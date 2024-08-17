@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+[[ -n $DEBUG ]] && set -x
+
+echo "-------------------------------------------------"
+echo "Updating Jellyfin from the upstream repository..."
+echo "-------------------------------------------------"
+echo
+echo "Fetching latest changes from upstream..."
+git fetch upstream
+echo "Checking out the master branch..."
+git checkout master
+echo "Rebasing local master branch to match upstream..."
+git rebase upstream/master
+echo
+echo "-------------------------------------------------"
+echo "Installing dependencies..."
+npm install
+echo "Building the project for production..."
+npm run build:production

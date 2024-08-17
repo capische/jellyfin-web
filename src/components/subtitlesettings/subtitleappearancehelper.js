@@ -7,6 +7,18 @@ function getTextStyles(settings, preview) {
     const list = [];
 
     switch (settings.textSize || '') {
+        case 'tiniest':
+            list.push({ name: 'font-size', value: '.4em' });
+            break;
+        case 'tinier':
+            list.push({ name: 'font-size', value: '.5em' });
+            break;
+        case 'tiny':
+            list.push({ name: 'font-size', value: '.6em' });
+            break;
+        case 'extrasmaller':
+            list.push({ name: 'font-size', value: '.7em' });
+            break;
         case 'smaller':
             list.push({ name: 'font-size', value: '.8em' });
             break;
@@ -29,6 +41,15 @@ function getTextStyles(settings, preview) {
     }
 
     switch (settings.textWeight || '') {
+        case 'thinnest':
+            list.push({ name: 'font-weight', value: '100' });
+            break;
+        case 'thinner':
+            list.push({ name: 'font-weight', value: '200' });
+            break;
+        case 'thin':
+            list.push({ name: 'font-weight', value: '300' });
+            break;
         case 'bold':
             list.push({ name: 'font-weight', value: 'bold' });
             break;
