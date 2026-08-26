@@ -1,3 +1,7 @@
+import {
+    DEFAULT_SUBTITLE_POSITION,
+    migratePlacement
+} from 'components/subtitlesettings/subtitlePlacement';
 import { getDisplayPreferencesQuery } from 'hooks/api/useDisplayPreferences';
 import { getUserQuery } from 'hooks/api/useUser';
 import { QUERY_KEY } from 'hooks/useUsers';
@@ -49,8 +53,18 @@ function filterQuerySettings(query, allowedItems) {
 }
 
 const defaultSubtitleAppearanceSettings = {
-    verticalPosition: -3,
+    position: DEFAULT_SUBTITLE_POSITION,
+    // Lines from the edge named by 'position'.
+    verticalPosition: 2,
     aspectMode: 'contain'
+};
+
+export const SECONDARY_SUBTITLE_APPEARANCE_KEY = 'localplayersecondarysubtitleappearance';
+
+const defaultSecondarySubtitleAppearanceSettings = {
+    ...defaultSubtitleAppearanceSettings,
+    // Stacked above the primary, so this is the gap between the two rather than an offset.
+    verticalPosition: 0
 };
 
 const defaultComicsPlayerSettings = {
@@ -650,7 +664,14 @@ export class UserSettings {
      */
     getSubtitleAppearanceSettings(key) {
         key = key || 'localplayersubtitleappearance3';
-        return Object.assign(defaultSubtitleAppearanceSettings, JSON.parse(this.get(key, false) || '{}'));
+        const isSecondary = key === SECONDARY_SUBTITLE_APPEARANCE_KEY;
+        const defaults = isSecondary ?
+            defaultSecondarySubtitleAppearanceSettings :
+            defaultSubtitleAppearanceSettings;
+        // Migrate before merging: the defaults always carry a 'position', which would
+        // otherwise make settings saved before that field look already-migrated.
+        const saved = migratePlacement(JSON.parse(this.get(key, false) || '{}'), isSecondary);
+        return Object.assign({}, defaults, saved);
     }
 
     /**

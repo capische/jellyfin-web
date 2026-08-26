@@ -1,0 +1,90 @@
+<aside class="playerSubtitleSettings-panel" role="dialog" aria-modal="false" aria-labelledby="playerSubtitleSettingsTitle">
+    <header class="playerSubtitleSettings-header">
+        <h2 id="playerSubtitleSettingsTitle" class="playerSubtitleSettings-title">${HeaderSubtitleAppearance}</h2>
+        <button is="paper-icon-button-light" type="button" class="playerSubtitleSettings-close" title="${ButtonClose}" aria-label="${ButtonClose}">
+            <span class="material-icons close" aria-hidden="true"></span>
+        </button>
+    </header>
+
+    <div class="playerSubtitleSettings-profiles" role="tablist" aria-label="${HeaderSubtitleAppearance}">
+        <button is="emby-button" id="playerSubtitlePrimaryTab" type="button" role="tab" class="playerSubtitleSettings-profile emby-button" data-profile="primary" aria-selected="true" aria-controls="playerSubtitleSettingsFields">${Primary}</button>
+        <button is="emby-button" id="playerSubtitleSecondaryTab" type="button" role="tab" class="playerSubtitleSettings-profile emby-button" data-profile="secondary" aria-selected="false" aria-controls="playerSubtitleSettingsFields" tabindex="-1">${Secondary}</button>
+    </div>
+
+    <div id="playerSubtitleSettingsFields" class="playerSubtitleSettings-fields" role="tabpanel" aria-labelledby="playerSubtitlePrimaryTab">
+        <div class="selectContainer">
+            <select is="emby-select" class="playerSubtitleSettings-field" data-setting="textSize" label="${LabelTextSize}">
+                <option value="tiniest">${Tiniest}</option>
+                <option value="tinier">${Tinier}</option>
+                <option value="tiny">${Tiny}</option>
+                <option value="extrasmaller">${ExtraSmaller}</option>
+                <option value="smaller">${Smaller}</option>
+                <option value="small">${Small}</option>
+                <option value="">${Normal}</option>
+                <option value="large">${Large}</option>
+                <option value="larger">${Larger}</option>
+                <option value="extralarge">${ExtraLarge}</option>
+            </select>
+        </div>
+
+        <div class="selectContainer">
+            <select is="emby-select" class="playerSubtitleSettings-field" data-setting="textWeight" label="${LabelTextWeight}">
+                <option value="thinnest">${Thinnest}</option>
+                <option value="thinner">${Thinner}</option>
+                <option value="thin">${Thin}</option>
+                <option value="normal">${Normal}</option>
+                <option value="bold">${Bold}</option>
+            </select>
+        </div>
+
+        <div class="selectContainer">
+            <select is="emby-select" class="playerSubtitleSettings-field" data-setting="font" label="${LabelFont}">
+                <option value="">${Default}</option>
+                <option value="typewriter">${Typewriter}</option>
+                <option value="print">${Print}</option>
+                <option value="console">${Console}</option>
+                <option value="cursive">${Cursive}</option>
+                <option value="casual">${Casual}</option>
+                <option value="smallcaps">${SmallCaps}</option>
+            </select>
+        </div>
+
+        <div class="selectContainer">
+            <input is="emby-input" type="color" class="playerSubtitleSettings-field" data-setting="textColor" label="${LabelTextColor}" />
+        </div>
+
+        <div class="selectContainer">
+            <select is="emby-select" class="playerSubtitleSettings-field" data-setting="dropShadow" label="${LabelDropShadow}">
+                <option value="none">${None}</option>
+                <option value="raised">${Raised}</option>
+                <option value="depressed">${Depressed}</option>
+                <option value="uniform">${Uniform}</option>
+                <option value="">${DropShadow}</option>
+            </select>
+        </div>
+
+        <div class="selectContainer">
+            <select is="emby-select" class="playerSubtitleSettings-field" data-setting="position" label="${LabelSubtitlePosition}">
+                <option value="top">${PositionTop}</option>
+                <option value="bottom">${PositionBottom}</option>
+                <option value="bottom-left">${PositionBottomLeft}</option>
+                <option value="bottom-right">${PositionBottomRight}</option>
+            </select>
+        </div>
+
+        <div class="sliderContainer-settings">
+            <div class="sliderContainer">
+                <input is="emby-slider" id="playerSubtitleVerticalPosition" type="range" min="0" max="16" class="playerSubtitleSettings-field" data-setting="verticalPosition" label="${LabelSubtitleVerticalPosition}" />
+            </div>
+        </div>
+
+        <div class="playerSubtitleSettings-actions">
+            <button is="emby-button" type="button" class="raised playerSubtitleSettings-reset">
+                <span>${Reset}</span>
+            </button>
+            <button is="emby-button" type="button" class="raised button-submit playerSubtitleSettings-save">
+                <span>${Save}</span>
+            </button>
+        </div>
+    </div>
+</aside>

@@ -22,8 +22,20 @@ interface OptionItem {
     value?: string;
 }
 
+interface TitleButton {
+    icon: string;
+    id: string;
+    title: string;
+}
+
 interface Options {
     items: OptionItem[];
+    /**
+     * Render as a compact translucent box instead of taking over the whole
+     * screen in the TV layout. Used by the player menus so the video stays
+     * visible behind them.
+     */
+    boxed?: boolean;
     border?: boolean;
     callback?: (id: string) => void;
     dialogClass?: string;
@@ -43,6 +55,7 @@ interface Options {
     text?: string;
     timeout?: number;
     title?: string;
+    titleButton?: TitleButton;
 }
 
 interface Offset {
@@ -148,9 +161,13 @@ export function show(options: Options) {
         scrollY: false
     };
 
+    const boxed = !!options.boxed;
+    // On TV the box is centered on screen rather than anchored to the button,
+    // which would otherwise push it into a corner.
+    const isCenteredBox = boxed && layoutManager.tv;
     let isFullscreen;
 
-    if (layoutManager.tv) {
+    if (layoutManager.tv && !boxed) {
         dialogOptions.size = 'fullscreen';
         isFullscreen = true;
         dialogOptions.autoFocus = true;
@@ -160,7 +177,7 @@ export function show(options: Options) {
         dialogOptions.exitAnimation = options.exitAnimation;
         dialogOptions.entryAnimationDuration = options.entryAnimationDuration || 140;
         dialogOptions.exitAnimationDuration = options.exitAnimationDuration || 100;
-        dialogOptions.autoFocus = false;
+        dialogOptions.autoFocus = layoutManager.tv;
     }
 
     const dlg = dialogHelper.createDialog(dialogOptions);
@@ -172,6 +189,10 @@ export function show(options: Options) {
     }
 
     dlg.classList.add('actionSheet');
+
+    if (boxed) {
+        dlg.classList.add('actionSheet-boxed');
+    }
 
     if (options.dialogClass) {
         dlg.classList.add(options.dialogClass);
@@ -200,7 +221,7 @@ export function show(options: Options) {
         icons.push(itemIcon || '');
     }
 
-    if (layoutManager.tv) {
+    if (isFullscreen) {
         html += `<button is="paper-icon-button-light" class="btnCloseActionSheet hide-mouse-idle-tv" tabindex="-1" title="${globalize.translate('ButtonBack')}">
                      <span class="material-icons arrow_back" aria-hidden="true"></span>
                  </button>`;
@@ -209,14 +230,25 @@ export function show(options: Options) {
     // If any items have an icon, give them all an icon just to make sure they're all lined up evenly
     const center = options.title && (!renderIcon /*|| itemsWithIcons.length != options.items.length*/);
 
-    if (center || layoutManager.tv) {
+    if (center || isFullscreen) {
         html += '<div class="actionSheetContent actionSheetContent-centered">';
     } else {
         html += '<div class="actionSheetContent">';
     }
 
     if (options.title) {
+        if (options.titleButton) {
+            html += '<div class="actionSheetTitleRow">';
+        }
+
         html += '<h1 class="actionSheetTitle">' + escapeHtml(options.title) + '</h1>';
+
+        if (options.titleButton) {
+            html += `<button is="paper-icon-button-light" type="button" class="actionSheetTitleButton" data-id="${escapeHtml(options.titleButton.id)}" title="${escapeHtml(options.titleButton.title)}" aria-label="${escapeHtml(options.titleButton.title)}">
+                         <span class="material-icons ${escapeHtml(options.titleButton.icon)}" aria-hidden="true"></span>
+                     </button>`;
+            html += '</div>';
+        }
     }
     if (options.text) {
         html += '<p class="actionSheetText">' + escapeHtml(options.text) + '</p>';
@@ -224,7 +256,10 @@ export function show(options: Options) {
 
     let scrollerClassName = 'actionSheetScroller';
     if (layoutManager.tv) {
-        scrollerClassName += ' actionSheetScroller-tv focuscontainer-x focuscontainer-y';
+        scrollerClassName += ' focuscontainer-x focuscontainer-y';
+    }
+    if (isFullscreen) {
+        scrollerClassName += ' actionSheetScroller-tv';
     }
     html += '<div class="' + scrollerClassName + ' ' + scrollClassName + '" style="' + style + '">';
 
@@ -324,7 +359,8 @@ export function show(options: Options) {
         let isResolved = false;
 
         dlg.addEventListener('click', function (e) {
-            const actionSheetMenuItem = dom.parentWithClass(e.target as HTMLElement, 'actionSheetMenuItem');
+            const actionSheetMenuItem = dom.parentWithClass(e.target as HTMLElement, 'actionSheetMenuItem')
+                || dom.parentWithClass(e.target as HTMLElement, 'actionSheetTitleButton');
 
             if (actionSheetMenuItem) {
                 selectedId = actionSheetMenuItem.getAttribute('data-id');
@@ -375,7 +411,9 @@ export function show(options: Options) {
             console.warn('DialogHelper.open error', e);
         });
 
-        const pos = options.positionTo && dialogOptions.size !== 'fullscreen' ? getPosition(options.positionTo, options, dlg) : null;
+        const pos = options.positionTo && !isCenteredBox && dialogOptions.size !== 'fullscreen' ?
+            getPosition(options.positionTo, options, dlg) :
+            null;
 
         if (pos) {
             dlg.style.position = 'fixed';

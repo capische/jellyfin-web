@@ -1,0 +1,183 @@
+@use '../../styles/mixins' as *;
+
+// Kept opaque off-TV, where the menus are opaque too.
+$panel-background: rgba(12, 12, 12, 0.86);
+
+/* The width is a plain value, not a custom property, and there is no min()/max()
+   anywhere in this file. TV browsers predating Chrome 79 cannot parse those, and
+   a var() substituting an unparseable value is invalid at computed-value time:
+   the property drops to its initial value rather than the previous declaration,
+   which collapsed this panel to shrink-to-fit and took the subtitle container
+   down with it. Narrow viewports are handled with media queries instead, and the
+   inset that keeps subtitles clear of the panel is set from JS, which already
+   measures it. */
+.playerSubtitleSettings {
+    position: fixed;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 24rem;
+    padding-right: env(safe-area-inset-right);
+    color: #fff;
+    background: $panel-background;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    .layout-tv & {
+        /* Undo the 125% TV baseline so the whole panel fits without scrolling. */
+        font-size: 0.78em;
+
+        /* The TV baseline is 125%, so this would otherwise eat half the screen. */
+        width: 17.5rem;
+
+        /* Matches the in-player menus rather than sitting heavier than them. */
+        @include player-overlay-surface;
+    }
+}
+
+@media all and (max-width: 28rem) {
+    .playerSubtitleSettings {
+        width: 88vw;
+    }
+}
+
+@media all and (max-width: 44rem) {
+    .layout-tv .playerSubtitleSettings {
+        width: 40vw;
+    }
+}
+
+.playerSubtitleSettings-panel {
+    box-sizing: border-box;
+    min-height: 100%;
+    padding: 0 1.5em 1.5em;
+
+    .layout-tv & {
+        /* Extra inline padding keeps the fields clear of TV overscan. */
+        padding: 0 1.75em 1.5em 1.25em;
+    }
+}
+
+/* Bleeds over the panel padding so content scrolls underneath cleanly. */
+.playerSubtitleSettings-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    margin: 0 -1.5em;
+    padding: 1em 1.5em 0.6em;
+    background: $panel-background;
+
+    .layout-tv & {
+        margin: 0 -1.75em 0 -1.25em;
+        padding: 1em 1.75em 0.6em 1.25em;
+
+        /* Frosts whatever scrolls beneath it, which a flat translucent fill
+           would let show straight through. */
+        @include player-overlay-surface;
+    }
+}
+
+.playerSubtitleSettings-title {
+    flex: 1;
+    margin: 0;
+
+    /* Small enough that 'Subtitle Appearance' stays on one line in the panel. */
+    font-size: 1.05em;
+}
+
+.playerSubtitleSettings-close {
+    flex: none;
+}
+
+.playerSubtitleSettings-profiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0.75em 0 1.25em;
+    overflow: hidden;
+    border: 1px solid #606060;
+    border-radius: 0.375em;
+    background-color: #454545;
+}
+
+.playerSubtitleSettings-profile {
+    justify-content: center;
+    margin: 0;
+    padding: 0.6em 0.5em;
+    color: #ddd;
+    text-align: center;
+    background-color: #454545;
+    border: 0;
+    border-radius: 0;
+}
+
+.playerSubtitleSettings-profile + .playerSubtitleSettings-profile {
+    border-inline-start: 1px solid #666;
+}
+
+.playerSubtitleSettings-profile[aria-selected='true'] {
+    color: #000;
+    background-color: var(--theme-primary-color, #00a4dc);
+}
+
+/* The stock field spacing is tuned for a full settings page; tighten it up so
+   every field fits in the panel. */
+.playerSubtitleSettings-fields {
+    .selectContainer,
+    .inputContainer,
+    .sliderContainer-settings {
+        margin-bottom: 1em;
+    }
+
+    .selectLabel,
+    .inputLabel,
+    .sliderLabel {
+        margin-bottom: 0.2em;
+        font-size: 0.95em;
+    }
+
+    .emby-select,
+    .emby-input {
+        font-size: 100%;
+    }
+
+    .emby-input[type='color'] {
+        height: 1.9em;
+    }
+}
+
+.playerSubtitleSettings-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75em;
+    margin-top: 1.25em;
+}
+
+.playerSubtitleSettings-actions > .emby-button {
+    flex: none;
+    justify-content: center;
+    min-width: 6em;
+    margin: 0;
+}
+
+@media all and (max-height: 35em) and (orientation: landscape) {
+    .playerSubtitleSettings-profiles {
+        margin: 0.5em 0 0.75em;
+    }
+
+    .playerSubtitleSettings-fields {
+        .selectContainer,
+        .inputContainer,
+        .sliderContainer-settings {
+            margin-bottom: 0.5em;
+        }
+    }
+
+    .playerSubtitleSettings-actions {
+        margin-top: 0.75em;
+    }
+}
