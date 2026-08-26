@@ -52,31 +52,76 @@ video[controls]::-webkit-media-controls {
 
 .videoSubtitles {
     position: fixed;
+    top: 0;
     bottom: 0;
-    text-align: center;
     left: 0;
     right: 0;
     color: #fff;
     font-size: 170%;
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    pointer-events: none;
 }
 
-.videoSubtitlesInner {
+/* A horizontal strip holding the subtitle layers placed in it. Layers are flex children
+   rather than absolutely positioned boxes, which is what makes overlap impossible. */
+.videoSubtitlesBand {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    box-sizing: border-box;
+
+    /* Keeps side placements clear of TV overscan, which would otherwise cut them
+       off. A plain percentage rather than max(..., env()): older TV browsers
+       cannot parse the maths, and would drop the padding entirely. */
+    padding-left: 2.5%;
+    padding-right: 2.5%;
+}
+
+.videoSubtitlesBand-top {
+    top: 0;
+    flex-direction: column;
+}
+
+/* Reversed so the first layer appended sits on the floor and later ones stack above it. */
+.videoSubtitlesBand-bottom {
+    bottom: 0;
+    flex-direction: column-reverse;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Two layers in one band with different alignments share a line instead of stacking. */
+.videoSubtitlesBand-row {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+/* Stretches across its band; horizontal placement is justify-content, set per layer. */
+.videoSubtitlesLayer {
+    display: flex;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.videoSubtitlesBand-row > .videoSubtitlesLayer {
+    flex: 0 1 50%;
+    min-width: 0;
+}
+
+.videoSubtitlesInner,
+.videoSecondarySubtitlesInner {
     max-width: 70%;
     background-color: rgba(0, 0, 0, 0.8);
 }
 
 .videoSecondarySubtitlesInner {
-    max-width: 70%;
-    background-color: rgba(0, 0, 0, 0.8);
     min-height: 0 !important;
-    margin-top: 0.5em !important;
-    margin-bottom: 0.5em !important;
+}
+
+/* The layer is already capped at ~half the band, so the inner cap would compound. */
+.videoSubtitlesBand-row .videoSubtitlesInner,
+.videoSubtitlesBand-row .videoSecondarySubtitlesInner {
+    max-width: 100%;
 }
 
 @keyframes htmlvideoplayer-zoomin {

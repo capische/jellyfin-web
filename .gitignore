@@ -21,3 +21,6 @@ config.json
 
 # environment related
 .envrc
+
+# Host-specific settings for ./jellyfin-sync
+jellyfin-sync.env

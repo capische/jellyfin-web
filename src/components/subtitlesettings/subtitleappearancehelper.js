@@ -2,8 +2,24 @@
  * Subtitle settings visual helper.
  * @module components/subtitleSettings/subtitleAppearanceHelper
  */
+import { getFlexAlign, resolvePlacement } from './subtitlePlacement';
 
-function getTextStyles(settings, preview) {
+/**
+ * Approximate line height of a subtitle line, used to convert the spacing setting from lines
+ * to em. Ideally this would be measured from the element rather than assumed.
+ */
+export const LINE_HEIGHT = 1.35;
+
+/**
+ * The text size setting as a plain multiplier, for callers that need to reason about the
+ * rendered line height in pixels rather than emit CSS.
+ */
+export function getTextScale(settings) {
+    const fontSize = getTextStyles(settings).find((style) => style.name === 'font-size')?.value;
+    return fontSize === 'inherit' ? 1 : (parseFloat(fontSize) || 1);
+}
+
+function getTextStyles(settings) {
     const list = [];
 
     switch (settings.textSize || '') {
@@ -119,35 +135,40 @@ function getTextStyles(settings, preview) {
             break;
     }
 
-    if (!preview) {
-        const pos = parseInt(settings.verticalPosition, 10);
-        const lineHeight = 1.35; // FIXME: It is better to read this value from element
-        if (pos < 0) {
-            const margin = Math.abs(pos + 1) * lineHeight;
-            list.push({ name: 'margin-bottom', value: `${margin}em` });
-            list.push({ name: 'margin-top', value: '' });
-        } else {
-            const margin = pos * lineHeight;
-            list.push({ name: 'margin-bottom', value: '' });
-            list.push({ name: 'margin-top', value: `${margin}em` });
-        }
-    }
-
     return list;
 }
 
+/**
+ * Styles for the layer element, which owns placement.
+ *
+ * The band the layer is appended to anchors it to the top or bottom of the screen and stacks
+ * its children, so all that is left here is alignment within the band and the spacing value.
+ *
+ * The margin always goes on the side facing the band's edge, which makes it do double duty:
+ * on the layer nearest the edge it is the distance from the screen, and on the layer stacked
+ * beyond it the same margin becomes the gap between the two. It stays in this profile's own
+ * em, which is what keeps the spacing predictable when its text size changes.
+ */
 function getWindowStyles(settings, preview) {
     const list = [];
 
-    if (!preview) {
-        const pos = parseInt(settings.verticalPosition, 10);
-        if (pos < 0) {
-            list.push({ name: 'top', value: '' });
-            list.push({ name: 'bottom', value: '0' });
-        } else {
-            list.push({ name: 'top', value: '0' });
-            list.push({ name: 'bottom', value: '' });
-        }
+    if (preview) return list;
+
+    const placement = resolvePlacement(settings.position);
+    // Placement is done with justify-content only. Setting align-self would stop the layer
+    // stretching across its band, leaving it shrink-to-fit - and the inner element's
+    // max-width percentage would then resolve against that, collapsing the text.
+    list.push({ name: 'justify-content', value: getFlexAlign(placement.align) });
+
+    const lines = Math.abs(parseInt(settings.verticalPosition, 10) || 0);
+    const margin = `${lines * LINE_HEIGHT}em`;
+
+    if (placement.band === 'bottom') {
+        list.push({ name: 'margin-bottom', value: margin });
+        list.push({ name: 'margin-top', value: '' });
+    } else {
+        list.push({ name: 'margin-bottom', value: '' });
+        list.push({ name: 'margin-top', value: margin });
     }
 
     return list;
@@ -155,7 +176,7 @@ function getWindowStyles(settings, preview) {
 
 export function getStyles(settings, preview) {
     return {
-        text: getTextStyles(settings, preview),
+        text: getTextStyles(settings),
         window: getWindowStyles(settings, preview)
     };
 }
@@ -180,5 +201,6 @@ export function applyStyles(elements, appearanceSettings) {
 }
 export default {
     getStyles: getStyles,
-    applyStyles: applyStyles
+    applyStyles: applyStyles,
+    getTextScale: getTextScale
 };
