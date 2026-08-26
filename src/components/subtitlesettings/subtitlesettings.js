@@ -7,6 +7,7 @@ import focusManager from '../focusManager';
 import layoutManager from '../layoutManager';
 import loading from '../loading/loading';
 import subtitleAppearanceHelper from './subtitleappearancehelper';
+import { DEFAULT_SUBTITLE_POSITION } from './subtitlePlacement';
 import settingsHelper from '../settingshelper';
 import dom from '../../utils/dom';
 import Events from '../../utils/events.ts';
@@ -36,7 +37,8 @@ function getSubtitleAppearanceObject(context) {
         font: context.querySelector('#selectFont').value,
         textBackground: context.querySelector('#inputTextBackground').value,
         textColor: layoutManager.tv ? context.querySelector('#selectTextColor').value : context.querySelector('#inputTextColor').value,
-        verticalPosition: context.querySelector('#sliderVerticalPosition').value
+        verticalPosition: context.querySelector('#sliderVerticalPosition').value,
+        position: context.querySelector('#selectSubtitlePosition').value
     };
 }
 
@@ -74,6 +76,7 @@ function loadForm(context, user, userSettings, appearanceSettings, apiClient) {
         context.querySelector('#inputTextColor').value = appearanceSettings.textColor || '#ffffff';
         context.querySelector('#selectFont').value = appearanceSettings.font || '';
         context.querySelector('#sliderVerticalPosition').value = appearanceSettings.verticalPosition;
+        context.querySelector('#selectSubtitlePosition').value = appearanceSettings.position || DEFAULT_SUBTITLE_POSITION;
         context.querySelector('#selectBitmapSubtitleAspectMode').value = appearanceSettings.aspectMode || 'stretch';
 
         context.querySelector('#selectSubtitleBurnIn').value = appSettings.get('subtitleburnin') || '';
