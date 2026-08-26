@@ -1,22 +1,253 @@
 #!/usr/bin/env bash
+#
+# Deploy jellyfin-web to the Jellyfin host.
+#
+# The host serves the built bundle straight from this checkout's dist/, which the
+# Jellyfin container bind-mounts, so deploying means getting a fresh dist/ there
+# and restarting the container.
+#
+#   jellyfin-sync            Build on the host from the deployment branch. Needs
+#                            nothing locally, but a Raspberry Pi spends roughly
+#                            six minutes in webpack alone.
+#
+#   jellyfin-sync --local    Build dist/ here and rsync it over. The bundle is
+#                            plain JS/CSS/wasm with nothing host-specific in it,
+#                            so a workstation build runs fine on the Pi.
+#
+# Run with DEBUG=1 to trace.
 
-set -eo pipefail
+set -euo pipefail
 
-[[ -n $DEBUG ]] && set -x
+[[ -n ${DEBUG:-} ]] && set -x
 
-echo "-------------------------------------------------"
-echo "Updating Jellyfin from the upstream repository..."
-echo "-------------------------------------------------"
+# Resolved before the re-exec below, which moves the running copy to a temp file.
+if [[ -n ${JELLYFIN_SYNC_ROOT:-} ]]; then
+    readonly SCRIPT_DIR="$JELLYFIN_SYNC_ROOT"
+else
+    readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+# Bash reads a script incrementally, so checking out another revision would
+# corrupt this file mid-run. Hand over to a copy outside the checkout first.
+if [[ -z ${JELLYFIN_SYNC_REEXEC:-} ]]; then
+    self="$(mktemp "${TMPDIR:-/tmp}/jellyfin-sync.XXXXXX")"
+    cp -- "${BASH_SOURCE[0]}" "$self"
+    # No -- here: BSD chmod treats it as a file name.
+    chmod +x "$self"
+    JELLYFIN_SYNC_REEXEC="$self" JELLYFIN_SYNC_ROOT="$SCRIPT_DIR" exec "$self" "$@"
+fi
+# Preserve the status the script exited with; a bare trap would report the
+# status of its own last command instead.
+cleanup() {
+    local status=$?
+    rm -f -- "$JELLYFIN_SYNC_REEXEC"
+    exit "$status"
+}
+trap cleanup EXIT
+
+# Anything host-specific belongs in jellyfin-sync.env, which is not tracked.
+# See jellyfin-sync.env.example.
+readonly CONFIG_FILE="${JELLYFIN_SYNC_CONFIG:-$SCRIPT_DIR/jellyfin-sync.env}"
+if [[ -f $CONFIG_FILE ]]; then
+    # shellcheck source=/dev/null
+    . "$CONFIG_FILE"
+fi
+
+readonly DEPLOY_REMOTE="${JELLYFIN_WEB_REMOTE:-deployment}"
+# Prefer the remote the host already deploys from; fall back to origin for a
+# checkout that has not been set up yet.
+readonly DEPLOY_URL="${JELLYFIN_WEB_FORK_URL:-$(
+    git -C "$SCRIPT_DIR" remote get-url "$DEPLOY_REMOTE" 2>/dev/null ||
+        git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null
+)}"
+readonly DEPLOY_BRANCH="${JELLYFIN_WEB_BRANCH:-master}"
+readonly SSH_HOST="${JELLYFIN_SSH_HOST:-jellyfin}"
+
+# Paths are taken relative to the deploy account's home directory, so the same
+# values work whether the script runs on the host or drives it over ssh. An
+# absolute value is used as given.
+readonly MEDIA_DIR="${JELLYFIN_MEDIA_DIR:-media}"
+readonly COMPOSE_FILE="${JELLYFIN_COMPOSE_FILE:-$MEDIA_DIR/server/docker-compose.yml}"
+readonly WEB_DIR="${JELLYFIN_WEB_DIR:-$MEDIA_DIR/src/jellyfin-web}"
+
+mode=host
+build=1
+restart=1
+
+die() {
+    echo "$*" >&2
+    exit 2
+}
+
+usage() {
+    cat <<'EOF'
+Deploy jellyfin-web to the Jellyfin host.
+
+The host serves the built bundle straight from this checkout's dist/, which the
+Jellyfin container bind-mounts, so deploying means getting a fresh dist/ there
+and restarting the container.
+
+  jellyfin-sync            Build on the host from the deployment branch. Needs
+                           nothing locally, but a Raspberry Pi spends roughly
+                           six minutes in webpack alone.
+
+  jellyfin-sync --local    Build dist/ here and rsync it over. The bundle is
+                           plain JS/CSS/wasm with nothing host-specific in it,
+                           so a workstation build runs fine on the Pi.
+
+Options:
+  -l, --local        Build dist/ locally and rsync it to the host.
+      --host HOST    SSH host for --local.
+      --path PATH    Web checkout, relative to the deploy account's home.
+      --no-build     With --local, sync the existing dist/ without rebuilding.
+      --no-restart   Leave the Jellyfin container alone after deploying.
+  -h, --help         Show this message.
+
+Run with DEBUG=1 to trace.
+EOF
+}
+
+while (($#)); do
+    case "$1" in
+        -l | --local) mode=local ;;
+        --host)
+            [[ $# -ge 2 ]] || die "--host needs a value"
+            SSH_HOST_OVERRIDE="$2"
+            shift
+            ;;
+        --path)
+            [[ $# -ge 2 ]] || die "--path needs a value"
+            WEB_DIR_OVERRIDE="$2"
+            shift
+            ;;
+        --no-build) build=0 ;;
+        --no-restart) restart=0 ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            die "Unknown option: $1"
+            ;;
+    esac
+    shift
+done
+
+ssh_host="${SSH_HOST_OVERRIDE:-$SSH_HOST}"
+web_dir="${WEB_DIR_OVERRIDE:-$WEB_DIR}"
+
+rule() {
+    echo "-------------------------------------------------"
+}
+
+# The host's login shell is not necessarily bash, and quoting a command through
+# it is fragile. Feed the script over stdin instead so only bash ever parses it.
+remote() {
+    ssh "$ssh_host" bash -ls
+}
+
+restart_jellyfin_remote() {
+    echo "Restarting Jellyfin on $ssh_host..."
+    # \$HOME stays unexpanded so it resolves on the host, not here.
+    remote <<EOF
+cd "\$HOME" || exit 1
+docker compose -f '$COMPOSE_FILE' restart jellyfin
+EOF
+}
+
+deploy_on_host() {
+    cd "$SCRIPT_DIR"
+
+    rule
+    echo "Updating Jellyfin Web from ${DEPLOY_URL} (${DEPLOY_BRANCH})..."
+    rule
+
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "Refusing to deploy because the checkout has tracked changes." >&2
+        echo "Commit or discard them before running this script." >&2
+        exit 1
+    fi
+
+    [[ -n $DEPLOY_URL ]] || die "No deploy URL. Set JELLYFIN_WEB_FORK_URL in $CONFIG_FILE."
+
+    if git remote get-url "$DEPLOY_REMOTE" >/dev/null 2>&1; then
+        git remote set-url "$DEPLOY_REMOTE" "$DEPLOY_URL"
+    else
+        git remote add "$DEPLOY_REMOTE" "$DEPLOY_URL"
+    fi
+
+    echo "Fetching the deployment branch..."
+    git fetch --prune "$DEPLOY_REMOTE" "$DEPLOY_BRANCH"
+
+    echo "Checking out the exact deployment revision..."
+    git checkout -B "$DEPLOY_BRANCH" "$DEPLOY_REMOTE/$DEPLOY_BRANCH"
+    echo "Deploying commit $(git rev-parse --short HEAD)"
+
+    echo
+    rule
+    echo "Installing locked dependencies..."
+    npm ci
+
+    echo "Building production assets..."
+    npm run build:production
+
+    if ((restart)); then
+        echo "Restarting Jellyfin..."
+        (cd "$HOME" && docker compose -f "$COMPOSE_FILE" restart jellyfin)
+    fi
+}
+
+deploy_from_local() {
+    cd "$SCRIPT_DIR"
+
+    rule
+    echo "Deploying a local build to ${ssh_host}:${web_dir}/dist"
+    rule
+
+    local revision
+    revision="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    if git diff --quiet && git diff --cached --quiet; then
+        echo "Building commit $revision"
+    else
+        echo "Building commit $revision plus uncommitted changes."
+        echo "The host will be running a bundle that matches no revision."
+    fi
+
+    if ((build)); then
+        echo
+        echo "Building production assets..."
+        npm run build:production
+    fi
+
+    # An empty or half-written dist/ must never reach the host: the sync mirrors
+    # deletions, so shipping one would leave Jellyfin serving nothing at all.
+    if [[ ! -s dist/index.html ]]; then
+        echo "dist/index.html is missing or empty, refusing to sync." >&2
+        echo "Drop --no-build, or run npm run build:production first." >&2
+        exit 1
+    fi
+
+    echo
+    echo "Syncing dist/..."
+    # Into the directory, never over it: the container bind-mounts this exact
+    # path, and replacing it would leave the mount on the old, orphaned inode.
+    # --delete-after so stale chunks go only once the new ones have landed.
+    rsync --archive --compress --delete-after --human-readable \
+        --info=stats1 dist/ "$ssh_host:$web_dir/dist/"
+
+    if ((restart)); then
+        restart_jellyfin_remote
+    fi
+}
+
+case "$mode" in
+    host) deploy_on_host ;;
+    local) deploy_from_local ;;
+esac
+
+echo "Jellyfin Web deployment completed successfully."
 echo
-echo "Fetching latest changes from upstream..."
-git fetch upstream
-echo "Checking out the master branch..."
-git checkout master
-echo "Rebasing local master branch to match upstream..."
-git rebase upstream/master
-echo
-echo "-------------------------------------------------"
-echo "Installing dependencies..."
-npm install
-echo "Building the project for production..."
-npm run build:production
+echo "index.html is served no-cache, but clients that stay resident never go back"
+echo "for it. Fully close and reopen the app on TVs and phones, or they will keep"
+echo "running the bundle they started with."

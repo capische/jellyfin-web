@@ -3,11 +3,22 @@ import debounce from 'lodash-es/debounce';
 import Screenfull from 'screenfull';
 
 import { useCustomSubtitles } from 'apps/legacy/features/playback/utils/subtitleStyles';
-import subtitleAppearanceHelper from 'components/subtitlesettings/subtitleappearancehelper';
+import subtitleAppearanceHelper, {
+    LINE_HEIGHT,
+    getTextScale
+} from 'components/subtitlesettings/subtitleappearancehelper';
+import {
+    getBandLayout,
+    getLayerRoles,
+    resolvePlacement
+} from 'components/subtitlesettings/subtitlePlacement';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import { currentSettings as userSettings } from 'scripts/settings/userSettings';
+import {
+    currentSettings as userSettings,
+    SECONDARY_SUBTITLE_APPEARANCE_KEY
+} from 'scripts/settings/userSettings';
 import { MediaError } from 'types/mediaError';
 
 import browser from '../../scripts/browser';
@@ -155,6 +166,28 @@ function zoomIn(elem) {
             once: true
         });
     });
+}
+
+/**
+ * Apply a horizontal placement to a native cue.
+ *
+ * Native cues are positioned with a percentage anchor plus a box width rather than a CSS
+ * alignment, so a side placement is expressed as a half-width box pinned to that edge.
+ *
+ * @param {TextTrackCue} cue - Cue to position.
+ * @param {'start'|'center'|'end'} align - Resolved horizontal alignment.
+ */
+function applyCueAlignment(cue, align) {
+    if (align === 'center') return;
+
+    try {
+        cue.size = 50;
+        cue.align = align === 'start' ? 'start' : 'end';
+        cue.positionAlign = 'auto';
+        cue.position = align === 'start' ? 0 : 100;
+    } catch (error) {
+        console.debug('[HtmlVideoPlayer] failed to align native cue', error);
+    }
 }
 
 function normalizeTrackEventText(text, useHtml) {
@@ -321,6 +354,37 @@ export class HtmlVideoPlayer {
      * @type {HTMLVideoElement | null | undefined}
      */
     #mediaElement;
+    /**
+     * Last text written to each subtitle layer, so identical cues are not re-rendered.
+     * @type {string[]}
+     */
+    #renderedSubtitleText = ['', ''];
+    /**
+     * Lines in the primary track's active native cue, tracked so a custom secondary layer can
+     * be kept clear of it. Only meaningful while the primary renders through native cues.
+     * @type {number}
+     */
+    #primaryCueLineCount = 0;
+    /**
+     * @type {TextTrack | null}
+     */
+    #primaryCueChangeTrack = null;
+    /**
+     * @type {(() => void) | null}
+     */
+    #onPrimaryCueChange = null;
+    /**
+     * @type {Map<TextTrackCue, { position: number | string, positionAlign?: string, size: number }>}
+     */
+    #subtitleSettingsCueLayouts = new Map();
+    /**
+     * @type {boolean}
+     */
+    #subtitleSettingsOpen = false;
+    /**
+     * @type {number}
+     */
+    #subtitleSettingsPanelWidth = 0;
     /**
      * @type {number}
      */
@@ -1236,24 +1300,44 @@ export class HtmlVideoPlayer {
      * @private
      */
     destroyCustomRenderedTrackElements(targetTrackIndex) {
+        const removeSubtitleLayer = (subtitleElement) => {
+            const layer = subtitleElement?.parentNode;
+            const band = layer?.parentNode;
+            const container = band?.parentNode;
+            if (layer) {
+                tryRemoveElement(layer);
+            }
+            if (band && !band.children.length) {
+                tryRemoveElement(band);
+            }
+            if (container && !container.children.length) {
+                tryRemoveElement(container);
+            }
+        };
+
         if (this.isPrimaryTrack(targetTrackIndex)) {
             if (this.#videoSubtitlesElem) {
-                tryRemoveElement(this.#videoSubtitlesElem);
+                removeSubtitleLayer(this.#videoSubtitlesElem);
                 this.#videoSubtitlesElem = null;
             }
+            this.#renderedSubtitleText[PRIMARY_TEXT_TRACK_INDEX] = '';
         } else if (this.isSecondaryTrack(targetTrackIndex)) {
             if (this.#videoSecondarySubtitlesElem) {
-                tryRemoveElement(this.#videoSecondarySubtitlesElem);
+                removeSubtitleLayer(this.#videoSecondarySubtitlesElem);
                 this.#videoSecondarySubtitlesElem = null;
             }
-        } else if (this.#videoSubtitlesElem) {
+            this.#renderedSubtitleText[SECONDARY_TEXT_TRACK_INDEX] = '';
+        } else {
             // destroy all
-            const subtitlesContainer = this.#videoSubtitlesElem.parentNode;
+            const subtitleElement = this.#videoSubtitlesElem || this.#videoSecondarySubtitlesElem;
+            // inner -> layer -> band -> container
+            const subtitlesContainer = subtitleElement?.parentNode?.parentNode?.parentNode;
             if (subtitlesContainer) {
                 tryRemoveElement(subtitlesContainer);
             }
             this.#videoSubtitlesElem = null;
             this.#videoSecondarySubtitlesElem = null;
+            this.#renderedSubtitleText = ['', ''];
         }
     }
 
@@ -1304,6 +1388,10 @@ export class HtmlVideoPlayer {
             this.endPendingSubtitleLoad(SECONDARY_TEXT_TRACK_INDEX);
         } else {
             this.endPendingSubtitleLoad(targetTrackIndex);
+        }
+
+        if (targetTrackIndex === undefined || this.isPrimaryTrack(targetTrackIndex)) {
+            this.#stopTrackingPrimaryCueLines();
         }
 
         this.destroyCustomRenderedTrackElements(targetTrackIndex);
@@ -1554,48 +1642,292 @@ export class HtmlVideoPlayer {
             // Exit if the video element was destroyed while fetching subtitles
             if (!this.#mediaElement) return;
 
-            const subtitleAppearance = userSettings.getSubtitleAppearanceSettings();
-            const subtitleVerticalPosition = parseInt(subtitleAppearance.verticalPosition, 10);
-
             if (!this.#videoSubtitlesElem && !this.isSecondaryTrack(targetTextTrackIndex)) {
-                let subtitlesContainer = document.querySelector('.videoSubtitles');
-                if (!subtitlesContainer) {
-                    subtitlesContainer = document.createElement('div');
-                    subtitlesContainer.classList.add('videoSubtitles');
-                }
+                const subtitlesLayer = document.createElement('div');
+                subtitlesLayer.classList.add('videoSubtitlesLayer', 'videoSubtitlesLayer-primary');
                 const subtitlesElement = document.createElement('div');
                 subtitlesElement.classList.add('videoSubtitlesInner');
-                subtitlesContainer.appendChild(subtitlesElement);
+                subtitlesLayer.appendChild(subtitlesElement);
                 this.#videoSubtitlesElem = subtitlesElement;
-                this.setSubtitleAppearance(subtitlesContainer, this.#videoSubtitlesElem);
-                videoElement.parentNode.appendChild(subtitlesContainer);
                 this.#currentTrackEvents = subtitleData.TrackEvents;
             } else if (!this.#videoSecondarySubtitlesElem && this.isSecondaryTrack(targetTextTrackIndex)) {
-                const subtitlesContainer = document.querySelector('.videoSubtitles');
-                if (!subtitlesContainer) return;
+                const subtitlesLayer = document.createElement('div');
+                subtitlesLayer.classList.add('videoSubtitlesLayer', 'videoSubtitlesLayer-secondary');
                 const secondarySubtitlesElement = document.createElement('div');
                 secondarySubtitlesElement.classList.add('videoSecondarySubtitlesInner');
-                // determine the order of the subtitles
-                if (subtitleVerticalPosition < 0) {
-                    subtitlesContainer.insertBefore(secondarySubtitlesElement, subtitlesContainer.firstChild);
-                } else {
-                    subtitlesContainer.appendChild(secondarySubtitlesElement);
-                }
+                subtitlesLayer.appendChild(secondarySubtitlesElement);
                 this.#videoSecondarySubtitlesElem = secondarySubtitlesElement;
-                this.setSubtitleAppearance(subtitlesContainer, this.#videoSecondarySubtitlesElem);
                 this.#currentSecondaryTrackEvents = subtitleData.TrackEvents;
+            } else {
+                return;
             }
+
+            this.updateSubtitleAppearance();
         });
+    }
+
+    /**
+     * Get the container the subtitle bands live in, creating it on first use.
+     * @private
+     */
+    #getSubtitlesContainer() {
+        let container = document.querySelector('.videoSubtitles');
+        if (!container && this.#mediaElement?.parentNode) {
+            container = document.createElement('div');
+            container.classList.add('videoSubtitles');
+            this.#mediaElement.parentNode.appendChild(container);
+        }
+        return container;
+    }
+
+    /**
+     * Get the top or bottom band, creating it on first use.
+     * @private
+     */
+    #getSubtitleBand(container, band) {
+        const className = `videoSubtitlesBand-${band}`;
+        let elem = container.querySelector(`.${className}`);
+        if (!elem) {
+            elem = document.createElement('div');
+            elem.classList.add('videoSubtitlesBand', className);
+            container.appendChild(elem);
+        }
+        return elem;
+    }
+
+    /**
+     * Move each subtitle layer into the band its placement names and set the band's layout.
+     *
+     * Layers in a band are flex siblings, which is what makes overlap impossible: the bottom
+     * band is laid out in reverse so its first child sits on the floor and the next stacks
+     * above it. Two layers in the same band with different alignments (bottom left + bottom
+     * right) share a line instead, as a row.
+     *
+     * @private
+     */
+    #placeSubtitleLayers() {
+        const primaryLayer = this.#videoSubtitlesElem?.parentNode;
+        const secondaryLayer = this.#videoSecondarySubtitlesElem?.parentNode;
+        if (!primaryLayer && !secondaryLayer) return;
+
+        const container = this.#getSubtitlesContainer();
+        if (!container) return;
+
+        // The panel may already be open when a track starts rendering.
+        this.#applySubtitleContainerInset(container);
+
+        const primaryPlacement = resolvePlacement(
+            userSettings.getSubtitleAppearanceSettings().position);
+        const secondaryPlacement = resolvePlacement(
+            userSettings.getSubtitleAppearanceSettings(SECONDARY_SUBTITLE_APPEARANCE_KEY).position);
+
+        // Order matters: the primary is appended first so it ends up nearest the screen edge.
+        if (primaryLayer) {
+            this.#getSubtitleBand(container, primaryPlacement.band).appendChild(primaryLayer);
+        }
+        if (secondaryLayer) {
+            this.#getSubtitleBand(container, secondaryPlacement.band).appendChild(secondaryLayer);
+        }
+
+        const sharedBand = primaryLayer && secondaryLayer
+            && primaryPlacement.band === secondaryPlacement.band ?
+            primaryLayer.parentNode :
+            null;
+        const isRow = !!sharedBand
+            && getBandLayout(primaryPlacement, secondaryPlacement) === 'row';
+
+        for (const band of container.querySelectorAll('.videoSubtitlesBand')) {
+            band.classList.toggle('videoSubtitlesBand-row', isRow && band === sharedBand);
+
+            // Drop bands that no longer hold a layer
+            if (!band.children.length) tryRemoveElement(band);
+        }
     }
 
     /**
      * @private
      */
-    setSubtitleAppearance(elem, innerElem) {
+    setSubtitleAppearance(elem, innerElem, targetTextTrackIndex = PRIMARY_TEXT_TRACK_INDEX) {
+        const appearanceKey = this.isSecondaryTrack(targetTextTrackIndex) ?
+            SECONDARY_SUBTITLE_APPEARANCE_KEY :
+            undefined;
         subtitleAppearanceHelper.applyStyles({
             text: innerElem,
             window: elem
-        }, userSettings.getSubtitleAppearanceSettings());
+        }, userSettings.getSubtitleAppearanceSettings(appearanceKey));
+    }
+
+    updateSubtitleAppearance() {
+        this.#placeSubtitleLayers();
+
+        if (this.#videoSubtitlesElem) {
+            this.setSubtitleAppearance(
+                this.#videoSubtitlesElem.parentNode,
+                this.#videoSubtitlesElem,
+                PRIMARY_TEXT_TRACK_INDEX
+            );
+        }
+        if (this.#videoSecondarySubtitlesElem) {
+            this.setSubtitleAppearance(
+                this.#videoSecondarySubtitlesElem.parentNode,
+                this.#videoSecondarySubtitlesElem,
+                SECONDARY_TEXT_TRACK_INDEX
+            );
+        }
+        this.setCueAppearance();
+        this.#alignSecondaryLayer();
+    }
+
+    /**
+     * Fix up what the band layout cannot express on its own. Runs after
+     * setSubtitleAppearance, whose inline styles it overwrites.
+     * @private
+     */
+    #alignSecondaryLayer() {
+        const secondaryLayer = this.#videoSecondarySubtitlesElem?.parentNode;
+        if (!secondaryLayer) return;
+
+        const primarySettings = userSettings.getSubtitleAppearanceSettings();
+        const secondarySettings = userSettings.getSubtitleAppearanceSettings(
+            SECONDARY_SUBTITLE_APPEARANCE_KEY);
+        const primaryPlacement = resolvePlacement(primarySettings.position);
+        const secondaryPlacement = resolvePlacement(secondarySettings.position);
+
+        const primaryLayer = this.#videoSubtitlesElem?.parentNode;
+        const sharesBand = primaryLayer && primaryPlacement.band === secondaryPlacement.band;
+
+        if (sharesBand && getBandLayout(primaryPlacement, secondaryPlacement) === 'row') {
+            // Each layer already owns its half of the band, so centre the text within that
+            // half rather than pushing it out to the bezel where overscan clips it.
+            primaryLayer.style.justifyContent = 'center';
+            secondaryLayer.style.justifyContent = 'center';
+
+            // Neither is above the other, so match the primary's offset to sit level.
+            const primaryMargin = getComputedStyle(primaryLayer);
+            secondaryLayer.style.marginBottom = primaryMargin.marginBottom;
+            secondaryLayer.style.marginTop = primaryMargin.marginTop;
+            return;
+        }
+
+        this.#updateStackedSecondaryOffset();
+    }
+
+    /**
+     * Keep a custom secondary layer clear of a natively rendered primary.
+     *
+     * When both layers are ours they are flex siblings in a band and cannot overlap. But the
+     * primary may be drawn by the browser as native cues, whose box we cannot measure or put
+     * in our band, so the secondary is nudged above it by arithmetic instead: the primary's
+     * own line offset, plus the lines in the cue it is currently showing, plus the gap.
+     *
+     * The result is an approximation, because it assumes the native cue box uses the same
+     * line height as our container. It is still much closer than measuring in the secondary's
+     * own em, which drifts as soon as the two profiles use different text sizes.
+     *
+     * @private
+     */
+    #updateStackedSecondaryOffset() {
+        const secondaryLayer = this.#videoSecondarySubtitlesElem?.parentNode;
+        if (!secondaryLayer) return;
+
+        const primarySettings = userSettings.getSubtitleAppearanceSettings();
+        const secondarySettings = userSettings.getSubtitleAppearanceSettings(
+            SECONDARY_SUBTITLE_APPEARANCE_KEY);
+        const roles = getLayerRoles(primarySettings.position, secondarySettings.position);
+
+        // A custom primary is handled by the band layout, so the value the appearance helper
+        // already wrote is correct - leave it alone.
+        if (this.#videoSubtitlesElem || roles.secondary !== 'stacked') return;
+
+        const container = secondaryLayer.closest('.videoSubtitles');
+        if (!container) return;
+
+        const basePx = parseFloat(getComputedStyle(container).fontSize) || 0;
+        const primaryLines = Math.abs(parseInt(primarySettings.verticalPosition, 10) || 0);
+        const gapLines = Math.abs(parseInt(secondarySettings.verticalPosition, 10) || 0);
+        const lines = primaryLines + Math.max(this.#primaryCueLineCount, 1) + gapLines;
+
+        const offset = `${lines * LINE_HEIGHT * getTextScale(primarySettings) * basePx}px`;
+
+        // Overwrites the helper's margin, so this has to run after setSubtitleAppearance.
+        if (resolvePlacement(secondarySettings.position).band === 'bottom') {
+            secondaryLayer.style.marginBottom = offset;
+        } else {
+            secondaryLayer.style.marginTop = offset;
+        }
+    }
+
+    #updateNativeSubtitleSettingsLayout() {
+        const videoElement = this.#mediaElement;
+
+        if (!this.#subtitleSettingsOpen) {
+            for (const [ cue, layout ] of this.#subtitleSettingsCueLayouts) {
+                try {
+                    cue.position = layout.position;
+                    cue.size = layout.size;
+                    if (layout.positionAlign !== undefined) {
+                        cue.positionAlign = layout.positionAlign;
+                    }
+                } catch (error) {
+                    console.debug('[HtmlVideoPlayer] failed to restore native subtitle layout', error);
+                }
+            }
+            this.#subtitleSettingsCueLayouts.clear();
+            return;
+        }
+
+        const videoWidth = videoElement?.getBoundingClientRect().width;
+        if (!videoWidth || !videoElement.textTracks) return;
+
+        const availablePercent = Math.max(0, Math.min(100,
+            ((videoWidth - this.#subtitleSettingsPanelWidth) / videoWidth) * 100));
+
+        for (const track of Array.from(videoElement.textTracks)) {
+            for (const cue of Array.from(track.cues || [])) {
+                if (!this.#subtitleSettingsCueLayouts.has(cue)) {
+                    this.#subtitleSettingsCueLayouts.set(cue, {
+                        position: cue.position,
+                        positionAlign: cue.positionAlign,
+                        size: cue.size
+                    });
+                }
+
+                try {
+                    cue.positionAlign = 'center';
+                    cue.position = availablePercent / 2;
+                    cue.size = availablePercent;
+                } catch (error) {
+                    console.debug('[HtmlVideoPlayer] failed to adjust native subtitle layout', error);
+                }
+            }
+        }
+    }
+
+    setSubtitleSettingsOpen(open, panelWidth = 0) {
+        this.#subtitleSettingsOpen = open;
+        this.#subtitleSettingsPanelWidth = panelWidth;
+
+        this.#applySubtitleContainerInset(document.querySelector('.videoSubtitles'));
+        this.#updateNativeSubtitleSettingsLayout();
+    }
+
+    /**
+     * Hold the subtitle container clear of the settings panel.
+     *
+     * Set here rather than in CSS because the stylesheet would have to reach for
+     * min()/max() to size the panel, which older TV browsers cannot parse - and a
+     * var() carrying an unparseable value is invalid at computed-value time, taking
+     * 'right' back to its initial 'auto' and collapsing the container to
+     * shrink-to-fit rather than leaving it full width.
+     *
+     * @private
+     */
+    #applySubtitleContainerInset(container) {
+        if (!container) return;
+
+        container.style.right = this.#subtitleSettingsOpen && this.#subtitleSettingsPanelWidth ?
+            `${this.#subtitleSettingsPanelWidth}px` :
+            '';
     }
 
     /**
@@ -1642,7 +1974,7 @@ export class HtmlVideoPlayer {
                 return;
             }
 
-            if (useCustomSubtitles(userSettings)) {
+            if (this.isSecondaryTrack(targetTextTrackIndex) || useCustomSubtitles(userSettings)) {
                 this.renderSubtitlesWithCustomElement(videoElement, track, item, targetTextTrackIndex);
                 return;
             }
@@ -1677,8 +2009,14 @@ export class HtmlVideoPlayer {
 
             console.debug(`downloaded ${data.TrackEvents.length} track events`);
 
-            const subtitleAppearance = userSettings.getSubtitleAppearanceSettings();
-            const cueLine = parseInt(subtitleAppearance.verticalPosition, 10);
+            const appearanceKey = this.isSecondaryTrack(targetTextTrackIndex) ?
+                SECONDARY_SUBTITLE_APPEARANCE_KEY :
+                undefined;
+            const subtitleAppearance = userSettings.getSubtitleAppearanceSettings(appearanceKey);
+            const placement = resolvePlacement(subtitleAppearance.position);
+            // Unsigned since placement carries the band; native cue lines count from the
+            // bottom when negative, where -1 is the bottom-most line.
+            const offsetLines = Math.abs(parseInt(subtitleAppearance.verticalPosition, 10) || 0);
 
             // add some cues to show the text
             // in safari, the cues need to be added before setting the track mode to showing
@@ -1688,19 +2026,60 @@ export class HtmlVideoPlayer {
                 const cue = new TrackCue(trackEvent.StartPositionTicks / 10000000, trackEvent.EndPositionTicks / 10000000, text);
 
                 if (cue.line === 'auto') {
-                    if (cueLine < 0) {
+                    if (placement.band === 'bottom') {
                         const lineCount = (text.match(/\n/g) || []).length;
-                        cue.line = cueLine - lineCount;
+                        cue.line = -(offsetLines + 1) - lineCount;
                     } else {
-                        cue.line = cueLine;
+                        cue.line = offsetLines;
                     }
                 }
+
+                applyCueAlignment(cue, placement.align);
 
                 trackElement.addCue(cue);
             }
 
             trackElement.mode = 'showing';
+
+            if (this.isPrimaryTrack(targetTextTrackIndex)) {
+                this.#trackPrimaryCueLines(trackElement);
+            }
+
+            this.#updateNativeSubtitleSettingsLayout();
         });
+    }
+
+    /**
+     * Follow the primary native track's active cue so a stacked secondary layer can be kept
+     * above it as the cue's line count changes.
+     * @private
+     */
+    #trackPrimaryCueLines(trackElement) {
+        if (this.#primaryCueChangeTrack === trackElement) return;
+
+        this.#stopTrackingPrimaryCueLines();
+        this.#primaryCueChangeTrack = trackElement;
+        this.#onPrimaryCueChange = () => {
+            const cue = trackElement.activeCues?.[0];
+            const lines = cue ? (cue.text.match(/\n/g) || []).length + 1 : 0;
+            if (lines === this.#primaryCueLineCount) return;
+
+            this.#primaryCueLineCount = lines;
+            this.#alignSecondaryLayer();
+        };
+        trackElement.addEventListener('cuechange', this.#onPrimaryCueChange);
+    }
+
+    /**
+     * @private
+     */
+    #stopTrackingPrimaryCueLines() {
+        if (this.#primaryCueChangeTrack && this.#onPrimaryCueChange) {
+            this.#primaryCueChangeTrack.removeEventListener('cuechange', this.#onPrimaryCueChange);
+        }
+        this.#primaryCueChangeTrack = null;
+        this.#onPrimaryCueChange = null;
+        this.#primaryCueLineCount = 0;
     }
 
     /**
@@ -1724,9 +2103,16 @@ export class HtmlVideoPlayer {
                     }
                 }
 
-                if (selectedTrackEvent?.Text) {
+                // This runs on every timeupdate, so skip the sanitize and the DOM write
+                // unless the cue actually changed - otherwise identical text is re-parsed
+                // and re-laid out several times a second, for both layers.
+                const text = selectedTrackEvent?.Text || '';
+                if (text === this.#renderedSubtitleText[i]) continue;
+                this.#renderedSubtitleText[i] = text;
+
+                if (text) {
                     subtitleTextElement.innerHTML = DOMPurify.sanitize(
-                        normalizeTrackEventText(selectedTrackEvent.Text, true));
+                        normalizeTrackEventText(text, true));
                     subtitleTextElement.classList.remove('hide');
                 } else {
                     subtitleTextElement.classList.add('hide');

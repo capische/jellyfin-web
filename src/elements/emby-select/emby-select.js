@@ -1,6 +1,7 @@
 import layoutManager from '../../components/layoutManager';
 import browser from '../../scripts/browser';
 import actionsheet from '../../components/actionSheet/actionSheet';
+import dom from '../../utils/dom';
 import './emby-select.scss';
 import 'webcomponents.js/webcomponents-lite';
 
@@ -41,7 +42,10 @@ function showActionSheet(select) {
     actionsheet.show({
         items: select.options,
         positionTo: select,
-        title: title
+        title: title,
+        // Selects living in an overlay that should stay visible behind the menu
+        // (e.g. the in-player subtitle settings) opt into the compact box.
+        boxed: !!dom.parentWithClass(select, 'boxedSelectMenus')
 
     }).then(function (value) {
         setValue(select, value);

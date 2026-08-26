@@ -464,6 +464,12 @@ export default function (view) {
                 break;
 
             case 'back':
+                if (currentVisibleMenu === 'subtitleappearance') {
+                    closeSubtitleAppearanceSettings();
+                    e.preventDefault();
+                    break;
+                }
+
                 // Ignore command when some dialog is opened
                 if (currentVisibleMenu === 'osd' && !getOpenedDialog()) {
                     hideOsd();
@@ -973,6 +979,8 @@ export default function (view) {
                     quality: state.MediaSource?.SupportsTranscoding,
                     stats: true,
                     suboffset: showSubOffset,
+                    subtitleAppearance: appHost.supports(AppFeature.SubtitleAppearance),
+                    boxed: true,
                     onOption: onSettingsOption
                 }).finally(() => {
                     resetIdle();
@@ -991,6 +999,42 @@ export default function (view) {
             if (player) {
                 playbackManager.enableShowingSubtitleOffset(player);
                 toggleSubtitleSync();
+            }
+        } else if (selectedOption === 'subtitleappearance') {
+            showSubtitleAppearanceSettings();
+        }
+    }
+
+    function showSubtitleAppearanceSettings() {
+        if (subtitleAppearanceOverlay || !currentPlayer) return;
+
+        hideMainOsdControls();
+        currentVisibleMenu = 'subtitleappearance';
+        import('components/playback/playerSubtitleSettings').then(({ default: PlayerSubtitleSettings }) => {
+            if (!currentPlayer || currentVisibleMenu !== 'subtitleappearance') return;
+
+            subtitleAppearanceOverlay = new PlayerSubtitleSettings({
+                container: view,
+                player: currentPlayer,
+                hasSecondarySubtitle: (playbackManager.getSecondarySubtitleStreamIndex(currentPlayer) ?? -1) > -1,
+                onClose: closeSubtitleAppearanceSettings
+            });
+        }).catch((error) => {
+            console.error('[VideoPlayer] failed to load subtitle appearance settings', error);
+            closeSubtitleAppearanceSettings();
+        });
+    }
+
+    function closeSubtitleAppearanceSettings(restoreOsd = true) {
+        if (subtitleAppearanceOverlay) {
+            subtitleAppearanceOverlay.destroy();
+            subtitleAppearanceOverlay = null;
+        }
+
+        if (currentVisibleMenu === 'subtitleappearance') {
+            currentVisibleMenu = null;
+            if (restoreOsd) {
+                showOsd(view.querySelector('.btnVideoOsdSettings'));
             }
         }
     }
@@ -1040,7 +1084,8 @@ export default function (view) {
             actionsheet.show({
                 items: menuItems,
                 title: globalize.translate('Audio'),
-                positionTo: positionTo
+                positionTo: positionTo,
+                boxed: true
             }).then(function (id) {
                 const index = parseInt(id, 10);
 
@@ -1086,7 +1131,8 @@ export default function (view) {
         actionsheet.show({
             title: globalize.translate('SecondarySubtitles'),
             items: menuItems,
-            positionTo
+            positionTo,
+            boxed: true
         }).then(function (id) {
             if (id) {
                 const index = parseInt(id, 10);
@@ -1144,8 +1190,14 @@ export default function (view) {
                 && playbackManager.trackHasSecondarySubtitleSupport(playbackManager.getSubtitleStream(player, currentIndex), player);
 
         if (currentTrackCanAddSecondarySubtitle) {
+            const currentSecondaryIndex = playbackManager.getSecondarySubtitleStreamIndex(player);
+            const currentSecondaryStream = secondaryStreams.find((stream) => stream.Index === currentSecondaryIndex);
+            const secondarySubtitleName = currentSecondaryStream?.Title
+                || currentSecondaryStream?.DisplayTitle?.split(' - ')[0]
+                || currentSecondaryStream?.Language
+                || globalize.translate('Off');
             const secondarySubtitleMenuItem = {
-                name: globalize.translate('SecondarySubtitles'),
+                name: `${globalize.translate('SecondarySubtitles')} – ${secondarySubtitleName}`,
                 id: 'secondarysubtitle'
             };
             menuItems.unshift(secondarySubtitleMenuItem);
@@ -1156,10 +1208,18 @@ export default function (view) {
         import('components/actionSheet/actionSheet').then(({ default: actionsheet }) => {
             actionsheet.show({
                 title: globalize.translate('Subtitles'),
+                titleButton: {
+                    icon: 'settings',
+                    id: 'subtitleappearance',
+                    title: globalize.translate('HeaderSubtitleAppearance')
+                },
                 items: menuItems,
-                positionTo: positionTo
+                positionTo: positionTo,
+                boxed: true
             }).then(function (id) {
-                if (id === 'secondarysubtitle') {
+                if (id === 'subtitleappearance') {
+                    showSubtitleAppearanceSettings();
+                } else if (id === 'secondarysubtitle') {
                     try {
                         showSecondarySubtitlesMenu(actionsheet, positionTo);
                     } catch (e) {
@@ -1173,7 +1233,9 @@ export default function (view) {
                     }
                 }
 
-                toggleSubtitleSync();
+                if (id !== 'subtitleappearance') {
+                    toggleSubtitleSync();
+                }
             }).finally(() => {
                 resetIdle();
             });
@@ -1216,6 +1278,12 @@ export default function (view) {
 
     function onKeyDown(e) {
         clickedElement = e.target;
+
+        // The subtitle appearance panel (and the menus it opens) handle their own
+        // keys. Without this the player treats OK/Enter on a field as play/pause.
+        if (currentVisibleMenu === 'subtitleappearance') {
+            return;
+        }
 
         const isKeyModified = e.ctrlKey || e.altKey || e.metaKey;
 
@@ -1635,6 +1703,7 @@ export default function (view) {
     let programEndDateMs = 0;
     let playbackStartTimeTicks = 0;
     let subtitleSyncOverlay;
+    let subtitleAppearanceOverlay;
     let trickplayResolution = null;
     const nowPlayingVolumeSlider = view.querySelector('.osdVolumeSlider');
     const nowPlayingVolumeSliderContainer = view.querySelector('.osdVolumeSliderContainer');
@@ -1787,10 +1856,15 @@ export default function (view) {
 
         destroyStats();
         destroySubtitleSync();
+        closeSubtitleAppearanceSettings(false);
     });
     let lastPointerDown = 0;
     /* eslint-disable-next-line compat/compat */
     dom.addEventListener(view, window.PointerEvent ? 'pointerdown' : 'click', function (e) {
+        if (dom.parentWithClass(e.target, 'playerSubtitleSettings')) {
+            return;
+        }
+
         if (dom.parentWithClass(e.target, ['videoOsdBottom', 'upNextContainer'])) {
             showOsd();
             return;

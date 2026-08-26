@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as *;
+
 .actionSheet {
     display: flex;
     justify-content: center;
@@ -15,6 +17,28 @@
 .actionsheet-fullscreen {
     max-height: none;
     border-radius: 0 !important;
+}
+
+/* Used by the player menus, which already render as a box outside the TV
+   layout. On TV it replaces the fullscreen takeover with the same compact
+   translucent box so the video stays visible behind it. */
+.layout-tv .actionSheet.actionSheet-boxed {
+    /* Plain value plus a media query rather than min(): TV browsers predating
+       Chrome 79 drop the whole declaration, leaving the box unbounded. */
+    max-width: 32em;
+    max-height: 72%;
+    border-radius: 0.4em !important;
+
+    @include player-overlay-surface;
+
+    /* Undo the 125% TV baseline so the box does not dominate the screen. */
+    font-size: 0.8em;
+}
+
+@media all and (max-width: 40em) {
+    .layout-tv .actionSheet.actionSheet-boxed {
+        max-width: 80%;
+    }
 }
 
 .actionSheetContent-centered {
@@ -106,6 +130,38 @@
     margin: 0.6em 0 0.7em !important;
     padding: 0 0.75rem;
     flex-grow: 0;
+}
+
+.actionSheetTitleRow {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.6em 0 0.7em;
+
+    .actionSheetTitle {
+        flex: 1;
+        margin: 0 !important;
+
+        [dir="ltr"] & {
+            padding-right: 0.75rem;
+        }
+
+        [dir="rtl"] & {
+            padding-left: 0.75rem;
+        }
+    }
+}
+
+.actionSheetTitleButton {
+    flex: none;
+
+    [dir="ltr"] & {
+        margin-right: 0.5rem;
+    }
+
+    [dir="rtl"] & {
+        margin-left: 0.5rem;
+    }
 }
 
 .actionSheetText {
