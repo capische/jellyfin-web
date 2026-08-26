@@ -100,7 +100,7 @@
         <div class="selectContainer">
             <select is="emby-select" id="selectTextSize" label="${LabelTextSize}">
                 <option value="tiniest">${Tiniest}</option>
-                <option value="tinier">${Tinnier}</option>
+                <option value="tinier">${Tinier}</option>
                 <option value="tiny">${Tiny}</option>
                 <option value="extrasmaller">${ExtraSmaller}</option>
                 <option value="smaller">${Smaller}</option>
@@ -168,9 +168,19 @@
             </select>
         </div>
 
+        <div class="selectContainer">
+            <select is="emby-select" id="selectSubtitlePosition" label="${LabelSubtitlePosition}">
+                <option value="top">${PositionTop}</option>
+                <option value="bottom">${PositionBottom}</option>
+                <option value="bottom-left">${PositionBottomLeft}</option>
+                <option value="bottom-right">${PositionBottomRight}</option>
+            </select>
+            <div class="fieldDescription">${SubtitlePositionHelp}</div>
+        </div>
+
         <div class="sliderContainer-settings">
             <div class="sliderContainer">
-                <input is="emby-slider" id="sliderVerticalPosition" label="${LabelSubtitleVerticalPosition}" type="range" min="-16" max="16" />
+                <input is="emby-slider" id="sliderVerticalPosition" label="${LabelSubtitleVerticalPosition}" type="range" min="0" max="16" />
             </div>
             <div class="fieldDescription">${SubtitleVerticalPositionHelp}</div>
         </div>

@@ -10,3 +10,18 @@
         #{$property}: max($max-value, $default);
     }
 }
+
+// The frosted surface shared by the in-player menus and the subtitle appearance
+// panel, so the two cannot drift apart again. Compile-time values rather than
+// custom properties: a var() whose substitution fails is invalid at
+// computed-value time, and a dropped background would leave text over bare
+// video. backdrop-filter simply does nothing where it is unsupported.
+$player-overlay-background: rgba(22, 22, 22, 0.78) !default;
+// rem, not em: the menus and the panel run at different font sizes, so an em
+// blur would resolve to a slightly different radius in each.
+$player-overlay-blur: blur(1.2rem) saturate(1.4) !default;
+
+@mixin player-overlay-surface {
+    background-color: $player-overlay-background;
+    backdrop-filter: $player-overlay-blur;
+}
