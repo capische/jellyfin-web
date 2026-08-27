@@ -173,10 +173,14 @@ const scrollerFactory = function (frame, options) {
     let slideeSize = 0;
     function ensureSizeInfo() {
         if (requiresReflow) {
-            requiresReflow = false;
-
             // Reset global variables
             frameSize = slideeElement[o.horizontal ? 'clientWidth' : 'clientHeight'];
+
+            // The element has not been laid out yet (i.e. it is still hidden). Measuring now would
+            // cache a zero frame size and break any positioning (like centering the focused item)
+            // that happens before the first resize, so keep the reflow pending instead.
+            requiresReflow = frameSize === 0;
+
             slideeSize = o.scrollWidth || Math.max(slideeElement[o.horizontal ? 'offsetWidth' : 'offsetHeight'], slideeElement[o.horizontal ? 'scrollWidth' : 'scrollHeight']);
 
             // Set position limits & relatives
@@ -269,6 +273,13 @@ const scrollerFactory = function (frame, options) {
          */
     self.slideTo = function (newPos, immediate, fullItemPos) {
         ensureSizeInfo();
+
+        // The frame has not been laid out yet, so any position computed from it (i.e. the center of
+        // a freshly focused item) is bogus. Ignore it rather than scrolling to a random offset.
+        if (!frameSize && newPos) {
+            return;
+        }
+
         const pos = self._pos;
 
         if (layoutManager.tv && globalize.getIsRTL()) {
