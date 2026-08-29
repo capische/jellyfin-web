@@ -236,20 +236,31 @@ export function show(options: Options) {
         html += '<div class="actionSheetContent">';
     }
 
+    let titleHtml = '';
     if (options.title) {
         if (options.titleButton) {
-            html += '<div class="actionSheetTitleRow">';
+            titleHtml += '<div class="actionSheetTitleRow">';
         }
 
-        html += '<h1 class="actionSheetTitle">' + escapeHtml(options.title) + '</h1>';
+        titleHtml += '<h1 class="actionSheetTitle">' + escapeHtml(options.title) + '</h1>';
 
         if (options.titleButton) {
-            html += `<button is="paper-icon-button-light" type="button" class="actionSheetTitleButton" data-id="${escapeHtml(options.titleButton.id)}" title="${escapeHtml(options.titleButton.title)}" aria-label="${escapeHtml(options.titleButton.title)}">
+            titleHtml += `<button is="paper-icon-button-light" type="button" class="actionSheetTitleButton" data-id="${escapeHtml(options.titleButton.id)}" title="${escapeHtml(options.titleButton.title)}" aria-label="${escapeHtml(options.titleButton.title)}">
                          <span class="material-icons ${escapeHtml(options.titleButton.icon)}" aria-hidden="true"></span>
                      </button>`;
-            html += '</div>';
+            titleHtml += '</div>';
         }
     }
+
+    // Spatial navigation cannot cross out of the scroller, which is a focus container, so a
+    // title button left outside it is unreachable by remote however visible it looks. On TV
+    // the title goes inside the scroller with the items, where the button is just another
+    // focus stop above them.
+    const titleInScroller = layoutManager.tv && !!options.titleButton;
+    if (!titleInScroller) {
+        html += titleHtml;
+    }
+
     if (options.text) {
         html += '<p class="actionSheetText">' + escapeHtml(options.text) + '</p>';
     }
@@ -262,6 +273,10 @@ export function show(options: Options) {
         scrollerClassName += ' actionSheetScroller-tv';
     }
     html += '<div class="' + scrollerClassName + ' ' + scrollClassName + '" style="' + style + '">';
+
+    if (titleInScroller) {
+        html += titleHtml;
+    }
 
     let menuItemClass = 'listItem listItem-button actionSheetMenuItem';
 

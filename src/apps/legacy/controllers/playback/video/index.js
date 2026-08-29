@@ -1042,7 +1042,6 @@ export default function (view) {
             subtitleAppearanceOverlay = new PlayerSubtitleSettings({
                 container: view,
                 player: currentPlayer,
-                hasSecondarySubtitle: (playbackManager.getSecondarySubtitleStreamIndex(currentPlayer) ?? -1) > -1,
                 onClose: closeSubtitleAppearanceSettings
             });
         }).catch((error) => {
