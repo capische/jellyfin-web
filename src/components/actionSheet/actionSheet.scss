@@ -164,6 +164,14 @@
     }
 }
 
+/* On TV the title row sits inside the scroller, so this button is a focus stop among the
+   menu items. The stock scale alone reads weakly there; a filled disc behind it makes the
+   focused stop obvious from across a room. */
+.layout-tv .actionSheetTitleButton:focus {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+}
+
 .actionSheetText {
     margin-top: 0;
     padding: 0 0.75rem;

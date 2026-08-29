@@ -11,6 +11,14 @@ import { getFlexAlign, resolvePlacement } from './subtitlePlacement';
 export const LINE_HEIGHT = 1.35;
 
 /**
+ * The vertical position setting as an unsigned line count. The sign the value used to carry
+ * now lives in `position`, but settings saved either side of that change still reach here.
+ */
+export function getLineOffset(settings) {
+    return Math.abs(parseInt(settings.verticalPosition, 10) || 0);
+}
+
+/**
  * The text size setting as a plain multiplier, for callers that need to reason about the
  * rendered line height in pixels rather than emit CSS.
  */
@@ -144,10 +152,10 @@ function getTextStyles(settings) {
  * The band the layer is appended to anchors it to the top or bottom of the screen and stacks
  * its children, so all that is left here is alignment within the band and the spacing value.
  *
- * The margin always goes on the side facing the band's edge, which makes it do double duty:
- * on the layer nearest the edge it is the distance from the screen, and on the layer stacked
- * beyond it the same margin becomes the gap between the two. It stays in this profile's own
- * em, which is what keeps the spacing predictable when its text size changes.
+ * The margin goes on the side facing the band's edge, so it reads as the distance from the
+ * screen. Where two layers stack in one band a flex column would turn the inboard one's
+ * margin into a gap instead, so the player recomputes both in pixels afterwards; this is the
+ * value it starts from, and the only one used when a layer has its band to itself.
  */
 function getWindowStyles(settings, preview) {
     const list = [];
@@ -160,8 +168,7 @@ function getWindowStyles(settings, preview) {
     // max-width percentage would then resolve against that, collapsing the text.
     list.push({ name: 'justify-content', value: getFlexAlign(placement.align) });
 
-    const lines = Math.abs(parseInt(settings.verticalPosition, 10) || 0);
-    const margin = `${lines * LINE_HEIGHT}em`;
+    const margin = `${getLineOffset(settings) * LINE_HEIGHT}em`;
 
     if (placement.band === 'bottom') {
         list.push({ name: 'margin-bottom', value: margin });
@@ -202,5 +209,6 @@ export function applyStyles(elements, appearanceSettings) {
 export default {
     getStyles: getStyles,
     applyStyles: applyStyles,
+    getLineOffset: getLineOffset,
     getTextScale: getTextScale
 };

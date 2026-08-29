@@ -6,6 +6,10 @@
  * laid out as flex siblings, so they can never overlap; the only question is whether they
  * stack (column) or sit next to each other (row).
  *
+ * When they stack, the secondary takes the edge of the band and the primary sits inboard of
+ * it. Both measure their offset from that same edge, so neither slider changes meaning when
+ * the other profile is turned on.
+ *
  * @module components/subtitleSettings/subtitlePlacement
  */
 
@@ -60,39 +64,61 @@ export function getBandLayout(primary: ResolvedPlacement, secondary: ResolvedPla
 }
 
 /**
- * The role a layer plays within its band, which decides how its vertical position value is
- * read: the edge-most layer measures from the screen edge, a stacked layer measures the gap
- * to the layer below it.
- */
-export type LayerRole = 'edge' | 'stacked';
-
-export interface LayerRoles {
-    primary: LayerRole;
-    secondary: LayerRole;
-}
-
-/**
- * Assign roles to the two layers.
+ * Lines of vertical space held for the secondary when it is stacked with the primary.
  *
- * The primary always owns the distance to the screen edge. The secondary is 'stacked' only
- * when it actually sits above the primary — sharing a band, in a column layout. Alone in its
- * band, or beside the primary in a row, it measures from the edge like the primary does.
+ * The reservation is what keeps the two layers still. Without it the secondary's box is
+ * content-sized, so the primary — which sits on top of it — would slide down every time the
+ * secondary ran out of cues and back up when the next one arrived. Two lines covers what a
+ * secondary track realistically shows; a longer cue grows past the reservation rather than
+ * being clipped.
  */
-export function getLayerRoles(
+export const RESERVED_SECONDARY_LINES = 2;
+
+/** Whether the two layers are stacked one above the other in a shared band. */
+export function isStacked(
     primaryPosition: string | undefined | null,
     secondaryPosition: string | undefined | null,
     hasSecondary = true
-): LayerRoles {
+): boolean {
     const primary = resolvePlacement(primaryPosition);
     const secondary = resolvePlacement(secondaryPosition);
 
-    const stacked = hasSecondary
+    return hasSecondary
         && primary.band === secondary.band
         && getBandLayout(primary, secondary) === 'column';
+}
+
+/** Pixel geometry for a stacked pair, all of it derived from settings alone. */
+export interface StackGeometry {
+    /** Fixed height of the secondary's slot. */
+    secondaryReserve: number;
+    /** Distance from the primary's slot to the secondary's, which may be zero. */
+    primaryGap: number;
+}
+
+/**
+ * Lay out a stacked pair so neither layer can be moved by the other's content.
+ *
+ * The secondary owns the edge of the band and measures from it. The primary measures from
+ * the same edge, but is pushed clear of the secondary's reserved slot when its own offset
+ * would put it inside: its final distance from the edge is the larger of the two. Both
+ * numbers come from the stored settings, so no cue appearing or disappearing can shift
+ * either layer.
+ *
+ * @param primaryOffset distance the primary asks to sit from the band edge, in px
+ * @param secondaryOffset distance the secondary sits from the band edge, in px
+ * @param secondaryLineHeight rendered height of one line of secondary text, in px
+ */
+export function getStackGeometry(
+    primaryOffset: number,
+    secondaryOffset: number,
+    secondaryLineHeight: number
+): StackGeometry {
+    const secondaryReserve = RESERVED_SECONDARY_LINES * secondaryLineHeight;
 
     return {
-        primary: 'edge',
-        secondary: stacked ? 'stacked' : 'edge'
+        secondaryReserve,
+        primaryGap: Math.max(0, primaryOffset - secondaryOffset - secondaryReserve)
     };
 }
 
@@ -109,9 +135,9 @@ interface MigratableSettings {
  * now carried by `position`, so it is folded into a band and the value becomes an unsigned
  * magnitude.
  *
- * A secondary profile's old value was an absolute screen position, not a gap, so there is
- * nothing meaningful to carry over — it resets to `0` (flush above the primary) and the user
- * can open it back up.
+ * A secondary profile's old value was an absolute screen position, so there is nothing
+ * meaningful to carry over — it resets to `0`, flush against the band edge, which is where a
+ * secondary usually wants to be anyway.
  *
  * Mutates and returns the passed object, matching how `getSubtitleAppearanceSettings` builds
  * its result.
