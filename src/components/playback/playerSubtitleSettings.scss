@@ -123,6 +123,54 @@ $panel-background: rgba(12, 12, 12, 0.86);
     background-color: var(--theme-primary-color, #00a4dc);
 }
 
+/* On TV the segmented control loses its box.
+   Focus on TV means the control zooms, and a zoom inside a segmented box has nowhere to go:
+   the container's overflow clips it, and without the clip it collides with its neighbour.
+   Dropping the box gives the zoom the whole row to grow into. Selection stays a fill rather
+   than becoming an underline, so the pair still reads as tabs and not as links.
+
+   The focus rules are nested a level deeper than they need to be so they outrank the stock
+   .emby-button.show-focus:focus scale, rather than depending on which file loads last. They
+   key off :focus rather than the .show-focus class, so they do not need the custom element
+   to have been upgraded. */
+.layout-tv {
+    .playerSubtitleSettings-profiles {
+        gap: 0.75em;
+        overflow: visible;
+        border: 0;
+        background-color: transparent;
+    }
+
+    .playerSubtitleSettings-profile {
+        color: #9a9a9a;
+        font-weight: 600;
+        background-color: transparent;
+        border-radius: 0.375em;
+    }
+
+    .playerSubtitleSettings-profile + .playerSubtitleSettings-profile {
+        border-inline-start: 0;
+    }
+
+    .playerSubtitleSettings-profile[aria-selected='true'] {
+        color: #000;
+        background-color: var(--theme-primary-color, #00a4dc);
+    }
+
+    .playerSubtitleSettings-profiles .playerSubtitleSettings-profile:focus {
+        /* Positioned so the zoom lifts over its neighbour rather than under it. */
+        position: relative;
+        z-index: 1;
+        color: #fff;
+        transform: scale(1.16);
+    }
+
+    /* The selected tab is already filled, so it keeps its dark text when focused. */
+    .playerSubtitleSettings-profiles .playerSubtitleSettings-profile[aria-selected='true']:focus {
+        color: #000;
+    }
+}
+
 /* The stock field spacing is tuned for a full settings page; tighten it up so
    every field fits in the panel. */
 .playerSubtitleSettings-fields {
@@ -162,6 +210,12 @@ $panel-background: rgba(12, 12, 12, 0.86);
     justify-content: center;
     min-width: 6em;
     margin: 0;
+}
+
+/* The close button has nothing but an icon to show state with. */
+.layout-tv .playerSubtitleSettings-close:focus {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
 }
 
 @media all and (max-height: 35em) and (orientation: landscape) {

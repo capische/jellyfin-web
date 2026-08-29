@@ -1,8 +1,8 @@
-import {
-    DEFAULT_SUBTITLE_POSITION,
-    getLayerRoles
-} from 'components/subtitlesettings/subtitlePlacement';
+import { attachSliderValue } from 'components/subtitlesettings/sliderValue';
+import { DEFAULT_SUBTITLE_POSITION } from 'components/subtitlesettings/subtitlePlacement';
+import layoutManager from 'components/layoutManager';
 import globalize from 'lib/globalize';
+import keyboardnavigation from 'scripts/keyboardNavigation';
 import {
     currentSettings as userSettings,
     SECONDARY_SUBTITLE_APPEARANCE_KEY
@@ -50,9 +50,44 @@ export default class PlayerSubtitleSettings {
         options.container.appendChild(this.element);
         window.addEventListener('resize', this.updateSubtitleLayout);
 
+        this.sliderValue = attachSliderValue(
+            this.element.querySelector('[data-setting="verticalPosition"]'));
         this.loadProfile();
+        this.setupTvNavigation();
         this.updateSubtitleLayout();
         this.element.querySelector('.playerSubtitleSettings-close').focus();
+    }
+
+    /**
+     * Open the panel up to a remote.
+     *
+     * Spatial navigation skips a range input outright, and skips anything carrying
+     * tabindex="-1" - which between them hid the vertical position slider and whichever
+     * profile tab was not currently selected. Both are opt-in, so only the TV layout pays
+     * for them.
+     */
+    setupTvNavigation() {
+        if (!layoutManager.tv) return;
+
+        // Without this the panel is not a focus container, so spatial navigation resolves
+        // against the whole document: it wanders off into the player controls behind the
+        // panel - SyncPlay and friends - and several of the panel's own stops become
+        // unreachable because something in the background wins on distance. Dialogs get
+        // this from dialogHelper; the panel is not one, so it says so itself.
+        this.element.classList.add('focuscontainer');
+
+        this.element.querySelectorAll('.playerSubtitleSettings-profile').forEach((button) => {
+            button.tabIndex = 0;
+        });
+
+        const slider = this.element.querySelector('[data-setting="verticalPosition"]');
+
+        // The custom element is only upgraded once the panel is in the document, so its
+        // methods are not there yet on this tick.
+        setTimeout(() => {
+            slider.classList.add('focusable');
+            slider.enableKeyboardDragging?.();
+        }, 0);
     }
 
     get appearanceKey() {
@@ -77,28 +112,7 @@ export default class PlayerSubtitleSettings {
             }
         });
 
-        this.updateSpacingLabel();
-    }
-
-    /**
-     * The vertical position value means one of two things depending on how the two subtitles
-     * are placed, so the label follows it: a distance from the screen edge normally, or the
-     * gap to the subtitle below when this profile is stacked on top of the other one.
-     */
-    updateSpacingLabel() {
-        const slider = this.element.querySelector('[data-setting="verticalPosition"]');
-        const label = slider && this.element.querySelector(`label[for="${slider.id}"]`);
-        if (!label) return;
-
-        const roles = getLayerRoles(
-            userSettings.getSubtitleAppearanceSettings().position,
-            userSettings.getSubtitleAppearanceSettings(SECONDARY_SUBTITLE_APPEARANCE_KEY).position,
-            this.options.hasSecondarySubtitle !== false
-        );
-
-        label.textContent = roles[this.activeProfile] === 'stacked' ?
-            globalize.translate('LabelSubtitleSpacing') :
-            globalize.translate('LabelSubtitleVerticalPosition');
+        this.sliderValue?.update();
     }
 
     selectProfile(profile) {
@@ -109,7 +123,9 @@ export default class PlayerSubtitleSettings {
         this.element.querySelectorAll('.playerSubtitleSettings-profile').forEach((button) => {
             const selected = button.dataset.profile === profile;
             button.setAttribute('aria-selected', selected ? 'true' : 'false');
-            button.tabIndex = selected ? 0 : -1;
+            // A roving tabindex is what a keyboard expects, but it hides the unselected tab
+            // from spatial navigation, which is the only way a remote can reach it.
+            button.tabIndex = selected || layoutManager.tv ? 0 : -1;
             if (selected) {
                 selectedButton = button;
             }
@@ -125,10 +141,6 @@ export default class PlayerSubtitleSettings {
         settings[field.dataset.setting] = field.value;
         userSettings.setSubtitleAppearanceSettings(settings, this.appearanceKey);
         this.options.player?.updateSubtitleAppearance?.();
-
-        if (field.dataset.setting === 'position') {
-            this.updateSpacingLabel();
-        }
     }
 
     onClick(event) {
@@ -152,14 +164,18 @@ export default class PlayerSubtitleSettings {
     }
 
     onKeyDown(event) {
+        // Remotes and gamepads report keys a browser keyboard never would, so the name has
+        // to be normalised before it can be compared.
+        const key = keyboardnavigation.getKeyName(event);
         const profileButton = event.target.closest('.playerSubtitleSettings-profile');
         const tabKeys = [ 'ArrowLeft', 'ArrowRight', 'Home', 'End' ];
-        if (profileButton && tabKeys.includes(event.key)) {
+
+        if (profileButton && tabKeys.includes(key)) {
             const tabs = Array.from(this.element.querySelectorAll('.playerSubtitleSettings-profile'));
             const currentIndex = tabs.indexOf(profileButton);
-            let nextIndex = event.key === 'ArrowLeft' ? currentIndex - 1 : currentIndex + 1;
-            if (event.key === 'Home') nextIndex = 0;
-            if (event.key === 'End') nextIndex = tabs.length - 1;
+            let nextIndex = key === 'ArrowLeft' ? currentIndex - 1 : currentIndex + 1;
+            if (key === 'Home') nextIndex = 0;
+            if (key === 'End') nextIndex = tabs.length - 1;
             nextIndex = (nextIndex + tabs.length) % tabs.length;
 
             event.preventDefault();
@@ -168,7 +184,11 @@ export default class PlayerSubtitleSettings {
             return;
         }
 
-        if (event.key === 'Escape') {
+        // 'Back' is what a webOS or Tizen remote sends, and it is not aliased to Escape.
+        // Without it the panel ignores the key and the player's global handler takes it as
+        // a request to leave playback altogether - and now that focus cannot wander out of
+        // the panel, this is the way out of it.
+        if (key === 'Escape' || key === 'Back') {
             event.preventDefault();
             this.options.onClose?.();
         }
@@ -185,6 +205,7 @@ export default class PlayerSubtitleSettings {
             field.removeEventListener('change', this.onFieldChange);
             field.removeEventListener('input', this.onFieldChange);
         });
+        this.sliderValue?.destroy();
         window.removeEventListener('resize', this.updateSubtitleLayout);
         this.options.player?.setSubtitleSettingsOpen?.(false);
         document.documentElement.classList.remove('playerSubtitleSettings-open');

@@ -5,11 +5,14 @@ import Screenfull from 'screenfull';
 import { useCustomSubtitles } from 'apps/legacy/features/playback/utils/subtitleStyles';
 import subtitleAppearanceHelper, {
     LINE_HEIGHT,
+    getLineOffset,
     getTextScale
 } from 'components/subtitlesettings/subtitleappearancehelper';
 import {
+    RESERVED_SECONDARY_LINES,
     getBandLayout,
-    getLayerRoles,
+    getStackGeometry,
+    isStacked,
     resolvePlacement
 } from 'components/subtitlesettings/subtitlePlacement';
 import { AppFeature } from 'constants/appFeature';
@@ -190,6 +193,67 @@ function applyCueAlignment(cue, align) {
     }
 }
 
+/** Everything getNativeCueLine reads apart from the cue itself, as a comparable value. */
+function getNativeCueBasis(placement, settings, reserveLines) {
+    return `${placement.band}:${getLineOffset(settings)}:${reserveLines}`;
+}
+
+/**
+ * Where a native cue sits, as a line number.
+ *
+ * Lines count from the bottom when negative, -1 being the bottom-most, and a cue is placed
+ * by its first line - so a multi-line cue has to be pushed up by its own extra lines to keep
+ * its last line at the requested offset. `reserveLines` lifts it further, over the slot a
+ * stacked secondary layer holds below it.
+ */
+function getNativeCueLine(text, placement, settings, reserveLines = 0) {
+    // Unsigned since placement carries the band.
+    const offsetLines = getLineOffset(settings) + reserveLines;
+
+    if (placement.band !== 'bottom') return offsetLines;
+
+    const extraLines = (text.match(/\n/g) || []).length;
+    return -(offsetLines + 1) - extraLines;
+}
+
+/**
+ * The track event covering `ticks`, found by bisection rather than a walk from the start.
+ *
+ * This runs for both layers on every timeupdate, and a feature-length track holds thousands
+ * of events, so the linear scan it replaces was doing real work several times a second on
+ * hardware that has none to spare.
+ *
+ * Events are ordered by start time, so the candidate is the last one that has already begun.
+ * Overlapping cues are rare but legal, and the earliest of an overlapping set is the one a
+ * scan from the start would have returned, so the search steps back over any cue still
+ * running to keep that behaviour.
+ */
+function findTrackEvent(trackEvents, ticks) {
+    let low = 0;
+    let high = trackEvents.length - 1;
+    let candidate = -1;
+
+    while (low <= high) {
+        const mid = (low + high) >> 1;
+
+        if (trackEvents[mid].StartPositionTicks <= ticks) {
+            candidate = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    let match;
+    for (let i = candidate; i >= 0 && trackEvents[i].EndPositionTicks >= ticks; i--) {
+        if (trackEvents[i].StartPositionTicks <= ticks) {
+            match = trackEvents[i];
+        }
+    }
+
+    return match;
+}
+
 function normalizeTrackEventText(text, useHtml) {
     const result = text
         .replace(/\\N/gi, '\n') // Correct newline characters
@@ -360,19 +424,22 @@ export class HtmlVideoPlayer {
      */
     #renderedSubtitleText = ['', ''];
     /**
-     * Lines in the primary track's active native cue, tracked so a custom secondary layer can
-     * be kept clear of it. Only meaningful while the primary renders through native cues.
-     * @type {number}
-     */
-    #primaryCueLineCount = 0;
-    /**
+     * The primary track when it is drawn by the browser as native cues, kept so its cue
+     * lines can be re-derived if the secondary layer appears or moves under it.
      * @type {TextTrack | null}
      */
-    #primaryCueChangeTrack = null;
+    #primaryNativeTrack = null;
     /**
-     * @type {(() => void) | null}
+     * What the primary's cue lines were last built from, so an appearance change that does
+     * not move them does not walk the whole cue list.
+     * @type {string}
      */
-    #onPrimaryCueChange = null;
+    #primaryNativeCueBasis = '';
+    /**
+     * The cue stylesheet as it was last written, so an unchanged one is not rewritten.
+     * @type {string}
+     */
+    #cueCss = '';
     /**
      * @type {Map<TextTrackCue, { position: number | string, positionAlign?: string, size: number }>}
      */
@@ -1391,12 +1458,20 @@ export class HtmlVideoPlayer {
         }
 
         if (targetTrackIndex === undefined || this.isPrimaryTrack(targetTrackIndex)) {
-            this.#stopTrackingPrimaryCueLines();
+            this.#primaryNativeTrack = null;
+            this.#primaryNativeCueBasis = '';
         }
 
         this.destroyCustomRenderedTrackElements(targetTrackIndex);
         this.destroyNativeTracks(videoElement, targetTrackIndex);
         this.destroyStoredTrackInfo(targetTrackIndex);
+
+        // Losing one layer changes where the other belongs - a primary lifted over a
+        // secondary that is no longer there has to come back down - and nothing else runs
+        // the layout again until an appearance setting is touched.
+        if (this.#videoSubtitlesElem || this.#primaryNativeTrack) {
+            this.updateSubtitleAppearance();
+        }
 
         const octopus = this.#currentAssRenderer;
         if (octopus) {
@@ -1703,6 +1778,9 @@ export class HtmlVideoPlayer {
      * above it. Two layers in the same band with different alignments (bottom left + bottom
      * right) share a line instead, as a row.
      *
+     * The secondary is appended first, so it is the one that sits against the band edge and
+     * the primary stacks inboard of it.
+     *
      * @private
      */
     #placeSubtitleLayers() {
@@ -1721,12 +1799,13 @@ export class HtmlVideoPlayer {
         const secondaryPlacement = resolvePlacement(
             userSettings.getSubtitleAppearanceSettings(SECONDARY_SUBTITLE_APPEARANCE_KEY).position);
 
-        // Order matters: the primary is appended first so it ends up nearest the screen edge.
-        if (primaryLayer) {
-            this.#getSubtitleBand(container, primaryPlacement.band).appendChild(primaryLayer);
-        }
+        // Order matters: the secondary is appended first so it ends up nearest the screen
+        // edge, with the primary above it.
         if (secondaryLayer) {
             this.#getSubtitleBand(container, secondaryPlacement.band).appendChild(secondaryLayer);
+        }
+        if (primaryLayer) {
+            this.#getSubtitleBand(container, primaryPlacement.band).appendChild(primaryLayer);
         }
 
         const sharedBand = primaryLayer && secondaryLayer
@@ -1775,7 +1854,8 @@ export class HtmlVideoPlayer {
             );
         }
         this.setCueAppearance();
-        this.#alignSecondaryLayer();
+        this.#alignSubtitleLayers();
+        this.#lineUpNativePrimaryCues();
     }
 
     /**
@@ -1783,7 +1863,8 @@ export class HtmlVideoPlayer {
      * setSubtitleAppearance, whose inline styles it overwrites.
      * @private
      */
-    #alignSecondaryLayer() {
+    #alignSubtitleLayers() {
+        const primaryLayer = this.#videoSubtitlesElem?.parentNode;
         const secondaryLayer = this.#videoSecondarySubtitlesElem?.parentNode;
         if (!secondaryLayer) return;
 
@@ -1793,7 +1874,10 @@ export class HtmlVideoPlayer {
         const primaryPlacement = resolvePlacement(primarySettings.position);
         const secondaryPlacement = resolvePlacement(secondarySettings.position);
 
-        const primaryLayer = this.#videoSubtitlesElem?.parentNode;
+        // Start from the helper's own margins, with no reservation; applyStackGeometry puts
+        // one back if the pair does turn out to be stacked.
+        secondaryLayer.style.height = '';
+
         const sharesBand = primaryLayer && primaryPlacement.band === secondaryPlacement.band;
 
         if (sharesBand && getBandLayout(primaryPlacement, secondaryPlacement) === 'row') {
@@ -1809,51 +1893,55 @@ export class HtmlVideoPlayer {
             return;
         }
 
-        this.#updateStackedSecondaryOffset();
+        this.#applyStackGeometry();
     }
 
     /**
-     * Keep a custom secondary layer clear of a natively rendered primary.
+     * Reserve the secondary's slot and lift the primary clear of it.
      *
-     * When both layers are ours they are flex siblings in a band and cannot overlap. But the
-     * primary may be drawn by the browser as native cues, whose box we cannot measure or put
-     * in our band, so the secondary is nudged above it by arithmetic instead: the primary's
-     * own line offset, plus the lines in the cue it is currently showing, plus the gap.
+     * Both layers measure from the same band edge, but a flex column adds up its children:
+     * the primary's margin is a gap above the secondary's slot, not a distance from the
+     * screen. Converting the two settings to pixels here is what lets the gap be computed so
+     * that the primary still ends up its own configured distance from the edge - or further
+     * out, when the secondary's slot would otherwise reach into it.
      *
-     * The result is an approximation, because it assumes the native cue box uses the same
-     * line height as our container. It is still much closer than measuring in the secondary's
-     * own em, which drifts as soon as the two profiles use different text sizes.
+     * The reservation is the whole point: it is a fixed height taken from the settings, so a
+     * secondary cue arriving or expiring cannot move the primary, and a primary cue cannot
+     * move the secondary either.
      *
      * @private
      */
-    #updateStackedSecondaryOffset() {
+    #applyStackGeometry() {
         const secondaryLayer = this.#videoSecondarySubtitlesElem?.parentNode;
         if (!secondaryLayer) return;
 
         const primarySettings = userSettings.getSubtitleAppearanceSettings();
         const secondarySettings = userSettings.getSubtitleAppearanceSettings(
             SECONDARY_SUBTITLE_APPEARANCE_KEY);
-        const roles = getLayerRoles(primarySettings.position, secondarySettings.position);
 
-        // A custom primary is handled by the band layout, so the value the appearance helper
-        // already wrote is correct - leave it alone.
-        if (this.#videoSubtitlesElem || roles.secondary !== 'stacked') return;
+        // A primary that is not ours - native cues, ASS, bitmap - has no layer to push, and
+        // is kept clear of the reservation through its own cue lines instead.
+        if (!this.#videoSubtitlesElem
+            || !isStacked(primarySettings.position, secondarySettings.position)) return;
 
         const container = secondaryLayer.closest('.videoSubtitles');
         if (!container) return;
 
         const basePx = parseFloat(getComputedStyle(container).fontSize) || 0;
-        const primaryLines = Math.abs(parseInt(primarySettings.verticalPosition, 10) || 0);
-        const gapLines = Math.abs(parseInt(secondarySettings.verticalPosition, 10) || 0);
-        const lines = primaryLines + Math.max(this.#primaryCueLineCount, 1) + gapLines;
+        const { secondaryReserve, primaryGap } = getStackGeometry(
+            getLineOffset(primarySettings) * LINE_HEIGHT * basePx,
+            getLineOffset(secondarySettings) * LINE_HEIGHT * basePx,
+            LINE_HEIGHT * getTextScale(secondarySettings) * basePx
+        );
 
-        const offset = `${lines * LINE_HEIGHT * getTextScale(primarySettings) * basePx}px`;
+        // Overwrites the helper's margins, so this has to run after setSubtitleAppearance.
+        secondaryLayer.style.height = `${secondaryReserve}px`;
 
-        // Overwrites the helper's margin, so this has to run after setSubtitleAppearance.
-        if (resolvePlacement(secondarySettings.position).band === 'bottom') {
-            secondaryLayer.style.marginBottom = offset;
+        const primaryLayer = this.#videoSubtitlesElem.parentNode;
+        if (resolvePlacement(primarySettings.position).band === 'bottom') {
+            primaryLayer.style.marginBottom = `${primaryGap}px`;
         } else {
-            secondaryLayer.style.marginTop = offset;
+            primaryLayer.style.marginTop = `${primaryGap}px`;
         }
     }
 
@@ -1943,6 +2031,16 @@ export class HtmlVideoPlayer {
      * @private
      */
     setCueAppearance() {
+        const css = this.getCueCss(
+            subtitleAppearanceHelper.getStyles(userSettings.getSubtitleAppearanceSettings()),
+            '.htmlvideoplayer');
+
+        // Replacing a stylesheet invalidates style for the whole document, and this runs on
+        // every step of the appearance sliders. Most of those steps - anything to do with
+        // placement - do not change a cue's own styling at all.
+        if (css === this.#cueCss) return;
+        this.#cueCss = css;
+
         const elementId = `${this.id}-cuestyle`;
 
         let styleElem = document.querySelector(`#${elementId}`);
@@ -1952,7 +2050,7 @@ export class HtmlVideoPlayer {
             document.getElementsByTagName('head')[0].appendChild(styleElem);
         }
 
-        styleElem.innerHTML = this.getCueCss(subtitleAppearanceHelper.getStyles(userSettings.getSubtitleAppearanceSettings()), '.htmlvideoplayer');
+        styleElem.innerHTML = css;
     }
 
     /**
@@ -2009,14 +2107,11 @@ export class HtmlVideoPlayer {
 
             console.debug(`downloaded ${data.TrackEvents.length} track events`);
 
-            const appearanceKey = this.isSecondaryTrack(targetTextTrackIndex) ?
-                SECONDARY_SUBTITLE_APPEARANCE_KEY :
-                undefined;
-            const subtitleAppearance = userSettings.getSubtitleAppearanceSettings(appearanceKey);
+            const isSecondary = this.isSecondaryTrack(targetTextTrackIndex);
+            const subtitleAppearance = userSettings.getSubtitleAppearanceSettings(
+                isSecondary ? SECONDARY_SUBTITLE_APPEARANCE_KEY : undefined);
             const placement = resolvePlacement(subtitleAppearance.position);
-            // Unsigned since placement carries the band; native cue lines count from the
-            // bottom when negative, where -1 is the bottom-most line.
-            const offsetLines = Math.abs(parseInt(subtitleAppearance.verticalPosition, 10) || 0);
+            const reserveLines = isSecondary ? 0 : this.#getSecondaryReserveLines();
 
             // add some cues to show the text
             // in safari, the cues need to be added before setting the track mode to showing
@@ -2026,12 +2121,7 @@ export class HtmlVideoPlayer {
                 const cue = new TrackCue(trackEvent.StartPositionTicks / 10000000, trackEvent.EndPositionTicks / 10000000, text);
 
                 if (cue.line === 'auto') {
-                    if (placement.band === 'bottom') {
-                        const lineCount = (text.match(/\n/g) || []).length;
-                        cue.line = -(offsetLines + 1) - lineCount;
-                    } else {
-                        cue.line = offsetLines;
-                    }
+                    cue.line = getNativeCueLine(text, placement, subtitleAppearance, reserveLines);
                 }
 
                 applyCueAlignment(cue, placement.align);
@@ -2041,8 +2131,10 @@ export class HtmlVideoPlayer {
 
             trackElement.mode = 'showing';
 
-            if (this.isPrimaryTrack(targetTextTrackIndex)) {
-                this.#trackPrimaryCueLines(trackElement);
+            if (!isSecondary) {
+                this.#primaryNativeTrack = trackElement;
+                this.#primaryNativeCueBasis = getNativeCueBasis(
+                    placement, subtitleAppearance, reserveLines);
             }
 
             this.#updateNativeSubtitleSettingsLayout();
@@ -2050,36 +2142,58 @@ export class HtmlVideoPlayer {
     }
 
     /**
-     * Follow the primary native track's active cue so a stacked secondary layer can be kept
-     * above it as the cue's line count changes.
+     * Lines of the band edge the secondary layer's slot occupies, expressed in lines of
+     * *primary* text so it can be handed to a native cue.
+     *
+     * Zero unless a custom secondary is stacked under the primary, which is the only case
+     * where the primary has to be lifted to make room for it.
+     *
      * @private
      */
-    #trackPrimaryCueLines(trackElement) {
-        if (this.#primaryCueChangeTrack === trackElement) return;
+    #getSecondaryReserveLines() {
+        if (!this.#videoSecondarySubtitlesElem) return 0;
 
-        this.#stopTrackingPrimaryCueLines();
-        this.#primaryCueChangeTrack = trackElement;
-        this.#onPrimaryCueChange = () => {
-            const cue = trackElement.activeCues?.[0];
-            const lines = cue ? (cue.text.match(/\n/g) || []).length + 1 : 0;
-            if (lines === this.#primaryCueLineCount) return;
+        const primarySettings = userSettings.getSubtitleAppearanceSettings();
+        const secondarySettings = userSettings.getSubtitleAppearanceSettings(
+            SECONDARY_SUBTITLE_APPEARANCE_KEY);
 
-            this.#primaryCueLineCount = lines;
-            this.#alignSecondaryLayer();
-        };
-        trackElement.addEventListener('cuechange', this.#onPrimaryCueChange);
+        if (!isStacked(primarySettings.position, secondarySettings.position)) return 0;
+
+        const slotLines = getLineOffset(secondarySettings) + RESERVED_SECONDARY_LINES;
+        const scale = getTextScale(secondarySettings) / (getTextScale(primarySettings) || 1);
+
+        return Math.ceil(slotLines * scale);
     }
 
     /**
+     * Re-place a natively rendered primary above the secondary's reserved slot.
+     *
+     * A native cue's box cannot be measured or moved into a band, so the only lever is its
+     * line number. Because the reservation is a fixed number of lines, this runs when the
+     * settings change rather than as cues come and go - re-lining a full track is far too
+     * much work to be doing several times a second on a TV.
+     *
      * @private
      */
-    #stopTrackingPrimaryCueLines() {
-        if (this.#primaryCueChangeTrack && this.#onPrimaryCueChange) {
-            this.#primaryCueChangeTrack.removeEventListener('cuechange', this.#onPrimaryCueChange);
+    #lineUpNativePrimaryCues() {
+        const track = this.#primaryNativeTrack;
+        if (!track) return;
+
+        const settings = userSettings.getSubtitleAppearanceSettings();
+        const placement = resolvePlacement(settings.position);
+        const reserveLines = this.#getSecondaryReserveLines();
+
+        const basis = getNativeCueBasis(placement, settings, reserveLines);
+        if (basis === this.#primaryNativeCueBasis) return;
+        this.#primaryNativeCueBasis = basis;
+
+        try {
+            for (const cue of track.cues || []) {
+                cue.line = getNativeCueLine(cue.text, placement, settings, reserveLines);
+            }
+        } catch (error) {
+            console.debug('[HtmlVideoPlayer] failed to re-line native cues', error);
         }
-        this.#primaryCueChangeTrack = null;
-        this.#onPrimaryCueChange = null;
-        this.#primaryCueLineCount = 0;
     }
 
     /**
@@ -2088,25 +2202,17 @@ export class HtmlVideoPlayer {
     updateSubtitleText(timeMs) {
         const allTrackEvents = [this.#currentTrackEvents, this.#currentSecondaryTrackEvents];
         const subtitleTextElements = [this.#videoSubtitlesElem, this.#videoSecondarySubtitlesElem];
+        const ticks = timeMs * 10000;
 
         for (let i = 0; i < allTrackEvents.length; i++) {
             const trackEvents = allTrackEvents[i];
             const subtitleTextElement = subtitleTextElements[i];
 
             if (trackEvents && subtitleTextElement) {
-                const ticks = timeMs * 10000;
-                let selectedTrackEvent;
-                for (const trackEvent of trackEvents) {
-                    if (trackEvent.StartPositionTicks <= ticks && trackEvent.EndPositionTicks >= ticks) {
-                        selectedTrackEvent = trackEvent;
-                        break;
-                    }
-                }
-
                 // This runs on every timeupdate, so skip the sanitize and the DOM write
                 // unless the cue actually changed - otherwise identical text is re-parsed
                 // and re-laid out several times a second, for both layers.
-                const text = selectedTrackEvent?.Text || '';
+                const text = findTrackEvent(trackEvents, ticks)?.Text || '';
                 if (text === this.#renderedSubtitleText[i]) continue;
                 this.#renderedSubtitleText[i] = text;
 

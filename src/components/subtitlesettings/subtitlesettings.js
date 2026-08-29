@@ -7,7 +7,9 @@ import focusManager from '../focusManager';
 import layoutManager from '../layoutManager';
 import loading from '../loading/loading';
 import subtitleAppearanceHelper from './subtitleappearancehelper';
+import { attachSliderValue } from './sliderValue';
 import { DEFAULT_SUBTITLE_POSITION } from './subtitlePlacement';
+import { SECONDARY_SUBTITLE_APPEARANCE_KEY } from '../../scripts/settings/userSettings';
 import settingsHelper from '../settingshelper';
 import dom from '../../utils/dom';
 import Events from '../../utils/events.ts';
@@ -27,6 +29,30 @@ import template from './subtitlesettings.template.html';
  * @module components/subtitleSettings/subtitleSettings
  */
 
+/**
+ * The appearance fields each subtitle profile owns a copy of.
+ *
+ * Everything else the form writes into the appearance object - how subtitles are rendered at
+ * all, and the aspect mode for bitmap subtitles - describes the pipeline rather than the
+ * look of one layer, so it stays with the primary profile and is not offered on the
+ * secondary tab.
+ */
+const PROFILE_FIELDS = [
+    'textSize',
+    'textWeight',
+    'dropShadow',
+    'font',
+    'textBackground',
+    'textColor',
+    'verticalPosition',
+    'position'
+];
+
+const PROFILE_KEYS = {
+    primary: undefined,
+    secondary: SECONDARY_SUBTITLE_APPEARANCE_KEY
+};
+
 function getSubtitleAppearanceObject(context) {
     return {
         aspectMode: context.querySelector('#selectBitmapSubtitleAspectMode').value,
@@ -42,6 +68,61 @@ function getSubtitleAppearanceObject(context) {
     };
 }
 
+/** Narrow an appearance object down to the fields a profile owns. */
+function pickProfileFields(settings) {
+    return PROFILE_FIELDS.reduce((result, field) => {
+        result[field] = settings[field];
+        return result;
+    }, {});
+}
+
+/** Just the per-profile fields, for a profile that does not own the rest of the form. */
+function getProfileAppearanceObject(context) {
+    return pickProfileFields(getSubtitleAppearanceObject(context));
+}
+
+/** Push one profile's stored values back into the shared appearance fields. */
+function applyProfileToForm(context, settings, instance) {
+    context.querySelector('#selectTextSize').value = settings.textSize || '';
+    context.querySelector('#selectTextWeight').value = settings.textWeight || 'normal';
+    context.querySelector('#selectDropShadow').value = settings.dropShadow || '';
+    context.querySelector('#selectFont').value = settings.font || '';
+    context.querySelector('#inputTextBackground').value = settings.textBackground || 'transparent';
+    context.querySelector('#selectTextColor').value = settings.textColor || '#ffffff';
+    context.querySelector('#inputTextColor').value = settings.textColor || '#ffffff';
+    context.querySelector('#sliderVerticalPosition').value = settings.verticalPosition;
+    context.querySelector('#selectSubtitlePosition').value = settings.position || DEFAULT_SUBTITLE_POSITION;
+
+    instance?.sliderValue?.update();
+    onAppearanceFieldChange({ target: context.querySelector('#selectTextSize') });
+}
+
+/** Copy what the form currently shows into the profile it belongs to. */
+function stashActiveProfile(context, instance) {
+    instance.profiles[instance.activeProfile] = Object.assign(
+        instance.profiles[instance.activeProfile] || {},
+        getProfileAppearanceObject(context));
+}
+
+function selectProfile(context, instance, profile) {
+    if (!Object.prototype.hasOwnProperty.call(PROFILE_KEYS, profile)
+        || profile === instance.activeProfile) return;
+
+    stashActiveProfile(context, instance);
+    instance.activeProfile = profile;
+
+    context.querySelectorAll('.subtitleProfile').forEach((button) => {
+        button.setAttribute('aria-selected', button.dataset.profile === profile ? 'true' : 'false');
+    });
+
+    // Fields describing the pipeline rather than one layer's look belong to the primary.
+    context.querySelectorAll('.subtitlePrimaryOnly').forEach((field) => {
+        field.classList.toggle('hide', profile !== 'primary');
+    });
+
+    applyProfileToForm(context, instance.profiles[profile], instance);
+}
+
 function toggleBitmapSubtitleAspectModeField(view) {
     const fieldBitmapSubtitleAspectMode = view.querySelector('.fldBitmapSubtitleAspectMode');
     const fieldRenderPgs = view.querySelector('.fldRenderPgs');
@@ -51,7 +132,7 @@ function toggleBitmapSubtitleAspectModeField(view) {
     fieldBitmapSubtitleAspectMode.classList.toggle('hide', !renderPgsVisible || !renderPgsEnabled);
 }
 
-function loadForm(context, user, userSettings, appearanceSettings, apiClient) {
+function loadForm(context, user, userSettings, appearanceSettings, apiClient, instance) {
     apiClient.getCultures().then(function (allCultures) {
         if (appHost.supports(AppFeature.SubtitleBurnIn) && user.Policy.EnableVideoPlaybackTranscoding) {
             context.querySelector('.fldBurnIn').classList.remove('hide');
@@ -79,6 +160,8 @@ function loadForm(context, user, userSettings, appearanceSettings, apiClient) {
         context.querySelector('#selectSubtitlePosition').value = appearanceSettings.position || DEFAULT_SUBTITLE_POSITION;
         context.querySelector('#selectBitmapSubtitleAspectMode').value = appearanceSettings.aspectMode || 'stretch';
 
+        instance?.sliderValue?.update();
+
         context.querySelector('#selectSubtitleBurnIn').value = appSettings.get('subtitleburnin') || '';
         context.querySelector('#chkSubtitleRenderPgs').checked = appSettings.get('subtitlerenderpgs') === 'true';
 
@@ -94,11 +177,22 @@ function loadForm(context, user, userSettings, appearanceSettings, apiClient) {
     });
 }
 
-function saveUser(context, user, userSettingsInstance, appearanceKey, apiClient) {
-    let appearanceSettings = userSettingsInstance.getSubtitleAppearanceSettings(appearanceKey);
-    appearanceSettings = Object.assign(appearanceSettings, getSubtitleAppearanceObject(context));
+function saveUser(context, user, userSettingsInstance, instance, apiClient) {
+    // The form only ever holds the tab on screen, so the other profile's edits live in the
+    // instance until now. Stash the visible one alongside them and write both.
+    stashActiveProfile(context, instance);
 
-    userSettingsInstance.setSubtitleAppearanceSettings(appearanceSettings, appearanceKey);
+    let appearanceSettings = userSettingsInstance.getSubtitleAppearanceSettings(instance.options.appearanceKey);
+    appearanceSettings = Object.assign(
+        appearanceSettings, getSubtitleAppearanceObject(context), instance.profiles.primary);
+
+    userSettingsInstance.setSubtitleAppearanceSettings(appearanceSettings, instance.options.appearanceKey);
+
+    const secondary = Object.assign(
+        userSettingsInstance.getSubtitleAppearanceSettings(SECONDARY_SUBTITLE_APPEARANCE_KEY),
+        instance.profiles.secondary);
+
+    userSettingsInstance.setSubtitleAppearanceSettings(secondary, SECONDARY_SUBTITLE_APPEARANCE_KEY);
 
     user.Configuration.SubtitleLanguagePreference = context.querySelector('#selectSubtitleLanguage').value;
     user.Configuration.SubtitleMode = context.querySelector('#selectSubtitlePlaybackMode').value;
@@ -114,7 +208,7 @@ function save(instance, context, userId, userSettings, apiClient, enableSaveConf
     appSettings.alwaysBurnInSubtitleWhenTranscoding(context.querySelector('#chkAlwaysBurnInSubtitleWhenTranscoding').checked);
 
     apiClient.getUser(userId).then(function (user) {
-        saveUser(context, user, userSettings, instance.appearanceKey, apiClient).then(function () {
+        saveUser(context, user, userSettings, instance, apiClient).then(function () {
             loading.hide();
             if (enableSaveConfirmation) {
                 toast(globalize.translate('SettingsSaved'));
@@ -215,6 +309,13 @@ function embed(options, self) {
 
     options.element.querySelector('form').addEventListener('submit', self.onSubmit.bind(self));
 
+    self.activeProfile = 'primary';
+    self.profiles = { primary: {}, secondary: {} };
+
+    options.element.querySelectorAll('.subtitleProfile').forEach((button) => {
+        button.addEventListener('click', () => selectProfile(options.element, self, button.dataset.profile));
+    });
+
     options.element.querySelector('#selectSubtitlePlaybackMode').addEventListener('change', onSubtitleModeChange);
     options.element.querySelector('#selectSubtitleStyling').addEventListener('change', onSubtitleStyleChange);
     options.element.querySelector('#selectSubtitleBurnIn').addEventListener('change', onSubtitleBurnInChange);
@@ -239,6 +340,7 @@ function embed(options, self) {
         self._refFullPreview = 0;
 
         const sliderVerticalPosition = options.element.querySelector('#sliderVerticalPosition');
+        self.sliderValue = attachSliderValue(sliderVerticalPosition);
         sliderVerticalPosition.addEventListener('input', onAppearanceFieldChange);
         sliderVerticalPosition.addEventListener('input', () => showSubtitlePreview.call(self));
 
@@ -300,7 +402,17 @@ export class SubtitleSettings {
 
                 const appearanceSettings = userSettings.getSubtitleAppearanceSettings(self.options.appearanceKey);
 
-                loadForm(context, user, userSettings, appearanceSettings, apiClient);
+                self.activeProfile = 'primary';
+                // Only the per-profile fields: the rest of the appearance object describes
+                // the pipeline and is owned by the form, so stale copies of it here would
+                // overwrite whatever the user just changed.
+                self.profiles = {
+                    primary: pickProfileFields(appearanceSettings),
+                    secondary: pickProfileFields(userSettings.getSubtitleAppearanceSettings(
+                        SECONDARY_SUBTITLE_APPEARANCE_KEY))
+                };
+
+                loadForm(context, user, userSettings, appearanceSettings, apiClient, self);
             });
         });
     }
@@ -310,6 +422,8 @@ export class SubtitleSettings {
     }
 
     destroy() {
+        this.sliderValue?.destroy();
+        this.sliderValue = null;
         this.options = null;
     }
 

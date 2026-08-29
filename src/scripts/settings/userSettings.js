@@ -63,7 +63,8 @@ export const SECONDARY_SUBTITLE_APPEARANCE_KEY = 'localplayersecondarysubtitleap
 
 const defaultSecondarySubtitleAppearanceSettings = {
     ...defaultSubtitleAppearanceSettings,
-    // Stacked above the primary, so this is the gap between the two rather than an offset.
+    // The secondary takes the edge of the band, under the primary, and defaults to sitting
+    // right against it.
     verticalPosition: 0
 };
 
@@ -658,6 +659,24 @@ export class UserSettings {
     }
 
     /**
+     * Get or set the language of the last secondary subtitle track that was picked.
+     *
+     * The server remembers a preference for the primary subtitle but has no notion of a
+     * secondary one, so it is kept here and matched against whatever the next item happens
+     * to offer. An empty value means the last choice was to turn it off.
+     *
+     * @param {string|undefined} val - Language, or an empty string for off.
+     * @return {string} Remembered language.
+     */
+    secondarySubtitleLanguage(val) {
+        if (val !== undefined) {
+            return this.set('secondarySubtitleLanguage', val, false);
+        }
+
+        return this.get('secondarySubtitleLanguage', false) || '';
+    }
+
+    /**
      * Get subtitle appearance settings.
      * @param {string|undefined} [key] - Settings key.
      * @return {Object} Subtitle appearance settings.
@@ -778,6 +797,7 @@ export const soundEffects = currentSettings.soundEffects.bind(currentSettings);
 export const stillWatchingPrompt = currentSettings.stillWatchingPrompt.bind(currentSettings);
 export const loadQuerySettings = currentSettings.loadQuerySettings.bind(currentSettings);
 export const saveQuerySettings = currentSettings.saveQuerySettings.bind(currentSettings);
+export const secondarySubtitleLanguage = currentSettings.secondarySubtitleLanguage.bind(currentSettings);
 export const getSubtitleAppearanceSettings = currentSettings.getSubtitleAppearanceSettings.bind(currentSettings);
 export const setSubtitleAppearanceSettings = currentSettings.setSubtitleAppearanceSettings.bind(currentSettings);
 export const getComicsPlayerSettings = currentSettings.getComicsPlayerSettings.bind(currentSettings);
