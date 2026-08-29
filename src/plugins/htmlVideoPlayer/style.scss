@@ -96,11 +96,25 @@ video[controls]::-webkit-media-controls {
     justify-content: space-between;
 }
 
-/* Stretches across its band; horizontal placement is justify-content, set per layer. */
+/* Stretches across its band; horizontal placement is justify-content, set per layer.
+   'flex: none' because a stacked secondary is given a fixed height from JS, and a flex
+   column would otherwise shrink that reservation away again. */
 .videoSubtitlesLayer {
     display: flex;
+    flex: none;
     box-sizing: border-box;
     text-align: center;
+}
+
+/* Pins the text to the band's edge within the layer, which matters for a secondary holding
+   a reserved slot taller than its cue: a one-line cue then sits exactly where a two-line one
+   ends, and anything longer grows away from the edge rather than being clipped. */
+.videoSubtitlesBand-bottom > .videoSubtitlesLayer {
+    align-items: flex-end;
+}
+
+.videoSubtitlesBand-top > .videoSubtitlesLayer {
+    align-items: flex-start;
 }
 
 .videoSubtitlesBand-row > .videoSubtitlesLayer {

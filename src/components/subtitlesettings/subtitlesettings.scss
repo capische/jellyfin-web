@@ -24,3 +24,73 @@
     display: inline-block;
     max-width: 70%;
 }
+
+/* Mirrors the in-player appearance panel: the two profiles are tabs, selection is a fill.
+   The settings page is reached with a remote too, so on TV the segmented box is dropped and
+   focus zooms - a zoom inside a clipped segmented control has nowhere to go. */
+.subtitleProfiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 22em;
+    margin: 0 0 1.5em;
+    overflow: hidden;
+    background-color: #454545;
+    border: 1px solid #606060;
+    border-radius: 0.375em;
+}
+
+.subtitleProfile {
+    justify-content: center;
+    margin: 0;
+    padding: 0.6em 0.5em;
+    color: #ddd;
+    text-align: center;
+    background-color: #454545;
+    border: 0;
+    border-radius: 0;
+}
+
+.subtitleProfile + .subtitleProfile {
+    border-inline-start: 1px solid #666;
+}
+
+.subtitleProfile[aria-selected='true'] {
+    color: #000;
+    background-color: var(--theme-primary-color, #00a4dc);
+}
+
+.layout-tv {
+    .subtitleProfiles {
+        gap: 0.75em;
+        overflow: visible;
+        background-color: transparent;
+        border: 0;
+    }
+
+    .subtitleProfile {
+        color: #9a9a9a;
+        font-weight: 600;
+        background-color: transparent;
+        border-radius: 0.375em;
+    }
+
+    .subtitleProfile + .subtitleProfile {
+        border-inline-start: 0;
+    }
+
+    .subtitleProfile[aria-selected='true'] {
+        color: #000;
+        background-color: var(--theme-primary-color, #00a4dc);
+    }
+
+    .subtitleProfiles .subtitleProfile:focus {
+        position: relative;
+        z-index: 1;
+        color: #fff;
+        transform: scale(1.16);
+    }
+
+    .subtitleProfiles .subtitleProfile[aria-selected='true']:focus {
+        color: #000;
+    }
+}
