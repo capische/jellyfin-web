@@ -230,6 +230,40 @@ function getOffset(elem) {
     return box;
 }
 
+function isLabel(elem) {
+    return elem.tagName === 'LABEL' || (elem.classList?.contains('label'));
+}
+
+// A labelled row - a select, a checkbox, "Director: ..." - puts the label first and
+// the element that actually takes focus after it, so that element's box starts well
+// to the right of the row it belongs to. Everything above and below lines up with
+// the row, so that is what alignment has to be measured against.
+function getAlignmentElement(elem) {
+    let child = elem;
+
+    for (let depth = 0; depth < 3; depth++) {
+        const parent = child.parentElement;
+
+        if (!parent) {
+            break;
+        }
+
+        if (isLabel(parent)) {
+            return parent;
+        }
+
+        for (let i = 0, length = parent.children.length; i < length; i++) {
+            if (isLabel(parent.children[i])) {
+                return parent;
+            }
+        }
+
+        child = parent;
+    }
+
+    return elem;
+}
+
 function nav(activeElement, direction, container, focusableElements) {
     activeElement = activeElement || document.activeElement;
 
@@ -254,14 +288,23 @@ function nav(activeElement, direction, container, focusableElements) {
     const point2x = parseFloat(point1x + rect.width - 1) || point1x;
     const point2y = parseFloat(point1y + rect.height - 1) || point1y;
 
-    const sourceMidX = rect.left + (rect.width / 2);
-    const sourceMidY = rect.top + (rect.height / 2);
+    // Distance along the direction of travel is measured from the element itself,
+    // but alignment across that direction is measured from its field row
+    const alignRect = getOffset(getAlignmentElement(activeElement));
+
+    const align1x = parseFloat(alignRect.left) || 0;
+    const align1y = parseFloat(alignRect.top) || 0;
+    const align2x = parseFloat(align1x + alignRect.width - 1) || align1x;
+    const align2y = parseFloat(align1y + alignRect.height - 1) || align1y;
+
+    const sourceMidX = alignRect.left + (alignRect.width / 2);
+    const sourceMidY = alignRect.top + (alignRect.height / 2);
 
     const focusable = focusableElements || container.querySelectorAll(focusableQuery);
 
-    const maxDistance = Infinity;
-    let minDistance = maxDistance;
-    let nearestElement;
+    const isVertical = direction === 2 || direction === 3;
+    const candidates = [];
+    let nearestEdge = Infinity;
 
     for (let i = 0, length = focusable.length; i < length; i++) {
         const curr = focusable[i];
@@ -327,8 +370,8 @@ function nav(activeElement, direction, container, focusableElements) {
         const x2 = x + elementRect.width - 1;
         const y2 = y + elementRect.height - 1;
 
-        const intersectX = intersects(point1x, point2x, x, x2);
-        const intersectY = intersects(point1y, point2y, y, y2);
+        const intersectX = intersects(align1x, align2x, x, x2);
+        const intersectY = intersects(align1y, align2y, y, y2);
 
         const midX = elementRect.left + (elementRect.width / 2);
         const midY = elementRect.top + (elementRect.height / 2);
@@ -361,11 +404,49 @@ function nav(activeElement, direction, container, focusableElements) {
                 break;
         }
 
-        const dist = Math.sqrt(distX * distX + distY * distY);
+        // Distance to the candidate along the direction of travel, and how big
+        // the candidate itself is along that same axis
+        const edgeDistance = isVertical ? distY : distX;
+        const size = isVertical ? elementRect.height : elementRect.width;
 
-        if (dist < minDistance) {
-            nearestElement = curr;
-            minDistance = dist;
+        nearestEdge = Math.min(nearestEdge, edgeDistance);
+
+        candidates.push({
+            elem: curr,
+            edgeDistance,
+            size,
+            dist: Math.sqrt(distX * distX + distY * distY)
+        });
+    }
+
+    // Only elements in the nearest row (or column, for horizontal navigation) compete.
+    // Without this an element that happens to line up with the active one wins over a
+    // much closer one that is merely offset across the axis - a label pushing a select
+    // to the right is enough to make focus skip past it entirely. A candidate counts as
+    // part of the nearest row while it starts within its own size of it, which keeps a
+    // row of cards reachable past the section title sitting just above it.
+    let minDistance = Infinity;
+    let nearestElement;
+
+    for (const candidate of candidates) {
+        if (candidate.edgeDistance - nearestEdge > candidate.size) {
+            continue;
+        }
+
+        if (candidate.dist < minDistance) {
+            nearestElement = candidate.elem;
+            minDistance = candidate.dist;
+        }
+    }
+
+    if (nearestElement && isVertical) {
+        // Card rows scroll horizontally, so arriving from outside one starts at its
+        // beginning instead of at whichever card happens to line up with the element
+        // left behind. Moving between rows keeps lining up as before.
+        const row = dom.parentWithClass(nearestElement, 'scrollSlider');
+
+        if (row && !dom.parentWithClass(activeElement, 'scrollSlider')) {
+            nearestElement = getFocusableElements(row, 1)[0] || nearestElement;
         }
     }
 
