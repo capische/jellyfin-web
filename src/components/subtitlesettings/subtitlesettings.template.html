@@ -64,6 +64,12 @@
             ${HeaderSubtitleAppearance}
         </h2>
 
+        <div class="subtitleProfiles" role="tablist" aria-label="${HeaderSubtitleAppearance}">
+            <button is="emby-button" id="subtitlePrimaryTab" type="button" role="tab" class="subtitleProfile emby-button" data-profile="primary" aria-selected="true" aria-controls="subtitleProfileFields">${Primary}</button>
+            <button is="emby-button" id="subtitleSecondaryTab" type="button" role="tab" class="subtitleProfile emby-button" data-profile="secondary" aria-selected="false" aria-controls="subtitleProfileFields">${Secondary}</button>
+        </div>
+
+
         <div class="subtitleappearance-fullpreview subtitleappearance-fullpreview-hide">
             <div class="subtitleappearance-fullpreview-window">
                 <div class="subtitleappearance-fullpreview-text">
@@ -86,7 +92,7 @@
             <div class="fieldDescription">${SubtitleAppearanceSettingsAlsoPassedToCastDevices}</div>
         </div>
 
-        <div class="selectContainer">
+        <div class="selectContainer subtitlePrimaryOnly">
             <select is="emby-select" id="selectSubtitleStyling" label="${LabelSubtitleStyling}">
                 <option value="Auto">${Auto}</option>
                 <option value="Custom">${Custom}</option>

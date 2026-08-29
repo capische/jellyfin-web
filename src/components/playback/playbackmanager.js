@@ -1567,13 +1567,20 @@ export class PlaybackManager {
             // Also disable secondary subtitles when disabling the primary
             // subtitles, or if it doesn't support a secondary pair
             if (selectedTrackElementIndex === -1 || !self.trackHasSecondarySubtitleSupport(newStream)) {
-                self.setSecondarySubtitleStreamIndex(-1);
+                self.setSecondarySubtitleStreamIndex(-1, player, false);
             }
 
             getPlayerData(player).subtitleStreamIndex = index;
         };
 
-        self.setSecondarySubtitleStreamIndex = function (index, player) {
+        /**
+         * @param {number} index - Stream index, -1 to turn the secondary off.
+         * @param {Object} [player] - Player.
+         * @param {boolean} [remember] - Whether this choice should be reused on the next
+         * item. False when the secondary is being dropped as a side effect of the primary
+         * changing, which is not the user saying they are done with it.
+         */
+        self.setSecondarySubtitleStreamIndex = function (index, player, remember = true) {
             player = player || self._currentPlayer;
             if (!self.playerHasSecondarySubtitleSupport(player)) return;
             if (player && !enableLocalPlaylistManagement(player)) {
@@ -1601,6 +1608,10 @@ export class PlaybackManager {
             try {
                 player.setSecondarySubtitleStreamIndex(index);
                 getPlayerData(player).secondarySubtitleStreamIndex = index;
+
+                if (remember) {
+                    userSettings.secondarySubtitleLanguage(newStream?.Language || '');
+                }
             } catch (e) {
                 console.error('[playbackmanager] AutoSet - Failed to set secondary track:', e);
             }
@@ -2584,6 +2595,28 @@ export class PlaybackManager {
             }
         }
 
+        /**
+         * The stream matching the last secondary subtitle the user picked, or -1.
+         *
+         * Nothing carries a secondary selection between items the way the server does for
+         * the primary, so it is matched by language against what this item happens to have.
+         * An item without that language simply plays without a secondary - the preference is
+         * kept for the next one that does have it.
+         */
+        function findRememberedSecondarySubtitle(mediaSource, player) {
+            const language = userSettings.secondarySubtitleLanguage().toLowerCase();
+            if (!language || language === 'und') return -1;
+
+            const match = (mediaSource.MediaStreams || []).find((stream) => (
+                stream.Type === 'Subtitle'
+                && stream.Index !== mediaSource.DefaultSubtitleStreamIndex
+                && (stream.Language || '').toLowerCase() === language
+                && self.trackHasSecondarySubtitleSupport(stream, player)
+            ));
+
+            return match ? match.Index : -1;
+        }
+
         function detectBitrate(item, mediaType) {
             const api = ServerConnections.getApi(item.ServerId);
             const apiClient = ServerConnections.getApiClient(item.ServerId);
@@ -2710,6 +2743,12 @@ export class PlaybackManager {
                 return getPlaybackMediaSource(player, apiClient, deviceProfile, item, mediaSourceId, options).then(async (mediaSource) => {
                     if (trackOptions.DefaultSecondarySubtitleStreamIndex != null) {
                         mediaSource.DefaultSecondarySubtitleStreamIndex = trackOptions.DefaultSecondarySubtitleStreamIndex;
+                    } else if (user.Configuration.RememberSubtitleSelections
+                        && mediaSource.DefaultSubtitleStreamIndex >= 0) {
+                        // Only alongside a primary. Filling this in when subtitles are
+                        // otherwise off would see it promoted to primary just below.
+                        mediaSource.DefaultSecondarySubtitleStreamIndex = findRememberedSecondarySubtitle(
+                            mediaSource, player);
                     }
 
                     if (mediaSource.DefaultSubtitleStreamIndex == null || mediaSource.DefaultSubtitleStreamIndex < 0) {

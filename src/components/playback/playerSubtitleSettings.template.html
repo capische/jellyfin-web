@@ -78,7 +78,12 @@
             </div>
         </div>
 
-        <div class="playerSubtitleSettings-actions">
+        <!-- focuscontainer-x keeps a left/right move inside this row. Without it, going
+             right from Reset is scored against every full-width field in the panel, and
+             they all win: a horizontal move is judged on horizontal gap first, so a field
+             directly above scores zero on that axis while Save pays the whole width of the
+             row. Save was unreachable by remote entirely. -->
+        <div class="playerSubtitleSettings-actions focuscontainer-x">
             <button is="emby-button" type="button" class="raised playerSubtitleSettings-reset">
                 <span>${Reset}</span>
             </button>

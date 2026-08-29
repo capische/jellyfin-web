@@ -1,0 +1,75 @@
+/* The badge is laid over the thumb, so its offsets have to resolve against the slider row
+   rather than the whole field, which includes the label above it. */
+.sliderValueContainer {
+    position: relative;
+}
+
+/* A native range input cannot carry text in its thumb, so the value is drawn on top of it.
+   Inset by half a thumb at each end, exactly as emby-slider insets its own bubble track, so
+   the badge tracks the thumb instead of drifting away from it towards the ends. */
+.sliderValueTrack {
+    position: absolute;
+
+    /* Above the slider's own layers whichever order they end up in: the element upgrade
+       that inserts them can run after this track is attached, and among positioned siblings
+       the later one would otherwise paint on top. */
+    z-index: 2;
+    top: 50%;
+    left: 0;
+    right: 0;
+    margin: 0 0.54em;
+    pointer-events: none;
+}
+
+.sliderValue {
+    position: absolute;
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.1em;
+    height: 2.1em;
+    padding: 0 0.3em;
+    color: #000;
+    font-size: 0.9em;
+    font-weight: 700;
+    line-height: 1;
+    background-color: var(--theme-primary-color, #00a4dc);
+    border-radius: 1em;
+
+    /* Half its own width and height, to sit centred on the thumb. */
+    transform: translate(-50%, -50%);
+}
+
+/* The bounds flank the track so the row reads min - value - max across. */
+.sliderValueRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+}
+
+.sliderValueRow > .sliderValueContainer {
+    flex: 1;
+
+    /* Without this the track refuses to shrink below its content width and pushes the
+       bounds out of the field. */
+    min-width: 0;
+}
+
+.sliderEnd {
+    flex: none;
+    color: #9a9a9a;
+    font-size: 0.9em;
+}
+
+/* The badge covers the thumb, so the thumb's own focus scale is invisible underneath it -
+   which left the slider looking inert under a remote while every other control grew. The
+   badge is the bullet now, so the badge is what grows, and the bounds brighten with it to
+   show the row as a whole has focus. */
+.mdl-slider:focus ~ .sliderValueTrack .sliderValue {
+    transform: translate(-50%, -50%) scale(1.3);
+}
+
+.sliderValueRow:focus-within .sliderEnd {
+    color: #fff;
+}
