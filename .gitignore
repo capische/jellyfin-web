@@ -24,3 +24,7 @@ config.json
 
 # Host-specific settings for ./jellyfin-sync
 jellyfin-sync.env
+
+# Local notes and tooling config for Claude Code, not shared
+CLAUDE.local.md
+.claude/launch.json
