@@ -12,6 +12,7 @@ import { DEFAULT_SUBTITLE_POSITION } from './subtitlePlacement';
 import { SECONDARY_SUBTITLE_APPEARANCE_KEY } from '../../scripts/settings/userSettings';
 import settingsHelper from '../settingshelper';
 import dom from '../../utils/dom';
+import keyboardnavigation from '../../scripts/keyboardNavigation';
 import Events from '../../utils/events.ts';
 
 import '../listview/listview.scss';
@@ -121,6 +122,56 @@ function selectProfile(context, instance, profile) {
     });
 
     applyProfileToForm(context, instance.profiles[profile], instance);
+}
+
+/** Keys that move between the profile tabs rather than away from them. */
+const PROFILE_TAB_KEYS = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+
+/** Keys that leave the strip, and the move each one asks the focus manager for. */
+const PROFILE_TAB_EXITS = { ArrowUp: 'moveUp', ArrowDown: 'moveDown' };
+
+/**
+ * Move between the profile tabs, or out of them.
+ *
+ * The strip is two narrow buttons sitting above a column of full width fields, and
+ * directional navigation goes by geometry alone. Sideways it finds no tab beside the one
+ * being left - the strip ends there - and settles for whichever field is nearest below;
+ * upwards and downwards the focused tab, scaled up on TV, overlaps the tab next to it
+ * enough to look like it sits above and below it, so focus never leaves the strip at all.
+ *
+ * Take both directions over: left and right cycle through the tabs, and up and down go
+ * looking for the rest of the form with the strip itself out of the running.
+ */
+function onProfileTabKeyDown(context, instance, event) {
+    // Remotes and gamepads report keys a browser keyboard never would, so the name has
+    // to be normalised before it can be compared.
+    const key = keyboardnavigation.getKeyName(event);
+    const tab = dom.parentWithClass(event.target, 'subtitleProfile');
+
+    if (!tab) return;
+
+    if (layoutManager.tv && PROFILE_TAB_EXITS[key]) {
+        event.preventDefault();
+        focusManager[PROFILE_TAB_EXITS[key]](tab, {
+            focusableElements: focusManager.getFocusableElements(context, null, 'subtitleProfile')
+        });
+        return;
+    }
+
+    if (!PROFILE_TAB_KEYS.includes(key)) return;
+
+    const tabs = Array.from(context.querySelectorAll('.subtitleProfile'));
+    const currentIndex = tabs.indexOf(tab);
+    let nextIndex = key === 'ArrowLeft' ? currentIndex - 1 : currentIndex + 1;
+
+    if (key === 'Home') nextIndex = 0;
+    if (key === 'End') nextIndex = tabs.length - 1;
+
+    nextIndex = (nextIndex + tabs.length) % tabs.length;
+
+    event.preventDefault();
+    focusManager.focus(tabs[nextIndex]);
+    selectProfile(context, instance, tabs[nextIndex].dataset.profile);
 }
 
 function toggleBitmapSubtitleAspectModeField(view) {
@@ -314,6 +365,10 @@ function embed(options, self) {
 
     options.element.querySelectorAll('.subtitleProfile').forEach((button) => {
         button.addEventListener('click', () => selectProfile(options.element, self, button.dataset.profile));
+    });
+
+    options.element.querySelector('.subtitleProfiles').addEventListener('keydown', (e) => {
+        onProfileTabKeyDown(options.element, self, e);
     });
 
     options.element.querySelector('#selectSubtitlePlaybackMode').addEventListener('change', onSubtitleModeChange);
