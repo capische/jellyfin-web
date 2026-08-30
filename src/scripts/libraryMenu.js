@@ -10,6 +10,8 @@ import { EventType } from 'constants/eventType';
 import { queryClient } from 'utils/query/queryClient';
 
 import dom from '../utils/dom';
+import focusManager from '../components/focusManager';
+import keyboardnavigation from './keyboardNavigation';
 import layoutManager from '../components/layoutManager';
 import inputManager from './inputManager';
 import viewManager from '../components/viewManager/viewManager';
@@ -225,6 +227,50 @@ function showAudioPlayer() {
     return appRouter.showNowPlaying();
 }
 
+/**
+ * Step through the header's controls with left and right.
+ *
+ * The header is two rows - buttons along the top, the section tabs centred underneath -
+ * and `focuscontainer-x` keeps sideways navigation inside it. Geometry cannot join those
+ * rows: the tab strip stretches the full width, so right from the last button drops into
+ * it, while left from the first tab has nothing to its left and focus stops dead there.
+ * Read the controls in document order instead - the order they are reached by eye - which
+ * joins the rows and leaves no dead end in either direction.
+ */
+function onHeaderKeyDown(e) {
+    if (!layoutManager.tv || e.defaultPrevented) return;
+
+    // Remotes and gamepads report keys a browser keyboard never would, so the name has to
+    // be normalised before it can be compared.
+    const key = keyboardnavigation.getKeyName(e);
+
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight') return;
+
+    // The tab strip is focusable in its own right, standing in for whichever tab is
+    // selected. It is the tabs themselves being stepped through here, so drop it - and
+    // anything else that wraps a control - from the walk.
+    //
+    // Order them by where they sit across the header rather than by where they appear in
+    // the markup. The tabs are written after the buttons but drawn between the ones on
+    // the left and the ones on the right, so following the markup made right jump from
+    // the last button back across the screen to the first tab.
+    const controls = focusManager.getFocusableElements(skinHeader)
+        .filter((elem, index, all) => !all.some((other, otherIndex) => otherIndex !== index && elem.contains(other)))
+        .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+    const current = controls.findIndex((elem) => elem.contains(document.activeElement));
+
+    if (current === -1) return;
+
+    // Round the end, so the last control leads back to the first and every one of them is
+    // a few presses away whichever way you set off. Up and down still leave the header.
+    const step = key === 'ArrowLeft' ? -1 : 1;
+    const next = controls[(current + step + controls.length) % controls.length];
+
+    e.preventDefault();
+    focusManager.focus(next);
+}
+
 function bindMenuEvents() {
     if (mainDrawerButton) {
         mainDrawerButton.addEventListener('click', toggleMainDrawer);
@@ -247,6 +293,8 @@ function bindMenuEvents() {
 
     headerAudioPlayerButton.addEventListener('click', showAudioPlayer);
     headerSyncButton.addEventListener('click', onSyncButtonClicked);
+
+    skinHeader.addEventListener('keydown', onHeaderKeyDown);
 
     if (layoutManager.mobile) {
         initHeadRoom(skinHeader);
