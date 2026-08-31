@@ -254,9 +254,29 @@ function onHeaderKeyDown(e) {
     // the markup. The tabs are written after the buttons but drawn between the ones on
     // the left and the ones on the right, so following the markup made right jump from
     // the last button back across the screen to the first tab.
+    //
+    // A tab counts as being wherever its strip is: a strip too wide for the header scrolls,
+    // leaving the tabs waiting past its edge sitting under - or beyond - the buttons, and
+    // taking those at their own position would deal them out among the buttons. Held
+    // inside the strip they stay one block, in the order they are written.
+    const position = (elem) => {
+        const box = elem.getBoundingClientRect();
+        const strip = dom.parentWithClass(elem, 'headerTabs');
+
+        if (!strip) {
+            return box.left;
+        }
+
+        const stripBox = strip.getBoundingClientRect();
+
+        return Math.min(Math.max(box.left, stripBox.left), stripBox.right);
+    };
+
     const controls = focusManager.getFocusableElements(skinHeader)
         .filter((elem, index, all) => !all.some((other, otherIndex) => otherIndex !== index && elem.contains(other)))
-        .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        .map((elem, index) => ({ elem, index, left: position(elem) }))
+        .sort((a, b) => a.left - b.left || a.index - b.index)
+        .map(({ elem }) => elem);
 
     const current = controls.findIndex((elem) => elem.contains(document.activeElement));
 
