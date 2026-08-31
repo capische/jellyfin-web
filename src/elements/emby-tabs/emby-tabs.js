@@ -10,6 +10,36 @@ import '../../styles/scrollstyles.scss';
 const EmbyTabs = Object.create(HTMLDivElement.prototype);
 const buttonClass = 'emby-tab-button';
 const activeButtonClass = buttonClass + '-active';
+const moreStartClass = 'emby-tabs-more-start';
+const moreEndClass = 'emby-tabs-more-end';
+
+/**
+ * Mark the ends the strip carries on past.
+ *
+ * A strip too wide for its frame simply stops at a word, which looks exactly like a strip
+ * that ends there - the tabs beyond leave nothing behind to say they exist. Marking the
+ * ends lets the styling fade them, so an edge that continues reads as one.
+ */
+function updateScrollMarkers(tabs) {
+    const scroller = tabs.scroller;
+
+    if (!scroller) {
+        return;
+    }
+
+    const position = scroller.getScrollPosition();
+    const visible = scroller.getScrollFrame().clientWidth;
+    const size = scroller.getScrollSize();
+
+    // Sizes are fractional, and a strip that fits its frame exactly must not claim to
+    // have more of itself either side.
+    tabs.classList.toggle(moreStartClass, position > 1);
+    tabs.classList.toggle(moreEndClass, position + visible < size - 1);
+}
+
+function onScroll() {
+    updateScrollMarkers(this);
+}
 
 function setActiveTabButton(newButton) {
     newButton.classList.add(activeButtonClass);
@@ -145,6 +175,13 @@ function initScroller(tabs) {
             allowNativeSmoothScroll: true
         });
         tabs.scroller.init();
+
+        tabs.scrollEventName = tabs.scroller.getScrollEventName();
+        dom.addEventListener(tabs, tabs.scrollEventName, onScroll, { passive: true });
+
+        // The tabs are laid out by the time the scroller has measured them, but a font
+        // still arriving will change their widths, so take the reading after a frame.
+        requestAnimationFrame(() => updateScrollMarkers(tabs));
     } else {
         tabs.classList.add('scrollX');
         tabs.classList.add('hiddenScrollX');
@@ -186,6 +223,7 @@ EmbyTabs.focus = function () {
 EmbyTabs.refresh = function () {
     if (this.scroller) {
         this.scroller.reload();
+        updateScrollMarkers(this);
     }
 };
 
@@ -215,6 +253,7 @@ EmbyTabs.attachedCallback = function () {
 
 EmbyTabs.detachedCallback = function () {
     if (this.scroller) {
+        dom.removeEventListener(this, this.scrollEventName, onScroll, { passive: true });
         this.scroller.destroy();
         this.scroller = null;
     }

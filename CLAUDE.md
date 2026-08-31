@@ -91,8 +91,16 @@ be exercised in a desktop browser:
 localStorage.setItem('layout','tv'); location.reload()
 ```
 
-Use a 1280x720 viewport to match what webOS reports, and drive it with arrow keys and Enter —
-some bugs are only reachable by D-pad. `localStorage.removeItem('layout')` restores auto.
+Use a **1920x1080 viewport**, and drive it with arrow keys and Enter — some bugs are only
+reachable by D-pad. `localStorage.removeItem('layout')` restores auto.
+
+The viewport matters more than it looks. The TV reports 1920x1080, which is past the
+`min-width: 100em` breakpoint in `styles/librarybrowser.scss`, and that breakpoint rearranges
+the header: the section tabs move up beside the header buttons into a single row, and the
+strip becomes a fixed fraction of the width that scrolls when the tabs outgrow it. A 1280x720
+viewport gets the two row header instead — a layout the TV never shows — so header work
+verified there can be aimed at the wrong thing entirely. Check 1280x720 as the narrower case,
+not as the TV.
 
 This gets you close, but it does not reproduce the TV's browser engine. webOS ships an older
 Chromium than a current desktop browser: **CSS `min()` and `max()` may be unsupported**, and a
