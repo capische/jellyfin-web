@@ -243,8 +243,13 @@
     width: 100%;
 }
 
+// The strip is centred, so this width decides how close its far end comes to the header
+// buttons: at 55% it reaches 77.5% across, and a TV with a full set of buttons starts them
+// around 80%, leaving the last tab crowded against them once the strip has scrolled to its
+// end. 50% keeps it centred and stops it a comfortable distance short. Only wide screens
+// see this - below 100em the strip has a row to itself and takes the full width.
 .layout-tv .sectionTabs {
-    width: 55%;
+    width: 50%;
 }
 
 .selectedMediaFolder {
