@@ -34,3 +34,28 @@
 .tabContent:not(.is-active) {
     display: none;
 }
+
+/* The strip fades out on any side it carries on past, so an edge with tabs beyond it
+   reads as one - a hard cut looks the same whether the strip ends there or not. Only the
+   TV layout gets this: elsewhere the strip is scrolled by hand, where the movement itself
+   says there is more of it.
+
+   The fade runs about a tab's width, so the word at the edge is carried across most of
+   its length rather than nicked at the tail, where it reads as a clipped word instead of
+   a strip that keeps going.
+
+   The fade is a mask over the tabs rather than a gradient painted on top of them, so it
+   holds whatever the header sits on - themes set that colour, and it may be a gradient or
+   translucent over the page. Autoprefixer adds the -webkit- form the older engines on a
+   TV need, so write the plain property only. */
+.layout-tv .emby-tabs-more-start {
+    mask-image: linear-gradient(to right, transparent 0, #000 8em);
+}
+
+.layout-tv .emby-tabs-more-end {
+    mask-image: linear-gradient(to left, transparent 0, #000 8em);
+}
+
+.layout-tv .emby-tabs-more-start.emby-tabs-more-end {
+    mask-image: linear-gradient(to right, transparent 0, #000 8em, #000 calc(100% - 8em), transparent 100%);
+}
