@@ -2,6 +2,8 @@ import globalize from '../../lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import EmbyButtonPrototype from '../../elements/emby-button/emby-button';
+import { EventType } from 'constants/eventType';
+import Events from 'utils/events';
 
 function onClick() {
     const button = this;
@@ -9,13 +11,16 @@ function onClick() {
     const serverId = button.getAttribute('data-serverid');
     const apiClient = ServerConnections.getApiClient(serverId);
 
+    let update;
     if (!button.classList.contains('playstatebutton-played')) {
-        apiClient.markPlayed(apiClient.getCurrentUserId(), id, new Date());
+        update = apiClient.markPlayed(apiClient.getCurrentUserId(), id, new Date());
         setState(button, true);
     } else {
-        apiClient.markUnplayed(apiClient.getCurrentUserId(), id, new Date());
+        update = apiClient.markUnplayed(apiClient.getCurrentUserId(), id, new Date());
         setState(button, false);
     }
+
+    update.then(() => Events.trigger(document, EventType.REFRESH_NEEDED));
 }
 
 function onUserDataChanged({ Data }, button) {

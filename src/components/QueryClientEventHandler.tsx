@@ -15,9 +15,9 @@ const QueryClientEventHandler: FC = () => {
         queryClient.clear()
     ), [queryClient]);
 
-    const invalidateItemQueries = useCallback(() => (
+    const invalidateUserQueries = useCallback(() => (
         queryClient.invalidateQueries({
-            queryKey: ['User', user?.Id, 'Items']
+            queryKey: ['User', user?.Id]
         })
     ), [queryClient, user?.Id]);
 
@@ -30,16 +30,16 @@ const QueryClientEventHandler: FC = () => {
     }, [clearQueries]);
 
     useEffect(() => {
-        Events.on(document, EventType.REFRESH_NEEDED, invalidateItemQueries);
+        Events.on(document, EventType.REFRESH_NEEDED, invalidateUserQueries);
 
         return () => {
-            Events.off(document, EventType.REFRESH_NEEDED, invalidateItemQueries);
+            Events.off(document, EventType.REFRESH_NEEDED, invalidateUserQueries);
         };
-    }, [invalidateItemQueries]);
+    }, [invalidateUserQueries]);
 
     useEffect(() => (
-        api?.subscribe([OutboundWebSocketMessageType.UserDataChanged], invalidateItemQueries)
-    ), [api, invalidateItemQueries]);
+        api?.subscribe([OutboundWebSocketMessageType.UserDataChanged], invalidateUserQueries)
+    ), [api, invalidateUserQueries]);
 
     return null;
 };
