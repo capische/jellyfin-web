@@ -232,9 +232,10 @@ deploy_from_local() {
     echo "Syncing dist/..."
     # Into the directory, never over it: the container bind-mounts this exact
     # path, and replacing it would leave the mount on the old, orphaned inode.
-    # --delete-after so stale chunks go only once the new ones have landed.
-    rsync --archive --compress --delete-after --human-readable \
-        --info=stats1 dist/ "$ssh_host:$web_dir/dist/"
+    # Keep content-hashed chunks from prior builds because resident TV clients
+    # continue requesting their original bundle until the app is fully closed.
+    rsync --archive --compress --human-readable --stats \
+        dist/ "$ssh_host:$web_dir/dist/"
 
     if ((restart)); then
         restart_jellyfin_remote
