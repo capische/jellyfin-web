@@ -78,8 +78,9 @@ Types in use here: `feat`, `fix`, `refactor`, `perf`, `docs`, `chore`, `test`, `
 For JellyfinMod work, use a lowercase component and phase/task ID from the plan, separated
 by a comma without spaces: `feat(catalog,p2.r1): reconcile native library bindings`,
 `fix(search,p1.w4): restore focus after adding`, or `docs(retention,p3.plan): define expiry policy`.
-Commit validated slices regularly. For existing combined commits, list their tasks after the
-component in the scope; prefer separate task commits for new work. Unrelated Jellyfin fixes retain their
+Commit validated slices regularly. For combined commits, use ranges for consecutive tasks in
+the same phase and task series, such as `catalog,p1.p5-6`. List nonconsecutive tasks or different
+phases separately; prefer separate task commits for new work. Unrelated Jellyfin fixes retain their
 normal area scopes such as `player` or `subtitles`. Never add a Codex/GPT co-author or commit
 secrets. Rewrite published history only when explicitly authorized; verify the remote tip,
 use an explicit force-with-lease, and verify the pushed commit.
