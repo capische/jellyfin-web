@@ -71,13 +71,15 @@ back to `docs/jellyfinmod/UX.md` rather than reaching for `!important`.
 Every commit made in this fork uses [Conventional Commits](https://www.conventionalcommits.org):
 
 ```
-<type>(<phase>.<task>): <description>
+<type>(<component>,<phase>.<task>): <description>
 ```
 
 Types in use here: `feat`, `fix`, `refactor`, `perf`, `docs`, `chore`, `test`, `build`.
-For JellyfinMod work, scope is the phase and task ID from the plan: `P1.W4`, `P2.R5`, or
-`P3.plan`. Commit validated slices regularly. For existing combined commits, list their tasks
-in the scope; prefer separate task commits for new work. Unrelated Jellyfin fixes retain their
+For JellyfinMod work, use a lowercase component and phase/task ID from the plan, separated
+by a comma without spaces: `feat(catalog,p2.r1): reconcile native library bindings`,
+`fix(search,p1.w4): restore focus after adding`, or `docs(retention,p3.plan): define expiry policy`.
+Commit validated slices regularly. For existing combined commits, list their tasks after the
+component in the scope; prefer separate task commits for new work. Unrelated Jellyfin fixes retain their
 normal area scopes such as `player` or `subtitles`. Never add a Codex/GPT co-author or commit
 secrets. Rewrite published history only when explicitly authorized; verify the remote tip,
 use an explicit force-with-lease, and verify the pushed commit.
