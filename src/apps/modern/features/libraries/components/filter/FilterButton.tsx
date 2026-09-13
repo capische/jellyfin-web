@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography';
 
 import { useGetQueryFilters, useGetQueryFiltersLegacy, useGetStudios } from 'hooks/useFetchItems';
 import globalize from 'lib/globalize';
+import FileFilterGroup from '../../../jellyfinmod/components/FileFilterGroup';
 
 import FiltersAudioLanguages from './FiltersAudioLanguages';
 import FiltersFeatures from './FiltersFeatures';
@@ -82,6 +83,7 @@ interface FilterButtonProps {
     itemType: BaseItemKind[];
     viewType: LibraryTab;
     hasFilters: boolean;
+    fileFiltersAvailable?: boolean;
     libraryViewSettings: LibraryViewSettings;
     setLibraryViewSettings: React.Dispatch<
         React.SetStateAction<LibraryViewSettings>
@@ -93,6 +95,7 @@ const FilterButton: FC<FilterButtonProps> = ({
     itemType,
     viewType,
     hasFilters,
+    fileFiltersAvailable = false,
     libraryViewSettings,
     setLibraryViewSettings
 }) => {
@@ -236,6 +239,22 @@ const FilterButton: FC<FilterButtonProps> = ({
                         />
                     </AccordionDetails>
                 </Accordion>
+                {fileFiltersAvailable && (
+                    <Accordion
+                        expanded={expanded === 'jfmodFileFilters'}
+                        onChange={handleChange('jfmodFileFilters')}
+                    >
+                        <AccordionSummary aria-controls='jfmodFileFilters-content' id='jfmodFileFilters-header'>
+                            <Typography>File</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <FileFilterGroup
+                                libraryViewSettings={libraryViewSettings}
+                                setLibraryViewSettings={setLibraryViewSettings}
+                            />
+                        </AccordionDetails>
+                    </Accordion>
+                )}
                 {isFiltersSeriesStatusEnabled() && (
                     <Accordion
                         expanded={expanded === 'filtersSeriesStatus'}
