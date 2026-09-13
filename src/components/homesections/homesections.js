@@ -10,9 +10,9 @@ import { loadRecordings } from './sections/activeRecordings';
 import { loadLibraryButtons } from './sections/libraryButtons';
 import { loadLibraryTiles } from './sections/libraryTiles';
 import { loadLiveTV } from './sections/liveTv';
-import { loadNextUp } from './sections/nextUp';
 import { loadRecentlyAdded } from './sections/recentlyAdded';
 import { loadResume } from './sections/resume';
+import { mountContinueRow, mountRecentRow, unmountHomeRows } from 'apps/modern/features/jellyfinmod/integration/homeSections';
 
 import 'elements/emby-button/paper-icon-button-light';
 import 'elements/emby-itemscontainer/emby-itemscontainer';
@@ -74,9 +74,10 @@ export function loadSections(elem, apiClient, user, userSettings) {
                 elem.innerHTML = html;
                 elem.classList.add('homeSectionsContainer');
 
-                const promises = getAllSectionsToShow(userSettings)
+                const selectedSections = getAllSectionsToShow(userSettings);
+                const promises = selectedSections
                     .map((section, index) => (
-                        loadSection(elem, apiClient, user, userSettings, userViews, section, index)
+                        loadSection(elem, apiClient, user, userSettings, userViews, section, index, selectedSections)
                     ));
 
                 return Promise.all(promises)
@@ -108,6 +109,7 @@ export function loadSections(elem, apiClient, user, userSettings) {
 }
 
 export function destroySections(elem) {
+    unmountHomeRows(elem);
     const elems = elem.querySelectorAll('.itemsContainer');
     for (const e of elems) {
         e.fetchData = null;
@@ -138,7 +140,9 @@ export function resume(elem, options) {
     return Promise.all(promises);
 }
 
-function loadSection(page, apiClient, user, userSettings, userViews, section, index) {
+// Home composition needs both the selected slot and the complete selection to preserve ordering.
+// eslint-disable-next-line max-params
+function loadSection(page, apiClient, user, userSettings, userViews, section, index, selectedSections) {
     const elem = page.querySelector('.section' + index);
     const options = { enableOverflow: enableScrollX() };
 
@@ -146,19 +150,38 @@ function loadSection(page, apiClient, user, userSettings, userViews, section, in
         case HomeSectionType.ActiveRecordings:
             loadRecordings(elem, true, apiClient, options);
             break;
-        case HomeSectionType.LatestMedia:
-            loadRecentlyAdded(elem, apiClient, user, userViews, options);
+        case HomeSectionType.LatestMedia: {
+            elem.classList.add('jfmod-homeSectionMount');
+            const visibleViews = userViews.filter(view => !(user.Configuration?.LatestItemsExcludes ?? []).includes(view.Id));
+            mountRecentRow(elem, visibleViews);
+            const otherViews = visibleViews.filter(view => view.CollectionType !== 'movies' && view.CollectionType !== 'tvshows');
+            if (otherViews.length) {
+                const other = document.createElement('div');
+                elem.appendChild(other);
+                loadRecentlyAdded(other, apiClient, user, otherViews, options);
+            }
             break;
+        }
         case HomeSectionType.LibraryButtons:
             loadLibraryButtons(elem, userViews);
             break;
         case HomeSectionType.LiveTv:
             return loadLiveTV(elem, apiClient, user, options);
         case HomeSectionType.NextUp:
-            loadNextUp(elem, apiClient, userSettings, options);
+            if (index === selectedSections.findIndex(value => value === HomeSectionType.NextUp || value === HomeSectionType.Resume)) {
+                elem.classList.add('jfmod-homeSectionMount');
+                mountContinueRow(elem, selectedSections.includes(HomeSectionType.Resume), true);
+            } else {
+                elem.innerHTML = '';
+            }
             break;
         case HomeSectionType.Resume:
-            loadResume(elem, apiClient, 'HeaderContinueWatching', 'Video', userSettings, options);
+            if (index === selectedSections.findIndex(value => value === HomeSectionType.NextUp || value === HomeSectionType.Resume)) {
+                elem.classList.add('jfmod-homeSectionMount');
+                mountContinueRow(elem, true, selectedSections.includes(HomeSectionType.NextUp));
+            } else {
+                elem.innerHTML = '';
+            }
             break;
         case HomeSectionType.ResumeAudio:
             loadResume(elem, apiClient, 'HeaderContinueListening', 'Audio', userSettings, options);
