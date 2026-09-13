@@ -19,6 +19,7 @@ interface PlayAllButtonProps {
     hasFilters: boolean
     isTextVisible: boolean
     libraryViewSettings: LibraryViewSettings
+    disabled?: boolean
 }
 
 const PlayAllButton: FC<PlayAllButtonProps> = ({
@@ -28,7 +29,8 @@ const PlayAllButton: FC<PlayAllButtonProps> = ({
     collectionType,
     hasFilters,
     isTextVisible,
-    libraryViewSettings
+    libraryViewSettings,
+    disabled = false
 }) => {
     const { itemsResult } = useLibrary();
     const isPending = itemsResult?.isPending ?? true;
@@ -70,7 +72,7 @@ const PlayAllButton: FC<PlayAllButtonProps> = ({
             title={globalize.translate('HeaderPlayAll')}
             startIcon={isTextVisible ? <PlayArrow /> : undefined}
             onClick={play}
-            disabled={isPending || totalRecordCount === 0}
+            disabled={disabled || isPending || totalRecordCount === 0}
         >
             {isTextVisible ? (
                 globalize.translate('HeaderPlayAll')
