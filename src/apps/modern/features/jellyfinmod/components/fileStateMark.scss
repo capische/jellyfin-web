@@ -1,0 +1,72 @@
+/* JellyfinMod — file state mark.
+ *
+ * Additive only: no upstream selector is touched and every class is prefixed `jfmod-`.
+ * Sizing is in `em` throughout, because `.layout-tv` sets the root font to 125% and
+ * `.layout-mobile` to 90% — a `px` value silently opts out of both.
+ *
+ * Placement: `.cardIndicators` owns top-right (played tick, unplayed count) and mobile's
+ * `CardOverlayButtons` own bottom-right, so this takes top-left. Mirrored under RTL,
+ * following the same `[dir]` pattern card.scss uses.
+ */
+
+.jfmod-mark {
+    position: absolute;
+    top: 0.3em;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    height: 1.4em;
+    padding: 0 0.35em;
+    border-radius: 0.9em;
+    background: rgba(8, 8, 8, 0.6);
+    font-size: 0.75em;
+    line-height: 1;
+    pointer-events: none;
+
+    [dir="ltr"] & {
+        left: 0.3em;
+    }
+
+    [dir="rtl"] & {
+        right: 0.3em;
+    }
+}
+
+.jfmod-mark svg {
+    width: 1.1em;
+    height: 1.1em;
+    display: block;
+}
+
+/* On disk is the majority case, so it is drawn quiet: present if you look for it, invisible
+ * if you are not. Anything louder would be a badge on every card, which is a badge on none. */
+.jfmod-mark--onDisk {
+    background: none;
+    color: rgba(255, 255, 255, 0.4);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
+
+.jfmod-mark--none,
+.jfmod-mark--reclaimed {
+    color: #cfa8dd;
+}
+
+.jfmod-mark--inFlight {
+    color: #f0dbf7;
+}
+
+/* Dimming is what actually carries at phone sizes, where the icon is at its legibility limit. */
+.jfmod-noFile .cardImageContainer {
+    opacity: 0.6;
+}
+
+.jfmod-countdown {
+    font-family: inherit;
+    font-size: 0.95em;
+    color: #f0cd8a;
+}
+
+.jfmod-countdown--urgent {
+    color: #f3a49e;
+}

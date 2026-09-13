@@ -20,6 +20,7 @@ interface ShuffleButtonProps {
     hasFilters: boolean
     isTextVisible: boolean
     libraryViewSettings: LibraryViewSettings
+    disabled?: boolean
 }
 
 const ShuffleButton: FC<ShuffleButtonProps> = ({
@@ -29,7 +30,8 @@ const ShuffleButton: FC<ShuffleButtonProps> = ({
     collectionType,
     hasFilters,
     isTextVisible,
-    libraryViewSettings
+    libraryViewSettings,
+    disabled = false
 }) => {
     const { itemsResult } = useLibrary();
     const isPending = itemsResult?.isPending ?? true;
@@ -61,7 +63,7 @@ const ShuffleButton: FC<ShuffleButtonProps> = ({
             title={globalize.translate('Shuffle')}
             startIcon={isTextVisible ? <Shuffle /> : undefined}
             onClick={shuffle}
-            disabled={isPending || totalRecordCount <= 1}
+            disabled={disabled || isPending || totalRecordCount <= 1}
         >
             {isTextVisible ? (
                 globalize.translate('Shuffle')

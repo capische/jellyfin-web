@@ -48,6 +48,7 @@ const LibraryToolbar: FC = () => {
         content,
         isLibraryPath,
         itemsResult,
+        browseResult,
         viewSettings,
         setViewSettings
     } = useLibrary();
@@ -61,9 +62,13 @@ const LibraryToolbar: FC = () => {
 
     const { data: item } = useItem(parentId || undefined);
 
-    const isPending = itemsResult?.isPending ?? true;
-    const totalRecordCount = itemsResult?.data?.TotalRecordCount ?? 0;
-    const items = itemsResult?.data?.Items ?? [];
+    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length) ?
+        browseResult.data : undefined;
+    const isPending = browseResult?.isSelectingSource || (combined ? browseResult?.isPending : (itemsResult?.isPending ?? true));
+    const totalRecordCount = combined?.totalRecordCount ?? itemsResult?.data?.TotalRecordCount ?? 0;
+    const items = combined ? combined.items.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []) : itemsResult?.data?.Items ?? [];
+    const fileStates = libraryViewSettings.Filters?.FileStates;
+    const noPlayableFiles = isPending || !!combined && !!fileStates?.length && !fileStates.includes('onDisk');
     const hasFilterOptions = Object.values(viewSettings?.Filters ?? {}).some(f => !!f);
     const hasFilters = !!viewSettings?.Alphabet || hasFilterOptions;
     const { user } = useApi();
@@ -189,6 +194,7 @@ const LibraryToolbar: FC = () => {
                             >
                                 {isBtnPlayAllEnabled && (
                                     <PlayAllButton
+                                        disabled={noPlayableFiles}
                                         item={item}
                                         items={items}
                                         viewType={viewType}
@@ -201,6 +207,7 @@ const LibraryToolbar: FC = () => {
 
                                 {isBtnShuffleEnabled && (
                                     <ShuffleButton
+                                        disabled={noPlayableFiles}
                                         item={item}
                                         items={items}
                                         viewType={viewType}
@@ -240,6 +247,7 @@ const LibraryToolbar: FC = () => {
                                     itemType={itemType ?? []}
                                     viewType={viewType}
                                     hasFilters={hasFilterOptions}
+                                    fileFiltersAvailable={browseResult?.isSuccess}
                                     libraryViewSettings={libraryViewSettings}
                                     setLibraryViewSettings={setLibraryViewSettings}
                                 />
@@ -268,7 +276,7 @@ const LibraryToolbar: FC = () => {
                                 index={startIndex}
                                 pageSize={paginationLimit}
                                 total={totalRecordCount}
-                                disabled={isPending || !isPaginationRequired || itemsResult?.isPlaceholderData}
+                                disabled={isPending || !isPaginationRequired || (combined ? browseResult?.isPlaceholderData : itemsResult?.isPlaceholderData)}
                             />
                         )}
                     </Stack>
