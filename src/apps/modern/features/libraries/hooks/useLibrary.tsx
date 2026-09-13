@@ -10,6 +10,7 @@ import { ItemDtoQueryResult } from 'types/base/models/item-dto-query-result';
 import { LibraryViewSettings } from 'types/library';
 import { LibraryTab } from 'types/libraryTab';
 import { LibraryTabContent } from 'types/libraryTabContent';
+import { useBrowse } from '../../jellyfinmod/hooks/useBrowse';
 
 import { LibraryRoutes } from '../constants/libraryRoutes';
 import { isLibraryPath } from '../utils/path';
@@ -22,6 +23,7 @@ interface LibraryState {
     isLibraryPath: boolean;
     id?: string;
     itemsResult?: UseQueryResult<ItemDtoQueryResult | undefined, Error>;
+    browseResult?: ReturnType<typeof useBrowse>;
     viewSettings?: LibraryViewSettings;
     setViewSettings?: React.Dispatch<React.SetStateAction<LibraryViewSettings>>;
 }
@@ -58,6 +60,7 @@ export const LibraryProvider: FC<PropsWithChildren<unknown>> = ({ children }) =>
         content?.itemType,
         viewSettings
     );
+    const browseResult = useBrowse(viewType, libraryId, viewSettings);
 
     const state = useMemo(() => ({
         ...DEFAULT_LIBRARY_STATE,
@@ -67,8 +70,9 @@ export const LibraryProvider: FC<PropsWithChildren<unknown>> = ({ children }) =>
         content,
         viewSettings,
         setViewSettings,
-        itemsResult
-    }), [collectionType, isLibPath, id, content, viewSettings, setViewSettings, itemsResult]);
+        itemsResult,
+        browseResult
+    }), [collectionType, isLibPath, id, content, viewSettings, setViewSettings, itemsResult, browseResult]);
 
     return (
         <LibraryContext.Provider value={state}>
