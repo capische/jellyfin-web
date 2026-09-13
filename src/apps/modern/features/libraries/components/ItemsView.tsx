@@ -21,6 +21,8 @@ import type { ListOptions } from 'types/listOptions';
 
 import AlphabetPicker from './AlphabetPicker';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import EntryCards from '../../jellyfinmod/components/EntryCards';
+import EntryLists from '../../jellyfinmod/components/EntryLists';
 
 const ItemsView: FC = () => {
     const {
@@ -28,6 +30,7 @@ const ItemsView: FC = () => {
         collectionType,
         content,
         itemsResult,
+        browseResult,
         viewSettings,
         setViewSettings
     } = useLibrary();
@@ -48,13 +51,16 @@ const ItemsView: FC = () => {
         `(min-width: ${t.breakpoints.values.sm}px) and (min-height: 610px)`
     ].join(', '));
 
-    const { __legacyApiClient__, user } = useApi();
+    const { api, __legacyApiClient__, user } = useApi();
+    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length) ?
+        browseResult.data : undefined;
 
     // The query key for all items for the current user.
     // This should be used to invalidate queries that affect multiple parents, such as collections and playlists.
     const allItemsQueryKey = useMemo(() => ['User', user?.Id, 'Items'], [user?.Id]);
     // The query key for all views for the current parent item.
     const allViewsQueryKey = useMemo(() => [...allItemsQueryKey, parentId, 'ViewByType'], [allItemsQueryKey, parentId]);
+    const combinedQueryKey = useMemo(() => ['JellyfinMod', api?.basePath, user?.Id, 'Browse'], [api?.basePath, user?.Id]);
 
     const getListOptions = useCallback(() => {
         const listOptions: ListOptions = {
@@ -112,7 +118,7 @@ const ItemsView: FC = () => {
             preferLogo,
             overlayText: !libraryViewSettings.ShowTitle,
             imageType: libraryViewSettings.ImageType,
-            queryKey: allViewsQueryKey,
+            queryKey: combined ? combinedQueryKey : allViewsQueryKey,
             serverId: __legacyApiClient__?.serverId()
         };
 
@@ -153,10 +159,18 @@ const ItemsView: FC = () => {
         libraryViewSettings.CardLayout,
         collectionType,
         allViewsQueryKey,
+        combined,
+        combinedQueryKey,
         viewType
     ]);
 
     const getItems = useCallback(() => {
+        if (combined) {
+            if (!combined.items.length) return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
+            return libraryViewSettings.ViewMode === ViewMode.ListView ?
+                <EntryLists rows={combined.items} listOptions={getListOptions()} serverId={__legacyApiClient__?.serverId()} /> :
+                <EntryCards rows={combined.items} cardOptions={getCardOptions()} />;
+        }
         if (!itemsResult?.data?.Items?.length) {
             return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
         }
@@ -180,7 +194,9 @@ const ItemsView: FC = () => {
         itemsResult?.data?.Items,
         getListOptions,
         getCardOptions,
-        noItemsMessage
+        noItemsMessage,
+        combined,
+        __legacyApiClient__
     ]);
 
     const handleAlphabetChange = useCallback((newValue: string | null | undefined) => {
@@ -209,14 +225,14 @@ const ItemsView: FC = () => {
                 />
             )}
 
-            {(!itemsResult || itemsResult.isPending) ? (
+            {(browseResult?.isSelectingSource || (!combined && (!itemsResult || itemsResult.isPending))) ? (
                 <Loading />
             ) : (
                 <ItemsContainer
                     className={itemsContainerClass}
                     parentId={parentId}
-                    reloadItems={itemsResult?.refetch}
-                    queryKey={allItemsQueryKey}
+                    reloadItems={combined ? browseResult?.refetch : itemsResult?.refetch}
+                    queryKey={combined ? combinedQueryKey : allItemsQueryKey}
                 >
                     {getItems()}
                 </ItemsContainer>
