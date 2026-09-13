@@ -2,6 +2,7 @@ import * as userSettings from 'scripts/settings/userSettings';
 import focusManager from 'components/focusManager';
 import homeSections from 'components/homesections/homesections';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { mountHomeChrome, pauseHomeChrome, unmountHomeChrome } from 'apps/modern/features/jellyfinmod/integration/homeChrome';
 
 import 'elements/emby-itemscontainer/emby-itemscontainer';
 
@@ -14,6 +15,7 @@ class HomeTab {
         view.querySelector('.sections').addEventListener('settingschange', onHomeScreenSettingsChanged.bind(this));
     }
     onResume(options) {
+        mountHomeChrome(this.view);
         if (this.sectionsRendered) {
             const sectionsContainer = this.sectionsContainer;
 
@@ -39,6 +41,7 @@ class HomeTab {
             });
     }
     onPause() {
+        pauseHomeChrome(this.view);
         const sectionsContainer = this.sectionsContainer;
 
         if (sectionsContainer) {
@@ -46,6 +49,7 @@ class HomeTab {
         }
     }
     destroy() {
+        unmountHomeChrome(this.view);
         this.view = null;
         this.params = null;
         this.apiClient = null;

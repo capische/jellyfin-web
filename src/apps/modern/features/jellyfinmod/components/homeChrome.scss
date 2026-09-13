@@ -1,0 +1,55 @@
+.jfmod-homeHero {
+    align-items: flex-end;
+    background-color: #101010;
+    background-position: center 20%;
+    background-size: cover;
+    display: flex;
+    margin-top: -3em;
+    min-height: 34em;
+    padding-top: 3em;
+    position: relative;
+}
+
+.jfmod-homeHero::after {
+    background: linear-gradient(0deg, #101010 0%, rgba(16, 16, 16, 0.35) 55%, rgba(16, 16, 16, 0.1) 100%);
+    content: '';
+    inset: 0;
+    position: absolute;
+}
+
+.jfmod-homeHeroContent {
+    max-width: 38em;
+    padding-bottom: 5em;
+    position: relative;
+    text-shadow: 0 0.08em 0.25em #101010;
+    z-index: 1;
+}
+
+.jfmod-homeHeroContent h1 { font-size: 2.8em; margin: 0 0 0.25em; }
+.jfmod-homeHeroContent p { display: -webkit-box; font-size: 1.05em; line-height: 1.45; max-width: 36em; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.jfmod-homeHeroActions { display: flex; gap: 0.7em; margin-top: 1.2em; }
+.jfmod-homeHeroActions .emby-button:focus-visible { box-shadow: 0 0 0 0.18em #00a4dc; }
+
+.skinHeader.jfmod-topbar {
+    background: linear-gradient(180deg, rgba(16, 16, 16, 0.95), rgba(16, 16, 16, 0));
+    transition: background-color 160ms ease;
+
+    .MuiButton-startIcon { display: none; }
+    .MuiButton-root { color: rgba(255, 255, 255, 0.72); min-width: auto; text-transform: none; }
+    .MuiButton-root[aria-current='page'], .MuiButton-root.MuiButton-colorPrimary { color: #fff; }
+}
+
+.skinHeader.jfmod-topbarSolid { background: #101010; }
+
+.layout-tv .skinHeader.jfmod-topbar {
+    background: linear-gradient(180deg, rgba(16, 16, 16, 0.95), rgba(16, 16, 16, 0));
+}
+
+.layout-tv .skinHeader.jfmod-topbarSolid { background: #101010; }
+
+.layout-mobile .jfmod-homeHero { min-height: 29em; }
+.layout-mobile .jfmod-homeHeroContent { padding-bottom: 3.5em; }
+.layout-mobile .jfmod-homeHeroContent h1 { font-size: 2.1em; }
+.layout-tv .jfmod-homeHero { min-height: 37em; }
+.layout-tv .jfmod-homeHeroContent { padding-bottom: 5.5em; }
+.layout-tv .jfmod-homeHeroActions .emby-button:focus { box-shadow: 0 0 0 0.18em #00a4dc; }
