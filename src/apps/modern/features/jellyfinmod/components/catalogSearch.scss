@@ -1,0 +1,50 @@
+.jfmod-searchResults {
+    .jfmod-discoveryHeading {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+
+        h2 { margin-right: auto; }
+        label { align-items: center; display: flex; gap: 0.5em; }
+        select { font: inherit; padding: 0.45em; }
+    }
+
+    .jfmod-searchSkeletons,
+    .jfmod-discoveryCards {
+        display: flex;
+        gap: 1em;
+        min-height: 18em;
+        overflow: hidden;
+    }
+
+    .jfmod-searchSkeletons span,
+    .jfmod-discoveryCard {
+        border-radius: 0.2em;
+        flex: 0 0 10em;
+    }
+
+    .jfmod-searchSkeletons span { background: #202020; height: 15em; opacity: 0.65; }
+    .jfmod-discoveryCard { position: relative; }
+    .jfmod-discoveryArtwork { background-color: #202020; background-position: center; background-size: cover; border-radius: 0.2em; height: 15em; }
+    .jfmod-discoveryTitle { font-size: 86%; padding: 0.5em 0; }
+    .jfmod-discoveryCard button { position: absolute; right: 0.4em; top: 0.4em; }
+    .jfmod-searchNotice { color: #f2b01e; min-height: 15em; }
+}
+
+.jfmod-addToast {
+    bottom: 2em;
+    left: 50%;
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 1099;
+}
+
+.jfmod-addToastUndo {
+    background: none;
+    border: 0;
+    color: #00a4dc;
+    cursor: pointer;
+    font: inherit;
+    margin-left: 1em;
+}
