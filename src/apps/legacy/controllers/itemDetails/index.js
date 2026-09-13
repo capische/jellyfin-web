@@ -1,3 +1,5 @@
+import initializeNativeEntryDetails, { showNativeEntryMenu } from 'apps/modern/features/jellyfinmod/integration/nativeEntryDetails';
+import initializeEntryDetails from 'apps/modern/features/jellyfinmod/integration/entryDetails';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
 import { PersonKind } from '@jellyfin/sdk/lib/generated-client/models/person-kind';
@@ -1925,6 +1927,11 @@ function onTrackSelectionsSubmit(e) {
 window.ItemDetailPage = new ItemDetailPage();
 
 export default function (view, params) {
+    if (params.entryId) {
+        initializeEntryDetails(view, params);
+        return;
+    }
+    initializeNativeEntryDetails(view, params);
     function getApiClient() {
         return params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
     }
@@ -2064,7 +2071,7 @@ export default function (view, params) {
             selectedItem = item;
 
             apiClient.getCurrentUser().then(function (user) {
-                itemContextMenu.show(getContextMenuOptions(selectedItem, user, button))
+                showNativeEntryMenu(getContextMenuOptions(selectedItem, user, button), view)
                     .then(function (result) {
                         if (result.deleted) {
                             const parentId = selectedItem.SeasonId || selectedItem.SeriesId || selectedItem.ParentId;

@@ -1,0 +1,33 @@
+.jfmod-entryPoster {
+    position: relative;
+    min-height: 8em;
+}
+
+.jfmod-entryPoster img {
+    width: 100%;
+    border-radius: 0.2em;
+}
+
+.jfmod-entryActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6em;
+}
+
+.jfmod-entryHistory {
+    margin: 0.7em 0;
+}
+
+.jfmod-entryHistory summary {
+    cursor: pointer;
+}
+
+.jfmod-episodeRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.6em;
+    padding: 0.6em 0;
+}
