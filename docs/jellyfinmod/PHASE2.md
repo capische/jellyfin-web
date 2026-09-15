@@ -190,3 +190,27 @@ R5 was exercised against the isolated `jellyfinmod-test` container at
   catalog card. Poster and List views rendered the entry, and the List row opened native details.
 - `tsc --noEmit`, targeted ESLint, `git diff --check`, and `npm run build:production` passed. The
   production build emitted only the existing Webpack asset-size warnings.
+
+## Final native-host acceptance — 2026-09-15
+
+The remaining Phase 2 contracts were exercised through Jellyfin's running native scan and task
+pipeline on the isolated `jellyfinmod-test` container:
+
+- Two physical copies with TMDB 550 produced one catalog entry with two bindings. Removing one
+  copy kept the entry playable through the surviving copy and emitted no false missing-media event.
+- A native scan overlapping the repair task converged to one restored binding. The completed repair
+  scanned 161 observations: 160 unchanged, one unmatched, and zero created, updated, conflicted,
+  failed, missing or incomplete.
+- Cancellation after three committed observations left a valid partial run. The immediate rerun
+  completed all 161 observations with 160 unchanged, one unmatched and no failures or duplicates.
+- A temporary ordinary user added TMDB 552 while scan and reconciliation were active. Backfill won
+  the insert race; the add returned that same entry, enabled monitoring and left coherent backfill
+  and monitoring history.
+- A native movie first scanned without a provider ID remained unmatched. After its native metadata
+  was corrected to TMDB 553, the next scan produced exactly one bound entry without title matching.
+
+The disposable media, catalog entries and temporary user were removed after the run. Final database
+counts were 163 entries, 160 bindings and 22 episodes; TMDB 550 retained one binding to native item
+`ba9815a6b64dfb9820639f36f8271a1a`. The server contained only the expected `nata`, `oleksii`,
+`papa` and `vika` users. Together with the R5 browser run above, this satisfies the Phase 2
+completion gate on the isolated test instance. Production Jellyfin was not changed.
