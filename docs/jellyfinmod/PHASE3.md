@@ -95,6 +95,28 @@ and manual watched/unwatched changes. Callbacks enqueue work; processing re-read
 native state. A repair pass catches missed notifications after downtime. Missing metadata,
 user data or access information produces a blocked candidate, never an assumed completion.
 
+#### T1 acceptance checkpoint — 2026-09-16
+
+T1 is complete on `jellyfinmod-phase3`. The plugin now persists the disabled-by-default
+All/Selected/Any policy, explicit inherit/days/never entry policy, authoritative per-user movie and
+episode observations, and access-aware evaluations with policy revision, anonymous access-set
+fingerprint, completion basis, grace start and deadline. User-data, configuration and user-policy
+events are queued and re-read outside Jellyfin callbacks; the repair task recovers missed events and
+recomputes evaluations. T1 has no deletion path.
+
+The real SQLite/event integration covers two users, duplicate completion, replay/resume, unwatched,
+missing evidence, favorite protection, Keep, per-entry days, selected-user validity, access changes,
+deadline non-shortening, re-enable baseline grace and restart. All Phase 0–3 suites pass. Applying
+the eighth migration to a copy of the isolated database preserved 163 entries, 160 bindings, 22
+episodes and 224 completion observations with clean integrity and foreign-key checks.
+
+On the isolated native host, real watched/unwatched/favorite events updated only the affected row.
+The repair task produced 224 observations across 56 targets and four users. Browser configuration
+persisted all modes and the selected-user picker across reloads. Selected and Any scheduled the
+disposable R4 movie after `oleksii` completed it; All waited for the remaining accessible users.
+The fixture finished unwatched and unfavorited. Retention was restored to disabled/All users, all 56
+evaluations returned to `retention_disabled`, and production remained untouched.
+
 ### T2 — preview before deletion
 
 One evaluator supplies both admin preview and execution. Return eligibility, deadline,
