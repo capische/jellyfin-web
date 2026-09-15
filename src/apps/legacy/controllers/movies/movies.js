@@ -9,11 +9,21 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Events from 'utils/events';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { getFilterStatus, setFilterStatus } from 'components/filterdialog/filterIndicator';
+import {
+    fetchLegacyBrowse,
+    getFocusedBrowseIdentity,
+    isLegacyBrowseResult,
+    legacyBrowsePlaceholder,
+    mountLegacyBrowse,
+    subscribeLegacyBrowse
+} from 'apps/modern/features/jellyfinmod/integration/legacyLibrary';
 
 import 'elements/emby-itemscontainer/emby-itemscontainer';
 
 export default function (view, params, tabContent, options) {
     const onViewStyleChange = () => {
+        unmountCatalog?.();
+        unmountCatalog = null;
         if (this.getCurrentViewStyle() == 'List') {
             itemsContainer.classList.add('vertical-list');
             itemsContainer.classList.remove('vertical-wrap');
@@ -26,10 +36,14 @@ export default function (view, params, tabContent, options) {
     };
 
     function fetchData() {
+        focusedIdentity = getFocusedBrowseIdentity(itemsContainer);
         isLoading = true;
         loading.show();
         const apiClient = ServerConnections.currentApiClient();
-        return apiClient.getItems(apiClient.getCurrentUserId(), query);
+        return fetchLegacyBrowse(apiClient, query, 'movie').then(result => {
+            usingCatalogRows = isLegacyBrowseResult(result);
+            return result;
+        });
     }
 
     function playAll() {
@@ -112,12 +126,22 @@ export default function (view, params, tabContent, options) {
         isLoading = false;
         loading.hide();
 
+        if (isLegacyBrowseResult(result)) {
+            unmountCatalog = mountLegacyBrowse(itemsContainer, result.Items, this.getCurrentViewStyle(), 'movies', query.SortBy,
+                focusedIdentity.id, focusedIdentity.tmdbId) ?? null;
+        }
+
         import('components/autoFocuser').then(({ default: autoFocuser }) => {
             autoFocuser.autoFocus(tabContent);
         });
     };
 
     const getItemsHtml = (items) => {
+        if (usingCatalogRows) {
+            unmountCatalog?.();
+            unmountCatalog = null;
+            return legacyBrowsePlaceholder;
+        }
         let html;
         const viewStyle = this.getCurrentViewStyle();
 
@@ -303,6 +327,10 @@ export default function (view, params, tabContent, options) {
     }
 
     let isLoading = false;
+    let usingCatalogRows = false;
+    let unmountCatalog = null;
+    let focusedIdentity = {};
+    const unsubscribeCatalog = subscribeLegacyBrowse(ApiClient, () => itemsContainer?.refreshItems());
 
     if (options.mode === 'favorites') {
         query.IsFavorite = true;
@@ -342,6 +370,8 @@ export default function (view, params, tabContent, options) {
     };
 
     this.destroy = function () {
+        unsubscribeCatalog();
+        unmountCatalog?.();
         itemsContainer = null;
     };
 }
