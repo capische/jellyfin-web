@@ -8,6 +8,14 @@ import * as userSettings from 'scripts/settings/userSettings';
 import globalize from 'lib/globalize';
 import Events from 'utils/events';
 import { setFilterStatus } from 'components/filterdialog/filterIndicator';
+import {
+    fetchLegacyBrowse,
+    getFocusedBrowseIdentity,
+    isLegacyBrowseResult,
+    legacyBrowsePlaceholder,
+    mountLegacyBrowse,
+    subscribeLegacyBrowse
+} from 'apps/modern/features/jellyfinmod/integration/legacyLibrary';
 
 import 'elements/emby-itemscontainer/emby-itemscontainer';
 
@@ -51,6 +59,8 @@ export default function (view, params, tabContent) {
     }
 
     const onViewStyleChange = () => {
+        unmountCatalog?.();
+        unmountCatalog = null;
         const viewStyle = this.getCurrentViewStyle();
         const itemsContainer = tabContent.querySelector('.itemsContainer');
 
@@ -70,8 +80,10 @@ export default function (view, params, tabContent) {
         isLoading = true;
         const query = getQuery();
         setFilterStatus(page, query);
+        const itemsContainer = tabContent.querySelector('.itemsContainer');
+        const focusedIdentity = getFocusedBrowseIdentity(itemsContainer);
 
-        ApiClient.getItems(ApiClient.getCurrentUserId(), query).then((result) => {
+        fetchLegacyBrowse(ApiClient, query, 'series').then((result) => {
             function onNextPageClick() {
                 if (isLoading) {
                     return;
@@ -108,7 +120,11 @@ export default function (view, params, tabContent) {
                 filterButton: false
             });
             const viewStyle = this.getCurrentViewStyle();
-            if (viewStyle == 'Thumb') {
+            if (isLegacyBrowseResult(result)) {
+                unmountCatalog?.();
+                unmountCatalog = null;
+                html = legacyBrowsePlaceholder;
+            } else if (viewStyle == 'Thumb') {
                 html = cardBuilder.getCardsHtml({
                     items: result.Items,
                     shape: 'backdrop',
@@ -181,9 +197,13 @@ export default function (view, params, tabContent) {
                 elem.addEventListener('click', onPreviousPageClick);
             }
 
-            const itemsContainer = tabContent.querySelector('.itemsContainer');
             itemsContainer.innerHTML = html;
-            imageLoader.lazyChildren(itemsContainer);
+            if (isLegacyBrowseResult(result)) {
+                unmountCatalog = mountLegacyBrowse(itemsContainer, result.Items, viewStyle, 'tvshows', query.SortBy,
+                    focusedIdentity.id, focusedIdentity.tmdbId) ?? null;
+            } else {
+                imageLoader.lazyChildren(itemsContainer);
+            }
             userSettings.saveQuerySettings(getSavedQueryKey(), query);
             loading.hide();
             isLoading = false;
@@ -196,6 +216,10 @@ export default function (view, params, tabContent) {
 
     const data = {};
     let isLoading = false;
+    let unmountCatalog = null;
+    const unsubscribeCatalog = subscribeLegacyBrowse(ApiClient, () => {
+        if (tabContent.isConnected) reloadItems(tabContent);
+    });
 
     this.showFilterMenu = function () {
         import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
@@ -301,5 +325,9 @@ export default function (view, params, tabContent) {
         reloadItems(tabContent);
         this.alphaPicker?.updateControls(getQuery());
     };
-}
 
+    this.destroy = () => {
+        unsubscribeCatalog();
+        unmountCatalog?.();
+    };
+}

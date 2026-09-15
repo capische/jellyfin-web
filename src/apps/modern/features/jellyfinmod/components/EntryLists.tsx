@@ -1,6 +1,5 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import List from 'components/listview/List/List';
 import layoutManager from 'components/layoutManager';
 import type { ListOptions } from 'types/listOptions';
@@ -28,11 +27,10 @@ function NativeEntryList({ row, index, listOptions }: Readonly<{ row: Extract<Br
 }
 
 export default function EntryLists({ rows, listOptions, serverId }: Readonly<Props>) {
-    const navigate = useNavigate();
     const openEntry = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         const path = event.currentTarget.dataset.entryPath;
-        if (path) navigate(path);
-    }, [navigate]);
+        if (path) window.location.hash = '#' + path;
+    }, []);
     return <>{rows.map((row, index) => {
         if (row.kind === 'native') return <NativeEntryList key={'native:' + row.nativeItem.Id} row={row} index={index} listOptions={listOptions} />;
         const path = getEntryPath(row.entry.id, serverId);
