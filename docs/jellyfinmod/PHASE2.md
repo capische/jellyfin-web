@@ -166,3 +166,27 @@ backfill succeeds; absence detection and user-state/access acceptance are separa
 
 Phase 2 is complete when backfill is repeatable and subsequent library changes converge to the
 correct catalog state without duplicates, lost history, broken playback or access leaks.
+
+## R5 acceptance evidence — 2026-09-15
+
+R5 was exercised against the isolated `jellyfinmod-test` container at
+`http://<test-host>:18096/web/`. The deployed web bundle was built from
+`4c465f8f37` and the plugin was `8969eebc90`. Production Jellyfin was not changed.
+
+- Moving the test movie out of its isolated library and running `RefreshLibrary` changed the same
+  visible card from **On disk** to **Not downloaded** without reloading the page. Restoring the file
+  and scanning changed it back to **On disk**. Both transitions retained focus on the title.
+- Entry `efe27ec9dffe405d8c97a6c23e324cab` retained its identity and rebound to native item
+  `ba9815a6b64dfb9820639f36f8271a1a`. Its `entryId` detail bookmark redirected to the new native
+  details page, whose Play action targeted that native item.
+- Global search returned one result for the owned test title after reconciliation and opened the
+  native details page.
+- A temporary non-admin user restricted to the test movie library saw its one permitted row and
+  received 404 for the test TV library. Marking the movie played for that user changed its own
+  combined browse DTO from false to true while `oleksii` remained false. The temporary user was
+  deleted after the check.
+- Responsive checks passed in the automatic desktop layout at 1280x720, mobile at 390x844, and TV
+  at 1920x1080 and 1280x720. TV D-pad focus moved between navigation, toolbar and the combined
+  catalog card. Poster and List views rendered the entry, and the List row opened native details.
+- `tsc --noEmit`, targeted ESLint, `git diff --check`, and `npm run build:production` passed. The
+  production build emitted only the existing Webpack asset-size warnings.
