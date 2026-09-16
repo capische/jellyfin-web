@@ -1,12 +1,13 @@
-# Phase 1 API examples
+# JellyfinMod API examples
 
-Implementation contract as of 2026-09-13. These examples describe the current local server and
-web code, not the deployed Phase 0 server. Live authentication, model binding and serializer
-acceptance remain required before deployment. All IDs below are illustrative.
+Implementation contract as of 2026-09-16. These examples describe the Phase 3 source and the
+accepted isolated test deployment. Production is outside this deployment. All IDs below are
+illustrative.
 
 All routes require Jellyfin authentication. Identity comes from the authenticated user, never
 a submitted user ID. Entry IDs and native Jellyfin item IDs belong to different namespaces.
-Inaccessible entry lookups return 404. Monitoring and removal require administrator elevation.
+Inaccessible entry lookups return 404. Monitoring, removal, Keep, retention diagnostics and
+manual retention runs require administrator elevation.
 
 ## Health
 
@@ -54,6 +55,7 @@ An illustrative Entry with minimal metadata:
   "watchedAt": null,
   "reclaimAt": null,
   "reclaimAfterDays": null,
+  "retentionPolicy": "inherit",
   "metadata": {
     "mediaType": "movie", "tmdbId": 123, "title": "Example Movie",
     "premiereDate": null, "overview": null, "posterPath": null, "backdropPath": null,
@@ -136,7 +138,8 @@ active, the stock native query remains the reference path.
 
 `GET /JellyfinMod/Entries/22222222-2222-4222-8222-222222222222`
 
-Response shape is `{"entry": <Entry>, "history": [<History>], "episodes": [<Episode>]}`.
+Response shape is
+`{"entry": <Entry>, "history": [<History>], "episodes": [<Episode>], "retention": <Retention>}`.
 Movies return an empty episode array. A history object is:
 
 ```json
@@ -145,9 +148,60 @@ Movies return an empty episode array. A history object is:
 
 An episode object contains `id`, `entryId`, `tmdbId`, `seasonNumber`, `episodeNumber`, `title`,
 nullable `overview`, `stillPath`, `airDate`, `runtimeMinutes`, then `monitored`, `state` and
-nullable `jellyfinItemId`. Dates are UTC ISO 8601. Season zero is specials; a future air date
+nullable `jellyfinItemId`, and a nullable `retention` summary. Dates are UTC ISO 8601. Season zero is specials; a future air date
 distinguishes unaired episodes from missing aired media. A series binding does not make every
 episode `onDisk`. Bound episodes must independently pass native visibility checks.
+
+## Automatic retention
+
+Entry and episode detail uses a privacy-safe retention summary:
+
+```json
+{
+  "enabled": true,
+  "policy": "inherit",
+  "state": "scheduled",
+  "reason": "completion_policy_satisfied",
+  "deadline": "2026-09-30T00:00:00Z"
+}
+```
+
+`POST /JellyfinMod/Entries/{id}/Keep` is administrator-only. It changes the entry policy to
+`never`; on a series this protects every child episode. A repeated request returns success
+without adding another `retention_kept` history event.
+
+`GET /JellyfinMod/Retention/Preview` is administrator-only and returns `generatedAt`, summary
+counts (`inspected`, `due`, `blocked`, `scheduled`, `waiting`, `disabled`) and per-representation
+diagnostics under `items`. Physical paths, hardlink counts and torrent evidence never appear in
+ordinary-user detail responses.
+
+`POST /JellyfinMod/Retention/Run` invokes the same 25-physical-action batch as the native daily
+task. A concurrent invocation returns 409. `GET /JellyfinMod/Retention/Runs/Latest` returns the
+newest durable summary. Both run endpoints use this contract:
+
+```json
+{
+  "id": "44444444-4444-4444-8444-444444444444",
+  "startedAt": "2026-09-16T11:37:00Z",
+  "completedAt": "2026-09-16T11:37:00Z",
+  "status": "disabled",
+  "inspected": 0,
+  "eligible": 0,
+  "blocked": 0,
+  "reclaimed": 0,
+  "failed": 0,
+  "interrupted": 0,
+  "logicalBytesUnlinked": 0,
+  "physicalBytesReleased": 0,
+  "physicalBytesUnknown": 0,
+  "detail": "Retention is disabled; no media was changed."
+}
+```
+
+The native task key is `JellyfinModRetentionReclamation`; its default trigger is daily at 03:00
+server local time. The global enabled setting is checked at run entry, before every action and
+again inside the executor immediately before unlink. Configuration or policy-version changes at
+that final boundary block the operation.
 
 ## Monitoring and removal
 
