@@ -181,6 +181,44 @@ Measure logical bytes unlinked separately from physical bytes released. A remain
 means no claimed reclaimed space for that inode; open handles and filesystem accounting may
 delay or prevent reliable measurement. Report unknown rather than claiming nominal size.
 
+#### T3 acceptance checkpoint — 2026-09-16
+
+T3 is complete on `jellyfinmod-phase3` through plugin commit `698f1d9`. Every physical unlink
+now has durable prepared, unlinked and terminal operation states containing the policy revision,
+library and binding identities, canonical path, device/inode identity, logical size and hardlink
+count. Recovery inspects the current mount and inode before deciding whether to resume an unlink
+or finish catalog reconciliation. It never treats unavailable storage as a successful deletion.
+
+Execution uses the T2 preview evaluator again immediately before unlink while holding the same
+per-library locks as reconciliation. Keep, disable, active playback, changed seed state, changed
+policy, changed storage, replaced files and newly observed cross-library bindings therefore stop
+the operation. Exact-path bindings that are all eligible share one physical action and retain
+per-entry binding/history outcomes. Surviving versions remain selected and playable; a title or
+episode becomes `reclaimed` only after its final playable binding is gone. Reconciliation sees
+that provenance and does not add a duplicate `media_missing` event.
+
+The executor calls `File.Delete` only for the verified canonical media file. It then removes the
+native Jellyfin item with both file-location and external-provider deletion disabled. NFO,
+subtitle and other neighboring files are not recursively removed, and Transmission receives no
+mutation. Logical bytes are recorded per operation action; a pre-unlink hardlink count above one
+records zero physical bytes released, while a final link remains unknown rather than claiming its
+nominal length.
+
+The ARM64 Linux integration uses real files, hardlinks, SQLite transactions and restart recovery.
+It covers interruption before and after unlink, retry idempotency, inode replacement, Keep and
+disable races, alternate versions, cross-library same-path bindings, exactly-once reclaimed
+history, preserved sidecars and physical-space accounting. All Phase 0–3 integration suites pass,
+and EF reports no pending model changes.
+
+The isolated Pi deployment created a pre-T3 backup at
+`<test-root>/backups/p3-t3-pre-698f1d9`, applied migration
+`20260916120000_PhaseThreeRetentionOperations`, passed SQLite integrity/foreign-key checks and
+remained healthy with zero restarts. A disposable movie file was unlinked while its NFO and
+subtitle remained; after a real isolated library scan, a playable-only Movie/Episode/Video query
+returned zero items. The disposable folder was then removed. The reusable ARM64 build cache lives
+under `<test-root>/build/{p3-t3-src,nuget,dotnet-tools}`. Production was
+untouched.
+
 ### T4 — automatic task and API contract
 
 Use the existing plugin settings and native scheduled-task surface. Run daily in bounded
