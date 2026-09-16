@@ -232,6 +232,28 @@ Use existing configuration surfaces for global settings; avoid a second settings
 Keep must be idempotent, write history only on change, and protect all child episodes for a
 series. Reject ordinary-user writes at the API even if controls are hidden in the UI.
 
+T4 is complete on `jellyfinmod-phase3` through plugin commits `ccd05dc` and `fb4a66b`. The
+native `JellyfinModRetentionReclamation` task runs daily at 03:00 in batches of at most 25 exact
+physical paths. Automatic and manual runs share a non-waiting run gate, persist terminal counts
+and separate logical/physical space metrics, and honor cancellation between physical actions.
+The live XML setting is synchronized at task entry, before each action and inside the executor
+immediately before unlink; disable or policy-version changes block the operation.
+
+The finalized camelCase API adds administrator-only manual run/latest status and idempotent Keep,
+plus privacy-safe entry/episode retention summaries. The real HTTP suite rejects ordinary-user
+Keep, proves one history record across repeated admin requests, series-wide child protection,
+409 overlap, cancellation/restart recovery, a disabled no-op run, and a disposable hardlink run
+with separate logical and physical accounting. All five integration executables pass on the
+ARM64 .NET 9 container, and EF reports no pending model changes.
+
+The isolated deployment created backup
+`<test-root>/backups/p3-t4-pre-ccd05dc`, uses build source
+`<test-root>/build/p3-t4-src`, and applied migration
+`20260916130000_PhaseThreeRetentionRuns`. Live acceptance on port `18096` found the task idle with
+its daily trigger, Health ready, SQLite integrity clean, and a disabled manual run with zero media
+changes. The installed DLL matched the validated build checksum, the container remained healthy
+with zero restarts, and production was untouched.
+
 ### T5 — integrate the existing UI
 
 Show the precise schedule or exemption/blocked state on details; use ordinary-language
