@@ -129,6 +129,36 @@ Check active playback, resume, Keep, favorite exemption, completion policy, stor
 and torrent seed goals. Unknown/unreachable client state blocks affected candidates.
 Classify verified non-torrent media explicitly; missing client configuration is not proof.
 
+#### T2 acceptance checkpoint — 2026-09-16
+
+T2 is complete on `jellyfinmod-phase3` through plugin commit `de971f7`. The admin-only
+`GET /JellyfinMod/Retention/Preview` route runs the T1 evaluator and returns every physical
+movie version and episode representation with stable state/reason codes, deadlines, logical
+bytes, hardlink count and sanitized seed evidence. It has no deletion path. Ordinary users
+receive 403 and anonymous requests receive 401.
+
+The shared preview/execution evaluator now blocks missing or changed storage, missing native
+bindings, final and parent symlinks, path-identity replacement, active sessions, resume/favorite/
+Keep policy, favorite parent series, incomplete torrents, unmet or unbounded seed goals,
+unreachable/unconfigured Transmission state, and shared physical files unless every affected
+catalog target qualifies. A complete Transmission file index is required before a path is
+classified as a non-torrent. The read-only Transmission 4.x adapter follows its 409 session
+handshake and the configured global/per-torrent ratio or idle goal semantics.
+
+The ARM64 Linux integration uses real Kestrel auth, HTTP Transmission responses, SQLite,
+hardlinks and canonical paths. It covers multiple movie versions, cross-library shared files,
+storage replacement, final/parent symlinks, series favorites, active playback, ratio and idle
+goals, paused/incomplete/unbounded torrents and an unreachable client. All prior Phase 0–3
+integration suites remain green.
+
+The first isolated deployment exposed a Pi ARM64 native-interop crash during file inspection.
+`de971f7` replaced marshalled `statx` structs with the kernel's fixed 256-byte buffer and skips
+physical scans when no representation is due. A disposable Pi hardlink then returned link count
+2 and 4096 logical bytes. The isolated server remained healthy with zero restarts, its container
+reached the configured Transmission endpoint, and the real admin preview accounted for all 56
+representations as retention-disabled. Browser save/reload preserved the seed endpoint with
+blank optional credentials and retention disabled. Production was untouched.
+
 ### T3 — reclaim safely and recover after interruption
 
 Create a durable operation record before the irreversible filesystem action. Serialize
