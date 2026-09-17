@@ -23,6 +23,17 @@
     cursor: pointer;
 }
 
+.jfmod-retentionStatus {
+    margin: 0.7em 0;
+    opacity: 0.8;
+}
+
+.jfmod-retentionStatus--compact {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.9em;
+}
+
 .jfmod-episodeRow {
     display: flex;
     align-items: center;
