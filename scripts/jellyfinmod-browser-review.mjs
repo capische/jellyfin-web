@@ -8,6 +8,14 @@ const entryId = process.env.JELLYFINMOD_NATIVE_ENTRY_ID;
 if (!entryId) throw new Error('Set JELLYFINMOD_NATIVE_ENTRY_ID to a bound series entry with native seasons');
 const libraryId = process.env.JELLYFINMOD_LIBRARY_ID;
 if (!libraryId) throw new Error('Set JELLYFINMOD_LIBRARY_ID to the isolated browser-test library');
+const retentionEntryTitle = process.env.JELLYFINMOD_RETENTION_ENTRY_TITLE ?? 'JellyfinMod R4 Movie';
+const expectedNormalCountdown = process.env.JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN;
+const expectedFilteredCountdown = process.env.JELLYFINMOD_EXPECT_FILTER_COUNTDOWN;
+const expectedDueCards = Number(process.env.JELLYFINMOD_EXPECT_DUE_CARDS ?? 0);
+const testUser = process.env.JELLYFINMOD_TEST_USER ?? 'oleksii';
+const expectAdmin = process.env.JELLYFINMOD_EXPECT_ADMIN !== 'false';
+const reclaimedEntryId = process.env.JELLYFINMOD_RECLAIMED_ENTRY_ID;
+const nativePlaybackItemId = process.env.JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID;
 
 const page = await (await fetch(`${base}/json/new?${encodeURIComponent(server)}`, { method: 'PUT' })).json();
 
@@ -83,7 +91,7 @@ try {
         await evaluate(`(() => {
             const input = document.querySelector('#txtManualName');
             const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-            setter.call(input, 'oleksii');
+            setter.call(input, ${JSON.stringify(testUser)});
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
             Array.from(document.querySelectorAll('button')).find(button => button.textContent.includes('Sign In'))?.click();
@@ -91,11 +99,22 @@ try {
         await wait(5000);
     }
     if (await evaluate(`location.hash.includes('/login') || location.hash.includes('/selectuser')`)) {
-        throw new Error('Sign into the dedicated test browser as oleksii with an empty password, then rerun');
+        throw new Error('Sign into the dedicated test browser as ' + testUser + ' with an empty password, then rerun');
     }
     originalLayout = await evaluate(`localStorage.getItem('layout')`);
     await evaluate(`localStorage.setItem('layout', 'desktop')`);
     await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
+    if (expectedNormalCountdown) {
+        const normalCountdown = await evaluate(`(() => {
+            const card = Array.from(document.querySelectorAll('.jfmod-entryCard')).find(candidate =>
+                candidate.offsetParent !== null && candidate.getAttribute('aria-label') === ${JSON.stringify(retentionEntryTitle)});
+            return card?.querySelector('.jfmod-countdown')?.textContent.trim() ?? null;
+        })()`);
+        const expected = expectedNormalCountdown === 'none' ? null : expectedNormalCountdown;
+        if (normalCountdown !== expected) {
+            throw new Error('Normal library countdown mismatch: ' + JSON.stringify({ expected, actual: normalCountdown }));
+        }
+    }
     const filterOpened = await evaluate(`(() => {
         const button = Array.from(document.querySelectorAll('button')).find(candidate =>
             candidate.offsetParent !== null
@@ -129,17 +148,48 @@ try {
     await wait(3000);
     const dueResult = await evaluate(`({
         dueChecked: Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'))?.querySelector('input[type="checkbox"]')?.checked ?? false,
-        cards: document.querySelectorAll('.jfmod-entryCard').length
+        cards: Array.from(document.querySelectorAll('.jfmod-entryCard')).filter(candidate => candidate.offsetParent !== null).length,
+        countdowns: Array.from(document.querySelectorAll('.jfmod-entryCard')).filter(candidate => candidate.offsetParent !== null)
+            .map(candidate => candidate.querySelector('.jfmod-countdown')?.textContent.trim()).filter(Boolean)
     })`);
-    if (!dueResult.dueChecked || dueResult.cards !== 0) {
-        throw new Error('Due filter did not render the expected empty eligible set: ' + JSON.stringify(dueResult));
+    if (!dueResult.dueChecked || dueResult.cards !== expectedDueCards
+        || expectedFilteredCountdown && !dueResult.countdowns.includes(expectedFilteredCountdown)) {
+        throw new Error('Due filter did not render the expected eligible set: ' + JSON.stringify(dueResult));
     }
     await evaluate(`Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'))?.querySelector('input[type="checkbox"]')?.click()`);
     await wait(3000);
-    if (!await evaluate(`document.querySelectorAll('.jfmod-entryCard').length > 0`)) {
+    if (!await evaluate(`Array.from(document.querySelectorAll('.jfmod-entryCard')).some(candidate => candidate.offsetParent !== null)`)) {
         throw new Error('Clearing the Due filter did not restore the isolated library');
     }
-    checks.push({ dueFilter: 'passed', emptyEligibleSet: 'passed' });
+    checks.push({ dueFilter: 'passed', eligibleSet: 'passed' });
+    if (reclaimedEntryId) {
+        await navigate(server + '#/details?entryId=' + encodeURIComponent(reclaimedEntryId));
+        const reclaimed = await evaluate(`(() => {
+            const root = document.querySelector('.jfmod-entryDetailsRoot');
+            const playback = Array.from(root?.querySelectorAll('button, a') ?? []).some(candidate =>
+                candidate.offsetParent !== null && /^(play|resume|continue)/i.test(candidate.textContent.trim()));
+            return { filelessRoot: !!root, playback };
+        })()`);
+        if (!reclaimed.filelessRoot || reclaimed.playback) {
+            throw new Error('Reclaimed details exposed a dead playback action: ' + JSON.stringify(reclaimed));
+        }
+        checks.push({ reclaimedPlayback: 'absent' });
+    }
+    if (nativePlaybackItemId) {
+        await navigate(server + '#/details?id=' + encodeURIComponent(nativePlaybackItemId));
+        const nativePlayback = await evaluate(`(() => {
+            const controls = Array.from(document.querySelectorAll('#itemDetailPage:not(.hide) button, #itemDetailPage:not(.hide) a'))
+                .filter(candidate => candidate.offsetParent !== null)
+                .map(candidate => ({ text: candidate.textContent.trim(), title: candidate.getAttribute('title'), aria: candidate.getAttribute('aria-label'), classes: candidate.className }));
+            return {
+                present: controls.some(candidate => /^(play|resume|continue)/i.test(candidate.text)
+                    || /^(play|resume|continue)/i.test(candidate.title ?? '') || /^(play|resume|continue)/i.test(candidate.aria ?? '')),
+                controls
+            };
+        })()`);
+        if (!nativePlayback.present) throw new Error('Native movie lost its playback action: ' + JSON.stringify(nativePlayback.controls));
+        checks.push({ nativePlayback: 'present' });
+    }
     for (const [layout, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844], ['tv', 1920, 1080], ['tv', 1280, 720]]) {
         await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: layout === 'mobile' });
         await evaluate(`localStorage.setItem('layout', ${JSON.stringify(layout)})`);
@@ -161,21 +211,28 @@ try {
         if (layout === 'desktop') {
             const hasKeep = await evaluate(`(() => {
                 const button = document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]');
-                button?.focus();
-                button?.click();
+                if (${JSON.stringify(expectAdmin)}) {
+                    button?.focus();
+                    button?.click();
+                }
                 return !!button;
             })()`);
-            if (!hasKeep) throw new Error('Admin Keep action is missing from native details');
-            await wait(3000);
-            const kept = await evaluate(`({
-                focused: document.activeElement?.matches('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]') ?? false,
-                label: document.activeElement?.textContent.trim() ?? null,
-                status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
-            })`);
-            if (!kept.focused || kept.label !== 'Kept' || kept.status !== 'Kept indefinitely.') {
-                throw new Error('Keep did not preserve focus and refresh retention state: ' + JSON.stringify(kept));
+            if (expectAdmin) {
+                if (!hasKeep) throw new Error('Admin Keep action is missing from native details');
+                await wait(3000);
+                const kept = await evaluate(`({
+                    focused: document.activeElement?.matches('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]') ?? false,
+                    label: document.activeElement?.textContent.trim() ?? null,
+                    status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
+                })`);
+                if (!kept.focused || kept.label !== 'Kept' || kept.status !== 'Kept indefinitely.') {
+                    throw new Error('Keep did not preserve focus and refresh retention state: ' + JSON.stringify(kept));
+                }
+                checks.push({ keepFocus: 'passed', retentionStatus: 'passed' });
+            } else {
+                if (hasKeep) throw new Error('Restricted user can see the admin-only Keep action');
+                checks.push({ restrictedKeep: 'absent' });
             }
-            checks.push({ keepFocus: 'passed', retentionStatus: 'passed' });
         }
     }
     await evaluate(`localStorage.setItem('layout', 'tv')`);
