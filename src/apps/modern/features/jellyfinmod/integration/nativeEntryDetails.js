@@ -9,22 +9,32 @@ import NativeEntryDetails from '../components/NativeEntryDetails';
 export default function initializeNativeEntryDetails(view, params) {
     let mount;
     let unmount;
+    let generation = 0;
     const hide = () => {
+        generation++;
         unmount?.();
         unmount = undefined;
         mount?.remove();
         mount = undefined;
     };
-    const show = () => {
+    const show = async () => {
         hide();
+        const currentGeneration = generation;
         const client = params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
         const api = client && ServerConnections.getApi(client.serverId());
         const target = view.querySelector('.detailSectionContent');
         if (!api || !target || !params.id) return;
+        const user = await client.getCurrentUser();
+        if (currentGeneration !== generation) return;
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
         target.appendChild(mount);
-        unmount = renderComponent(NativeEntryDetails, { api, userId: client.getCurrentUserId(), itemId: params.id }, mount);
+        unmount = renderComponent(NativeEntryDetails, {
+            api,
+            userId: client.getCurrentUserId(),
+            itemId: params.id,
+            isAdmin: !!user?.Policy?.IsAdministrator
+        }, mount);
     };
     const destroy = () => {
         hide();

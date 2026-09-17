@@ -31,6 +31,7 @@ export interface Entry {
     posterPath?: string | null;
     metadata?: TmdbMetadata | null;
     reclaimAfterDays?: number | null;
+    retentionPolicy: 'inherit' | 'days' | 'never';
     state: FileState;
     monitored: boolean;
     /** Set from OnDisk onward. */
@@ -85,4 +86,13 @@ export interface EntryEpisode {
     state: FileState;
     availability: 'onDisk' | 'missing' | 'unaired';
     jellyfinItemId: string | null;
+    retention: RetentionSummary | null;
+}
+
+export interface RetentionSummary {
+    enabled: boolean;
+    policy: 'inherit' | 'days' | 'never';
+    state: 'disabled' | 'blocked' | 'waiting' | 'scheduled' | 'mixed';
+    reason: string;
+    deadline: string | null;
 }
