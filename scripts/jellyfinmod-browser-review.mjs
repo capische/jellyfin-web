@@ -46,7 +46,8 @@ const navigate = async url => {
 };
 const setSearch = async query => {
     await evaluate(`(() => {
-        const input = document.querySelector('#searchPage input[type="search"], #searchPage .searchField');
+        const input = document.querySelector('#searchTextInput');
+        if (!(input instanceof HTMLInputElement)) throw new Error('Search input is unavailable');
         const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
         setter.call(input, ${JSON.stringify(query)});
         input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -131,6 +132,14 @@ try {
     }
     await evaluate(`localStorage.setItem('layout', 'tv')`);
     await navigate(server + '#/search?query=' + encodeURIComponent(process.env.JELLYFINMOD_SEARCH_QUERY ?? 'blade'));
+    const searchActivated = await evaluate(`(() => {
+        if (document.querySelector('#searchPage:not(.hide)')) return true;
+        const button = Array.from(document.querySelectorAll('button')).find(candidate => candidate.getAttribute('aria-label') === 'Search');
+        button?.click();
+        return !!button;
+    })()`);
+    if (!searchActivated) throw new Error('Search route could not be activated');
+    await wait(3000);
     await evaluate(`(() => {
         for (const select of document.querySelectorAll('.jfmod-discovery select')) {
             if (!select.value && select.options.length > 1) {
