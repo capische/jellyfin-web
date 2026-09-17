@@ -52,7 +52,8 @@ const ItemsView: FC = () => {
     ].join(', '));
 
     const { api, __legacyApiClient__, user } = useApi();
-    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length) ?
+    const dueWithinDays = libraryViewSettings.Filters?.RetentionDueWithinDays;
+    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length || dueWithinDays) ?
         browseResult.data : undefined;
 
     // The query key for all items for the current user.
@@ -168,8 +169,9 @@ const ItemsView: FC = () => {
         if (combined) {
             if (!combined.items.length) return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
             return libraryViewSettings.ViewMode === ViewMode.ListView ?
-                <EntryLists rows={combined.items} listOptions={getListOptions()} serverId={__legacyApiClient__?.serverId()} /> :
-                <EntryCards rows={combined.items} cardOptions={getCardOptions()} />;
+                <EntryLists rows={combined.items} listOptions={getListOptions()} serverId={__legacyApiClient__?.serverId()}
+                    alwaysShowCountdown={!!dueWithinDays} /> :
+                <EntryCards rows={combined.items} cardOptions={getCardOptions()} alwaysShowCountdown={!!dueWithinDays} />;
         }
         if (!itemsResult?.data?.Items?.length) {
             return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
@@ -196,6 +198,7 @@ const ItemsView: FC = () => {
         getCardOptions,
         noItemsMessage,
         combined,
+        dueWithinDays,
         __legacyApiClient__
     ]);
 

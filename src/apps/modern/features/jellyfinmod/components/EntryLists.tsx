@@ -12,9 +12,10 @@ interface Props {
     rows: BrowseRow[];
     listOptions: ListOptions;
     serverId?: string;
+    alwaysShowCountdown?: boolean;
 }
 
-function NativeEntryList({ row, index, listOptions }: Readonly<{ row: Extract<BrowseRow, { kind: 'native' }>; index: number; listOptions: ListOptions }>) {
+function NativeEntryList({ row, index, listOptions, alwaysShowCountdown }: Readonly<{ row: Extract<BrowseRow, { kind: 'native' }>; index: number; listOptions: ListOptions; alwaysShowCountdown?: boolean }>) {
     const anchor = useRef<HTMLDivElement>(null);
     const [cover, setCover] = useState<Element | null>(null);
     useLayoutEffect(() => {
@@ -22,22 +23,26 @@ function NativeEntryList({ row, index, listOptions }: Readonly<{ row: Extract<Br
     }, [listOptions.image]);
     return <div ref={anchor}>
         <List index={index} item={row.nativeItem} listOptions={listOptions} />
-        {row.entry && cover && createPortal(<FileStateMark entry={row.entry} />, cover)}
+        {row.entry && cover && createPortal(<FileStateMark entry={row.entry} retention={row.retention}
+            alwaysShowCountdown={alwaysShowCountdown} />, cover)}
     </div>;
 }
 
-export default function EntryLists({ rows, listOptions, serverId }: Readonly<Props>) {
+export default function EntryLists({ rows, listOptions, serverId, alwaysShowCountdown }: Readonly<Props>) {
     const openEntry = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         const path = event.currentTarget.dataset.entryPath;
         if (path) window.location.hash = '#' + path;
     }, []);
     return <>{rows.map((row, index) => {
-        if (row.kind === 'native') return <NativeEntryList key={'native:' + row.nativeItem.Id} row={row} index={index} listOptions={listOptions} />;
+        if (row.kind === 'native') {
+            return <NativeEntryList key={'native:' + row.nativeItem.Id} row={row} index={index}
+                listOptions={listOptions} alwaysShowCountdown={alwaysShowCountdown} />;
+        }
         const path = getEntryPath(row.entry.id, serverId);
         const artwork = getTmdbImage(row.entry.posterPath);
         const content = <>
             <div className='listItemImage jfmod-entryListImage' style={artwork ? { backgroundImage: `url("${artwork}")` } : undefined}>
-                <FileStateMark entry={row.entry} />
+                <FileStateMark entry={row.entry} retention={row.retention} alwaysShowCountdown={alwaysShowCountdown} />
             </div>
             <div className='listItemBody'>
                 <div className='listItemBodyText'>{row.entry.title}</div>

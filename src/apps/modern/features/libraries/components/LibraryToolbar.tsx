@@ -60,7 +60,8 @@ const LibraryToolbar: FC = () => {
 
     const { data: item } = useItem(parentId || undefined);
 
-    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length) ?
+    const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || libraryViewSettings.Filters?.FileStates?.length
+        || libraryViewSettings.Filters?.RetentionDueWithinDays) ?
         browseResult.data : undefined;
     const isPending = browseResult?.isSelectingSource || (combined ? browseResult?.isPending : (itemsResult?.isPending ?? true));
     const totalRecordCount = combined?.totalRecordCount ?? itemsResult?.data?.TotalRecordCount ?? 0;
