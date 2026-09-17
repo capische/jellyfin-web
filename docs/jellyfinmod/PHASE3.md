@@ -297,14 +297,48 @@ Release gates:
 - [x] Verify the live daily task is installed and a disabled manual run changes zero media.
 - [x] Verify native details, seasons, History and Keep across desktop/mobile/TV layouts, including
   focus remaining on Keep after success.
-- [ ] Verify the live File filter exposes **Due within 7 days**, uses server eligibility and keeps
+- [x] Verify the live File filter exposes **Due within 7 days**, uses server eligibility and keeps
   the grid stable for an empty result.
-- [ ] Verify scheduled countdown boundaries and that disabled, blocked and kept entries show no
+- [x] Verify scheduled countdown boundaries and that disabled, blocked and kept entries show no
   countdown.
-- [ ] Verify an ordinary user has no Keep control, old bookmarks still resolve, reclaimed entries
+- [x] Verify an ordinary user has no Keep control, old bookmarks still resolve, reclaimed entries
   have no dead Play/Continue Watching action, and valid native playback remains unchanged.
-- [ ] Record final plugin/web checksums, test paths and URLs, push the evidence commits, then remove
+- [x] Record final plugin/web checksums, test paths and URLs, push the evidence commits, then remove
   the Phase 3 worktrees while preserving their branches.
+
+## T6 acceptance evidence — 2026-09-17
+
+T6 ran only on `jellyfinmod-test` at `http://<test-host>:18096`; production was not changed.
+The isolated container finished healthy with restart count zero, retention disabled and the database
+restored after every browser fixture.
+
+- The five Phase 0–3 integration executables passed on ARM64 Linux in a `.NET 9` SDK container with
+  package networking disabled. They covered real SQLite and HTTP authorization, Jellyfin user-data
+  events, disposable files, hardlinks, Transmission boundaries, restart recovery and reconciliation.
+- EF reported no model changes after the last migration. Database backup
+  `<test-root>/backups/p3-t6-final-81c1aae.db` passed integrity and foreign-key
+  checks with 163 entries, 160 bindings, 178 history records, three retention runs and ten
+  migrations. The reversible browser-fixture backup is
+  `<test-root>/backups/p3-t6-browser-original-81c1aae.db`.
+- The live daily task was present. A disabled manual run inspected, reclaimed and changed zero media.
+- The built browser passed native details, seasons, History and admin Keep on desktop, mobile,
+  1920x1080 TV layout and 1280x720 TV layout. Keep retained focus and refreshed to **Kept
+  indefinitely**. Physical-TV hardware was not tested in T6.
+- The File filter exposed **Due within 7 days**. An empty server-eligible result stayed stable and
+  clearing the filter restored the library. Reversible persisted evaluations verified `0d`, `3d`
+  and the normal-view `3d`/`4d` boundary; the filtered view showed `4d`. Disabled, blocked and kept
+  fixtures showed no countdown.
+- Existing ordinary user `nata` saw no Keep control. An old `entryId` bookmark still resolved to
+  native details. A reversible reclaimed entry exposed no Play, Resume or Continue action, while
+  native item `ba9815a6b64dfb9820639f36f8271a1a` retained its playback action. The original database
+  was restored and passed `PRAGMA integrity_check` afterward.
+- Installed plugin DLL SHA-256:
+  `8e8370fc8ca130004bfe2875a5c7b03f1fc78e3fa176fdc8cfa2381f5890b002`.
+  Deployed web `index.html` SHA-256:
+  `4531fe62a2716695bb848f4f509f6a268432d3a0481da70b4f45bc6c6b1ac3e1`.
+- The release branches are `jellyfinmod-phase3` in `capische/jellyfin-mod` and
+  `jellyfinmod-phase3-web` in `capische/jellyfin-web`. The deployed feature commits are plugin
+  `81c1aae` and web `ec9f6bedeb`; later web commits add the T6 browser runner and this evidence.
 
 ## Required integration and E2E matrix
 
