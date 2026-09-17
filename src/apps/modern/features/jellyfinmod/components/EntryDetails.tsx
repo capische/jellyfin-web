@@ -3,6 +3,7 @@ import React, { type ChangeEvent, type FC, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
+import { keepButtonLabel } from '../constants/fileState';
 import { getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
 import RetentionStatus from './RetentionStatus';
@@ -51,17 +52,20 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         await removeEntry(api, entry.id, { signal });
         if (!signal.aborted) window.location.hash = '#/home';
     }), [api, entry.id, mutate, signal]);
-    const keep = useCallback(() => mutate(async () => {
-        await keepEntry(api, entry.id, { signal });
-        const updated = await getEntry(api, entry.id, { signal });
-        if (!signal.aborted) {
-            setEntry(updated.entry);
-            setEpisodes(updated.episodes);
-            setHistory(updated.history);
-            setRetention(updated.retention);
-            setMessage('This title will be kept.');
-        }
-    }), [api, entry.id, mutate, signal]);
+    const keep = useCallback(() => {
+        if (busy) return;
+        return mutate(async () => {
+            await keepEntry(api, entry.id, { signal });
+            const updated = await getEntry(api, entry.id, { signal });
+            if (!signal.aborted) {
+                setEntry(updated.entry);
+                setEpisodes(updated.episodes);
+                setHistory(updated.history);
+                setRetention(updated.retention);
+                setMessage('This title will be kept.');
+            }
+        });
+    }, [api, busy, entry.id, mutate, signal]);
     const toggleEpisode = useCallback((event: ChangeEvent<HTMLInputElement>) => {
         const id = event.currentTarget.dataset.episodeId;
         const monitored = event.currentTarget.checked;
@@ -102,9 +106,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 Search releases
             </button>
             {isAdmin && <>
-                <button className='emby-button raised' type='button' disabled={busy}
-                    aria-pressed={retention.reason === 'kept'} onClick={keep}>
-                    {retention.reason === 'kept' ? 'Kept' : 'Keep'}
+                <button className='emby-button raised' type='button' aria-busy={busy}
+                    aria-disabled={busy} aria-pressed={retention.reason === 'kept'} onClick={keep}>
+                    {keepButtonLabel(busy, retention.reason === 'kept')}
                 </button>
                 <label><input type='checkbox' checked={entry.monitored} disabled={busy}
                     onChange={toggleMonitoring} /> Monitor</label>

@@ -97,7 +97,7 @@ try {
         await navigate(server + '#/details?entryId=' + encodeURIComponent(entryId));
         const native = await evaluate(`({
             nativeRoute: location.hash.includes('id=') && !location.hash.includes('entryId='),
-            seasons: !!document.querySelector('#itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .card, #itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .listItem'),
+            seasons: !!document.querySelector('#itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .card, #itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .listItem, #itemDetailPage:not(.hide) #listChildrenCollapsible:not(.hide) .card, #itemDetailPage:not(.hide) #listChildrenCollapsible:not(.hide) .listItem'),
             history: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-entryHistory'),
             filelessRoot: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-entryDetailsRoot')
         })`);
@@ -109,6 +109,25 @@ try {
         const menuHasSearch = await evaluate(`Array.from(document.querySelectorAll('[data-id="jfmod-search-releases"]')).some(node => node.textContent.includes('Search releases'))`);
         if (!menuHasSearch) throw new Error('Search releases missing from native More menu in ' + layout);
         checks.push({ layout, width, height, nativeDetails: 'passed' });
+        if (layout === 'desktop') {
+            const hasKeep = await evaluate(`(() => {
+                const button = document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]');
+                button?.focus();
+                button?.click();
+                return !!button;
+            })()`);
+            if (!hasKeep) throw new Error('Admin Keep action is missing from native details');
+            await wait(3000);
+            const kept = await evaluate(`({
+                focused: document.activeElement?.matches('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]') ?? false,
+                label: document.activeElement?.textContent.trim() ?? null,
+                status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
+            })`);
+            if (!kept.focused || kept.label !== 'Kept' || kept.status !== 'Kept indefinitely.') {
+                throw new Error('Keep did not preserve focus and refresh retention state: ' + JSON.stringify(kept));
+            }
+            checks.push({ keepFocus: 'passed', retentionStatus: 'passed' });
+        }
     }
     await evaluate(`localStorage.setItem('layout', 'tv')`);
     await navigate(server + '#/search?query=' + encodeURIComponent(process.env.JELLYFINMOD_SEARCH_QUERY ?? 'blade'));

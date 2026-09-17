@@ -35,6 +35,11 @@ export const daysUntilReclaim = (reclaimAt?: string | null): number | null => {
 export const retentionDeadline = (retention?: RetentionSummary | null): string | null =>
     retention?.enabled && retention.state === 'scheduled' ? retention.deadline : null;
 
+export const keepButtonLabel = (busy: boolean, kept: boolean): string => {
+    if (busy) return 'Keeping…';
+    return kept ? 'Kept' : 'Keep';
+};
+
 const PROTECTION_MESSAGES = new Map([
     ['favorite', 'Protected while marked as a favourite.'],
     ['favorite_series', 'Protected while marked as a favourite.'],
@@ -45,8 +50,8 @@ const PROTECTION_MESSAGES = new Map([
 
 /** Privacy-safe wording shared by native, file-less and episode details. */
 export const retentionMessage = (retention?: RetentionSummary | null): string => {
+    if (retention?.reason === 'kept') return 'Kept indefinitely.';
     if (!retention || !retention.enabled || retention.state === 'disabled') return 'Automatic removal is off.';
-    if (retention.reason === 'kept') return 'Kept indefinitely.';
     if (retention.state === 'scheduled' && retention.deadline) {
         const deadline = new Date(retention.deadline);
         const days = daysUntilReclaim(retention.deadline);
