@@ -1,7 +1,7 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
-import type { Entry, EntryEpisode, HistoryRecord, TmdbMetadata } from '../types/entry';
+import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { Filters } from 'types/library';
 
@@ -69,6 +69,7 @@ export interface EntryDetail {
     entry: Entry;
     history: HistoryRecord[];
     episodes: EntryEpisode[];
+    retention: RetentionSummary;
 }
 
 export interface DiscoveryQuery {
@@ -90,13 +91,15 @@ export interface BrowseRequest {
     targetLibraryId?: string;
     query?: string;
     state?: string[];
+    dueWithinDays?: number;
     sortBy?: string[];
     sortOrder?: string;
     randomSeed?: string;
     startIndex?: number;
     limit?: number;
     alphabet?: string | null;
-    filters?: Partial<Record<Uncapitalize<Exclude<keyof Filters, 'FileStates' | 'EpisodeFilter' | 'EpisodesStatus'>>, unknown>>;
+    filters?: Partial<Record<Uncapitalize<Exclude<keyof Filters,
+        'FileStates' | 'RetentionDueWithinDays' | 'EpisodeFilter' | 'EpisodesStatus'>>, unknown>>;
 }
 
 export interface BrowseResult {
@@ -131,6 +134,12 @@ export const refreshEntry = async (api: Api, id: string, options?: AxiosRequestC
 
 export const patchEntry = async (api: Api, id: string, monitored: boolean, options?: AxiosRequestConfig): Promise<Entry> => {
     const response = await api.axiosInstance.patch<Entry>(api.basePath + BASE + '/Entries/' + encodeURIComponent(id), { monitored },
+        { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+export const keepEntry = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<Entry> => {
+    const response = await api.axiosInstance.post<Entry>(api.basePath + BASE + '/Entries/' + encodeURIComponent(id) + '/Keep', undefined,
         { ...options, headers: authorization(api) });
     return response.data;
 };

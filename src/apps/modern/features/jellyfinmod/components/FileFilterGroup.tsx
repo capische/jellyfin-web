@@ -18,6 +18,7 @@ interface Props {
 
 export default function FileFilterGroup({ libraryViewSettings, setLibraryViewSettings }: Readonly<Props>) {
     const selected = libraryViewSettings.Filters?.FileStates ?? [];
+    const dueWithinDays = libraryViewSettings.Filters?.RetentionDueWithinDays;
     const change = useCallback((event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
         const states = options.find(option => option.label === event.target.value)?.states;
         if (!states) return;
@@ -30,6 +31,16 @@ export default function FileFilterGroup({ libraryViewSettings, setLibraryViewSet
                 Filters: { ...previous.Filters, FileStates: values.length ? values : undefined }
             };
         });
+    }, [setLibraryViewSettings]);
+    const changeDue = useCallback((_event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+        setLibraryViewSettings(previous => ({
+            ...previous,
+            StartIndex: 0,
+            Filters: {
+                ...previous.Filters,
+                RetentionDueWithinDays: checked ? 7 : undefined
+            }
+        }));
     }, [setLibraryViewSettings]);
     return (
         <FormGroup>
@@ -46,6 +57,10 @@ export default function FileFilterGroup({ libraryViewSettings, setLibraryViewSet
                     }
                 />
             ))}
+            <FormControlLabel
+                label='Due within 7 days'
+                control={<Checkbox checked={dueWithinDays === 7} onChange={changeDue} />}
+            />
         </FormGroup>
     );
 }
