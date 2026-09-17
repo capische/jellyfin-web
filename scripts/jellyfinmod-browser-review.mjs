@@ -6,6 +6,8 @@ const base = process.env.JELLYFINMOD_CDP_URL ?? 'http://127.0.0.1:9223';
 const server = new URL('/web/', testUrl).href;
 const entryId = process.env.JELLYFINMOD_NATIVE_ENTRY_ID;
 if (!entryId) throw new Error('Set JELLYFINMOD_NATIVE_ENTRY_ID to a bound series entry with native seasons');
+const libraryId = process.env.JELLYFINMOD_LIBRARY_ID;
+if (!libraryId) throw new Error('Set JELLYFINMOD_LIBRARY_ID to the isolated browser-test library');
 
 const page = await (await fetch(`${base}/json/new?${encodeURIComponent(server)}`, { method: 'PUT' })).json();
 
@@ -92,6 +94,52 @@ try {
         throw new Error('Sign into the dedicated test browser as oleksii with an empty password, then rerun');
     }
     originalLayout = await evaluate(`localStorage.getItem('layout')`);
+    await evaluate(`localStorage.setItem('layout', 'desktop')`);
+    await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
+    const filterOpened = await evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('button')).find(candidate =>
+            candidate.offsetParent !== null
+            && (candidate.getAttribute('aria-label') === 'Filter' || candidate.getAttribute('title') === 'Filter'));
+        button?.click();
+        return !!button;
+    })()`);
+    if (!filterOpened) throw new Error('Library filter button is unavailable');
+    await wait(500);
+    const fileFilterState = await evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('button')).find(candidate =>
+            candidate.offsetParent !== null && candidate.textContent.trim() === 'File');
+        button?.click();
+        return {
+            opened: !!button,
+            cards: document.querySelectorAll('.jfmod-entryCard').length,
+            filterHeadings: Array.from(document.querySelectorAll('[role="presentation"] h3')).map(candidate => candidate.textContent.trim())
+        };
+    })()`);
+    if (!fileFilterState.opened) {
+        throw new Error('File filter group is unavailable after the combined browse response: ' + JSON.stringify(fileFilterState));
+    }
+    await wait(500);
+    const dueSelected = await evaluate(`(() => {
+        const label = Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'));
+        const input = label?.querySelector('input[type="checkbox"]');
+        input?.click();
+        return !!input;
+    })()`);
+    if (!dueSelected) throw new Error('Due within 7 days filter is unavailable');
+    await wait(3000);
+    const dueResult = await evaluate(`({
+        dueChecked: Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'))?.querySelector('input[type="checkbox"]')?.checked ?? false,
+        cards: document.querySelectorAll('.jfmod-entryCard').length
+    })`);
+    if (!dueResult.dueChecked || dueResult.cards !== 0) {
+        throw new Error('Due filter did not render the expected empty eligible set: ' + JSON.stringify(dueResult));
+    }
+    await evaluate(`Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'))?.querySelector('input[type="checkbox"]')?.click()`);
+    await wait(3000);
+    if (!await evaluate(`document.querySelectorAll('.jfmod-entryCard').length > 0`)) {
+        throw new Error('Clearing the Due filter did not restore the isolated library');
+    }
+    checks.push({ dueFilter: 'passed', emptyEligibleSet: 'passed' });
     for (const [layout, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844], ['tv', 1920, 1080], ['tv', 1280, 720]]) {
         await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: layout === 'mobile' });
         await evaluate(`localStorage.setItem('layout', ${JSON.stringify(layout)})`);
