@@ -26,6 +26,7 @@ export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId,
         limit: libraryPageSize || undefined,
         alphabet: settings.Alphabet,
         state: filters?.FileStates,
+        dueWithinDays: filters?.RetentionDueWithinDays,
         filters: {
             genres: filters?.Genres,
             years: filters?.Years,

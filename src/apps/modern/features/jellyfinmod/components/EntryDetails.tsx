@@ -2,9 +2,10 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import React, { type ChangeEvent, type FC, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { type EntryDetail, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
+import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
 import { getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
+import RetentionStatus from './RetentionStatus';
 
 import './entryDetails.scss';
 
@@ -21,6 +22,8 @@ interface EntryDetailsProps {
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal }) => {
     const [entry, setEntry] = useState(detail.entry);
     const [episodes, setEpisodes] = useState(detail.episodes);
+    const [history, setHistory] = useState(detail.history);
+    const [retention, setRetention] = useState(detail.retention);
     const [message, setMessage] = useState('');
     const [busy, setBusy] = useState(false);
     const mount = (selector: string, content: React.ReactNode) => {
@@ -48,6 +51,17 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         await removeEntry(api, entry.id, { signal });
         if (!signal.aborted) window.location.hash = '#/home';
     }), [api, entry.id, mutate, signal]);
+    const keep = useCallback(() => mutate(async () => {
+        await keepEntry(api, entry.id, { signal });
+        const updated = await getEntry(api, entry.id, { signal });
+        if (!signal.aborted) {
+            setEntry(updated.entry);
+            setEpisodes(updated.episodes);
+            setHistory(updated.history);
+            setRetention(updated.retention);
+            setMessage('This title will be kept.');
+        }
+    }), [api, entry.id, mutate, signal]);
     const toggleEpisode = useCallback((event: ChangeEvent<HTMLInputElement>) => {
         const id = event.currentTarget.dataset.episodeId;
         const monitored = event.currentTarget.checked;
@@ -62,6 +76,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         if (!signal.aborted) {
             setEntry(updated.entry);
             setEpisodes(updated.episodes);
+            setHistory(updated.history);
+            setRetention(updated.retention);
             setMessage('Metadata refreshed.');
         }
     }), [api, entry.id, mutate, signal]);
@@ -75,7 +91,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} /></div>, node, String(index)))}
+            <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}
         {mount('.mainDetailButtons', <div className='jfmod-entryActions'>
             {entry.jellyfinItemId && <a className='emby-button raised button-submit'
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
@@ -86,6 +102,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 Search releases
             </button>
             {isAdmin && <>
+                <button className='emby-button raised' type='button' disabled={busy}
+                    aria-pressed={retention.reason === 'kept'} onClick={keep}>
+                    {retention.reason === 'kept' ? 'Kept' : 'Keep'}
+                </button>
                 <label><input type='checkbox' checked={entry.monitored} disabled={busy}
                     onChange={toggleMonitoring} /> Monitor</label>
                 <button className='emby-button' type='button' disabled={busy}
@@ -98,9 +118,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.overview', entry.overview)}
         {mount('.itemDetailsGroup', <>
             <p role='status'>{message}</p>
+            <RetentionStatus retention={retention} />
             <details className='jfmod-entryHistory'>
-                <summary>History{detail.history[0] ? ' · ' + detail.history[0].summary : ''}</summary>
-                <ol>{detail.history.map(event => <li key={event.id}>
+                <summary>History{history[0] ? ' · ' + history[0].summary : ''}</summary>
+                <ol>{history.map(event => <li key={event.id}>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
                 </li>)}</ol>
             </details>
@@ -109,6 +130,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 {episodes.map(episode => <div className='jfmod-episodeRow' key={episode.id}>
                     <span>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</span>
                     <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open episode</a> : availabilityLabel(episode.availability)}</span>
+                    <RetentionStatus retention={episode.retention} compact />
                     {isAdmin && <label><input type='checkbox' checked={episode.monitored} disabled={busy}
                         data-episode-id={episode.id} onChange={toggleEpisode} /> Monitor</label>}
                 </div>)}
