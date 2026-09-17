@@ -247,7 +247,7 @@ const LibraryToolbar: FC = () => {
                                     itemType={itemType ?? []}
                                     viewType={viewType}
                                     hasFilters={hasFilterOptions}
-                                    fileFiltersAvailable={browseResult?.isSuccess}
+                                    fileFiltersAvailable={!!browseResult?.data}
                                     libraryViewSettings={libraryViewSettings}
                                     setLibraryViewSettings={setLibraryViewSettings}
                                 />
