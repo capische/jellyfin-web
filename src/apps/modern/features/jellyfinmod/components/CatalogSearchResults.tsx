@@ -70,6 +70,7 @@ const optimisticEntry = (metadata: TmdbMetadata, targetLibraryId: string): Entry
     overview: metadata.overview,
     posterPath: metadata.posterPath,
     metadata,
+    retentionPolicy: 'inherit',
     state: FileState.None,
     monitored: true,
     targetLibraryId,

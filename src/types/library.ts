@@ -35,6 +35,7 @@ export enum VideoBasicFilter {
 
 export interface Filters {
     FileStates?: string[];
+    RetentionDueWithinDays?: number;
     Features?: FeatureFilters[];
     Genres?: string[];
     OfficialRatings?: string[];

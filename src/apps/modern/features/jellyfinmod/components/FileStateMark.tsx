@@ -7,13 +7,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 import classNames from 'classnames';
 import React, { type FC } from 'react';
 
-import { daysUntilReclaim, FILE_STATE_LABEL } from '../constants/fileState';
-import { type Entry, FileState } from '../types/entry';
+import { daysUntilReclaim, FILE_STATE_LABEL, retentionDeadline } from '../constants/fileState';
+import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 
 import './fileStateMark.scss';
 
 interface FileStateMarkProps {
     entry: Entry;
+    retention?: RetentionSummary | null;
     /** Show the retention countdown regardless of how far off it is (used by the filtered view). */
     alwaysShowCountdown?: boolean;
 }
@@ -43,8 +44,8 @@ const variantFor = (state: FileState) => {
  * When retention is close, the countdown takes this slot instead of the state icon. One mark per
  * cover: two would start a badge collection.
  */
-const FileStateMark: FC<FileStateMarkProps> = ({ entry, alwaysShowCountdown = false }) => {
-    const days = daysUntilReclaim(entry.reclaimAt);
+const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCountdown = false }) => {
+    const days = daysUntilReclaim(retentionDeadline(retention));
     const showCountdown = days !== null && (alwaysShowCountdown || days <= 3);
 
     if (showCountdown) {
