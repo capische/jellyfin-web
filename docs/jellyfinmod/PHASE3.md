@@ -266,6 +266,46 @@ metadata/history and bookmarks; no playable action may target a removed native i
 ID. Preserve valid Continue Watching items, and remove dead resume actions only after confirmed
 loss. Reacquisition is Phase 4+: do not expose a working Get again action in Phase 3.
 
+#### T5 acceptance checkpoint — 2026-09-17
+
+T5 is implemented on `jellyfinmod-phase3` and `jellyfinmod-phase3-web` through plugin commit
+`81c1aae` and web commits `8d3d692b96`, `eee632795a` and `f31d0b8653`. Combined browse and
+entry/episode detail return the privacy-safe retention summary used by the executor. The built UI
+shows scheduled, blocked, disabled and kept states, hides countdowns unless an authoritative
+scheduled deadline applies, and adds the persisted **Due within 7 days** filter. Keep is
+administrator-only and remains the same focused control while its request completes.
+
+The isolated browser passed native routing, seasons, History, Keep focus/state refresh,
+failed-add focus and search-scope isolation at desktop, mobile, 1920×1080 TV and 1280×720 TV
+layouts. This is layout emulation, not physical-TV evidence. The live gate found one remaining
+issue: the built File filter section did not appear even though combined browse data was
+available. Its fix and final verification belong to T6 and must pass before Phase 3 closes.
+
+### T6 — isolated acceptance and release gate
+
+T6 is the final task of **Phase 3**. It adds no product feature. It combines the completed plugin
+and web work on `jellyfinmod-test`, then decides whether Phase 3 is safe to close. Production is
+not a T6 deployment or test target.
+
+Release gates:
+
+- [x] Run all five Phase 0–3 integration executables on ARM64 Linux with package networking
+  disabled, including real SQLite, HTTP auth, files, hardlinks and Transmission boundaries.
+- [x] Prove the EF model matches the committed migrations.
+- [x] Create a readable isolated database backup; verify integrity, foreign keys, preserved IDs,
+  history, operations and migration records from a restore copy.
+- [x] Verify the live daily task is installed and a disabled manual run changes zero media.
+- [x] Verify native details, seasons, History and Keep across desktop/mobile/TV layouts, including
+  focus remaining on Keep after success.
+- [ ] Verify the live File filter exposes **Due within 7 days**, uses server eligibility and keeps
+  the grid stable for an empty result.
+- [ ] Verify scheduled countdown boundaries and that disabled, blocked and kept entries show no
+  countdown.
+- [ ] Verify an ordinary user has no Keep control, old bookmarks still resolve, reclaimed entries
+  have no dead Play/Continue Watching action, and valid native playback remains unchanged.
+- [ ] Record final plugin/web checksums, test paths and URLs, push the evidence commits, then remove
+  the Phase 3 worktrees while preserving their branches.
+
 ## Required integration and E2E matrix
 
 - Real HTTP/auth/SQLite and native user-data events for two users: default All users waits for
