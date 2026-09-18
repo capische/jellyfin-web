@@ -148,6 +148,11 @@ Follow the fork's existing conventions: Conventional Commits, and `./jellyfin-sy
 to deploy. Catalog work adds a second deploy target — the plugin DLL — which the sync
 script will need to learn about (Phase 1).
 
+**Correction (review 2026-09-18):** by default `./jellyfin-sync --local` targets the production
+service, not the mod test instance. Mod work deploys only to the isolated test instance (port
+18096, service `jellyfinmod-test`) with explicit test targeting; making that the safe default is
+PLAN X3 (plan-ops#2, medium, verified; see [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 ## 4. Data model (plugin SQLite)
 
 ```
@@ -234,12 +239,26 @@ existing media-cleaner plugins get wrong and this must not: **never delete a fil
 torrent client is still seeding under its ratio/time goal**, and **never count a hardlinked
 file as reclaimed space without checking the link count**.
 
+**Correction (review 2026-09-18):** the `watched_at` stamp and global N described here are
+superseded by [`PHASE3.md`](PHASE3.md): retention uses per-user observations and the accepted
+All users / Selected user / Any user mode. The two safeguards in bold remain in force. For
+Transmission, whose seed goals are ratio and idle limits, the "time" goal means the idle limit;
+other clients keep their own time limits. If adopted, the proposed safety gate at the top of
+PHASE3 applies before retention is enabled on non-disposable media (plan-ops#8, low,
+single-source; prior-H4a residual; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 **Phase 4 — Indexers and manual grab.** Torznab client (`t=caps` first, then `t=movie` /
 `t=tvsearch`), release parsing, quality profiles, scoring. Web: a "Search releases" dialog
 listing parsed releases with size/seeders/quality/freeleech, and a manual grab. Download
 client abstraction — qBittorrent first, it is the best-behaved API of the three. Success:
 grab a release from the catalog UI and watch it appear in qBittorrent with the right
 category.
+
+**Open question for the user (review 2026-09-18):** "qBittorrent first" is not settled. Phase 3
+seed protection reads the deployed Transmission, so a qBittorrent-only grab path would leave
+grabbed torrents invisible to it. The choice between a Transmission write driver, qBittorrent
+with a new read adapter, or both is recorded in [`PHASE4.md`](PHASE4.md) and PLAN open
+questions (prior-H4c, medium, verified; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
 **Phase 5 — Import pipeline.** Watch the download client, detect completion, parse the
 release, **hardlink** into the library under the version-suffix naming convention, trigger
@@ -331,6 +350,10 @@ web-side polish.
 **Disk on a Pi.** Hardlink imports are not optional — a copy doubles every file while it
 seeds. Download directory and library must sit on the same filesystem, which is a
 deployment constraint to settle in Phase 0, not Phase 5.
+
+**Correction (review 2026-09-18):** the same-filesystem decision is tracked in one place,
+[`PLAN.md`](PLAN.md) open question 3 ("Needed before Phase 5"); the "Phase 0" timing above is
+superseded (plan-ops#8, low, single-source; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
 **Scope.** "Full replacement of Sonarr and Radarr" is the largest item on the list by an
 order of magnitude. The phasing above is deliberately arranged so that stopping after Phase

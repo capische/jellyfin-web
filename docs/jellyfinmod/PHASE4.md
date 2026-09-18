@@ -77,6 +77,12 @@ stubs. Replace those stubs through the existing feature integration; do not buil
 catalog, matching service or settings page. Phase 2/3 documents describe dependencies, not proof
 that their services exist in the current checkout.
 
+**Correction (review 2026-09-18):** This inventory is stale. Phase 3 ships
+`TransmissionSeedClient`, the seed endpoint and credentials configuration, the
+`RetentionOperation` and `RetentionRun` records and the retention summary DTOs. A1, A5 and A6
+must extend these rather than build a parallel client or seed store (plan-ops#8, low,
+single-source; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 The following are proposed Phase 4 defaults, not previously accepted user decisions. Resolve
 them in A1 before enabling acquisition; documentation and protocol evidence can proceed now.
 
@@ -89,6 +95,18 @@ them in A1 before enabling acquisition; documentation and protocol evidence can 
 | Rejection override | Rejected rows are inspectable but cannot be grabbed. No force-grab escape hatch in this phase. Change the profile or correct metadata and search again. |
 | Duplicate acquisition | One unresolved/active grab per entry or episode target; reject another until resolved. A verified existing playable copy stays available during an explicit manual grab. Multi-quality orchestration remains Phase 6. |
 | Correcting a mistaken grab | **Superseded by user decision 2:** a 5-second server-side hold with `POST /Grabs/{id}/Cancel` before submission. After handoff, correction happens in the Transmission web interface, linked after confirmed handoff. Phase 4 offers no queue Undo or removal API; do not promise the Phase 5 queue already exists. |
+
+**Proposed amendment (review 2026-09-18, not user-approved):** For the 'Correcting a mistaken
+grab' row and the A7 one-Enter rule, choose one of: (1) a short server-side cancellable hold,
+for example 5 s showing 'Sending… Back to cancel', with `POST /Grabs/{id}/Cancel` valid only
+before `submitting`; (2) a second Enter on the same row in the TV and mobile layouts; or (3) the
+current rule. In every option, freeze row order while a row is focused (plan-ops#6, medium,
+single-source; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
+**Open question for the user (review 2026-09-18):** UX §9 justifies grabbing with no
+confirmation because "the queue is where a mistake gets undone", but that queue does not exist
+until Phase 5. Keep one Enter with no confirmation, add the cancellable hold, or require a
+second Enter on TV and mobile?
 
 ## Entry gates and dependencies
 
@@ -109,6 +127,27 @@ them in A1 before enabling acquisition; documentation and protocol evidence can 
 6. Phase 3 T7, T8, T9, T10 and T18 pass on the isolated test instance (user decision 5).
 7. P7 is complete and the X1 production merge is done, with its SHA recorded (user decision 5).
 8. The X3 deploy tooling refuses production by default (user decision 5).
+
+**Proposed amendment (review 2026-09-18, not user-approved):** Add entry gates 6–9; gates 1–5
+are unchanged. See [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md) and PLAN.md X1–X4.
+
+6. The Phase 3 review blockers T7, T8, T9, T10 and T18 pass on the isolated test instance
+   (port 18096). Otherwise 'Get again' re-acquisition of a reclaimed title is due immediately
+   and would be deleted at the next retention run (plugin-retention-policy#1, critical,
+   verified).
+7. P7 and X1 are complete: every commit that `git cherry jellyfinmod-phase4 <older phase
+   branch>` marks `+`, including the phase1 commit `fba11e3`, is either patch-identical on the
+   phase4 line or named in a port commit there (a `(cherry picked from commit …)` or
+   `Ported-from:` trailer), with the mappings recorded in the evidence; and `origin/master` is merged with its SHA
+   recorded (plan-ops#3, plan-ops#4, medium, single-source).
+8. The X3 deploy tooling refuses production by default, and the X4 Health response reports
+   the plugin revision and `capabilities`, which A7 gating uses (plan-ops#2, medium, verified;
+   lowered from high; plan-ops#5, medium, single-source).
+9. A9 (isolated acquisition infrastructure) is complete (plan-ops#7, low, single-source).
+
+Also recommended before A6 relies on availability: R6 and R7, so one unverifiable binding or a
+re-created library cannot disable absence detection or orphan entries (plugin-reconciliation-data#2,
+high, verified).
 
 ## Data model and ownership
 
@@ -185,6 +224,44 @@ remain distinguishable from accepted/failed through the actual serializer and we
 | A6 | Entry/history and retention integration; plugin contracts/services | A5, Phase 2/3 | Preserved bindings, played policy, seed requirements and correct accepted/failed/unknown summaries |
 | A7 | Release picker and profile surfaces; web and narrow detail/menu mounts | A1 contract, A4–A6 | Built app, real server/client, desktop/mobile/TV focus and degradation |
 | A8 | Isolated end-to-end acceptance; both repositories | A1–A7 | Complete search-to-client flow plus migration/restart, security, failure and playback regressions |
+| A9 | Proposed (review 2026-09-18, not user-approved): provision isolated acquisition infrastructure and credentials; test compose, plugin test suite | Client decision | Disposable client service and Torznab boundary server reachable through real HTTP from `jellyfinmod-test`, with credentials only in the ignored `plugin/.env` |
+
+**Proposed amendment (review 2026-09-18, not user-approved):** A1 also depends on A9, so no
+protocol spike runs against household indexers or production client credentials (plan-ops#7,
+low, single-source; [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
+### A9 — provision isolated acquisition infrastructure first
+
+**Proposed (review 2026-09-18, not user-approved):** **Priority** high · **Depends on** the
+download-client open question · **Findings** plan-ops#7 (low, single-source)
+
+The isolated test instance has Transmission from Phase 3 but no second download client, no
+isolated indexer, no compose service for either and no sanctioned place for their credentials.
+A9 provisions them before A1 needs protocol evidence. Run the chosen client as a disposable
+service on the isolated test compose, with its config and download directories inside the
+isolated state directory and auto-removal disabled. Record the container path mapping between
+that client, Transmission and `jellyfinmod-test` without publishing paths. Run a Torznab HTTP
+boundary server from the test suite. Keep credentials only in the ignored `plugin/.env` (mode
+`0600`), add empty keys to `plugin/.env.sample`, and never print them. Use no household indexer
+and no production client credential. A1 indexer evidence comes from the boundary server plus
+read-only capability queries; whether any real indexer may be queried is an open question.
+
+**Acceptance**
+
+- The chosen client runs as a disposable service on the isolated test compose; its config and
+  download directories are inside the isolated state directory and auto-removal is disabled.
+- The container path mapping between the client, Transmission and `jellyfinmod-test` is
+  recorded without publishing paths.
+- The Torznab HTTP boundary server runs from the test suite and serves caps and feeds.
+- Credentials live only in the ignored `plugin/.env` (`0600`), empty keys exist in
+  `plugin/.env.sample`, and no command, log, test output or report prints them.
+- Real HTTP connection tests from `jellyfinmod-test` (port 18096) to the client and the
+  boundary server succeed.
+- No household indexer or production client credential is used.
+
+**Open question for the user (review 2026-09-18):** Is any real indexer allowed for read-only
+capability queries in A1, and which one? Or should A1 rely only on the Torznab boundary server?
+Its keys would live in the ignored `plugin/.env` under this proposal.
 
 ### A1 — make the first slice executable
 
@@ -327,6 +404,12 @@ recovered by client identity lookup before any retry. Keep accepted, failed and 
 honest; never automatically switch clients or blindly retry add after a lost response. Recovery
 runs after restart and exposes unresolved cases for admin action without adding a removal API.
 
+**Proposed amendment (review 2026-09-18, not user-approved):** If qBittorrent is chosen, the
+operations list must also include the reads protection needs (files, save path, ratio and
+seeding time); A5 currently excludes them (prior-H4c, medium, verified). If the cancellable
+hold is chosen, A5 owns the `pending` hold and the Cancel transition before `submitting`
+(plan-ops#6, medium, single-source).
+
 ### A6 — preserve catalog and retention truth
 
 Add history and acquisition summary through existing entry/episode reads. One accepted grab gets
@@ -347,6 +430,25 @@ must recognize new torrent-managed paths and treat unknown client state as prote
 client's actual goal-combination/inheritance semantics; a client stopping condition is not proof
 that every retention seed requirement has been met. Never lower an existing goal or allow client
 auto-removal to bypass it. No claimed disk-space reclamation occurs in this phase.
+
+**Proposed amendment (review 2026-09-18, not user-approved):** Add A6 acceptance items:
+
+- (a) 'Get again' or any re-acquisition never inherits a prior retention deadline or
+  observations; depends on T7 (plugin-retention-policy#1, critical, verified).
+- (b) The Phase 3 read adapter recognises the chosen client's paths. It is Transmission-only
+  today (prior-H4c, medium, verified).
+- (c) Optional hardening, not a defect fix: the retention gate uses the stricter of the client's
+  goals and the grab's recorded seed-policy floor, ANDed with client state such as `isFinished`
+  and never ORed. This is the residual of the refuted prior-H4a.
+- (d) Define File-filter membership from the acquisition summary for file-less rows and for
+  native rows with partial episode grabs. Otherwise the PHASE1 Downloading filter matches
+  nothing once Phase 4 keeps `Entry.State` at `none` or `reclaimed` (plugin-browse-discover#8,
+  low, verified).
+- (e) Reclaimed episodes are not presented as missing gaps; see T14 (tests-contract#7, medium,
+  single-source).
+
+Each item is proved on the isolated test instance (port 18096) through real HTTP, Jellyfin
+authentication, serialization and SQLite, with disposable fixtures and a real client boundary.
 
 ### A7 — finish the existing release action
 
@@ -369,6 +471,12 @@ Focus the first eligible result when available, otherwise a stable status/reject
 Back/Escape closes and restores the opener. Async results, rescoring and errors must not unmount
 the focused container or reorder rows underneath an active selection without deliberate refresh.
 Keep native browse/playback usable on plugin absence, older API versions or indexer/client outage.
+
+**Proposed amendment (review 2026-09-18, not user-approved):** Gate the picker on the X4
+Health `capabilities` rather than version guessing (plan-ops#5, medium, single-source;
+web-library-search-details#6, medium, single-source). Apply the mistaken-grab option chosen
+under the decision table in place of the one-Enter sentence above, which stays as written until
+the user decides (plan-ops#6, medium, single-source). Keep rows frozen while one is focused.
 
 ## A8 — isolated acceptance and release gate
 
@@ -401,6 +509,21 @@ with a controlled seeder. Prove actual client state and fixture data, not only s
 - Record plugin/web/client revisions, fixture identity, test results, timings and Pi memory usage
   without secrets. Plugin Release build with zero warnings, web TypeScript and lint are supporting
   checks; they cannot replace integration/E2E evidence. Report any unverified gate explicitly.
+
+**Proposed amendment (review 2026-09-18, not user-approved):** Add these A8 cases on the
+isolated test instance (port 18096), using the built browser in desktop, mobile and TV layouts
+where a UI is involved:
+
+- If the hold is chosen, Back during the hold cancels the grab and the real client shows no
+  mutation (plan-ops#6, medium, single-source).
+- A late indexer result arriving from the Torznab boundary server while a row is focused does
+  not move or replace the focused row.
+- Get again for a reclaimed title is not deleted at the next retention run
+  (plugin-retention-policy#1, critical, verified).
+- The File filter shows grabbed rows, including a native series with a partial episode grab
+  (plugin-browse-discover#8, low, verified).
+- Evidence records the Health revision and the merged master SHA (plan-ops#5, plan-ops#4,
+  medium, single-source).
 
 Phase 4 is complete only when the accepted manual flow reliably hands the intended release to
 the isolated client once, with correct ownership/settings/history, and every protection and
@@ -455,6 +578,13 @@ and SQLite against Torznab and Transmission RPC boundary servers.
 | Credentials embedded in torrent locators | Server-only locators, bounded endpoint/redirect policy and redacted config/history/logs |
 | Parser licensing or scope expands | Independent implementation or compatible attributed references; no copied GPL-3.0 parser and no automation/import creep |
 | UI promises more than handoff | Distinct pending/unknown/accepted status; no fake progress, queue Undo or playable native ID |
+
+**Correction (review 2026-09-18):** In the 'Seed requirements lost between phases' row, the
+shared retention read adapter is Transmission-only, so sharing it protects nothing if the chosen
+client is qBittorrent; see the download-client open question and A6 (prior-H4c, medium,
+verified). Phase 5 already owns removing the seeding copy after seed goals (README §6). The
+earlier `REVIEW-2026-09-17.md` claims that no phase owns that removal (prior-H3) and that the
+Transmission idle limit breaks seed goals (prior-H4a) were refuted and are not Phase 4 defects.
 
 Protocol sources consulted through Context7 and official documentation on 2026-09-14:
 

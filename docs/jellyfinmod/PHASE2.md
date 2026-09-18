@@ -41,6 +41,19 @@ folder. Episode rows keep stable local IDs and monitoring when metadata changes.
 refresh must not remove episodes; unavailable TMDB must not prevent binding already-known native
 identities. Catalog reconciliation never writes native watched, favorite or resume data.
 
+**Proposed (review 2026-09-18, not user-approved):** the table rows above stay as written; these
+additions refine them after [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md). Absence is judged per
+title, not per library: a failed, conflicted, or unmatched-but-previously-bound title excludes only
+its own bindings from absence confirmation (plugin-reconciliation-data#2, high, verified). An
+unmatched series that already has bindings keeps them and its state, with a diagnostic
+(plugin-reconciliation-data#5, medium, single-source). Episode conflicts are isolated per episode,
+and a native position is never identity when a TMDB episode ID exists
+(plugin-reconciliation-data#6, medium, single-source). A native `IndexNumberEnd` range binds every
+covered episode, and an unnumbered episode is a per-episode diagnostic rather than a series failure
+(critic-gaps#2, medium, single-source). Overlapping libraries that share a path and library
+re-homing after a re-create or rename get one defined rule (plugin-reconciliation-data#3, high,
+verified), and admins get an explicit conflict-resolution path. See R6, R7 and R9 below.
+
 ## Execution and ownership
 
 | Order | Work | Depends on | Main owner | Verification |
@@ -170,7 +183,7 @@ correct catalog state without duplicates, lost history, broken playback or acces
 ## R5 acceptance evidence — 2026-09-15
 
 R5 was exercised against the isolated `jellyfinmod-test` container at
-`http://<test-host>:18096/web/`. The deployed web bundle was built from
+the isolated test instance (port 18096). The deployed web bundle was built from
 `4c465f8f37` and the plugin was `8969eebc90`. Production Jellyfin was not changed.
 
 - Moving the test movie out of its isolated library and running `RefreshLibrary` changed the same
@@ -214,3 +227,184 @@ counts were 163 entries, 160 bindings and 22 episodes; TMDB 550 retained one bin
 `ba9815a6b64dfb9820639f36f8271a1a`. The server contained only the expected `nata`, `oleksii`,
 `papa` and `vika` users. Together with the R5 browser run above, this satisfies the Phase 2
 completion gate on the isolated test instance. Production Jellyfin was not changed.
+
+**Correction (review 2026-09-18):** the recorded acceptance stands, but
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md) narrows what it proves. The run used a test library
+with 22 episodes, so listener event-storm cost and library-lock hold during absence confirmation
+were not observable (plugin-reconciliation-data#7, medium, verified; see R8). Absence confirmation
+is all-or-nothing per library: one unverifiable absent binding, or one failed or conflicted title,
+keeps it from completing until an admin intervenes, and the only recovery is a lossy entry removal
+(plugin-reconciliation-data#2, high, verified; see R6). Re-creating a library under another name,
+and probably renaming it, orphans its entries (plugin-reconciliation-data#3, high, verified; see
+R7). The automated Phase 2 suites stub Jellyfin host services and authentication, so they are
+supporting evidence only (tests-contract#2, medium, verified).
+
+## Review remediation — 2026-09-18
+
+Status: Phase 2 remains accepted on the isolated test instance (port 18096) as recorded above.
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md) found that absence confirmation, library identity,
+episode matching and event cost break down on real-world library shapes the 22-episode acceptance
+library did not contain. The tasks below are proposals, not user-approved work; none of the fixes
+exist on this branch. Each needs real-host integration on the isolated test instance (port 18096)
+through real HTTP, Jellyfin authentication and authorization, serialization, migrations and
+SQLite, using disposable fixtures in the isolated writable library. Browser items use built-browser
+E2E on the same instance: desktop, mobile, and TV layout (`localStorage.setItem('layout','tv')`)
+at 1920×1080 and 1280×720, driven by arrow keys, Enter and Back, signed in as `oleksii` with an
+empty password. Stubbed host services, builds, lint and type checks are supporting evidence only,
+and hand-seeded database state does not count as acceptance for behaviour the product must produce.
+
+**Proposed (review 2026-09-18, not user-approved):** complete R6 and R7 before Phase 4 A6 relies on
+catalog availability, because a stale `onDisk` episode or an orphaned entry would be treated as
+held media rather than wanted media.
+
+### R6 — scope absence confirmation per title, skip unnumbered episodes and re-baseline volatile storage identity
+
+**Priority** high · **Depends on** X1 · **Findings** plugin-reconciliation-data#2 (high, verified),
+plugin-reconciliation-data#5 (medium, single-source), critic-gaps#2 (medium, single-source),
+prior-M7 (medium, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** make incompleteness a per-title property.
+A failed, conflicted, or unmatched-but-previously-bound title excludes only its own bindings and
+episodes from absence decisions; the rest of the library is still confirmed. An unmatched series
+that already has bindings keeps them and its state, with a diagnostic, instead of losing every
+episode binding and writing false `media_missing` and `episode_media_missing` events. A native
+episode without `ParentIndexNumber` or `IndexNumber` (date-named daily shows, unparsed files,
+"Season Unknown") becomes a per-episode diagnostic instead of throwing for the whole series. An
+absent binding with no recorded storage identity, or with a path outside the library's current
+locations, is resolved by a direct existence check: readable parent directory and missing file
+means absent. Storage identity uses device numbers that can change across a reboot or USB
+re-enumeration, and no reconcile runs at startup today, so stale identity blocks absence and
+retention until an admin runs the reconcile task by hand. Add a re-baseline: when mount point,
+fstype and root still match and the library root enumerates, refresh `StorageIdentity` for all
+bindings in that library, including absent ones, before absence confirmation or retention preview.
+Show per-library incompleteness reasons in the Dashboard, not only a count. Commit scope:
+`fix(catalog,p2.r6)`.
+
+**Acceptance** — real scans on the isolated writable TV library:
+
+1. Add an unnumbered episode file and a date-named episode to disposable series A. A records a
+   per-episode diagnostic and its numbered episodes still bind.
+2. Delete one episode of disposable series B by hand. The post-scan run writes
+   `episode_media_missing` for it; the library is not marked incomplete.
+3. Clear the TMDB id of a bound disposable series. It keeps its bindings and state, with a
+   diagnostic and no missing events.
+4. A binding with null storage identity, or a path outside current locations, is resolved by a
+   direct existence check.
+5. After a container restart, the storage-identity re-baseline runs when mount point, fstype and
+   root match.
+
+Per-library incompleteness reasons are visible in the Dashboard.
+
+### R7 — re-home entries when a library is re-created or renamed, define overlapping libraries, and keep stale-bound entries manageable
+
+**Priority** high · **Depends on** R6 · **Findings** plugin-reconciliation-data#3 (high, verified),
+prior-M2 (medium, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** the host check comes first. On the isolated
+test instance, record whether renaming a disposable library, or re-adding its path under a new
+name, changes the `/Library/VirtualFolders` `ItemId`; the finding infers the change from the
+path-derived collection-folder ID but did not observe it. Re-adding under the same name keeps the
+same ID and is unaffected. Then, when a bound native item appears in a live library and the owning
+entry's `TargetLibraryId` is no longer a live library, move the entry, its bindings and its
+episodes to the new library under both library locks, merge with any existing entry there, and
+write one `library_moved` history event. Today every title in the new library reports a conflict
+on every run, and the old entries (including file-less wishlist entries, Keep and history) are
+hidden from everyone because access requires a live library; even admin Remove returns 404. Admin
+diagnostics list entries whose `TargetLibraryId` is not a live library. Access checks fall back
+to the unbound rule when the only bound native item no longer exists (deleted in the Jellyfin UI,
+moved to another library, or dropped by a monitor), so admins can open, Refresh and Remove the
+entry. Define overlapping libraries that share a path with one documented rule. Commit scope:
+`fix(catalog,p2.r7)`.
+
+**Open question for the user (review 2026-09-18):** when two libraries share a path, should each
+library get its own entry and binding for the same native item, or should one library own it with
+the overlap documented? The current code lets the library whose name sorts first own the binding,
+and the other library reports a permanent conflict.
+
+**Acceptance** — first, on the isolated test instance, record whether renaming a disposable
+library, or re-adding its path under a new name, changes the `/Library/VirtualFolders` `ItemId`.
+Then:
+
+- Re-adding the same disposable path under a new name re-homes its entries, with a
+  `library_moved` history event and Keep/monitoring preserved. They appear in Browse, Search and
+  Details as the admin and as the signed-in test user.
+- Overlapping libraries follow the documented rule.
+- An admin can open, Refresh and Remove an entry whose only bound native item was deleted in the
+  Jellyfin UI (no 404).
+- Admin diagnostics list entries whose `TargetLibraryId` is not a live library.
+
+### R8 — coalesce series events and shorten library-lock hold during absence confirmation
+
+**Priority** medium · **Depends on** R6 · **Findings** plugin-reconciliation-data#7 (medium,
+verified)
+
+**Proposed (review 2026-09-18, not user-approved):** an episode event is reconciled as a full
+series observation, so a metadata refresh or season import costs O(episodes²) CPU and I/O on the
+Pi; the mount table is also re-parsed for every episode path. Coalesce by title work key (library
+plus series or movie) with a short debounce, drop `ItemUpdated` events whose native identity, path
+and playability are unchanged, and read the mount table once per observation. The verifier
+narrowed the impact: the per-library lock is FIFO and released between listener items, so an event
+storm does not starve Add for minutes. The real Add failure comes from post-scan absence
+confirmation, which walks the library twice under one lease; an Add to that library can exceed its
+shared 60 s budget and is then mislabelled as a TMDB timeout. Keep the lease-held re-enumeration
+invariant, but shorten the hold (for example by batching titles or re-checking only candidates
+under the lock), and give Add its own lock-wait budget that returns a documented 409/503 "library
+busy". Commit scope: `perf(catalog,p2.r8)`.
+
+**Acceptance** — build a disposable series of 200 or more generated episodes in the isolated
+writable library. Refresh its metadata. Listener work time, taken from the logs, is recorded
+before and after and scales with changed titles, not episodes squared. While post-scan absence
+confirmation walks the TV library, an Add to that library succeeds or returns a documented 409/503
+"library busy". It never returns "TMDB metadata timed out". The mount table is read once per
+observation.
+
+### R9 — isolate episode conflicts, bind multi-episode files and add an admin conflict-resolution path
+
+**Priority** medium · **Depends on** R6 · **Findings** plugin-reconciliation-data#6 (medium,
+single-source), critic-gaps#2 (medium, single-source)
+
+**Proposed (review 2026-09-18, not user-approved):** one episode whose TMDB ID or position
+disagrees with its tracked row currently returns Conflict for the whole series, so no other
+episode gets new bindings or availability; this is common with DVD or episode-group display order
+on a partly downloaded series. Skip only the conflicting episode, reconcile the rest, and record a
+per-episode diagnostic. Match episodes by TMDB ID and never treat position as identity when a TMDB
+ID exists; use native display order for display and TMDB for identity, so reconciliation and admin
+Refresh stop overwriting each other's season/episode numbers. Carry `IndexNumberEnd` so an
+`S01E01-E02` file reports both episodes on disk instead of leaving E02 missing (and, in Phase 4,
+grab-able). Add an admin-only conflict view with explicit actions — rebind to the new identity or
+keep — each writing one history event. Retention of multi-episode files is blocked separately by
+Phase 3 T16. Commit scope: `fix(catalog,p2.r9)`.
+
+**Acceptance** — real scans on the isolated writable TV library:
+
+- A disposable series whose one episode's TMDB id disagrees with its tracked position still binds
+  its other episodes, with a per-episode diagnostic.
+- An `S01E01-E02` file reports both episodes on disk; `IndexNumberEnd` is honoured.
+- The admin-only conflict view (proposed) can rebind or keep, writing one history event, verified
+  through real HTTP and the built Dashboard.
+
+### R10 — phase 2 hygiene: database readiness, interrupted run rows, summary-write isolation and hidden legacy view refreshes
+
+**Priority** low · **Depends on** none · **Findings** plugin-reconciliation-data#9 (low,
+single-source), web-library-search-details#10 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** gate the event listener, the backfill and
+post-scan tasks on database readiness, as the controllers already are. At startup, after
+migration, mark leftover `running` reconciliation runs `interrupted`. Move the per-item summary
+checkpoint inside the per-item error handling so one busy-database failure does not fail the run.
+When the post-scan task is skipped because a manual run holds the gate, queue its absence pass to
+run afterwards. Keep only the last N run rows. In the web client, the legacy TV Shows and Movies
+controllers refresh while hidden but still attached, running the full Browse, the global spinner,
+`window.scrollTo(0, 0)` and autofocus against the visible page; pause them on `viewbeforehide`,
+resume on `viewshow`, and drop stale responses. Commit scopes: `fix(catalog,p2.r10)` and
+`fix(web,p2.r10)`.
+
+**Acceptance** — on the isolated test instance:
+
+- Stopping the container mid-backfill leaves the ReconciliationRun marked `interrupted`, not
+  `running`, after restart.
+- While Health reports not ready, the listener and tasks perform no writes, as shown in the logs.
+- A skipped post-scan absence pass runs after the active run.
+- Run rows are pruned to the configured N.
+- In the built browser, the hidden TV Shows and Movies views issue no `/JellyfinMod/Browse` on a
+  mark-played event while a details page is visible, and there is no spinner flash or scroll jump.
