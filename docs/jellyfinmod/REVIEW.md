@@ -40,11 +40,12 @@ node scripts/jellyfinmod-browser-review.mjs
 ```
 
 The script checks native bookmark routing, season navigation presence, History and the More
-menu in desktop, mobile, 1920×1080 TV and 1280×720 TV layouts. It also checks failed-add keyboard
-focus and switching to a different search query. It restores the browser's layout setting and
-closes its tab. These TV layouts do not establish physical-device compatibility.
+menu in desktop, mobile, 1920×1080 TV and 1280×720 TV layouts. It also checks failed-add focus,
+duplicate activation and switching to a different search query. It restores the browser's
+layout and Latest-items settings, removes every fixture confirmed created by the run, and closes
+its tab. These TV layouts do not establish physical-device compatibility.
 
-Additional live acceptance remains necessary:
+The runner now performs the following live acceptance:
 
 1. Hold a successful Add request in flight, change the query and library, then release it.
    Verify the old title never appears in the new scope, the current focus remains stable, and
@@ -63,10 +64,11 @@ Additional live acceptance remains necessary:
 
 ## Validation record
 
-The final review web build and TypeScript passed. Scoped lint passed with only existing legacy
-controller warnings; webpack reported its asset/entrypoint size warnings. The browser runner has passed syntax checking
-only; it has not passed live acceptance. The Pi refused SSH and test-page connections during
-this review pass, so no review build was deployed and production was not changed.
+On 2026-09-18 the final review bundle passed TypeScript, scoped feature lint and the production
+webpack build; webpack reported its existing asset/entrypoint size warnings. The browser runner
+passed every live item above against the isolated Pi instance on port 18096. Native detail/search
+remained usable with plugin transport blocked; cached detail augmentation may remain visible
+until its query expires. Production was not changed. Physical webOS acceptance remains separate.
 
 Plugin review fixes and their integration results are recorded in the plugin repository commits.
 Phase 2 R4/R5 and their acceptance remain separate from remediation of R1–R3.

@@ -286,3 +286,23 @@ it after restart, and never see duplicates of accessible owned titles; forbidden
 fail server-side; all native routes still work when the plugin or TMDB is unavailable; and the
 accepted Home/chrome changes pass the three layout checks. Until the technical gates pass,
 the phase is under refinement rather than a set of independently executable tasks.
+
+## Acceptance evidence — 2026-09-18
+
+The Phase 1 plugin and web bundle passed on the isolated Pi instance at
+`http://<test-host>:18096/web/`; production was not changed. Hosted plugin smoke tests passed
+through real HTTP, authentication, authorization, serialization, migrations and SQLite. The
+built browser flow passed native bound-series details, seasons, History and Search releases at
+desktop 1440×900, mobile 390×844, TV 1920×1080 and TV 1280×720. It also passed failed-add focus
+restoration, one-request duplicate activation, query-scope preservation, automatic excluded-page
+continuation, explicit pagination, two-library Home deduplication and Latest exclusions, and
+native detail/search usability while plugin transport was blocked.
+
+Twenty Browse and Detail samples and ten live TMDB discovery samples were measured through the
+authenticated built client. Browse was 29.6 ms p50 / 35.2 ms p95; Detail was 232.7 ms p50 /
+241.4 ms p95; Discovery was 1063.5 ms p50 / 1768.2 ms p95. The isolated Jellyfin process reported
+546224 kB RSS and 633936 kB high-water RSS after the run. TypeScript, scoped feature lint and the
+production webpack build passed; webpack emitted its existing asset-size warnings.
+
+Physical webOS acceptance remains a hardware check and is not represented by desktop TV
+emulation. All automated fixtures and user configuration changes were reversed by the runner.
