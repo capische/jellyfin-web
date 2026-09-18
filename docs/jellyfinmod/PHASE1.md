@@ -33,10 +33,29 @@ and is accessible. An entry lookup outside that scope returns 404 without reveal
 Discovery and its exclusion set obey the same visibility rules. Also account for the user's
 content restrictions; library membership alone must not bypass parental restrictions.
 
+**Proposed (review 2026-09-18, not user-approved):** two gaps in this contract are tracked by
+P11 below. First, an owned title that is hidden from the requester by tags or ratings is still
+offered by discovery, and Add answers it with an immediate, distinguishable 404 before any TMDB
+call, which is an existence oracle (plugin-authz-entries#7, low, verified). Returning exactly the
+same 404 as a metadata-restricted title, after the TMDB call, narrows it. Second, API-key requests
+to the user-scoped endpoints (`/JellyfinMod/Entries`, `Browse`, `Discover`) fail with HTTP 400
+and a logged `ArgumentException` instead of a defined 401/403 (plugin-authz-entries#6, low,
+verified). See [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md).
+
+**Open question for the user (review 2026-09-18):** after the equal 404, a residual leak remains
+because discovery offered the hidden title. Should it be documented as an accepted limitation?
+Should user-scoped mod endpoints reject API keys with 401, or should admin automation get a
+defined API-key contract?
+
 Default placement: use the current compatible library when adding from its search. In global
 search, use the sole accessible compatible library. If there are several, require selection
 before creating the entry and remember it for subsequent adds in that session. Do not guess a
 library from array order. No quality-profile dialog is needed to resolve a destination library.
+
+**Correction (review 2026-09-18):** the "remember it for subsequent adds in that session" rule is
+not implemented. The search session is keyed by the query text, so the library choice resets on
+every query edit and the add buttons are disabled again (web-library-search-details#7, low,
+single-source). W13 restores the rule.
 
 Use `(mediaType, tmdbId)` as provider identity, never the numeric TMDB ID alone. An entry ID is
 distinct from a Jellyfin item ID. Preserve existing native items that lack a provider identity.
@@ -188,6 +207,24 @@ no omissions/duplicates with ties; each sort direction; file plus genre plus pla
 restricted libraries; grid and list modes; alphabetical navigation; plugin removal fallback.
 Play all and Shuffle operate on playable native items only, preserving their existing ordering.
 
+**Correction (review 2026-09-18):** this gate is not covered as written. See
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md).
+
+- The automated HTTP suite sends only `SortName` (both directions) and `Random`, never
+  `alphabet`, and cannot exercise native filters or native-field sorts: its fixture ignores
+  `InternalItemsQuery` (tests-contract#5, medium, single-source).
+- The series Played/Unplayed filter reads the series row's own user data, whereas native 10.11.11
+  counts a series as played from its episodes' play state (plugin-browse-discover#3, medium,
+  single-source).
+- The legacy/TV filter dialog sends string-encoded filters. Genre, year, rating and similar fields
+  make Browse return 400, which silently falls back to native rows, and status and feature filters
+  are dropped (web-library-search-details#1, high, verified).
+- Natively, SD/HD/4K form one OR group; only 3D and features are ANDed. `API.md` calls them
+  conjunctive (plugin-browse-discover#9, low, single-source).
+
+P10 automates the parity gate and fixes the series filter, W8 fixes the legacy/TV request shape,
+and `API.md` carries the filter correction.
+
 ## 5. File-less details — technical gate
 
 The legacy detail controller loads `/Items/{id}` and issues further item-specific requests for
@@ -219,6 +256,15 @@ resume state for native episodes remains Jellyfin-owned. Refreshing TMDB metadat
 local episode IDs, monitoring and history; missing results from a failed/partial refresh are not
 deletions. Minimum episode matching belongs here; full ongoing episode reconciliation is Phase 2.
 
+**Correction (review 2026-09-18):** on the phase3 and phase4 lines (plugin 81c1aae), Refresh
+deletes local episodes that are missing from the TMDB snapshot. Since Phase 3, that delete
+cascades to the episode's bindings, retention evaluations and retention operations, which violates
+"missing results … are not deletions" (plugin-authz-entries#1, medium, verified). The strict
+season `episode_count` check also rejects Add and Refresh of an airing series for TMDB's cache
+window (prior-M4, medium, verified). The fix exists only on `jellyfinmod-phase1` (fba11e3). P7
+carries it forward, and PHASE3 T10 adds foreign-key and lock hardening. See
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md).
+
 **Gate:** prove one wanted movie and one wanted series render with artwork, metadata and history,
 including the latter's individual episodes, with no native request carrying a plugin ID. Test
 mixed downloaded/missing/unaired episodes, specials, metadata refresh, admin-only monitoring,
@@ -239,6 +285,16 @@ feature logic in new files and existing stylesheets unchanged. Required candidat
 This is a proposal for narrowly scoped changes, not permission to rewrite shared components.
 W1's card wrapper must prove overlay placement across shapes and footer modes; the stock
 `CardBox` also has no overlay slot, so do not assume a sibling automatically sits on the cover.
+
+**Correction (review 2026-09-18):** the implementation exceeds these seams.
+`QueryClientEventHandler` is not a listed seam but now holds about 80 lines of mod logic:
+query-key schema, plugin task keys, debounce state and three websocket subscriptions.
+`homesections.js` inlines Latest and slot-selection logic and drops the upstream `loadNextUp`
+call (web-home-rules-tv#10, low, single-source).
+
+**Proposed (review 2026-09-18, not user-approved):** move that logic into a feature hook mounted
+by one line, and keep the upstream section calls intact when the mod does not compose a section
+(W10). See [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md).
 
 Search uses stable identity keys and rolls back optimistic additions on failure. Keep input
 focus if the input was active; when an add is activated by D-pad, restore focus to a deliberate
@@ -263,6 +319,22 @@ Check an older webOS engine before deployment; desktop TV layout alone is not de
 For merged Continue Watching/Next Up, dedupe the same episode and prioritize its resume state.
 Specify ordering and limits without discarding the user's existing section visibility choices.
 Recently Added includes accessible wanted titles and uses the same browse identity rules.
+
+**Correction (review 2026-09-18):** the accepted redesign decision stands; these are
+implementation defects. See [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md).
+
+- The top-bar rules are scoped to `.skinHeader.jfmod-topbar`. The modern layout hides
+  `.skinHeader` and puts `jfmod-topbar` on the MUI toolbar, so the rules never match there, and
+  the recorded toolbar-state acceptance cannot have exercised them in modern desktop or mobile
+  (web-home-rules-tv#4, medium, single-source). W12 addresses this.
+- The older-webOS engine check was not performed. The legacy/TV grid relies on
+  `display: contents` (Chromium 65+), and the mod styles rely on flex `gap` (Chromium 84+)
+  (critic-gaps#3, high, verified; web-home-rules-tv#8, low, verified). W11 addresses this.
+- The merged rows do not refresh after playback or import, because their native query keys are
+  never invalidated (web-home-rules-tv#1, high, verified). Continue watching orders Next Up by
+  episode add date and drops the user's Next Up settings (web-home-rules-tv#5, medium,
+  single-source). Recently Added sorts grouped series by the series' own creation date
+  (web-home-rules-tv#6, medium, verified). W10 addresses this.
 
 ## 8. Execution order and completion
 
@@ -306,3 +378,382 @@ production webpack build passed; webpack emitted its existing asset-size warning
 
 Physical webOS acceptance remains a hardware check and is not represented by desktop TV
 emulation. All automated fixtures and user configuration changes were reversed by the runner.
+## Review remediation — 2026-09-18
+
+A multi-agent review of plugin 81c1aae and web c45b7fc588 is recorded in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), which supersedes the single-pass
+`REVIEW-2026-09-17.md`. Phase 1's accepted decisions and its recorded acceptance stand; nothing
+below reopens them. The corrections above (§1, §4, §5, §6, §7) record where the implementation or
+evidence differs from this file. Each finding is cited with its severity and whether adversarial
+verifiers confirmed it (verified) or only one reviewer reported it (single-source).
+
+**Correction (review 2026-09-18):** the Phase 1 HTTP suites (`PhaseOneSmoke`) run the plugin
+against `DispatchProxy` stubs of Jellyfin host services and authenticate with custom `Smoke`
+schemes driven by request headers. Their fixtures ignore `InternalItemsQuery`. They remain
+supporting evidence only: they show real SQLite and serialization, not Jellyfin's native query,
+authorization or user-data behaviour. Those were checked only in manual runs on the isolated test
+instance (tests-contract#2, medium, verified). PLAN X5 proposes real-host coverage.
+
+**Proposed (review 2026-09-18, not user-approved):** the tasks below are proposals from the
+review. They use new IDs (P7–P11, W8–W15) and do not renumber P5–P6 or W1–W7. Commits use the
+documented scope format, for example `fix(catalog,p1.p7)` or `fix(search,p1.w9)`. Real-host
+integration runs on the isolated test instance (port 18096) with real HTTP, Jellyfin
+authentication and authorization, serialization, migrations and SQLite, and uses disposable
+fixtures in the isolated writable library. Built-browser E2E runs on the same instance in
+desktop, mobile and TV layout (`localStorage.setItem('layout','tv')`) at 1920×1080 and 1280×720,
+driven by arrow keys, Enter and Back, signed in as `oleksii` with an empty password. TMDB is
+controlled through a real HTTP boundary server. Physical webOS evidence is reported separately
+from emulation. Stubbed host services, builds, lint and type checks are supporting evidence only,
+and hand-seeded database state does not prove behaviour the product is supposed to produce.
+
+### P7 — carry forward the phase1 access-batching, search-folding and partial-metadata fix onto the phase4 line
+
+**Priority** blocker · **Depends on** X1 · **Findings** prior-H5a (high, verified), prior-M4
+(medium, verified), prior-M5 (medium, verified), plugin-authz-entries#1 (medium, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** commit fba11e3 exists only on
+`jellyfinmod-phase1`; it is not on the phase3 or phase4 lines, which still have all four defects
+at 81c1aae. It replaces per-entry library enumeration in `LibraryAccess.CanRead` and per-episode
+series scans in `CanReadEpisode` with a per-request accessible-ID set. It folds diacritics and
+matches original and sort titles in combined search. It relaxes the strict season
+`episode_count` check and stops Refresh from deleting episodes missing from the snapshot. Port it
+onto the phase4 integration line, adapting it to phase4's retention-aware `BuildDetail` and
+`EntriesController` (the `BuildDetail` hunk conflicts). Also cover the remaining whole-library
+`CanReadEpisode` call in `PatchEpisode`, and update the ApiSmoke regressions. This is proposed as
+a Phase 4 entry gate (see [`PHASE4.md`](PHASE4.md)). PHASE3 T10 builds on it.
+
+**Acceptance**
+
+- In the plugin repo, `fba11e3` is named in a port commit on the phase4 line (a
+  `(cherry picked from commit fba11e3)` or `Ported-from:` trailer), because the adapted port has a
+  new patch-id that `git cherry jellyfinmod-phase4 jellyfinmod-phase1` still marks `+`. Every
+  other `+` commit is either patch-identical on phase4 or named the same way, and the evidence
+  records the mappings.
+- On the isolated test instance, with a TMDB boundary server, an admin Refresh of a series whose
+  TMDB snapshot omits a bound episode and a reclaimed episode keeps each episode's local ID and
+  its `EpisodeBinding`, `RetentionEvaluation` and `RetentionOperation` rows. Verify the rows by
+  query on a copy of the isolated database.
+- Add and Refresh of an airing series whose season `episode_count` disagrees with the episode
+  array both succeed without deleting episode rows.
+- Browse `query` `amelie` and the built-browser Search both return `Amélie` and a native
+  original-title match.
+- Browse, Discover and series-detail p50/p95 latency on the Pi, with about 160 entries, is recorded
+  before and after the port and shows no per-entry library enumeration.
+
+### P8 — bound TMDB discovery cost and isolate per-candidate failures
+
+**Priority** medium · **Depends on** P7 · **Findings** plugin-browse-discover#2 (medium,
+verified), plugin-browse-discover#6 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** Discover returns `nextPage` even when every
+candidate was filtered out, and the web follows empty pages without a limit. A user with
+`AllowedTags` can never read file-less metadata, so every page is empty and one search can walk up
+to 500 TMDB pages per media type at 21 calls each. A very low parental-rating limit produces long,
+but not unbounded, empty runs. Return `{items:[],nextPage:null}` before any TMDB call when the
+user can never read file-less metadata, and enforce a documented per-request TMDB call budget.
+Separately, one failed or timed-out detail call currently fails the whole page. Skip it, count it
+in a `skipped` field, and still return `nextPage` when the search call itself succeeded. The web
+side of the cap is W13.
+
+**Acceptance**
+
+Against the isolated test instance, with a TMDB boundary server that counts upstream calls:
+
+- An `AllowedTags` user's search returns `{items:[],nextPage:null}` with zero TMDB calls.
+- A user with a low parental-rating limit stays within the documented per-request call budget.
+- When one detail call returns 500 or exceeds the 15 s timeout, the response still carries the
+  other candidates, a `skipped` count and `nextPage`.
+- In built-browser Search on desktop, mobile and TV, the surviving results remain usable.
+
+### P9 — reduce per-request Browse cost for sorts, language filters, Home rows and entry-less libraries
+
+**Priority** medium · **Depends on** P7 · **Findings** plugin-browse-discover#5 (medium,
+single-source), plugin-browse-discover#7 (low, verified), prior-H5b (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** beyond the access fan-out fixed by P7,
+Browse does work proportional to the whole library on every page request. `SeriesDatePlayed`
+runs one query per series plus user-data lookups per played episode. Audio and subtitle language
+filters run one episode query per series and a media-stream lookup per episode, twice when both
+are active. All retention evaluations in scope are loaded, and entry metadata is deserialized
+repeatedly. The Home Recently Added row hydrates native DTOs it discards, and Browse DTOs keep the
+default unlimited image types. A library with no entries still waits for one unpaged native
+enumeration. Compute these in one pass per request, add an entries-only mode for Home, set
+`ImageTypeLimit = 1`, and return `hasCatalogEntries=false` early when a library has no entries
+and no File filter is active.
+
+**Acceptance**
+
+Seed a realistically sized disposable TV fixture, for example 150 series of generated tiny files,
+in the isolated writable library. On the Pi, record `POST /JellyfinMod/Browse` p50/p95 before and
+after for:
+
+- the `SeriesDatePlayed` sort;
+- combined audio and subtitle language filters;
+- a library with no entries.
+
+Row IDs and totals are identical before and after. The Home entries-only request hydrates no
+native DTOs; compare its response bytes with `/Items`. Browse `DtoOptions` use
+`ImageTypeLimit=1`. A library with no entries returns `hasCatalogEntries=false` without native
+hydration. The built-browser Movies and TV pages look unchanged on desktop, mobile and TV.
+
+### P10 — match native series Played/Unplayed semantics and automate the §4 browse-parity gate
+
+**Priority** medium · **Depends on** P7 · **Findings** plugin-browse-discover#3 (medium,
+single-source), tests-contract#5 (medium, single-source), plugin-browse-discover#4 (low,
+verified), plugin-browse-discover#9 (low, single-source)
+
+**Proposed (review 2026-09-18, not user-approved):** apply series Played/Unplayed through the
+native query so that Jellyfin's episode-based semantics apply, keeping Favorite and Resumable on
+the row's user data. When several native copies share a TMDB ID, global Browse picks the lowest
+GUID, which ignores the copy that carries the bound entry and its retention summary; prefer the
+bound copy. Replace the manual §4 checks with a repeatable script, and document SD/HD/4K as one
+OR group in `API.md`.
+
+**Acceptance**
+
+A repeatable script runs against the isolated test instance, signed in as the test user:
+
+1. Use a scratch library with no entries as the native reference. For every Movies and Series
+   sort option in both directions, and for combinations of genre, played and HD/SD/4K, the row
+   IDs and totals of `POST /JellyfinMod/Browse` equal `GET /Items` with the same parameters. This
+   includes series Played/Unplayed with partially and fully watched shows.
+2. Add entries and verify interleaving across three or more pages with ties, alphabet `#`, and
+   the legacy TV request shape.
+3. A Browse call without `targetLibraryId`, over two native copies of one movie where one is
+   bound, returns the bound copy with its retention summary.
+
+### P11 — close Phase 1 contract hygiene: API-key requests, existence oracle, multi-binding `jellyfinItemId` lookup and dead DTO fields
+
+**Priority** low · **Depends on** P7 · **Findings** plugin-authz-entries#6 (low, verified),
+plugin-authz-entries#7 (low, verified), tests-contract#8 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** API-key requests reach
+`GetUserById(Guid.Empty)` on the Entries, Browse and Discover endpoints and return 400; the
+Retention and Reconciliation endpoints do not resolve a user and behave normally. Return 401
+from `GetUser` for API keys, or define an API-key contract (open question in §1). Make the
+hidden-owned-title 404 identical to the metadata-restricted 404 and issue it after the TMDB call.
+Resolve `jellyfinItemId` through `EntryBindings` on the server and in the web
+`NativeEntryDetails` filter, so a non-primary native copy bound to an entry shows its History and
+Keep. Mark `watchedAt` and `reclaimAt` deprecated; `progress` stays as a reserved
+downloading-state field.
+
+**Acceptance**
+
+Real-host checks on the isolated test instance:
+
+- An admin-created API key calling `GET /JellyfinMod/Entries`, Browse or Discover gets 401, or
+  the documented contract, with no `ArgumentException` in the server log. Retention and
+  Reconciliation endpoints behave as documented in `API.md`.
+- A `BlockedTags` user adding a hidden owned title receives the same 404 body as for a
+  metadata-restricted title, issued after the TMDB call.
+- On the details page of a non-primary native copy bound to the same entry, the built browser
+  shows History and Keep.
+- `watchedAt` and `reclaimAt` are marked deprecated in the DTO documentation and `API.md`.
+
+### W8 — normalize legacy/TV library filter queries for combined browse and expose File/Due filters on TV
+
+**Priority** high · **Depends on** — · **Findings** web-library-search-details#1 (high, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** the TV layout runs the legacy
+`movies.js`/`tvshows.js` controllers, whose filter dialog writes pipe- or comma-joined strings
+and a `Filters` token list. `toRequest` passes the strings through, so any genre, year, rating,
+video-type or series-status choice makes Browse return 400. The web then silently shows the native
+grid, and every file-less and reclaimed card disappears. A reset persists empty strings, which
+keeps the failure for that library on that device. Played, Unplayed, Resumable, Favorites and all
+feature and resolution flags are dropped while the indicator reports an active filter. Normalize
+the legacy query in `toRequest`, add File and Due within 7 days to the TV filter dialog, and log
+non-404 failures instead of silently falling back.
+
+**Acceptance**
+
+Built browser in TV layout at 1920×1080 and 1280×720 against the isolated test instance, driven
+by arrow keys, Enter and Back:
+
+- In Movies and TV Shows, apply one genre, then Unplayed, then HD, then the dialog reset. Every
+  `POST /JellyfinMod/Browse` returns 200 in the network log.
+- File-less and reclaimed rows remain visible.
+- Results match native `GET /Items` for the same filter, and the Favorites checkbox is honoured.
+- Settings persisted before the fix (empty-string `Genres`/`Years`) no longer cause a 400.
+- File and Due within 7 days are available in the TV layout. Non-404 failures are logged rather
+  than silently falling back to native.
+
+### W9 — make every 'Add from TMDB' result reachable with a scroller row
+
+**Priority** high · **Depends on** — · **Findings** web-library-search-details#2 (high,
+verified), web-home-rules-tv#8 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** `.jfmod-discoveryCards` is a non-wrapping
+`overflow: hidden` flex row. Mouse and touch users cannot reach cards past the first screen
+width; with more than about 10 movie matches no series card is reachable. On TV, focus can land on
+clipped cards on engines that support `preventScroll`. Render the row with the same
+`emby-scroller`/`scrollSlider` markup as the entry sections (`data-horizontal`,
+`data-centerfocus`), and give adjacent cards margins instead of flex `gap`. This follows the
+Search layout in [`UX.md`](UX.md) §6 and the TV rules in §13.
+
+**Acceptance**
+
+Built browser on the isolated test instance, with a mixed query that has more than 10 movie
+matches plus series:
+
+- On a 375px mobile viewport by touch, on desktop by mouse, and on TV by D-pad at both
+  resolutions, the last discovery card and at least one series card come fully into the viewport
+  after scrolling or focus.
+- Cards appended by 'More … results from TMDB' are reachable.
+- Adjacent cards have visible spacing without flex `gap`.
+- The browser runner asserts viewport visibility, not only the count of enabled buttons.
+
+### W10 — refresh and order merged Home rows correctly; move mod websocket logic into a feature hook
+
+**Priority** high · **Depends on** X1 · **Findings** web-home-rules-tv#1 (high, verified),
+web-home-rules-tv#6 (medium, verified), web-home-rules-tv#5 (medium, single-source),
+web-home-rules-tv#10 (low, single-source), web-home-rules-tv#9 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** invalidate the native `ResumeItems` and
+`NextUp` keys on playback stop and on played-state changes, and `LatestMedia` together with the
+catalog Home rows on library changes, so both halves of Recently Added refresh together. Sort
+grouped series by their last-media-added date. Order Next Up by comparable recency instead of
+episode add date, and pass the user's Next Up settings (max days, rewatching, episode images) as
+upstream does. Subscribe to `ScheduledTasksInfo` only where needed (for example admins or a
+mounted catalog surface) instead of on every client. Move this logic out of
+`QueryClientEventHandler` into a feature hook, and keep the upstream section calls in
+`homesections.js` (see the §6 correction). It depends on X1 so that it lands on top of the
+production master merge.
+
+**Acceptance**
+
+After the X1 merge of production b72ac53721, run the built browser on the isolated test instance
+on desktop, mobile and TV:
+
+- In TV layout, play an episode from Continue watching to completion and press Back. Row contents
+  and order update, and the network log shows the Resume and NextUp refetch.
+- A wanted title shown in Recently Added stays in the row after its file is imported and scanned.
+- A disposable old series that gains two or more episodes appears in the first positions.
+- Next Up honours Max days in Next Up, rewatching and the episode-image setting.
+- Last night's episode sorts before older resumes.
+- A non-admin TV websocket receives no per-second `ScheduledTasksInfo` stream during a library
+  scan; count the frames.
+- `QueryClientEventHandler` contains only a one-line mount of the feature hook.
+
+### W11 — remove the `display: contents` and flex-gap dependencies from the legacy/TV grid and mod styles
+
+**Priority** high · **Depends on** — · **Findings** critic-gaps#3 (high, verified),
+web-home-rules-tv#8 (low, verified)
+
+**Proposed (review 2026-09-18, not user-approved):** the legacy/TV Movies and Shows grids render
+into a wrapper made transparent with `display: contents`, which engines older than Chromium 65
+ignore. On such an engine the Poster, PosterCard, Thumb, ThumbCard and Banner views collapse into
+one card per row; List view is largely unaffected. Mod styles also use flex `gap` (Chromium 84+),
+most visibly on the discovery cards, and the hero focus ring uses `:focus-visible` only. Give the
+wrapper the container's layout classes or mount into the container itself, replace `gap` with
+em-sized margins, and add a `:focus` fallback. Severity stays high only if the household TV runs
+webOS 3.x or 4.x.
+
+**Open question for the user (review 2026-09-18):** the TV model and its webOS/Chromium version
+are unknown, and they decide this task's severity. Should one physical webOS run be mandatory to
+close any phase that touches TV UI?
+
+**Acceptance**
+
+- Record `navigator.userAgent` from the Jellyfin webOS app on the household TV and report it
+  separately as physical evidence.
+- Run the built bundle in TV layout on an old engine (Chromium 53 or 68 equivalent, or the webOS
+  emulator) against the isolated test instance. The combined Movies and Shows grids render
+  multi-column in Poster, PosterCard, Thumb, ThumbCard and Banner views.
+- Spacing is present without flex `gap`.
+- The hero focus ring is visible without `:focus-visible`.
+- Current Chromium at 1920×1080 and 1280×720 is visually unchanged (screenshots).
+
+### W12 — tie Home chrome to visibility, make the accepted top-bar redesign actually apply, and correct the hero
+
+**Priority** medium · **Depends on** W10 · **Findings** web-home-rules-tv#2 (medium,
+single-source), web-home-rules-tv#3 (medium, single-source), web-home-rules-tv#4 (medium,
+single-source), web-home-rules-tv#7 (low, single-source)
+
+**Proposed (review 2026-09-18, not user-approved):** this implements the accepted redesign; it
+does not change it. The Home scroll listener survives pause, so the Home top-bar classes leak onto
+Movies, details and other legacy/TV pages. In the modern layout, Home roots and listeners are
+never destroyed, so every visit leaks them, and hidden Home queries keep refetching during
+playback. The top-bar selectors never match in the modern layout (see the §7 correction). The hero
+ignores the user's Latest exclusions, shows Play without a playability check, and uses hard-coded
+English labels and dark colours. Tie mount, pause and unmount to visibility, target the elements
+that exist in each layout, and fix the hero.
+
+**Acceptance**
+
+Built browser on the isolated test instance:
+
+- In TV layout, go Home → Movies and scroll by D-pad. `.skinHeader` never carries `jfmod-topbar`.
+- Five modern-desktop visits to `/home` leave one hero root and one scroll listener.
+- 60 s of playback started from Home issues no `/JellyfinMod/Browse` or `/Items` requests.
+- Computed toolbar backgrounds at `scrollY` 0 and above 40 show the gradient and solid states in
+  modern desktop, modern mobile and TV (screenshots).
+- The hero excludes a library listed in `LatestItemsExcludes`, hides Play when `canPlay` is false,
+  and uses translated labels and theme colours; check it in a light theme.
+
+### W13 — make search additions operable on TV and mobile and cap discovery auto-follow
+
+**Priority** medium · **Depends on** P8 · **Findings** prior-L1 (low, verified),
+web-library-search-details#7 (low, single-source), web-library-search-details#8 (low,
+single-source), plugin-browse-discover#2 (medium, verified), plugin-browse-discover#6 (low,
+verified)
+
+**Proposed (review 2026-09-18, not user-approved):** after an add, the Undo toast is appended to
+the document body, never receives focus and disappears after 4 seconds, so D-pad Undo is
+effectively unusable; a failed Undo is silent. The library choice resets on each query edit
+(§1 correction). The optimistic pending card links to an invalid `entryId=pending:…` route, so an
+OK press during a slow add opens an error page. Discovery auto-follows empty pages with no cap,
+and one failed media type hides the other type's cards. Keep Undo in the page and focus it on TV,
+persist the library choice for the session, make pending cards non-navigable, stop auto-follow
+after at most three consecutive empty pages with a 'Search more' control, and isolate discovery
+errors per media type.
+
+**Acceptance**
+
+Built browser in TV layout on the isolated test instance:
+
+- An admin add moves focus to an in-page Undo, and focus survives the toast timeout.
+- A failed Undo shows an error.
+- The chosen library persists across query edits in the session (§1 placement rule).
+- An OK press on a pending card during an in-flight add does not navigate.
+- As an `AllowedTags` user against the TMDB boundary server, auto-follow stops after at most three
+  consecutive empty pages and offers a 'Search more' control; the upstream call count is asserted.
+- One failed media-type discovery does not hide the other type's cards.
+
+### W14 — gate newer plugin features on Health capabilities and keep data after a failed refetch
+
+**Priority** medium · **Depends on** X4 · **Findings** web-library-search-details#6 (medium,
+single-source)
+
+**Proposed (review 2026-09-18, not user-approved):** the web gates mod features on `health.ok`
+alone. A newer web bundle on an older plugin offers Due within 7 days; the older plugin rejects
+the unknown field with 400, and the grid silently becomes native while the filter stays set but
+disappears from the menu. Any failed background refetch also discards good cached catalog data.
+Expose capabilities (or an API version) in `/JellyfinMod/Health` and gate newer request fields on
+them, keep previous data after a refetch error, and fall back to native only on 404, a missing
+plugin or an initial failure.
+
+**Acceptance**
+
+Built browser against the isolated test instance:
+
+- With an older (Phase 2) plugin build deployed, and later restored, through the X3/X4 tooling,
+  the Due within 7 days option is hidden and no 400 occurs.
+- With the current plugin, when one Browse refetch is blocked at the transport, the grid keeps its
+  previous catalog rows and the File accordion stays visible while its filters are set.
+- Native fallback happens only on 404, a missing plugin or an initial failure.
+
+### W15 — pass the repository stylelint gate for mod SCSS
+
+**Priority** low · **Depends on** — · **Findings** static-checks#1 (low, single-source)
+
+**Proposed (review 2026-09-18, not user-approved):** stylelint reports 12 errors in
+`catalogSearch.scss` and `homeChrome.scss`: single-line multi-declaration blocks and one selector
+list on one line. Split them without changing the rendered result, and add stylelint to the phase
+validation checklist.
+
+**Acceptance**
+
+- `npm run stylelint`, or `npx stylelint` over
+  `src/apps/modern/features/jellyfinmod/**/*.scss`, reports zero errors.
+- Built-browser screenshots on desktop, mobile and TV on the isolated test instance are visually
+  unchanged.

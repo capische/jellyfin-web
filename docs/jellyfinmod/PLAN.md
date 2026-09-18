@@ -11,7 +11,7 @@ until those gates are resolved. Phase 0 is complete; its verification is recorde
 Two repos, siblings:
 
 ```
-<workspace>/
+jellyfin-mod/
   jellyfin-web/   the web fork      — tasks prefixed W
   plugin/         the server plugin — tasks prefixed P
 ```
@@ -28,6 +28,15 @@ the task.
 3. `jellyfin-web/docs/jellyfinmod/UX.md` — the interface, and why it is that shape.
 4. This file.
 5. For Phase 1, `jellyfin-web/docs/jellyfinmod/PHASE1.md` — current decisions and technical gates.
+
+**Proposed (review 2026-09-18, not user-approved):** treat the docs on the newest phase branch as
+authoritative — currently the `jellyfinmod-phase4` line, carried by the review branch until it is
+merged — not the copy in an older phase checkout. Older phase branches receive a pointer to that
+location (X2). Add a sixth reading item: 6. For review remediation, read
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md) and the Review remediation sections of PHASE1–3
+and this file. Changing the workspace `CLAUDE.md` branch rule that sends agents to
+`jellyfinmod-phase1` is a user decision (open question 14) (tests-contract#9, medium, verified;
+plan-ops#3, medium, single-source).
 
 `jellyfin-web/docs/jellyfinmod/prototype/movies-prototype.html` is a working click-through of the
 target design. Open it in a browser when a task says "match the prototype".
@@ -76,11 +85,25 @@ confirmation without Undo. Failed optimistic adds still roll back locally for al
 unless an admin disables it. No confirmation is needed for each expiry. Preserve catalog entries
 and history, and retain the existing deletion safeguards. Phase 1 adds no automatic deletion.
 
+**Proposed safety gate (review 2026-09-18, not user-approved):** Phase 3 is implemented.
+Automatic retention stays disabled on non-disposable media until the review blockers T7, T8, T9,
+T10 and T18 pass on the isolated test instance; Selected user mode on real media also waits for
+T13. This defers enabling retention; it does not change the accepted automatic-expiry decision.
+The trigger is re-acquired media being due immediately (plugin-retention-policy#1, critical,
+verified) and the enabled cycle never having run on the live host (plan-ops#1, high, verified).
+Whether to adopt the gate is open question 5.
+
 ### Development conventions
 
 Conventional Commits, lower case, imperative, no trailing full stop. One task per commit where
 practical. Web: 4-space indent, TypeScript, `npx tsc --noEmit` and `npx eslint` must both pass.
 Plugin: `TreatWarningsAsErrors` is on; XML doc comments are required on public members.
+
+**Proposed (review 2026-09-18, not user-approved):** at each phase start and before each isolated
+acceptance, merge `origin/master` into the current phase branch and record the merged master SHA
+in the phase evidence. Fixes land on the newest phase line, or on a short-lived branch merged into
+it, the same day; older phase branches are frozen after acceptance. See X1 (plan-ops#4, medium,
+single-source; plan-ops#3, medium, single-source).
 
 ### Definition of done, every task
 
@@ -91,6 +114,18 @@ Plugin: `TreatWarningsAsErrors` is on; XML doc comments are required on public m
    `npx eslint src/apps/modern/features/jellyfinmod --ext .ts,.tsx` is silent.
 4. For UI tasks: verified at **desktop**, **mobile**, and at **1920×1080 with `localStorage.setItem('layout','tv')`**
    driven by arrow keys only.
+
+**Proposed (review 2026-09-18, not user-approved):** add these items after item 4.
+
+5. Mod SCSS passes the repository `stylelint` gate (static-checks#1, low, single-source).
+6. TV checks also cover 1280×720 with Enter and Back, and physical webOS evidence is reported
+   separately from TV-layout emulation. Whether one physical webOS run is mandatory to close a
+   TV-touching phase is open question 17, not a rule.
+7. Evidence records the plugin revision reported by Health (X4) and states which host services
+   the automated suites simulate (plan-ops#5, medium, single-source; tests-contract#2, medium,
+   verified).
+8. Acceptance never relies on hand-seeded database state for behaviour the product is supposed
+   to produce (plan-ops#1, high, verified).
 
 ---
 
@@ -108,6 +143,13 @@ returns 401. The configuration page saves, and its saved XML plus the database s
 migration record survive another container restart. Live tables are empty at this phase; local
 smoke tests verified persistence with rows. The original deployed DLL SHA256 matched the built artifact:
 `9dba934e888d9d47abd50919fc5b8cdcf6dc1f46c0099ce4cdeba86f657aa571`.
+
+**Correction (review 2026-09-18):** "deployment-script checks pass" overstates the committed
+tooling. The committed `jellyfin-sync` can only restart the production service and defaults its
+web directory to production. The `--plugin`/`--test` targeting existed only as uncommitted edits,
+and `--plugin` without `--test` targets the production plugin folder. The plugin still reports
+`0.1.0.0` through Phase 3, so builds cannot be told apart. See X3 and X4 (plan-ops#2, medium,
+verified; plan-ops#5, medium, single-source).
 
 **Packaging follow-up, 2026-09-08:** the approved logo and clean Phase 0 package are deployed.
 The installed plugin image endpoint returns the approved PNG, the manifest reports Active, and
@@ -171,6 +213,11 @@ DLL, behind a flag so a web-only deploy stays fast. Host-specific paths belong i
 
 **Acceptance** `./jellyfin-sync --local` behaves exactly as before; the new flag deploys the plugin
 and restarts the container.
+
+**Proposed (review 2026-09-18, not user-approved):** extend this acceptance. `--plugin` implies
+the isolated target unless `--production` is given; every production-refusal case exits non-zero
+before any remote action; the script prints the plugin commit and dirty state and backs up
+`jellyfinmod.db` before the restart. The work is tracked as X3 (plan-ops#2, medium, verified).
 
 ---
 
@@ -317,6 +364,15 @@ build on webOS before calling device verification complete. See `PHASE1.md` §7.
 Planning may proceed while Phase 1 is in progress. Do not deploy these until Phase 1 passes
 acceptance on the Pi. Phases 2 and 3 have task breakdowns; Phase 4 onward remain sketches.
 
+**Correction (review 2026-09-18):** "Phase 4 onward remain sketches" is stale: Phase 4 has a task
+breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current status:
+
+- Phase 1: accepted (see [`PHASE1.md`](PHASE1.md)).
+- Phase 2: accepted on the isolated test instance (port 18096), 2026-09-15.
+- Phase 3: implemented; see the proposed safety gate under *Automatic expiry, accepted* and the
+  Review remediation section of [`PHASE3.md`](PHASE3.md).
+- Phase 4: planned; its entry gates are amended as proposals in [`PHASE4.md`](PHASE4.md).
+
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
   the existing library, then maintain bindings as media changes. Phase 1 already supplies the
   minimum lookup needed to avoid duplicate discovery results. See [`PHASE2.md`](PHASE2.md) for
@@ -332,11 +388,167 @@ acceptance on the Pi. Phases 2 and 3 have task breakdowns; Phase 4 onward remain
   profiles, scoring; qBittorrent first. **Do not port Sonarr's or Radarr's parsers — they are GPL-3.0
   and Jellyfin is GPL-2.0-only.** MIT references, or regexes written against their test cases.
   Web: release picker dialog, rejected releases listed with reasons, raw release title always visible.
+  **Correction (review 2026-09-18):** the task breakdown is [`PHASE4.md`](PHASE4.md). "qBittorrent
+  first" conflicts with Phase 3, whose seed protection reads Transmission only; the download
+  client is open question 6 (prior-H4c, medium, verified).
 - **Phase 5 — import pipeline.** Watch the client, hardlink into the library under the version
   naming convention, targeted scan, bind the item id. Honour seed goals. Web: `/catalog/queue`, the
   only new route in the design.
+  **Proposed (review 2026-09-18, not user-approved):** make ownership of the seeding copy explicit.
+  After the effective seed goals are met, remove the torrent and its data as a durable operation
+  (or through a verified client share-limit action), leaving the library hardlink, and account
+  for space freed later separately from a 0-byte reclaim. This is clarification only: the earlier
+  claim that no phase owns the seeding copy (prior-H3) was refuted, because README §6 already
+  assigns it to Phase 5.
 - **Phase 6 — automation and multi-quality.** Scheduled search for monitored entries; upgrade to
   cutoff; enrich the existing version selector with resolution, codec, audio and size.
+
+---
+
+# Cross-cutting remediation — review 2026-09-18
+
+**Proposed (review 2026-09-18, not user-approved):** these tasks come from the consolidated
+review, [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), of plugin `81c1aae` and web `c45b7fc588`.
+Every item here is a proposal. PHASE4 proposed entry gates 6–9 (Phase 3 blockers, P7, X1, X3,
+X4, A9) block Phase 4 deployment. Phase-level tasks live in
+the Review remediation sections of [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) and
+[`PHASE3.md`](PHASE3.md), and in the proposed amendments to [`PHASE4.md`](PHASE4.md). The
+blocker set across the plan is P7, T7, T8, T9, T10, T18, X1 and X3. T13 and X4 are on the
+blocker path through T18 (and X4 through PHASE4 gate 8). Acceptance uses the
+repository boundaries only: real-host integration on the isolated test instance (port 18096),
+with real HTTP, Jellyfin authentication and authorization, serialization, migrations and SQLite;
+and built-browser E2E there on desktop, mobile and TV layout at 1920×1080 and 1280×720, driven by
+arrow keys, Enter and Back, signed in as `oleksii` with an empty password. No unit tests.
+
+## X1 · Integrate branches: carry fixes forward and merge production master
+**Repo** plugin, jellyfin-web · **Depends on** nothing · **Priority** blocker ·
+**Findings** plan-ops#3 (medium, single-source), plan-ops#4 (medium, single-source)
+
+Fixes have landed on `jellyfinmod-phase1` without reaching the newer phase lines: plugin commit
+`fba11e3` (access batching, search folding, partial metadata) is absent from phase2, phase3 and
+`jellyfinmod-phase4`, and its port is P7. Production's `origin/master` carries two fixes no phase
+branch has — `ff89608a6c` (asset retention for resident TV clients in `jellyfin-sync`) and
+`b72ac53721` (Home progress refresh in `QueryClientEventHandler`) — and the mod rewrote the same
+`QueryClientEventHandler` lines. Port every unported fix onto the phase4 line and merge
+`origin/master` into the phase4 web line, resolving `QueryClientEventHandler` semantically: keep
+production's `['User', id]` refresh together with the mod's debounced catalog invalidation. The
+workspace `CLAUDE.md` rule "keep existing Phase 1 web work on `jellyfinmod-phase1`" can be changed
+only by the user (open question 14); until then, record where each fix lands. Commit as, for
+example, `chore(branches,x1): merge production master into phase4`.
+
+**Acceptance** In both repos, every commit that `git cherry jellyfinmod-phase4 <older phase
+branch>` marks `+` is either patch-identical on the phase4 line or named in a port commit there
+(a `(cherry picked from commit …)` or `Ported-from:` trailer); adapted ports have new patch-ids,
+so `git cherry` alone cannot show them as ported. The evidence records the list of mappings. `origin/master` is merged into the phase4 web line with
+`QueryClientEventHandler` resolved as above, and the merged master SHA is recorded. On the
+isolated test instance, production's `b72ac53721` behaviour survives the merge: after an episode
+is marked played in the built browser (desktop, mobile and TV layouts), the native `['User', id]`
+queries refetch (network log) and the mod's catalog invalidation still fires. The full Home and
+Continue Watching row check belongs to W10, which depends on X1.
+A resident webOS TV surviving a redeploy with `ff89608a6c` asset retention is physical evidence,
+reported separately from emulation.
+
+## X2 · Name one authoritative docs location and verify recorded push evidence
+**Repo** jellyfin-web · **Depends on** X1 · **Priority** high ·
+**Findings** tests-contract#9 (medium, verified)
+
+The main `jellyfin-web` checkout, where the workspace rules send agents, is on
+`jellyfinmod-phase1`, whose docs lack the Phase 2 final acceptance, the Phase 3 checkpoints and
+the retention API contract. PHASE3 T6 records the evidence commits as pushed, and local tracking
+refs suggested the branches were ahead of origin, but those refs were stale: a read-only
+`git ls-remote` during the review showed `jellyfinmod-phase3` at `81c1aae` and
+`jellyfinmod-phase3-web` at `c45b7fc588` on origin; X2 records the formal confirmation. Name the authoritative
+docs branch in the Briefing, verify the push record, and leave pointers on older branches.
+Commit as, for example, `docs(plan,x2): name authoritative docs branch`.
+
+**Acceptance**
+- The Briefing names the authoritative docs branch.
+- `git ls-remote origin` in both repos confirms that plugin `81c1aae` and web `c45b7fc588` (and
+  the T6 evidence commits) are on origin, or they are pushed.
+- The PHASE3 T6 correction note records the result.
+- Older phase branches' docs carry a pointer; this is a separate task on those branches.
+
+## X3 · Make `jellyfin-sync` safe by default for mod work
+**Repo** jellyfin-web · **Depends on** X1 · **Priority** blocker ·
+**Findings** plan-ops#2 (medium, verified), plan-ops#4 (medium, single-source)
+
+The committed script targets production by default and can restart only the production service;
+plugin and test targeting existed only as uncommitted edits, where `--plugin` without `--test`
+selects the production plugin folder. No database backup precedes the restart that applies
+migrations, and the plugin path prints no commit. Make the isolated target the default for mod
+work and fail closed. Host-specific values stay in the ignored `jellyfin-sync.env`. Commit as,
+for example, `chore(deploy,x3): default mod deploys to the isolated target`.
+
+**Acceptance** committed on the trunk line:
+- `--plugin` implies the isolated target unless `--production` is given.
+- `--local` on a `jellyfinmod-*` branch refuses without `--test`.
+- The script prints the plugin commit and dirty state, and refuses a dirty tree without
+  `--allow-dirty`.
+- It copies `jellyfinmod.db` to a timestamped backup inside the isolated state directory before
+  the restart.
+- Host mode refuses when its compose file is absent.
+- Every refusal path exits non-zero before any ssh, rsync or restart, shown by trace output.
+- An isolated deploy to `jellyfinmod-test` (port 18096) passes the startup-log, Dashboard plugin
+  page, authenticated Health and database-persistence checks. Production is never contacted.
+
+## X4 · Identify and downgrade-guard deployed plugin builds
+**Repo** plugin, jellyfin-web · **Depends on** nothing · **Priority** high ·
+**Findings** plan-ops#5 (medium, single-source)
+
+The plugin reports `0.1.0.0` through ten migrations and three phases, Health returns only name,
+version and `Ok`, and an older build starts `Ok` on a newer schema because EF ignores unknown
+applied migrations. Evidence ties builds to DLL SHA-256 values from staged copies with no commit.
+Bump the version per phase, embed the commit, extend Health, and refuse to become ready on a
+database that holds unknown migrations. PHASE4 A7's capability gating and W14 consume the Health
+fields. Commit as, for example, `feat(health,x4): report revision and capabilities`.
+
+**Acceptance**
+- The plugin version is bumped per phase (0.3.x for Phase 3, 0.4.x for Phase 4) with
+  `build.yaml` changelog entries.
+- `GET /JellyfinMod/Health` returns `revision`, `lastMigration` and `capabilities`, asserted
+  through the built web client on the isolated test instance.
+- Starting an older build against a copy of the isolated database that holds newer migrations
+  leaves `IsReady` false (Health 503, no task registration); the database is then restored.
+- Builds come from a git worktree, and the commit is recorded in evidence.
+
+## X5 · Provide one run script, real-host integration coverage and CI for the plugin suites
+**Repo** plugin · **Depends on** nothing · **Priority** high ·
+**Findings** prior-L5 (low, verified), tests-contract#2 (medium, verified)
+
+The five integration executables have no single runner, the plugin README documents no Phase 3
+commands, and no CI runs them. The suites replace Jellyfin host services and authentication with
+`DispatchProxy` stubs, so they are supporting evidence only, and the T6 wording overstates them.
+The live T1, T3 and T6 runs did exercise the real host, but not repeatably. Add a runner, CI for
+the stub-based suites, and repeatable real-host suites for the retention and browse contracts.
+An ephemeral disposable Jellyfin container would conflict with the rule that all E2E runs on
+`jellyfinmod-test`, so it waits for a user decision (open question 15). Commit as, for example,
+`test(integration,x5): add a single suite runner`.
+
+**Acceptance**
+- One script runs every plugin integration executable and fails on the first non-zero exit.
+- The plugin README documents the Phase 3 commands.
+- Retention and browse contracts have repeatable real-host suites against the isolated test
+  instance: real Jellyfin authentication, users, and played and favourite state driven through
+  the Jellyfin API. The ephemeral-container harness is added only if the user approves it.
+- A CI job runs the stub-based suites on phase branches, on ARM64 where `statx` matters.
+- Evidence text states which host services were simulated.
+
+## X6 · Keep LAN addresses and local paths out of committed docs
+**Repo** jellyfin-web · **Depends on** nothing · **Priority** medium ·
+**Findings** critic-invariants#5 (low, single-source)
+
+Acceptance write-ups committed and pushed the test host's LAN URL, the isolated state directory's
+absolute paths and a local workspace path, which the workspace rules forbid. The review branch
+redacts the current docs; keep them clean with a guard. Scrubbing already published history is a
+separate user decision (open question 16). Commit as, for example,
+`chore(docs,x6): guard docs against local addresses`.
+
+**Acceptance**
+- A grep of `docs/` on the trunk line finds no private IPv4 address and no absolute Linux or
+  macOS home-directory path.
+- A pre-commit or CI grep guard exists and rejects a test commit that contains one.
+- Published-history scrubbing happens only after explicit user authorization, using
+  force-with-lease with verified remote tips.
 
 ---
 
@@ -351,3 +563,62 @@ acceptance on the Pi. Phases 2 and 3 have task breakdowns; Phase 4 onward remain
 4. **Publication name decided by the user, 2026-09-08:** publish as `capische/jellyfin-mod`,
    matching the web fork's account and public visibility. This supersedes the earlier requirement
    to rename before publishing.
+
+The following are **Open question for the user (review 2026-09-18):** items raised by
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md). None is decided; each names the task that
+consumes the answer. Accepted decisions above and in the phase documents stay unchanged.
+
+5. **Safety gate.** Should automatic retention stay disabled on non-disposable media until
+   blockers T7, T8, T9, T10 and T18 pass (plus T13 for Selected user mode)? This is a proposal;
+   the accepted automatic-expiry decision is unchanged (plan-ops#1, high, verified;
+   plugin-retention-policy#1, critical, verified). Consumed by T18 and the PHASE3 safety gate.
+6. **Download client for Phase 4.** A Transmission write driver (matches the deployed client and
+   the existing read adapter), qBittorrent with a new qBittorrent read adapter, or both? The
+   answer changes A1, A5, A6, A9 and T17 (prior-H4c, medium, verified).
+7. **Mistaken grabs before the Phase 5 queue exists.** Keep one Enter with no confirmation, add a
+   short server-side cancellable hold with `POST /Grabs/{id}/Cancel`, or require a second Enter
+   on TV and mobile? Consumed by PHASE4 A7 and A8 (plan-ops#6, medium, single-source).
+8. **All users eligible set.** All users is accepted as the default. Should it keep counting
+   every user with library access, even though users blocked by parental rating or tags then
+   prevent reclamation forever, or count only users who can actually see the item? Should All
+   users remain the default? Consumed by T11 (plugin-retention-policy#5, medium, single-source).
+9. **Quarantine or soft delete.** Add a quarantine step before the physical unlink
+   (same-filesystem rename, delayed purge, exact attribution after a crash), or keep direct
+   unlink, where a missing prepared file ends in a terminal "vanished" state? Consumed by T9 and
+   T12 (plugin-retention-safety#3, medium, single-source).
+10. **Entry Remove when native bindings exist.** Refuse with 409, keep a tombstone that preserves
+    Keep and policy so reconciliation does not recreate a bare entry, or keep the current hard
+    delete? Consumed by T10 (plugin-reconciliation-data#1, medium, verified).
+11. **Grace semantics.** Should a transient block (another user's brief playback, a favourite
+    toggle, a new user, access errors) preserve the existing grace start instead of restarting
+    the full window? Consumed by T11 (plugin-retention-policy#9, low, single-source).
+12. **Favourite seasons.** Should favourite seasons protect their episodes, as favourite series
+    already do? Consumed by T11.
+13. **Keep reversal.** Add an admin un-Keep and a per-entry days editor? Keep would still be one
+    action with no confirmation. Consumed by T13 (prior-M9, low, verified).
+14. **Branch rule.** Replace the workspace `CLAUDE.md` rule "keep existing Phase 1 web work on
+    `jellyfinmod-phase1`" with "the newest phase branch is trunk; older phase branches are frozen
+    after acceptance", and switch both main checkouts to it? Only the user can change
+    `CLAUDE.md`. Consumed by X1 and X2 (plan-ops#3, medium, single-source).
+15. **Test harness.** May an ephemeral disposable Jellyfin 10.11.11 container (CI or local,
+    ephemeral port) serve as an additional integration boundary, or must all host-level tests
+    stay on `jellyfinmod-test` (port 18096)? Consumed by X5 (tests-contract#2, medium, verified).
+16. **Published history.** Scrub the LAN IP and local paths already pushed to origin? This needs
+    an explicit force-push authorization under the history-rewrite rule. Consumed by X6
+    (critic-invariants#5, low, single-source).
+17. **Physical webOS.** Which TV model and webOS/Chromium version is the target? The answer
+    decides W11's severity. Must one physical webOS run be mandatory to close any phase that
+    touches TV UI? Consumed by W11 and Definition of done item 6 (critic-gaps#3, high, verified;
+    web-home-rules-tv#8, low, verified).
+18. **Phase 4 indexer evidence.** Is any real indexer allowed for read-only capability queries,
+    and which one, or should A1 rely only on the Torznab boundary server? Where do its keys live
+    (proposed: the ignored `plugin/.env`)? Consumed by A9 and A1 (plan-ops#7, low, single-source).
+19. **Existence oracle.** After P11 equalises the 404, accept the residual leak (discovery offers
+    titles that exist but are hidden from the user) as a documented limitation? Consumed by P11
+    (plugin-authz-entries#7, low, verified).
+20. **API keys.** Should user-scoped mod endpoints reject API keys with 401, or should admin
+    automation get a defined API-key contract? Consumed by P11 (plugin-authz-entries#6, low,
+    verified).
+21. **Overlapping libraries.** When libraries share a path, should each library get its own
+    entry and binding for the same native item, or should one library own it with the overlap
+    documented? Consumed by R7 (plugin-reconciliation-data#3, high, verified).
