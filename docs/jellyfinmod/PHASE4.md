@@ -152,6 +152,60 @@ maps to each configured indexer's supported identifiers; generic title search is
 discovery, never sufficient evidence to rebind a catalog identity. Record ambiguous numbering
 and unsupported packs as rejection cases. Confirm that phase branches preserve unrelated work.
 
+#### A1 decisions and protocol evidence — 2026-09-18
+
+The first slice uses the proposed defaults above as its implementation contract:
+
+- Search, profile changes and grab are administrator-only. Ordinary users may continue to add
+  and browse accessible catalog titles, but cannot use an indexer or download-client credential.
+- A movie targets its library-scoped entry. TV targets exactly one durable episode ID belonging
+  to that entry. Season packs, multi-episode releases, absolute-only numbering and ambiguous
+  specials are rejected with visible reasons.
+- Grab is disabled until an enabled indexer, a verified isolated qBittorrent destination and a
+  valid default quality profile exist. Picker profile changes affect one search snapshot; saving
+  an entry profile is a separate administrator action.
+- Rejected releases cannot be overridden. One unresolved operation is allowed per entry/episode,
+  and an existing unrelated client torrent is a conflict. Correction happens in qBittorrent;
+  Phase 4 does not add removal, Undo or queue controls.
+
+Phase 4 is stacked without worktrees on plugin `jellyfinmod-phase4` from Phase 3 `81c1aae` plus
+Phase 1 closure `214bbe0`, and web `jellyfinmod-phase4` from Phase 3 `c45b7fc588` plus Phase 1
+closure through `2712de1b97`. Phase 2 reconciliation owns bindings under
+`ReconciliationLibraryLock`; Phase 3 retention owns destructive execution under
+`RetentionExecutionGate`. Acquisition will reuse those identities and locks, persist intent
+before remote mutation, and never write `Entry.State` or binding rows during search/handoff.
+
+The Pi had no qBittorrent container before this task. A disposable ARM64 client now runs only for
+JellyfinMod testing at `http://<test-host>:18080`, with state under
+`<test-root>/phase4/qbittorrent`. It is qBittorrent `5.2.3`, WebUI API
+`2.15.1`, from pinned image digest
+`sha256:2be038f3421f60f62e8e4bf201f66f385b68e4fbc9ed3ab79051069ea22e2650`.
+Its credential is mode `0600` in the isolated host directory and is never committed. The client
+save path is `/downloads`, backed only by the isolated Phase 4 fixture directory. Production
+Jellyfin, Transmission and media were not changed.
+
+Current qBittorrent WebUI API evidence requires login session cookies, reports application and API
+versions separately, accepts `savepath`, `category`, `ratioLimit` and `seedingTimeLimit` when
+adding, and returns HTTP 200 for cases that are not proof of acceptance. A5 therefore verifies the
+normalized infohash and observed settings through `torrents/info` before recording acceptance.
+The first slice accepts only a 40-character lower-case BitTorrent v1 SHA-1 infohash, including
+base32 magnet normalization. BitTorrent v2/hybrid-only identity remains unsupported until its
+client representation and duplicate semantics have separate evidence.
+
+Torznab `t=caps` supplies supported search modes, parameters, categories and result limits.
+Movie search requires an advertised `imdbid` or `tmdbid`; episode search requires advertised
+`tvdbid`, `season` and `ep`. The stable entry/episode identity and parsed title/year or season/
+episode must agree. A `q`-only fallback may discover rows, but those rows are rejected as
+`identity_unverified` and cannot rebind or grab. Source GUIDs are namespaced by indexer and never
+treated as infohashes. Feed offset/total metadata drives bounded pagination; HTTP-200 XML errors
+remain errors rather than empty results.
+
+The controlled legal fixture will be a self-created UTF-8 payload and a v1 `.torrent` generated
+inside the isolated test tree, served by a bounded local Torznab HTTP service and seeded only by a
+disposable local peer. Its payload, torrent and expected SHA-256/infohash will be recorded without
+tracker credentials. This provides real XML, torrent parsing and client state without copyrighted
+media or production tracker traffic.
+
 ### A2 — configure without leaking credentials
 
 Extend the plugin Dashboard with indexer, client and profile forms using ordinary admin controls.
