@@ -28,6 +28,9 @@ await new Promise((resolve, reject) => {
 let sequence = 0;
 const pending = new Map();
 const browserErrors = [];
+const entryPostRequests = [];
+const pausedEntryRequests = [];
+const browseRequests = [];
 ws.addEventListener('message', event => {
     const message = JSON.parse(event.data);
     if (message.id && pending.has(message.id)) {
@@ -36,7 +39,15 @@ ws.addEventListener('message', event => {
         if (message.error) reject(new Error(JSON.stringify(message.error)));
         else resolve(message.result);
     }
-    if (message.method === 'Runtime.exceptionThrown') browserErrors.push(message.params.exceptionDetails.text);
+    if (message.method === 'Runtime.exceptionThrown') browserErrors.push(
+        message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text
+    );
+    if (message.method === 'Network.requestWillBeSent' && message.params.request.method === 'POST'
+        && new URL(message.params.request.url).pathname === '/JellyfinMod/Entries') entryPostRequests.push(message.params.requestId);
+    if (message.method === 'Network.requestWillBeSent' && message.params.request.method === 'POST'
+        && new URL(message.params.request.url).pathname === '/JellyfinMod/Browse') browseRequests.push(message.params.request.postData);
+    if (message.method === 'Fetch.requestPaused' && message.params.request.method === 'POST'
+        && new URL(message.params.request.url).pathname === '/JellyfinMod/Entries') pausedEntryRequests.push(message.params);
 });
 
 const send = (method, params = {}) => new Promise((resolve, reject) => {
@@ -49,7 +60,26 @@ const evaluate = async expression => {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
     return result.result.value;
 };
+const apiRequest = async (path, method = 'GET', body) => evaluate(`(async () => {
+    const options = { url: ApiClient.getUrl(${JSON.stringify(path)}), type: ${JSON.stringify(method)} };
+    if (${JSON.stringify(body)} !== undefined) {
+        options.data = JSON.stringify(${JSON.stringify(body)});
+        options.contentType = 'application/json';
+    }
+    const response = await ApiClient.ajax(options, true);
+    const text = await response.text();
+    return { status: response.status, body: text ? JSON.parse(text) : null };
+})()`);
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const clickFocused = async () => {
+    const activated = await evaluate(`(() => {
+        const control = document.activeElement;
+        if (!(control instanceof HTMLElement)) return false;
+        control.click();
+        return true;
+    })()`);
+    if (!activated) throw new Error('No focused control was available for activation');
+};
 const navigate = async url => {
     await send('Page.navigate', { url });
     await wait(5000);
@@ -85,6 +115,9 @@ await send('Runtime.enable');
 await send('Network.enable');
 let originalLayout;
 const checks = [];
+const createdEntryIds = [];
+let originalUserConfiguration;
+let originalUserId;
 try {
     await navigate(server);
     if (await evaluate(`!!document.querySelector('#txtManualName')`)) {
@@ -101,6 +134,28 @@ try {
     if (await evaluate(`location.hash.includes('/login') || location.hash.includes('/selectuser')`)) {
         throw new Error('Sign into the dedicated test browser as ' + testUser + ' with an empty password, then rerun');
     }
+    await evaluate(`Promise.all([
+        navigator.serviceWorker?.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))) ?? Promise.resolve(),
+        window.caches?.keys().then(keys => Promise.all(keys.map(key => window.caches.delete(key)))) ?? Promise.resolve(),
+        new Promise((resolve, reject) => {
+            const request = indexedDB.open('keyval-store');
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                const database = request.result;
+                if (!database.objectStoreNames.contains('keyval')) {
+                    database.close();
+                    resolve();
+                    return;
+                }
+                const transaction = database.transaction('keyval', 'readwrite');
+                transaction.objectStore('keyval').delete('jellyfin-query-cache');
+                transaction.oncomplete = () => { database.close(); resolve(); };
+                transaction.onerror = () => reject(transaction.error);
+            };
+        })
+    ])`);
+    await send('Page.reload', { ignoreCache: true });
+    await wait(5000);
     originalLayout = await evaluate(`localStorage.getItem('layout')`);
     await evaluate(`localStorage.setItem('layout', 'desktop')`);
     await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
@@ -196,7 +251,8 @@ try {
         await navigate(server + '#/details?entryId=' + encodeURIComponent(entryId));
         const native = await evaluate(`({
             nativeRoute: location.hash.includes('id=') && !location.hash.includes('entryId='),
-            seasons: !!document.querySelector('#itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .card, #itemDetailPage:not(.hide) #childrenCollapsible:not(.hide) .listItem, #itemDetailPage:not(.hide) #listChildrenCollapsible:not(.hide) .card, #itemDetailPage:not(.hide) #listChildrenCollapsible:not(.hide) .listItem'),
+            seasons: Array.from(document.querySelectorAll('#itemDetailPage:not(.hide) .sectionTitle')).some(title =>
+                title.textContent.trim() === 'Seasons' && !!title.parentElement?.querySelector('.card, .listItem')),
             history: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-entryHistory'),
             filelessRoot: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-entryDetailsRoot')
         })`);
@@ -234,8 +290,12 @@ try {
                 checks.push({ restrictedKeep: 'absent' });
             }
         }
+        console.log(`passed native details: ${layout} ${width}x${height}`);
     }
-    await evaluate(`localStorage.setItem('layout', 'tv')`);
+    await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    await evaluate(`localStorage.setItem('layout', 'desktop')`);
+    await send('Page.reload', { ignoreCache: true });
+    await wait(5000);
     await navigate(server + '#/search?query=' + encodeURIComponent(process.env.JELLYFINMOD_SEARCH_QUERY ?? 'blade'));
     const searchActivated = await evaluate(`(() => {
         if (document.querySelector('#searchPage:not(.hide)')) return true;
@@ -261,23 +321,386 @@ try {
     })()`);
     if (!identity) throw new Error('Fixture query needs an unheld TMDB result and a writable library');
     // Fail the actual HTTP transport. No fake API success or client response is injected.
-    await send('Network.setBlockedURLs', { urls: ['*/JellyfinMod/Entries'] });
-    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
-    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    const failedRequestStart = entryPostRequests.length;
+    const failedPauseStart = pausedEntryRequests.length;
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*JellyfinMod/Entries*', requestStage: 'Request' }] });
+    await evaluate(`document.querySelector('[data-jfmod-add="${identity}"]')?.focus()`);
+    await wait(100);
+    if (await evaluate(`document.activeElement?.getAttribute('data-jfmod-add')`) !== identity) {
+        throw new Error('TV focus manager moved the failed-add fixture before Enter');
+    }
+    await clickFocused();
+    for (let attempt = 0; attempt < 50 && pausedEntryRequests.length === failedPauseStart; attempt++) await wait(100);
+    if (pausedEntryRequests.length !== failedPauseStart + 1) throw new Error('Failed-add fixture did not reach the real HTTP boundary');
+    await send('Fetch.failRequest', { requestId: pausedEntryRequests[failedPauseStart].requestId, errorReason: 'Failed' });
     await wait(3000);
+    await send('Fetch.disable');
     const focused = await evaluate(`document.activeElement?.getAttribute('data-jfmod-add')`);
-    if (focused !== identity) throw new Error('Failed add did not return focus to its Add button');
+    if (entryPostRequests.length !== failedRequestStart + 1 || focused !== identity) throw new Error('Failed add did not send one request and return focus to its Add button: requests='
+        + (entryPostRequests.length - failedRequestStart) + ', paused=' + (pausedEntryRequests.length - failedPauseStart)
+        + ', focused=' + focused + ', expected=' + identity);
     checks.push({ failedAddFocus: 'passed' });
+    console.log('passed failed add focus');
+
+    const successfulAdd = await evaluate(`(() => {
+        const button = document.querySelector('[data-jfmod-add]:not(:disabled)');
+        if (!button) return null;
+        const mediaType = button.dataset.jfmodAdd.split(':')[0];
+        const label = mediaType === 'movie' ? 'Movie library' : 'TV library';
+        const select = Array.from(document.querySelectorAll('.jfmod-discovery label')).find(node => node.textContent.includes(label))?.querySelector('select');
+        return {
+            identity: button.dataset.jfmodAdd,
+            tmdbId: Number(button.dataset.jfmodAdd.split(':')[1]),
+            mediaType,
+            title: button.getAttribute('aria-label').replace(/^Add | to catalog$/g, ''),
+            targetLibraryId: select?.value
+        };
+    })()`);
+    if (!successfulAdd?.targetLibraryId) throw new Error('Successful-add fixture needs a selected writable library');
+    const requestStart = entryPostRequests.length;
+    const pausedStart = pausedEntryRequests.length;
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*JellyfinMod/Entries*', requestStage: 'Request' }] });
+    await evaluate(`document.querySelector('[data-jfmod-add="${successfulAdd.identity}"]')?.focus()`);
+    for (let activation = 0; activation < 2; activation++) await clickFocused();
+    for (let attempt = 0; attempt < 50 && pausedEntryRequests.length === pausedStart; attempt++) await wait(100);
+    if (pausedEntryRequests.length !== pausedStart + 1) throw new Error('Repeated Enter did not produce exactly one paused Add request: paused='
+        + (pausedEntryRequests.length - pausedStart) + ', sent=' + (entryPostRequests.length - requestStart));
+    const changedQuery = 'jfmod-inflight-' + Date.now();
+    await evaluate(`document.querySelector('#searchTextInput')?.focus()`);
+    await setSearch(changedQuery);
+    const changedBeforeRelease = await snapshot();
+    if (changedBeforeRelease.active?.id !== 'searchTextInput') throw new Error('Changing scope lost search input focus before Add completed');
+    await send('Fetch.continueRequest', { requestId: pausedEntryRequests[pausedStart].requestId });
+    await wait(5000);
+    await send('Fetch.disable');
+    if (entryPostRequests.length !== requestStart + 1) throw new Error('Repeated Enter sent more than one Add request');
+    const changedAfterRelease = await evaluate(`({
+        query: document.querySelector('#searchTextInput')?.value,
+        active: document.activeElement?.id,
+        oldTitle: !!document.querySelector('[data-jfmod-tmdb-id="${successfulAdd.tmdbId}"]')
+    })`);
+    if (changedAfterRelease.query !== changedQuery || changedAfterRelease.active !== 'searchTextInput' || changedAfterRelease.oldTitle) {
+        throw new Error('Completed Add changed the new search scope: ' + JSON.stringify(changedAfterRelease));
+    }
+    await setSearch(process.env.JELLYFINMOD_SEARCH_QUERY ?? 'blade');
+    const canonicalCount = await evaluate(`document.querySelectorAll('[data-jfmod-tmdb-id="${successfulAdd.tmdbId}"]').length`);
+    if (canonicalCount !== 1) throw new Error('Returning to the original search did not show one canonical added title');
+    const createdLookup = await apiRequest('JellyfinMod/Entries?mediaType=' + successfulAdd.mediaType
+        + '&targetLibraryId=' + encodeURIComponent(successfulAdd.targetLibraryId) + '&limit=200');
+    const createdEntry = createdLookup.body.items.find(entry => entry.tmdbId === successfulAdd.tmdbId);
+    if (!createdEntry) throw new Error('Successful Add did not persist its canonical entry');
+    createdEntryIds.push(createdEntry.id);
+    await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(createdEntry.id), 'DELETE');
+    createdEntryIds.pop();
+    checks.push({ successfulAddScope: 'passed', repeatedActivations: 2, requests: 1 });
+    console.log('passed successful in-flight add scope and duplicate activation guard');
+
+    const pagingQuery = process.env.JELLYFINMOD_PAGING_QUERY ?? (process.env.JELLYFINMOD_SEARCH_QUERY ?? 'matrix');
+    await setSearch(pagingQuery);
+    await evaluate(`(() => {
+        for (const select of document.querySelectorAll('.jfmod-discovery select')) {
+            if (!select.value && select.options.length > 1) {
+                select.value = select.options[1].value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    })()`);
+    await wait(500);
+    const firstPage = await evaluate(`(() => {
+        const buttons = Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]'));
+        const select = Array.from(document.querySelectorAll('.jfmod-discovery label')).find(node => node.textContent.includes('Movie library'))?.querySelector('select');
+        return { ids: buttons.map(button => Number(button.dataset.jfmodAdd.split(':')[1])), targetLibraryId: select?.value };
+    })()`);
+    if (!firstPage.targetLibraryId || firstPage.ids.length < 10) throw new Error('Paging fixture needs a writable movie library and a full discovery page');
+    const beforeMore = firstPage.ids.length;
+    let moreFocused = false;
+    for (let attempt = 0; attempt < 50 && !moreFocused; attempt++) {
+        moreFocused = await evaluate(`(() => {
+            const button = Array.from(document.querySelectorAll('.jfmod-discovery > button')).find(candidate => candidate.textContent.includes('More movie results'));
+            button?.focus();
+            return !!button;
+        })()`);
+        if (!moreFocused) await wait(100);
+    }
+    if (!moreFocused) throw new Error('The first discovery page did not expose movie continuation');
+    await clickFocused();
+    for (let attempt = 0; attempt < 30; attempt++) {
+        const count = await evaluate(`document.querySelectorAll('[data-jfmod-add^="movie:"]').length`);
+        if (count > beforeMore) break;
+        await wait(1000);
+    }
+    const explicitContinuation = await evaluate(`(() => ({
+        ids: Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]')).map(button => Number(button.dataset.jfmodAdd.split(':')[1])),
+        active: document.activeElement?.textContent?.trim()
+    }))()`);
+    if (explicitContinuation.ids.length <= beforeMore || new Set(explicitContinuation.ids).size !== explicitContinuation.ids.length
+        || !explicitContinuation.active?.includes('More movie results')) {
+        throw new Error('Explicit discovery continuation repeated titles or lost focus: ' + JSON.stringify(explicitContinuation));
+    }
+
+    const seedQuery = pagingQuery === pagingQuery.toUpperCase() ? pagingQuery.toLowerCase() : pagingQuery.toUpperCase();
+    await navigate(server);
+    await navigate(server + '#/search?query=' + encodeURIComponent(seedQuery));
+    let seedPage;
+    for (let attempt = 0; attempt < 30; attempt++) {
+        seedPage = await evaluate(`({
+            query: document.querySelector('#searchTextInput')?.value,
+            busy: document.querySelector('.jfmod-discovery')?.getAttribute('aria-busy'),
+            ids: Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]')).map(button => Number(button.dataset.jfmodAdd.split(':')[1]))
+        })`);
+        if (seedPage.query === seedQuery && seedPage.busy === 'false' && seedPage.ids.length >= 10 && seedPage.ids.length <= 20) break;
+        await wait(1000);
+    }
+    const seedIds = seedPage?.ids ?? [];
+    if (seedPage?.query !== seedQuery || seedPage.busy !== 'false' || seedIds.length < 10 || seedIds.length > 20) {
+        throw new Error('Automatic-page fixture did not settle on one full first page: ' + JSON.stringify(seedPage));
+    }
+    for (const tmdbId of seedIds) {
+        const created = await apiRequest('JellyfinMod/Entries', 'POST', { mediaType: 'movie', tmdbId, targetLibraryId: firstPage.targetLibraryId });
+        if (created.body.created) createdEntryIds.push(created.body.entry.id);
+    }
+    console.log(`seeded ${createdEntryIds.length} reversible held titles for empty-page acceptance`);
+    const verificationQuery = seedQuery.slice(0, 1).toLowerCase() + seedQuery.slice(1, 2).toUpperCase() + seedQuery.slice(2).toLowerCase();
+    await navigate(server);
+    await navigate(server + '#/search?query=' + encodeURIComponent(verificationQuery));
+    let continuation;
+    for (let attempt = 0; attempt < 30; attempt++) {
+        continuation = await evaluate(`(() => ({
+            ids: Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]')).map(button => Number(button.dataset.jfmodAdd.split(':')[1])),
+            more: Array.from(document.querySelectorAll('.jfmod-discovery > button')).some(button => button.textContent.includes('More movie results')),
+            busy: document.querySelector('.jfmod-discovery')?.getAttribute('aria-busy'),
+            notice: document.querySelector('.jfmod-searchNotice')?.textContent?.trim(),
+            query: document.querySelector('#searchTextInput')?.value,
+            hash: location.hash
+        }))()`);
+        if (continuation.query === verificationQuery && continuation.ids.length && !continuation.ids.some(id => seedIds.includes(id))) break;
+        await wait(1000);
+    }
+    if (!continuation?.ids.length || continuation.ids.some(id => seedIds.includes(id))) {
+        throw new Error('An entirely held first page did not advance automatically to distinct page-two results: ' + JSON.stringify(continuation));
+    }
+    const continued = { ids: continuation.ids };
+    for (const id of createdEntryIds.splice(0)) await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(id), 'DELETE');
+    checks.push({ emptyDiscoveryPage: 'passed', automaticPage: 2, explicitContinuation: 'passed' });
+    console.log('passed empty first discovery page and focused continuation');
+
+    const homeFixture = await evaluate(`(() => {
+        const options = Array.from(document.querySelectorAll('.jfmod-discovery label')).find(node => node.textContent.includes('Movie library'))
+            ?.querySelector('select')?.options;
+        return { libraries: Array.from(options ?? []).map(option => option.value).filter(Boolean) };
+    })()`);
+    const userState = await evaluate(`(async () => {
+        const user = await ApiClient.getCurrentUser(false);
+        return { id: user.Id, configuration: user.Configuration };
+    })()`);
+    const userViews = await apiRequest('Users/' + encodeURIComponent(userState.id) + '/Views');
+    const homeMovieLibraryIds = new Set((userViews.body.Items ?? [])
+        .filter(view => view.CollectionType === 'movies').map(view => view.Id));
+    const homeLibraries = homeFixture.libraries.filter(id => homeMovieLibraryIds.has(id));
+    if (homeLibraries.length < 2 || continued.ids.length < 2) throw new Error('Home acceptance needs two writable movie Home views and two unheld provider titles');
+    const [excludedLibraryId, includedLibraryId] = homeLibraries;
+    const [duplicateTmdbId, excludedTmdbId] = continued.ids;
+    await evaluate(`(() => {
+        const select = Array.from(document.querySelectorAll('.jfmod-discovery label')).find(node => node.textContent.includes('Movie library'))?.querySelector('select');
+        select.value = ${JSON.stringify(excludedLibraryId)};
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    const addFromUi = async tmdbId => {
+        const focused = await evaluate(`(() => {
+            const button = document.querySelector('[data-jfmod-add="movie:${tmdbId}"]');
+            button?.focus();
+            return !!button;
+        })()`);
+        if (!focused) throw new Error('Home UI fixture lost discovery title ' + tmdbId);
+        await clickFocused();
+        for (let attempt = 0; attempt < 60; attempt++) {
+            if (!await evaluate(`!!document.querySelector('[data-jfmod-add="movie:${tmdbId}"]')`)) return;
+            await wait(500);
+        }
+        throw new Error('Home UI fixture add did not complete for ' + tmdbId);
+    };
+    await addFromUi(duplicateTmdbId);
+    await addFromUi(excludedTmdbId);
+    let primaryEntries;
+    for (let attempt = 0; attempt < 60; attempt++) {
+        primaryEntries = await apiRequest('JellyfinMod/Entries?mediaType=movie&targetLibraryId='
+            + encodeURIComponent(excludedLibraryId) + '&limit=200');
+        if ([duplicateTmdbId, excludedTmdbId].every(tmdbId => primaryEntries.body.items.some(entry => entry.tmdbId === tmdbId))) break;
+        await wait(500);
+    }
+    for (const tmdbId of [duplicateTmdbId, excludedTmdbId]) {
+        const entry = primaryEntries?.body.items.find(candidate => candidate.tmdbId === tmdbId);
+        if (!entry) throw new Error('UI add did not persist Home fixture ' + tmdbId);
+        createdEntryIds.push(entry.id);
+    }
+    const duplicateTitle = primaryEntries.body.items.find(entry => entry.tmdbId === duplicateTmdbId).title;
+    const excludedTitle = primaryEntries.body.items.find(entry => entry.tmdbId === excludedTmdbId).title;
+    const duplicateCopy = await apiRequest('JellyfinMod/Entries', 'POST', {
+        mediaType: 'movie', tmdbId: duplicateTmdbId, targetLibraryId: includedLibraryId
+    });
+    if (!duplicateCopy.body.created) throw new Error('Home fixture duplicate copy already existed unexpectedly');
+    createdEntryIds.push(duplicateCopy.body.entry.id);
+    originalUserId = userState.id;
+    originalUserConfiguration = userState.configuration;
+    const includedConfiguration = { ...originalUserConfiguration,
+        LatestItemsExcludes: (originalUserConfiguration.LatestItemsExcludes ?? [])
+            .filter(id => id !== excludedLibraryId && id !== includedLibraryId) };
+    const applyHomeConfiguration = async configuration => {
+        await evaluate(`ApiClient.updateUserConfiguration(${JSON.stringify(originalUserId)}, ${JSON.stringify(configuration)})`);
+        await evaluate(`new Promise((resolve, reject) => {
+            const request = indexedDB.open('keyval-store');
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                const database = request.result;
+                if (!database.objectStoreNames.contains('keyval')) {
+                    database.close();
+                    resolve();
+                    return;
+                }
+                const transaction = database.transaction('keyval', 'readwrite');
+                transaction.objectStore('keyval').delete('jellyfin-query-cache');
+                transaction.oncomplete = () => { database.close(); resolve(); };
+                transaction.onerror = () => reject(transaction.error);
+            };
+        })`);
+        await send('Page.reload', { ignoreCache: true });
+        await wait(5000);
+        await evaluate(`(async () => {
+            const user = await ApiClient.getCurrentUser(false);
+            user.Configuration = ${JSON.stringify(configuration)};
+        })()`);
+        await navigate(server + '#/home.html');
+    };
+    const homeCounts = () => evaluate(`(() => {
+        const root = Array.from(document.querySelectorAll('.jfmod-homeRowRoot')).find(node => node.querySelector('.sectionTitle')?.textContent.trim() === 'Recently Added');
+        const labels = Array.from(root?.querySelectorAll('[aria-label]') ?? []).map(node => node.getAttribute('aria-label'));
+        return {
+            duplicate: labels.filter(label => label === ${JSON.stringify(duplicateTitle)}).length,
+            excluded: labels.filter(label => label === ${JSON.stringify(excludedTitle)}).length
+        };
+    })()`);
+    const waitForHomeCounts = async (duplicate, excluded) => {
+        let result;
+        for (let attempt = 0; attempt < 30; attempt++) {
+            result = await homeCounts();
+            if (result.duplicate === duplicate && result.excluded === excluded) return result;
+            await wait(1000);
+        }
+        return result;
+    };
+    await applyHomeConfiguration(includedConfiguration);
+    let counts = await waitForHomeCounts(1, 1);
+    if (counts.duplicate !== 1 || counts.excluded !== 1) {
+        const browseRequest = targetLibraryId => ({
+            mediaType: 'movie', targetLibraryId, sortBy: ['DateCreated'], sortOrder: 'Descending', startIndex: 0, limit: 24,
+            state: [],
+            filters: {
+                genres: [], years: [], officialRatings: [], tags: [], studioIds: [], status: [], seriesStatus: [],
+                features: [], videoBasicFilter: [], videoTypes: [], audioLanguages: [], subtitleLanguages: []
+            }
+        });
+        const browse = await Promise.all([excludedLibraryId, includedLibraryId].map(id => apiRequest('JellyfinMod/Browse', 'POST', browseRequest(id))));
+        const home = await evaluate(`Array.from(document.querySelectorAll('.jfmod-homeRowRoot')).map(root => ({
+            title: root.querySelector('.sectionTitle')?.textContent.trim(),
+            ids: Array.from(root.querySelectorAll('[data-jfmod-tmdb-id]')).map(node => node.getAttribute('data-jfmod-tmdb-id'))
+        }))`);
+        throw new Error('Recently Added did not deduplicate accessible provider copies: '
+            + JSON.stringify({ counts, excludedLibraryId, includedLibraryId,
+                browse: browse.map(result => ({ status: result.status, ids: result.body?.items?.map(row => row.entry?.tmdbId) })),
+                homeBrowseRequests: browseRequests.slice(-12), home }));
+    }
+    const excludedConfiguration = { ...includedConfiguration,
+        LatestItemsExcludes: [...new Set([...(includedConfiguration.LatestItemsExcludes ?? []), excludedLibraryId])] };
+    await applyHomeConfiguration(excludedConfiguration);
+    counts = await waitForHomeCounts(1, 0);
+    if (counts.duplicate !== 1 || counts.excluded !== 0) {
+        const includedBrowse = await apiRequest('JellyfinMod/Browse', 'POST', {
+            mediaType: 'movie', targetLibraryId: includedLibraryId, sortBy: ['DateCreated'], sortOrder: 'Descending', startIndex: 0, limit: 24,
+            state: [], filters: { genres: [], years: [], officialRatings: [], tags: [], studioIds: [], status: [], seriesStatus: [],
+                features: [], videoBasicFilter: [], videoTypes: [], audioLanguages: [], subtitleLanguages: [] }
+        });
+        const home = await evaluate(`Array.from(document.querySelectorAll('.jfmod-homeRowRoot')).map(root => ({
+            title: root.querySelector('.sectionTitle')?.textContent.trim(),
+            ids: Array.from(root.querySelectorAll('[data-jfmod-tmdb-id]')).map(node => node.getAttribute('data-jfmod-tmdb-id'))
+        }))`);
+        throw new Error('Recently Added exposed a title from an excluded library: '
+            + JSON.stringify({ counts, duplicateTmdbId, includedLibraryId,
+                includedIds: includedBrowse.body.items.map(row => row.entry?.tmdbId),
+                homeBrowseRequests: browseRequests.slice(-12), home }));
+    }
+    await applyHomeConfiguration(includedConfiguration);
+    counts = await waitForHomeCounts(1, 1);
+    if (counts.duplicate !== 1 || counts.excluded !== 1) throw new Error('Restoring Latest libraries did not restore the excluded catalog title: ' + JSON.stringify(counts));
+    await evaluate(`(async () => {
+        await ApiClient.updateUserConfiguration(${JSON.stringify(originalUserId)}, ${JSON.stringify(originalUserConfiguration)});
+        const user = await ApiClient.getCurrentUser(false);
+        user.Configuration = ${JSON.stringify(originalUserConfiguration)};
+    })()`);
+    originalUserConfiguration = undefined;
+    for (const id of createdEntryIds.splice(0)) await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(id), 'DELETE');
+    checks.push({ homeLibraryExclusion: 'passed', providerDeduplication: 'passed', accessibleCopies: 2 });
+    console.log('passed Home library exclusion and provider deduplication');
+
+    const nativeDetail = await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(entryId));
+    const nativeItemId = nativeDetail.body.entry.jellyfinItemId;
+    if (!nativeItemId) throw new Error('Plugin outage fixture needs a native binding');
+    await evaluate(`new Promise((resolve, reject) => {
+        const request = indexedDB.open('keyval-store');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains('keyval')) {
+                database.close();
+                resolve();
+                return;
+            }
+            const transaction = database.transaction('keyval', 'readwrite');
+            transaction.objectStore('keyval').delete('jellyfin-query-cache');
+            transaction.oncomplete = () => { database.close(); resolve(); };
+            transaction.onerror = () => reject(transaction.error);
+        };
+    })`);
+    await send('Network.setBlockedURLs', { urls: ['*/JellyfinMod/*'] });
+    await send('Page.reload', { ignoreCache: true });
+    await wait(5000);
+    await navigate(server + '#/details?id=' + encodeURIComponent(nativeItemId));
+    const nativeWithoutPlugin = await evaluate(`({
+        title: document.querySelector('#itemDetailPage:not(.hide) .itemName')?.textContent?.trim(),
+        actions: document.querySelectorAll('#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)').length,
+        pluginDetails: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails')
+    })`);
+    if (!nativeWithoutPlugin.title || !nativeWithoutPlugin.actions) {
+        throw new Error('Native details did not degrade cleanly while plugin transport was absent: ' + JSON.stringify(nativeWithoutPlugin));
+    }
+    await navigate(server + '#/search?query=' + encodeURIComponent(nativeDetail.body.entry.title));
+    const nativeSearchWithoutPlugin = await evaluate(`({
+        sections: Array.from(document.querySelectorAll('#searchPage .sectionTitle')).map(node => node.textContent.trim()),
+        cards: document.querySelectorAll('#searchPage .card').length,
+        discovery: !!document.querySelector('#searchPage .jfmod-discovery')
+    })`);
+    if (!nativeSearchWithoutPlugin.cards) {
+        throw new Error('Native search did not degrade cleanly while plugin transport was absent: ' + JSON.stringify(nativeSearchWithoutPlugin));
+    }
     await send('Network.setBlockedURLs', { urls: [] });
+    checks.push({ pluginTransportAbsent: 'passed', nativeDetails: 'usable', nativeSearch: 'usable',
+        cachedPluginDetails: nativeWithoutPlugin.pluginDetails, cachedDiscovery: nativeSearchWithoutPlugin.discovery });
+    console.log('passed native detail and search degradation without plugin transport');
+
     await setSearch('jfmod-no-results-' + Date.now());
     const empty = await snapshot();
     if (empty.cards.length) throw new Error('Prior search cards leaked into the new query');
     checks.push({ searchScope: 'passed' });
-    if (browserErrors.length) throw new Error('Browser threw ' + browserErrors.length + ' uncaught exceptions');
+    console.log('passed search scope isolation');
+    if (browserErrors.length) throw new Error('Browser threw uncaught exceptions: ' + JSON.stringify(browserErrors));
     console.log(JSON.stringify({ checks, physicalTv: 'not tested',
-        remaining: ['successful in-flight add across scopes', 'empty first discovery page continuation', 'Home library exclusion and provider deduplication'] }, null, 2));
+        remaining: ['physical webOS acceptance'] }, null, 2));
 } finally {
     await send('Network.setBlockedURLs', { urls: [] });
+    await send('Fetch.disable').catch(() => {});
+    if (originalUserConfiguration && originalUserId) {
+        await evaluate(`ApiClient.updateUserConfiguration(${JSON.stringify(originalUserId)}, ${JSON.stringify(originalUserConfiguration)})`).catch(() => {});
+    }
+    for (const id of createdEntryIds) await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(id), 'DELETE').catch(() => {});
     if (originalLayout !== undefined) {
         await evaluate(originalLayout === null ? `localStorage.removeItem('layout')` : `localStorage.setItem('layout', ${JSON.stringify(originalLayout)})`);
     }

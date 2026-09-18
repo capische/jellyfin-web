@@ -114,6 +114,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const [selectedLibraries, setSelectedLibraries] = useState<Partial<Record<MediaType, string>>>({});
     const active = useRef(true);
     const inFlight = useRef(new Set<string>());
+    const failedFocus = useRef<string>();
     useEffect(() => {
         active.current = true;
         return () => {
@@ -164,6 +165,14 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         setOptimistic(current => current.some(entry => ids.has(entry.id)) ?
             current.filter(entry => !ids.has(entry.id)) : current);
     }, [authoritativeIds]);
+    useEffect(() => {
+        const identity = failedFocus.current;
+        if (!identity) return;
+        failedFocus.current = undefined;
+        const button = resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-add="${identity}"]`);
+        const fallback = resultsRef.current?.querySelector<HTMLElement>('[data-jfmod-add]:not(:disabled)');
+        (button ?? fallback ?? document.querySelector<HTMLElement>('#searchTextInput'))?.focus();
+    }, [optimistic]);
 
     // A plugin outage keeps the exact upstream page working.
     if (health.isError || (health.isSuccess && !health.data.ok)) {
@@ -206,13 +215,19 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath, user?.Id] });
     };
 
+    const restoreFocusAfterAdd = (metadata: TmdbMetadata, inputWasFocused: boolean, succeeded: boolean) => {
+        if (!active.current) return;
+        if (inputWasFocused) document.querySelector<HTMLElement>('#searchTextInput')?.focus();
+        else if (succeeded) focusMovedEntry(metadata);
+    };
+
     const add = async (metadata: TmdbMetadata) => {
         const targetLibraryId = targetFor(metadata.mediaType);
         if (!api || !targetLibraryId) return;
         const identity = `${metadata.mediaType}:${metadata.tmdbId}`;
         if (inFlight.current.has(identity)) return;
         inFlight.current.add(identity);
-        const inputWasFocused = document.activeElement?.matches('input[type="search"], .searchField') === true;
+        const inputWasFocused = document.activeElement?.id === 'searchTextInput';
         let succeeded = false;
         const pending = optimisticEntry(metadata, targetLibraryId);
         setOptimistic(current => [...current, pending]);
@@ -233,23 +248,13 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             showAddedToast(!!user?.Policy?.IsAdministrator && result.created, undoAdd.bind(null, result.entry));
         } catch (error) {
             if (!active.current) return;
+            failedFocus.current = inputWasFocused ? undefined : identity;
             setOptimistic(current => current.filter(entry => entry.id !== pending.id));
             toast('Could not add this title');
             console.error('[JellyfinMod] add from search failed', error);
         } finally {
             inFlight.current.delete(identity);
-            if (active.current && !succeeded && !inputWasFocused) {
-                window.requestAnimationFrame(() => {
-                    if (!active.current) return;
-                    const button = resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-add="${identity}"]`);
-                    const fallback = resultsRef.current?.querySelector<HTMLElement>('[data-jfmod-add]:not(:disabled)');
-                    (button ?? fallback ?? document.querySelector<HTMLElement>('#searchPage input[type="search"], #searchPage .searchField'))?.focus();
-                });
-            } else if (active.current && inputWasFocused) {
-                (document.querySelector('#searchPage input[type="search"], #searchPage .searchField') as HTMLElement | null)?.focus();
-            } else if (active.current) {
-                focusMovedEntry(metadata);
-            }
+            restoreFocusAfterAdd(metadata, inputWasFocused, succeeded);
         }
     };
 
