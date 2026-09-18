@@ -1,0 +1,1388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0}img{max-width:100%}</style>
+<title>JellyfinMod Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+/* ============================================================
+   JellyfinMod — catalog click-through
+   Single visual world: the app is dark, because Jellyfin is dark.
+   Deliberately single-theme; every colour painted explicitly.
+   Colour carries meaning:
+     BLUE   #00A4DC  stock Jellyfin  (upstream, unmodified)
+     PURPLE #AA5CC3  JellyfinMod     (everything the fork adds)
+   ============================================================ */
+:root{
+  --ground:#0d0d10;
+  --surface:#16161b;
+  --surface-2:#1e1e25;
+  --surface-3:#282831;
+  --line:#2e2e38;
+  --line-soft:#23232b;
+
+  --ink:#f2f2f5;
+  --ink-2:#a8a8b6;
+  --ink-3:#6f6f80;
+
+  --jf:#00a4dc;          /* stock Jellyfin accent */
+  --mod:#aa5cc3;         /* JellyfinMod accent */
+  --mod-dim:#6d3a7d;
+  --ok:#5cb85c;
+  --warn:#e0a33e;
+  --crit:#e05a52;
+
+  --r-card:6px;
+  --r-chip:999px;
+  --card-w:150px;
+  --gap:14px;
+
+  --f-ui:'Noto Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --f-note:'IBM Plex Sans',system-ui,sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--f-ui);font-size:14px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--jf);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- device shell ---------- */
+#stage{position:fixed;inset:0;display:grid;place-items:center;background:
+   radial-gradient(1200px 700px at 50% -10%,#191922 0%,#0d0d10 62%);padding:0}
+#screen{
+  position:relative;width:100%;height:100%;overflow:hidden;background:var(--ground);
+  display:grid;grid-template-rows:auto 1fr;
+}
+body.tv #stage{padding:26px 26px 92px}
+body.tv #screen{
+  width:min(100%,1600px);aspect-ratio:16/9;height:auto;max-height:100%;
+  border-radius:10px;border:1px solid var(--line);
+  box-shadow:0 40px 90px -30px #000,0 0 0 8px #08080b;
+  --card-w:196px;--gap:20px;font-size:15px;
+}
+body.tv #screen::after{
+  content:'TV LAYOUT · 1920×1080 · arrow keys + Enter + Backspace';
+  position:absolute;left:0;right:0;bottom:0;text-align:center;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;
+  color:var(--ink-3);background:linear-gradient(transparent,#0d0d10 62%);padding:26px 0 7px;
+  pointer-events:none;z-index:60;
+}
+
+/* ---------- app bar ---------- */
+.appbar{
+  display:flex;align-items:center;gap:6px;height:52px;padding:0 10px;
+  background:var(--surface);border-bottom:1px solid var(--line-soft);z-index:30;
+}
+.iconbtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2)}
+.iconbtn:hover{background:#ffffff12;color:var(--ink)}
+.iconbtn svg{width:20px;height:20px;display:block}
+.brand{display:flex;align-items:center;gap:9px;margin-left:2px;font-weight:700;letter-spacing:.01em}
+.brand .glyph{
+  width:22px;height:22px;border-radius:5px;
+  background:linear-gradient(140deg,var(--mod),var(--jf));flex:none;
+}
+.brand small{
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;color:var(--mod);
+  border:1px solid var(--mod-dim);border-radius:3px;padding:1px 4px;font-weight:500;
+}
+.appbar .spacer{flex:1}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(140deg,#3a3a46,#22222a);
+  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line)}
+
+/* ---------- body split ---------- */
+.split{display:grid;grid-template-columns:232px 1fr;min-height:0}
+body.tv .split{grid-template-columns:1fr}
+.drawer{
+  background:var(--surface);border-right:1px solid var(--line-soft);
+  padding:10px 0;overflow:auto;min-height:0;
+}
+body.tv .drawer{display:none}
+.dgroup{padding:6px 0}
+.dhead{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:9px 18px 5px}
+.dsep{height:1px;background:var(--line-soft);margin:6px 0}
+.dlink{
+  display:flex;align-items:center;gap:13px;width:100%;padding:9px 18px;text-align:left;
+  color:var(--ink-2);font-size:13.5px;border-left:3px solid transparent;
+}
+.dlink:hover{background:#ffffff0a;color:var(--ink)}
+.dlink.on{background:#ffffff0f;color:var(--ink);border-left-color:var(--jf);font-weight:600}
+.dlink.mod.on{border-left-color:var(--mod)}
+.dlink svg{width:19px;height:19px;flex:none;opacity:.9}
+.dlink .newdot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--mod)}
+.dlink .redirect{
+  margin-left:auto;font-family:var(--f-mono);font-size:9px;color:var(--mod);
+  letter-spacing:.06em;opacity:.85;
+}
+
+.main{overflow:auto;min-height:0;position:relative;scroll-behavior:smooth}
+.main::-webkit-scrollbar{width:9px}
+.main::-webkit-scrollbar-thumb{background:#33333f;border-radius:9px}
+
+/* ---------- tabs ---------- */
+.tabs{
+  display:flex;gap:2px;padding:0 20px;background:var(--surface);
+  border-bottom:1px solid var(--line-soft);position:sticky;top:0;z-index:20;
+  overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:13px 15px 11px;font-size:13px;color:var(--ink-3);white-space:nowrap;
+  border-bottom:2px solid transparent;font-weight:500;
+}
+.tab.on{color:var(--ink);border-bottom-color:var(--jf)}
+.tab:hover{color:var(--ink-2)}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;align-items:center;gap:8px;padding:14px 20px 6px}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.toolbar .spacer{flex:1}
+.tbtn{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:4px;
+  color:var(--ink-2);font-size:12.5px;border:1px solid transparent;
+}
+.tbtn:hover{background:#ffffff0d;color:var(--ink)}
+.tbtn svg{width:16px;height:16px}
+
+/* ---------- chip row (JellyfinMod) ---------- */
+.chiprow{
+  display:flex;align-items:center;gap:8px;padding:9px 20px 14px;flex-wrap:wrap;
+  position:relative;
+}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:var(--r-chip);
+  border:1px solid var(--line);background:transparent;color:var(--ink-2);font-size:12.5px;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.chip:hover{border-color:#3d3d4a;color:var(--ink)}
+.chip .n{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.chip.on{background:#aa5cc31f;border-color:var(--mod);color:#eddaf3;font-weight:600}
+.chip.on .n{color:#d6a9e4}
+.chip.warnchip.on{background:#e0a33e1c;border-color:var(--warn);color:#f4dcae}
+.chip.warnchip.on .n{color:#e9c47c}
+
+/* ---------- card grid ---------- */
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));
+  gap:calc(var(--gap) + 8px) var(--gap);padding:0 20px 104px;align-content:start;position:relative;
+}
+.card{display:block;text-align:left;width:100%;position:relative}
+.poster{
+  position:relative;width:100%;aspect-ratio:2/3;border-radius:var(--r-card);overflow:hidden;
+  display:flex;align-items:flex-end;transition:transform .16s ease, box-shadow .16s ease, opacity .16s;
+  box-shadow:0 2px 10px -4px #000;
+}
+.card:hover .poster{transform:scale(1.045);box-shadow:0 12px 26px -10px #000}
+.poster .art{position:absolute;inset:0}
+.poster .pt{
+  position:absolute;inset:auto 9px 10px 9px;z-index:2;
+  font-size:15px;font-weight:700;line-height:1.06;letter-spacing:-.02em;
+  text-transform:uppercase;color:#fff;opacity:.72;
+  text-shadow:0 2px 14px #000c;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+.poster::after{content:'';position:absolute;inset:0;z-index:1;
+  background:linear-gradient(transparent 42%,#00000075 100%)}
+.card .meta{margin-top:7px;font-size:12.5px;line-height:1.35}
+.card .mname{color:var(--ink);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .myear{color:var(--ink-3);font-family:var(--f-mono);font-size:11px}
+
+/* stock indicators: TOP-RIGHT (matches .cardIndicators in card.scss) */
+.ind{
+  position:absolute;top:4px;right:4px;z-index:4;display:flex;gap:3px;
+}
+.ind .pill{
+  min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--jf);
+  color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;
+  font-family:var(--f-mono);
+}
+.ind .pill svg{width:12px;height:12px}
+
+/* catalog badge: TOP-LEFT (never collides with the stock set) */
+.badge{
+  position:absolute;top:4px;left:4px;z-index:4;height:20px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:5px;padding:0 7px;
+  background:#0b0b0ecc;backdrop-filter:blur(6px);border:1px solid #ffffff1f;
+  font-size:10px;font-family:var(--f-mono);letter-spacing:.04em;color:var(--ink-2);
+}
+.badge svg{width:12px;height:12px}
+.badge.wanted{color:#d8bde2;border-color:#aa5cc355}
+.badge.inflight{color:#e2c8ec;border-color:var(--mod);background:#1a0f1fcc}
+.badge.archived{color:#9fa0ad}
+
+.ring{width:13px;height:13px;border-radius:50%;flex:none;
+  background:conic-gradient(var(--mod) calc(var(--p)*1%), #ffffff22 0);
+  -webkit-mask:radial-gradient(circle,transparent 45%,#000 47%);
+  mask:radial-gradient(circle,transparent 45%,#000 47%);}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--mod);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+/* presentation classes */
+.card[data-pres="wanted"] .poster{opacity:.55}
+.card[data-pres="wanted"] .mname{color:var(--ink-2)}
+.card[data-pres="wanted"]:hover .poster{opacity:.8}
+.card[data-pres="archived"] .poster{filter:none}
+
+.countdown{
+  position:absolute;left:4px;top:4px;z-index:4;height:19px;border-radius:4px;
+  display:inline-flex;align-items:center;gap:4px;padding:0 6px;
+  background:#1a1409e0;border:1px solid #e0a33e66;color:#f0cd8a;
+  font-family:var(--f-mono);font-size:10px;
+}
+.countdown.urgent{background:#1c0d0be0;border-color:#e05a5266;color:#f3a49e}
+
+/* ---------- empty / skeleton ---------- */
+.empty{padding:64px 20px;text-align:center;color:var(--ink-3);grid-column:1/-1}
+.empty h3{color:var(--ink-2);font-size:15px;margin:0 0 6px;font-weight:600}
+.empty p{margin:0 0 16px;font-size:13px}
+.skel{border-radius:var(--r-card);background:linear-gradient(100deg,#1c1c22 30%,#26262e 50%,#1c1c22 70%);
+  background-size:220% 100%;animation:sh 1.3s linear infinite}
+@keyframes sh{to{background-position:-220% 0}}
+
+/* ---------- search ---------- */
+.searchwrap{padding:22px 20px 0;max-width:1180px}
+.sfield{
+  display:flex;align-items:center;gap:12px;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:8px;padding:0 16px;height:52px;
+}
+.sfield:focus-within{border-color:var(--jf)}
+.sfield svg{width:20px;height:20px;color:var(--ink-3);flex:none}
+.sfield input{
+  flex:1;background:none;border:0;outline:0;color:var(--ink);font-size:16px;font-family:var(--f-ui);
+}
+.sfield input::placeholder{color:var(--ink-3)}
+.sfield .kbd{font-family:var(--f-mono);font-size:10px;color:var(--ink-3);border:1px solid var(--line);
+  border-radius:3px;padding:2px 5px}
+.tier{padding:20px 20px 0;max-width:1180px}
+.tierhead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.tierhead h3{
+  margin:0;font-size:11px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--ink-2);
+}
+.tier[data-tier="library"] .tierhead h3{color:var(--jf)}
+.tier[data-tier="catalog"] .tierhead h3,.tier[data-tier="tmdb"] .tierhead h3{color:var(--mod)}
+.tierhead .src{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3)}
+.tierhead .src b{color:var(--ink-2);font-weight:500}
+.trow{
+  --card-w:128px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));
+  gap:18px var(--gap);
+}
+body.tv .trow{--card-w:176px}
+.addbtn{
+  position:absolute;right:6px;bottom:6px;z-index:5;width:30px;height:30px;border-radius:50%;
+  background:var(--mod);color:#fff;display:grid;place-items:center;
+  box-shadow:0 3px 10px -2px #000c;transition:transform .12s;
+}
+.addbtn:hover{transform:scale(1.12)}
+.addbtn svg{width:17px;height:17px}
+.tiernote{
+  font-size:12.5px;color:var(--ink-3);padding:10px 14px;border:1px dashed var(--line);
+  border-radius:6px;background:#ffffff05;
+}
+.tiernote b{color:var(--warn);font-weight:600}
+
+/* ---------- detail ---------- */
+.detail{position:relative;padding-bottom:60px}
+.backdrop{position:absolute;inset:0 0 auto;height:340px;overflow:hidden;z-index:0}
+.backdrop .art{position:absolute;inset:0;filter:saturate(.85)}
+.backdrop::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,#0d0d1055 0%,#0d0d10cc 55%,var(--ground) 100%)}
+.dwrap{position:relative;z-index:1;padding:66px 34px 0;display:grid;grid-template-columns:190px 1fr;
+  gap:28px;max-width:1100px}
+body.tv .dwrap{padding-top:48px}
+.dposter{width:100%;aspect-ratio:2/3;border-radius:8px;overflow:hidden;position:relative;
+  box-shadow:0 18px 40px -14px #000;border:1px solid #ffffff14}
+.dtitle{font-size:34px;font-weight:700;margin:0 0 6px;letter-spacing:-.015em;line-height:1.1;text-wrap:balance}
+.dsub{color:var(--ink-2);font-size:13.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dsub .dot{color:var(--ink-3)}
+.statepill{
+  display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  border:1px solid var(--mod);color:#e6cbef;background:#aa5cc31c;
+}
+.statepill.avail{border-color:#3b6b3b;color:#b4dab4;background:#5cb85c14}
+.statepill.arch{border-color:#42424f;color:#a5a6b3;background:#ffffff08}
+.dactions{display:flex;gap:10px;margin:22px 0 20px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:5px;
+  font-size:13.5px;font-weight:600;border:1px solid var(--line);color:var(--ink);background:var(--surface-2);
+}
+.btn:hover{background:var(--surface-3)}
+.btn svg{width:17px;height:17px}
+.btn.primary{background:var(--mod);border-color:var(--mod);color:#fff}
+.btn.primary:hover{background:#b96ed1}
+.btn.jf{background:var(--jf);border-color:var(--jf);color:#04222c}
+.btn.jf:hover{background:#22b6e8}
+.btn.ghost{background:transparent}
+.btn[aria-pressed="true"]{border-color:var(--mod);color:#e6cbef}
+.dover{color:var(--ink-2);font-size:14px;max-width:62ch;line-height:1.6}
+
+.retline{
+  display:flex;align-items:center;gap:14px;margin:20px 0 0;padding:12px 15px;
+  border:1px solid #e0a33e40;background:#e0a33e0f;border-radius:6px;max-width:62ch;
+}
+.retline .txt{font-size:13px;color:#f0d6a4;flex:1}
+.retline .txt small{display:block;color:var(--ink-3);font-size:11.5px;margin-top:2px}
+.retline.kept{border-color:#5cb85c40;background:#5cb85c0f}
+.retline.kept .txt{color:#c3e3c3}
+
+.section{max-width:1100px;padding:34px 34px 0}
+.section h2{
+  font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);
+  margin:0 0 14px;font-weight:700;display:flex;align-items:center;gap:10px;
+}
+.section h2::after{content:'';flex:1;height:1px;background:var(--line-soft)}
+.activity{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:5px}
+.act{display:grid;grid-template-columns:96px 1fr;gap:16px;padding:9px 0 9px 18px;position:relative;font-size:13px}
+.act::before{content:'';position:absolute;left:-5px;top:16px;width:8px;height:8px;border-radius:50%;
+  background:var(--surface-3);border:2px solid var(--ground)}
+.act.hi::before{background:var(--mod)}
+.act time{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);padding-top:1px}
+.act .what{color:var(--ink-2)}
+.act .what b{color:var(--ink);font-weight:600}
+.act .what code{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2);background:#ffffff0c;
+  padding:1px 5px;border-radius:3px}
+
+.seasons{display:flex;flex-direction:column;gap:8px;max-width:760px}
+.season{border:1px solid var(--line-soft);border-radius:6px;background:var(--surface);overflow:hidden}
+.season>.sh{display:flex;align-items:center;gap:12px;padding:12px 15px;width:100%;text-align:left}
+.season>.sh:hover{background:#ffffff07}
+.season .sname{font-weight:600;font-size:13.5px}
+.season .sbar{flex:1;height:4px;border-radius:2px;background:#ffffff12;overflow:hidden;max-width:180px}
+.season .sbar i{display:block;height:100%;background:var(--jf)}
+.season .scount{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.eps{border-top:1px solid var(--line-soft);padding:4px 0}
+.ep{display:flex;align-items:center;gap:12px;padding:8px 15px;font-size:13px;color:var(--ink-2)}
+.ep .epn{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);width:44px;flex:none}
+.ep .ept{flex:1}
+.ep .epst{font-family:var(--f-mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase}
+.ep[data-pres="available"] .epst{color:var(--ok)}
+.ep[data-pres="wanted"] .epst{color:var(--ink-3)}
+.ep[data-pres="wanted"] .ept{color:var(--ink-3)}
+.ep[data-pres="inflight"] .epst{color:var(--mod)}
+.ep[data-pres="archived"] .epst{color:var(--ink-3)}
+
+/* stock detail: the "we changed nothing" screen */
+.stockbar{
+  display:flex;align-items:center;gap:10px;padding:9px 16px;background:#00a4dc12;
+  border:1px solid #00a4dc40;border-radius:6px;font-size:12.5px;color:#9fdcf2;max-width:62ch;margin-top:20px;
+}
+.stockbar svg{width:16px;height:16px;flex:none}
+
+/* ---------- context menu ---------- */
+.menu{
+  position:fixed;z-index:200;min-width:224px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:7px;padding:5px;box-shadow:0 22px 50px -14px #000d;
+}
+.menu button{display:flex;align-items:center;gap:11px;width:100%;padding:8px 11px;border-radius:4px;
+  text-align:left;font-size:13px;color:var(--ink-2)}
+.menu button:hover{background:#ffffff10;color:var(--ink)}
+.menu button svg{width:16px;height:16px;opacity:.85}
+.menu .sep{height:1px;background:var(--line-soft);margin:5px 2px}
+.menu .modItem{color:#d5b1e2}
+.menu .modItem:hover{background:#aa5cc31f;color:#f0dff5}
+
+/* ---------- dialog ---------- */
+.scrim{position:fixed;inset:0;background:#06060980;backdrop-filter:blur(2px);z-index:150;display:grid;place-items:center;padding:24px}
+.dialog{
+  position:relative;width:min(900px,100%);max-height:86vh;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 40px 90px -24px #000;display:flex;flex-direction:column;overflow:hidden;
+}
+.dhead2{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line-soft)}
+.dhead2 h3{margin:0;font-size:15.5px;font-weight:600;flex:1}
+.dhead2 .sub{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.dbody{overflow:auto;padding:6px 0}
+.rel{
+  display:grid;grid-template-columns:1fr auto;gap:2px 20px;padding:11px 20px;width:100%;text-align:left;
+  border-left:3px solid transparent;
+}
+.rel:hover,.rel.navon{background:#ffffff09;border-left-color:var(--mod)}
+.rel .r1{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13.5px}
+.rel .q{font-weight:700}
+.rel .grp{color:var(--ink-2)}
+.rel .r2{grid-column:1/2;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rel .r3{grid-row:1/3;grid-column:2/3;display:flex;align-items:center;gap:16px;
+  font-family:var(--f-mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.rel .seed{color:var(--ok)}
+.rel .score{
+  min-width:42px;text-align:right;font-weight:600;
+  color:var(--ink);
+}
+.tag{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+  padding:2px 6px;border-radius:3px;border:1px solid var(--line);color:var(--ink-3)}
+.tag.free{border-color:#5cb85c66;color:#9fd39f;background:#5cb85c14}
+.tag.proper{border-color:#e0a33e66;color:#e6c184;background:#e0a33e14}
+.rejhead{display:flex;align-items:center;gap:9px;padding:11px 20px;width:100%;text-align:left;
+  color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--line-soft)}
+.rejhead:hover{color:var(--ink-2);background:#ffffff06}
+.rejhead svg{width:14px;height:14px;transition:transform .15s}
+.rejhead[aria-expanded="true"] svg{transform:rotate(90deg)}
+.rej{display:grid;grid-template-columns:1fr auto;gap:2px 20px;padding:9px 20px;opacity:.62;font-size:13px}
+.rej .r2{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.rej .why{font-size:11.5px;color:var(--crit);font-family:var(--f-mono)}
+.dfoot{padding:12px 20px;border-top:1px solid var(--line-soft);display:flex;gap:10px;align-items:center}
+.dfoot .hint{font-size:11.5px;color:var(--ink-3);flex:1}
+
+/* ---------- queue ---------- */
+.qtable{max-width:1100px;padding:8px 20px 40px;display:flex;flex-direction:column;gap:2px}
+.qrow{display:grid;grid-template-columns:44px 1fr 220px 130px 90px;gap:16px;align-items:center;
+  padding:12px 12px;border-radius:6px}
+.qrow:hover{background:#ffffff07}
+.qrow .qp{width:44px;aspect-ratio:2/3;border-radius:3px;overflow:hidden;position:relative}
+.qrow .qt{font-size:13.5px;font-weight:600}
+.qrow .qr{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.qbar{height:5px;border-radius:3px;background:#ffffff12;overflow:hidden}
+.qbar i{display:block;height:100%;background:linear-gradient(90deg,var(--mod),#c47ad9);transition:width .8s linear}
+.qmeta{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:5px;
+  display:flex;gap:10px;font-variant-numeric:tabular-nums}
+.qstate{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mod)}
+.qstate.stale{color:var(--warn)}
+.qhead{display:grid;grid-template-columns:44px 1fr 220px 130px 90px;gap:16px;padding:0 12px 8px;
+  font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1px solid var(--line-soft);margin-bottom:6px}
+
+/* ---------- snackbar ---------- */
+#snack{position:fixed;left:50%;bottom:26px;transform:translate(-50%,240%);opacity:0;pointer-events:none;z-index:300;
+  display:flex;align-items:center;gap:16px;background:var(--surface-3);border:1px solid var(--line);
+  border-radius:7px;padding:11px 12px 11px 16px;box-shadow:0 20px 40px -14px #000c;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1.2),opacity .2s;max-width:min(560px,92vw)}
+#snack.up{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+#snack .msg{font-size:13px}
+#snack .msg b{color:#e6cbef}
+#snack button{padding:6px 11px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--mod)}
+#snack button:hover{background:#aa5cc31f}
+body.tv #snack{bottom:104px}
+
+/* ---------- dock ---------- */
+#dock{
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:250;
+  display:flex;align-items:center;gap:6px;padding:6px;border-radius:11px;
+  background:#14141ae8;border:1px solid var(--line);backdrop-filter:blur(14px);
+  box-shadow:0 18px 40px -16px #000;
+}
+#dock .seg{display:flex;background:#0c0c11;border-radius:7px;padding:2px;gap:2px}
+#dock .seg button{padding:6px 12px;border-radius:5px;font-size:12px;color:var(--ink-3);font-weight:500}
+#dock .seg button.on{background:var(--surface-3);color:var(--ink)}
+#dock .dsep2{width:1px;height:22px;background:var(--line);margin:0 3px}
+#dock .tog{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:7px;font-size:12px;color:var(--ink-3)}
+#dock .tog:hover{background:#ffffff0d;color:var(--ink-2)}
+#dock .tog.on{background:#aa5cc324;color:#e0bced}
+#dock .tog .sw{width:26px;height:15px;border-radius:9px;background:#2c2c36;position:relative;transition:background .16s}
+#dock .tog .sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;
+  background:var(--ink-3);transition:transform .16s,background .16s}
+#dock .tog.on .sw{background:var(--mod)}
+#dock .tog.on .sw::after{transform:translateX(11px);background:#fff}
+
+/* ---------- annotations ---------- */
+.pin{
+  position:absolute;z-index:90;width:22px;height:22px;border-radius:50%;
+  background:var(--mod);color:#fff;font-size:11px;font-weight:700;display:none;
+  place-items:center;box-shadow:0 0 0 3px #aa5cc340,0 3px 10px -2px #000;
+  font-family:var(--f-mono);
+}
+body.annot .pin{display:grid}
+.pin:hover{background:#c374db}
+#note{
+  position:fixed;z-index:280;width:min(330px,80vw);background:var(--surface-2);
+  border:1px solid var(--mod-dim);border-left:3px solid var(--mod);border-radius:8px;
+  padding:14px 16px;box-shadow:0 24px 50px -16px #000d;display:none;font-family:var(--f-note);
+}
+#note.show{display:block}
+#note h4{margin:0 0 6px;font-size:13px;font-weight:600;color:#e6cbef;letter-spacing:.01em}
+#note p{margin:0;font-size:12.5px;line-height:1.55;color:var(--ink-2)}
+#note .ref{margin-top:9px;font-family:var(--f-mono);font-size:10px;color:var(--ink-3);letter-spacing:.05em}
+
+/* ---------- TV focus ---------- */
+body.tv .navon .poster,body.tv .card.navon .poster{
+  transform:scale(1.075);box-shadow:0 0 0 3px var(--jf),0 16px 34px -10px #000;
+}
+body.tv .chip.navon,body.tv .btn.navon,body.tv .tab.navon,body.tv .dlink.navon{
+  box-shadow:0 0 0 3px var(--jf);border-radius:6px;color:var(--ink);
+}
+body.tv .card:hover .poster{transform:none;box-shadow:0 2px 10px -4px #000}
+body.tv .card.navon:hover .poster{transform:scale(1.075);box-shadow:0 0 0 3px var(--jf),0 16px 34px -10px #000}
+body.tv .iconbtn,body.tv .tbtn{pointer-events:none}
+.hidewhen-tv{display:contents}
+body.tv .hidewhen-tv{display:none}
+</style>
+
+</head>
+<body>
+<div id="stage">
+  <div id="screen">
+
+    <div class="appbar">
+      <button class="iconbtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/></svg></button>
+      <div class="brand"><span class="glyph"></span>Jellyfin <small>MOD</small></div>
+      <div class="spacer"></div>
+      <button class="iconbtn" id="searchBtn" aria-label="Search"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+      <button class="iconbtn" aria-label="Cast"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg></button>
+      <div class="avatar">O</div>
+    </div>
+
+    <div class="split">
+      <nav class="drawer" id="drawer"></nav>
+      <main class="main" id="main"></main>
+    </div>
+
+  </div>
+</div>
+
+<div id="snack"><span class="msg"></span><button id="snackAct"></button></div>
+
+<div id="dock">
+  <div class="seg">
+    <button data-layout="desktop" class="on">Desktop</button>
+    <button data-layout="tv">TV</button>
+  </div>
+  <div class="dsep2"></div>
+  <button class="tog" id="annotTog"><span class="sw"></span>Design notes</button>
+</div>
+
+<div id="note" role="dialog" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Fixtures
+   ============================================================ */
+const S = { // catalog states -> presentation class
+  wanted:'wanted', searching:'inflight', grabbed:'inflight', downloading:'inflight',
+  imported:'available', watched:'available', reclaimed:'archived'
+};
+const STATE_LABEL = {
+  wanted:'Wanted', searching:'Searching', grabbed:'Grabbed', downloading:'Downloading',
+  imported:'On disk', watched:'Watched', reclaimed:'Archived'
+};
+
+let ITEMS = [
+  // available — the boring, correct majority
+  {id:'dune2', t:'Dune: Part Two', y:2024, k:'movie', s:'imported', jf:1},
+  {id:'oppen', t:'Oppenheimer', y:2023, k:'movie', s:'watched', jf:1, played:1, reclaimIn:2},
+  {id:'eeaao', t:'Everything Everywhere All at Once', y:2022, k:'movie', s:'watched', jf:1, played:1, reclaimIn:19},
+  {id:'zone', t:'The Zone of Interest', y:2023, k:'movie', s:'watched', jf:1, played:1, reclaimIn:3},
+  {id:'past', t:'Past Lives', y:2023, k:'movie', s:'watched', jf:1, played:1, reclaimIn:1},
+  {id:'arrival', t:'Arrival', y:2016, k:'movie', s:'imported', jf:1},
+  {id:'sicario', t:'Sicario', y:2015, k:'movie', s:'imported', jf:1},
+  {id:'fury', t:'Mad Max: Fury Road', y:2015, k:'movie', s:'watched', jf:1, played:1, reclaimIn:44},
+  {id:'prison', t:'Prisoners', y:2013, k:'movie', s:'imported', jf:1},
+  {id:'br2049', t:'Blade Runner 2049', y:2017, k:'movie', s:'imported', jf:1},
+  {id:'bear', t:'The Bear', y:2022, k:'series', s:'imported', jf:1, unplayed:4},
+  {id:'chern', t:'Chernobyl', y:2019, k:'series', s:'watched', jf:1, played:1, reclaimIn:26},
+  {id:'andor', t:'Andor', y:2022, k:'series', s:'imported', jf:1, unplayed:2},
+
+  // in flight
+  {id:'poor', t:'Poor Things', y:2023, k:'movie', s:'downloading', p:62},
+  {id:'shogun', t:'Shōgun', y:2024, k:'series', s:'downloading', p:8},
+  {id:'brutal', t:'The Brutalist', y:2024, k:'movie', s:'searching'},
+  {id:'anat', t:'Anatomy of a Fall', y:2023, k:'movie', s:'grabbed'},
+
+  // wanted
+  {id:'nosf', t:'Nosferatu', y:2024, k:'movie', s:'wanted'},
+  {id:'conc', t:'Conclave', y:2024, k:'movie', s:'wanted'},
+  {id:'subst', t:'The Substance', y:2024, k:'movie', s:'wanted'},
+  {id:'flow', t:'Flow', y:2024, k:'movie', s:'wanted'},
+  {id:'sever', t:'Severance', y:2022, k:'series', s:'wanted'},
+  {id:'lotus', t:'Blade Runner: Black Lotus', y:2021, k:'series', s:'wanted'},
+
+  // archived (STRM placeholder — still a real library item)
+  {id:'br82', t:'Blade Runner', y:1982, k:'movie', s:'reclaimed', jf:1, played:1},
+  {id:'north', t:'The Northman', y:2022, k:'movie', s:'reclaimed', jf:1, played:1},
+  {id:'nope', t:'Nope', y:2022, k:'movie', s:'reclaimed', jf:1, played:1},
+  {id:'tgm', t:'Top Gun: Maverick', y:2022, k:'movie', s:'reclaimed', jf:1, played:1},
+  {id:'barb', t:'Barbarian', y:2022, k:'movie', s:'reclaimed', jf:1, played:1},
+  {id:'tar', t:'Tár', y:2022, k:'movie', s:'reclaimed', jf:1, played:1}
+];
+
+// TMDB pool — deliberately contains nothing already in the catalog
+const TMDB = [
+  {id:'tm1', t:'Dangerous Days: Making Blade Runner', y:2007, k:'movie'},
+  {id:'tm2', t:'Blade Runner: Black Out 2022', y:2017, k:'movie'},
+  {id:'tm3', t:'Blade', y:1998, k:'movie'},
+  {id:'tm4', t:'Blade II', y:2002, k:'movie'},
+  {id:'tm5', t:'Dune', y:1984, k:'movie'},
+  {id:'tm6', t:'Dune: Prophecy', y:2024, k:'series'},
+  {id:'tm7', t:'Jodorowsky’s Dune', y:2013, k:'movie'},
+  {id:'tm8', t:'Sicario: Day of the Soldado', y:2018, k:'movie'},
+  {id:'tm9', t:'Enemy', y:2013, k:'movie'},
+  {id:'tm10', t:'The Northman: Behind the Scenes', y:2022, k:'movie'},
+  {id:'tm11', t:'Severance: The Lexington Letter', y:2022, k:'movie'},
+  {id:'tm12', t:'Top Gun', y:1986, k:'movie'},
+  {id:'tm13', t:'Arrival of a Train', y:1896, k:'movie'},
+  {id:'tm14', t:'The Substance of Fire', y:1996, k:'movie'},
+  {id:'tm15', t:'Poor Cow', y:1967, k:'movie'},
+  {id:'tm16', t:'Chernobyl 1986', y:2021, k:'movie'}
+];
+
+const RELEASES = [
+  {q:'1080p', src:'BluRay', codec:'x265', grp:'FraMeSToR', size:'8.4 GB', seed:43, peer:4, idx:'HDBits', score:94, raw:'Blade.Runner.2049.2017.1080p.BluRay.REMUX.x265.HDR-FraMeSToR', tags:['free']},
+  {q:'2160p', src:'WEB-DL', codec:'HEVC DV', grp:'NTb', size:'24.1 GB', seed:11, peer:1, idx:'HDBits', score:88, raw:'Blade.Runner.2049.2017.2160p.AMZN.WEB-DL.DDP5.1.HDR.HEVC-NTb', tags:[]},
+  {q:'1080p', src:'WEB-DL', codec:'x264', grp:'CMRG', size:'6.1 GB', seed:120, peer:9, idx:'TorrentLeech', score:76, raw:'Blade.Runner.2049.2017.1080p.WEB-DL.DD5.1.H264-CMRG', tags:['proper']},
+  {q:'1080p', src:'BluRay', codec:'x264', grp:'SPARKS', size:'12.9 GB', seed:31, peer:2, idx:'TorrentLeech', score:71, raw:'Blade.Runner.2049.2017.1080p.BluRay.x264-SPARKS', tags:[]},
+  {q:'720p', src:'BluRay', codec:'x264', grp:'YTS', size:'1.9 GB', seed:812, peer:64, idx:'Public', score:44, raw:'Blade.Runner.2049.2017.720p.BluRay.x264.AAC-[YTS.MX]', tags:[]}
+];
+const REJECTED = [
+  {raw:'Blade.Runner.2049.2017.2160p.BluRay.REMUX.HEVC.TrueHD.7.1-EPSiLON', why:'size 71.2 GB > profile max'},
+  {raw:'Blade.Runner.2049.2017.1080p.HDTV.x264-CAMHD', why:'source HDTV not in profile'},
+  {raw:'Blade Runner 2049 2017 TS XviD', why:'quality unparseable'},
+  {raw:'Blade.Runner.2049.2017.1080p.BluRay.x264-iNTENSO', why:'blocklisted 12 Aug'},
+  {raw:'Blade.Runner.2049.2017.1080p.WEB.H264-STRiFE', why:'0 seeders'},
+  {raw:'Blade.Runner.2049.2049.Extended.Fan.Edit.1080p', why:'title match 0.41 < 0.85'}
+];
+
+/* ============================================================
+   Poster art — procedural placeholders, deterministic per title.
+   Not artwork: a duotone field + the title. Wireframe device.
+   ============================================================ */
+function hash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
+function art(t){
+  const h1=hash(t)%360, h2=(h1+42+hash(t+'x')%70)%360;
+  const a=`hsl(${h1},46%,34%)`, b=`hsl(${h2},52%,16%)`;
+  const c=`hsla(${h1},72%,58%,.42)`, d=`hsla(${h2},70%,62%,.22)`;
+  const px=18+hash(t+'p')%64, py=10+hash(t+'q')%54;
+  return `background-image:`
+    + `radial-gradient(110% 80% at ${px}% ${py}%, ${c} 0%, transparent 60%),`
+    + `radial-gradient(90% 70% at ${100-px}% ${92-py}%, ${d} 0%, transparent 55%),`
+    + `linear-gradient(${140+hash(t)%70}deg, ${a} 0%, ${b} 100%);`;
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+const state = {
+  route:'catalog', chip:'all', q:'', layout:'desktop', annot:false,
+  tmdbLoading:false, added:new Set(), kept:new Set(), openSeason:1, showRejected:false,
+  navIndex:0
+};
+const $ = s=>document.querySelector(s);
+const main = $('#main');
+
+function pres(it){ return S[it.s]; }
+function counts(){
+  const c={all:ITEMS.length,ondisk:0,wanted:0,downloading:0,archived:0,expiring:0};
+  ITEMS.forEach(i=>{
+    const p=pres(i);
+    if(p==='available')c.ondisk++;
+    if(i.s==='wanted')c.wanted++;
+    if(p==='inflight')c.downloading++;
+    if(p==='archived')c.archived++;
+    if(i.reclaimIn!=null && i.reclaimIn<=7 && !state.kept.has(i.id))c.expiring++;
+  });
+  return c;
+}
+function filtered(){
+  return ITEMS.filter(i=>{
+    const p=pres(i);
+    switch(state.chip){
+      case 'ondisk': return p==='available';
+      case 'wanted': return i.s==='wanted';
+      case 'downloading': return p==='inflight';
+      case 'archived': return p==='archived';
+      case 'expiring': return i.reclaimIn!=null && i.reclaimIn<=7 && !state.kept.has(i.id);
+      default: return true;
+    }
+  });
+}
+
+/* ============================================================
+   Icons
+   ============================================================ */
+const I = {
+  check:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>',
+  bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>',
+  archive:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v4H3zM5 9h14v11H5zm4 3v2h6v-2z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 10.6V6h-2v7.4l5.2 3.1 1-1.7z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.2 2 5.4 4.2 3.2 7 3.2c1.5 0 3 .7 4 1.9 1-1.2 2.5-1.9 4-1.9 2.8 0 5 2.2 5 5 0 3.7-3.4 6.8-8.6 11.5z"/></svg>',
+  cat:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" opacity=".9"/></svg>',
+  film:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3zM8 17H6v-2h2zm0-4H6v-2h2zm0-4H6V7h2zm10 8h-2v-2h2zm0-4h-2v-2h2zm0-4h-2V7h2z"/></svg>',
+  tv:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 6h-7.6l3.3-3.3-1.4-1.4L12 4.6 8.7 1.3 7.3 2.7 10.6 6H3v14h18zm-2 12H5V8h14z"/></svg>',
+  dl:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5zm7-16v9.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4L12 13.2V4z"/></svg>',
+  music:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.6A4 4 0 1014 17V7h4V3z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12V2zM8 4h8v8l-4-2-4 2z"/></svg>',
+  live:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zM3 12a9 9 0 013-6.7l1.4 1.4A7 7 0 005 12a7 7 0 002.4 5.3L6 18.7A9 9 0 013 12zm18 0a9 9 0 01-3 6.7l-1.4-1.4A7 7 0 0019 12a7 7 0 00-2.4-5.3L18 5.3A9 9 0 0121 12z"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6l6 6-6 6z"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>',
+  ext:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3zM5 5h5V3H3v18h18v-7h-2v5H5z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5z"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>'
+};
+
+/* ============================================================
+   Drawer
+   ============================================================ */
+function drawer(){
+  const rows = [
+    {ic:I.home, label:'Home', route:'home'},
+    {ic:I.heart, label:'Favorites', route:'fav'},
+    {ic:I.cat, label:'Catalog', route:'catalog', mod:true, dot:true}
+  ];
+  const libs = [
+    {ic:I.film, label:'Movies', route:'catalog', redirect:'→ /catalog'},
+    {ic:I.tv, label:'TV Shows', route:'catalog', redirect:'→ /catalog'},
+    {ic:I.music, label:'Music', route:'stock'},
+    {ic:I.book, label:'Books', route:'stock'},
+    {ic:I.live, label:'Live TV', route:'stock'}
+  ];
+  $('#drawer').innerHTML = `
+    <div class="dgroup">
+      ${rows.map(r=>`<button class="dlink ${r.mod?'mod':''} ${state.route===r.route&&r.route==='catalog'?'on':''}" data-goto="${r.route}" data-nav>
+        ${r.ic}<span>${r.label}</span>${r.dot?'<span class="newdot" title="added by JellyfinMod"></span>':''}</button>`).join('')}
+    </div>
+    <div class="dsep"></div>
+    <div class="dgroup">
+      <div class="dhead">Libraries</div>
+      ${libs.map(l=>`<button class="dlink" data-goto="${l.route}" data-nav>
+        ${l.ic}<span>${l.label}</span>${l.redirect?`<span class="redirect">${l.redirect}</span>`:''}</button>`).join('')}
+    </div>
+    <div class="dsep"></div>
+    <div class="dgroup">
+      <button class="dlink ${state.route==='queue'?'on':''} mod" data-goto="queue" data-nav>${I.dl}<span>Queue</span>
+        <span class="redirect">${counts().downloading}</span></button>
+    </div>
+    <div class="pin" style="left:206px;top:281px" data-note="drawer">1</div>
+  `;
+}
+
+/* ============================================================
+   Card
+   ============================================================ */
+function cardHTML(it, opts={}){
+  const p = pres(it);
+  let badge='';
+  if(p==='wanted') badge=`<span class="badge wanted">${I.bookmark}wanted</span>`;
+  else if(p==='inflight'){
+    badge = it.s==='downloading'
+      ? `<span class="badge inflight"><i class="ring" style="--p:${it.p}"></i>${it.p}%</span>`
+      : `<span class="badge inflight"><i class="pulse"></i>${it.s}</span>`;
+  }
+  else if(p==='archived') badge=`<span class="badge archived">${I.archive}archived</span>`;
+
+  let ind='';
+  if(it.played) ind=`<span class="ind"><span class="pill">${I.check}</span></span>`;
+  else if(it.unplayed) ind=`<span class="ind"><span class="pill">${it.unplayed}</span></span>`;
+
+  let cd='';
+  const showCd = it.reclaimIn!=null && !state.kept.has(it.id) &&
+                 (state.chip==='expiring' || it.reclaimIn<=3);
+  if(showCd) cd=`<span class="countdown ${it.reclaimIn<=2?'urgent':''}">${I.clock}${it.reclaimIn}d</span>`;
+
+  const add = opts.add ? `<button class="addbtn" data-add="${it.id}" aria-label="Add ${it.t} to catalog">${I.plus}</button>` : '';
+
+  return `<div class="card" data-pres="${p}" data-id="${it.id}" data-nav ${opts.add?'data-tmdb="1"':''}>
+      <div class="poster">
+        <div class="art" style="${art(it.t)}"></div>
+        ${badge}${ind}${cd}${add}
+        <div class="pt">${it.t}</div>
+      </div>
+      <div class="meta">
+        <span class="mname">${it.t}</span>
+        <span class="myear">${it.y}${it.k==='series'?' · series':''}</span>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   Screens
+   ============================================================ */
+function screenCatalog(){
+  const c = counts(), list = filtered();
+  const chips = [
+    ['all','All',c.all],['ondisk','On disk',c.ondisk],['wanted','Wanted',c.wanted],
+    ['downloading','Downloading',c.downloading],['archived','Archived',c.archived],
+    ['expiring','Expiring soon',c.expiring]
+  ].filter(([k,,n])=> !(k==='downloading'&&n===0));
+
+  const empties = {
+    wanted:['Nothing on the wishlist.','Search for a film or show and add it — it does not need to exist on disk.'],
+    expiring:['Nothing is due to be removed.','Retention deletes a file some days after you finish it. The catalog entry always stays.'],
+    archived:['Nothing archived yet.','Titles appear here once retention has reclaimed their disk space.'],
+    all:['Nothing in the catalog yet.','Run the library backfill task, or search to add your first title.']
+  };
+  const e = empties[state.chip] || empties.all;
+
+  main.innerHTML = `
+    <div class="tabs">
+      <button class="tab on" data-nav>Catalog</button>
+      <button class="tab" data-nav>Suggestions</button>
+      <button class="tab" data-nav>Favorites</button>
+      <button class="tab" data-nav>Collections</button>
+      <button class="tab" data-nav>Genres</button>
+      <button class="tab" data-nav>Studios</button>
+      <span class="pin" style="right:16px;top:15px" data-note="tabs">2</span>
+    </div>
+
+    <div class="toolbar">
+      <span class="count">${list.length} title${list.length===1?'':'s'}</span>
+      <span class="spacer"></span>
+      <button class="tbtn">Sort: ${state.chip==='wanted'?'Date added':'Name'} ▾</button>
+      <button class="tbtn">Filter ▾</button>
+      <button class="tbtn">View ▾</button>
+    </div>
+
+    <div class="chiprow">
+      ${chips.map(([k,l,n])=>`<button class="chip ${k==='expiring'?'warnchip':''} ${state.chip===k?'on':''}" data-chip="${k}" data-nav>${l}<span class="n">${n}</span></button>`).join('')}
+      <span class="pin" style="left:12px;top:-6px" data-note="chips">3</span>
+    </div>
+
+    <div class="grid" id="grid">
+      ${list.length ? list.map(i=>cardHTML(i)).join('')
+        : `<div class="empty"><h3>${e[0]}</h3><p>${e[1]}</p>
+             <button class="btn primary" data-goto="search">${I.search}Search</button></div>`}
+      ${list.length ? `<span class="pin" style="left:calc(var(--card-w) * 1.06);top:-2px" data-note="badges">4</span>` : ''}
+    </div>`;
+}
+
+function matches(t,q){ return t.toLowerCase().includes(q.toLowerCase()); }
+
+function screenSearch(){
+  const q = state.q.trim();
+  const inLib = q ? ITEMS.filter(i=>i.jf && matches(i.t,q)) : [];
+  const inCat = q ? ITEMS.filter(i=>!i.jf && matches(i.t,q)) : [];
+  const seen = new Set([...inLib,...inCat].map(i=>i.t.toLowerCase()));
+  const tmdb = q.length>=2 ? TMDB.filter(i=>matches(i.t,q) && !seen.has(i.t.toLowerCase())) : [];
+
+  let body='';
+  if(!q){
+    const wanted = ITEMS.filter(i=>i.s==='wanted');
+    body = `<div class="tier" data-tier="catalog">
+        <div class="tierhead"><h3>Wanted</h3><span class="src">the list you opened this page to act on</span></div>
+        <div class="trow">${wanted.map(i=>cardHTML(i)).join('')}</div>
+      </div>
+      <div class="tier"><div class="tierhead"><h3>Suggestions</h3>
+        <span class="src">stock <b>SearchSuggestions</b>, unmodified</span></div>
+        <div class="trow">${ITEMS.filter(i=>i.jf).slice(0,7).map(i=>cardHTML(i)).join('')}</div></div>`;
+  } else {
+    const tierHTML = (key,label,src,items,opts)=>`
+      <div class="tier" data-tier="${key}">
+        <div class="tierhead"><h3>${label}</h3><span class="src">${src}</span>
+          ${key==='tmdb'?'<span class="pin" style="position:relative;left:6px;top:2px" data-note="tier3">6</span>':''}
+          ${key==='library'?'<span class="pin" style="position:relative;left:6px;top:2px" data-note="tiers">5</span>':''}
+        </div>
+        ${items.length? `<div class="trow">${items.map(i=>cardHTML(i,opts)).join('')}</div>`
+          : `<div class="tiernote">No match in this tier.</div>`}
+      </div>`;
+
+    body = tierHTML('library','In your library',
+        'stock <b>/Items</b> — includes archived titles, because a <b>.strm</b> is a real item', inLib,{})
+      + tierHTML('catalog','In your catalog',
+        '<b>GET /JellyfinMod/Catalog?query=</b> — wanted, searching, grabbed, downloading', inCat,{})
+      + (state.tmdbLoading
+        ? `<div class="tier" data-tier="tmdb"><div class="tierhead"><h3>Add from TMDB</h3>
+             <span class="src">reserved slot — nothing above it will move</span>
+             <span class="pin" style="position:relative;left:6px;top:2px" data-note="tier3">6</span></div>
+           <div class="trow">${'<div><div class="skel" style="aspect-ratio:2/3;border-radius:6px"></div><div class="skel" style="height:12px;margin-top:8px;width:70%"></div></div>'.repeat(5)}</div></div>`
+        : tierHTML('tmdb','Add from TMDB',
+            '<b>GET /JellyfinMod/Discover/Search</b> — deduped against both tiers above', tmdb,{add:true}));
+
+    if(!inLib.length && !inCat.length && !tmdb.length && !state.tmdbLoading){
+      body += `<div class="tier"><div class="empty" style="padding:40px 0;text-align:left">
+        <h3>Nothing anywhere for “${q}”.</h3>
+        <p>All three tiers came back empty.</p>
+        <button class="btn">${I.search}Search TMDB unfiltered</button></div></div>`;
+    }
+    body += `<div class="tier"><div class="tierhead"><h3>Episodes · People · Studios · Collections</h3>
+      <span class="src">stock sections, rendered by <b>SearchResultsRow</b> — zero upstream files touched</span></div>
+      <div class="tiernote">The catalog owns movies and series. Everything else keeps working exactly as it does today —
+      the new page calls <b>useSearchItems</b>, drops its <b>Movies</b> and <b>Shows</b> sections, and renders the rest.</div></div>`;
+  }
+
+  main.innerHTML = `
+    <div class="searchwrap">
+      <div class="sfield">
+        ${I.search}
+        <input id="q" value="${q.replace(/"/g,'&quot;')}" placeholder="Search everything — library, catalog, TMDB" autocomplete="off">
+        <span class="kbd">${state.layout==='tv'?'A–Z picker on TV':'one box'}</span>
+      </div>
+    </div>
+    ${body}
+    <div style="height:50px"></div>`;
+
+  const inp = $('#q');
+  if(inp){
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.addEventListener('input', onType);
+  }
+}
+
+let tmdbTimer=null, localTimer=null;
+function onType(e){
+  const v = e.target.value;
+  clearTimeout(localTimer); clearTimeout(tmdbTimer);
+  // local tiers: 250ms
+  localTimer = setTimeout(()=>{
+    state.q = v; state.tmdbLoading = v.trim().length>=2; render(true);
+  },250);
+  // TMDB: 600ms
+  tmdbTimer = setTimeout(()=>{
+    state.q = v; state.tmdbLoading = false; render(true);
+  },900);
+}
+
+const OVERVIEW = {
+  wanted:(it,s)=>`Nothing on disk, and nothing coming yet. It sits in the catalog because you said you wanted it — the entry is real, the file is not. Monitored titles get searched on a schedule; this one is waiting on a release that passes its quality profile.`,
+  inflight:(it,s)=>`A release passed the profile and went to the download client. When it completes it is hardlinked into the library under the version naming convention, and this entry picks up its Jellyfin item id.`,
+  available:(it,s)=>s?`On disk and playable everywhere. The catalog tracks it so that retention knows when to reclaim it — and so the entry survives the day it does.`
+    :`On disk and playable everywhere. This card would open upstream's own detail page on a real build; only the catalog affordances live here.`,
+  archived:(it,s)=>`You watched this, and the file has since been reclaimed. What remains is a 100-byte <b>.strm</b> placeholder — enough for Jellyfin to keep the item, the artwork and the played state, on every client, without keeping the gigabytes.`
+};
+
+function screenDetail(id){
+  const it = ITEMS.find(i=>i.id===id); if(!it) return screenCatalog();
+  const p = pres(it), kept = state.kept.has(it.id);
+  const pillClass = p==='available'?'avail':p==='archived'?'arch':'';
+
+  const acts = [];
+  if(it.s==='wanted'){
+    acts.push(['12 Aug','Added to catalog from <b>TMDB</b> search'],
+              ['12 Aug','Quality profile set to <code>1080p</code>'],
+              ['2h ago','Searched 6 indexers · <b>0 releases</b> passed the profile']);
+  } else if(p==='archived'){
+    acts.push(['4 Mar 2024','Grabbed <code>2160p WEB-DL</code> from <b>HDBits</b>'],
+              ['4 Mar 2024','Imported by hardlink · seeded to ratio 1.4'],
+              ['9 Mar 2024','Watched'],
+              ['23 Mar 2024','File removed · <b>24.1 GB</b> reclaimed · placeholder kept', true]);
+  } else if(p==='inflight'){
+    acts.push(['3 days ago','Added to catalog'],
+              ['1h ago','Grabbed <code>1080p BluRay x265</code> from <b>HDBits</b>'],
+              ['now','Downloading · '+(it.p||0)+'%', true]);
+  } else {
+    acts.push(['—','Backfilled from the existing library (Phase 2)'],
+              ['—','Matched to Jellyfin item by TMDB provider id']);
+  }
+
+  const isSeries = it.k==='series';
+  const epStates = isSeries ? (it.s==='wanted'
+      ? ['wanted','wanted','wanted','wanted','wanted','wanted']
+      : ['available','available','available','available','inflight','wanted']) : [];
+
+  main.innerHTML = `
+    <div class="detail">
+      <div class="backdrop"><div class="art" style="${art(it.t)}"></div></div>
+      <div class="dwrap">
+        <div>
+          <div class="dposter"><div class="art" style="${art(it.t)};position:absolute;inset:0"></div></div>
+        </div>
+        <div>
+          <h1 class="dtitle">${it.t}</h1>
+          <div class="dsub">
+            <span>${it.y}</span><span class="dot">·</span>
+            <span>${isSeries?(2+hash(it.t)%4)+' seasons':Math.floor(88+hash(it.t)%74/60)+'h '+(hash(it.t)%60)+'m'}</span><span class="dot">·</span>
+            <span>${isSeries?'Drama':'Science Fiction'}</span>
+            <span class="statepill ${pillClass}">${STATE_LABEL[it.s]}</span>
+          </div>
+
+          <div class="dactions">
+            ${p==='available'
+              ? `<button class="btn jf" data-nav>${I.play}Play</button>
+                 <button class="btn ghost" data-nav>Open in library ${I.ext}</button>`
+              : p==='archived'
+              ? `<button class="btn primary" data-releases data-nav>${I.dl}Get again</button>
+                 <button class="btn ghost" data-nav>Open in library ${I.ext}</button>
+                 <span class="pin" style="position:relative;top:-16px;left:2px" data-note="getagain">8</span>`
+              : `<button class="btn primary" data-releases data-nav>${I.search}Search releases</button>`}
+            ${p!=='available'?'':''}
+            <button class="btn" aria-pressed="true" data-nav>${I.shield}Monitored</button>
+            <button class="btn ghost" data-nav>Profile: 1080p ▾</button>
+          </div>
+
+          <p class="dover">${OVERVIEW[p](it, isSeries)}</p>
+
+          ${it.reclaimIn!=null ? (kept
+            ? `<div class="retline kept">${I.shield}<div class="txt">Kept indefinitely.<small>Retention will not touch this file. Marking it a favourite does the same thing.</small></div></div>`
+            : `<div class="retline">${I.clock}<div class="txt">File will be removed in <b>${it.reclaimIn} day${it.reclaimIn===1?'':'s'}</b>.<small>The catalog entry and your watch history stay. Favourites are exempt.</small></div>
+                 <button class="btn" data-keep="${it.id}" data-nav>Keep</button>
+                 <span class="pin" style="position:relative;top:-22px" data-note="keep">7</span></div>`) : ''}
+
+          ${p==='available'? `<div class="stockbar">${I.info}
+            On a real build this card opens upstream’s <b>/details</b> page — cast, chapters, versions, all untouched.
+            Catalog actions reach it from the card’s context menu instead.</div>`:''}
+        </div>
+      </div>
+
+      ${isSeries? `<div class="section"><h2>Season 1</h2>
+        <div class="seasons"><div class="season">
+          <button class="sh" data-nav><span class="sname">Season 1</span>
+            <span class="sbar"><i style="width:${it.s==='wanted'?0:66}%"></i></span>
+            <span class="scount">${epStates.filter(s=>s==='available').length}/6</span></button>
+          <div class="eps">
+            ${epStates.map((s,n)=>`<div class="ep" data-pres="${s}">
+              <span class="epn">S1E${n+1}</span>
+              <span class="ept">Episode ${n+1}</span>
+              <span class="epst">${s==='available'?'on disk':s==='inflight'?'downloading':s}</span>
+            </div>`).join('')}
+          </div>
+        </div></div></div>`:''}
+
+      <div class="section"><h2>Activity</h2>
+        <div class="activity">
+          ${acts.map(a=>`<div class="act ${a[2]?'hi':''}"><time>${a[0]}</time><span class="what">${a[1]}</span></div>`).join('')}
+        </div>
+        <div style="margin-top:14px;font-size:12.5px;color:var(--ink-3);max-width:62ch">
+          This is the <code style="font-family:var(--f-mono);color:var(--ink-2)">history</code> table rendered plainly.
+          It is what makes the catalog a record rather than a queue — and it survives the file.
+        </div>
+      </div>
+    </div>`;
+}
+
+function screenQueue(){
+  const q = ITEMS.filter(i=>pres(i)==='inflight');
+  main.innerHTML = `
+    <div class="toolbar" style="padding-top:20px">
+      <span class="count">${q.length} active</span><span class="spacer"></span>
+      <button class="tbtn">${I.ext}Open qBittorrent</button>
+    </div>
+    <div class="qtable">
+      <div class="qhead"><span></span><span>Title</span><span>Progress</span><span>State</span><span></span></div>
+      ${q.length? q.map(i=>{
+        const stale = i.s==='searching';
+        return `<div class="qrow" data-nav>
+          <div class="qp"><div class="art" style="${art(i.t)};position:absolute;inset:0"></div></div>
+          <div><div class="qt">${i.t}</div><div class="qr">${i.t.replace(/[^A-Za-z0-9]+/g,'.')}.${i.y}.1080p.BluRay.x265-FraMeSToR</div></div>
+          <div><div class="qbar"><i style="width:${i.p||0}%"></i></div>
+            <div class="qmeta"><span>${i.p||0}%</span><span>${i.p?((8.4*i.p/100).toFixed(1)+' / 8.4 GB'):'—'}</span>
+            <span>${i.p?'4.2 MB/s':'—'}</span><span>${i.p?'21m left':'—'}</span></div></div>
+          <div><span class="qstate ${stale?'stale':''}">${STATE_LABEL[i.s]}</span>
+            <div class="qmeta" style="margin-top:4px">qBittorrent</div></div>
+          <div style="text-align:right"><button class="tbtn" data-qrm="${i.id}">${I.trash}Remove</button></div>
+        </div>`;}).join('')
+      : `<div class="empty"><h3>Nothing downloading.</h3><p>Grab something from the wishlist and it will show up here.</p>
+          <button class="btn primary" data-chip-go="wanted">${I.bookmark}Open the wishlist</button></div>`}
+      <div class="tiernote" style="margin:22px 0 0;max-width:820px">
+        <b style="color:var(--mod)">Scope, deliberately.</b> This is a monitor, not a torrent client — remove and open-in-client, nothing else.
+        Pause, priority and file selection are one link away in qBittorrent, and reimplementing them here means owning their bugs.
+      </div>
+      <span class="pin" style="position:relative;left:0;top:-92px" data-note="queue">9</span>
+    </div>`;
+}
+
+function screenStock(){
+  main.innerHTML = `<div style="padding:70px 34px;max-width:70ch">
+    <h1 style="font-size:24px;margin:0 0 12px">Untouched.</h1>
+    <p style="color:var(--ink-2);line-height:1.65">Music, books, photos and Live TV keep the stock views entirely.
+    The catalog's scope is movies and TV, and every library outside that scope is reached through upstream's own routes,
+    unchanged and unwrapped.</p>
+    <p style="color:var(--ink-3);font-family:var(--f-mono);font-size:12px;margin-top:22px">
+    src/apps/modern/routes/music/index.tsx &nbsp;·&nbsp; 0 lines changed</p>
+    <button class="btn primary" data-goto="catalog" style="margin-top:20px">Back to the catalog</button>
+  </div>`;
+}
+
+function screenHome(){
+  main.innerHTML = `<div style="padding:26px 20px">
+    <h2 style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px">Continue watching</h2>
+    <div class="trow" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));gap:20px var(--gap)">
+      ${ITEMS.filter(i=>i.jf&&!i.played).slice(0,6).map(i=>cardHTML(i)).join('')}
+    </div>
+    <h2 style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:30px 0 14px">Recently added</h2>
+    <div class="trow" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-w),1fr));gap:20px var(--gap)">
+      ${ITEMS.filter(i=>i.jf).slice(6,13).map(i=>cardHTML(i)).join('')}
+    </div>
+    <div class="tiernote" style="margin:30px 20px 0 0;max-width:820px">
+      Home is stock and stays stock. A “Wanted” row here is tempting and would be well used — but it is a real diff
+      against a file upstream touches often, so it is an open question, not a Phase 1 feature.
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   Release picker
+   ============================================================ */
+let dialogEl=null, releaseFor='Blade Runner 2049';
+function openReleases(){
+  const html = `
+  <div class="scrim" id="scrim">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="Releases">
+      <div class="dhead2">
+        <h3>Releases for ${releaseFor}</h3>
+        <span class="sub">profile 1080p · 6 indexers · 1.9s</span>
+        <button class="iconbtn" data-close>${I.close}</button>
+      </div>
+      <div class="dbody">
+        ${RELEASES.map((r,n)=>`<button class="rel ${n===0?'navon':''}" data-nav data-grab="${n}">
+          <span class="r1"><span class="q">${r.q} ${r.src}</span><span class="grp">${r.codec} · ${r.grp}</span>
+            ${r.tags.map(t=>`<span class="tag ${t}">${t==='free'?'freeleech':'proper'}</span>`).join('')}</span>
+          <span class="r2">${r.raw}</span>
+          <span class="r3"><span>${r.size}</span><span class="seed">${r.seed}↑</span><span>${r.idx}</span>
+            <span class="score">${r.score}</span></span>
+        </button>`).join('')}
+        <button class="rejhead" aria-expanded="${state.showRejected}" data-rej>${I.chev}${REJECTED.length} rejected</button>
+        ${state.showRejected? REJECTED.map(r=>`<div class="rej">
+            <span class="r2" style="grid-column:1/2">${r.raw}</span>
+            <span class="why" style="grid-row:1/2;grid-column:2/3">${r.why}</span></div>`).join(''):''}
+      </div>
+      <div class="dfoot">
+        <span class="hint">Enter grabs. The raw release title stays visible on every row — when a grab goes wrong it is the only diagnostic there is.</span>
+        <button class="btn ghost" data-close>Cancel</button>
+      </div>
+      <span class="pin" style="left:14px;top:64px" data-note="releases">10</span>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  dialogEl = $('#scrim');
+  dialogEl.addEventListener('click', ev=>{
+    if(ev.target===dialogEl || ev.target.closest('[data-close]')) closeDialog();
+    const rej = ev.target.closest('[data-rej]');
+    if(rej){ state.showRejected=!state.showRejected; closeDialog(); openReleases(); }
+    const g = ev.target.closest('[data-grab]');
+    if(g){ grab(+g.dataset.grab); }
+  });
+}
+function closeDialog(){ if(dialogEl){ dialogEl.remove(); dialogEl=null; } }
+function grab(n){
+  const r = RELEASES[n];
+  closeDialog();
+  snack(`Grabbed <b>${r.q} ${r.src}</b> of ${releaseFor} to qBittorrent`, 'Open queue', ()=>go('queue'));
+}
+
+/* ============================================================
+   Snackbar
+   ============================================================ */
+let snackTimer=null, snackFn=null;
+function snack(msg, actionLabel, fn){
+  const el = $('#snack');
+  el.querySelector('.msg').innerHTML = msg;
+  const btn = $('#snackAct');
+  btn.textContent = actionLabel || '';
+  btn.style.display = actionLabel ? '' : 'none';
+  snackFn = fn;
+  el.classList.add('up');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(()=>el.classList.remove('up'), 5200);
+}
+$('#snackAct').addEventListener('click', ()=>{
+  $('#snack').classList.remove('up');
+  if(snackFn) snackFn();
+});
+
+/* ============================================================
+   Annotations
+   ============================================================ */
+const NOTES = {
+  drawer:['The Libraries list needs zero changes','Drawer links come from <b>useUserViews</b> and already point at <code>/movies</code> and <code>/tv</code> — which redirect. One nav entry is added, and that is the whole drawer diff.','UX.md §2.2'],
+  tabs:['Tabs stay upstream’s','Suggestions, Collections, Genres and Studios all still make sense over a catalog. The state axis goes somewhere else — see 3.','UX.md §5.1'],
+  chips:['State is a chip row, not a tab','At 1920×1080 the tab strip collapses into the header and scrolls once tabs outgrow it — the fork’s most fragile D-pad surface. Chips cost nothing there, and carry counts a tab cannot. <b>Downloading</b> hides itself at zero rather than sitting there as a permanent lie.','UX.md §5.2'],
+  badges:['Four classes, not seven badges','Playable titles get <b>nothing</b> — after the backfill that is most of the grid, and a badge on everything is a badge on nothing. Wanted dims the poster so a mixed grid is scannable at TV distance. Archived stays full colour: it is the most earned entry here, and dimming would read as broken.','UX.md §3'],
+  tiers:['Tier order never reranks','Library, then catalog, then TMDB — always. The thing you can play right now is always top-left, so you stop reading the headings after a week. Relevance scoring across tiers would move that target every query.','UX.md §6.1'],
+  tier3:['The slow tier reserves its space','TMDB is a network call and lands last. It renders as skeletons from the first keystroke rather than appearing from nothing — because content arriving <i>above</i> the focus ring moves the D-pad cursor out from under the user.','UX.md §6.4'],
+  keep:['Keep takes no confirmation','It is the safety valve on an automated deletion system, and a safety valve behind a dialog is one nobody reaches in time. Countdowns stay hidden until the last 72 hours: a grid where every poster ticks is a grid nobody browses.','UX.md §8'],
+  getagain:['The one thing only this client can do','The file is gone and a 100-byte <code>.strm</code> stands in its place. Because this fork knows the catalog state, the primary button is not Play — it is <b>Get again</b>, opening the release picker. Kodi and Swiftfin cannot know, and will just fail.','UX.md §8.1'],
+  queue:['A monitor, not a torrent client','Remove and open-in-client. No pause, no priority, no file selection — those live in qBittorrent, one link away, and reimplementing them means owning their bugs.','UX.md §10'],
+  releases:['Show the rejects and the raw title','The interesting question is usually “why did it not grab the obvious one”, so rejected releases are listed with their reason. And the raw release title is on every row: when a grab goes wrong it is the only diagnostic there is.','UX.md §9']
+};
+function showNote(key, el){
+  const n = NOTES[key]; if(!n) return;
+  const box = $('#note');
+  box.innerHTML = `<h4>${n[0]}</h4><p>${n[1]}</p><div class="ref">${n[2]}</div>`;
+  box.classList.add('show');
+  const r = el.getBoundingClientRect();
+  let left = r.left + 30, top = r.top - 10;
+  const bw = 340, bh = box.offsetHeight;
+  if(left + bw > window.innerWidth - 14) left = r.left - bw - 12;
+  if(top + bh > window.innerHeight - 14) top = window.innerHeight - bh - 14;
+  if(top < 10) top = 10;
+  box.style.left = Math.max(10,left)+'px';
+  box.style.top = top+'px';
+}
+document.addEventListener('click', e=>{
+  const pin = e.target.closest('.pin');
+  if(pin){ showNote(pin.dataset.note, pin); e.stopPropagation(); return; }
+  if(!e.target.closest('#note')) $('#note').classList.remove('show');
+});
+
+/* ============================================================
+   Context menu
+   ============================================================ */
+let menuEl=null;
+function openMenu(x,y,id){
+  closeMenu();
+  const it = ITEMS.find(i=>i.id===id); if(!it) return;
+  const p = pres(it);
+  menuEl = document.createElement('div');
+  menuEl.className='menu';
+  menuEl.innerHTML = `
+    ${p==='available'?`<button>${I.play}Play</button><button>${I.check}Mark unplayed</button>`:''}
+    <button>${I.heart}Add to favourites</button>
+    <div class="sep"></div>
+    <button class="modItem" data-releases>${I.search}Search releases</button>
+    ${it.reclaimIn!=null?`<button class="modItem" data-keep="${it.id}">${I.shield}Keep — never reclaim</button>`:''}
+    <button class="modItem">${I.trash}Remove from catalog</button>
+    <div class="sep"></div>
+    <button>${I.info}Details</button>`;
+  document.body.appendChild(menuEl);
+  const w=menuEl.offsetWidth,h=menuEl.offsetHeight;
+  menuEl.style.left = Math.min(x, innerWidth-w-8)+'px';
+  menuEl.style.top = Math.min(y, innerHeight-h-8)+'px';
+}
+function closeMenu(){ if(menuEl){menuEl.remove(); menuEl=null;} }
+
+/* ============================================================
+   Router + events
+   ============================================================ */
+function render(keepFocus){
+  drawer();
+  switch(state.route){
+    case 'catalog': screenCatalog(); break;
+    case 'search': screenSearch(); break;
+    case 'queue': screenQueue(); break;
+    case 'stock': screenStock(); break;
+    case 'home': case 'fav': screenHome(); break;
+    default:
+      if(state.route.startsWith('entry/')) screenDetail(state.route.slice(6));
+      else screenCatalog();
+  }
+  if(state.layout==='tv') refreshNav(keepFocus);
+}
+function go(r){ state.route=r; if(r!=='search'){state.q='';} main.scrollTop=0; render(); }
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.menu')) closeMenu();
+
+  const gotoEl = e.target.closest('[data-goto]');
+  if(gotoEl){ go(gotoEl.dataset.goto); return; }
+
+  const chip = e.target.closest('[data-chip]');
+  if(chip){ state.chip = chip.dataset.chip; render(); return; }
+
+  const chipGo = e.target.closest('[data-chip-go]');
+  if(chipGo){ state.chip = chipGo.dataset.chipGo; go('catalog'); return; }
+
+  const rel = e.target.closest('[data-releases]');
+  if(rel){
+    const card = e.target.closest('.card');
+    const cur = state.route.startsWith('entry/') ? ITEMS.find(i=>i.id===state.route.slice(6)) : null;
+    const src = card ? ITEMS.find(i=>i.id===card.dataset.id) : cur;
+    releaseFor = src ? src.t : 'this title';
+    closeMenu(); openReleases(); return;
+  }
+
+  const keep = e.target.closest('[data-keep]');
+  if(keep){
+    state.kept.add(keep.dataset.keep); closeMenu(); render();
+    snack('Kept indefinitely — retention will not touch this file.','Undo',()=>{state.kept.delete(keep.dataset.keep);render();});
+    return;
+  }
+
+  const add = e.target.closest('[data-add]');
+  if(add){
+    e.stopPropagation();
+    const t = TMDB.find(i=>i.id===add.dataset.add);
+    if(t){
+      ITEMS.push({...t, s:'wanted'});
+      render(true);
+      snack(`Added <b>${t.t}</b> to the catalog · profile 1080p`,'Undo',()=>{
+        ITEMS = ITEMS.filter(i=>i.id!==t.id); render(true);
+      });
+      const i2=$('#q'); if(i2){i2.focus();i2.setSelectionRange(i2.value.length,i2.value.length);}
+    }
+    return;
+  }
+
+  const qrm = e.target.closest('[data-qrm]');
+  if(qrm){
+    const it = ITEMS.find(i=>i.id===qrm.dataset.qrm);
+    const old = it.s; it.s='wanted'; delete it.p; render();
+    snack('Removed from the queue · release blocklisted','Undo',()=>{it.s=old;it.p=62;render();});
+    return;
+  }
+
+  const card = e.target.closest('.card');
+  if(card && !e.target.closest('[data-add]')){ go('entry/'+card.dataset.id); return; }
+});
+
+document.addEventListener('contextmenu', e=>{
+  const card = e.target.closest('.card');
+  if(card && !card.dataset.tmdb){ e.preventDefault(); openMenu(e.clientX,e.clientY,card.dataset.id); }
+});
+
+$('#searchBtn').addEventListener('click', ()=>go('search'));
+
+/* dock */
+document.querySelectorAll('#dock [data-layout]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.layout = b.dataset.layout;
+    document.querySelectorAll('#dock [data-layout]').forEach(x=>x.classList.toggle('on', x===b));
+    document.body.classList.toggle('tv', state.layout==='tv');
+    render();
+  });
+});
+$('#annotTog').addEventListener('click', ()=>{
+  state.annot = !state.annot;
+  $('#annotTog').classList.toggle('on', state.annot);
+  document.body.classList.toggle('annot', state.annot);
+  if(!state.annot) $('#note').classList.remove('show');
+});
+
+/* ============================================================
+   D-pad — real geometric roving focus, TV layout only
+   ============================================================ */
+let navEls=[], navI=0;
+function refreshNav(keep){
+  const scope = dialogEl || document;
+  navEls = [...scope.querySelectorAll('[data-nav]')].filter(el=>el.offsetParent!==null);
+  navEls.forEach(el=>el.classList.remove('navon'));
+  if(!navEls.length) return;
+  if(!keep || navI>=navEls.length) navI = navEls.findIndex(el=>el.classList.contains('card'));
+  if(navI<0) navI=0;
+  navEls[navI].classList.add('navon');
+}
+function moveNav(dx,dy){
+  if(!navEls.length) return;
+  const cur = navEls[navI].getBoundingClientRect();
+  const cx = cur.left+cur.width/2, cy = cur.top+cur.height/2;
+  let best=-1, bestScore=Infinity;
+  navEls.forEach((el,i)=>{
+    if(i===navI) return;
+    const r = el.getBoundingClientRect();
+    const x = r.left+r.width/2, y = r.top+r.height/2;
+    const ddx = x-cx, ddy = y-cy;
+    if(dx && Math.sign(ddx)!==dx) return;
+    if(dy && Math.sign(ddy)!==dy) return;
+    if(dx && Math.abs(ddy) > Math.max(cur.height, r.height)*0.85) return;
+    if(dy && Math.abs(ddx) > Math.max(cur.width, r.width)*1.6) return;
+    const score = dx ? Math.abs(ddx)+Math.abs(ddy)*3 : Math.abs(ddy)+Math.abs(ddx)*1.4;
+    if(score<bestScore){ bestScore=score; best=i; }
+  });
+  if(best<0) return;
+  navEls[navI].classList.remove('navon');
+  navI = best;
+  navEls[navI].classList.add('navon');
+  navEls[navI].scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+document.addEventListener('keydown', e=>{
+  if(state.layout!=='tv') return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT' &&
+     !['ArrowUp','ArrowDown','Escape','Backspace'].includes(e.key)) return;
+  const map={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  if(map[e.key]){ e.preventDefault(); moveNav(...map[e.key]); return; }
+  if(e.key==='Enter'){ if(navEls[navI]){ e.preventDefault(); navEls[navI].click(); } return; }
+  if(e.key==='Backspace'||e.key==='Escape'){
+    e.preventDefault();
+    if(dialogEl){ closeDialog(); refreshNav(); }
+    else if(state.route!=='catalog') go('catalog');
+  }
+});
+
+render();
+</script>
+
+</body>
+</html>
