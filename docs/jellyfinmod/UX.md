@@ -228,6 +228,14 @@ stored. `features/catalog/utils/entry.ts` owns `resolvePoster()` and nothing els
 stale in a cached response and is wrong on a client with a skewed clock; the client formats the
 countdown from the timestamp at render time.
 
+**Correction (review 2026-09-18):** the implemented plugin never writes `watchedAt` or
+`reclaimAt`; both are always null on the Entry DTO. The countdown comes from `retention.deadline`
+in the retention summary on entry and episode detail (see [`API.md`](API.md),
+Automatic retention; it currently exposes other users' activity to ordinary users, tracked as T15
+in [`PHASE3.md`](PHASE3.md); plugin-authz-entries#3, medium, single-source), which keeps the absolute-timestamp rule above. Removing or deprecating the
+dead fields is P11 in `PHASE1.md` ([`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md):
+tests-contract#8, low, verified).
+
 **`presentation` is derived on the client** from `state`, in
 `features/catalog/constants/state.ts`. One function, one place, so a new state added server-side
 fails loudly in one file rather than rendering as a blank badge in six.
@@ -484,6 +492,21 @@ genuinely painful on a D-pad, and the profile is the wrong one perhaps one time 
 `Undo` removes a saved entry and is admin-only. Ordinary users cannot invoke it through another
 endpoint either. A failed create still rolls back its optimistic UI for every user.
 
+**Proposed (review 2026-09-18, not user-approved):** four search rules, tracked as W9 and W13 in
+`PHASE1.md` ([`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)):
+
+- The **Add from TMDB** row is a horizontal `emby-scroller` row, like the stock sections, so every
+  result — including later pages and series after many movie pages — is reachable by touch, mouse
+  and D-pad. Today it is an `overflow: hidden` row that clips everything past the first screen
+  width (web-library-search-details#2, high, verified; W9).
+- The chosen target library persists for the session instead of resetting on every query edit
+  (web-library-search-details#7, low, single-source; W13).
+- A pending card, shown while its add request is in flight, stays focusable but is not
+  navigable; it opens nothing until the real entry id arrives (web-library-search-details#8, low,
+  single-source; W13).
+- Admin **Undo** must be reachable on TV: focus moves to it, or it is an inline focusable control
+  that outlives the 4-second toast (prior-L1, low, verified; W13).
+
 ### 6.7 Empty query
 
 The stock page shows `SearchSuggestions`. The catalog page shows, in order: a **Wanted** row
@@ -599,6 +622,26 @@ Entries with no file appear in Recently added — that is the point of the entry
 download does — carrying the same mark as everywhere else; clicking one opens the entry, where
 **Search releases** is. Everything else on Home is untouched.
 
+**Proposed (review 2026-09-18, not user-approved):** ordering rules for the merged rows and the
+hero, tracked as W10 and W12 in `PHASE1.md` and T14 in `PHASE3.md`
+([`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)):
+
+- In Continue watching, a Next Up item's recency key is the date the user last played that series,
+  not the episode's library `DateCreated`. The Next Up query honours the user's Next Up settings
+  (max days in Next Up, rewatching, episode images) as upstream does (web-home-rules-tv#5, medium,
+  single-source).
+- Recently added sorts grouped series by `DateLastMediaAdded`, falling back to `DateCreated`, so a
+  batch of new episodes of an old show is not buried (web-home-rules-tv#6, medium, verified).
+- Reclaimed entries are excluded from Recently added; only file-less *wanted* entries appear there
+  (critic-journeys#5, low, single-source).
+- The hero honours Latest exclusions, shows Play only when `canPlay` allows it, uses translated
+  labels and follows the selected theme (web-home-rules-tv#7, low, single-source).
+
+**Correction (review 2026-09-18):** the top-bar styles above do not apply in the modern layout.
+Its selectors target `.skinHeader`, which the modern layout hides, so desktop and mobile show the
+stock opaque app bar (web-home-rules-tv#4, medium, single-source). The accepted redesign stands;
+W12 in `PHASE1.md` makes it apply and re-verifies it in every layout.
+
 ---
 
 ## 8. Retention (Phase 3)
@@ -635,6 +678,11 @@ look like a bug.
 **[API addition]** `POST /JellyfinMod/Catalog/{id}/Keep` — or a `reclaimAfterDays: null` PATCH,
 but a named endpoint makes the audit entry in `history` honest.
 
+**Correction (review 2026-09-18):** the implemented Keep route is
+`POST /JellyfinMod/Entries/{id}/Keep` (administrator-only; see [`API.md`](API.md)), not
+`/JellyfinMod/Catalog/{id}/Keep` (plan-ops#8, low, single-source, in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 ### 8.1 Playing a reclaimed title
 
 The file is gone; a `.strm` placeholder remains. On this fork, where the catalog state is known,
@@ -648,12 +696,22 @@ downloaded" clip — is the right fix and belongs to the plugin, not here. Until
 archived mark in this fork is the only warning, and that asymmetry should be an accepted split,
 not a surprise.
 
+**Correction (review 2026-09-18):** no `.strm` placeholder exists. `PHASE3.md` chose the
+plugin-only file-less representation ("File-less representation" row), so a reclaimed title is a
+plugin entry, not a library item. **Get again** needs the release picker and therefore belongs to
+Phase 4 (plan-ops#8, low, single-source, in [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 ### 8.2 Continue Watching and reclaimed files
 
 An open UX hole worth naming now: a partially-watched file that gets reclaimed leaves a resume
 position pointing at nothing, and stock Continue Watching will happily offer it. Either
 retention refuses to reclaim a title with a resume position under 90%, or the catalog filters
 those rows out of its own Continue Watching. The first is simpler and belongs in the plugin.
+
+**Correction (review 2026-09-18):** `PHASE3.md` answered this and rejected the 90% rule ("Partial
+playback" row): any accessible user's active playback or unfinished resume protects the physical
+media, and no separate completion threshold is used (plan-ops#8, low, single-source, in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
 ---
 
@@ -693,6 +751,14 @@ Design rules:
 
 Opened from: the catalog card context menu, the catalog detail page, and (Phase 6) the version
 list's *Get another quality*.
+
+**Open question for the user (review 2026-09-18):** the *Enter grabs* rule rests on the queue
+being where a mistake is undone, and that queue does not exist until Phase 5; `PHASE4.md` offers no
+queue Undo. Options recorded in `PHASE4.md`: keep one Enter with no confirmation, add a short
+server-side cancellable hold (`POST /Grabs/{id}/Cancel`), or require a second Enter on TV and
+mobile. The rule above stays as written until the user decides (plan-ops#6, medium,
+single-source, in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
 ---
 
@@ -783,6 +849,26 @@ explicit that TV bugs are only reachable by D-pad at 1920x1080.
 8. **Verify at 1920x1080**, with `localStorage.setItem('layout','tv')`, driven by arrow keys.
    1280x720 gets a two-row header the TV never shows, and header work verified there is aimed at
    the wrong layout.
+
+**Proposed (review 2026-09-18, not user-approved):** additional TV rules from
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), tracked as T19 in `PHASE3.md` and W9 and W11 in
+`PHASE1.md`:
+
+- **No native `<details>` for History.** Legacy spatial navigation never focuses a `<summary>`,
+  so History becomes a focusable toggle button with `aria-expanded` (critic-journeys#6, low,
+  single-source; T19).
+- **A control stays focusable while its own request runs.** Use the `aria-disabled` pattern Keep
+  already uses, with a guard in the handler, instead of `disabled`, which drops focus to `<body>`
+  (web-library-search-details#9, low, verified; T19).
+- **Monitor toggles with Enter**, like every other D-pad control (T19).
+- **Remove entry uses the stock confirm dialog**, because it also drops the entry's history
+  (web-library-search-details#9; T19).
+- **Horizontal card rows use `emby-scroller`**, so scrollManager can bring the focused card into
+  view (web-library-search-details#2, high, verified; W9).
+- **Avoid `display: contents` and flex `gap`** for old webOS engines: the first needs Chromium 65
+  and the second Chromium 84. Use the container's own layout classes and child margins instead
+  (critic-gaps#3, high, verified; web-home-rules-tv#8, low, verified; W11). How severe this is
+  depends on the physical TV's webOS version, an open question in `PLAN.md`.
 
 ---
 
@@ -883,6 +969,14 @@ implies.
 | Queue | `GET /Queue` **with `progress`, rate, ETA, client**, `DELETE /Queue/{id}` | 5 |
 | Version selector | stock `/Items` MediaSources | 6 |
 
+**Correction (review 2026-09-18):** the `/Catalog` rows above predate the implemented contract.
+All routes sit under `/JellyfinMod`: the Movies/TV grid uses `POST /JellyfinMod/Browse`, and the
+Due-within-7-days filter is its `dueWithinDays` field; entry list, create, detail, monitor PATCH
+and removal use `/JellyfinMod/Entries` and `/JellyfinMod/Entries/{id}`; Keep is
+`POST /JellyfinMod/Entries/{id}/Keep`; leftovers use `GET /JellyfinMod/Discover/Search`.
+[`API.md`](API.md) is the current contract (plan-ops#8, low, single-source, in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
+
 ---
 
 ## 17. Build order
@@ -927,6 +1021,12 @@ Phases 3–6 follow the README's ordering; each adds its components from §15.1 
    If it does, reclaim keeps a stable item id and the version selector in §11 becomes the natural
    place to show "archived" — which would simplify §8.1 considerably. Worth testing on the Pi
    before Phase 3 design is finalised.
+
+**Correction (review 2026-09-18):** `PHASE3.md` has answered Q4 and Q6; they stay listed for the
+record. Q4: partial playback (active playback or an unfinished resume) protects the physical
+media, and no 90% rule is used. Q6: there are no STRM placeholders; reclaimed titles use the
+plugin-only representation (plan-ops#8, low, single-source, in
+[`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
 ---
 
