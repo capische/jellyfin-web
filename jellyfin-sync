@@ -38,9 +38,13 @@ if [[ -z ${JELLYFIN_SYNC_REEXEC:-} ]]; then
 fi
 # Preserve the status the script exited with; a bare trap would report the
 # status of its own last command instead.
+plugin_package_dir=''
 cleanup() {
     local status=$?
     rm -f -- "$JELLYFIN_SYNC_REEXEC"
+    if [[ -n ${plugin_package_dir:-} ]]; then
+        rm -rf -- "$plugin_package_dir"
+    fi
     exit "$status"
 }
 trap cleanup EXIT
@@ -69,10 +73,15 @@ readonly SSH_HOST="${JELLYFIN_SSH_HOST:-jellyfin}"
 readonly MEDIA_DIR="${JELLYFIN_MEDIA_DIR:-media}"
 readonly COMPOSE_FILE="${JELLYFIN_COMPOSE_FILE:-$MEDIA_DIR/server/docker-compose.yml}"
 readonly WEB_DIR="${JELLYFIN_WEB_DIR:-$MEDIA_DIR/src/jellyfin-web}"
+readonly TEST_COMPOSE_FILE="${JELLYFIN_TEST_COMPOSE_FILE:-$MEDIA_DIR/server/docker-compose.jellyfinmod-test.yml}"
+readonly TEST_WEB_DIR="${JELLYFIN_TEST_WEB_DIR:-$MEDIA_DIR/test/jellyfinmod/web}"
+readonly TEST_PLUGIN_DIR="${JELLYFIN_TEST_PLUGIN_DIR:-$MEDIA_DIR/test/jellyfinmod/config/plugins/JellyfinMod}"
 
 mode=host
+target=web
 build=1
 restart=1
+test_instance=0
 
 die() {
     echo "$*" >&2
@@ -97,9 +106,11 @@ and restarting the container.
 
 Options:
   -l, --local        Build dist/ locally and rsync it to the host.
+      --plugin       With --local, deploy only JellyfinMod; leave dist/ untouched.
+      --test         Target the isolated jellyfinmod-test service, never the default service.
       --host HOST    SSH host for --local.
       --path PATH    Web checkout, relative to the deploy account's home.
-      --no-build     With --local, sync the existing dist/ without rebuilding.
+      --no-build     With --local, sync the existing target without rebuilding.
       --no-restart   Leave the Jellyfin container alone after deploying.
   -h, --help         Show this message.
 
@@ -110,6 +121,8 @@ EOF
 while (($#)); do
     case "$1" in
         -l | --local) mode=local ;;
+        --plugin) target=plugin ;;
+        --test) test_instance=1 ;;
         --host)
             [[ $# -ge 2 ]] || die "--host needs a value"
             SSH_HOST_OVERRIDE="$2"
@@ -135,7 +148,22 @@ while (($#)); do
 done
 
 ssh_host="${SSH_HOST_OVERRIDE:-$SSH_HOST}"
+compose_file="$COMPOSE_FILE"
+compose_service=jellyfin
 web_dir="${WEB_DIR_OVERRIDE:-$WEB_DIR}"
+plugin_dir_default="${JELLYFIN_PLUGIN_DIR:-$MEDIA_DIR/config/jellyfin/plugins/JellyfinMod}"
+
+if ((test_instance)); then
+    [[ $mode == local ]] || die "--test requires --local; isolated test deployments use local artifacts."
+    compose_file="$TEST_COMPOSE_FILE"
+    compose_service=jellyfinmod-test
+    web_dir="${WEB_DIR_OVERRIDE:-$TEST_WEB_DIR}"
+    plugin_dir_default="$TEST_PLUGIN_DIR"
+fi
+
+if [[ $target == plugin && $mode != local ]]; then
+    die "--plugin requires --local; the plugin is built from the local plugin checkout."
+fi
 
 rule() {
     echo "-------------------------------------------------"
@@ -148,11 +176,11 @@ remote() {
 }
 
 restart_jellyfin_remote() {
-    echo "Restarting Jellyfin on $ssh_host..."
+    echo "Restarting $compose_service on $ssh_host..."
     # \$HOME stays unexpanded so it resolves on the host, not here.
     remote <<EOF
 cd "\$HOME" || exit 1
-docker compose -f '$COMPOSE_FILE' restart jellyfin
+docker compose -f '$compose_file' restart '$compose_service'
 EOF
 }
 
@@ -194,7 +222,7 @@ deploy_on_host() {
 
     if ((restart)); then
         echo "Restarting Jellyfin..."
-        (cd "$HOME" && docker compose -f "$COMPOSE_FILE" restart jellyfin)
+        (cd "$HOME" && docker compose -f "$compose_file" restart "$compose_service")
     fi
 }
 
@@ -241,6 +269,75 @@ deploy_from_local() {
         restart_jellyfin_remote
     fi
 }
+
+deploy_plugin_from_local() {
+    local project="${JELLYFIN_PLUGIN_PROJECT:-$SCRIPT_DIR/../plugin/JellyfinMod/JellyfinMod.csproj}"
+    local plugin_dir="$plugin_dir_default"
+    local dotnet="${JELLYFIN_DOTNET:-dotnet}"
+    local python="${JELLYFIN_PLUGIN_PYTHON:-python3}"
+    local binary_dir="$(dirname -- "$project")/bin/Release/net9.0"
+    local package_script="$(dirname -- "$(dirname -- "$project")")/scripts/package_plugin.py"
+
+    [[ -f $project ]] || die "Plugin project missing: $project"
+    if ((build)); then
+        "$dotnet" build -c Release "$project"
+    fi
+    [[ -f $package_script ]] || die "Plugin packaging script missing: $package_script"
+    plugin_package_dir="$(mktemp -d "${TMPDIR:-/tmp}/jellyfin-plugin.XXXXXX")"
+    "$python" "$package_script" "$binary_dir" "$plugin_package_dir"
+    # Values are embedded in a single-quoted remote command below.
+    [[ $plugin_dir != *"'"* && $plugin_dir != *$'\n'* ]] || die "Plugin path cannot contain quotes or newlines."
+    [[ -n $plugin_dir && $plugin_dir != / && $plugin_dir != . ]] || die "Set a dedicated plugin folder."
+
+    echo "Deploying JellyfinMod to ${ssh_host}:${plugin_dir}/"
+    # Preserve the administrator's enable/disable and auto-update choices when
+    # replacing generated metadata. Configuration XML and the database are elsewhere.
+    remote > "$plugin_package_dir/existing-meta.json" <<EOF
+set -eu
+cd "\$HOME"
+if [[ -f '$plugin_dir/meta.json' ]]; then
+    cat -- '$plugin_dir/meta.json'
+fi
+EOF
+    "$python" - "$plugin_package_dir" <<'PY'
+import json
+import pathlib
+import sys
+folder = pathlib.Path(sys.argv[1])
+existing = folder / 'existing-meta.json'
+if existing.stat().st_size:
+    old = json.loads(existing.read_text())
+    manifest = folder / 'meta.json'
+    new = json.loads(manifest.read_text())
+    if old.get('guid') != new['guid']:
+        raise SystemExit('Target folder belongs to another plugin; refusing to overwrite it.')
+    for key in ('status', 'autoUpdate'):
+        if key in old:
+            new[key] = old[key]
+    manifest.write_text(json.dumps(new, indent=4) + '\n')
+PY
+    remote <<EOF
+set -eu
+cd "\$HOME"
+mkdir -p -- '$plugin_dir'
+EOF
+    # Copy only the generated package files, without --delete; other plugins stay intact.
+    # Jellyfin 10.11 supplies the compatible EF Core/SQLite runtime dependencies.
+    rsync --archive --compress --human-readable \
+        "$plugin_package_dir/JellyfinMod.dll" "$plugin_package_dir/logo.png" \
+        "$plugin_package_dir/meta.json" "$ssh_host:$plugin_dir/"
+    if ((restart)); then
+        restart_jellyfin_remote
+    fi
+}
+
+case "$target:$mode" in
+    plugin:local)
+        deploy_plugin_from_local
+        echo "JellyfinMod deployment completed successfully."
+        exit 0
+        ;;
+esac
 
 case "$mode" in
     host) deploy_on_host ;;
