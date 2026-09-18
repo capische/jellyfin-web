@@ -115,7 +115,12 @@ const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
     const catalog = useQueries({ queries: scopes.map(({ mediaType, targetLibraryId }) => ({
         queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'HomeRecent', mediaType, targetLibraryId],
         queryFn: ({ signal }: { signal: AbortSignal }) => browseEntries(api!, {
-            mediaType, targetLibraryId, sortBy: ['DateCreated'], sortOrder: 'Descending', startIndex: 0, limit: 24
+            mediaType, targetLibraryId, sortBy: ['DateCreated'], sortOrder: 'Descending', startIndex: 0, limit: 24,
+            state: [],
+            filters: {
+                genres: [], years: [], officialRatings: [], tags: [], studioIds: [], status: [], seriesStatus: [],
+                features: [], videoBasicFilter: [], videoTypes: [], audioLanguages: [], subtitleLanguages: []
+            }
         }, { signal }),
         enabled: !!api && !!user?.Id && health.data?.ok === true,
         retry: false
