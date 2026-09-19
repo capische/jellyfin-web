@@ -1,0 +1,128 @@
+// Release picker (UX §9, PHASE4 A7). One column everywhere: no horizontal table on TV or mobile.
+// Values come from the base theme: primary #00a4dc, error #c62828, card radius 0.2em, secondary text 86%.
+// No flex gap, min()/max() or display: contents, for older TV engines (P1.W11).
+
+.jfmod-releaseDialog .formDialogContent {
+    padding: 0 1em 1em;
+}
+
+.jfmod-releasePicker {
+    max-width: 60em;
+    margin: 0 auto;
+}
+
+.jfmod-releaseControls > .selectContainer {
+    margin-bottom: 0.8em;
+}
+
+.jfmod-releaseLabel {
+    display: block;
+    margin-bottom: 0.3em;
+    font-size: 86%;
+    opacity: 0.8;
+}
+
+.jfmod-releaseStatus {
+    margin: 0.6em 0;
+}
+
+.jfmod-releaseNotice {
+    margin: 0 0 0.6em;
+    font-size: 86%;
+    color: #c62828;
+}
+
+.jfmod-releaseRow {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 0.3em;
+    padding: 0.6em 0.8em;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+        background: rgba(0, 164, 220, 0.2);
+        outline: none;
+    }
+
+    &[aria-disabled='true'] {
+        cursor: default;
+    }
+}
+
+.jfmod-releaseRow--rejected {
+    cursor: default;
+    opacity: 0.75;
+}
+
+.jfmod-releaseSummary {
+    display: block;
+}
+
+.jfmod-releaseQuality {
+    font-weight: 600;
+}
+
+.jfmod-releaseChip {
+    display: inline-block;
+    margin-left: 0.4em;
+    padding: 0 0.4em;
+    border: 1px solid #00a4dc;
+    border-radius: 0.2em;
+    font-size: 86%;
+}
+
+.jfmod-releaseMeta {
+    display: block;
+    font-size: 86%;
+    opacity: 0.8;
+}
+
+// Always visible and wrapped, never truncated: it is the diagnostic when a grab goes wrong.
+.jfmod-releaseTitle {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 86%;
+    opacity: 0.6;
+    word-break: break-all;
+}
+
+.jfmod-releaseReasons {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 86%;
+    color: #c62828;
+}
+
+.jfmod-grabStatus {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0 0 0.6em;
+    padding: 0.5em 0.8em;
+    border-left: 0.2em solid #00a4dc;
+
+    > * { margin: 0.2em 0.8em 0.2em 0; }
+}
+
+.jfmod-rejectedGroup {
+    margin-top: 0.8em;
+}
+
+.jfmod-releaseClose {
+    margin-top: 1em;
+}
+
+// Acquisition summary on entry and episode detail (P4.A6).
+.jfmod-acquisitionLine {
+    margin: 0.4em 0;
+    font-size: 86%;
+    opacity: 0.8;
+}
