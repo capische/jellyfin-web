@@ -4,6 +4,7 @@ import type { AxiosRequestConfig } from 'axios';
 import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
+import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
 import type { Filters } from 'types/library';
 
 /**
@@ -205,6 +206,36 @@ export const cancelGrab = async (api: Api, id: string, options?: AxiosRequestCon
 
 export const getQualityProfiles = async (api: Api, options?: AxiosRequestConfig): Promise<QualityProfile[]> => {
     const response = await api.axiosInstance.get<QualityProfile[]>(api.basePath + BASE + '/Settings/QualityProfiles',
+        { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+/**
+ * The download queue (P5.I7). Answers 403 `queue_admin_only` to an ordinary user while the administrator keeps
+ * the queue private, which is the default.
+ */
+export const getQueue = async (api: Api, params: QueueQuery = {}, options?: AxiosRequestConfig): Promise<QueueList> => {
+    const response = await api.axiosInstance.get<QueueList>(api.basePath + BASE + '/Queue',
+        { ...options, headers: authorization(api), params, paramsSerializer: { indexes: null } });
+    return response.data;
+};
+
+/** Administrator-only. Cancels the import; never deletes a library file. */
+export const removeQueueRow = async (api: Api, id: string, request: RemoveQueueRequest, options?: AxiosRequestConfig): Promise<ImportOperation> => {
+    const response = await api.axiosInstance.delete<ImportOperation>(api.basePath + BASE + '/Queue/' + encodeURIComponent(id),
+        { ...options, headers: authorization(api), data: request });
+    return response.data;
+};
+
+/** Administrator-only. Starts a new import for the same grab from a blocked or failed one (202). */
+export const retryImport = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<ImportOperation> => {
+    const response = await api.axiosInstance.post<ImportOperation>(api.basePath + BASE + '/Imports/' + encodeURIComponent(id) + '/Retry',
+        undefined, { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+export const getImport = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<ImportOperation> => {
+    const response = await api.axiosInstance.get<ImportOperation>(api.basePath + BASE + '/Imports/' + encodeURIComponent(id),
         { ...options, headers: authorization(api) });
     return response.data;
 };
