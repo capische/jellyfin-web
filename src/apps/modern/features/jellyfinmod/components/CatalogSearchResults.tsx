@@ -72,6 +72,13 @@ const DiscoveryRow: FC<{ children: React.ReactNode }> = ({ children }) => {
         setSlider(element.current?.querySelector('.scrollSlider') ?? null);
     }, []);
 
+    // The scroller measures its slider when attached and on frame resize only; cards portalled in afterwards,
+    // or appended by "More results", would stay out of reach of the desktop scroll buttons.
+    useEffect(() => {
+        element.current?.querySelector<HTMLElement & { scroller?: { reload(): void } }>('[is="emby-scroller"]')
+            ?.scroller?.reload();
+    });
+
     return <div ref={element}>
         <div dangerouslySetInnerHTML={{
             __html: `<div is="emby-scroller" data-horizontal="true" data-centerfocus="card" class="padded-top-focusscale padded-bottom-focusscale">
