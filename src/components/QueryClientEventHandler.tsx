@@ -19,7 +19,8 @@ const QueryClientEventHandler: FC = () => {
     const invalidateCatalogQueries = useCallback(() => {
         if (!user?.Id) return;
 
-        void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'Items'] });
+        // All of the user's queries, not only Items, so watched progress refreshes too (master b72ac53721).
+        void queryClient.invalidateQueries({ queryKey: ['User', user.Id] });
         if (api) {
             void queryClient.invalidateQueries({
                 queryKey: ['JellyfinMod', api.basePath, user.Id]
