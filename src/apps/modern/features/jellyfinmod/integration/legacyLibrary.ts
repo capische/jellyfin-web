@@ -76,20 +76,44 @@ const list = (value: LegacyList, delimiter: string): string[] => {
 
 const FEATURES = ['HasSubtitles', 'HasTrailer', 'HasSpecialFeature', 'HasThemeSong', 'HasThemeVideo'] as const;
 
-const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series'): BrowseRequest => {
+let legacyCapabilities: Promise<string[]> | undefined;
+
+/** The plugin's advertised capabilities, read once per page load; an older plugin lists none (P1.W14). */
+const getLegacyCapabilities = (apiClient: LegacyApiClient) => {
+    legacyCapabilities ??= apiClient.ajax({ type: 'GET', url: apiClient.getUrl('JellyfinMod/Health'), dataType: 'json' })
+        .then(health => {
+            const capabilities = (health as unknown as { Capabilities?: unknown }).Capabilities;
+            return Array.isArray(capabilities) ? capabilities.filter((value): value is string => typeof value === 'string') : [];
+        })
+        .catch(() => []);
+    return legacyCapabilities;
+};
+
+const STATUS_TOKENS = ['IsPlayed', 'IsUnplayed', 'IsFavorite', 'IsResumable'];
+
+/** Played, favourite and resumable choices from both the `Filters` tokens and the boolean fields. */
+const toStatus = (query: LegacyQuery) => {
     // The dialog writes `IsUnPlayed`; Jellyfin reads Filters tokens case-insensitively, and so does this.
-    const statusTokens = ['IsPlayed', 'IsUnplayed', 'IsFavorite', 'IsResumable'];
     const status = new Set<string>(list(query.Filters, ',').flatMap(token =>
-        statusTokens.filter(known => known.toLowerCase() === token.toLowerCase())));
+        STATUS_TOKENS.filter(known => known.toLowerCase() === token.toLowerCase())));
     if (query.IsPlayed === true) status.add('IsPlayed');
     if (query.IsPlayed === false) status.add('IsUnplayed');
     if (query.IsFavorite) status.add('IsFavorite');
     if (query.IsResumable) status.add('IsResumable');
-    const videoBasicFilter: string[] = [];
-    if (query.IsHD === true) videoBasicFilter.push('IsHD');
-    if (query.IsHD === false) videoBasicFilter.push('IsSD');
-    if (query.Is4K) videoBasicFilter.push('Is4K');
-    if (query.Is3D) videoBasicFilter.push('Is3D');
+    return [...status];
+};
+
+/** SD is the dialog's `IsHD: false`. */
+const toVideoBasicFilter = (query: LegacyQuery) => {
+    const values: string[] = [];
+    if (query.IsHD === true) values.push('IsHD');
+    if (query.IsHD === false) values.push('IsSD');
+    if (query.Is4K) values.push('Is4K');
+    if (query.Is3D) values.push('Is3D');
+    return values;
+};
+
+const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series', capabilities: string[] = []): BrowseRequest => {
     const state = list(query.JellyfinModState, ',');
 
     const sortBy = (query.SortBy ?? 'SortName').split(',');
@@ -106,18 +130,18 @@ const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series'): BrowseReq
         limit: query.Limit && query.Limit > 0 ? query.Limit : undefined,
         alphabet: query.NameLessThan === 'A' ? '#' : query.NameStartsWith,
         state: state.length > 0 ? state : undefined,
-        dueWithinDays: query.JellyfinModDueWithinDays ?? undefined,
+        dueWithinDays: capabilities.includes('browse.dueWithinDays') ? query.JellyfinModDueWithinDays ?? undefined : undefined,
         filters: {
             genres: list(query.Genres, '|'),
             years: list(query.Years, ',').map(Number).filter(Number.isInteger),
             officialRatings: list(query.OfficialRatings, '|'),
             tags: list(query.Tags, '|'),
             studioIds: list(query.StudioIds, ','),
-            status: [...status],
+            status: toStatus(query),
             seriesStatus: list(query.SeriesStatus, ','),
             videoTypes: list(query.VideoTypes, ','),
             features: FEATURES.filter(feature => query[feature] === true),
-            videoBasicFilter,
+            videoBasicFilter: toVideoBasicFilter(query),
             audioLanguages: list(query.AudioLanguages, ','),
             subtitleLanguages: list(query.SubtitleLanguages, ',')
         }
@@ -134,7 +158,7 @@ export const fetchLegacyBrowse = async (
         const result = await apiClient.ajax({
             type: 'POST',
             url: apiClient.getUrl('JellyfinMod/Browse'),
-            data: JSON.stringify(toRequest(query, mediaType)),
+            data: JSON.stringify(toRequest(query, mediaType, await getLegacyCapabilities(apiClient))),
             contentType: 'application/json',
             dataType: 'json'
         });
