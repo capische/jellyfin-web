@@ -332,3 +332,148 @@ the same cancelled operation, and after submission starts it answers 409 `grab_n
 by infohash lookup and never resubmits. Entry detail adds `acquisition` for movies, and each episode
 adds `acquisition`. Ordinary users see only `state` and `updatedAt`. `DELETE /JellyfinMod/Entries/{id}`
 answers 409 `grab_active` while a grab owns the title.
+
+## Import, queue and seeding (Phase 5)
+
+Health `Capabilities` adds `queue`, `import` and `seedRelease`. Clients hide the queue route, the
+downloading card state and the Remove dialog when a capability is missing (old plugin).
+
+### Import settings and path mappings
+
+`GET/PATCH /JellyfinMod/Settings/Import` (administrator-only). A PATCH must echo `revision`:
+
+```json
+{"importEnabled":true,"seedReleaseEnabled":false,"seedFloorRatio":1.0,"seedFloorHours":168,
+ "importPollSeconds":15,"videoExtensions":["mkv","mp4","m4v","avi","mov","ts","m2ts","webm","wmv","mpg","mpeg"],
+ "stalledAfterHours":24,"scanTimeoutMinutes":10,"queueVisibleToUsers":false,"revision":1}
+```
+
+`GET/PUT /JellyfinMod/DownloadClients/{id}/PathMappings` replaces the ordered list
+`{"pathMappings":[{"clientPathPrefix":"<client-download-dir>","localPathPrefix":"<test-root>/downloads"}],
+"revision":3}`; the client's `revision` is bumped. The first matching prefix wins; a path that no
+mapping and no `downloadDirectory`/`localDirectory` pair covers is `path_unmapped`.
+`POST /JellyfinMod/DownloadClients/{id}/TestImportPath` with `{"clientPath":"…"}` maps the path, checks
+that it exists, and reports for each movie/TV library root whether it shares the mount and whether a
+`link(2)` probe succeeded (`linkProbe`: `linked`, `not_same_mount`, `source_not_writable`,
+`cross_device` or `failed_<errno>`). It creates one empty probe file in the download folder, links it
+into each same-mount root, and removes both links immediately.
+
+### Queue
+
+`GET /JellyfinMod/Queue?entryId=&state=` (`state` repeatable) returns open imports and seeding copies, newest
+first. Ordinary users get 403 `queue_admin_only` unless `queueVisibleToUsers` is on; then they see
+only rows of libraries they can read, without the `admin` block.
+
+```json
+{"items":[{"id":"…","grabId":"…",
+  "entry":{"id":"…","mediaType":"movie","title":"Example Movie","year":2024,"posterPath":null,
+           "jellyfinItemId":null,"targetLibraryId":"…"},
+  "episode":null,"releaseTitle":"Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-GRP",
+  "state":"downloading","importState":"waiting","reason":null,"message":null,
+  "progress":0.42,"sizeBytes":4000000000,"downloadedBytes":1680000000,"downloadRateBytes":2500000,
+  "etaSeconds":928,"stalledSince":null,"observedAt":"…","versionLabel":null,"intent":"acquire",
+  "createdAt":"…","updatedAt":"…","client":{"id":"…","name":"Transmission","openUrl":null},
+  "seeding":null,
+  "admin":{"sourcePath":null,"sourceClientPath":null,"destinationPath":null,
+           "sourcePhysicalIdentity":null,"destinationPhysicalIdentity":null,
+           "hardlinkCountAfter":null,"error":null,"infoHash":"<40 hex>"}}],
+ "totalRecordCount":1,"generatedAt":"…",
+ "clientStatus":{"reachable":true,"checkedAt":"…","reason":null},
+ "importEnabled":true,"seedReleaseEnabled":false,
+ "automation":{"enabled":false,"pausedReasons":["disabled"]}}
+```
+
+Row `state` is one of `queued` (nothing downloaded yet), `downloading`, `stalled`, `unknown`
+(client unreachable), `identifying`, `linking`, `scanning`, `seeding`, `blocked` and `failed`.
+`importState` is the stored state: `waiting`, `identifying`, `linking`, `linked`, `scanning`,
+`completed`, `blocked`, `failed`, `cancelled`. Import reasons: `path_unmapped`, `source_missing`,
+`source_size_mismatch`, `no_video_file`, `ambiguous_files`, `archive_unsupported`,
+`episode_mismatch`, `target_exists`, `cross_filesystem`, `destination_not_writable`,
+`destination_collision`, `library_root_missing`, `scan_timeout`, `binding_not_observed`,
+`client_unreachable`, `torrent_missing`, `import_disabled`, `cancelled`, `target_missing` and
+`client_missing`. `seeding.waitingFor` lists the unmet goals (`complete`, `ratio`, `time`). One client snapshot, at most 3 s old, serves every queue read and projection.
+
+`GET /JellyfinMod/Imports/{id}` returns one import operation (concealed 404 without library access).
+`POST /JellyfinMod/Imports/{id}/Retry` (admin) re-inspects a `blocked` or `failed` import from the
+start and answers 409 `import_not_retryable`, `import_open` or `grab_missing`.
+
+`DELETE /JellyfinMod/Queue/{id}` (admin) with an optional body
+`{"removeFromClient":false,"blocklist":false}` cancels an open import. With `removeFromClient`
+the torrent and its data are removed from Transmission only if JellyfinMod added it (409
+`torrent_not_owned`) and the seeding path is outside every library (409
+`seeding_path_inside_library`); an unreachable client answers 503 `client_unreachable` and nothing
+changes. `blocklist` stores the infohash so later searches reject it as `blocklisted`. Library
+files are never deleted by this route. Other refusals: 409 `not_in_queue`,
+`seed_release_in_progress`, `client_missing`.
+
+`GET /JellyfinMod/Seeding` (admin) lists seed releases with their goal, the source of each goal
+(`indexer`, `client`, `floor`), observed ratio and seeding time, `goalMetAt`, `logicalBytes` and
+whether the library link is still present. Seed release states are `waiting`, `removing`,
+`completed`, `blocked` and `cancelled`; reasons include `seed_goal_unmet`, `seeding_incomplete`,
+`seed_release_disabled`, `torrent_not_owned`, `retention_operation_open`,
+`seeding_path_inside_library`, `library_link_unexpected`, `seeding_path_unavailable`,
+`client_unreachable`, `seeding_copy_survived`, `released` and `seeding_copy_missing`.
+
+Entry list, browse and detail projections report `acquisition.state` values `grabbed`,
+`downloading`, `importing` and `blocked` from the open import, while the stored entry state stays
+unchanged until Phase 2 binds the imported file. `DELETE /JellyfinMod/Entries/{id}` answers 409
+`import_active` while an import is open.
+
+## Automation and versions (Phase 6)
+
+Health `Capabilities` adds `automation` and `versions`. Every automation route is administrator-only.
+
+`GET /JellyfinMod/Settings/Automation` and `PATCH` (echo `revision`):
+
+```json
+{"automationEnabled":false,"automationIntervalHours":6,"automationBatchSize":40,
+ "newEpisodeDelayMinutes":120,"dailyAutoGrabBudget":6,"maxConcurrentImports":3,
+ "freeSpaceFloorPercent":10,"freeSpaceFloorBytes":25000000000,"decisionLogCap":2000,
+ "episodeUpgradesEnabled":false,"reacquireReclaimed":false,"revision":1}
+```
+
+Indexers gain `minIntervalSeconds` (default 10) and `dailyQueryBudget` (default 200). Quality
+profiles gain `cutoff`, `upgradeAllowed`, `upgradeMode` (`replace` or `add`), `minimumAutoScore`
+and `minimumSeeders`; a cutoff outside the allowed qualities, or upgrades without a cutoff, answer
+400 `invalid_cutoff`.
+
+`GET /JellyfinMod/Automation/Status` returns `enabled`, `pausedReasons` (`disabled`,
+`budget_grabs`, `too_many_open_imports`, `free_space_floor`, `client_unreachable`,
+`acquisition_not_ready`), `running`, `nextRunAt`, `lastRun` (counts and `queriesByIndexer`),
+`budgets` (grabs used today, open imports, free and floor bytes) and per-indexer queries used today,
+limits and `breakerOpenUntil`. `POST /JellyfinMod/Automation/Run` queues the native
+`JellyfinModAutomationSearch` task and answers 202 `{"status":"queued"}`, or 409
+`automation_run_active`; a manual run obeys every budget.
+
+`GET /JellyfinMod/Automation/Decisions?entryId=&episodeId=&kind=&startIndex=&limit=` pages the
+bounded decision log. `kind` is `searched`, `skipped`, `grabbed`, `upgrade_planned`,
+`upgrade_completed`, `breaker_opened` or `budget_exhausted`; `reason` includes `not_due`,
+`unmonitored`, `unaired`, `special_excluded`, `already_held_at_cutoff`, `upgrade_not_allowed`,
+`budget_grabs`, `budget_indexer`, `breaker_open`, `free_space_floor`, `too_many_open_imports`,
+`client_unreachable`, `no_eligible_candidate`, `below_minimum_score`, `below_minimum_seeders`,
+`active_grab_exists`, `blocklisted`, `kept_entry`, `episode_versions_unsupported`,
+`held_quality_unknown`, `reclaimed`, `search_failed`, `grab_refused` and `replacement_blocked`.
+`GET /JellyfinMod/Automation/Targets?entryId=` lists each target's `nextSearchAt`,
+`consecutiveEmpty`, `lastOutcome`, `heldBestQuality`, `cutoff`, `upgradeEligible` and
+`blockedReason`. `PATCH /JellyfinMod/Entries/{id}` accepts `{"searchNow":true}` (admin) to make
+the target due at the next run and reset its back-off.
+
+`GET /JellyfinMod/Releases?…&intent=addVersion` searches for another quality of a title that has
+a playable file (409 `no_playable_version`; episodes answer 409 `episode_versions_unsupported`
+while episode upgrades are off). Candidates carry `heldQuality: true` for qualities already in the
+library, and grabbing one answers 409 `held_quality`. An unknown `intent` is 400 `invalid_intent`.
+
+Entry detail adds `versions` and, for administrators, `upgrade`; episodes add `versions`:
+
+```json
+"versions":[{"jellyfinItemId":"…","mediaSourceId":"…","bindingId":"…","label":"1080p WEB-DL",
+  "quality":"webdl-1080p","resolution":"1080p","width":1920,"height":1080,"videoCodec":"h264",
+  "videoRange":"SDR","bitDepth":8,"audioCodec":"eac3","audioChannels":6,"sizeBytes":4000000000,
+  "isDefault":true,"retention":{"state":"protected","reason":"seed_goal_unmet"}}],
+"upgrade":{"eligible":true,"cutoff":"bluray-2160p","heldBest":"webdl-1080p","mode":"replace",
+  "blockedReason":null,"openUpgradeState":null}
+```
+
+A superseded version removed after an upgrade is a Phase 3 `RetentionOperation` with
+`provenance: "upgrade_replaced"` and history event `upgrade_replaced`; automatic grabs write
+`auto_grabbed`.
