@@ -90,6 +90,8 @@ export interface EntryEpisode {
     state: FileState;
     availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;
+    /** 0-100 while `state` is projected as `downloading`; `availability` stays the file truth (P5.I3). */
+    progress?: number | null;
     retention: RetentionSummary | null;
     /** Newest grab of this episode; absent from older plugins (P4.A6). */
     acquisition?: AcquisitionSummary | null;

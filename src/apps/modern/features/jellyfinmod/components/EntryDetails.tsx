@@ -12,6 +12,7 @@ import type { AcquisitionSummary } from '../types/acquisition';
 import { getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
+import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
@@ -182,6 +183,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             <p role='status'>{message}</p>
             <RetentionStatus retention={retention} />
             <AcquisitionLine acquisition={acquisition} />
+            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />
             <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
                 <ol>{history.map(event => <li key={event.id}>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
@@ -194,6 +196,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open episode</a> : availabilityLabel(episode.availability)}</span>
                     <RetentionStatus retention={episode.retention} compact />
                     <AcquisitionLine acquisition={episode.acquisition} />
+                    <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />
                     {canAcquire && <button className='emby-button' type='button' data-episode-id={episode.id}
                         onClick={searchReleases}>Search releases</button>}
                     {isAdmin && <button className='emby-button' type='button' role='switch' aria-checked={episode.monitored}
