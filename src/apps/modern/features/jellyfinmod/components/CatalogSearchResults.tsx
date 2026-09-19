@@ -60,6 +60,28 @@ const EntrySection: FC<{ mediaType: MediaType; title: string; rows: BrowseRow[];
     </section>;
 };
 
+/**
+ * The TMDB suggestions scroll like every other search row: an emby-scroller with a scrollSlider, so mouse,
+ * touch and D-pad focus can reach every card (P1.W9).
+ */
+const DiscoveryRow: FC<{ children: React.ReactNode }> = ({ children }) => {
+    const element = useRef<HTMLDivElement>(null);
+    const [slider, setSlider] = useState<Element | null>(null);
+
+    useEffect(() => {
+        setSlider(element.current?.querySelector('.scrollSlider') ?? null);
+    }, []);
+
+    return <div ref={element}>
+        <div dangerouslySetInnerHTML={{
+            __html: `<div is="emby-scroller" data-horizontal="true" data-centerfocus="card" class="padded-top-focusscale padded-bottom-focusscale">
+                <div class="focuscontainer-x scrollSlider jfmod-discoveryCards padded-left padded-right"></div>
+            </div>`
+        }} />
+        {slider && createPortal(children, slider)}
+    </div>;
+};
+
 const optimisticEntry = (metadata: TmdbMetadata, targetLibraryId: string): Entry => ({
     id: `pending:${metadata.mediaType}:${metadata.tmdbId}:${targetLibraryId}`,
     mediaType: metadata.mediaType,
@@ -311,14 +333,14 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
                 {[0, 1, 2, 3, 4, 5].map(index => <span key={index} />)}
             </div>}
             {!discoveryPending && discoveryFailed && <p className='jfmod-searchNotice padded-left padded-right'>TMDB is unavailable. Your library results are still shown above.</p>}
-            {!discoveryPending && !discoveryFailed && <div className='jfmod-discoveryCards padded-left padded-right focuscontainer-x'>
+            {!discoveryPending && !discoveryFailed && <DiscoveryRow>
                 {discovered.map(metadata => <article className='jfmod-discoveryCard' key={`${metadata.mediaType}:${metadata.tmdbId}`}>
                     <div className='jfmod-discoveryArtwork' style={getTmdbImage(metadata.posterPath) ? { backgroundImage: `url("${getTmdbImage(metadata.posterPath)}")` } : undefined} />
                     <div className='jfmod-discoveryTitle'>{metadata.title}</div>
                     {/* eslint-disable-next-line react/jsx-no-bind */}
                     <button type='button' className='emby-button button-submit' disabled={!targetFor(metadata.mediaType)} onClick={() => { add(metadata).catch(console.error); }} data-jfmod-add={`${metadata.mediaType}:${metadata.tmdbId}`} aria-label={`Add ${metadata.title} to catalog`}>+</button>
                 </article>)}
-            </div>}
+            </DiscoveryRow>}
             {types.map((mediaType, index) => discovery[index]?.hasNextPage && <button
                 key={mediaType} type='button' className='emby-button' disabled={discovery[index].isFetching}
                 // eslint-disable-next-line react/jsx-no-bind
