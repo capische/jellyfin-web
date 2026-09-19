@@ -196,7 +196,8 @@ try {
     const dueSelected = await evaluate(`(() => {
         const label = Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'));
         const input = label?.querySelector('input[type="checkbox"]');
-        input?.click();
+        // Set, not toggle: an interrupted earlier run can leave the filter persisted as checked.
+        if (input && !input.checked) input.click();
         return !!input;
     })()`);
     if (!dueSelected) throw new Error('Due within 7 days filter is unavailable');
