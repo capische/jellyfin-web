@@ -31,21 +31,32 @@
         white-space: nowrap;
     }
 
-    .jfmod-searchSkeletons span,
-    .jfmod-discoveryCard {
+    .jfmod-searchSkeletons span {
+        background: #202020;
         border-radius: 0.2em;
         display: inline-block;
+        height: 15em;
         margin-right: 1em;
+        opacity: 0.65;
         vertical-align: top;
-        white-space: normal;
         width: 10em;
     }
 
-    .jfmod-searchSkeletons span { background: #202020; height: 15em; opacity: 0.65; }
-    .jfmod-discoveryCard { position: relative; }
+    // The spacing sits inside the card, as on stock cards: the scroll buttons step by each item's
+    // offsetWidth, which a margin would not include.
+    .jfmod-discoveryCard {
+        box-sizing: border-box;
+        display: inline-block;
+        padding-right: 1em;
+        position: relative;
+        vertical-align: top;
+        white-space: normal;
+        width: 11em;
+    }
+
     .jfmod-discoveryArtwork { background-color: #202020; background-position: center; background-size: cover; border-radius: 0.2em; height: 15em; }
     .jfmod-discoveryTitle { font-size: 86%; padding: 0.5em 0; }
-    .jfmod-discoveryCard button { position: absolute; right: 0.4em; top: 0.4em; }
+    .jfmod-discoveryCard button { position: absolute; right: 1.4em; top: 0.4em; }
     .jfmod-searchNotice { color: #f2b01e; min-height: 15em; }
 }
 
