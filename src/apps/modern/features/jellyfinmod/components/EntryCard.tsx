@@ -1,4 +1,4 @@
-import React, { type FC, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { type FC, type MouseEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import CardBox from 'components/cardbuilder/Card/CardBox';
@@ -7,8 +7,11 @@ import { CardShape } from 'components/cardbuilder/utils/shape';
 import layoutManager from 'components/layoutManager';
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { CardOptions } from 'types/cardOptions';
+import inputManager from 'scripts/inputManager';
 
-import type { Entry, RetentionSummary } from '../types/entry';
+import { useQueueVisible } from '../hooks/useQueue';
+import { openInFlightCardMenu } from '../integration/queueActions';
+import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
 
@@ -49,6 +52,36 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
         <div className={entryClassName} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes}>{content}</div>;
 };
 
+/**
+ * A `grabbed` or `downloading` file-less card gains a context menu with **View queue** (P5.I8). File-less cards had
+ * no menu, and the stock item menu needs a native item, so this is mod-owned: right-click, long-press and the
+ * Menu key raise `contextmenu`; a `menu` command from the input manager is honoured too. The card stays the one
+ * focusable element (UX §5.7).
+ */
+const useInFlightMenu = (entry: Entry, pending: boolean) => {
+    const inFlight = !pending && (entry.state === FileState.Grabbed || entry.state === FileState.Downloading);
+    const offered = useQueueVisible(inFlight);
+    const [node, setNode] = useState<HTMLElement | null>(null);
+    const onContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {
+        if (!offered) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openInFlightCardMenu(event.currentTarget);
+    }, [offered]);
+    useEffect(() => {
+        if (!offered || !node) return;
+        const onCommand = (event: Event) => {
+            if ((event as CustomEvent<{ command?: string }>).detail?.command !== 'menu') return;
+            event.preventDefault();
+            event.stopPropagation();
+            void openInFlightCardMenu(node);
+        };
+        inputManager.on(node, onCommand);
+        return () => inputManager.off(node, onCommand);
+    }, [node, offered]);
+    return { ref: setNode, onContextMenu: offered ? onContextMenu : undefined };
+};
+
 /** File-less cards expose only an entry link; native actions require a real item. */
 const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, alwaysShowCountdown }) => {
     const requestedShape = cardOptions.shape;
@@ -61,6 +94,7 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
     const openEntry = useCallback(() => {
         if (!pending) window.location.hash = '#' + path;
     }, [path, pending]);
+    const menu = useInFlightMenu(entry, pending);
     const content = (
         <div className={'cardBox ' + (cardOptions.cardLayout ? 'visualCardBox' : 'cardBox-bottompadded')}>
             <div className='cardScalable'>
@@ -82,11 +116,11 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
     const className = 'card ' + shape + 'Card jfmod-entryCard';
     if (layoutManager.tv) {
         return <button className={className} type='button' aria-label={entry.title} aria-disabled={pending || undefined}
-            data-jfmod-tmdb-id={entry.tmdbId} onClick={openEntry}>{content}</button>;
+            data-jfmod-tmdb-id={entry.tmdbId} onClick={openEntry} {...menu}>{content}</button>;
     }
     return pending ?
         <div className={className} aria-label={entry.title} aria-busy='true' data-jfmod-tmdb-id={entry.tmdbId}>{content}</div> :
-        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId}>{content}</a>;
+        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...menu}>{content}</a>;
 };
 
 const EntryCard: FC<EntryCardProps> = props => props.nativeItem ?
