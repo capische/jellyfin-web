@@ -14,8 +14,8 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    formatBytes, formatDuration, formatRate, progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, seedingSummary,
-    sortQueueRows, updatedAgo
+    automationPausedText, formatBytes, formatDuration, formatRate, progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage,
+    seedingSummary, sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
 import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
@@ -258,6 +258,8 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
         stale: staleAll || row.state === 'unknown', onMenu
     });
     const seeding = rows.some(row => row.state === 'seeding');
+    // Administrators only; an older plugin sends no automation block and the line stays away (P6.M8).
+    const automation = isAdmin ? automationPausedText(list.automation?.pausedReasons) : null;
 
     let body: React.ReactNode;
     if (!rows.length) {
@@ -285,6 +287,9 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     return <div className={'jfmod-queue jfmod-queue--' + layout} ref={container} onFocus={onFocus} onBlur={onBlur}>
         {!list.clientStatus.reachable && <p className='jfmod-queueBanner' role='status'>
             The download client cannot be reached. Showing the last known state.
+        </p>}
+        {automation && <p className={automation.quiet ? 'jfmod-queueNotice' : 'jfmod-queueBanner'} role='status'>
+            {automation.text}
         </p>}
         {isAdmin && !list.importEnabled && <p className='jfmod-queueNotice'>
             Importing is turned off. Finished downloads wait here until it is turned on.
