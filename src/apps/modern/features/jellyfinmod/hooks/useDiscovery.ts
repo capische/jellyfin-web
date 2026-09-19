@@ -5,6 +5,8 @@ import { useApi } from 'hooks/useApi';
 import { searchDiscovery } from '../api/modApi';
 import { usePluginHealth } from './useEntries';
 
+const MAX_EMPTY_PAGES = 3;
+
 export const useDiscovery = (mediaType: 'movie' | 'series', parentId: string | undefined, query: string, enabled: boolean) => {
     const { api, user } = useApi();
     const health = usePluginHealth();
@@ -19,12 +21,15 @@ export const useDiscovery = (mediaType: 'movie' | 'series', parentId: string | u
         retry: false
     });
     const { data, hasNextPage, isFetching, isError, fetchNextPage } = result;
-    const emptyPage = data?.pages[data.pages.length - 1]?.items.length === 0;
+    const pages = data?.pages ?? [];
+    let trailingEmpty = 0;
+    for (let index = pages.length - 1; index >= 0 && pages[index].items.length === 0; index--) trailingEmpty++;
     useEffect(() => {
-        // Held/restricted titles can exclude a whole remote page without exhausting search.
-        if (enabled && emptyPage && hasNextPage && !isFetching && !isError) {
+        // Held/restricted titles can exclude a whole remote page without exhausting search, but auto-follow
+        // stops after three empty pages in a row; the "More results" control continues on request (P1.W13).
+        if (enabled && trailingEmpty > 0 && trailingEmpty < MAX_EMPTY_PAGES && hasNextPage && !isFetching && !isError) {
             fetchNextPage().catch(console.error);
         }
-    }, [enabled, emptyPage, hasNextPage, isFetching, isError, fetchNextPage]);
+    }, [enabled, trailingEmpty, hasNextPage, isFetching, isError, fetchNextPage]);
     return result;
 };

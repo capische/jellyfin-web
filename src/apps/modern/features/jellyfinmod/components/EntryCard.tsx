@@ -56,9 +56,11 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         requestedShape : CardShape.Portrait;
     const artwork = getTmdbImage((shape === CardShape.Backdrop || shape === CardShape.Banner) ? entry.metadata?.backdropPath ?? entry.posterPath : entry.posterPath);
     const path = getEntryPath(entry.id, cardOptions.serverId ?? undefined);
+    // An optimistic card has no entry yet; opening it during a slow add would show an error page (P1.W13).
+    const pending = entry.id.startsWith('pending:');
     const openEntry = useCallback(() => {
-        window.location.hash = '#' + path;
-    }, [path]);
+        if (!pending) window.location.hash = '#' + path;
+    }, [path, pending]);
     const content = (
         <div className={'cardBox ' + (cardOptions.cardLayout ? 'visualCardBox' : 'cardBox-bottompadded')}>
             <div className='cardScalable'>
@@ -78,11 +80,13 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         </div>
     );
     const className = 'card ' + shape + 'Card jfmod-entryCard';
-    return layoutManager.tv ? (
-        <button className={className} type='button' aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} onClick={openEntry}>{content}</button>
-    ) : (
-        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId}>{content}</a>
-    );
+    if (layoutManager.tv) {
+        return <button className={className} type='button' aria-label={entry.title} aria-disabled={pending || undefined}
+            data-jfmod-tmdb-id={entry.tmdbId} onClick={openEntry}>{content}</button>;
+    }
+    return pending ?
+        <div className={className} aria-label={entry.title} aria-busy='true' data-jfmod-tmdb-id={entry.tmdbId}>{content}</div> :
+        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId}>{content}</a>;
 };
 
 const EntryCard: FC<EntryCardProps> = props => props.nativeItem ?
