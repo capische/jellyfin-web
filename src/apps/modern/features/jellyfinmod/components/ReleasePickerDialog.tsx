@@ -5,7 +5,8 @@ import React, { type ChangeEvent, type FC, Fragment, useCallback, useEffect, use
 import focusManager from 'components/focusManager';
 
 import { cancelGrab, getGrab, getQualityProfiles, grabRelease, searchReleases } from '../api/modApi';
-import type { GrabOperation, ReleaseCandidate, ReleaseSearch } from '../types/acquisition';
+import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
+import type { GrabOperation, ReleaseCandidate, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
 
 import './releasePicker.scss';
 
@@ -20,6 +21,8 @@ export interface ReleasePickerProps {
     mediaType: 'movie' | 'series';
     episodes: ReleasePickerEpisode[];
     initialEpisodeId?: string;
+    /** `addVersion` searches for another version beside the held file (P6.M6, opened by Get another quality). */
+    intent?: ReleaseIntent;
     onClose: () => void;
     /** Called after a grab reaches a final state, so the opener can refresh history and summaries. */
     onChanged?: () => void;
@@ -59,9 +62,11 @@ const summary = (candidate: ReleaseCandidate) => {
 
 /** Reads the plugin's problem details, which are written for people and never carry a credential. */
 const problemOf = (error: unknown, fallback: string) => {
-    const data = (error as { response?: { data?: { title?: unknown; operationId?: unknown } } })?.response?.data;
+    const data = (error as { response?: { data?: { type?: unknown; title?: unknown; operationId?: unknown } } })?.response?.data;
+    // Another-version refusals (409) get the fork's own sentence; the rest keep the server's title.
+    const known = typeof data?.type === 'string' ? ADD_VERSION_UNAVAILABLE.get(data.type) : undefined;
     return {
-        title: typeof data?.title === 'string' ? data.title : fallback,
+        title: known ?? (typeof data?.title === 'string' ? data.title : fallback),
         operationId: typeof data?.operationId === 'string' ? data.operationId : null
     };
 };
@@ -93,6 +98,7 @@ const ReleaseLines: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => <>
         {candidate.freeleech && <span className='jfmod-releaseChip'>Freeleech</span>}
         {candidate.proper && <span className='jfmod-releaseChip'>Proper</span>}
         {candidate.repack && <span className='jfmod-releaseChip'>Repack</span>}
+        {candidate.heldQuality && <span className='jfmod-releaseChip jfmod-releaseChip--held'>In library</span>}
         <span className='jfmod-releaseMeta'>
             {formatSize(candidate.size)} · {candidate.seeders === null ? 'seeders unknown' : candidate.seeders + '↑'}
             {' · '}{candidate.indexerName} · score {candidate.score}
@@ -102,11 +108,16 @@ const ReleaseLines: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => <>
     <span className='jfmod-releaseTitle'>{candidate.rawTitle}</span>
 </>;
 
+/**
+ * A quality already in the library stays focusable for reading, but cannot be grabbed: the server would answer
+ * 409 `held_quality` (P6.M6).
+ */
 const ReleaseRow: FC<{ candidate: ReleaseCandidate; disabled: boolean; onGrab: (candidate: ReleaseCandidate) => void }> =
     ({ candidate, disabled, onGrab }) => {
         const activate = useCallback(() => onGrab(candidate), [candidate, onGrab]);
-        return <button type='button' className='jfmod-releaseRow' aria-disabled={disabled} onClick={activate}>
+        return <button type='button' className='jfmod-releaseRow' aria-disabled={disabled || !!candidate.heldQuality} onClick={activate}>
             <ReleaseLines candidate={candidate} />
+            {candidate.heldQuality && <span className='jfmod-releaseHeld'>This quality is already in the library.</span>}
         </button>;
     };
 
@@ -210,7 +221,7 @@ const useGrab = (api: Api, onChanged?: () => void) => {
  * Cancel follows the grabbed row during the hold (user decision 2). Rows only change on a deliberate search:
  * a new episode or profile. Nothing refetches underneath a focused row.
  */
-const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, onClose, onChanged }) => {
+const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, intent, onClose, onChanged }) => {
     const [episodeId, setEpisodeId] = useState(initialEpisodeId ?? '');
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
@@ -224,8 +235,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         retry: false
     });
     const search = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, 'Releases', entryId, episodeId, profileId],
-        queryFn: ({ signal }) => searchReleases(api, { entryId, episodeId: episodeId || undefined, profileId: profileId || undefined }, { signal }),
+        queryKey: ['JellyfinMod', api.basePath, 'Releases', entryId, episodeId, profileId, intent ?? 'acquire'],
+        // `intent` is sent only for another version, so an acquire search reads exactly as it did before Phase 6.
+        queryFn: ({ signal }) => searchReleases(api, { entryId, episodeId: episodeId || undefined, profileId: profileId || undefined,
+            intent: intent === 'addVersion' ? intent : undefined }, { signal }),
         enabled: !waitingForEpisode,
         retry: false,
         gcTime: 0,
@@ -253,7 +266,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const { busy, operation, start } = grab;
     const stale = search.isFetching || search.isPlaceholderData;
     const onGrab = useCallback((candidate: ReleaseCandidate) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || stale) return;
+        if (!data?.grab.available || busy || operation?.state === 'accepted' || stale || candidate.heldQuality) return;
         start(data.searchId, candidate);
     }, [busy, data, operation, stale, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
@@ -285,6 +298,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
                 {profiles.data.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
             </select>
         </div>}
+        {intent === 'addVersion' && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>
+            The release you grab is added as another version; the ones you have stay.
+        </p>}
         <p className='jfmod-releaseStatus' role='status' tabIndex={-1}>{status}</p>
         {failedIndexers.length > 0 && <p className='jfmod-releaseNotice'>
             Partial results: {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}

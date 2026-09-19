@@ -126,3 +126,21 @@
     font-size: 86%;
     opacity: 0.8;
 }
+
+// Get another quality (P6.M8): a quality already held is marked and cannot be grabbed.
+.jfmod-releaseChip--held {
+    border-color: currentColor;
+    opacity: 0.86;
+}
+
+.jfmod-releaseHeld {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 86%;
+    opacity: 0.8;
+}
+
+.jfmod-releaseNotice--info {
+    color: inherit;
+    opacity: 0.8;
+}
