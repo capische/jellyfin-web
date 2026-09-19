@@ -226,3 +226,109 @@ also apply. Items use the Entry's `metadata` shape above.
 An entirely excluded remote page can return `{"items":[],"nextPage":2}`. Follow `nextPage`
 until it is null; an empty page alone is not the end. No unfiltered TMDB count is exposed as a
 remaining-result total. Provider failures must leave no partially created catalog entry.
+
+## Acquisition (Phase 4)
+
+Every route below is administrator-only (`Policies.RequiresElevation`, P4.A1). Ordinary users get 403;
+an administrator without access to the target library gets the concealed 404. Acquisition DTOs serialize
+unknown values as explicit JSON `null`. The host's serializer writes GUIDs in compact form without dashes.
+
+### Settings
+
+`GET/POST /JellyfinMod/Settings/Indexers`, `PATCH/DELETE /JellyfinMod/Settings/Indexers/{id}`,
+`POST /JellyfinMod/Settings/Indexers/{id}/Test`, and the same set for `DownloadClients` and
+`QualityProfiles` (profiles have no Test). A PATCH must echo the current `revision` or it gets 409
+`revision_conflict`. Unknown fields are rejected. Secrets are write-only (user decision 3):
+
+```json
+{"name":"Tracker","baseUrl":"<torznab-api-url>","enabled":true,"categories":[2000,5000],"priority":1,
+ "downloadHosts":[],"minimumSeedRatio":1.0,"minimumSeedMinutes":2880,
+ "apiKey":{"action":"replace","value":"<secret>"},"revision":1}
+```
+
+`action` is `unchanged` (value null), `replace` or `clear`. Reads return only `apiKeyConfigured` /
+`passwordConfigured`; SQLite keeps an opaque reference, and the value lives in the plugin-owned
+secret file. A download client (`kind: "transmission"`, user decision 1) carries `label`,
+`downloadDirectory` (the client's view), `localDirectory` (Jellyfin's view of the same folder) and
+an optional credential-free `openUrl`. The folder must be outside every library folder and share the
+statx device and mount of at least one movie/TV library root (user decision 6). Otherwise the save
+answers 400 `destination_missing`, `destination_inside_library` or `destination_not_same_filesystem`.
+The client Test reads `session-get` only and never adds a torrent.
+
+`GET /JellyfinMod/Settings/Acquisition` returns `enabled`, `downloadClientId`,
+`defaultQualityProfileId`, `revision`, `ready`, `blockers`, `holdSeconds`,
+`seedProtectionMatchesClient` and the quality vocabulary (`source-resolution` ids such as
+`webdl-1080p`). `PATCH` with `enabled: true` answers 409 `acquisition_not_ready` with the blockers
+until a verified indexer, a verified enabled client and a default profile exist.
+
+`PATCH /JellyfinMod/Entries/{id}` also accepts `{"qualityProfileId": "<id>"}`. An explicit `null`
+restores inheritance. Episodes inherit their series profile and reject the field.
+
+### Search
+
+`GET /JellyfinMod/Releases?entryId=&episodeId=&profileId=` never submits anything:
+
+```json
+{
+  "searchId": "…", "createdAt": "2026-09-19T10:00:00Z", "expiresAt": "2026-09-19T10:10:00Z",
+  "target": {"entryId": "…", "episodeId": null, "mediaType": "movie", "title": "Example Movie",
+             "year": 2024, "seasonNumber": null, "episodeNumber": null},
+  "profile": {"id": "…", "name": "HD", "revision": 3, "inherited": true},
+  "grab": {"available": true, "reason": null, "holdSeconds": 5, "activeOperationId": null},
+  "candidates": [{
+    "releaseId": "opaque", "indexerId": "…", "indexerName": "Tracker",
+    "rawTitle": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-GRP",
+    "parsed": {"title": "Example Movie", "year": 2024, "seasonNumber": null, "episodeNumbers": [],
+               "seasonPack": false, "absoluteNumbering": false, "dailyNumbering": false,
+               "resolution": "1080p", "source": "webdl", "codec": "h264", "audio": "DD+", "hdr": null,
+               "group": "GRP", "proper": false, "repack": false, "quality": "webdl-1080p"},
+    "match": {"identity": "verified", "method": "imdbid"},
+    "size": 4000000000, "seeders": 50, "peers": null, "publishedAt": "2026-09-18T10:00:00Z",
+    "freeleech": null, "proper": false, "repack": false, "infoHash": null, "sameHashReleaseIds": [],
+    "score": 522, "contributions": [{"code": "quality_rank", "points": 500}, {"code": "seeders", "points": 22}],
+    "eligible": true, "rejections": [], "seedRatio": 1.0, "seedMinutes": 2880
+  }],
+  "eligibleCount": 1, "rejectedCount": 0,
+  "indexers": [{"indexerId": "…", "name": "Tracker", "status": "ok", "message": null,
+                "resultCount": 1, "truncated": false, "retryAfterSeconds": null}],
+  "partial": false, "truncated": false
+}
+```
+
+Indexer `status` is `ok`, `no_results`, `auth_failed`, `rate_limited`, `timeout`, `unavailable`,
+`malformed_response`, `capabilities_unavailable`, `unsupported_search`, `secret_unavailable` or another
+stable failure code. Rejection codes include `identity_unverified`, `identity_mismatch`,
+`title_mismatch`, `year_missing`, `year_mismatch`, `media_type_mismatch`, `season_pack`,
+`multi_episode`, `absolute_numbering`, `ambiguous_numbering`, `ambiguous_special`, `episode_mismatch`,
+`quality_unknown`, `quality_forbidden`, `quality_not_allowed`, `size_unknown`, `runtime_unknown`,
+`size_below_minimum`, `size_above_maximum`, `no_download_locator`, `download_host_not_allowed` and
+`unsupported_hash`. Series searches need `episodeId` (400 `episode_required`).
+
+### Grab, hold and Cancel
+
+`POST /JellyfinMod/Releases/Grab` accepts only
+`{"searchId":"…","releaseId":"…","idempotencyKey":"grab-…"}`. A new operation answers 202 in state
+`pending` with `holdUntil`; the same key and payload answer 200 with the same operation. A reused key
+with another payload answers 409 `idempotency_conflict`. Other refusals are 404 `search_not_found` /
+`release_not_found`, 410 `search_expired`, 409 `release_rejected`, `grab_active` (with
+`operationId`), `duplicate_hash`, `acquisition_disabled`, `acquisition_not_ready`,
+`destination_not_same_filesystem` or `hash_mismatch`, and 502 `download_host_not_allowed`,
+`redirect_rejected`, `invalid_torrent` or `unsupported_hash`.
+
+```json
+{"id":"…","state":"pending","active":true,"cancellable":true,"entryId":"…","episodeId":null,
+ "releaseTitle":"Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-GRP","indexerName":"Tracker",
+ "quality":"webdl-1080p","size":4000000000,"infoHash":"<40 hex>","score":522,"seedRatio":1.0,
+ "seedMinutes":2880,"holdUntil":"2026-09-19T10:00:05Z","createdAt":"…","updatedAt":"…",
+ "submittedAt":null,"acceptedAt":null,"cancelledAt":null,"failureCode":null,
+ "message":"Held before sending; it can still be cancelled.","openUrl":null}
+```
+
+States: `pending` (held and cancellable, nothing sent), `submitting`, `accepted`, `failed`, `unknown`
+and `cancelled`. `GET /JellyfinMod/Grabs/{id}` reads one operation. `GET /JellyfinMod/Grabs` lists active
+and unknown ones. `POST /JellyfinMod/Grabs/{id}/Cancel` cancels a pending grab; repeating it returns
+the same cancelled operation, and after submission starts it answers 409 `grab_not_cancellable`
+(user decision 2). `POST /JellyfinMod/Grabs/{id}/Recheck` resolves an uncertain or accepted operation
+by infohash lookup and never resubmits. Entry detail adds `acquisition` for movies, and each episode
+adds `acquisition`. Ordinary users see only `state` and `updatedAt`. `DELETE /JellyfinMod/Entries/{id}`
+answers 409 `grab_active` while a grab owns the title.
