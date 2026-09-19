@@ -3,6 +3,10 @@
 **Phase 3 planning:** [`PHASE3.md`](PHASE3.md) refines retention scope, proposed defaults,
 deletion safeguards and T1–T6 acceptance; it supersedes older placeholder assumptions below.
 
+**Phase 5 and Phase 6 planning:** [`PHASE5.md`](PHASE5.md) (import pipeline, including explicit
+ownership of the seeding copy) and [`PHASE6.md`](PHASE6.md) (automation and multi-quality) refine
+the §6 sketches; where they and §6 differ, the phase documents win.
+
 **Current implementation:** use [`PLAN.md`](PLAN.md) for task order and
 [`PHASE1.md`](PHASE1.md) for Phase 1 decisions and unresolved technical gates. Older `/catalog`
 browse routes, redirects, `/Catalog` API names and tiny-diff estimates below are historical;
