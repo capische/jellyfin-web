@@ -8,6 +8,7 @@ export const ASYNC_USER_ROUTES: AsyncRoute[] = [
     { path: 'movies', type: AppType.Modern },
     { path: 'music', type: AppType.Modern },
     { path: 'books', type: AppType.Modern },
+    { path: 'catalog/queue', type: AppType.Modern },
     { path: 'musicvideos', type: AppType.Modern },
     { path: 'boxsets', type: AppType.Modern },
     { path: 'playlists', type: AppType.Modern },
