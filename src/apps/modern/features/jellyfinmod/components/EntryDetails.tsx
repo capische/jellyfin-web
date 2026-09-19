@@ -4,9 +4,10 @@ import { createPortal } from 'react-dom';
 
 import confirm from 'components/confirm/confirm';
 
-import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
+import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry, requestSearch } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
-import { useAcquisitionAvailable } from '../hooks/useAcquisition';
+import { AUTOMATION_CAPABILITY } from '../constants/queue';
+import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker } from '../integration/releasePicker';
 import type { AcquisitionSummary } from '../types/acquisition';
 import { getTmdbImage } from '../utils/entryLinks';
@@ -47,7 +48,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
     const [message, setMessage] = useState('');
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
-    const canAcquire = useAcquisitionAvailable(api, isAdmin);
+    const capabilities = usePluginCapabilities(api, isAdmin);
+    const canAcquire = capabilities.includes(RELEASES_CAPABILITY);
+    // Search now asks the next automation run to search this file-less title and resets its backoff (P6.M8).
+    const canSearchNow = capabilities.includes(AUTOMATION_CAPABILITY);
     const [busy, setBusy] = useState(false);
     const mount = (selector: string, content: React.ReactNode) => {
         const node = view.querySelector(selector);
@@ -128,6 +132,13 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             if (!signal.aborted) setEpisodes(episodes.map(item => item.id === updated.id ? updated : item));
         });
     }, [api, busy, entry.id, episodes, mutate, signal]);
+    const searchNow = useCallback(() => {
+        if (busy) return;
+        return mutate(async () => {
+            await requestSearch(api, entry.id, undefined, { signal });
+            if (!signal.aborted) setMessage('Search requested. The next automation run searches this title.');
+        });
+    }, [api, busy, entry.id, mutate, signal]);
     const refresh = useCallback(() => {
         if (busy) return;
         return mutate(async () => {
@@ -163,6 +174,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 {entry.state === 'reclaimed' ? 'Get again' : 'Search releases'}
             </button>}
             {isAdmin && <>
+                {canSearchNow && <button className='emby-button raised' type='button' aria-disabled={busy}
+                    onClick={searchNow}>Search now</button>}
                 <button className='emby-button raised' type='button' aria-busy={busy}
                     aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
                     {keepButtonLabel(busy, retention?.reason === 'kept')}
