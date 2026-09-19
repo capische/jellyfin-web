@@ -16,6 +16,7 @@ import type { ItemDto } from 'types/base/models/item-dto';
 import { browseEntries } from '../api/modApi';
 import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
+import { FileState } from '../types/entry';
 import EntryCards from './EntryCards';
 
 interface ContinueProps {
@@ -132,8 +133,10 @@ const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
         const nativeRows: BrowseRow[] = nativeItems.map(nativeItem => ({ kind: 'native', nativeItem: nativeItem as ItemDto }));
         // Native rows already come from each allowed Latest feed. Only append file-less
         // catalog rows here or the same native item appears twice in Recently Added.
+        // A reclaimed title was watched and removed; it is not something recently added (P3.T14).
         const entryRows = catalog.flatMap(result => result.data?.items ?? [])
-            .filter((row): row is Extract<BrowseRow, { kind: 'entry' }> => row.kind === 'entry');
+            .filter((row): row is Extract<BrowseRow, { kind: 'entry' }> => row.kind === 'entry')
+            .filter(row => row.entry.state !== FileState.Reclaimed);
         const seen = new Set<string>();
         const uniqueRows = [...nativeRows, ...entryRows].filter(row => {
             const item = row.kind === 'native' ? row.nativeItem : undefined;

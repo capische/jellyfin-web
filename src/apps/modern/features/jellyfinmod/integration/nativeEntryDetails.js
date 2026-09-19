@@ -1,10 +1,44 @@
 import actionsheet from 'components/actionSheet/actionSheet';
+import loading from 'components/loading/loading';
 import itemContextMenu, { executeCommand } from 'components/itemContextMenu';
 import toast from 'components/toast/toast';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { renderComponent } from 'utils/reactUtils';
 
+import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
+
+/**
+ * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
+ * endless spinner, or says plainly that it is unavailable (P3.T14).
+ */
+export async function handleMissingNativeItem(view, params, error) {
+    if (error?.status !== 404 || !params.id) return;
+    const client = params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
+    const api = client && ServerConnections.getApi(client.serverId());
+    try {
+        const entries = api ? await getEntries(api, { jellyfinItemId: params.id, limit: 1 }) : null;
+        const entry = entries?.items[0];
+        if (entry) {
+            window.location.replace('#/details?entryId=' + encodeURIComponent(entry.id)
+                + '&serverId=' + encodeURIComponent(client.serverId()));
+            return;
+        }
+    } catch (lookupError) {
+        console.error('[JellyfinMod] Could not look up the entry for a missing item', lookupError);
+    }
+
+    loading.hide();
+    const content = view.querySelector('.detailPageContent') ?? view;
+    const message = document.createElement('p');
+    message.className = 'jfmod-nativeUnavailable padded-left padded-right';
+    message.textContent = 'This item is no longer in the library. ';
+    const link = document.createElement('a');
+    link.href = '#/home';
+    link.textContent = 'Open Home';
+    message.appendChild(link);
+    content.prepend(message);
+}
 
 export default function initializeNativeEntryDetails(view, params) {
     let mount;
