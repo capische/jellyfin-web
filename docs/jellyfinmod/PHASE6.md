@@ -425,7 +425,9 @@ authentication, serializer, migrations and SQLite. It checks boundary query coun
 summaries, that a restart between runs creates no duplicate grab, import or replacement, and that
 automation and settings routes refuse anonymous and ordinary users.
 
-### Defaults chosen here — needs user decision
+### Defaults chosen here — accepted by the user on 2026-09-19
+
+The user accepted every default below as chosen on 2026-09-19.
 
 1. **Automation default and budgets (open question 1):** off after migration and after
    acceptance until an admin enables it; budgets as listed under M1.
@@ -495,6 +497,10 @@ and a disposable Torznab indexer:
 | GPL-3.0 code creeps in through "just the upgrade logic" | Independent implementation; test cases may mirror behaviour, source may not |
 
 ## Open questions for the user
+
+Questions 1–9 are answered by the user's acceptance of the defaults on 2026-09-19 (see
+*Defaults chosen here*); the answer is the default recorded there, where it differs from the
+proposal below.
 
 1. **Automation default.** Should `AutomationEnabled` stay off after Phase 6 acceptance until the
    admin turns it on (proposed), and are the budget defaults (6 grabs/day, 200 queries/indexer
