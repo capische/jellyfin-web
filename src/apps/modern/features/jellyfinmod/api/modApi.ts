@@ -1,6 +1,7 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
+import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { Filters } from 'types/library';
@@ -74,6 +75,8 @@ export interface EntryDetail {
     history: HistoryRecord[];
     episodes: EntryEpisode[];
     retention: RetentionSummary;
+    /** Newest grab of a movie entry; absent from older plugins (P4.A6). */
+    acquisition?: AcquisitionSummary | null;
 }
 
 export interface DiscoveryQuery {
@@ -161,5 +164,47 @@ export const removeEntry = async (api: Api, id: string, options?: AxiosRequestCo
 export const searchDiscovery = async (api: Api, params: DiscoveryQuery, options?: AxiosRequestConfig): Promise<DiscoveryResult> => {
     const response = await api.axiosInstance.get<DiscoveryResult>(api.basePath + BASE + '/Discover/Search',
         { ...options, headers: authorization(api), params });
+    return response.data;
+};
+
+export interface ReleaseQuery {
+    entryId: string;
+    /** Required for a series: one stable episode per search (P4.A1). */
+    episodeId?: string;
+    /** Rescores this search only; never changes the entry's saved profile. */
+    profileId?: string;
+}
+
+/** Searches enabled indexers for one target. Never starts a download. Administrator-only. */
+export const searchReleases = async (api: Api, params: ReleaseQuery, options?: AxiosRequestConfig): Promise<ReleaseSearch> => {
+    const response = await api.axiosInstance.get<ReleaseSearch>(api.basePath + BASE + '/Releases',
+        { ...options, headers: authorization(api), params });
+    return response.data;
+};
+
+/** Grabs one eligible release; the server holds it before sending it to the client (user decision 2). */
+export const grabRelease = async (api: Api, request: { searchId: string; releaseId: string; idempotencyKey: string },
+    options?: AxiosRequestConfig): Promise<GrabOperation> => {
+    const response = await api.axiosInstance.post<GrabOperation>(api.basePath + BASE + '/Releases/Grab', request,
+        { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+export const getGrab = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<GrabOperation> => {
+    const response = await api.axiosInstance.get<GrabOperation>(api.basePath + BASE + '/Grabs/' + encodeURIComponent(id),
+        { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+/** Cancels a held grab. Idempotent; the server answers 409 once submission has started. */
+export const cancelGrab = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<GrabOperation> => {
+    const response = await api.axiosInstance.post<GrabOperation>(api.basePath + BASE + '/Grabs/' + encodeURIComponent(id) + '/Cancel',
+        undefined, { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+export const getQualityProfiles = async (api: Api, options?: AxiosRequestConfig): Promise<QualityProfile[]> => {
+    const response = await api.axiosInstance.get<QualityProfile[]>(api.basePath + BASE + '/Settings/QualityProfiles',
+        { ...options, headers: authorization(api) });
     return response.data;
 };
