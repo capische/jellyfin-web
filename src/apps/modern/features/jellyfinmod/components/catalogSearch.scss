@@ -79,19 +79,9 @@
     }
 }
 
-.jfmod-addToast {
-    bottom: 2em;
-    left: 50%;
-    position: fixed;
-    transform: translateX(-50%);
-    z-index: 1099;
-}
+// The in-page Undo bar replaces the timed toast so D-pad users can reach it (P1.W13).
+.jfmod-undoBar {
+    margin: 0.5em 0;
 
-.jfmod-addToastUndo {
-    background: none;
-    border: 0;
-    color: #00a4dc;
-    cursor: pointer;
-    font: inherit;
-    margin-left: 1em;
+    .emby-button { margin-left: 0.5em; }
 }
