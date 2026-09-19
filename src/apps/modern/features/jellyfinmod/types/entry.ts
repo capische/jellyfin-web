@@ -1,3 +1,5 @@
+import type { AcquisitionSummary } from './acquisition';
+
 /**
  * A JellyfinMod entry. One per title, with or without a media file behind it.
  * Mirrors the plugin's Entry; see docs/jellyfinmod/UX.md §4.
@@ -43,6 +45,8 @@ export interface Entry {
     watchedAt?: string | null;
     /** Absolute timestamp, never a countdown — a cached "5 days left" goes stale. */
     reclaimAt?: string | null;
+    /** Administrator-assigned quality profile; null inherits the default (P4.A2). */
+    qualityProfileId?: string | null;
 }
 
 export interface HistoryRecord {
@@ -87,6 +91,8 @@ export interface EntryEpisode {
     availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;
     retention: RetentionSummary | null;
+    /** Newest grab of this episode; absent from older plugins (P4.A6). */
+    acquisition?: AcquisitionSummary | null;
 }
 
 export interface RetentionSummary {

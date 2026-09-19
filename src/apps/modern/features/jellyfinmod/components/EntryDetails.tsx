@@ -6,10 +6,24 @@ import confirm from 'components/confirm/confirm';
 
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
+import { useAcquisitionAvailable } from '../hooks/useAcquisition';
+import { openReleasePicker } from '../integration/releasePicker';
+import type { AcquisitionSummary } from '../types/acquisition';
 import { getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import RetentionStatus from './RetentionStatus';
+
+const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
+    pending: 'Grab held, not sent yet', submitting: 'Sending to the download client', accepted: 'Sent to the download client',
+    failed: 'Last grab failed', unknown: 'Grab not confirmed by the download client', cancelled: 'Last grab cancelled'
+};
+
+const AcquisitionLine: FC<{ acquisition?: AcquisitionSummary | null }> = ({ acquisition }) => {
+    if (!acquisition) return null;
+    return <p className='jfmod-acquisitionLine'>{ACQUISITION_LABELS[acquisition.state]}
+        {acquisition.releaseTitle ? ' · ' + acquisition.releaseTitle : ''}</p>;
+};
 
 import './entryDetails.scss';
 
@@ -29,7 +43,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const [history, setHistory] = useState(detail.history);
     // An older plugin omits the summary; the page must still render (P1.W14).
     const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
+    const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
     const [message, setMessage] = useState('');
+    // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
+    const canAcquire = useAcquisitionAvailable(api, isAdmin);
     const [busy, setBusy] = useState(false);
     const mount = (selector: string, content: React.ReactNode) => {
         const node = view.querySelector(selector);
@@ -47,7 +64,25 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             if (!signal.aborted) setBusy(false);
         }
     }, [signal]);
-    const searchReleases = useCallback(() => setMessage('Release search is not available yet. No download has started.'), []);
+    const reload = useCallback(async () => {
+        try {
+            const updated = await getEntry(api, entry.id, { signal });
+            if (signal.aborted) return;
+            setEntry(updated.entry);
+            setEpisodes(updated.episodes);
+            setHistory(updated.history);
+            setRetention(updated.retention);
+            setAcquisition(updated.acquisition ?? null);
+        } catch {
+            // The picker already showed the outcome; the page keeps its last good state.
+        }
+    }, [api, entry.id, signal]);
+    const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        void openReleasePicker({
+            api, entryId: entry.id, title: entry.title, mediaType: entry.mediaType, episodes,
+            episodeId: event.currentTarget.dataset.episodeId, onChanged: reload
+        });
+    }, [api, entry.id, entry.mediaType, entry.title, episodes, reload]);
     // Busy controls stay focusable (aria-disabled) so D-pad focus is not lost mid-request (P3.T19).
     const toggleMonitoring = useCallback(() => {
         if (busy) return;
@@ -122,10 +157,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
                 Open in Jellyfin
             </a>}
-            <button className='emby-button raised button-submit' type='button'
+            {canAcquire && <button className='emby-button raised button-submit' type='button'
                 onClick={searchReleases}>
-                Search releases
-            </button>
+                {entry.state === 'reclaimed' ? 'Get again' : 'Search releases'}
+            </button>}
             {isAdmin && <>
                 <button className='emby-button raised' type='button' aria-busy={busy}
                     aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
@@ -146,6 +181,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemDetailsGroup', <>
             <p role='status'>{message}</p>
             <RetentionStatus retention={retention} />
+            <AcquisitionLine acquisition={acquisition} />
             <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
                 <ol>{history.map(event => <li key={event.id}>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
@@ -157,6 +193,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     <span>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</span>
                     <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open episode</a> : availabilityLabel(episode.availability)}</span>
                     <RetentionStatus retention={episode.retention} compact />
+                    <AcquisitionLine acquisition={episode.acquisition} />
+                    {canAcquire && <button className='emby-button' type='button' data-episode-id={episode.id}
+                        onClick={searchReleases}>Search releases</button>}
                     {isAdmin && <button className='emby-button' type='button' role='switch' aria-checked={episode.monitored}
                         aria-disabled={busy} data-episode-id={episode.id} onClick={toggleEpisode}>
                         {episode.monitored ? '☑' : '☐'} Monitor
