@@ -1,0 +1,15 @@
+{
+  "name": "jellyfinmod-e2e",
+  "private": true,
+  "description": "JellyfinMod browser acceptance against the isolated test instance",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "review": "node browser-review.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
