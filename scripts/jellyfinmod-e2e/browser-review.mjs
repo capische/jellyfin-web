@@ -83,6 +83,11 @@ const heldRequests = new Set();
 let lastNetworkActivity = Date.now();
 page.on('pageerror', error => browserErrors.push(error.stack ?? error.message));
 page.on('request', request => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+        // A new document cancels the old one's pending requests, but Playwright never reports those as failed;
+        // left in place they would hold every later networkIdle wait to its full timeout.
+        for (const pending of inflight) if (!heldRequests.has(pending)) inflight.delete(pending);
+    }
     inflight.add(request);
     lastNetworkActivity = Date.now();
     allRequestUrls.push(request.url());
@@ -111,9 +116,9 @@ const poll = async (read, done, { timeout = 15000, interval = 250 } = {}) => {
     }
     return value;
 };
-/** Waits until the page has had no request in flight for `quiet` ms. Used before absence checks, where no element can be awaited. */
 /** Requests still pending when a networkIdle wait timed out, by method, type and path (no query, so no tokens). */
 const idleTimeouts = {};
+/** Waits until the page has had no request in flight for `quiet` ms. Used before absence checks, where no element can be awaited. */
 const networkIdle = ({ quiet = 750, timeout = 20000 } = {}) => timed('networkIdle', async () => {
     const deadline = Date.now() + timeout;
     const pending = () => [...inflight].filter(request => !heldRequests.has(request));
@@ -413,9 +418,12 @@ try {
                 .waitFor({ timeout: 10000 }).then(() => true, () => false);
             if (!menuHasSearch) throw new Error('Search releases missing from native More menu in ' + layout);
             checks.push({ layout, width, height, nativeDetails: 'passed' });
-            // Escape is the app's Back on TV; elsewhere the action sheet closes on Escape itself.
+            // Escape is the app's Back on TV and closes the sheet. With focus on the body, desktop and mobile keep the
+            // sheet open, so waiting there only ran out its timeout; the reload that follows discards the sheet.
             await page.keyboard.press('Escape');
-            await page.locator('[data-id="jfmod-search-releases"]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
+            if (layout === 'tv') {
+                await page.locator('[data-id="jfmod-search-releases"]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
+            }
         });
         await step(`keep by keyboard ${layout} ${width}x${height}`, async () => {
             await reload();
@@ -444,10 +452,11 @@ try {
             title: root.querySelector('.sectionTitle')?.textContent.trim(),
             ids: Array.from(root.querySelectorAll('[data-jfmod-tmdb-id]')).map(node => node.getAttribute('data-jfmod-tmdb-id'))
         })));
-        await step('hard reload and open discovery', async () => {
+        await step('reload and open discovery', async () => {
             await page.setViewportSize({ width: 1440, height: 900 });
             await page.evaluate(() => localStorage.setItem('layout', 'desktop'));
-            await reload({ ignoreCache: true });
+            // Setup already bypassed the HTTP cache once; this reload only applies the layout.
+            await reload();
             await navigate(server + '#/search?query=' + encodeURIComponent(searchQuery));
             if (!await page.locator('#searchPage:not(.hide)').count()) {
                 const searchButton = page.locator('button[aria-label="Search"]').first();
@@ -672,7 +681,8 @@ try {
                 await page.evaluate(update => ApiClient.updateUserConfiguration(update.userId, update.configuration),
                     { userId: originalUserId, configuration });
                 await clearQueryCache();
-                await reload({ ignoreCache: true });
+                // Recently Added reads POST /JellyfinMod/Browse, which the HTTP cache never serves; a plain reload resets the app.
+                await reload();
                 await page.evaluate(async applied => {
                     const user = await ApiClient.getCurrentUser(false);
                     user.Configuration = applied;
@@ -744,8 +754,8 @@ try {
         if (!nativeItemId) throw new Error('Plugin outage fixture needs a native binding');
         await clearQueryCache();
         await page.route(pluginRoute, blockPlugin);
-        // Routing disables the HTTP cache for plugin requests, so quick mode keeps its single cache-bypassing reload for setup.
-        await reload({ ignoreCache: !quick });
+        // Routing disables the HTTP cache, so the run keeps its single cache-bypassing reload for setup.
+        await reload();
         await navigate(server + '#/details?id=' + encodeURIComponent(nativeItemId));
         const nativeWithoutPlugin = await poll(() => page.evaluate(() => ({
             title: document.querySelector('#itemDetailPage:not(.hide) .itemName')?.textContent?.trim(),
