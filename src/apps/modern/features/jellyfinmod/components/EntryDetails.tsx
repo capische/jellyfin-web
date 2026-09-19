@@ -1,11 +1,14 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import React, { type ChangeEvent, type FC, useCallback, useState } from 'react';
+import React, { type FC, type MouseEvent, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import confirm from 'components/confirm/confirm';
 
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
 import { getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
+import HistoryToggle from './HistoryToggle';
 import RetentionStatus from './RetentionStatus';
 
 import './entryDetails.scss';
@@ -24,7 +27,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const [entry, setEntry] = useState(detail.entry);
     const [episodes, setEpisodes] = useState(detail.episodes);
     const [history, setHistory] = useState(detail.history);
-    const [retention, setRetention] = useState(detail.retention);
+    // An older plugin omits the summary; the page must still render (P1.W14).
+    const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
     const [message, setMessage] = useState('');
     const [busy, setBusy] = useState(false);
     const mount = (selector: string, content: React.ReactNode) => {
@@ -44,14 +48,27 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         }
     }, [signal]);
     const searchReleases = useCallback(() => setMessage('Release search is not available yet. No download has started.'), []);
-    const toggleMonitoring = useCallback(() => mutate(async () => {
-        const updated = await patchEntry(api, entry.id, !entry.monitored, { signal });
-        if (!signal.aborted) setEntry(updated);
-    }), [api, entry.id, entry.monitored, mutate, signal]);
-    const remove = useCallback(() => mutate(async () => {
-        await removeEntry(api, entry.id, { signal });
-        if (!signal.aborted) window.location.hash = '#/home';
-    }), [api, entry.id, mutate, signal]);
+    // Busy controls stay focusable (aria-disabled) so D-pad focus is not lost mid-request (P3.T19).
+    const toggleMonitoring = useCallback(() => {
+        if (busy) return;
+        return mutate(async () => {
+            const updated = await patchEntry(api, entry.id, !entry.monitored, { signal });
+            if (!signal.aborted) setEntry(updated);
+        });
+    }, [api, busy, entry.id, entry.monitored, mutate, signal]);
+    const remove = useCallback(async () => {
+        if (busy) return;
+        try {
+            await confirm({ title: 'Remove entry', text: `Remove ${entry.title} from the catalog?`,
+                confirmText: 'Remove', primary: 'delete' });
+        } catch {
+            return;
+        }
+        return mutate(async () => {
+            await removeEntry(api, entry.id, { signal });
+            if (!signal.aborted) window.location.hash = '#/home';
+        });
+    }, [api, busy, entry.id, entry.title, mutate, signal]);
     const keep = useCallback(() => {
         if (busy) return;
         return mutate(async () => {
@@ -66,25 +83,28 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             }
         });
     }, [api, busy, entry.id, mutate, signal]);
-    const toggleEpisode = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const toggleEpisode = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         const id = event.currentTarget.dataset.episodeId;
-        const monitored = event.currentTarget.checked;
-        if (!id) return;
+        const monitored = event.currentTarget.getAttribute('aria-checked') !== 'true';
+        if (!id || busy) return;
         return mutate(async () => {
             const updated = await patchEpisode(api, entry.id, id, monitored, { signal });
             if (!signal.aborted) setEpisodes(episodes.map(item => item.id === updated.id ? updated : item));
         });
-    }, [api, entry.id, episodes, mutate, signal]);
-    const refresh = useCallback(() => mutate(async () => {
-        const updated = await refreshEntry(api, entry.id, { signal });
-        if (!signal.aborted) {
-            setEntry(updated.entry);
-            setEpisodes(updated.episodes);
-            setHistory(updated.history);
-            setRetention(updated.retention);
-            setMessage('Metadata refreshed.');
-        }
-    }), [api, entry.id, mutate, signal]);
+    }, [api, busy, entry.id, episodes, mutate, signal]);
+    const refresh = useCallback(() => {
+        if (busy) return;
+        return mutate(async () => {
+            const updated = await refreshEntry(api, entry.id, { signal });
+            if (!signal.aborted) {
+                setEntry(updated.entry);
+                setEpisodes(updated.episodes);
+                setHistory(updated.history);
+                setRetention(updated.retention);
+                setMessage('Metadata refreshed.');
+            }
+        });
+    }, [api, busy, entry.id, mutate, signal]);
     const availabilityLabel = (availability: EntryDetail['episodes'][number]['availability']) => {
         if (availability === 'onDisk') return 'On disk';
         if (availability === 'unaired') return 'Unaired';
@@ -108,14 +128,16 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             </button>
             {isAdmin && <>
                 <button className='emby-button raised' type='button' aria-busy={busy}
-                    aria-disabled={busy} aria-pressed={retention.reason === 'kept'} onClick={keep}>
-                    {keepButtonLabel(busy, retention.reason === 'kept')}
+                    aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
+                    {keepButtonLabel(busy, retention?.reason === 'kept')}
                 </button>
-                <label><input type='checkbox' checked={entry.monitored} disabled={busy}
-                    onChange={toggleMonitoring} /> Monitor</label>
-                <button className='emby-button' type='button' disabled={busy}
+                <button className='emby-button raised' type='button' role='switch' aria-checked={entry.monitored}
+                    aria-disabled={busy} onClick={toggleMonitoring}>
+                    {entry.monitored ? '☑' : '☐'} Monitor
+                </button>
+                <button className='emby-button' type='button' aria-disabled={busy}
                     onClick={remove}>Remove entry</button>
-                {entry.mediaType === 'series' && <button className='emby-button' type='button' disabled={busy}
+                {entry.mediaType === 'series' && <button className='emby-button' type='button' aria-disabled={busy}
                     onClick={refresh}>Refresh metadata</button>}
             </>}
         </div>)}
@@ -124,20 +146,21 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemDetailsGroup', <>
             <p role='status'>{message}</p>
             <RetentionStatus retention={retention} />
-            <details className='jfmod-entryHistory'>
-                <summary>History{history[0] ? ' · ' + history[0].summary : ''}</summary>
+            <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
                 <ol>{history.map(event => <li key={event.id}>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
                 </li>)}</ol>
-            </details>
+            </HistoryToggle>
             {episodes.length > 0 && <section aria-label='Episodes'>
                 <h2>Episodes</h2>
                 {episodes.map(episode => <div className='jfmod-episodeRow' key={episode.id}>
                     <span>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</span>
                     <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open episode</a> : availabilityLabel(episode.availability)}</span>
                     <RetentionStatus retention={episode.retention} compact />
-                    {isAdmin && <label><input type='checkbox' checked={episode.monitored} disabled={busy}
-                        data-episode-id={episode.id} onChange={toggleEpisode} /> Monitor</label>}
+                    {isAdmin && <button className='emby-button' type='button' role='switch' aria-checked={episode.monitored}
+                        aria-disabled={busy} data-episode-id={episode.id} onClick={toggleEpisode}>
+                        {episode.monitored ? '☑' : '☐'} Monitor
+                    </button>}
                 </div>)}
             </section>}
         </>)}
