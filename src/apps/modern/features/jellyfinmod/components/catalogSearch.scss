@@ -54,10 +54,29 @@
         width: 11em;
     }
 
-    .jfmod-discoveryArtwork { background-color: #202020; background-position: center; background-size: cover; border-radius: 0.2em; height: 15em; }
-    .jfmod-discoveryTitle { font-size: 86%; padding: 0.5em 0; }
-    .jfmod-discoveryCard button { position: absolute; right: 1.4em; top: 0.4em; }
-    .jfmod-searchNotice { color: #f2b01e; min-height: 15em; }
+    .jfmod-discoveryArtwork {
+        background-color: #202020;
+        background-position: center;
+        background-size: cover;
+        border-radius: 0.2em;
+        height: 15em;
+    }
+
+    .jfmod-discoveryTitle {
+        font-size: 86%;
+        padding: 0.5em 0;
+    }
+
+    .jfmod-discoveryCard button {
+        position: absolute;
+        right: 1.4em;
+        top: 0.4em;
+    }
+
+    .jfmod-searchNotice {
+        color: #f2b01e;
+        min-height: 15em;
+    }
 }
 
 .jfmod-addToast {
