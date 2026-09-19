@@ -88,6 +88,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const availabilityLabel = (availability: EntryDetail['episodes'][number]['availability']) => {
         if (availability === 'onDisk') return 'On disk';
         if (availability === 'unaired') return 'Unaired';
+        if (availability === 'reclaimed') return 'Removed after watching';
         return 'Missing';
     };
     return <>
