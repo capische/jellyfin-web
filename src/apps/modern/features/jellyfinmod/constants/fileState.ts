@@ -45,7 +45,10 @@ const PROTECTION_MESSAGES = new Map([
     ['favorite_series', 'Protected while marked as a favourite.'],
     ['active_session', 'Protected while it is playing.'],
     ['active_resume', 'Protected while playback is in progress.'],
-    ['waiting_for_completion', 'Waiting for the configured watched rule.']
+    ['waiting_for_completion', 'Waiting for the configured watched rule.'],
+    // The public vocabulary shown to non-administrators (P3.T15).
+    ['protected', 'Protected from automatic removal.'],
+    ['series_unavailable', 'Protected while its series cannot be read.']
 ]);
 
 /** Privacy-safe wording shared by native, file-less and episode details. */
@@ -58,6 +61,8 @@ export const retentionMessage = (retention?: RetentionSummary | null): string =>
         if (days === 0) return 'Eligible for automatic removal today.';
         return `Scheduled for ${deadline.toLocaleDateString()} · ${days} day${days === 1 ? '' : 's'} remaining.`;
     }
+    // Non-administrators are not given the deadline, which could reveal other users' activity (P3.T15).
+    if (retention.state === 'scheduled') return 'Scheduled for automatic removal after watching.';
     if (retention.state === 'mixed') return 'Episodes have different retention schedules.';
     const protectionMessage = PROTECTION_MESSAGES.get(retention.reason);
     if (protectionMessage) return protectionMessage;
