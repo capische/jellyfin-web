@@ -7,6 +7,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
+import { openReleasePickerForEntry } from './releasePicker';
 
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
@@ -86,11 +87,21 @@ export async function showNativeEntryMenu(options, view) {
     if (!view.querySelector('.jfmod-nativeEntryDetails .jfmod-entryHistory')) {
         return itemContextMenu.show(options);
     }
+    // Administrators get Search releases only when the plugin advertises it (P4.A7).
+    const acquisition = view.querySelector('.jfmod-nativeEntryDetails [data-jfmod-can-acquire="true"]');
+    if (!acquisition) return itemContextMenu.show(options);
     const commands = await itemContextMenu.getCommands(options);
     commands.push({ id: 'jfmod-search-releases', name: 'Search releases', icon: 'search' });
     const id = await actionsheet.show({ items: commands, positionTo: options.positionTo, resolveOnClick: ['share'] });
     if (id === 'jfmod-search-releases') {
-        toast('Release search is not available yet. No download has started.');
+        const client = options.item?.ServerId ? ServerConnections.getApiClient(options.item.ServerId) : ServerConnections.currentApiClient();
+        const api = client && ServerConnections.getApi(client.serverId());
+        if (api) {
+            openReleasePickerForEntry(api, acquisition.dataset.jfmodEntryId, options.item?.Id).catch(error => {
+                console.error('[JellyfinMod] Could not open the release picker', error);
+                toast('Releases could not be loaded. Please try again.');
+            });
+        }
         return { command: id, updated: false, deleted: false };
     }
     return executeCommand(options.item, id, options);

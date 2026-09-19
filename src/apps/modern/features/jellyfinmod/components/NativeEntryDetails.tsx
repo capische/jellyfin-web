@@ -4,6 +4,7 @@ import React, { type FC, useCallback, useState } from 'react';
 
 import { getEntries, getEntry, keepEntry } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
+import { useAcquisitionAvailable } from '../hooks/useAcquisition';
 import HistoryToggle from './HistoryToggle';
 import RetentionStatus from './RetentionStatus';
 import './entryDetails.scss';
@@ -12,6 +13,7 @@ import './entryDetails.scss';
 const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin: boolean }> = ({ api, userId, itemId, isAdmin }) => {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
+    const canAcquire = useAcquisitionAvailable(api, isAdmin);
     const detail = useQuery({
         queryKey: ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId],
         queryFn: async ({ signal }) => {
@@ -42,7 +44,9 @@ const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const episode = detail.data.episodes.find(candidate => sameId(candidate.jellyfinItemId));
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
-    return <section aria-label='JellyfinMod'>
+    // The native More menu reads these to offer Search releases for this entry (P4.A7).
+    return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
+        data-jfmod-can-acquire={canAcquire ? 'true' : undefined}>
         <p role='status'>{message}</p>
         <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
         {isSeriesPage && detail.data.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode retention'>
