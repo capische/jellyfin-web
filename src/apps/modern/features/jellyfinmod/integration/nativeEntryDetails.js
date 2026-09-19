@@ -5,7 +5,7 @@ import toast from 'components/toast/toast';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { renderComponent } from 'utils/reactUtils';
 
-import { getEntries } from '../api/modApi';
+import { getEntries, requestSearch } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
 import { openReleasePickerForEntry } from './releasePicker';
 
@@ -43,6 +43,7 @@ export async function handleMissingNativeItem(view, params, error) {
 
 export default function initializeNativeEntryDetails(view, params) {
     let mount;
+    let versionsMount;
     let unmount;
     let generation = 0;
     const hide = () => {
@@ -51,6 +52,8 @@ export default function initializeNativeEntryDetails(view, params) {
         unmount = undefined;
         mount?.remove();
         mount = undefined;
+        versionsMount?.remove();
+        versionsMount = undefined;
     };
     const show = async () => {
         hide();
@@ -64,11 +67,21 @@ export default function initializeNativeEntryDetails(view, params) {
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
         target.appendChild(mount);
+        // Version rows sit beside the stock track selections, outside their horizontal focus container (P6.M8).
+        const trackSelections = view.querySelector('.trackSelections');
+        if (trackSelections) {
+            versionsMount = document.createElement('div');
+            versionsMount.className = 'jfmod-versionsMount';
+            // insertBefore rather than after(): older TV engines lack ChildNode.after.
+            trackSelections.parentNode.insertBefore(versionsMount, trackSelections.nextSibling);
+        }
         unmount = renderComponent(NativeEntryDetails, {
             api,
             userId: client.getCurrentUserId(),
             itemId: params.id,
-            isAdmin: !!user?.Policy?.IsAdministrator
+            isAdmin: !!user?.Policy?.IsAdministrator,
+            view,
+            versionsMount
         }, mount);
     };
     const destroy = () => {
@@ -82,26 +95,53 @@ export default function initializeNativeEntryDetails(view, params) {
     view.addEventListener('viewdestroy', destroy);
 }
 
+/**
+ * The mod's More menu commands for the loaded entry, all administrator-only and each gated on the plugin's advertised
+ * capability: Search releases (P4.A7), Get another quality for a title with a file and Search now for an
+ * upgrade-eligible one (P6.M8).
+ */
+const modCommands = section => {
+    const commands = [];
+    if (section.dataset.jfmodCanAcquire === 'true') commands.push({ id: 'jfmod-search-releases', name: 'Search releases', icon: 'search' });
+    if (section.dataset.jfmodCanAddVersion === 'true') commands.push({ id: 'jfmod-add-version', name: 'Get another quality', icon: 'hd' });
+    if (section.dataset.jfmodCanSearchNow === 'true') commands.push({ id: 'jfmod-search-now', name: 'Search now', icon: 'autorenew' });
+    return commands;
+};
+
+const runModCommand = (id, section, options) => {
+    const client = options.item?.ServerId ? ServerConnections.getApiClient(options.item.ServerId) : ServerConnections.currentApiClient();
+    const api = client && ServerConnections.getApi(client.serverId());
+    if (!api) return;
+    const entryId = section.dataset.jfmodEntryId;
+    if (id === 'jfmod-search-now') {
+        requestSearch(api, entryId).then(() => {
+            toast('Search requested. The next automation run searches this title.');
+        }).catch(error => {
+            console.error('[JellyfinMod] Could not request a search', error);
+            toast('The search could not be requested. Please try again.');
+        });
+        return;
+    }
+    const intent = id === 'jfmod-add-version' ? 'addVersion' : undefined;
+    openReleasePickerForEntry(api, entryId, options.item?.Id, intent, intent ? section.dataset.jfmodEpisodeId : undefined).catch(error => {
+        console.error('[JellyfinMod] Could not open the release picker', error);
+        toast('Releases could not be loaded. Please try again.');
+    });
+};
+
 /** Extend only the native Details More menu after an accessible entry has loaded. */
 export async function showNativeEntryMenu(options, view) {
     if (!view.querySelector('.jfmod-nativeEntryDetails .jfmod-entryHistory')) {
         return itemContextMenu.show(options);
     }
-    // Administrators get Search releases only when the plugin advertises it (P4.A7).
-    const acquisition = view.querySelector('.jfmod-nativeEntryDetails [data-jfmod-can-acquire="true"]');
-    if (!acquisition) return itemContextMenu.show(options);
+    const section = view.querySelector('.jfmod-nativeEntryDetails [data-jfmod-entry-id]');
+    const extra = section ? modCommands(section) : [];
+    if (!extra.length) return itemContextMenu.show(options);
     const commands = await itemContextMenu.getCommands(options);
-    commands.push({ id: 'jfmod-search-releases', name: 'Search releases', icon: 'search' });
+    commands.push(...extra);
     const id = await actionsheet.show({ items: commands, positionTo: options.positionTo, resolveOnClick: ['share'] });
-    if (id === 'jfmod-search-releases') {
-        const client = options.item?.ServerId ? ServerConnections.getApiClient(options.item.ServerId) : ServerConnections.currentApiClient();
-        const api = client && ServerConnections.getApi(client.serverId());
-        if (api) {
-            openReleasePickerForEntry(api, acquisition.dataset.jfmodEntryId, options.item?.Id).catch(error => {
-                console.error('[JellyfinMod] Could not open the release picker', error);
-                toast('Releases could not be loaded. Please try again.');
-            });
-        }
+    if (extra.some(command => command.id === id)) {
+        runModCommand(id, section, options);
         return { command: id, updated: false, deleted: false };
     }
     return executeCommand(options.item, id, options);
