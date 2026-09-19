@@ -326,7 +326,7 @@ export default function (view, params, tabContent, options) {
     let usingCatalogRows = false;
     let unmountCatalog = null;
     let focusedIdentity = {};
-    const unsubscribeCatalog = subscribeLegacyBrowse(ApiClient, () => itemsContainer?.refreshItems());
+    const unsubscribeCatalog = subscribeLegacyBrowse(ApiClient, () => itemsContainer?.refreshItems(), view);
 
     if (options.mode === 'favorites') {
         query.IsFavorite = true;
