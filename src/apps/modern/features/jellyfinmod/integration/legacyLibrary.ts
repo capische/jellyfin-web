@@ -242,10 +242,34 @@ export const getFocusedBrowseIdentity = (container: HTMLElement) => {
     };
 };
 
-/** Keep legacy TV grids aligned with the plugin's asynchronous reconciliation work. */
-export const subscribeLegacyBrowse = (apiClient: LegacyApiClient, refresh: () => void) => {
+/**
+ * Keep legacy TV grids aligned with the plugin's asynchronous reconciliation work. While the view is hidden
+ * behind another page, changes are only remembered and one refresh runs when it is shown again, so a hidden
+ * grid never shows the spinner, scrolls or steals focus from the visible page (P2.R10).
+ */
+export const subscribeLegacyBrowse = (apiClient: LegacyApiClient, onRefresh: () => void, view?: HTMLElement) => {
     let libraryTimer: ReturnType<typeof setTimeout> | undefined;
     let trackedTaskRunning = false;
+    let hidden = false;
+    let pendingRefresh = false;
+    const refresh = () => {
+        if (hidden) {
+            pendingRefresh = true;
+            return;
+        }
+        onRefresh();
+    };
+    const onHide = () => {
+        hidden = true;
+    };
+    const onShow = () => {
+        hidden = false;
+        if (!pendingRefresh) return;
+        pendingRefresh = false;
+        onRefresh();
+    };
+    view?.addEventListener('viewbeforehide', onHide);
+    view?.addEventListener('viewshow', onShow);
     const currentUserId = apiClient.getCurrentUserId().replace(/-/g, '').toLowerCase();
     const unsubscribers = [
         apiClient.subscribe([OutboundWebSocketMessageType.UserDataChanged], ({ Data }) => {
@@ -273,6 +297,8 @@ export const subscribeLegacyBrowse = (apiClient: LegacyApiClient, refresh: () =>
     ];
     return () => {
         if (libraryTimer) clearTimeout(libraryTimer);
+        view?.removeEventListener('viewbeforehide', onHide);
+        view?.removeEventListener('viewshow', onShow);
         unsubscribers.forEach(unsubscribe => {
             unsubscribe();
         });
