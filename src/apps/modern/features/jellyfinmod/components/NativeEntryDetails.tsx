@@ -4,6 +4,7 @@ import React, { type FC, useCallback, useState } from 'react';
 
 import { getEntries, getEntry, keepEntry } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
+import HistoryToggle from './HistoryToggle';
 import RetentionStatus from './RetentionStatus';
 import './entryDetails.scss';
 
@@ -44,23 +45,21 @@ const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin
     return <section aria-label='JellyfinMod'>
         <p role='status'>{message}</p>
         <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
-        {isSeriesPage && detail.data.episodes.some(candidate => candidate.retention) && <details className='jfmod-entryHistory'>
-            <summary>Episode retention</summary>
+        {isSeriesPage && detail.data.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode retention'>
             {detail.data.episodes.map(candidate => <div className='jfmod-episodeRow' key={candidate.id}>
                 <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
                 <RetentionStatus retention={candidate.retention} compact />
             </div>)}
-        </details>}
+        </HistoryToggle>}
         {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
             aria-disabled={busy} aria-pressed={detail.data.retention.reason === 'kept'} onClick={keep}>
             {keepButtonLabel(busy, detail.data.retention.reason === 'kept')}
         </button>}
-        <details className='jfmod-entryHistory'>
-            <summary>History{detail.data.history[0] ? ' · ' + detail.data.history[0].summary : ''}</summary>
+        <HistoryToggle label={<>History{detail.data.history[0] ? ' · ' + detail.data.history[0].summary : ''}</>}>
             <ol>{detail.data.history.map(event => <li key={event.id}>
                 <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
             </li>)}</ol>
-        </details>
+        </HistoryToggle>
     </section>;
 };
 
