@@ -1,3 +1,5 @@
+import type { AutomationSummary } from './versions';
+
 /**
  * Phase 5 queue and import contract, mirroring the plugin's Queue and ImportOperation DTOs (PHASE5.md, API contract).
  * Rows never carry a credential or a credential-bearing URL; physical paths appear only in the admin block.
@@ -100,6 +102,8 @@ export interface QueueList {
     clientStatus: QueueClientStatus;
     importEnabled: boolean;
     seedReleaseEnabled: boolean;
+    /** Automation state (P6.M8); null or absent from an older plugin. */
+    automation?: AutomationSummary | null;
 }
 
 export interface QueueQuery {

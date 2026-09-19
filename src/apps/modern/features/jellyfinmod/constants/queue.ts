@@ -64,6 +64,27 @@ const SEED_REASONS = new Map([
     ['seeding_copy_survived', 'The client removed the torrent but its file is still on disk.']
 ]);
 
+/** Why automation is not grabbing, one short sentence per `pausedReasons` code (P6.M8). */
+const AUTOMATION_PAUSED_REASONS = new Map([
+    ['disabled', 'Automation is turned off.'],
+    ['budget_grabs', 'Today\'s grab budget is used up.'],
+    ['too_many_open_imports', 'Too many downloads are still being imported.'],
+    ['free_space_floor', 'Free space in the library is below the configured floor.'],
+    ['client_unreachable', 'The download client cannot be reached.'],
+    ['acquisition_not_ready', 'Indexers or the download client are not ready.']
+]);
+
+/**
+ * The queue's automation line for administrators: null when automation runs, a quiet `off` when the master switch
+ * is the only reason, and otherwise every reason in words, each once.
+ */
+export const automationPausedText = (pausedReasons: string[] | null | undefined): { quiet: boolean; text: string } | null => {
+    if (!pausedReasons?.length) return null;
+    if (pausedReasons.every(reason => reason === 'disabled')) return { quiet: true, text: 'Automation is off.' };
+    const sentences = pausedReasons.map(reason => AUTOMATION_PAUSED_REASONS.get(reason) ?? 'Another safeguard is holding it.');
+    return { quiet: false, text: 'Automation paused: ' + Array.from(new Set(sentences)).join(' ') };
+};
+
 /** Refusals of Remove and Retry, by ProblemDetails `type`. */
 const ACTION_ERRORS = new Map([
     ['not_in_queue', 'It has already left the queue.'],
