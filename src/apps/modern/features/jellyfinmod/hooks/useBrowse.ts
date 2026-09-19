@@ -26,7 +26,8 @@ export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId,
         limit: libraryPageSize || undefined,
         alphabet: settings.Alphabet,
         state: filters?.FileStates,
-        dueWithinDays: filters?.RetentionDueWithinDays,
+        // An older plugin rejects the unknown field with 400 (P1.W14).
+        dueWithinDays: health.data?.capabilities?.includes('browse.dueWithinDays') ? filters?.RetentionDueWithinDays : undefined,
         filters: {
             genres: filters?.Genres,
             years: filters?.Years,
@@ -52,9 +53,12 @@ export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId,
             && (previousQuery?.queryKey[5] as BrowseRequest | undefined)?.mediaType === request.mediaType ? previous : undefined,
         retry: false
     });
+    // A failed background refetch keeps the catalog rows already shown; only a missing plugin (404) or a
+    // first load that never succeeded falls back to the native grid (P1.W14).
+    const missing = (result.error as { response?: { status?: number } } | null)?.response?.status === 404;
     return {
         ...result,
-        data: result.isError || health.isError ? undefined : result.data,
+        data: health.isError || missing ? undefined : result.data,
         isSelectingSource: supported && !!user?.Id && (health.isPending || health.data?.ok === true && result.isPending)
     };
 }
