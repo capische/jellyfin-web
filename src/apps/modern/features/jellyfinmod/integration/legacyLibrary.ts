@@ -7,6 +7,7 @@ import type { CardOptions } from 'types/cardOptions';
 import { renderComponent } from 'utils/reactUtils';
 
 import EntryCards from '../components/EntryCards';
+import './legacyLibrary.scss';
 import EntryLists from '../components/EntryLists';
 import type { BrowseRequest, BrowseResult } from '../api/modApi';
 import type { BrowseRow } from '../types/browse';
@@ -205,7 +206,10 @@ export const mountLegacyBrowse = (
 ) => {
     const root = container.querySelector<HTMLElement>('.jfmod-legacyLibraryRoot');
     if (!root) return;
-    root.style.display = 'contents';
+    // The wrapper lays cards out itself instead of relying on display: contents, which engines older than
+    // Chromium 65 ignore and which collapsed the grid to one card per row (P1.W11).
+    root.className = ['jfmod-legacyLibraryRoot', viewStyle === 'List' ? 'vertical-list' : 'vertical-wrap',
+        container.classList.contains('centered') ? 'centered' : ''].filter(Boolean).join(' ');
     const serverId = window.ApiClient.serverId();
     let unmount: () => void;
     if (viewStyle === 'List') {
