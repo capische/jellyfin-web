@@ -54,7 +54,12 @@ export interface ReleaseCandidate {
     rejections: ReleaseRejection[];
     seedRatio: number | null;
     seedMinutes: number | null;
+    /** The candidate's quality is already held; grabbing it as another version answers 409 `held_quality` (P6.M6). */
+    heldQuality?: boolean;
 }
+
+/** `addVersion` adds a version beside the held file (P6.M6); the default is `acquire`. */
+export type ReleaseIntent = 'acquire' | 'addVersion';
 
 export interface IndexerOutcome {
     indexerId: string;
@@ -69,6 +74,8 @@ export interface IndexerOutcome {
 
 export interface ReleaseSearch {
     searchId: string;
+    /** Echoed by plugins with `versions`; absent from older ones. */
+    intent?: ReleaseIntent;
     createdAt: string;
     expiresAt: string;
     target: {

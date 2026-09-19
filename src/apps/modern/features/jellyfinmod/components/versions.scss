@@ -1,0 +1,90 @@
+// Version rows beside the stock version select (UX §11, P6.M8). One column on every layout, one button per row, so
+// each version is a D-pad stop on TV. Values come from the base theme: primary #00a4dc, card radius 0.2em, secondary
+// text 86%. No flex gap, min()/max() or display: contents, for older TV engines (P1.W11).
+
+// The mount stays empty (and takes no space) when the plugin has no `versions`.
+.jfmod-versions {
+    max-width: 48em;
+    margin: 0 0 1em;
+}
+
+.jfmod-versionsHeading {
+    margin: 0 0 0.3em;
+    font-size: 86%;
+    font-weight: normal;
+    opacity: 0.8;
+}
+
+.jfmod-versionRow {
+    display: flex;
+    align-items: baseline;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 0.2em;
+    padding: 0.5em 0.8em;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+        background: rgba(0, 164, 220, 0.2);
+        outline: none;
+    }
+}
+
+.jfmod-versionRow--selected {
+    background: rgba(0, 164, 220, 0.08);
+}
+
+.jfmod-versionMark {
+    flex: 0 0 auto;
+    width: 1.4em;
+    color: #00a4dc;
+}
+
+.jfmod-versionBody {
+    display: flex;
+    align-items: baseline;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+
+    > * { margin-right: 0.8em; }
+}
+
+.jfmod-versionResolution {
+    min-width: 3.4em;
+    font-weight: 600;
+}
+
+.jfmod-versionDetails {
+    opacity: 0.86;
+}
+
+.jfmod-versionLabel,
+.jfmod-versionRetention {
+    font-size: 86%;
+    opacity: 0.7;
+}
+
+.jfmod-versionRetention::before {
+    content: '· ';
+}
+
+.jfmod-versionDefault {
+    flex: 0 0 auto;
+    margin-left: 0.8em;
+    padding: 0 0.4em;
+    border: 1px solid #00a4dc;
+    border-radius: 0.2em;
+    font-size: 86%;
+    text-transform: uppercase;
+}
+
+.jfmod-versionRow--add {
+    color: #00a4dc;
+}
