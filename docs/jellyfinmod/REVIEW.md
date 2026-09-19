@@ -18,13 +18,20 @@ plugin and built web bundle on the isolated Jellyfin instance. Production is not
 
 ## Repeatable browser checks
 
-`scripts/jellyfinmod-browser-review.mjs` drives a dedicated Chromium debugging session against
+`scripts/jellyfinmod-e2e/browser-review.mjs` uses Playwright to drive a dedicated Chrome against
 an actual built app and running Jellyfin. It never synthesizes successful API responses. Its
 failed-add case blocks the actual transport; it does not create or delete catalog entries.
 
+The runner is a self-contained package with its own lockfile and ignored `node_modules`, so the
+app's dependencies stay untouched. It depends on `playwright-core` only and never downloads or
+launches a browser; it attaches over CDP and opens a fresh tab in the signed-in profile.
+`scripts/jellyfinmod-browser-review.mjs` forwards to it.
+
 Prerequisites:
 
-- A dedicated Chromium profile with remote debugging enabled on port 9223.
+- Node 22 or newer, and `npm ci --prefix scripts/jellyfinmod-e2e` once.
+- A dedicated Chrome profile with remote debugging enabled, by default on port 9223
+  (`JELLYFINMOD_CDP_URL` overrides it).
 - The isolated server on port 18096 with the review plugin and web builds deployed.
 - Sign-in as `oleksii` with an empty password; the script handles the manual login form.
 - A catalog entry bound to a native series with at least one native season.
@@ -35,9 +42,16 @@ Run with environment variables (no credentials belong in the command):
 ```sh
 JELLYFINMOD_TEST_URL="$test_url" \
 JELLYFINMOD_NATIVE_ENTRY_ID="$bound_series_entry_id" \
+JELLYFINMOD_LIBRARY_ID="$browser_test_library_id" \
 JELLYFINMOD_SEARCH_QUERY=blade \
-node scripts/jellyfinmod-browser-review.mjs
+node scripts/jellyfinmod-e2e/browser-review.mjs
 ```
+
+Retention and playback gates need `JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN`,
+`JELLYFINMOD_EXPECT_FILTER_COUNTDOWN`, `JELLYFINMOD_EXPECT_DUE_CARDS`,
+`JELLYFINMOD_RETENTION_ENTRY_TITLE`, `JELLYFINMOD_RECLAIMED_ENTRY_ID` and
+`JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID`. A run that skips any gate exits 2 unless
+`JELLYFINMOD_ALLOW_SKIPS=true`; a failed check exits 1.
 
 The script checks native bookmark routing, season navigation presence, History and the More
 menu in desktop, mobile, 1920×1080 TV and 1280×720 TV layouts. It also checks failed-add focus,
