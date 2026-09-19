@@ -8,12 +8,14 @@ that earlier phases have passed acceptance or authorize a production deployment.
 ## Outcome and boundaries
 
 An administrator opens Search releases for an accessible catalog movie or episode, compares
-parsed and rejected results, selects one, and sees the matching torrent accepted by qBittorrent
+parsed and rejected results, selects one, and sees the matching torrent accepted by Transmission
 with the configured category, destination and seeding requirements. The durable entry, episode
 identity and acquisition history survive retries and a plugin restart.
 
 - Torznab is the indexer protocol; direct indexers and compatible aggregators work without a
-  required Prowlarr or Jackett installation. qBittorrent is the first and only write driver.
+  required Prowlarr or Jackett installation. Transmission is the first and only write driver
+  (accepted user decision, 2026-09-19); other clients may be added later behind the same
+  acquisition-engine interface.
 - Phase 1 supplies library-scoped entries and stable episodes; Phase 2 owns native bindings.
   Keep existing Movies/TV, Search and Details routes, with a release dialog rather than a page.
 - Phase 3 retention stays configurable: All users by default, Selected user, or Any user.
@@ -24,10 +26,46 @@ identity and acquisition history survive retries and a plugin restart.
   media and multi-quality selection remain Phase 6. Monitoring alone starts nothing here.
 - No acquisition operation deletes a library file, removes a torrent, clears a catalog entry,
   rewrites native user data or creates a STRM placeholder.
-- All development, deployment and E2E use `jellyfinmod-test` on port `18096`, with its state
-  under `<test-root>`. Production `jellyfin` on `8096` stays running and
-  untouched; production-media mounts remain read-only. Use a separate disposable qBittorrent
-  instance and writable fixture storage, not production download-client credentials or data.
+- All development, deployment and E2E use `jellyfinmod-test` on `<isolated-test-port>`, with its
+  state under `<isolated-state-dir>`. Production `jellyfin` on `<production-port>` stays running
+  and untouched; production-media mounts remain read-only. Use a separate disposable Transmission
+  instance and writable fixture storage, never the production Transmission, its credentials or
+  its data.
+
+## Accepted user decisions — 2026-09-19
+
+These decisions were made by the user on 2026-09-19. They override the A1 defaults below and the
+review proposals in `REVIEW-2026-09-18.md` wherever they differ.
+
+1. **Download client: Transmission.** The Phase 4 write driver is Transmission RPC, the client
+   already deployed and the one Phase 3 seed protection (`TransmissionSeedClient`) already reads.
+   The handoff uses the RPC session-id handshake, `torrent-add` with `metainfo` (or a supported
+   magnet) and per-grab `labels` plus `download-dir` as the isolation mechanism. qBittorrent is
+   dropped as the Phase 4 driver; the internal acquisition-engine interface stays so another client
+   can be added later. Integration tests use a real HTTP Transmission RPC boundary server. No
+   torrent is ever added to the production Transmission; live acceptance uses a disposable
+   Transmission instance.
+2. **Mistaken grabs: server-side cancellable hold.** One Enter still grabs, with no confirmation
+   dialog. The server holds the persisted grab for a documented window (5 seconds) before
+   anything is sent to Transmission. `POST /JellyfinMod/Grabs/{id}/Cancel` cancels while the grab
+   is held: it is administrator-only, idempotent, and writes one `grab_cancelled` history event.
+   After the hold ends and submission starts, Cancel returns 409. The web picker shows a
+   focusable Cancel during the hold on desktop, mobile and TV.
+3. **Credentials.** Test secrets live only in the ignored plugin `.env`. Live indexer and client
+   secrets are stored as opaque references: SQLite rows hold only a reference, and the value lives
+   in a plugin-owned secret file (mode `0600`) in the plugin data directory, outside the SQLite
+   database and the XML plugin configuration. No DTO, log, history event or diagnostic ever
+   returns a secret value; reads report only whether one is configured.
+4. **Published addresses and paths.** Committed files never contain LAN addresses, host ports tied
+   to the test host, or absolute host paths. Documents use placeholders such as
+   `<isolated-test-port>`, `<isolated-state-dir>` and `<transmission-rpc-url>`.
+5. **Additional entry gates.** Phase 3 T7–T10 and T18 passing, P7, the X1 production merge and the
+   X3 safe deploy tooling are required before any Phase 4 deployment (gates 6–8 below).
+6. **Single shared mount.** Downloads and the library share one filesystem, and Phase 5 import is
+   hardlink-only with no copy fallback. The isolated download destination is a folder on the same
+   filesystem as the target library root and outside every watched library folder. The plugin
+   validates this at configuration time by comparing device identities (`statx`) of the
+   plugin-visible download folder and the library roots, and refuses a destination that fails.
 
 ## Current implementation and decisions to settle
 
@@ -50,7 +88,7 @@ them in A1 before enabling acquisition; documentation and protocol evidence can 
 | Profile selection | Selecting a profile in the picker changes that search only. Saving an entry profile is a separate admin setting; episode searches inherit their series profile. No profile dialog on catalog add. |
 | Rejection override | Rejected rows are inspectable but cannot be grabbed. No force-grab escape hatch in this phase. Change the profile or correct metadata and search again. |
 | Duplicate acquisition | One unresolved/active grab per entry or episode target; reject another until resolved. A verified existing playable copy stays available during an explicit manual grab. Multi-quality orchestration remains Phase 6. |
-| Correcting a mistaken grab | Use the existing qBittorrent WebUI, linked after confirmed handoff. Phase 4 offers no queue Undo or removal API; do not promise the Phase 5 queue already exists. |
+| Correcting a mistaken grab | **Superseded by user decision 2:** a 5-second server-side hold with `POST /Grabs/{id}/Cancel` before submission. After handoff, correction happens in the Transmission web interface, linked after confirmed handoff. Phase 4 offers no queue Undo or removal API; do not promise the Phase 5 queue already exists. |
 
 ## Entry gates and dependencies
 
@@ -59,7 +97,7 @@ them in A1 before enabling acquisition; documentation and protocol evidence can 
    Build Phase 4 on separate `jellyfinmod-phase4` branches/worktrees based on those revisions.
 2. A1 resolves the proposed permission, episode, profile and duplicate contracts above and
    records them with concrete request/response examples before API/UI implementation diverges.
-3. Inspect the actual isolated indexer capabilities and qBittorrent application/WebAPI versions.
+3. Inspect the actual isolated indexer capabilities and the disposable Transmission version and RPC version.
    Select supported API behavior from that evidence, not from the latest documentation alone.
    Verify authentication, category/save-path behavior and seeding semantics through real HTTP.
 4. Confirm a writable isolated download destination outside watched library roots. Record how
@@ -68,6 +106,9 @@ them in A1 before enabling acquisition; documentation and protocol evidence can 
    external production importer. Disable auto-removal behavior in the isolated test client.
 5. Back up the plugin database and prove migration plus restore with preserved entries,
    episodes, user-scoped evidence, policy and history. Restoring SQLite cannot undo client adds.
+6. Phase 3 T7, T8, T9, T10 and T18 pass on the isolated test instance (user decision 5).
+7. P7 is complete and the X1 production merge is done, with its SHA recorded (user decision 5).
+8. The X3 deploy tooling refuses production by default (user decision 5).
 
 ## Data model and ownership
 
@@ -79,11 +120,11 @@ Dashboard page is the single admin UI for this configuration.
 | Record | Minimum contents and invariants |
 | --- | --- |
 | Indexer | Stable ID, name, Torznab base endpoint, enabled flag, category selection, priority, secret reference, capabilities snapshot/version/time and seed requirements. Capability failures are explicit, not empty search results. |
-| Download client | Stable ID, qBittorrent endpoint, enabled flag, secret reference, category and isolated save-path configuration, last verified version/capabilities. Start with one selected client; no automatic failover after an uncertain submission. |
+| Download client | Stable ID, driver kind (`transmission`), RPC endpoint, username, password secret reference, enabled flag, label and client-visible download directory, plugin-visible path of that directory with its verified same-filesystem check, last verified version/RPC version. Start with one selected client; no automatic failover after an uncertain submission. |
 | Quality profile | Stable ID/name/revision, ordered allowed quality/source combinations and optional size-per-runtime limits. Store only implemented scoring settings. Cutoff and upgrade automation are deferred. |
 | Entry extension | Nullable quality-profile ID: null means inherit the configured default. Validate references on write and prevent deleting an assigned/default profile until explicitly reassigned. Episode searches inherit their parent's resolved profile. |
 | Search snapshot | Opaque search ID, requesting user, entry/episode target, profile/config revisions, creation/expiry, per-indexer outcomes and immutable candidate snapshots. Bounded server-side cache is sufficient; expiry or restart requires a new search. |
-| Grab operation | Stable operation ID, requester, target entry and optional episode ID, idempotency key/request fingerprint, source indexer/GUID, raw title, parsed attributes, profile/scoring version, client ID, normalized hash/download identity, seed-policy snapshot, timestamps, status and sanitized failure code. Persist before contacting the client. |
+| Grab operation | Stable operation ID, hold deadline, requester, target entry and optional episode ID, idempotency key/request fingerprint, source indexer/GUID, raw title, parsed attributes, profile/scoring version, client ID, normalized hash/download identity, seed-policy snapshot, timestamps, status and sanitized failure code. Persist before contacting the client. |
 
 After validation, retain the selected candidate in the grab record so recovery does not depend
 on an expiring search cache. Keep authenticated enclosure URLs/passkeys in protected server-only
@@ -91,9 +132,10 @@ storage only as long as needed; they must never enter public DTOs or ordinary hi
 reads return presence indicators, never saved values. Distinguish unchanged secrets from an
 explicit replacement/clear, and redact transport URLs, cookies and credentials from diagnostics.
 
-Separate acquisition status from file availability. Proposed operation states are `pending`,
-`submitting`, `accepted`, `failed` and `unknown`. `unknown` means a submission may have succeeded
-and blocks blind resubmission. Search alone does not persist `Entry.State = searching` or
+Separate acquisition status from file availability. Operation states are `pending` (held,
+cancellable, nothing sent), `submitting`, `accepted`, `failed`, `unknown` and `cancelled`
+(user decision 2). `unknown` means a submission may have succeeded and blocks blind
+resubmission. Search alone does not persist `Entry.State = searching` or
 overwrite an on-disk/reclaimed representation. An accepted grab supplies acquisition summary;
 file-less cards may project `grabbed`, while on-disk items retain native playback. Preserve the
 underlying `none`/`reclaimed` provenance for failure and Phase 5 resolution. Do not report progress
@@ -111,7 +153,8 @@ Recheck access and policy when committing a grab, even when its search was autho
 | --- | --- |
 | `GET /Releases?entryId=&episodeId=&profileId=` | Return `searchId`, `expiresAt`, target, effective profile/revision, candidates and per-indexer status. Episode is required for series acquisition; omitted profile uses inheritance. Reads never submit a torrent. |
 | `POST /Releases/Grab` | Accept only `{ searchId, releaseId, idempotencyKey }`; derive target, client, download locator and evaluated profile from server records. Return canonical grab operation, not a bare success boolean. |
-| `GET /Grabs/{id}` | Return authorized operation state and sanitized result/recovery message. Supports bounded handoff confirmation only; it is not a Phase 5 transfer queue. |
+| `GET /Grabs/{id}` | Return authorized operation state, `holdUntil` and sanitized result/recovery message. Supports bounded handoff confirmation only; it is not a Phase 5 transfer queue. |
+| `POST /Grabs/{id}/Cancel` | Administrator-only; cancels a `pending` (held) grab before submission and writes one `grab_cancelled` event. Repeating it returns the same cancelled operation without another event; after submission starts it returns 409 `grab_not_cancellable` (user decision 2). |
 | `GET /Settings/Indexers`, `/Settings/DownloadClients`, `/Settings/QualityProfiles` | Admin configuration DTOs without credentials; profile list and selected defaults support the picker. |
 | `POST /Settings/{resource}`, `PATCH /Settings/{resource}/{id}`, `DELETE /Settings/{resource}/{id}` | Admin CRUD for the three named resource types; validate references/revisions and preserve records required by unresolved grabs. Deleting config never deletes client torrents or media. |
 | `POST /Settings/Indexers/{id}/Test`, `/Settings/DownloadClients/{id}/Test` | Bounded admin connection/capability checks; download-client Test never adds a torrent. Return safe, actionable results. |
@@ -138,7 +181,7 @@ remain distinguishable from accepted/failed through the actual serializer and we
 | A2 | Acquisition configuration and migrations; plugin data/Dashboard | A1 | Real admin save/read/restart, ordinary-user rejection, secret redaction and reference integrity |
 | A3 | Torznab search and release identity; plugin services/API | A1, A2 | Real HTTP capability negotiation, pagination, partial failure and controlled malicious/error responses |
 | A4 | Parsing, profiles and scoring; plugin services/API | A2, A3 | Representative release feeds exercised through hosted APIs, deterministic order and explicit rejection reasons |
-| A5 | qBittorrent handoff and recovery; plugin driver/data | A2–A4 | Actual client acceptance/category/identity, concurrent retry and interrupted-submission recovery |
+| A5 | Transmission handoff, cancellable hold and recovery; plugin driver/data | A2–A4 | Actual client acceptance/category/identity, concurrent retry and interrupted-submission recovery |
 | A6 | Entry/history and retention integration; plugin contracts/services | A5, Phase 2/3 | Preserved bindings, played policy, seed requirements and correct accepted/failed/unknown summaries |
 | A7 | Release picker and profile surfaces; web and narrow detail/menu mounts | A1 contract, A4–A6 | Built app, real server/client, desktop/mobile/TV focus and degradation |
 | A8 | Isolated end-to-end acceptance; both repositories | A1–A7 | Complete search-to-client flow plus migration/restart, security, failure and playback regressions |
@@ -147,7 +190,7 @@ remain distinguishable from accepted/failed through the actual serializer and we
 
 Inventory current Phase 2/3 services and their synchronization rules; reuse the matcher, access
 checks and read-only seeding adapter rather than inventing parallel ownership. Document the
-actual qBittorrent version and supported hash formats. Prove how a chosen movie or stable episode
+actual Transmission version, RPC version and supported hash formats. Prove how a chosen movie or stable episode
 maps to each configured indexer's supported identifiers; generic title search is candidate
 discovery, never sufficient evidence to rebind a catalog identity. Record ambiguous numbering
 and unsupported packs as rejection cases. Confirm that phase branches preserve unrelated work.
@@ -161,12 +204,13 @@ The first slice uses the proposed defaults above as its implementation contract:
 - A movie targets its library-scoped entry. TV targets exactly one durable episode ID belonging
   to that entry. Season packs, multi-episode releases, absolute-only numbering and ambiguous
   specials are rejected with visible reasons.
-- Grab is disabled until an enabled indexer, a verified isolated qBittorrent destination and a
+- Grab is disabled until an enabled indexer, a verified isolated Transmission destination and a
   valid default quality profile exist. Picker profile changes affect one search snapshot; saving
   an entry profile is a separate administrator action.
 - Rejected releases cannot be overridden. One unresolved operation is allowed per entry/episode,
-  and an existing unrelated client torrent is a conflict. Correction happens in qBittorrent;
-  Phase 4 does not add removal, Undo or queue controls.
+  and an existing unrelated client torrent is a conflict. Before submission a held grab can be
+  cancelled (user decision 2); after handoff, correction happens in Transmission. Phase 4 does
+  not add removal, Undo or queue controls.
 
 Phase 4 is stacked without worktrees on plugin `jellyfinmod-phase4` from Phase 3 `81c1aae` plus
 Phase 1 closure `214bbe0`, and web `jellyfinmod-phase4` from Phase 3 `c45b7fc588` plus Phase 1
@@ -175,21 +219,27 @@ closure through `2712de1b97`. Phase 2 reconciliation owns bindings under
 `RetentionExecutionGate`. Acquisition will reuse those identities and locks, persist intent
 before remote mutation, and never write `Entry.State` or binding rows during search/handoff.
 
-The Pi had no qBittorrent container before this task. A disposable ARM64 client now runs only for
-JellyfinMod testing at `http://<test-host>:18080`, with state under
-`<test-root>/phase4/qbittorrent`. It is qBittorrent `5.2.3`, WebUI API
-`2.15.1`, from pinned image digest
-`sha256:2be038f3421f60f62e8e4bf201f66f385b68e4fbc9ed3ab79051069ea22e2650`.
-Its credential is mode `0600` in the isolated host directory and is never committed. The client
-save path is `/downloads`, backed only by the isolated Phase 4 fixture directory. Production
-Jellyfin, Transmission and media were not changed.
+**Superseded by user decision 1 (2026-09-19).** A disposable qBittorrent client was provisioned
+for the original qBittorrent spike (qBittorrent `5.2.3`, WebUI API `2.15.1`) on the test host at
+`<qbittorrent-test-url>`, with state under `<isolated-state-dir>` and its credential kept mode
+`0600` outside the repository. It is no longer the Phase 4 driver. Production Jellyfin,
+Transmission and media were not changed.
 
-Current qBittorrent WebUI API evidence requires login session cookies, reports application and API
-versions separately, accepts `savepath`, `category`, `ratioLimit` and `seedingTimeLimit` when
-adding, and returns HTTP 200 for cases that are not proof of acceptance. A5 therefore verifies the
-normalized infohash and observed settings through `torrents/info` before recording acceptance.
+Transmission handoff contract (user decision 1). The driver speaks the legacy
+`{"method","arguments"}` RPC that the deployed Transmission 4.x and the existing
+`TransmissionSeedClient` use: a 409 answer supplies `X-Transmission-Session-Id`, which is
+retried once. `session-get` reports `version` and `rpc-version`; labels need RPC version 17 or
+later, so an older daemon fails the connection test. `torrent-add` sends the verified
+`metainfo` (or a v1 magnet as `filename`), the configured `download-dir` and the labels
+`[<configured label>, jfmod-<operation id>]`. The operation label proves ownership during
+recovery. `torrent-duplicate` is a conflict with an unrelated torrent, never an acceptance.
+After the add, `torrent-set` sets `seedRatioMode` and `seedIdleMode` to 2 (unlimited), so no
+client stopping condition can undercut a recorded seed requirement. Removal after the goals are
+met belongs to Phase 5. Acceptance requires `torrent-get` by hash to show the same
+`hashString`, `downloadDir`, both labels and both unlimited modes. HTTP 200 alone is never
+acceptance.
 The first slice accepts only a 40-character lower-case BitTorrent v1 SHA-1 infohash, including
-base32 magnet normalization. BitTorrent v2/hybrid-only identity remains unsupported until its
+base32 magnet normalization. BitTorrent v2-only and hybrid torrents remain unsupported until their
 client representation and duplicate semantics have separate evidence.
 
 Torznab `t=caps` supplies supported search modes, parameters, categories and result limits.
@@ -250,8 +300,9 @@ the dialog retains its place; it must not silently mutate the entry's saved prof
 
 ### A5 — hand off once, then verify
 
-Keep the acquisition engine behind a small internal interface and implement only the qBittorrent
-operations needed for authentication, version/capability checks, add and identity lookup. Use
+Keep the acquisition engine behind a small internal interface and implement only the Transmission
+RPC operations needed for the session handshake, version/capability checks, add, per-torrent
+seed modes and identity lookup (user decision 1). Use
 `IHttpClientFactory.CreateClient(NamedClient.Default)` and correctly scoped services. Inspect
 the installed client's supported API before choosing fields; do not change Jellyfin/.NET pins.
 
@@ -262,7 +313,13 @@ the target and enforce durable uniqueness for the client/hash so parallel reques
 indexer sources cannot double-submit. A matching torrent owned outside this operation is a
 conflict; never silently recategorize, relocate or claim an unrelated existing download.
 
-Submit with the configured category/destination and effective seed requirements; verify the
+Hold each persisted grab for 5 seconds before submission. During the hold, Cancel moves it to
+`cancelled` and nothing reaches the client. A restart during the hold fails the operation as
+`interrupted_before_submit`, because the fetched torrent metadata stays only in memory (user
+decision 2). Validate the download destination's filesystem against the target library before
+submission (user decision 6).
+
+Submit with the configured label/destination and effective seed requirements; verify the
 matching client torrent and its observed settings before marking accepted and writing one
 `grabbed` event. A successful HTTP response alone is insufficient. The SQLite commit and remote
 add are not atomic: timeouts or process death after sending produce an uncertain operation,
@@ -282,7 +339,10 @@ with existing reconciliation/retention operation locks without keeping a DB writ
 across HTTP. Acquisition neither exempts existing media forever nor shortens retention windows.
 Preserve per-user state and All/Selected/Any watched-user settings across migration and handoff.
 
-Persist the indexer's effective ratio/time requirements on the grab. The Phase 3 read adapter
+Persist the indexer's effective ratio/time requirements on the grab. With Transmission as the
+write driver (user decision 1), the Phase 3 `TransmissionSeedClient` reads the same daemon. The
+acquisition settings report whether seed protection is configured for the same RPC endpoint.
+Until they match, grabbed torrents are not covered by that read adapter. The Phase 3 read adapter
 must recognize new torrent-managed paths and treat unknown client state as protected. Verify the
 client's actual goal-combination/inheritance semantics; a client stopping condition is not proof
 that every retention seed requirement has been met. Never lower an existing goal or allow client
@@ -298,6 +358,8 @@ retain native navigation/Play. Gate controls by server capability and authorizat
 Follow UX §9: parsed summary and always-visible raw title, descending visible scores, size and
 seeders, meaningful freeleech/proper/repack chips, and a collapsed rejected group with reasons.
 One Enter activation grabs an eligible row without a confirmation; prevent double activation.
+During the server-side hold the picker shows the pending row with a focusable Cancel on desktop,
+mobile and TV (user decision 2).
 Show confirmation only after verified acceptance, with a configured credential-free Open in client
 link. Pending/unknown remains visible and cannot offer an unsafe retry or nonexistent queue Undo.
 
@@ -313,7 +375,7 @@ Keep native browse/playback usable on plugin absence, older API versions or inde
 Use real HTTP/authentication/authorization/serialization/migrations/SQLite integration and a built
 browser against running Jellyfin. Controlled external conditions come from a real HTTP boundary
 server serving Torznab caps/feeds/torrent metadata; never mocked clients or helper-only tests.
-Use a disposable qBittorrent instance and a small self-created or openly licensed torrent fixture
+Use a disposable Transmission instance and a small self-created or openly licensed torrent fixture
 with a controlled seeder. Prove actual client state and fixture data, not only status codes.
 
 - Admin search/grab succeeds; anonymous and ordinary-user calls fail under the agreed default.
@@ -363,6 +425,8 @@ Protocol sources consulted through Context7 and official documentation on 2026-0
   and [source specification](https://github.com/torznab/torznab-docs/blob/develop/docs/source/torznab/Specification-v1.3.rst):
   caps, supported parameters/categories and response contracts. The linked specification is a
   draft; observed configured-indexer behavior remains an A1 gate.
-- [qBittorrent WebUI API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)):
-  versioned authentication, torrent add, category and identity-read contracts. This reference
-  covers 5.0+ and is not evidence of the installed client's version or successful handoff.
+- [Transmission RPC specification](https://github.com/transmission/transmission/blob/main/docs/rpc-spec.md):
+  session-id handshake, `torrent-add`, `torrent-set` and `torrent-get` contracts, consulted
+  through Context7 on 2026-09-19. The current document describes the JSON-RPC 2.0 form; the
+  deployed 4.x daemon and the existing reader use the legacy form, which remains supported.
+  Neither is evidence of the installed daemon's behaviour.
