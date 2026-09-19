@@ -635,7 +635,9 @@ binding, retention baseline, both seed-release orders, every documented block re
 each import state, Remove with each option, and anonymous, ordinary-user and no-library-access
 calls.
 
-### Defaults chosen here — needs user decision
+### Defaults chosen here — accepted by the user on 2026-09-19
+
+The user accepted every default below as chosen on 2026-09-19.
 
 Each is the conservative option behind a named setting or documented default:
 
@@ -709,6 +711,10 @@ directory is inside the single writable mount and outside every library root, au
 | Paths or credentials leak into docs, DTOs or logs | Admin-only paths; X6 grep guard; credentials only in `plugin/.env` |
 
 ## Open questions for the user
+
+Questions 2–8 are answered by the user's acceptance of the defaults on 2026-09-19 (see
+*Defaults chosen here*); the answer is the default recorded there, where it differs from the
+proposal below.
 
 1. **Single mount on the Pi.** *Answered 2026-09-19 (user decision 4):* downloads and the library
    share one filesystem through one mount; import is hardlink-only with no copy fallback.
