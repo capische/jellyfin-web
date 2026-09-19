@@ -1,27 +1,35 @@
 .jfmod-searchResults {
+    // Margins instead of flex gap, which older TV engines ignore (P1.W9, P1.W11).
     .jfmod-discoveryHeading {
         align-items: center;
         display: flex;
         flex-wrap: wrap;
-        gap: 1em;
 
         h2 { margin-right: auto; }
-        label { align-items: center; display: flex; gap: 0.5em; }
+        label { align-items: center; display: flex; margin-left: 1em; }
+        label span { margin-right: 0.5em; }
         select { font: inherit; padding: 0.45em; }
     }
 
-    .jfmod-searchSkeletons,
-    .jfmod-discoveryCards {
-        display: flex;
-        gap: 1em;
+    .jfmod-searchSkeletons {
         min-height: 18em;
         overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .jfmod-discoveryCards {
+        min-height: 18em;
+        white-space: nowrap;
     }
 
     .jfmod-searchSkeletons span,
     .jfmod-discoveryCard {
         border-radius: 0.2em;
-        flex: 0 0 10em;
+        display: inline-block;
+        margin-right: 1em;
+        vertical-align: top;
+        white-space: normal;
+        width: 10em;
     }
 
     .jfmod-searchSkeletons span { background: #202020; height: 15em; opacity: 0.65; }
