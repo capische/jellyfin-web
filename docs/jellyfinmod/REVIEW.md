@@ -53,6 +53,20 @@ Retention and playback gates need `JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN`,
 `JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID`. A run that skips any gate exits 2 unless
 `JELLYFINMOD_ALLOW_SKIPS=true`; a failed check exits 1.
 
+Each step prints its wall-clock duration as it finishes (`passed <step> (12.3s)`). The final JSON
+has `timings` (step to seconds, plus `total`), `waits` (aggregated hard reloads, soft reloads,
+networkIdle quiet waits, TMDB-backed discovery waits and fixture seeding/cleanup; these kinds
+overlap) and `idleTimeouts` (requests still pending when a quiet wait timed out, by path only).
+A failed run prints the partial timings to stderr.
+
+`JELLYFINMOD_QUICK=true` runs a post-deploy smoke subset: native details and Keep by keyboard in
+all four layouts, the retention countdown and Due filter, the reclaimed and native playback gates,
+plugin transport outage, Home resume, the plugin-ID leak check and search scope, with a single
+cache-bypassing reload. It skips the TMDB- and fixture-heavy checks (failed and in-flight Add, the
+seeded empty discovery page, Home library exclusion) and lists them as `skippedByQuickMode`. Its
+summary says `mode: "quick"` and `fullAcceptance: false`; it never replaces a full run. Failures
+exit 1 and skipped gates exit 2, as in a full run.
+
 The script checks native bookmark routing, season navigation presence, History and the More
 menu in desktop, mobile, 1920×1080 TV and 1280×720 TV layouts. It also checks failed-add focus,
 duplicate activation and switching to a different search query. It restores the browser's
