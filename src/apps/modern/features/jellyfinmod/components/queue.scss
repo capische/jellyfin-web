@@ -1,0 +1,250 @@
+// Download queue (UX §10, P5.I8). Desktop is one table; mobile and TV are one column with no horizontal scroll.
+// Values come from the base theme: ground #101010, paper #202020, primary #00a4dc, error #c62828,
+// card radius 0.2em, secondary text 86%. Sized in em so TV's 125% and mobile's 90% roots apply.
+// No flex gap, min()/max() or display: contents, for older TV engines (P1.W11).
+
+.jfmod-queuePage {
+    max-width: 90em;
+    margin: 0 auto;
+    padding-top: 1em;
+}
+
+.jfmod-queueHeading {
+    margin: 0 0 0.6em;
+    font-size: 1.6em;
+    font-weight: 400;
+}
+
+.jfmod-queueStatus {
+    margin: 1em 0;
+}
+
+.jfmod-queueBanner,
+.jfmod-queueNotice {
+    margin: 0 0 0.8em;
+    padding: 0.6em 0.8em;
+    border-left: 0.25em solid #c62828;
+    border-radius: 0.2em;
+    background: #202020;
+}
+
+.jfmod-queueNotice {
+    border-left-color: #00a4dc;
+}
+
+.jfmod-queueEmpty {
+    margin: 1.5em 0;
+
+    > p {
+        margin: 0 0 1em;
+    }
+}
+
+.jfmod-queueLink {
+    display: inline-block;
+    margin: 0 0.6em 0.6em 0;
+}
+
+.jfmod-queueHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+// Shared row parts.
+
+.jfmod-queueThumb {
+    display: block;
+    flex-shrink: 0;
+    width: 3em;
+    height: 4.5em;
+    border-radius: 0.2em;
+    background-color: #202020;
+    background-position: center;
+    background-size: cover;
+}
+
+.jfmod-queueTitle {
+    display: block;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: break-word;
+}
+
+a.jfmod-queueTitle:hover,
+a.jfmod-queueTitle:focus {
+    color: #00a4dc;
+    text-decoration: underline;
+}
+
+// Always visible and wrapped, never truncated: it is the diagnostic when an import goes wrong (UX §9).
+.jfmod-queueRelease {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 86%;
+    opacity: 0.6;
+    word-break: break-all;
+}
+
+.jfmod-queueMuted {
+    display: block;
+    font-size: 86%;
+    opacity: 0.75;
+}
+
+.jfmod-queueProgress {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0.3em 0;
+
+    > * {
+        margin-right: 0.6em;
+    }
+}
+
+.jfmod-queueBar {
+    display: block;
+    flex: 1 1 6em;
+    height: 0.4em;
+    min-width: 6em;
+    overflow: hidden;
+    border-radius: 0.2em;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.jfmod-queueBarFill {
+    display: block;
+    height: 100%;
+    background: #00a4dc;
+}
+
+// Last known progress from an unreachable client: drawn, but visibly not live.
+.jfmod-queueBar--stale .jfmod-queueBarFill {
+    opacity: 0.45;
+}
+
+.jfmod-queuePercent {
+    white-space: nowrap;
+}
+
+.jfmod-queueFreshness {
+    display: inline;
+}
+
+.jfmod-queueState {
+    display: block;
+}
+
+.jfmod-queueState--problem {
+    color: #c62828;
+    font-weight: 600;
+}
+
+.jfmod-queueDetail {
+    display: block;
+    font-size: 86%;
+    opacity: 0.85;
+}
+
+.jfmod-queueMenu {
+    flex-shrink: 0;
+}
+
+// Desktop: one table.
+
+.jfmod-queueTable {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+        padding: 0.4em 0.6em;
+        font-size: 86%;
+        font-weight: 400;
+        text-align: left;
+        opacity: 0.75;
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 0.5em 0.6em;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        vertical-align: top;
+    }
+}
+
+.jfmod-queueCellThumb {
+    width: 3em;
+}
+
+.jfmod-queueCellTitle {
+    width: 30%;
+}
+
+.jfmod-queueCellProgress {
+    width: 16%;
+}
+
+.jfmod-queueCellNumber {
+    white-space: nowrap;
+}
+
+.jfmod-queueCellState {
+    width: 20%;
+}
+
+.jfmod-queueCellMenu {
+    width: 3em;
+    text-align: right;
+}
+
+// Mobile and TV: one column.
+
+.jfmod-queueList {
+    margin: 0;
+}
+
+.jfmod-queueRow {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 0.4em;
+    padding: 0.6em 0.8em;
+    border: 0;
+    border-radius: 0.2em;
+    background: #202020;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+
+    > .jfmod-queueThumb {
+        margin-right: 0.8em;
+    }
+}
+
+.jfmod-queueRowBody {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.jfmod-queueRow--tv {
+    cursor: pointer;
+
+    &:focus {
+        background: rgba(0, 164, 220, 0.3);
+        outline: none;
+    }
+}
+
+// Detail pages: one line for a grabbed or downloading movie or episode.
+.jfmod-queueStatusLine {
+    margin: 0.4em 0;
+    font-size: 86%;
+    opacity: 0.85;
+}
