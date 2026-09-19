@@ -400,8 +400,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   for space freed later separately from a 0-byte reclaim. This is clarification only: the earlier
   claim that no phase owns the seeding copy (prior-H3) was refuted, because README §6 already
   assigns it to Phase 5.
+  **Planned (2026-09-19):** [`PHASE5.md`](PHASE5.md) breaks this down into I1–I9, including a
+  durable seeding-copy release operation, container path mapping and the queue route. Every default
+  there is proposed; entry gates include Phase 4 A8, blockers T7–T10 and T18, open question 3
+  (single mount) and open question 6 (download client).
 - **Phase 6 — automation and multi-quality.** Scheduled search for monitored entries; upgrade to
   cutoff; enrich the existing version selector with resolution, codec, audio and size.
+  **Planned (2026-09-19):** [`PHASE6.md`](PHASE6.md) breaks this down into M1–M9: scheduled
+  searches with backoff, budgets and a kill switch, new-episode acquisition, upgrade-to-cutoff as a
+  Phase 3 operation with `upgrade_replaced` provenance, Get another quality, retention per version
+  and the D-pad-operable version selector. Every default is proposed; depends on Phase 5 I9.
+  Phase 5 and Phase 6 open questions are listed in those documents, not renumbered here.
 
 ---
 
