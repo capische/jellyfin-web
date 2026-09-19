@@ -84,7 +84,7 @@ export interface EntryEpisode {
     runtimeMinutes: number | null;
     monitored: boolean;
     state: FileState;
-    availability: 'onDisk' | 'missing' | 'unaired';
+    availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;
     retention: RetentionSummary | null;
 }

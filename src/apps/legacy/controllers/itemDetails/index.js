@@ -1,4 +1,4 @@
-import initializeNativeEntryDetails, { showNativeEntryMenu } from 'apps/modern/features/jellyfinmod/integration/nativeEntryDetails';
+import initializeNativeEntryDetails, { handleMissingNativeItem, showNativeEntryMenu } from 'apps/modern/features/jellyfinmod/integration/nativeEntryDetails';
 import initializeEntryDetails from 'apps/modern/features/jellyfinmod/integration/entryDetails';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
@@ -1936,6 +1936,7 @@ export default function (view, params) {
             reloadFromItem(instance, page, pageParams, item, user);
         }).catch((error) => {
             console.error('failed to get item or current user: ', error);
+            handleMissingNativeItem(view, pageParams, error);
         });
     }
 
