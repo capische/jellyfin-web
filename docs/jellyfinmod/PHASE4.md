@@ -407,6 +407,40 @@ the isolated client once, with correct ownership/settings/history, and every pro
 failure case above is verified. Download completion, import and playback of that new media are
 Phase 5 acceptance, not implied by this gate.
 
+## Implementation status — 2026-09-19
+
+Source is on the Phase 4 build branches; nothing is deployed. Gates 6–8 and the T18 live run on
+the isolated instance are still open. The test instance stays untouched until T18 finishes.
+
+- **A2 (implemented, integration-tested).** Indexer, Transmission-client and quality-profile settings
+  are revisioned and administrator-only, with write-only secret references stored in a 0600 plugin
+  file. A configuration-time statx device and mount check covers the download folder. The migration
+  follows the latest Phase 3 migration. The Dashboard editors are written but not browser-verified.
+- **A3/A4 (implemented, integration-tested).** Capabilities are checked before search, and
+  id-parameter searches are bounded by pagination, timeout and back-off. Search reports explicit
+  failure states and refuses DTDs. A no-redirect client host-checks every torrent download hop. An
+  independent parser feeds deterministic scoring with visible contributions and stable rejection
+  codes.
+- **A5 (implemented against a Transmission RPC boundary server).** Intent persists before the client
+  is contacted. Each grab is held for 5 seconds with an idempotent Cancel. It is submitted once with
+  the label, directory and per-operation ownership label, then set to unlimited seed modes. It is
+  accepted only when a lookup by hash matches. Unknown outcomes are resolved by lookup at restart or
+  on Recheck. No live Transmission has received a torrent.
+- **A6 (partly implemented).** The entry profile, per-entry and per-episode acquisition summaries, and
+  removal blocked while a grab is active are done. Grabbed torrents are protected by the Phase 3
+  Transmission reader only when its RPC URL matches the acquisition client; the settings report
+  whether they match. The review's A6 amendments (a)–(e) are not implemented.
+- **A7 (implemented; type-check, lint and production build only).** The release picker dialog is
+  reachable from the file-less detail page (Get again for reclaimed titles), episode rows and the
+  native Details More menu. Desktop, mobile and TV browser verification is outstanding, and so is a
+  catalog card context menu.
+- **A8 (not started).** It needs gates 6–8, a disposable Transmission instance and the built bundle
+  on the isolated instance.
+
+Plugin evidence: all six suites pass in the offline SDK container on the test host.
+`PhaseFourIntegration` runs a real Kestrel host, authentication, MVC serialization, EF migrations
+and SQLite against Torznab and Transmission RPC boundary servers.
+
 ## Risks and references
 
 | Risk | Required response |
