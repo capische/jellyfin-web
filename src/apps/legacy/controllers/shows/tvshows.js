@@ -219,7 +219,7 @@ export default function (view, params, tabContent) {
     let unmountCatalog = null;
     const unsubscribeCatalog = subscribeLegacyBrowse(ApiClient, () => {
         if (tabContent.isConnected) reloadItems(tabContent);
-    });
+    }, view);
 
     this.showFilterMenu = function () {
         import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
