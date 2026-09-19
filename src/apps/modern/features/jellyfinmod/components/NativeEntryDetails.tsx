@@ -5,7 +5,9 @@ import React, { type FC, useCallback, useState } from 'react';
 import { getEntries, getEntry, keepEntry } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
 import { useAcquisitionAvailable } from '../hooks/useAcquisition';
+import { FileState } from '../types/entry';
 import HistoryToggle from './HistoryToggle';
+import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
 import './entryDetails.scss';
 
@@ -44,11 +46,21 @@ const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const episode = detail.data.episodes.find(candidate => sameId(candidate.jellyfinItemId));
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
+    // Episodes of this series that are grabbed or downloading; the series entry itself is never projected (P5.I3).
+    const inFlightEpisodes = isSeriesPage ? detail.data.episodes.filter(candidate =>
+        candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading) : [];
     // The native More menu reads these to offer Search releases for this entry (P4.A7).
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
         data-jfmod-can-acquire={canAcquire ? 'true' : undefined}>
         <p role='status'>{message}</p>
         <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
+        {episode && <QueueStatusLine entryId={detail.data.entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />}
+        {!episode && detail.data.entry.mediaType === 'movie'
+            && <QueueStatusLine entryId={detail.data.entry.id} state={detail.data.entry.state} progress={detail.data.entry.progress} />}
+        {inFlightEpisodes.map(candidate => <div className='jfmod-episodeRow' key={'queue:' + candidate.id}>
+            <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
+            <QueueStatusLine entryId={candidate.entryId} episodeId={candidate.id} state={candidate.state} progress={candidate.progress} />
+        </div>)}
         {isSeriesPage && detail.data.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode retention'>
             {detail.data.episodes.map(candidate => <div className='jfmod-episodeRow' key={candidate.id}>
                 <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
