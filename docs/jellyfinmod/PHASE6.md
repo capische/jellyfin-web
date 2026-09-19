@@ -378,6 +378,108 @@ configured budgets, every replacement is attributed to a plugin operation, reten
 versions correctly, the selector is usable by D-pad, and every safeguard has been shown to stop
 the automation.
 
+## M1 evidence — 2026-09-19
+
+The isolated instance was not touched on this date, so these answers come from the pinned host API
+and the integration suites; the live parts are in the checklist below.
+
+- **Episode versions.** Phase 5 I1 did not measure this live. Episodes therefore follow the
+  conservative branch: no second episode version and no episode upgrade while
+  `episodeUpgradesEnabled` is off (default). Episode `addVersion` searches answer 409
+  `episode_versions_unsupported`; automation records the same reason.
+- **Selector data.** Versions are read from the plugin's own bindings (one per native item of a
+  version group) plus `IMediaSourceManager.GetMediaStreams(itemId)` of the pinned 10.11 host:
+  video `Width`, `Height`, `Codec`, `BitDepth`, `VideoRange`; the default audio stream's `Codec`
+  and `Channels`; size from the file inspector. The default version is the binding whose native
+  item is the version group's primary item. Unknown fields stay `null`; nothing is guessed.
+- **Free space.** `statvfs` on the target library root (available blocks × fragment size), the
+  same figure `df` reports for that filesystem. The floor is the larger of
+  `freeSpaceFloorPercent` of the filesystem and `freeSpaceFloorBytes`. *Live:* compare with `df`
+  on the host.
+- **Budgets.** Defaults are 10 s between queries and 200 queries a day per indexer, 6 automatic
+  grabs a day, one automatic grab per title per 24 hours, 3 open imports, 40 targets per run and a
+  6-hour interval. They were not tuned against live Phase 4 A8 timings, which do not exist yet.
+- **Contract.** Published in [API.md](API.md) *Automation and versions (Phase 6)*.
+
+## Implementation status — 2026-09-19
+
+Source is on the Phase 5 build branches (Phase 6 commits follow Phase 5); nothing is deployed.
+
+| Task | Status | Notes |
+| --- | --- | --- |
+| M1 | Partial | Answers above; live measurements in the checklist |
+| M2 | Done | One migration after Phase 5: per-target schedule, runs, bounded decision log, per-indexer daily budget and breaker, upgrade operations, retention provenance; profile cutoff/upgrade fields, indexer limits, automation settings (master switch off after migration); Dashboard Automation section with status, Run now and recent decisions |
+| M3 | Done | Hourly native task `JellyfinModAutomationSearch` runs a batch once `automationIntervalHours` has passed; all budgets are checked before any search; empty searches back off 12 h doubling to 7 days; per-indexer minimum interval, daily budget and a breaker (5 failures, 1 hour) inside the Phase 4 fan-out, so manual searches count too; idempotency key per run and target |
+| M4 | Done | Monitored aired episodes become due `newEpisodeDelayMinutes` after air; specials never; airing series get a metadata-only refresh at most daily (10 per run), shared with the Refresh action |
+| M5 | Done | Below-cutoff movies are upgraded as an additional version; after the new version is bound, playable and its seeding copy owned, the superseded version is removed through the Phase 3 executor as `upgrade_replaced`, skipping only the watched rule; Keep blocks replacement; `add` mode keeps both |
+| M6 | Done | `intent=addVersion` search and grab, held qualities marked and refused, labelled additional version on import |
+| M7 | Done | Due versions of one target are reclaimed lowest resolution first; each version reports its own retention state |
+| M8 | Done, not browser-verified | Version rows driving the stock select, Play with the selected `mediaSourceId`, Get another quality, More-menu entry, paused-automation banner in the queue, Search now; type-check, lint, stylelint and production build pass |
+| M9 | Partial | `PhaseSixIntegration` passes; the isolated live run is below |
+
+Plugin evidence: all eight suites exit 0 in the offline SDK container on the test host (see
+PHASE5). `PhaseSixIntegration` drives the production scheduler task, budgets, breaker,
+new-episode delay, upgrade replacement, added versions and per-version retention against two
+counting Torznab boundaries and a Transmission boundary that writes real files, over the real host,
+authentication, serializer, migrations and SQLite. It checks boundary query counts against run
+summaries, that a restart between runs creates no duplicate grab, import or replacement, and that
+automation and settings routes refuse anonymous and ordinary users.
+
+### Defaults chosen here — needs user decision
+
+1. **Automation default and budgets (open question 1):** off after migration and after
+   acceptance until an admin enables it; budgets as listed under M1.
+2. **Keep and upgrades (open question 2):** Keep blocks replacement; a kept title only gains
+   versions.
+3. **Replace or add (open question 3):** `replace` is the default profile upgrade mode; the
+   explicit action always adds. Replacement also waits while retention is disabled, because it
+   runs through the Phase 3 executor.
+4. **Reclaimed titles (open question 4):** not re-acquired automatically; `reacquireReclaimed`
+   (default off) turns it on. This is stricter than the proposal.
+5. **Episode versions (open question 5):** blocked entirely until live evidence; switch
+   `episodeUpgradesEnabled`.
+6. **New-episode delay and specials (open question 6):** 120 minutes; specials are never
+   acquired automatically (no per-episode opt-in yet).
+7. **Proper/repack (open question 7):** only offered in the picker, never auto-replaced.
+8. **Get another quality (open question 8):** administrator-only.
+9. **Reclaim order (open question 9):** lowest quality first within a due target.
+10. **Unknown held quality:** a title whose held version quality cannot be parsed is never
+    upgraded (`held_quality_unknown`).
+11. **Manual run:** `POST /Automation/Run` bypasses only the interval, never a budget.
+
+### Live acceptance checklist (M2–M9)
+
+Run after Phase 5's checklist passes, on `jellyfinmod-test` only, with the disposable Transmission
+and a disposable Torznab indexer:
+
+1. Deploy the Phase 6 build and bundle; confirm Health lists `automation` and `versions`, the
+   migration applied and automation is off.
+2. Dashboard: set a profile cutoff and upgrades, indexer limits and small budgets; enable
+   automation with a 1-hour interval.
+3. Over at least three scheduled runs: a wanted movie is auto-grabbed and imported; a new
+   episode is acquired only after its delay; a below-cutoff movie is upgraded and the old file is
+   reclaimed only after the new one plays, as a `RetentionOperation` with `upgrade_replaced`; a
+   budget exhaustion and an empty-search back-off are visible in the decision log.
+4. Restart the container between runs; no duplicate grab, import or replacement.
+5. Safeguards: open the breaker with a failing indexer, raise the free-space floor above free
+   space, stop Transmission, and switch automation off mid-run; each stops automatic grabs with a
+   visible decision and a queue banner.
+6. Compare the free space automation reports with `df` for the same filesystem (M1).
+7. If the Phase 5 checklist showed merged episode versions, re-decide open question 5 before
+   enabling `episodeUpgradesEnabled`.
+8. Retention: the T18 cycle still passes; per-version ordering holds; no `media_missing`.
+9. Security: automation and settings routes answer 401/403 for anonymous and ordinary users;
+   `intent=addVersion` is refused for a file-less target.
+10. Browser (M8), signed in as `oleksii` with an empty password: desktop and mobile — version rows
+    show resolution, codecs, channels, size and default marker, selecting a row drives the stock
+    version select, Play starts the selected `mediaSourceId`, Get another quality opens the picker
+    with held qualities marked, the More-menu entry, Search now, and the queue banner for each
+    paused reason; TV — rows reachable and selectable by D-pad; old plugin (capability missing)
+    hides rows, action and banner; check webOS separately. The Movies grid never blanks while
+    automation changes states.
+11. Record revisions, boundary query counts against run summaries, timings and Pi memory; switch
+    automation off and remove disposable media.
+
 ## Risks
 
 | Risk | Required response |
