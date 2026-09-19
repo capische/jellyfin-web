@@ -31,8 +31,11 @@ const browserErrors = [];
 const entryPostRequests = [];
 const pausedEntryRequests = [];
 const browseRequests = [];
+const allRequestUrls = [];
+const skippedGates = [];
 ws.addEventListener('message', event => {
     const message = JSON.parse(event.data);
+    if (message.method === 'Network.requestWillBeSent') allRequestUrls.push(message.params.request.url);
     if (message.id && pending.has(message.id)) {
         const { resolve, reject } = pending.get(message.id);
         pending.delete(message.id);
@@ -71,6 +74,20 @@ const apiRequest = async (path, method = 'GET', body) => evaluate(`(async () => 
     return { status: response.status, body: text ? JSON.parse(text) : null };
 })()`);
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const keyCodes = { ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39, Enter: 13, Tab: 9, Escape: 27 };
+/** A trusted key press, as a remote or keyboard produces it; synthetic DOM events miss native activation. */
+const pressKey = async key => {
+    const code = keyCodes[key];
+    await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key, code: key, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code });
+    if (key === 'Enter') await send('Input.dispatchKeyEvent', { type: 'char', key, code: key, text: '\r', windowsVirtualKeyCode: code });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code });
+    await wait(250);
+};
+/** Controls that a screen reader could not name through text, aria-label or title. */
+const unnamedControls = scope => evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(scope)}))
+    .filter(node => node.offsetParent !== null)
+    .filter(node => !node.textContent.trim() && !node.getAttribute('aria-label') && !node.getAttribute('title'))
+    .map(node => node.outerHTML.slice(0, 120))`);
 const clickFocused = async () => {
     const activated = await evaluate(`(() => {
         const control = document.activeElement;
@@ -113,6 +130,8 @@ const snapshot = () => evaluate(`(() => ({
 await send('Page.enable');
 await send('Runtime.enable');
 await send('Network.enable');
+// A headless or background page gets no focus events otherwise, and TV center-focus depends on them.
+await send('Emulation.setFocusEmulationEnabled', { enabled: true });
 let originalLayout;
 const checks = [];
 const createdEntryIds = [];
@@ -218,6 +237,10 @@ try {
         throw new Error('Clearing the Due filter did not restore the isolated library');
     }
     checks.push({ dueFilter: 'passed', eligibleSet: 'passed' });
+    if (!expectedNormalCountdown) skippedGates.push('normal-library countdown (JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN)');
+    if (!expectedFilteredCountdown) skippedGates.push('filtered countdown (JELLYFINMOD_EXPECT_FILTER_COUNTDOWN)');
+    if (!reclaimedEntryId) skippedGates.push('reclaimed details without playback (JELLYFINMOD_RECLAIMED_ENTRY_ID)');
+    if (!nativePlaybackItemId) skippedGates.push('native playback action (JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID)');
     if (reclaimedEntryId) {
         await navigate(server + '#/details?entryId=' + encodeURIComponent(reclaimedEntryId));
         const reclaimed = await evaluate(`(() => {
@@ -265,31 +288,40 @@ try {
         const menuHasSearch = await evaluate(`Array.from(document.querySelectorAll('[data-id="jfmod-search-releases"]')).some(node => node.textContent.includes('Search releases'))`);
         if (!menuHasSearch) throw new Error('Search releases missing from native More menu in ' + layout);
         checks.push({ layout, width, height, nativeDetails: 'passed' });
-        if (layout === 'desktop') {
-            const hasKeep = await evaluate(`(() => {
-                const button = document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]');
-                if (${JSON.stringify(expectAdmin)}) {
-                    button?.focus();
-                    button?.click();
-                }
-                return !!button;
-            })()`);
-            if (expectAdmin) {
-                if (!hasKeep) throw new Error('Admin Keep action is missing from native details');
-                await wait(3000);
-                const kept = await evaluate(`({
-                    focused: document.activeElement?.matches('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]') ?? false,
-                    label: document.activeElement?.textContent.trim() ?? null,
-                    status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
-                })`);
-                if (!kept.focused || kept.label !== 'Kept' || kept.status !== 'Kept indefinitely.') {
-                    throw new Error('Keep did not preserve focus and refresh retention state: ' + JSON.stringify(kept));
-                }
-                checks.push({ keepFocus: 'passed', retentionStatus: 'passed' });
-            } else {
-                if (hasKeep) throw new Error('Restricted user can see the admin-only Keep action');
-                checks.push({ restrictedKeep: 'absent' });
+        await pressKey('Escape');
+        await send('Page.reload', { ignoreCache: false });
+        await wait(5000);
+        const unnamed = await unnamedControls('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button, '
+            + '#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)');
+        if (unnamed.length) throw new Error('Controls without text, aria-label or title in ' + layout + ': ' + JSON.stringify(unnamed));
+        const keepSelector = '#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button[aria-pressed]';
+        const hasKeep = await evaluate(`!!document.querySelector(${JSON.stringify(keepSelector)})`);
+        if (expectAdmin) {
+            if (!hasKeep) throw new Error('Admin Keep action is missing from native details in ' + layout);
+            // Reach Keep the way this layout is driven: the D-pad on TV, Tab elsewhere, from the first detail action.
+            await evaluate(`document.querySelector('#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)')?.focus()`);
+            const step = layout === 'tv' ? 'ArrowDown' : 'Tab';
+            let reached = false;
+            for (let press = 0; press < 40 && !reached; press++) {
+                await pressKey(step);
+                reached = await evaluate(`document.activeElement?.matches(${JSON.stringify(keepSelector)}) ?? false`);
             }
+            if (!reached) throw new Error('Keep is not reachable by ' + step + ' in ' + layout);
+            await pressKey('Enter');
+            await wait(3000);
+            const kept = await evaluate(`({
+                focused: document.activeElement?.matches(${JSON.stringify(keepSelector)}) ?? false,
+                label: document.activeElement?.textContent.trim() ?? null,
+                pressed: document.activeElement?.getAttribute('aria-pressed') ?? null,
+                status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
+            })`);
+            if (!kept.focused || kept.label !== 'Kept' || kept.pressed !== 'true' || kept.status !== 'Kept indefinitely.') {
+                throw new Error('Keep by ' + step + ' and Enter did not keep focus and state in ' + layout + ': ' + JSON.stringify(kept));
+            }
+            checks.push({ layout, width, keepByKeyboard: step + '+Enter', keepFocus: 'passed', retentionStatus: 'passed' });
+        } else {
+            if (hasKeep) throw new Error('Restricted user can see the admin-only Keep action in ' + layout);
+            checks.push({ layout, width, restrictedKeep: 'absent' });
         }
         console.log(`passed native details: ${layout} ${width}x${height}`);
     }
@@ -687,14 +719,51 @@ try {
         cachedPluginDetails: nativeWithoutPlugin.pluginDetails, cachedDiscovery: nativeSearchWithoutPlugin.discovery });
     console.log('passed native detail and search degradation without plugin transport');
 
+    // The Home Continue watching row must show when Jellyfin has resumable items for this user.
+    await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    await navigate(server + '#/home');
+    const resume = await apiRequest('UserItems/Resume?limit=12&mediaTypes=Video');
+    const resumeIds = (resume.body?.Items ?? []).map(item => item.Id.replace(/-/g, '').toLowerCase());
+    if (!resumeIds.length) {
+        skippedGates.push('Home resume row (the test user has no resumable item)');
+    } else {
+        const row = await evaluate(`(() => {
+            const title = Array.from(document.querySelectorAll('.sectionTitle')).find(node => /^continue watching$/i.test(node.textContent.trim()));
+            const section = title?.closest('.verticalSection') ?? title?.parentElement?.parentElement;
+            return { present: !!title, ids: Array.from(section?.querySelectorAll('.card[data-id]') ?? []).map(card => card.dataset.id.replace(/-/g, '').toLowerCase()) };
+        })()`);
+        if (!row.present || !row.ids.some(id => resumeIds.includes(id))) {
+            throw new Error('Home Continue watching row is missing resumable items: ' + JSON.stringify({ row, resumeIds }));
+        }
+        checks.push({ homeResumeRow: 'passed', resumable: resumeIds.length, shown: row.ids.length });
+    }
+
+    // Catalog entry IDs belong to /JellyfinMod only; a native request carrying one would 404 or leak.
+    const entries = await apiRequest('JellyfinMod/Entries?limit=200');
+    const entryIds = new Set([...(entries.body?.items ?? []).map(entry => entry.id), ...createdEntryIds]
+        .map(id => String(id).replace(/-/g, '').toLowerCase()));
+    const leaked = allRequestUrls.filter(url => {
+        const parsed = new URL(url, server);
+        if (parsed.pathname.includes('/JellyfinMod/') || parsed.host !== new URL(server).host) return false;
+        const text = decodeURIComponent(parsed.pathname + parsed.search).replace(/-/g, '').toLowerCase();
+        return [...entryIds].some(id => text.includes(id)) || text.includes('pending:');
+    });
+    if (leaked.length) throw new Error('Native requests carried plugin entry IDs: ' + JSON.stringify(leaked.slice(0, 10)));
+    checks.push({ nativeRequestsWithPluginIds: 0, requestsChecked: allRequestUrls.length });
+    await navigate(server + '#/search');
+
     await setSearch('jfmod-no-results-' + Date.now());
     const empty = await snapshot();
     if (empty.cards.length) throw new Error('Prior search cards leaked into the new query');
     checks.push({ searchScope: 'passed' });
     console.log('passed search scope isolation');
     if (browserErrors.length) throw new Error('Browser threw uncaught exceptions: ' + JSON.stringify(browserErrors));
-    console.log(JSON.stringify({ checks, physicalTv: 'not tested',
+    console.log(JSON.stringify({ checks, skippedGates, physicalTv: 'not tested',
         remaining: ['physical webOS acceptance'] }, null, 2));
+    if (skippedGates.length && process.env.JELLYFINMOD_ALLOW_SKIPS !== 'true') {
+        console.error('Skipped gates make this run incomplete; set JELLYFINMOD_ALLOW_SKIPS=true only for a partial run.');
+        process.exitCode = 2;
+    }
 } finally {
     await send('Network.setBlockedURLs', { urls: [] });
     await send('Fetch.disable').catch(() => {});
