@@ -4,6 +4,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import FormGroup from '@mui/material/FormGroup';
 import type { LibraryViewSettings } from 'types/library';
 
+import { usePluginHealth } from '../hooks/useEntries';
+
 const options = [
     { label: 'On disk', states: ['onDisk'] },
     { label: 'Not downloaded', states: ['none'] },
@@ -17,6 +19,8 @@ interface Props {
 }
 
 export default function FileFilterGroup({ libraryViewSettings, setLibraryViewSettings }: Readonly<Props>) {
+    const health = usePluginHealth();
+    const supportsDue = health.data?.capabilities?.includes('browse.dueWithinDays') === true;
     const selected = libraryViewSettings.Filters?.FileStates ?? [];
     const dueWithinDays = libraryViewSettings.Filters?.RetentionDueWithinDays;
     const change = useCallback((event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
@@ -57,10 +61,10 @@ export default function FileFilterGroup({ libraryViewSettings, setLibraryViewSet
                     }
                 />
             ))}
-            <FormControlLabel
+            {supportsDue && <FormControlLabel
                 label='Due within 7 days'
                 control={<Checkbox checked={dueWithinDays === 7} onChange={changeDue} />}
-            />
+            />}
         </FormGroup>
     );
 }
