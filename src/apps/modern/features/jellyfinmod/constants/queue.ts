@@ -10,6 +10,9 @@ export const QUEUE_CAPABILITY = 'queue';
 
 export const QUEUE_ROUTE = '/catalog/queue';
 
+/** The Health capability a plugin build advertises when it runs scheduled searches (P6.M3). */
+export const AUTOMATION_CAPABILITY = 'automation';
+
 /** Polling interval while the queue or an in-flight mark is on screen; no websocket (UX §10). */
 export const QUEUE_POLL_MS = 3000;
 
