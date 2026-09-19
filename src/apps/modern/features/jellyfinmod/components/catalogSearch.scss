@@ -6,9 +6,18 @@
         flex-wrap: wrap;
 
         h2 { margin-right: auto; }
-        label { align-items: center; display: flex; margin-left: 1em; }
-        label span { margin-right: 0.5em; }
-        select { font: inherit; padding: 0.45em; }
+
+        label {
+            align-items: center;
+            display: flex;
+            margin-left: 1em;
+        }
+
+        select {
+            font: inherit;
+            margin-left: 0.5em;
+            padding: 0.45em;
+        }
     }
 
     .jfmod-searchSkeletons {
