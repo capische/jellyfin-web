@@ -14,8 +14,9 @@ const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin
     const detail = useQuery({
         queryKey: ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId],
         queryFn: async ({ signal }) => {
+            // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14).
             const entries = await getEntries(api, { jellyfinItemId: itemId, limit: 1 }, { signal });
-            const entry = entries.items.find(candidate => candidate.jellyfinItemId?.replace(/-/g, '').toLowerCase() === itemId.replace(/-/g, '').toLowerCase());
+            const entry = entries.items[0];
             return entry ? getEntry(api, entry.id, { signal }) : null;
         },
         retry: false
@@ -36,9 +37,20 @@ const NativeEntryDetails: FC<{ api: Api; userId: string; itemId: string; isAdmin
         }
     }, [api, busy, detail]);
     if (!detail.data) return null;
+    const sameId = (value?: string | null) => value?.replace(/-/g, '').toLowerCase() === itemId.replace(/-/g, '').toLowerCase();
+    // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
+    const episode = detail.data.episodes.find(candidate => sameId(candidate.jellyfinItemId));
+    const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
     return <section aria-label='JellyfinMod'>
         <p role='status'>{message}</p>
-        <RetentionStatus retention={detail.data.retention} />
+        <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
+        {isSeriesPage && detail.data.episodes.some(candidate => candidate.retention) && <details className='jfmod-entryHistory'>
+            <summary>Episode retention</summary>
+            {detail.data.episodes.map(candidate => <div className='jfmod-episodeRow' key={candidate.id}>
+                <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
+                <RetentionStatus retention={candidate.retention} compact />
+            </div>)}
+        </details>}
         {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
             aria-disabled={busy} aria-pressed={detail.data.retention.reason === 'kept'} onClick={keep}>
             {keepButtonLabel(busy, detail.data.retention.reason === 'kept')}
