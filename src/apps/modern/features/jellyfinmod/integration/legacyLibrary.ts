@@ -20,6 +20,9 @@ interface LegacyApiClient {
     subscribe(messageTypes: OutboundWebSocketMessageType[], callback: (message: { Data?: unknown }) => void): () => void;
 }
 
+/** A legacy value is a delimited string from the filter dialog, an array, or empty after a reset. */
+type LegacyList = string | number | Array<string | number> | null | undefined;
+
 interface LegacyQuery {
     ParentId?: string;
     SortBy?: string;
@@ -28,19 +31,30 @@ interface LegacyQuery {
     Limit?: number;
     NameStartsWith?: string;
     NameLessThan?: string;
-    Genres?: string[];
-    Years?: number[];
-    OfficialRatings?: string[];
-    Tags?: string[];
-    StudioIds?: string[];
-    SeriesStatus?: string[];
-    VideoTypes?: string[];
-    AudioLanguages?: string[];
-    SubtitleLanguages?: string[];
-    IsPlayed?: boolean;
-    IsFavorite?: boolean;
-    IsResumable?: boolean;
+    Genres?: LegacyList;
+    Years?: LegacyList;
+    OfficialRatings?: LegacyList;
+    Tags?: LegacyList;
+    StudioIds?: LegacyList;
+    SeriesStatus?: LegacyList;
+    VideoTypes?: LegacyList;
+    AudioLanguages?: LegacyList;
+    SubtitleLanguages?: LegacyList;
+    Filters?: LegacyList;
+    IsPlayed?: boolean | null;
+    IsFavorite?: boolean | null;
+    IsResumable?: boolean | null;
+    IsHD?: boolean | null;
+    Is4K?: boolean | null;
+    Is3D?: boolean | null;
+    HasSubtitles?: boolean | null;
+    HasTrailer?: boolean | null;
+    HasSpecialFeature?: boolean | null;
+    HasThemeSong?: boolean | null;
+    HasThemeVideo?: boolean | null;
     JellyfinModRandomSeed?: string;
+    JellyfinModState?: LegacyList;
+    JellyfinModDueWithinDays?: number | null;
 }
 
 export interface LegacyBrowseResult {
@@ -49,14 +63,32 @@ export interface LegacyBrowseResult {
     JellyfinModRows: true;
 }
 
-const values = <T>(value?: T[]) => value ?? [];
+/**
+ * Splits the legacy filter dialog's values (P1.W8). It writes genres, tags and ratings joined with `|`, years,
+ * series status, video types and `Filters` joined with `,`, and an empty string after a reset.
+ */
+const list = (value: LegacyList, delimiter: string): string[] => {
+    if (value === null || value === undefined) return [];
+    const parts = Array.isArray(value) ? value.map(String) : String(value).split(delimiter);
+    return [...new Set(parts.map(part => part.trim()).filter(part => part.length > 0))];
+};
+
+const FEATURES = ['HasSubtitles', 'HasTrailer', 'HasSpecialFeature', 'HasThemeSong', 'HasThemeVideo'] as const;
 
 const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series'): BrowseRequest => {
-    const status: string[] = [];
-    if (query.IsPlayed === true) status.push('IsPlayed');
-    if (query.IsPlayed === false) status.push('IsUnplayed');
-    if (query.IsFavorite) status.push('IsFavorite');
-    if (query.IsResumable) status.push('IsResumable');
+    const tokens = list(query.Filters, ',');
+    const status = new Set<string>(tokens.filter(token =>
+        token === 'IsPlayed' || token === 'IsUnplayed' || token === 'IsFavorite' || token === 'IsResumable'));
+    if (query.IsPlayed === true) status.add('IsPlayed');
+    if (query.IsPlayed === false) status.add('IsUnplayed');
+    if (query.IsFavorite) status.add('IsFavorite');
+    if (query.IsResumable) status.add('IsResumable');
+    const videoBasicFilter: string[] = [];
+    if (query.IsHD === true) videoBasicFilter.push('IsHD');
+    if (query.IsHD === false) videoBasicFilter.push('IsSD');
+    if (query.Is4K) videoBasicFilter.push('Is4K');
+    if (query.Is3D) videoBasicFilter.push('Is3D');
+    const state = list(query.JellyfinModState, ',');
 
     const sortBy = (query.SortBy ?? 'SortName').split(',');
     if (sortBy.includes('Random') && !query.JellyfinModRandomSeed) {
@@ -71,17 +103,21 @@ const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series'): BrowseReq
         startIndex: query.StartIndex ?? 0,
         limit: query.Limit && query.Limit > 0 ? query.Limit : undefined,
         alphabet: query.NameLessThan === 'A' ? '#' : query.NameStartsWith,
+        state: state.length > 0 ? state : undefined,
+        dueWithinDays: query.JellyfinModDueWithinDays ?? undefined,
         filters: {
-            genres: values(query.Genres),
-            years: values(query.Years),
-            officialRatings: values(query.OfficialRatings),
-            tags: values(query.Tags),
-            studioIds: values(query.StudioIds),
-            status,
-            seriesStatus: values(query.SeriesStatus),
-            videoTypes: values(query.VideoTypes),
-            audioLanguages: values(query.AudioLanguages),
-            subtitleLanguages: values(query.SubtitleLanguages)
+            genres: list(query.Genres, '|'),
+            years: list(query.Years, ',').map(Number).filter(Number.isInteger),
+            officialRatings: list(query.OfficialRatings, '|'),
+            tags: list(query.Tags, '|'),
+            studioIds: list(query.StudioIds, ','),
+            status: [...status],
+            seriesStatus: list(query.SeriesStatus, ','),
+            videoTypes: list(query.VideoTypes, ','),
+            features: FEATURES.filter(feature => query[feature] === true),
+            videoBasicFilter,
+            audioLanguages: list(query.AudioLanguages, ','),
+            subtitleLanguages: list(query.SubtitleLanguages, ',')
         }
     };
 };
@@ -105,7 +141,11 @@ export const fetchLegacyBrowse = async (
             TotalRecordCount: result.totalRecordCount,
             JellyfinModRows: true
         };
-    } catch {
+    } catch (error) {
+        // Without the plugin (404) the stock grid is expected; anything else is a mod bug that must not hide
+        // file-less and reclaimed titles silently (P1.W8).
+        const status = (error as { status?: number } | undefined)?.status;
+        if (status !== 404) console.error('[JellyfinMod] Browse failed; showing the native grid instead', status, error);
         return apiClient.getItems(apiClient.getCurrentUserId(), query as Record<string, unknown>);
     }
 };
