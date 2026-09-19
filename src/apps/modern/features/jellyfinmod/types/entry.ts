@@ -1,4 +1,5 @@
 import type { AcquisitionSummary } from './acquisition';
+import type { VersionDto } from './versions';
 
 /**
  * A JellyfinMod entry. One per title, with or without a media file behind it.
@@ -95,6 +96,8 @@ export interface EntryEpisode {
     retention: RetentionSummary | null;
     /** Newest grab of this episode; absent from older plugins (P4.A6). */
     acquisition?: AcquisitionSummary | null;
+    /** Playable versions, empty unless the episode has a file; absent from plugins without `versions` (P6.M8). */
+    versions?: VersionDto[];
 }
 
 export interface RetentionSummary {

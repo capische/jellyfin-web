@@ -1,10 +1,11 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
-import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseSearch } from '../types/acquisition';
+import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
+import type { UpgradeStateDto, VersionDto } from '../types/versions';
 import type { Filters } from 'types/library';
 
 /**
@@ -78,6 +79,10 @@ export interface EntryDetail {
     retention: RetentionSummary;
     /** Newest grab of a movie entry; absent from older plugins (P4.A6). */
     acquisition?: AcquisitionSummary | null;
+    /** Playable versions of a movie with files; absent from plugins without `versions` (P6.M8). */
+    versions?: VersionDto[];
+    /** Administrators only: whether an upgrade is due and why not (P6.M5). */
+    upgrade?: UpgradeStateDto | null;
 }
 
 export interface DiscoveryQuery {
@@ -158,6 +163,16 @@ export const patchEpisode = async (api: Api, entryId: string, episodeId: string,
     return response.data;
 };
 
+/**
+ * Administrator-only. Asks the next automation run to search this title, or one episode of it, and resets its
+ * backoff (P6.M3). The target's monitoring is left as it is.
+ */
+export const requestSearch = async (api: Api, entryId: string, episodeId?: string, options?: AxiosRequestConfig): Promise<void> => {
+    const path = api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
+        + (episodeId ? '/Episodes/' + encodeURIComponent(episodeId) : '');
+    await api.axiosInstance.patch(path, { searchNow: true }, { ...options, headers: authorization(api) });
+};
+
 export const removeEntry = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<void> => {
     await api.axiosInstance.delete(api.basePath + BASE + '/Entries/' + encodeURIComponent(id), { ...options, headers: authorization(api) });
 };
@@ -174,6 +189,8 @@ export interface ReleaseQuery {
     episodeId?: string;
     /** Rescores this search only; never changes the entry's saved profile. */
     profileId?: string;
+    /** Omitted means `acquire`; `addVersion` needs the `versions` capability (P6.M6). */
+    intent?: ReleaseIntent;
 }
 
 /** Searches enabled indexers for one target. Never starts a download. Administrator-only. */
