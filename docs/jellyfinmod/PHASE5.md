@@ -1,6 +1,6 @@
 # Phase 5 — import pipeline
 
-Planning draft, 2026-09-19. Read [PLAN.md](PLAN.md), [README.md](README.md) §6–§7,
+Planning draft, 2026-09-19; see *Implementation status* for what is built. Read [PLAN.md](PLAN.md), [README.md](README.md) §6–§7,
 [UX.md](UX.md) §8, §10, §13 and §14, [PHASE2.md](PHASE2.md), [PHASE3.md](PHASE3.md),
 [PHASE4.md](PHASE4.md) and [API.md](API.md) alongside this refinement. This document plans
 work; it does not establish that Phase 4 has passed acceptance, and it does not authorize a
@@ -565,6 +565,132 @@ with production never contacted:
 Phase 5 is complete only when a grab becomes a playable library file without a copy, survives
 restarts in every state, starts retention from the import time, and the seeding copy is removed
 by the plugin after its goals so that the retention cycle demonstrably frees disk.
+
+## I1 evidence — 2026-09-19
+
+Nothing was deployed to the isolated instance on this date (it is reserved until the T18 run
+finishes), so the answers below come from a read-only inspection of the isolated container, the
+pinned host API and the integration suites. Each item names what still has to be measured live in
+the I9 checklist.
+
+- **Same mount.** A read-only `docker inspect` of `jellyfinmod-test` shows exactly one writable bind
+  mount, which holds the isolated library and has room for a download folder beside it; the
+  production media mounts are read-only. Gate 3 is therefore satisfiable by putting the
+  Transmission download directory inside that one mount, outside every library root. The plugin
+  checks this itself: the download-client save compares statx device and mount identity (Phase 4),
+  and `POST /DownloadClients/{id}/TestImportPath` performs a real `link(2)` probe into each
+  same-mount library root. *Live:* run that probe on the isolated instance and record the
+  `mountIdentity` (without paths).
+- **Targeted scan.** The importer calls `ILibraryMonitor.ReportFileSystemChanged(<new folder or
+  file>)`, the in-process call behind `POST /Library/Media/Updated`. It refreshes only the parent
+  folder and raises `ItemAdded`, which the existing `LibraryEventListener` consumes; binding then
+  happens only in `ReconciliationService`. A scan that has not bound after `scanTimeoutMinutes` is
+  reported once more; after the second attempt the import blocks as `binding_not_observed` with
+  the hardlink kept, so a later full scan still completes it. `ImportRepairTask` (hourly) retries
+  those blocked imports. *Live:* time
+  one new file on the Pi.
+- **Episode versions.** Not measured. The conservative default is implemented: an episode that
+  already has a file blocks as `target_exists`, and Phase 6 keeps episode versions behind
+  `episodeUpgradesEnabled` (off). *Live:* land `Series S01E01 - 1080p.mkv` and
+  `Series S01E01 - 2160p.mkv` in a disposable series and record whether 10.11.11 merges them.
+- **Client semantics (Transmission RPC, legacy method names).** `torrent-get` with `hashString`,
+  `name`, `downloadDir`, `labels`, `percentDone`, `sizeWhenDone`, `leftUntilDone`,
+  `rateDownload`, `eta`, `status`, `isFinished`, `uploadRatio`, `secondsSeeding`,
+  `seedRatioMode`, `seedRatioLimit`, `seedIdleMode`, `seedIdleLimit`, `error`, `files` and
+  `fileStats`. Completion is `leftUntilDone == 0` with `percentDone == 1`; unwanted files are
+  ignored. `torrent-remove` with `delete-local-data` removes only that torrent's files. Ratio and
+  seeding time come from `uploadRatio` and `secondsSeeding`. Phase 4 sets each grabbed torrent to
+  unlimited seed modes, so a pause by share limit cannot happen for plugin torrents; ownership is
+  the per-grab label `jfmod-<grabId>`. *Live:* confirm against the disposable Transmission.
+- **Legal fixture.** The integration boundary writes real payloads (single video, multi-file with
+  extras and samples, archive, wrong episode). *Live:* the 64 MB and archive torrents of A1 still
+  have to be created for the disposable tracker.
+- **Contract.** Published in [API.md](API.md) *Import, queue and seeding (Phase 5)*.
+
+## Implementation status — 2026-09-19
+
+Source is on the Phase 5 build branches; nothing is deployed. Plugin tasks were built and
+integration-tested before the Phase 6 work started.
+
+| Task | Status | Notes |
+| --- | --- | --- |
+| I1 | Partial | Answers above from inspection and code; live measurements are in the checklist below |
+| I2 | Done | One migration after Phase 4: import operations (one open per grab), seed releases, ordered path mappings, blocklist, import settings in the SQLite acquisition settings row with a revision; Dashboard sections for import settings and path mappings |
+| I3 | Done | `ImportMonitor` hosted service polls every `importPollSeconds` through one shared client snapshot (single-flight, 3 s freshness); stalls after `stalledAfterHours`; client outages keep rows `unknown` instead of failing them |
+| I4 | Done | 90 % largest-video rule, extras and samples skipped, episode parse must match, archives blocked; `link(2)` only (no bytes copied, so no free-space check), `EXDEV` blocks `cross_filesystem`, collision-safe names; restart-safe through recorded physical identities |
+| I5 | Done | Targeted scan, binding observed only through Phase 2 reconciliation, retention baseline reset at bind, one `imported` history event, grab released |
+| I6 | Done | Strictest goal of indexer, client and floor; release only when complete and the goal is met, the torrent is plugin-owned, the seeding path is outside every library and the library link is either the same inode or already reclaimed; bytes verified after removal |
+| I7 | Done | Queue, import detail, Retry, Remove (cancel, remove from client, blocklist) and Seeding routes; projections in list, browse and detail |
+| I8 | Done, not browser-verified | `/catalog/queue` route, downloading cards, detail and user-menu links, TV route entry; type-check, lint, stylelint and production build pass |
+| I9 | Partial | `PhaseFiveIntegration` passes; the isolated live run is below |
+
+Plugin evidence (offline SDK container on the test host, committed tree): `PhaseZeroSmoke`,
+`PhaseOneSmoke`, `PhaseTwoIntegration`, `PhaseThreeIntegration`,
+`PhaseThreeProtectionIntegration`, `PhaseFourIntegration`, `PhaseFiveIntegration` and
+`PhaseSixIntegration` all exit 0. `PhaseFiveIntegration` runs a real Kestrel host with
+authentication, MVC serialization, EF migrations and SQLite, a Torznab boundary and a Transmission
+RPC boundary that writes real files, real `link(2)` into a real library folder, and the
+production monitor, scan, reconciliation and retention code. It covers download progress, import,
+binding, retention baseline, both seed-release orders, every documented block reason, restart in
+each import state, Remove with each option, and anonymous, ordinary-user and no-library-access
+calls.
+
+### Defaults chosen here — needs user decision
+
+Each is the conservative option behind a named setting or documented default:
+
+1. **Queue visibility (open question 2):** `queueVisibleToUsers` defaults to off, so the queue is
+   administrator-only like search and grab.
+2. **Seed release (open question 3):** `seedReleaseEnabled` defaults to off; floors are ratio 1.0
+   **or** 168 hours. The client's idle limit is not part of the goal.
+3. **Episodes with a file (open question 4):** blocked as `target_exists`.
+4. **Archives (open question 5):** blocked at import as `archive_unsupported`; Phase 4 scoring is
+   unchanged.
+5. **Release-now (open question 6):** not implemented. `DELETE /Queue/{id}` with
+   `removeFromClient` is the only escape hatch and never touches the library file.
+6. **Folder naming (open question 7):** `Title (Year) [tmdbid-N]`; existing native folders are
+   reused, never renamed.
+7. **Version label (open question 8):** `<resolution> <Source>` (for example `1080p WEB-DL`), with
+   ` vN` appended on a collision.
+8. **Import settings live in SQLite,** not plugin XML, to keep the revision and Dashboard contract
+   of Phase 4.
+9. **Retry** of a blocked import re-inspects from the start rather than resuming.
+10. **Retention baseline** is reset for every added version, not only the first file.
+
+### Live acceptance checklist (I3–I9)
+
+Run after the T18 window, on `jellyfinmod-test` only, with a disposable Transmission whose download
+directory is inside the single writable mount and outside every library root, auto-removal off:
+
+1. Deploy the Phase 5 plugin build and web bundle; confirm Health lists `queue`, `import` and
+   `seedRelease` and the migration applied; record the revisions.
+2. Dashboard: add the path mapping, run *Test import path*, and confirm `linked` for the movie and
+   TV roots (I1 same-mount evidence).
+3. Grab the 64 MB fixture for a disposable movie; watch `queued` → `downloading` with advancing
+   progress over several polls → `identifying` → `linking` → `scanning` → `seeding`.
+4. Confirm the library file shares the download's inode (`stat` link count 2), the item plays,
+   one `imported` history event exists and the retention baseline is the import time.
+5. Time the targeted scan; confirm no full library scan ran (I1 targeted-scan evidence).
+6. Land two versions of one episode in a disposable series and record whether they merge (I1
+   episode evidence); remove them.
+7. Seed release on: with a short floor, confirm the seeding copy is removed only after the goal,
+   the bytes are freed only when retention has also reclaimed the library link, and both orders
+   work. Restore `seedReleaseEnabled` afterwards.
+8. Failure cases: wrong path mapping, ambiguous files, archive, wrong episode, torrent removed in
+   the client, Transmission stopped mid-download, container restart in `linking` and `scanning`,
+   and Remove with each option. No file appears outside the documented paths and no library file
+   is deleted.
+9. Security: anonymous and ordinary-user calls to every new route; a user without library access
+   gets the concealed 404 on `GET /Imports/{id}`.
+10. Browser (I8), signed in as `oleksii` with an empty password, against the built bundle: desktop
+    and mobile at 390 px — queue rows, progress, blocked reasons, Retry, the Remove dialog with
+    both options, downloading cards in Movies and TV and the detail link; TV layout — D-pad focus
+    stays on the focused row across ten polls and the list never unmounts; the Movies grid never
+    blanks during polls; an ordinary user sees no queue link; with the capability missing (old
+    plugin) the route, cards and menu entry are hidden.
+11. Regressions: Phase 2 suites and the T18 retention cycle still pass; no `media_missing` written.
+12. Record revisions, client version, fixture identity, timings and Pi memory; remove disposable
+    media and torrents.
 
 ## Risks
 
