@@ -57,13 +57,14 @@ Each step prints its wall-clock duration as it finishes (`passed <step> (12.3s)`
 has `timings` (step to seconds, plus `total`), `waits` (aggregated hard reloads, soft reloads,
 networkIdle quiet waits, TMDB-backed discovery waits and fixture seeding/cleanup; these kinds
 overlap) and `idleTimeouts` (requests still pending when a quiet wait timed out, by path only).
-A failed run prints the partial timings to stderr.
+A failed run prints the partial timings to stderr. Every run bypasses the HTTP cache once, at
+setup; later reloads only apply a layout or reset app state.
 
 `JELLYFINMOD_QUICK=true` runs a post-deploy smoke subset: native details and Keep by keyboard in
 all four layouts, the retention countdown and Due filter, the reclaimed and native playback gates,
-plugin transport outage, Home resume, the plugin-ID leak check and search scope, with a single
-cache-bypassing reload. It skips the TMDB- and fixture-heavy checks (failed and in-flight Add, the
-seeded empty discovery page, Home library exclusion) and lists them as `skippedByQuickMode`. Its
+plugin transport outage, Home resume, the plugin-ID leak check and search scope. It skips the
+TMDB- and fixture-heavy checks (failed and in-flight Add, the seeded empty discovery page, Home
+library exclusion) and lists them as `skippedByQuickMode`. Its
 summary says `mode: "quick"` and `fullAcceptance: false`; it never replaces a full run. Failures
 exit 1 and skipped gates exit 2, as in a full run.
 
