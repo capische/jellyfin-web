@@ -27,8 +27,12 @@
 
 .jfmod-homeHeroContent h1 { font-size: 2.8em; margin: 0 0 0.25em; }
 .jfmod-homeHeroContent p { display: -webkit-box; font-size: 1.05em; line-height: 1.45; max-width: 36em; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.jfmod-homeHeroActions { display: flex; gap: 0.7em; margin-top: 1.2em; }
-.jfmod-homeHeroActions .emby-button:focus-visible { box-shadow: 0 0 0 0.18em #00a4dc; }
+// Margins instead of flex gap, and a :focus ring that engines without :focus-visible still show (P1.W11).
+// The rules stay separate: an engine drops a whole selector list when it does not know one selector.
+.jfmod-homeHeroActions { display: flex; margin-top: 1.2em; }
+.jfmod-homeHeroActions > * + * { margin-left: 0.7em; }
+.jfmod-homeHeroActions .emby-button:focus { box-shadow: 0 0 0 0.18em #00a4dc; }
+.jfmod-homeHeroActions .emby-button:focus:not(:focus-visible) { box-shadow: none; }
 
 .skinHeader.jfmod-topbar {
     background: linear-gradient(180deg, rgba(16, 16, 16, 0.95), rgba(16, 16, 16, 0));

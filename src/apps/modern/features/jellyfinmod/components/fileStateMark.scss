@@ -15,7 +15,6 @@
     z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 0.3em;
     height: 1.4em;
     padding: 0 0.35em;
     border-radius: 0.9em;
@@ -23,6 +22,9 @@
     font-size: 0.75em;
     line-height: 1;
     pointer-events: none;
+
+    // Margins instead of flex gap for older TV engines (P1.W11).
+    > * + * { margin-left: 0.3em; }
 
     [dir="ltr"] & {
         left: 0.3em;
