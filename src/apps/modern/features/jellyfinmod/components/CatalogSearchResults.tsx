@@ -7,6 +7,7 @@ import SearchResults from 'apps/legacy/features/search/components/SearchResults'
 import SearchResultsRow from 'apps/legacy/features/search/components/SearchResultsRow';
 import { useSearchItems } from 'apps/legacy/features/search/api/useSearchItems';
 import { CardShape } from 'components/cardbuilder/utils/shape';
+import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
 import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
@@ -106,25 +107,15 @@ const optimisticEntry = (metadata: TmdbMetadata, targetLibraryId: string): Entry
     addedAt: new Date().toISOString()
 });
 
-const showAddedToast = (canUndo: boolean, onUndo: () => void) => {
-    if (!canUndo) {
-        toast('Added to catalog');
-        return;
+/** The session's library choice per media type survives query edits (P1.W13). */
+const librariesKey = (userId?: string | null) => 'jfmod-searchLibraries:' + (userId ?? '');
+
+const loadLibraryChoice = (userId?: string | null): Partial<Record<MediaType, string>> => {
+    try {
+        return JSON.parse(sessionStorage.getItem(librariesKey(userId)) ?? '{}') as Partial<Record<MediaType, string>>;
+    } catch {
+        return {};
     }
-    const container = document.createElement('div');
-    container.className = 'toast jfmod-addToast toastVisible';
-    container.textContent = 'Added to catalog ';
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'jfmod-addToastUndo';
-    button.textContent = 'Undo';
-    button.addEventListener('click', () => {
-        onUndo();
-        container.remove();
-    }, { once: true });
-    container.appendChild(button);
-    document.body.appendChild(container);
-    window.setTimeout(() => container.remove(), 4000);
 };
 
 const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
@@ -140,7 +131,20 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         return ['movie', 'series'];
     }, [collectionType]);
     const [optimistic, setOptimistic] = useState<Entry[]>([]);
-    const [selectedLibraries, setSelectedLibraries] = useState<Partial<Record<MediaType, string>>>({});
+    const [selectedLibraries, setSelectedLibraries] = useState<Partial<Record<MediaType, string>>>(() => loadLibraryChoice(user?.Id));
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(librariesKey(user?.Id), JSON.stringify(selectedLibraries));
+        } catch {
+            // The choice is a convenience; without storage it lasts for this search only.
+        }
+    }, [selectedLibraries, user?.Id]);
+    // Undo stays in the page, is focused on TV and waits for the viewer instead of a 4-second toast (P1.W13).
+    const [undoEntry, setUndoEntry] = useState<Entry | null>(null);
+    const undoButton = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        if (undoEntry && layoutManager.tv) undoButton.current?.focus();
+    }, [undoEntry]);
     const active = useRef(true);
     const inFlight = useRef(new Set<string>());
     const failedFocus = useRef<string>();
@@ -228,7 +232,9 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         .filter(metadata => !heldIdentities.has(`${metadata.mediaType}:${metadata.tmdbId}`))
         .filter((metadata, index, items) => items.findIndex(item => item.mediaType === metadata.mediaType && item.tmdbId === metadata.tmdbId) === index);
     const discoveryPending = queryInput.length >= 2 && discovery.some(result => result.isPending);
-    const discoveryFailed = discovery.some(result => result.isError);
+    // One media type failing must not hide the other type's suggestions (P1.W13).
+    const discoveryFailed = discovery.length > 0 && discovery.every(result => result.isError);
+    const failedTypes = types.filter((_, index) => discovery[index]?.isError);
 
     const targetFor = (mediaType: MediaType) => {
         if (parentId) return parentId;
@@ -242,6 +248,15 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         await removeEntry(api, entry.id);
         setOptimistic(current => current.filter(candidate => candidate.id !== entry.id));
         await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath, user?.Id] });
+    };
+
+    const undo = () => {
+        const entry = undoEntry;
+        if (!entry) return;
+        undoAdd(entry).then(() => setUndoEntry(null), (error: unknown) => {
+            console.error('[JellyfinMod] undo failed', error);
+            toast('Could not undo. The title is still in the catalog.');
+        });
     };
 
     const restoreFocusAfterAdd = (metadata: TmdbMetadata, inputWasFocused: boolean, succeeded: boolean) => {
@@ -274,7 +289,8 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             // A duplicate/racing add returns created=false. Never let Undo delete an entry
             // that existed before this action, even for an administrator.
             if (!active.current) return;
-            showAddedToast(!!user?.Policy?.IsAdministrator && result.created, undoAdd.bind(null, result.entry));
+            if (user?.Policy?.IsAdministrator && result.created) setUndoEntry(result.entry);
+            else toast('Added to catalog');
         } catch (error) {
             if (!active.current) return;
             failedFocus.current = inputWasFocused ? undefined : identity;
@@ -339,7 +355,15 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             {discoveryPending && <div className='jfmod-searchSkeletons padded-left padded-right' aria-label='Searching TMDB'>
                 {[0, 1, 2, 3, 4, 5].map(index => <span key={index} />)}
             </div>}
+            {undoEntry && <div className='jfmod-undoBar padded-left padded-right' role='status'>
+                Added {undoEntry.title} to the catalog{' '}
+                {/* eslint-disable-next-line react/jsx-no-bind */}
+                <button ref={undoButton} type='button' className='emby-button raised' onClick={undo}>Undo</button>
+            </div>}
             {!discoveryPending && discoveryFailed && <p className='jfmod-searchNotice padded-left padded-right'>TMDB is unavailable. Your library results are still shown above.</p>}
+            {!discoveryPending && !discoveryFailed && failedTypes.length > 0 && <p className='jfmod-searchNotice padded-left padded-right'>
+                TMDB {failedTypes.map(type => type === 'movie' ? 'movie' : 'series').join(' and ')} results are unavailable right now.
+            </p>}
             {!discoveryPending && !discoveryFailed && <DiscoveryRow>
                 {discovered.map(metadata => <article className='jfmod-discoveryCard' key={`${metadata.mediaType}:${metadata.tmdbId}`}>
                     <div className='jfmod-discoveryArtwork' style={getTmdbImage(metadata.posterPath) ? { backgroundImage: `url("${getTmdbImage(metadata.posterPath)}")` } : undefined} />
