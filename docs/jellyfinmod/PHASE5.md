@@ -601,7 +601,9 @@ the I9 checklist.
   ignored. `torrent-remove` with `delete-local-data` removes only that torrent's files. Ratio and
   seeding time come from `uploadRatio` and `secondsSeeding`. Phase 4 sets each grabbed torrent to
   unlimited seed modes, so a pause by share limit cannot happen for plugin torrents; ownership is
-  the per-grab label `jfmod-<grabId>`. *Live:* confirm against the disposable Transmission.
+  the per-grab label `jfmod-<grabId>`. The retention reader holds those torrents to the plugin's
+  effective goal instead of reporting them unbounded (proposed default 1 of the 2026-09-19 gap
+  fixes). *Live:* confirm against the disposable Transmission.
 - **Legal fixture.** The integration boundary writes real payloads (single video, multi-file with
   extras and samples, archive, wrong episode). *Live:* the 64 MB and archive torrents of A1 still
   have to be created for the disposable tracker.
@@ -658,6 +660,28 @@ Each is the conservative option behind a named setting or documented default:
    of Phase 4.
 9. **Retry** of a blocked import re-inspects from the start rather than resuming.
 10. **Retention baseline** is reset for every added version, not only the first file.
+
+### Proposed defaults from the 2026-09-19 gap fixes — needs user decision
+
+Each is the conservative option; none is accepted yet.
+
+1. **Seed goal for plugin-added torrents in the retention reader.** The client keeps both seed
+   modes unlimited (P4.A5), so no client stopping condition undercuts a requirement. The Phase 3
+   seed reader recognises a torrent the plugin added (matching infohash, the configured label and
+   the per-grab `jfmod-<grabId>` label) and holds it to the same effective goal as I6: the
+   strictest of the grab's indexer snapshot, any finite ratio limit the client applies (per torrent
+   or session, never lowered) and the global floor (ratio 1.0 **or** 168 hours). Retention may
+   reclaim the library link only once that goal is met; before, the file is blocked with
+   `seed_goal_unmet`. With every floor cleared and no indexer or client limit the goal stays
+   unbounded (`seed_goal_unbounded`), so nothing is ever reclaimable early. This also covers
+   torrents whose seed release was cancelled from the queue while they keep seeding. Torrents the
+   plugin did not add keep the client's own semantics.
+2. **Path mappings in the retention reader (PHASE4 A6 (b)).** The reader translates daemon paths
+   through the verified path mappings of the acquisition client configured for the same RPC
+   endpoint (the grab's client for plugin torrents, otherwise the client whose label the torrent
+   carries, else the selected client). A path whose best matching prefix is unverified is never
+   read, so its file stays unresolved and non-torrent media stays blocked with
+   `seed_index_incomplete`. A path no mapping covers is read as the daemon reports it, as before.
 
 ### Live acceptance checklist (I3–I9)
 
