@@ -77,9 +77,10 @@ const list = (value: LegacyList, delimiter: string): string[] => {
 const FEATURES = ['HasSubtitles', 'HasTrailer', 'HasSpecialFeature', 'HasThemeSong', 'HasThemeVideo'] as const;
 
 const toRequest = (query: LegacyQuery, mediaType: 'movie' | 'series'): BrowseRequest => {
-    const tokens = list(query.Filters, ',');
-    const status = new Set<string>(tokens.filter(token =>
-        token === 'IsPlayed' || token === 'IsUnplayed' || token === 'IsFavorite' || token === 'IsResumable'));
+    // The dialog writes `IsUnPlayed`; Jellyfin reads Filters tokens case-insensitively, and so does this.
+    const statusTokens = ['IsPlayed', 'IsUnplayed', 'IsFavorite', 'IsResumable'];
+    const status = new Set<string>(list(query.Filters, ',').flatMap(token =>
+        statusTokens.filter(known => known.toLowerCase() === token.toLowerCase())));
     if (query.IsPlayed === true) status.add('IsPlayed');
     if (query.IsPlayed === false) status.add('IsUnplayed');
     if (query.IsFavorite) status.add('IsFavorite');
