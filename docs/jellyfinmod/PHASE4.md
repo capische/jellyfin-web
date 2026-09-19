@@ -429,7 +429,10 @@ the isolated instance are still open. The test instance stays untouched until T1
 - **A6 (partly implemented).** The entry profile, per-entry and per-episode acquisition summaries, and
   removal blocked while a grab is active are done. Grabbed torrents are protected by the Phase 3
   Transmission reader only when its RPC URL matches the acquisition client; the settings report
-  whether they match. The review's A6 amendments (a)–(e) are not implemented.
+  whether they match. Amendment (b) is implemented (2026-09-19): the reader applies the matching
+  client's path mappings, and plugin-added torrents are held to the Phase 5 effective seed goal
+  instead of reading as unbounded (PHASE5 proposed defaults from the gap fixes). Amendments (a)
+  and (c)–(e) are not implemented.
 - **A7 (implemented; type-check, lint and production build only).** The release picker dialog is
   reachable from the file-less detail page (Get again for reclaimed titles), episode rows and the
   native Details More menu. Desktop, mobile and TV browser verification is outstanding, and so is a
