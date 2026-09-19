@@ -316,6 +316,11 @@ Phase 6 adds ordering and clarity, not new eligibility:
 - The privacy-safe retention summary and the version rows in detail show per-version state so an
   admin can see "2160p waiting for seeding, 1080p scheduled".
 - The title becomes `reclaimed` only when its last playable binding is gone (unchanged).
+- A remaining version keeps the completion and deadline that scheduled its title: when a sibling
+  version is reclaimed or removed and completion is re-read from the remaining one, a later
+  re-read instant does not restart the window (fixed 2026-09-19). A new completion (after an
+  unwatched or resume state) and policy or access changes recompute as before, and a prior longer
+  deadline is still kept.
 
 **Acceptance** — disposable movie with two versions, both due, the 2160p seeding copy below its
 goal: the run reclaims the 1080p file only, the 2160p stays with a seed reason, the entry stays
