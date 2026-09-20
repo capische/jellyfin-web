@@ -9,7 +9,9 @@ const URL_RESOLVER = document.createElement('a');
 // Based on https://github.com/github/fetch/pull/92#issuecomment-174730593
 //          https://github.com/github/fetch/pull/92#issuecomment-512187452
 export default async function fetchLocal(url: string, options?: FetchOptions) {
-    URL_RESOLVER.href = url;
+    // JellyfinMod: a bundle served from outside the document's directory declares where its own files are, so
+    // `config.json` is fetched from the bundle rather than from beside the document (PHASE7 §3.1).
+    URL_RESOLVER.href = window.__jfmodAssetRoot ? new URL(url, window.__jfmodAssetRoot).href : url;
 
     const requestURL = URL_RESOLVER.href;
 
@@ -30,7 +32,7 @@ export default async function fetchLocal(url: string, options?: FetchOptions) {
             reject(new TypeError('Local request failed'));
         };
 
-        xhr.open('GET', url);
+        xhr.open('GET', requestURL);
 
         if (options?.cache) {
             xhr.setRequestHeader('Cache-Control', options.cache);
