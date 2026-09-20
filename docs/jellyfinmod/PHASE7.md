@@ -391,17 +391,32 @@ Run for every upstream merge; the result is recorded in the phase evidence with 
 
 ### 3.5 Version and compatibility matrix
 
+**Corrected 2026-09-20 (S1 evidence, confirmed by the coordinator).** The rows below originally
+described a pinned `10.11.x` line with a `supportedServer` range of `min` and `maxExclusive`.
+That line is stale. The isolated instances genuinely run the `jellyfin/jellyfin` image that
+reports **`Version: 12.0.0`**, and the plugin loads and works against it: `targetAbi` is a
+*minimum*, `10.11.0.0`, which 12.0.0 satisfies. README §7.1 still describes the 10.11.11 pair;
+that discrepancy is noted here and left for the README's own revision rather than rewritten from
+this document.
+
+Support is therefore expressed as **a minimum plus a tested-on list**, never as a guessed upper
+bound. `jellyfinmod-web.json` carries `supportedServer: { minimum: "<targetAbi>", testedOn: [
+"12.0.0" ] }`. A host at or above the minimum is supported; a host outside it degrades to stock
+with a named blocker rather than being guessed about. An untested host above the minimum runs,
+and says so, rather than being refused — refusing every version nobody has tried yet would make
+each host release an outage.
+
 | Host server | Plugin load | Bundle at `/web` | Behaviour |
 | --- | --- | --- | --- |
-| Older than `targetAbi` (`10.11.0.0`) | Not loaded (`NotSupported`) | Stock | Nothing runs; if a patched file was left behind, the failsafe shows stock and the log names it |
-| `10.11.x` (pinned line; `supportedServer.min ≤ version < maxExclusive`) | Loaded | JellyfinMod | Supported; the fork uses only 10.11 API surface |
-| Newer minor inside the range | Loaded | JellyfinMod | Supported; the merge routine re-verifies at each image pin bump |
-| Newer than `maxExclusive` (for example 12.x, .NET 10) | Usually not loaded (ABI or framework); if it loads | Stock | The engine compares `IServerApplicationHost.ApplicationVersion` with the bundle's `supportedServer` at startup: outside the range it applies no takeover, restores a previous one, reports blocker `server_version_unsupported` in Health and settings, and keeps serving the bundle at its own path for administrators to evaluate |
+| Below `targetAbi` (`10.11.0.0`) | Not loaded (`NotSupported`) | Stock | Nothing runs; if a patched file was left behind, the failsafe shows stock and the log names it |
+| At or above the minimum, in `testedOn` (today `12.0.0`) | Loaded | JellyfinMod | Supported |
+| At or above the minimum, not in `testedOn` | Loaded | JellyfinMod | Runs; Health and the Interface section report `server_version_untested` with the observed version, and the merge routine adds it to `testedOn` once a real run passes. Not a blocker: an untried version is unknown, not known-bad |
+| Loaded but a real incompatibility is found | Loaded | Stock | The engine applies no takeover, restores any previous one, reports blocker `server_version_unsupported`, and keeps serving the bundle at its own path so an administrator can evaluate it. Reaching this state is reported, never worked around silently |
 | Bundle newer than plugin (archive shape or a retained bundle after rollback) | Loaded | JellyfinMod | Capability gating hides surfaces the plugin lacks; the Overview shows the id mismatch |
 | Plugin newer than bundle (a retained older bundle in a resident client) | Loaded | JellyfinMod (old) | Works while the API stays additive within the grace period; `expectsCapabilities` is a subset |
 
-Moving the pinned host (a 12.0 / .NET 10 plugin) is separate work (`plugin/CLAUDE.md`); the
-matrix gains a row when it happens.
+Moving the plugin itself to .NET 10 and a 12.x `targetAbi` is still separate work
+(`plugin/CLAUDE.md`); what changed here is only how support is *expressed*, not the build target.
 
 ## 4. UI delivery
 
