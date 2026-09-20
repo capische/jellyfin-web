@@ -11,12 +11,9 @@
  * it.
  */
 
+// `Window.__jfmodAssetRoot` is declared beside the shared `assetUrl` helper in utils, which is where the rest of
+// the app reads it from.
 declare global {
-    interface Window {
-        /** Set by the takeover renderer in the patched document, before any bundle script runs. */
-        __jfmodAssetRoot?: string;
-    }
-
     /** Webpack's own public path, rewritten at build time; `'auto'` resolves it to the runtime script's URL. */
     // eslint-disable-next-line @typescript-eslint/naming-convention -- webpack defines this name; we only read it
     const __webpack_public_path__: string;

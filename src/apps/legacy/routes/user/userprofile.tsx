@@ -15,6 +15,7 @@ import UserPasswordForm from 'components/dashboard/users/UserPasswordForm';
 import Page from 'components/Page';
 import Loading from 'components/loading/LoadingComponent';
 import Button from 'elements/emby-button/Button';
+import { assetUrl } from 'utils/assetUrl';
 
 const USER_IMAGE_PLACEHOLDER = 'assets/img/avatar.png';
 
@@ -41,9 +42,9 @@ const UserProfile: FunctionComponent = () => {
 
         void libraryMenu.then(menu => menu.setTitle(user.Name));
 
-        let imageUrl = USER_IMAGE_PLACEHOLDER;
+        let imageUrl = assetUrl(USER_IMAGE_PLACEHOLDER);
         if (api) {
-            imageUrl = getImageApi(api).getUserImageUrl(user) ?? USER_IMAGE_PLACEHOLDER;
+            imageUrl = getImageApi(api).getUserImageUrl(user) ?? assetUrl(USER_IMAGE_PLACEHOLDER);
         }
         const userImage = (page.querySelector('#image') as HTMLDivElement);
         userImage.style.backgroundImage = 'url(' + imageUrl + ')';
