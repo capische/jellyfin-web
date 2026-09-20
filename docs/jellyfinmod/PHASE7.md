@@ -188,7 +188,7 @@ on 2026-09-20, so the tasks below say accurately what is new.
 jellyfin-web fork                      plugin (JellyfinMod)                 host
   master  = upstream + prod fixes        jellyfinmod-web.zip  ───extract──▶  <plugin-data>/web/<bundleId>/
   jellyfin-mod = master + mod            JellyfinMod.dll                      │ served at
-     │ npm run build                     ├ /JellyfinMod/Web/<bundleId>/ ◀─────┘
+     │ npm run build                     ├ /web-mod/<bundleId>/ ◀─────┘
      ├ dist/index.html      (stock entry, unchanged screens)      ├ takeover engine ──▶ <web-root>/index.html (patched)
      ├ dist/jellyfinmod.html (mod entry: shell + mod screens      │                      <web-root>/index.jellyfinmod-stock.html
      │                        + upstream screens imported)        └ pristine copy ──▶ <plugin-data>/web-root/
@@ -342,6 +342,12 @@ target state after Stage B parity is the first four rows only.
 | `src/apps/legacy/routes/search.tsx` | Add from TMDB section (W4) | leftovers section vanishes | until Stage B search passes, then removed |
 | `src/apps/legacy/controllers/itemDetails/index.js` | detail augmentation (W5, T14) | History, retention, Search releases vanish on stock details | until Stage B details pass, then removed |
 | `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` (W7/W12) | top-bar restyle gone in the stock entry | until Stage B Home passes, then removed |
+| `src/utils/assetUrl.ts` | **new file**, the one helper the four rows below call | nothing; a new file never conflicts | permanent |
+| `src/utils/fetchLocal.ts` | roots `config.json` at the bundle (S3) | `config.json` is fetched from beside the document instead of from the bundle | permanent |
+| `src/components/ThemeCss.tsx` | roots the theme stylesheet at the bundle (S3) | the theme stylesheet 404s from the plugin path | permanent |
+| `src/utils/image.ts` | roots the device images at the bundle (S3) | device icons 404 from the plugin path | permanent |
+| `src/apps/legacy/routes/user/userprofile.tsx` | roots the default avatar at the bundle (S3) | the default avatar 404s from the plugin path | permanent |
+| `src/plugins/syncPlay/ui/playbackPermissionManager.js` | roots the silent sound at the bundle (S3) | the SyncPlay permission probe 404s from the plugin path | permanent |
 | `src/components/toolbar/AppUserMenu.tsx` | Queue item (I8) | Queue unreachable from the stock user menu | until Stage A, then removed (the mod shell has its own menu) |
 | `src/apps/modern/routes/asyncRoutes/user.ts`, `routes/catalog/queue.tsx` | the `catalog/queue` route in the stock entry | queue route missing in the stock entry | until Stage A, then removed; the mod router owns `catalog/*` |
 
@@ -425,7 +431,7 @@ Moving the plugin itself to .NET 10 and a 12.x `targetAbi` is still separate wor
 | Plugin | Web root | What `/web` serves | Who sees it |
 | --- | --- | --- | --- |
 | Enabled, takeover on | writable, patched | JellyfinMod interface (plugin-served bundle) | every browser and web-based TV client (`jellyfin-webos`, Tizen) |
-| Enabled, takeover on | read-only | stock; JellyfinMod at `<baseUrl>/JellyfinMod/Web/` only; Health and settings show the blocker | as above; the mod address is opened by hand |
+| Enabled, takeover on | read-only | stock; JellyfinMod at `<baseUrl>/web-mod/` only; Health and settings show the blocker | as above; the mod address is opened by hand |
 | Enabled, takeover off | any | stock; JellyfinMod at its own path | as above |
 | Enabled, host already serves the fork (archive shape) | fork bind-mounted | the fork, unpatched (recognised by the bundle meta tag) | as above |
 | Disabled or uninstalled cleanly | restored | byte-identical stock `index.html` | as above |
@@ -444,7 +450,7 @@ the user and the login page.
 | Route | What it is | Cost | Risk | "Enable → new product, disable → stock"? |
 | --- | --- | --- | --- | --- |
 | (a) runtime capability switch in the fork | The deployed fork shows the stock look when Health is unreachable or lacks `ui`. With the separate entry this becomes two things: the stock entry sheds its mod mounts (§3.2) and the mod entry degrades to native browsing and playback with mod surfaces hidden. | Small: gates and the mount removals. | Low; it is the existing degradation contract (UX §14, W14). | Only where the fork is deployed by hand; still needs a web deploy. |
-| (b) plugin-served UI | The plugin package carries the built bundle and serves it anonymously under `<baseUrl>/JellyfinMod/Web/<bundleId>/`. | Medium: packaging (well under 60 MB per release once maps are excluded), extraction, static serving with cache headers, bundle identity in Health. | Low–medium: the app must run from a non-`/web` document (rooted fetches, service worker). No host file touched. | Enable → available at a second address; disable → gone; not at `/web`. |
+| (b) plugin-served UI | The plugin package carries the built bundle and serves it anonymously under `<baseUrl>/web-mod/<bundleId>/`. | Medium: packaging (well under 60 MB per release once maps are excluded), extraction, static serving with cache headers, bundle identity in Health. | Low–medium: the app must run from a non-`/web` document (rooted fetches, service worker). No host file touched. | Enable → available at a second address; disable → gone; not at `/web`. |
 | (c) plugin patches `index.html` | The plugin rewrites the host's `/web/index.html` to load (b)'s bundle, keeps a pristine copy, re-applies after upgrades, restores on disable. | Medium–high: a small but safety-critical file engine and a writable web root. | Medium: a wrong write blanks the login page and the Dashboard needed to fix it; hence failsafe and manual recovery. | Yes, at `/web`, for browsers and web TV clients. |
 | (d) distribution shapes | Image `FROM jellyfin/jellyfin` with the plugin preinstalled; or an archive plus `JELLYFIN_WEB_DIR` / a volume. | Image: build pipeline, entrypoint, writable web directory. Archive: documentation and `jellyfin-sync`. | Image: low once built; the web root is inside the container and stock again on recreate, which (c) handles. Archive: the operator owns the swap back. | Image with (b)+(c): yes, no operator steps. Archive: enable yes; disable is an operator action. |
 
@@ -455,12 +461,12 @@ web-based TV clients follow whatever `/web` serves, which is the point of (c).
 ### 4.4 Takeover mechanisms
 
 Both mechanisms start from the same pieces: the plugin serves the bundle at
-`<baseUrl>/JellyfinMod/Web/<bundleId>/` (S3), and the engine (S4) owns `<web-root>/index.html`
+`<baseUrl>/web-mod/<bundleId>/` (S3), and the engine (S4) owns `<web-root>/index.html`
 with a pristine copy. They differ only in what the patched file contains.
 
 **Mechanism 1 — swap in place (recommended).** The patched `index.html` is rendered from the
 bundle's `jellyfinmod.html`: every `<script src>`, stylesheet `<link>`, icon and manifest
-reference is rewritten to the absolute plugin path (`<baseUrl>/JellyfinMod/Web/<bundleId>/…`,
+reference is rewritten to the absolute plugin path (`<baseUrl>/web-mod/<bundleId>/…`,
 `<baseUrl>` read from the host's network configuration), a marker comment and the
 `jellyfinmod-web` meta tag are present, and a small inline failsafe script comes first in
 `<head>`. The document URL stays `/web/index.html`; `HashRouter` routes (`#/home`,
@@ -485,7 +491,7 @@ mode, as evidence only.
 
 **Mechanism 2 — redirect (fallback).** The patched `index.html` is the stock file with one
 injected head script: unless `?jfmod=stock` is present, probe the bundle manifest with a short
-`XMLHttpRequest` and, on success, `location.replace('<baseUrl>/JellyfinMod/Web/<bundleId>/' +
+`XMLHttpRequest` and, on success, `location.replace('<baseUrl>/web-mod/<bundleId>/' +
 location.hash)`. The app then runs from its own directory, so relative fetches need no rooting and
 the service-worker scope is natural. Costs: the address changes, deep links map only because both
 sides use hash routes, the host's `/` → `/web/index.html` redirect gets a second hop, the probe
@@ -521,9 +527,9 @@ step needs the Dashboard, because the Dashboard is inside the page that may be b
   stays). Previous bundles are kept for `WebBundleGraceDays` (default 14, at most three bundles)
   so a resident TV client that loaded an older page keeps working after an upgrade (the reason
   `jellyfin-sync` retains old assets, `ff89608a6c`), then pruned.
-- Serving: an `[AllowAnonymous]` controller at `JellyfinMod/Web/{bundleId}/{**path}` returns
+- Serving: an `[AllowAnonymous]` controller at `web-mod/{bundleId}/{**path}` returns
   `PhysicalFile` with the right content type, range support and `Cache-Control: public,
-  max-age=31536000, immutable`; `JellyfinMod/Web/` (no id) answers the current bundle's
+  max-age=31536000, immutable`; `web-mod/` (no id) answers the current bundle's
   `jellyfinmod.html` with `Cache-Control: no-store` and rewritten asset URLs, so the read-only
   fallback and the redirect mechanism have one address. `..` and encoded separators are rejected;
   only files inside the extracted bundle are served; the secret store and database are outside.
@@ -740,6 +746,118 @@ state is neither complete nor dismissed sees a banner on the mod Home linking to
 sections' forms and Tests. On TV it is reachable and navigable by D-pad with Back; data entry is
 verified on desktop and mobile.
 
+## 7.1 Trakt — verify and keep compatible
+
+Requested by the user on 2026-09-20: *"if the Trakt plugin is installed, use it to report watched
+state and current-view tracking."* **Plan only; nothing here is implemented yet.**
+
+The honest answer is smaller than the request implies, so it is worth stating before the detail.
+
+### 7.1.1 What the stock Trakt plugin already does
+
+Established from `jellyfin/jellyfin-plugin-trakt` on 2026-09-20, not from memory:
+
+- Its `ServerMediator` subscribes to the **server's own** events: `ISessionManager`'s
+  `PlaybackStart`, `PlaybackProgress` and `PlaybackStopped`, `IUserDataManager`'s `UserDataSaved`,
+  and the library's `ItemAdded` / `ItemUpdated` / `ItemRemoved`.
+- It scrobbles a watch when `PlaybackStopped` reports `PlayedToCompletion`; short of that it sends
+  a paused state at the current percentage. It acts only for users who have Trakt credentials and
+  have scrobbling enabled, and only for movies and episodes.
+- `SyncFromTraktTask` runs the other way: it writes watched state, play counts, last-played times
+  and playback positions **from** Trakt **into** Jellyfin user data through
+  `IUserDataManager.SaveUserData`. Items that are not in the local library are skipped.
+
+**Therefore the JellyfinMod interface has nothing to report to Trakt, and must not try.** Trakt
+never sees a browser. It sees Jellyfin's server-side events, which are raised because a client
+used Jellyfin's ordinary playback session and user-data APIs. The mod interface already does
+that, because it embeds upstream's `playbackManager` and the upstream `video` route unchanged
+(§3.3) rather than reimplementing playback.
+
+So Phase 7.1 is scoped to **verify and keep compatible**. Any task here that starts with "send"
+or "report to Trakt" is the wrong task: a second scrobbler would double every play.
+
+### 7.1.2 What the new interface must keep doing
+
+Each of these is upstream behaviour the mod interface inherits; the work is proving it still
+holds once the mod entry, shell and Stage B pages are in front of it, not building it.
+
+| Behaviour | Why Trakt depends on it | Where it comes from |
+| --- | --- | --- |
+| Playback session reporting (`POST /Sessions/Playing`) | Raises `PlaybackStart`; without it a play never begins on Trakt | upstream `playbackManager` |
+| Progress ticks (`POST /Sessions/Playing/Progress`) | Drives the paused/progress state and the resume point | upstream `playbackManager` |
+| Stop reporting (`POST /Sessions/Playing/Stopped`) with an accurate position | `PlayedToCompletion` is what turns a play into a scrobble | upstream `playbackManager` |
+| Mark played / unplayed | Raises `UserDataSaved`, which the mediator also listens to | upstream item context menu and detail actions |
+| Resume points | Written as user data; read back by `SyncFromTraktTask` | upstream |
+
+The risk is not that these are missing today — the S1 spike played a movie and an episode through
+the mod router — but that a Stage B page reimplements a detail action with its own API call and
+quietly drops one. The acceptance below is written against that risk.
+
+### 7.1.3 Detecting the plugin, and what to show
+
+- **Detection is server-side.** `GET /Plugins` requires elevation, so an ordinary user's browser
+  cannot ask whether Trakt is installed. If any surface needs to know, the JellyfinMod plugin
+  reports it: a `trakt` block in Health carrying `installed`, `version` and `configuredForUser`,
+  derived from the host's own plugin list. The plugin's id must be read off an installed copy
+  rather than hard-coded from documentation, which does not publish it.
+- **Proposed surfaces: none in the first slice.** Trakt state is not JellyfinMod state, and the
+  detail page already shows Jellyfin's watched state, which is what Trakt reads and writes. A
+  Trakt badge would be a second source of truth for the same fact. The proposed first slice shows
+  nothing and only guarantees that scrobbling keeps working.
+- **Absent or unconfigured plugin: nothing happens, visibly.** No error, no console noise, no
+  banner, and above all no effect on playback. The interface never waits on a Trakt answer before
+  starting a video. This is the same degradation contract as UX §14.
+
+### 7.1.4 Retention, which is where the two actually meet
+
+Watched state lives in Jellyfin's user data, attached to the `BaseItem`. Retention deletes the
+media file and the item, so that user data goes with it — but the Trakt history was written when
+the title was watched and is unaffected. Nothing is lost on Trakt's side and nothing is
+duplicated, because retention never replays anything.
+
+Two consequences worth stating plainly:
+
+- `SyncFromTraktTask` skips items that are not in the library, so a reclaimed title is simply not
+  considered. It does not error and does not resurrect anything. The JellyfinMod entry stays as
+  the placeholder it already is.
+- If the title is re-acquired later, the same task will mark it watched again from Trakt. That is
+  correct, and it is also the more interesting interaction: **Trakt can now be the thing that
+  tells Jellyfin a title was watched**, including watched somewhere else entirely. JellyfinMod's
+  retention reads Jellyfin's user data, so a watch that arrived from Trakt would start a retention
+  window exactly as a local watch does. That is arguably right, and it is certainly a behaviour an
+  administrator should be told about rather than discover. It is open question 14 below.
+
+### 7.1.5 Acceptance
+
+Real browser against the acceptance instance with the Trakt plugin installed and authorised for
+the test user, plus one run with it uninstalled. No fixture left behind.
+
+- A movie played to the end in the mod interface produces a Trakt scrobble; the same movie played
+  to roughly half and stopped produces a paused state and no scrobble. Verified by Trakt's own
+  history for the test account, not by reading Jellyfin's logs.
+- An episode does the same.
+- Mark played and mark unplayed from the mod detail page each move Trakt's watched state.
+- A resume point set in the mod interface survives a reload and is the one Jellyfin reports.
+- The network log for a full play shows exactly one `Sessions/Playing`, progress ticks, and one
+  `Sessions/Playing/Stopped` — no duplicate session reporting from any mod surface.
+- With the Trakt plugin uninstalled: every one of the above still plays, marks and resumes
+  correctly, with no error toast, no uncaught exception and no failed request.
+- Retention: a watched title reclaimed by retention leaves its Trakt history intact, its
+  JellyfinMod entry present as a placeholder, and `SyncFromTraktTask` completing without error.
+- Desktop, mobile and both TV layouts, since playback reporting is the same code in each.
+
+### 7.1.6 Open questions this section adds
+
+14. **Trakt-sourced watches and retention.** Should a watch that arrived *from* Trakt — watched on
+    another device, imported by `SyncFromTraktTask` — start a JellyfinMod retention window like a
+    local watch (proposed: yes, because the user has watched it), or should retention count only
+    watches observed on this server? Consumed by 7.1 and PHASE3's observation rules.
+15. **Reclaimed titles on Trakt.** Should reclaiming a file be reported to Trakt at all — for
+    example removed from a collection list (proposed: **no**; Trakt tracks what you watched, not
+    what you store, and JellyfinMod deliberately keeps the entry as the durable record)?
+16. **Trakt state on screen.** Show nothing (proposed), or show a small indicator on the detail
+    page when the plugin is installed and the title has Trakt history?
+
 ## Entry gates and dependencies
 
 **Proposed, not user-approved.** Phase 7 work starts only after the current product passes live
@@ -787,7 +905,7 @@ each.
 
 | Endpoint | Contract |
 | --- | --- |
-| `GET /Web/` and `GET /Web/{bundleId}/{**path}` (anonymous) | Static serving per §4.5; 404 for unknown ids and paths; no directory listing. |
+| `GET /web-mod/` and `GET /web-mod/{bundleId}/{**path}` (anonymous, outside `/JellyfinMod`) | Static serving per §4.5; 404 for unknown ids and paths; no directory listing. |
 | `GET /Health` | Adds `revision`, `lastMigration`, `web` (§4.5); `capabilities` adds `ui`, `ui.web`, `ui.takeover`, `acquisition.prowlarr`, `settings.overview`, `setup`. |
 | `GET /Settings/Overview` | `{ plugin: { version, revision }, web: <Health.web>, areas: [{ id, ready, blockers[], revision, lastRun? }], setup: <summary> }`. |
 | `GET/PATCH /Settings/Discovery`, `POST /Settings/Discovery/Test` | `{ tokenConfigured, revision }`; PATCH takes `{ token: <SecretChangeRequest>, revision }`; Test answers `ConnectionTestDto`. |
@@ -1049,7 +1167,7 @@ place (this task proves (b) alone):
 
 - After restart `<plugin-data>/web/<bundleId>/` exists and matches the manifest; Health reports
   `web.bundleId`, `servedAt`, `supportedServer` and `capabilities` including `ui.web`.
-- `GET <baseUrl>/JellyfinMod/Web/` returns `jellyfinmod.html` with `no-store` and absolute asset
+- `GET <baseUrl>/web-mod/` returns `jellyfinmod.html` with `no-store` and absolute asset
   URLs; assets under the id answer `immutable`; `../` and encoded separators are 404; anonymous
   access works for these routes only (`Settings/**` still 401/403).
 - At that address, in every layout: Home, Movies, search, a file-less detail, a native playback,
@@ -1058,6 +1176,54 @@ place (this task proves (b) alone):
 - Deploying a second build keeps the first bundle served at its old path and lists both; after
   the grace period (shortened in the isolated XML) the older one is pruned; a fourth build prunes
   the oldest at once.
+
+#### S3 evidence — 2026-09-20, on the acceptance instance
+
+**Address, accepted by the user on 2026-09-20: `/web-mod`.** The interface is a static site
+someone types into a browser, so it mirrors the host's own `/web` instead of sitting under
+`/JellyfinMod`. Every API this plugin exposes stays under `/JellyfinMod`; only the bundle moved.
+The earlier `/JellyfinMod/Web` path is **dropped, not redirected** — nothing had been published
+on it, and a redirect would be one more address to keep working for ever.
+
+Collision and shadowing were checked rather than assumed: `/web/` and `/web/index.html` still
+answer `200` from the host's own static root, unchanged; `/web-mod` answers with and without a
+trailing slash; `/JellyfinMod/Web/` is now `404`. The app's own routing is a `HashRouter`, so
+everything after `#` is resolved in the browser and cannot collide with a server route — deep
+links were opened directly at `/web-mod/#/movies?topParentId=…&collectionType=movies` and
+`/web-mod/#/details?id=…` and both rendered, as did `/web-mod/#/dashboard`.
+
+| Check | Result |
+| --- | --- |
+| Bundle installed and verified | The plugin recomputes the bundle id from the extracted files and refuses a mismatch; it matched, and Health reports `bundleId`, `webCommit`, `servedAt`, `retainedBundleIds`, `hostVersion` and `supportedServer` |
+| Capabilities | `ui` and `ui.web` advertised |
+| Document | `Cache-Control: no-store`, the takeover marker, `window.__jfmodAssetRoot`, the meta tag equal to the manifest's `bundleId`, and no relative script or stylesheet left in it |
+| Assets | `Cache-Control: public, max-age=31536000, immutable`, `Accept-Ranges: bytes` |
+| Traversal | `../../../etc/passwd`, percent-encoded `..%2f`, backslash `..%5c` and `../jellyfinmod.db` all `404`; an unknown bundle id `404` |
+| Authorization | `/JellyfinMod/Settings/Acquisition` and `/JellyfinMod/Health` answer `401` anonymously; only `web-mod/**` is anonymous |
+| Retention of a superseded bundle | A second build left both ids in `retainedBundleIds`, and the older bundle still served both its document and its assets at its own path. Two bundles occupied ~121 MB |
+| Running from the plugin path | Home, Movies, search, a detail page and the Dashboard all render, with **zero** requests under `/web/` and no failed requests |
+
+**Service worker (default 7) — moot on an HTTP deployment, and measured rather than assumed.**
+`navigator.serviceWorker` is `undefined` for **both** the mod and the stock entry on this server,
+because a LAN HTTP origin is not a secure context. So no service worker is registered today in
+either interface, and the conservative choice not to register one in swap mode costs nothing
+here. The question only becomes real for an HTTPS deployment, where the header must come from
+the plugin's own controller; it stays open until then.
+
+**Two defects were found by deploying, not by reading.** The first build answered `500` on the
+bundle document because the controller declared both a relative and an absolute route for the
+same action, which makes every request to it an ambiguous match. The second was quieter: the
+manifest's `testedOn` and `expectsCapabilities` arrived empty because `System.Text.Json` leaves
+a get-only collection property alone, so the bundle silently claimed to support no server at all.
+Both are fixed; both are the reason S3 acceptance is a live run and not a build.
+
+**A correction to the S1 asset audit.** The audit found the document-relative fetches that go
+through `fetchLocal` and the webpack runtime, and missed four that are built as plain relative
+strings at runtime: the theme stylesheet (`ThemeCss.tsx`), the device images (`utils/image.ts`),
+the default avatar (`userprofile.tsx`) and the silent sound (`playbackPermissionManager.js`). The
+theme stylesheet `404`ed from the plugin path. All four now go through one `assetUrl` helper that
+is a no-op unless a JellyfinMod document declared where its bundle lives. **This grew the patch
+surface of §3.2 by four upstream files plus one new file**, which §3.2 must record.
 
 ### S4 — take over `/web/index.html` and give it back
 
