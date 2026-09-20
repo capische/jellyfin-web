@@ -3,7 +3,9 @@ import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-ite
 import type { DeviceInfoDto } from '@jellyfin/sdk/lib/generated-client/models/device-info-dto';
 import type { SessionInfoDto } from '@jellyfin/sdk/lib/generated-client/models/session-info-dto';
 
-const BASE_DEVICE_IMAGE_URL = 'assets/img/devices/';
+import { assetUrl } from 'utils/assetUrl';
+
+const BASE_DEVICE_IMAGE_URL = assetUrl('assets/img/devices/');
 
 // audit note: this module is expected to return safe text for use in HTML
 function getWebDeviceIcon(browser: string | null | undefined) {

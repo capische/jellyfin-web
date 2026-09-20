@@ -1,5 +1,6 @@
 import { appHost } from 'components/apphost';
 import { AppFeature } from 'constants/appFeature';
+import { assetUrl } from 'utils/assetUrl';
 
 /**
  * Creates an audio element that plays a silent sound.
@@ -13,7 +14,7 @@ function createTestMediaElement () {
     document.body.appendChild(elem);
 
     elem.volume = 1; // Volume should not be zero to trigger proper permissions
-    elem.src = 'assets/audio/silence.mp3'; // Silent sound
+    elem.src = assetUrl('assets/audio/silence.mp3'); // Silent sound
 
     return elem;
 }

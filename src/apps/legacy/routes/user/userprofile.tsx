@@ -15,6 +15,7 @@ import UserPasswordForm from 'components/dashboard/users/UserPasswordForm';
 import Page from 'components/Page';
 import Loading from 'components/loading/LoadingComponent';
 import Button from 'elements/emby-button/Button';
+import { assetUrl } from 'utils/assetUrl';
 
 const UserProfile: FunctionComponent = () => {
     const [ searchParams ] = useSearchParams();
@@ -38,7 +39,7 @@ const UserProfile: FunctionComponent = () => {
 
         void libraryMenu.then(menu => menu.setTitle(user.Name));
 
-        let imageUrl = 'assets/img/avatar.png';
+        let imageUrl = assetUrl('assets/img/avatar.png');
         if (user.PrimaryImageTag) {
             imageUrl = window.ApiClient.getUserImageUrl(user.Id, {
                 tag: user.PrimaryImageTag,
