@@ -932,14 +932,65 @@ not do — it stamps `jellyfinmod.html` only, so the stock entry's output stays 
 upstream produces. The prototype was reverted rather than committed, because S2 owns this file
 and S1 writes no product code; it is kept for S2 to adapt.
 
-**Still open, blocked on the isolated instance (port 18096, busy with the T18 retention run).**
-Static serving and `Cache-Control` for `/web/index.html` on the pinned host; the image's web
-directory path, ownership and writability once the read-only bind mount is removed;
-`BasePlugin.OnUninstalling` behaviour; the swap spike (mechanism 1 vs 2 go/no-go); the embedding
-spike in a real browser (Dashboard, video player, login and a legacy library view under the mod
-root layout); route takeover with `hostwebclient=false`; Prowlarr's observed API; bundle
-extraction time on the Pi; the service-worker policy in swap mode. **S1 is not complete and S2
-does not start until these are answered.**
+#### S1 evidence — 2026-09-20, part 2: the host and the embedding spike
+
+Recorded on the dedicated **acceptance instance** (`jellyfinmod-acceptance`, its own compose,
+its own Transmission, its own library, web root bind-mounted read-write). Production and the
+retention instance were not contacted. Addresses and host paths are omitted.
+
+**Static serving.** `GET /web/index.html` answers `200` with `Cache-Control: no-cache`, an
+`ETag` and `Last-Modified`, and no `Expires`. This is better news than §4.7 assumed: `no-cache`
+means a browser revalidates the document on every load rather than serving a cached copy, so a
+patched `index.html` is picked up on the next page load and the "a browser that cached the stock
+page shows stock until the cache expires" caveat does not apply to this host. Hashed assets are
+served with `ETag` and `Last-Modified` but **no** `Cache-Control` at all, so they fall to
+heuristic caching — which is why the plugin serving them itself with `immutable` (§4.5) is worth
+doing. `GET /` answers `302` to the relative `web/`, and `GET /web/` serves `index.html` as the
+default document. Range support is advertised (`Accept-Ranges: bytes`).
+
+**Web directory in the image.** In the pinned image the web root is `root:root`, mode `0755`.
+The containers here run as `1000:1000`, so **the image's own web directory is not writable by the
+runtime user** and the Docker image shape (§4.8) needs an explicit `chown` or `chmod` in the
+Dockerfile — S5 must not assume it inherits writability. On the acceptance instance the web root
+is a bind mount owned by the host user the container runs as, and a write probe from inside the
+container succeeds, so the takeover target there is writable today.
+
+**Host version — a correction to §3.5.** The pinned image reports `Version: 12.0.0`, not the
+`10.11.11` §3.5 and README §7.1 describe. The plugin's `targetAbi` of `10.11.0.0` is a *minimum*,
+so it still loads, and it does: `GET /JellyfinMod/Health` answers `200` with `Ok: true` and the
+sixteen Phase 1–6 capabilities. But `supportedServer` in `jellyfinmod-web.json` must be written
+against what the host actually reports, and §3.5's "pinned line `10.11.x`" row does not describe
+this deployment. Flagged for the plan; S3 should not encode `10.11.x` without settling it.
+
+**Embedding spike — go.** The §2.1 mechanism was proven by building it rather than by a
+throwaway: a second entry whose router imports upstream's route tables and replaces only the app
+table's layout. Driven with Playwright over CDP against the acceptance instance, **13 of 13
+checks passed**: the mod entry executes and sets `window.__jfmodBundle`; its `jellyfinmod.html`
+meta tag equals `jellyfinmod-web.json`'s `bundleId`; the upstream login view signs in under the
+mod router; Home, the Movies library, the TV library and search all render; a real item detail
+page renders through the legacy `viewManager`; the Dashboard renders with its own layout, as does
+the Dashboard plugins page (whose `/web/configurationpage` URL is absolute and unaffected); the
+TV layout renders Home through the **legacy** route table; and the stock entry still renders and
+carries neither the marker nor the meta tag. The only console noise was pre-existing: one missing
+translation key and two missing artwork images in the acceptance library.
+
+One correction to §2.2 follows from the spike. The **Dashboard and the server wizard keep their
+own layouts** and are imported completely untouched, rather than being re-parented under the mod
+shell. Both already carry their own full navigation, so wrapping them would give those pages two
+sets of chrome, and leaving them alone is what makes "the Dashboard keeps working" true by
+construction. They are reached from the mod shell's user menu.
+
+**Service-worker policy (default 7) — decided conservatively, still flaggable.** The mod entry
+registers the worker only when the bundle is served from the document's own directory; when the
+document is `/web/index.html` and the bundle is not, it logs why and registers nothing. A worker
+cannot claim a scope above its own directory without `Service-Worker-Allowed`, and that header
+has to come from the plugin's controller, which does not exist until S3. Offline support is the
+only thing lost in swap mode. S3 can revisit it once it owns the response headers.
+
+**Still open.** `BasePlugin.OnUninstalling` behaviour (needs a plugin build to carry it, so it
+lands with S4); the end-to-end swap spike with a real patched `index.html` (S4, once the plugin
+serves the bundle); route takeover with `hostwebclient=false`; Prowlarr's observed API (S9);
+bundle extraction time on the Pi (S3). None of these blocks S2, whose go/no-go is answered above.
 
 ### S2 — the mod entry, its shell, and stock by construction (Stage A)
 
