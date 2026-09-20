@@ -779,6 +779,106 @@ Record, with evidence from the pinned host, the fork and the isolated instance, 
 redacted, names the mechanism S4 builds and the boot option S2 uses, and confirms the screen
 inventory of §2.2 against the fork's actual route tables.
 
+#### S1 evidence — 2026-09-20, part 1: the fork
+
+Recorded against web `jellyfin-mod` at `dcc8d33403` and plugin `master` at `7299b07`. Everything
+here is answered from the fork's own sources and a local production build; no server was
+contacted and nothing was deployed. The host-side items (static serving, the image's web
+directory, the uninstall hook, the swap spike, route takeover, Prowlarr, extraction time) are
+**still open** — they need the isolated instance, which is running the T18 retention acceptance.
+They are listed again at the end of this heading.
+
+**Route tables and shadowing (§2.1 mechanism, confirmed with one correction).**
+`src/RootAppRouter.tsx` builds `createHashRouter` from one element whose children are
+`layoutManager.modern ? MODERN_APP_ROUTES : LEGACY_APP_ROUTES`, then `DASHBOARD_APP_ROUTES`,
+`WIZARD_APP_ROUTES`, then a `!/*` `BangRedirect`. Both app tables are a **single** `RouteObject`
+with `path: '/*'` — modern uses `lazy: () => import('../AppLayout')`, legacy uses
+`Component: AppLayout` (`src/apps/legacy/AppLayout`, a different file) — whose children are an
+index redirect to `/home`, a `ConnectionRequired` group of user routes and a public group ending
+in a `*` `FallbackRoute`. Correction to §2.1: **listing the mod routes first is not what makes
+them shadow upstream.** React Router ranks matches by path specificity, not array order, so a
+top-level static `home` outranks the imported `'/*'` regardless of position. Two consequences
+S2 must handle, neither of them blocking:
+
+- A mod route declared as a sibling of the imported table renders **outside** `AppLayout`, which
+  is what the mod shell wants — but it also renders outside the table's `ConnectionRequired`
+  wrapper and its `ErrorBoundary`. The mod shell must wrap its own routes in
+  `ConnectionRequired` (`src/components/ConnectionRequired.tsx`, access levels
+  `admin` / `public` / `user` / `wizard`) and an `ErrorBoundary` itself.
+- The imported tables' own `*` fallback lives inside `'/*'`, so it still catches unknown paths.
+  Ordering the mod routes first is kept anyway, as documentation of intent.
+
+**How the legacy `.skinHeader` is hidden (§2.1's open mechanism, answered).** No new mechanism is
+needed. `src/components/AppHeader.tsx` already renders the legacy `.mainDrawer`, `.skinHeader`
+and `.mainDrawerHandle` stubs and hides them with `display: none` when `isHidden` is set;
+`RootAppRouter` passes `layoutManager.modern || isNewLayoutPath`. Its own comment records why the
+elements must stay in the DOM: legacy views address them directly and the app crashes without
+them. The mod shell renders `<AppHeader isHidden />` unconditionally and gets the same behaviour
+in every layout, including the legacy views it embeds.
+
+**Boot sharing (§3.1 — decision: option (1), with a mechanical guard).** `src/index.jsx` is 220
+lines. Only 14 are render — `import RootApp` and `renderApp()`, which clears `#reactRoot`, shows
+`loading` and mounts `<RootApp />`. The other ~206 are start-up: polyfills and auto-running
+imports, site styles, `appHost.init()`, last-server resolution and `initApiClient`,
+`initializeAutoCast`, `loadCoreDictionary` plus the two `localusersigned*` culture handlers,
+`loadFonts`, `loadPlugins`, the `requestfail` handlers, `initializeServerConnections`,
+`loadPlatformFeatures` and `registerServiceWorker`, then `keyboardNavigation.enable()` and
+`autoFocuser.enable()`. So the split is roughly 94% boot / 6% render.
+
+That ratio argues for option (2) on paper, but option (2) means deleting ~200 lines from an
+upstream file that upstream edits regularly, which conflicts on every touch and is the largest
+single item the merge routine would carry. The user's standing constraint is the opposite: keep
+unavoidable edits to upstream files minimal and enumerated. **S2 therefore takes option (1)** —
+`src/jellyfinmod.jsx` repeats the sequence, `src/index.jsx` is not edited, and the §3.2 row for
+it stays empty.
+
+Option (1)'s real risk is silent divergence: an upstream change to the boot that nobody mirrors.
+S2 removes that risk mechanically instead of relying on the merge checklist. The build records a
+hash of `src/index.jsx`'s boot region (everything except the `renderApp` function and the
+`RootApp` import) in `scripts/jellyfinmod-build/`, and the build fails, loudly and by name, when
+that hash changes without the recorded value being updated in the same commit that mirrors the
+change into the mod entry. Merge-routine step 3 stays as the human half of the same check.
+
+**Asset audit (§3.1, fork half).** Every document-relative fetch in the fork, and what each needs
+when the document is `/web/index.html` but the assets are served from the plugin's path:
+
+| What | Where | Resolves against | Needs |
+| --- | --- | --- | --- |
+| `config.json` | `hooks/useWebConfig.tsx` and `scripts/settings/webSettings.js`, both via `utils/fetchLocal` | the document URL — `fetchLocal` assigns the URL to a detached `<a>` and `XMLHttpRequest.open`s the result | `modAssetRoot()`; the only two call sites, both passing the bare string `'config.json'` |
+| Chunks, `[name].[contenthash].chunk.js`, extracted CSS | webpack runtime | `output.publicPath`, today `''` (document-relative) | `publicPath: 'auto'`, which roots them at the runtime script's own URL |
+| Translation dictionaries | `lib/globalize/index.js`, `import('../../strings/${url}')` | the webpack runtime, as a dynamic chunk | nothing beyond `publicPath: 'auto'` |
+| `serviceworker.js` | `src/index.jsx` `registerServiceWorker()` | the document URL | a decision, not a rewrite: the mod entry either registers from the asset root with `Service-Worker-Allowed`, or does not register in swap mode. **Open — needs the host spike**, since the header must come from the plugin's own controller |
+| `manifest.json`, favicons, touch icons | `src/index.html` `<link>` elements | the document URL | rewritten by the takeover renderer along with the script and stylesheet URLs (§4.4), not by application code |
+| date-fns locales | `utils/dateFnsLocale.ts` | dynamic `import()`, webpack runtime | nothing |
+
+So the application-code surface is **one helper at two call sites**. Everything else is either the
+webpack runtime (one config line) or the takeover renderer's job. This supports mechanism 1 (swap
+in place) as far as the fork can answer; the go/no-go still needs the host spike.
+
+**Package size (§4.5).** The production build emits **no** source maps, so "`dist/` without
+`.map`" is `dist/` as built: 2 346 files, 60 MB on disk, **34.2 MB zipped** (`zip -r -X`, ~1 s on
+the workstation). Three retained bundles are therefore ~180 MB extracted on the Pi. Extraction
+time on the Pi is not yet measured.
+
+**Bundle identity, built and verified.** A prototype of the §3.1 emitter was built and run against
+a full production build: a webpack plugin at `PROCESS_ASSETS_STAGE_REPORT` hashes every emitted
+asset's name and contents, excluding `.map` files, the manifest itself and the HTML document that
+carries the id, takes 12 hex characters of the sha-256, emits `jellyfinmod-web.json` and inserts
+`<meta name="jellyfinmod-web" content="…">` after `<head>`. It produced a stable id over 2 347
+assets and the matching meta tag. The prototype stamped the **stock** `index.html`, which S2 must
+not do — it stamps `jellyfinmod.html` only, so the stock entry's output stays byte-for-byte what
+upstream produces. The prototype was reverted rather than committed, because S2 owns this file
+and S1 writes no product code; it is kept for S2 to adapt.
+
+**Still open, blocked on the isolated instance (port 18096, busy with the T18 retention run).**
+Static serving and `Cache-Control` for `/web/index.html` on the pinned host; the image's web
+directory path, ownership and writability once the read-only bind mount is removed;
+`BasePlugin.OnUninstalling` behaviour; the swap spike (mechanism 1 vs 2 go/no-go); the embedding
+spike in a real browser (Dashboard, video player, login and a legacy library view under the mod
+root layout); route takeover with `hostwebclient=false`; Prowlarr's observed API; bundle
+extraction time on the Pi; the service-worker policy in swap mode. **S1 is not complete and S2
+does not start until these are answered.**
+
 ### S2 — the mod entry, its shell, and stock by construction (Stage A)
 
 Add `src/jellyfinmod.jsx`, the webpack entry, `jellyfinmod.html`, `jellyfinmod-web.json`,
