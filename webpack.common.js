@@ -7,6 +7,8 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { DefinePlugin, IgnorePlugin } = require('webpack');
 const packageJson = require('./package.json');
+const JellyfinModBootGuardPlugin = require('./scripts/jellyfinmod-build/bootGuard');
+const JellyfinModBundleManifestPlugin = require('./scripts/jellyfinmod-build/bundleManifest');
 
 const Assets = [
     'native-promise-only/npo.js',
@@ -44,6 +46,8 @@ const config = {
     target: 'browserslist',
     entry: {
         'main.jellyfin': './index.jsx',
+        // JellyfinMod: the mod interface is a second entry sharing every chunk with the stock one (P7.S2).
+        'main.jellyfinmod': './jellyfinmod.jsx',
         ...THEMES_BY_ID
     },
     resolve: {
@@ -73,6 +77,16 @@ const config = {
             hash: true,
             chunks: [
                 'main.jellyfin',
+                'serviceworker'
+            ]
+        }),
+        // JellyfinMod: the mod entry's document, from the same template as the stock one (P7.S2).
+        new HtmlWebpackPlugin({
+            filename: 'jellyfinmod.html',
+            template: 'index.html',
+            hash: true,
+            chunks: [
+                'main.jellyfinmod',
                 'serviceworker'
             ]
         }),
@@ -116,7 +130,11 @@ const config = {
                 return '[name].[contenthash].css';
             },
             chunkFilename: '[name].[contenthash].css'
-        })
+        }),
+        // JellyfinMod: refuse to build when an upstream file the mod entry mirrors has changed (P7.S2).
+        new JellyfinModBootGuardPlugin({ root: __dirname }),
+        // JellyfinMod: stamp the bundle's identity so the plugin can package, serve and recognise it (P7.S2).
+        new JellyfinModBundleManifestPlugin({ webCommit: COMMIT_SHA })
     ],
     output: {
         filename: pathData => (
@@ -133,7 +151,9 @@ const config = {
             return '[name].[hash][ext][query]';
         },
         path: path.resolve(__dirname, 'dist'),
-        publicPath: ''
+        // JellyfinMod: 'auto' roots chunks and dictionaries at the runtime script's own URL, so the same files
+        // work served from /web/ (stock entry, archive shape) and from the plugin's path (P7.S2, §3.1).
+        publicPath: 'auto'
     },
     optimization: {
         runtimeChunk: 'single',
