@@ -33,6 +33,24 @@ try {
     console.warn('Failed to get commit sha. Is git installed?', err);
 }
 
+// JellyfinMod: recorded in the bundle manifest so a merge can be traced from a deployed build (PHASE7 3.1).
+let UPSTREAM_MERGE_BASE = '';
+try {
+    UPSTREAM_MERGE_BASE = require('child_process')
+        // eslint-disable-next-line sonarjs/no-os-command-from-path
+        .execSync('git merge-base HEAD upstream/master', { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim();
+} catch {
+    // No upstream remote in this checkout; the field stays empty rather than guessing.
+}
+
+// JellyfinMod: how the bundle expresses which servers it runs on. The minimum matches the plugin's targetAbi;
+// `testedOn` lists versions a real acceptance run has passed against (PHASE7 3.5, corrected 2026-09-20).
+// eslint-disable-next-line sonarjs/no-hardcoded-ip -- a Jellyfin version, not an address
+const JELLYFINMOD_MINIMUM_SERVER = '10.11.0.0';
+const JELLYFINMOD_TESTED_SERVERS = ['12.0.0'];
+
 const NODE_MODULES_REGEX = /[\\/]node_modules[\\/]/;
 
 const THEMES = fg.globSync('themes/**/*.scss', { cwd: path.resolve(__dirname, 'src') });
@@ -134,7 +152,12 @@ const config = {
         // JellyfinMod: refuse to build when an upstream file the mod entry mirrors has changed (P7.S2).
         new JellyfinModBootGuardPlugin({ root: __dirname }),
         // JellyfinMod: stamp the bundle's identity so the plugin can package, serve and recognise it (P7.S2).
-        new JellyfinModBundleManifestPlugin({ webCommit: COMMIT_SHA })
+        new JellyfinModBundleManifestPlugin({
+            webCommit: COMMIT_SHA,
+            upstreamMergeBase: UPSTREAM_MERGE_BASE,
+            minimumServer: JELLYFINMOD_MINIMUM_SERVER,
+            testedOnServers: JELLYFINMOD_TESTED_SERVERS
+        })
     ],
     output: {
         filename: pathData => (

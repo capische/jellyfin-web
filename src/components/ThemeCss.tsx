@@ -2,12 +2,13 @@ import React, { type FC, useEffect, useState } from 'react';
 
 import { useUserTheme } from 'hooks/useUserTheme';
 import { getDefaultTheme } from 'scripts/settings/webSettings';
+import { assetUrl } from 'utils/assetUrl';
 
 interface ThemeCssProps {
     dashboard?: boolean
 }
 
-const getThemeUrl = (id: string) => `themes/${id}/theme.css`;;
+const getThemeUrl = (id: string) => assetUrl(`themes/${id}/theme.css`);
 
 const DEFAULT_THEME_URL = getThemeUrl(getDefaultTheme().id);
 
