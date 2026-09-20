@@ -56,6 +56,33 @@ These were decided by the user on 2026-09-20. They override any proposal below t
    only in the isolated writable test library, and removed at the end of the run, or explicitly
    listed for cleanup if a run aborts.
 
+The four below answer open questions 1, 2, 4 and 7. They replace the proposed defaults where
+they differ; the remaining open questions stay open and their proposed defaults stand.
+
+7. **Takeover is on wherever the web root is writable** (open question 1; replaces default 1's
+   "off until enabled"). Installing the plugin takes over `/web` automatically as soon as it
+   can, in every shape, not only in the image. Three things follow and are requirements, not
+   options: an explicit administrator setting still turns the takeover **off**, and the failsafe
+   and restore paths of §4.4 and §4.6 are unchanged; the automatic takeover is **visible** —
+   the plugin logs it at every patch and Health and the settings Interface section report that
+   it happened and why, so an administrator who did not ask for it can see why `/web` changed;
+   and a read-only web root still degrades to plugin-path serving with the blocker (default 4),
+   never to a failure or a forced remount.
+8. **The isolated compose keeps its bind mount and makes it read-write** (open question 2;
+   replaces the §4.8 proposal of removing it). The mount stays so `jellyfin-sync --local --test`
+   keeps working; only `ro` becomes `rw`. **This deliberately differs from the shipped Docker
+   image**, where there is no bind mount and the container's own stock web directory is the
+   takeover target. The two shapes are therefore not interchangeable evidence: S5 and S11 must
+   verify the **image** path as well as the bind-mounted one, and a takeover result on the
+   isolated instance alone never stands for the image.
+9. **The look is server-wide only** (open question 4; confirms default 16). There is no per-user
+   "classic Jellyfin" preference in Phase 7, and none is built speculatively.
+10. **The stock-for-now list is accepted as planned** (open question 7; confirms default 9).
+    Music, live TV, books, photos, playlists and collections stay upstream screens inside the
+    mod shell for Phase 7. They are reachable and fully functional there; moving any of them to
+    Reimplement is a later phase decision, and none of them blocks the takeover being on by
+    default.
+
 ## Outcome and boundaries
 
 An operator runs the JellyfinMod image, or installs the plugin into a stock server. Every browser
@@ -502,6 +529,15 @@ installed; never concurrently with itself; never when the host version is outsid
 `supportedServer` (§3.5). Every write is temporary file + `fsync` + rename inside the web root;
 nothing is truncated in place.
 
+`UiTakeoverEnabled` **defaults to true** (decision 7), so the first startup after an install
+patches on its own, with no administrator step and no wizard step. Because that is a change an
+administrator did not ask for, it must never be silent: every patch and every restore writes an
+`interface_patched` / `interface_restored` history row and a log line at information level
+naming the bundle id, both hashes and the manual recovery, and `state.json` records
+`patchedBy` (`automatic` on the default path, `setting` when an administrator changed the switch,
+`bundle` on a re-render after an upgrade). Health and the Interface section surface the same
+value, so "why did `/web` change?" is answerable from the Dashboard without reading the log.
+
 | Observed `<web-root>/index.html` | Action | State |
 | --- | --- | --- |
 | Web root missing, not a directory, or a write probe (`.jellyfinmod-write-probe`, removed at once) fails | Nothing written | `readOnly`; blocker `web_root_read_only`; own path only |
@@ -566,7 +602,9 @@ never touching other plugins), then `exec`s the stock entrypoint. The image's we
 filesystem, so it is writable for the runtime user once the Dockerfile grants it, it is stock
 again on every container recreate, and the engine re-patches at startup. No web bind mount exists
 in this shape. `JELLYFINMOD_UI_TAKEOVER=true|false` is read at first start only, when the plugin
-configuration does not exist yet. Rollback is `docker compose` to the previous image tag.
+configuration does not exist yet; since the takeover is now on by default everywhere (decision 7)
+its only remaining use is `false`, for an operator who wants the image's plugin without the
+interface. Rollback is `docker compose` to the previous image tag.
 
 **Release archive (secondary).** `jellyfinmod-<version>.zip` containing `plugin/` and `web/`
 (the same `dist/`). Operators install `plugin/` into a stock server (the engine works as in the
@@ -575,11 +613,32 @@ in which case the engine detects the meta tag and stays out (`forkServedByHost`)
 stock" is their swap back; in that shape `web/index.html` is the fork's stock entry and
 `web/jellyfinmod.html` the mod entry, and the operator chooses which the host's default file is.
 
-**Isolated test instance.** Before S3 acceptance the isolated compose changes once: the read-only
-bind mount of `dist/` over the web directory goes (or becomes `rw` for the transition), so the
-container's stock web directory is the takeover target; recorded without paths.
-`jellyfin-sync --test` gains `--plugin-web` and keeps `--local --test`; X3's production refusals
-apply unchanged.
+**Isolated test instance.** **Accepted 2026-09-20 (decision 8):** the bind mount of `dist/` over
+the web directory **stays** and becomes read-write; it is not removed. That keeps
+`jellyfin-sync --local --test` working unchanged, and the takeover target on the isolated
+instance is the bind-mounted directory. Recorded without paths. `jellyfin-sync --test` gains
+`--plugin-web` and keeps `--local --test`; X3's production refusals apply unchanged.
+
+This is **not** the image's shape. The image has no web bind mount: its target is the container's
+own stock web directory, which is writable only if the Dockerfile made it so and which returns to
+stock on every recreate. The two differ in ownership, in what "stock" is, and in what a recreate
+does, so S5 and S11 verify the image path separately (decision 8) and an isolated-instance pass
+never stands in for it.
+
+**Consequence of keeping the mount — "stock" differs between the two shapes, and S4 must say so.**
+With the mount kept, the isolated instance's web root holds *the fork's own* `dist/`, so the file
+the engine takes as pristine is the fork's stock-entry `index.html`, not the host image's. On the
+isolated instance, therefore, "restore to stock" means "restore the fork's stock entry", which
+renders the upstream app and passes the runner's stock checks, but is not byte-identical to the
+file the host image ships. Only the image shape proves the byte-identical-to-the-host claim.
+S4 records which file its hashes are of; S5 and S11 carry the host-stock claim.
+
+Note also that this does **not** make the isolated instance the `forkServedByHost` case of §4.6.
+That row keys off `<web-root>/index.html` carrying the bundle meta tag, and per §3.1 the tag is
+written to `jellyfinmod.html` only — the stock entry's `index.html` is byte-for-byte what upstream
+produces and carries no tag. So a bind-mounted `dist/` is patched like any other web root.
+`forkServedByHost` therefore only triggers if a future build also stamps the stock entry, which
+S2 must not do; S1 flags the inconsistency between §3.1 and the §4.6 row for the plan to settle.
 
 ## 5. Unified settings area
 
@@ -601,7 +660,7 @@ plugin-owned page.
 | Import and seeding | Existing switches and values | existing `Settings/Import` |
 | Retention | Enabled, days, mode with the Selected user picker (T13), favourites exemption, preview, latest run | XML today → `GET/PATCH /Settings/Retention` (storage stays XML in the first slice) |
 | Automation | Existing settings, status, budgets, breakers, Run now, decisions | existing |
-| Interface | Takeover on/off, web root state, bundle ids, supported server range, "Restore stock now", manual recovery text | new `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` |
+| Interface | Takeover on/off (on by default, decision 7), when it last applied and whether the plugin or an administrator did it, web root state, bundle ids, supported server range, "Restore stock now", manual recovery text | new `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` |
 | Diagnostics | Reconciliation latest, orphans, conflicts | existing |
 | Jellyfin preferences and Dashboard | Links into the embedded upstream user preferences and Dashboard (§2.2) | upstream |
 
@@ -678,7 +737,9 @@ acceptance:
    the browser matrices, with the Dashboard forms browser-verified.
 4. The Phase 3 blockers T7–T10 remain green on the revision Phase 7 builds on; X1 (merged master
    SHA recorded) and X3 are in place; X4's Health fields land in S3 if still open.
-5. The isolated compose change (§4.8) is agreed and recorded without paths.
+5. The isolated compose change (§4.8) is applied and recorded without paths: the web bind mount
+   becomes read-write and stays (decision 8). The coordinator makes this change; no agent edits
+   the isolated compose.
 6. A disposable Prowlarr on the test host, or the decision to use only the boundary server, is
    recorded (open question 9).
 7. The runner's fixture cleanup covers every fixture type this phase creates before any Phase 7
@@ -690,7 +751,8 @@ Use the existing SQLite database with new migrations; plugin configuration stays
 
 | Record | Minimum contents and invariants |
 | --- | --- |
-| `AcquisitionSettings` (existing row) | Gains `TmdbReadAccessTokenRef`, `DiscoveryRevision`, `DiscoveryVerifiedRevision`, `SeedProtectionSource` (`acquisitionClient` / `separate`), `SeedProtectionRpcUrl?`, `SeedProtectionUsername?`, `SeedProtectionPasswordRef?`, `SeedProtectionRevision`, `UiTakeoverEnabled`, `WebBundleGraceDays` (14), `InterfaceRevision`, `SetupCompletedAt?`, `SetupDismissedAt?`. A one-time migration step imports the XML values and existing secret references and leaves the XML fields empty. |
+| `AcquisitionSettings` (existing row) | Gains `TmdbReadAccessTokenRef`, `DiscoveryRevision`, `DiscoveryVerifiedRevision`, `SeedProtectionSource` (`acquisitionClient` / `separate`), `SeedProtectionRpcUrl?`, `SeedProtectionUsername?`, `SeedProtectionPasswordRef?`, `SeedProtectionRevision`, `UiTakeoverEnabled` (**default true**, decision 7),
+`WebBundleGraceDays` (14), `InterfaceRevision`, `SetupCompletedAt?`, `SetupDismissedAt?`. A one-time migration step imports the XML values and existing secret references and leaves the XML fields empty. |
 | `ProwlarrSource` | As in §6; unique name; deleting it deletes its synced indexers unless a grab is active on one (409, like clients). |
 | `AcquisitionIndexer` (existing) | Gains `ManagedBy`, `ProwlarrSourceId?`, `ProwlarrIndexerId?`, `ProwlarrRemovedAt?`, `AdminOverridesJson`. |
 | Takeover state | Not in SQLite: `<plugin-data>/web-root/state.json` and the pristine copies, so a lost database never loses the restore source. |
@@ -716,7 +778,7 @@ each.
 | `GET/PATCH /Settings/Discovery`, `POST /Settings/Discovery/Test` | `{ tokenConfigured, revision }`; PATCH takes `{ token: <SecretChangeRequest>, revision }`; Test answers `ConnectionTestDto`. |
 | `GET/PATCH /Settings/SeedProtection`, `POST /Settings/SeedProtection/Test` | `{ source, rpcUrl?, username?, passwordConfigured, matchesAcquisitionClient, revision }`. |
 | `GET/PATCH /Settings/Retention` | The XML-backed fields with the Dashboard's validation; Selected user without a valid user is refused (T13). |
-| `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` | `{ takeoverEnabled, state, webRoot, bundleId, retainedBundleIds[], supportedServer, hostVersion, stockSha256, patchedSha256, blocker, recovery, revision }`; RestoreStock performs the restore row of §4.6 without changing the switch. |
+| `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` | `{ takeoverEnabled, state, webRoot, bundleId, retainedBundleIds[], supportedServer, hostVersion, stockSha256, patchedSha256, patchedAt, patchedBy (`automatic` / `setting` / `bundle`), blocker, recovery, revision }`; `patchedBy` and `patchedAt` are how an administrator sees that the takeover applied itself (decision 7). RestoreStock performs the restore row of §4.6 without changing the switch. |
 | `GET/POST/PATCH/DELETE /Settings/Prowlarr`, `POST /Settings/Prowlarr/Test`, `POST /Settings/Prowlarr/Sync` | Source DTO with `apiKeyConfigured`; sync outcome `{ seen, created, updated, disabled, removed, verified, failed[] }` (202 scheduled, 200 synchronous test). |
 | `GET /Settings/Indexers` (existing) | Rows gain `managedBy`, `prowlarrSourceId`, `prowlarrIndexerId`, `prowlarrRemovedAt`, `breakerOpenUntil`. |
 | `GET /Setup/State`, `POST /Setup/Dismiss` | `{ complete, dismissedAt, steps: [{ id, status, reasons[] }] }`. |
@@ -938,15 +1000,23 @@ the Interface settings and `RestoreStock`, the log lines with the manual recover
 `scripts/jellyfinmod-e2e/patch-check.mjs` (renders and asserts the patched file offline from a
 stock fixture and `jellyfinmod.html`). Apply the isolated compose change first (gate 5).
 
-**Acceptance** — isolated instance, stock web directory writable, hashes checked with
-`sha256sum` on the test host:
+**Acceptance** — isolated instance, its web bind mount now read-write (decision 8), hashes checked
+with `sha256sum` on the test host. Note that this proves the **bind-mounted** shape only; the
+image's own web directory is S5's and S11's to prove:
 
+- Fresh install, no administrator action: a first start with no plugin configuration patches
+  `/web` on its own (decision 7), the log names the bundle id, both hashes and the manual
+  recovery, a `interface_patched` history row exists, and Health and `Settings/Interface` report
+  `patchedBy: "automatic"` with `patchedAt`. Setting `JELLYFINMOD_UI_TAKEOVER=false` before that
+  first start leaves stock in place and nothing is written.
 - Turning the takeover on writes exactly two files; `index.html.pristine` equals the original
   stock file by hash; `/web/` in a fresh session shows the JellyfinMod shell with the address
   `/web/index.html#/home`; bookmarks (`/web/index.html#/details?id=…`, `/web/#/search`,
   `/web/index.html#/dashboard`) open the right pages.
 - Turning it off restores a file whose hash equals the recorded stock hash; the stock copy is
-  gone; `/web/` shows stock Jellyfin and the runner's stock checks pass against it.
+  gone; `/web/` shows stock Jellyfin and the runner's stock checks pass against it. Record
+  explicitly which file that hash is of: on the isolated instance the web root is the fork's
+  bind-mounted `dist/`, so it is the fork's stock entry, not the host image's stock file (§4.8).
 - Host-upgrade simulation: replace `index.html` with a differently hashed stock file from another
   web release and restart; the engine re-patches from the new file, keeps `.prev`, and a later
   restore yields the new stock file. With the bundle's `supportedServer` narrowed in a test build
@@ -978,7 +1048,12 @@ service on `<isolated-image-port>` with its own config volume and disposable med
 production compose, never the shared `jellyfinmod-test` volumes):
 
 - A fresh container from the image installs the plugin into its config volume, applies
-  migrations, patches `/web`, and a browser sign-in lands in the JellyfinMod shell.
+  migrations, patches `/web` **with no administrator step** (decision 7), and a browser sign-in
+  lands in the JellyfinMod shell. This is the image's own web directory, not a bind mount, so it
+  is verified here separately from S4's evidence (decision 8): record the directory's ownership
+  and mode, that the runtime user could write it, and the `patchedBy: "automatic"` report.
+- `JELLYFINMOD_UI_TAKEOVER=false` on a fresh container leaves the image's web directory stock,
+  reports the switch as the reason, and the interface is still reachable at the plugin path.
 - `docker compose up -d --force-recreate` results in a re-patched page after startup;
   downgrading to the previous image tag serves the previous bundle and does not downgrade the
   plugin folder.
@@ -1113,8 +1188,9 @@ settings cleared), built browser as `oleksii`:
 
 ### S11 — isolated acceptance and release gate
 
-On `jellyfinmod-test` with the compose change applied, the plugin revision and bundle id from
-Health, production never contacted, signed in as `oleksii` with an empty password:
+On `jellyfinmod-test` with the compose change applied (the web bind mount read-write, decision 8),
+the plugin revision and bundle id from Health, production never contacted, signed in as `oleksii`
+with an empty password:
 
 1. Fresh install path: deploy the package to a clean isolated config, sign in at `/web/`, run the
    wizard end to end, sync Prowlarr, grab, import, play, and confirm the T18 retention cycle and
@@ -1123,9 +1199,15 @@ Health, production never contacted, signed in as `oleksii` with an empty passwor
 2. Takeover matrix: S4's rows, plus a plugin upgrade with a browser and a TV-layout session left
    open (both keep working on the retained bundle; after a full reload they run the new one).
 3. Stock parity: with the takeover off and with the plugin uninstalled, the runner's stock checks
-   pass on the byte-identical stock page; hashes recorded.
+   pass on the restored page and hashes are recorded — on the isolated instance against the
+   fork's stock entry, and in step 4 against the image's host-stock file, which is the one that
+   carries the byte-identical claim (§4.8).
 4. Image shape (S5) on the second isolated service: install, recreate, rollback; one upstream
-   merge per §3.4 if one is pending.
+   merge per §3.4 if one is pending. The takeover matrix of step 2 is **re-run here against the
+   image's own web directory** (decision 8): the isolated instance's read-write bind mount is a
+   different shape — different ownership, different "stock", and a recreate that resets it — so
+   its result never stands for the image's. Record both, and record that a fresh image container
+   takes over with no administrator step (decision 7).
 5. Full-replacement sweep: every row of §2.2 opened from the shell in every layout, including the
    Dashboard, user preferences, Quick Connect, the video player and one screen of each
    Stock-for-now library type present on the isolated instance.
@@ -1153,11 +1235,13 @@ stock page with no manual step and no fixture left behind.
 
 Run after the entry gates, on `jellyfinmod-test` only:
 
-1. Apply the compose change; confirm the container's web directory is writable and the fork
-   mount is gone; record without paths.
+1. Apply the compose change (coordinator, not an agent): the fork bind mount **stays** and
+   becomes read-write (decision 8); confirm the container can write it; record without paths.
 2. Deploy the S2 + S3 build: Health lists `ui`, `ui.web`; the own-path address works in all
    layouts; every §2.2 screen opens through the shell.
-3. Enable the takeover; hash checks; bookmarks; TV layout at `/web/`.
+3. Confirm the takeover applied by itself on first start (decision 7) and that Health and the
+   Interface section say so; hash checks; bookmarks; TV layout at `/web/`; then exercise the off
+   switch and turn it back on.
 4. Host-upgrade simulation, server-range refusal, double-patch guard, edited-file case.
 5. Failsafe: plugin folder removed; Dashboard disable; bundle directory removed; manual recovery.
 6. Read-only web root: startup, blocker, own path.
@@ -1196,13 +1280,15 @@ Run after the entry gates, on `jellyfinmod-test` only:
 
 ## Defaults chosen here — needs user decision
 
-Each is the conservative option behind a named setting or documented default; none is accepted
-yet.
+Each is the conservative option behind a named setting or documented default. Items 1 and 16 were
+**accepted by the user on 2026-09-20** and are recorded as such; the rest are not accepted yet.
 
-1. **Takeover default after install:** `UiTakeoverEnabled` **off** until the wizard's last step
-   or the Interface section turns it on, except in the image shape where
-   `JELLYFINMOD_UI_TAKEOVER=true` is the image default. Alternative: on wherever the web root is
-   writable.
+1. ~~**Takeover default after install:** `UiTakeoverEnabled` off until enabled.~~
+   **Superseded — accepted 2026-09-20 (decision 7):** `UiTakeoverEnabled` defaults **on**, in
+   every shape, and the takeover applies as soon as the web root is writable. The setting
+   remains, so an administrator can turn it off; `JELLYFINMOD_UI_TAKEOVER` remains as the
+   image's first-start override, now able only to turn it *off*. Every automatic patch is logged
+   and reported in Health and the Interface section.
 2. **Mechanism:** swap in place, with redirect as the fallback decided by the S1 spike.
 3. **Failsafe:** load the stock copy in place (`document.write`), falling back to navigation; the
    stock copy is written beside `index.html` (a second file in the web root) so recovery needs
@@ -1230,29 +1316,34 @@ yet.
 14. **Wizard entry:** a Home banner for administrators, no automatic redirect; Dismiss available.
 15. **TV scope of the settings area and wizard:** reachable and navigable by D-pad; data entry
     verified on desktop and mobile.
-16. **Per-user look:** server-wide only in the first slice.
+16. **Per-user look:** server-wide only. **Accepted 2026-09-20 (decision 9)**; no per-user
+    preference is built in Phase 7.
 
 ## Open questions for the user
 
-1. **Takeover default.** Off until enabled by an administrator, with the image turning it on
-   (proposed), or on wherever the web root is writable? Consumed by S4 and S5.
-2. **Writable web root in the isolated compose.** Remove the read-only fork bind mount so the
-   container's stock web directory is the takeover target (proposed), or keep the bind mount and
-   make it read-write? Consumed by gate 5, S4 and S5.
+**Answered 2026-09-20:** 1, 2, 4 and 7 — see decisions 7–10 under *Accepted user decisions*. They
+are struck through below rather than deleted, so a reader of an older evidence note can still
+find them. Nine remain open; each task implements its proposed default, behind a setting where
+reasonable, and flags it.
+
+1. ~~**Takeover default.**~~ **Answered:** on wherever the web root is writable, with an explicit
+   off switch, logging and Health/settings visibility (decision 7). Consumed by S4 and S5.
+2. ~~**Writable web root in the isolated compose.**~~ **Answered:** keep the bind mount, make it
+   read-write; the image's own web directory is a separate shape that S5 and S11 verify
+   separately (decision 8). Consumed by gate 5, S4, S5 and S11.
 3. **Behaviour across host upgrades.** Re-patch automatically at the next startup after a changed
    stock file inside `supportedServer` (proposed), or hold the takeover off after any host
    upgrade until an administrator confirms? Consumed by S4.
-4. **Per-user versus server-wide look.** Server-wide only (proposed), or also a per-user "classic
-   Jellyfin" preference inside the mod entry that routes that user to the embedded upstream
-   screens? Consumed by S2 and S8.
+4. ~~**Per-user versus server-wide look.**~~ **Answered:** server-wide only; no per-user
+   preference (decision 9). Consumed by S2 and S8.
 5. **Web-based TV clients.** Accept that `jellyfin-webos` and Tizen follow `/web` and switch with
    the takeover, with a full app close after upgrades (proposed)? Which physical webOS model
    verifies S4 (PLAN open question 17)? Consumed by S4 and S11.
 6. **Failsafe file in the web root.** Write the stock copy beside `index.html` (proposed, two
    files), or keep only the pristine copy in `<plugin-data>`? Consumed by S4.
-7. **Stock-for-now list.** Are music, live TV, books, photos, playlists and collections
-   acceptable as upstream screens inside the shell for Phase 7 (proposed), or must any of them be
-   reimplemented before the takeover is enabled by default? Consumed by S2 and S6.
+7. ~~**Stock-for-now list.**~~ **Answered:** accepted as planned — music, live TV, books, photos,
+   playlists and collections stay upstream screens inside the mod shell for Phase 7, and none of
+   them blocks the takeover default (decision 10). Consumed by S2 and S6.
 8. **Boot sharing.** Mirror the boot in the mod entry (proposed) or factor `index.jsx` (one
    permanent upstream edit)? Consumed by S1 and S2.
 9. **Prowlarr test harness.** Boundary server only (proposed), or also a disposable Prowlarr
