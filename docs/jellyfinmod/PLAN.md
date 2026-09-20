@@ -379,6 +379,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   [`PHASE5.md`](PHASE5.md) and [`PHASE6.md`](PHASE6.md)).
 - Phase 7: planned, 2026-09-20; see [`PHASE7.md`](PHASE7.md). Starts only after the current
   product passes live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists).
+  [`PARITY.md`](PARITY.md) plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6);
+  it is a plan, not evidence, and has not been run.
 
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
   the existing library, then maintain bindings as media changes. Phase 1 already supplies the
