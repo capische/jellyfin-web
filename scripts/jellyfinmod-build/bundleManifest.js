@@ -30,13 +30,28 @@ const isHashInput = name => name !== MANIFEST_NAME
     && name !== STOCK_INDEX_NAME
     && !name.endsWith('.map');
 
+/**
+ * Health capability names this bundle needs the plugin to advertise.
+ *
+ * The plugin compares these with what it actually serves and reports the difference, which is how a bundle newer
+ * than its plugin — a retained bundle after a rollback, or an archive-shape deployment — surfaces as a warning
+ * rather than as surfaces that silently do nothing. Grow this list in the commit that adds the gate that needs it.
+ */
+const EXPECTS_CAPABILITIES = ['ui', 'ui.web'];
+
 class JellyfinModBundleManifestPlugin {
     /**
      * @param {object} [options]
      * @param {string} [options.webCommit] The fork revision this bundle was built from.
+     * @param {string} [options.upstreamMergeBase] The upstream commit `master` last merged.
+     * @param {string} [options.minimumServer] The lowest server version this bundle supports.
+     * @param {string[]} [options.testedOnServers] Server versions this bundle has actually been run against.
      */
-    constructor({ webCommit = '' } = {}) {
+    constructor({ webCommit = '', upstreamMergeBase = '', minimumServer = '', testedOnServers = [] } = {}) {
         this.webCommit = webCommit;
+        this.upstreamMergeBase = upstreamMergeBase;
+        this.minimumServer = minimumServer;
+        this.testedOnServers = testedOnServers;
     }
 
     apply(compiler) {
@@ -60,8 +75,15 @@ class JellyfinModBundleManifestPlugin {
                     compilation.emitAsset(MANIFEST_NAME, new RawSource(`${JSON.stringify({
                         bundleId,
                         webCommit: this.webCommit,
+                        upstreamMergeBase: this.upstreamMergeBase,
                         builtAt: new Date().toISOString(),
-                        fileCount: files.length
+                        fileCount: files.length,
+                        expectsCapabilities: EXPECTS_CAPABILITIES,
+                        // A minimum and versions someone actually ran, never a guessed upper bound (PHASE7 3.5).
+                        supportedServer: {
+                            minimum: this.minimumServer,
+                            testedOn: this.testedOnServers
+                        }
                     }, null, 2)}\n`));
 
                     const index = assets[MOD_INDEX_NAME];
