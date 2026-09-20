@@ -84,6 +84,9 @@ confirmation without Undo. Failed optimistic adds still roll back locally for al
 **Automatic expiry, accepted:** in Phase 3, retention reclaims eligible media automatically
 unless an admin disables it. No confirmation is needed for each expiry. Preserve catalog entries
 and history, and retain the existing deletion safeguards. Phase 1 adds no automatic deletion.
+**Accepted 2026-09-20:** reclaiming removes the media file only. The title's folder and every
+sidecar (`.nfo`, subtitles, artwork, extras) stay on disk, and empty folders are not tidied.
+This is current behaviour, recorded as accepted; no phase plans to change it.
 
 **Proposed safety gate (review 2026-09-18, not user-approved):** Phase 3 is implemented.
 Automatic retention stays disabled on non-disposable media until the review blockers T7, T8, T9,
@@ -372,6 +375,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 3: implemented; see the proposed safety gate under *Automatic expiry, accepted* and the
   Review remediation section of [`PHASE3.md`](PHASE3.md).
 - Phase 4: planned; its entry gates are amended as proposals in [`PHASE4.md`](PHASE4.md).
+- Phase 5 and Phase 6: implemented and integration-tested; live checklists pending (see
+  [`PHASE5.md`](PHASE5.md) and [`PHASE6.md`](PHASE6.md)).
+- Phase 7: planned, 2026-09-20; see [`PHASE7.md`](PHASE7.md). Starts only after the current
+  product passes live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists).
 
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
   the existing library, then maintain bindings as media changes. Phase 1 already supplies the
@@ -411,6 +418,19 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Phase 3 operation with `upgrade_replaced` provenance, Get another quality, retention per version
   and the D-pad-operable version selector. Every default is proposed; depends on Phase 5 I9.
   Phase 5 and Phase 6 open questions are listed in those documents, not renumbered here.
+- **Phase 7 — setup, admin UI and UI delivery.** Make the product installable and switchable:
+  enable the plugin and Jellyfin becomes the new product at `/web`; disable or uninstall it and
+  the byte-identical stock interface is back on the same data.
+  **Planned (2026-09-20):** [`PHASE7.md`](PHASE7.md) breaks this down into S1–S11. User
+  decisions of 2026-09-20 recorded there: full replacement (own shell, navigation, home, browse,
+  detail, search and settings, with every other stock screen embedded or reachable), delivery as
+  a plugin-served bundle plus the plugin patching the host's `index.html` (swap in place
+  preferred, redirect as fallback, File Transformation excluded), a custom Docker image as the
+  preferred shape, the `jellyfin-web` fork staying the source of the interface with a separate
+  mod entry, an enumerated patch surface and an upstream merge routine, retention keeping media
+  folders and sidecars, and fixture hygiene. It also plans the unified admin settings area,
+  native Prowlarr support and the first-run wizard. Every other default there is proposed; its
+  open questions are listed in that document, not renumbered here.
 
 ---
 
