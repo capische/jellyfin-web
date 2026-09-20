@@ -5,13 +5,20 @@
 import { chromium } from 'playwright-core';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL);
-if (testUrl.port !== '18096') throw new Error('Only the isolated test instance on port 18096 is allowed');
+// The isolated instances, and nothing else. Production is 8096 and must stay impossible to reach from here,
+// whatever else this list grows to hold.
+const ISOLATED_PORTS = ['18096', '28096'];
+if (!ISOLATED_PORTS.includes(testUrl.port)) {
+    throw new Error('Only the isolated instances on ports ' + ISOLATED_PORTS.join(' and ') + ' are allowed');
+}
 const cdpUrl = process.env.JELLYFINMOD_CDP_URL ?? 'http://127.0.0.1:9223';
 const server = new URL('/web/', testUrl).href;
+// Fixture-dependent gates are optional so this runner works against either isolated instance. What cannot be
+// supplied is skipped and named in the summary, never quietly passed; a run with skips still exits non-zero
+// unless JELLYFINMOD_ALLOW_SKIPS says a partial run was intended.
 const entryId = process.env.JELLYFINMOD_NATIVE_ENTRY_ID;
-if (!entryId) throw new Error('Set JELLYFINMOD_NATIVE_ENTRY_ID to a bound series entry with native seasons');
-const libraryId = process.env.JELLYFINMOD_LIBRARY_ID;
-if (!libraryId) throw new Error('Set JELLYFINMOD_LIBRARY_ID to the isolated browser-test library');
+// Derived from the signed-in user's own views when not given, so a browse gate does not need a fixture id.
+let libraryId = process.env.JELLYFINMOD_LIBRARY_ID;
 const retentionEntryTitle = process.env.JELLYFINMOD_RETENTION_ENTRY_TITLE ?? 'JellyfinMod R4 Movie';
 const expectedNormalCountdown = process.env.JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN;
 const expectedFilteredCountdown = process.env.JELLYFINMOD_EXPECT_FILTER_COUNTDOWN;
@@ -270,6 +277,13 @@ try {
         await reload({ ignoreCache: true });
         originalLayout = await page.evaluate(() => localStorage.getItem('layout'));
         await page.evaluate(() => localStorage.setItem('layout', 'desktop'));
+        if (!libraryId) {
+            libraryId = await page.evaluate(async () => {
+                const views = await ApiClient.getUserViews({}, ApiClient.getCurrentUserId());
+                return (views.Items ?? []).find(view => view.CollectionType === 'movies')?.Id ?? null;
+            });
+            if (!libraryId) throw new Error('No movie library on this server; set JELLYFINMOD_LIBRARY_ID');
+        }
     });
     await step('library countdown and due filter', async () => {
         await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
@@ -395,7 +409,8 @@ try {
         }
         checks.push({ layout, width, keepByKeyboard: key + '+Enter', keepFocus: 'passed', retentionStatus: 'passed' });
     };
-    for (const [layout, width, height] of [['desktop', 1440, 900], ['mobile', 390, 844], ['tv', 1920, 1080], ['tv', 1280, 720]]) {
+    if (!entryId) skippedGates.push('native details and Keep by keyboard (JELLYFINMOD_NATIVE_ENTRY_ID)');
+    for (const [layout, width, height] of (entryId ? [['desktop', 1440, 900], ['mobile', 390, 844], ['tv', 1920, 1080], ['tv', 1280, 720]] : [])) {
         await step(`native details ${layout} ${width}x${height}`, async () => {
             await page.setViewportSize({ width, height });
             await page.evaluate(value => localStorage.setItem('layout', value), layout);
@@ -749,9 +764,12 @@ try {
             await page.setViewportSize({ width: 1440, height: 900 });
             await page.evaluate(() => localStorage.setItem('layout', 'desktop'));
         }
-        const nativeDetail = await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(entryId));
-        const nativeItemId = nativeDetail.body.entry.jellyfinItemId;
-        if (!nativeItemId) throw new Error('Plugin outage fixture needs a native binding');
+        // Any bound entry proves the outage behaviour; the fixture id is only a way to name one.
+        const boundEntry = entryId ?
+            (await apiRequest('JellyfinMod/Entries/' + encodeURIComponent(entryId))).body.entry :
+            (await apiRequest('JellyfinMod/Entries?limit=50')).body?.items?.find(entry => entry.jellyfinItemId);
+        const nativeItemId = boundEntry?.jellyfinItemId;
+        if (!nativeItemId) throw new Error('Plugin outage gate needs an entry bound to a native item');
         await clearQueryCache();
         await page.route(pluginRoute, blockPlugin);
         // Routing disables the HTTP cache, so the run keeps its single cache-bypassing reload for setup.
@@ -765,7 +783,7 @@ try {
         if (!nativeWithoutPlugin.title || !nativeWithoutPlugin.actions) {
             throw new Error('Native details did not degrade cleanly while plugin transport was absent: ' + JSON.stringify(nativeWithoutPlugin));
         }
-        await navigate(server + '#/search?query=' + encodeURIComponent(nativeDetail.body.entry.title));
+        await navigate(server + '#/search?query=' + encodeURIComponent(boundEntry.title));
         const nativeSearchWithoutPlugin = await poll(() => page.evaluate(() => ({
             sections: Array.from(document.querySelectorAll('#searchPage .sectionTitle')).map(node => node.textContent.trim()),
             cards: document.querySelectorAll('#searchPage .card').length,
