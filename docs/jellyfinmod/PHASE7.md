@@ -685,7 +685,9 @@ Queue and from a link on the Dashboard plugin page. **Proposed route:** `/catalo
 owned by the mod router (a second mod route beside `/catalog/queue`; UX §2.1's "only new route"
 counted the stock entry, and the mod entry has its own table). The Dashboard `configPage.html`
 stays until parity (S8), then shrinks to readiness, the Interface section and a link; it is a
-plugin-owned page.
+plugin-owned page. Three design directions for that page, with static mockups and a recommendation
+on what carries over to S8, are in
+[`design/config-page/README.md`](design/config-page/README.md) (2026-09-21, proposal only).
 
 | Section | Contents | Backing (existing → new) |
 | --- | --- | --- |
