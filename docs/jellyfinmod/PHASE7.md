@@ -1556,6 +1556,62 @@ fixtures only, each removed at the end:
 - Hygiene: the run's final assertion finds no `JellyfinMod`-prefixed title in any library or in
   `GET /Entries`.
 
+#### S6 evidence — cast images, the browse merge and search, 2026-09-21
+
+On the isolated instance, plugin build from `master` + the fix below, web bundles `fa503504d766`
+then `a9435092c681` (`webCommit 45cf9e98d3`), host `12.0.0`. Playwright's bundled Chromium,
+headless, signed in as `oleksii`. The instance's web bind mount was removed for these runs so the
+plugin serves its own bundle at `/web-mod/`, with the container's own stock web root at `/web/`
+for side-by-side comparison; the takeover itself reports `readOnly` / `web_root_read_only` there,
+because the image's web directory is root-owned and the service runs as uid 1000.
+
+**Cast and guest-star portraits: not a mod defect.** Reported as "Guests and Cast are empty on new
+mod". Driven on a series detail page (`Peaky Blinders`, 28 people, 28 with a primary image tag):
+
+| Shape | Result |
+| --- | --- |
+| Stock entry at `/web/` | All 28 cards lose `lazy-hidden`; the horizontally visible ones take their `background-image` |
+| Mod entry, bundle served from the web root | Identical |
+| Mod entry, bundle served from the plugin path (`/web-mod/`) | Identical; portraits render at 1280×900, 390×844 and 1920×1080 with `layout=tv` |
+
+The page's scroll container is `BODY.libraryDocument`, so the lazy loader's viewport-rooted
+observer needs the window scrolled, not an inner container. An earlier probe that reported the
+cards "never unveiling" had simply not scrolled far enough, on both sides. The `serverId=undefined`
+in cast hrefs is present on the stock entry too, so it is a pre-existing fork quirk and not the
+cause. **Untested shape:** the genuinely patched `/web/index.html`, which cannot be produced on
+this instance for the reason above.
+
+**The mod TV grid was showing each owned series twice, not losing 38 of them.** Measured against
+the API rather than by counting cards: the Shows library holds 105 native series, and
+`POST /JellyfinMod/Browse` returned 162 rows — 105 native plus 57 catalog entries, 55 of which
+were unbound entries naming a title the library already owns (`state: none`,
+`jellyfinItemId` unset). The first page of 100 therefore held 67 native series and 33 duplicates,
+which is exactly the "67 of 105" that was read as truncation. There is no cap in that path: paging
+worked throughout, and a browser walk reached rows 101–162 including all five titles thought to be
+unreachable. The fix is in `BrowseController`: the dedup by title identity ran only when no target
+library was given, and now always runs, so a title is one row whether or not its entry is bound
+(PHASE1 "never see duplicates of accessible owned titles").
+
+After the fix, browser walks with the Next control: Shows 100 + 8 = 108 rows (105 native + 3
+entries not on disk) against stock's 105; Movies 54 against stock's 54.
+
+**Stock does page this route.** The claim that stock caps at 100 cards with no paging control is
+wrong: the stock grid walks 100 + 5 = 105 and reaches *The White Lotus*, *Will Trent*,
+*Yellowstone (2018)*, *You* and *Young Sherlock (2026)*. Nothing is unreachable on either side.
+
+**Search is mod-owned and its upstream row is out.** `apps/legacy/routes/search.tsx` is restored
+(`git diff master` empty) and the mod router owns `search`, in both layouts. Typed `peaky` and
+observed: mod shows *Shows* plus *Add from TMDB* with the file-state mark on the owned card, and
+focus stays in `#searchTextInput`; the fork's own stock entry at `/web-mod/<id>/index.html` shows
+only upstream's sections with no `jfmod-` element. Confirmed at 1440×900, 390×844 and, driven by
+keyboard rather than a mouse, at 1920×1080 and 1280×720 with `layout=tv`. No page errors.
+
+**Patch surface correction.** §3.2 does not list `apps/modern/features/libraries/`
+(`ItemsView.tsx`, `LibraryToolbar.tsx`, `hooks/useLibrary.tsx`, `PlayAllButton.tsx`,
+`ShuffleButton.tsx`, `filter/FilterButton.tsx`), which carry the combined-browse mounts for the
+modern grids. They belong in the table with the `movies.js` / `tvshows.js` row's lifetime, and the
+Stage B browse slice removes them together.
+
 ### S7 — one settings contract behind every form
 
 Add the migration and typed endpoints of the API contract; import the XML-held discovery and
