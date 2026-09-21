@@ -18,22 +18,55 @@ plugin and built web bundle on the isolated Jellyfin instance. Production is not
 
 ## Repeatable browser checks
 
-`scripts/jellyfinmod-e2e/browser-review.mjs` uses Playwright to drive a dedicated Chrome against
-an actual built app and running Jellyfin. It never synthesizes successful API responses. Its
-failed-add case blocks the actual transport; it does not create or delete catalog entries.
+`scripts/jellyfinmod-e2e/browser-review.mjs` uses Playwright to drive a real browser against an
+actual built app and running Jellyfin. It never synthesizes successful API responses. Its
+failed-add case blocks the actual transport; it does not create or delete catalog entries. It
+launches its browser headless by default, so it never steals window focus or takes over the
+screen the way an earlier attach-to-a-visible-window version did.
 
 The runner is a self-contained package with its own lockfile and ignored `node_modules`, so the
-app's dependencies stay untouched. It depends on `playwright-core` only and never downloads or
-launches a browser; it attaches over CDP and opens a fresh tab in the signed-in profile.
-`scripts/jellyfinmod-browser-review.mjs` forwards to it.
+app's dependencies stay untouched. It depends on `playwright` (not `playwright-core`), because it
+needs Playwright's own bundled Chromium as well as the ability to launch the machine's installed
+Google Chrome. `scripts/jellyfinmod-browser-review.mjs` forwards to it.
+
+### Browser tiers
+
+`JELLYFINMOD_BROWSER` picks which browser a launched run uses:
+
+- `chromium` (default) — Playwright's own bundled Chromium, headless. Reproducible on any machine
+  once `npx playwright install chromium` has fetched it; use this for day-to-day iteration and
+  debugging. It has no H.264/AAC decoding, so any future check that plays real video or switches
+  audio tracks/subtitles cannot pass on this tier — such a check must report itself as skipped
+  with a reason here, not fail.
+- `chrome` — the machine's own installed Google Chrome, headless, via Playwright's `channel:
+  'chrome'`. **This is the only tier that counts as acceptance evidence.** It is the browser real
+  users run, and the only one of the two with full codec support. Run the full suite on `chrome`
+  before calling any JellyfinMod web work done. If channel resolution fails, the runner reports
+  that clearly and falls back to the platform's known Chrome path rather than silently using a
+  different browser.
+
+Both launch tiers use a persistent profile outside the repo (by default under the OS cache
+directory, one subdirectory per tier) so sign-in and per-viewer settings survive between runs. A
+brand-new profile has nothing signed in; the runner signs itself in as `oleksii` with an empty
+password on first use (see "sign in from a cleared session" below) and needs no manual setup.
+
+`JELLYFINMOD_HEADED=true` opens either launch tier with a visible window, for the rare case of
+wanting to watch a launched run. `JELLYFINMOD_CDP_URL` remains a separate, explicit opt-in: it
+attaches to an already-running, already-signed-in Chrome over CDP instead of launching one, for
+watching a run live. That attach path is the one mode that can take over someone's screen, since
+it drives a real visible window rather than a headless one.
+
+The final summary JSON always names the browser that actually ran (`browser`: tier, name,
+version, and profile or CDP URL) and an `acceptanceEvidence` line saying in plain words whether
+that run counts as acceptance. Do not read a `chromium`-tier pass as acceptance evidence.
 
 Prerequisites:
 
 - Node 22 or newer, and `npm ci --prefix scripts/jellyfinmod-e2e` once.
-- A dedicated Chrome profile with remote debugging enabled, by default on port 9223
-  (`JELLYFINMOD_CDP_URL` overrides it).
-- The isolated server on port 18096 with the review plugin and web builds deployed.
-- Sign-in as `oleksii` with an empty password; the script handles the manual login form.
+- For the `chromium` tier: `npx playwright install chromium` once (a one-off download of a few
+  hundred MB), from inside `scripts/jellyfinmod-e2e`.
+- For the `chrome` tier: Google Chrome installed on the machine running the test.
+- The isolated server on port 18096 or 28096 with the review plugin and web builds deployed.
 - A catalog entry bound to a native series with at least one native season.
 - A TMDB query with an unheld result and a library accepting additions.
 
@@ -41,11 +74,15 @@ Run with environment variables (no credentials belong in the command):
 
 ```sh
 JELLYFINMOD_TEST_URL="$test_url" \
+JELLYFINMOD_BROWSER=chrome \
 JELLYFINMOD_NATIVE_ENTRY_ID="$bound_series_entry_id" \
 JELLYFINMOD_LIBRARY_ID="$browser_test_library_id" \
 JELLYFINMOD_SEARCH_QUERY=blade \
 node scripts/jellyfinmod-e2e/browser-review.mjs
 ```
+
+Omit `JELLYFINMOD_BROWSER` (or set it to `chromium`) for a faster iteration run; switch to
+`JELLYFINMOD_BROWSER=chrome` for the acceptance pass.
 
 Retention and playback gates need `JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN`,
 `JELLYFINMOD_EXPECT_FILTER_COUNTDOWN`, `JELLYFINMOD_EXPECT_DUE_CARDS`,
