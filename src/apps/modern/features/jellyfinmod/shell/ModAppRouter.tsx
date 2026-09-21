@@ -7,13 +7,17 @@ import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
 import { APP_ROUTES as MODERN_APP_ROUTES } from 'apps/modern/routes/routes';
 import { WIZARD_APP_ROUTES } from 'apps/wizard/routes/routes';
 import AppHeader from 'components/AppHeader';
+import ConnectionRequired from 'components/ConnectionRequired';
 import Backdrop from 'components/Backdrop';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
+import ErrorBoundary from 'components/router/ErrorBoundary';
 import { history as sharedHistory } from 'RootAppRouter';
 import type { RouterHistory } from 'components/router/routerHistory';
 import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
+
+import HomePage from '../routes/HomePage';
 
 import ModAppLayout from './ModAppLayout';
 
@@ -32,8 +36,20 @@ import ModAppLayout from './ModAppLayout';
  * own full navigation, and wrapping them would give the page two sets of chrome.
  */
 
-/** Paths the JellyfinMod interface owns. Anything not listed falls through to the upstream screen. */
-const MOD_ROUTES: RouteObject[] = [];
+/**
+ * Paths the JellyfinMod interface owns. Anything not listed falls through to the upstream screen.
+ *
+ * These are nested inside upstream's app table rather than declared beside it, so they inherit the shell, the
+ * sign-in requirement and the error boundary instead of restating them. React Router ranks by path specificity
+ * and breaks ties by declaration order, and these are declared first, so a mod path wins over the upstream route
+ * of the same name.
+ */
+const MOD_ROUTES: RouteObject[] = [
+    // Desktop and mobile only for now. The TV layout routes through upstream's legacy table, whose Home has
+    // different chrome and different focus rules, and a d-pad surface that has not been driven on a real device
+    // is not one to switch anybody onto. It joins this list with the TV shell.
+    ...(layoutManager.modern ? [{ path: 'home', Component: HomePage }] : [])
+];
 
 /**
  * Upstream's app table is `[{ path: '/*', children: [...] }]`. We depend on that shape, so say so loudly rather
@@ -53,7 +69,10 @@ const embedUpstreamApp = (routes: RouteObject[]): RouteObject => {
     return {
         path: table.path,
         Component: ModAppLayout,
-        children: table.children
+        children: [
+            { Component: ConnectionRequired, children: MOD_ROUTES, ErrorBoundary },
+            ...table.children
+        ]
     };
 };
 
@@ -61,9 +80,6 @@ const router = createHashRouter([
     {
         element: <ModRootLayout />,
         children: [
-            // Listed first as a statement of intent. React Router matches by path specificity rather than by
-            // order, so a static mod path outranks the upstream table's "/*" wherever both could match.
-            ...MOD_ROUTES,
             embedUpstreamApp(layoutManager.modern ? MODERN_APP_ROUTES : LEGACY_APP_ROUTES),
             ...DASHBOARD_APP_ROUTES,
             ...WIZARD_APP_ROUTES,
