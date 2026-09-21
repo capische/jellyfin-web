@@ -1609,8 +1609,55 @@ keyboard rather than a mouse, at 1920×1080 and 1280×720 with `layout=tv`. No p
 **Patch surface correction.** §3.2 does not list `apps/modern/features/libraries/`
 (`ItemsView.tsx`, `LibraryToolbar.tsx`, `hooks/useLibrary.tsx`, `PlayAllButton.tsx`,
 `ShuffleButton.tsx`, `filter/FilterButton.tsx`), which carry the combined-browse mounts for the
-modern grids. They belong in the table with the `movies.js` / `tvshows.js` row's lifetime, and the
-Stage B browse slice removes them together.
+modern grids, nor `components/filterdialog/` (`filterdialog.js`, `filterdialog.template.html`,
+`filterIndicator.js`) or `components/QueryClientEventHandler.tsx`. They belong in the table with
+the `movies.js` / `tvshows.js` row's lifetime.
+
+#### S6 evidence — the detail route, 2026-09-21
+
+Bundle built from the branch and served by the plugin on the isolated instance; Playwright's
+bundled Chromium, headless, signed in as `oleksii`.
+
+The mod router owns `details`. It composes the page rather than editing upstream's file: upstream's
+template and controller for a native item with the mod's augmentation registered first, the mod's
+own controller for a `entryId` with no file, and no mod work at all for anything the catalog does
+not know. What that bought back:
+
+| Upstream file | State |
+| --- | --- |
+| `apps/legacy/controllers/itemDetails/index.js` | restored, `git diff master` empty |
+| `apps/legacy/routes/search.tsx` | restored, `git diff master` empty |
+| `components/itemContextMenu.js` | restored, `git diff master` empty — nothing wraps the stock More menu now |
+
+The mod's own commands (Search releases, Get another quality, Search now) left the stock More menu
+and are plain buttons in the mod's section, so the wrap that used to need `executeCommand`
+exported is gone. A monkey-patch was considered and rejected: it would not appear in a diff.
+
+| Page | Observed |
+| --- | --- |
+| Series (`Peaky Blinders`) | Upstream Play, Trailer, Shuffle, Mark played, Add to favorites, More; Next Up, Seasons, Cast & Crew, Guest Stars; mod Search releases, Keep, History ("Discovered in Jellyfin library"), retention line |
+| Movie (`20 Days in Mariupol`) | Upstream Play, Trailer, Mark played, Add to favorites, More; mod Search releases, Get another quality, Keep, Version rows, History, retention |
+| File-less entry (`1923`, `state: none`) | Mod page on upstream's template: Keep, Monitor, Remove entry, Refresh metadata, History |
+| Person (`A.C. Lyles`) | Upstream view, no mod section — the dispatcher falling through |
+| Missing native item | "This item is no longer in the library. Open Home", rendered from the mod's own 404 handling rather than from inside upstream's catch |
+| Stock More menu | Opens with upstream's eleven commands and nothing else |
+
+Layouts: movie page verified at 1440×900, 390×844, and 1920×1080 and 1280×720 with `layout=tv`,
+no page errors in any. On TV, ArrowDown from the page reaches *Get another quality* and *Search
+releases*, so the mod actions are d-pad reachable.
+
+**Not verified.** The reclaim redirect (a native id whose item is gone but whose entry exists,
+which should land on `?entryId=`) — no such item exists on the instance; the code path is the one
+that already served it, only its caller changed. A native episode shows no mod section because the
+server returns no entry for an episode item id on this instance (episodes are discovered at series
+level and left unbound); that is a data condition, not the route, and it predates this change.
+
+**Browse is still patched.** `movies.js`, `tvshows.js` and the modern `features/libraries` files
+above still carry the combined-browse mounts. Unlike search and detail, the mod's browse changes
+live inside upstream components rather than behind a route, so owning them means mirroring
+`useLibrary`, `ItemsView` and `LibraryToolbar` into the mod — roughly 600 lines that then have to
+be hand-merged forever, which is the cost §3.1 weighs against a patch. That trade needs a decision
+before the slice is built.
 
 ### S7 — one settings contract behind every form
 
