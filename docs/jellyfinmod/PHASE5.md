@@ -683,10 +683,39 @@ Each is the conservative option; none is accepted yet.
    read, so its file stays unresolved and non-torrent media stays blocked with
    `seed_index_incomplete`. A path no mapping covers is read as the daemon reports it, as before.
 
+### Accepted user decisions — 2026-09-20/21: live acceptance services
+
+Live acceptance — this checklist, PHASE4 A8 and the PHASE6 M2–M9 checklist — runs against real
+services, not only against the boundary servers. The user accepted the following on 2026-09-20/21:
+
+1. **A separate real Transmission.** A second Transmission instance, dedicated to the isolated
+   Jellyfin, on the **same VPN as production's** client. The production Transmission is never
+   used: no torrent is added to it, its RPC endpoint is never configured on the isolated instance,
+   and its credentials never leave production. Wherever earlier text says "disposable
+   Transmission", it means this separate real instance.
+2. **Real Prowlarr, read-only for indexers.** The isolated instance reads indexer definitions
+   and searches through the household's real Prowlarr (Phase 7 §6 sync, or its per-indexer
+   Torznab feeds typed by hand before S9 lands). Nothing is written to Prowlarr: no application
+   registration, no indexer edit, no setting change. Its API key lives only in the plugin secret
+   store on the isolated instance (and in the ignored `plugin/.env` for the runner), never in a
+   committed file, DTO or log. Real-tracker traffic obeys the Phase 6 per-indexer minimum
+   interval, daily budget and breaker.
+3. **One shared mount.** The separate Transmission's download directory and the isolated library
+   are one filesystem reached through one mount inside the isolated Jellyfin container (user
+   decision 4 made concrete); import stays hardlink-only.
+4. **Production media stays read-only** in the isolated container; fixtures exist only in the
+   isolated writable library and are removed afterwards (PHASE7 decision 6).
+
+The boundary servers keep their role for controlled conditions (429, 5xx, malformed XML, clock
+control, restart-in-every-state); the real services provide the happy-path and real-tracker
+evidence. Evidence names each service by role, never by address or path (X6). What is actually
+downloaded in a real-service run is open question 10 below.
+
 ### Live acceptance checklist (I3–I9)
 
-Run after the T18 window, on `jellyfinmod-test` only, with a disposable Transmission whose download
-directory is inside the single writable mount and outside every library root, auto-removal off:
+Run after the T18 window, on `jellyfinmod-test` only, with the separate real Transmission of the
+decision above (its download directory inside the single writable mount and outside every library
+root, auto-removal off) and real Prowlarr read-only for indexers:
 
 1. Deploy the Phase 5 plugin build and web bundle; confirm Health lists `queue`, `import` and
    `seedRelease` and the migration applied; record the revisions.
@@ -762,3 +791,9 @@ proposal below.
 9. **Newest Phase 4 contract vs. review amendments.** *Answered 2026-09-19:* the client is
    Transmission, credentials follow user decision 3, mistaken grabs use the 5-second server-side
    hold, and X1 is an entry gate (PHASE4 user decisions 1–5).
+10. **What a real-service run downloads.** With real Prowlarr indexers and a real Transmission
+    (accepted 2026-09-20/21), the grab step can reach a real tracker. Should the grab evidence
+    still come from the legal fixture, seeded on the separate Transmission and offered through a
+    private Torznab feed beside the real indexers (proposed, so no copyrighted release is fetched
+    by an acceptance run), or may the user choose a real release for the run, recorded by role
+    and hash only? Consumed by A8, I9 and M9.
