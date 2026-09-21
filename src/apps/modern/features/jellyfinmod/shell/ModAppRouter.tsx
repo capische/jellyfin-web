@@ -10,7 +10,8 @@ import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
-import { createRouterHistory } from 'components/router/routerHistory';
+import { history as sharedHistory } from 'RootAppRouter';
+import type { RouterHistory } from 'components/router/routerHistory';
 import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
@@ -74,7 +75,22 @@ const router = createHashRouter([
     }
 ]);
 
-export const history = createRouterHistory(router);
+/**
+ * The shared history is pointed at this router, which is the one actually on screen.
+ *
+ * `appRouter` and `dialogHelper` both navigate through a single `history` that upstream creates alongside its own
+ * router. Left alone, every navigation in this bundle would drive that router instead of this one: the address
+ * bar would move, because both read the same window hash, and the mounted router would never hear about it. The
+ * visible symptom is a control that appears to do nothing — signing in, for instance, authenticating and then
+ * leaving the login form on screen until the page is reloaded by hand.
+ *
+ * Adopting rather than replacing keeps upstream's module-initialisation order exactly as it is. `appRouter` is
+ * constructed at module scope and reads `history.location` while doing so, so the history has to exist before it
+ * is imported — which is precisely what importing it from upstream's router guarantees.
+ */
+(sharedHistory as RouterHistory).adopt(router);
+
+export const history = sharedHistory;
 
 export default function ModAppRouter() {
     return <RouterProvider router={router} />;
