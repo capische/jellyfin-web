@@ -5,7 +5,7 @@ import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-
 import { SortOrder } from '@jellyfin/sdk/lib/generated-client/models/sort-order';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC, useCallback } from 'react';
+import React, { type FC, useCallback, useState } from 'react';
 
 import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
@@ -35,8 +35,26 @@ const HomeHero: FC = () => {
         staleTime: 5 * 60 * 1000
     });
     const item = hero.data;
+    const [playError, setPlayError] = useState<string | null>(null);
+
+    /**
+     * Plays whatever this title means by "play".
+     *
+     * For a movie that is the film. For a series `playbackManager` resolves it: Next Up first, which is the
+     * in-progress episode if there is one and otherwise the next unwatched, then the episode list from there, so
+     * a finished series starts again at the first episode. That resolution is upstream's and is reused rather
+     * than reimplemented — it is the same thing the detail page's Play does, so the two cannot disagree.
+     */
     const onPlay = useCallback(() => {
-        if (item?.Id) playbackManager.play({ ids: [item.Id], serverId: __legacyApiClient__?.serverId() }).catch(console.error);
+        if (!item?.Id) return;
+        setPlayError(null);
+        playbackManager.play({ ids: [item.Id], serverId: __legacyApiClient__?.serverId() })
+            .catch((error: unknown) => {
+                console.error('[JellyfinMod] Home hero could not start playback', error);
+                // A hero button that does nothing is worse than one that explains itself. The usual cause is a
+                // series whose episodes are not on disk.
+                setPlayError('Nothing to play yet. Open More info to see what is available.');
+            });
     }, [__legacyApiClient__, item?.Id]);
 
     if (!item?.Id || !item.BackdropImageTags?.[0] || !api) return null;
@@ -47,9 +65,12 @@ const HomeHero: FC = () => {
             <h1 id='jfmod-homeHero-title'>{item.Name}</h1>
             {item.Overview && <p>{item.Overview}</p>}
             <div className='jfmod-homeHeroActions focuscontainer-x'>
-                {item.Type === BaseItemKind.Movie && <button type='button' className='emby-button button-submit' onClick={onPlay}><span className='material-icons play_arrow' aria-hidden='true' /> Play</button>}
+                <button type='button' className='emby-button button-submit' onClick={onPlay}>
+                    <span className='material-icons play_arrow' aria-hidden='true' /> Play
+                </button>
                 <a className='emby-button button-flat' href={'#' + details}>More info</a>
             </div>
+            {playError && <p className='jfmod-homeHeroError' role='status'>{playError}</p>}
         </div>
     </section>;
 };
