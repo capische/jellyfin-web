@@ -381,6 +381,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   product passes live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists).
   [`PARITY.md`](PARITY.md) plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6);
   it is a plan, not evidence, and has not been run.
+- Phase 6 follow-up (M10–M21), Phase 8 and Phase 9: planned outlines only, 2026-09-21; not
+  scheduled, no entry gate met (see [`PHASE6.md`](PHASE6.md), [`PHASE8.md`](PHASE8.md) and
+  [`PHASE9.md`](PHASE9.md)).
 
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
   the existing library, then maintain bindings as media changes. Phase 1 already supplies the
@@ -400,6 +403,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   **Correction (review 2026-09-18):** the task breakdown is [`PHASE4.md`](PHASE4.md). "qBittorrent
   first" conflicts with Phase 3, whose seed protection reads Transmission only; the download
   client is open question 6 (prior-H4c, medium, verified).
+  **Accepted 2026-09-20/21 (PHASE4 user decision 7):** on text-only indexers a release matched on
+  parsed title and exact year is a manual-grab candidate with `match.identity == "title"`;
+  automation takes it only from an indexer with `automateTitleMatches` on (default off). This
+  replaces the A1 rule that `q`-only rows are always `identity_unverified`. Implemented on
+  plugin `master` (`474bd91`).
 - **Phase 5 — import pipeline.** Watch the client, hardlink into the library under the version
   naming convention, targeted scan, bind the item id. Honour seed goals. Web: `/catalog/queue`, the
   only new route in the design.
@@ -413,6 +421,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   durable seeding-copy release operation, container path mapping and the queue route. Every default
   there is proposed; entry gates include Phase 4 A8, blockers T7–T10 and T18, open question 3
   (single mount) and open question 6 (download client).
+  **Accepted 2026-09-20/21:** live acceptance (A8, I3–I9, M2–M9) runs against real services — a
+  separate real Transmission on the same VPN as production's (never the production client), real
+  Prowlarr read-only for indexers, one shared mount, production media read-only — recorded under
+  PHASE5 *Accepted user decisions — 2026-09-20/21: live acceptance services*.
 - **Phase 6 — automation and multi-quality.** Scheduled search for monitored entries; upgrade to
   cutoff; enrich the existing version selector with resolution, codec, audio and size.
   **Planned (2026-09-19):** [`PHASE6.md`](PHASE6.md) breaks this down into M1–M9: scheduled
@@ -420,6 +432,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Phase 3 operation with `upgrade_replaced` provenance, Get another quality, retention per version
   and the D-pad-operable version selector. Every default is proposed; depends on Phase 5 I9.
   Phase 5 and Phase 6 open questions are listed in those documents, not renumbered here.
+  **Follow-up planned (2026-09-21, proposed):** [`PHASE6.md`](PHASE6.md) *Phase 6 follow-up —
+  multiple held qualities (M10–M21)*: an ordered preference ladder with must-have rungs that
+  define the copies a title holds, per server/library/title scope, attribute vocabulary with
+  confidence, dynamic-range and audio ticks, user-defined string-match rules, per-indexer release
+  title grammars, language and subtitle preferences, editable device presets and picker chips.
+  Acquisition-side only; retention is unchanged. Its open questions 11–22 are listed there.
 - **Phase 7 — setup, admin UI and UI delivery.** Make the product installable and switchable:
   enable the plugin and Jellyfin becomes the new product at `/web`; disable or uninstall it and
   the byte-identical stock interface is back on the same data.
@@ -433,6 +451,20 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   folders and sidecars, and fixture hygiene. It also plans the unified admin settings area,
   native Prowlarr support and the first-run wizard. Every other default there is proposed; its
   open questions are listed in that document, not renumbered here.
+- **Phase 8 — release attribute enrichment and playback evidence.** Future, **not scheduled**;
+  outline only in [`PHASE8.md`](PHASE8.md) (E1–E12): tracker detail-page reads behind a
+  deterministic or optional model-assisted extractor (output treated as untrusted input), post-import
+  truth from real media streams including Dolby Vision profiles, a device capability catalogue
+  favouring the user's registered devices with device-targeted and plays-everywhere selection,
+  and direct-play diagnostics that report rather than re-grab. Depends on the Phase 6 follow-up
+  and Phase 7 S8–S9; its open questions are listed there.
+- **Phase 9 — ratings and title enrichment.** Future, **not scheduled**; outline only in
+  [`PHASE9.md`](PHASE9.md) (R1–R8). **Accepted 2026-09-21:** MDBList is the single ratings
+  source (IMDb, TMDB, Trakt, Rotten Tomatoes critic and audience, plus its extra sources as
+  optional), the host's OMDb plugin data is a read-only fallback for on-disk titles, and Google
+  ratings are dropped. Ratings live in plugin SQLite, the key in the secret store, and a missing
+  or failing provider makes ratings absent without touching browsing or playback. Its four open
+  questions are listed there.
 
 ---
 
