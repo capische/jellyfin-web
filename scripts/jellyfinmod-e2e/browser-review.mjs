@@ -1,8 +1,22 @@
 /* eslint-disable compat/compat -- a Node runner; the browserslist targets TV clients, not this script */
 /* global document, window, localStorage, navigator, indexedDB, HTMLElement, ApiClient */
 // JellyfinMod browser acceptance. Runs against the built app and the real isolated server; no synthetic API responses.
-// Node 22+ and a dedicated, signed-in Chrome with remote debugging enabled are required; no browser is launched or downloaded.
-import { chromium } from 'playwright-core';
+// Node 22+ is required. The browser itself comes from one of three places, chosen by environment variables:
+//   - JELLYFINMOD_CDP_URL set: attach to an already-running, already-signed-in Chrome over CDP. Opt-in only, for
+//     watching a run; this is the one mode that can steal OS focus, because it drives someone's visible window.
+//   - JELLYFINMOD_BROWSER=chrome: launch the machine's own installed Google Chrome, headless, in a dedicated
+//     profile. This is the acceptance tier: only a result from real Chrome counts as acceptance evidence, both
+//     because it is the browser real users run and because it is the only one of the two launch tiers with
+//     H.264/AAC decoding, which future playback checks will depend on.
+//   - JELLYFINMOD_BROWSER=chromium (default): launch Playwright's own bundled Chromium, headless, in a dedicated
+//     profile. Reproducible across machines without depending on what happens to be installed; use it for
+//     day-to-day iteration. Run `npx playwright install chromium` once in this directory to fetch it.
+// Both launch tiers use a persistent, git-ignored profile outside the repo so sign-in and per-viewer settings
+// (layout, subtitle appearance, etc.) survive between runs; JELLYFINMOD_HEADED=true opens either with a visible
+// window for the rare case someone wants to watch a launched (not attached) run.
+import os from 'node:os';
+import path from 'node:path';
+import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL);
 // The isolated instances, and nothing else. Production is 8096 and must stay impossible to reach from here,
@@ -11,7 +25,18 @@ const ISOLATED_PORTS = ['18096', '28096'];
 if (!ISOLATED_PORTS.includes(testUrl.port)) {
     throw new Error('Only the isolated instances on ports ' + ISOLATED_PORTS.join(' and ') + ' are allowed');
 }
-const cdpUrl = process.env.JELLYFINMOD_CDP_URL ?? 'http://127.0.0.1:9223';
+const cdpUrl = process.env.JELLYFINMOD_CDP_URL;
+const browserTier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
+if (!cdpUrl && browserTier !== 'chromium' && browserTier !== 'chrome') {
+    throw new Error('JELLYFINMOD_BROWSER must be "chromium" or "chrome", got ' + JSON.stringify(browserTier));
+}
+const headed = process.env.JELLYFINMOD_HEADED === 'true';
+// Outside the repo, so a launched profile's cookies and settings never end up in git or in a worktree; one
+// directory per tier, so the two browsers never share (and cannot corrupt each other's) profile data.
+const cacheRoot = process.platform === 'darwin'
+    ? path.join(os.homedir(), 'Library', 'Caches')
+    : (process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'));
+const profileDir = process.env.JELLYFINMOD_CHROME_PROFILE_DIR ?? path.join(cacheRoot, 'jellyfinmod-e2e', 'profile-' + browserTier);
 const server = new URL('/web/', testUrl).href;
 // Fixture-dependent gates are optional so this runner works against either isolated instance. What cannot be
 // supplied is skipped and named in the summary, never quietly passed; a run with skips still exits non-zero
@@ -69,15 +94,55 @@ const step = async (name, work) => {
     }
 };
 
-// The dedicated profile holds the signed-in session, so the run uses a fresh tab in its default context.
-const browser = await chromium.connectOverCDP(cdpUrl);
-const context = browser.contexts()[0];
-if (!context) throw new Error('The dedicated Chrome at ' + cdpUrl + ' exposes no browser context');
-const page = await context.newPage();
+// The dedicated profile holds the signed-in session, so a returning run reuses it; a fresh one signs in itself
+// (see the "sign in from a cleared session" step below), which also means a fresh profile needs no manual setup.
+let browser;
+let context;
+let closeBrowser;
+const browserInfo = { requestedTier: cdpUrl ? 'cdp-attach' : browserTier, headless: !headed };
+if (cdpUrl) {
+    browser = await chromium.connectOverCDP(cdpUrl);
+    context = browser.contexts()[0];
+    if (!context) throw new Error('The dedicated Chrome at ' + cdpUrl + ' exposes no browser context');
+    browserInfo.cdpUrl = cdpUrl;
+    // Disconnect only; the dedicated Chrome and its profile stay running for whoever attached it.
+    closeBrowser = () => browser.close();
+} else {
+    const launchOptions = { headless: !headed };
+    if (browserTier === 'chrome') launchOptions.channel = 'chrome';
+    try {
+        context = await chromium.launchPersistentContext(profileDir, launchOptions);
+    } catch (error) {
+        if (browserTier === 'chrome') {
+            // Report clearly rather than silently falling back to the bundled browser, which would quietly
+            // stop this being the real-Chrome acceptance tier the run was asked for.
+            const fallbackPath = process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : null;
+            if (!fallbackPath) throw new Error('Playwright channel "chrome" failed to launch and no known executablePath fallback applies on this platform: ' + error.message);
+            console.error('Playwright channel "chrome" failed (' + error.message + '); falling back to executablePath ' + fallbackPath);
+            launchOptions.executablePath = fallbackPath;
+            delete launchOptions.channel;
+            context = await chromium.launchPersistentContext(profileDir, launchOptions);
+        } else {
+            throw new Error('Could not launch Playwright\'s bundled Chromium: ' + error.message
+                + '. Run `npx playwright install chromium` in scripts/jellyfinmod-e2e first.');
+        }
+    }
+    browserInfo.profileDir = profileDir;
+    closeBrowser = () => context.close();
+}
+const page = context.pages()[0] ?? await context.newPage();
 page.setDefaultTimeout(30000);
 const cdp = await context.newCDPSession(page);
-// A background tab gets no focus events otherwise, and TV center-focus depends on them.
-await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+if (cdpUrl) {
+    // Attaching over CDP shares one browser window that may hold other tabs; a background tab gets no focus
+    // events from the OS, and TV center-focus depends on them. A launched context's page is always the
+    // foreground (if headless, still notionally "focused") tab of its own dedicated browser, so it already
+    // receives them without forcing this.
+    await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+}
+browserInfo.name = context.browser()?.browserType()?.name() ?? null;
+browserInfo.version = context.browser()?.version() ?? null;
+console.log('browser: ' + JSON.stringify(browserInfo));
 
 const browserErrors = [];
 const entryPostRequests = [];
@@ -284,6 +349,86 @@ try {
             });
             if (!libraryId) throw new Error('No movie library on this server; set JELLYFINMOD_LIBRARY_ID');
         }
+    });
+    await step('sign in from a cleared session', async () => {
+        // This runner used to sign in only when it happened to find a login form, so on an already-authenticated
+        // profile the login path was never exercised — which is how a Sign In button that authenticated and then
+        // never re-rendered reached a user. The session is now cleared deliberately on every run.
+        const wasModBundle = await page.evaluate(() => window.__jfmodBundle === true);
+        await page.evaluate(async () => {
+            try {
+                await window.ApiClient?.logout();
+            } catch {
+                // Already signed out; dropping the stored token below is what actually clears the session.
+            }
+            // A cleared session means no access token, not a wiped browser. Clearing all of localStorage would
+            // also drop the server list, leaving the app at "add a server", which is not the state a signed-out
+            // user is in — and logging out alone leaves a token the app signs straight back in with.
+            try {
+                const raw = localStorage.getItem('jellyfin_credentials');
+                if (raw) {
+                    const credentials = JSON.parse(raw);
+                    for (const stored of credentials.Servers ?? []) {
+                        delete stored.AccessToken;
+                        delete stored.UserId;
+                    }
+                    localStorage.setItem('jellyfin_credentials', JSON.stringify(credentials));
+                }
+            } catch {
+                // No stored credentials to trim; the login form is what we wanted anyway.
+            }
+        });
+        await reload({ ignoreCache: true });
+        await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
+
+        const manualName = page.locator('#txtManualName');
+        await manualName.waitFor({ state: 'visible', timeout: 25000 });
+        // Empty password by policy; the password field is never touched.
+        await manualName.fill(testUser);
+        await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+
+        // Deliberately no reload: the whole point is that signing in renders Home on its own. A reload here
+        // would hide exactly the defect this step exists to catch.
+        const readLanding = () => page.evaluate(() => ({
+            hash: window.location.hash,
+            rendered: Array.from(document.querySelectorAll('.skinBody'))
+                .some(element => (element.textContent ?? '').trim().length > 20),
+            // Visibility, not presence: legacy views stay in the DOM with `.hide`, so asking whether the
+            // element exists would pass while the login form was still covering the screen.
+            loginVisible: (() => {
+                const field = document.querySelector('#txtManualName');
+                return !!field && !!field.offsetParent && field.getClientRects().length > 0;
+            })(),
+            modBundle: window.__jfmodBundle === true
+        }));
+        const landedOk = state => state.hash.includes('/home') && state.rendered && !state.loginVisible;
+        const landing = await poll(readLanding, landedOk, { timeout: 30000 });
+        if (!landedOk(landing)) {
+            throw new Error('Signing in did not reach a rendered Home without a reload: ' + JSON.stringify(landing));
+        }
+        if (wasModBundle && !landing.modBundle) {
+            throw new Error('The JellyfinMod bundle stopped running across sign-in; the failsafe or the stock entry took over');
+        }
+
+        // Navigating straight after sign-in is the same code path, so a router that is not the rendered one
+        // shows up here too rather than three steps later.
+        await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
+        const browsed = await poll(
+            () => page.evaluate(() => ({
+                hash: window.location.hash,
+                cards: document.querySelectorAll('.card, .listItem').length
+            })),
+            state => state.hash.includes('/movies') && state.cards > 0,
+            { timeout: 25000 }
+        );
+        if (!browsed.hash.includes('/movies') || browsed.cards === 0) {
+            throw new Error('Navigation after sign-in did not render the library: ' + JSON.stringify(browsed));
+        }
+
+        checks.push({ signIn: 'rendered home without a reload', modBundle: landing.modBundle });
+        // The layout survives a token trim, but set it again so this step cannot leave the rest of the run
+        // depending on what a previous one happened to store.
+        await page.evaluate(() => localStorage.setItem('layout', 'desktop'));
     });
     await step('library countdown and due filter', async () => {
         await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
@@ -848,6 +993,14 @@ try {
         mode: quick ? 'quick' : 'full',
         fullAcceptance: !quick,
         ...(quick ? { note: 'Quick smoke run; it does not count as full acceptance.' } : {}),
+        browser: browserInfo,
+        acceptanceEvidence: browserInfo.requestedTier === 'chrome' ?
+            'This ran on real, installed Google Chrome; it counts as acceptance evidence.' :
+            'This ran on ' + browserInfo.requestedTier + ', not real Chrome; rerun with JELLYFINMOD_BROWSER=chrome before calling anything accepted.',
+        // No check here plays a <video> element or inspects decode state, so none is currently codec-sensitive;
+        // revisit this note (and skip any that need it, rather than let them fail) once a check switches audio
+        // tracks or subtitles and depends on H.264/AAC, which the bundled Chromium tier does not have.
+        mediaDecodeCoverage: 'no check in this suite currently exercises real playback/decode',
         checks, skippedGates, skippedByQuickMode, timings, waits, idleTimeouts,
         waitNote: 'Wait kinds overlap: networkIdle inside hard reloads or discovery waits counts in each.',
         physicalTv: 'not tested',
@@ -874,7 +1027,8 @@ try {
             .catch(ignore);
     }
     await page.close().catch(ignore);
-    // Disconnects only; the dedicated Chrome and its profile stay running.
-    await browser.close().catch(ignore);
+    // In CDP-attach mode this only disconnects; the dedicated Chrome and its profile stay running. In either
+    // launch mode this closes the browser process this run started.
+    await closeBrowser().catch(ignore);
 }
 /* eslint-enable compat/compat */
