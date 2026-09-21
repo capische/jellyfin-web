@@ -99,12 +99,15 @@ const step = async (name, work) => {
 let browser;
 let context;
 let closeBrowser;
-const browserInfo = { requestedTier: cdpUrl ? 'cdp-attach' : browserTier, headless: !headed };
+const browserInfo = { requestedTier: cdpUrl ? 'cdp-attach' : browserTier };
 if (cdpUrl) {
     browser = await chromium.connectOverCDP(cdpUrl);
     context = browser.contexts()[0];
     if (!context) throw new Error('The dedicated Chrome at ' + cdpUrl + ' exposes no browser context');
     browserInfo.cdpUrl = cdpUrl;
+    // Whoever launched the attached browser decided headless/headed, not JELLYFINMOD_HEADED; leave it unstated
+    // here rather than report a value this script never actually chose.
+    browserInfo.headless = 'unknown (attached, not launched by this run)';
     // Disconnect only; the dedicated Chrome and its profile stay running for whoever attached it.
     closeBrowser = () => browser.close();
 } else {
@@ -128,6 +131,7 @@ if (cdpUrl) {
         }
     }
     browserInfo.profileDir = profileDir;
+    browserInfo.headless = !headed;
     closeBrowser = () => context.close();
 }
 const page = context.pages()[0] ?? await context.newPage();
@@ -228,6 +232,53 @@ const apiRequest = (path, method = 'GET', body) => page.evaluate(async request =
     const text = await response.text();
     return { status: response.status, body: text ? JSON.parse(text) : null };
 }, { path, method, body });
+const manualLoginField = page.locator('#txtManualName');
+/**
+ * Fills and submits the manual-login form as `username`, empty password. A brand-new profile (the
+ * default in launch mode) has never chosen a login method, so it lands on a "Please sign in"
+ * chooser (Manual Login / Quick Connect / Forgot Password) before the username field exists at
+ * all; a previously-used profile (CDP-attach, or a launch profile from an earlier run) remembers
+ * the choice and skips straight to the field.
+ */
+const signInManually = async username => {
+    if (!await manualLoginField.isVisible()) {
+        const chooser = page.locator('.btnManual').first();
+        if (await chooser.count()) {
+            // Playwright's own actionability check ("Visible") is unreliable for this `is="emby-button"`
+            // custom element in headless Chromium: it sometimes refuses to consider the button visible —
+            // even with `force`, which only skips the separate "receives events" check, not "Visible" —
+            // for the whole retry window, despite the button being fully painted on screen the entire
+            // time (confirmed with a screenshot and getComputedStyle). Wait for it to be attached, then
+            // dispatch a native click directly on the DOM node, bypassing Playwright's actionability
+            // pipeline for this one known-flaky interaction only.
+            await chooser.waitFor({ state: 'attached', timeout: 15000 });
+            await chooser.evaluate(node => node.click());
+        }
+        await manualLoginField.waitFor({ state: 'visible', timeout: 15000 });
+    }
+    // Just after the field mounts, the surrounding form can still reset its value once before settling;
+    // wait for it to stop changing before typing into it, or Sign In can submit an empty field a moment
+    // after a successful-looking fill.
+    let previousValue;
+    for (let attempt = 0; attempt < 15; attempt++) {
+        const value = await manualLoginField.inputValue().catch(() => '');
+        if (value === previousValue) break;
+        previousValue = value;
+        await sleep(200);
+    }
+    await manualLoginField.fill(username);
+    if (await manualLoginField.inputValue() !== username) {
+        // A slower, second reset than the one waited out above; retry once so a real defect here still
+        // surfaces as a clear error rather than a silent empty-field submission.
+        await sleep(300);
+        await manualLoginField.fill(username);
+    }
+    if (await manualLoginField.inputValue() !== username) {
+        throw new Error('The manual-login username field would not hold a value long enough to submit');
+    }
+    // Empty password by policy; the password field is never touched.
+    await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+};
 const activeMatches = selector => page.evaluate(match => document.activeElement?.matches(match) ?? false, selector);
 /** A trusted key press, as a remote or keyboard produces it; waits briefly for the app to move focus in response. */
 const pressKey = async key => {
@@ -323,11 +374,11 @@ try {
     await step('setup and hard reload', async () => {
         await page.goto(server);
         await page.waitForFunction(() => !!window.ApiClient && !!document.querySelector('.page:not(.hide)'));
-        const manualName = page.locator('#txtManualName');
-        if (await manualName.isVisible()) {
-            // Empty password by policy; the password field is never touched.
-            await manualName.fill(testUser);
-            await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+        // A brand-new launch profile (the default) has nothing signed in and lands here, not on a
+        // login form that merely happens to be showing; sign in ourselves rather than treat it as an
+        // operator's job, or every first run of a fresh profile would fail before it even started.
+        if (await page.evaluate(() => window.location.hash.includes('/login') || window.location.hash.includes('/selectuser'))) {
+            await signInManually(testUser);
             await page.waitForFunction(() => !window.location.hash.includes('/login'), undefined, { timeout: 15000 }).catch(ignore);
         }
         await appReady();
@@ -381,11 +432,7 @@ try {
         await reload({ ignoreCache: true });
         await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
 
-        const manualName = page.locator('#txtManualName');
-        await manualName.waitFor({ state: 'visible', timeout: 25000 });
-        // Empty password by policy; the password field is never touched.
-        await manualName.fill(testUser);
-        await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+        await signInManually(testUser);
 
         // Deliberately no reload: the whole point is that signing in renders Home on its own. A reload here
         // would hide exactly the defect this step exists to catch.

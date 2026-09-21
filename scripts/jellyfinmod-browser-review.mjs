@@ -2,7 +2,7 @@
 // Playwright package. Install it once with `npm ci --prefix scripts/jellyfinmod-e2e`; this path forwards to it.
 import { existsSync } from 'node:fs';
 
-if (!existsSync(new URL('./jellyfinmod-e2e/node_modules/playwright-core/package.json', import.meta.url))) {
+if (!existsSync(new URL('./jellyfinmod-e2e/node_modules/playwright/package.json', import.meta.url))) {
     console.error('Run `npm ci --prefix scripts/jellyfinmod-e2e` first; see docs/jellyfinmod/REVIEW.md.');
     process.exit(1);
 }
