@@ -1,19 +1,15 @@
-import actionsheet from 'components/actionSheet/actionSheet';
 import loading from 'components/loading/loading';
-import itemContextMenu, { executeCommand } from 'components/itemContextMenu';
-import toast from 'components/toast/toast';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { renderComponent } from 'utils/reactUtils';
 
-import { getEntries, requestSearch } from '../api/modApi';
+import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
-import { openReleasePickerForEntry } from './releasePicker';
 
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
  * endless spinner, or says plainly that it is unavailable (P3.T14).
  */
-export async function handleMissingNativeItem(view, params, error) {
+async function handleMissingNativeItem(view, params, error) {
     if (error?.status !== 404 || !params.id) return;
     const client = params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
     const api = client && ServerConnections.getApi(client.serverId());
@@ -62,7 +58,22 @@ export default function initializeNativeEntryDetails(view, params) {
         const api = client && ServerConnections.getApi(client.serverId());
         const target = view.querySelector('.detailSectionContent');
         if (!api || !target || !params.id) return;
-        const user = await client.getCurrentUser();
+        // Asked for here rather than read out of upstream's failure. Upstream's controller does its own
+        // getItem and, when the item is gone (a reclaim, a library removal), logs and leaves the page empty;
+        // reading that used to mean a patch inside its catch. Owning the route means asking the same question
+        // ourselves. It costs one extra request per native detail page, which is the price of the patch
+        // coming out (P7.S6, P3.T14).
+        let user;
+        try {
+            [, user] = await Promise.all([
+                client.getItem(client.getCurrentUserId(), params.id),
+                client.getCurrentUser()
+            ]);
+        } catch (error) {
+            if (currentGeneration !== generation) return;
+            await handleMissingNativeItem(view, params, error);
+            return;
+        }
         if (currentGeneration !== generation) return;
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
@@ -93,56 +104,4 @@ export default function initializeNativeEntryDetails(view, params) {
     view.addEventListener('viewshow', show);
     view.addEventListener('viewbeforehide', hide);
     view.addEventListener('viewdestroy', destroy);
-}
-
-/**
- * The mod's More menu commands for the loaded entry, all administrator-only and each gated on the plugin's advertised
- * capability: Search releases (P4.A7), Get another quality for a title with a file and Search now for an
- * upgrade-eligible one (P6.M8).
- */
-const modCommands = section => {
-    const commands = [];
-    if (section.dataset.jfmodCanAcquire === 'true') commands.push({ id: 'jfmod-search-releases', name: 'Search releases', icon: 'search' });
-    if (section.dataset.jfmodCanAddVersion === 'true') commands.push({ id: 'jfmod-add-version', name: 'Get another quality', icon: 'hd' });
-    if (section.dataset.jfmodCanSearchNow === 'true') commands.push({ id: 'jfmod-search-now', name: 'Search now', icon: 'autorenew' });
-    return commands;
-};
-
-const runModCommand = (id, section, options) => {
-    const client = options.item?.ServerId ? ServerConnections.getApiClient(options.item.ServerId) : ServerConnections.currentApiClient();
-    const api = client && ServerConnections.getApi(client.serverId());
-    if (!api) return;
-    const entryId = section.dataset.jfmodEntryId;
-    if (id === 'jfmod-search-now') {
-        requestSearch(api, entryId).then(() => {
-            toast('Search requested. The next automation run searches this title.');
-        }).catch(error => {
-            console.error('[JellyfinMod] Could not request a search', error);
-            toast('The search could not be requested. Please try again.');
-        });
-        return;
-    }
-    const intent = id === 'jfmod-add-version' ? 'addVersion' : undefined;
-    openReleasePickerForEntry(api, entryId, options.item?.Id, intent, intent ? section.dataset.jfmodEpisodeId : undefined).catch(error => {
-        console.error('[JellyfinMod] Could not open the release picker', error);
-        toast('Releases could not be loaded. Please try again.');
-    });
-};
-
-/** Extend only the native Details More menu after an accessible entry has loaded. */
-export async function showNativeEntryMenu(options, view) {
-    if (!view.querySelector('.jfmod-nativeEntryDetails .jfmod-entryHistory')) {
-        return itemContextMenu.show(options);
-    }
-    const section = view.querySelector('.jfmod-nativeEntryDetails [data-jfmod-entry-id]');
-    const extra = section ? modCommands(section) : [];
-    if (!extra.length) return itemContextMenu.show(options);
-    const commands = await itemContextMenu.getCommands(options);
-    commands.push(...extra);
-    const id = await actionsheet.show({ items: commands, positionTo: options.positionTo, resolveOnClick: ['share'] });
-    if (extra.some(command => command.id === id)) {
-        runModCommand(id, section, options);
-        return { command: id, updated: false, deleted: false };
-    }
-    return executeCommand(options.item, id, options);
 }
