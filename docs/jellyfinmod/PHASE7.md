@@ -99,6 +99,20 @@ they differ; the remaining open questions stay open and their proposed defaults 
     - If a JellyfinMod repository is already registered — the operator added it by hand first —
       the image does not add a second one.
 
+12. **The modern React grid stays patched; it is not forked into the mod** (§S6, Stage B browse).
+    Unlike Home, search and detail, the mod's browse changes live *inside* upstream components
+    rather than behind a route, so owning them would mean mirroring `hooks/useLibrary.tsx`,
+    `ItemsView.tsx`, `LibraryToolbar.tsx`, `PlayAllButton.tsx`, `ShuffleButton.tsx`,
+    `filter/FilterButton.tsx` and `components/filterdialog/` — roughly 600 lines to hand-merge
+    forever. That is the cost §3.1 weighed when it chose boot option (1), and it applies here
+    unchanged: a small additive patch that shows up in a diff beats a large silent fork.
+    Ownership is not the goal; a different experience is, and the patched grid already delivers
+    it. So these files are **enumerated in §3.2 with `permanent` lifetime** rather than a
+    Stage-B one, and Stage B browse is complete without them.
+
+    **What would reopen this:** Phase 6 follow-up work — the quality ladder, preferred sources,
+    version ticks on cards — needing a grid upstream cannot host. Not a tidiness argument.
+
 ## Outcome and boundaries
 
 An operator runs the JellyfinMod image, or installs the plugin into a stock server. Every browser
@@ -343,8 +357,9 @@ Re-enabling never re-runs setup.
 
 ### 3.2 The patch surface, enumerated
 
-Every edit to an upstream file is listed here; a Jellyfin release upgrade walks this table. The
-target state after Stage B parity is the first four rows only.
+Every edit to an upstream file is listed here; a Jellyfin release upgrade walks this table. Rows
+struck through have been handed back and are kept for one release as a record of what came out;
+`git diff master -- <file>` is empty for each. The target state is the permanent rows only.
 
 | Upstream file | Why | What breaks if upstream changes it | Lifetime |
 | --- | --- | --- | --- |
@@ -354,9 +369,13 @@ target state after Stage B parity is the first four rows only.
 | `src/config.json` | none planned; listed because the mod entry reads it | the mod entry fetches it by rooted URL; a schema change surfaces in `useWebConfig` | none |
 | `src/apps/legacy/controllers/hometab.js` | mounts hero and top bar (W7) | Home chrome disappears in the stock entry | **still patched.** Stage B's Home covers desktop and mobile; the TV layout routes through upstream's legacy Home, which is what this mounts. It comes out with the TV shell slice, not before |
 | `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |
-| `src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js` | combined browse and File filter (W2, W3, W8) | file-less entries vanish from stock grids | until Stage B browse passes, then removed |
-| `src/apps/legacy/routes/search.tsx` | Add from TMDB section (W4) | leftovers section vanishes | until Stage B search passes, then removed |
-| `src/apps/legacy/controllers/itemDetails/index.js` | detail augmentation (W5, T14) | History, retention, Search releases vanish on stock details | until Stage B details pass, then removed |
+| `src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js` | combined browse and File filter (W2, W3, W8) | file-less entries and the File filter vanish from the **TV layout's** grids, which is the only layout that reaches these controllers | **still patched.** Restoring them does not remove a seam, it removes the feature on TV: the legacy route table serves `movies` and `tv` whenever `layoutManager.modern` is false, and nothing else serves TV browse. Measured, not assumed (P7.S6). It comes out with the TV shell slice, like the `hometab.js` row |
+| ~~`src/apps/legacy/routes/search.tsx`~~ | Add from TMDB section (W4) | — | **removed (P7.S6).** The mod router owns `search`; `git diff master` is empty |
+| ~~`src/apps/legacy/controllers/itemDetails/index.js`~~ | detail augmentation (W5, T14) | — | **removed (P7.S6).** The mod router owns `details` and composes upstream's controller; `git diff master` is empty |
+| ~~`src/components/itemContextMenu.js`~~ | exported `executeCommand` for the More-menu wrap | — | **removed (P7.S6).** Nothing wraps the stock More menu; the mod's commands are buttons in its own section |
+| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `components/ItemsView.tsx`, `LibraryToolbar.tsx`, `PlayAllButton.tsx`, `ShuffleButton.tsx`, `filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grids (W2, W3, W8) | the modern grids lose file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
+| `src/components/filterdialog/filterdialog.js`, `filterdialog.template.html`, `filterIndicator.js` | the File and Due filter groups, shared by the legacy and modern grids (W3, W8) | the File and Due filters vanish from every grid | **permanent**, with the row above |
+| `src/components/QueryClientEventHandler.tsx` | catalog query invalidation on the events the mod's surfaces depend on | mod surfaces stop refreshing after a change | permanent |
 | `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` (W7/W12) | top-bar restyle gone in the stock entry | until Stage B Home passes, then removed |
 | `src/components/router/routerHistory.ts` | `RouterHistory.adopt(router)`, so the shared history drives the router that is actually rendered (P7.S2 login fix) | the mod bundle navigates upstream's router instead of its own: the address bar moves and the screen does not | permanent |
 | `src/utils/assetUrl.ts` | **new file**, the one helper the four rows below call | nothing; a new file never conflicts | permanent |
@@ -369,7 +388,15 @@ target state after Stage B parity is the first four rows only.
 | `src/apps/modern/routes/asyncRoutes/user.ts`, `routes/catalog/queue.tsx` | the `catalog/queue` route in the stock entry | queue route missing in the stock entry | until Stage A, then removed; the mod router owns `catalog/*` |
 
 Removing a row means restoring the upstream text of that file on `jellyfin-mod`, verified by
-`git diff master -- <file>` being empty. The stock entry then differs from upstream only in build
+`git diff master -- <file>` being empty. It is only worth doing when the mod screen that replaces
+it is actually serving every layout that reached the patched file; otherwise it removes the
+feature rather than the seam, which is why the two legacy grid controllers stay (decision 12 and
+the row above).
+
+Upstream files the mod **mirrors** rather than edits are not in this table, because they are not
+patched: `src/index.jsx`, `src/RootApp.tsx` and `src/components/viewManager/ViewManagerPage.tsx`.
+`scripts/jellyfinmod-build/bootGuard.js` hashes each one and fails the build when upstream changes
+it, so a mirroring that nobody remembers cannot go quiet. The stock entry then differs from upstream only in build
 configuration, and "plugin off" is stock by construction rather than by gating.
 
 ### 3.3 Upstream modules the new interface depends on
@@ -1652,12 +1679,19 @@ that already served it, only its caller changed. A native episode shows no mod s
 server returns no entry for an episode item id on this instance (episodes are discovered at series
 level and left unbound); that is a data condition, not the route, and it predates this change.
 
-**Browse is still patched.** `movies.js`, `tvshows.js` and the modern `features/libraries` files
-above still carry the combined-browse mounts. Unlike search and detail, the mod's browse changes
-live inside upstream components rather than behind a route, so owning them means mirroring
-`useLibrary`, `ItemsView` and `LibraryToolbar` into the mod — roughly 600 lines that then have to
-be hand-merged forever, which is the cost §3.1 weighs against a patch. That trade needs a decision
-before the slice is built.
+**Browse stays patched, and that is now the accepted answer (decision 12).** Unlike search and
+detail, the mod's browse changes live inside upstream components rather than behind a route, so
+owning them would mean mirroring `useLibrary`, `ItemsView` and `LibraryToolbar` — roughly 600
+lines to hand-merge forever, which is the cost §3.1 weighs against a patch. Stage B browse is
+complete with them in place.
+
+The two legacy controllers were then checked rather than restored on the strength of that, and
+they must stay too, for a different reason: **the TV layout is the only layout that reaches them,
+and nothing else serves TV browse.** Driven at 1920×1080 with `layout=tv`, the Shows grid renders
+100 cards, all of them mod-rendered, with 48 file-state marks and the filter control present.
+Restoring `movies.js` and `tvshows.js` today would take the catalog off the TV grid entirely.
+They come out with the TV shell slice, alongside the `hometab.js` row that is deferred for the
+same reason.
 
 ### S7 — one settings contract behind every form
 
