@@ -386,7 +386,7 @@ function getResolveFunction(resolve, commandId, changed, deleted, itemId) {
     };
 }
 
-export function executeCommand(item, id, options) {
+function executeCommand(item, id, options) {
     const itemId = item.Id;
     const serverId = item.ServerId;
     const apiClient = ServerConnections.getApiClient(serverId);

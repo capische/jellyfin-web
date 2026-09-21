@@ -17,6 +17,16 @@
     > * { margin: 0 0.6em 0.6em 0; }
 }
 
+/* The mod's own actions on a native detail page, since they left the stock More menu (P7.S6). */
+.jfmod-nativeActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0.5em 0;
+
+    > * { margin: 0 0.6em 0.6em 0; }
+}
+
 .jfmod-entryHistory {
     margin: 0.7em 0;
 }
