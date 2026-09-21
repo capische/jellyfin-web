@@ -1439,9 +1439,32 @@ series / season / episode page (native actions through `itemContextMenu` and `pl
 Keep, Remove with the stock confirm). As each page passes, restore the corresponding upstream
 files of §3.2 on `jellyfin-mod` and delete the integration shims that only served them.
 
+#### The Home hero always offers Play — accepted 2026-09-21
+
+User feedback, verbatim: *"main home screen background should be recent tv show or movie with play button."*
+
+What the code actually did, checked rather than assumed: the Play button was gated on
+`item.Type === BaseItemKind.Movie`. It had nothing to do with `canPlay`, and a series hero therefore offered only
+*More info*. That is the behaviour the user hit, and it is now removed — the hero offers Play for whatever it is
+showing.
+
+**What Play starts, and why it is not reimplemented here.** The hero calls
+`playbackManager.play({ ids: [item.Id] })`, and for a series upstream already resolves that in
+`getSeriesOrSeasonPlaybackPromise`: it asks for Next Up first — which is the in-progress episode when there is
+one and otherwise the next unwatched — and then plays the episode list from there, so a fully watched series
+starts again at its first episode. That is exactly the "resume, else next unwatched, else first" order, it is the
+same resolution the detail page's Play uses, and reusing it is what stops the two disagreeing.
+
+**When nothing is playable.** The button is not silently dropped. If playback cannot start — most likely a series
+whose episodes are not on disk — the hero says so under the actions and points at *More info*, because a hero
+button that does nothing is worse than one that explains itself.
+
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:
 
+- Home hero: Play is present and starts playback for **both** a movie hero and a series hero; the series case
+  starts the in-progress or next unwatched episode; a title with nothing playable shows the reason instead of a
+  dead button.
 - Home: hero honours Latest exclusions and `canPlay`; merged rows sort per W10; the user's Home
   section choices are honoured; a file-less wanted title appears in Recently Added with its mark
   and a reclaimed one does not.
