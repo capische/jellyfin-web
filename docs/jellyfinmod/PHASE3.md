@@ -29,6 +29,11 @@ episode records and history survive. Expiry never removes the catalog entry.
 - Keep exempts an entry indefinitely and requires one action with no confirmation.
 - Preserve favorite, watched/resume, seeding and hardlink safeguards.
 - Card countdowns appear within the last 72 hours, or under the Due within 7 days filter.
+- **Reclaim removes the media file only, accepted 2026-09-20:** the title's folder and every
+  sidecar (`.nfo`, subtitles, artwork, extras) stay on disk, and empty folders are never tidied.
+  This is the T3 behaviour ("NFO, subtitle and other neighboring files are not recursively
+  removed") recorded as accepted; no phase plans to change it, and T18 verifies it live
+  (step 4, "sidecars kept"). Also recorded in PLAN *Automatic expiry* and PHASE7 decision 5.
 - All development and destructive acceptance use disposable media in the isolated test
   instance. Production and its media paths are outside the Phase 3 deployment/test scope.
 
