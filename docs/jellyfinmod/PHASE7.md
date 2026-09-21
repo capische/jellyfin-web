@@ -20,7 +20,7 @@ product; disable it and stock Jellyfin is still there, byte for byte". Nothing i
 the catalog, acquisition, import, retention or automation do; it changes what the interface is,
 how it is delivered, how it is configured and how it is switched on and off.
 
-## Accepted user decisions — 2026-09-20
+## Accepted user decisions — 2026-09-20 and 2026-09-21
 
 These were decided by the user on 2026-09-20. They override any proposal below that disagrees.
 
@@ -82,6 +82,22 @@ they differ; the remaining open questions stay open and their proposed defaults 
     mod shell for Phase 7. They are reachable and fully functional there; moving any of them to
     Reimplement is a later phase decision, and none of them blocks the takeover being on by
     default.
+
+**Accepted 2026-09-21.**
+
+11. **The Docker image preconfigures the self-hosted repository** (§S5.1; settles what was
+    proposed there). A manual install still registers nothing, and the README documents the one
+    step for that case. The preconfiguration has to be honest and reversible, which means all of
+    the following, and they are requirements rather than preferences:
+    - It appears in Manage Repositories like any other, clearly named, and removing it leaves
+      the plugin working. Only the details panel and the update path depend on it; the catalog,
+      acquisition, import, retention and the interface do not.
+    - The image's documentation says it points at **the server's own address**, so no external
+      service is contacted. That is the reason it is defensible to ship it already registered.
+    - It is **image configuration, not plugin behaviour**: the plugin never writes the
+      repository list at runtime, on any install, however convenient that would be.
+    - If a JellyfinMod repository is already registered — the operator added it by hand first —
+      the image does not add a second one.
 
 ## Outcome and boundaries
 
@@ -1286,6 +1302,16 @@ production compose, never the shared `jellyfinmod-test` volumes):
   and mode, that the runtime user could write it, and the `patchedBy: "automatic"` report.
 - `JELLYFINMOD_UI_TAKEOVER=false` on a fresh container leaves the image's web directory stock,
   reports the switch as the reason, and the interface is still reachable at the plugin path.
+- Repository, preconfigured (decision 11), verified **on the image's own web directory, not the
+  bind-mounted one**: a fresh container comes up with the JellyfinMod repository already in
+  Manage Repositories, clearly named and pointing at the server's own address;
+  `GET /Packages/JellyfinMod?assemblyGuid=<guid>` answers; and Dashboard → Plugins shows the
+  plugin with its version and no error banner.
+- Removing that repository entry in the Dashboard leaves the plugin fully working — catalog,
+  acquisition, import, retention and the interface all unaffected — and only the details panel
+  and the update path stop being available. Re-adding it restores them.
+- A container started against a config volume that already has a JellyfinMod repository
+  registered does not gain a second copy.
 - `docker compose up -d --force-recreate` results in a re-patched page after startup;
   downgrading to the previous image tag serves the previous bundle and does not downgrade the
   plugin folder.
@@ -1339,11 +1365,11 @@ someone's behalf at startup would be indefensible however convenient. Two suppor
 2. **The Docker image ships it preconfigured** (S5), because there the operator chose the image and the image is
    the product. Still visible and still removable in the same Dashboard list.
 
-**Needs the user's approval (default 17):** whether the image preconfigures the repository, and whether an
-opt-in setting may register it on a manually installed server. The proposed default is: the image preconfigures
-it; a manual install never registers anything by itself, and the README documents step 1. No opt-in switch is
-built until this is answered, because a switch that rewrites server configuration is exactly the thing worth
-asking about first.
+**Accepted 2026-09-21 (decision 11).** The image preconfigures it; a manual install never registers anything by
+itself. No opt-in switch is built at all: a setting that rewrites the server's repository list would be plugin
+behaviour, and this is deliberately image configuration. The image's entry must be visible, clearly named and
+removable without breaking the plugin, must point at the server's own address so nothing external is contacted,
+and must not be added twice if the operator already registered one by hand.
 
 **Acceptance** — live on the acceptance instance, with the repository registered on that instance only:
 
