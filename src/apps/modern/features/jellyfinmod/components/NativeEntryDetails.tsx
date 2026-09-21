@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 
-import { type EntryDetail, getEntries, getEntry, keepEntry } from '../api/modApi';
+import { type EntryDetail, getEntries, getEntry, keepEntry, requestSearch } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
 import { AUTOMATION_CAPABILITY } from '../constants/queue';
 import { sameItemId, VERSIONS_CAPABILITY } from '../constants/versions';
@@ -88,16 +88,36 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     const { data, refetch } = detail;
     const sameId = (value?: string | null) => sameItemId(value, itemId);
     const episode = data?.episodes.find(candidate => sameId(candidate.jellyfinItemId));
-    const addVersion = useCallback((opener: HTMLElement) => {
+    const openPicker = useCallback((opener: HTMLElement, intent?: 'addVersion') => {
         if (!data) return;
         const reload = () => {
             refetch().catch(() => undefined);
         };
         openReleasePicker({
             api, entryId: data.entry.id, title: data.entry.title, mediaType: data.entry.mediaType, episodes: data.episodes,
-            episodeId: episode?.id, intent: 'addVersion', onChanged: reload
+            episodeId: episode?.id, intent, onChanged: reload
         }).then(() => restoreFocus(opener), () => restoreFocus(opener));
     }, [api, data, episode?.id, refetch]);
+    const addVersion = useCallback((opener: HTMLElement) => openPicker(opener, 'addVersion'), [openPicker]);
+    const searchReleases = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        openPicker(event.currentTarget);
+    }, [openPicker]);
+    const addVersionFromButton = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        addVersion(event.currentTarget);
+    }, [addVersion]);
+    const searchNow = useCallback(async () => {
+        if (busy || !data) return;
+        setBusy(true);
+        setMessage('');
+        try {
+            await requestSearch(api, data.entry.id);
+            setMessage('Search requested. The next automation run searches this title.');
+        } catch {
+            setMessage('The search could not be requested. Please try again.');
+        } finally {
+            setBusy(false);
+        }
+    }, [api, busy, data]);
     if (!detail.data) return null;
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
@@ -105,12 +125,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     const inFlightEpisodes = isSeriesPage ? detail.data.episodes.filter(candidate =>
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading) : [];
     const { versions, canAddVersion, canSearchNow } = versionSurfaces(detail.data, episode, capabilities, canAcquire, isAdmin);
-    // The native More menu reads these to offer Search releases, Get another quality and Search now (P4.A7, P6.M8).
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
-        data-jfmod-episode-id={episode?.id}
-        data-jfmod-can-acquire={canAcquire ? 'true' : undefined}
-        data-jfmod-can-add-version={canAddVersion ? 'true' : undefined}
-        data-jfmod-can-search-now={canSearchNow ? 'true' : undefined}>
+        data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && versionsMount && createPortal(
             <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined} />, versionsMount)}
         <p role='status'>{message}</p>
@@ -128,10 +144,28 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
                 <RetentionStatus retention={candidate.retention} compact />
             </div>)}
         </HistoryToggle>}
-        {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
-            aria-disabled={busy} aria-pressed={detail.data.retention.reason === 'kept'} onClick={keep}>
-            {keepButtonLabel(busy, detail.data.retention.reason === 'kept')}
-        </button>}
+        {/*
+          * The mod's own actions, at the mod's own call site (P7.S6).
+          *
+          * These used to be appended to the stock More menu, which meant wrapping `itemContextMenu.show` inside
+          * upstream's detail controller. The mod interface owns this route now, so the wrap — and the patch to
+          * `itemDetails/index.js` that carried it — is gone, and the commands are plain buttons beside Keep.
+          */}
+        <div className='jfmod-nativeActions'>
+            {canAcquire && <button className='emby-button raised' type='button' onClick={searchReleases}>
+                Search releases
+            </button>}
+            {canAddVersion && <button className='emby-button raised' type='button'
+                onClick={addVersionFromButton}>
+                Get another quality
+            </button>}
+            {canSearchNow && <button className='emby-button raised' type='button' aria-disabled={busy}
+                onClick={searchNow}>Search now</button>}
+            {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
+                aria-disabled={busy} aria-pressed={detail.data.retention.reason === 'kept'} onClick={keep}>
+                {keepButtonLabel(busy, detail.data.retention.reason === 'kept')}
+            </button>}
+        </div>
         <HistoryToggle label={<>History{detail.data.history[0] ? ' · ' + detail.data.history[0].summary : ''}</>}>
             <ol>{detail.data.history.map(event => <li key={event.id}>
                 <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
