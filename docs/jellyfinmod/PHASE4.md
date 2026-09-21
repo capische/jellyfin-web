@@ -67,6 +67,28 @@ review proposals in `REVIEW-2026-09-18.md` wherever they differ.
    validates this at configuration time by comparing device identities (`statx`) of the
    plugin-visible download folder and the library roots, and refuses a destination that fails.
 
+### Accepted user decisions — 2026-09-20/21
+
+7. **Text-only indexers: a title-and-year match is a manual-grab candidate.** A release whose
+   parsed title matches the target and whose parsed year equals the target year **exactly** is
+   eligible for a manual grab and reports `match.identity == "title"` (the id-verified case stays
+   `"verified"`). A missing or different year, or a title that does not match, is still rejected
+   (`year_missing`, `year_mismatch`, `title_mismatch`). Automation takes a `"title"` release only
+   from an indexer whose new flag `automateTitleMatches` is on (default **off**); on every other
+   indexer such releases are visible and grabbable by hand only. This **replaces** the A1 rule that
+   `q`-only rows are always rejected as `identity_unverified`: most public trackers advertise no
+   id search, so that rule made the feature unusable on them. `identity_unverified` remains only
+   for rows that match neither an id nor title-and-year. Implemented on plugin `master` as
+   `474bd91` (migration `PhaseFourTitleMatchAutomation`); PHASE6 *Accepted user decisions —
+   2026-09-20/21* records the automation side. A8 must show a text-only boundary indexer
+   producing a `"title"` candidate that an administrator can grab, and the same candidate never
+   auto-grabbed while the flag is off.
+8. **Live acceptance runs against real services** (recorded in full under PHASE5 *Accepted user
+   decisions — 2026-09-20/21: live acceptance services*): a separate real Transmission on the same
+   VPN as production's, never the production client; real Prowlarr read-only for indexers; one
+   shared mount; production media read-only. The "disposable Transmission" wording in A1, A5 and
+   A8 means that separate real instance.
+
 ## Current implementation and decisions to settle
 
 The inspected implementation has `Entry`, `Episode`, `HistoryRecord`, library access checks,
@@ -323,7 +345,10 @@ Torznab `t=caps` supplies supported search modes, parameters, categories and res
 Movie search requires an advertised `imdbid` or `tmdbid`; episode search requires advertised
 `tvdbid`, `season` and `ep`. The stable entry/episode identity and parsed title/year or season/
 episode must agree. A `q`-only fallback may discover rows, but those rows are rejected as
-`identity_unverified` and cannot rebind or grab. Source GUIDs are namespaced by indexer and never
+`identity_unverified` and cannot rebind or grab. **Superseded by user decision 7 (2026-09-20/21):**
+a `q`-only row whose parsed title and exact year match the target is eligible for a manual grab
+with `match.identity == "title"`; it still never rebinds a catalog identity, and automation
+accepts it only from an indexer with `automateTitleMatches` on. Source GUIDs are namespaced by indexer and never
 treated as infohashes. Feed offset/total metadata drives bounded pagination; HTTP-200 XML errors
 remain errors rather than empty results.
 
