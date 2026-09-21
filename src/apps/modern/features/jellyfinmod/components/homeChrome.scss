@@ -49,6 +49,14 @@
 .jfmod-homeHeroActions .emby-button:focus { box-shadow: 0 0 0 0.18em #00a4dc; }
 .jfmod-homeHeroActions .emby-button:focus:not(:focus-visible) { box-shadow: none; }
 
+/* Only shown when Play could not start, so it never takes room from the hero otherwise. */
+.jfmod-homeHeroError {
+    color: #f2b01e;
+    font-size: 0.95em;
+    margin: 0.7em 0 0;
+    max-width: 32em;
+}
+
 .skinHeader.jfmod-topbar {
     background: linear-gradient(180deg, rgba(16, 16, 16, 0.95), rgba(16, 16, 16, 0));
     transition: background-color 160ms ease;
