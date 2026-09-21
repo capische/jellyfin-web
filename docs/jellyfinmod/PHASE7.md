@@ -352,12 +352,13 @@ target state after Stage B parity is the first four rows only.
 | `package.json` | `build:mod`-related scripts and the e2e runner reference | scripts missing; re-add | permanent |
 | `src/index.jsx` | only under boot option (2) | mod entry boots differently from stock; re-factor | permanent if (2) is chosen, otherwise none |
 | `src/config.json` | none planned; listed because the mod entry reads it | the mod entry fetches it by rooted URL; a schema change surfaces in `useWebConfig` | none |
-| `src/apps/legacy/controllers/hometab.js` | mounts hero and top bar (W7) | Home chrome disappears in the stock entry | until Stage B Home passes, then removed |
-| `src/components/homesections/homesections.js` | merged rows (W6) | merged rows disappear in the stock entry | until Stage B Home passes, then removed |
+| `src/apps/legacy/controllers/hometab.js` | mounts hero and top bar (W7) | Home chrome disappears in the stock entry | **still patched.** Stage B's Home covers desktop and mobile; the TV layout routes through upstream's legacy Home, which is what this mounts. It comes out with the TV shell slice, not before |
+| `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |
 | `src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js` | combined browse and File filter (W2, W3, W8) | file-less entries vanish from stock grids | until Stage B browse passes, then removed |
 | `src/apps/legacy/routes/search.tsx` | Add from TMDB section (W4) | leftovers section vanishes | until Stage B search passes, then removed |
 | `src/apps/legacy/controllers/itemDetails/index.js` | detail augmentation (W5, T14) | History, retention, Search releases vanish on stock details | until Stage B details pass, then removed |
 | `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` (W7/W12) | top-bar restyle gone in the stock entry | until Stage B Home passes, then removed |
+| `src/components/router/routerHistory.ts` | `RouterHistory.adopt(router)`, so the shared history drives the router that is actually rendered (P7.S2 login fix) | the mod bundle navigates upstream's router instead of its own: the address bar moves and the screen does not | permanent |
 | `src/utils/assetUrl.ts` | **new file**, the one helper the four rows below call | nothing; a new file never conflicts | permanent |
 | `src/utils/fetchLocal.ts` | roots `config.json` at the bundle (S3) | `config.json` is fetched from beside the document instead of from the bundle | permanent |
 | `src/components/ThemeCss.tsx` | roots the theme stylesheet at the bundle (S3) | the theme stylesheet 404s from the plugin path | permanent |
@@ -1284,6 +1285,52 @@ image's own web directory is S5's and S11's to prove:
   left in place.
 - Security: `RestoreStock` and `Settings/Interface` answer 401/403 for anonymous and ordinary
   users; the served path cannot read outside the bundle.
+
+#### S4 evidence — 2026-09-20, on the acceptance instance
+
+Every row of §4.6's state table was walked live. Hashes are `sha256` of the file on disk.
+
+| Row | Result |
+| --- | --- |
+| First start, no administrator action | Patched by itself (decision 7). Exactly two files written: the patched `index.html` and `index.jellyfinmod-stock.html`. `patchedBy: "automatic"`, log naming both hashes and the manual recovery |
+| Restart twice | Hash unchanged both times; no double-patch |
+| Patched file edited by hand | Detected, warned, re-rendered back to the exact expected hash |
+| Host upgrade simulated (different stock file) | New stock recorded, previous pristine archived to `.prev`, re-patched, stock copy updated; warning named both hashes |
+| Takeover off via `PATCH /Settings/Interface` | Restored to **exactly** the recorded stock hash; `index.jellyfinmod-stock.html` removed; state `stock` |
+| Takeover on again | Re-patched |
+| Plugin folder removed, container restarted | **Failsafe fired**: the bundle never ran, 12 asset requests 404ed, the stock copy was fetched and written in at the unchanged `/web/` address, no reload loop |
+| Web root made read-only | State `readOnly`, blocker logged, nothing written, `/web-mod/` still serving. Restored to writable and it re-patched on its own |
+
+Hashes from the run: the host image's own stock `index.html` is
+`a1308635f90142b14245f13c4f6307e0a4dbea34bb1cb398b6bc59f7379cfbe3`; the fork's stock entry, which that web root
+held before the walk, is `5e21b9e4aaab3c5217e3dc28bfed9addacf8d9ee2c35f3d11bcd74daa5bfa542`.
+
+**Two defects that only deploying found.** The patched document was being rendered from the *host's* `index.html`
+with its URLs rewritten into the bundle directory — which contains the stock entry too, so the page loaded a
+working Jellyfin that was not this interface, and the failsafe correctly replaced it with stock. The pristine
+copy's job is to be the way back, not the input; the bundle's own document is the input, and it is never a
+patched file, so patches still cannot stack. Separately, `onerror` had been hooked to every `<link>`, so a
+missing touch icon would have torn the page down to stock — a far worse failure than the one it reacted to. Only
+entry scripts and stylesheets report failure now.
+
+**A gap those fixes exposed, and closed.** The engine re-rendered only when the bundle id changed, so a plugin
+upgrade that changed the *rendering* would look at a correctly-recorded patched file and decide there was nothing
+to do — silently, and surviving restarts. `WebDocumentRenderer.Version` is now recorded in the state and a change
+in it triggers a re-render exactly like a change of bundle.
+
+**`Cache-Control` is friendlier than §4.7 assumed.** The pinned host serves `/web/index.html` with `no-cache`, so
+a browser revalidates the document on every load and picks up a patched file immediately. The "a browser that
+cached the stock page shows stock until the cache expires" caveat does not apply to this host.
+
+**A caching effect worth knowing.** The first failsafe test appeared to pass when it should not have: the bundle
+loaded from the browser's disk cache, because everything under a bundle id is served `immutable`. That is the
+cache doing its job — a client that already has the bundle keeps working even when the plugin is gone — but it
+means a failsafe test is only meaningful with the cache disabled.
+
+**Not built: `scripts/jellyfinmod-e2e/patch-check.mjs`** (agreed 2026-09-21). Writing it in JavaScript would mean
+a second implementation of the renderer, and two sources of truth for a safety-critical transform is worse than
+one plus live evidence. If an offline guard is wanted later, the right shape is a small .NET harness invoking the
+real `WebDocumentRenderer`, which is integration-style rather than a unit test.
 
 ### S5 — image, archive, merge routine and compatibility
 
