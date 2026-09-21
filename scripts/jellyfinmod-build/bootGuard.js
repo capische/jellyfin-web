@@ -33,6 +33,12 @@ const MIRRORED = [
         mirroredBy: 'src/apps/modern/features/jellyfinmod/shell/ModApp.tsx',
         what: 'the provider stack',
         sha256: 'd143be1b1119c95d1984e856f78bdfeeb394dd76d7a31e2e966fd35ba74efc51'
+    },
+    {
+        file: 'src/components/viewManager/ViewManagerPage.tsx',
+        mirroredBy: 'src/apps/modern/features/jellyfinmod/routes/DetailsPage.tsx',
+        what: 'the legacy view load/restore sequence',
+        sha256: '9d6855d56f8ef66ecdd4f39680514c921522e405effc2067448130d5805ee98b'
     }
 ];
 

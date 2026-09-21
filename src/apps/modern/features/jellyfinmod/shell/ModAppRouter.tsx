@@ -18,6 +18,7 @@ import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
 import HomePage from '../routes/HomePage';
+import DetailsPage from '../routes/DetailsPage';
 import SearchPage from '../routes/SearchPage';
 
 import ModAppLayout from './ModAppLayout';
@@ -52,7 +53,10 @@ const MOD_ROUTES: RouteObject[] = [
     ...(layoutManager.modern ? [{ path: 'home', Component: HomePage }] : []),
     // Every layout: both upstream route tables resolve `search` to the same React component, so there is no
     // legacy-view or focus difference to hold this one back (P7.S6).
-    { path: 'search', Component: SearchPage }
+    { path: 'search', Component: SearchPage },
+    // Every layout: `details` is a legacy view in both tables, and the mod route loads the same view through the
+    // same view manager, so nothing about the page changes with the layout (P7.S6).
+    { path: 'details', Component: DetailsPage }
 ];
 
 /**
