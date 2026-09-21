@@ -7,9 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "review": "node browser-review.mjs"
+    "review": "node browser-review.mjs",
+    "parity": "node parity.mjs"
   },
   "dependencies": {
-    "playwright": "1.63.0"
+    "playwright": "1.63.0",
+    "playwright-core": "1.63.0"
   }
 }
