@@ -711,6 +711,46 @@ never a raw exception or a URL with credentials; styles are `em`-sized, feature-
 single-column and D-pad reachable; it is an administrator surface "never used on a TV" (UX §12),
 so TV acceptance is reachability, readability and Back, while data entry is desktop and mobile.
 
+### 5.1 The Dashboard page is already Option B — what S8 takes verbatim
+
+The user chose **Option B (Checklist)** on 2026-09-21 and
+`plugin/JellyfinMod/Configuration/configPage.html` was rebuilt as it: a persistent readiness rail
+in pipeline order is the navigation, one section shows at a time, and indexers and quality profiles
+are edited in a sheet. It is one file — markup, one `jfmod-settings` stylesheet and the vanilla
+wiring the page already had — and it covers the ten sections above **plus** the Interface section
+and the retention preview and latest run, none of which the page had any UI for before.
+
+This is the reason Option B was chosen, so S8 reimplements the section *bodies* in React against
+the same DTOs and takes the rest as it stands:
+
+| Piece | Where in the file | Note |
+| --- | --- | --- |
+| The `jfmod-settings` stylesheet | `<style id="jfmod-settings-style">` | Two blocks: the shared `jfmod-` vocabulary (state pill, chip, notice, secret, list row, ordered row, group, key/value list) and the Option B layer (rail, section, sheet). Move it to a `.scss` the fork imports and change nothing but the delivery. Every size is `em`; there is no flex/grid `gap` and no `display: contents` (UX §13 W11); the amber attention state is the theme's star token and every dot repeats itself in words, so nothing is said by colour alone. |
+| `BLOCKER_SENTENCES` and `BLOCKER_SECTIONS` | the script's copy block | The six `Settings/Acquisition` blockers as one sentence each, plus which section owns the fix. The rail head, the Grabbing refusal and S10's step 5 all read this one map; a blocker must never be shown as a bare code again. |
+| `PAUSE_SENTENCES`, `PATH_SENTENCES` | the same block | Automation `pausedReasons`, and the path-mapping and import-probe codes, as sentences. |
+| `CONFLICT_MESSAGE` and `fail()` | the script | Every 409 renders as an inline notice **in the section that refused**, carrying the server's own title plus a Reload that re-reads and clears it. |
+| The secret component | `renderSecret`, `secretChange`, `secretXmlValue` | `Configured` with Replace and Clear; Clear becomes a pending *Will be removed on save* with Undo; and the two write shapes the API actually wants — `{action, value}` for the typed endpoints, `''` / `__clear__` for the XML plugin configuration. The page never receives, holds or logs a value. |
+| The section markup | each `<section class="jfmod-check-section">` | Eyebrow, `h2` with `tabindex="-1"` so navigation can put focus on it, state pill, header-action slot, notice slot, `jfmod-group`s with quiet subheadings, footer with Save, the revision line and **Next: … →**. |
+| The sheet | `openSheet` / `closeSheet` | About sixty lines, owned rather than riding `dialogHelper`: first focus inside, Tab trapped, Escape and Back close it and return focus to the row's Edit button. It sits in the fork's own dialog z-index band (999998/999999) so it covers the app bar instead of sliding under it. |
+| The rail and `summarise()` | `SECTIONS`, `summarise`, `renderRail` | One case per area turning the DTOs into a state kind and one line of text. When `GET /Settings/Overview` lands it should return exactly these, and `summarise()` becomes the client-side fallback rather than the source. |
+
+What the mockup asked for and the page could not honour, so S8 knows what is still open:
+
+- **No TMDB Test and no *Test all* indexers.** Neither endpoint exists; both are S7 work.
+- **No "· since <date>" on a secret.** The DTOs carry `apiKeyConfigured` / `passwordConfigured` /
+  `*Ref` and never when the secret was stored. The component omits the date; add `secretSetAt` in
+  S7 if it is wanted back.
+- **No `#section=` deep link.** The Dashboard owns the hash (`#/configurationpage?name=JellyfinMod`),
+  so the page keeps the chosen section in `sessionStorage` instead. S8 owns its own route and can
+  put the section in the URL as the mockup does.
+- **Units live in labels, not overlaid on the field.** The mockup's `jfmod-unit` overlays a stock
+  `emby-input` whose padding the page does not own.
+- **"Make default" is a `PATCH /Settings/Acquisition`,** not a per-profile endpoint.
+- **One implementation trap worth carrying forward:** `emby-input`'s legacy `createdCallback`
+  returns early when the element already carries the `emby-input` class, which leaves it without
+  its label element and makes `attachedCallback` throw. Build stock inputs without that class and
+  let the element add it on upgrade.
+
 Where Jellyfin's own TMDb settings are separate: the host's TMDb metadata provider
 (Dashboard → Plugins → TMDb) has its own key handling, language and "include adult" options and
 is what scans and refreshes use. JellyfinMod's discovery token is a different credential for a

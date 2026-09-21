@@ -2,7 +2,20 @@
 
 Proposals for replacing the look and structure of the plugin's Dashboard configuration page
 (`plugin/JellyfinMod/Configuration/configPage.html`), prompted by the verdict *"the whole
-configuration page UI is so ugly."* Nothing here is implemented; the plugin page is untouched.
+configuration page UI is so ugly."*
+
+> **Decided and built (2026-09-21).** The user chose **Option B — Checklist**, *"easier to use and
+> navigate"*, and `configPage.html` is now that page. The mockups below stay as the record of the
+> three directions and as the contract the implementation was judged against;
+> [`PHASE7.md` §5.1](../../PHASE7.md) lists what S8 takes from the built page verbatim and the six
+> places the implementation had to depart from `option-b.html`. The short version of those
+> departures: no TMDB **Test** and no *Test all* (neither endpoint exists yet), no *· since <date>*
+> beside a secret (no DTO carries it), no `#section=` deep link (the Dashboard owns the hash, so
+> the section is remembered in `sessionStorage`), units in labels instead of overlaid on the field,
+> and *Make default* implemented as `PATCH /Settings/Acquisition`. Everything else on the mockup —
+> the rail and its blocker head, one section at a time, the sheet, the secret component, the
+> per-section Save with its revision line, the 409 notice, the Interface section and the retention
+> preview and latest run — is in the page.
 
 Open the three mockups in a browser. They are self-contained static files: inline CSS, no build,
 no network, dummy values only.
@@ -277,3 +290,14 @@ the real stylesheet should use child margins if this page must render on the phy
 only be reachable there per PHASE7 §5). And the mock stock-element styles are approximations of
 `emby-input`/`emby-checkbox`/`emby-button`; the real page inherits the genuine ones and only adds
 the `jfmod-` layer.
+
+Both were honoured in the build: the shipped stylesheet has no flex or grid `gap` and no
+`display: contents` — the rail, the section footers, the row actions and the test lines space
+themselves with child margins, and only the two- and three-up field grids keep a `column-gap`,
+which is a grid property W11 does not object to. The page carries no stock-element styles at all;
+it renders `<input is="emby-input">`, `<select is="emby-select">` and
+`<label class="checkboxContainer"><input is="emby-checkbox">` and lets the Dashboard style them.
+One trap found while doing that, worth repeating for S8: `emby-input`'s legacy `createdCallback`
+returns early when the element already carries the `emby-input` class, so an input built in script
+with that class set never gets its label element and `attachedCallback` then throws. Create stock
+inputs without the class and let the element add it when it upgrades.
