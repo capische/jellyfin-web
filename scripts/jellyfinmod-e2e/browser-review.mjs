@@ -33,9 +33,9 @@ if (!cdpUrl && browserTier !== 'chromium' && browserTier !== 'chrome') {
 const headed = process.env.JELLYFINMOD_HEADED === 'true';
 // Outside the repo, so a launched profile's cookies and settings never end up in git or in a worktree; one
 // directory per tier, so the two browsers never share (and cannot corrupt each other's) profile data.
-const cacheRoot = process.platform === 'darwin'
-    ? path.join(os.homedir(), 'Library', 'Caches')
-    : (process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'));
+const cacheRoot = process.platform === 'darwin' ?
+    path.join(os.homedir(), 'Library', 'Caches') :
+    (process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'));
 const profileDir = process.env.JELLYFINMOD_CHROME_PROFILE_DIR ?? path.join(cacheRoot, 'jellyfinmod-e2e', 'profile-' + browserTier);
 const server = new URL('/web/', testUrl).href;
 // Fixture-dependent gates are optional so this runner works against either isolated instance. What cannot be
@@ -222,7 +222,7 @@ const reload = ({ ignoreCache = false } = {}) => timed(ignoreCache ? 'hardReload
     await loaded;
     await appReady();
 });
-const apiRequest = (path, method = 'GET', body) => page.evaluate(async request => {
+const apiRequest = (route, method = 'GET', body) => page.evaluate(async request => {
     const options = { url: ApiClient.getUrl(request.path), type: request.method };
     if (request.body !== undefined) {
         options.data = JSON.stringify(request.body);
@@ -231,7 +231,17 @@ const apiRequest = (path, method = 'GET', body) => page.evaluate(async request =
     const response = await ApiClient.ajax(options, true);
     const text = await response.text();
     return { status: response.status, body: text ? JSON.parse(text) : null };
-}, { path, method, body });
+}, { path: route, method, body });
+/**
+ * The library select only renders when a media type has more than one library, so a server with a single
+ * Movies or TV library has no select and adds to that one implicitly. Fall back to the user's own view.
+ */
+const soleLibraryId = async mediaType => {
+    const views = await apiRequest('UserViews');
+    const wanted = mediaType === 'movie' ? 'movies' : 'tvshows';
+    const matches = (views.body?.Items ?? []).filter(item => item.CollectionType === wanted);
+    return matches.length === 1 ? matches[0].Id : undefined;
+};
 const manualLoginField = page.locator('#txtManualName');
 /**
  * Fills and submits the manual-login form as `username`, empty password. A brand-new profile (the
@@ -716,10 +726,18 @@ try {
                     tmdbId: Number(button.dataset.jfmodAdd.split(':')[1]),
                     mediaType,
                     title: button.getAttribute('aria-label').replace(/^Add | to catalog$/g, ''),
-                    targetLibraryId: select?.value
+                    targetLibraryId: select?.value,
+                    hasSelect: !!select
                 };
             });
-            if (!successfulAdd?.targetLibraryId) throw new Error('Successful-add fixture needs a selected writable library');
+            if (!successfulAdd) throw new Error('Successful-add fixture needs an enabled Add button');
+            if (successfulAdd.hasSelect && !successfulAdd.targetLibraryId) {
+                throw new Error('The library select rendered without a selected library');
+            }
+            successfulAdd.targetLibraryId ??= await soleLibraryId(successfulAdd.mediaType);
+            if (!successfulAdd.targetLibraryId) {
+                throw new Error('No single ' + successfulAdd.mediaType + ' library is available to add to');
+            }
             const requestStart = entryPostRequests.length;
             const pausedStart = pausedEntryRoutes.length;
             await page.route(entriesRoute, holdEntryPosts);
@@ -770,7 +788,11 @@ try {
         await step('empty discovery page and continuation', async () => {
             await setSearch(pagingQuery);
             await selectDiscoveryLibraries();
-            const readFirstPage = async () => ({ ids: await movieIds(), targetLibraryId: await movieLibrarySelect().inputValue({ timeout: 1000 }).catch(() => undefined) });
+            const soleMovieLibraryId = await soleLibraryId('movie');
+            const readFirstPage = async () => ({
+                ids: await movieIds(),
+                targetLibraryId: await movieLibrarySelect().inputValue({ timeout: 1000 }).catch(() => undefined) ?? soleMovieLibraryId
+            });
             firstPage = await discoveryWait(() => poll(readFirstPage, result => result.targetLibraryId && result.ids.length >= 10));
             if (!firstPage.targetLibraryId || firstPage.ids.length < 10) throw new Error('Paging fixture needs a writable movie library and a full discovery page');
             const beforeMore = firstPage.ids.length;
