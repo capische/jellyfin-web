@@ -1,3 +1,4 @@
+import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
@@ -13,6 +14,22 @@ import { useApi } from 'hooks/useApi';
 
 import './homeChrome.scss';
 
+/**
+ * How many recent titles to consider. Generous on purpose: a library import adds a hundred titles at once, most
+ * without a backdrop or without files, and a short list would leave the hero empty or stuck on one media type.
+ */
+const HERO_CANDIDATES = 200;
+
+/**
+ * Whether this title has something to play behind it.
+ *
+ * A movie in the library has a file by definition. A series does not: a library can hold a series whose episodes
+ * are not on disk, and several in a real library do. Showing one as the hero gives a Play button that can only
+ * fail, which is the thing the user complained about in the first place, so such titles are not chosen.
+ */
+const isPlayable = (item: BaseItemDto): boolean =>
+    item.Type === BaseItemKind.Movie || (item.RecursiveItemCount ?? 0) > 0;
+
 const HomeHero: FC = () => {
     const { api, user, __legacyApiClient__ } = useApi();
     const hero = useQuery({
@@ -22,14 +39,16 @@ const HomeHero: FC = () => {
                 userId: user?.Id,
                 recursive: true,
                 includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series],
-                fields: [ItemFields.Overview],
+                // RecursiveItemCount is how a series says whether it has any episodes on disk.
+                fields: [ItemFields.Overview, ItemFields.RecursiveItemCount],
                 enableImageTypes: [ImageType.Backdrop],
                 imageTypeLimit: 1,
                 sortBy: [ItemSortBy.DateCreated],
                 sortOrder: [SortOrder.Descending],
-                limit: 40
+                limit: HERO_CANDIDATES
             }, { signal });
-            return response.data.Items?.find(item => item.Id && item.BackdropImageTags?.length);
+            return response.data.Items?.find(item =>
+                item.Id && item.BackdropImageTags?.length && isPlayable(item));
         },
         enabled: !!api && !!user?.Id,
         staleTime: 5 * 60 * 1000

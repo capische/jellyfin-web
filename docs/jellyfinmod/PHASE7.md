@@ -1459,6 +1459,38 @@ same resolution the detail page's Play uses, and reusing it is what stops the tw
 whose episodes are not on disk — the hero says so under the actions and points at *More info*, because a hero
 button that does nothing is worse than one that explains itself.
 
+**The hero only chooses a title that has something to play.** Real data made this necessary rather than
+theoretical: the acceptance library holds 105 series but only 514 episodes, and the newest of them — *Tehran*,
+*Disclaimer*, *Stranger Things* — have **no episodes at all**. The hero was picking one of those, so the user's
+Play button could only ever fail. Candidates are now filtered by `RecursiveItemCount` for a series; a movie in
+the library has a file by definition. The explanation above stays as a backstop for a title that stops being
+playable between being chosen and being clicked.
+
+**The candidate pool is 200, not 40.** A library import adds a hundred titles at once. With 40, every candidate
+after the rescan was a series and the hero could not have shown a movie at all. With 200 the pool holds 54
+movies alongside the series, so the rule can pick either type; it picks a series today because every series was
+indexed more recently than every movie, which is what "most recent" honestly means here.
+
+#### S6 evidence — the Home hero, 2026-09-21
+
+Against the acceptance instance on bundle `50446611ceb6`, ids re-derived live after the rescan.
+
+| Check | Result |
+| --- | --- |
+| Selection rule can pick either type | Pool of 160 candidates → 104 playable with a backdrop, of which **54 are movies**; the first movie ranks 50th. Chosen: `Series: Under the Bridge` |
+| Series hero offers Play | Visible |
+| What Play resolves to | Next Up → `S1:E1 Looking Glass`, unplayed, resume position 0 |
+| Series hero Play actually starts it | Server session reported `NowPlayingItem` = that exact episode id, type `Episode`, video element present |
+| Movie Play through the same call | `Night of the Living Dead` started, type `Movie`, video element present |
+| Nothing-playable explanation | Proven on the previous bundle `1c749aead235`, before the filter existed: clicking Play on *Tehran* (0 episodes) showed "Nothing to play yet. Open More info to see what is available." instead of a dead button |
+| Instance left quiet | Playback stopped; `NowPlayingItem` null |
+
+**Not yet proven: a movie *as the hero*.** It could not be produced naturally, because every series was indexed
+more recently than every movie, so the newest playable candidate is always a series today. The movie half is
+evidenced by the same `playbackManager.play({ ids })` call the hero makes, driven on a movie, plus the absence of
+any type gate in the component. Producing a genuine movie hero needs either a movie newer than all 105 series or
+a deliberate fixture, and neither was worth doing inside a window the parity run was waiting on.
+
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:
 
