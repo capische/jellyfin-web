@@ -1297,6 +1297,62 @@ production compose, never the shared `jellyfinmod-test` volumes):
   upstream tip at the time), recorded with both SHAs, the patch-check result, suite results, the
   Playwright timings and the bundle id change.
 
+### S5.1 — the plugin publishes its own repository
+
+A plugin installed by copying files has no repository behind it. The Dashboard asks every configured repository
+for the package, finds nothing, and shows *"An error occurred while getting the plugin details from the
+repository"* above the entry. The banner is the cosmetic part; the real cost is no version history and no update
+path, which S5 needs anyway.
+
+So the plugin serves its own repository, in the same spirit as the bundle:
+
+- `GET /JellyfinMod/Repository` (anonymous) returns the manifest, in the shape the server parses: an array of
+  packages, each with `guid`, `name`, `description`, `overview`, `owner`, `category` and a `versions` array of
+  `version`, `changelog`, `targetAbi`, `sourceUrl`, `checksum`, `timestamp`, `repositoryName`, `repositoryUrl`.
+  Anonymous because the server fetches a repository as an ordinary outbound request, with no session and no
+  token, exactly as it fetches anyone else's.
+- `GET /JellyfinMod/Repository/{package}.zip` (anonymous) serves the installable package, built from the
+  installed plugin directory, flat, which is the layout the server extracts.
+- **Everything is derived from JPRM's `meta.json`**, never restated. `plugin/CLAUDE.md` forbids hand-writing
+  that file, and a hand-maintained repository manifest would be the same mistake one step removed: a second
+  description of the plugin, free to drift from the plugin.
+- `checksum` is the hex MD5 of the very file `sourceUrl` serves, computed from that file. The server hashes the
+  download and refuses it on a mismatch, so a manifest whose checksum disagrees with its package is worse than
+  no manifest at all: it renders, and then the install fails.
+- `sourceUrl` and `repositoryUrl` are built from the request that arrived, so they are right for however the
+  administrator registered the repository — by address, by hostname, behind a proxy, under a base URL — without
+  the plugin having to be told what the server is called.
+- Failure is never fatal: no readable `meta.json` means the endpoints answer `503` and the plugin works exactly
+  as before, with the Dashboard reporting what it reported already.
+
+**Offline by design.** A self-hosted manifest needs no internet access, which is the point for a server that has
+none, and for a Docker image that should work the moment it starts. A public manifest — GitHub-hosted, as most
+Jellyfin plugins do — remains the right answer for *distributing releases to other people*, and is a separate
+piece of work from this one. The two do not conflict: the same JPRM output feeds both.
+
+**Registration is an administrator's decision, and stays one.** The plugin never edits the server's repository
+list. Adding a repository changes where the server will fetch and execute code from, and doing that silently on
+someone's behalf at startup would be indefensible however convenient. Two supported routes:
+
+1. **Manual, one step:** Dashboard → Plugins → Manage Repositories → add
+   `<your-server>/JellyfinMod/Repository`. Removing it is the same step in reverse and leaves the plugin working.
+2. **The Docker image ships it preconfigured** (S5), because there the operator chose the image and the image is
+   the product. Still visible and still removable in the same Dashboard list.
+
+**Needs the user's approval (default 17):** whether the image preconfigures the repository, and whether an
+opt-in setting may register it on a manually installed server. The proposed default is: the image preconfigures
+it; a manual install never registers anything by itself, and the README documents step 1. No opt-in switch is
+built until this is answered, because a switch that rewrites server configuration is exactly the thing worth
+asking about first.
+
+**Acceptance** — live on the acceptance instance, with the repository registered on that instance only:
+
+- `GET /JellyfinMod/Repository` returns a manifest the server parses when the repository is added.
+- `GET /Packages/JellyfinMod?assemblyGuid=<guid>` returns the package rather than `404`.
+- The MD5 of the served package equals the manifest's `checksum`.
+- Dashboard → Plugins shows JellyfinMod with its version and no error banner.
+- The suites cover it, so a manifest missing a required field, or disagreeing with its package, fails a run.
+
 ### S6 — the mod owns home, browse, detail and search (Stage B)
 
 Build the mod pages from the existing components: Home (hero, merged rows, remaining upstream
