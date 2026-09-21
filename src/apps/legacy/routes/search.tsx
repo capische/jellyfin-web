@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useDebounceValue } from 'usehooks-ts';
 
 import SearchFields from 'apps/legacy/features/search/components/SearchFields';
-import CatalogSearchResults from 'apps/modern/features/jellyfinmod/components/CatalogSearchResults';
+import SearchResults from 'apps/legacy/features/search/components/SearchResults';
 import SearchSuggestions from 'apps/legacy/features/search/components/SearchSuggestions';
 import Page from 'components/Page';
 import useSearchParam from 'hooks/useSearchParam';
@@ -33,7 +33,7 @@ const Search: FC = () => {
                     parentId={parentIdQuery}
                 />
             ) : (
-                <CatalogSearchResults
+                <SearchResults
                     parentId={parentIdQuery}
                     collectionType={collectionTypeQuery}
                     query={debouncedQuery}
