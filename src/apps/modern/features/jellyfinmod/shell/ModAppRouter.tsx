@@ -18,6 +18,7 @@ import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
 import HomePage from '../routes/HomePage';
+import SearchPage from '../routes/SearchPage';
 
 import ModAppLayout from './ModAppLayout';
 
@@ -48,7 +49,10 @@ const MOD_ROUTES: RouteObject[] = [
     // Desktop and mobile only for now. The TV layout routes through upstream's legacy table, whose Home has
     // different chrome and different focus rules, and a d-pad surface that has not been driven on a real device
     // is not one to switch anybody onto. It joins this list with the TV shell.
-    ...(layoutManager.modern ? [{ path: 'home', Component: HomePage }] : [])
+    ...(layoutManager.modern ? [{ path: 'home', Component: HomePage }] : []),
+    // Every layout: both upstream route tables resolve `search` to the same React component, so there is no
+    // legacy-view or focus difference to hold this one back (P7.S6).
+    { path: 'search', Component: SearchPage }
 ];
 
 /**
