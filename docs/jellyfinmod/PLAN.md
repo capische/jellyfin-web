@@ -451,6 +451,28 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   folders and sidecars, and fixture hygiene. It also plans the unified admin settings area,
   native Prowlarr support and the first-run wizard. Every other default there is proposed; its
   open questions are listed in that document, not renumbered here.
+- **Work queue and model assignment — accepted 2026-09-21.** Run strictly in order, one agent at a
+  time, no parallel agents. Stop all work when 10% of the weekly allowance remains and resume at the
+  reset.
+  1. Deploy the Browse dedup fix to the acceptance instance, re-run the A1 grid gate there, and run
+     the full browser suite once on real Google Chrome. Opus, medium. These convert agent claims into
+     acceptance evidence and block everything else.
+  2. The TV and D-pad shell (Phase 7), which also carries the deferred legacy grid and `hometab.js`
+     restores. **Fable implements this**, at the user's direction; start after the weekly reset.
+  3. Per-media tracking and retention (below). **Fable implements this.**
+- **Per-media entries and retention — accepted 2026-09-21.** Verbatim: *"We need control per media
+  file no matter it's a movie or episode. Therefore, if I watched episode – remove it, and each media
+  should have separate retention."* Entries bind to an individual media file, not only to a series,
+  so an episode carries its own retention deadline, its own Keep, and its own versions; series-level
+  entries stay as the container. A watched episode becomes eligible for removal on its own schedule
+  without touching its siblings. This supersedes the series-level-only binding and answers the
+  "unbound episodes" question left open by Phase 7 S6: episode pages get the mod section. Retention
+  is the delete path, so design and critical verification run on Fable at high effort, and no
+  reclaim ships without live E2E on the isolated instance.
+- **Phases 8 and 9 are out of scope for the production release. Accepted 2026-09-21:** the user
+  ruled both optional for a real production release and deferred them until after it. Neither
+  blocks the release gate, and no release criterion may depend on them. They keep their outlines
+  below and are picked up only on an explicit later decision.
 - **Phase 8 — release attribute enrichment and playback evidence.** Future, **not scheduled**;
   outline only in [`PHASE8.md`](PHASE8.md) (E1–E12): tracker detail-page reads behind a
   deterministic or optional model-assisted extractor (output treated as untrusted input), post-import
