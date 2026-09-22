@@ -819,16 +819,41 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 let seasonFails = 0; let episodeFails = 0;
                 for (const series of sample) {
                     const seasonsRef = (await S.apiRequest(`Shows/${series.Id}/Seasons`)).body?.Items ?? [];
-                    const episodesRef = (await S.apiRequest(`Shows/${series.Id}/Episodes?Fields=MediaSources`)).body?.Items ?? [];
                     const seasonRefIds = seasonsRef.map(s => s.Id);
+                    // The first season by index, as the reference to check the default-open season against.
+                    // `Shows/{id}/Episodes` does not return a season id on its items without an explicit,
+                    // version-sensitive `Fields` request (verified live: a plain call omits it), so the
+                    // season's own episodes are fetched with the `seasonId` filter instead — a query the
+                    // server accepts directly and confirmed live to return exactly that season's episodes.
+                    const sortedSeasonsRef = [...seasonsRef].sort((a, b) => (a.IndexNumber ?? 0) - (b.IndexNumber ?? 0));
+                    const firstSeasonRef = sortedSeasonsRef[0];
+                    const firstSeasonEpisodesRef = firstSeasonRef
+                        ? ((await S.apiRequest(`Shows/${series.Id}/Episodes?seasonId=${firstSeasonRef.Id}`)).body?.Items ?? []).map(e => e.Id)
+                        : [];
 
+                    // Current UI (2026-09): the series detail page renders each season as an ordinary card
+                    // (`.card[data-id][data-type="Season"]`) inside `#childrenContent`, not as `.seasonTabs`/
+                    // `.selectSeason` (that markup no longer exists — it read 0 on both sides, every time).
+                    // Opening a season navigates to its own `#/details?id=` page, where episodes render as
+                    // `[data-id].listItem` rows (already covered by shownIds()) rather than as cards.
                     const collectRendered = async harnessSide => {
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + series.Id);
                         await harnessSide.networkIdle();
-                        const seasonIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.seasonTabs [data-id], .selectSeason option, [is="emby-select"].selectSeason option'))
-                            .map(n => n.dataset?.id ?? n.value).filter(Boolean));
-                        // Episodes for whichever season is showing by default; enough to assert structure, not to exhaust every season per series.
-                        const episodeIds = await harnessSide.shownIds();
+                        const seasonIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.card[data-id][data-type="Season"]'))
+                            .filter(node => node.getClientRects().length > 0)
+                            .map(node => node.dataset.id.replace(/-/g, '').toLowerCase()));
+                        let episodeIds = [];
+                        if (firstSeasonRef) {
+                            await harnessSide.navigate(harnessSide.base + '#/details?id=' + firstSeasonRef.Id);
+                            await harnessSide.networkIdle();
+                            // Not shownIds(): a season page also renders its Cast & Crew as `.card[data-id]`
+                            // person cards alongside the `[data-id].listItem` episode rows, so the generic,
+                            // page-wide selector doubles the count (verified live: Ahsoka season 1 read 16 —
+                            // 8 episodes + 8 cast — against an API count of 8). Scope to Episode rows only.
+                            episodeIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('[data-id][data-type="Episode"]'))
+                                .filter(node => node.getClientRects().length > 0)
+                                .map(node => node.dataset.id.replace(/-/g, '').toLowerCase()));
+                        }
                         return { seasonIds, episodeIds };
                     };
                     const renderedS = await collectRendered(S);
@@ -840,10 +865,12 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         pushRow('A3', 'Seasons/Episodes', `${series.Name} (${series.Id}) season set`, `${renderedS.seasonIds.length}`, `${renderedM.seasonIds.length}`, 'FAIL',
                             seasonDiff.text || `stock/mod season count differs from API (${seasonRefIds.length})`);
                     }
-                    const episodeDiff = describeSetDiff(`A3 ${series.Name} default-season episode set`, renderedS.episodeIds, renderedM.episodeIds);
-                    if (!episodeDiff.equal) {
+                    const episodeDiff = describeSetDiff(`A3 ${series.Name} season 1 episode set`, renderedS.episodeIds, renderedM.episodeIds);
+                    const episodeVsRef = describeSetDiff(`A3 ${series.Name} season 1 episode set vs API`, renderedS.episodeIds, firstSeasonEpisodesRef);
+                    if (!episodeDiff.equal || (firstSeasonRef && !episodeVsRef.equal)) {
                         episodeFails++;
-                        pushRow('A3', 'Seasons/Episodes', `${series.Name} (${series.Id}) episode set (default season)`, `${renderedS.episodeIds.length}`, `${renderedM.episodeIds.length}`, 'FAIL', episodeDiff.text);
+                        pushRow('A3', 'Seasons/Episodes', `${series.Name} (${series.Id}) episode set (season 1)`, `${renderedS.episodeIds.length}`, `${renderedM.episodeIds.length}`, 'FAIL',
+                            [episodeDiff.text, episodeVsRef.text].filter(Boolean).join('\n\n') || `stock/mod episode count differs from API (${firstSeasonEpisodesRef.length})`);
                     }
                 }
                 if (!seasonFails && !episodeFails) {
@@ -1084,37 +1111,49 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
  * `.itemDetailsGroup .detailsGroupItem` blocks labelled by a `.label` element, and Tags render as
  * `.itemTags`. `.itemName`, `.itemMiscInfo`, `.mediaInfoOfficialRating`, `.starRatingContainer`,
  * `.mediaInfoCriticRating`, `.overview` and `select.selectSource` remain exactly as PARITY.md says.
+ *
+ * This is a single-page app that keeps previously visited `#itemDetailPage` instances in the DOM,
+ * merely hidden (verified live: after visiting three movies in sequence, `document.querySelectorAll(
+ * '.page')` held all three, only the last without `.hide`). Every selector below therefore MUST be
+ * scoped to the current, visible page (`.page:not(.hide)`, the same root `appReady()` waits for) —
+ * an unscoped `document.querySelector('.itemName')` or `document.querySelectorAll('.sectionTitle')`
+ * matches document order, which is oldest-hidden-page-first, not the page actually on screen. That
+ * staleness is what made B1's Title read the previous sampled item's name and made B3's cast id
+ * sequence come from the wrong (or a now-absent) page.
  */
     const readDetailFields = harnessSide => harnessSide.page.evaluate(() => {
+        const root = document.querySelector('.page:not(.hide)') ?? document;
         const text = el => (el?.textContent ?? '').trim();
-        const groupItem = label => Array.from(document.querySelectorAll('.detailsGroupItem'))
+        const groupItem = label => Array.from(root.querySelectorAll('.detailsGroupItem'))
             .find(node => text(node.querySelector('.label')) === label);
         const groupLinks = label => Array.from(groupItem(label)?.querySelectorAll('a') ?? []).map(a => a.textContent.trim());
-        const castHeading = Array.from(document.querySelectorAll('.sectionTitle')).find(node => /cast\s*&?\s*crew/i.test(node.textContent));
+        const castHeading = Array.from(root.querySelectorAll('.sectionTitle')).find(node => /cast\s*&?\s*crew/i.test(node.textContent));
         const castContainer = castHeading?.closest('.verticalSection, div')?.querySelector('[is="emby-itemscontainer"], .itemsContainer');
         return {
-            title: text(document.querySelector('.itemName')),
-            parentTitle: text(document.querySelector('.parentItemName')),
-            miscInfo: Array.from(document.querySelectorAll('.itemMiscInfo')).map(text).join(' | '),
-            officialRating: text(document.querySelector('.mediaInfoOfficialRating')),
-            communityRating: text(document.querySelector('.starRatingContainer')),
-            criticRating: text(document.querySelector('.mediaInfoCriticRating')),
+            title: text(root.querySelector('.itemName')),
+            parentTitle: text(root.querySelector('.parentItemName')),
+            miscInfo: Array.from(root.querySelectorAll('.itemMiscInfo')).map(text).join(' | '),
+            officialRating: text(root.querySelector('.mediaInfoOfficialRating')),
+            communityRating: text(root.querySelector('.starRatingContainer')),
+            criticRating: text(root.querySelector('.mediaInfoCriticRating')),
             genres: groupLinks('Genres'),
             studios: groupLinks('Studios'),
             director: groupLinks('Director'),
             writer: groupLinks('Writer'),
-            tags: Array.from(document.querySelectorAll('.itemTags a')).map(a => a.textContent.trim()),
-            overview: text(document.querySelector('.overview')),
-            castIds: Array.from(castContainer?.querySelectorAll('.card[data-id]') ?? []).map(n => n.dataset.id),
-            mediaInfoBadges: Array.from(document.querySelectorAll('.mediaInfoItem')).map(text),
-            primarySrc: document.querySelector('.detailImageContainer .cardImageContainer, .detailImageContainer img')?.style?.backgroundImage
-            ?? document.querySelector('.detailImageContainer img')?.getAttribute('src') ?? null,
-            backdropSrc: document.querySelector('#itemBackdrop')?.style?.backgroundImage ?? null,
-            logoSrc: document.querySelector('.detailLogo')?.style?.backgroundImage ?? null,
-            sourceOptions: Array.from(document.querySelectorAll('select.selectSource option')).map(o => ({ value: o.value, label: o.textContent.trim() })),
-            sourceSelected: document.querySelector('select.selectSource')?.value ?? null,
-            resumeOffered: !!document.querySelector('.btnResume, [data-action="resume"]'),
-            playButtonPresent: !!document.querySelector('.btnPlay, .detailButton-icon.btnPlay, [data-action="play"]')
+            tags: Array.from(root.querySelectorAll('.itemTags a')).map(a => a.textContent.trim()),
+            overview: text(root.querySelector('.overview')),
+            castIds: Array.from(castContainer?.querySelectorAll('.card[data-id]') ?? [])
+                .filter(node => node.getClientRects().length > 0)
+                .map(n => n.dataset.id),
+            mediaInfoBadges: Array.from(root.querySelectorAll('.mediaInfoItem')).map(text),
+            primarySrc: root.querySelector('.detailImageContainer .cardImageContainer, .detailImageContainer img')?.style?.backgroundImage
+            ?? root.querySelector('.detailImageContainer img')?.getAttribute('src') ?? null,
+            backdropSrc: root.querySelector('#itemBackdrop')?.style?.backgroundImage ?? null,
+            logoSrc: root.querySelector('.detailLogo')?.style?.backgroundImage ?? null,
+            sourceOptions: Array.from(root.querySelectorAll('select.selectSource option')).map(o => ({ value: o.value, label: o.textContent.trim() })),
+            sourceSelected: root.querySelector('select.selectSource')?.value ?? null,
+            resumeOffered: !!root.querySelector('.btnResume, [data-action="resume"]'),
+            playButtonPresent: !!root.querySelector('.btnPlay, .detailButton-icon.btnPlay, [data-action="play"]')
         };
     });
 
