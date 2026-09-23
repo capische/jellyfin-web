@@ -9,6 +9,13 @@
 - Extend existing browse routes; do not add a separate catalog section or redirect Movies/TV.
 - Keep changes additive and narrowly mounted so upstream rebases remain manageable.
 
+### Rebase workflow
+
+- Keep `jellyfin-mod` linear. Do not merge `master` or `upstream/master` into it, and do not use `--rebase-merges` when refreshing it.
+- Refresh `master` from `upstream/master` first, then rebase `jellyfin-mod` onto the rewritten `master`; resolve and verify the result before starting new mod work.
+- Put mod runtime behavior under `src/apps/modern/features/jellyfinmod/`. Upstream-owned files should remain thin adapters or unchanged; if a shared upstream file needs substantial mod logic, extract that logic into the feature and mount it from the mod shell.
+- Keep phase and review history as ordinary linear commits. Do not create documentation merge commits; update the authoritative phase document once and link to it from other documents.
+
 ## Styling
 
 - Never edit existing selectors or existing `.scss` files for mod features.
