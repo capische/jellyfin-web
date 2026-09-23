@@ -3,6 +3,10 @@
 Task list for agents. Each task is self-contained: an agent that has read the **Briefing** below
 and its own task entry should be able to finish without asking a question.
 
+**Open review issues, 2026-09-23:** see [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md)
+for three Phase 7 S4 takeover bugs (repeated fallback, base URL and interrupted recovery-state
+write). All remain open; the document includes reproduction conditions and acceptance checks.
+
 **Phase 1 refinement, 2026-09-06:** read [`PHASE1.md`](PHASE1.md) before P5/P6 or web tasks.
 It records the accepted permissions and Home redesign, corrects the integration assumptions,
 and adds technical gates. The Phase 1 tasks below are not independently implementation-ready
