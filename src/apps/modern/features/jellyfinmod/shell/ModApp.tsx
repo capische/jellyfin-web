@@ -11,6 +11,7 @@ import browser from 'scripts/browser';
 import { persister, queryClient } from 'utils/query/queryClient';
 
 import ModAppRouter from './ModAppRouter';
+import JellyfinModQueryClientEventHandler from '../integration/queryClientEventHandler';
 
 /**
  * The JellyfinMod interface's application root (P7.S2).
@@ -37,6 +38,7 @@ const ModApp = () => (
             <UserSettingsProvider>
                 <WebConfigProvider>
                     <QueryClientEventHandler />
+                    <JellyfinModQueryClientEventHandler />
                     <ModAppRouter />
                 </WebConfigProvider>
             </UserSettingsProvider>
