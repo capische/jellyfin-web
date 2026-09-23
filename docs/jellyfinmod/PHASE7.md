@@ -1,5 +1,8 @@
 # Phase 7 — setup, admin UI and UI delivery
 
+**S4 follow-up issues:** [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md) records three open
+takeover findings with acceptance checks. Existing S4 evidence does not cover these cases.
+
 Planning draft, 2026-09-20. Read [PLAN.md](PLAN.md), [README.md](README.md) §1, §3, §7.1 and
 §9.2, [UX.md](UX.md) §1, §2, §7.3, §12, §13 and §14, [PHASE1.md](PHASE1.md) §6–§7,
 [PHASE4.md](PHASE4.md) (settings and secrets), [PHASE5.md](PHASE5.md) (path mappings and the
