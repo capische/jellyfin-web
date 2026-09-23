@@ -1,0 +1,109 @@
+name: Weekly fork rebase
+
+on:
+  schedule:
+    - cron: '17 10 * * 1'
+      timezone: Australia/Sydney
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-fork-rebase
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    if: github.repository == 'capische/jellyfin-web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare rebased branches
+        id: rebase
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/jellyfin/jellyfin-web.git
+          git fetch --no-tags origin \
+            '+refs/heads/master:refs/remotes/origin/master' \
+            '+refs/heads/jellyfin-mod:refs/remotes/origin/jellyfin-mod'
+          git fetch --no-tags upstream \
+            '+refs/heads/master:refs/remotes/upstream/master'
+          bash scripts/weekly-rebase.sh
+
+      - name: Set up Node.js
+        if: steps.rebase.outputs.changed == 'true'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Check production fork
+        if: steps.rebase.outputs.changed == 'true'
+        env:
+          REVISION: ${{ steps.rebase.outputs.new_master }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch --detach "$REVISION"
+          npm ci --no-audit
+          npm run build:production
+
+      - name: Check mod branch
+        if: steps.rebase.outputs.changed == 'true'
+        env:
+          REVISION: ${{ steps.rebase.outputs.new_mod }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch --detach "$REVISION"
+          npm ci --no-audit
+          npm run build:production
+          npm run build:check
+          npx eslint src/apps/modern/features/jellyfinmod --ext .ts,.tsx
+          npm run stylelint
+
+      - name: Verify publication access
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD_MASTER: ${{ steps.rebase.outputs.old_master }}
+          OLD_MOD: ${{ steps.rebase.outputs.old_mod }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh auth setup-git --hostname github.com
+          git push --atomic --dry-run \
+            "--force-with-lease=refs/heads/master:$OLD_MASTER" \
+            "--force-with-lease=refs/heads/jellyfin-mod:$OLD_MOD" \
+            origin \
+            "$OLD_MASTER:refs/heads/master" \
+            "$OLD_MOD:refs/heads/jellyfin-mod"
+
+      - name: Publish both branches together
+        if: steps.rebase.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD_MASTER: ${{ steps.rebase.outputs.old_master }}
+          OLD_MOD: ${{ steps.rebase.outputs.old_mod }}
+          NEW_MASTER: ${{ steps.rebase.outputs.new_master }}
+          NEW_MOD: ${{ steps.rebase.outputs.new_mod }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh auth setup-git --hostname github.com
+          git push --atomic \
+            "--force-with-lease=refs/heads/master:$OLD_MASTER" \
+            "--force-with-lease=refs/heads/jellyfin-mod:$OLD_MOD" \
+            origin \
+            "$NEW_MASTER:refs/heads/master" \
+            "$NEW_MOD:refs/heads/jellyfin-mod"
+          git ls-remote origin refs/heads/master refs/heads/jellyfin-mod
