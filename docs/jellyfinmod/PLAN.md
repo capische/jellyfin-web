@@ -503,6 +503,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   ratings are dropped. Ratings live in plugin SQLite, the key in the secret store, and a missing
   or failing provider makes ratings absent without touching browsing or playback. Its four open
   questions are listed there.
+- **Phase 11 — notifications and the bell.** Future, **not scheduled**; outline only in
+  [`PHASE11.md`](PHASE11.md). **Requested 2026-09-24:** a bell in the top bar with an unread badge
+  that opens a list of messages, per user, on desktop, mobile and TV. First events: retention windows
+  starting (including Trakt-imported watches) and files about to be deleted, then downloads,
+  upgrades, indexer failures and interface changes. The user asked for it to be planned, not
+  implemented now. Its open questions are listed there.
 
 ---
 
