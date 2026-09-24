@@ -409,7 +409,8 @@ authentication, Quick Connect), `components/apphost`, `components/playback/playb
 `plugins/htmlVideoPlayer`, `plugins/htmlAudioPlayer`, the `video` OSD route, `components/router/
 appRouter` and `routerHistory`, `apps/legacy/routes` and `apps/modern/routes` tables,
 `apps/dashboard/routes`, `apps/wizard/routes`, `components/cardbuilder` (`useCard`, `CardWrapper`,
-`CardBox`), `components/layoutManager`, `scripts/inputManager`, `components/autoFocuser`,
+`CardBox`), `components/layoutManager`, `scripts/inputManager`, `scripts/keyboardNavigation` (`getKeyName`,
+`isInteractiveElement`), `components/focusManager`, `components/autoFocuser`,
 `scripts/scrollManager`, `components/viewManager` (for embedded legacy views), `lib/globalize`,
 `themes/*` and `ThemeStorageManager`, `elements/emby-*`, `hooks/useUserViews`, `hooks/useApi`,
 `apps/modern/features/libraries` (filter dialog and view settings), `components/itemContextMenu`,
