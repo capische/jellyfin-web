@@ -13,6 +13,7 @@ import Events from 'utils/events';
 import 'elements/emby-tabs/emby-tabs';
 import 'elements/emby-button/emby-button';
 import 'elements/emby-scroller/emby-scroller';
+import SetupBanner from '../components/SetupBanner';
 
 type OnResumeOptions = {
     autoFocus?: boolean;
@@ -185,6 +186,7 @@ const Home = () => {
                 ]}
             >
                 <div className='tabContent pageTabContent' id='homeTab' data-index='0'>
+                    <SetupBanner />
                     <div className='sections'></div>
                 </div>
                 <div className='tabContent pageTabContent' id='favoritesTab' data-index='1'>
