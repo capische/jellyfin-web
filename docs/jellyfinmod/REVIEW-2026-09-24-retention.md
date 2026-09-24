@@ -38,7 +38,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R1 — An unplayed file is unlinked because a sibling copy at the same position was played
 
-- **Status:** **resolved by user decision, 2026-09-24** (PHASE10 Q7): any copy watched counts, unless a version is kept. The rule is unchanged in code and now explicit in PHASE10 §2; per-file Keep (plugin `b5a46fc`) is the exception. Live evidence with a two-binding episode and a kept copy: **not yet run**. Originally: open, verified in code. **Priority:** P2.
+- **Status:** **resolved by user decision, 2026-09-24, and verified live** (PHASE10 Q7; evidence in PHASE10, 2026-09-24): with E01 as one row with two bindings in two library roots, watching copy A reclaimed A while copy B, kept per file, stayed byte-identical; with E02, watching copy B reclaimed both copies (the any-copy rule, explicit). Earlier text:: any copy watched counts, unless a version is kept. The rule is unchanged in code and now explicit in PHASE10 §2; per-file Keep (plugin `b5a46fc`) is the exception. Live evidence with a two-binding episode and a kept copy: **not yet run**. Originally: open, verified in code. **Priority:** P2.
 - **Location:** plugin, `JellyfinMod/Services/ReconciliationService.cs` (position rows:
   `ReconcileEpisodes`, the `positionGroup` loop binds every native episode of the entry at one season and
   episode to one row); `RetentionCompletionService.cs:88–107` (`finished = current.Any(...)`,
@@ -70,7 +70,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R2 — Adoption by position assumes TVDB and TMDB number episodes alike, and Add turns the adopted rows on
 
-- **Status:** **fixed in code, plugin `b5a46fc`, not yet verified live.** Add never adopts or monitors a position row and never creates a row at its position; Refresh adopts only on air-date or title evidence and records `episode_adopted`; an upgrade replacement needs the watched rule (preview requires a scheduled evaluation, the live check requires completion). Originally: open, plausible. **Priority:** P2.
+- **Status:** **fixed and verified live** (plugin `b5a46fc`; the upgrade part superseded by the user's Q10, `1c47d8b`): an ordinary user's Add left every on-disk episode at TMDB id 0 and unmonitored with no second row at a held position; an admin Refresh adopted only E01 once its title matched TMDB's and recorded `episode_adopted`. Upgrades replace at once again by the user's decision (PHASE10 Q10). Residual recorded as PHASE10 S19 (a TMDB row created for an empty position binds a later file there by position, P2 rule). Earlier text: Add never adopts or monitors a position row and never creates a row at its position; Refresh adopts only on air-date or title evidence and records `episode_adopted`; an upgrade replacement needs the watched rule (preview requires a scheduled evaluation, the live check requires completion). Originally: open, plausible. **Priority:** P2.
 - **Location:** plugin, `JellyfinMod/Api/EntriesController.cs:423–432` (`CompleteConcurrentAdd`:
   `positional.TmdbId = remote.TmdbId; … positional.Monitored = true`),
   `JellyfinMod/Services/SeriesMetadataRefresher.cs:91–100`, `JellyfinMod/Services/Automation/
@@ -100,7 +100,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R3 — The migration cannot be rolled back, and the old assembly breaks on the new data
 
-- **Status:** **addressed in code and docs, plugin `b5a46fc`, restore not yet exercised.** Both Phase 10 migrations are forward-only (`Down` throws with the reason); PHASE10 §2 *Rollback* states the database-restore rollback. Originally: open, verified. **Priority:** P2.
+- **Status:** **fixed and verified live** (plugin `b5a46fc`, forward-only `Down` in all three Phase 10 migrations): the documented rollback was executed once on 18096 — previous DLL, web bundle and pre-deploy database served Health, Refresh and Add (200), then the new build and current database went back intact. Both Phase 10 migrations are forward-only (`Down` throws with the reason); PHASE10 §2 *Rollback* states the database-restore rollback. Originally: open, verified. **Priority:** P2.
 - **Location:** plugin, `JellyfinMod/Data/Migrations/20260924053825_PhaseTenEpisodeRetention.cs`
   `Down` (drops the two columns and recreates `IX_Episodes_EntryId_TmdbId` unique and unfiltered);
   pre-P10 `SeriesMetadataRefresher` and `EntriesController` (`ToDictionary(episode => episode.TmdbId)`).
@@ -125,7 +125,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R4 — The backlog rule starts at tracking, not at enabling
 
-- **Status:** **fixed, plugin `f4d427c`, per the user's answer to PHASE10 Q1 (2026-09-24), not yet verified live.** The fresh-completion floor for episodes is the later of first tracking and the last enable; the mark-played consequences are stated in PHASE10 §3. Originally: open, policy question. **Priority:** P3.
+- **Status:** **fixed and verified live** (plugin `f4d427c`, then `1c47d8b` for Q9): the floor is the later of first tracking and the **first** switch-on; the backlog episode stayed waiting; watches just before the recorded switch-on did not count; switching retention off and on kept the countdowns; the mark-played consequences are stated in PHASE10 §3. Originally: open, policy question. **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Services/ReconciliationService.cs:1017–1034` (`BaselineAt = now`
   at first binding), `RetentionEvaluator.cs:309` (`eligibleAt = Latest(completion, EnabledAt, BaselineAt)`).
 - **Trigger:** the plugin is deployed (episodes tracked) weeks before retention is enabled; users watch
@@ -149,7 +149,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R5 — The live evidence never exercised an episode with two bindings
 
-- **Status:** **open.** The two-root fixture, the committed driver and the real-window positive half are planned in the PHASE10 handover and not run yet. **Priority:** P3.
+- **Status:** **fixed and verified live, except the real-window positive half, scheduled for 2026-09-25 10:30Z** (web `bc82337f5f`, `32d9058b2e`): the driver is committed (`scripts/jellyfinmod-e2e/retention-live.py`), E01 and E02 each had two bindings, per-binding outcomes are in PHASE10. **Priority:** P3.
 - **Location:** web, `docs/jellyfinmod/PHASE10.md` §Evidence, E5.
 - **Trigger:** reading the E5 run as proof of per-version episode retention.
 - **Cause:** the fixture's "E01 in two versions" was merged by Jellyfin into one item with alternate
@@ -170,7 +170,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R6 — Fresh installs get a different index shape from 18096
 
-- **Status:** **fixed in code, plugin `b5a46fc` (migration `PhaseTenRetentionControls`), not yet checked on a fresh-chain database or 18096.** The index is recreated non-unique everywhere. **Priority:** P3.
+- **Status:** **fixed and verified** (plugin `b5a46fc`): a copy of 18096 and a database created from an empty file both end with the same non-unique index; 18096 live too. The index is recreated non-unique everywhere. **Priority:** P3.
 - **Location:** plugin, `Data/Migrations/20260911042407_PhaseTwoBindings.cs:57–60` (recreates
   `IX_Episodes_EntryId_SeasonNumber_EpisodeNumber` **non-unique**); the 18096 database still carries the
   Phase 1 **unique** index; `ModDbContext.cs:111` declares it non-unique.
@@ -191,7 +191,7 @@ Counts: P1 0 · P2 3 · P3 5. The verdict is at the end.
 
 ## RET-R7 — Episode-page Keep falls back to the whole series without saying which control it is
 
-- **Status:** **fixed in code, web `0d89e18537`, browser check not yet run.** The button reads Keep series and the message names the series wherever the page's episode is not tracked. **Priority:** P3.
+- **Status:** **fixed and verified in the browser** (web `0d89e18537`; Chromium and real Google Chrome): the series page and any page without a tracked episode say Keep series. The button reads Keep series and the message names the series wherever the page's episode is not tracked. **Priority:** P3.
 - **Location:** web, `src/apps/modern/features/jellyfinmod/components/NativeEntryDetails.tsx:74–92`
   (`episode` lookup by page item id or version ids; `keepsEpisode` requires a match and the
   `retention.episodes` capability; otherwise `keepEntry`).
@@ -272,3 +272,9 @@ high effort for all future verification. Status per finding is recorded under ea
 fixes are committed on `p10-retention` (plugin `f4d427c`, `b5a46fc`; web `0d89e18537`) and are **not yet
 deployed or verified live**; the PHASE10 handover lists the remaining acceptance. Automatic reclamation
 stays disabled on every instance.
+
+**Update, end of the 2026-09-24 session:** deployed to 18096 and verified live as recorded under each
+finding and in PHASE10 *Evidence — 2026-09-24, decisions Q1–Q11*; the real-window positive half runs
+on 2026-09-25. New findings for the next verifier (a separate Opus 5.5 at high effort, which replaces
+Fable from 2026-09-24): PHASE10 S17 (Jellyfin 12 versions guard), S18 (clock resets recorded, not
+prevented) and S19 (TMDB rows bound by position, with upgrades replacing at once).

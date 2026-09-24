@@ -364,8 +364,9 @@ Kept current as work lands. Model: Opus, effort high.
 - **Worktrees:** plugin `.claude/worktrees/p10-plugin` (branch `p10-retention`); web
   `.claude/worktrees/p10-web` (branch `p10-retention`, fast-forwarded to `jellyfin-mod`).
 - **Instances:** 18096 only. 28096 belongs to the Phase 7 agent; production 8096 is never touched.
-- **State:** D1, E1–E5 done as recorded above, except the real-window positive half. E6 waits for
-  the user's answers; E7 (episode files merged by Jellyfin) is the next implementation task.
+- **State (2026-09-24, end of session):** D1, E1–E6 and E8 done and verified live, except the real
+  window's positive half (scheduled for 2026-09-25 10:30Z, see below). E7 waits for V1 (Jellyfin 12
+  version enumeration), a separate task.
 - **Push:** the plugin commits could not be pushed from this session because the SSH agent lost its
   identities mid-session; they sit on local branch `p10-retention` in the plugin worktree, rebased
   onto nothing newer than `cdb6e7b`. Rebase onto `origin/master` and fast-forward push once the
@@ -464,41 +465,14 @@ and the episode floor count from the first-ever switch-on; plugin `1c47d8b`, mig
 (the detail warning with date, cause and files for every viewer, Keep for admins; plugin `07f2af7`, web
 `d57459b9a8`). Next: deploy to 18096 and the live run.
 
-Done, committed on `p10-retention`, **not deployed and not verified live** (18096 still runs
-`5637362` + `9d6d261`):
+Commits on `p10-retention` (plugin local only, the plugin repository is master-only; neither is pushed
+into `master` or `jellyfin-mod`):
 
-- Plugin (local branch only; the plugin repository is master-only, so it is not pushed):
-  `f4d427c` Q1 backlog floor; `b5a46fc` per-file Keep (`VersionKeeps`, migration
-  `PhaseTenRetentionControls`), episode un-Keep and window editor
-  (`DELETE …/Episodes/{id}/Keep`, `PUT …/Episodes/{id}/Retention`), `POST|DELETE
-  …/Versions/{bindingId}/Keep`, multi-episode rule, RET-R2 (Add never adopts or monitors, Refresh
-  adopts with evidence and records `episode_adopted`, upgrade replacement needs the watched rule),
-  RET-R3 (forward-only `Down`), RET-R6 (index recreated non-unique). Health capabilities
-  `retention.episodeControls`, `retention.versionKeep`. Supporting suites: Zero, One, Two, Three (Mac)
-  and ThreeProtection, Five, Six (Pi, unprivileged) pass; Four needs root as before and was not run.
-- Web: `0d89e18537` RetentionControls (Stop keeping, episode window select, per-file Keep buttons)
-  and RET-R7 (Keep series label and message). `tsc` clean, touched files lint-clean.
-
-Unfinished, in order:
-
-1. **Q8:** the plugin now records `retention_started` when an evaluation becomes scheduled, with the
-   cause from the completing user's observation `SourceReason` (`Import` → "watched on another device
-   (Trakt)", `TogglePlayed` → "marked played", playback → "watched on this server"), the deadline and
-   the file names, in the event `data`. Still to do: expose it (or the scheduled deadline) to ordinary
-   users for this warning, which T15 withholds today; the web warning on the detail page ("Added to
-   retention: … will be deleted on <date> unless kept", cause, files, Keep for admins) in every layout;
-   the Trakt-style check that writes user data with save reason `Import` as `SyncFromTraktTask` does.
-2. Deploy both to 18096 (backup first), then the live E2E: a committed, parameterised driver under
-   `scripts/jellyfinmod-e2e/` (the 2026-09-24 driver lives only on the Pi as `build/p10/e5.py`; X6:
-   no host paths in the committed copy). Fixture: the series in **two library roots** so one position
-   row has two bindings (RET-R5), per-file Keep on one copy (RET-R1/Q3), an unwatched sibling, an
-   episode-kept episode, a backlog episode, a seeded copy, `S01E07-E08` watched (reclaimed),
-   `S01E09-E10` with E10 unwatched elsewhere (blocked), a movie with two versions keeping the one
-   Jellyfin re-identifies; SHA-256 before and after; fast window then real window; Trakt-style user
-   data for Q8.
-3. RET-R2 acceptance (Add by ordinary user, Refresh with and without evidence), RET-R3 restore
-   exercised once on 18096, RET-R6 migration check on a fresh-chain database and a copy of 18096.
-4. Q6: disposable non-admin user, 403 on Keep, un-Keep, window, version Keep, Remove, settings; delete
-   and prove gone.
-5. Browser: desktop, mobile, TV 1920×1080 and 1280×720 by keyboard, Chromium then real Chrome.
-6. Restore: retention disabled everywhere, fixtures removed.
+- Plugin: `f4d427c` Q1, `b5a46fc` Q3–Q5 and RET-R2/R3/R6, `29d2648` Q8 event, `1c47d8b` Q9/Q10,
+  `c7f509e` Jellyfin 12 guards and C5 record, `07f2af7` Q8/Q11 warning API, `08c97af` synced cause and
+  file names, `36f9d01` grace restart kept across off/on, `ab4d464` fresh Keep per evaluated target.
+- Web: `0d89e18537` controls and RET-R7, `d57459b9a8` warning, `095a4ddf6f` version Keep labels,
+  `e02996a611` focus after a change, `bc82337f5f` / `32d9058b2e` driver and probe; docs `a3985b650b`,
+  `57406d95db`, `62c4e1b805`, this commit.
+- Supporting suites after the last change: Zero, One, Two, Three (Mac), ThreeProtection, Five, Six (Pi,
+  unprivileged) pass; Four needs root as before and was not run.
