@@ -1,0 +1,178 @@
+[
+  {
+    "itemId": "df0cd16ee814dd955959d4b8b829f5d9",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 0,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:34:28.4024524Z",
+      "Played": false,
+      "Key": "355730001001",
+      "ItemId": "df0cd16ee814dd955959d4b8b829f5d9"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 0,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:34:28.4024524Z",
+      "Played": false,
+      "Key": "355730001001",
+      "ItemId": "df0cd16ee814dd955959d4b8b829f5d9"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "09bba766e4f5fbad18e6a81e4e4bd3a2",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 2,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:34:48.8558459Z",
+      "Played": false,
+      "Key": "355730001002",
+      "ItemId": "09bba766e4f5fbad18e6a81e4e4bd3a2"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 2,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:34:48.8558459Z",
+      "Played": false,
+      "Key": "355730001002",
+      "ItemId": "09bba766e4f5fbad18e6a81e4e4bd3a2"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "0b112cfd083cae1722f28359797f5b65",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 5,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T06:13:37.646Z",
+      "Played": true,
+      "Key": "8009",
+      "ItemId": "0b112cfd083cae1722f28359797f5b65"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 5,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T06:13:37.646Z",
+      "Played": true,
+      "Key": "8009",
+      "ItemId": "0b112cfd083cae1722f28359797f5b65"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "0040709081e66d6e20f562643b81a00f",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 6,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T06:16:23.828Z",
+      "Played": true,
+      "Key": "00407090-81e6-6d6e-20f5-62643b81a00f",
+      "ItemId": "0040709081e66d6e20f562643b81a00f"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 6,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T06:16:23.828Z",
+      "Played": true,
+      "Key": "00407090-81e6-6d6e-20f5-62643b81a00f",
+      "ItemId": "0040709081e66d6e20f562643b81a00f"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "1c3a1ac050339e228c8b6033556ff638",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 2,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-09T22:50:34.278Z",
+      "Played": true,
+      "Key": "1236153",
+      "ItemId": "1c3a1ac050339e228c8b6033556ff638"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 2,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-09T22:50:34.278Z",
+      "Played": true,
+      "Key": "1236153",
+      "ItemId": "1c3a1ac050339e228c8b6033556ff638"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 0,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:04:08.3365766Z",
+      "Played": false,
+      "Key": "1185207",
+      "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 0,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T09:04:08.3365766Z",
+      "Played": false,
+      "Key": "1185207",
+      "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "b5399065a2bf8fbbf6effe875180b811",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 1,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T05:23:52.0018488Z",
+      "Played": false,
+      "Key": "10331",
+      "ItemId": "b5399065a2bf8fbbf6effe875180b811"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 1,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-21T05:23:52.0018488Z",
+      "Played": false,
+      "Key": "10331",
+      "ItemId": "b5399065a2bf8fbbf6effe875180b811"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  },
+  {
+    "itemId": "2558c83d688659351b80a17491b5f160",
+    "from": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 14,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-22T04:19:41.4176302Z",
+      "Played": false,
+      "Key": "10331",
+      "ItemId": "2558c83d688659351b80a17491b5f160"
+    },
+    "to": {
+      "PlaybackPositionTicks": 0,
+      "PlayCount": 14,
+      "IsFavorite": false,
+      "LastPlayedDate": "2026-09-22T04:19:41.4176302Z",
+      "Played": false,
+      "Key": "10331",
+      "ItemId": "2558c83d688659351b80a17491b5f160"
+    },
+    "route": "POST /UserItems/{itemId}/UserData (exact overwrite)"
+  }
+]

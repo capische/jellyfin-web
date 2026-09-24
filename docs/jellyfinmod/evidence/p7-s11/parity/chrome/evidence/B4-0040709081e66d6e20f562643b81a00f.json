@@ -1,0 +1,99 @@
+{
+  "itemId": "0040709081e66d6e20f562643b81a00f",
+  "title": "David Beckham Infamous",
+  "api": {
+    "summary": "avi mpeg4 720x400 SDR",
+    "audio": [
+      "2"
+    ],
+    "subtitles": [
+      "0"
+    ]
+  },
+  "stock": {
+    "title": "David Beckham Infamous",
+    "parentTitle": "",
+    "miscInfo": "2021 1h 11m | ",
+    "endsAt": "Ends at 9:58 AM",
+    "readAt": 1790290088365,
+    "audioOptions": [
+      "2:Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:Undefined - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "1:404p MPEG4 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "",
+    "criticRating": "",
+    "genres": [],
+    "studios": [],
+    "director": [],
+    "writer": [],
+    "tags": [],
+    "overview": "",
+    "castIds": [],
+    "mediaInfoBadges": [
+      "2021",
+      "1h 11m"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/0040709081e66d6e20f562643b81a00f/Images/Primary?fillHeight=200&fillWidth=360&quality=96&tag=fad8fa50d051ce1c464932028558ce0a\")",
+    "backdropSrc": "",
+    "logoSrc": "",
+    "sourceOptions": [
+      {
+        "value": "0040709081e66d6e20f562643b81a00f",
+        "label": "David.Beckham.Infamous.2021.Pa.WEB-DLRip.14OOMB"
+      }
+    ],
+    "sourceSelected": "0040709081e66d6e20f562643b81a00f",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "David Beckham Infamous",
+    "parentTitle": "",
+    "miscInfo": "2021 1h 11m | ",
+    "endsAt": "Ends at 9:58 AM",
+    "readAt": 1790290089514,
+    "audioOptions": [
+      "2:Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:Undefined - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "1:404p MPEG4 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "",
+    "criticRating": "",
+    "genres": [],
+    "studios": [],
+    "director": [],
+    "writer": [],
+    "tags": [],
+    "overview": "",
+    "castIds": [],
+    "mediaInfoBadges": [
+      "2021",
+      "1h 11m"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/0040709081e66d6e20f562643b81a00f/Images/Primary?fillHeight=200&fillWidth=360&quality=96&tag=fad8fa50d051ce1c464932028558ce0a\")",
+    "backdropSrc": "",
+    "logoSrc": "",
+    "sourceOptions": [
+      {
+        "value": "0040709081e66d6e20f562643b81a00f",
+        "label": "David.Beckham.Infamous.2021.Pa.WEB-DLRip.14OOMB"
+      }
+    ],
+    "sourceSelected": "0040709081e66d6e20f562643b81a00f",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
