@@ -21,6 +21,7 @@ import HomePage from '../routes/HomePage';
 import DetailsPage from '../routes/DetailsPage';
 import LibraryGridPage from '../routes/LibraryGridPage';
 import SearchPage from '../routes/SearchPage';
+import SettingsPage from '../settings/SettingsPage';
 
 import ModAppLayout from './ModAppLayout';
 
@@ -59,6 +60,9 @@ const MOD_ROUTES: RouteObject[] = [
     // Every layout: `details` is a legacy view in both tables, and the mod route loads the same view through the
     // same view manager, so nothing about the page changes with the layout (P7.S6).
     { path: 'details', Component: DetailsPage },
+    // Every layout: the administrator settings area (P7.S8). It is a mod route rather than an upstream one, so no
+    // upstream route table is edited; the page itself refuses ordinary users (UX §14).
+    { path: 'catalog/settings', Component: SettingsPage },
     // The legacy layouts — the TV above all — browse Movies and TV on the modern React grid, the same grid the
     // modern layout reaches through upstream's own routes (PHASE7 decision 13). One grid means every grid feature
     // is built once, and upstream's legacy `movies.js` and `tvshows.js` controllers stay unedited. The modern layout
