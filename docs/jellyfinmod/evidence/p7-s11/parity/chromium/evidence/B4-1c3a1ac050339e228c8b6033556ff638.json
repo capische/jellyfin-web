@@ -1,0 +1,244 @@
+{
+  "itemId": "1c3a1ac050339e228c8b6033556ff638",
+  "title": "Mercy",
+  "api": {
+    "summary": "mp4 hevc 3840x2160 HDR",
+    "audio": [
+      "5",
+      "6",
+      "7"
+    ],
+    "subtitles": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ]
+  },
+  "stock": {
+    "title": "Mercy",
+    "parentTitle": "",
+    "miscInfo": "2026 1h 40m PG-13 7.1 | ",
+    "endsAt": "Ends at 12:25 AM",
+    "readAt": 1790253941141,
+    "audioOptions": [
+      "5:DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Default",
+      "6:DUB WinMedia - Russian - Dolby Digital - 5.1",
+      "7:English - Dolby Digital - 5.1"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:stream-4 - Russian - Default - SUBRIP - External",
+      "1:stream-5 - Russian - SUBRIP - External",
+      "2:stream-6 - English - SUBRIP - External",
+      "3:stream-7 - English - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "4:4K HEVC HDR"
+    ],
+    "officialRating": "PG-13",
+    "communityRating": "7.1",
+    "criticRating": "",
+    "genres": [
+      "Science Fiction",
+      "Thriller",
+      "Crime",
+      "Mystery"
+    ],
+    "studios": [
+      "Atlas Entertainment",
+      "Amazon MGM Studios",
+      "Bazelevs"
+    ],
+    "director": [
+      "Timur Bekmambetov"
+    ],
+    "writer": [],
+    "tags": [
+      "trakt",
+      "watched",
+      "race against time",
+      "mission",
+      "artificial intelligence (a.i.)",
+      "bomb",
+      "kidnapping",
+      "dystopia",
+      "cop",
+      "los angeles, california",
+      "false accusations",
+      "innocent suspect",
+      "father daughter relationship",
+      "criminal justice system",
+      "evidence room",
+      "near future",
+      "screenlife",
+      "alcoholic cop",
+      "crime"
+    ],
+    "overview": "In the near future, a detective stands on trial accused of murdering his wife. He has ninety minutes to prove his innocence to the advanced AI Judge he once championed, before it determines his fate.",
+    "castIds": [
+      "4cd9bcda9c16d0abc2e3ec95bc45d7ab",
+      "efd4803986517026d7f8c7b87dd408d5",
+      "9d05d9644c6d40e8ae5ea43867e97a9c",
+      "4d14f0e7d61b44c29a14541c99aa6aff",
+      "16ca4e9cd1e56e8d2d031d820a7e9943",
+      "f9bf68c83754b9f10528d6b945528084",
+      "80c2e17f65c3c99a9cfbd443178c1335",
+      "9b873ea0bfd74690fd2fbec09df23a0f",
+      "70f15b85608eee88be78b4ea26ef03f4",
+      "38b222f77293781e9aa972464041acf2",
+      "5fa0daf406c6877d91e6b09e6d8603b4",
+      "5fcaa1506e352f5e7eae7dde07c881ea",
+      "8e333ad0bf7624e8b9115155f447d6b0",
+      "450b1958716764f048983d4deef7de79",
+      "7bc4fd166aed220d446dc2422c8c67b8",
+      "edd81e5738f05f3a52a7cbb71c565e3f",
+      "7a0162e811fc0e015808390757f509e7",
+      "fa3cc8a3b14cf0f11c5a702a2bf368f3",
+      "5bec20e2dd826f2249e0b43b3cbd6a58",
+      "dae8bba4190748bcbb3103fb7110732b",
+      "4660008846c0c3909063baa3861827c4",
+      "219fa21195e068a057e00115fd482dc4",
+      "f95c86524f0f1d16167ebc5b53815e0a",
+      "1d93954a4c87022d01227535776c22da",
+      "75d2f4efd12540b0ce494e744ff17859",
+      "0724f7790a40ce7c90dbf22ad379ffb7",
+      "6a5de572f2dad130372122db615b7526",
+      "7c50e5222327905ea565a84172f74f4f",
+      "d76b5c897e6ab5c96dd3c873770ba1d7",
+      "45dadc9b9bbc8533959c9da2e21a2650",
+      "7210835fb2b61dab7edf89d502c70ce2"
+    ],
+    "mediaInfoBadges": [
+      "2026",
+      "1h 40m",
+      "PG-13",
+      "7.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/1c3a1ac050339e228c8b6033556ff638/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=9e182e070ad220a25ed57871b3e20580\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/1c3a1ac050339e228c8b6033556ff638/Images/Logo?tag=95e6516b6e07751e9ae45173b651f2c4&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "1c3a1ac050339e228c8b6033556ff638",
+        "label": "Mercy (2026) Bluray-2160p"
+      }
+    ],
+    "sourceSelected": "1c3a1ac050339e228c8b6033556ff638",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Mercy",
+    "parentTitle": "",
+    "miscInfo": "2026 1h 40m PG-13 7.1 | ",
+    "endsAt": "Ends at 12:25 AM",
+    "readAt": 1790253942491,
+    "audioOptions": [
+      "5:DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Default",
+      "6:DUB WinMedia - Russian - Dolby Digital - 5.1",
+      "7:English - Dolby Digital - 5.1"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:stream-4 - Russian - Default - SUBRIP - External",
+      "1:stream-5 - Russian - SUBRIP - External",
+      "2:stream-6 - English - SUBRIP - External",
+      "3:stream-7 - English - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "4:4K HEVC HDR"
+    ],
+    "officialRating": "PG-13",
+    "communityRating": "7.1",
+    "criticRating": "",
+    "genres": [
+      "Science Fiction",
+      "Thriller",
+      "Crime",
+      "Mystery"
+    ],
+    "studios": [
+      "Atlas Entertainment",
+      "Amazon MGM Studios",
+      "Bazelevs"
+    ],
+    "director": [
+      "Timur Bekmambetov"
+    ],
+    "writer": [],
+    "tags": [
+      "trakt",
+      "watched",
+      "race against time",
+      "mission",
+      "artificial intelligence (a.i.)",
+      "bomb",
+      "kidnapping",
+      "dystopia",
+      "cop",
+      "los angeles, california",
+      "false accusations",
+      "innocent suspect",
+      "father daughter relationship",
+      "criminal justice system",
+      "evidence room",
+      "near future",
+      "screenlife",
+      "alcoholic cop",
+      "crime"
+    ],
+    "overview": "In the near future, a detective stands on trial accused of murdering his wife. He has ninety minutes to prove his innocence to the advanced AI Judge he once championed, before it determines his fate.",
+    "castIds": [
+      "4cd9bcda9c16d0abc2e3ec95bc45d7ab",
+      "efd4803986517026d7f8c7b87dd408d5",
+      "9d05d9644c6d40e8ae5ea43867e97a9c",
+      "4d14f0e7d61b44c29a14541c99aa6aff",
+      "16ca4e9cd1e56e8d2d031d820a7e9943",
+      "f9bf68c83754b9f10528d6b945528084",
+      "80c2e17f65c3c99a9cfbd443178c1335",
+      "9b873ea0bfd74690fd2fbec09df23a0f",
+      "70f15b85608eee88be78b4ea26ef03f4",
+      "38b222f77293781e9aa972464041acf2",
+      "5fa0daf406c6877d91e6b09e6d8603b4",
+      "5fcaa1506e352f5e7eae7dde07c881ea",
+      "8e333ad0bf7624e8b9115155f447d6b0",
+      "450b1958716764f048983d4deef7de79",
+      "7bc4fd166aed220d446dc2422c8c67b8",
+      "edd81e5738f05f3a52a7cbb71c565e3f",
+      "7a0162e811fc0e015808390757f509e7",
+      "fa3cc8a3b14cf0f11c5a702a2bf368f3",
+      "5bec20e2dd826f2249e0b43b3cbd6a58",
+      "dae8bba4190748bcbb3103fb7110732b",
+      "4660008846c0c3909063baa3861827c4",
+      "219fa21195e068a057e00115fd482dc4",
+      "f95c86524f0f1d16167ebc5b53815e0a",
+      "1d93954a4c87022d01227535776c22da",
+      "75d2f4efd12540b0ce494e744ff17859",
+      "0724f7790a40ce7c90dbf22ad379ffb7",
+      "6a5de572f2dad130372122db615b7526",
+      "7c50e5222327905ea565a84172f74f4f",
+      "d76b5c897e6ab5c96dd3c873770ba1d7",
+      "45dadc9b9bbc8533959c9da2e21a2650",
+      "7210835fb2b61dab7edf89d502c70ce2"
+    ],
+    "mediaInfoBadges": [
+      "2026",
+      "1h 40m",
+      "PG-13",
+      "7.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/1c3a1ac050339e228c8b6033556ff638/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=9e182e070ad220a25ed57871b3e20580\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/1c3a1ac050339e228c8b6033556ff638/Images/Logo?tag=95e6516b6e07751e9ae45173b651f2c4&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "1c3a1ac050339e228c8b6033556ff638",
+        "label": "Mercy (2026) Bluray-2160p"
+      }
+    ],
+    "sourceSelected": "1c3a1ac050339e228c8b6033556ff638",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}

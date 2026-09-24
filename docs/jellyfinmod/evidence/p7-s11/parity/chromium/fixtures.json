@@ -1,0 +1,73 @@
+{
+  "C-4KHDR": {
+    "id": "1c3a1ac050339e228c8b6033556ff638",
+    "title": "Mercy",
+    "mediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+    "container": "mp4",
+    "width": 3840,
+    "videoRange": "HDR"
+  },
+  "C-1080": {
+    "id": "09be82fc66ac0aa8a3a9df0450fa7406",
+    "title": "Lessons of Tolerance",
+    "mediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+    "container": "mkv",
+    "width": 1920,
+    "videoRange": "SDR"
+  },
+  "C-MULTIAUDIO": {
+    "id": "0b112cfd083cae1722f28359797f5b65",
+    "title": "Highlander",
+    "mediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+    "container": "mkv",
+    "width": 1920,
+    "videoRange": "SDR"
+  },
+  "C-EMBEDSUB": {
+    "id": "0b112cfd083cae1722f28359797f5b65",
+    "title": "Highlander",
+    "mediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+    "container": "mkv",
+    "width": 1920,
+    "videoRange": "SDR"
+  },
+  "C-EXTSUB": {
+    "id": "0040709081e66d6e20f562643b81a00f",
+    "title": "David Beckham Infamous",
+    "mediaSourceId": "0040709081e66d6e20f562643b81a00f",
+    "container": "avi",
+    "width": 720,
+    "videoRange": "SDR"
+  },
+  "C-AVI": {
+    "id": "0040709081e66d6e20f562643b81a00f",
+    "title": "David Beckham Infamous",
+    "mediaSourceId": "0040709081e66d6e20f562643b81a00f",
+    "container": "avi",
+    "width": 720,
+    "videoRange": "SDR"
+  },
+  "C-TVNEXT": {
+    "id": "df0cd16ee814dd955959d4b8b829f5d9",
+    "title": "The Wheel of Time - Leavetaking",
+    "seriesId": "024428fd966bba9ac17dcd3acad1bd81",
+    "nextEpisodeId": "09bba766e4f5fbad18e6a81e4e4bd3a2",
+    "mediaSourceId": "df0cd16ee814dd955959d4b8b829f5d9"
+  },
+  "C-TWOVER": {
+    "id": "b5399065a2bf8fbbf6effe875180b811",
+    "title": "Night of the Living Dead",
+    "sources": [
+      {
+        "id": "b5399065a2bf8fbbf6effe875180b811",
+        "container": "mp4",
+        "width": 1472
+      },
+      {
+        "id": "2558c83d688659351b80a17491b5f160",
+        "container": "mp4",
+        "width": 1280
+      }
+    ]
+  }
+}

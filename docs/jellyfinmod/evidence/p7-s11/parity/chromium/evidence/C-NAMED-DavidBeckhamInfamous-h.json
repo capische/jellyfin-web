@@ -1,0 +1,175 @@
+{
+  "fixture": "C-NAMED-DavidBeckhamInfamous",
+  "itemId": "0040709081e66d6e20f562643b81a00f",
+  "title": "David Beckham Infamous",
+  "container": "avi",
+  "video": "mpeg4 720x400 SDR",
+  "audioStreams": 1,
+  "subtitleStreams": 1,
+  "row": "C-NAMED-DavidBeckhamInfamous-h",
+  "check": "subtitle off (data-id -1)",
+  "verdict": "PASS",
+  "heavyTranscode": true,
+  "stock": {
+    "summary": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOff": {
+        "session": {
+          "nowPlayingItemId": "0040709081e66d6e20f562643b81a00f",
+          "playState": {
+            "PositionTicks": 906710319,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0040709081e66d6e20f562643b81a00f",
+            "AudioStreamIndex": 2,
+            "SubtitleStreamIndex": -1,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "h264",
+            "AudioCodec": "aac",
+            "IsVideoDirect": false,
+            "IsAudioDirect": false,
+            "Width": 720,
+            "Height": 400,
+            "Framerate": 323,
+            "CompletionPercentage": 12.349646768313585,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "ContainerNotSupported",
+              "VideoCodecNotSupported",
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 91.5,
+          "duration": 4250,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "disabled",
+              "cues": null,
+              "activeCues": null,
+              "activeText": null
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 9939,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0040709081e66d6e20f562643b81a00f",
+              "MediaSourceId": "0040709081e66d6e20f562643b81a00f",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 896710319,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "mod": {
+    "summary": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOff": {
+        "session": {
+          "nowPlayingItemId": "0040709081e66d6e20f562643b81a00f",
+          "playState": {
+            "PositionTicks": 864291640,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0040709081e66d6e20f562643b81a00f",
+            "AudioStreamIndex": 2,
+            "SubtitleStreamIndex": -1,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "h264",
+            "AudioCodec": "aac",
+            "IsVideoDirect": false,
+            "IsAudioDirect": false,
+            "Width": 720,
+            "Height": 400,
+            "Framerate": 319,
+            "CompletionPercentage": 11.079740250097172,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "ContainerNotSupported",
+              "VideoCodecNotSupported",
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 87,
+          "duration": 4250,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "disabled",
+              "cues": null,
+              "activeCues": null,
+              "activeText": null
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 5664,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0040709081e66d6e20f562643b81a00f",
+              "MediaSourceId": "0040709081e66d6e20f562643b81a00f",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 854291640,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      }
+    }
+  }
+}
