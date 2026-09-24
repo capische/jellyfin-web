@@ -49,7 +49,7 @@ try {
 // JellyfinMod: how the bundle expresses which servers it runs on. The minimum matches the plugin's targetAbi;
 // `testedOn` lists versions a real acceptance run has passed against (PHASE7 3.5, corrected 2026-09-20).
 // eslint-disable-next-line sonarjs/no-hardcoded-ip -- a Jellyfin version, not an address
-const JELLYFINMOD_MINIMUM_SERVER = '10.11.0.0';
+const JELLYFINMOD_MINIMUM_SERVER = '12.0.0.0';
 const JELLYFINMOD_TESTED_SERVERS = ['12.0.0'];
 
 const NODE_MODULES_REGEX = /[\\/]node_modules[\\/]/;
