@@ -220,7 +220,8 @@ work without a pop-up; nothing new needs `dpadModals`.
 | E3 | Episode-scoped detail: `retentionPolicy`, `history[].episodeId` | E2 | HTTP detail for the fixture series shows per-episode policy and episode history |
 | E4 | Web episode page: episode Keep, episode retention, versions and History | E3 | Built bundle on `/web-mod/`, real Chromium then real Google Chrome, desktop/mobile/TV 1920×1080 and 1280×720 by keyboard: Keep focus stays, Kept shown, no page errors |
 | E5 | Live retention E2E on disposable fixtures (fast window, then real window) | E1–E3 | See below |
-| E6 | Gated on the user's answers: episode un-Keep and days editor (Q4), backlog rule change (Q1), per-version Keep (Q3) | answers | per answer |
+| E6 | The user's answers of 2026-09-24: backlog rule (Q1), per-file Keep (Q3), episode un-Keep and window editor (Q4), multi-episode files (Q5), and review fixes RET-R2–R7 | answers | per answer; code done, live acceptance open (Handover) |
+| E8 | Warn when a retention window starts (Q8, added 2026-09-24): `retention_started` history with cause and files; detail-page warning for every viewer, Keep inside it for admins | E6 | Live: windows started by playback, mark played and Trakt-style `Import` user data each show the warning and one event, desktop/mobile/TV by keyboard |
 | E7 | Track an episode's merged files as versions (alternate media sources, as P6.M6 does for movies), then lift `episode_versions_untracked` | E5 | Live: a two-file fixture episode, watched, loses its lowest unseeded file first; a seeded file stays; the episode is reclaimed only when its last file goes |
 
 **E5 fixture and acceptance.** A disposable library on 18096 pointing at the writable test root
@@ -365,7 +366,8 @@ Kept current as work lands. Model: Opus, effort high.
 
 ### Handover — 2026-09-24, retention decisions and review fixes (Opus 5.5, high)
 
-**Stopped at the 80 % usage pause.** Top of the list: **Q8 (retention-start warning) is not started.**
+**Stopped at the 80 % usage pause.** Top of the list: **Q8 (retention-start warning) is half done** —
+the plugin records `retention_started` (plugin `29d2648`); the web warning is not built.
 
 Done, committed on `p10-retention`, **not deployed and not verified live** (18096 still runs
 `5637362` + `9d6d261`):
@@ -384,10 +386,13 @@ Done, committed on `p10-retention`, **not deployed and not verified live** (1809
 
 Unfinished, in order:
 
-1. **Q8:** plugin — record a `retention_started` history event with its cause when an evaluation
-   first becomes scheduled (cause from the basis user's observation `SourceReason`: `Import` →
-   "watched on another device (Trakt)", `TogglePlayed` → "marked played", playback → "watched here")
-   and the file(s) it covers; web — the warning with Keep for admins, date for everyone.
+1. **Q8:** the plugin now records `retention_started` when an evaluation becomes scheduled, with the
+   cause from the completing user's observation `SourceReason` (`Import` → "watched on another device
+   (Trakt)", `TogglePlayed` → "marked played", playback → "watched on this server"), the deadline and
+   the file names, in the event `data`. Still to do: expose it (or the scheduled deadline) to ordinary
+   users for this warning, which T15 withholds today; the web warning on the detail page ("Added to
+   retention: … will be deleted on <date> unless kept", cause, files, Keep for admins) in every layout;
+   the Trakt-style check that writes user data with save reason `Import` as `SyncFromTraktTask` does.
 2. Deploy both to 18096 (backup first), then the live E2E: a committed, parameterised driver under
    `scripts/jellyfinmod-e2e/` (the 2026-09-24 driver lives only on the Pi as `build/p10/e5.py`; X6:
    no host paths in the committed copy). Fixture: the series in **two library roots** so one position
