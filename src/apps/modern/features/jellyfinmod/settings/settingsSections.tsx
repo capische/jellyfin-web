@@ -247,7 +247,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
             onSave={save} saving={section.busy} saveMeta={`Revision ${discovery.revision ?? '—'}.`} next={props.next} onGo={props.onGo}
         >
             <div className='jfmod-group'>
-                <SecretField id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken} />
+                <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken} />
                 <div className='jfmod-testline'>
                     <Button variant='outlined' size='small' disabled={section.busy} onClick={() => section.test('Settings/Discovery/Test', api)} data-test='discovery'>Test</Button>
                     <span className='fieldDescription'>Asks TMDB whether it accepts the saved token. Save a new token first.</span>
@@ -303,7 +303,7 @@ export const ClientSection: FC<SectionProps> = props => {
             actions={client && <Button variant='outlined' size='small' disabled={section.busy} onClick={() => section.test(`Settings/DownloadClients/${client.id}/Test`, api)} data-test='client'>Test</Button>}
         >
             <FieldForm fields={fields} draft={draft} onChange={set} />
-            <SecretField id='jfmodClientPassword' label='Password' configured={!!client?.passwordConfigured} change={password} onChange={setPassword} />
+            <SecretField key={client?.revision ?? 'new'} id='jfmodClientPassword' label='Password' configured={!!client?.passwordConfigured} change={password} onChange={setPassword} />
             {client && (
                 <div className='jfmod-group'>
                     <h3 className='jfmod-grouptitle'>Path mappings</h3>
@@ -341,7 +341,7 @@ const INDEXER_KEYS = ['name', 'baseUrl', 'enabled', 'automateTitleMatches', 'cat
     'minimumSeedMinutes', 'minIntervalSeconds', 'dailyQueryBudget'];
 
 const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolean) => void }> = ({ api, indexer, onClose }) => {
-    const [draft, set] = useDraft(indexer, { enabled: true, categories: [2000, 5000], priority: 25, downloadHosts: [] });
+    const [draft, set] = useDraft(indexer, { enabled: true, automateTitleMatches: false, categories: [2000, 5000], priority: 25, downloadHosts: [] });
     const [key, setKey] = useState<SecretChange>(UNCHANGED);
     const [notice, setNotice] = useState<NoticeState | null>(null);
     const fields: FieldSpec[] = [
@@ -422,7 +422,7 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
                 { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
                 { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }
             ]} draft={draft} onChange={set} />
-            <SecretField id='jfmodProwlarrKey' label='API key' configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
+            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
             <div className='jfmod-inlineactions'>
                 <Button variant='outlined' size='small' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
                 {source && <Button size='small' disabled={section.busy} onClick={() => section.test(`Settings/Prowlarr/${source.id}/Test`, api)}>Test</Button>}
@@ -755,7 +755,7 @@ export const RetentionSection: FC<SectionProps> = props => {
                     ] : [])
                 ]} draft={seedDraft} onChange={setSeed} />
                 {seedDraft.source === 'separate' && (
-                    <SecretField id='jfmodSeedPassword' label='Password' configured={!!data.seed.passwordConfigured} change={password} onChange={setPassword} />
+                    <SecretField key={data.seed.revision} id='jfmodSeedPassword' label='Password' configured={!!data.seed.passwordConfigured} change={password} onChange={setPassword} />
                 )}
                 <div className='jfmod-testline'>
                     <Button variant='outlined' size='small' disabled={section.busy} onClick={() => section.test('Settings/SeedProtection/Test', api)} data-test='seed'>Test</Button>
