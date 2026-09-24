@@ -300,22 +300,36 @@ enough for the trackers you actually use.
 
 ## 7. Risks
 
-### 7.1 Confirmed target: server 10.11.11, web 12.0
+### 7.1 Confirmed target: server 12.0.0 on .NET 10
 
-The Pi reports **server 10.11.11** (latest stable) serving a **web 12.0** bundle — this
-fork, which tracks jellyfin-web master. That is a deliberately mismatched pair, and it
-settles the plugin toolchain in the good direction:
+**Current, decided 2026-09-24.** Every instance — production, the isolated test instance and the
+acceptance instance — reports **Jellyfin 12.0.0**, and the Docker image is built on 12.0.0 pinned
+by digest. The user asked what the point of supporting an older Jellyfin was once 12 had shipped,
+and chose to drop 10.11 and retarget the plugin to 12.0.0 before S11, so that S11 accepts the build
+that ships ([`PLAN.md`](PLAN.md) decision log). The plugin now builds against:
 
 | | Value |
 | --- | --- |
-| Target framework | `net9.0` (10.11.x `Jellyfin.Server.csproj`) |
-| Package refs | `Jellyfin.Controller` / `Jellyfin.Model` `10.11.11` (published, stable) |
-| `meta.json` targetAbi | `10.11.0.0` |
+| Target framework | `net10.0` (12.0.0 `Jellyfin.Server.csproj`; the host runs .NET 10.0.11) |
+| Package refs | `Jellyfin.Controller` / `Jellyfin.Model` `12.0.0` (published, stable) |
+| EF Core | `Microsoft.EntityFrameworkCore.Sqlite` `10.0.11`, the version the host ships and loads |
+| `meta.json` targetAbi | `12.0.0.0` — a 10.11 server marks the plugin `NotSupported` and never loads it |
 
-So the 12.0 RC churn does not touch this project at all until you *choose* to move the
-server. Build against stable, and retarget to net10 / 12.0 as a deliberate later step.
+**Jellyfin 10.11 is no longer supported.** The 10.11-only workarounds went with it: the reflection
+that read `Video.PrimaryVersionId` as either a string (10.11) or a `Guid?` (12) is a plain property
+read, the extra-version lookup no longer derives a `Video`-typed item id (12 types an extra version
+like its main item and deleted every `Video`-typed one on upgrade) but reads the versions Jellyfin
+itself links (`ILibraryManager.GetLocalAlternateVersionIds`), and the compile target now matches the
+host's EF Core. Enumerating every version through `GetMediaSources` is task V1, not part of the
+retarget.
 
-**The mismatch is the real risk here, not the plugin ABI.** A web bundle from the 12.0 dev
+*History, kept for the reasoning below.* Until 2026-09-24 the plugin compiled against 10.11.11 on
+`net9.0` with `targetAbi` `10.11.0.0` — first because the Pi then ran 10.11.11 serving this fork's
+12.0 web bundle, later (S1, PHASE7 §3.5) as a *minimum* that the 12.0.0 hosts satisfied. The
+paragraphs below describe that mismatched pair; the risk they name is gone now that server, web and
+plugin are all 12.0.
+
+**The mismatch was the real risk, not the plugin ABI.** A web bundle from the 12.0 dev
 line is talking to a 10.11 server. Jellyfin's API is mostly additive so most of it works,
 but any endpoint upstream added for 12.0 will 404 against this server, and the pinned
 `@jellyfin/sdk` unstable build is generated from the 12.0 OpenAPI spec. Consequences for
