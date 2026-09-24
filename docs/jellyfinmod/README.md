@@ -157,6 +157,22 @@ service, not the mod test instance. Mod work deploys only to the isolated test i
 18096, service `jellyfinmod-test`) with explicit test targeting; making that the safe default is
 PLAN X3 (plan-ops#2, medium, verified; see [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
+**Cloning an isolated instance (2026-09-24):** clone the source instance's whole `/config`, not
+only `data/`, `config/` and `root/`. In particular, include `/config/metadata`: `jellyfin.db`
+records person, studio, genre and library-item images by their absolute paths under
+`/config/metadata`, the API advertises an image tag for every such row, and Jellyfin does not
+check that the file exists. A clone that copies the database without `metadata/People` shows
+the placeholder on every Cast & Crew and Guest Stars card, because each portrait request
+returns 404 ("Could not find file …/folder.jpg" in the server log). This happened on the
+acceptance instance; production and the test instance were never affected. Copy with
+ownership and modification times preserved (`rsync -a`, owned by the container's
+`1000:1000`). Copy `jellyfin.db` as a consistent snapshot (SQLite backup API, or with the
+source stopped), never as a live file without its WAL. After the clone, and before any
+acceptance run, check that every `BaseItemImageInfos.Path` under `/config/metadata` in the
+cloned database exists on disk. The count of missing files must be 0. To repair a clone
+that already exists, copy only the missing referenced files from the source instance with
+`rsync --ignore-existing`. This takes effect without a restart.
+
 ## 4. Data model (plugin SQLite)
 
 ```
