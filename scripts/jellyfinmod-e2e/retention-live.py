@@ -14,6 +14,8 @@ Environment (all required unless noted):
   JFMOD_SEED_RPC         URL the container uses to reach `seed-server` (a fake Transmission RPC)
   JFMOD_SEED_PORT        port `seed-server` listens on (optional, 19091)
   JFMOD_USER             administrator to sign in as (optional, oleksii; empty password)
+  JFMOD_DB               the plugin database, read through an online backup copy by `late` (optional otherwise)
+  JFMOD_CONTAINER        the isolated instance's container (optional, jellyfinmod-test)
 
 Subcommands, in scenario order:
   login | logout
@@ -30,6 +32,8 @@ Subcommands, in scenario order:
   real                    real-window checks: one-day schedule, window editor, un-Keep restart, series Keep wins
   restore                 disable retention and restore the saved settings
   cleanup                 remove the libraries, fixture files, catalog entries and native items
+  reacquire | unkeep-survivor | unkeep-finish | toggle | covered | late
+                          the second review's acceptance checks (RET2-R1, R2, R5, R7, R3)
   seed-server             serve the fake Transmission RPC in the foreground
 """
 import hashlib, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -54,6 +58,11 @@ MOVIE_DIR = "JellyfinMod P10 Movie (1999) [tmdbid-603]"
 ROOTS = {"A": "tv-p10a", "B": "tv-p10b"}
 SEED_DIR = "p10-seed"
 MOVIE_ROOT = "movies-p10"
+# A library root on a second filesystem inside the container (its own /dev/shm) was tried for RET2-R9 and dropped: Jellyfin
+# 12 then presents the series through that root's copy and the plugin entry, bound to another copy, is hidden from the
+# listing. The cross-filesystem move is verified in the real-Kestrel protection suite instead. Cleanup still removes it.
+CONTAINER = os.environ.get("JFMOD_CONTAINER", "jellyfinmod-test")
+EXTRA_ROOTS = ("/dev/shm/tv-p10c",)
 
 # FIXTURE — key: (root, file name, what the fast run must do to it)
 FIXTURE = {
@@ -71,12 +80,16 @@ FIXTURE = {
     "E11": ("A", "JellyfinMod P10 Show S01E11.mkv", "kept"),               # grouped with E11-E12 by Jellyfin 12 (C1)
     "E11-E12": ("A", "JellyfinMod P10 Show S01E11-E12.mkv", "kept"),       # E12's only copy
     "E13": ("A", "JellyfinMod P10 Show S01E13.mkv", "reclaimed"),          # watched on another device (synced)
-    "E14-A": ("A", "JellyfinMod P10 Show S01E14.mkv", "kept"),             # two bindings, for the per-file Keep UI
-    "E14-B": ("B", "JellyfinMod P10 Show S01E14.mkv", "kept"),
+    "E14-A": ("A", "JellyfinMod P10 Show S01E14.mkv", "reclaimed"),        # unwatched copy of a two-binding episode
+    "E14-B": ("B", "JellyfinMod P10 Show S01E14.mkv", "kept"),             # the watched copy, kept per file (RET2-R2 later)
+    "E16": ("A", "JellyfinMod P10 Show S01E16.mkv", "kept"),               # arrives late, before any Refresh: a position row
+    "E17": ("A", "JellyfinMod P10 Show S01E17.mkv", "kept"),               # arrives after a Refresh listed TMDB's E17 (RET2-R3)
+    "E18-E19": ("A", "JellyfinMod P10 Show S01E18-E19.mkv", "kept"),       # a late double file: E19 gets a covered row (RET2-R7)
     "M-1080p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 1080p.mkv", "kept"),  # a two-file movie on Jellyfin 12 (C7)
     "M-720p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 720p.mkv", "kept"),
 }
 SEEDED = ("E06",)
+LATE = ("E16", "E17", "E18-E19")  # created later: E16 and E17 by `late`, E18-E19 by `double`
 SIDECAR = ("A", "JellyfinMod P10 Show S01E01.en.srt")
 NFO = ("A", "JellyfinMod P10 Show S01E01.nfo")  # titles E01 "Pilot", TMDB's own title: evidence for Refresh
 
@@ -136,7 +149,13 @@ def check(condition, message):
 
 
 def library(name):
-    return next((f for f in must("GET", "/Library/VirtualFolders") if f["Name"] == name), None)
+    # A library being created or refreshed can briefly be listed without its item id.
+    for _ in range(40):
+        found = next((f for f in must("GET", "/Library/VirtualFolders") if f["Name"] == name), None)
+        if found is None or found.get("ItemId"):
+            return found
+        time.sleep(3)
+    sys.exit(f"library {name} never got an item id")
 
 
 def entry(name, tmdb):
@@ -262,7 +281,7 @@ def cmd_media():
     marker = os.path.join(STATE, "media-created.json")
     created = set(json.load(open(marker))) if os.path.exists(marker) else set()
     for index, key in enumerate(FIXTURE):
-        if key in created:
+        if key in created or key in LATE:
             continue
         root, name, _ = FIXTURE[key]
         directory = host_dir("S") if key in SEEDED else host_dir(root)
@@ -279,7 +298,7 @@ def cmd_media():
     with open(os.path.join(host_dir(NFO[0]), NFO[1]), "w") as handle:
         handle.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<episodedetails><title>Pilot</title>"
                      "<season>1</season><episode>1</episode></episodedetails>\n")
-    write_private(marker, json.dumps(sorted(created | set(FIXTURE))))
+    write_private(marker, json.dumps(sorted(created | (set(FIXTURE) - set(LATE)))))
     print(json.dumps({key: os.stat(host_path(key)).st_nlink for key in FIXTURE if os.path.exists(host_path(key))}))
 
 
@@ -297,13 +316,36 @@ def cmd_library():
             query = urllib.parse.urlencode({"name": name, "collectionType": kind, "refreshLibrary": "true"})
             must("POST", f"/Library/VirtualFolders?{query}", library_options(paths))
         else:
-            must("POST", f"/Items/{library(name)['ItemId']}/Refresh?Recursive=true")
+            refresh_library(name)
         wait_scan()
     shows = episodes_by_file()
     print("native episodes", len(shows))
     for path, item in sorted(shows.items()):
         print(" ", path.replace(CONTAINER_MEDIA, "<media>"), "S", item.get("ParentIndexNumber"), "E", item.get("IndexNumber"),
               "-", item.get("IndexNumberEnd"), item["Id"])
+
+
+def library_paths(name):
+    lib = library(name)
+    if lib is None:
+        return set()
+    return {item.get("Path") for item in must("GET", f"/Items?ParentId={lib['ItemId']}&Recursive=true&Fields=Path")["Items"]}
+
+
+def refresh_library(name, until=None, timeout=600):
+    """Refreshes one library. An item refresh is not the RefreshLibrary task, so its end is observed instead: until
+    `until(paths)` holds, or until the library's items stop changing."""
+    must("POST", f"/Items/{library(name)['ItemId']}/Refresh?Recursive=true&MetadataRefreshMode=Default")
+    begin, previous = time.time(), None
+    while time.time() - begin < timeout:
+        time.sleep(10)
+        paths = library_paths(name)
+        if until is not None and until(paths):
+            return
+        if until is None and paths == previous:
+            return
+        previous = paths
+    sys.exit(f"TIMEOUT waiting for {name} to refresh")
 
 
 def cmd_reconcile():
@@ -370,6 +412,11 @@ def cmd_act():
     must("POST", f"/JellyfinMod/Entries/{series['id']}/Episodes/{tracked_episode(detail, 4)['id']}/Keep")
     for key in ("E04", "E06", "E07-E08", "E09-E10", "E11"):
         mark_played(key, user)
+    # E14: keep copy B by itself and watch only B; copy A goes by the any-copy rule (Q7), B stays kept (RET2-R2 later).
+    e14 = tracked_episode(detail, 14)
+    check(len(e14.get("versions") or []) == 2, "E14 is one tracked episode with two bindings")
+    must("POST", f"/JellyfinMod/Entries/{series['id']}/Versions/{version_of(e14, 'E14-B')['bindingId']}/Keep")
+    mark_played("E14-B", user)
     sync_watch("E13", user)
     # The movie: watch the main version.
     lib, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
@@ -442,6 +489,8 @@ def cmd_compare(before, after):
     first = json.load(open(os.path.join(STATE, f"hashes-{before}.json")))
     second = json.load(open(os.path.join(STATE, f"hashes-{after}.json")))
     for key, (_, _, expected) in FIXTURE.items():
+        if key in LATE and first[key] == "ABSENT":
+            continue
         if expected == "reclaimed":
             check(second[key] == "ABSENT" and first[key] != "ABSENT", f"{key} was unlinked")
         else:
@@ -468,8 +517,10 @@ def cmd_phase_b():
     the native task, compare, check series Keep wins, then switch retention off, restore and remove every fixture."""
     cmd_login()
     try:
+        announced, _ = started_events()
         cmd_configure(0, 1)
         cmd_preview()
+        check(started_events()[0] == announced, "switching retention back on announced no window again (RET2-R5)")
         cmd_hashes("phaseb-run-before")
         cmd_run()
         cmd_hashes("phaseb-run-after")
@@ -517,7 +568,9 @@ def cmd_ordinary():
             check(status == 403, f"ordinary user {method} {path.replace(series['id'], '<series>')} -> {status}")
         seen = must("GET", base, token=token)
         warnings = [e["retentionWarning"] for e in seen["episodes"] if e.get("retentionWarning")]
-        print("warnings the ordinary user sees:", [(w["deadline"], w["cause"]) for w in warnings])
+        print("warnings the ordinary user sees:", [(w["deadline"], w["cause"], w.get("overdue")) for w in warnings])
+        check(bool(warnings) and all(not w["files"] for w in warnings),
+              "an ordinary user sees each warning's date and cause but no file names (RET2-R10)")
         # RET-R2: an ordinary user's Add of the existing series adopts and monitors nothing it holds by position.
         lib = library(SHOW_LIBRARY)
         status, added = call("POST", "/JellyfinMod/Entries", {"mediaType": "series", "tmdbId": SERIES_TMDB,
@@ -551,23 +604,30 @@ def cmd_refresh():
     check(not e01["monitored"], "the adopted row stays unmonitored")
 
 
+def await_episode(number, condition, timeout=420):
+    """The plugin reads user data through a queue that a busy host can take minutes to drain; poll rather than sleep."""
+    begin = time.time()
+    while True:
+        _, detail = series_detail()
+        episode = tracked_episode(detail, number)
+        if condition(episode) or time.time() - begin > timeout:
+            return detail, episode
+        time.sleep(10)
+
+
 def cmd_real():
     user = selected_user()
     series, detail = series_detail()
     base = f"/JellyfinMod/Entries/{series['id']}"
     e03 = tracked_episode(detail, 3)
     mark_played("E03", user)
-    time.sleep(8)
-    _, detail = series_detail()
-    e03 = tracked_episode(detail, 3)
+    detail, e03 = await_episode(3, lambda e: e["retention"]["state"] == "scheduled" and e.get("retentionWarning"))
     deadline = e03["retention"].get("deadline")
     print("E03 scheduled", e03["retention"]["state"], deadline, "warning", e03.get("retentionWarning"))
     check(e03["retention"]["state"] == "scheduled" and e03.get("retentionWarning"), "E03 is scheduled with a warning")
     # A window started by a sync client (Trakt-style user data) names that cause in the warning and History (Q8).
     sync_watch("E10-B", user)
-    time.sleep(8)
-    _, detail = series_detail()
-    e10 = tracked_episode(detail, 10)
+    detail, e10 = await_episode(10, lambda e: bool(e.get("retentionWarning")))
     print("E10 synced ->", e10["retention"]["state"], e10.get("retentionWarning"))
     check((e10.get("retentionWarning") or {}).get("cause") == "watched on another device (synced)",
           "a synced watch starts a window whose warning names the sync as the cause")
@@ -619,16 +679,38 @@ def cmd_restore():
 
 
 def cmd_cleanup():
+    """Removes every fixture. The order matters: the plugin confirms a file's absence only in a library that still exists,
+    so the files go first, the libraries are scanned and reconciled empty (which unbinds the entries), and only then are
+    the libraries deleted and the entries removed. A library deleted earlier is recreated empty under its old name, which
+    Jellyfin maps to the same library id, so a cleanup that was interrupted can always be finished."""
     import shutil
-    for directory in (os.path.join(HOST_MEDIA, ROOTS["A"]), os.path.join(HOST_MEDIA, ROOTS["B"]),
-                      os.path.join(HOST_MEDIA, MOVIE_ROOT), os.path.join(HOST_MEDIA, SEED_DIR)):
+    roots = [os.path.join(HOST_MEDIA, ROOTS["A"]), os.path.join(HOST_MEDIA, ROOTS["B"]), os.path.join(HOST_MEDIA, MOVIE_ROOT)]
+    for directory in roots:
         if os.path.isdir(directory):
             shutil.rmtree(directory)
+        os.makedirs(directory)
+    if os.path.isdir(os.path.join(HOST_MEDIA, SEED_DIR)):
+        shutil.rmtree(os.path.join(HOST_MEDIA, SEED_DIR))
+    known = json.load(open(ENTRIES)) if os.path.exists(ENTRIES) else []
+    # The plugin never confirms absence under an empty directory (it may be an unmounted mount point), so the extra root
+    # keeps a marker until the scan has run.
+    for extra in EXTRA_ROOTS:
+        subprocess.run(["docker", "exec", CONTAINER, "sh", "-c", f"mkdir -p '{extra}' && touch '{extra}/.jfmod-present'"],
+                       check=False)
+    if known or library(SHOW_LIBRARY) is not None or library(MOVIE_LIBRARY) is not None:
+        cmd_library()
+        # Absence is confirmed by the plugin's post-scan task, which only a full library scan runs; an item refresh does not.
+        print("library scan", run_task("RefreshLibrary", timeout=1800))
+        cmd_reconcile()
     for name in (SHOW_LIBRARY, MOVIE_LIBRARY):
         if library(name) is not None:
             must("DELETE", "/Library/VirtualFolders?" + urllib.parse.urlencode({"name": name, "refreshLibrary": "true"}))
     wait_scan()
-    cmd_reconcile()
+    for directory in roots:
+        if os.path.isdir(directory):
+            shutil.rmtree(directory)
+    for extra in EXTRA_ROOTS:
+        subprocess.run(["docker", "exec", CONTAINER, "rm", "-rf", extra], check=False)
     known = json.load(open(ENTRIES)) if os.path.exists(ENTRIES) else []
     left = [e["id"] for e in must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["items"]]
     for entry_id in dict.fromkeys(known + left):
@@ -637,6 +719,7 @@ def cmd_cleanup():
     for entry_id in known:
         status, _ = call("GET", f"/JellyfinMod/Entries/{entry_id}")
         check(status == 404, f"fixture entry {entry_id} is gone")
+    write_private(ENTRIES, json.dumps([]))
     remaining = must("GET", "/Items?Recursive=true&SearchTerm=JellyfinMod&IncludeItemTypes=Movie,Series,Episode")["TotalRecordCount"]
     entries = must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["totalRecordCount"]
     files = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
@@ -688,6 +771,190 @@ def cmd_seed_server():
     HTTPServer(("0.0.0.0", int(os.environ.get("JFMOD_SEED_PORT", "19091"))), Handler).serve_forever()
 
 
+# ---- Second delete-path review (RET2): the acceptance checks of REVIEW-2026-09-24-retention-2.md ----
+
+def rescan(expect_path=None):
+    refresh_library(SHOW_LIBRARY, (lambda paths: expect_path in paths) if expect_path else None)
+    cmd_reconcile()
+    time.sleep(5)
+
+
+def parse_time(value):
+    """A UTC instant from the API, to the second."""
+    from datetime import datetime, timezone
+    return datetime.fromisoformat(value[:19]).replace(tzinfo=timezone.utc)
+
+
+def now_utc():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc)
+
+
+def window_minutes():
+    return must("GET", f"/Plugins/{PLUGIN}/Configuration").get("RetentionTestWindowMinutes", 0)
+
+
+def cmd_reacquire():
+    """RET2-R1: E01's watched copy A was reclaimed while its kept copy B stayed; A comes back at its path. Jellyfin gives
+    it its old item id and play state, yet the episode must start over: waiting, no inherited completion or deadline."""
+    check(sha(host_path("E01-A")) == "ABSENT", "E01-A was reclaimed by the fast run")
+    make_video(host_path("E01-A"), 0, "E01-A")
+    rescan(container_path("E01-A"))
+    item = native_item("E01-A")
+    data = must("GET", f"/UserItems/{item['Id']}/UserData?userId={selected_user()}")
+    print("E01-A is back as", item["Id"], "played", data.get("Played"), "last played", data.get("LastPlayedDate"))
+    _, detail = series_detail()
+    e01 = tracked_episode(detail, 1)
+    r = e01["retention"]
+    print("E01 ->", r, "warning", e01.get("retentionWarning"))
+    check(r["state"] == "waiting" and r["reason"] == "representation_reset" and not r.get("deadline") and
+          not e01.get("retentionWarning"), "the re-acquired copy starts over: waiting, no deadline, no warning (RET2-R1)")
+    resets = [h for h in detail["history"] if h["eventType"] == "retention_reset" and "new file arrived" in h["summary"]]
+    for h in resets:
+        print("  history", h["createdAt"][:19], h["summary"])
+    check(any("S01E01" in h["summary"] for h in resets), "History says why: a new file arrived (RET2-R1)")
+    _, rows = preview_rows()
+    row = next(r for r in rows if (r.get("path") or "").endswith(f"/{ROOTS['A']}/{SERIES_DIR}/Season 01/{FIXTURE['E01-A'][1]}"))
+    check(row["state"] == "waiting", f"the preview does not list E01-A as due ({row['state']}/{row['reason']})")
+    cmd_hashes("reacquired")
+
+
+def cmd_unkeep_survivor():
+    """RET2-R2: E14's copy A went at its deadline while copy B was kept; stopping B's Keep gives B a window of its own."""
+    series, detail = series_detail()
+    e14 = tracked_episode(detail, 14)
+    versions = e14.get("versions") or []
+    check(len(versions) == 1 and versions[0].get("kept"), "only E14's kept copy B is left")
+    print("E14 before ->", e14["retention"])
+    started = now_utc()
+    must("DELETE", f"/JellyfinMod/Entries/{series['id']}/Versions/{versions[0]['bindingId']}/Keep")
+    time.sleep(3)
+    _, detail = series_detail()
+    e14 = tracked_episode(detail, 14)
+    r, w = e14["retention"], e14.get("retentionWarning")
+    print("E14 after ->", r, "warning", w)
+    minutes = window_minutes()
+    deadline = parse_time(r["deadline"]) if r.get("deadline") else None
+    check(r["state"] == "scheduled" and deadline is not None and (deadline - started).total_seconds() >= minutes * 60 - 5,
+          "stopping the Keep restarts the window from now, one window out (RET2-R2)")
+    check(bool(w) and not w.get("overdue") and parse_time(w["deadline"]) > now_utc(),
+          "the warning shows a future date, not an overdue one (RET2-R2)")
+    write_private(os.path.join(STATE, "e14-deadline.txt"), r["deadline"])
+    before = sha(host_path("E14-B"))
+    cmd_run()
+    check(sha(host_path("E14-B")) == before != "ABSENT", "an immediate run reclaims nothing: E14-B is byte-identical")
+
+
+def cmd_unkeep_finish():
+    """RET2-R2, second half: once B's own window has passed it is reclaimed."""
+    deadline = parse_time(open(os.path.join(STATE, "e14-deadline.txt")).read().strip())
+    wait = (deadline - now_utc()).total_seconds() + 10
+    if wait > 0:
+        print("waiting", int(wait), "s for E14-B's window")
+        time.sleep(wait)
+    cmd_run()
+    check(sha(host_path("E14-B")) == "ABSENT", "after its own window E14-B is reclaimed (RET2-R2)")
+
+
+def started_events():
+    _, detail = series_detail()
+    counts = {}
+    for h in detail["history"]:
+        if h["eventType"] == "retention_started":
+            counts[h.get("episodeId")] = counts.get(h.get("episodeId"), 0) + 1
+    return counts, detail
+
+
+def cmd_toggle():
+    """RET2-R5: switching retention off and on twice announces no window again; a passed date reads as overdue."""
+    before, detail = started_events()
+    for _ in range(2):
+        retention = must("GET", "/JellyfinMod/Settings/Retention")
+        body = {k: retention[k] for k in ("reclaimAfterDays", "watchedUserMode", "exemptFavourites") if k in retention}
+        if retention.get("selectedUserId"):
+            body["selectedUserId"] = retention["selectedUserId"]
+        must("PATCH", "/JellyfinMod/Settings/Retention", dict(body, enabled=False, revision=retention["revision"]))
+        time.sleep(10)
+        retention = must("GET", "/JellyfinMod/Settings/Retention")
+        must("PATCH", "/JellyfinMod/Settings/Retention", dict(body, enabled=True, revision=retention["revision"]))
+        time.sleep(25)
+        must("GET", "/JellyfinMod/Retention/Preview")
+    after, detail = started_events()
+    print("retention_started per episode before", sum(before.values()), "after", sum(after.values()))
+    check(after == before, "switching retention off and on twice adds no retention_started event (RET2-R5)")
+    overdue = [(e["episodeNumber"], e["retentionWarning"]) for e in detail["episodes"]
+               if (e.get("retentionWarning") or {}).get("overdue")]
+    print("overdue warnings:", overdue)
+    check(any(number == 6 for number, _ in overdue), "E06, past its date and held by seeding, reads as overdue (RET2-R5)")
+
+
+def cmd_covered():
+    """RET2-R7: the episode a position-tracked double file covers has a row of its own."""
+    _, detail = series_detail()
+    e07, e08 = tracked_episode(detail, 7), tracked_episode(detail, 8)
+    print("E07", e07["tmdbId"], e07["state"], len(e07.get("versions") or []), "E08", e08["tmdbId"], e08["state"],
+          e08["monitored"], len(e08.get("versions") or []))
+    check(e08["tmdbId"] == 0 and e08["state"] == "onDisk" and not e08["monitored"] and not e08.get("versions") and
+          len(e07.get("versions") or []) == 1, "S01E08, covered by S01E07-E08, is tracked without a file of its own (RET2-R7)")
+
+
+def db_rows(sql):
+    """Reads the plugin database from a private online backup copy (never the live file)."""
+    source = os.environ["JFMOD_DB"]
+    copy = os.path.join(STATE, "db-read.db")
+    subprocess.run(["sqlite3", source, f".backup '{copy}'"], check=True)
+    rows = subprocess.run(["sqlite3", "-separator", "|", copy, sql], check=True, capture_output=True, text=True).stdout
+    os.remove(copy)
+    return [line.split("|") for line in rows.strip().splitlines() if line]
+
+
+def cmd_late():
+    """RET2-R3: a file arrives at a number for which a TMDB row exists without a file. E16 arrives first, while no row holds
+    its number, and gets a position row of its own. Then an admin Refresh lists TMDB's episodes, creating a monitored
+    file-less TMDB row at 17 (an ordinary user's Add of a title they can already see changes nothing), and E17 arrives: it
+    binds to that TMDB row by its number only, so it is unverified and no upgrade can replace it."""
+    make_video(host_path("E16"), 16, "E16")
+    rescan(container_path("E16"))
+    _, detail = series_detail()
+    e16 = tracked_episode(detail, 16)
+    check(e16["tmdbId"] == 0 and len(e16.get("versions") or []) == 1, "a file at a number no row holds gets a position row")
+    cmd_refresh()
+    _, detail = series_detail()
+    e17 = tracked_episode(detail, 17)
+    print("E17 before its file:", e17["tmdbId"], e17["state"], "monitored", e17["monitored"])
+    check(e17["tmdbId"] > 0 and not e17.get("versions"), "the Refresh created a file-less TMDB row at 17")
+    make_video(host_path("E17"), 17, "E17")
+    rescan(container_path("E17"))
+    _, detail = series_detail()
+    e17 = tracked_episode(detail, 17)
+    print("E17", e17["tmdbId"], e17["state"], "monitored", e17["monitored"], "versions", len(e17.get("versions") or []))
+    check(e17["tmdbId"] > 0 and len(e17.get("versions") or []) == 1, "the late file binds to the TMDB row by its number")
+    flags = db_rows("SELECT e.SeasonNumber, e.EpisodeNumber, e.TmdbId, b.IdentityUnverified FROM EpisodeBindings b JOIN "
+                    "Episodes e ON e.Id = b.EpisodeId JOIN Entries n ON n.Id = e.EntryId WHERE n.TmdbId = 1418 ORDER BY 1, 2")
+    for row in flags:
+        print("  binding S%sE%s tmdb=%s unverified=%s" % tuple(row))
+    check(any(r[1] == "17" and r[3] == "1" for r in flags), "the file bound by number only is unverified (RET2-R3)")
+    check(all(r[3] == "0" for r in flags if r[2] == "0"), "files of position rows are not flagged")
+    # Each file is verified by its own evidence: E01's copy whose title matches TMDB's is verified; a copy without that
+    # evidence stays unverified, which only ever stops a replacement.
+    e01 = [r for r in flags if r[1] == "1"]
+    check(e01 and all(r[2] != "0" for r in e01) and any(r[3] == "0" for r in e01),
+          "E01, adopted by the Refresh on its matching title, has its matching file verified")
+
+
+def cmd_double():
+    """RET2-R7 for the web: a double file that arrives later gives the number it covers a row of its own, and the file's
+    page must open the row that holds it (checked by the browser probe with the ids printed here)."""
+    make_video(host_path("E18-E19"), 18, "E18-E19")
+    rescan(container_path("E18-E19"))
+    _, detail = series_detail()
+    e18, e19 = tracked_episode(detail, 18), tracked_episode(detail, 19)
+    item = native_item("E18-E19")
+    print("E18-E19 item", item["Id"], "E18 row", e18["id"], "E19 row", e19["id"], "E19 points at", e19.get("jellyfinItemId"))
+    check(len(e18.get("versions") or []) == 1 and not e19.get("versions") and e19["tmdbId"] == 0 and not e19["monitored"],
+          "S01E19, covered by a late S01E18-E19, is tracked without a file of its own (RET2-R7)")
+    write_private(os.path.join(STATE, "double.json"), json.dumps({"item": item["Id"], "row": e18["id"], "covered": e19["id"]}))
+
 if __name__ == "__main__":
     os.makedirs(STATE, mode=0o700, exist_ok=True)
     args = sys.argv[1:] or ["help"]
@@ -696,6 +963,8 @@ if __name__ == "__main__":
         "reconcile": cmd_reconcile, "backlog": cmd_backlog, "act": cmd_act, "state": cmd_state, "preview": cmd_preview,
         "run": cmd_run, "ordinary": cmd_ordinary, "refresh": cmd_refresh, "real": cmd_real, "series-keep": cmd_series_keep,
         "restore": cmd_restore, "cleanup": cmd_cleanup, "seed-server": cmd_seed_server,
+        "reacquire": cmd_reacquire, "unkeep-survivor": cmd_unkeep_survivor, "unkeep-finish": cmd_unkeep_finish,
+        "toggle": cmd_toggle, "covered": cmd_covered, "late": cmd_late, "double": cmd_double,
     }
     if args[0] == "configure":
         cmd_configure(int(args[1]), int(args[2]))
