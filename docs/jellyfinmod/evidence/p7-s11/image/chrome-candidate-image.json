@@ -1,0 +1,443 @@
+{
+ "browser": "chrome",
+ "version": "153.0.8010.53",
+ "runs": [
+  {
+   "step": "wizard",
+   "at": "2026-09-24T12:42:34.708Z",
+   "results": [
+    {
+     "step": "wizard",
+     "check": "The wizard opens at Discovery with Continue refused",
+     "verdict": "PASS",
+     "detail": {
+      "step": "discovery"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Turning grabbing on before setup is refused with 409 acquisition_not_ready, blockers shown",
+     "verdict": "PASS",
+     "detail": "Acquisition is not ready. No enabled indexer has verified its capabilities. No download client is selected. No default quality profile is selected."
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery: a wrong token fails the Test (unauthorized) and Continue stays refused",
+     "verdict": "PASS",
+     "detail": "TMDB rejected the token. Check it was copied completely. (unauthorized)"
+    },
+    {
+     "step": "wizard",
+     "check": "Secret field: Replace opens an empty input, Keep returns, Clear is pending until save, Undo restores Configured",
+     "verdict": "PASS",
+     "detail": {
+      "pending": "TMDB API Read Access Token Will be removed on save Undo",
+      "restored": "Configured"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery: the stand-in TMDB over HTTPS accepts the token; the step is done and Continue unlocks",
+     "verdict": "PASS",
+     "detail": "TMDB accepted the token. (ok)"
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery DTO says configured and carries no token value",
+     "verdict": "PASS",
+     "detail": {
+      "tokenConfigured": true,
+      "verified": true
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Continue moves to Download client",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Download client inside a library root is refused (destination_inside_library)",
+     "verdict": "PASS",
+     "detail": "The download folder is inside a watched library folder; the library would scan partial downloads. (destination_inside_library)"
+    },
+    {
+     "step": "wizard",
+     "check": "Download folder on a second filesystem (/dev/shm) is refused (destination_not_same_filesystem)",
+     "verdict": "PASS",
+     "detail": "No movie or TV library root shares the download folder's filesystem and mount, so imports could not hardlink. (destination_not_same_filesystem)"
+    },
+    {
+     "step": "wizard",
+     "check": "The download folder on the library filesystem is accepted",
+     "verdict": "PASS",
+     "detail": "Saved. Test the client before grabbing."
+    },
+    {
+     "step": "wizard",
+     "check": "Test verifies the stand-in Transmission and the download folder",
+     "verdict": "PASS",
+     "detail": "Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"
+    },
+    {
+     "step": "wizard",
+     "check": "Saving the first download client selects it, so step 2 can finish inside step 2",
+     "verdict": "PASS",
+     "detail": {
+      "reasons": []
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "An unverified mapping keeps the step open and Continue refused",
+     "verdict": "PASS",
+     "detail": {
+      "pill": "The mapped folder does not exist or cannot be read.",
+      "status": "pending",
+      "reasons": [
+       "path_mapping_unverified"
+      ],
+      "shown": "This step is not done yet. A path mapping has not been verified. Continue"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "The corrected mapping verifies",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Test import path (server): an unmapped path is named; the mapped download folder hardlinks into the libraries",
+     "verdict": "PASS",
+     "detail": {
+      "unmapped": "path_unmapped",
+      "mapped": "ok"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Test import path (page): the result is shown and stays",
+     "verdict": "PASS",
+     "detail": {
+      "unmappedShown": "No mapping turns this client path into a local path. (path_unmapped)",
+      "unmappedFinal": "No mapping turns this client path into a local path. (path_unmapped)",
+      "probedShown": "The folder can receive a hardlink from the library mount. (ok)",
+      "probedFinal": "The folder can receive a hardlink from the library mount. (ok)"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Download client step done; Continue unlocks",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Continue moves to Indexers with Continue refused",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "step": "resume",
+   "at": "2026-09-24T12:43:08.648Z",
+   "results": [
+    {
+     "step": "resume",
+     "check": "A new browser session resumes the wizard at the first incomplete step",
+     "verdict": "PASS",
+     "detail": {
+      "step": "indexers"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr: a wrong API key fails the Test (unauthorized)",
+     "verdict": "PASS",
+     "detail": "Prowlarr refused the API key. (unauthorized)"
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr: the right key passes the Test",
+     "verdict": "PASS",
+     "detail": "Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin"
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr Sync adds the stand-in torrent indexer and verifies its caps",
+     "verdict": "PASS",
+     "detail": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr Sync: the page keeps showing the outcome",
+     "verdict": "PASS",
+     "detail": {
+      "final": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Indexers step done: one synced, enabled, verified indexer holding no key of its own",
+     "verdict": "PASS",
+     "detail": [
+      {
+       "name": "JellyfinMod Standin Indexer",
+       "managedBy": "prowlarr",
+       "verified": true,
+       "apiKeyConfigured": false
+      }
+     ]
+    },
+    {
+     "step": "resume",
+     "check": "Continue moves to Quality profile",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "An empty profile is refused",
+     "verdict": "PASS",
+     "detail": "The configuration is not valid. (invalid_qualities)"
+    },
+    {
+     "step": "resume",
+     "check": "A cutoff outside the allowed qualities is refused",
+     "verdict": "PASS",
+     "detail": {
+      "cutoff": "The cutoff must be one of the profile's allowed qualities, and upgrades need a cutoff. (invalid_cutoff)",
+      "allowed": "webdl-1080p",
+      "cutoffQuality": "bluray-720p"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "A valid profile made default completes the step",
+     "verdict": "PASS",
+     "detail": {
+      "quality": "webdl-1080p"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Grabbing turns on once every step passed",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "Setup reports complete; the optional step shows retention, automation and the interface",
+     "verdict": "PASS",
+     "detail": {
+      "complete": true,
+      "steps": [
+       "discovery:done",
+       "downloadClient:done",
+       "indexers:done",
+       "qualityProfile:done",
+       "enable:done",
+       "optional:done"
+      ]
+     }
+    },
+    {
+     "step": "import-on",
+     "check": "Import turned on from the settings area",
+     "verdict": "PASS"
+    },
+    {
+     "step": "import-on",
+     "check": "With setup complete the Home banner is gone",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "import-on",
+   "at": "2026-09-24T12:43:18.658Z",
+   "results": [
+    {
+     "step": "import-on",
+     "check": "Import turned on from the settings area",
+     "verdict": "PASS"
+    },
+    {
+     "step": "import-on",
+     "check": "With setup complete the Home banner is gone",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "step": "tests",
+   "at": "2026-09-24T12:45:15.924Z",
+   "results": [
+    {
+     "step": "tests",
+     "check": "Client password: Clear is pending until save and Undo restores Configured",
+     "verdict": "PASS"
+    },
+    {
+     "step": "tests",
+     "check": "Transmission Test with a wrong password",
+     "verdict": "PASS",
+     "detail": "Transmission rejected its credentials. (client_auth_failed)"
+    },
+    {
+     "step": "tests",
+     "check": "After saving a replaced password the field returns to Configured",
+     "verdict": "PASS",
+     "detail": {
+      "stillEditing": false
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Client password Clear saved: not configured, and the Test is refused",
+     "verdict": "PASS",
+     "detail": {
+      "passwordConfigured": false,
+      "test": "Transmission rejected its credentials. (client_auth_failed)"
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Client password replaced: the Test passes again",
+     "verdict": "PASS"
+    },
+    {
+     "step": "tests",
+     "check": "Transmission Test against an unreachable host",
+     "verdict": "PASS",
+     "detail": "Transmission could not be reached. (client_unreachable)"
+    },
+    {
+     "step": "tests",
+     "check": "Transmission Test against a host that never answers times out",
+     "verdict": "PASS",
+     "detail": {
+      "notice": "The download client did not answer in time. (timeout)",
+      "seconds": 21
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Transmission restored: the Test passes",
+     "verdict": "PASS"
+    },
+    {
+     "step": "tests",
+     "check": "A mapping into a library folder is refused (mapping_inside_library)",
+     "verdict": "PASS",
+     "detail": "A mapped download folder must not be inside a library folder; the library would scan partial downloads. (mapping_inside_library)"
+    },
+    {
+     "step": "tests",
+     "check": "Import path on another filesystem: the mapping is saved unverified (cross_filesystem) and imports cannot use it",
+     "verdict": "PASS",
+     "detail": {
+      "pill": "This folder is on a different filesystem from every library, so imports through it cannot hardlink.",
+      "probeThroughIt": "path_unmapped"
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Import path on another filesystem: the page shows the probe result and keeps it",
+     "verdict": "PASS",
+     "detail": {
+      "shown": "No mapping turns this client path into a local path. (path_unmapped)",
+      "final": "No mapping turns this client path into a local path. (path_unmapped)"
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Synced indexer Test: a failing feed is reported, a healthy one passes",
+     "verdict": "PASS",
+     "detail": {
+      "failing": "The indexer answered HTTP 500. (unavailable)",
+      "recovered": "Capabilities verified: 3 movie and 3 TV search parameters. (ok)"
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Add an indexer with its defaults saves (automation switch untouched)",
+     "verdict": "PASS"
+    },
+    {
+     "step": "tests",
+     "check": "Manual indexer Test with a wrong API key",
+     "verdict": "PASS",
+     "detail": "The indexer rejected its credentials. (auth_failed)"
+    },
+    {
+     "step": "tests",
+     "check": "Manual indexer Test against an unreachable host",
+     "verdict": "PASS",
+     "detail": "The indexer could not be reached. (unavailable)"
+    },
+    {
+     "step": "tests",
+     "check": "Manual indexer Test against a host that never answers",
+     "verdict": "PASS",
+     "detail": {
+      "notice": "The indexer did not answer in time. (timeout)",
+      "seconds": 21
+     }
+    },
+    {
+     "step": "tests",
+     "check": "The probe indexer is removed",
+     "verdict": "PASS"
+    },
+    {
+     "step": "tests",
+     "check": "Prowlarr Test with a wrong API key",
+     "verdict": "PASS",
+     "detail": "Prowlarr refused the API key. (unauthorized)"
+    },
+    {
+     "step": "tests",
+     "check": "Prowlarr Test against an unreachable host",
+     "verdict": "PASS",
+     "detail": "Prowlarr could not be reached from this server. (unreachable)"
+    },
+    {
+     "step": "tests",
+     "check": "Prowlarr Test against a host that never answers times out",
+     "verdict": "PASS",
+     "detail": {
+      "notice": "Prowlarr did not answer in time. (timeout)",
+      "seconds": 21
+     }
+    },
+    {
+     "step": "tests",
+     "check": "Prowlarr restored: Test passes, Sync keeps one verified synced indexer",
+     "verdict": "PASS",
+     "detail": {
+      "test": "Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin",
+      "sync": "Synced: 1 seen, 0 added, 0 changed, 0 turned off, 0 removed, 0 verified."
+     }
+    },
+    {
+     "step": "tests",
+     "check": "No settings response carries a secret value, reference or apikey (17 routes)",
+     "verdict": "PASS",
+     "detail": {
+      "leaks": []
+     }
+    },
+    {
+     "step": "tests",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  }
+ ]
+}
