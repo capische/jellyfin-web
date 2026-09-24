@@ -116,8 +116,10 @@ export interface RetentionWarning {
     deadline: string;
     /** Why the window started, for example `watched on another device (Trakt)`. */
     cause: string;
-    /** The files that will be deleted; kept files are left out. */
+    /** The files that will be deleted; kept files are left out. Empty for ordinary users, who see the date and cause (RET2-R10). */
     files: string[];
+    /** The date has passed: the files go at the next retention run (RET2-R5). */
+    overdue?: boolean;
 }
 
 export interface RetentionSummary {
