@@ -366,8 +366,13 @@ Kept current as work lands. Model: Opus, effort high.
 
 ### Handover — 2026-09-24, retention decisions and review fixes (Opus 5.5, high)
 
-**Stopped at the 80 % usage pause.** Top of the list: **Q8 (retention-start warning) is half done** —
-the plugin records `retention_started` (plugin `29d2648`); the web warning is not built.
+**Resumed past the 80 % pause at the user's request (2026-09-24).** Since the first handover: Q9 (grace
+and the episode floor count from the first-ever switch-on; plugin `1c47d8b`, migration
+`PhaseTenFirstEnabled`), Q10 (upgrades replace at once again, same commit), the Jellyfin 12.0.0 guards
+(`versions_untracked` for movies, the episode guard extended to extra versions, file comparison by path,
+`retention_reset` history when a clock resets because a file was not observed; plugin `c7f509e`), and Q8/Q11
+(the detail warning with date, cause and files for every viewer, Keep for admins; plugin `07f2af7`, web
+`d57459b9a8`). Next: deploy to 18096 and the live run.
 
 Done, committed on `p10-retention`, **not deployed and not verified live** (18096 still runs
 `5637362` + `9d6d261`):
