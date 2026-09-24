@@ -82,6 +82,7 @@ target=web
 build=1
 restart=1
 test_instance=0
+plugin_web=0
 
 die() {
     echo "$*" >&2
@@ -107,6 +108,9 @@ and restarting the container.
 Options:
   -l, --local        Build dist/ locally and rsync it to the host.
       --plugin       With --local, deploy only JellyfinMod; leave dist/ untouched.
+      --plugin-web   With --local --test, build dist/, zip it into jellyfinmod-web.zip and
+                     deploy JellyfinMod with that bundle, which the plugin serves and puts
+                     at /web itself. The host's web directory is not synced.
       --test         Target the isolated jellyfinmod-test service, never the default service.
       --host HOST    SSH host for --local.
       --path PATH    Web checkout, relative to the deploy account's home.
@@ -122,6 +126,10 @@ while (($#)); do
     case "$1" in
         -l | --local) mode=local ;;
         --plugin) target=plugin ;;
+        --plugin-web)
+            target=plugin
+            plugin_web=1
+            ;;
         --test) test_instance=1 ;;
         --host)
             [[ $# -ge 2 ]] || die "--host needs a value"
@@ -163,6 +171,11 @@ fi
 
 if [[ $target == plugin && $mode != local ]]; then
     die "--plugin requires --local; the plugin is built from the local plugin checkout."
+fi
+
+# The bundle is mod work: it only ever goes to the isolated instance.
+if ((plugin_web && !test_instance)); then
+    die "--plugin-web requires --test; the plugin-served interface is never deployed to production."
 fi
 
 rule() {
@@ -270,6 +283,24 @@ deploy_from_local() {
     fi
 }
 
+# Build dist/ and zip it, without source maps, as the bundle the plugin serves (PHASE7 §4.5).
+package_web_bundle() {
+    local binary_dir="$1"
+    cd "$SCRIPT_DIR"
+    if ((build)); then
+        npm run build:production
+    fi
+    local required
+    for required in index.html jellyfinmod.html jellyfinmod-web.json; do
+        [[ -s dist/$required ]] || die "dist/$required is missing or empty; refusing to package the bundle."
+    done
+    mkdir -p "$binary_dir"
+    binary_dir="$(cd -- "$binary_dir" && pwd)"
+    rm -f "$binary_dir/jellyfinmod-web.zip"
+    (cd dist && zip -q -r -X "$binary_dir/jellyfinmod-web.zip" . -x '*.map')
+    echo "Packaged web bundle $(sed -n 's/.*"bundleId": *"\([^"]*\)".*/\1/p' dist/jellyfinmod-web.json | head -n 1)"
+}
+
 deploy_plugin_from_local() {
     local project="${JELLYFIN_PLUGIN_PROJECT:-$SCRIPT_DIR/../plugin/JellyfinMod/JellyfinMod.csproj}"
     local plugin_dir="$plugin_dir_default"
@@ -283,6 +314,9 @@ deploy_plugin_from_local() {
         "$dotnet" build -c Release "$project"
     fi
     [[ -f $package_script ]] || die "Plugin packaging script missing: $package_script"
+    if ((plugin_web)); then
+        package_web_bundle "$binary_dir"
+    fi
     plugin_package_dir="$(mktemp -d "${TMPDIR:-/tmp}/jellyfin-plugin.XXXXXX")"
     "$python" "$package_script" "$binary_dir" "$plugin_package_dir"
     # Values are embedded in a single-quoted remote command below.
@@ -323,9 +357,11 @@ mkdir -p -- '$plugin_dir'
 EOF
     # Copy only the generated package files, without --delete; other plugins stay intact.
     # Jellyfin 10.11 supplies the compatible EF Core/SQLite runtime dependencies.
-    rsync --archive --compress --human-readable \
-        "$plugin_package_dir/JellyfinMod.dll" "$plugin_package_dir/logo.png" \
-        "$plugin_package_dir/meta.json" "$ssh_host:$plugin_dir/"
+    local files=("$plugin_package_dir/JellyfinMod.dll" "$plugin_package_dir/logo.png" "$plugin_package_dir/meta.json")
+    if ((plugin_web)); then
+        files+=("$plugin_package_dir/jellyfinmod-web.zip")
+    fi
+    rsync --archive --compress --human-readable "${files[@]}" "$ssh_host:$plugin_dir/"
     if ((restart)); then
         restart_jellyfin_remote
     fi
