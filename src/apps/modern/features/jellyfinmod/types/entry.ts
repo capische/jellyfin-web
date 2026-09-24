@@ -22,6 +22,9 @@ export enum FileState {
     Reclaimed = 'reclaimed'
 }
 
+/** An entry's or an episode's own retention override. */
+export type RetentionPolicyWire = 'inherit' | 'days' | 'never';
+
 export interface Entry {
     id: string;
     mediaType: 'movie' | 'series';
@@ -34,7 +37,7 @@ export interface Entry {
     posterPath?: string | null;
     metadata?: TmdbMetadata | null;
     reclaimAfterDays?: number | null;
-    retentionPolicy: 'inherit' | 'days' | 'never';
+    retentionPolicy: RetentionPolicyWire;
     state: FileState;
     monitored: boolean;
     /** Set from OnDisk onward. */
@@ -56,6 +59,8 @@ export interface HistoryRecord {
     eventType: string;
     summary: string;
     createdAt: string;
+    /** The episode the event is about; null for the title, absent from plugins before P10.E3. */
+    episodeId?: string | null;
 }
 
 export interface TmdbMetadata {
@@ -88,6 +93,8 @@ export interface EntryEpisode {
     airDate: string | null;
     runtimeMinutes: number | null;
     monitored: boolean;
+    /** The episode's own retention override; absent from plugins before P10.E3. */
+    retentionPolicy?: RetentionPolicyWire;
     state: FileState;
     availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;
@@ -102,7 +109,7 @@ export interface EntryEpisode {
 
 export interface RetentionSummary {
     enabled: boolean;
-    policy: 'inherit' | 'days' | 'never';
+    policy: RetentionPolicyWire;
     state: 'disabled' | 'blocked' | 'waiting' | 'scheduled' | 'mixed';
     reason: string;
     deadline: string | null;
