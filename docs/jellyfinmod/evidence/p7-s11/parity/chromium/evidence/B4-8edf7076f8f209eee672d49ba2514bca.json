@@ -1,0 +1,207 @@
+{
+  "itemId": "8edf7076f8f209eee672d49ba2514bca",
+  "title": "Interstate 60",
+  "api": {
+    "summary": "mkv h264 1920x1080 SDR",
+    "audio": [
+      "3",
+      "4"
+    ],
+    "subtitles": [
+      "0",
+      "1"
+    ]
+  },
+  "stock": {
+    "title": "Interstate 60",
+    "parentTitle": "",
+    "miscInfo": "2002 1h 52m R 7.4 | ",
+    "endsAt": "Ends at 11:08 PM",
+    "readAt": 1790253954050,
+    "audioOptions": [
+      "3:Russian - Dolby Digital - 5.1 - Default",
+      "4:English - Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:0 - Russian - SUBRIP - External",
+      "1:Russian - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "2:Interstate 60: Episodes of the Road 2002_WizardWhite - 1080p - H264 - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "7.4",
+    "criticRating": "",
+    "genres": [
+      "Adventure",
+      "Fantasy",
+      "Drama"
+    ],
+    "studios": [
+      "Fireworks Pictures",
+      "Redeemable Features"
+    ],
+    "director": [
+      "Bob Gale"
+    ],
+    "writer": [],
+    "tags": [
+      "motel",
+      "highway",
+      "convertible",
+      "surrealism",
+      "road trip",
+      "dream girl",
+      "judgment",
+      "lawyer",
+      "parallel world",
+      "courtroom",
+      "inspirational",
+      "romantic"
+    ],
+    "overview": "An aspiring painter meets various characters and learns valuable lessons while traveling across America.",
+    "castIds": [
+      "833e6e2a3abf2420c7d896b7d703f801",
+      "77b892cfbd82d6d833fc568e6ef1da93",
+      "751a397737ea3ab52ee79e5bc8626fe3",
+      "f2b2a2a18149ac8c4423b482f320e700",
+      "0f8886a72d2e97826b78f66796e904b0",
+      "162b16d11dfcd259eb08c0a21043a20d",
+      "cb3b67bdb0d770692541f809ae9741f2",
+      "72ef42729d6ab049ab8434c001d31698",
+      "b9a096ecd328b62adaf5463050d0dc3b",
+      "df06958528e6cbc9c24650af2f676923",
+      "1000f834ee9d1211074f16e3c434b667",
+      "7265656eaea8a3aeed906d8915d6eb28",
+      "2d159a83409046d1b401c81af0fd1c59",
+      "94d3d29c14e581ca77d4c9a2c95f9a18",
+      "7a07e0ecf70d36300196ad9f10619dd7",
+      "50063c7388b7bd3443deb38a9be38a35",
+      "f3784e968d413925697fa6561d35db27",
+      "e6ebb0c95ecf40804657f4f1aefd4191",
+      "4e6911250c75934b910307b592ee6092",
+      "73f46b44e045a7de113ddaa35c9d022c",
+      "15ca16d63f0984d05309dacad8b831af",
+      "abc45a4d3c948f8cf21a9cd304e2729f",
+      "4de273351663accbb8124ffcf319c346",
+      "94b6d74a51126051ecbee44871647572",
+      "b9e4abb7aa3013aff4b0ed2da0797c55",
+      "5a54cd41cccbb11dfb42259001bda40c"
+    ],
+    "mediaInfoBadges": [
+      "2002",
+      "1h 52m",
+      "R",
+      "7.4"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/8edf7076f8f209eee672d49ba2514bca/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=f33e2381c2eb893c1bd3d90b76e14c86\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/8edf7076f8f209eee672d49ba2514bca/Images/Logo?tag=b28c3a41de6edbf6abb677dd7e38c146&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "8edf7076f8f209eee672d49ba2514bca",
+        "label": "Interstate 60 (2002) WEBDL-1080p"
+      }
+    ],
+    "sourceSelected": "8edf7076f8f209eee672d49ba2514bca",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Interstate 60",
+    "parentTitle": "",
+    "miscInfo": "2002 1h 52m R 7.4 | ",
+    "endsAt": "Ends at 11:08 PM",
+    "readAt": 1790253955302,
+    "audioOptions": [
+      "3:Russian - Dolby Digital - 5.1 - Default",
+      "4:English - Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "0:0 - Russian - SUBRIP - External",
+      "1:Russian - SUBRIP - External"
+    ],
+    "videoOptions": [
+      "2:Interstate 60: Episodes of the Road 2002_WizardWhite - 1080p - H264 - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "7.4",
+    "criticRating": "",
+    "genres": [
+      "Adventure",
+      "Fantasy",
+      "Drama"
+    ],
+    "studios": [
+      "Fireworks Pictures",
+      "Redeemable Features"
+    ],
+    "director": [
+      "Bob Gale"
+    ],
+    "writer": [],
+    "tags": [
+      "motel",
+      "highway",
+      "convertible",
+      "surrealism",
+      "road trip",
+      "dream girl",
+      "judgment",
+      "lawyer",
+      "parallel world",
+      "courtroom",
+      "inspirational",
+      "romantic"
+    ],
+    "overview": "An aspiring painter meets various characters and learns valuable lessons while traveling across America.",
+    "castIds": [
+      "833e6e2a3abf2420c7d896b7d703f801",
+      "77b892cfbd82d6d833fc568e6ef1da93",
+      "751a397737ea3ab52ee79e5bc8626fe3",
+      "f2b2a2a18149ac8c4423b482f320e700",
+      "0f8886a72d2e97826b78f66796e904b0",
+      "162b16d11dfcd259eb08c0a21043a20d",
+      "cb3b67bdb0d770692541f809ae9741f2",
+      "72ef42729d6ab049ab8434c001d31698",
+      "b9a096ecd328b62adaf5463050d0dc3b",
+      "df06958528e6cbc9c24650af2f676923",
+      "1000f834ee9d1211074f16e3c434b667",
+      "7265656eaea8a3aeed906d8915d6eb28",
+      "2d159a83409046d1b401c81af0fd1c59",
+      "94d3d29c14e581ca77d4c9a2c95f9a18",
+      "7a07e0ecf70d36300196ad9f10619dd7",
+      "50063c7388b7bd3443deb38a9be38a35",
+      "f3784e968d413925697fa6561d35db27",
+      "e6ebb0c95ecf40804657f4f1aefd4191",
+      "4e6911250c75934b910307b592ee6092",
+      "73f46b44e045a7de113ddaa35c9d022c",
+      "15ca16d63f0984d05309dacad8b831af",
+      "abc45a4d3c948f8cf21a9cd304e2729f",
+      "4de273351663accbb8124ffcf319c346",
+      "94b6d74a51126051ecbee44871647572",
+      "b9e4abb7aa3013aff4b0ed2da0797c55",
+      "5a54cd41cccbb11dfb42259001bda40c"
+    ],
+    "mediaInfoBadges": [
+      "2002",
+      "1h 52m",
+      "R",
+      "7.4"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/8edf7076f8f209eee672d49ba2514bca/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=f33e2381c2eb893c1bd3d90b76e14c86\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/8edf7076f8f209eee672d49ba2514bca/Images/Logo?tag=b28c3a41de6edbf6abb677dd7e38c146&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "8edf7076f8f209eee672d49ba2514bca",
+        "label": "Interstate 60 (2002) WEBDL-1080p"
+      }
+    ],
+    "sourceSelected": "8edf7076f8f209eee672d49ba2514bca",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}

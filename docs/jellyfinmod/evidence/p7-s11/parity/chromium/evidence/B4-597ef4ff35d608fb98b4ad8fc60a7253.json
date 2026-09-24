@@ -1,0 +1,196 @@
+{
+  "itemId": "597ef4ff35d608fb98b4ad8fc60a7253",
+  "title": "Nightbitch",
+  "api": {
+    "summary": "mkv hevc 3840x2160 SDR",
+    "audio": [
+      "1"
+    ],
+    "subtitles": [
+      "2",
+      "3"
+    ]
+  },
+  "stock": {
+    "title": "Nightbitch",
+    "parentTitle": "",
+    "miscInfo": "2024 1h 40m R 5.7 59 | ",
+    "endsAt": "Ends at 12:25 AM",
+    "readAt": 1790253948925,
+    "audioOptions": [
+      "1:English - Dolby Digital+ - 5.1 - Default - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:English - SUBRIP",
+      "3:English [SDH] - Hearing Impaired - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:4K HEVC SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "5.7",
+    "criticRating": "59",
+    "genres": [
+      "Comedy",
+      "Horror"
+    ],
+    "studios": [
+      "Annapurna Pictures",
+      "Bond Group Entertainment",
+      "Defiant By Nature",
+      "Archer Gray"
+    ],
+    "director": [
+      "Marielle Heller"
+    ],
+    "writer": [],
+    "tags": [
+      "based on novel or book",
+      "melancholy",
+      "satire",
+      "magic realism",
+      "metamorphosis",
+      "suburbanite",
+      "motherhood",
+      "playful",
+      "body horror"
+    ],
+    "overview": "A woman, thrown into the stay-at-home routine of raising a toddler in the suburbs, slowly embraces the feral power deeply rooted in motherhood, as she becomes increasingly aware of the bizarre and undeniable signs that she may be turning into a dog.",
+    "castIds": [
+      "e690d435964c95b28936e74ebd5fa1f2",
+      "4df6a38391d5e01cf679de61bfe31be0",
+      "0341bff625be6104a789954468ca6c38",
+      "915515e7c1d1b769d5b5e27eadba8b4c",
+      "a0e73cca238c0be5eabe43c3db938abb",
+      "bf73a74abbb214f2e92aa73a947caa77",
+      "c0957cbf2d7e95634153c4d1964539f0",
+      "6398800b1454026bd20d6bc52a5f5a4f",
+      "009fb90fd4627f69d425820388e6362e",
+      "a533e0d78ffd2d6aa6de2c51efe27fc9",
+      "af8c4b1f762289d542317ac05b12dae4",
+      "b2501315a0c20168387be03aff06c0de",
+      "06a95ad66cb4245494f5e4095641ab3b",
+      "f966076217ba4142001aeb691b778231",
+      "79c8cf8a4cca45e858677063d75cdb41",
+      "86512905761dca575d70fc19f9557ef2",
+      "051c875244ee536c85bf719e7ed1865f",
+      "699226c76bb11f97d0733b549b098e4b",
+      "b205742c67cf5839ce16ee4e3143173e",
+      "da6b4b3a30c8b9dc697bf3f32cbff8ad",
+      "7e12b95990874053c430eff4d7ce003d",
+      "ddcc561ca0817596e0b9e14287e4ed1f",
+      "ddcc561ca0817596e0b9e14287e4ed1f"
+    ],
+    "mediaInfoBadges": [
+      "2024",
+      "1h 40m",
+      "R",
+      "5.7",
+      "59"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=79938f17726ca0592ba5dd1165522b12\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Logo?tag=d84ad2c00776d94860d5e8e02b83f365&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "597ef4ff35d608fb98b4ad8fc60a7253",
+        "label": "Nightbitch (2024) WEBDL-2160p"
+      }
+    ],
+    "sourceSelected": "597ef4ff35d608fb98b4ad8fc60a7253",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Nightbitch",
+    "parentTitle": "",
+    "miscInfo": "2024 1h 40m R 5.7 59 | ",
+    "endsAt": "Ends at 12:25 AM",
+    "readAt": 1790253950177,
+    "audioOptions": [
+      "1:English - Dolby Digital+ - 5.1 - Default - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:English - SUBRIP",
+      "3:English [SDH] - Hearing Impaired - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:4K HEVC SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "5.7",
+    "criticRating": "59",
+    "genres": [
+      "Comedy",
+      "Horror"
+    ],
+    "studios": [
+      "Annapurna Pictures",
+      "Bond Group Entertainment",
+      "Defiant By Nature",
+      "Archer Gray"
+    ],
+    "director": [
+      "Marielle Heller"
+    ],
+    "writer": [],
+    "tags": [
+      "based on novel or book",
+      "melancholy",
+      "satire",
+      "magic realism",
+      "metamorphosis",
+      "suburbanite",
+      "motherhood",
+      "playful",
+      "body horror"
+    ],
+    "overview": "A woman, thrown into the stay-at-home routine of raising a toddler in the suburbs, slowly embraces the feral power deeply rooted in motherhood, as she becomes increasingly aware of the bizarre and undeniable signs that she may be turning into a dog.",
+    "castIds": [
+      "e690d435964c95b28936e74ebd5fa1f2",
+      "4df6a38391d5e01cf679de61bfe31be0",
+      "0341bff625be6104a789954468ca6c38",
+      "915515e7c1d1b769d5b5e27eadba8b4c",
+      "a0e73cca238c0be5eabe43c3db938abb",
+      "bf73a74abbb214f2e92aa73a947caa77",
+      "c0957cbf2d7e95634153c4d1964539f0",
+      "6398800b1454026bd20d6bc52a5f5a4f",
+      "009fb90fd4627f69d425820388e6362e",
+      "a533e0d78ffd2d6aa6de2c51efe27fc9",
+      "af8c4b1f762289d542317ac05b12dae4",
+      "b2501315a0c20168387be03aff06c0de",
+      "06a95ad66cb4245494f5e4095641ab3b",
+      "f966076217ba4142001aeb691b778231",
+      "79c8cf8a4cca45e858677063d75cdb41",
+      "86512905761dca575d70fc19f9557ef2",
+      "051c875244ee536c85bf719e7ed1865f",
+      "699226c76bb11f97d0733b549b098e4b",
+      "b205742c67cf5839ce16ee4e3143173e",
+      "da6b4b3a30c8b9dc697bf3f32cbff8ad",
+      "7e12b95990874053c430eff4d7ce003d",
+      "ddcc561ca0817596e0b9e14287e4ed1f",
+      "ddcc561ca0817596e0b9e14287e4ed1f"
+    ],
+    "mediaInfoBadges": [
+      "2024",
+      "1h 40m",
+      "R",
+      "5.7",
+      "59"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=79938f17726ca0592ba5dd1165522b12\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Logo?tag=d84ad2c00776d94860d5e8e02b83f365&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "597ef4ff35d608fb98b4ad8fc60a7253",
+        "label": "Nightbitch (2024) WEBDL-2160p"
+      }
+    ],
+    "sourceSelected": "597ef4ff35d608fb98b4ad8fc60a7253",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}

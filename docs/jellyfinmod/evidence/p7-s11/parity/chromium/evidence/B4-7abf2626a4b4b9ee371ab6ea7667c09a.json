@@ -1,0 +1,147 @@
+{
+  "itemId": "7abf2626a4b4b9ee371ab6ea7667c09a",
+  "title": "Oh Mom!",
+  "api": {
+    "summary": "mkv h264 1920x1080 SDR",
+    "audio": [
+      "1"
+    ],
+    "subtitles": [
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  "stock": {
+    "title": "Oh Mom!",
+    "parentTitle": "",
+    "miscInfo": "2026 1h 30m 8.5 | ",
+    "endsAt": "Ends at 12:16 AM",
+    "readAt": 1790253951486,
+    "audioOptions": [
+      "1:Оригінал E-AC3 5.1 640 Кбіт/с - Ukrainian - Dolby Digital+ - Default - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:Повні *.srt - Ukrainian - SUBRIP",
+      "3:SDH *.srt - Ukrainian - Hearing Impaired - SUBRIP",
+      "4:Повні *.srt - English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "8.5",
+    "criticRating": "",
+    "genres": [
+      "Comedy",
+      "Drama"
+    ],
+    "studios": [],
+    "director": [
+      "Oleh Borshchevskyi"
+    ],
+    "writer": [],
+    "tags": [
+      "didactic"
+    ],
+    "overview": "How much is contained in these two words—irritation, tenderness, laughter, love. And a little shame, when she knows everything about you. Even what you yourself have forgotten. This film is about all mothers and for all of us. About those moments when you say, “Mooom, don’t start”—and she starts. About the calls with the question, “Have you eaten?” when you are in a courtroom or on a date. About superpowers that work even thousands of kilometers away.",
+    "castIds": [
+      "3a8ab8e037bdae72f96d7c3a6cf6d0f9",
+      "61cd18b120bf13a7f2d3c00fc249ee52",
+      "f49df3bcebd379bc598ce13810e230c1",
+      "3e76375b6ecbc3cc410b4d526850a118",
+      "d013c76f9efd8e74ee82fca999e8d3d1",
+      "6134c077c8b015094e503da9b6734a1b",
+      "dacbb40f3273bfb89ee2018877ccf070",
+      "aba69cc347e0a891daf55073a5c4ffd2",
+      "308e5f2a8fd15538f18bc5dfa61f5fcf",
+      "243e4228046df35122621ffd1ce74e04",
+      "49151b2822e97b66b4b71e51ddcb8eb8",
+      "fc9469195ce8519b0cabd294c7531338"
+    ],
+    "mediaInfoBadges": [
+      "2026",
+      "1h 30m",
+      "8.5"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=50861a660b8be30f7ef5146ff784ce62\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Logo?tag=0cbae6e8f488025e75e50d6ae0d65068&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "7abf2626a4b4b9ee371ab6ea7667c09a",
+        "label": "Oh Mom! (2026) NF WEB-DL 1080p"
+      }
+    ],
+    "sourceSelected": "7abf2626a4b4b9ee371ab6ea7667c09a",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Oh Mom!",
+    "parentTitle": "",
+    "miscInfo": "2026 1h 30m 8.5 | ",
+    "endsAt": "Ends at 12:16 AM",
+    "readAt": 1790253952733,
+    "audioOptions": [
+      "1:Оригінал E-AC3 5.1 640 Кбіт/с - Ukrainian - Dolby Digital+ - Default - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:Повні *.srt - Ukrainian - SUBRIP",
+      "3:SDH *.srt - Ukrainian - Hearing Impaired - SUBRIP",
+      "4:Повні *.srt - English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "8.5",
+    "criticRating": "",
+    "genres": [
+      "Comedy",
+      "Drama"
+    ],
+    "studios": [],
+    "director": [
+      "Oleh Borshchevskyi"
+    ],
+    "writer": [],
+    "tags": [
+      "didactic"
+    ],
+    "overview": "How much is contained in these two words—irritation, tenderness, laughter, love. And a little shame, when she knows everything about you. Even what you yourself have forgotten. This film is about all mothers and for all of us. About those moments when you say, “Mooom, don’t start”—and she starts. About the calls with the question, “Have you eaten?” when you are in a courtroom or on a date. About superpowers that work even thousands of kilometers away.",
+    "castIds": [
+      "3a8ab8e037bdae72f96d7c3a6cf6d0f9",
+      "61cd18b120bf13a7f2d3c00fc249ee52",
+      "f49df3bcebd379bc598ce13810e230c1",
+      "3e76375b6ecbc3cc410b4d526850a118",
+      "d013c76f9efd8e74ee82fca999e8d3d1",
+      "6134c077c8b015094e503da9b6734a1b",
+      "dacbb40f3273bfb89ee2018877ccf070",
+      "aba69cc347e0a891daf55073a5c4ffd2",
+      "308e5f2a8fd15538f18bc5dfa61f5fcf",
+      "243e4228046df35122621ffd1ce74e04",
+      "49151b2822e97b66b4b71e51ddcb8eb8",
+      "fc9469195ce8519b0cabd294c7531338"
+    ],
+    "mediaInfoBadges": [
+      "2026",
+      "1h 30m",
+      "8.5"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=50861a660b8be30f7ef5146ff784ce62\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Logo?tag=0cbae6e8f488025e75e50d6ae0d65068&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "7abf2626a4b4b9ee371ab6ea7667c09a",
+        "label": "Oh Mom! (2026) NF WEB-DL 1080p"
+      }
+    ],
+    "sourceSelected": "7abf2626a4b4b9ee371ab6ea7667c09a",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}

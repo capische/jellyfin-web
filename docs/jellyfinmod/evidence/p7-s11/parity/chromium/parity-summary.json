@@ -1,0 +1,2396 @@
+{
+  "mode": "full",
+  "fullAcceptance": true,
+  "areas": "all",
+  "shape": "takeover",
+  "baseStock": "<test-host>/web-mod/9fe379afd867/index.html",
+  "baseMod": "<test-host>/web/",
+  "servedBundleId": "9fe379afd867",
+  "aborted": false,
+  "gateFailed": false,
+  "continuedPastGate": false,
+  "browser": {
+    "requestedTier": "chromium",
+    "profileDir": "<home>/Library/Caches/jellyfinmod-e2e/parity-profile-chromium",
+    "headless": true,
+    "name": "chromium",
+    "version": "153.0.8010.12"
+  },
+  "acceptanceEvidence": "Launched Playwright's bundled Chromium ({\"requestedTier\":\"chromium\",\"profileDir\":\"<home>/Library/Caches/jellyfinmod-e2e/parity-profile-chromium\",\"headless\":true,\"name\":\"chromium\",\"version\":\"153.0.8010.12\"}). Iteration evidence only: the workspace rules require the same checks to pass on real Google Chrome before anything is called accepted.",
+  "takeover": {
+    "before": {
+      "TakeoverEnabled": true,
+      "BundleId": "9fe379afd867",
+      "state": "patched"
+    },
+    "after": {
+      "state": "patched",
+      "bundleId": "9fe379afd867"
+    }
+  },
+  "header": {
+    "shape": "takeover",
+    "servedS": {
+      "meta": null,
+      "assetRoot": null,
+      "bundle": false,
+      "document": "/web-mod/9fe379afd867/index.html",
+      "stylesheetsAndScripts": [
+        "/web-mod/9fe379afd867/",
+        "/cv/js/sender/v1/",
+        "/web-mod/9fe379afd867/themes/dark/"
+      ]
+    },
+    "servedM": {
+      "meta": "9fe379afd867",
+      "assetRoot": "/web-mod/9fe379afd867/",
+      "bundle": true,
+      "document": "/web/",
+      "stylesheetsAndScripts": [
+        "/web-mod/9fe379afd867/",
+        "/cv/js/sender/v1/",
+        "/web-mod/9fe379afd867/themes/dark/"
+      ]
+    },
+    "health": {
+      "Version": "0.1.0.0",
+      "bundleId": "9fe379afd867",
+      "webCommit": "a279641ebf",
+      "hostVersion": "12.0.0.0",
+      "Capabilities": [
+        "browse.dueWithinDays",
+        "browse.features",
+        "retention.summary",
+        "discover.skipped",
+        "reconciliation.conflicts",
+        "reconciliation.orphans",
+        "entries.libraryBusy",
+        "entries.qualityProfile",
+        "acquisition.settings",
+        "acquisition.releases",
+        "acquisition.grabHold",
+        "queue",
+        "import",
+        "seedRelease",
+        "automation",
+        "versions",
+        "ui",
+        "ui.web",
+        "ui.takeover",
+        "settings.overview",
+        "settings.discovery",
+        "settings.seedProtection",
+        "settings.retention",
+        "setup",
+        "acquisition.prowlarr"
+      ]
+    },
+    "webHeadShort": "dd625d6b66",
+    "stockRequestsUnderWeb": [],
+    "userViews": [
+      {
+        "Id": "a656b907eb3a73532e40e44b968d0225",
+        "Name": "Shows",
+        "CollectionType": "tvshows"
+      },
+      {
+        "Id": "f137a2dd21bbc1b99aa5c0f6bf02a805",
+        "Name": "Movies",
+        "CollectionType": "movies"
+      }
+    ],
+    "b0Sample": [
+      {
+        "Id": "0040709081e66d6e20f562643b81a00f",
+        "Name": "David Beckham Infamous"
+      },
+      {
+        "Id": "09be82fc66ac0aa8a3a9df0450fa7406",
+        "Name": "Lessons of Tolerance"
+      },
+      {
+        "Id": "0b112cfd083cae1722f28359797f5b65",
+        "Name": "Highlander"
+      },
+      {
+        "Id": "1a0b81d432dbe0cc9efb467117cf50ac",
+        "Name": "Highlander II: The Quickening"
+      },
+      {
+        "Id": "1c3a1ac050339e228c8b6033556ff638",
+        "Name": "Mercy"
+      },
+      {
+        "Id": "28f5b20511edaa6c2129d8b4c98eeaee",
+        "Name": "The Minimalists: Less Is Now"
+      },
+      {
+        "Id": "3a3aeead9e4e7985a607380369528e40",
+        "Name": "After Porn Ends"
+      },
+      {
+        "Id": "597ef4ff35d608fb98b4ad8fc60a7253",
+        "Name": "Nightbitch"
+      },
+      {
+        "Id": "7abf2626a4b4b9ee371ab6ea7667c09a",
+        "Name": "Oh Mom!"
+      },
+      {
+        "Id": "8edf7076f8f209eee672d49ba2514bca",
+        "Name": "Interstate 60"
+      },
+      {
+        "Id": "9f87e86fdb9995e801fd25c675b66cf4",
+        "Name": "The Wonderful Story of Henry Sugar"
+      },
+      {
+        "Id": "b00893883b6bbd226e9bd99469ec3128",
+        "Name": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM"
+      }
+    ],
+    "fixtures": {
+      "C-4KHDR": {
+        "id": "1c3a1ac050339e228c8b6033556ff638",
+        "title": "Mercy",
+        "mediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+        "container": "mp4",
+        "width": 3840,
+        "videoRange": "HDR"
+      },
+      "C-1080": {
+        "id": "09be82fc66ac0aa8a3a9df0450fa7406",
+        "title": "Lessons of Tolerance",
+        "mediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+        "container": "mkv",
+        "width": 1920,
+        "videoRange": "SDR"
+      },
+      "C-MULTIAUDIO": {
+        "id": "0b112cfd083cae1722f28359797f5b65",
+        "title": "Highlander",
+        "mediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+        "container": "mkv",
+        "width": 1920,
+        "videoRange": "SDR"
+      },
+      "C-EMBEDSUB": {
+        "id": "0b112cfd083cae1722f28359797f5b65",
+        "title": "Highlander",
+        "mediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+        "container": "mkv",
+        "width": 1920,
+        "videoRange": "SDR"
+      },
+      "C-EXTSUB": {
+        "id": "0040709081e66d6e20f562643b81a00f",
+        "title": "David Beckham Infamous",
+        "mediaSourceId": "0040709081e66d6e20f562643b81a00f",
+        "container": "avi",
+        "width": 720,
+        "videoRange": "SDR"
+      },
+      "C-AVI": {
+        "id": "0040709081e66d6e20f562643b81a00f",
+        "title": "David Beckham Infamous",
+        "mediaSourceId": "0040709081e66d6e20f562643b81a00f",
+        "container": "avi",
+        "width": 720,
+        "videoRange": "SDR"
+      },
+      "C-TVNEXT": {
+        "id": "df0cd16ee814dd955959d4b8b829f5d9",
+        "title": "The Wheel of Time - Leavetaking",
+        "seriesId": "024428fd966bba9ac17dcd3acad1bd81",
+        "nextEpisodeId": "09bba766e4f5fbad18e6a81e4e4bd3a2",
+        "mediaSourceId": "df0cd16ee814dd955959d4b8b829f5d9"
+      },
+      "C-TWOVER": {
+        "id": "b5399065a2bf8fbbf6effe875180b811",
+        "title": "Night of the Living Dead",
+        "sources": [
+          {
+            "id": "b5399065a2bf8fbbf6effe875180b811",
+            "container": "mp4",
+            "width": 1472
+          },
+          {
+            "id": "2558c83d688659351b80a17491b5f160",
+            "container": "mp4",
+            "width": 1280
+          }
+        ]
+      }
+    }
+  },
+  "verdictCounts": {
+    "PASS": 245,
+    "SKIPPED": 2,
+    "RECORDED": 10,
+    "FAIL": 1,
+    "EXPECTED-FALLBACK": 4
+  },
+  "rows": [
+    {
+      "id": "preflight",
+      "area": "Preflight",
+      "feature": "Same user, same views, bundle correctly rooted",
+      "stock": "ok",
+      "mod": "ok",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A1",
+      "area": "Inventory",
+      "feature": "Movies total count (API, both tabs)",
+      "stock": 55,
+      "mod": 55,
+      "verdict": "PASS"
+    },
+    {
+      "id": "A1",
+      "area": "Inventory",
+      "feature": "TV total count (API, both tabs)",
+      "stock": 105,
+      "mod": 105,
+      "verdict": "PASS"
+    },
+    {
+      "id": "A1",
+      "area": "Inventory",
+      "feature": "Movies grid reported total",
+      "stock": 55,
+      "mod": 55,
+      "verdict": "PASS"
+    },
+    {
+      "id": "A1",
+      "area": "Inventory",
+      "feature": "TV grid reported total",
+      "stock": 105,
+      "mod": 105,
+      "verdict": "PASS"
+    },
+    {
+      "id": "A2",
+      "area": "Inventory",
+      "feature": "movies id set (stock vs mod), lazy-load mode paged/paged",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A2",
+      "area": "Inventory",
+      "feature": "tv id set (stock vs mod), lazy-load mode paged/paged",
+      "stock": "105 ids",
+      "mod": "105 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A3",
+      "area": "Seasons/Episodes",
+      "feature": "Seasons and episodes for 40 series",
+      "stock": "match",
+      "mod": "match",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A4",
+      "area": "Sort orders",
+      "feature": "Movies sort: Name Ascending",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A4",
+      "area": "Sort orders",
+      "feature": "Movies sort: Date Added Descending",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A4",
+      "area": "Sort orders",
+      "feature": "Movies sort: Release Date Descending",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A4",
+      "area": "Sort orders",
+      "feature": "Movies sort: Community Rating Descending",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A5",
+      "area": "Filters",
+      "feature": "Movies filter: Genre: Action",
+      "stock": "6 ids",
+      "mod": "6 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A5",
+      "area": "Filters",
+      "feature": "Movies filter: Year: 2025",
+      "stock": "9 ids",
+      "mod": "9 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A5",
+      "area": "Filters",
+      "feature": "Movies filter: Played",
+      "stock": "9 ids",
+      "mod": "9 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A5",
+      "area": "Filters",
+      "feature": "Movies filter: Unplayed",
+      "stock": "46 ids",
+      "mod": "46 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A5",
+      "area": "Filters",
+      "feature": "Movies filter: Favourites",
+      "stock": "1 ids",
+      "mod": "1 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A6",
+      "area": "Collections",
+      "feature": "Movies collections tab id set",
+      "stock": "55 ids",
+      "mod": "55 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "A6",
+      "area": "Collections",
+      "feature": "First boxset children",
+      "stock": "n/a",
+      "mod": "n/a",
+      "verdict": "SKIPPED"
+    },
+    {
+      "id": "A7",
+      "area": "Non-Latin titles",
+      "feature": "Non-Latin titles present",
+      "stock": "none in library",
+      "mod": "none in library",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "B0",
+      "area": "Detail sample",
+      "feature": "Sample chosen: 12 movies + 105 series",
+      "stock": "[\"0040709081e66d6e20f562643b81a00f\",\"09be82fc66ac0aa8a3a9df0450fa7406\",\"0b112cfd083cae1722f28359797f5b65\",\"1a0b81d432dbe0cc9efb467117cf50ac\",\"1c3a1ac050339e228c8b6033556ff638\",\"28f5b20511edaa6c2129d8b4c98eeaee\",\"3a3aeead9e4e7985a607380369528e40\",\"597ef4ff35d608fb98b4ad8fc60a7253\",\"7abf2626a4b4b9ee371ab6ea7667c09a\",\"8edf7076f8f209eee672d49ba2514bca\",\"9f87e86fdb9995e801fd25c675b66cf4\",\"b00893883b6bbd226e9bd99469ec3128\"]",
+      "mod": "same sample (data-level, both sides read the same ids)",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Title",
+      "stock": "David Beckham Infamous",
+      "mod": "David Beckham Infamous",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Misc info (year/runtime)",
+      "stock": "2021 1h 11m |",
+      "mod": "2021 1h 11m |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Official rating",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Genres",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Overview",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Studios",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): Tags",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): primary image path/tag",
+      "stock": "/Items/0040709081e66d6e20f562643b81a00f/Images/Primary",
+      "mod": "/Items/0040709081e66d6e20f562643b81a00f/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): cast id sequence",
+      "stock": "0",
+      "mod": "0",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Title",
+      "stock": "Lessons of Tolerance",
+      "mod": "Lessons of Tolerance",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Misc info (year/runtime)",
+      "stock": "2024 1h 35m 7.1 |",
+      "mod": "2024 1h 35m 7.1 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Official rating",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Genres",
+      "stock": "Comedy, Drama",
+      "mod": "Comedy, Drama",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Overview",
+      "stock": "A Ukrainian LGBTQ+ acceptance group is formed by teacher Nadia. A stereotypicall",
+      "mod": "A Ukrainian LGBTQ+ acceptance group is formed by teacher Nadia. A stereotypicall",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Studios",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): Tags",
+      "stock": "lgbt, social justice, gay theme, social acceptance",
+      "mod": "lgbt, social justice, gay theme, social acceptance",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): primary image path/tag",
+      "stock": "/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Primary",
+      "mod": "/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): cast id sequence",
+      "stock": "9",
+      "mod": "9",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Title",
+      "stock": "Highlander",
+      "mod": "Highlander",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Misc info (year/runtime)",
+      "stock": "1986 1h 57m R 6.9 70 |",
+      "mod": "1986 1h 57m R 6.9 70 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Official rating",
+      "stock": "R",
+      "mod": "R",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Genres",
+      "stock": "Adventure, Action, Fantasy",
+      "mod": "Adventure, Action, Fantasy",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Overview",
+      "stock": "He fought his first battle on the Scottish Highlands in 1536. He will fight his ",
+      "mod": "He fought his first battle on the Scottish Highlands in 1536. He will fight his ",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Studios",
+      "stock": "Davis-Panzer Productions, Thorn EMI Screen Entertainment, Highlander Productions",
+      "mod": "Davis-Panzer Productions, Thorn EMI Screen Entertainment, Highlander Productions",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): Tags",
+      "stock": "new york city, martial arts, swordplay, immortality, scotland, sword, sword figh",
+      "mod": "new york city, martial arts, swordplay, immortality, scotland, sword, sword figh",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): primary image path/tag",
+      "stock": "/Items/0b112cfd083cae1722f28359797f5b65/Images/Primary",
+      "mod": "/Items/0b112cfd083cae1722f28359797f5b65/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): cast id sequence",
+      "stock": "34",
+      "mod": "34",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Title",
+      "stock": "Highlander II: The Quickening",
+      "mod": "Highlander II: The Quickening",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Misc info (year/runtime)",
+      "stock": "1991 1h 50m R 4.7 |",
+      "mod": "1991 1h 50m R 4.7 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Official rating",
+      "stock": "R",
+      "mod": "R",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Genres",
+      "stock": "Fantasy, Action, Adventure, Science Fiction",
+      "mod": "Fantasy, Action, Adventure, Science Fiction",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Overview",
+      "stock": "The Prize has been won. Connor MacLeod is mortal... Now an old man on the verge ",
+      "mod": "The Prize has been won. Connor MacLeod is mortal... Now an old man on the verge ",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Studios",
+      "stock": "Davis-Panzer Productions, Harat Investments, Lamb Bear Entertainment, Interstar,",
+      "mod": "Davis-Panzer Productions, Harat Investments, Lamb Bear Entertainment, Interstar,",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): Tags",
+      "stock": "new york city, martial arts, immortality, scotland, sword fight, fictional war, ",
+      "mod": "new york city, martial arts, immortality, scotland, sword fight, fictional war, ",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): primary image path/tag",
+      "stock": "/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Primary",
+      "mod": "/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): cast id sequence",
+      "stock": "20",
+      "mod": "20",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Title",
+      "stock": "Mercy",
+      "mod": "Mercy",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Misc info (year/runtime)",
+      "stock": "2026 1h 40m PG-13 7.1 |",
+      "mod": "2026 1h 40m PG-13 7.1 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Official rating",
+      "stock": "PG-13",
+      "mod": "PG-13",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Genres",
+      "stock": "Science Fiction, Thriller, Crime, Mystery",
+      "mod": "Science Fiction, Thriller, Crime, Mystery",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Overview",
+      "stock": "In the near future, a detective stands on trial accused of murdering his wife. H",
+      "mod": "In the near future, a detective stands on trial accused of murdering his wife. H",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Studios",
+      "stock": "Atlas Entertainment, Amazon MGM Studios, Bazelevs",
+      "mod": "Atlas Entertainment, Amazon MGM Studios, Bazelevs",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): Tags",
+      "stock": "trakt, watched, race against time, mission, artificial intelligence (a.i.), bomb",
+      "mod": "trakt, watched, race against time, mission, artificial intelligence (a.i.), bomb",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): primary image path/tag",
+      "stock": "/Items/1c3a1ac050339e228c8b6033556ff638/Images/Primary",
+      "mod": "/Items/1c3a1ac050339e228c8b6033556ff638/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): cast id sequence",
+      "stock": "31",
+      "mod": "31",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Title",
+      "stock": "The Minimalists: Less Is Now",
+      "mod": "The Minimalists: Less Is Now",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Misc info (year/runtime)",
+      "stock": "2021 54m 6.1 |",
+      "mod": "2021 54m 6.1 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Official rating",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Genres",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Overview",
+      "stock": "They've built a movement out of minimalism. Longtime friends Joshua Fields Millb",
+      "mod": "They've built a movement out of minimalism. Longtime friends Joshua Fields Millb",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Studios",
+      "stock": "Booklight Productions, Catalyst Films",
+      "mod": "Booklight Productions, Catalyst Films",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): Tags",
+      "stock": "minimalism, inspirational, intimate, factual",
+      "mod": "minimalism, inspirational, intimate, factual",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): primary image path/tag",
+      "stock": "/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Primary",
+      "mod": "/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): cast id sequence",
+      "stock": "3",
+      "mod": "3",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Title",
+      "stock": "After Porn Ends",
+      "mod": "After Porn Ends",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Misc info (year/runtime)",
+      "stock": "2012 1h 33m R 5.6 |",
+      "mod": "2012 1h 33m R 5.6 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Official rating",
+      "stock": "R",
+      "mod": "R",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Genres",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Overview",
+      "stock": "Documentary examining what happens to some of the biggest names in the history o",
+      "mod": "Documentary examining what happens to some of the biggest names in the history o",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Studios",
+      "stock": "Oxymoron Entertainment, Mallick Media",
+      "mod": "Oxymoron Entertainment, Mallick Media",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): Tags",
+      "stock": "porno, informative",
+      "mod": "porno, informative",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): primary image path/tag",
+      "stock": "/Items/3a3aeead9e4e7985a607380369528e40/Images/Primary",
+      "mod": "/Items/3a3aeead9e4e7985a607380369528e40/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): cast id sequence",
+      "stock": "17",
+      "mod": "17",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Title",
+      "stock": "Nightbitch",
+      "mod": "Nightbitch",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Misc info (year/runtime)",
+      "stock": "2024 1h 40m R 5.7 59 |",
+      "mod": "2024 1h 40m R 5.7 59 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Official rating",
+      "stock": "R",
+      "mod": "R",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Genres",
+      "stock": "Comedy, Horror",
+      "mod": "Comedy, Horror",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Overview",
+      "stock": "A woman, thrown into the stay-at-home routine of raising a toddler in the suburb",
+      "mod": "A woman, thrown into the stay-at-home routine of raising a toddler in the suburb",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Studios",
+      "stock": "Annapurna Pictures, Bond Group Entertainment, Defiant By Nature, Archer Gray",
+      "mod": "Annapurna Pictures, Bond Group Entertainment, Defiant By Nature, Archer Gray",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): Tags",
+      "stock": "based on novel or book, melancholy, satire, magic realism, metamorphosis, suburb",
+      "mod": "based on novel or book, melancholy, satire, magic realism, metamorphosis, suburb",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): primary image path/tag",
+      "stock": "/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Primary",
+      "mod": "/Items/597ef4ff35d608fb98b4ad8fc60a7253/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): cast id sequence",
+      "stock": "23",
+      "mod": "23",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Title",
+      "stock": "Oh Mom!",
+      "mod": "Oh Mom!",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Misc info (year/runtime)",
+      "stock": "2026 1h 30m 8.5 |",
+      "mod": "2026 1h 30m 8.5 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Official rating",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Genres",
+      "stock": "Comedy, Drama",
+      "mod": "Comedy, Drama",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Overview",
+      "stock": "How much is contained in these two words—irritation, tenderness, laughter, love.",
+      "mod": "How much is contained in these two words—irritation, tenderness, laughter, love.",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Studios",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): Tags",
+      "stock": "didactic",
+      "mod": "didactic",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): primary image path/tag",
+      "stock": "/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Primary",
+      "mod": "/Items/7abf2626a4b4b9ee371ab6ea7667c09a/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): cast id sequence",
+      "stock": "12",
+      "mod": "12",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Title",
+      "stock": "Interstate 60",
+      "mod": "Interstate 60",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Misc info (year/runtime)",
+      "stock": "2002 1h 52m R 7.4 |",
+      "mod": "2002 1h 52m R 7.4 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Official rating",
+      "stock": "R",
+      "mod": "R",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Genres",
+      "stock": "Adventure, Fantasy, Drama",
+      "mod": "Adventure, Fantasy, Drama",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Overview",
+      "stock": "An aspiring painter meets various characters and learns valuable lessons while t",
+      "mod": "An aspiring painter meets various characters and learns valuable lessons while t",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Studios",
+      "stock": "Fireworks Pictures, Redeemable Features",
+      "mod": "Fireworks Pictures, Redeemable Features",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): Tags",
+      "stock": "motel, highway, convertible, surrealism, road trip, dream girl, judgment, lawyer",
+      "mod": "motel, highway, convertible, surrealism, road trip, dream girl, judgment, lawyer",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): primary image path/tag",
+      "stock": "/Items/8edf7076f8f209eee672d49ba2514bca/Images/Primary",
+      "mod": "/Items/8edf7076f8f209eee672d49ba2514bca/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): cast id sequence",
+      "stock": "26",
+      "mod": "26",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Title",
+      "stock": "The Wonderful Story of Henry Sugar",
+      "mod": "The Wonderful Story of Henry Sugar",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Misc info (year/runtime)",
+      "stock": "2023 41m PG 7.3 95 |",
+      "mod": "2023 41m PG 7.3 95 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Official rating",
+      "stock": "PG",
+      "mod": "PG",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Genres",
+      "stock": "Fantasy, Adventure, Drama",
+      "mod": "Fantasy, Adventure, Drama",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Overview",
+      "stock": "A rich man learns about a guru who can see without using his eyes. He sets out t",
+      "mod": "A rich man learns about a guru who can see without using his eyes. He sets out t",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Studios",
+      "stock": "American Empirical Pictures, Indian Paintbrush",
+      "mod": "American Empirical Pictures, Indian Paintbrush",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): Tags",
+      "stock": "list-one, london, england, card game, casino, based on novel or book, gambling, ",
+      "mod": "list-one, london, england, card game, casino, based on novel or book, gambling, ",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): primary image path/tag",
+      "stock": "/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Primary",
+      "mod": "/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): cast id sequence",
+      "stock": "31",
+      "mod": "31",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Title",
+      "stock": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM",
+      "mod": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Misc info (year/runtime)",
+      "stock": "2022 1h 19m 6.6 |",
+      "mod": "2022 1h 19m 6.6 |",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Official rating",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Genres",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Overview",
+      "stock": "In the aftermath of George Floyd’s death, the media concocted a narrative that j",
+      "mod": "In the aftermath of George Floyd’s death, the media concocted a narrative that j",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Studios",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B1",
+      "area": "Detail metadata",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): Tags",
+      "stock": "",
+      "mod": "",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B2",
+      "area": "Artwork",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): primary image path/tag",
+      "stock": "/Items/b00893883b6bbd226e9bd99469ec3128/Images/Primary",
+      "mod": "/Items/b00893883b6bbd226e9bd99469ec3128/Images/Primary",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B3",
+      "area": "Cast/crew",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): cast id sequence",
+      "stock": "30",
+      "mod": "30",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): media info badges (Ends at excluded)",
+      "stock": "2021 / 1h 11m",
+      "mod": "2021 / 1h 11m",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 11:56 PM @12:45:30Z",
+      "mod": "Ends at 11:56 PM @12:45:32Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): audio streams offered (detail select)",
+      "stock": "2:Dolby Digital - Stereo",
+      "mod": "2:Dolby Digital - Stereo",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 0:Undefined - SUBRIP - External",
+      "mod": "-1:Off / 0:Undefined - SUBRIP - External",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): media info badges (Ends at excluded)",
+      "stock": "2024 / 1h 35m / 7.1",
+      "mod": "2024 / 1h 35m / 7.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:21 AM @12:45:33Z",
+      "mod": "Ends at 12:21 AM @12:45:34Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): audio streams offered (detail select)",
+      "stock": "1:Main - Stereo - Default",
+      "mod": "1:Main - Stereo - Default",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): subtitle streams offered (detail select)",
+      "stock": "-1:Off",
+      "mod": "-1:Off",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): media info badges (Ends at excluded)",
+      "stock": "1986 / 1h 57m / R / 6.9 / 70",
+      "mod": "1986 / 1h 57m / R / 6.9 / 70",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:42 AM @12:45:35Z",
+      "mod": "Ends at 12:42 AM @12:45:37Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): audio streams offered (detail select)",
+      "stock": "1:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \"ICTV\", \"1+1\" - Dolby Digital - Stereo - Default / 2:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \"Україна\", \"NLO.TV\" - Dolby Digital - Stereo / 3:English | AC-3 | 5.1 | 640 kbps - Dolby Digital / 4:English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulcahy - Dolby Digital - Stereo",
+      "mod": "1:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \"ICTV\", \"1+1\" - Dolby Digital - Stereo - Default / 2:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \"Україна\", \"NLO.TV\" - Dolby Digital - Stereo / 3:English | AC-3 | 5.1 | 640 kbps - Dolby Digital / 4:English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulcahy - Dolby Digital - Stereo",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 5:Ukrainian | Forced - Default - SUBRIP / 6:Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - SUBRIP / 7:English | Full - SUBRIP / 8:English | SDH - SUBRIP",
+      "mod": "-1:Off / 5:Ukrainian | Forced - Default - SUBRIP / 6:Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - SUBRIP / 7:English | Full - SUBRIP / 8:English | SDH - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): media info badges (Ends at excluded)",
+      "stock": "1991 / 1h 50m / R / 4.7",
+      "mod": "1991 / 1h 50m / R / 4.7",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:35 AM @12:45:38Z",
+      "mod": "Ends at 12:35 AM @12:45:39Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): audio streams offered (detail select)",
+      "stock": "1:Дублированный (РТР) - Russian - Dolby Digital - Stereo - Default / 2:Дублированный (Хлопушка) - Russian - Dolby Digital - Stereo / 3:Многоголосый (DVD Group) - Russian - Dolby Digital - 5.1 / 4:Многоголосый (ТВЦ) - Russian - Dolby Digital - Stereo / 5:Многоголосый (СТС) - Russian - Dolby Digital - Stereo / 6:Двухголосый (Инис/ДТВ/7ТВ) - Russian - Dolby Digital - Stereo / 7:Двухголосый - Russian - Dolby Digital - 5.1 / 8:Авторский Ю.Живов - Russian - Dolby Digital - 5.1 / 9:Авторский С. Визгунов - Russian - Dolby Digital - 5.1 / 10:English - DTS-HD MA - 7.1",
+      "mod": "1:Дублированный (РТР) - Russian - Dolby Digital - Stereo - Default / 2:Дублированный (Хлопушка) - Russian - Dolby Digital - Stereo / 3:Многоголосый (DVD Group) - Russian - Dolby Digital - 5.1 / 4:Многоголосый (ТВЦ) - Russian - Dolby Digital - Stereo / 5:Многоголосый (СТС) - Russian - Dolby Digital - Stereo / 6:Двухголосый (Инис/ДТВ/7ТВ) - Russian - Dolby Digital - Stereo / 7:Двухголосый - Russian - Dolby Digital - 5.1 / 8:Авторский Ю.Живов - Russian - Dolby Digital - 5.1 / 9:Авторский С. Визгунов - Russian - Dolby Digital - 5.1 / 10:English - DTS-HD MA - 7.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Highlander II: The Quickening (1a0b81d432dbe0cc9efb467117cf50ac): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 11:Russian - SUBRIP / 12:English - SUBRIP",
+      "mod": "-1:Off / 11:Russian - SUBRIP / 12:English - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): media info badges (Ends at excluded)",
+      "stock": "2026 / 1h 40m / PG-13 / 7.1",
+      "mod": "2026 / 1h 40m / PG-13 / 7.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:25 AM @12:45:41Z",
+      "mod": "Ends at 12:25 AM @12:45:42Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): audio streams offered (detail select)",
+      "stock": "5:DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Default / 6:DUB WinMedia - Russian - Dolby Digital - 5.1 / 7:English - Dolby Digital - 5.1",
+      "mod": "5:DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Default / 6:DUB WinMedia - Russian - Dolby Digital - 5.1 / 7:English - Dolby Digital - 5.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 0:stream-4 - Russian - Default - SUBRIP - External / 1:stream-5 - Russian - SUBRIP - External / 2:stream-6 - English - SUBRIP - External / 3:stream-7 - English - SUBRIP - External",
+      "mod": "-1:Off / 0:stream-4 - Russian - Default - SUBRIP - External / 1:stream-5 - Russian - SUBRIP - External / 2:stream-6 - English - SUBRIP - External / 3:stream-7 - English - SUBRIP - External",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): media info badges (Ends at excluded)",
+      "stock": "2021 / 54m / 6.1",
+      "mod": "2021 / 54m / 6.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 11:39 PM @12:45:43Z",
+      "mod": "Ends at 11:39 PM @12:45:45Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): audio streams offered (detail select)",
+      "stock": "1:English - Dolby Digital+ - 5.1 - Default",
+      "mod": "1:English - Dolby Digital+ - 5.1 - Default",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Minimalists: Less Is Now (28f5b20511edaa6c2129d8b4c98eeaee): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 2:SDH - English - SUBRIP / 3:Arabic - SUBRIP / 4:Czech - SUBRIP / 5:Danish - SUBRIP / 6:German - SUBRIP / 7:Greek - SUBRIP / 8:Latin American - Spanish - SUBRIP / 9:European - Spanish - SUBRIP / 10:Finnish - SUBRIP / 11:French - SUBRIP / 12:Hebrew - SUBRIP / 13:Croatian - SUBRIP / 14:Hungarian - SUBRIP / 15:Indonesian - SUBRIP / 16:Italian - SUBRIP / 17:Japanese - SUBRIP / 18:Korean - SUBRIP / 19:Malay - SUBRIP / 20:Norwegian (Bokmal) - SUBRIP / 21:Dutch - SUBRIP / 22:Polish - SUBRIP / 23:European - Portuguese - SUBRIP / 24:Brazilian - Portuguese - SUBRIP / 25:Romanian - SUBRIP / 26:Russian - SUBRIP / 27:Swedish - SUBRIP / 28:Thai - SUBRIP / 29:Turkish - SUBRIP / 30:Vietnamese - SUBRIP / 31:Simplified - Chinese - SUBRIP / 32:Traditional - Chinese - SUBRIP",
+      "mod": "-1:Off / 2:SDH - English - SUBRIP / 3:Arabic - SUBRIP / 4:Czech - SUBRIP / 5:Danish - SUBRIP / 6:German - SUBRIP / 7:Greek - SUBRIP / 8:Latin American - Spanish - SUBRIP / 9:European - Spanish - SUBRIP / 10:Finnish - SUBRIP / 11:French - SUBRIP / 12:Hebrew - SUBRIP / 13:Croatian - SUBRIP / 14:Hungarian - SUBRIP / 15:Indonesian - SUBRIP / 16:Italian - SUBRIP / 17:Japanese - SUBRIP / 18:Korean - SUBRIP / 19:Malay - SUBRIP / 20:Norwegian (Bokmal) - SUBRIP / 21:Dutch - SUBRIP / 22:Polish - SUBRIP / 23:European - Portuguese - SUBRIP / 24:Brazilian - Portuguese - SUBRIP / 25:Romanian - SUBRIP / 26:Russian - SUBRIP / 27:Swedish - SUBRIP / 28:Thai - SUBRIP / 29:Turkish - SUBRIP / 30:Vietnamese - SUBRIP / 31:Simplified - Chinese - SUBRIP / 32:Traditional - Chinese - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): media info badges (Ends at excluded)",
+      "stock": "2012 / 1h 33m / R / 5.6",
+      "mod": "2012 / 1h 33m / R / 5.6",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:18 AM @12:45:46Z",
+      "mod": "Ends at 12:18 AM @12:45:47Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): audio streams offered (detail select)",
+      "stock": "1:Russian - Dolby Digital - 5.1 - Default / 2:English - Dolby Digital - 5.1",
+      "mod": "1:Russian - Dolby Digital - 5.1 - Default / 2:English - Dolby Digital - 5.1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "After Porn Ends (3a3aeead9e4e7985a607380369528e40): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 3:English - SUBRIP",
+      "mod": "-1:Off / 3:English - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): media info badges (Ends at excluded)",
+      "stock": "2024 / 1h 40m / R / 5.7 / 59",
+      "mod": "2024 / 1h 40m / R / 5.7 / 59",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:25 AM @12:45:48Z",
+      "mod": "Ends at 12:25 AM @12:45:50Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): audio streams offered (detail select)",
+      "stock": "1:English - Dolby Digital+ - 5.1 - Default - Original",
+      "mod": "1:English - Dolby Digital+ - 5.1 - Default - Original",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Nightbitch (597ef4ff35d608fb98b4ad8fc60a7253): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 2:English - SUBRIP / 3:English [SDH] - Hearing Impaired - SUBRIP",
+      "mod": "-1:Off / 2:English - SUBRIP / 3:English [SDH] - Hearing Impaired - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): media info badges (Ends at excluded)",
+      "stock": "2026 / 1h 30m / 8.5",
+      "mod": "2026 / 1h 30m / 8.5",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:16 AM @12:45:51Z",
+      "mod": "Ends at 12:16 AM @12:45:52Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): audio streams offered (detail select)",
+      "stock": "1:Оригінал E-AC3 5.1 640 Кбіт/с - Ukrainian - Dolby Digital+ - Default - Original",
+      "mod": "1:Оригінал E-AC3 5.1 640 Кбіт/с - Ukrainian - Dolby Digital+ - Default - Original",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Oh Mom! (7abf2626a4b4b9ee371ab6ea7667c09a): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 2:Повні *.srt - Ukrainian - SUBRIP / 3:SDH *.srt - Ukrainian - Hearing Impaired - SUBRIP / 4:Повні *.srt - English - SUBRIP",
+      "mod": "-1:Off / 2:Повні *.srt - Ukrainian - SUBRIP / 3:SDH *.srt - Ukrainian - Hearing Impaired - SUBRIP / 4:Повні *.srt - English - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): media info badges (Ends at excluded)",
+      "stock": "2002 / 1h 52m / R / 7.4",
+      "mod": "2002 / 1h 52m / R / 7.4",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 11:08 PM @12:45:54Z",
+      "mod": "Ends at 11:08 PM @12:45:55Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): audio streams offered (detail select)",
+      "stock": "3:Russian - Dolby Digital - 5.1 - Default / 4:English - Dolby Digital - Stereo",
+      "mod": "3:Russian - Dolby Digital - 5.1 - Default / 4:English - Dolby Digital - Stereo",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "Interstate 60 (8edf7076f8f209eee672d49ba2514bca): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 0:0 - Russian - SUBRIP - External / 1:Russian - SUBRIP - External",
+      "mod": "-1:Off / 0:0 - Russian - SUBRIP - External / 1:Russian - SUBRIP - External",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): media info badges (Ends at excluded)",
+      "stock": "2023 / 41m / PG / 7.3 / 95",
+      "mod": "2023 / 41m / PG / 7.3 / 95",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 11:27 PM @12:45:56Z",
+      "mod": "Ends at 11:27 PM @12:45:57Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): audio streams offered (detail select)",
+      "stock": "1:LostFilm - Russian - Dolby Digital - Stereo - Default / 2:Многоголосый - Russian - AAC - Stereo / 3:OZZ - Russian - AAC - Stereo / 4:Токсин - Russian - AAC - Stereo / 5:English - Dolby Digital+ - 5.1 - Original",
+      "mod": "1:LostFilm - Russian - Dolby Digital - Stereo - Default / 2:Многоголосый - Russian - AAC - Stereo / 3:OZZ - Russian - AAC - Stereo / 4:Токсин - Russian - AAC - Stereo / 5:English - Dolby Digital+ - 5.1 - Original",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Wonderful Story of Henry Sugar (9f87e86fdb9995e801fd25c675b66cf4): subtitle streams offered (detail select)",
+      "stock": "-1:Off / 6:Russian (Forced) - Default - SUBRIP / 7:Russian - SUBRIP / 8:English - SUBRIP",
+      "mod": "-1:Off / 6:Russian (Forced) - Default - SUBRIP / 7:Russian - SUBRIP / 8:English - SUBRIP",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): media info badges (Ends at excluded)",
+      "stock": "2022 / 1h 19m / 6.6",
+      "mod": "2022 / 1h 19m / 6.6",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): \"Ends at\" equals read time + runtime (±1 min)",
+      "stock": "Ends at 12:04 AM @12:45:59Z",
+      "mod": "Ends at 12:04 AM @12:46:00Z",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): audio streams offered (detail select)",
+      "stock": "1:AAC - Stereo - Default",
+      "mod": "1:AAC - Stereo - Default",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B4",
+      "area": "Media info",
+      "feature": "The Greatest Lie Ever Sold: George Floyd and the Rise of BLM (b00893883b6bbd226e9bd99469ec3128): subtitle streams offered (detail select)",
+      "stock": "-1:Off",
+      "mod": "-1:Off",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B5",
+      "area": "Episodes/Seasons",
+      "feature": "The Wheel of Time: season selector",
+      "stock": 0,
+      "mod": 0,
+      "verdict": "PASS"
+    },
+    {
+      "id": "B5",
+      "area": "Episodes/Seasons",
+      "feature": "The Wheel of Time: default season episode list",
+      "stock": 4,
+      "mod": 4,
+      "verdict": "PASS"
+    },
+    {
+      "id": "B6",
+      "area": "Home rows",
+      "feature": "Continue Watching + Next Up (mod merges them into one row, UX 2026-09-04)",
+      "stock": "CW 12 + Next Up 9",
+      "mod": "merged 24, separate Next Up 0",
+      "verdict": "PASS"
+    },
+    {
+      "id": "B7",
+      "area": "Version selector",
+      "feature": "Night of the Living Dead (b5399065a2bf8fbbf6effe875180b811): version list",
+      "stock": "[{\"value\":\"b5399065a2bf8fbbf6effe875180b811\",\"label\":\"1080p BluRay\"},{\"value\":\"2558c83d688659351b80a17491b5f160\",\"label\":\"720p BluRay\"}]",
+      "mod": "[{\"value\":\"b5399065a2bf8fbbf6effe875180b811\",\"label\":\"1080p BluRay\"},{\"value\":\"2558c83d688659351b80a17491b5f160\",\"label\":\"720p BluRay\"}]",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C0",
+      "area": "Playback",
+      "feature": "Fixtures chosen: C-4KHDR, C-1080, C-MULTIAUDIO, C-EMBEDSUB, C-EXTSUB, C-AVI, C-TVNEXT, C-TWOVER",
+      "stock": "n/a",
+      "mod": "n/a",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-NAMED-Highlander-a",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): start (one Sessions/Playing, same item/source, playing)",
+      "stock": "started:true in 5.7s, 1 Playing",
+      "mod": "started:true in 5.7s, 1 Playing",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-b",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): play method",
+      "stock": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:VideoCodecNotSupported+AudioCodecNotSupported",
+      "mod": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:VideoCodecNotSupported+AudioCodecNotSupported",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-c",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): transcode reasons",
+      "stock": "[\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "mod": "[\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-d",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): stream shape",
+      "stock": "hls",
+      "mod": "hls",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-e",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): seek (ArrowRight x10, paced)",
+      "stock": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":49.9,\"jumps\":[5,4.9,5.1,4.9,5,5,4.9,5,5.1,5],\"before\":1.4,\"after\":52.6,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.5}",
+      "mod": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":50,\"jumps\":[4.9,5.1,5,5,4.9,5.1,4.9,5.1,5,5],\"before\":1.1,\"after\":52.4,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.3}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-f",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): audio switch (to a genuinely different track, by data-id)",
+      "stock": "{\"fromIndex\":1,\"targetIndex\":2,\"options\":[{\"id\":\"1\",\"text\":\"Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \\\"ICTV\\\", \\\"1+1\\\" -\"},{\"id\":\"2\",\"text\":\"Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \\\"Україна\\\", \\\"NL\"},{\"id\":\"3\",\"text\":\"English | AC-3 | 5.1 | 640 kbps - Dolby Digital\"},{\"id\":\"4\",\"text\":\"English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulc\"}],\"serverIndex\":2,\"streamAudioStreamIndex\":\"2\",\"newStreamRequested\":true,\"reloadAfterMs\":1192,\"playingAfter\":true,\"actuallyChanged\":true}",
+      "mod": "{\"fromIndex\":1,\"targetIndex\":2,\"options\":[{\"id\":\"1\",\"text\":\"Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \\\"ICTV\\\", \\\"1+1\\\" -\"},{\"id\":\"2\",\"text\":\"Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \\\"Україна\\\", \\\"NL\"},{\"id\":\"3\",\"text\":\"English | AC-3 | 5.1 | 640 kbps - Dolby Digital\"},{\"id\":\"4\",\"text\":\"English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulc\"}],\"serverIndex\":2,\"streamAudioStreamIndex\":\"2\",\"newStreamRequested\":true,\"reloadAfterMs\":1420,\"playingAfter\":true,\"actuallyChanged\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-g",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): subtitle switch (by data-id) + render",
+      "stock": "{\"fromIndex\":5,\"preOff\":null,\"targetIndex\":6,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndex\":6,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":148.5,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "mod": "{\"fromIndex\":5,\"preOff\":null,\"targetIndex\":6,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndex\":6,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":148.5,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-h",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): subtitle off (data-id -1)",
+      "stock": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "mod": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-i",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): stop and resume (stopped at 20%)",
+      "stock": "{\"stoppedAt\":1400.9,\"stored\":1400.9,\"resumeOffered\":true,\"resumedAt\":1400.9,\"resumedPlaying\":true}",
+      "mod": "{\"stoppedAt\":1401.3,\"stored\":1401.3,\"resumeOffered\":true,\"resumedAt\":1401.3,\"resumedPlaying\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Highlander-j",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): single reporting (no duplicate Playing/Stopped)",
+      "stock": "playing:1 stopped:1",
+      "mod": "playing:1 stopped:1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-a",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): start (one Sessions/Playing, same item/source, playing)",
+      "stock": "started:true in 2.4s, 1 Playing",
+      "mod": "started:true in 2.4s, 1 Playing",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-b",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): play method",
+      "stock": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:ContainerNotSupported+VideoCodecNotSupported+AudioCodecNotSupported",
+      "mod": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:ContainerNotSupported+VideoCodecNotSupported+AudioCodecNotSupported",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-c",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): transcode reasons",
+      "stock": "[\"ContainerNotSupported\",\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "mod": "[\"ContainerNotSupported\",\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-d",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): stream shape",
+      "stock": "hls",
+      "mod": "hls",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-e",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): seek (ArrowRight x10, paced)",
+      "stock": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":50,\"jumps\":[5,5,5,5,5,5,4.9,5,5.1,5],\"before\":1.1,\"after\":52.4,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.3}",
+      "mod": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":49.9,\"jumps\":[4.9,5,5,5,5,5,4.9,5.1,4.9,5.1],\"before\":1.1,\"after\":52.4,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.3}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-g",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): subtitle switch (by data-id) + render",
+      "stock": "{\"fromIndex\":-1,\"preOff\":{\"from\":0,\"serverIndex\":-1},\"targetIndex\":0,\"options\":[{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":80.8,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "mod": "{\"fromIndex\":-1,\"preOff\":{\"from\":0,\"serverIndex\":-1},\"targetIndex\":0,\"options\":[{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":80.8,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-h",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): subtitle off (data-id -1)",
+      "stock": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "mod": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"Undefined - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-i",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): stop and resume (stopped at 20%)",
+      "stock": "{\"stoppedAt\":851.9,\"stored\":851.9,\"resumeOffered\":true,\"resumedAt\":851.9,\"resumedPlaying\":true}",
+      "mod": "{\"stoppedAt\":851.9,\"stored\":851.9,\"resumeOffered\":true,\"resumedAt\":851.9,\"resumedPlaying\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-DavidBeckhamInfamous-j",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): single reporting (no duplicate Playing/Stopped)",
+      "stock": "playing:1 stopped:1",
+      "mod": "playing:1 stopped:1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-a",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): start (one Sessions/Playing, same item/source, playing)",
+      "stock": "started:true in 20.2s, 1 Playing",
+      "mod": "started:true in 18.8s, 1 Playing",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-b",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): play method",
+      "stock": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:VideoCodecNotSupported+AudioCodecNotSupported",
+      "mod": "Transcode; transcode h264/aac video-direct:false audio-direct:false reasons:VideoCodecNotSupported+AudioCodecNotSupported",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-c",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): transcode reasons",
+      "stock": "[\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "mod": "[\"VideoCodecNotSupported\",\"AudioCodecNotSupported\"]",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-d",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): stream shape",
+      "stock": "hls",
+      "mod": "hls",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-e",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): seek (ArrowRight x10, paced)",
+      "stock": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":50,\"jumps\":[5.1,5,4.9,5.1,4.9,5.1,5,4.9,5,5],\"before\":1.2,\"after\":52.4,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.5}",
+      "mod": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":49.8,\"jumps\":[4.9,4.9,5.1,4.9,5,5.1,5,4.9,5.1,4.9],\"before\":1.1,\"after\":52.2,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.2}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-f",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): audio switch (to a genuinely different track, by data-id)",
+      "stock": "{\"fromIndex\":7,\"targetIndex\":5,\"options\":[{\"id\":\"5\",\"text\":\"DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Defaul\"},{\"id\":\"6\",\"text\":\"DUB WinMedia - Russian - Dolby Digital - 5.1\"},{\"id\":\"7\",\"text\":\"English - Dolby Digital - 5.1\"}],\"serverIndex\":5,\"streamAudioStreamIndex\":\"5\",\"newStreamRequested\":true,\"reloadAfterMs\":2852,\"playingAfter\":true,\"actuallyChanged\":true}",
+      "mod": "{\"fromIndex\":7,\"targetIndex\":5,\"options\":[{\"id\":\"5\",\"text\":\"DUB  Red Head Sound - Russian - Dolby Digital - 5.1 - Defaul\"},{\"id\":\"6\",\"text\":\"DUB WinMedia - Russian - Dolby Digital - 5.1\"},{\"id\":\"7\",\"text\":\"English - Dolby Digital - 5.1\"}],\"serverIndex\":5,\"streamAudioStreamIndex\":\"5\",\"newStreamRequested\":true,\"reloadAfterMs\":2288,\"playingAfter\":true,\"actuallyChanged\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-g",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): subtitle switch (by data-id) + render",
+      "stock": "{\"fromIndex\":1,\"preOff\":null,\"targetIndex\":0,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":336.1,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "mod": "{\"fromIndex\":1,\"preOff\":null,\"targetIndex\":0,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":336.1,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-h",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): subtitle off (data-id -1)",
+      "stock": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "mod": "{\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndexOff\":-1,\"isOff\":true,\"overlayEmpty\":true,\"noneShowing\":true,\"anyTrackShowing\":false}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-i",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): stop and resume (stopped at 20%)",
+      "stock": "{\"stoppedAt\":1197.8,\"stored\":1197.8,\"resumeOffered\":true,\"resumedAt\":1197.8,\"resumedPlaying\":true}",
+      "mod": "{\"stoppedAt\":1197.5,\"stored\":1197.5,\"resumeOffered\":true,\"resumedAt\":1197.5,\"resumedPlaying\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-Mercy-j",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): single reporting (no duplicate Playing/Stopped)",
+      "stock": "playing:1 stopped:1",
+      "mod": "playing:1 stopped:1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-a",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): start (one Sessions/Playing, same item/source, playing)",
+      "stock": "started:true in 1.5s, 1 Playing",
+      "mod": "started:true in 1.5s, 1 Playing",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-b",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): play method",
+      "stock": "DirectPlay; transcode none",
+      "mod": "DirectPlay; transcode none",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-c",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): transcode reasons",
+      "stock": "[]",
+      "mod": "[]",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-d",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): stream shape",
+      "stock": "static",
+      "mod": "static",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-e",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): seek (ArrowRight x10, paced)",
+      "stock": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":50,\"jumps\":[5,5.1,4.9,5,5,5,5,5,5,5],\"before\":1,\"after\":52.3,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.2}",
+      "mod": "{\"skipSeconds\":5,\"expected\":50,\"skipped\":50,\"jumps\":[5,5.1,4.9,5,5,5,5.1,4.9,5.1,4.9],\"before\":1,\"after\":52.3,\"settledAll\":true,\"playingAfter\":true,\"reported\":true,\"reportedPositionSeconds\":41.2}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-i",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): stop and resume (stopped at 20%)",
+      "stock": "{\"stoppedAt\":1148.1,\"stored\":1148.1,\"resumeOffered\":true,\"resumedAt\":1148.1,\"resumedPlaying\":true}",
+      "mod": "{\"stoppedAt\":1148.2,\"stored\":1148.2,\"resumeOffered\":true,\"resumedAt\":1148.2,\"resumedPlaying\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-NAMED-LessonsofTolerance-j",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): single reporting (no duplicate Playing/Stopped)",
+      "stock": "playing:1 stopped:1",
+      "mod": "playing:1 stopped:1",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-4KHDR",
+      "area": "Playback",
+      "feature": "Mercy (1c3a1ac050339e228c8b6033556ff638): covered by C-NAMED-Mercy (= C-4KHDR)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-1080",
+      "area": "Playback",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): covered by C-NAMED-LessonsofTolerance (= C-1080)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-MULTIAUDIO",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): covered by C-NAMED-Highlander (= C-MULTIAUDIO, C-EMBEDSUB)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-EMBEDSUB",
+      "area": "Playback",
+      "feature": "Highlander (0b112cfd083cae1722f28359797f5b65): covered by C-NAMED-Highlander (= C-MULTIAUDIO, C-EMBEDSUB)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-EXTSUB",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): covered by C-NAMED-DavidBeckhamInfamous (= C-EXTSUB, C-AVI)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C",
+      "area": "Playback",
+      "feature": "C-M2TS",
+      "stock": "n/a",
+      "mod": "n/a",
+      "verdict": "SKIPPED"
+    },
+    {
+      "id": "C-AVI",
+      "area": "Playback",
+      "feature": "David Beckham Infamous (0040709081e66d6e20f562643b81a00f): covered by C-NAMED-DavidBeckhamInfamous (= C-EXTSUB, C-AVI)",
+      "stock": "see named row",
+      "mod": "see named row",
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "C-TVNEXT",
+      "area": "Playback",
+      "feature": "The Wheel of Time - Leavetaking: end-of-episode behaviour",
+      "stock": "{\"hash\":\"#/video\",\"ended\":false,\"nowPlaying\":\"same episode\"}",
+      "mod": "{\"hash\":\"#/video\",\"ended\":false,\"nowPlaying\":\"same episode\"}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "C-TWOVER",
+      "area": "Playback",
+      "feature": "C-TWOVER",
+      "stock": "n/a",
+      "mod": "n/a",
+      "verdict": "FAIL"
+    },
+    {
+      "id": "D-1",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: mark watched (S to M)",
+      "stock": "server:true",
+      "mod": "observer(M):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-2",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: mark unwatched (S to M)",
+      "stock": "server:true",
+      "mod": "observer(M):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-3",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: favourite (S to M)",
+      "stock": "server:true",
+      "mod": "observer(M):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-4",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: unfavourite (S to M)",
+      "stock": "server:true",
+      "mod": "observer(M):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-1",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: mark watched (M to S)",
+      "stock": "server:true",
+      "mod": "observer(S):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-2",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: mark unwatched (M to S)",
+      "stock": "server:true",
+      "mod": "observer(S):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-3",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: favourite (M to S)",
+      "stock": "server:true",
+      "mod": "observer(S):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "D-4",
+      "area": "User data",
+      "feature": "movie David Beckham Infamous: unfavourite (M to S)",
+      "stock": "server:true",
+      "mod": "observer(S):true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "E-1",
+      "area": "Mod-only",
+      "feature": "File-state marks present (recorded)",
+      "stock": 0,
+      "mod": 0,
+      "verdict": "RECORDED"
+    },
+    {
+      "id": "E-3",
+      "area": "Mod-only",
+      "feature": "Queue reachable at #/catalog/queue on mod",
+      "stock": "n/a (mod-only)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "E-4",
+      "area": "Mod-only",
+      "feature": "Search \"20\": Add-from-TMDB zone present + upstream results match",
+      "stock": "13 ids",
+      "mod": "discovery:true, 13 ids",
+      "verdict": "PASS"
+    },
+    {
+      "id": "E-6",
+      "area": "Mod-only",
+      "feature": "Degrades cleanly with plugin transport blocked (UX §14)",
+      "stock": "n/a",
+      "mod": "grid:true detail:true",
+      "verdict": "PASS"
+    },
+    {
+      "id": "E-7",
+      "area": "Mod-only",
+      "feature": "No id leak outside /JellyfinMod/** on either tab",
+      "stock": 0,
+      "mod": 0,
+      "verdict": "PASS"
+    },
+    {
+      "id": "E-5",
+      "area": "Mod-only",
+      "feature": "Stock Movies total re-checked alone matches paired run",
+      "stock": 55,
+      "mod": 55,
+      "verdict": "PASS"
+    },
+    {
+      "id": "F",
+      "area": "TV layout",
+      "feature": "S at 1920x1080: renders/legacy-header/navigable",
+      "stock": "true/true/true",
+      "verdict": "EXPECTED-FALLBACK"
+    },
+    {
+      "id": "F",
+      "area": "TV layout",
+      "feature": "M at 1920x1080: renders/legacy-header/navigable",
+      "mod": "true/true/true",
+      "verdict": "EXPECTED-FALLBACK"
+    },
+    {
+      "id": "F",
+      "area": "TV layout",
+      "feature": "S at 1280x720: renders/legacy-header/navigable",
+      "stock": "true/true/true",
+      "verdict": "EXPECTED-FALLBACK"
+    },
+    {
+      "id": "F",
+      "area": "TV layout",
+      "feature": "M at 1280x720: renders/legacy-header/navigable",
+      "mod": "true/true/true",
+      "verdict": "EXPECTED-FALLBACK"
+    },
+    {
+      "id": "T-inv",
+      "area": "TV layout",
+      "feature": "Movies id set at 1920x1080 (layout-tv true/true), lazy-load/paged",
+      "stock": "55 ids",
+      "mod": "55 ids (api 55)",
+      "verdict": "PASS"
+    },
+    {
+      "id": "T-inv",
+      "area": "TV layout",
+      "feature": "TV id set at 1920x1080 (layout-tv true/true), paged/paged",
+      "stock": "105 ids",
+      "mod": "105 ids (api 105)",
+      "verdict": "PASS"
+    },
+    {
+      "id": "T-play",
+      "area": "TV layout",
+      "feature": "Lessons of Tolerance (09be82fc66ac0aa8a3a9df0450fa7406): keys-only play, seek, Back, Resume at 1920x1080",
+      "stock": "{\"playFocused\":true,\"started\":true,\"seek\":{\"before\":1.4,\"after\":22,\"delta\":20.6,\"playingAfter\":true},\"stoppedByBack\":true,\"stoppedAt\":1720.8,\"backLandedOn\":\"#/details\",\"resumeFocused\":true,\"resumedAt\":1720.8,\"resumedPlaying\":true}",
+      "mod": "{\"playFocused\":true,\"started\":true,\"seek\":{\"before\":1.5,\"after\":22,\"delta\":20.5,\"playingAfter\":true},\"stoppedByBack\":true,\"stoppedAt\":1720.8,\"backLandedOn\":\"#/details\",\"resumeFocused\":true,\"resumedAt\":1720.8,\"resumedPlaying\":true}",
+      "verdict": "PASS"
+    },
+    {
+      "id": "T-inv",
+      "area": "TV layout",
+      "feature": "Movies id set at 1280x720 (layout-tv true/true), lazy-load/paged",
+      "stock": "55 ids",
+      "mod": "55 ids (api 55)",
+      "verdict": "PASS"
+    },
+    {
+      "id": "T-inv",
+      "area": "TV layout",
+      "feature": "TV id set at 1280x720 (layout-tv true/true), paged/paged",
+      "stock": "105 ids",
+      "mod": "105 ids (api 105)",
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/music renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/livetv renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/books renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/playlists renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/boxsets renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/dashboard renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "G",
+      "area": "Reachability",
+      "feature": "Mod #/mypreferencesmenu renders without an uncaught exception",
+      "stock": "n/a (mod-only smoke)",
+      "mod": true,
+      "verdict": "PASS"
+    },
+    {
+      "id": "cleanup",
+      "area": "Cleanup",
+      "feature": "UserData restored and verified for 8 item(s)",
+      "stock": "restored",
+      "mod": "restored",
+      "verdict": "PASS"
+    },
+    {
+      "id": "cleanup",
+      "area": "Cleanup",
+      "feature": "No JellyfinMod-prefixed title in any library",
+      "stock": "none",
+      "mod": "none",
+      "verdict": "PASS"
+    },
+    {
+      "id": "cleanup",
+      "area": "Cleanup",
+      "feature": "No JellyfinMod-prefixed title in GET /JellyfinMod/Entries",
+      "stock": "none",
+      "mod": "none",
+      "verdict": "PASS"
+    },
+    {
+      "id": "cleanup",
+      "area": "Cleanup",
+      "feature": "JellyfinMod/Entries set unchanged",
+      "stock": "159 entries",
+      "mod": "159 entries",
+      "verdict": "PASS"
+    },
+    {
+      "id": "takeover",
+      "area": "Cleanup",
+      "feature": "/web takeover untouched (read only in this shape)",
+      "stock": "{\"TakeoverEnabled\":true,\"BundleId\":\"9fe379afd867\",\"state\":\"patched\"}",
+      "mod": "{\"state\":\"patched\",\"bundleId\":\"9fe379afd867\"}",
+      "verdict": "PASS"
+    }
+  ],
+  "skipped": [
+    {
+      "id": "A6",
+      "feature": "First boxset children",
+      "reason": "no BoxSet exists in this library"
+    },
+    {
+      "id": "C-M2TS",
+      "feature": "Fixture selection",
+      "reason": "no item in the library matches this predicate"
+    },
+    {
+      "id": "C",
+      "feature": "C-M2TS",
+      "reason": "no fixture selected for C-M2TS"
+    }
+  ],
+  "knownGapsObserved": [
+    "A3 sampled 40 of 105 series (§9.3 escape hatch: library exceeds ~40 series) rather than exhaustive coverage.",
+    "Area F (TV layout) recorded per PARITY.md §8.3/Area F: ModAppLayout deliberately falls back to LegacyAppLayout on TV. Not asserted as pass/fail."
+  ],
+  "timings": {
+    "setup: read the /web takeover state": 2.6,
+    "setup: navigate both tabs and sign in": 3.8,
+    "preflight": 0.5,
+    "A1: library views and totals": 8.3,
+    "A2: item id sets (Movies, TV)": 7.4,
+    "A3: seasons and episodes": 180.4,
+    "A4: sort orders": 30.2,
+    "A5: filters": 33.6,
+    "A6: collections": 4.4,
+    "A7: non-Latin titles": 0,
+    "B0: choose detail/playback sample": 0,
+    "B1/B2/B3: metadata, artwork, cast": 31.9,
+    "B4: media info": 30.7,
+    "B5: episode lists and season navigation": 3,
+    "B6: continue watching and next up": 8,
+    "B7: version selector": 2.9,
+    "C0: fixture selection": 0.5,
+    "C: playback fixtures": 1195.6,
+    "D: user-data parity": 37.1,
+    "E: mod-only surfaces and stock-unchanged": 9.6,
+    "F: TV layout (recorded)": 11.2,
+    "T: TV layout inventory and keys-only playback": 84.6,
+    "G: reachability smoke": 10.2,
+    "total": 1699.4
+  },
+  "waits": {
+    "networkIdle:S": {
+      "seconds": 229.1,
+      "count": 341
+    },
+    "networkIdle:M": {
+      "seconds": 267.5,
+      "count": 351
+    },
+    "softReloads:S": {
+      "seconds": 43,
+      "count": 24
+    },
+    "softReloads:M": {
+      "seconds": 56.9,
+      "count": 23
+    }
+  },
+  "idleTimeouts": {
+    "POST fetch /Sessions/Playing/Stopped": 1
+  },
+  "cleanupFailed": false
+}
