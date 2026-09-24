@@ -3,15 +3,16 @@
 Task list for agents. Each task is self-contained: an agent that has read the **Briefing** below
 and its own task entry should be able to finish without asking a question.
 
-**Open review issues, 2026-09-24:** see [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md)
-for the Phase 7 review of the S4 fixes, S5, S7–S10 and the TV shell: no P1, four P2 (missing
-takeover history rows, the XML import's failure path, the §3.2 patch-surface table, and unrun
-S7–S10 acceptance) and twelve P3, each with a trigger, a fix direction and an acceptance check.
-Pick up the P2 items before S11.
+**Review issues, 2026-09-24:** see [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md) for the Phase 7
+review of the S4 fixes, S5, S7–S10 and the TV shell (no P1, four P2, twelve P3). Worked on
+2026-09-24: thirteen are fixed and verified, two are documentation fixes, S4-R5 is disputed with
+live evidence, and P7-R2 is partly closed (the Prowlarr grab ran live; the fresh-database wizard, the ordinary-user browser check
+and the secret actions in the page are named S11 steps). Each finding carries its commit and
+evidence there.
 
-**Open review issues, 2026-09-23:** see [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md)
-for three Phase 7 S4 takeover bugs (repeated fallback, base URL and interrupted recovery-state
-write). All remain open; the document includes reproduction conditions and acceptance checks.
+**Review issues, 2026-09-23:** see [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md) for three
+Phase 7 S4 takeover bugs (repeated fallback, base URL and interrupted recovery-state write). All
+three are fixed and verified in plugin `ce49172`, as that document records.
 
 **Phase 1 refinement, 2026-09-06:** read [`PHASE1.md`](PHASE1.md) before P5/P6 or web tasks.
 It records the accepted permissions and Home redesign, corrects the integration assumptions,
@@ -481,8 +482,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   entries stay as the container. A watched episode becomes eligible for removal on its own schedule
   without touching its siblings. This supersedes the series-level-only binding and answers the
   "unbound episodes" question left open by Phase 7 S6: episode pages get the mod section. Retention
-  is the delete path, so design and critical verification run on Fable at high effort, and no
-  reclaim ships without live E2E on the isolated instance.
+  is the delete path, so design and critical verification run on Opus 5.5 at high effort (**changed
+  by the user on 2026-09-24: Fable is no longer used anywhere**), and no reclaim ships without live
+  E2E on the isolated instance.
 - **Phases 8 and 9 are out of scope for the production release. Accepted 2026-09-21:** the user
   ruled both optional for a real production release and deferred them until after it. Neither
   blocks the release gate, and no release criterion may depend on them. They keep their outlines
