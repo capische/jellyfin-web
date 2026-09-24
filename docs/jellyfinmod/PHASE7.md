@@ -1876,13 +1876,16 @@ server.
 
 Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, high effort.
 
-- **Done and verified:** S7 (plugin `8efe9ea`, deployed to 28096; evidence under *S7 evidence* below).
-- **In progress:** S8, the settings area in the mod interface. Branch `p7-settings`, worktree
-  `.claude/worktrees/p7-settings`, off `origin/jellyfin-mod`; pushed commits fast-forward `jellyfin-mod`.
-- **Next step:** S8 per §5 on the typed endpoints of S7, then S9, S10, S5, S11 in that order (PHASE7's own
-  dependencies: S9 needs S7+S8, S10 needs S7–S9, S11 needs everything).
-- **Instance:** 28096 runs plugin `8efe9ea` and web bundle `9aea38d0cc4d` (`jellyfin-mod` `04c9179189`).
-- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (Dashboard page, S7); the plugin suite
+- **Done and verified:** S7 (plugin `8efe9ea`); S8 first slice (web `350c0de050`, bundle `5667c9eb9536`) — see
+  the evidence sections, including what each does not yet cover.
+- **Open S8 debt:** feature eslint findings; browser checks of secret replace/clear, the ordinary-user refusal and
+  the Test failure codes from the page.
+- **Next step:** S9 (Prowlarr, plugin then the Indexers card), then S10, S5, S11 (PHASE7's own dependencies: S9
+  needs S7+S8, S10 needs S7–S9, S11 needs everything). Branch `p7-settings`, worktree
+  `.claude/worktrees/p7-settings`, off `origin/jellyfin-mod`; pushes fast-forward `jellyfin-mod`.
+- **Instance:** 28096 runs plugin `8efe9ea` and web bundle `5667c9eb9536` (`jellyfin-mod` `e516bb4430`).
+- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (Dashboard page, S7), `settings-area.mjs` (S8,
+  `JELLYFINMOD_SETTINGS_LAYOUTS`); the plugin suite
   `tests/PhaseSevenSettingsIntegration`, run on the Pi like the others.
 
 ### S7 — one settings contract behind every form
@@ -1969,8 +1972,9 @@ re-reads every value. 55 responses and every log line leak-checked for the five 
 **Not verified.** Ordinary-user 403 was proven in the suite only: the instance's other accounts have passwords this
 agent does not have and must not ask for. `Retention/Preview` protecting a plugin-added torrent through the
 acquisition client was not shown live, because retention is off there and turning it on is a delete-path change.
-A cold load of `/web/#/configurationpage?name=JellyfinMod` lands on Home in the mod interface; arriving from the
-Dashboard's plugin list works. Not investigated further.
+An apparent finding — a deep link to `#/configurationpage?name=JellyfinMod` landing on Home — was the probe's own
+timing: the sign-in flow navigates to Home a moment after the session exists and overwrites any hash set before
+that. The S8 probe waits for that navigation; the Dashboard probe arrives from the plugin list.
 
 Backups of the pre-S7 database, XML and secret store are beside the instance under `backups/pre-8efe9ea`, and the
 previous plugin as `JellyfinMod.dll.pre-8efe9ea`.
@@ -1995,6 +1999,65 @@ links to the embedded upstream preferences and Dashboard.
 - Ordinary user: no menu item, direct navigation shows the UX §14 message, every endpoint 403.
 - Mobile at 390 px: no horizontal scroll; TV: every section reachable by D-pad, Back returns to
   the opener, no focus trap; an older plugin without `settings.overview` hides the route.
+
+#### S8 evidence — 2026-09-24
+
+Opus, high effort. Web `jellyfin-mod` `350c0de050` (feature) and `e516bb4430` (probe), bundle `5667c9eb9536`,
+served at `/web/` on 28096 by the takeover over plugin `8efe9ea`.
+
+**What was built.** `/catalog/settings` is a **mod route** (no upstream route table edited), administrator-only,
+gated on `settings.overview`, with the chosen section in the URL (`?section=`, replaced rather than pushed so Back
+leaves the area for its opener). The Option B shape of §5.1 carries over: the readiness rail in pipeline order,
+one section at a time, eyebrow / heading / state pill / notice / footer with Save, the revision line and
+**Next**. The `jfmod-settings` stylesheet is the Dashboard page's, lifted into `settings/settings.scss` with only
+the delivery changed (stylelint clean). `BLOCKER_SENTENCES`, `BLOCKER_SECTIONS`, `PAUSE_SENTENCES`,
+`PATH_SENTENCES` and `CONFLICT_MESSAGE` are carried verbatim into `settings/settingsApi.ts`, plus sentences for the
+S7 setup reasons. Sections: Overview (blockers with **Fix** links, plugin version, the server's bundle id against
+this page's meta tag with a skew warning, build commit, takeover state, a link to the wizard), Discovery (secret,
+Save, Test), Download client (fields, password secret, Test, ordered path mappings with save and the import-path
+probe), Indexers and Quality profiles (lists with Test / Edit / Remove, edited in dialogs, Make default), Grabbing
+(enable with the `acquisition_not_ready` blockers as sentences), Import and seeding, Retention (with the selected
+user and seed protection's source, separate endpoint, secret and Test, plus the preview and latest run),
+Automation (with Run now and recent decisions), Interface (switch, state, who applied it and when, Restore stock
+now, the recovery text), Diagnostics (read-only counts). The rail links to Jellyfin preferences, the Dashboard and
+the wizard. The user menu gains **JellyfinMod settings** beside Queue, for administrators of a plugin that offers
+it — one more item in the already-patched `AppUserMenu.tsx` block (§3.2 row unchanged in kind).
+
+**Deviation from §5, recorded.** §5 asks for stock `emby-*` inputs. The React page uses the modern Dashboard's MUI
+controls instead: `emby-*` elements cannot be created from React without the markup workaround of
+`components/EmbySelect.tsx`, and decision 13 already names MUI pop-ups under `shell/dpadModals` as the TV mechanism
+for this area. Secrets, sizes (`em`), `jfmod-` classes and the no-`gap` rule are kept.
+
+**Browser, `scripts/jellyfinmod-e2e/settings-area.mjs`** — **32 of 32 on Playwright's Chromium 153.0.8010.12 and 32
+of 32 on real Google Chrome 153.0.8010.53, identical**, on the dev build `99d3cfd8c9de`; then 24 of 24 (Chrome:
+desktop, mobile, TV 1280×720) and 10 of 10 (Chromium: desktop) on the committed build `5667c9eb9536`.
+
+| Layout | Observed |
+| --- | --- |
+| Desktop 1440×900 | The user menu offers *JellyfinMod settings*; it opens the area; the Overview shows the server's bundle id equal to the page's meta tag; all eleven sections open; Discovery Test `TMDB accepted the token. (ok)`; retention days saved, echoed with the revision, re-read after a full reload; a save against a stale revision (another session saved first) shows the conflict sentence with **Reload**, which clears it and the next save succeeds; the original value restored |
+| Mobile 390×844 (Android UA) | All sections open through the section picker, which replaces the rail; no horizontal scroll (overflow 0) |
+| TV 1920×1080 and 1280×720, keys only | Focus starts on the current rail step; Down + Enter reaches every section; Enter on a select opens its menu, Escape and the remote's 461 each close only the menu and return focus to it, staying on the page; Back with nothing open returns to Home, where the area was opened from |
+| Every layout | No settings response carries a secret reference; no page errors |
+
+The retention days were left at 15 by an aborted first run and restored to 14 through the endpoint afterwards; the
+XML's retention fields now match the pre-S7 backup field for field.
+
+**Not done or not verified.**
+
+- **Ordinary user:** the menu item's admin gate and the page's refusal were not exercised in a browser — the other
+  accounts have passwords this agent does not have. The endpoints' 403 is proven in the S7 suite.
+- **Secrets through the area** were not replaced live (the TMDB token and the Transmission password are the
+  instance's real ones); replace / clear / indicator are proven in the S7 suite, and the component's Replace /
+  Clear / Undo were not clicked in the browser.
+- **Tests for Transmission, the import path, an indexer and Prowlarr** with wrong credential, unreachable host and
+  timeout were not driven from the page; the endpoints' codes are proven in the S7 and Phase 4 suites.
+- **"An older plugin without `settings.overview` hides the route"** — the gate exists in code (menu item hidden,
+  page explains), not exercised against an older plugin.
+- **Save across a restart** was not driven from this page; the values re-read after the restarts that deployed
+  each build, and the S7 suite restarts its host.
+- **Parity with the Dashboard page is not claimed** item by item; the Dashboard page stays until it is (§5).
+- **Feature eslint is not clean** (about 110 findings in the new files, mostly `react/jsx-no-bind` and naming);
+  `tsc --noEmit` and stylelint are clean. Supporting evidence only, but it is debt.
 
 ### S9 — Prowlarr
 
