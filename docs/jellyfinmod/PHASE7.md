@@ -116,6 +116,29 @@ they differ; the remaining open questions stay open and their proposed defaults 
     **What would reopen this:** Phase 6 follow-up work — the quality ladder, preferred sources,
     version ticks on cards — needing a grid upstream cannot host. Not a tidiness argument.
 
+**Accepted 2026-09-24.**
+
+13. **The TV layout browses Movies and TV on the modern React grid** (work queue item 2, the TV and
+    D-pad shell). The two alternatives were keeping upstream's legacy `movies.js` / `tvshows.js`
+    patched for the TV alone, or owning them — about 1 500 copied upstream lines, because their tab
+    dispatch also pulls in `moviesrecommended.js` and `tvrecommended.js`. The user chose the modern
+    grid for the long term, for three reasons:
+    - **one grid instead of two**, so every future grid feature — per-media retention controls, the
+      Phase 6 follow-up quality ladder, version ticks on cards, device presets — is built once;
+    - **D-pad handling for MUI pop-ups is needed anyway** — Back closes the open menu instead of
+      leaving the page — for the settings area, the wizard and the per-media controls, so building
+      it for the grid is not extra work;
+    - **it invests where upstream's React side lives**, rather than in the legacy controllers
+      upstream is moving away from.
+
+    How it is built: the mod router sends `movies` and `tv` to `routes/LibraryGridPage.tsx` in the
+    legacy layouts (the TV, and upstream's `desktop-legacy` / `mobile-legacy`), which is upstream's
+    `LibraryPage` with `LibraryToolbar` moved inside the page under the legacy header; no upstream
+    route table is edited. MUI pop-ups get Back and D-pad from `shell/dpadModals.ts`, a mechanism
+    installed once for every MUI pop-up the mod shows on a TV. Focus placement, restore after Back
+    and rescue from disabled controls come from `hooks/useTvGridFocus.ts`. The legacy grid
+    controllers and the filter dialog's File group are handed back (§3.2).
+
 ## Outcome and boundaries
 
 An operator runs the JellyfinMod image, or installs the plugin into a stock server. Every browser
@@ -372,12 +395,12 @@ struck through have been handed back and are kept for one release as a record of
 | `src/config.json` | none planned; listed because the mod entry reads it | the mod entry fetches it by rooted URL; a schema change surfaces in `useWebConfig` | none |
 | ~~`src/apps/legacy/controllers/hometab.js`~~ | mounts hero and top bar (W7) | — | **removed (P7 TV shell).** The mod router owns `home` in every layout, and the mod Home tab applies the TV header's transparent bar itself; `git diff master` is empty |
 | `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |
-| `src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js` | combined browse and File filter (W2, W3, W8) | file-less entries and the File filter vanish from the **TV layout's** grids, which is the only layout that reaches these controllers | **still patched.** Restoring them does not remove a seam, it removes the feature on TV: the legacy route table serves `movies` and `tv` whenever `layoutManager.modern` is false, and nothing else serves TV browse. Measured, not assumed (P7.S6). It comes out with the TV shell slice, like the `hometab.js` row |
+| ~~`src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js`~~ | combined browse and File filter (W2, W3, W8) | — | **removed (P7 TV shell, decision 13).** The mod router serves `movies` and `tv` in every legacy layout from the modern grid, so nothing in the mod entry reaches these controllers; `git diff master` is empty on both, and the `integration/legacyLibrary` shim that served them is deleted |
 | ~~`src/apps/legacy/routes/search.tsx`~~ | Add from TMDB section (W4) | — | **removed (P7.S6).** The mod router owns `search`; `git diff master` is empty |
 | ~~`src/apps/legacy/controllers/itemDetails/index.js`~~ | detail augmentation (W5, T14) | — | **removed (P7.S6).** The mod router owns `details` and composes upstream's controller; `git diff master` is empty |
 | ~~`src/components/itemContextMenu.js`~~ | exported `executeCommand` for the More-menu wrap | — | **removed (P7.S6).** Nothing wraps the stock More menu; the mod's commands are buttons in its own section |
-| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `components/ItemsView.tsx`, `LibraryToolbar.tsx`, `PlayAllButton.tsx`, `ShuffleButton.tsx`, `filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grids (W2, W3, W8) | the modern grids lose file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
-| `src/components/filterdialog/filterdialog.js`, `filterdialog.template.html`, `filterIndicator.js` | the File and Due filter groups, shared by the legacy and modern grids (W3, W8) | the File and Due filters vanish from every grid | **permanent**, with the row above |
+| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `components/ItemsView.tsx`, `LibraryToolbar.tsx`, `PlayAllButton.tsx`, `ShuffleButton.tsx`, `filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grid, which since decision 13 serves every layout including the TV (W2, W3, W8) | every grid loses file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
+| ~~`src/components/filterdialog/filterdialog.js`, `filterdialog.template.html`, `filterIndicator.js`~~ | the File and Due filter groups in the legacy grids' filter dialog (W3, W8) | — | **removed (P7 TV shell, decision 13).** Only the legacy `movies.js` / `tvshows.js` opened this dialog in the movies and series modes that showed the group; the modern grid's `FilterButton` carries the File and Due groups itself. `git diff master` is empty on all three |
 | `src/components/QueryClientEventHandler.tsx` | catalog query invalidation on the events the mod's surfaces depend on | mod surfaces stop refreshing after a change | permanent |
 | `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` (W7/W12) | top-bar restyle gone in the stock entry | until Stage B Home passes, then removed |
 | `src/components/router/routerHistory.ts` | `RouterHistory.adopt(router)`, so the shared history drives the router that is actually rendered (P7.S2 login fix) | the mod bundle navigates upstream's router instead of its own: the address bar moves and the screen does not | permanent |
@@ -393,8 +416,8 @@ struck through have been handed back and are kept for one release as a record of
 Removing a row means restoring the upstream text of that file on `jellyfin-mod`, verified by
 `git diff master -- <file>` being empty. It is only worth doing when the mod screen that replaces
 it is actually serving every layout that reached the patched file; otherwise it removes the
-feature rather than the seam, which is why the two legacy grid controllers stay (decision 12 and
-the row above).
+feature rather than the seam, which is why the two legacy grid controllers stayed until the TV
+layout moved to the modern grid (decision 13).
 
 Upstream files the mod **mirrors** rather than edits are not in this table, because they are not
 patched: `src/index.jsx`, `src/RootApp.tsx` and `src/components/viewManager/ViewManagerPage.tsx`.
@@ -1696,7 +1719,8 @@ and nothing else serves TV browse.** Driven at 1920×1080 with `layout=tv`, the 
 100 cards, all of them mod-rendered, with 48 file-state marks and the filter control present.
 Restoring `movies.js` and `tvshows.js` today would take the catalog off the TV grid entirely.
 They come out with the TV shell slice, alongside the `hometab.js` row that is deferred for the
-same reason.
+same reason. **Superseded 2026-09-24 by decision 13:** the TV now browses on the modern grid and both
+controllers are back to their upstream text.
 
 #### TV and D-pad shell — handover, 2026-09-24
 
@@ -1732,24 +1756,121 @@ File group, Back closes it and stays on the grid. No page errors. Desktop 1440×
 `layout-mobile`): Home hero and sections, search with both zones, detail with the mod section, both grids with
 marks, no page errors.
 
+**Not done or not verified at that point** — each resolved or carried into part 2 below.
+
+- The real Google Chrome pass had not run — run in part 2, on the part-2 bundle.
+- Physical webOS: not run — still open, see part 2.
+- `movies.js` and `tvshows.js` were still patched, left for a user decision — decided (decision 13) and handed
+  back in part 2.
+- The Search releases picker opened by Enter on TV was not reached by the probe — reached and operated in part 2,
+  which also found and fixed why it could never have worked with a quality profile configured.
+
+**Next step (then).** Re-run the probe on real Chrome and decide the two legacy grid rows with the user.
+
+#### TV and D-pad shell — part 2: the modern grid on TV, 2026-09-24
+
+Opus, high effort. Same branch and worktree, fast-forwarded to `origin/jellyfin-mod`. Decision 13 recorded above.
+Acceptance instance 28096, the branch's bundle packaged into the plugin and served at `/web/` by the takeover.
+
+**Done in code.**
+
+- `routes/LibraryGridPage.tsx`: in the legacy layouts the mod router sends `movies` and `tv` to upstream's
+  `LibraryProvider` + `LibraryToolbar` + `PageTabContent`, the toolbar inside the page under `.skinHeader`. The
+  modern layout keeps upstream's own routes. No upstream route table is edited.
+- `shell/dpadModals.ts` (+ `.scss`): while an MUI modal is open, every Back key (Escape, 461, 10009, BrowserBack,
+  VIDAA Backspace) and every `back` command closes the top pop-up only; focus returns to its opener. On the TV,
+  arrows move spatially inside the top pop-up only, Right/Left step into and out of a control nested in a row,
+  Enter toggles checkboxes and switch rows, and opening a pop-up focuses its first control. Primary-fill focus on
+  MUI controls on the TV, since older webOS has no `:focus-visible`. Installed once from `ModApp`.
+- `hooks/useTvGridFocus.ts`: first focus on the first card; Back from details returns to the card left from;
+  a focused control that disappears or is disabled hands focus to its twin paging button or the first card
+  instead of dropping it to `<body>`.
+- `routes/libraryGridPage.scss`: the toolbar is a `focuscontainer-x` (its two ends are a screen apart, so Right
+  from the view menu used to pick a card); upstream's TV card focus ring (`show-focus`), which the React card never
+  applies; compact alphabet letters on 720-line screens, where the column ran over the header.
+- **A pre-existing defect found and fixed:** the release picker rendered `<select is="emby-select">` from React,
+  which the v0 custom-elements polyfill rejects (`t.toLowerCase is not a function`), unmounting the picker whenever
+  a quality profile exists — in every layout. `components/EmbySelect.tsx` creates it from markup like upstream's
+  `SelectElement`.
+- **Handed back** (`git diff master` empty on each): `apps/legacy/controllers/movies/movies.js`,
+  `shows/tvshows.js`, `components/filterdialog/filterdialog.js`, `filterdialog.template.html`,
+  `filterIndicator.js`. `integration/legacyLibrary.{ts,scss}` deleted.
+- The probe is committed as `scripts/jellyfinmod-e2e/tv-shell.mjs` (`JELLYFINMOD_TEST_URL`,
+  `JELLYFINMOD_BROWSER=chromium|chrome`, `JELLYFINMOD_TV_LAYOUTS`, `JELLYFINMOD_TV_SECTIONS`); its last check is the
+  decision-6 hygiene assertion (no `JellyfinMod`-prefixed title in the libraries or in the 159 catalog entries).
+
+**Verified — bundle `a1f72eb7b8ea`, the hand-back included.** Playwright's bundled Chromium 153.0.8010.12 and
+real Google Chrome 153.0.8010.53, both headless: **142 of 142 checks pass on each**, identical results. Layouts
+TV 1920×1080 and 1280×720 (keyboard only), desktop 1440×900, mobile 390×844 (Android UA), and `desktop-legacy`
+1440×900.
+
+| Area | Observed on TV, by keys only |
+| --- | --- |
+| Shows grid | 100 cards on page 1 of 105, 50 mod cards, 50 file-state marks (legacy grid: 48/48); first focus on the first card |
+| Movies grid | 55 of 55, 54 mod cards, 54 marks (legacy: 54/54) |
+| Filter | reached along the toolbar by arrows, opens by Enter with focus on the first accordion; File group lists On disk, Not downloaded, Downloading, Reclaimed, Due within 7 days; Enter on Not downloaded filters Shows 100 → 55 cards with the pop-up still open, Enter again restores 100 |
+| Sort, View settings | open by Enter with focus inside; Down moves within; Right reaches the grid-view row's settings button, Enter opens card settings, Down walks them |
+| Back | Escape **and the remote's 461** close Filter, Sort and View settings, stay on the grid, focus back on the opener; with nothing open, 461 navigates back to Home |
+| View menu | Enter opens it, Down + Enter switches to Suggestions (`tab=1`, sections render); 461 returns to the grid tab |
+| Paging | Next by remote → 101–105 of 105; when Next disables on the last page, focus stays on the paging buttons (Previous) instead of dropping to the page; Previous back to 1–100 |
+| Focus restore | Enter on a card opens details; Escape returns with focus on the same card |
+| Release picker | from a movie page: Down to the mod actions, arrows along the row to Search releases, Enter opens it; focus lands on the top release row when the search returns; Up/Down stay inside; Enter on the profile select opens upstream's action sheet and Back closes only the sheet; Escape and 461 each close the picker with focus back on Search releases. Nothing grabbed |
+| Home, search, details | unchanged from part 1, all passing |
+| Stock entry (`/web-mod/<id>/index.html`, TV, Chromium) | upstream legacy grid, 0 `jfmod` elements, filter dialog without a File group, no page errors |
+
+Page errors: none from the mod. Backing out of any `emby-select` logs upstream's own unhandled
+`ActionSheet closed without resolving` (emby-select has no `catch`); stock does the same, and the probe reports it
+separately.
+
+**Grid timings, TV 1920×1080, median of three** (Home → grid by in-app navigation; key → focus and key → the second
+painted frame over 16–20 arrow presses; Next page to the first new card). Measured on the legacy grid (bundle
+`0350bcab50fa`) before the hand-back, and on the modern grid (`a1f72eb7b8ea`):
+
+| | Chromium legacy | Chromium modern | Chrome legacy | Chrome modern |
+| --- | --- | --- | --- | --- |
+| Shows, first card (ms) | 475 | 464 | 507 | 478 |
+| Movies, first card (ms) | 257 | 240 | 279 | 265 |
+| Key → focus (ms, Shows / Movies) | 0.8 / 0.8 | 1.1 / 0.8 | 1.3 / 0.7 | 1.2 / 0.7 |
+| Key → painted frame (ms, Shows / Movies) | 19.6 / 17.2 | 21.0 / 20.7 | 18.6 / 14.9 | 20.6 / 23.5 |
+| Next page, first new card (ms) | 166 | 221 | 187 | 211 |
+
+The modern grid reaches its first card as fast or faster; a key press paints 2–9 ms later (well under one frame);
+a page change is 24–55 ms slower. **This is a desktop Mac, not a TV**: an LG TV's CPU renders React far slower, and none of
+these numbers stands for the device.
+
+**Differences a user will see.** Six posters per row on the TV, which is upstream's TV card size
+(`.itemsContainer-tv > .portraitCard`); the mod's legacy grid showed nine only because its wrapper element defeated
+that rule. The view tabs move from the header strip to the toolbar's view menu, which adds Studios and Playlists to
+Movies and Collections and Playlists to Shows. Sort and view choices are the modern grid's saved settings, shared
+with the desktop, not the legacy grid's. At 1280×720 the page keeps upstream's padding for a two-row header, so a
+band stays empty above the toolbar where the legacy tabs used to sit.
+
 **Not done or not verified.**
 
-- **The real Google Chrome pass has not run.** Nothing here is accepted until it does.
-- Physical webOS: not run; desktop TV emulation is not device evidence.
-- `movies.js` and `tvshows.js` are **still patched**. They are the only thing that serves the catalog on the TV
-  grid, and owning them would mean mirroring `moviesrecommended.js` and `tvrecommended.js` as well (their tab
-  dispatch imports `../movies/${depends}` by path, and their Suggestions tab is module-private), about 1 500
-  lines against a ~70-line patch — the trade decision 12 already rejected for the modern grid. The alternative,
-  rendering the modern React library page on the TV, puts MUI popovers in front of the remote, where webOS's Back
-  key would navigate away instead of closing them. Left for a user decision.
-- The Search releases picker opened by Enter on TV was not reached by the probe (the walk back along the action
-  row overshot); the S6 detail evidence covers the actions' reachability, not this dialog on this bundle.
+- **Physical LG TV: not run.** Desktop emulation, in either browser, is not device evidence. Checklist for the
+  user, after fully closing and reopening the Jellyfin app on the TV:
+  1. Movies and Shows open with a card focused and a visible blue ring on it.
+  2. Up reaches the toolbar; Left/Right walk the whole row (view menu, Play All, Shuffle, Filter, Sort, View
+     settings, Previous, Next).
+  3. Filter → OK opens it with a highlighted row; Down to File, OK, Down to Not downloaded, OK filters the grid;
+     OK again clears it; the remote's **Back closes the pop-up and stays on the grid**. Same for Sort and View
+     settings.
+  4. With nothing open, Back leaves the grid as before.
+  5. Next page and Previous page by OK; focus stays on a paging button.
+  6. OK on a card, then Back: focus returns to the same card.
+  7. On a movie page, Search releases → OK: the picker opens, Up/Down move inside it, Back closes it. Do not press
+     OK on a release row — that grabs it.
+  8. Scrolling down the grid stays smooth, and the alphabet on the right does not cover the clock.
+- The other tabs (Genres, Upcoming, Networks, Episodes, Collections, Playlists, Studios) are upstream's modern tab
+  views; only Suggestions was opened and driven by remote.
+- `desktop-legacy` was checked for rendering (grids with marks, Home, search, detail), not driven by keys;
+  `mobile-legacy` reaches the same route and was not run.
 
-**Instance state.** 28096's packaged bundle was replaced for these runs; the previous zip is kept beside it as
-`jellyfinmod-web.zip.pre-p7tv` and was restored at the end of the run.
+**Instance state.** 28096's packaged bundle was swapped for these runs and the original
+(`6219abbfdcab`) restored at the end; the probe leaves no browser-side layout override and creates nothing on the
+server.
 
-**Next step.** Re-run the probe on real Chrome (`channel: 'chrome'`) at the four layouts against a fresh deploy of
-this branch, then decide the two legacy grid rows with the user.
+**Next step.** The physical-TV checklist above. Then work queue item 3.
 
 ### S7 — one settings contract behind every form
 
