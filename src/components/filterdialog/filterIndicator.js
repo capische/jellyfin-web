@@ -22,8 +22,6 @@ export function getFilterStatus(query) {
             || query.Years
             || query.OfficialRatings
             || query.IsUnaired
-            || query.JellyfinModState
-            || query.JellyfinModDueWithinDays
     );
 }
 
