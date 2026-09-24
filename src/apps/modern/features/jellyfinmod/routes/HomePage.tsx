@@ -1,6 +1,7 @@
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Action } from 'history';
+import { useNavigationType, useSearchParams } from 'react-router-dom';
 
 import globalize from 'lib/globalize';
 import { clearBackdrop } from 'components/backdrop/backdrop';
@@ -15,7 +16,8 @@ import 'elements/emby-scroller/emby-scroller';
 
 type OnResumeOptions = {
     autoFocus?: boolean;
-    refresh?: boolean
+    refresh?: boolean;
+    restoreFocus?: boolean;
 };
 
 type ControllerProps = {
@@ -39,6 +41,8 @@ type ControllerProps = {
  */
 const Home = () => {
     const [ searchParams ] = useSearchParams();
+    // A Back navigation returns the TV's focus to the card it left from (the mod Home tab remembers it).
+    const isReturning = useNavigationType() === Action.Pop;
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
 
     const libraryMenu = useMemo(async () => ((await import('scripts/libraryMenu')).default), []);
@@ -95,7 +99,8 @@ const Home = () => {
 
             controller.onResume({
                 autoFocus: previousIndex == null && layoutManager.tv,
-                refresh: refresh
+                refresh: refresh,
+                restoreFocus: isReturning
             });
 
             controller.refreshed = true;
@@ -103,7 +108,7 @@ const Home = () => {
         }).catch(err => {
             console.error('[Home] failed to get tab controller', err);
         });
-    }, [ getTabController ]);
+    }, [ getTabController, isReturning ]);
 
     const onTabChange = useCallback((e: { detail: { selectedTabIndex: string; previousIndex: number | null }; }) => {
         const newIndex = parseInt(e.detail.selectedTabIndex, 10);
