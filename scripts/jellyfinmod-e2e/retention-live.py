@@ -450,6 +450,41 @@ def cmd_compare(before, after):
         check(second[key] == first[key] != "ABSENT", f"{key} is byte-identical")
 
 
+REAL_WINDOW_RECLAIMED = ("E04", "E09-E10", "E10-B")  # due one day after the real-window watches and restarts
+
+
+def cmd_compare_real(before, after):
+    first = json.load(open(os.path.join(STATE, f"hashes-{before}.json")))
+    second = json.load(open(os.path.join(STATE, f"hashes-{after}.json")))
+    for key in first:
+        if key in REAL_WINDOW_RECLAIMED:
+            check(first[key] != "ABSENT" and second[key] == "ABSENT", f"{key} was unlinked after its real one-day window")
+        else:
+            check(second[key] == first[key], f"{key} is unchanged ({'absent' if first[key] == 'ABSENT' else 'byte-identical'})")
+
+
+def cmd_phase_b():
+    """The real window's positive half, a day later: switch retention on again (Q9: the countdowns kept running), run
+    the native task, compare, check series Keep wins, then switch retention off, restore and remove every fixture."""
+    cmd_login()
+    try:
+        cmd_configure(0, 1)
+        cmd_preview()
+        cmd_hashes("phaseb-run-before")
+        cmd_run()
+        cmd_hashes("phaseb-run-after")
+        cmd_compare_real("phaseb-before", "phaseb-run-after")
+        cmd_reconcile()
+        _, detail = series_detail()
+        check(not [h for h in detail["history"] if h["eventType"] in ("media_missing", "episode_media_missing")],
+              "no missing-media event after the real-window reclaim")
+        cmd_series_keep()
+    finally:
+        cmd_restore()
+        cmd_cleanup()
+        cmd_logout()
+
+
 def cmd_run():
     print("task", run_task("JellyfinModRetentionReclamation"))
     print("latest run", json.dumps(must("GET", "/JellyfinMod/Retention/Runs/Latest")))
@@ -666,6 +701,10 @@ if __name__ == "__main__":
         cmd_configure(int(args[1]), int(args[2]))
     elif args[0] == "hashes":
         cmd_hashes(args[1] if len(args) > 1 else "now")
+    elif args[0] == "compare-real":
+        cmd_compare_real(args[1], args[2])
+    elif args[0] == "phase-b":
+        cmd_phase_b()
     elif args[0] == "compare":
         cmd_compare(args[1], args[2])
     elif args[0] in commands:
