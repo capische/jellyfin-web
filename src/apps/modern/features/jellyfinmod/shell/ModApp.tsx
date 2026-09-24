@@ -11,6 +11,7 @@ import browser from 'scripts/browser';
 import { persister, queryClient } from 'utils/query/queryClient';
 
 import ModAppRouter from './ModAppRouter';
+import { installDpadModals } from './dpadModals';
 import JellyfinModQueryClientEventHandler from '../integration/queryClientEventHandler';
 
 /**
@@ -25,6 +26,9 @@ import JellyfinModQueryClientEventHandler from '../integration/queryClientEventH
 // '@tanstack/query-devtools' requires 'Proxy', which cannot be polyfilled for legacy browsers, and the devtools
 // button takes d-pad focus on the TV.
 const supportsReactQueryDevtools = window.Proxy && !browser.tv;
+
+// Back closes an open MUI pop-up instead of leaving the page, and on the TV the remote can move inside one.
+installDpadModals();
 
 const ModApp = () => (
     <PersistQueryClientProvider
