@@ -330,7 +330,8 @@ const CLIENT_KEYS = ['name', 'kind', 'baseUrl', 'username', 'enabled', 'label', 
 export const ClientSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const client = selectedClient(data);
-    const [draft, set] = useDraft(client, { kind: 'transmission', enabled: true, label: 'jellyfinmod' });
+    // `username` is optional but not nullable on the server: a new client left without one sends '', as the Dashboard page does.
+    const [draft, set] = useDraft(client, { kind: 'transmission', enabled: true, label: 'jellyfinmod', username: '' });
     const [password, setPassword] = useState<SecretChange>(UNCHANGED);
     const [mappings, setMappings] = useState<PathMapping[]>([]);
     const [probePath, setProbePath] = useState('');
