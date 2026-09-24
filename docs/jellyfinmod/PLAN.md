@@ -3,6 +3,17 @@
 Task list for agents. Each task is self-contained: an agent that has read the **Briefing** below
 and its own task entry should be able to finish without asking a question.
 
+**Jellyfin 12 retarget — decided by the user, 2026-09-24.** Asked what the point of supporting an
+older Jellyfin was once 12 had shipped, the user chose to drop Jellyfin 10.11 and retarget the
+plugin to **Jellyfin 12.0.0 on .NET 10**, as its own task, **before S11**, so that S11 accepts the
+build that ships. Every instance (production, isolated test, acceptance) already runs 12.0.0 and the
+image is built on 12.0.0 pinned by digest. The plugin now targets `net10.0`, `Jellyfin.Controller`/
+`Jellyfin.Model` `12.0.0`, EF Core `10.0.11` and `targetAbi` `12.0.0.0`; 10.11 is no longer supported.
+Rationale and what was removed: [README §7.1](README.md#71-confirmed-target-server-1200-on-net-10);
+matrix and evidence: [PHASE7 §3.5](PHASE7.md#35-version-and-compatibility-matrix) and the S5 retarget
+evidence. Version enumeration through `GetMediaSources` (V1) and episode versions (E7) stay separate
+tasks. This supersedes the 10.11.11 pins in P1 below and in open question 15.
+
 **Review issues, 2026-09-24:** see [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md) for the Phase 7
 review of the S4 fixes, S5, S7–S10 and the TV shell (no P1, four P2, twelve P3). Worked on
 2026-09-24: thirteen are fixed and verified, two are documentation fixes, S4-R5 is disputed with
