@@ -14,7 +14,7 @@ import {
     blockerSentence, BLOCKER_SECTIONS, type ConnectionTest, type Overview, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
 } from './settingsApi';
-import { type Draft, FieldForm, type FieldSpec, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill } from './settingsWidgets';
+import { type Draft, FieldForm, type FieldSpec, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill, useConfirm } from './settingsWidgets';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the settings DTOs are the plugin's own and are read field by field */
 
@@ -388,6 +388,7 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     const [draft, set] = useDraft(source, { name: 'Prowlarr', baseUrl: '', enabled: true, syncIntervalMinutes: 360 });
     const [key, setKey] = useState<SecretChange>(UNCHANGED);
     const section = useSectionState(reload);
+    const [confirmDialog, ask] = useConfirm();
     if (!data.prowlarr) return null;
     const save = () => section.run(async () => {
         const body = { ...pick(draft, ['name', 'baseUrl', 'enabled', 'syncIntervalMinutes']), apiKey: key };
@@ -425,11 +426,13 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
                 {source && <Button size='small' disabled={section.busy} onClick={() => section.test(`Settings/Prowlarr/${source.id}/Test`, api)}>Test</Button>}
                 {source && <Button size='small' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync now</Button>}
                 {source && (
-                    <Button size='small' className='jfmod-danger-text' disabled={section.busy} onClick={() => {
-                        if (window.confirm('Remove Prowlarr and every indexer it synced?')) void section.run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Removed.');
-                    }}>Remove</Button>
+                    <Button size='small' className='jfmod-danger-text' disabled={section.busy} data-prowlarr='remove' onClick={() => ask({
+                        title: 'Remove Prowlarr?', text: 'Every indexer it synced is removed with it. Grabs keep their recorded source name.',
+                        action: 'Remove', onConfirm: () => void section.run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Removed.')
+                    })}>Remove</Button>
                 )}
             </div>
+            {confirmDialog}
         </div>
     );
 };
@@ -437,6 +440,7 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
 export const IndexersSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const section = useSectionState(reload);
+    const [confirmDialog, ask] = useConfirm();
     const [editing, setEditing] = useState<any | null | undefined>(undefined);
     return (
         <SectionFrame id='indexers' eyebrow={props.eyebrow} title='Indexers' state={summarise('indexers', data)} notice={section.notice}
@@ -461,17 +465,17 @@ export const IndexersSection: FC<SectionProps> = props => {
                         <span className='jfmod-rowactions'>
                             <Button size='small' disabled={section.busy} onClick={() => section.test(`Settings/Indexers/${indexer.id}/Test`, api)}>Test</Button>
                             <Button size='small' onClick={() => setEditing(indexer)}>Edit</Button>
-                            {indexer.managedBy !== 'prowlarr' && <Button size='small' className='jfmod-danger-text' onClick={() => {
-                                if (window.confirm(`Remove ${indexer.name}? Grabs keep their recorded source name.`)) {
-                                    void section.run(() => request(api, 'DELETE', `Settings/Indexers/${indexer.id}`), 'Removed.');
-                                }
-                            }}>Remove</Button>}
+                            {indexer.managedBy !== 'prowlarr' && <Button size='small' className='jfmod-danger-text' data-indexer-remove={indexer.id} onClick={() => ask({
+                                title: `Remove ${indexer.name}?`, text: 'Grabs keep their recorded source name.', action: 'Remove',
+                                onConfirm: () => void section.run(() => request(api, 'DELETE', `Settings/Indexers/${indexer.id}`), 'Removed.')
+                            })}>Remove</Button>}
                         </span>
                     </div>
                 ))}
             </div>
             <ProwlarrCard {...props} />
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={saved => { setEditing(undefined); if (saved) void reload(); }} />}
+            {confirmDialog}
         </SectionFrame>
     );
 };
@@ -540,6 +544,7 @@ const ProfileDialog: FC<{ api: Api; profile: any | null; qualities: { id: string
 export const ProfilesSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const section = useSectionState(reload);
+    const [confirmDialog, ask] = useConfirm();
     const [editing, setEditing] = useState<any | null | undefined>(undefined);
     const makeDefault = (id: string) => section.run(() => request(api, 'PATCH', 'Settings/Acquisition', {
         enabled: data.acquisition.enabled, downloadClientId: data.acquisition.downloadClientId ?? null, defaultQualityProfileId: id,
@@ -562,9 +567,10 @@ export const ProfilesSection: FC<SectionProps> = props => {
                             <Button size='small' disabled={section.busy || !data.acquisition} onClick={() => makeDefault(profile.id)}>Make default</Button>}
                         <span className='jfmod-rowactions'>
                             <Button size='small' onClick={() => setEditing(profile)}>Edit</Button>
-                            <Button size='small' className='jfmod-danger-text' onClick={() => {
-                                if (window.confirm(`Remove ${profile.name}?`)) void section.run(() => request(api, 'DELETE', `Settings/QualityProfiles/${profile.id}`), 'Removed.');
-                            }}>Remove</Button>
+                            <Button size='small' className='jfmod-danger-text' onClick={() => ask({
+                                title: `Remove ${profile.name}?`, text: 'The profile is deleted. Titles already downloaded are not affected.', action: 'Remove',
+                                onConfirm: () => void section.run(() => request(api, 'DELETE', `Settings/QualityProfiles/${profile.id}`), 'Removed.')
+                            })}>Remove</Button>
                         </span>
                     </div>
                 ))}
@@ -573,6 +579,7 @@ export const ProfilesSection: FC<SectionProps> = props => {
                 <ProfileDialog api={api} profile={editing} qualities={data.acquisition?.qualities ?? []}
                     onClose={saved => { setEditing(undefined); if (saved) void reload(); }} />
             )}
+            {confirmDialog}
         </SectionFrame>
     );
 };
