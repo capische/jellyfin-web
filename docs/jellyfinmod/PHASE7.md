@@ -1,7 +1,8 @@
 # Phase 7 — setup, admin UI and UI delivery
 
-**S4 follow-up issues:** [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md) records three open
-takeover findings with acceptance checks. Existing S4 evidence does not cover these cases.
+**Review follow-ups:** [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md) (three S4 takeover findings, fixed in
+`ce49172`) and [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md) (sixteen findings, worked 2026-09-24; see the
+*Phase 7 remaining — handover* below for what is still open).
 
 Planning draft, 2026-09-20. Read [PLAN.md](PLAN.md), [README.md](README.md) §1, §3, §7.1 and
 §9.2, [UX.md](UX.md) §1, §2, §7.3, §12, §13 and §14, [PHASE1.md](PHASE1.md) §6–§7,
@@ -679,7 +680,14 @@ administrator did not ask for, it must never be silent: every patch and every re
 `interface_patched` / `interface_restored` history row and a log line at information level
 naming the bundle id, both hashes and the manual recovery, and `state.json` records
 `patchedBy` (`automatic` on the default path, `setting` when an administrator changed the switch,
-`bundle` on a re-render after an upgrade). Health and the Interface section surface the same
+`bundle` on a re-render after an upgrade). **As built (2026-09-24, REVIEW-2026-09-24 S4-R4 and
+P7-R3):** `automatic` also covers every re-patch the plugin makes by itself — after a host upgrade, a
+container recreate, a changed base URL or a hand edit; the history rows carry `bundleId`,
+`previousBundleId`, both hashes and `patchedBy`, and a restore records `restoredBy`: `setting` (the
+switch is off), `restoreStock` (*Restore stock now*, switch unchanged) or `noBundle`. No row carries a
+path. A base URL change takes effect in Jellyfin only after a restart (observed on 12.0.0: until then
+the host redirects every request to the new prefix and serves none there), and the engine re-renders
+for the new prefix at that restart. Health and the Interface section surface the same
 value, so "why did `/web` change?" is answerable from the Dashboard without reading the log.
 
 | Observed `<web-root>/index.html` | Action | State |
@@ -888,7 +896,7 @@ observed behaviour of the disposable Prowlarr in S1 wins over documentation.
 | Rate limits | Phase 6 per-indexer interval, budget and breaker apply unchanged; Prowlarr's own limits and 429 trip the same breaker; sync is one request per run plus one `t=caps` per changed indexer. |
 | Fail-closed | A sync error changes nothing. An HTTP 200 with zero torrent indexers disables synced indexers only after two consecutive empty syncs at least one hour apart. A body missing `id`, `name`, `protocol` or `enable` aborts with `prowlarr_schema`. `http`/`https` only, no userinfo or query in the base URL; TLS errors are errors. A sync never enables what the administrator disabled. |
 | Test | `POST /Settings/Prowlarr/Test`: `system/status`, `health`, count of enabled torrent indexers; codes `unauthorized`, `unreachable`, `timeout`, `prowlarr_schema`, `no_torrent_indexers`. |
-| Scheduling | `IScheduledTask` `JellyfinModProwlarrSync`, default every 6 hours. |
+| Scheduling | `IScheduledTask` `JellyfinModProwlarrSync`. **As built (2026-09-24, S9-R1):** the task wakes every 15 minutes and syncs each enabled source whose own `SyncIntervalMinutes` (default 360, at least 15) has passed since its last sync. Routes carry the source id (see the API contract). |
 | Capability | `acquisition.prowlarr`. |
 
 Prowlarr's "applications" push is not used; JellyfinMod is not one of those applications and a
@@ -903,7 +911,7 @@ enforces, not from stored progress.
 | Step | Passes when | Refuses |
 | --- | --- | --- |
 | 1 Discovery | TMDB token configured and `Discovery/Test` succeeded for the current revision | Continuing without a passing test |
-| 2 Download client | Client saved, `Test` verified, destination checks passed, at least one path mapping verified, `TestImportPath` returned `linked` for the target library root | A download directory inside any library root (`destination_inside_library`), on another filesystem (`destination_not_same_filesystem`, `cross_filesystem`), an unverified mapping |
+| 2 Download client | Client saved, `Test` verified, destination checks passed, at least one path mapping verified, `TestImportPath` returned `linked` for the target library root. **As built (S7, recorded here 2026-09-24, P7-R3):** `Setup/State` checks the selected client is enabled and verified and every mapping verified; `TestImportPath`'s result is not persisted, so the server cannot require `linked`, and the wizard runs the probe itself | A download directory inside any library root (`destination_inside_library`), on another filesystem (`destination_not_same_filesystem`, `cross_filesystem`), an unverified mapping |
 | 3 Indexers | At least one enabled indexer with verified capabilities, typed by hand or synced | Continuing with none verified |
 | 4 Quality profile | At least one profile and a default selected | An empty profile, a cutoff outside the allowed qualities |
 | 5 Enable | `PATCH /Settings/Acquisition` with `enabled: true` succeeded | The existing 409 `acquisition_not_ready` with blockers, shown verbatim |
@@ -1081,8 +1089,8 @@ each.
 | `GET/PATCH /Settings/Discovery`, `POST /Settings/Discovery/Test` | `{ tokenConfigured, revision }`; PATCH takes `{ token: <SecretChangeRequest>, revision }`; Test answers `ConnectionTestDto`. |
 | `GET/PATCH /Settings/SeedProtection`, `POST /Settings/SeedProtection/Test` | `{ source, rpcUrl?, username?, passwordConfigured, matchesAcquisitionClient, revision }`. |
 | `GET/PATCH /Settings/Retention` | The XML-backed fields with the Dashboard's validation; Selected user without a valid user is refused (T13). |
-| `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` | `{ takeoverEnabled, state, webRoot, bundleId, retainedBundleIds[], supportedServer, hostVersion, stockSha256, patchedSha256, patchedAt, patchedBy (`automatic` / `setting` / `bundle`), blocker, recovery, revision }`; `patchedBy` and `patchedAt` are how an administrator sees that the takeover applied itself (decision 7). RestoreStock performs the restore row of §4.6 without changing the switch. |
-| `GET/POST/PATCH/DELETE /Settings/Prowlarr`, `POST /Settings/Prowlarr/Test`, `POST /Settings/Prowlarr/Sync` | Source DTO with `apiKeyConfigured`; sync outcome `{ seen, created, updated, disabled, removed, verified, failed[] }` (202 scheduled, 200 synchronous test). |
+| `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` | `{ takeoverEnabled, state, webRoot, bundleId, retainedBundleIds[], supportedServer, hostVersion, stockSha256, patchedSha256, patchedAt, patchedBy (`automatic` / `setting` / `bundle`; §4.6 says when each applies), blocker, recovery, revision }`; `patchedBy` and `patchedAt` are how an administrator sees that the takeover applied itself (decision 7). RestoreStock performs the restore row of §4.6 without changing the switch. |
+| `GET/POST /Settings/Prowlarr`, `PATCH/DELETE /Settings/Prowlarr/{id}`, `POST /Settings/Prowlarr/{id}/Test`, `POST /Settings/Prowlarr/{id}/Sync` | Source DTO with `apiKeyConfigured`; sync outcome `{ code, seen, created, updated, disabled, removed, verified, failed[] }`, synchronous (200). **As built (S9, recorded here 2026-09-24, P7-R3):** the routes carry the source id; the first draft's id-less paths were never built. A `PATCH` that changes `baseUrl` moves the synced feeds in the same save and re-syncs at once (S9-R3). |
 | `GET /Settings/Indexers` (existing) | Rows gain `managedBy`, `prowlarrSourceId`, `prowlarrIndexerId`, `prowlarrRemovedAt`, `breakerOpenUntil`. |
 | `GET /Setup/State`, `POST /Setup/Dismiss` | `{ complete, dismissedAt, steps: [{ id, status, reasons[] }] }`. |
 
@@ -1997,29 +2005,79 @@ server.
 
 #### Phase 7 remaining — handover
 
-Kept current by whoever works S5 and S7–S11. Last update 2026-09-24 (S5), Opus, high effort.
+Kept current by whoever works S11. Last update 2026-09-24 (review fixes), Opus 5.5, high effort.
 
-- **Done and verified (first slices, each with its own "Not verified" list):** S7 (plugin `8efe9ea`), S8 (web
-  `350c0de050`, `16b71bff3b`), S9 (plugin `cdb6e7b`, web `b4800a09c5`), S10 (web `7bc5931da2`). Evidence sections
-  below.
-- **Open debt:** feature eslint findings in `features/jellyfinmod/settings/`; the S10 run from a fresh database copy;
-  a search and grab through a synced Prowlarr indexer; browser checks of secret replace/clear and the ordinary-user
-  refusal (no password for another account).
-- **S5 (2026-09-24, Opus, high):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows
-  done; see *S5 evidence* for what is not verified. The image `capische/jellyfinmod:0.1.0.0` lives on the test
-  host only; build it with the plugin's `scripts/build-release.sh` and `docker build`.
-- **Next step:** S11 — **not started**; and the §3.4 routine run once for real when the user authorizes the two
-  rebases. Everything above is on `origin/jellyfin-mod` and plugin `master`; start from new worktrees. Open
-  question 11 (image name, registry, host pin) still stands; S5 used its proposed default, `capische/jellyfinmod`
-  pinned to the acceptance compose's digest, and published nothing.
-- **Probe:** `scripts/jellyfinmod-e2e/image-review.mjs` (S5), against a disposable image container only.
-- **Instance:** 28096 runs plugin `cdb6e7b` and web bundle `a3ecb472798a` (`jellyfin-mod` `8f4b021d43`). Backups
-  beside it: `backups/pre-8efe9ea` and `backups/pre-s9` (database, XML, secret store), `JellyfinMod.dll.pre-8efe9ea`,
-  `JellyfinMod.dll.pre-s9`.
-- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (S7), `settings-area.mjs` (S8,
-  `JELLYFINMOD_SETTINGS_LAYOUTS`), `settings-prowlarr.mjs` (S9), `setup-wizard.mjs` (S10); plugin suites
-  `tests/PhaseSevenSettingsIntegration` and `tests/PhaseSevenProwlarrIntegration`, run on the Pi like the others
-  (`PhaseSevenTakeoverIntegration` needs a real `jellyfinmod-web.zip` path as its argument).
+- **S7, S8, S9, S10: implemented; acceptance partial** (REVIEW-2026-09-24 P7-R2). Plugin `8efe9ea`, `cdb6e7b`; web
+  `350c0de050`, `16b71bff3b`, `b4800a09c5`, `7bc5931da2`. Each evidence section below keeps its "Not verified" list;
+  what is still missing is named in the S11 steps of *Review fixes — 2026-09-24* below, not left as debt.
+- **REVIEW-2026-09-24:** worked 2026-09-24. Thirteen findings fixed and verified, two fixed in the documentation (S7-R4,
+  P7-R3), S4-R5 disputed with live evidence, P7-R2 partly closed. Commits and evidence per finding in [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md).
+- **S5 (2026-09-24):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows done; see *S5
+  evidence*. The image `capische/jellyfinmod:0.1.0.0` lives on the test host only. Open question 11 is answered
+  (`ghcr.io/capische/jellyfinmod`, Jellyfin 12.0.0 by digest) but **nothing was published**: publishing is a public
+  action this agent did not take on a relayed instruction; it needs the user's own go-ahead.
+- **§3.4 merge routine: not run.** The coordinator relayed on 2026-09-24 that the user authorized rebasing `master`
+  and `jellyfin-mod` onto upstream and force-pushing both. A force-push rewrites published history, and this agent
+  does not treat a relayed message as the user's own authorization; it was not run. One upstream commit was
+  pending at S5.
+- **S11: not run** (see *S11 evidence* below for what is and is not covered).
+- **Instance:** 28096 runs plugin `1c1098c` (branch `p7-r24`, fast-forwarded to `master` when pushed) and web bundle
+  `cb3ac1e01a5b` (`jellyfin-mod` `378d8ddd10`), served at `/web/` by the takeover. Backups beside it:
+  `backups/pre-r24` (database, XML, secret store, recovery state, the previous DLL, bundle zip and patched
+  `index.html` of plugin `cdb6e7b` / bundle `a3ecb472798a`) and `backups/pre-p7r2` (the state the Prowlarr run was
+  restored to). Earlier: `backups/pre-8efe9ea`, `backups/pre-s9`.
+- **Probes:** `scripts/jellyfinmod-e2e/review-fixes.mjs` (S8-R1, S8-R2), `settings-dashboard.mjs` (S7),
+  `settings-area.mjs` (S8), `settings-prowlarr.mjs` (S9), `setup-wizard.mjs` (S10), `image-review.mjs` (S5); plugin
+  suites under `tests/` (the takeover suite takes a `jellyfinmod-web.zip` path) and the image test
+  `tests/image/entrypoint-rewrite.sh`.
+
+#### Review fixes — 2026-09-24
+
+Opus 5.5, high effort. Plugin `732cea3`..`1c1098c`, web `c8e3437e12`..`689bf7151d`. Every plugin suite passes on the
+test host (twelve .NET suites plus the image test); PhaseThreeIntegration and PhaseSixIntegration each failed once
+on timing in one sequential run of all suites and passed on an immediate re-run, unchanged code.
+
+**Live on 28096, 2026-09-24.**
+
+| Check | Result |
+| --- | --- |
+| Deploy of plugin `1c1098c` and bundle `07499d1414e2`, then `cb3ac1e01a5b` | Health `patched`, `patchedBy: bundle`; one `interface_patched` history row per change naming both bundle ids and hashes, no path (S4-R4) |
+| Base URL `/jfprobe` set without a restart | The host redirected every path (including `/JellyfinMod/Health`) to `/jfprobe/…` and served nothing there (`404`) until restarted — host behaviour, so S4-R5 is disputed. After the restart `/jfprobe/web/` served the page with every asset under `/jfprobe/web-mod/<id>/`, Health `patched`, an `automatic` history row. Restored to an empty base URL and re-rendered |
+| Retained bundles | 30 bundles (≈1.8 GB) before; after `1c1098c` three (179 MB), the cap §4.5 always promised (found here, fixed in `1c1098c`) |
+| Prowlarr through a synced indexer (P7-R2, S9) | A stand-in Prowlarr and Torznab feed on the test host's Docker bridge (never the production Prowlarr; the two manual indexers on 28096 that point at it were switched off for the run). Source added with a generated key; Test `ok`; Sync created and verified one indexer (`t=caps` with the source key); `GET /Releases` for *Night of the Living Dead* (intent `addVersion`) returned the stand-in release, identity `verified` by `imdbid`, eligible, score 114; the grab passed its 5 s hold and **the acceptance Transmission accepted the torrent**; the queue showed it. Removed with `DELETE /Queue/{id}` `removeFromClient`, no torrent, resume file or data left in the acceptance Transmission. The database, XML and secret store were then restored to the pre-run snapshot, byte for byte for the XML and store, and the indexers re-read exactly as before |
+| S8-R1 and S8-R2 in the browser (`review-fixes.mjs`) | **27 of 27 on Playwright's Chromium 153.0.8010.12 and 27 of 27 on Google Chrome 153.0.8010.53**, identical: the mod entry's menu offers *JellyfinMod settings*, the stock entry at `/web-mod/<id>/index.html` does not; on the TV at 1920×1080 and 1280×720, Down from Home reaches *JellyfinMod settings* in four presses, Enter opens the area, the rail reaches Indexers, Right enters the section, Down and Right reach a disposable indexer's Remove, Enter opens the dialog on Cancel, the remote's Back (461) closes it and removes nothing, Right + Enter removes it, Back returns to Home; no page errors; no fixture left |
+
+**Found and fixed on the way:** in the TV settings area Down from a section heading fell back into the rail and
+never reached the section's rows; the section column is now a `focuscontainer-y` (amended into `378d8ddd10`).
+
+#### S11 evidence
+
+**Not run, 2026-09-24.** This agent stopped at the 80% usage rule after the review fixes. Nothing below is claimed.
+What the review fixes already cover towards S11: the takeover history and bundle cap (step 2, isolated shape
+only), the Prowlarr search and grab through a synced indexer (step 1's "sync Prowlarr, grab", on the acceptance
+instance rather than a fresh install), the S8 TV path in both browsers (step 7, partially). Still to run, as named
+steps:
+
+1. Step 1 from a clean isolated config in a disposable container (image): the wizard end to end with the provoked
+   refusals (`destination_inside_library`, a download directory on a second filesystem such as the container's
+   `/dev/shm`, an unverified mapping, an empty profile, a cutoff outside the allowed qualities, the 409
+   `acquisition_not_ready`), resume after closing the browser, Dismiss from the banner, the TV reachability of
+   the wizard; then sync the stand-in Prowlarr, grab, import, play; the T18 cycle and the Phase 6 checklist with
+   settings saved only through the area. TMDB needs a token, which may be configured only on 18096: use the
+   acceptance instance's database copy with its token reference kept (acquisition cleared), or decide how the
+   disposable instance gets discovery.
+2. Ordinary user in a browser (menu gate, page refusal) — needs a throwaway user in a disposable container.
+3. Secret Replace / Clear / Undo and the Transmission, import-path, indexer and Prowlarr Tests (wrong credential,
+   unreachable, timeout) driven from the page, against stand-in servers with generated fixture credentials.
+4. Steps 2–4 and 6: the takeover matrix on the image's own web directory, the plugin upgrade between two real
+   versions with sessions left open (needs a second plugin version, e.g. 0.1.0.1 built for the purpose), stock
+   parity with the plugin off and uninstalled (hashes), the security sweeps.
+5. Step 5 and the parity run against stock (every movie and show, audio-track and subtitle switching) in all four
+   layouts, Chromium then Chrome.
+6. §3.4 run for real, once the user confirms the rebase and force-push in person; image publication to
+   `ghcr.io/capische/jellyfinmod` likewise.
+7. Feature eslint in `features/jellyfinmod/settings/` (≈130 findings, unchanged in kind by the fixes).
+8. Physical LG webOS (6–22) checklist from the TV shell part 2, after fully closing and reopening the app.
 
 ### S7 — one settings contract behind every form
 
@@ -2454,40 +2512,40 @@ Each is the conservative option behind a named setting or documented default. It
 
 ## Open questions for the user
 
-**Answered 2026-09-20:** 1, 2, 4 and 7 — see decisions 7–10 under *Accepted user decisions*. They
-are struck through below rather than deleted, so a reader of an older evidence note can still
-find them. Nine remain open; each task implements its proposed default, behind a setting where
-reasonable, and flags it.
+**Answered 2026-09-20:** 1, 2, 4 and 7 — see decisions 7–10 under *Accepted user decisions*.
+**Answered 2026-09-24:** 3, 5, 6, 8, 9, 10, 11, 12 and 13, each recorded at its item. They are struck
+through below rather than deleted, so a reader of an older evidence note can still find them. None of
+questions 1–13 remains open; 14–16 (Trakt, §7.1.6) still are.
 
 1. ~~**Takeover default.**~~ **Answered:** on wherever the web root is writable, with an explicit
    off switch, logging and Health/settings visibility (decision 7). Consumed by S4 and S5.
 2. ~~**Writable web root in the isolated compose.**~~ **Answered:** keep the bind mount, make it
    read-write; the image's own web directory is a separate shape that S5 and S11 verify
    separately (decision 8). Consumed by gate 5, S4, S5 and S11.
-3. **Behaviour across host upgrades.** Re-patch automatically at the next startup after a changed
+3. ~~**Behaviour across host upgrades.**~~ **Answered 2026-09-24:** re-apply the takeover automatically at the next start when the new host is within `supportedServer`, as built. Original question: Re-patch automatically at the next startup after a changed
    stock file inside `supportedServer` (proposed), or hold the takeover off after any host
    upgrade until an administrator confirms? Consumed by S4.
 4. ~~**Per-user versus server-wide look.**~~ **Answered:** server-wide only; no per-user
    preference (decision 9). Consumed by S2 and S8.
-5. **Web-based TV clients.** Accept that `jellyfin-webos` and Tizen follow `/web` and switch with
+5. ~~**Web-based TV clients.**~~ **Answered 2026-09-24:** accepted — `jellyfin-webos` and Tizen follow `/web` and switch with the takeover; a full app close is needed after upgrades. The user's physical TV is an **LG on webOS 6–22 (about 2021–2022)**, the target for TV compatibility notes and the real-TV checklist (PLAN open question 17). Original question: Accept that `jellyfin-webos` and Tizen follow `/web` and switch with
    the takeover, with a full app close after upgrades (proposed)? Which physical webOS model
    verifies S4 (PLAN open question 17)? Consumed by S4 and S11.
-6. **Failsafe file in the web root.** Write the stock copy beside `index.html` (proposed, two
+6. ~~**Failsafe file in the web root.**~~ **Answered 2026-09-24:** keep both copies — the stock copy beside `index.html` and the pristine copy in plugin data — as built. Original question: Write the stock copy beside `index.html` (proposed, two
    files), or keep only the pristine copy in `<plugin-data>`? Consumed by S4.
 7. ~~**Stock-for-now list.**~~ **Answered:** accepted as planned — music, live TV, books, photos,
    playlists and collections stay upstream screens inside the mod shell for Phase 7, and none of
    them blocks the takeover default (decision 10). Consumed by S2 and S6.
-8. **Boot sharing.** Mirror the boot in the mod entry (proposed) or factor `index.jsx` (one
+8. ~~**Boot sharing.**~~ **Answered 2026-09-24:** mirror the boot in the mod entry, hash-guarded, as built. Original question: Mirror the boot in the mod entry (proposed) or factor `index.jsx` (one
    permanent upstream edit)? Consumed by S1 and S2.
-9. **Prowlarr test harness.** Boundary server only (proposed), or also a disposable Prowlarr
+9. ~~**Prowlarr test harness.**~~ **Answered 2026-09-24:** a stand-in (boundary) server only; tests never contact a real Prowlarr. Original question: Boundary server only (proposed), or also a disposable Prowlarr
    container on the test host, and whose indexers may it hold (PLAN open question 18)? Consumed
    by gate 6 and S9.
-10. **Prowlarr removal window.** Disable for 30 days then delete (proposed), disable forever, or
+10. ~~**Prowlarr removal window.**~~ **Answered 2026-09-24:** disable, then delete after 30 days, as built. Original question: Disable for 30 days then delete (proposed), disable forever, or
     delete immediately? Consumed by S9.
-11. **Docker image name, registry and host pin.** Under `capische/` to match the repositories
+11. ~~**Docker image name, registry and host pin.**~~ **Answered 2026-09-24:** publish as `ghcr.io/capische/jellyfinmod`, built on Jellyfin 12.0.0 pinned by digest, as tested. Original question: Under `capische/` to match the repositories
     (proposed), published where, and is the host pinned to `10.11.11` for the first image?
     Consumed by S5.
-12. **Wizard on TV.** Reachable and navigable only (proposed), or full data-entry acceptance on TV?
+12. ~~**Wizard on TV.**~~ **Answered 2026-09-24:** reachable and navigable by remote only; full data entry on the TV is not required. Original question: Reachable and navigable only (proposed), or full data-entry acceptance on TV?
     Consumed by S10.
-13. **Settings storage.** Move discovery and seed protection to SQLite with a one-time import
+13. ~~**Settings storage.**~~ **Answered 2026-09-24:** keep discovery and seed-protection secrets in the plugin database, write-only through the API, as built — with the S7-R1 import fix. Original question: Move discovery and seed protection to SQLite with a one-time import
     (proposed), or keep every host-visible setting in XML? Consumed by S7.
