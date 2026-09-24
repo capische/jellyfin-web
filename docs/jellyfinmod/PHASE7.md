@@ -413,7 +413,8 @@ appRouter` and `routerHistory`, `apps/legacy/routes` and `apps/modern/routes` ta
 `isInteractiveElement`), `components/focusManager`, `components/autoFocuser`,
 `scripts/scrollManager`, `components/viewManager` (for embedded legacy views), `lib/globalize`,
 `themes/*` and `ThemeStorageManager`, `elements/emby-*`, `hooks/useUserViews`, `hooks/useApi`,
-`apps/modern/features/libraries` (filter dialog and view settings), `components/itemContextMenu`,
+`hooks/useItem`, `hooks/useCurrentTab`, `components/Page`, `scripts/libraryMenu`, `apps/modern/features/libraries`
+(`LibraryProvider`, `LibraryToolbar`, `PageTabContent`, the view constants, the filter dialog and view settings), `components/itemContextMenu`,
 `components/homesections`, `utils/fetchLocal`, `serviceworker`. A new dependency is added to this
 list in the same commit that introduces it.
 
