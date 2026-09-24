@@ -154,14 +154,15 @@ checksums of the preserved tables.
 | Partially watched | Not watched. Any resume position on any version by any accessible user protects (`active_resume`); watched means Jellyfin's played flag with no resume. No separate percentage rule (PHASE3, accepted). |
 | Specials (season 0) | Episodes like any other; the user's decision covers every media item. Unnumbered specials stay skipped with a diagnostic (P2.R6) and are never targets. |
 | Multi-episode files | **Answered 2026-09-24 (Q5): reclaimed when every episode in the file is due.** The file is due only when no episode it covers is kept, every covered episode that has files of its own is due on its own schedule, and the file itself was watched under the watched-user policy after the baseline (for an episode whose only copy is this file, the file is that episode); the longest covered window applies. Otherwise `multi_episode_not_all_due`. Covered episodes without files of their own become `reclaimed` with it. An upgrade never replaces a multi-episode file. |
-| Newly tracked backlog | **Answered 2026-09-24 (Q1): only a new watch counts.** An episode becomes due only after a completion whose Jellyfin last-played date is at or after the **later of the episode's first-tracked time and the time retention was last enabled**; nothing watched before per-episode retention existed, between deploy and enable, or while retention was off, becomes due by itself. Consequences, from Jellyfin 10.11 (`BaseItem.MarkPlayed`/`MarkUnplayed`): *mark played* keeps an existing last-played date, so marking played an episode that was played or partly played before the floor does not count; *mark unplayed* clears the date, so unplayed-then-played counts; the modern web marks played without a date; *mark series played* dates every episode that had no last-played date "now", so those episodes become due one window later; a real playback always sets the date to its start. Disabling and re-enabling retention moves the floor, so episodes scheduled before must be watched again. A played flag with no last-played date never counts. Movies keep today's rule (grace from enable). |
-| Several files of one episode | Jellyfin 10.11 merges them into one item with alternate media sources, and episode observations see only the item. Until E7 tracks them, such an episode is **blocked** (`episode_versions_untracked`) so no file of it is unlinked. |
+| Newly tracked backlog | **Answered 2026-09-24 (Q1): only a new watch counts.** An episode becomes due only after a completion whose Jellyfin last-played date is at or after the **later of the episode's first-tracked time and the time retention was first ever enabled** (Q9, answered 2026-09-24: `RetentionPolicySnapshots.FirstEnabledAt`); nothing watched before per-episode retention existed, or between deploy and the first switch-on, becomes due by itself. The switch-on is recorded when the plugin reads the saved settings, a few seconds after the save; a watch in those seconds does not count (seen live). Consequences, from Jellyfin (`BaseItem.MarkPlayed`/`MarkUnplayed`, the same in 10.11 and the 12.0.0 host): *mark played* keeps an existing last-played date, so marking played an episode that was played or partly played before the floor does not count; *mark unplayed* clears the date, so unplayed-then-played counts; the modern web marks played without a date; *mark series played* dates every episode that had no last-played date "now", so those episodes become due one window later; a real playback always sets the date to its start. **Switching retention off and on again moves nothing (Q9):** the floor stays at the first switch-on and grace never starts before it, so a countdown that was running continues and, if its deadline passed while retention was off, the file is due at the next run; an administrator's restart (un-Keep, a changed window) is stored as `GraceNotBefore` and survives the switch too. Jellyfin 12 marks every version of an item played when one is finished, but copies the flag **without** a last-played date (analysis C9), so such a propagated flag never counts as a new watch: the safe direction, recorded rather than worked around. A played flag with no last-played date never counts. Movies keep today's rule (grace from enable). |
+| Several files of one movie or episode | The runtime host is **Jellyfin 12.0.0** (the plugin compiles against 10.11.11). Jellyfin 12 groups several files of a movie, and now of an episode, in one folder as versions of one main item; it also groups `S01E01-E02` with `S01E01`, because its episode key ignores the ending number, and hides extra versions from normal queries. The plugin binds only what reconciliation sees, so until task V1 enumerates versions and E7 tracks them, any movie or episode for which Jellyfin plays a file the plugin has not bound (compared by path: the main item, its local and linked versions), or whose bound item has itself become an extra version, is **blocked**: `versions_untracked` for movies, `episode_versions_untracked` for episodes. Seen live: a two-file movie tracked by its main file only stayed with both files; `S01E11` + `S01E11-E12` in one folder, E11 watched, both files stayed (E12's only copy). |
+| Upgrade replacement | **Answered 2026-09-24 (Q10): replace immediately**, as Phase 6 designed: the older version goes once the better one is imported, without the watched rule or the window. A per-file Keep on the older version, Keep on the title or episode, seeding and read-only media still protect it. |
+| Retention-start warning | **Answered 2026-09-24 (Q8, Q11).** When a movie's or episode's window starts, History records `retention_started` with the cause, the deadline and the files, and the detail page shows everyone who can see the title "Added to retention: this file will be deleted on <date> unless kept", the cause and the files; administrators get Keep inside it. The cause is the save reason Jellyfin reported for the completing user's data: `TogglePlayed` "marked played", playback "watched on this server", `UpdateUserData` (a sync client writing user data) "watched on another device (synced)", `Import` (the Trakt plugin's `SyncFromTraktTask`, verified in its source) "watched on another device (Trakt)". Ordinary users see the date too; this overrides the T15 date hiding for this warning only. The warning reflects the schedule: a file held by a protection (seeding, the versions guard, a multi-episode file not fully due) keeps the warning while it waits. |
 | Re-acquired episodes (T7–T10 class) | Unchanged per target: losing the last binding resets the evaluation (`RetentionTargetReset`) in the same transaction, so a returning file never inherits a deadline or an old completion. |
 | Seed protection | Per file, unchanged: a version seeding below its goal (plugin-owned or Transmission) stays blocked while a lower version of the same episode may be reclaimed (M7). |
 | Hardlinks between versions | Unchanged shared-inode rule: two bindings on one inode are one physical action and need every affected target due; hardlink count above one records zero physical bytes released. |
 | Series container | When the last episode binding of a series is reclaimed the series entry becomes `reclaimed` (T14) and keeps metadata, Keep, history and bindings of its native series item. Reconciliation writes no `media_missing` for it. |
 | Keep | Admin only, one action, no confirmation (accepted). Series Keep protects every episode; episode Keep protects that episode's versions; a per-file Keep protects that file (Q3). **Answered 2026-09-24 (Q4):** an episode can be un-kept and given its own window (inherit, 1–3650 days, never); any change but a Keep restarts the episode's grace from the change, so a shorter window never makes it due at once. Settings live in the plugin database. Titles (movies, series) still have no un-Keep or days editor (PLAN question 13 for titles is not part of this decision). |
-| Upgrade replacement | **Changed 2026-09-24 (RET-R2):** an upgrade replacing a version needs the watched rule (the target's completion under the watched-user policy, live before the unlink); only the retention window is skipped. Keep and a per-file Keep block it. |
 
 ## 4. Safety analysis — every way this could delete something it should not
 
@@ -182,6 +183,9 @@ checksums of the preserved tables.
 | S13 | Episode lookup by an alternate version's native id shows the wrong episode's controls. | The detail carries every version's item id; the web matches the page's item against versions, not only the selected binding. | Browser check on a two-version fixture episode. |
 | S15 | An episode whose files Jellyfin merged into one item loses its primary file while the others stay untracked, then re-resolve as a new item. Found by the live run. | Preview and executor block it with `episode_versions_untracked` until E7. | Live: E01 (1080p + 720p) watched and past its deadline, both files byte-identical. |
 | S16 | A first "mark played" arriving before the episode's first evaluation never counts, or an undated played flag counts as fresh. | The baseline is seeded at first binding; a fresh completion needs a last-played date at or after it. | Live: fixture episodes marked played after binding were scheduled; the backlog episode marked played with an old date stayed waiting. |
+| S17 | Jellyfin 12 plays a version the plugin does not track (analysis C1, C7, C10): a movie's extra file bound by the 10.11 id, an episode's grouped files, `S01E01-E02` grouped as a version of `S01E01`, or a bound item that became an extra version. Watching the tracked file would delete it while the untracked one stays, or delete a multi-episode file that is another episode's only copy. | Preview blocks the whole title (`versions_untracked`, `episode_versions_untracked`) whenever a file Jellyfin plays is not bound, compared by path; the multi-episode rule reads each file's own range. E7 builds on V1, never on P6.M6's id lookup. | Live 2026-09-24: two-file movie watched and past its deadline: both files byte-identical; `S01E11` + `S01E11-E12` watched: both byte-identical. |
+| S18 | Absence deletes the binding of a file Jellyfin stopped reporting and silently restarts its clock (analysis C5). | Not fixed (V1); every such reset is now recorded as `retention_reset` with the files, so it is never silent. | Code; not triggered live. |
+| S19 | A TMDB row that a user's Add or a Refresh created for a position with no file yet binds a later TMDB-less file at that position (the P2 rule), monitored; with upgrades replacing at once (Q10), a wrong-identity upgrade could replace a correct file. | Not changed: pre-P10 behaviour, recorded for the verifier. Add and Refresh no longer adopt position rows without evidence (RET-R2). | Live: the ordinary Add created monitored TMDB rows for positions 8, 12, 14–17; a later `S01E14` pair bound to the TMDB row by position. |
 | S14 | Migration loses Keep, deadlines or history. | Additive columns and index swap only; verified on a DB copy with preserved counts and integrity/foreign-key checks. | Migration check on the 18096 copy. |
 
 The riskiest part is **S1 together with S2**: the moment tracking starts, a library's whole watched
@@ -262,8 +266,13 @@ and summarised here. The original wording follows each answer.
   can see it: "Added to retention: this file will be deleted on <date> unless kept", naming the cause
   and the file(s); a History entry records the start and its cause; admins get Keep inside the
   warning, ordinary users see the date but cannot Keep. This shows ordinary users a date, which the
-  T15 privacy rule withheld; the user's decision is taken to override T15 for this warning only.
-  **Not implemented yet** (Handover).
+  T15 privacy rule withheld; the user confirmed it overrides T15 for this warning only (Q11).
+  Implemented (plugin `29d2648`, `07f2af7`, `08c97af`; web `d57459b9a8`, `e02996a611`).
+- **Q9 answered:** switching retention off and on moves neither the episode floor nor a running
+  countdown; the floor is the first-ever switch-on.
+- **Q10 answered:** upgrades replace the older version immediately (Phase 6 design); per-file Keep,
+  seeding and read-only media still protect it.
+- **Q11 answered:** the warning's date is shown to ordinary users too.
 
 1. **Backlog of already-watched episodes.** When tracking starts, should episodes watched before it
    (a) need a new completion — watched or marked played again — before they can be reclaimed
@@ -364,7 +373,88 @@ Kept current as work lands. Model: Opus, effort high.
 - **Before enabling retention on real media:** a separate Opus 5.5 high verifier reviews this delete
   path (changed from Fable by the user, 2026-09-24). Questions 1–7 are answered.
 
+## Evidence — 2026-09-24, decisions Q1–Q11 and the review fixes (Opus 5.5, high)
+
+All on the isolated instance with disposable fixtures; production and 28096 untouched; signed in as
+`oleksii` with an empty password. Host: Jellyfin 12.0.0.
+
+**Deployed on 18096:** plugin `ab4d464` (DLL SHA-256 prefix of the final build recorded in the report),
+web bundle `934ad614dfd7` (web `e02996a611`) at `/web-mod/`. Pre-deploy backup of the DLL, web zip,
+XML and database: isolated build directory `p10e6-backup-20260924T085957Z`. Migrations
+`PhaseTenRetentionControls`, `PhaseTenFirstEnabled`, `PhaseTenGraceFloor` applied at startup.
+
+**Migrations (RET-R6, S14).** On a `.backup` copy of the 18096 database, `dotnet ef database update`
+applied the new migrations; every table except the policy row (new column) is checksum-identical
+before and after, `integrity_check` ok; the position index became non-unique. A database created from
+an empty file by the full chain has the same three episode indexes. Live after deploy: same shape.
+
+**Driver.** `scripts/jellyfinmod-e2e/retention-live.py` (RET-R5): every step below is a subcommand,
+host values come from the environment, the token is kept 0600 and the disposable user's password
+exists only in memory. `retention-controls.mjs` is the browser probe.
+
+**Fast window** (3 minutes, Selected user `oleksii`, seed protection on the driver's fake
+Transmission RPC with one torrent below its ratio goal). Fixture series in **two library roots**, so
+E01 and E02 are each **one tracked episode with two bindings**; E01's second copy **kept per file**;
+E02 watched on the second copy only; E03 unwatched; E04 kept at episode level; E05 marked played with
+a date before tracking (backlog); E06 hardlinked to a seeding copy; `S01E07-E08` watched; `S01E09-E10`
+watched while E10's own copy is unwatched; `S01E11` and `S01E11-E12` in one folder (Jellyfin 12
+groups them) with E11 watched; E13 watched through synced user data; a two-file movie watched. Preview
+after the deadline: E01 copy A, both E02 copies, `S01E07-E08` and E13 `due`; E01 copy B
+`version_kept`; E04 `kept`; E03 and E05 `waiting`; E06 `seed_goal_unmet`; `S01E09-E10`
+`multi_episode_not_all_due`; E11 `episode_versions_untracked`; the movie `versions_untracked`; the 7
+read-only production rows `media_not_writable`. Native task run: inspected 581, eligible 5, reclaimed
+5, blocked 50, failed 0, 358 394 logical bytes. **SHA-256: the five due files absent; E01's kept copy,
+E03–E06, both multi-episode files that were not fully due, E10's copy, E11, `S01E11-E12`, both movie
+files, the seeding copy and the sidecar byte-identical.** Reconciliation afterwards: no missing-media
+event. First attempt note: watches made in the seconds before the plugin recorded the switch-on did
+not count (Q1/Q9 working as designed); the driver now waits and marks unplayed first.
+
+**T7 again, live:** fixture files recreated at the reclaimed paths (same item ids, Jellyfin reattached
+played state) stayed `waiting/representation_reset`.
+
+**Real window** (window 0, one day): E03 marked played → scheduled one day out with a warning; E03
+window set to 2 days → deadline moved; E04 un-kept → scheduled, grace restarted; a synced watch on E10
+→ warning "watched on another device (synced)"; an immediate run reclaimed nothing (all hashes equal).
+Retention switched off and on (Q9): deadlines kept from the first switch-on, not restarted; an
+administrator restart survived the switch after `PhaseTenGraceFloor` (it did not before: fixed in
+`36f9d01`). A stale-evaluation race (an un-Keep overwritten by a batch that started earlier) was found
+and fixed (`ab4d464`). **The positive half is scheduled, not yet verified:** a script on the Pi runs
+at 2026-09-25 10:30Z: retention on (Q9: countdowns kept), native task, expected reclaims E04,
+`S01E09-E10` and E10's copy with every other fixture file byte-identical, no missing-media event,
+series Keep over E03's two-day window, then retention off, settings restored and every fixture
+removed. Its log goes to the isolated build directory `p10e6/state/phase-b.log`.
+
+**Q6 / decision 7, live:** a disposable non-admin user (random name, password generated in memory,
+never printed or stored) got **403** on episode Keep, un-Keep, the window editor, version Keep and
+un-Keep, series Keep, Remove and the retention settings; it saw every running warning **with its
+date** (Q11); it was then deleted and `GET /Users/{id}` returned 404.
+
+**RET-R2, live:** that user's Add of the existing series left every on-disk episode at TMDB id 0 and
+unmonitored and created no second row at a held position. An admin Refresh adopted E01 only after its
+native title matched TMDB's ("Pilot"), recorded `episode_adopted`, left the row unmonitored, and left
+E03 (no matching title or date) tracked by position.
+
+**RET-R3, live:** `p10e6/rollback-check.sh` switched retention off, stopped 18096, put back the previous
+DLL, web bundle and the pre-deploy database, and the previous build served Health, Refresh of a
+tracked series and Add of an existing series (200 each; no plugin errors in the log); then the new
+build and the current database went back and the fixture state was intact.
+
+**Browser** (`retention-controls.mjs`): Playwright's Chromium, then **real Google Chrome 153**, 44
+checks each, all pass: desktop 1440×900, mobile 390×844, TV 1920×1080 and 1280×720 by keyboard only.
+The warning names date, cause and file; Keep inside it keeps the episode and the warning goes; Stop
+keeping brings it back with a restarted date; the episode window select sets 3 days; each file of a
+two-file episode has its own Keep, toggled by Enter; the series page says Keep series (RET-R7); the
+remote Back key leaves the page; no page errors. Found and fixed: focus fell to the page body when
+Keep inside the warning or Stop keeping removed itself (`e02996a611`). Physical webOS not tested.
+
 ### Handover — 2026-09-24, retention decisions and review fixes (Opus 5.5, high)
+
+**State at the end of the session:** everything above is done and verified live except the real
+window's positive half, which runs on the Pi at 2026-09-25 10:30Z and removes the fixtures afterwards;
+until then the fixture series and movie stay on 18096 with **retention disabled**. Remaining: check
+`p10e6/state/phase-b.log` and `phase-b.DONE`, record the result here, and confirm no `JellyfinMod …`
+title remains. The verifier (a separate Opus 5.5 high) should look at S17–S19. V1 and E7 are separate
+tasks. Titles still have no un-Keep or days editor (PLAN question 13 for titles).
 
 **Resumed past the 80 % pause at the user's request (2026-09-24).** Since the first handover: Q9 (grace
 and the episode floor count from the first-ever switch-on; plugin `1c47d8b`, migration
