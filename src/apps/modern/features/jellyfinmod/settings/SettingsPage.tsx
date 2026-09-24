@@ -41,7 +41,7 @@ const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
  * Loads every area at once, as the Dashboard page does. A read that fails leaves its area empty and says so in
  * the section rather than breaking the page (UX §14).
  */
-const useSettingsData = (enabled: boolean) => {
+export const useSettingsData = (enabled: boolean) => {
     const { api } = useApi();
     return useQuery({
         queryKey: ['JellyfinMod', api?.basePath, 'SettingsArea'],
@@ -52,17 +52,18 @@ const useSettingsData = (enabled: boolean) => {
             const users = api!.axiosInstance.get(api!.basePath + '/Users', { headers: { Authorization: api!.authorizationHeader } })
                 .then(response => response.data as SettingsData['users']).catch(() => []);
             const [overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
-                decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList] = await Promise.all([
+                decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList, prowlarr] = await Promise.all([
                 get<Overview | undefined>('Settings/Overview', undefined), get('Settings/Discovery', undefined), get('Settings/SeedProtection', undefined),
                 get('Settings/Retention', undefined), get('Settings/Acquisition', undefined), get<unknown[]>('Settings/Indexers', []),
                 get<unknown[]>('Settings/DownloadClients', []), get<unknown[]>('Settings/QualityProfiles', []), get('Settings/Import', undefined),
                 get('Settings/Automation', undefined), get('Automation/Status', undefined), get<{ items: unknown[] }>('Automation/Decisions?limit=20', { items: [] }),
                 get('Settings/Interface', undefined), get('Reconciliation/Latest', undefined), get<unknown[]>('Reconciliation/Conflicts', []),
-                get<unknown[]>('Reconciliation/Orphans', []), get('Retention/Preview', undefined), get('Retention/Runs/Latest', undefined), users
+                get<unknown[]>('Reconciliation/Orphans', []), get('Retention/Preview', undefined), get('Retention/Runs/Latest', undefined), users,
+                get<unknown[] | undefined>('Settings/Prowlarr', undefined)
             ]);
             return {
                 overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
-                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList
+                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr
             } as SettingsData;
         }
     });
