@@ -14,6 +14,13 @@ const days = (count: number) => `${count} day${count === 1 ? '' : 's'}`;
 const WINDOW_OPTIONS = [{ value: 'inherit', label: 'Series default' },
     ...EPISODE_WINDOWS.map(count => ({ value: String(count), label: `${days(count)} after watching` }))];
 
+/** A version's name for its Keep button: its label or resolution, numbered where two versions would read alike. */
+const versionName = (versions: VersionDto[], version: VersionDto, index: number) => {
+    const name = (candidate: VersionDto) => describeVersion(candidate).label ?? describeVersion(candidate).resolution ?? 'version';
+    const own = name(version);
+    return versions.filter(candidate => name(candidate) === own).length > 1 ? `${own} (${index + 1})` : own;
+};
+
 interface RetentionControlsProps {
     api: Api;
     entryId: string;
@@ -58,9 +65,9 @@ const RetentionControls: FC<RetentionControlsProps> = ({ api, entryId, busy, cha
     return <>
         {canEditEpisode && keptItself && <button className='emby-button raised' type='button' aria-disabled={busy}
             onClick={unkeep}>Stop keeping</button>}
-        {keepable.map(version => <button key={'keep:' + version.bindingId} className='emby-button raised' type='button'
+        {keepable.map((version, index) => <button key={'keep:' + version.bindingId} className='emby-button raised' type='button'
             aria-disabled={busy} aria-pressed={!!version.kept} data-jfmod-binding-id={version.bindingId} onClick={toggleVersion}>
-            {version.kept ? 'Stop keeping ' : 'Keep '}{describeVersion(version).resolution}
+            {version.kept ? 'Stop keeping ' : 'Keep '}{versionName(keepable, version, index)}
         </button>)}
         {canEditEpisode && !keptItself && <EmbySelect id={'jfmod-episode-window-' + episode.id} label='Remove this episode'
             value={windowValue} options={WINDOW_OPTIONS} onChange={changeWindow} />}
