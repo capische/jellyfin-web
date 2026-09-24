@@ -47,6 +47,9 @@ export const useSettingsData = (enabled: boolean) => {
         queryKey: ['JellyfinMod', api?.basePath, 'SettingsArea'],
         enabled: !!api && enabled,
         retry: false,
+        // Settings are edited against revisions: a copy restored from the persisted cache would only earn a 409.
+        staleTime: 0,
+        refetchOnMount: 'always',
         queryFn: async (): Promise<SettingsData> => {
             const get = <T, >(path: string, fallback: T) => request<T>(api!, 'GET', path).catch(() => fallback);
             const users = api!.axiosInstance.get(api!.basePath + '/Users', { headers: { Authorization: api!.authorizationHeader } })
