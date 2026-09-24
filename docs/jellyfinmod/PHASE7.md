@@ -2055,8 +2055,14 @@ never reached the section's rows; the section column is now a `focuscontainer-y`
 **Not run, 2026-09-24.** This agent stopped at the 80% usage rule after the review fixes. Nothing below is claimed.
 What the review fixes already cover towards S11: the takeover history and bundle cap (step 2, isolated shape
 only), the Prowlarr search and grab through a synced indexer (step 1's "sync Prowlarr, grab", on the acceptance
-instance rather than a fresh install), the S8 TV path in both browsers (step 7, partially). Still to run, as named
-steps:
+instance rather than a fresh install), the S8 TV path in both browsers (step 7, partially), and part of step 6,
+run on 28096 (plugin `1c1098c`, bundle `cb3ac1e01a5b`) on 2026-09-24: every new route (`Settings/Overview`,
+`Discovery` and its Test, `SeedProtection` and its Test, `Retention`, `Interface` and `RestoreStock`, the five
+`Prowlarr` routes, `Setup/State` and `Dismiss`, `Indexers`, `Acquisition`) and `Health` answer **401** anonymously
+with no `sec_` in any body; `/JellyfinMod/Repository` and the bundle's own files answer 200 anonymously, as designed;
+`/web-mod/../../etc/passwd`, `…/../../jellyfinmod.db`, `..%2f` and `..%5c` forms and an unknown bundle id are all
+**404**; fourteen administrator settings responses carry no secret reference, password value or `apikey=`. The
+ordinary-user half of step 6 is not run (item 2 below). Still to run, as named steps:
 
 1. Step 1 from a clean isolated config in a disposable container (image): the wizard end to end with the provoked
    refusals (`destination_inside_library`, a download directory on a second filesystem such as the container's
