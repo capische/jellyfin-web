@@ -47,10 +47,11 @@ import ModAppLayout from './ModAppLayout';
  * of the same name.
  */
 const MOD_ROUTES: RouteObject[] = [
-    // Desktop and mobile only for now. The TV layout routes through upstream's legacy table, whose Home has
-    // different chrome and different focus rules, and a d-pad surface that has not been driven on a real device
-    // is not one to switch anybody onto. It joins this list with the TV shell.
-    ...(layoutManager.modern ? [{ path: 'home', Component: HomePage }] : []),
+    // Every layout (P7 TV shell). The page is upstream's legacy Home shape — `mainTabsManager` tabs in the header,
+    // `homesections` rows, `focusManager` autofocus — so the TV layout's d-pad rules apply to it unchanged, and the
+    // TV's legacy header gets Home's transparent bar from the mod's Home tab rather than from upstream's
+    // `hometab.js`, which is back to its upstream text.
+    { path: 'home', Component: HomePage },
     // Every layout: both upstream route tables resolve `search` to the same React component, so there is no
     // legacy-view or focus difference to hold this one back (P7.S6).
     { path: 'search', Component: SearchPage },

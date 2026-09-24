@@ -1,59 +1,38 @@
-import { renderComponent } from 'utils/reactUtils';
-
-import HomeHero from '../components/HomeHero';
-
-interface ChromeMount {
-    root: HTMLElement;
-    unmount: () => void;
-    onScroll: () => void;
-}
-
-const mounts = new WeakMap<HTMLElement, ChromeMount>();
+/** Scroll distance, in px, past which Home's transparent bar becomes solid; the same as `useModToolbarClass`. */
+const SOLID_AFTER = 40;
 
 const updateHeader = () => {
     const header = document.querySelector<HTMLElement>('.skinHeader');
     if (!header) return;
 
     header.classList.add('jfmod-topbar');
-    header.classList.toggle('jfmod-topbarSolid', window.scrollY > 40);
+    header.classList.toggle('jfmod-topbarSolid', window.scrollY > SOLID_AFTER);
 };
 
-export const mountHomeChrome = (homeTab: HTMLElement) => {
-    let mount = mounts.get(homeTab);
-    if (!mount) {
-        const page = homeTab.closest<HTMLElement>('.homePage');
-        const sections = homeTab.querySelector<HTMLElement>('.sections');
-        if (!page || !sections) return;
+let detachCurrent: (() => void) | null = null;
 
-        const root = document.createElement('div');
-        root.className = 'jfmod-homeHeroMount';
-        sections.before(root);
+/**
+ * Home's transparent top bar for the TV layout (UX §7.3, P7 TV shell).
+ *
+ * The TV layout keeps upstream's legacy `.skinHeader` as its navigation, because that header is what the D-pad
+ * already knows how to reach (§2.2, "Top bar"). The desktop and mobile shell restyle their React toolbar through
+ * `useModToolbarClass`; this is the same presentation applied to the legacy header, and it is only ever called by
+ * the mod's own Home tab. It used to be pushed into upstream's `hometab.js` from outside, which is why that file
+ * was patched; now the page that wants the look asks for it.
+ *
+ * Returns the detach function. Attaching twice is harmless: the second call replaces the first.
+ */
+export const attachLegacyTopbar = (): (() => void) => {
+    detachCurrent?.();
 
-        const onScroll = () => updateHeader();
-        window.addEventListener('scroll', onScroll, { passive: true });
-        mount = {
-            root,
-            unmount: renderComponent(HomeHero, {}, root),
-            onScroll
-        };
-        mounts.set(homeTab, mount);
-    }
-
+    window.addEventListener('scroll', updateHeader, { passive: true });
     updateHeader();
-};
 
-export const pauseHomeChrome = (homeTab: HTMLElement) => {
-    if (!mounts.has(homeTab)) return;
-    document.querySelector('.skinHeader')?.classList.remove('jfmod-topbar', 'jfmod-topbarSolid');
-};
-
-export const unmountHomeChrome = (homeTab: HTMLElement) => {
-    const mount = mounts.get(homeTab);
-    if (!mount) return;
-
-    window.removeEventListener('scroll', mount.onScroll);
-    mount.unmount();
-    mount.root.remove();
-    mounts.delete(homeTab);
-    document.querySelector('.skinHeader')?.classList.remove('jfmod-topbar', 'jfmod-topbarSolid');
+    const detach = () => {
+        window.removeEventListener('scroll', updateHeader);
+        document.querySelector('.skinHeader')?.classList.remove('jfmod-topbar', 'jfmod-topbarSolid');
+        if (detachCurrent === detach) detachCurrent = null;
+    };
+    detachCurrent = detach;
+    return detach;
 };
