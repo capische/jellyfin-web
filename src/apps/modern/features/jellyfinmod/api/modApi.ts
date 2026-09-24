@@ -157,6 +157,13 @@ export const keepEntry = async (api: Api, id: string, options?: AxiosRequestConf
     return response.data;
 };
 
+/** Keeps one episode, every version of it, from automatic retention. Administrators only (P10.E2). */
+export const keepEpisode = async (api: Api, entryId: string, episodeId: string, options?: AxiosRequestConfig): Promise<EntryEpisode> => {
+    const response = await api.axiosInstance.post<EntryEpisode>(api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
+        + '/Episodes/' + encodeURIComponent(episodeId) + '/Keep', undefined, { ...options, headers: authorization(api) });
+    return response.data;
+};
+
 export const patchEpisode = async (api: Api, entryId: string, episodeId: string, monitored: boolean, options?: AxiosRequestConfig): Promise<EntryEpisode> => {
     const response = await api.axiosInstance.patch<EntryEpisode>(api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
         + '/Episodes/' + encodeURIComponent(episodeId), { monitored }, { ...options, headers: authorization(api) });
