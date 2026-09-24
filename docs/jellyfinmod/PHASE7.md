@@ -443,29 +443,56 @@ list in the same commit that introduces it.
 
 ### 3.4 The upstream merge routine
 
-Run for every upstream merge; the result is recorded in the phase evidence with both SHAs.
+**Rewritten 2026-09-24 (S5) as a runnable procedure.** The first version said `git merge upstream/master`
+and `git merge master`; the fork's own rules (`jellyfin-web/CLAUDE.md`, *Rebase workflow*) keep
+`jellyfin-mod` linear and forbid merging `master` into it, so the routine is a **rebase**. Both
+rebases rewrite published branches, so steps 2 and 4 need the user's explicit authorization each
+time, and every push is `--force-with-lease` against the tip recorded in step 1. Record both SHAs,
+the upstream tip, the bundle ids and the results of steps 5–9 in the phase evidence.
 
-1. `git fetch upstream`; on `master`, `git merge upstream/master`; production fixes stay on
-   `master` as today. Build the stock entry and deploy it to production only through the existing
-   production procedure, never through the mod instance.
-2. On `jellyfin-mod`, `git merge master`. Conflicts are allowed only in the files of §3.2; a
-   conflict anywhere else means an upstream module the mod imports changed and is handled in
+1. **Record the starting point.** In the fork:
+   ```bash
+   git fetch upstream && git fetch origin
+   git rev-parse origin/master origin/jellyfin-mod upstream/master   # write all three down
+   git rev-list --count "$(git merge-base origin/master upstream/master)"..upstream/master   # pending upstream commits
+   ```
+   Zero pending means there is nothing to do.
+2. **Refresh `master` (the production fork).** In a clean worktree off `origin/master`:
+   `git rebase upstream/master`. Production fixes are replayed on top; a conflict here is a
+   production fix colliding with upstream and is resolved on its own merits. Build the stock entry
+   (`npm ci && npm run build:production`), then `git push --force-with-lease=master:<recorded master>
+   origin HEAD:master`. Production is deployed from `master` only through its own procedure, never
+   through the mod instances.
+3. **Check what upstream touched.** `git diff <old master>..master --stat -- $(the §3.2 files)
+   src/index.jsx src/RootApp.tsx src/components/viewManager/ViewManagerPage.tsx` lists the patched
+   and mirrored files the rebase will meet; re-check the §3.3 list against upstream renames with
+   `git diff <old master>..master --name-status -M | grep '^R'`.
+4. **Rebase `jellyfin-mod`.** In a clean worktree off `origin/jellyfin-mod`:
+   `git rebase master` (never `--rebase-merges`). Conflicts are allowed only in the §3.2 files; a
+   conflict anywhere else means an upstream module the mod imports changed, and is fixed in
    `features/jellyfinmod/`, never by editing the upstream file.
-3. Under boot option (1), diff `src/index.jsx` against the mod entry's boot section and mirror
-   changes; re-check the §3.3 list against upstream renames.
-4. `npm ci`, `npm run build:production` (both entries), `npx tsc --noEmit`, feature eslint and
-   stylelint; run the offline patch check (`scripts/jellyfinmod-e2e/patch-check.mjs`, S4) that
-   renders the patched `index.html` from the stored stock fixture of the pinned host and from
-   the new `jellyfinmod.html` and asserts marker, meta, failsafe, rewritten URLs and no stock
-   script tags.
-5. Rebuild and run the plugin suites on the test host (`run-suites.sh`, all suites exit 0).
-6. Deploy to the isolated instance with `jellyfin-sync --test --plugin-web`; confirm Health shows
-   the new bundle id and `takeover.state = patched`; the engine re-renders because the bundle
-   id changed.
-7. Run the Playwright acceptance in full (≈ 75 s) and the quick mode after any fix; TV layouts
-   included; physical webOS after a UI-visible upstream change.
-8. If the merge coincides with a host or image upgrade, also verify the pristine hash changed and
-   was re-recorded (§4.4), update the stock fixture used by the patch check, and re-run step 4.
+5. **Build and static checks.** `npm ci`, `npm run build:production` (both entries). The boot
+   guard (`scripts/jellyfinmod-build/bootGuard.js`, run by the build) fails by name if upstream
+   changed `src/index.jsx`, `src/RootApp.tsx` or `ViewManagerPage.tsx`; mirror the change into the
+   mod entry and record the new hash in the same commit. Then `npx tsc --noEmit`, feature eslint and
+   stylelint. `dist/jellyfinmod-web.json` shows the new `upstreamMergeBase` and a new `bundleId`.
+   (`patch-check.mjs` was not built, S4 evidence; the live takeover run in step 7 replaces it.)
+6. **Plugin suites.** Rebuild the plugin and run every suite under the plugin's `tests/` with
+   `dotnet run -c Release --project tests/<Suite>/<Suite>.csproj` on the test host; all exit 0
+   (`PhaseSevenTakeoverIntegration` takes the new `jellyfinmod-web.zip` path as its argument).
+7. **Deploy to an isolated instance.** `./jellyfin-sync --local --test --plugin-web` builds the fork,
+   packages the bundle into the plugin and deploys both; after the restart Health shows the new
+   `web.bundleId` and `takeover.state = "patched"` (the engine re-renders because the id changed).
+8. **Browser acceptance.** The Playwright runner in full, then quick mode after any fix, TV layouts
+   included, on bundled Chromium and then on Google Chrome; physical webOS after a UI-visible change.
+9. **Host upgrade, if the merge coincides with one.** Change the digest in the plugin's
+   `docker/Dockerfile`, rebuild the image (`scripts/build-release.sh`, then `docker build`), run
+   `scripts/jellyfinmod-e2e/image-review.mjs` against a disposable container, confirm the engine
+   recorded the new stock hash (§4.4), add the host version to `JELLYFINMOD_TESTED_SERVERS` in
+   `webpack.common.js`, and add a row to §3.5.
+10. **Push `jellyfin-mod`.** `git push --force-with-lease=jellyfin-mod:<recorded jellyfin-mod>
+    origin HEAD:jellyfin-mod`, then confirm `git rev-parse origin/jellyfin-mod` is the rebased tip.
+    Other agents' worktrees on the old tip rebase onto it before their next push.
 
 ### 3.5 Version and compatibility matrix
 
@@ -495,6 +522,17 @@ each host release an outage.
 
 Moving the plugin itself to .NET 10 and a 12.x `targetAbi` is still separate work
 (`plugin/CLAUDE.md`); what changed here is only how support is *expressed*, not the build target.
+
+**Tested, 2026-09-24 (S5).** Only combinations actually run are listed; everything else in the table
+above is policy, not evidence.
+
+| Host | How it ran | Plugin | Bundle | Shape | Result |
+| --- | --- | --- | --- | --- | --- |
+| Jellyfin 12.0.0, `jellyfin/jellyfin@sha256:baba6304…5ef5`, arm64 | `capische/jellyfinmod:0.1.0.0` on a disposable container, empty config | 0.1.0.0 (plugin `6b91df3`, code of `cdb6e7b`) | `973b049f196a` (web `cca474e246`) | image, own web directory | Loaded; migrations applied; patched automatically; Health `ok`, `hostVersion` `12.0.0.0`, no `server_version_untested`; takeover off restores the host's own `index.html` byte for byte |
+| same host | stock image, plugin copied from the release archive, `JELLYFIN_WEB_DIR` at the archive's `web/` | same | same | archive, fork served by host | `forkServedByHost`, nothing written |
+| same host | isolated and acceptance instances (S3, S4, S6–S10 evidence) | earlier revisions | earlier bundles | bind-mounted `dist/` | as recorded in those sections |
+
+No host below `targetAbi` or above 12.0.0 has been run; those rows stay untested.
 
 ## 4. UI delivery
 
@@ -697,7 +735,12 @@ again on every container recreate, and the engine re-patches at startup. No web 
 in this shape. `JELLYFINMOD_UI_TAKEOVER=true|false` is read at first start only, when the plugin
 configuration does not exist yet; since the takeover is now on by default everywhere (decision 7)
 its only remaining use is `false`, for an operator who wants the image's plugin without the
-interface. Rollback is `docker compose` to the previous image tag.
+interface. Rollback is `docker compose` to the previous image tag — **corrected in S5:** that rolls
+back the host, not the plugin. The entrypoint never downgrades, because the plugin's migrations are
+forward-only, so a newer plugin already in the config volume keeps running with its own bundle after
+an image rollback; running an older plugin is a deliberate operator step (plugin README,
+*Distribution*). The acceptance line "downgrading serves the previous bundle and does not downgrade
+the plugin folder" cannot both hold, and the second half is the one kept.
 
 **Release archive (secondary).** `jellyfinmod-<version>.zip` containing `plugin/` and `web/`
 (the same `dist/`). Operators install `plugin/` into a stock server (the engine works as in the
@@ -1467,6 +1510,73 @@ production compose, never the shared `jellyfinmod-test` volumes):
   upstream tip at the time), recorded with both SHAs, the patch-check result, suite results, the
   Playwright timings and the bundle id change.
 
+#### S5 evidence — 2026-09-24, on a disposable image service
+
+Opus, high effort. Plugin `master` `6b91df3` (image files) and `25e0fc2` (README), web `jellyfin-mod`
+`f743b92f16` (`--plugin-web`) and `3f70db6789` (probe). Run on a disposable container of the image on
+its own port with its own config and cache on the test host, never the production compose and never
+the `jellyfinmod-test` or acceptance volumes; no production media was mounted. Driven by
+`scripts/jellyfinmod-e2e/image-review.mjs` on Playwright's bundled Chromium 153.0.8010.12, then on
+Google Chrome 153.0.8010.53. The administrator was created by that runner through the first-run wizard
+with a generated password that was never printed, and destroyed with the container.
+
+**What was built.** `docker/Dockerfile` and `docker/jellyfinmod-entrypoint.sh` in the plugin, and
+`scripts/build-release.sh`, which turns a built fork `dist/` into the plugin package, the release
+archive and the image context. The plugin is compiled natively on the workstation (Docker there cannot
+run `csc`); the image build only copies, so it was built on the test host itself, arm64, from
+`jellyfin/jellyfin@sha256:baba6304…5ef5` (Jellyfin 12.0.0), as `capische/jellyfinmod:0.1.0.0`. It is
+not published to any registry (open question 11 stands).
+
+**A finding that changed the entrypoint.** A repository entry written into `system.xml` before the
+first start does not survive it: a fresh server runs `AddDefaultPluginRepository` as a setup
+migration, and that migration *replaces* the whole list with the default one. The first image did
+exactly that and came up without the entry. The entrypoint now lets the first start finish, stops
+it, adds the entry and starts Jellyfin for real — one extra start-up, once per config volume (20–24 s
+here; first start to ready 66 s in total).
+
+| Check | Result |
+| --- | --- |
+| Fresh container, empty config | Plugin installed to `plugins/JellyfinMod_0.1.0.0`, migrations applied, loaded on 12.0.0; wizard still runs (`IsStartupWizardCompleted` false) |
+| Image web directory | stock image `root:root 0755`; this image `1000:1000 0775`, only the directory, its files stay `root 0644`; runtime user `1000:1000` wrote it |
+| Takeover, no administrator step | Patched at first start: stock `a1308635…cfbe3` (the host image's own `index.html`), patched `80fad6b4…6e93`, two files written; Health `state: patched`, `webRoot: writable`, `patchedBy: automatic` |
+| Browser sign-in | Lands in the JellyfinMod shell at `/web/#/home` with meta `973b049f196a`; the settings area names the same bundle |
+| Authenticated Health | `200`, `Ok: true`, version `0.1.0.0`, `hostVersion` `12.0.0.0`, no blocker; anonymous `401` |
+| Repository preconfigured | Manage Repositories lists *JellyfinMod (this server)* once, at `http://localhost:8096/JellyfinMod/Repository`, above *Jellyfin Stable* |
+| Dashboard → Plugins | JellyfinMod, Status Active, Version 0.1.0.0, Repository *JellyfinMod (this server)*, revision history, **no** repository error |
+| Repository removed (as an administrator, through `/Repositories`) | Not re-added by a restart (marker); interface, Health and `/JellyfinMod/Entries` unaffected; the plugin page then shows the repository error — the only thing that depended on it |
+| Repository re-added | Details panel and revision history return |
+| Already registered, marker absent | Entrypoint logs "already registered; not adding another"; still one entry |
+| `docker compose up -d --force-recreate` | New container id, web directory stock again, re-patched at startup to the same patched hash; users, plugin database (22 migrations) and the repository entry intact |
+| Takeover off (Settings/Interface) | `index.html` restored to `a1308635…cfbe3`, stock copy removed; `/web` is stock in both browsers (no bundle, marker, meta or `/web-mod` request), `/web-mod/` still `200`; after a recreate the switch persisted and `cmp` against the unmodified host image's `index.html` is byte-identical |
+| Takeover on again | Patched, `patchedBy: setting`; after the next recreate `patchedBy: startup` |
+| `JELLYFINMOD_UI_TAKEOVER=false`, fresh container | Nothing written to the web root (hash `a1308635…`, no JellyfinMod files); Interface section `takeoverEnabled: false`, `state: stock`; `/web-mod/` `200` |
+| Never downgrade | With a newer JellyfinMod folder in the config (simulated `0.1.0.1`), the image logged that it does not replace it and Jellyfin loaded the newer one; with it removed, the image installed its own again |
+| Archive shape | Stock host image, plugin from the archive's `plugin/`, `JELLYFIN_WEB_DIR` at its `web/` mounted read-write: `forkServedByHost`, no blocker, a checksum of every file in `web/` unchanged; `/web/jellyfinmod.html` signs in to the shell with zero `/web-mod` requests (both browsers) |
+| `jellyfin-sync --plugin-web` | Built `dist/`, zipped it without maps (2 384 files) and deployed DLL, logo, `meta.json` and the zip to a scratch plugin folder with `--no-restart`; `--plugin-web` without `--test`, without `--local`, and the existing X3 refusals all exit 2 before any remote action |
+
+**Chromium versus Chrome.** The same 7 review checks, the stock checks, the archive check and the
+forkServedByHost check passed on both, with the same bundle id and the same Health report.
+Screenshots of Home, Plugins, the plugin page, Repositories and Settings match in content; only
+anti-aliasing differs.
+
+**Found, not fixed (S4 scope).** §4.6 promises `interface_patched` / `interface_restored` history
+rows; the `History` table had none after several patches and restores, and nothing in the plugin
+writes them. The log lines and Health do report every patch.
+
+**Not verified in S5.** An upgrade between two real plugin versions in the image (both images
+carried 0.1.0.0; the downgrade guard was verified with a simulated newer folder); `--plugin-web` into
+a running instance with a restart (both isolated instances were owned by other work); mobile and TV
+layouts on the image (desktop only); removing the repository and switching the takeover by clicking
+through the Dashboard and the Interface section rather than through the same endpoints from the
+signed-in page; the §3.4 routine executed end to end — one upstream commit (`134e6add88`, a
+translation) is pending, and running it rewrites `master` and `jellyfin-mod`, which needs the user's
+authorization.
+
+**Cleanup.** Every disposable container (`jellyfinmod-s5`, the takeover-off and the archive
+containers), their config, cache, media and context directories and the extracted archive were
+removed, as were the generated secret files on the workstation. The image `capische/jellyfinmod:0.1.0.0`
+is kept on the test host as the deliverable.
+
 ### S5.1 — the plugin publishes its own repository
 
 A plugin installed by copying files has no repository behind it. The Dashboard asks every configured repository
@@ -1874,7 +1984,7 @@ server.
 
 #### Phase 7 remaining — handover
 
-Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, high effort.
+Kept current by whoever works S5 and S7–S11. Last update 2026-09-24 (S5), Opus, high effort.
 
 - **Done and verified (first slices, each with its own "Not verified" list):** S7 (plugin `8efe9ea`), S8 (web
   `350c0de050`, `16b71bff3b`), S9 (plugin `cdb6e7b`, web `b4800a09c5`), S10 (web `7bc5931da2`). Evidence sections
@@ -1882,11 +1992,14 @@ Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, hig
 - **Open debt:** feature eslint findings in `features/jellyfinmod/settings/`; the S10 run from a fresh database copy;
   a search and grab through a synced Prowlarr indexer; browser checks of secret replace/clear and the ordinary-user
   refusal (no password for another account).
-- **Next step:** S5 (image, archive, merge routine, compatibility matrix) — **not started**; then S11 — **not
-  started**. Everything above is on `origin/jellyfin-mod` and plugin `master`; the `p7-settings` worktree and branch
-  were removed once merged, so start S5 from a new worktree off `origin/jellyfin-mod`. Open question 11 (image
-  name, registry, host pin) still stands; its proposed default is `capische/` with the acceptance compose's pinned
-  image digest.
+- **S5 (2026-09-24, Opus, high):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows
+  done; see *S5 evidence* for what is not verified. The image `capische/jellyfinmod:0.1.0.0` lives on the test
+  host only; build it with the plugin's `scripts/build-release.sh` and `docker build`.
+- **Next step:** S11 — **not started**; and the §3.4 routine run once for real when the user authorizes the two
+  rebases. Everything above is on `origin/jellyfin-mod` and plugin `master`; start from new worktrees. Open
+  question 11 (image name, registry, host pin) still stands; S5 used its proposed default, `capische/jellyfinmod`
+  pinned to the acceptance compose's digest, and published nothing.
+- **Probe:** `scripts/jellyfinmod-e2e/image-review.mjs` (S5), against a disposable image container only.
 - **Instance:** 28096 runs plugin `cdb6e7b` and web bundle `a3ecb472798a` (`jellyfin-mod` `8f4b021d43`). Backups
   beside it: `backups/pre-8efe9ea` and `backups/pre-s9` (database, XML, secret store), `JellyfinMod.dll.pre-8efe9ea`,
   `JellyfinMod.dll.pre-s9`.
