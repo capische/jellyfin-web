@@ -3,6 +3,12 @@
 Task list for agents. Each task is self-contained: an agent that has read the **Briefing** below
 and its own task entry should be able to finish without asking a question.
 
+**Open review issues, 2026-09-24:** see [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md)
+for the Phase 7 review of the S4 fixes, S5, S7–S10 and the TV shell: no P1, four P2 (missing
+takeover history rows, the XML import's failure path, the §3.2 patch-surface table, and unrun
+S7–S10 acceptance) and twelve P3, each with a trigger, a fix direction and an acceptance check.
+Pick up the P2 items before S11.
+
 **Open review issues, 2026-09-23:** see [REVIEW-2026-09-23.md](REVIEW-2026-09-23.md)
 for three Phase 7 S4 takeover bugs (repeated fallback, base URL and interrupted recovery-state
 write). All remain open; the document includes reproduction conditions and acceptance checks.
