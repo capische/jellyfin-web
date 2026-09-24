@@ -387,22 +387,29 @@ Every edit to an upstream file is listed here; a Jellyfin release upgrade walks 
 struck through have been handed back and are kept for one release as a record of what came out;
 `git diff master -- <file>` is empty for each. The target state is the permanent rows only.
 
+**Checked by the build (2026-09-24, REVIEW-2026-09-24 P7-R1).** `scripts/jellyfinmod-build/patchSurface.js` runs
+in every webpack build and on its own (`node scripts/jellyfinmod-build/patchSurface.js`): the upstream files that
+differ from the fork point with `master` — everything outside `src/apps/modern/features/jellyfinmod/`, `docs/`,
+`scripts/jellyfinmod-*`, `src/jellyfinmod.jsx` and the fork's own `CLAUDE.md` and `jellyfin-sync` files — must be
+exactly the non-struck rows below, and every struck row must have no change left. A production build fails, and a
+development server warns, naming each file. Each row names every file in full so the check can read it; the
+change to a file and the change to its row go in the same commit.
+
 | Upstream file | Why | What breaks if upstream changes it | Lifetime |
 | --- | --- | --- | --- |
-| `webpack.common.js` | second entry, second `HtmlWebpackPlugin`, `publicPath: 'auto'`, the `jellyfinmod-web.json` emit | build fails loudly; re-apply the three additions | permanent |
-| `package.json` | `build:mod`-related scripts and the e2e runner reference | scripts missing; re-add | permanent |
-| `src/index.jsx` | only under boot option (2) | mod entry boots differently from stock; re-factor | permanent if (2) is chosen, otherwise none |
-| `src/config.json` | none planned; listed because the mod entry reads it | the mod entry fetches it by rooted URL; a schema change surfaces in `useWebConfig` | none |
+| `webpack.common.js` | second entry, second `HtmlWebpackPlugin`, `publicPath: 'auto'`, the `jellyfinmod-web.json` emit, the boot guard and the patch-surface check | build fails loudly; re-apply the additions | permanent |
+| ~~`package.json`~~ | `build:mod`-related scripts and the e2e runner reference | — | **never needed (corrected 2026-09-24, P7-R1).** The e2e runner is its own package under `scripts/jellyfinmod-e2e/`; `git diff master` is empty |
 | ~~`src/apps/legacy/controllers/hometab.js`~~ | mounts hero and top bar (W7) | — | **removed (P7 TV shell).** The mod router owns `home` in every layout, and the mod Home tab applies the TV header's transparent bar itself; `git diff master` is empty |
 | `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |
-| ~~`src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js`~~ | combined browse and File filter (W2, W3, W8) | — | **removed (P7 TV shell, decision 13).** The mod router serves `movies` and `tv` in every legacy layout from the modern grid, so nothing in the mod entry reaches these controllers; `git diff master` is empty on both, and the `integration/legacyLibrary` shim that served them is deleted |
+| ~~`src/apps/legacy/controllers/movies/movies.js`, `src/apps/legacy/controllers/shows/tvshows.js`~~ | combined browse and File filter (W2, W3, W8) | — | **removed (P7 TV shell, decision 13).** The mod router serves `movies` and `tv` in every legacy layout from the modern grid, so nothing in the mod entry reaches these controllers; `git diff master` is empty on both, and the `integration/legacyLibrary` shim that served them is deleted |
 | ~~`src/apps/legacy/routes/search.tsx`~~ | Add from TMDB section (W4) | — | **removed (P7.S6).** The mod router owns `search`; `git diff master` is empty |
 | ~~`src/apps/legacy/controllers/itemDetails/index.js`~~ | detail augmentation (W5, T14) | — | **removed (P7.S6).** The mod router owns `details` and composes upstream's controller; `git diff master` is empty |
 | ~~`src/components/itemContextMenu.js`~~ | exported `executeCommand` for the More-menu wrap | — | **removed (P7.S6).** Nothing wraps the stock More menu; the mod's commands are buttons in its own section |
-| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `components/ItemsView.tsx`, `LibraryToolbar.tsx`, `PlayAllButton.tsx`, `ShuffleButton.tsx`, `filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grid, which since decision 13 serves every layout including the TV (W2, W3, W8) | every grid loses file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
-| ~~`src/components/filterdialog/filterdialog.js`, `filterdialog.template.html`, `filterIndicator.js`~~ | the File and Due filter groups in the legacy grids' filter dialog (W3, W8) | — | **removed (P7 TV shell, decision 13).** Only the legacy `movies.js` / `tvshows.js` opened this dialog in the movies and series modes that showed the group; the modern grid's `FilterButton` carries the File and Due groups itself. `git diff master` is empty on all three |
-| `src/components/QueryClientEventHandler.tsx` | catalog query invalidation on the events the mod's surfaces depend on | mod surfaces stop refreshing after a change | permanent |
-| `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` (W7/W12) | top-bar restyle gone in the stock entry | until Stage B Home passes, then removed |
+| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `src/apps/modern/features/libraries/components/ItemsView.tsx`, `src/apps/modern/features/libraries/components/LibraryToolbar.tsx`, `src/apps/modern/features/libraries/components/PlayAllButton.tsx`, `src/apps/modern/features/libraries/components/ShuffleButton.tsx`, `src/apps/modern/features/libraries/components/filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grid, which since decision 13 serves every layout including the TV (W2, W3, W8) | every grid loses file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
+| `src/types/library.ts` | the `FileStates` and `RetentionDueWithinDays` fields on upstream's `Filters` (`6645d7d397`, `cb3b7daf44`), which the grid rows above read and persist with the view settings | the File and Due filters fail to type-check, or a renamed `Filters` drops them from saved view settings | **permanent** with the grid rows above (added 2026-09-24, P7-R1) |
+| ~~`src/components/filterdialog/filterdialog.js`, `src/components/filterdialog/filterdialog.template.html`, `src/components/filterdialog/filterIndicator.js`~~ | the File and Due filter groups in the legacy grids' filter dialog (W3, W8) | — | **removed (P7 TV shell, decision 13).** Only the legacy `movies.js` / `tvshows.js` opened this dialog in the movies and series modes that showed the group; the modern grid's `FilterButton` carries the File and Due groups itself. `git diff master` is empty on all three |
+| ~~`src/components/QueryClientEventHandler.tsx`~~ | catalog query invalidation on the events the mod's surfaces depend on | — | **removed (corrected 2026-09-24, P7-R1).** Moved into the mod's own `integration/queryClientEventHandler` by `f4a7e2ffc4`; `git diff master` is empty |
+| `src/apps/modern/components/AppToolbar/index.tsx` | imports `homeChrome.scss` and the Home top-bar state (W7/W12) | top-bar restyle gone in the stock entry | until the stock entry no longer shows the W7 top bar, then removed; the mod shell's own bar does not need it |
 | `src/components/router/routerHistory.ts` | `RouterHistory.adopt(router)`, so the shared history drives the router that is actually rendered (P7.S2 login fix) | the mod bundle navigates upstream's router instead of its own: the address bar moves and the screen does not | permanent |
 | `src/utils/assetUrl.ts` | **new file**, the one helper the four rows below call | nothing; a new file never conflicts | permanent |
 | `src/utils/fetchLocal.ts` | roots `config.json` at the bundle (S3) | `config.json` is fetched from beside the document instead of from the bundle | permanent |
@@ -410,8 +417,10 @@ struck through have been handed back and are kept for one release as a record of
 | `src/utils/image.ts` | roots the device images at the bundle (S3) | device icons 404 from the plugin path | permanent |
 | `src/apps/legacy/routes/user/userprofile.tsx` | roots the default avatar at the bundle (S3) | the default avatar 404s from the plugin path | permanent |
 | `src/plugins/syncPlay/ui/playbackPermissionManager.js` | roots the silent sound at the bundle (S3) | the SyncPlay permission probe 404s from the plugin path | permanent |
-| `src/components/toolbar/AppUserMenu.tsx` | Queue item (I8) | Queue unreachable from the stock user menu | until Stage A, then removed (the mod shell has its own menu) |
-| `src/apps/modern/routes/asyncRoutes/user.ts`, `routes/catalog/queue.tsx` | the `catalog/queue` route in the stock entry | queue route missing in the stock entry | until Stage A, then removed; the mod router owns `catalog/*` |
+| `src/components/toolbar/AppUserMenu.tsx` | the Queue item (I8) and the *JellyfinMod settings* item (S8), the latter shown only inside the mod entry (S8-R1) | Queue and the settings area unreachable from the user menu | **permanent (corrected 2026-09-24, P7-R1).** The mod shell renders upstream's `AppUserMenu` rather than its own, so both entries share this file |
+| `src/apps/modern/routes/asyncRoutes/user.ts`, `src/apps/modern/routes/catalog/queue.tsx` | the `catalog/queue` route in the stock entry's modern layout | the stock user menu's Queue item leads to not-found | as long as the stock user menu offers Queue; the mod router owns `catalog/*` in the mod entry |
+| `src/apps/legacy/routes/asyncRoutes/user.ts` | the same `catalog/queue` route for the legacy layouts (TV, `desktop-legacy`, `mobile-legacy`) of the stock entry (`56b7e9983d`) | the stock entry's Queue on a TV leads to not-found | with the row above (added 2026-09-24, P7-R1) |
+| `src/elements/emby-scrollbuttons/emby-scrollbuttons.js` | one guard: a scroller detached before its first frame no longer throws (`08e899f0e4`) | an uncaught `scrollHandler is not a function` when a Home row is torn down during first paint | **a production fix carried on `jellyfin-mod` (added 2026-09-24, P7-R1).** It belongs on `master`; it moves there through the production procedure, and the row is then struck when the rebase makes the diff empty |
 
 Removing a row means restoring the upstream text of that file on `jellyfin-mod`, verified by
 `git diff master -- <file>` being empty. It is only worth doing when the mod screen that replaces
@@ -420,7 +429,9 @@ feature rather than the seam, which is why the two legacy grid controllers staye
 layout moved to the modern grid (decision 13).
 
 Upstream files the mod **mirrors** rather than edits are not in this table, because they are not
-patched: `src/index.jsx`, `src/RootApp.tsx` and `src/components/viewManager/ViewManagerPage.tsx`.
+patched: `src/index.jsx` (boot option (1) was chosen, so its former "only under option (2)" row is gone),
+`src/RootApp.tsx` and `src/components/viewManager/ViewManagerPage.tsx`. `src/config.json` is read by the mod entry
+and never edited, so it is not a row either.
 `scripts/jellyfinmod-build/bootGuard.js` hashes each one and fails the build when upstream changes
 it, so a mirroring that nobody remembers cannot go quiet. The stock entry then differs from upstream only in build
 configuration, and "plugin off" is stock by construction rather than by gating.
@@ -474,7 +485,9 @@ the upstream tip, the bundle ids and the results of steps 5–9 in the phase evi
 5. **Build and static checks.** `npm ci`, `npm run build:production` (both entries). The boot
    guard (`scripts/jellyfinmod-build/bootGuard.js`, run by the build) fails by name if upstream
    changed `src/index.jsx`, `src/RootApp.tsx` or `ViewManagerPage.tsx`; mirror the change into the
-   mod entry and record the new hash in the same commit. Then `npx tsc --noEmit`, feature eslint and
+   mod entry and record the new hash in the same commit. The patch-surface check
+   (`scripts/jellyfinmod-build/patchSurface.js`, also run by the build) fails by name if the rebased branch changes
+   an upstream file §3.2 does not list, or a listed one no longer differs; fix the table or the file before going on. Then `npx tsc --noEmit`, feature eslint and
    stylelint. `dist/jellyfinmod-web.json` shows the new `upstreamMergeBase` and a new `bundleId`.
    (`patch-check.mjs` was not built, S4 evidence; the live takeover run in step 7 replaces it.)
 6. **Plugin suites.** Rebuild the plugin and run every suite under the plugin's `tests/` with
