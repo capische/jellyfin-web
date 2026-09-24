@@ -1872,6 +1872,19 @@ server.
 
 **Next step.** The physical-TV checklist above. Then work queue item 3.
 
+#### Phase 7 remaining — handover
+
+Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, high effort.
+
+- **Done and verified:** S7 (plugin `8efe9ea`, deployed to 28096; evidence under *S7 evidence* below).
+- **In progress:** S8, the settings area in the mod interface. Branch `p7-settings`, worktree
+  `.claude/worktrees/p7-settings`, off `origin/jellyfin-mod`; pushed commits fast-forward `jellyfin-mod`.
+- **Next step:** S8 per §5 on the typed endpoints of S7, then S9, S10, S5, S11 in that order (PHASE7's own
+  dependencies: S9 needs S7+S8, S10 needs S7–S9, S11 needs everything).
+- **Instance:** 28096 runs plugin `8efe9ea` and web bundle `9aea38d0cc4d` (`jellyfin-mod` `04c9179189`).
+- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (Dashboard page, S7); the plugin suite
+  `tests/PhaseSevenSettingsIntegration`, run on the Pi like the others.
+
 ### S7 — one settings contract behind every form
 
 Add the migration and typed endpoints of the API contract; import the XML-held discovery and
@@ -1891,6 +1904,76 @@ history events.
 - Every new endpoint answers 401 anonymous and 403 ordinary user; every PATCH without the current
   revision answers 409; unknown fields are 400.
 - The Dashboard page still saves and re-reads every field across a restart.
+
+#### S7 evidence — 2026-09-24
+
+Opus, high effort. Plugin `master` `8efe9ea`, deployed to the acceptance instance (28096) over `ce49172`, web bundle
+unchanged (`9aea38d0cc4d`). Host `12.0.0`.
+
+**What was built.** Open question 13 is implemented at its proposed default (PHASE7 says each task implements its
+proposed default and flags it; it is still open for the user):
+
+- Migration `PhaseSevenSettings` adds to the `AcquisitionSettings` row the TMDB token reference, the discovery
+  revision and verified revision, the seed-protection source (`acquisitionClient` by default, default 12) with a
+  separate endpoint, username and password reference, a retention revision, and `SetupCompletedAt` /
+  `SetupDismissedAt`. Existing rows start every new area at revision 1.
+- A one-time import at startup moves the XML token reference and the XML seed-protection endpoint into that row
+  and empties the XML fields. An endpoint that is the selected acquisition client with the same account becomes
+  `acquisitionClient` (its password reference is dropped); any other endpoint becomes `separate`, unchanged. It is
+  idempotent and runs at every startup, so a value an older page writes into the XML is picked up next time; until
+  then a value still in the XML wins, so nothing is silently ignored.
+- Typed, revisioned, administrator-only endpoints: `Settings/Discovery` (+`Test`), `Settings/SeedProtection`
+  (+`Test`), `Settings/Retention` (XML-backed, T13 selected-user check), `Settings/Overview`, `Setup/State`,
+  `Setup/Dismiss`. Unknown fields 400, missing revision 400, stale revision 409, secrets write-only. Health
+  advertises `settings.overview`, `settings.discovery`, `settings.seedProtection`, `settings.retention`, `setup`.
+- Seed protection reads the selected acquisition client when no separate endpoint is set, so `Settings/Acquisition`
+  now reports `seedProtectionMatchesClient: true` in that case (the Phase 4 suite's assertion was updated to say so).
+- `settings_changed` history rows (area, revision, administrator id; never a value) with `EntryId` empty.
+- The Dashboard page saves the TMDB token, retention and seed protection through the typed endpoints, shows the
+  revisions, and gains **Test** buttons for TMDB and seed protection; seed protection is a source choice (download
+  client or a separate Transmission) instead of a bare URL. The optional v3 TMDB key stays in the XML.
+
+**Deviations, recorded rather than hidden.**
+
+- `UiTakeoverEnabled`, `WebBundleGraceDays` and `InterfaceRevision` stay in the XML where S4 put them; the data-model
+  row listed them in SQLite. `Settings/Interface` is unchanged from S4.
+- `Setup/State` step 2 checks the selected client is enabled and verified and every path mapping is verified. The
+  `TestImportPath` result is not persisted, so the step cannot require `linked`; the wizard runs the probe itself.
+- `Settings/Overview` reports `plugin.revision` as the assembly's informational version, which is the version
+  number today; a git revision would need a build change.
+
+**Suite — `tests/PhaseSevenSettingsIntegration`** (real Kestrel host, authentication, authorization, MVC
+serialization, EF migrations, SQLite; real HTTP TMDB, Transmission RPC and Torznab boundary servers; ≈ 36 s):
+migration from a Phase 6 database with clean `integrity_check` and `foreign_key_check`; the startup import (XML
+emptied, references moved, secrets unchanged in the `0600` store); every new route 401 anonymous and 403 ordinary
+user; discovery `ok`, `unauthorized`, `unreachable` (dropped connection), `timeout` (20 s boundary delay against the
+15 s client timeout) and `not_configured`, with the boundary receiving the moved token as the bearer credential;
+seed protection `ok`, `unauthorized`, `unreachable`, `not_configured`, credentials in the URL refused, replaced and
+cleared passwords removed from the store; retention with an unknown selected user refused; stale revisions 409 and
+unknown fields 400; the Overview's acquisition blockers equal to `Settings/Acquisition`'s; setup walked from
+indexers pending to complete through the existing resources; `settings_changed` rows without values; a restart
+re-reads every value. 55 responses and every log line leak-checked for the five secrets. All eleven suites pass
+(Phase 0–6, the takeover suite with a real `jellyfinmod-web.zip`, and this one).
+
+**Live on 28096**, signed in as `oleksii` with an empty password over real HTTP:
+
+| Check | Result |
+| --- | --- |
+| Startup log | `moved the TMDB token reference …` and `moved the seed-protection connection … as acquisitionClient`, then migrations applied |
+| New routes | 200 as administrator, 401 anonymous; no `sec_` in any body |
+| Discovery after the move | `tokenConfigured: true`, `Discovery/Test` → `ok` against the real TMDB, and `Discover/Search` for a movie returns 19 results — no token re-entered |
+| Seed protection | `acquisitionClient`, effective endpoint the acceptance Transmission, `Test` → `ok` (Transmission 4.0.5, RPC 17), `seedProtectionMatchesClient: true` |
+| Retention preview | answers with 107 inspected; retention is off on this instance, so nothing is due |
+| Dashboard page (`settings-dashboard.mjs`) | 9 of 9 on Playwright's Chromium 153.0.8010.12 **and** on real Google Chrome 153.0.8010.53, identical: moved token shown, TMDB Test `(ok)`, seed Test `(ok)`, retention days 14 → 15 saved and re-read, restored to 14, 66 settings responses without a secret reference, no page errors |
+
+**Not verified.** Ordinary-user 403 was proven in the suite only: the instance's other accounts have passwords this
+agent does not have and must not ask for. `Retention/Preview` protecting a plugin-added torrent through the
+acquisition client was not shown live, because retention is off there and turning it on is a delete-path change.
+A cold load of `/web/#/configurationpage?name=JellyfinMod` lands on Home in the mod interface; arriving from the
+Dashboard's plugin list works. Not investigated further.
+
+Backups of the pre-S7 database, XML and secret store are beside the instance under `backups/pre-8efe9ea`, and the
+previous plugin as `JellyfinMod.dll.pre-8efe9ea`.
 
 ### S8 — the settings area (Stage C)
 
