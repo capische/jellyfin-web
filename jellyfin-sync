@@ -306,7 +306,7 @@ deploy_plugin_from_local() {
     local plugin_dir="$plugin_dir_default"
     local dotnet="${JELLYFIN_DOTNET:-dotnet}"
     local python="${JELLYFIN_PLUGIN_PYTHON:-python3}"
-    local binary_dir="$(dirname -- "$project")/bin/Release/net9.0"
+    local binary_dir="$(dirname -- "$project")/bin/Release/net10.0"
     local package_script="$(dirname -- "$(dirname -- "$project")")/scripts/package_plugin.py"
 
     [[ -f $project ]] || die "Plugin project missing: $project"
@@ -356,7 +356,7 @@ cd "\$HOME"
 mkdir -p -- '$plugin_dir'
 EOF
     # Copy only the generated package files, without --delete; other plugins stay intact.
-    # Jellyfin 10.11 supplies the compatible EF Core/SQLite runtime dependencies.
+    # Jellyfin 12.0.0 supplies the compatible EF Core/SQLite runtime dependencies.
     local files=("$plugin_package_dir/JellyfinMod.dll" "$plugin_package_dir/logo.png" "$plugin_package_dir/meta.json")
     if ((plugin_web)); then
         files+=("$plugin_package_dir/jellyfinmod-web.zip")
