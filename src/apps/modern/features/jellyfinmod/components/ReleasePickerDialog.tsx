@@ -1,12 +1,14 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import React, { type ChangeEvent, type FC, Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type FC, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import focusManager from 'components/focusManager';
 
 import { cancelGrab, getGrab, getQualityProfiles, grabRelease, searchReleases } from '../api/modApi';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import type { GrabOperation, ReleaseCandidate, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
+
+import EmbySelect, { type EmbySelectOption } from './EmbySelect';
 
 import './releasePicker.scss';
 
@@ -270,8 +272,15 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         start(data.searchId, candidate);
     }, [busy, data, operation, stale, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
-    const chooseEpisode = useCallback((event: ChangeEvent<HTMLSelectElement>) => setEpisodeId(event.target.value), []);
-    const chooseProfile = useCallback((event: ChangeEvent<HTMLSelectElement>) => setProfileId(event.target.value), []);
+    const episodeOptions = useMemo<EmbySelectOption[]>(() => [
+        { value: '', label: 'Choose an episode' },
+        ...episodes.map(episode => ({ value: episode.id, label: episode.label }))
+    ], [episodes]);
+    const defaultProfileLabel = profileLabel(data, !!profileId);
+    const profileOptions = useMemo<EmbySelectOption[]>(() => [
+        { value: '', label: defaultProfileLabel },
+        ...(profiles.data ?? []).map(profile => ({ value: profile.id, label: profile.name }))
+    ], [defaultProfileLabel, profiles.data]);
 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
     const eligible = data?.candidates.filter(candidate => candidate.eligible) ?? [];
@@ -284,20 +293,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         && <GrabStatus operation={operation} now={grab.now} cancelling={grab.cancelling} onCancel={grab.cancel} />;
 
     return <div className='jfmod-releasePicker' ref={container}>
-        {mediaType === 'series' && <div className='selectContainer'>
-            <label className='jfmod-releaseLabel' htmlFor='jfmod-releaseEpisode'>Episode</label>
-            <select id='jfmod-releaseEpisode' is='emby-select' value={episodeId} onChange={chooseEpisode}>
-                <option value=''>Choose an episode</option>
-                {episodes.map(episode => <option key={episode.id} value={episode.id}>{episode.label}</option>)}
-            </select>
-        </div>}
-        {!!profiles.data?.length && <div className='selectContainer'>
-            <label className='jfmod-releaseLabel' htmlFor='jfmod-releaseProfile'>Quality profile for this search</label>
-            <select id='jfmod-releaseProfile' is='emby-select' value={profileId} onChange={chooseProfile}>
-                <option value=''>{profileLabel(data, !!profileId)}</option>
-                {profiles.data.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-            </select>
-        </div>}
+        {mediaType === 'series' && <EmbySelect id='jfmod-releaseEpisode' label='Episode' value={episodeId}
+            options={episodeOptions} onChange={setEpisodeId} />}
+        {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile for this search'
+            value={profileId} options={profileOptions} onChange={setProfileId} />}
         {intent === 'addVersion' && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>
             The release you grab is added as another version; the ones you have stay.
         </p>}
