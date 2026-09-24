@@ -9,6 +9,7 @@ const { DefinePlugin, IgnorePlugin } = require('webpack');
 const packageJson = require('./package.json');
 const JellyfinModBootGuardPlugin = require('./scripts/jellyfinmod-build/bootGuard');
 const JellyfinModBundleManifestPlugin = require('./scripts/jellyfinmod-build/bundleManifest');
+const JellyfinModPatchSurfacePlugin = require('./scripts/jellyfinmod-build/patchSurface');
 
 const Assets = [
     'native-promise-only/npo.js',
@@ -151,6 +152,8 @@ const config = {
         }),
         // JellyfinMod: refuse to build when an upstream file the mod entry mirrors has changed (P7.S2).
         new JellyfinModBootGuardPlugin({ root: __dirname }),
+        // JellyfinMod: refuse to build when PHASE7 §3.2 no longer lists exactly the upstream files changed (P7-R1).
+        new JellyfinModPatchSurfacePlugin(),
         // JellyfinMod: stamp the bundle's identity so the plugin can package, serve and recognise it (P7.S2).
         new JellyfinModBundleManifestPlugin({
             webCommit: COMMIT_SHA,
