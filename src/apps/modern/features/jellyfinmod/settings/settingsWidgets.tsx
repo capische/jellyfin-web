@@ -54,6 +54,15 @@ interface SectionFrameProps {
     onGo: (id: string) => void;
 }
 
+const NextButton: FC<{ next: { id: string; title: string }; onGo: (id: string) => void }> = ({ next, onGo }) => {
+    const goNext = useCallback(() => onGo(next.id), [next.id, onGo]);
+    return (
+        <button type='button' className='jfmod-next' onClick={goNext}>
+            Next: {next.title} →
+        </button>
+    );
+};
+
 /** One section of the checklist: eyebrow, heading, state, body, and the footer with Save and "Next". */
 export const SectionFrame: FC<SectionFrameProps> = ({
     id, eyebrow, title, state, actions, notice, children, onSave, saving, saveMeta, next, onGo
@@ -79,11 +88,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                     </Button>
                 )}
                 {saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
-                {next && (
-                    <button type='button' className='jfmod-next' onClick={() => onGo(next.id)}>
-                        Next: {next.title} →
-                    </button>
-                )}
+                {next && <NextButton next={next} onGo={onGo} />}
             </footer>
         )}
     </section>
@@ -104,6 +109,15 @@ interface SecretFieldProps {
  */
 export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange }) => {
     const [editing, setEditing] = useState(false);
+    const undo = useCallback(() => onChange({ action: 'unchanged', value: null }), [onChange]);
+    const type = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value ?
+        { action: 'replace', value: event.target.value } : { action: 'unchanged', value: null }), [onChange]);
+    const keep = useCallback(() => {
+        setEditing(false);
+        onChange({ action: 'unchanged', value: null });
+    }, [onChange]);
+    const replace = useCallback(() => setEditing(true), []);
+    const clear = useCallback(() => onChange({ action: 'clear', value: null }), [onChange]);
     const replacing = editing || change.action === 'replace' || !configured;
     if (change.action === 'clear') {
         return (
@@ -111,7 +125,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                 <span className='jfmod-secret-label'>{label}</span>
                 <div className='jfmod-secret-row'>
                     <span className='jfmod-secret-state'>Will be removed on save</span>
-                    <Button size='small' onClick={() => onChange({ action: 'unchanged', value: null })}>Undo</Button>
+                    <Button size='small' onClick={undo}>Undo</Button>
                 </div>
             </div>
         );
@@ -127,11 +141,10 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                     fullWidth
                     margin='dense'
                     value={change.action === 'replace' ? change.value ?? '' : ''}
-                    onChange={event => onChange(event.target.value ?
-                        { action: 'replace', value: event.target.value } : { action: 'unchanged', value: null })}
+                    onChange={type}
                 />
                 {configured && (
-                    <Button size='small' onClick={() => { setEditing(false); onChange({ action: 'unchanged', value: null }); }}>
+                    <Button size='small' onClick={keep}>
                         Keep the saved one
                     </Button>
                 )}
@@ -143,8 +156,8 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
             <span className='jfmod-secret-label'>{label}</span>
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
-                <Button size='small' onClick={() => setEditing(true)}>Replace</Button>
-                <Button size='small' onClick={() => onChange({ action: 'clear', value: null })}>Clear</Button>
+                <Button size='small' onClick={replace}>Replace</Button>
+                <Button size='small' onClick={clear}>Clear</Button>
             </div>
         </div>
     );
@@ -162,51 +175,59 @@ export interface FieldSpec {
 
 export type Draft = Record<string, unknown>;
 
-export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: (key: string, value: unknown) => void }> = ({
+type FieldChange = (key: string, value: unknown) => void;
+
+/** One control of a FieldForm, chosen by the field's type. */
+const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange }> = ({ field, value, onChange }) => {
+    const { key, type, optional } = field;
+    const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => onChange(key, event.target.checked), [key, onChange]);
+    const choose = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(key, event.target.value || null), [key, onChange]);
+    const edit = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const text = event.target.value;
+        if (type === 'list') onChange(key, text.split(',').map(part => part.trim()).filter(Boolean));
+        else if (type === 'int') onChange(key, text === '' && optional ? null : parseInt(text, 10));
+        else if (type === 'number') onChange(key, text === '' && optional ? null : Number(text));
+        else onChange(key, text);
+    }, [key, type, optional, onChange]);
+    if (type === 'bool') {
+        return (
+            <div>
+                <FormControlLabel
+                    control={<Switch checked={!!value} onChange={toggle} />}
+                    label={field.label}
+                />
+                {field.help && <div className='fieldDescription jfmod-checkdesc'>{field.help}</div>}
+            </div>
+        );
+    }
+    if (type === 'select') {
+        return (
+            <TextField
+                select fullWidth margin='dense' label={field.label} helperText={field.help}
+                value={value ?? ''} onChange={choose}
+            >
+                {field.options?.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+            </TextField>
+        );
+    }
+    let shown = '';
+    if (Array.isArray(value)) shown = value.join(', ');
+    else if (value !== null && value !== undefined) shown = String(value);
+    return (
+        <TextField
+            fullWidth margin='dense' label={field.label} helperText={field.help}
+            type={type === 'int' || type === 'number' ? 'number' : 'text'}
+            value={shown}
+            onChange={edit}
+        />
+    );
+};
+
+export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: FieldChange }> = ({
     fields, draft, onChange
 }) => (
     <div className='jfmod-group'>
-        {fields.map(field => {
-            const value = draft[field.key];
-            if (field.type === 'bool') {
-                return (
-                    <div key={field.key}>
-                        <FormControlLabel
-                            control={<Switch checked={!!value} onChange={event => onChange(field.key, event.target.checked)} />}
-                            label={field.label}
-                        />
-                        {field.help && <div className='fieldDescription jfmod-checkdesc'>{field.help}</div>}
-                    </div>
-                );
-            }
-            if (field.type === 'select') {
-                return (
-                    <TextField
-                        key={field.key} select fullWidth margin='dense' label={field.label} helperText={field.help}
-                        value={value ?? ''} onChange={event => onChange(field.key, event.target.value || null)}
-                    >
-                        {field.options?.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
-                    </TextField>
-                );
-            }
-            let shown = '';
-            if (Array.isArray(value)) shown = value.join(', ');
-            else if (value !== null && value !== undefined) shown = String(value);
-            return (
-                <TextField
-                    key={field.key} fullWidth margin='dense' label={field.label} helperText={field.help}
-                    type={field.type === 'int' || field.type === 'number' ? 'number' : 'text'}
-                    value={shown}
-                    onChange={event => {
-                        const text = event.target.value;
-                        if (field.type === 'list') onChange(field.key, text.split(',').map(part => part.trim()).filter(Boolean));
-                        else if (field.type === 'int') onChange(field.key, text === '' && field.optional ? null : parseInt(text, 10));
-                        else if (field.type === 'number') onChange(field.key, text === '' && field.optional ? null : Number(text));
-                        else onChange(field.key, text);
-                    }}
-                />
-            );
-        })}
+        {fields.map(field => <FieldControl key={field.key} field={field} value={draft[field.key]} onChange={onChange} />)}
     </div>
 );
 
