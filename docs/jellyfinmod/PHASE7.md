@@ -510,6 +510,14 @@ the upstream tip, the bundle ids and the results of steps 5–9 in the phase evi
 
 ### 3.5 Version and compatibility matrix
 
+**Retargeted 2026-09-24 (user decision, before S11).** The plugin now compiles against Jellyfin
+**12.0.0** on **.NET 10** (`Jellyfin.Controller`/`Jellyfin.Model` `12.0.0`, EF Core `10.0.11` — the
+host's own), and `targetAbi` is **`12.0.0.0`**. **Jellyfin 10.11 is no longer supported:** a 10.11
+server marks the plugin `NotSupported` and never loads it, and the bundle's
+`supportedServer.minimum` is `12.0.0.0` to match. README §7.1 records the decision and what was
+removed with 10.11. Everything below this paragraph that names `10.11.0.0` as the minimum describes
+the state before the retarget; the matrix itself now reads with `12.0.0.0` as `targetAbi`.
+
 **Corrected 2026-09-20 (S1 evidence, confirmed by the coordinator).** The rows below originally
 described a pinned `10.11.x` line with a `supportedServer` range of `min` and `maxExclusive`.
 That line is stale. The isolated instances genuinely run the `jellyfin/jellyfin` image that
@@ -527,15 +535,15 @@ each host release an outage.
 
 | Host server | Plugin load | Bundle at `/web` | Behaviour |
 | --- | --- | --- | --- |
-| Below `targetAbi` (`10.11.0.0`) | Not loaded (`NotSupported`) | Stock | Nothing runs; if a patched file was left behind, the failsafe shows stock and the log names it |
+| Below `targetAbi` (`12.0.0.0`; so every 10.11.x) | Not loaded (`NotSupported`) | Stock | Nothing runs; if a patched file was left behind, the failsafe shows stock and the log names it |
 | At or above the minimum, in `testedOn` (today `12.0.0`) | Loaded | JellyfinMod | Supported |
 | At or above the minimum, not in `testedOn` | Loaded | JellyfinMod | Runs; Health and the Interface section report `server_version_untested` with the observed version, and the merge routine adds it to `testedOn` once a real run passes. Not a blocker: an untried version is unknown, not known-bad |
 | Loaded but a real incompatibility is found | Loaded | Stock | The engine applies no takeover, restores any previous one, reports blocker `server_version_unsupported`, and keeps serving the bundle at its own path so an administrator can evaluate it. Reaching this state is reported, never worked around silently |
 | Bundle newer than plugin (archive shape or a retained bundle after rollback) | Loaded | JellyfinMod | Capability gating hides surfaces the plugin lacks; the Overview shows the id mismatch |
 | Plugin newer than bundle (a retained older bundle in a resident client) | Loaded | JellyfinMod (old) | Works while the API stays additive within the grace period; `expectsCapabilities` is a subset |
 
-Moving the plugin itself to .NET 10 and a 12.x `targetAbi` is still separate work
-(`plugin/CLAUDE.md`); what changed here is only how support is *expressed*, not the build target.
+Moving the plugin itself to .NET 10 and a 12.x `targetAbi` was separate work when this was written;
+it was done on 2026-09-24 (the paragraph at the top of this section).
 
 **Tested, 2026-09-24 (S5).** Only combinations actually run are listed; everything else in the table
 above is policy, not evidence.
@@ -546,7 +554,11 @@ above is policy, not evidence.
 | same host | stock image, plugin copied from the release archive, `JELLYFIN_WEB_DIR` at the archive's `web/` | same | same | archive, fork served by host | `forkServedByHost`, nothing written |
 | same host | isolated and acceptance instances (S3, S4, S6–S10 evidence) | earlier revisions | earlier bundles | bind-mounted `dist/` | as recorded in those sections |
 
-No host below `targetAbi` or above 12.0.0 has been run; those rows stay untested.
+| Jellyfin 12.0.0, same digest, arm64 | `capische/jellyfinmod:0.1.0.0` rebuilt after the retarget (image `9a07af179fad`), fresh container, empty config; and the same image offline against a `.backup` copy of the acceptance database | 0.1.0.0 **built for 12.0.0 / .NET 10** (plugin `f443a62`) | `991019ca45ec` (web `25cbac123b`) | image, own web directory | Loaded, `Active`, `targetAbi` `12.0.0.0`; migrations applied; patched automatically; repository registered; the database copy byte-identical table by table (§S5 retarget evidence) |
+| same host | acceptance instance, bind-mounted web root | same | same | plugin folder | Loaded; Health `ok`, `hostVersion` `12.0.0.0`, `supportedServer.minimum` `12.0.0.0`, no blocker; browser smoke passed on Chromium and Chrome |
+
+No host below `targetAbi` or above 12.0.0 has been run; those rows stay untested. Since the retarget,
+every 10.11.x host is below `targetAbi` by construction.
 
 ## 4. UI delivery
 
@@ -1597,6 +1609,81 @@ authorization.
 containers), their config, cache, media and context directories and the extracted archive were
 removed, as were the generated secret files on the workstation. The image `capische/jellyfinmod:0.1.0.0`
 is kept on the test host as the deliverable.
+
+#### S5 retarget to Jellyfin 12.0.0 on .NET 10 — evidence, 2026-09-24
+
+Opus 5.5, high effort. The user's decision of 2026-09-24 (PLAN): drop 10.11, retarget before S11.
+Plugin `master` `f443a62`; web `jellyfin-mod` `f080c3faa4` (bundle minimum), `a351f8bf5a`
+(`jellyfin-sync` output path), `25cbac123b` (README §7.1) and this commit; bundle `991019ca45ec`.
+
+**What the 12.0.0 packages say.** `Jellyfin.Controller` and `Jellyfin.Model` `12.0.0` target
+`net10.0`; `Jellyfin.Database.Implementations` `12.0.0` depends on EF Core Relational `10.0.11`,
+and the acceptance host's `jellyfin.deps.json` loads `Microsoft.EntityFrameworkCore*` and
+`Microsoft.Data.Sqlite.Core` `10.0.11`, SQLitePCLRaw `2.1.12`, on the .NET `10.0.11` runtime. The
+plugin now references exactly those: `net10.0`, 12.0.0, EF Core `10.0.11`, `targetAbi` `12.0.0.0`
+(JPRM-generated `meta.json`). Built with the .NET 10 SDK `10.0.401`: zero warnings, zero errors.
+(12.1.0 is published too; the pin follows the host, which runs 12.0.0.)
+
+**What no longer compiled, and the 10.11 workarounds removed.** The plugin itself compiled
+unchanged; only test fixtures that set `PrimaryVersionId` as a string broke. Removed anyway, because
+12 has the proper API: the reflection that read `Video.PrimaryVersionId` as a string (10.11) or a
+`Guid?` (12) is now a property read; the extra-version lookup no longer computes
+`GetNewItemId(path, typeof(Video))` — the id 10.11 used and 12 deletes on upgrade — but reads the
+versions Jellyfin links to the title through `ILibraryManager.GetLocalAlternateVersionIds`, the list
+its own media sources come from. The Phase 5 fixture models 12 accordingly (extra versions typed
+like the main item with owner and primary version set, hidden from item queries, promotion keeping
+the promoted item's id); the Phase 2 fixture's `Jellyfin12Movie` shim is gone. Enumerating every
+version through `GetMediaSources`, merged versions and query visibility of versions stay V1.
+
+**`ExecuteUpdate` / `ExecuteDelete`.** The rule came from a real failure (T18, 2026-09-19): compiled
+against EF Core 9, whose `ExecuteUpdate` takes `Expression<Func<SetPropertyCalls<T>,
+SetPropertyCalls<T>>>`, the plugin hit a type-load failure on the host's EF Core 10, whose
+`ExecuteUpdate` takes `Action<UpdateSettersBuilder<T>>`, and startup stopped. Compiled against the
+host's own `10.0.11`, both now bind to members the host has, so the technical reason for the rule
+is gone. What remains is ordinary EF behaviour: bulk statements bypass the change tracker and
+`SaveChanges` transactions, so they are for set-based writes that need neither. No data-access code
+was changed in this task; `DatabaseInitializer`'s comment now says the tracked update is no longer
+required.
+
+**Suites** on the test host in the `mcr.microsoft.com/dotnet/sdk:10.0` container (SDK 10.0.401),
+offline: all eleven .NET suites pass — Phase 0 and 1 smoke, Phase 2, 3, 3-protection, 5, 6, S7
+settings, S9 Prowlarr, the takeover suite (with the new `jellyfinmod-web.zip`) unprivileged, and
+Phase 4 as root as before — and the image test `tests/image/entrypoint-rewrite.sh` passes on the new
+image.
+
+**Existing databases upgrade.** The new image ran offline (`--network none`, so a copied download
+client or indexer could not be contacted) against a `.backup` copy of the acceptance plugin
+database. It loaded the plugin, logged *database migrations applied* (no new migration exists; all
+22 recorded), and after it stopped every table — 29 tables including `Entries` 264,
+`EntryBindings` 317, `RetentionEvaluations` 54, `History` 394, `__EFMigrationsHistory` 22 — had
+the same row count and content checksum, the same schema hash, `integrity_check` ok and no
+foreign-key violations. The acceptance database holds no Keep and no deadline today (every
+`RetentionPolicy` inherit, every `Deadline` null), so those are proven unchanged by the checksums
+rather than by a set value.
+
+**Fresh container.** The rebuilt image on an empty config: installed the plugin, loaded it on
+12.0.0, applied migrations, patched `/web` automatically with `991019ca45ec`, registered *JellyfinMod
+(this server)* after the first-start pass, and the installed `meta.json` reads `targetAbi`
+`12.0.0.0`, `Active`; `/JellyfinMod/Repository` publishes `targetAbi` `12.0.0.0`; anonymous Health
+`401`; no `[ERR]` or `[FTL]` line. Container and its directories removed afterwards.
+
+**Acceptance instance.** Backed up to `backups/pre-jf12` (DLL, `meta.json`, bundle zip, logo, XML,
+secret store, `.backup` of the database with its checksums, recovery state and the patched
+`index.html`), then the package was copied into the plugin folder and only that service restarted.
+Startup log: plugin loaded, migrations applied, bundle `991019ca45ec` extracted and applied at `/web`
+(`bundle`), repository package built, no error line. Database after the restart against the backup:
+identical except one `interface_patched` history row for the bundle change and the seed-release
+row's live Transmission observation. `scripts/jellyfinmod-e2e/retarget-smoke.mjs`: **8 of 8 on
+Playwright's Chromium 153.0.8010.12 and 8 of 8 on Google Chrome 153.0.8010.53** — sign-in as
+`oleksii` lands on Home in the mod shell with the new bundle; Home shows the hero and card rows;
+authenticated Health `ok`, host `12.0.0.0`, minimum `12.0.0.0`, takeover `patched`, no blocker,
+anonymous `401`; a detail page renders; the settings area opens with its eleven sections; Dashboard →
+Plugins → JellyfinMod shows 0.1.0.0, Active, no repository error; no page errors. Desktop only.
+
+**Not done here.** The plugin version stays `0.1.0.0`, so an image or repository update does not
+replace an installed 0.1.0.0 built for 10.11 (the entrypoint never replaces an equal version); a
+version bump is the release's decision (S11). The isolated test instance (18096) and production
+were not touched; 18096 still runs the build before the retarget.
 
 ### S5.1 — the plugin publishes its own repository
 

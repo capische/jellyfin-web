@@ -482,6 +482,9 @@ All fixable without changing a language.
 
 ## Decision log
 
+- **2026-09-24** — **Jellyfin 10.11 dropped; the plugin targets Jellyfin 12.0.0 on .NET 10**, decided
+  by the user before S11 so that S11 accepts the shipping build. See §7.1.
+
 - **2026-09-06** — **Removal, including Undo, is admin-only.** Ordinary users may add titles.
   Phase 3 expiry reclaims eligible media automatically unless an admin disables retention,
   preserving catalog entries/history and all existing deletion safeguards. Phase 1 does not
