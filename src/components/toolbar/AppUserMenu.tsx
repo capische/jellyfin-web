@@ -4,6 +4,7 @@ import Close from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Download from '@mui/icons-material/Download';
 import Downloading from '@mui/icons-material/Downloading';
+import Tune from '@mui/icons-material/Tune';
 import Edit from '@mui/icons-material/Edit';
 import Logout from '@mui/icons-material/Logout';
 import PhonelinkLock from '@mui/icons-material/PhonelinkLock';
@@ -18,6 +19,7 @@ import React, { FC, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useQueueVisible } from 'apps/modern/features/jellyfinmod/hooks/useQueue';
+import { useSettingsVisible } from 'apps/modern/features/jellyfinmod/hooks/useSettingsVisible';
 import { appHost } from 'components/apphost';
 import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
@@ -41,6 +43,8 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
     const { data: isQuickConnectEnabled } = useQuickConnectEnabled();
     // JellyfinMod: the queue item, beside Profile and Settings (UX decision log, P5.I8).
     const isQueueVisible = useQueueVisible();
+    // JellyfinMod: the settings area, for administrators of a plugin that offers it (P7.S8).
+    const isSettingsVisible = useSettingsVisible();
 
     const onDownloadManagerClick = useCallback(() => {
         shell.openDownloadManager();
@@ -118,6 +122,20 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     </ListItemIcon>
                     <ListItemText>
                         Queue
+                    </ListItemText>
+                </MenuItem>
+            )}
+            {isSettingsVisible && (
+                <MenuItem
+                    component={Link}
+                    to='/catalog/settings'
+                    onClick={onMenuClose}
+                >
+                    <ListItemIcon>
+                        <Tune />
+                    </ListItemIcon>
+                    <ListItemText>
+                        JellyfinMod settings
                     </ListItemText>
                 </MenuItem>
             )}
