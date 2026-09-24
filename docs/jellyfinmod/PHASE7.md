@@ -1882,8 +1882,11 @@ Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, hig
 - **Open debt:** feature eslint findings in `features/jellyfinmod/settings/`; the S10 run from a fresh database copy;
   a search and grab through a synced Prowlarr indexer; browser checks of secret replace/clear and the ordinary-user
   refusal (no password for another account).
-- **Next step:** S5 (image, archive, merge routine, compatibility matrix), then S11. Branch `p7-settings`, worktree
-  `.claude/worktrees/p7-settings`, off `origin/jellyfin-mod`; pushes fast-forward `jellyfin-mod`.
+- **Next step:** S5 (image, archive, merge routine, compatibility matrix) — **not started**; then S11 — **not
+  started**. Everything above is on `origin/jellyfin-mod` and plugin `master`; the `p7-settings` worktree and branch
+  were removed once merged, so start S5 from a new worktree off `origin/jellyfin-mod`. Open question 11 (image
+  name, registry, host pin) still stands; its proposed default is `capische/` with the acceptance compose's pinned
+  image digest.
 - **Instance:** 28096 runs plugin `cdb6e7b` and web bundle `a3ecb472798a` (`jellyfin-mod` `8f4b021d43`). Backups
   beside it: `backups/pre-8efe9ea` and `backups/pre-s9` (database, XML, secret store), `JellyfinMod.dll.pre-8efe9ea`,
   `JellyfinMod.dll.pre-s9`.
