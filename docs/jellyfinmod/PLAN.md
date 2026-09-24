@@ -463,7 +463,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
      acceptance evidence and block everything else.
   2. The TV and D-pad shell (Phase 7), which also carries the deferred legacy grid and `hometab.js`
      restores. **Reassigned by the user on 2026-09-24 from Fable to Opus at high effort.** Progress and handover
-     in PHASE7 "TV and D-pad shell — handover".
+     in PHASE7 "TV and D-pad shell — handover" and its part 2. **Decided 2026-09-24 (PHASE7 decision 13):** the TV
+     browses on the modern React grid; the legacy grid controllers are handed back.
   3. Per-media tracking and retention (below). **Fable implements this.**
 - **Per-media entries and retention — accepted 2026-09-21.** Verbatim: *"We need control per media
   file no matter it's a movie or episode. Therefore, if I watched episode – remove it, and each media
