@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 
-import { type EntryDetail, getEntries, getEntry, keepEntry, requestSearch } from '../api/modApi';
-import { keepButtonLabel } from '../constants/fileState';
+import { type EntryDetail, getEntries, getEntry, keepEntry, keepEpisode, requestSearch } from '../api/modApi';
+import { EPISODE_RETENTION_CAPABILITY, keepButtonLabel } from '../constants/fileState';
 import { AUTOMATION_CAPABILITY } from '../constants/queue';
 import { sameItemId, VERSIONS_CAPABILITY } from '../constants/versions';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
@@ -70,24 +70,29 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         },
         retry: false
     });
+    const { data, refetch } = detail;
+    const sameId = (value?: string | null) => sameItemId(value, itemId);
+    // Any file of the episode opens its page, not only the one the plugin selected (P10.E3).
+    const episode = data?.episodes.find(candidate => sameId(candidate.jellyfinItemId)
+        || (candidate.versions ?? []).some(version => sameId(version.jellyfinItemId)));
+    // An episode page keeps that episode alone where the plugin supports it; the series page keeps the series (P10.E2).
+    const keepsEpisode = !!episode && capabilities.includes(EPISODE_RETENTION_CAPABILITY);
     const keep = useCallback(async () => {
-        if (busy || !detail.data) return;
+        if (busy || !data) return;
         setBusy(true);
         setMessage('');
         try {
-            await keepEntry(api, detail.data.entry.id);
-            const refreshed = await detail.refetch();
+            if (keepsEpisode && episode) await keepEpisode(api, data.entry.id, episode.id);
+            else await keepEntry(api, data.entry.id);
+            const refreshed = await refetch();
             if (refreshed.error) throw refreshed.error;
-            setMessage('This title will be kept.');
+            setMessage(keepsEpisode ? 'This episode will be kept.' : 'This title will be kept.');
         } catch {
             setMessage('The change could not be saved. Please try again.');
         } finally {
             setBusy(false);
         }
-    }, [api, busy, detail]);
-    const { data, refetch } = detail;
-    const sameId = (value?: string | null) => sameItemId(value, itemId);
-    const episode = data?.episodes.find(candidate => sameId(candidate.jellyfinItemId));
+    }, [api, busy, data, episode, keepsEpisode, refetch]);
     const openPicker = useCallback((opener: HTMLElement, intent?: 'addVersion') => {
         if (!data) return;
         const reload = () => {
@@ -125,6 +130,11 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     const inFlightEpisodes = isSeriesPage ? detail.data.episodes.filter(candidate =>
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading) : [];
     const { versions, canAddVersion, canSearchNow } = versionSurfaces(detail.data, episode, capabilities, canAcquire, isAdmin);
+    const kept = (keepsEpisode ? episode?.retention?.reason : detail.data.retention.reason) === 'kept';
+    // An episode page lists that episode's own events; the series and movie pages list every event (P10.E3).
+    const history = keepsEpisode && episode ?
+        detail.data.history.filter(event => event.episodeId && sameItemId(event.episodeId, episode.id)) :
+        detail.data.history;
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
         data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && versionsMount && createPortal(
@@ -162,12 +172,13 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             {canSearchNow && <button className='emby-button raised' type='button' aria-disabled={busy}
                 onClick={searchNow}>Search now</button>}
             {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
-                aria-disabled={busy} aria-pressed={detail.data.retention.reason === 'kept'} onClick={keep}>
-                {keepButtonLabel(busy, detail.data.retention.reason === 'kept')}
+                aria-disabled={busy} aria-pressed={kept} onClick={keep}
+                title={keepsEpisode ? 'Keep this episode indefinitely' : undefined}>
+                {keepButtonLabel(busy, kept)}
             </button>}
         </div>
-        <HistoryToggle label={<>History{detail.data.history[0] ? ' · ' + detail.data.history[0].summary : ''}</>}>
-            <ol>{detail.data.history.map(event => <li key={event.id}>
+        <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
+            <ol>{history.map(event => <li key={event.id}>
                 <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
             </li>)}</ol>
         </HistoryToggle>
