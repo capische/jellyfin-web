@@ -1876,17 +1876,21 @@ server.
 
 Kept current by whoever works S5 and S7–S11. Last update 2026-09-24, Opus, high effort.
 
-- **Done and verified:** S7 (plugin `8efe9ea`); S8 first slice (web `350c0de050`, bundle `5667c9eb9536`) — see
-  the evidence sections, including what each does not yet cover.
-- **Open S8 debt:** feature eslint findings; browser checks of secret replace/clear, the ordinary-user refusal and
-  the Test failure codes from the page.
-- **Next step:** S9 (Prowlarr, plugin then the Indexers card), then S10, S5, S11 (PHASE7's own dependencies: S9
-  needs S7+S8, S10 needs S7–S9, S11 needs everything). Branch `p7-settings`, worktree
+- **Done and verified (first slices, each with its own "Not verified" list):** S7 (plugin `8efe9ea`), S8 (web
+  `350c0de050`, `16b71bff3b`), S9 (plugin `cdb6e7b`, web `b4800a09c5`), S10 (web `7bc5931da2`). Evidence sections
+  below.
+- **Open debt:** feature eslint findings in `features/jellyfinmod/settings/`; the S10 run from a fresh database copy;
+  a search and grab through a synced Prowlarr indexer; browser checks of secret replace/clear and the ordinary-user
+  refusal (no password for another account).
+- **Next step:** S5 (image, archive, merge routine, compatibility matrix), then S11. Branch `p7-settings`, worktree
   `.claude/worktrees/p7-settings`, off `origin/jellyfin-mod`; pushes fast-forward `jellyfin-mod`.
-- **Instance:** 28096 runs plugin `8efe9ea` and web bundle `5667c9eb9536` (`jellyfin-mod` `e516bb4430`).
-- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (Dashboard page, S7), `settings-area.mjs` (S8,
-  `JELLYFINMOD_SETTINGS_LAYOUTS`); the plugin suite
-  `tests/PhaseSevenSettingsIntegration`, run on the Pi like the others.
+- **Instance:** 28096 runs plugin `cdb6e7b` and web bundle `a3ecb472798a` (`jellyfin-mod` `8f4b021d43`). Backups
+  beside it: `backups/pre-8efe9ea` and `backups/pre-s9` (database, XML, secret store), `JellyfinMod.dll.pre-8efe9ea`,
+  `JellyfinMod.dll.pre-s9`.
+- **Probes:** `scripts/jellyfinmod-e2e/settings-dashboard.mjs` (S7), `settings-area.mjs` (S8,
+  `JELLYFINMOD_SETTINGS_LAYOUTS`), `settings-prowlarr.mjs` (S9), `setup-wizard.mjs` (S10); plugin suites
+  `tests/PhaseSevenSettingsIntegration` and `tests/PhaseSevenProwlarrIntegration`, run on the Pi like the others
+  (`PhaseSevenTakeoverIntegration` needs a real `jellyfinmod-web.zip` path as its argument).
 
 ### S7 — one settings contract behind every form
 
@@ -2086,6 +2090,55 @@ removal, disable, `disabledTill`, 401, 429, 5xx, schema drift and an empty list.
 - If gate 6 approved a disposable Prowlarr: the same flow against it, version recorded; all its
   indexers and the source are removed afterwards.
 
+#### S9 evidence — 2026-09-24
+
+Opus, high effort. Plugin `master` `cdb6e7b`; web `jellyfin-mod` `b4800a09c5` (card) and `8f4b021d43` (probes), bundle
+`a3ecb472798a`, both on 28096. Open question 9 is implemented at its proposed default — **boundary server only**;
+no disposable Prowlarr was started, and the production Prowlarr was not contacted. Open question 10 at its default:
+removed indexers are disabled for 30 days, then deleted.
+
+**What was built.** `ProwlarrSource` (one per install in this slice) and the indexer columns of the data model
+(migration `PhaseSevenProwlarr`; existing indexers become `manual`). `ProwlarrSync` pulls `GET /api/v1/indexer`
+with `X-Api-Key`, keeps torrent indexers, and per indexer writes name (suffixed `(<source>)` on a collision),
+`<prowlarr>/<id>/api`, the movie and TV categories it advertises (both trees when it advertises none), its
+priority and download hosts (Prowlarr's host, plus `indexerUrls` hosts when `supportsRedirect`); every new or
+changed enabled one is verified by `t=caps` through Prowlarr. Synced rows hold **no key**:
+`AcquisitionConfiguration.EndpointAsync` resolves the source's key, so one rotation reaches every feed and the key
+only goes to the source's host. Fail-closed per §6. `GET /api/v1/indexerstatus` `disabledTill` opens the Phase 6
+breaker. An administrator may change only enabled, pacing, budget and seed minimums on a synced indexer, an
+off-switch is remembered in `AdminOverridesJson`, and deleting a synced indexer is refused (`prowlarr_managed`).
+Routes: `GET/POST /Settings/Prowlarr`, `PATCH/DELETE /Settings/Prowlarr/{id}`, `POST …/{id}/Test`,
+`POST …/{id}/Sync` (synchronous; the contract's id-less paths became id paths). Scheduled task
+`JellyfinModProwlarrSync`, every 6 hours. `prowlarr_synced` history rows. Capability `acquisition.prowlarr`;
+indexer rows gain `managedBy`, `prowlarrSourceId`, `prowlarrIndexerId`, `prowlarrRemovedAt`, `breakerOpenUntil`.
+Web: a Prowlarr card in the Indexers section (source form with write-only key, Test, Sync now with the outcome as a
+sentence, Remove), synced rows marked and not removable.
+
+**Suite — `tests/PhaseSevenProwlarrIntegration`** (real Kestrel host; a real HTTP Prowlarr boundary whose `/{id}/api`
+forwards to the Torznab boundary; ≈ 27 s): every route 401 anonymous and 403 ordinary user; a URL with credentials
+refused; a wrong key → `unauthorized` and the sync changes nothing; Test reads system status, health and the list;
+the first sync creates both torrent indexers (usenet skipped), with the documented name (suffixed beside a manual
+`Alpha`), feed URL, categories `2000, 2040, 5000, 5040` (8000 dropped), priority and download hosts, verifies the
+enabled one by `t=caps` carrying the source key, and leaves the disabled one off; synced rows hold no key reference
+and the key exists **once** in the secret store; a budget override survives three syncs while identity edits are
+ignored and deletion is refused; rotating the key makes the next synced-indexer request use it; `disabledTill` opens
+the breaker; disabled in Prowlarr disables, enabled again re-enables, an administrator's off-switch wins; 401, 429,
+a body missing `protocol` and a 500 each abort with their code and change nothing; one empty list and a second
+within the hour change nothing, a second one two hours later (test clock) disables the synced indexers as
+`prowlarr_removed`; reappearing re-enables; removed and 31 days later (test clock) deleted; deleting the source
+removes its indexers and key and keeps the manual one; no log line or response carries a key. All twelve plugin
+suites pass on `cdb6e7b`.
+
+**Browser — `settings-prowlarr.mjs`**, 9 of 9 on Chromium 153.0.8010.12 and on real Chrome 153.0.8010.53: the card
+adds a `JellyfinMod Prowlarr` source pointing at a closed port with a dummy key, Test reports
+`Prowlarr could not be reached from this server. (unreachable)`, Sync now reports `The sync changed nothing
+(unreachable).` and creates no indexer, Remove leaves no source behind, no response carries the key, no page errors.
+
+**Not verified.** A release search and a grab through a synced indexer reaching the disposable Transmission (the
+suite proves `t=caps` through Prowlarr with the source key, which is the same endpoint resolution a search uses, but
+no `GET /Releases` was run through it); a real Prowlarr (question 9 still open); the observed shape of
+`/api/v1/indexerstatus` on a real Prowlarr (the boundary follows the documented one).
+
 ### S10 — the wizard
 
 Server `Setup/State` and `Dismiss`; web wizard reusing S8's forms; Home banner for
@@ -2105,6 +2158,37 @@ settings cleared), built browser as `oleksii`:
 - After completion a grab from the picker reaches the disposable Transmission.
 - TV: the wizard opens, each step is readable and Back returns; desktop and mobile carry the
   data-entry checks. Every fixture the run created is removed.
+
+#### S10 evidence — 2026-09-24
+
+Opus, high effort. Server side landed with S7 (`Setup/State`, `Setup/Dismiss`, readiness-derived steps; proven in
+`tests/PhaseSevenSettingsIntegration`, which walks setup from indexers pending to complete). Web `7bc5931da2`
+(wizard and banner) and `16b71bff3b` (fresh reads), bundle `a3ecb472798a`.
+
+**What was built.** `/catalog/settings/setup` (mod route): the rail lists the six steps with the server's status;
+each step renders the settings area's own section (Discovery, Download client, Indexers, Quality profile, Grabbing,
+then Retention, Automation and Interface as the optional step); **Continue** is refused until `Setup/State` says the
+step is done; the page resumes at the first incomplete step and then stays put. The mod Home shows a banner to
+administrators while setup is neither complete nor dismissed, with **Set up** and **Dismiss**; nothing redirects.
+A real defect was found here and fixed for the whole area: the app persists its query cache across reloads with a
+long staleness, so the banner showed a state that was no longer true and the settings area could have edited a
+stale revision; both now refetch on mount.
+
+**Browser — `setup-wizard.mjs`**, 23 of 23 on Chromium and on real Chrome, desktop, mobile 390×844 and TV
+1920×1080. The run is reversible: it saves the TMDB token *unchanged*, which only advances the discovery revision
+and makes step 1 incomplete again; the wizard's own Test completes it. Observed in each layout: the Home banner
+appears (`JellyfinMod is not set up yet: 1 step(s) left …`); Set up (on TV, the route) opens the wizard at
+Discovery with Continue refused; Test passes against the real TMDB and unlocks Continue; Continue moves to the
+download client step; after a reload setup is complete and the banner is gone; mobile has no horizontal scroll; on
+TV Enter drives Test and Continue and Back leaves the wizard for Home; no page errors.
+
+**Not done or not verified.** The acceptance run **from a fresh copy of the database** was not done: on 28096 that
+means clearing the instance's working acquisition settings, and it was not worth the risk inside this window. Each
+step's refusals (`destination_inside_library`, `cross_filesystem`, an unverified mapping, an empty profile, a
+cutoff outside the allowed qualities, the 409 `acquisition_not_ready`) are enforced by the existing resources and
+proven in the Phase 4, Phase 5 and S7 suites, and the page shows the server's sentence for each, but they were not
+provoked through the wizard in a browser. Dismiss from the banner was not clicked live (it is proven in the S7
+suite); the step "past Indexers once by Prowlarr" was not run against a real Prowlarr.
 
 ### S11 — isolated acceptance and release gate
 
