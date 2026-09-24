@@ -30,6 +30,8 @@ export interface VersionDto {
     sizeBytes: number | null;
     isDefault: boolean;
     retention: VersionRetention | null;
+    /** An administrator kept this file while the title's other versions may go; absent before PHASE10 Q3. */
+    kept?: boolean;
 }
 
 export type UpgradeBlockedReason = 'upgrade_not_allowed' | 'already_held_at_cutoff' | 'held_quality_unknown'
