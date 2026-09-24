@@ -74,6 +74,18 @@ const pageWarning = (detail: EntryDetail, episode: EntryEpisode | undefined) =>
 const warningKeepLabel = (keepsEpisode: boolean, keepsSeries: boolean) =>
     keepsEpisode ? 'Keep this episode' : keepLabel(keepsSeries, false, false);
 
+/** What a viewer who is not told the file names reads the warning about (RET2-R10). */
+const warningSubject = (episode: EntryEpisode | undefined) => (episode ? 'episode' : 'movie');
+
+/**
+ * The tracked episode this native page shows. Any file of the episode opens its page, not only the one the plugin selected
+ * (P10.E3). A multi-episode file is also pointed at by the rows of the episodes it covers; its page is the row that holds
+ * the file (RET2-R7).
+ */
+const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
+    data?.episodes.find(candidate => (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)))
+        ?? data?.episodes.find(candidate => sameItemId(candidate.jellyfinItemId, itemId));
+
 /** Add catalog history without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, isAdmin, view, versionsMount }) => {
     const [busy, setBusy] = useState(false);
@@ -92,10 +104,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         retry: false
     });
     const { data, refetch } = detail;
-    const sameId = (value?: string | null) => sameItemId(value, itemId);
-    // Any file of the episode opens its page, not only the one the plugin selected (P10.E3).
-    const episode = data?.episodes.find(candidate => sameId(candidate.jellyfinItemId)
-        || (candidate.versions ?? []).some(version => sameId(version.jellyfinItemId)));
+    const episode = pageEpisode(data, itemId);
     // An episode page keeps that episode alone where the plugin supports it; the series page keeps the series (P10.E2).
     const keepsEpisode = !!episode && capabilities.includes(EPISODE_RETENTION_CAPABILITY);
     const section = useRef<HTMLElement>(null);
@@ -177,7 +186,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         {versions.length > 0 && versionsMount && createPortal(
             <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined} />, versionsMount)}
         <p role='status'>{message}</p>
-        {warning && <RetentionWarning warning={warning} busy={busy} onKeep={isAdmin ? keep : undefined}
+        {warning && <RetentionWarning warning={warning} subject={warningSubject(episode)} busy={busy}
+            onKeep={isAdmin ? keep : undefined}
             keepLabel={warningKeepLabel(keepsEpisode, keepsSeries)} />}
         <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
         {episode && <QueueStatusLine entryId={detail.data.entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />}
