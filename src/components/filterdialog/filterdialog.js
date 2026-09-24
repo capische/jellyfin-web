@@ -92,11 +92,6 @@ function updateFilterControls(context, options) {
         const filterName = elem.getAttribute('data-filter');
         elem.checked = filters.includes(`,${filterName}`);
     }
-    const jfmodStates = (query.JellyfinModState || '').split(',').filter(Boolean);
-    context.querySelectorAll('.chkJfmodFileState').forEach(chk => {
-        chk.checked = chk.getAttribute('data-states').split(',').every(state => jfmodStates.includes(state));
-    });
-    context.querySelector('.chkJfmodDue').checked = query.JellyfinModDueWithinDays === 7;
     context.querySelector('.chk3DFilter').checked = query.Is3D === true;
     context.querySelector('.chkHDFilter').checked = query.IsHD === true;
     context.querySelector('.chk4KFilter').checked = query.Is4K === true;
@@ -173,11 +168,6 @@ function setVisibility(context, options) {
 
     if (options.mode === 'series') {
         context.querySelector('.seriesStatus').classList.remove('hide');
-    }
-
-    // JellyfinMod: the TV layout's combined grid filters catalog titles by file state too (P1.W8).
-    if (options.mode === 'movies' || options.mode === 'series') {
-        context.querySelector('.jfmodFileFilters').classList.remove('hide');
     }
 
     if (options.mode === 'episodes') {
@@ -402,24 +392,6 @@ class FilterDialog {
             triggerChange(this);
         });
         context.addEventListener('change', (e) => {
-            const chkJfmodFileState = dom.parentWithClass(e.target, 'chkJfmodFileState');
-            if (chkJfmodFileState) {
-                const states = chkJfmodFileState.getAttribute('data-states').split(',');
-                const selected = (query.JellyfinModState || '').split(',')
-                    .filter(state => state && !states.includes(state));
-                if (chkJfmodFileState.checked) selected.push(...states);
-                query.StartIndex = 0;
-                query.JellyfinModState = selected.join(',');
-                triggerChange(this);
-                return;
-            }
-            const chkJfmodDue = dom.parentWithClass(e.target, 'chkJfmodDue');
-            if (chkJfmodDue) {
-                query.StartIndex = 0;
-                query.JellyfinModDueWithinDays = chkJfmodDue.checked ? 7 : null;
-                triggerChange(this);
-                return;
-            }
             const chkGenreFilter = dom.parentWithClass(e.target, 'chkGenreFilter');
             if (chkGenreFilter) {
                 const filterName = chkGenreFilter.getAttribute('data-filter');
@@ -508,8 +480,6 @@ class FilterDialog {
         query.HasTrailer = null;
         query.Tags = null;
         query.Years = '';
-        query.JellyfinModState = '';
-        query.JellyfinModDueWithinDays = null;
     }
 
     show() {
