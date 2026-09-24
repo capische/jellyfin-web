@@ -683,6 +683,18 @@ but a named endpoint makes the audit entry in `history` honest.
 `/JellyfinMod/Catalog/{id}/Keep` (plan-ops#8, low, single-source, in
 [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
+**Keeping one file (PHASE10 Q3, 2026-09-24; RET2-R9).** An administrator can keep one file of a movie or episode
+while its other versions expire. The Keep follows the file, not the version row: it matches by the file's path, or by
+its device, inode and birth time. So it survives a rename or a move **within one filesystem**, and a new file written at
+the kept path is kept too. A move to **another filesystem** gives the file a new device and inode and a new path; the
+Keep no longer applies, the detail page shows the file as not kept, and the administrator keeps it again. Stopping a
+file's Keep gives it a window of its own from that moment, never an old date that passed while it was kept (RET2-R2).
+
+**Who sees what in the retention warning (Q8, Q11; RET2-R10).** Everyone who can see the title sees the date and the
+cause in plain words ("marked played", "watched on another device (Trakt)"). Only administrators see the file names,
+which can include library folders when two files share a name; ordinary users read "this episode" or "this movie". A
+date that has passed reads as overdue: the file goes at the next retention run (RET2-R5).
+
 ### 8.1 Playing a reclaimed title
 
 The file is gone; a `.strm` placeholder remains. On this fork, where the catalog state is known,

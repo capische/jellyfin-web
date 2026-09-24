@@ -51,8 +51,9 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R1 — A re-acquired copy inherits its target's completion and deadline while a sibling copy survives
 
-- **Status:** open, verified in code; live on 18096 the trigger state exists now and tomorrow's phase-B
-  run is expected to show it. **Priority:** P2.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`; driver in web `p10-retention`, see the fix
+  record at the end). Option **2b** (T7-consistent): a file that arrives for a target retention already tracks resets
+  the target; stale evidence of a removed file is forgotten. **Priority:** P2.
 - **Location:** plugin, `JellyfinMod/Services/RetentionExecutor.cs:382–385` and `:414–416` (the evaluation is
   reset only when `remaining.Length == 0`); `JellyfinMod/Services/ReconciliationService.cs:160–170` (the
   absence pass resets only when every binding of the episode is absent) and `:1043–1046` (a fresh baseline is
@@ -88,7 +89,7 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R2 — Stopping a per-file Keep gives the file no window
 
-- **Status:** open, verified in code. **Priority:** P2.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`, suite `c970aab`). **Priority:** P2.
 - **Location:** plugin, `JellyfinMod/Api/EntriesController.cs:406–465` (`ChangeVersionKeepAsync` removes the
   `VersionKeep` and writes History; it neither touches the evaluation nor re-evaluates), against
   `:317–392` (`ChangeEpisodeRetentionAsync` sets `GraceNotBefore`, clears the schedule and re-evaluates for
@@ -113,7 +114,9 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R3 — A TMDB row created by Add binds a later file by position, monitored, and Q10 replaces without the watched rule (S19)
 
-- **Status:** open, plausible; the precondition is verified live. **Priority:** P2 (gated).
+- **Status:** **fixed, 2026-09-24** (plugin `bb6c7c5`, suites `bb6c7c5` and `c970aab`); the refusal is proven at
+  the executor boundary in the real-Kestrel suite, not through a live upgrade (see the fix record). **Priority:** P2
+  (gated).
 - **Location:** plugin, `JellyfinMod/Api/EntriesController.cs:558–577` (`CompleteConcurrentAdd` creates TMDB
   rows at every position not held by a position row, and sets the entry monitored at `:577`);
   `JellyfinMod/Services/ReconciliationService.cs:837–841` (a TMDB row with no TMDB-id match binds TMDB-less
@@ -145,7 +148,8 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R4 — Keep is not read by the preview for normal reclaim rows; the live check is the only pre-unlink guard after a stale evaluation
 
-- **Status:** open, verified in code; safe today because of the live check. **Priority:** P3.
+- **Status:** **fixed, 2026-09-24** (plugin `bb6c7c5`): both halves of the fix direction. The race itself was not
+  reproduced (it needs a paused batch); see the fix record. **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Services/RetentionPreviewService.cs:256–273` (`target.Kept` is consulted
   only for replacement rows; a normal row trusts the evaluation state); `JellyfinMod/Services/
   RetentionEvaluator.cs:116–134` (settings are read, then the evaluation row, with no gate or lock);
@@ -164,7 +168,7 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R5 — `retention_started` repeats and the re-enable warning can carry a past date
 
-- **Status:** open, verified live. **Priority:** P3.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`, web `02f7294d99`). **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Services/RetentionEvaluator.cs:345–347` (event on every transition into
   `Scheduled`); `JellyfinMod/Api/EntriesController.cs:614–647` (warning from the evaluation's deadline).
 - **Trigger:** retention switched off and on (each re-enable transitions Disabled→Scheduled with the kept
@@ -179,7 +183,8 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R6 — Absence still trusts the mount, not the file (analysis C5), now recorded
 
-- **Status:** open by design until V1; verified in code. **Priority:** P3.
+- **Status:** **recorded, stays for V1** (the fix brief of 2026-09-24): deletion-safe and every reset recorded;
+  PHASE10 S18 says so. Not built here. **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Services/ReconciliationService.cs:119,129,261–268` and
   `JellyfinMod/Services/MediaStorageIdentity.cs:30–80` (`IsCurrent` proves the library mount identity and
   readability, not that the file is gone); the reset is now recorded (`:249–259`).
@@ -195,7 +200,7 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R7 — A position-tracked multi-episode file has no row for the episodes it covers
 
-- **Status:** open, verified live. **Priority:** P3.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`, web `02f7294d99`). **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Services/ReconciliationService.cs:998–1041` (position rows are created for
   the observation's first number only) and `:917–940` (covered rows are only ever *existing* rows); web
   `NativeEntryDetails.tsx:97–98` (an episode page resolves to the first row sharing the item id).
@@ -211,7 +216,8 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R8 — Evidence: what the recorded runs prove and what they do not
 
-- **Status:** informational, verified against the driver, the live state and the Pi. **Priority:** P3.
+- **Status:** **addressed, 2026-09-24** (suites `c970aab`, `84b6937`; driver and a reboot-safe real-window job in
+  web `p10-retention`): (a) rescheduled as a cron job, (b) and (c) covered; (d)–(f) unchanged. **Priority:** P3.
 - The fast-window run is now scripted and its per-file claims match the driver's `FIXTURE` table and the
   live History; Jellyfin 12 grouping was confirmed live during this review (`S01E11.mkv` has two media
   sources, the movie's 1080p has two; the plugin lists one version of the movie), so the `versions_untracked`
@@ -232,7 +238,7 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R9 — Per-file Keep identity: overstated guarantee, cross-filesystem move, unique path
 
-- **Status:** open, verified in code. **Priority:** P3.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`, suite `84b6937`, UX §8). **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Data/VersionKeep.cs` (doc comment "never less"), `JellyfinMod/Api/
   EntriesController.cs:442–463`, `ModDbContext.cs:138` (`MediaPath` unique across entries).
 - A rename or move within one filesystem keeps the Keep (device, inode and birth time match); a move to
@@ -244,7 +250,8 @@ Counts: P1 0 · P2 3 · P3 7 (plus one dismissed-checks entry). The verdict is a
 
 ## RET2-R10 — What the warning shows ordinary users beyond the date
 
-- **Status:** informational; the user's decision 11 covers the date. **Priority:** P3.
+- **Status:** **fixed and verified, 2026-09-24** (plugin `bb6c7c5`, web `02f7294d99`): ordinary users get the date
+  and the cause, no file names. **Priority:** P3.
 - **Location:** plugin, `JellyfinMod/Api/EntriesController.cs:614–647`, `RetentionFileNames.Distinct`
   (`RetentionEvaluation.cs:125–146`); the endpoints themselves are correctly `RequiresElevation`
   (`EntriesController.cs:279,287,295,397,402`) and the detail is readable only with library access.
@@ -298,3 +305,66 @@ its title's deadline (RET2-R2). Before enabling: fix both, re-run the two accept
 read tomorrow's `phase-b.log` (expect the E01-A discrepancy and verify E04, `S01E09-E10`, E10-B and the rest),
 and confirm the fixtures are gone. RET2-R3 must be fixed before `EpisodeUpgradesEnabled` is ever switched on;
 it does not block retention itself. The P3 items are quality and evidence work for the next slice.
+
+## Fix record — 2026-09-24 (Opus 5.5, high)
+
+Plugin `p10-retention`: `bb6c7c5` (engine fixes and migration `PhaseTenRetentionFixes`, forward-only), `c970aab` and
+`84b6937` (suite coverage). Web `p10-retention`: `02f7294d99` (warning and page resolution), then this record with the
+driver, the browser probe and the reboot-safe real-window job. Deployed on 18096: plugin DLL SHA-256 prefix
+`ae2178da36278d1c` (`bb6c7c5`; the later plugin commits change tests only) and web bundle `02f7294d99` at `/web-mod/`;
+pre-deploy backup `p10r2-backup-20260924T111423Z` in the isolated build directory. The live checks below ran on the first build of the engine commit; the final one, redeployed at the end with the fixtures and settings untouched, differs only in which rows an Add leaves unmonitored (it keeps monitoring a row whose covering file carries the row's TMDB id, which the Phase 1 concurrent-Add suite requires). Migration applied at startup; Health
+`Ok`. All live checks on 18096 with disposable fixtures, signed in as `oleksii` with an empty password.
+
+**The scheduled phase-B run of 2026-09-25 10:30Z was cancelled** (10:45Z): it would have run against a build this
+work replaced, and its fixtures were needed fresh. Before cancelling, retention was switched on for one preview on the
+old build (`ab4d464`) and off again: the preview failed with a 500 (`database is locked` while the listener re-evaluated
+every target after the switch, see below), and the detail read E01 `waiting` at that moment (its observation was keyed
+to copy B), so the old build gave no live data point for RET2-R1 either way. The old fixtures were removed with a
+corrected cleanup (next paragraph) and every fixture entry reads 404.
+
+**Driver fixes found on the way** (`scripts/jellyfinmod-e2e/retention-live.py`): the plugin confirms a file's absence
+only in a library that still exists, only from its post-scan task (a full library scan, not an item refresh), and never
+under an empty directory. The old cleanup deleted files and libraries together, which left bound entries it could not
+remove (409); cleanup now empties the files, scans, reconciles, then deletes the libraries and entries, and can finish
+an interrupted cleanup. The real-window steps poll instead of sleeping: on the loaded Pi the plugin read a "mark played"
+about 1 m 50 s after it happened. A library root on a second filesystem inside the container (`/dev/shm`) was tried for
+RET2-R9 and dropped: Jellyfin 12 then presented the series through that root's copy and the plugin entry, bound to
+another copy, was hidden from the listing.
+
+| Finding | What changed | Evidence |
+| --- | --- | --- |
+| RET2-R1 | A file arriving for a tracked movie or episode (a path not bound to it) resets the target like T7 (option 2b) with a `retention_reset` "a new file arrived" event; the same file under a new native id does not. Evidence read through a removed file is forgotten when siblings stay (executor and absence pass). | Live fast window: E01-A (watched) reclaimed, E01-B kept per file; A recreated at its path came back as the same item id **with Jellyfin's old played state** (played, last played 11:32) and read `waiting/representation_reset`, no deadline, no warning; History "S01E01: Retention restarted: a new file arrived"; the preview lists it `waiting`. The scheduled real-window run checks it stays byte-identical a day later. Suite: Phase 2 (`bb6c7c5`) arrival resets, re-identification does not. |
+| RET2-R2 | Stopping a per-file Keep restarts the target's grace (`GraceNotBefore`, schedule back to waiting) and re-evaluates. | Live: E14 two copies, B kept and watched, A reclaimed by the any-copy rule; B's Keep stopped at 11:44:13 → `scheduled`, deadline 11:47:13 (one 3-minute window out), warning with that date, not overdue; an immediate run reclaimed nothing (B byte-identical); after the window the run reclaimed B. Suite: `GraceNotBefore` set by the real HTTP un-Keep. |
+| RET2-R3 | `EpisodeBindings.IdentityUnverified` for a file a TMDB row took by number only, cleared by a native TMDB id or an agreeing title or air date; migration marks existing TMDB-row bindings unverified; `ReplaceAsync` refuses `identity_unverified` before prepare and before unlink; `UpgradeService` records `upgrade_replacement_refused` once; an Add does not monitor a row at a number a file covers without carrying the row's TMDB id. | Live: after an admin Refresh created TMDB's file-less, monitored S01E17, a file arriving at 17 bound to it and read `unverified=1`; position-row files `0`; E01, adopted on its title, has its matching copy verified (its other copy, with no evidence of its own, stays unverified — only a replacement is affected). Suite (real Kestrel, real files): the executor refused with `identity_unverified`, prepared nothing, the file byte-identical; once verified the next protection (Keep) answered. Not live: an actual upgrade import (no live indexer or client flow was run). The Add path is exercised only for a title the user cannot yet read: an ordinary user's Add of a visible existing series returns it unchanged (seen live). |
+| RET2-R4 | The preview blocks every row of a kept title or episode (`kept`) whatever the evaluation row says; evaluations of one target are serialised, so a Keep's own evaluation writes after any batch that read the old setting. | Suites pass with the guard (kept rows read `blocked/kept`); the mid-batch race was not reproduced live. |
+| RET2-R5 | `AnnouncedDeadline`: one `retention_started` per window; the migration back-fills it from the last event. The warning carries `overdue`, and the page says "was due on <date> and will be deleted at the next retention run". | Live: retention off and on twice → 9 `retention_started` events before and after; E06 (seeding, past its date) reads overdue, and so did E09 and E11. Browser: the overdue text on desktop, mobile, TV 1080 and 720, Keep inside reachable by arrow keys. The scheduled run re-checks one switch-on a day later. |
+| RET2-R6 | Recorded only; stays for V1. | PHASE10 S18. |
+| RET2-R7 | A position-tracked double file gives each covered number a row (unbound, unmonitored, pointing at the file); the web resolves a page to the row holding the file. | Live: S01E08 (covered by S01E07-E08) tracked, `tmdb=0`, unmonitored, no file of its own; a late S01E18-E19 gave S01E19 a covered row. Browser: the S01E18-E19 page opens the E18 row on desktop, mobile, TV 1080 and 720. |
+| RET2-R8 | Suite coverage: un-Keep, window editor, per-file Keep and un-Keep 401/403/200; ordinary users' warning without files; Q10 replacement with a per-file Keep on the old file (Phase 6: new version added, replacement blocked `version_kept`, old file kept). Real window rescheduled as a reboot-safe cron job. | Pi suites at plugin `84b6937` (unprivileged SDK container, a tmpfs as the second filesystem): Zero, One, Two, Three, ThreeProtection, Five and Six pass; Six three times in a row after its M7 check was made to re-read the watch after the last import (it had raced the P3.T7 import reset). Four needs root, as before, and was not run. |
+| RET2-R9 | Unique `(EntryId, MediaPath)`; the cross-filesystem limit documented (VersionKeep comment, UX §8). | Suite with a real second filesystem (tmpfs): kept → renamed within the filesystem still kept → moved across filesystems not kept → back at the kept path kept (by path), all read from the HTTP detail. Not live (see the driver note). |
+| RET2-R10 | Ordinary users get date, cause and `overdue`, no file names; the page says "this episode"/"this movie". | Live API: a disposable ordinary user saw three warnings, none with files; 403 on every write; deleted and 404. Browser: a second disposable user (password generated in the probe's memory) read "Added to retention: this episode will be deleted on …"/"was due on …" with no file list and no Keep, desktop, mobile, TV 1080 and 720; deleted afterwards. |
+
+**Browser:** `retention-controls.mjs`, Playwright's Chromium 149 then **real Google Chrome 153**: the fast-window pass
+(overdue, covering row, ordinary user, per-file Keep by keyboard) 34 checks each, and the real-window pass (warning, Keep
+inside it, Stop keeping, the window select, synced cause, per-file Keep, Back key, plus the RET2 checks) 54 checks each,
+all pass. Physical webOS not tested.
+
+**Fast-window byte check:** every fixture the run was to leave (E01-B kept per file, E03–E06, both multi-episode files
+not fully due, E10-B, E11, `S01E11-E12`, E14-B while kept, both movie files, the seeding copy, the sidecar) SHA-256
+identical before and after; E01-A, both E02 copies, `S01E07-E08`, E13 and E14-A unlinked (run: inspected 583, eligible 6,
+reclaimed 6, failed 0).
+
+**Real window, rescheduled:** a user crontab entry on the Pi runs `retention-phase-b-cron.sh` every ten minutes; it does
+nothing before **2026-09-25 12:30Z**, waits for the instance to answer, runs `phase-b` once (retention on, native task,
+byte comparison against `hashes-phaseb-before`, no missing-media event, one switch-on announces nothing again, series Keep
+over E03's own window, then retention off, settings restored, every fixture removed), runs restore and cleanup itself if
+`phase-b` stopped early, and removes its crontab line. A reboot or outage only delays it. Expected reclaims: E04,
+`S01E09-E10`, E10-B; everything else unchanged, including the re-acquired E01-A (RET2-R1). Until then the fixtures stay
+on 18096 with **retention disabled**. Log: `p10r2/state/phase-b.log` in the isolated build directory.
+
+**Observed, not fixed here:** (1) `GET /Retention/Preview` returned 500 `database is locked` on the old build while the
+listener re-evaluated every target right after retention was switched on (SQLite busy past its timeout on the loaded Pi);
+nothing is deleted on that path, but a run started in that window fails. Not seen again with the new build. (2) The
+any-copy rule (decision 6) holds only while the watched copy is bound: the live check reads the copies that remain, so
+when a watched copy is reclaimed before its unwatched sibling, the sibling is blocked `live_not_completed` (the direction
+that deletes less).
