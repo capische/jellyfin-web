@@ -105,8 +105,19 @@ export interface EntryEpisode {
     retention: RetentionSummary | null;
     /** Newest grab of this episode; absent from older plugins (P4.A6). */
     acquisition?: AcquisitionSummary | null;
+    /** The episode's running retention window; absent from older plugins (PHASE10 Q8). */
+    retentionWarning?: RetentionWarning | null;
     /** Playable versions, empty unless the episode has a file; absent from plugins without `versions` (P6.M8). */
     versions?: VersionDto[];
+}
+
+/** A running retention window, shown to every viewer (PHASE10 Q8, Q11). */
+export interface RetentionWarning {
+    deadline: string;
+    /** Why the window started, for example `watched on another device (Trakt)`. */
+    cause: string;
+    /** The files that will be deleted; kept files are left out. */
+    files: string[];
 }
 
 export interface RetentionSummary {

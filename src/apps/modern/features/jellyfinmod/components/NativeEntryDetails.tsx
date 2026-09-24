@@ -16,6 +16,7 @@ import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionControls from './RetentionControls';
 import RetentionStatus from './RetentionStatus';
+import RetentionWarning from './RetentionWarning';
 import VersionRows from './VersionRows';
 import './entryDetails.scss';
 
@@ -65,6 +66,13 @@ const keepLabel = (keepsSeries: boolean, busy: boolean, kept: boolean): string =
     if (!keepsSeries || busy) return keepButtonLabel(busy, kept);
     return kept ? 'Series kept' : 'Keep series';
 };
+
+/** The running window of this episode, or of this movie (PHASE10 Q8); a series page has none of its own. */
+const pageWarning = (detail: EntryDetail, episode: EntryEpisode | undefined) =>
+    episode ? episode.retentionWarning : detail.retentionWarning;
+
+const warningKeepLabel = (keepsEpisode: boolean, keepsSeries: boolean) =>
+    keepsEpisode ? 'Keep this episode' : keepLabel(keepsSeries, false, false);
 
 /** Add catalog history without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, isAdmin, view, versionsMount }) => {
@@ -149,6 +157,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     const { versions, canAddVersion, canSearchNow } = versionSurfaces(detail.data, episode, capabilities, canAcquire, isAdmin);
     const kept = (keepsEpisode ? episode?.retention?.reason : detail.data.retention.reason) === 'kept';
     const keepsSeries = !keepsEpisode && detail.data.entry.mediaType === 'series';
+    const warning = pageWarning(detail.data, episode);
     // An episode page lists that episode's own events; the series and movie pages list every event (P10.E3).
     const history = keepsEpisode && episode ?
         detail.data.history.filter(event => event.episodeId && sameItemId(event.episodeId, episode.id)) :
@@ -158,6 +167,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         {versions.length > 0 && versionsMount && createPortal(
             <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined} />, versionsMount)}
         <p role='status'>{message}</p>
+        {warning && <RetentionWarning warning={warning} busy={busy} onKeep={isAdmin ? keep : undefined}
+            keepLabel={warningKeepLabel(keepsEpisode, keepsSeries)} />}
         <RetentionStatus retention={episode ? episode.retention : detail.data.retention} />
         {episode && <QueueStatusLine entryId={detail.data.entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />}
         {!episode && detail.data.entry.mediaType === 'movie'
