@@ -1,6 +1,6 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC, useCallback, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
@@ -98,6 +98,16 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         || (candidate.versions ?? []).some(version => sameId(version.jellyfinItemId)));
     // An episode page keeps that episode alone where the plugin supports it; the series page keeps the series (P10.E2).
     const keepsEpisode = !!episode && capabilities.includes(EPISODE_RETENTION_CAPABILITY);
+    const section = useRef<HTMLElement>(null);
+    // A retention change can remove the very button that made it (Keep inside the warning, Stop keeping). Focus then
+    // falls to the page body, which strands a remote; it goes to this page's Keep button instead (UX §13).
+    useEffect(() => {
+        if (busy) return;
+        const active = document.activeElement;
+        if (active && active !== document.body && active.isConnected) return;
+        const target = section.current?.querySelector<HTMLElement>('.jfmod-nativeActions button[aria-pressed]');
+        if (target) focusManager.focus(target);
+    }, [busy, data]);
     const change = useCallback(async (action: () => Promise<unknown>, done: string) => {
         if (busy) return;
         setBusy(true);
@@ -162,7 +172,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     const history = keepsEpisode && episode ?
         detail.data.history.filter(event => event.episodeId && sameItemId(event.episodeId, episode.id)) :
         detail.data.history;
-    return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
+    return <section ref={section} aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
         data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && versionsMount && createPortal(
             <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined} />, versionsMount)}
