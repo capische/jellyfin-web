@@ -35,6 +35,9 @@ export const daysUntilReclaim = (reclaimAt?: string | null): number | null => {
 export const retentionDeadline = (retention?: RetentionSummary | null): string | null =>
     retention?.enabled && retention.state === 'scheduled' ? retention.deadline : null;
 
+/** Episodes are tracked one by one and carry their own Keep (P10.E1-E2). */
+export const EPISODE_RETENTION_CAPABILITY = 'retention.episodes';
+
 export const keepButtonLabel = (busy: boolean, kept: boolean): string => {
     if (busy) return 'Keeping…';
     return kept ? 'Kept' : 'Keep';
@@ -48,7 +51,8 @@ const PROTECTION_MESSAGES = new Map([
     ['waiting_for_completion', 'Waiting for the configured watched rule.'],
     // The public vocabulary shown to non-administrators (P3.T15).
     ['protected', 'Protected from automatic removal.'],
-    ['series_unavailable', 'Protected while its series cannot be read.']
+    ['series_unavailable', 'Protected while its series cannot be read.'],
+    ['episode_versions_untracked', 'Kept while this episode has more than one file.']
 ]);
 
 /** Privacy-safe wording shared by native, file-less and episode details. */
