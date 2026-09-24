@@ -14,6 +14,7 @@ import { openReleasePicker } from '../integration/releasePicker';
 import { type EntryEpisode, FileState } from '../types/entry';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
+import RetentionControls from './RetentionControls';
 import RetentionStatus from './RetentionStatus';
 import VersionRows from './VersionRows';
 import './entryDetails.scss';
@@ -53,6 +54,18 @@ const versionSurfaces = (detail: EntryDetail, episode: EntryEpisode | undefined,
     };
 };
 
+/** What a Keep on this page keeps, in words (RET-R7): an untracked episode page keeps the whole series. */
+const keptMessage = (keepsEpisode: boolean, detail: EntryDetail): string => {
+    if (keepsEpisode) return 'This episode will be kept.';
+    if (detail.entry.mediaType === 'series') return `The series ${detail.entry.title} will be kept.`;
+    return 'This title will be kept.';
+};
+
+const keepLabel = (keepsSeries: boolean, busy: boolean, kept: boolean): string => {
+    if (!keepsSeries || busy) return keepButtonLabel(busy, kept);
+    return kept ? 'Series kept' : 'Keep series';
+};
+
 /** Add catalog history without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, isAdmin, view, versionsMount }) => {
     const [busy, setBusy] = useState(false);
@@ -77,22 +90,26 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         || (candidate.versions ?? []).some(version => sameId(version.jellyfinItemId)));
     // An episode page keeps that episode alone where the plugin supports it; the series page keeps the series (P10.E2).
     const keepsEpisode = !!episode && capabilities.includes(EPISODE_RETENTION_CAPABILITY);
-    const keep = useCallback(async () => {
-        if (busy || !data) return;
+    const change = useCallback(async (action: () => Promise<unknown>, done: string) => {
+        if (busy) return;
         setBusy(true);
         setMessage('');
         try {
-            if (keepsEpisode && episode) await keepEpisode(api, data.entry.id, episode.id);
-            else await keepEntry(api, data.entry.id);
+            await action();
             const refreshed = await refetch();
             if (refreshed.error) throw refreshed.error;
-            setMessage(keepsEpisode ? 'This episode will be kept.' : 'This title will be kept.');
+            setMessage(done);
         } catch {
             setMessage('The change could not be saved. Please try again.');
         } finally {
             setBusy(false);
         }
-    }, [api, busy, data, episode, keepsEpisode, refetch]);
+    }, [busy, refetch]);
+    const keep = useCallback(() => {
+        if (!data) return;
+        const action = keepsEpisode && episode ? () => keepEpisode(api, data.entry.id, episode.id) : () => keepEntry(api, data.entry.id);
+        change(action, keptMessage(keepsEpisode, data)).catch(() => undefined);
+    }, [api, change, data, episode, keepsEpisode]);
     const openPicker = useCallback((opener: HTMLElement, intent?: 'addVersion') => {
         if (!data) return;
         const reload = () => {
@@ -131,6 +148,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading) : [];
     const { versions, canAddVersion, canSearchNow } = versionSurfaces(detail.data, episode, capabilities, canAcquire, isAdmin);
     const kept = (keepsEpisode ? episode?.retention?.reason : detail.data.retention.reason) === 'kept';
+    const keepsSeries = !keepsEpisode && detail.data.entry.mediaType === 'series';
     // An episode page lists that episode's own events; the series and movie pages list every event (P10.E3).
     const history = keepsEpisode && episode ?
         detail.data.history.filter(event => event.episodeId && sameItemId(event.episodeId, episode.id)) :
@@ -173,9 +191,11 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
                 onClick={searchNow}>Search now</button>}
             {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
                 aria-disabled={busy} aria-pressed={kept} onClick={keep}
-                title={keepsEpisode ? 'Keep this episode indefinitely' : undefined}>
-                {keepButtonLabel(busy, kept)}
+                title={keepsSeries ? 'Keep the whole series indefinitely' : 'Keep indefinitely'}>
+                {keepLabel(keepsSeries, busy, kept)}
             </button>}
+            {isAdmin && <RetentionControls api={api} entryId={detail.data.entry.id} busy={busy} change={change}
+                episode={keepsEpisode ? episode : undefined} versions={versions} capabilities={capabilities} />}
         </div>
         <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
             <ol>{history.map(event => <li key={event.id}>
