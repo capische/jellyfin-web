@@ -7,9 +7,14 @@
 //   JELLYFINMOD_WARNED=desktop:<item>,mobile:<item>,tv1080:<item> JELLYFINMOD_SYNCED=<item> \
 //   JELLYFINMOD_VERSIONED=<item> JELLYFINMOD_SERIES=<item> node retention-controls.mjs
 //
+// Second review (RET2): JELLYFINMOD_OVERDUE=<item> is an episode whose warning date has passed (R5);
+// JELLYFINMOD_COVERING=<item>:<episode id> is a multi-episode file and the tracked row that holds it (R7);
+// JELLYFINMOD_ORDINARY=<item> is checked as a disposable ordinary user (R10), created through the administrator's session
+// with a password generated in memory, never printed or stored, and deleted afterwards.
 // JELLYFINMOD_BROWSER=chromium|chrome   Playwright's bundled Chromium (default) or real Google Chrome.
 // Every Keep a layout makes it takes back, so the fixture's schedule is left as it was. Signs in as the
 // administrator with an empty password; no credential is read or printed. Exits non-zero on any failure.
+import { randomBytes } from 'node:crypto';
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
@@ -19,6 +24,9 @@ const warned = Object.fromEntries((process.env.JELLYFINMOD_WARNED ?? '').split('
 const synced = process.env.JELLYFINMOD_SYNCED;
 const versioned = process.env.JELLYFINMOD_VERSIONED;
 const seriesItem = process.env.JELLYFINMOD_SERIES;
+const overdueItem = process.env.JELLYFINMOD_OVERDUE;
+const [coveringItem, coveringEpisode] = (process.env.JELLYFINMOD_COVERING ?? '').split(':');
+const ordinaryItem = process.env.JELLYFINMOD_ORDINARY;
 
 const LAYOUTS = {
     desktop: { viewport: { width: 1440, height: 900 }, tv: false },
@@ -39,7 +47,7 @@ const record = (layout, check, ok, detail) => {
 const browser = await chromium.launch({ headless: true, ...(tier === 'chrome' ? { channel: 'chrome' } : {}) });
 console.log('browser', tier, browser.version());
 
-async function signIn(page) {
+async function signIn(page, name = 'oleksii', password = '') {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
     await page.waitForFunction(() => {
@@ -52,9 +60,10 @@ async function signIn(page) {
         if (await chooser.count()) await chooser.evaluate(node => node.click());
         await field.waitFor({ state: 'visible', timeout: 15000 });
     }
-    await field.fill('oleksii');
+    await field.fill(name);
     await page.waitForTimeout(1000);
-    await field.fill('oleksii');
+    await field.fill(name);
+    if (password) await page.locator('#txtManualPassword').fill(password);
     await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
     await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
     await page.waitForFunction(() => /#\/home/.test(location.hash), undefined, { timeout: 30000 }).catch(() => undefined);
@@ -143,6 +152,60 @@ const warningFlow = async (page, layout, name, itemId, cause) => {
         await warningText(page));
 };
 
+const toTv = async page => {
+    await page.evaluate(() => { localStorage.setItem('layout', 'tv'); location.reload(); });
+    await page.waitForFunction(() => !!window.ApiClient && document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
+    await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+};
+
+/** RET2-R5 and R7, as the administrator: a passed date reads as overdue; a double file opens the row that holds it. */
+const reviewTwoAdminChecks = async (page, layout, name) => {
+    if (overdueItem) {
+        await openDetails(page, overdueItem);
+        const text = await warningText(page);
+        record(name, 'a passed date reads as overdue, never as a past countdown (RET2-R5)',
+            !!text && /Added to retention: this file was due on .+ and will be deleted at the next retention run unless kept\./.test(text), text);
+        if (layout.tv) {
+            const { reached, path } = await focusByKeys(page, isWarningKeep);
+            record(name, 'Keep inside the overdue warning is reachable by arrow keys', reached, reached ? undefined : path);
+        }
+    }
+    if (coveringItem) {
+        await openDetails(page, coveringItem);
+        const shown = await page.locator(SECTION).first().getAttribute('data-jfmod-episode-id');
+        record(name, 'a multi-episode file opens the row that holds it, not a covered row (RET2-R7)',
+            shown?.replace(/-/g, '').toLowerCase() === coveringEpisode.replace(/-/g, '').toLowerCase(), shown);
+    }
+};
+
+/** RET2-R10: an ordinary user reads the date and cause, no file names, and gets no Keep. */
+const ordinaryChecks = async (name, layout, account) => {
+    const context = await browser.newContext({ viewport: layout.viewport, isMobile: layout.isMobile, hasTouch: layout.hasTouch, userAgent: layout.userAgent });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+    try {
+        await signIn(page, account.name, account.password);
+        if (layout.tv) await toTv(page);
+        await openDetails(page, ordinaryItem);
+        const text = await warningText(page);
+        record(name + '/ordinary', 'an ordinary user reads the date and cause but no file names (RET2-R10)',
+            !!text && /Added to retention: this episode (will be deleted on|was due on) .+ unless kept\./.test(text) && /Why: /.test(text)
+            && !/\.mkv/.test(text) && await page.locator('.jfmod-retentionWarningFiles').count() === 0, text);
+        record(name + '/ordinary', 'an ordinary user gets no Keep', await page.locator('.jfmod-retentionWarning button').count() === 0
+            && await page.locator(SECTION + ' .jfmod-nativeActions button', { hasText: /Keep/ }).count() === 0);
+        record(name + '/ordinary', 'no page errors', errors.length === 0, errors);
+    } catch (error) {
+        record(name + '/ordinary', 'probe completed', false, String(error?.message ?? error).split('\n')[0]);
+    } finally {
+        await page.evaluate(() => localStorage.removeItem('layout')).catch(() => undefined);
+        await context.close();
+    }
+};
+
+let ordinaryAccount = null;
+let adminPage = null;
+
 for (const [name, layout] of Object.entries(LAYOUTS)) {
     const context = await browser.newContext({ viewport: layout.viewport, isMobile: layout.isMobile, hasTouch: layout.hasTouch, userAgent: layout.userAgent });
     const page = await context.newPage();
@@ -150,6 +213,16 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
     page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
     try {
         await signIn(page);
+        if (ordinaryItem && !ordinaryAccount) {
+            // The administrator's own session creates the disposable ordinary user; the password lives in this process only.
+            const account = { name: 'jfmod-probe-' + randomBytes(4).toString('hex'), password: randomBytes(18).toString('base64url') };
+            account.id = await page.evaluate(async ([user, pw]) => (await ApiClient.createUser({ Name: user, Password: pw })).Id,
+                [account.name, account.password]);
+            ordinaryAccount = account;
+            adminPage = { context: await browser.newContext(), page: null };
+            adminPage.page = await adminPage.context.newPage();
+            await signIn(adminPage.page);
+        }
         if (layout.tv) {
             await page.evaluate(() => { localStorage.setItem('layout', 'tv'); location.reload(); });
             await page.waitForFunction(() => !!window.ApiClient && document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
@@ -165,6 +238,7 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
 
         if (warned[name]) await warningFlow(page, layout, name, warned[name], 'marked played');
         if (name === 'tv1080' && synced) await warningFlow(page, layout, name, synced, 'watched on another device (synced)');
+        await reviewTwoAdminChecks(page, layout, name);
 
         if (name === 'desktop' && warned[name]) {
             // The episode's own window, through upstream's select.
@@ -180,12 +254,17 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
             await openDetails(page, versioned);
             const first = page.locator(SECTION + ' button', { hasText: /^(Keep|Stop keeping) 480p \(1\)$/ });
             record(name, 'each file of a two-file episode has its own Keep', await page.locator(SECTION + ' button', { hasText: /480p \(\d\)$/ }).count() === 2);
+            // The file may already be kept (the fixture keeps one copy): the probe toggles it and toggles it back.
+            const wasKept = await first.getAttribute('aria-pressed') === 'true';
+            const kept = /This file will be kept\./;
+            const unkept = /This file is no longer kept\./;
             await activate(page, layout, name, isFirstVersionKeep, first);
-            await waitStatus(page, /This file will be kept\./);
-            record(name, 'the file is kept and the button says so', await first.getAttribute('aria-pressed') === 'true' && /^Stop keeping/.test(await first.textContent()));
+            await waitStatus(page, wasKept ? unkept : kept);
+            record(name, 'Enter toggles the file\'s Keep and the button says so',
+                await first.getAttribute('aria-pressed') === String(!wasKept) && (wasKept ? /^Keep/ : /^Stop keeping/).test(await first.textContent()));
             await page.keyboard.press('Enter');
-            await waitStatus(page, /This file is no longer kept\./);
-            record(name, 'Enter again stops keeping the file', await first.getAttribute('aria-pressed') === 'false');
+            await waitStatus(page, wasKept ? kept : unkept);
+            record(name, 'Enter again puts the file\'s Keep back', await first.getAttribute('aria-pressed') === String(wasKept));
         }
 
         if (layout.tv) {
@@ -205,6 +284,16 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
         await page.evaluate(() => localStorage.removeItem('layout')).catch(() => undefined);
         await context.close();
     }
+}
+
+if (ordinaryAccount) {
+    for (const [name, layout] of Object.entries(LAYOUTS)) await ordinaryChecks(name, layout, ordinaryAccount);
+    const gone = await adminPage.page.evaluate(async id => {
+        await ApiClient.deleteUser(id);
+        try { await ApiClient.getUser(id); return false; } catch { return true; }
+    }, ordinaryAccount.id);
+    record('all', 'the disposable ordinary user is deleted and gone', gone);
+    await adminPage.context.close();
 }
 
 await browser.close();
