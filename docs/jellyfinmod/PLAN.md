@@ -462,7 +462,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
      the full browser suite once on real Google Chrome. Opus, medium. These convert agent claims into
      acceptance evidence and block everything else.
   2. The TV and D-pad shell (Phase 7), which also carries the deferred legacy grid and `hometab.js`
-     restores. **Fable implements this**, at the user's direction; start after the weekly reset.
+     restores. **Reassigned by the user on 2026-09-24 from Fable to Opus at high effort.** Progress and handover
+     in PHASE7 "TV and D-pad shell — handover".
   3. Per-media tracking and retention (below). **Fable implements this.**
 - **Per-media entries and retention — accepted 2026-09-21.** Verbatim: *"We need control per media
   file no matter it's a movie or episode. Therefore, if I watched episode – remove it, and each media
