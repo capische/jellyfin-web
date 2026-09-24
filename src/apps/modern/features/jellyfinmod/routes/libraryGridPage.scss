@@ -1,0 +1,65 @@
+/* JellyfinMod — the modern library grid in the legacy layouts (P7 TV shell).
+ *
+ * The modern layout puts the library toolbar in its app bar; here it sits inside the page, under the legacy
+ * `.skinHeader`, whose height `.libraryPage` already pads for. The only styling this needs is focus that reads
+ * from across a room: MUI shows keyboard focus as a faint tint, and only where the engine supports
+ * `:focus-visible`, which older webOS engines do not. Focused controls take upstream's TV focus treatment instead —
+ * the primary fill of `.emby-button.show-focus:focus` (`themes/_base/_theme.scss`) — and buttons that are already
+ * filled with primary take a ring in the primary text colour, so they do not vanish into their own fill.
+ *
+ * Additive only: no upstream selector or stylesheet is edited. Sizes are in `em` so the TV's 125% root applies,
+ * and every custom-property value is preceded by a plain one because older webOS engines drop a `var()` line.
+ */
+
+$jfmod-primary: #00a4dc;
+$jfmod-on-primary: #fff;
+
+.layout-tv .jfmod-libraryGridPage {
+    .jfmod-libraryGridToolbar {
+        .MuiButton-text:focus,
+        .MuiButton-outlined:focus,
+        .MuiIconButton-root:focus {
+            background-color: $jfmod-primary;
+            background-color: var(--jf-palette-primary-main, $jfmod-primary);
+            color: $jfmod-on-primary;
+            color: var(--jf-palette-primary-contrastText, $jfmod-on-primary);
+        }
+
+        .MuiButton-contained:focus {
+            box-shadow: 0 0 0 0.2em $jfmod-on-primary;
+        }
+    }
+
+    // Upstream's TV card focus ring. The legacy card builder gives every TV card `show-focus` (card.scss): a
+    // transparent 0.5em border that `.card:focus` colours with the secondary colour (`_theme.scss`). The React card
+    // (`useCard`) never adds that class, so on the TV a focused card looked exactly like the rest. The same rule is
+    // applied here to the grid's cards; a TV engine is `browser.slow`, so the ring — not the desktop scale-up — is
+    // what upstream's own TV cards show too.
+    .itemsContainer > .card > .cardBox {
+        margin: 0.4em;
+    }
+
+    .itemsContainer > .card > .cardBox.visualCardBox,
+    .itemsContainer > .card > .cardBox:not(.visualCardBox) .cardScalable {
+        border: 0.5em solid transparent;
+        border-radius: 0.7em;
+    }
+
+    // The alphabet picker is fixed to the page's right edge and is reached with Right from the last card column.
+    .alphaPicker-fixed-right .MuiToggleButton-root:focus {
+        background-color: $jfmod-primary;
+        background-color: var(--jf-palette-primary-main, $jfmod-primary);
+        color: $jfmod-on-primary;
+    }
+}
+
+// Upstream sizes the picker's letters for a desktop root font. At the TV's 125% the column of 27 letters is taller
+// than a 720-line screen and, centred, runs up over the header. Short TV screens get tighter letters instead.
+@media all and (max-height: 50em) {
+    .layout-tv .jfmod-libraryGridPage .alphaPicker-fixed-right .MuiToggleButton-root {
+        padding-top: 0;
+        padding-bottom: 0;
+        font-size: 0.75em;
+        line-height: 1.4;
+    }
+}
