@@ -1,0 +1,212 @@
+{
+  "fixture": "C-NAMED-Mercy",
+  "itemId": "1c3a1ac050339e228c8b6033556ff638",
+  "title": "Mercy",
+  "container": "mp4",
+  "video": "hevc 3840x2160 HDR",
+  "audioStreams": 3,
+  "subtitleStreams": 4,
+  "row": "C-NAMED-Mercy-g",
+  "check": "subtitle switch (by data-id) + render",
+  "verdict": "PASS",
+  "heavyTranscode": true,
+  "stock": {
+    "summary": "{\"fromIndex\":1,\"preOff\":null,\"targetIndex\":0,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":336.1,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOn": {
+        "session": {
+          "nowPlayingItemId": "1c3a1ac050339e228c8b6033556ff638",
+          "playState": {
+            "PositionTicks": 3351400000,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+            "AudioStreamIndex": 5,
+            "SubtitleStreamIndex": 0,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 3840,
+            "Height": 2160,
+            "Framerate": 606,
+            "CompletionPercentage": 9.218638684000492,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 336.2,
+          "duration": 5974,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 49,
+              "activeCues": 1,
+              "activeText": "‎ОТКРЫТИЕ // ДОКАЗАТЕЛЬСТВА"
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 539,
+            "method": "GET",
+            "url": "<test-host>/Videos/1c3a1ac0-5033-9e22-8c8b-6033556ff638/1c3a1ac050339e228c8b6033556ff638/Subtitles/0/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 7025,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "1c3a1ac050339e228c8b6033556ff638",
+              "MediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 5,
+              "SubtitleStreamIndex": 0,
+              "PositionTicks": 681272750,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 9903,
+            "method": "GET",
+            "url": "<test-host>/Videos/1c3a1ac050339e228c8b6033556ff638/1c3a1ac050339e228c8b6033556ff638/Subtitles/0/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 11027,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "1c3a1ac050339e228c8b6033556ff638",
+              "MediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 5,
+              "SubtitleStreamIndex": 0,
+              "PositionTicks": 3351400000,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "mod": {
+    "summary": "{\"fromIndex\":1,\"preOff\":null,\"targetIndex\":0,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"0\",\"text\":\"stream-4 - Russian - Default - SUBRIP - External\"},{\"id\":\"1\",\"text\":\"stream-5 - Russian - SUBRIP - External\"},{\"id\":\"2\",\"text\":\"stream-6 - English - SUBRIP - External\"},{\"id\":\"3\",\"text\":\"stream-7 - English - SUBRIP - External\"}],\"serverIndex\":0,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":336.1,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOn": {
+        "session": {
+          "nowPlayingItemId": "1c3a1ac050339e228c8b6033556ff638",
+          "playState": {
+            "PositionTicks": 655449750,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+            "AudioStreamIndex": 5,
+            "SubtitleStreamIndex": 0,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 3840,
+            "Height": 2160,
+            "Framerate": 828,
+            "CompletionPercentage": 8.09376121529619,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 335.1,
+          "duration": 5974,
+          "paused": false,
+          "seeking": true,
+          "ended": false,
+          "readyState": 1,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 49,
+              "activeCues": 0,
+              "activeText": null
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 500,
+            "method": "GET",
+            "url": "<test-host>/Videos/1c3a1ac0-5033-9e22-8c8b-6033556ff638/1c3a1ac050339e228c8b6033556ff638/Subtitles/0/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 6837,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "1c3a1ac050339e228c8b6033556ff638",
+              "MediaSourceId": "1c3a1ac050339e228c8b6033556ff638",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 5,
+              "SubtitleStreamIndex": 0,
+              "PositionTicks": 625449750,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 9771,
+            "method": "GET",
+            "url": "<test-host>/Videos/1c3a1ac050339e228c8b6033556ff638/1c3a1ac050339e228c8b6033556ff638/Subtitles/0/0/Stream.js",
+            "status": 200
+          }
+        ]
+      }
+    }
+  }
+}
