@@ -1,0 +1,233 @@
+{
+  "itemId": "1a0b81d432dbe0cc9efb467117cf50ac",
+  "title": "Highlander II: The Quickening",
+  "api": {
+    "summary": "mkv h264 1920x1080 SDR",
+    "audio": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "subtitles": [
+      "11",
+      "12"
+    ]
+  },
+  "stock": {
+    "title": "Highlander II: The Quickening",
+    "parentTitle": "",
+    "miscInfo": "1991 1h 50m R 4.7 | ",
+    "endsAt": "Ends at 10:37 AM",
+    "readAt": 1790290095675,
+    "audioOptions": [
+      "1:Дублированный (РТР) - Russian - Dolby Digital - Stereo - Default",
+      "2:Дублированный (Хлопушка) - Russian - Dolby Digital - Stereo",
+      "3:Многоголосый (DVD Group) - Russian - Dolby Digital - 5.1",
+      "4:Многоголосый (ТВЦ) - Russian - Dolby Digital - Stereo",
+      "5:Многоголосый (СТС) - Russian - Dolby Digital - Stereo",
+      "6:Двухголосый (Инис/ДТВ/7ТВ) - Russian - Dolby Digital - Stereo",
+      "7:Двухголосый - Russian - Dolby Digital - 5.1",
+      "8:Авторский Ю.Живов - Russian - Dolby Digital - 5.1",
+      "9:Авторский С. Визгунов - Russian - Dolby Digital - 5.1",
+      "10:English - DTS-HD MA - 7.1"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "11:Russian - SUBRIP",
+      "12:English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:Release for Кinozal by Райдэн - 1080p - H264 - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "4.7",
+    "criticRating": "",
+    "genres": [
+      "Fantasy",
+      "Action",
+      "Adventure",
+      "Science Fiction"
+    ],
+    "studios": [
+      "Davis-Panzer Productions",
+      "Harat Investments",
+      "Lamb Bear Entertainment",
+      "Interstar",
+      "Highlander Productions",
+      "J&M Entertainment"
+    ],
+    "director": [
+      "Russell Mulcahy"
+    ],
+    "writer": [
+      "Peter Bellwood"
+    ],
+    "tags": [
+      "new york city",
+      "martial arts",
+      "immortality",
+      "scotland",
+      "sword fight",
+      "fictional war",
+      "dark fantasy",
+      "warrior",
+      "action hero",
+      "sword and sorcery",
+      "supernatural power",
+      "good versus evil"
+    ],
+    "overview": "The Prize has been won. Connor MacLeod is mortal... Now an old man on the verge of death, memories of his past on the planet Zeist resurface, where a vengeful enemy, General Katana, plots to destroy him once and for all.",
+    "castIds": [
+      "f991422494ea12ce26ed8a9b7deec8f5",
+      "7194cff9b32f5bbdbfdc290d6117faa8",
+      "12dcfca2a0f7a40ceeda5b9edd09e3b8",
+      "50d08934f072df3e981895150e9e7a99",
+      "37c2ab61feb4e2a763d587ed2f506214",
+      "07a7da00cf59a75d2a3979edd70aeeef",
+      "6a61de46c9715e9670e2000c8a0e0e59",
+      "898f261d0aacaa164cc1b6ed3e63e89f",
+      "251fa26bba618dc6ffa942b1722adfaf",
+      "464c8dd303c517dbedc3123abd0de2ea",
+      "4273365a60443bf35424942f88d7cf19",
+      "b0593a9827d2ac94f62a1391820f0762",
+      "226133788efd82ae557921cd0d7e1503",
+      "5fbc44b14122519ee926828635806557",
+      "77b8df7f38ac82f3c7374d7feb047dd7",
+      "43926448cb8a4a14ffea69bce4cfd058",
+      "5314b49d95c6552455dbde9a9e533f14",
+      "b22af8936eb0ebef9ab87843c5bf9326",
+      "204824efbbc6c5f1663d2d2a18f5b05b",
+      "4d7ab2f8ff496144afda27407fb13a87"
+    ],
+    "mediaInfoBadges": [
+      "1991",
+      "1h 50m",
+      "R",
+      "4.7"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=371c40190217b4acfa03892257949859\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Logo?tag=57f395e03d215de15dac14fcd0ff53f8&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "1a0b81d432dbe0cc9efb467117cf50ac",
+        "label": "Highlander II The Quickening (1991) Remux-1080p"
+      }
+    ],
+    "sourceSelected": "1a0b81d432dbe0cc9efb467117cf50ac",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Highlander II: The Quickening",
+    "parentTitle": "",
+    "miscInfo": "1991 1h 50m R 4.7 | ",
+    "endsAt": "Ends at 10:37 AM",
+    "readAt": 1790290096914,
+    "audioOptions": [
+      "1:Дублированный (РТР) - Russian - Dolby Digital - Stereo - Default",
+      "2:Дублированный (Хлопушка) - Russian - Dolby Digital - Stereo",
+      "3:Многоголосый (DVD Group) - Russian - Dolby Digital - 5.1",
+      "4:Многоголосый (ТВЦ) - Russian - Dolby Digital - Stereo",
+      "5:Многоголосый (СТС) - Russian - Dolby Digital - Stereo",
+      "6:Двухголосый (Инис/ДТВ/7ТВ) - Russian - Dolby Digital - Stereo",
+      "7:Двухголосый - Russian - Dolby Digital - 5.1",
+      "8:Авторский Ю.Живов - Russian - Dolby Digital - 5.1",
+      "9:Авторский С. Визгунов - Russian - Dolby Digital - 5.1",
+      "10:English - DTS-HD MA - 7.1"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "11:Russian - SUBRIP",
+      "12:English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:Release for Кinozal by Райдэн - 1080p - H264 - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "4.7",
+    "criticRating": "",
+    "genres": [
+      "Fantasy",
+      "Action",
+      "Adventure",
+      "Science Fiction"
+    ],
+    "studios": [
+      "Davis-Panzer Productions",
+      "Harat Investments",
+      "Lamb Bear Entertainment",
+      "Interstar",
+      "Highlander Productions",
+      "J&M Entertainment"
+    ],
+    "director": [
+      "Russell Mulcahy"
+    ],
+    "writer": [
+      "Peter Bellwood"
+    ],
+    "tags": [
+      "new york city",
+      "martial arts",
+      "immortality",
+      "scotland",
+      "sword fight",
+      "fictional war",
+      "dark fantasy",
+      "warrior",
+      "action hero",
+      "sword and sorcery",
+      "supernatural power",
+      "good versus evil"
+    ],
+    "overview": "The Prize has been won. Connor MacLeod is mortal... Now an old man on the verge of death, memories of his past on the planet Zeist resurface, where a vengeful enemy, General Katana, plots to destroy him once and for all.",
+    "castIds": [
+      "f991422494ea12ce26ed8a9b7deec8f5",
+      "7194cff9b32f5bbdbfdc290d6117faa8",
+      "12dcfca2a0f7a40ceeda5b9edd09e3b8",
+      "50d08934f072df3e981895150e9e7a99",
+      "37c2ab61feb4e2a763d587ed2f506214",
+      "07a7da00cf59a75d2a3979edd70aeeef",
+      "6a61de46c9715e9670e2000c8a0e0e59",
+      "898f261d0aacaa164cc1b6ed3e63e89f",
+      "251fa26bba618dc6ffa942b1722adfaf",
+      "464c8dd303c517dbedc3123abd0de2ea",
+      "4273365a60443bf35424942f88d7cf19",
+      "b0593a9827d2ac94f62a1391820f0762",
+      "226133788efd82ae557921cd0d7e1503",
+      "5fbc44b14122519ee926828635806557",
+      "77b8df7f38ac82f3c7374d7feb047dd7",
+      "43926448cb8a4a14ffea69bce4cfd058",
+      "5314b49d95c6552455dbde9a9e533f14",
+      "b22af8936eb0ebef9ab87843c5bf9326",
+      "204824efbbc6c5f1663d2d2a18f5b05b",
+      "4d7ab2f8ff496144afda27407fb13a87"
+    ],
+    "mediaInfoBadges": [
+      "1991",
+      "1h 50m",
+      "R",
+      "4.7"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=371c40190217b4acfa03892257949859\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/1a0b81d432dbe0cc9efb467117cf50ac/Images/Logo?tag=57f395e03d215de15dac14fcd0ff53f8&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "1a0b81d432dbe0cc9efb467117cf50ac",
+        "label": "Highlander II The Quickening (1991) Remux-1080p"
+      }
+    ],
+    "sourceSelected": "1a0b81d432dbe0cc9efb467117cf50ac",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
