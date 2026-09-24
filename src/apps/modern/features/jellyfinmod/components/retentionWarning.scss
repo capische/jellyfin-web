@@ -1,0 +1,26 @@
+// The retention-start warning (PHASE10 Q8). Theme values only: the primary accent from themes/_base/theme.ts.
+.jfmod-retentionWarning {
+    margin: 0.7em 0;
+    padding: 0.6em 0.8em;
+    border-left: 0.25em solid #00a4dc;
+    border-radius: 0.2em;
+    background: rgba(0, 164, 220, 0.12);
+}
+
+.jfmod-retentionWarningTitle {
+    margin: 0 0 0.3em;
+    font-weight: 600;
+}
+
+.jfmod-retentionWarningCause {
+    margin: 0 0 0.3em;
+    opacity: 0.86;
+}
+
+.jfmod-retentionWarningFiles {
+    margin: 0 0 0.5em;
+    padding-left: 1.2em;
+    font-size: 0.9em;
+    opacity: 0.86;
+    word-break: break-all;
+}
