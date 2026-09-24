@@ -1,4 +1,4 @@
-/* eslint-disable compat/compat, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity, no-nested-ternary, sonarjs/no-nested-conditional, @typescript-eslint/no-unused-vars, sonarjs/no-dead-store, sonarjs/no-unused-vars, no-restricted-globals, @typescript-eslint/no-shadow, sonarjs/void-use, sonarjs/no-os-command-from-path, sonarjs/slow-regex -- a Node acceptance runner, not shipped code: the browserslist targets TV clients rather than this script, and the product lint profile does not fit a linear runner with page-side callbacks and deliberate no-op catch handlers */
+/* eslint-disable compat/compat, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity, no-nested-ternary, sonarjs/no-nested-conditional, @typescript-eslint/no-unused-vars, sonarjs/no-dead-store, sonarjs/no-unused-vars, @typescript-eslint/no-shadow, sonarjs/void-use, sonarjs/no-os-command-from-path, sonarjs/slow-regex, sonarjs/no-nested-functions -- a Node acceptance runner, not shipped code: the browserslist targets TV clients rather than this script, and the product lint profile does not fit a linear runner with page-side callbacks and deliberate no-op catch handlers */
 /* global document, window, localStorage, ApiClient */
 // Stock-versus-mod parity acceptance. See docs/jellyfinmod/PARITY.md for the plan this implements;
 // every area, threshold and pass/fail rule below is that document's, not a fresh design.
@@ -45,14 +45,72 @@ const allowSkips = process.env.JELLYFINMOD_ALLOW_SKIPS === 'true';
 // result (fullAcceptance is forced false and the summary/report say so loudly).
 const continuePastGate = process.env.JELLYFINMOD_PARITY_CONTINUE_PAST_GATE === 'true';
 
-const baseS = new URL('/web/', testUrl).href;
-const baseM = new URL('/web-mod/', testUrl).href;
+// Two shapes (P7.S11). `takeover` (the default, and the shipping shape): the plugin's takeover owns `/web/`, so
+// the MOD side is `/web/` and the STOCK side is the fork's stock entry of the very same bundle, served by the
+// plugin at `/web-mod/<bundleId>/index.html` — same origin, so one sign-in and one device. `toggle` is the
+// 2026-09-22 shape this runner was written for (switch the takeover off, stock at `/web/`, mod at `/web-mod/`).
+const shape = process.env.JELLYFINMOD_PARITY_SHAPE ?? 'takeover';
+if (shape !== 'takeover' && shape !== 'toggle') throw new Error('JELLYFINMOD_PARITY_SHAPE must be "takeover" or "toggle"');
+let baseS;
+let baseM;
+let servedBundleId = null;
+if (shape === 'takeover') {
+    baseM = new URL('/web/', testUrl).href;
+    // The bundle id is public: the patched document carries it in its meta tag (PHASE7 §3.1).
+    const document_ = await fetch(baseM).then(response => response.text());
+    servedBundleId = /name="jellyfinmod-web"\s+content="([0-9a-f]+)"/.exec(document_)?.[1] ?? null;
+    if (!servedBundleId) throw new Error('/web/ does not carry a jellyfinmod-web meta tag: the takeover is not applied, so the takeover shape cannot run');
+    baseS = process.env.JELLYFINMOD_PARITY_STOCK_URL ?? new URL('/web-mod/' + servedBundleId + '/index.html', testUrl).href;
+} else {
+    baseS = new URL('/web/', testUrl).href;
+    baseM = new URL('/web-mod/', testUrl).href;
+}
+// Which areas run: a comma list of A1,A2,A3,A4,A5,A6,A7,B,C,D,E,F,G,T (T = the TV-layout inventory and playback).
+// Unset runs everything. A partial run never counts as full acceptance.
+const areaFilter = process.env.JELLYFINMOD_PARITY_AREAS ? new Set(process.env.JELLYFINMOD_PARITY_AREAS.split(',').map(a => a.trim())) : null;
+const want = area => !areaFilter || areaFilter.has(area);
+// Named titles that must be covered in detail (B0) and playback (C) regardless of the predicate fixtures: the four
+// titles of the stale 2026-09-22 run (P7.S11 parity triage). Exact Name match in the Movies library.
+const namedTitles = (process.env.JELLYFINMOD_PARITY_TITLE_NAMES ?? 'Highlander|David Beckham Infamous|Mercy|Lessons of Tolerance')
+    .split('|').map(name => name.trim()).filter(Boolean);
+// Playback start limit. A title that is not playing by then is NOT VERIFIED (a heavy transcode on a Raspberry Pi
+// is not a pass and not a mod failure), with its session and transcode evidence recorded.
+const startLimitMs = Number(process.env.JELLYFINMOD_PARITY_START_LIMIT_MS ?? 90000);
+// The TV-layout playback title (T area); defaults to the first named title that is found.
+const tvPlaybackName = process.env.JELLYFINMOD_PARITY_TV_TITLE ?? 'Lessons of Tolerance';
 
 await fs.mkdir(outDir, { recursive: true });
 const networkDir = path.join(outDir, 'network');
 const shotsDir = path.join(outDir, 'shots');
+const evidenceDir = path.join(outDir, 'evidence');
 await fs.mkdir(networkDir, { recursive: true });
 await fs.mkdir(shotsDir, { recursive: true });
+await fs.mkdir(evidenceDir, { recursive: true });
+
+/**
+ * Everything written to disk passes through here: the committed evidence must carry no LAN address, host path,
+ * token, api_key, session id or device id (P7.S11). Origins become `<test-host>`, home paths `<home>`, and only an
+ * allow-list of query parameters survives on any URL.
+ */
+const KEEP_PARAMS = new Set(['audiostreamindex', 'subtitlestreamindex', 'mediasourceid', 'static', 'videocodec', 'audiocodec',
+    'subtitlemethod', 'transcodereasons', 'starttimeticks', 'container', 'segmentcontainer', 'maxstreamingbitrate', 'videobitrate',
+    'audiobitrate', 'requireavc', 'enableautostreamcopy', 'allowvideostreamcopy', 'allowaudiostreamcopy', 'tag', 'type', 'userid']);
+const scrubUrl = raw => {
+    let url;
+    try { url = new URL(raw, testUrl); } catch { return raw; }
+    const kept = [...url.searchParams].filter(([key]) => KEEP_PARAMS.has(key.toLowerCase()) && key.toLowerCase() !== 'userid');
+    const query = kept.length ? '?' + kept.map(([key, value]) => key + '=' + value).join('&') : '';
+    const origin = url.host === testUrl.host ? '<test-host>' : url.host;
+    return origin + url.pathname + query;
+};
+const scrubText = text => String(text)
+    .replaceAll(testUrl.origin, '<test-host>')
+    .replaceAll(testUrl.host, '<test-host>')
+    .replaceAll(testUrl.hostname, '<test-host>')
+    .replaceAll(os.homedir(), '<home>')
+    .replace(/(api_key|ApiKey|X-Emby-Token|Token|DeviceId|PlaySessionId|deviceId)=([^&"\s]+)/gi, '$1=<id>')
+    .replace(/"(PlaySessionId|DeviceId|SessionId|Id_session|AccessToken)"\s*:\s*"[^"]*"/g, '"$1":"<id>"');
+const writeScrubbed = (file, value) => fs.writeFile(file, scrubText(typeof value === 'string' ? value : JSON.stringify(value, null, 2)));
 
 // ---------------------------------------------------------------------------------------------
 // Shared primitives, copied verbatim in spirit from browser-review.mjs (same names/semantics).
@@ -112,7 +170,7 @@ const idleTimeouts = {};
 // ---------------------------------------------------------------------------------------------
 // Rows, skips and diff reporting (PARITY.md §2.2, §11.2)
 // ---------------------------------------------------------------------------------------------
-/** One row per checked feature. verdict is one of PASS/FAIL/SKIPPED/SHARED-GAP/EXPECTED-FALLBACK/RECORDED/CLEANUP-FAILED. */
+/** One row per checked feature. verdict is one of PASS/FAIL/SKIPPED/SHARED-GAP/EXPECTED-FALLBACK/RECORDED/CLEANUP-FAILED/NOT-VERIFIED. */
 const rows = [];
 const failuresDetail = [];
 const skipped = [];
@@ -151,7 +209,8 @@ async function writeMarkdownReport(summary) {
     lines.push(`Instance: <test-host>:${testUrl.port} · user: ${testUser} · web HEAD: ${summary.header.webHeadShort ?? 'unknown'} · plugin: ${summary.header.health?.Version ?? 'unknown'}`);
     lines.push(`Bundle: ${summary.header.health?.bundleId ?? 'unknown'} (${summary.header.health?.webCommit ?? 'unknown'}) · host: ${summary.header.health?.hostVersion ?? 'unknown'} · mode: ${summary.mode}${summary.aborted ? ' · ABORTED' : ''}`);
     lines.push(`Takeover before: ${JSON.stringify(summary.takeover.before)} · after: ${JSON.stringify(summary.takeover.after)}`, '');
-    lines.push('| # | Area | Feature | Stock (/web) | Mod (/web-mod) | Verdict |');
+    lines.push(`Shape: ${shape} · stock document: ${scrubUrl(baseS)} · mod document: ${scrubUrl(baseM)} · browser: ${browserInfo.requestedTier} ${browserInfo.name ?? ''} ${browserInfo.version ?? ''}`, '');
+    lines.push(`| # | Area | Feature | Stock (${shape === 'takeover' ? 'stock entry' : '/web'}) | Mod (${shape === 'takeover' ? '/web takeover' : '/web-mod'}) | Verdict |`);
     lines.push('|---|------|---------|--------------|----------------|---------|');
     for (const row of summary.rows) {
         const esc = value => String(value ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ').slice(0, 200);
@@ -173,7 +232,7 @@ async function writeMarkdownReport(summary) {
     lines.push(`${userDataSnapshots.size} item(s) touched; cleanupFailed=${summary.cleanupFailed}. See userdata-before.json / userdata-after.json / restore-actions.json.`);
     lines.push('', '## Verdict summary');
     lines.push('```', JSON.stringify(summary.verdictCounts, null, 2), '```');
-    await fs.writeFile(path.join(outDir, 'parity-report.md'), lines.join('\n') + '\n');
+    await writeScrubbed(path.join(outDir, 'parity-report.md'), lines.join('\n') + '\n');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -183,10 +242,13 @@ async function writeMarkdownReport(summary) {
 //     outside the repo. The workspace rules require the final acceptance to run on real Google Chrome
 //     ("chrome"), which no attach tier can guarantee, so this run must be able to launch it itself.
 // ---------------------------------------------------------------------------------------------
-const browserTier = process.env.JELLYFINMOD_BROWSER ?? '';
-if (browserTier && browserTier !== 'chromium' && browserTier !== 'chrome') {
-    throw new Error('JELLYFINMOD_BROWSER must be "chromium" or "chrome", got ' + JSON.stringify(browserTier));
+// P7.S11: the default is now to LAUNCH Playwright's bundled Chromium (iteration); `chrome` launches real Google
+// Chrome for the acceptance pass; `cdp` keeps the old attach-to-a-running-Chrome mode.
+const requestedBrowser = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
+if (!['chromium', 'chrome', 'cdp'].includes(requestedBrowser)) {
+    throw new Error('JELLYFINMOD_BROWSER must be "chromium", "chrome" or "cdp", got ' + JSON.stringify(requestedBrowser));
 }
+const browserTier = requestedBrowser === 'cdp' ? '' : requestedBrowser;
 let browser;
 let context;
 const browserInfo = {};
@@ -211,7 +273,14 @@ if (!browserTier) {
         (process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'));
     const profileDir = process.env.JELLYFINMOD_CHROME_PROFILE_DIR
         ?? path.join(cacheRoot, 'jellyfinmod-e2e', 'parity-profile-' + browserTier);
-    const launchOptions = { headless: process.env.JELLYFINMOD_HEADED !== 'true' };
+    // The run activates Play with a synthetic element.click() (see nativeClick), which carries no user activation,
+    // so the browser's autoplay policy would refuse an unmuted play() that a real click would allow. This flag
+    // stands in for that gesture; it does not change what either entry does with the media.
+    const launchOptions = {
+        headless: process.env.JELLYFINMOD_HEADED !== 'true',
+        args: ['--autoplay-policy=no-user-gesture-required'],
+        viewport: { width: 1440, height: 900 }
+    };
     if (browserTier === 'chrome') launchOptions.channel = 'chrome';
     try {
         context = await chromium.launchPersistentContext(profileDir, launchOptions);
@@ -295,6 +364,7 @@ function harness(page, base, label) {
     const allRequestUrls = [];
     /** Every request this page issued, kept for area C capture (bodies) and E-7 (id-leak) checks. */
     const requestLog = [];
+    const entryOf = new WeakMap();
     page.on('request', request => {
         if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
             for (const pending of inflight) if (!heldRequests.has(pending)) inflight.delete(pending);
@@ -302,7 +372,17 @@ function harness(page, base, label) {
         inflight.add(request);
         lastNetworkActivity = Date.now();
         allRequestUrls.push(request.url());
-        requestLog.push({ method: request.method(), url: request.url(), postData: request.method() === 'POST' ? request.postData() : null, t: Date.now(), request });
+        const entry = { method: request.method(), url: request.url(), postData: request.method() === 'POST' ? request.postData() : null, t: Date.now(), request, status: null };
+        requestLog.push(entry);
+        entryOf.set(request, entry);
+    });
+    page.on('response', response => {
+        const entry = entryOf.get(response.request());
+        if (entry) entry.status = response.status();
+    });
+    page.on('requestfailed', request => {
+        const entry = entryOf.get(request);
+        if (entry) entry.status = 'failed: ' + (request.failure()?.errorText ?? 'unknown');
     });
     for (const event of ['requestfinished', 'requestfailed']) {
         page.on(event, request => {
@@ -399,11 +479,40 @@ let userId;
 const userDataSnapshots = new Map(); // itemId -> UserData object
 const restoreRoute = { kind: null }; // recorded once discovered, per §7 "discover it once, record which was used"
 
+/**
+ * The remembered audio and subtitle selection (UserData.AudioStreamIndex / SubtitleStreamIndex) is user data too, and
+ * the API's UserData DTO does not expose it. With "remember selections" on, every progress report of a play stores the
+ * tracks it used, so the side that plays second starts from whatever the first side switched to (seen 2026-09-24:
+ * stock started Highlander on audio 1 / subtitle 5, the mod side then on audio 2 / subtitle off). The effective value
+ * is read from PlaybackInfo's defaults; the stored value, when the caller supplies it from the database
+ * (JELLYFINMOD_PARITY_STREAM_MEMORY, a JSON map itemId -> { a, s }, null meaning not remembered), is restored exactly.
+ */
+const streamMemory = process.env.JELLYFINMOD_PARITY_STREAM_MEMORY ?
+    JSON.parse(await fs.readFile(process.env.JELLYFINMOD_PARITY_STREAM_MEMORY, 'utf8')) : {};
+const streamSnapshots = new Map(); // itemId -> { a, s, effectiveAudio, effectiveSubtitle, mediaSourceId }
+const effectiveStreams = async itemId => {
+    const info = (await S.apiRequest('Items/' + encodeURIComponent(itemId) + '/PlaybackInfo?userId=' + encodeURIComponent(userId), 'POST', {})).body;
+    const source = info?.MediaSources?.[0];
+    return { audio: source?.DefaultAudioStreamIndex ?? null, subtitle: source?.DefaultSubtitleStreamIndex ?? null, mediaSourceId: source?.Id ?? itemId };
+};
 const snapshotUserData = async itemId => {
     const result = await S.apiRequest('Items/' + encodeURIComponent(itemId) + '?userId=' + encodeURIComponent(userId));
     const data = result.body?.UserData ?? null;
+    if (!streamSnapshots.has(itemId)) {
+        const effective = await effectiveStreams(itemId);
+        // With a database map, an item missing from it has no UserData row: nothing is remembered (null).
+        const hasMemory = Object.keys(streamMemory).length > 0;
+        const stored = streamMemory[normId(itemId)] ?? (hasMemory ? { a: null, s: null, noRow: true } : null);
+        streamSnapshots.set(itemId, {
+            a: stored ? stored.a : effective.audio, s: stored ? stored.s : effective.subtitle,
+            source: stored ? (stored.noRow ? 'database (no row: nothing remembered)' : 'database') : 'PlaybackInfo defaults',
+            effectiveAudio: effective.audio, effectiveSubtitle: effective.subtitle, mediaSourceId: effective.mediaSourceId
+        });
+        await writeScrubbed(path.join(outDir, 'streams-before.json'), Object.fromEntries(streamSnapshots));
+    }
+    if (userDataSnapshots.has(itemId)) return userDataSnapshots.get(itemId);
     userDataSnapshots.set(itemId, data);
-    await fs.writeFile(path.join(outDir, 'userdata-before.json'), JSON.stringify(Object.fromEntries(userDataSnapshots), null, 2));
+    await writeScrubbed(path.join(outDir, 'userdata-before.json'), Object.fromEntries(userDataSnapshots));
     return data;
 };
 
@@ -457,6 +566,17 @@ const restoreUserData = async itemId => {
             LastPlayedDate: before.LastPlayedDate ?? null,
             Rating: before.Rating ?? null
         };
+        // First the remembered track selection: a paused progress report carrying exactly the stored indexes (an absent
+        // index stores null), then a stop at the original position so the session no longer shows the item playing.
+        // Both touch the DTO fields, which the exact overwrite below then puts back.
+        const streams = streamSnapshots.get(itemId);
+        if (streams) {
+            const report = { ItemId: itemId, MediaSourceId: streams.mediaSourceId, IsPaused: true, PlayMethod: 'DirectPlay', CanSeek: true };
+            if (streams.a !== null && streams.a !== undefined) report.AudioStreamIndex = streams.a;
+            if (streams.s !== null && streams.s !== undefined) report.SubtitleStreamIndex = streams.s;
+            await S.apiRequest('Sessions/Playing/Progress', 'POST', report);
+            await S.apiRequest('Sessions/Playing/Stopped', 'POST', { ItemId: itemId, MediaSourceId: streams.mediaSourceId, PositionTicks: before.PlaybackPositionTicks ?? 0 });
+        }
         await S.apiRequest('UserItems/' + encodeURIComponent(itemId) + '/UserData', 'POST', payload);
     } else {
         await setUserData(pageS, itemId, {
@@ -491,8 +611,15 @@ const verifyRestoration = async () => {
             if (field === 'PlaybackPositionTicks' && !beforeValue && !currentValue) continue;
             if (beforeValue !== currentValue) mismatches.push({ itemId, field, expected: beforeValue, observed: currentValue });
         }
+        const streams = streamSnapshots.get(itemId);
+        if (streams) {
+            const effective = await effectiveStreams(itemId);
+            after[itemId + ':streams'] = effective;
+            if (effective.audio !== streams.effectiveAudio) mismatches.push({ itemId, field: 'DefaultAudioStreamIndex (remembered audio)', expected: streams.effectiveAudio, observed: effective.audio });
+            if (effective.subtitle !== streams.effectiveSubtitle) mismatches.push({ itemId, field: 'DefaultSubtitleStreamIndex (remembered subtitle)', expected: streams.effectiveSubtitle, observed: effective.subtitle });
+        }
     }
-    await fs.writeFile(path.join(outDir, 'userdata-after.json'), JSON.stringify({ after, mismatches }, null, 2));
+    await writeScrubbed(path.join(outDir, 'userdata-after.json'), { after, mismatches });
     return mismatches;
 };
 
@@ -508,6 +635,7 @@ const setTakeover = enabled => S.apiRequest('JellyfinMod/Settings/Interface', 'P
 const report = { header: {}, takeover: {} };
 let originalLayoutS; let originalLayoutM;
 let aborted = false;
+let toggledTakeover = false;
 /** True the moment preflight or A1 (PARITY.md's two hard gates) fails, regardless of continuePastGate. */
 let gateFailed = false;
 const failGate = () => { gateFailed = true; aborted = !continuePastGate; };
@@ -517,7 +645,7 @@ let moviesViewId; let showsViewId;
 try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an unexpected throw.
     try {
         let takeoverBefore;
-        await step('setup: read and disable /web takeover', async () => {
+        await step(shape === 'takeover' ? 'setup: read the /web takeover state' : 'setup: read and disable /web takeover', async () => {
         // Establish a session on pageS first (against whatever /web currently serves) so the API call
         // to flip the takeover has a signed-in ApiClient to run through.
             await pageS.goto(baseS);
@@ -529,11 +657,21 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             await S.appReady();
             takeoverBefore = (await getInterfaceSettings()).body;
             report.takeover.before = { TakeoverEnabled: takeoverBefore?.TakeoverEnabled, BundleId: takeoverBefore?.BundleId };
+            if (shape === 'takeover') {
+                // Read only: this shape needs the takeover ON and never touches it.
+                const health = (await S.apiRequest('JellyfinMod/Health')).body;
+                report.takeover.before.state = health?.Web?.Takeover?.Status ?? null;
+                if (report.takeover.before.state !== 'patched') {
+                    throw new Error('The takeover shape needs /web/ patched; Health reports ' + JSON.stringify(report.takeover.before));
+                }
+                return;
+            }
             if (takeoverBefore?.TakeoverEnabled !== true) {
                 throw new Error('Expected the /web takeover to be ON at the start of this run (environment note said so); found ' + JSON.stringify(takeoverBefore));
             }
             const patched = await setTakeover(false);
             if (patched.status >= 300) throw new Error('PATCH JellyfinMod/Settings/Interface {TakeoverEnabled:false} failed: ' + JSON.stringify(patched));
+            toggledTakeover = true;
         });
 
         await step('setup: navigate both tabs and sign in', async () => {
@@ -581,6 +719,13 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 assetRoot: window.__jfmodAssetRoot ?? null,
                 bundle: window.__jfmodBundle === true
             }));
+            servedS.document = new URL(pageS.url()).pathname;
+            servedM.document = new URL(pageM.url()).pathname;
+            servedS.stylesheetsAndScripts = await pageS.evaluate(() => [...new Set(Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"][href]'))
+                .map(node => new URL(node.src || node.href).pathname.replace(/[^/]+$/, '')))]);
+            servedM.stylesheetsAndScripts = await pageM.evaluate(() => [...new Set(Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"][href]'))
+                .map(node => new URL(node.src || node.href).pathname.replace(/[^/]+$/, '')))]);
+            report.header.shape = shape;
             report.header.servedS = servedS;
             report.header.servedM = servedM;
             if (servedS.bundle) {
@@ -601,15 +746,20 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
             report.header.webHeadShort = await gitRevShort();
 
-            // No request from the mod tab should touch /web/ (the S3 rooting rule).
-            const modAssetLeaks = M.allRequestUrls.filter(url => {
+            // The S3 rooting rule. Toggle shape: no request from the mod tab may touch /web/. Takeover shape: the mod
+            // document IS /web/, so only the document itself may come from there — every asset of either entry must
+            // come from the bundle under /web-mod/<bundleId>/.
+            const underWeb = harnessSide => harnessSide.allRequestUrls.filter(url => {
                 try {
                     const parsed = new URL(url);
-                    return parsed.host === testUrl.host && parsed.pathname.startsWith('/web/');
+                    if (parsed.host !== testUrl.host || !parsed.pathname.startsWith('/web/')) return false;
+                    return shape === 'toggle' || !['/web/', '/web/index.html'].includes(parsed.pathname);
                 } catch { return false; }
             });
+            const modAssetLeaks = underWeb(M);
+            report.header.stockRequestsUnderWeb = underWeb(S).map(url => new URL(url).pathname);
             if (modAssetLeaks.length) {
-                throw new Error('PREFLIGHT GATE: the mod tab requested assets under /web/: ' + JSON.stringify(modAssetLeaks.slice(0, 10)));
+                throw new Error('PREFLIGHT GATE: the mod tab requested assets under /web/: ' + JSON.stringify(modAssetLeaks.slice(0, 10).map(scrubUrl)));
             }
 
             const viewsS = await S.apiRequest('UserViews');
@@ -625,7 +775,11 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             if (!moviesViewId || !showsViewId) throw new Error('PREFLIGHT GATE: could not resolve Movies/Shows view ids from UserViews');
 
             const entriesBefore = await S.apiRequest('JellyfinMod/Entries?limit=200');
-            await fs.writeFile(path.join(outDir, 'entries-before.json'), JSON.stringify(entriesBefore.body ?? { items: [] }, null, 2));
+            // Ids and titles only: an entry's metadata can carry library paths, which never go to disk here.
+            await writeScrubbed(path.join(outDir, 'entries-before.json'), {
+                totalRecordCount: entriesBefore.body?.totalRecordCount ?? null,
+                items: (entriesBefore.body?.items ?? []).map(entry => ({ id: entry.id, title: entry.title }))
+            });
 
             pushRow('preflight', 'Preflight', 'Same user, same views, bundle correctly rooted', 'ok', 'ok', 'PASS');
         });
@@ -710,7 +864,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     };
 
     await step('A1: library views and totals', async () => {
-        if (aborted) return;
+        if (aborted || !want('A1')) return;
         try {
             for (const [name, viewId, type] of [['Movies', moviesViewId, 'Movie'], ['TV', showsViewId, 'Series']]) {
                 const totalS = (await S.apiRequest(`Items?ParentId=${viewId}&Recursive=true&IncludeItemTypes=${type}&Limit=0`)).body?.TotalRecordCount;
@@ -762,7 +916,12 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     /** A2 reference sets, kept module-level so B0's sample can reuse them. */
     const a2 = { movies: { ref: [], s: [], m: [] }, tv: { ref: [], s: [], m: [] } };
 
-    if (!aborted) {
+    if (!aborted && !want('A2')) {
+        // Later areas need the reference sets; read them from the API only.
+        a2.movies.ref = await pageAllItems(S, `Items?ParentId=${moviesViewId}&Recursive=true&IncludeItemTypes=Movie&SortBy=SortName&SortOrder=Ascending&Fields=ProviderIds`);
+        a2.tv.ref = await pageAllItems(S, `Items?ParentId=${showsViewId}&Recursive=true&IncludeItemTypes=Series&SortBy=SortName&SortOrder=Ascending&Fields=ProviderIds`);
+    }
+    if (!aborted && want('A2')) {
         await step('A2: item id sets (Movies, TV)', async () => {
             try {
                 for (const [key, viewId, type, route] of [
@@ -806,7 +965,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
     // A3 — seasons and episodes. §9.3 escape hatch: sample like B0 once the TV library exceeds ~40 series.
     const A3_SERIES_CAP = 40;
-    if (!aborted) {
+    if (!aborted && want('A3')) {
         await step('A3: seasons and episodes', async () => {
             try {
                 const allSeries = [...a2.tv.ref].sort((x, y) => x.Id.localeCompare(y.Id));
@@ -827,9 +986,9 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     // server accepts directly and confirmed live to return exactly that season's episodes.
                     const sortedSeasonsRef = [...seasonsRef].sort((a, b) => (a.IndexNumber ?? 0) - (b.IndexNumber ?? 0));
                     const firstSeasonRef = sortedSeasonsRef[0];
-                    const firstSeasonEpisodesRef = firstSeasonRef
-                        ? ((await S.apiRequest(`Shows/${series.Id}/Episodes?seasonId=${firstSeasonRef.Id}`)).body?.Items ?? []).map(e => e.Id)
-                        : [];
+                    const firstSeasonEpisodesRef = firstSeasonRef ?
+                        ((await S.apiRequest(`Shows/${series.Id}/Episodes?seasonId=${firstSeasonRef.Id}`)).body?.Items ?? []).map(e => e.Id) :
+                        [];
 
                     // Current UI (2026-09): the series detail page renders each season as an ordinary card
                     // (`.card[data-id][data-type="Season"]`) inside `#childrenContent`, not as `.seasonTabs`/
@@ -883,7 +1042,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // A4 — sort orders
-    if (!aborted) {
+    if (!aborted && want('A4')) {
         await step('A4: sort orders', async () => {
             try {
                 // Upstream's Sort control (SortButton.tsx) is a MUI popover: a button titled "Sort" opens a
@@ -970,7 +1129,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         await harnessSide.networkIdle();
     };
 
-    if (!aborted) {
+    if (!aborted && want('A5')) {
         await step('A5: filters', async () => {
             try {
                 const genresRef = (await S.apiRequest(`Genres?ParentId=${moviesViewId}`)).body?.Items ?? [];
@@ -1024,7 +1183,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // A6 — collections/boxsets
-    if (!aborted && !quick) {
+    if (!aborted && !quick && want('A6')) {
         await step('A6: collections', async () => {
             try {
                 const refSet = (await S.apiRequest('Items?IncludeItemTypes=BoxSet&Recursive=true')).body?.Items?.map(i => i.Id) ?? [];
@@ -1060,7 +1219,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // A7 — non-Latin titles
-    if (!aborted) {
+    if (!aborted && want('A7')) {
         await step('A7: non-Latin titles', async () => {
             try {
                 const nonLatinPattern = /[^ -ɏ]/;
@@ -1132,7 +1291,15 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         return {
             title: text(root.querySelector('.itemName')),
             parentTitle: text(root.querySelector('.parentItemName')),
-            miscInfo: Array.from(root.querySelectorAll('.itemMiscInfo')).map(text).join(' | '),
+            // "Ends at" is the clock time plus the remaining runtime, so two reads a few seconds apart straddle a minute
+            // boundary and differ (P7.S11 triage: the 2026-09-22 B4 mismatch). It is compared separately, with the read
+            // time, and left out of the static badge and misc-info comparison.
+            miscInfo: Array.from(root.querySelectorAll('.itemMiscInfo')).map(node => Array.from(node.querySelectorAll('.mediaInfoItem:not(.endsAt)')).map(text).join(' ') || text(node)).join(' | '),
+            endsAt: text(root.querySelector('.mediaInfoItem.endsAt')) || null,
+            readAt: Date.now(),
+            audioOptions: Array.from(root.querySelectorAll('select.selectAudio option')).map(o => o.value + ':' + o.textContent.trim()),
+            subtitleOptions: Array.from(root.querySelectorAll('select.selectSubtitles option')).map(o => o.value + ':' + o.textContent.trim()),
+            videoOptions: Array.from(root.querySelectorAll('select.selectVideo option')).map(o => o.value + ':' + o.textContent.trim()),
             officialRating: text(root.querySelector('.mediaInfoOfficialRating')),
             communityRating: text(root.querySelector('.starRatingContainer')),
             criticRating: text(root.querySelector('.mediaInfoCriticRating')),
@@ -1145,7 +1312,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             castIds: Array.from(castContainer?.querySelectorAll('.card[data-id]') ?? [])
                 .filter(node => node.getClientRects().length > 0)
                 .map(n => n.dataset.id),
-            mediaInfoBadges: Array.from(root.querySelectorAll('.mediaInfoItem')).map(text),
+            mediaInfoBadges: Array.from(root.querySelectorAll('.mediaInfoItem:not(.endsAt)')).map(text),
             primarySrc: root.querySelector('.detailImageContainer .cardImageContainer, .detailImageContainer img')?.style?.backgroundImage
             ?? root.querySelector('.detailImageContainer img')?.getAttribute('src') ?? null,
             backdropSrc: root.querySelector('#itemBackdrop')?.style?.backgroundImage ?? null,
@@ -1169,6 +1336,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
     // B0 — the sample, chosen deterministically per PARITY.md.
     let b0Sample = [];
+    let namedItems = [];
     if (!aborted) {
         await step('B0: choose detail/playback sample', async () => {
             try {
@@ -1177,6 +1345,12 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 const nonLatinPattern = /[^ -ɏ]/;
                 const nonLatin = moviesSorted.filter(i => nonLatinPattern.test(i.Name)).slice(0, 3);
                 for (const item of nonLatin) picked.add(item.Id);
+                // The named titles (the stale 2026-09-22 run's) are always in the sample.
+                namedItems = namedTitles.map(name => moviesSorted.find(i => i.Name === name)).filter(Boolean);
+                for (const name of namedTitles.filter(name => !moviesSorted.some(i => i.Name === name))) {
+                    pushRow('B0', 'Detail sample', `Named title "${name}"`, 'not found', 'not found', 'SKIPPED', 'no Movie with exactly this Name in the Movies library');
+                }
+                for (const item of namedItems) picked.add(item.Id);
                 const twoVersion = moviesSorted.find(i => (i.MediaSources?.length ?? 0) >= 2 || i.Id === fixedTwoVersionId);
                 if (twoVersion) picked.add(twoVersion.Id);
                 let i = 0;
@@ -1185,7 +1359,9 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     picked.add(moviesSorted[index]?.Id);
                     i++;
                 }
-                b0Sample = moviesSorted.filter(item => picked.has(item.Id)).slice(0, Math.max(sampleSize, nonLatin.length + (twoVersion ? 1 : 0)));
+                b0Sample = moviesSorted.filter(item => picked.has(item.Id)).slice(0, Math.max(sampleSize, nonLatin.length + namedItems.length + (twoVersion ? 1 : 0)));
+                // slice() above keeps Id order; make sure no named title fell off the end.
+                for (const item of namedItems) if (!b0Sample.includes(item)) b0Sample.push(item);
                 report.header.b0Sample = b0Sample.map(i => ({ Id: i.Id, Name: i.Name }));
                 pushRow('B0', 'Detail sample', `Sample chosen: ${b0Sample.length} movies + ${a2.tv.ref.length} series`, JSON.stringify(b0Sample.map(i => i.Id)), 'same sample (data-level, both sides read the same ids)', 'RECORDED');
             } catch (error) {
@@ -1195,7 +1371,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // B1, B2, B3 — metadata, artwork, cast
-    if (!aborted) {
+    if (!aborted && want('B')) {
         await step('B1/B2/B3: metadata, artwork, cast', async () => {
             try {
                 const sampleItems = quick ? b0Sample.slice(0, 3) : b0Sample;
@@ -1252,7 +1428,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // B4 — media info
-    if (!aborted) {
+    if (!aborted && want('B')) {
         await step('B4: media info', async () => {
             try {
                 const sampleItems = quick ? b0Sample.slice(0, 3) : b0Sample;
@@ -1260,16 +1436,44 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     const apiRef = (await S.apiRequest(`Items/${item.Id}?Fields=MediaSources,MediaStreams`)).body;
                     await S.navigate(baseS + '#/details?id=' + item.Id);
                     await S.networkIdle();
-                    const badgesS = (await readDetailFields(S)).mediaInfoBadges;
+                    const fieldsS = await readDetailFields(S);
                     await M.navigate(baseM + '#/details?id=' + item.Id);
                     await M.networkIdle();
-                    const badgesM = (await readDetailFields(M)).mediaInfoBadges;
-                    const streamSummary = (apiRef?.MediaSources ?? [])[0];
-                    const apiSummary = streamSummary ? `${streamSummary.Container} ${(streamSummary.MediaStreams ?? []).find(s => s.Type === 'Video')?.Codec ?? ''} ${(streamSummary.MediaStreams ?? []).find(s => s.Type === 'Video')?.Width ?? ''}x${(streamSummary.MediaStreams ?? []).find(s => s.Type === 'Video')?.Height ?? ''}` : 'n/a';
-                    if (JSON.stringify(badgesS) === JSON.stringify(badgesM)) {
-                        pushRow('B4', 'Media info', `${item.Name} (${item.Id}): media info badges`, badgesS.join(' / '), badgesM.join(' / '), 'PASS');
-                    } else {
-                        pushRow('B4', 'Media info', `${item.Name} (${item.Id}): media info badges`, badgesS.join(' / '), badgesM.join(' / '), 'FAIL', `api reference: ${apiSummary}`);
+                    const fieldsM = await readDetailFields(M);
+                    const streams = apiRef?.MediaSources?.[0]?.MediaStreams ?? [];
+                    const video = streams.find(stream => stream.Type === 'Video');
+                    const apiSummary = `${apiRef?.MediaSources?.[0]?.Container ?? 'n/a'} ${video?.Codec ?? ''} ${video?.Width ?? ''}x${video?.Height ?? ''} ${video?.VideoRange ?? ''}`;
+                    const apiAudio = streams.filter(stream => stream.Type === 'Audio').map(stream => String(stream.Index));
+                    const apiSubs = streams.filter(stream => stream.Type === 'Subtitle').map(stream => String(stream.Index));
+                    const evidence = { itemId: item.Id, title: item.Name, api: { summary: apiSummary, audio: apiAudio, subtitles: apiSubs }, stock: fieldsS, mod: fieldsM };
+                    const evidenceFile = `evidence/B4-${item.Id}.json`;
+                    await writeScrubbed(path.join(outDir, evidenceFile), evidence);
+                    const badgesEqual = JSON.stringify(fieldsS.mediaInfoBadges) === JSON.stringify(fieldsM.mediaInfoBadges);
+                    pushRow('B4', 'Media info', `${item.Name} (${item.Id}): media info badges (Ends at excluded)`, fieldsS.mediaInfoBadges.join(' / '), fieldsM.mediaInfoBadges.join(' / '), badgesEqual ? 'PASS' : 'FAIL',
+                        badgesEqual ? undefined : `api reference: ${apiSummary}\nevidence: ${evidenceFile}`);
+                    // Ends at: each side's value must equal its own read time plus the runtime, to the minute.
+                    const minutesOf = label => {
+                        const match = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(label ?? '');
+                        if (!match) return null;
+                        let hours = Number(match[1]) % 12;
+                        if (match[3]?.toUpperCase() === 'PM') hours += 12;
+                        if (!match[3]) hours = Number(match[1]);
+                        return hours * 60 + Number(match[2]);
+                    };
+                    const remainingMinutes = Math.round(((apiRef?.RunTimeTicks ?? 0) - (apiRef?.UserData?.PlaybackPositionTicks ?? 0)) / 6e8);
+                    const expected = at => { const d = new Date(at + remainingMinutes * 60000); return d.getHours() * 60 + d.getMinutes(); };
+                    const endsOk = fields => fields.endsAt === null || Math.abs(minutesOf(fields.endsAt) - expected(fields.readAt)) <= 1;
+                    if (fieldsS.endsAt !== null || fieldsM.endsAt !== null) {
+                        pushRow('B4', 'Media info', `${item.Name} (${item.Id}): "Ends at" equals read time + runtime (±1 min)`, `${fieldsS.endsAt} @${new Date(fieldsS.readAt).toISOString().slice(11, 19)}Z`, `${fieldsM.endsAt} @${new Date(fieldsM.readAt).toISOString().slice(11, 19)}Z`,
+                            !!fieldsS.endsAt === !!fieldsM.endsAt && endsOk(fieldsS) && endsOk(fieldsM) ? 'PASS' : 'FAIL', `evidence: ${evidenceFile}`);
+                    }
+                    // Stream lists offered on the detail page, against each other and against the API's indexes.
+                    for (const [label, key, api] of [['audio streams', 'audioOptions', apiAudio], ['subtitle streams', 'subtitleOptions', apiSubs]]) {
+                        const equal = JSON.stringify(fieldsS[key]) === JSON.stringify(fieldsM[key]);
+                        const indexes = fieldsM[key].map(option => option.split(':')[0]).filter(value => value !== '-1');
+                        const matchesApi = !fieldsM[key].length || JSON.stringify(indexes) === JSON.stringify(api);
+                        pushRow('B4', 'Media info', `${item.Name} (${item.Id}): ${label} offered (detail select)`, fieldsS[key].join(' / ') || '(none)', fieldsM[key].join(' / ') || '(none)',
+                            equal && matchesApi ? 'PASS' : (equal ? 'SHARED-GAP' : 'FAIL'), equal && matchesApi ? undefined : `api indexes: ${api.join(',')}\nevidence: ${evidenceFile}`);
                     }
                 }
             } catch (error) {
@@ -1278,14 +1482,23 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         });
     }
 
+    /** The first series by Id that has at least one season with two or more episodes (B5, B6 need one). */
+    const firstSeriesWithSeasons = async () => {
+        for (const series of [...a2.tv.ref].sort((x, y) => x.Id.localeCompare(y.Id))) {
+            const episodes = (await S.apiRequest(`Shows/${series.Id}/Episodes`)).body?.Items ?? [];
+            if (episodes.length >= 2 && episodes.some(episode => episode.SeasonId)) return series;
+        }
+        return [...a2.tv.ref].sort((x, y) => x.Id.localeCompare(y.Id))[0];
+    };
+
     // B5 — episode lists and season navigation (uses the A3 sample; skipped if A3 found nothing usable)
-    if (!aborted && !quick) {
+    if (!aborted && !quick && want('B')) {
         await step('B5: episode lists and season navigation', async () => {
             try {
                 if (!a2.tv.ref.length) {
                     pushRow('B5', 'Episodes/Seasons', 'B5', 'n/a', 'n/a', 'SKIPPED', 'no TV series in this library');
                 } else {
-                    const series = [...a2.tv.ref].sort((x, y) => x.Id.localeCompare(y.Id))[0];
+                    const series = await firstSeriesWithSeasons();
                     const seasonsRef = (await S.apiRequest(`Shows/${series.Id}/Seasons`)).body?.Items ?? [];
                     if (!seasonsRef.length) {
                         pushRow('B5', 'Episodes/Seasons', `${series.Name}: seasons`, 'n/a', 'n/a', 'SKIPPED', 'series has no seasons via API');
@@ -1295,7 +1508,11 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                             await harnessSide.networkIdle();
                             const seasonSelectValues = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.selectSeason option, [data-id].emby-select-option'))
                                 .map(o => o.value ?? o.dataset.id).filter(Boolean));
-                            const episodeIds = await harnessSide.shownIds();
+                            // Seasons and episodes only: the page also renders "More like this" series cards, whose
+                            // selection the server varies between requests (P7.S11 triage).
+                            const episodeIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.page:not(.hide) [data-id][data-type="Season"], .page:not(.hide) [data-id][data-type="Episode"]'))
+                                .filter(node => node.getClientRects().length > 0)
+                                .map(node => node.dataset.id.replace(/-/g, '').toLowerCase()));
                             return { seasonSelectValues, episodeIds };
                         };
                         const navS = await readSeasonNav(S);
@@ -1313,13 +1530,13 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // B6 — continue watching and next up
-    if (!aborted) {
+    if (!aborted && want('B')) {
         await step('B6: continue watching and next up', async () => {
             try {
                 if (!a2.tv.ref.length || b0Sample.length === 0) {
                     pushRow('B6', 'Home rows', 'B6', 'n/a', 'n/a', 'SKIPPED', 'no series or no sampled movie available to seed state');
                 } else {
-                    const series = [...a2.tv.ref].sort((x, y) => x.Id.localeCompare(y.Id))[0];
+                    const series = await firstSeriesWithSeasons();
                     const episodesRef = (await S.apiRequest(`Shows/${series.Id}/Episodes`)).body?.Items ?? [];
                     if (episodesRef.length < 2) {
                         pushRow('B6', 'Home rows', 'B6', 'n/a', 'n/a', 'SKIPPED', `${series.Name} has fewer than 2 episodes`);
@@ -1339,7 +1556,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                             await harnessSide.networkIdle();
                             return harnessSide.page.evaluate(() => {
                                 const rowIds = label => {
-                                    const title = Array.from(document.querySelectorAll('.sectionTitle')).find(node => new RegExp('^' + label + '$', 'i').test(node.textContent.trim()));
+                                    const title = Array.from(document.querySelectorAll('.page:not(.hide) .sectionTitle')).find(node => new RegExp('^' + label + '$', 'i').test(node.textContent.trim()));
                                     const section = title?.closest('.verticalSection') ?? title?.parentElement?.parentElement;
                                     return Array.from(section?.querySelectorAll('.card[data-id]') ?? []).map(c => c.dataset.id);
                                 };
@@ -1348,11 +1565,21 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         };
                         const rowsS = await readHomeRows(S);
                         const rowsM = await readHomeRows(M);
-                        const cwDiff = describeSetDiff('B6 Continue Watching', rowsS.continueWatching, rowsM.continueWatching);
-                        const nuDiff = describeSetDiff('B6 Next Up', rowsS.nextUp, rowsM.nextUp);
-                        pushRow('B6', 'Home rows', 'Continue Watching row', rowsS.continueWatching.length, rowsM.continueWatching.length,
-                            cwDiff.equal && normSet(rowsS.continueWatching).has(normId(target.Id)) ? 'PASS' : 'FAIL', cwDiff.text);
-                        pushRow('B6', 'Home rows', 'Next Up row', rowsS.nextUp.length, rowsM.nextUp.length, nuDiff.equal ? 'PASS' : 'FAIL', nuDiff.text);
+                        // The mod Home merges Continue watching and Next up into one row by design (UX.md, 2026-09-04,
+                        // "Continue watching + Next up become one row"). Stock's two rows must both be inside the mod's
+                        // merged row, and the merged row must hold nothing the server does not list as resumable or next up.
+                        const stockUnion = [...rowsS.continueWatching, ...rowsS.nextUp];
+                        const nextUpAll = (await S.apiRequest('Shows/NextUp?limit=100')).body?.Items?.map(i => i.Id) ?? [];
+                        const resumeAll = (await S.apiRequest('UserItems/Resume?limit=100&mediaTypes=Video')).body?.Items?.map(i => i.Id) ?? [];
+                        const allowed = normSet([...nextUpAll, ...resumeAll]);
+                        const modSet = normSet(rowsM.continueWatching);
+                        const missing = [...normSet(stockUnion)].filter(id => !modSet.has(id));
+                        const unexpected = [...modSet].filter(id => !allowed.has(id));
+                        const merged = !missing.length && !unexpected.length && modSet.has(normId(target.Id)) && rowsM.nextUp.length === 0;
+                        pushRow('B6', 'Home rows', 'Continue Watching + Next Up (mod merges them into one row, UX 2026-09-04)',
+                            `CW ${rowsS.continueWatching.length} + Next Up ${rowsS.nextUp.length}`, `merged ${rowsM.continueWatching.length}, separate Next Up ${rowsM.nextUp.length}`,
+                            merged ? 'PASS' : 'FAIL', merged ? undefined : JSON.stringify({ missingFromMod: missing, notResumableOrNextUp: unexpected, seededTargetInMod: modSet.has(normId(target.Id)) }));
+                        void resumeRef; void nextUpRef;
                     }
                 }
             } catch (error) {
@@ -1363,7 +1590,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
     // B7 — version selector (the two-version title)
     let twoVersionItem = null;
-    if (!aborted) {
+    if (!aborted && (want('B') || want('C'))) {
         await step('B7: version selector', async () => {
             try {
                 // a2.movies.ref only carries Fields=ProviderIds (A2 doesn't need MediaSources), so detecting
@@ -1382,7 +1609,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     const readVersions = async harnessSide => {
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + apiItem.Id);
                         await harnessSide.networkIdle();
-                        return harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('select.selectSource option')).map(o => ({ value: o.value, label: o.textContent.trim() })));
+                        return harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.page:not(.hide) select.selectSource option')).map(o => ({ value: o.value, label: o.textContent.trim() })));
                     };
                     const versionsS = await readVersions(S);
                     const versionsM = await readVersions(M);
@@ -1419,11 +1646,8 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
  * Returns the last-seen value regardless of whether it ever matched, so a failure still reports
  * what the server actually settled on.
  */
-    const pollSessionStreamIndex = (harnessSide, itemId, field, targetIndex, { timeout = 12000, interval = 500 } = {}) =>
-        poll(async () => {
-            const sessions = (await harnessSide.apiRequest('Sessions')).body ?? [];
-            return sessions.find(s => normId(s.NowPlayingItem?.Id ?? '') === normId(itemId))?.PlayState?.[field] ?? null;
-        }, value => value === targetIndex, { timeout, interval });
+    const pollSessionStreamIndex = (harnessSide, field, targetIndex, { timeout = 12000, interval = 500 } = {}) =>
+        poll(async () => (await sessionState(harnessSide).catch(() => null))?.playState?.[field] ?? null, value => value === targetIndex, { timeout, interval });
 
     /** Reveals the OSD the way a mouse or remote would, then waits briefly for controls to paint. */
     const revealOsd = async harnessSide => {
@@ -1439,7 +1663,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     // actionability-gated `.click()` can hang on these `is="emby-button"` custom elements.
 
     let fixtures = {};
-    if (!aborted) {
+    if (!aborted && want('C')) {
         await step('C0: fixture selection', async () => {
             try {
                 const moviesFull = await pageAllItems(S, `Items?ParentId=${moviesViewId}&Recursive=true&IncludeItemTypes=Movie&Fields=MediaSources,MediaStreams,Path`);
@@ -1491,7 +1715,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 }
 
                 report.header.fixtures = fixtures;
-                await fs.writeFile(path.join(outDir, 'fixtures.json'), JSON.stringify(fixtures, null, 2));
+                await writeScrubbed(path.join(outDir, 'fixtures.json'), fixtures);
                 pushRow('C0', 'Playback', `Fixtures chosen: ${Object.keys(fixtures).join(', ')}`, 'n/a', 'n/a', 'RECORDED');
             } catch (error) {
                 pushRow('C0', 'Playback', 'C0 fixture selection', 'n/a', 'n/a', 'FAIL', error.message);
@@ -1499,191 +1723,363 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         });
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Playback evidence (P7.S11 parity triage): every playback row carries the server's session state, the video
+    // element's track state and the network requests of its step, so a failure can be classified as (a) harness,
+    // (b) identical on stock or (c) mod-only from the evidence alone.
+    // ---------------------------------------------------------------------------------------------
+    const pathOf = entry => { try { return new URL(entry.url).pathname; } catch { return ''; } };
+    const isSessionReport = entry => entry.method === 'POST' && /^\/Sessions\/Playing(\/Progress|\/Stopped)?$/.test(pathOf(entry));
+    const isStreamRequest = entry => /\/videos\/[^/]+\/(stream(\.\w+)?|master\.m3u8|main\.m3u8)$/i.test(pathOf(entry));
+    const isEvidenceRequest = entry => isSessionReport(entry) || isStreamRequest(entry)
+        || /\/PlaybackInfo$|\/Subtitles\/|\/Items\/[^/]+\/PlaybackInfo|\/UserPlayedItems\/|\/UserItems\/[^/]+\/UserData/i.test(pathOf(entry));
+    const REPORT_FIELDS = ['ItemId', 'MediaSourceId', 'PlayMethod', 'AudioStreamIndex', 'SubtitleStreamIndex', 'PositionTicks', 'IsPaused', 'EventName', 'CanSeek'];
+    const requestsSince = (harnessSide, since, until = Date.now()) => harnessSide.requestLog
+        .filter(entry => entry.t >= since && entry.t <= until && isEvidenceRequest(entry))
+        .map(entry => {
+            const summary = { t: entry.t - since, method: entry.method, url: scrubUrl(entry.url), status: entry.status };
+            if (isSessionReport(entry)) {
+                const body = parsePostData(entry) ?? {};
+                summary.body = Object.fromEntries(REPORT_FIELDS.filter(key => key in body).map(key => [key, body[key]]));
+            }
+            return summary;
+        });
+    let skipForwardCache;
+    /** The signed-in user's own skip-forward length (upstream default 30 s), which is what one ArrowRight skips. */
+    const skipForwardSeconds = async () => {
+        if (skipForwardCache === undefined) {
+            const prefs = (await S.apiRequest(`DisplayPreferences/usersettings?userId=${userId}&client=emby`)).body;
+            skipForwardCache = Number(prefs?.CustomPrefs?.skipForwardLength ?? 30000) / 1000;
+        }
+        return skipForwardCache;
+    };
+    const deviceIdOf = harnessSide => harnessSide.page.evaluate(() => window.ApiClient.deviceId());
+    /** This browser's own session only (`Sessions?deviceId=`), so no other user's session is ever read. */
+    const sessionState = async harnessSide => {
+        const deviceId = await deviceIdOf(harnessSide);
+        const sessions = (await harnessSide.apiRequest('Sessions?deviceId=' + encodeURIComponent(deviceId))).body ?? [];
+        const session = Array.isArray(sessions) ? sessions[0] : null;
+        if (!session) return null;
+        const play = session.PlayState ?? {};
+        const transcode = session.TranscodingInfo;
+        return {
+            nowPlayingItemId: session.NowPlayingItem?.Id ?? null,
+            playState: {
+                PositionTicks: play.PositionTicks ?? null, IsPaused: play.IsPaused ?? null, PlayMethod: play.PlayMethod ?? null,
+                MediaSourceId: play.MediaSourceId ?? null, AudioStreamIndex: play.AudioStreamIndex ?? null,
+                SubtitleStreamIndex: play.SubtitleStreamIndex ?? null, CanSeek: play.CanSeek ?? null
+            },
+            transcodingInfo: transcode ? {
+                Container: transcode.Container, VideoCodec: transcode.VideoCodec, AudioCodec: transcode.AudioCodec,
+                IsVideoDirect: transcode.IsVideoDirect, IsAudioDirect: transcode.IsAudioDirect, Width: transcode.Width,
+                Height: transcode.Height, Framerate: transcode.Framerate, CompletionPercentage: transcode.CompletionPercentage,
+                HardwareAccelerationType: transcode.HardwareAccelerationType, TranscodeReasons: transcode.TranscodeReasons ?? []
+            } : null
+        };
+    };
+    const videoState = harnessSide => harnessSide.page.evaluate(() => {
+        const video = document.querySelector('video.htmlvideoplayer') ?? document.querySelector('video');
+        if (!video) return null;
+        const overlay = document.querySelector('.videoSubtitlesInner');
+        return {
+            currentTime: Math.round(video.currentTime * 10) / 10,
+            duration: Number.isFinite(video.duration) ? Math.round(video.duration) : String(video.duration),
+            paused: video.paused, seeking: video.seeking, ended: video.ended, readyState: video.readyState,
+            networkState: video.networkState, error: video.error ? video.error.code + ' ' + (video.error.message ?? '') : null,
+            srcKind: video.currentSrc ? video.currentSrc.split(':')[0] : null,
+            audioTracks: video.audioTracks ?
+                Array.from(video.audioTracks).map(track => ({ id: track.id, label: track.label, language: track.language, enabled: track.enabled })) :
+                'unsupported by this browser',
+            textTracks: Array.from(video.textTracks).map(track => ({
+                kind: track.kind, label: track.label, language: track.language, mode: track.mode,
+                cues: track.cues?.length ?? null, activeCues: track.activeCues?.length ?? null,
+                activeText: track.activeCues?.length ? String(track.activeCues[0].text ?? '').slice(0, 60) : null
+            })),
+            overlayText: overlay ? overlay.textContent.trim().slice(0, 60) : null
+        };
+    });
+    const urlParam = (raw, name) => {
+        try {
+            for (const [key, value] of new URL(raw).searchParams) if (key.toLowerCase() === name.toLowerCase()) return value;
+        } catch { /* not a URL */ }
+        return null;
+    };
+    const latestStreamParams = (harnessSide, since) => {
+        const streams = harnessSide.requestLog.filter(entry => entry.t >= since && isStreamRequest(entry));
+        const last = streams.at(-1);
+        if (!last) return null;
+        const url = new URL(last.url);
+        const param = name => {
+            for (const [key, value] of url.searchParams) if (key.toLowerCase() === name.toLowerCase()) return value;
+            return null;
+        };
+        return {
+            path: scrubUrl(last.url).split('?')[0],
+            shape: /static=true/i.test(last.url) ? 'static' : (/m3u8/i.test(last.url) ? 'hls' : 'other'),
+            AudioStreamIndex: param('AudioStreamIndex'), SubtitleStreamIndex: param('SubtitleStreamIndex'),
+            SubtitleMethod: param('SubtitleMethod'), VideoCodec: param('VideoCodec'), AudioCodec: param('AudioCodec'),
+            TranscodeReasons: param('TranscodeReasons'), requestsSoFar: streams.length
+        };
+    };
+    const snapshot = async (harnessSide, since) => ({
+        session: await sessionState(harnessSide).catch(error => ({ error: error.message })),
+        video: await videoState(harnessSide).catch(error => ({ error: error.message })),
+        stream: latestStreamParams(harnessSide, since),
+        requests: requestsSince(harnessSide, since)
+    });
     /**
- * Runs the full per-fixture procedure (§5.1) on one side and returns a capture object. `itemId` is
- * the item to open; `mediaSourceId` (optional) is explicitly selected via the version `<select>`
- * first, for C-TWOVER.
- */
-    const playFixtureOnSide = async (harnessSide, itemId, { mediaSourceId, hasMultiAudio, hasEmbedSub, hasExtSub, seekOnly } = {}) => {
-        const capture = { side: harnessSide.label };
+     * Playing means the element has data, is not paused, and its clock moves. A title that never gets there within
+     * `limit` is NOT VERIFIED (a transcode on the Pi may simply not keep up), never PASS.
+     */
+    const waitPlaying = async (harnessSide, limit) => {
+        const deadline = Date.now() + limit;
+        let previous = null;
+        while (Date.now() < deadline) {
+            const state = await videoState(harnessSide).catch(() => null);
+            if (state && !state.paused && !state.seeking && state.readyState >= 3 && previous && state.currentTime > previous.currentTime) {
+                return { playing: true, state };
+            }
+            previous = state;
+            await sleep(1000);
+        }
+        return { playing: false, state: previous };
+    };
+    /** Seeks through the OSD's own position slider, the control a user drags (videoosd `change` -> seekPercent). */
+    const seekWithSlider = async (harnessSide, percent) => {
+        await revealOsd(harnessSide);
+        return harnessSide.page.evaluate(value => {
+            const slider = document.querySelector('.osdPositionSlider');
+            if (!slider) return false;
+            slider.value = String(value);
+            slider.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        }, percent);
+    };
+    /** First subtitle cue at least `afterTicks` into the file, from the server's own rendering of the track. */
+    const firstCueAfter = async (harnessSide, itemId, mediaSourceId, streamIndex, afterTicks) => {
+        const events = (await harnessSide.apiRequest(`Videos/${itemId}/${mediaSourceId}/Subtitles/${streamIndex}/0/Stream.js`).catch(() => ({ body: null }))).body?.TrackEvents ?? [];
+        return events.find(event => event.StartPositionTicks >= afterTicks && String(event.Text ?? '').trim()) ?? null;
+    };
+    const renderState = harnessSide => harnessSide.page.evaluate(() => {
+        const overlay = document.querySelector('.videoSubtitlesInner');
+        const video = document.querySelector('video.htmlvideoplayer') ?? document.querySelector('video');
+        const tracks = video ? Array.from(video.textTracks) : [];
+        return {
+            overlayNonEmpty: !!overlay && overlay.textContent.trim().length > 0,
+            nativeActive: tracks.some(track => track.mode === 'showing' && track.activeCues && track.activeCues.length > 0),
+            anyShowing: tracks.some(track => track.mode === 'showing')
+        };
+    });
+    const openSheetAndPick = async (harnessSide, buttonSelector, pickId) => {
+        await revealOsd(harnessSide);
+        const button = harnessSide.page.locator(buttonSelector + ':visible').first();
+        if (!await button.count()) return { error: buttonSelector + ' not present' };
+        await nativeClick(button);
+        const items = harnessSide.page.locator('.actionSheetMenuItem');
+        await items.first().waitFor({ state: 'visible', timeout: 8000 }).catch(ignore);
+        const options = await items.evaluateAll(nodes => nodes.map(node => ({ id: node.getAttribute('data-id'), text: node.textContent.trim().slice(0, 60) })));
+        const targetId = pickId(options);
+        if (targetId === null || targetId === undefined) {
+            await harnessSide.page.keyboard.press('Escape');
+            return { options, error: 'no eligible entry' };
+        }
+        // Always by data-id, never by position (the action-sheet trap).
+        await nativeClick(harnessSide.page.locator(`.actionSheetMenuItem[data-id="${targetId}"]`).first());
+        return { options, targetId };
+    };
+
+    /**
+     * Runs the per-fixture procedure (§5.1) on one side and returns a capture with the evidence of every step.
+     * Seek is ArrowRight x10 (videoosd -> fastForward). The resume position is set with the Digit2 key (videoosd ->
+     * seekPercent(20)) so it clears the server's MinResumePct: a stop a few minutes into a long film writes no resume
+     * point at all on either entry, which the 2026-09-22 run read as a resume failure.
+     */
+    const playFixtureOnSide = async (harnessSide, itemId, { mediaSourceId, hasMultiAudio, hasSubs, seekOnly, runtimeTicks } = {}) => {
+        const capture = { side: harnessSide.label, evidence: {}, timedOut: {} };
+        const t0 = Date.now();
         await harnessSide.navigate(harnessSide.base + '#/details?id=' + itemId);
         await harnessSide.networkIdle();
         if (mediaSourceId) {
-            const select = harnessSide.page.locator('select.selectSource');
-            if (await select.count()) {
-                await select.selectOption(mediaSourceId).catch(() => {});
+            const select = harnessSide.page.locator('.page:not(.hide) select.selectSource');
+            if (await select.count() && await select.evaluate(node => node.options.length > 1)) {
+                await select.selectOption(mediaSourceId).catch(ignore);
                 await sleep(300);
             }
         }
-        const t0 = Date.now();
-        const playButton = harnessSide.page.locator('.btnPlay:visible').first();
-        await nativeClick(playButton);
-        await harnessSide.page.waitForSelector('video', { timeout: 30000 });
-        const playingReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing', { since: t0, timeout: 20000 });
+        capture.detailBefore = { playTitle: await harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first().getAttribute('title').catch(() => null) };
+        const playMarker = Date.now();
+        await nativeClick(harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first());
+        await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(ignore);
+        const playingReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing', { since: playMarker, timeout: startLimitMs });
         const playingBody = playingReq ? parsePostData(playingReq) : null;
-        capture.playingCount = harnessSide.requestLog.filter(e => e.t >= t0 && e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing').length;
         capture.itemId = playingBody?.ItemId ?? null;
         capture.mediaSourceId = playingBody?.MediaSourceId ?? null;
         capture.playMethod = playingBody?.PlayMethod ?? null;
         capture.audioStreamIndex = playingBody?.AudioStreamIndex ?? null;
         capture.subtitleStreamIndex = playingBody?.SubtitleStreamIndex ?? null;
-        capture.playSessionId = playingBody?.PlaySessionId ?? null;
+        const started = await waitPlaying(harnessSide, startLimitMs);
+        capture.started = started.playing;
+        capture.startSeconds = seconds(Date.now() - playMarker);
+        capture.evidence.start = await snapshot(harnessSide, playMarker);
+        capture.playingCount = harnessSide.requestLog.filter(e => e.t >= playMarker && e.method === 'POST' && pathOf(e) === '/Sessions/Playing').length;
+        capture.serverPlayMethod = capture.evidence.start.session?.playState?.PlayMethod ?? null;
+        capture.serverTranscodingInfo = capture.evidence.start.session?.transcodingInfo ?? null;
+        capture.streamShape = capture.evidence.start.stream?.shape ?? 'unknown';
 
-        await sleep(500);
-        const sessions = (await harnessSide.apiRequest('Sessions')).body ?? [];
-        const nowPlaying = sessions.find(s => s.NowPlayingItem?.Id && normId(s.NowPlayingItem.Id) === normId(itemId)) ?? sessions[0];
-        capture.serverPlayMethod = nowPlaying?.PlayState?.PlayMethod ?? null;
-        capture.serverTranscodingInfo = nowPlaying?.TranscodingInfo ? {
-            isVideoDirect: nowPlaying.TranscodingInfo.IsVideoDirect,
-            isAudioDirect: nowPlaying.TranscodingInfo.IsAudioDirect,
-            reasons: nowPlaying.TranscodingInfo.TranscodeReasons ?? []
-        } : null;
-
-        const streamReq = harnessSide.requestLog.find(e => e.t >= t0 && /\/Videos\/.*\/(stream|main\.m3u8|master\.m3u8|hls1)/i.test(e.url));
-        capture.streamShape = streamReq ? (/static=true/i.test(streamReq.url) ? 'static' : (/m3u8|hls1/i.test(streamReq.url) ? 'hls' : 'other')) : 'unknown';
-
-        // Seek: reveal OSD, ArrowRight x10.
-        const beforeTime = await harnessSide.page.evaluate(() => document.querySelector('video')?.currentTime ?? null);
-        await revealOsd(harnessSide);
-        const seekMarker = Date.now();
-        for (let i = 0; i < 10; i++) await harnessSide.page.keyboard.press('ArrowRight');
-        await sleep(1500);
-        const afterTime = await harnessSide.page.evaluate(() => document.querySelector('video')?.currentTime ?? null);
-        const progressAfterSeek = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Progress', { since: seekMarker, timeout: 8000 });
-        capture.seek = { before: beforeTime, after: afterTime, delta: (afterTime ?? 0) - (beforeTime ?? 0), reported: !!progressAfterSeek, reportedPositionTicks: progressAfterSeek ? parsePostData(progressAfterSeek)?.PositionTicks ?? null : null };
-
-        if (hasMultiAudio && !seekOnly) {
+        if (capture.started) {
+            // Seek: ArrowRight x10 through the OSD, at a human pace. Upstream computes each skip from the player's last
+            // reported position, so presses fired back to back coalesce into one skip on both entries (seen on
+            // 2026-09-24: ten instant presses moved 5 s, not 50 s). Each press waits for its seek to land.
+            const seekMarker = Date.now();
+            const skipSeconds = await skipForwardSeconds();
+            const beforeTime = (await videoState(harnessSide))?.currentTime ?? null;
             await revealOsd(harnessSide);
-            const audioBtn = harnessSide.page.locator('.btnAudio:visible').first();
-            if (await audioBtn.count()) {
+            const jumps = [];
+            let settledAll = true;
+            for (let i = 0; i < 10; i++) {
+                const before = (await videoState(harnessSide))?.currentTime ?? 0;
+                await harnessSide.page.keyboard.press('ArrowRight');
+                const landed = await poll(() => videoState(harnessSide), v => !!v && !v.seeking && v.currentTime >= before + skipSeconds - 0.5, { timeout: 30000, interval: 200 });
+                if (!landed || landed.seeking || landed.currentTime < before + skipSeconds - 0.5) settledAll = false;
+                jumps.push(Math.round(((landed?.currentTime ?? before) - before) * 10) / 10);
+            }
+            const settled = await waitPlaying(harnessSide, startLimitMs);
+            const afterTime = settled.state?.currentTime ?? null;
+            const progressAfterSeek = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Progress'
+                && (parsePostData(e)?.PositionTicks ?? 0) >= ((afterTime ?? 0) - 15) * 10000000, { since: seekMarker, timeout: 20000 });
+            const skipped = Math.round(jumps.reduce((sum, jump) => sum + Math.min(jump, skipSeconds + 1.5), 0) * 10) / 10;
+            capture.seek = {
+                skipSeconds, expected: skipSeconds * 10, skipped, jumps, before: beforeTime, after: afterTime, settledAll,
+                playingAfter: settled.playing, reported: !!progressAfterSeek,
+                reportedPositionSeconds: progressAfterSeek ? Math.round((parsePostData(progressAfterSeek)?.PositionTicks ?? 0) / 1e6) / 10 : null
+            };
+            if (!settled.playing || !settledAll) capture.timedOut.seek = true;
+            capture.evidence.seek = await snapshot(harnessSide, seekMarker);
+
+            if (hasMultiAudio && !seekOnly) {
                 const marker = Date.now();
-                await nativeClick(audioBtn);
-                const items = harnessSide.page.locator('.actionSheetMenuItem');
-                await items.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-                // Read every option's data-id (the stream Index — video/index.js showAudioTrackSelection
-                // sets `id: stream.Index`) and pick one that is NOT the currently playing index, so the
-                // click forces a genuine change instead of possibly re-selecting the same track (which
-                // Jellyfin's own code no-ops: `if (index !== currentIndex) setAudioStreamIndex(...)`).
-                const optionIds = await items.evaluateAll(nodes => nodes.map(n => n.getAttribute('data-id')));
-                const currentIndexStr = String(capture.audioStreamIndex ?? '');
-                const targetId = optionIds.find(id => id !== currentIndexStr) ?? null;
-                if (targetId !== null) {
-                    await nativeClick(harnessSide.page.locator(`.actionSheetMenuItem[data-id="${targetId}"]`).first());
-                    // Progress-ping is only how DirectPlay reports it; Transcode reloads the stream
-                    // instead (see pollSessionStreamIndex's comment), so poll the session directly.
-                    const progress = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Progress', { since: marker, timeout: 3000 });
-                    const serverIndex = await pollSessionStreamIndex(harnessSide, itemId, 'AudioStreamIndex', Number(targetId), { timeout: 15000 });
+                const current = String(capture.evidence.seek.session?.playState?.AudioStreamIndex ?? capture.audioStreamIndex ?? '');
+                const picked = await openSheetAndPick(harnessSide, '.btnAudio', options => options.map(o => o.id).find(id => /^\d+$/.test(id) && id !== current) ?? null);
+                if (picked.targetId !== undefined) {
+                    const target = Number(picked.targetId);
+                    // A switch the element cannot make in place reloads the stream (playbackmanager changeStream):
+                    // wait for that new stream request before judging, or the old stream's playback reads as
+                    // "playing after the switch" and the next step races the reload (seen 2026-09-24).
+                    const reload = await waitForRequestMatching(harnessSide, e => isStreamRequest(e) && urlParam(e.url, 'AudioStreamIndex') === String(target), { since: marker, timeout: 60000 });
+                    const serverIndex = await pollSessionStreamIndex(harnessSide, 'AudioStreamIndex', target, { timeout: 60000 });
+                    const resumed = await waitPlaying(harnessSide, startLimitMs);
+                    await sleep(1500);
+                    const stream = latestStreamParams(harnessSide, marker);
                     capture.audioSwitch = {
-                        fromIndex: capture.audioStreamIndex,
-                        targetIndex: Number(targetId),
-                        reportedIndex: progress ? parsePostData(progress)?.AudioStreamIndex ?? null : null,
-                        reported: !!progress,
-                        serverIndex,
-                        actuallyChanged: serverIndex === Number(targetId) && Number(targetId) !== capture.audioStreamIndex
+                        fromIndex: Number(current), targetIndex: target, options: picked.options, serverIndex,
+                        streamAudioStreamIndex: stream?.AudioStreamIndex ?? null, newStreamRequested: !!reload,
+                        reloadAfterMs: reload ? reload.t - marker : null,
+                        playingAfter: resumed.playing, actuallyChanged: serverIndex === target
                     };
+                    if (serverIndex !== target || !resumed.playing) capture.timedOut.audio = !resumed.playing;
                 } else {
-                    capture.audioSwitch = { skipped: 'every action-sheet entry has the same index as the currently playing track — this file cannot exercise a real switch' };
+                    capture.audioSwitch = { skipped: picked.error, options: picked.options };
                 }
-            } else {
-                capture.audioSwitch = { skipped: '.btnAudio not present' };
+                capture.evidence.audio = await snapshot(harnessSide, marker);
             }
-        }
 
-        if ((hasEmbedSub || hasExtSub) && !seekOnly) {
-            await revealOsd(harnessSide);
-            const subBtn = harnessSide.page.locator('.btnSubtitles:visible').first();
-            if (await subBtn.count()) {
+            if (hasSubs && !seekOnly) {
                 const marker = Date.now();
-                await nativeClick(subBtn);
-                const items = harnessSide.page.locator('.actionSheetMenuItem');
-                await items.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-                // "Off" always carries data-id="-1", but its POSITION moves: with a subtitle playing,
-                // a "Secondary Subtitles" entry is unshifted ahead of it. Always match on data-id.
-                // Pick a real, non-Off entry whose index genuinely differs from whatever is
-                // currently selected, same rigor as the audio switch above.
-                const optionIds = await items.evaluateAll(nodes => nodes.map(n => n.getAttribute('data-id')));
-                const currentIndexStr = String(capture.subtitleStreamIndex ?? '-1');
-                const targetId = optionIds.find(id => id !== '-1' && id !== currentIndexStr) ?? null;
-                if (targetId !== null) {
-                    await nativeClick(harnessSide.page.locator(`.actionSheetMenuItem[data-id="${targetId}"]`).first());
-                    // Progress-ping is only how DirectPlay reports it; Transcode reloads the stream
-                    // instead, so poll the session directly (see pollSessionStreamIndex's comment).
-                    const progress = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Progress', { since: marker, timeout: 3000 });
-                    const reportedIndex = progress ? parsePostData(progress)?.SubtitleStreamIndex ?? null : null;
-                    const serverIndex = await pollSessionStreamIndex(harnessSide, itemId, 'SubtitleStreamIndex', Number(targetId), { timeout: 15000 });
-                    // Seek forward to reach cues, then check for rendering by either mechanism.
-                    await harnessSide.page.keyboard.press('ArrowRight'); await harnessSide.page.keyboard.press('ArrowRight');
-                    const rendering = await poll(() => harnessSide.page.evaluate(() => {
-                        const overlay = document.querySelector('.videoSubtitlesInner');
-                        const overlayText = overlay?.textContent?.trim() ?? '';
-                        const video = document.querySelector('video');
-                        const tracks = video ? Array.from(video.textTracks) : [];
-                        const nativeShowing = tracks.find(t => t.mode === 'showing' && t.activeCues && t.activeCues.length > 0);
-                        return { overlayNonEmpty: overlayText.length > 0, nativeActive: !!nativeShowing };
-                    }), r => r.overlayNonEmpty || r.nativeActive, { timeout: 15000, interval: 500 });
-                    capture.subtitleSwitch = {
-                        fromIndex: capture.subtitleStreamIndex, targetIndex: Number(targetId), reportedIndex, reported: !!progress, serverIndex,
-                        actuallyChanged: serverIndex === Number(targetId),
-                        mechanism: rendering.overlayNonEmpty ? 'custom-overlay' : (rendering.nativeActive ? 'native-texttrack' : 'none-observed')
-                    };
-
-                    // Now Off.
-                    await nativeClick(subBtn);
-                    await items.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-                    // Select "Off" by its data-id, never by position: once a subtitle is playing,
-                    // video/index.js unshifts a "Secondary Subtitles" entry, so position 0 opens that
-                    // submenu and leaves the primary track showing — which reads exactly like a broken
-                    // Off and already produced one false "mod-only defect" report.
-                    await nativeClick(harnessSide.page.locator('.actionSheetMenuItem[data-id="-1"]').first());
-                    const serverIndexOff = await pollSessionStreamIndex(harnessSide, itemId, 'SubtitleStreamIndex', -1, { timeout: 15000 });
-                    await sleep(500); // let the player actually tear down the rendered track after the server confirms Off
-                    const offState = await harnessSide.page.evaluate(() => {
-                        const overlay = document.querySelector('.videoSubtitlesInner');
-                        const video = document.querySelector('video');
-                        const tracks = video ? Array.from(video.textTracks) : [];
-                        return { overlayEmpty: !(overlay?.textContent?.trim()), noneShowing: !tracks.some(t => t.mode === 'showing' && t.activeCues && t.activeCues.length > 0) };
-                    });
-                    capture.subtitleOff = { ...offState, serverIndexOff, isOff: serverIndexOff === null || serverIndexOff === -1 };
-                } else {
-                    capture.subtitleSwitch = { skipped: 'every action-sheet entry has the same index as the currently selected subtitle track (or none besides Off exists) — this file cannot exercise a real switch' };
+                let current = String((await sessionState(harnessSide))?.playState?.SubtitleStreamIndex ?? capture.subtitleStreamIndex ?? '-1');
+                let preOff = null;
+                // A file whose only subtitle is already selected (remembered) has no other track to switch to: turn it
+                // off first, then switch it on. The 2026-09-22 harness gave up here on both entries.
+                let picked = await openSheetAndPick(harnessSide, '.btnSubtitles', options => options.map(o => o.id).find(id => /^\d+$/.test(id) && id !== current)
+                    ?? (current !== '-1' && options.some(o => o.id === '-1') ? '-1' : null));
+                if (picked.targetId === '-1') {
+                    preOff = { from: Number(current), serverIndex: await pollSessionStreamIndex(harnessSide, 'SubtitleStreamIndex', -1, { timeout: 60000 }) };
+                    await waitPlaying(harnessSide, startLimitMs);
+                    current = '-1';
+                    picked = await openSheetAndPick(harnessSide, '.btnSubtitles', options => options.map(o => o.id).find(id => /^\d+$/.test(id) && id !== current) ?? null);
                 }
-            } else {
-                capture.subtitleSwitch = { skipped: '.btnSubtitles not present' };
+                if (picked.targetId !== undefined) {
+                    const target = Number(picked.targetId);
+                    // The chosen track arrives either as its own subtitle request (external delivery) or inside a
+                    // reloaded stream (burn-in); wait for whichever comes before looking for cues.
+                    const loaded = await waitForRequestMatching(harnessSide, e => new RegExp('/Subtitles/' + target + '(/|$)').test(pathOf(e))
+                        || (isStreamRequest(e) && urlParam(e.url, 'SubtitleStreamIndex') === String(target)), { since: marker, timeout: 60000 });
+                    const serverIndex = await pollSessionStreamIndex(harnessSide, 'SubtitleStreamIndex', target, { timeout: 60000 });
+                    await waitPlaying(harnessSide, startLimitMs);
+                    await sleep(1500);
+                    // Seek to one second before the next cue of the chosen track, then watch it render. The position is
+                    // the element's own clock, which is what the slider seeks against.
+                    const position = Math.round(((await videoState(harnessSide))?.currentTime ?? 0) * 1e7);
+                    const cue = await firstCueAfter(harnessSide, itemId, capture.mediaSourceId ?? mediaSourceId ?? itemId, target, position + 50000000);
+                    let seekedToCue = false;
+                    if (cue && runtimeTicks) {
+                        seekedToCue = await seekWithSlider(harnessSide, Math.max(0, (cue.StartPositionTicks - 10000000) / runtimeTicks * 100));
+                    }
+                    const rendering = await poll(() => renderState(harnessSide), r => r.overlayNonEmpty || r.nativeActive, { timeout: 60000, interval: 250 });
+                    const stream = latestStreamParams(harnessSide, marker);
+                    const burnedIn = /encode/i.test(stream?.SubtitleMethod ?? '');
+                    capture.subtitleSwitch = {
+                        fromIndex: Number(current), preOff, targetIndex: target, options: picked.options, serverIndex, trackLoaded: !!loaded,
+                        actuallyChanged: serverIndex === target, cueSeconds: cue ? Math.round(cue.StartPositionTicks / 1e6) / 10 : null, seekedToCue,
+                        streamSubtitleStreamIndex: stream?.SubtitleStreamIndex ?? null, subtitleMethod: stream?.SubtitleMethod ?? null,
+                        mechanism: rendering.overlayNonEmpty ? 'custom-overlay' : (rendering.nativeActive ? 'native-texttrack' : (burnedIn ? 'burned-in (Encode)' : 'none-observed'))
+                    };
+                    capture.evidence.subtitleOn = await snapshot(harnessSide, marker);
+
+                    const offMarker = Date.now();
+                    const off = await openSheetAndPick(harnessSide, '.btnSubtitles', options => (options.some(o => o.id === '-1') ? '-1' : null));
+                    const serverIndexOff = await pollSessionStreamIndex(harnessSide, 'SubtitleStreamIndex', -1, { timeout: 60000 });
+                    await waitPlaying(harnessSide, startLimitMs);
+                    const gone = await poll(() => renderState(harnessSide), r => !r.overlayNonEmpty && !r.nativeActive, { timeout: 10000, interval: 250 });
+                    capture.subtitleOff = {
+                        options: off.options, serverIndexOff, isOff: serverIndexOff === null || serverIndexOff === -1,
+                        overlayEmpty: !gone.overlayNonEmpty, noneShowing: !gone.nativeActive, anyTrackShowing: gone.anyShowing
+                    };
+                    capture.evidence.subtitleOff = await snapshot(harnessSide, offMarker);
+                } else {
+                    capture.subtitleSwitch = { skipped: picked.error, options: picked.options };
+                    capture.evidence.subtitleOn = await snapshot(harnessSide, marker);
+                }
             }
+
+            // Resume point: Digit2 -> seekPercent(20), clear of MinResumePct and MaxResumePct.
+            const resumeSeekMarker = Date.now();
+            await harnessSide.page.keyboard.press('Digit2');
+            const atTwenty = await waitPlaying(harnessSide, startLimitMs);
+            await sleep(2000);
+            capture.resumeSeek = { playing: atTwenty.playing, currentTime: (await videoState(harnessSide))?.currentTime ?? null };
+            capture.evidence.resumeSeek = await snapshot(harnessSide, resumeSeekMarker);
         }
 
-        // Stop. Escape only hides the OSD in this player (video/index.js: case 'Escape' calls hideOsd(),
-        // never playbackManager.stop()) — verified by reading the source, not assumed. What actually
-        // stops playback is the router leaving the video view (`viewbeforehide` -> onViewHideStopPlayback
-        // -> playbackManager.stop()), exactly what a real "back" press does. Navigate to the details
-        // route directly, which is the deterministic way to trigger that regardless of what hash Play
-        // used, and works whether or not the video route changed the URL (navigate() forces a reload if
-        // it turns out to be the same URL rather than silently no-op'ing).
+        // Stop by leaving the video view, as Back does (videoosd `viewbeforehide` -> playbackManager.stop()).
         const stopMarker = Date.now();
         await harnessSide.navigate(harnessSide.base + '#/details?id=' + itemId);
-        const stoppedReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Stopped', { since: stopMarker, timeout: 10000 });
+        const stoppedReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: stopMarker, timeout: 15000 });
         capture.stoppedPositionTicks = stoppedReq ? parsePostData(stoppedReq)?.PositionTicks ?? null : null;
-        capture.stoppedCount = harnessSide.requestLog.filter(e => e.t >= t0 && e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Stopped').length;
+        capture.stoppedCount = harnessSide.requestLog.filter(e => e.t >= playMarker && e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped').length;
         await harnessSide.networkIdle();
+        capture.storedResumeTicks = (await harnessSide.apiRequest('Items/' + itemId + '?userId=' + userId)).body?.UserData?.PlaybackPositionTicks ?? null;
+        capture.evidence.stop = { ...await snapshot(harnessSide, stopMarker), storedResumeSeconds: capture.storedResumeTicks === null ? null : Math.round(capture.storedResumeTicks / 1e6) / 10 };
 
-        // Resume: reopen the detail page (already there; navigate() reloads since the URL matches, so
-        // the resume affordance reflects the just-written UserData rather than stale pre-stop state).
+        // Resume: reload the detail page so it reflects the written UserData, then press Resume.
         await harnessSide.navigate(harnessSide.base + '#/details?id=' + itemId);
         await harnessSide.networkIdle();
-        const resumeTitle = await harnessSide.page.locator('.btnPlay:visible').first().getAttribute('title').catch(() => null);
+        const resumeTitle = await harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first().getAttribute('title').catch(() => null);
         capture.resumeOffered = /resume/i.test(resumeTitle ?? '');
-        if (capture.resumeOffered && capture.stoppedPositionTicks) {
+        if (capture.resumeOffered) {
             const resumeMarker = Date.now();
-            await nativeClick(harnessSide.page.locator('.btnPlay:visible').first());
-            await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(() => {});
-            const resumePlaying = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing', { since: resumeMarker, timeout: 15000 });
-            const resumeBody = resumePlaying ? parsePostData(resumePlaying) : null;
-            capture.resumePositionTicks = resumeBody?.StartPositionTicks ?? resumeBody?.PositionTicks ?? null;
-            await sleep(500);
+            await nativeClick(harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first());
+            await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(ignore);
+            const resumePlaying = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing', { since: resumeMarker, timeout: startLimitMs });
+            capture.resumePositionTicks = resumePlaying ? parsePostData(resumePlaying)?.PositionTicks ?? null : null;
+            const resumedPlaying = await waitPlaying(harnessSide, startLimitMs);
+            capture.resumedPlaying = resumedPlaying.playing;
+            capture.resumedCurrentTime = resumedPlaying.state?.currentTime ?? null;
+            capture.evidence.resume = await snapshot(harnessSide, resumeMarker);
             await harnessSide.navigate(harnessSide.base + '#/details?id=' + itemId);
-            await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing/Stopped', { since: resumeMarker, timeout: 10000 });
+            await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: resumeMarker, timeout: 15000 });
             await harnessSide.networkIdle();
         }
+        capture.totalSeconds = seconds(Date.now() - t0);
         return capture;
     };
 
@@ -1692,75 +2088,114 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         return Math.abs(ticksA - ticksB) <= seconds_ * 10000000;
     };
 
+    const fixtureOptionsFor = async itemId => {
+        const item = (await S.apiRequest(`Items/${itemId}?Fields=MediaSources`)).body;
+        const streams = item?.MediaSources?.[0]?.MediaStreams ?? [];
+        const video = streams.find(stream => stream.Type === 'Video') ?? {};
+        return {
+            title: item?.Name, mediaSourceId: item?.MediaSources?.[0]?.Id, runtimeTicks: item?.RunTimeTicks ?? null,
+            container: item?.MediaSources?.[0]?.Container, video: `${video.Codec ?? '?'} ${video.Width ?? '?'}x${video.Height ?? '?'} ${video.VideoRange ?? ''}`.trim(),
+            audioCount: streams.filter(stream => stream.Type === 'Audio').length,
+            subtitleCount: streams.filter(stream => stream.Type === 'Subtitle').length,
+            hasMultiAudio: streams.filter(stream => stream.Type === 'Audio').length >= 2,
+            hasSubs: streams.some(stream => stream.Type === 'Subtitle')
+        };
+    };
+
     /** Runs one fixture on both sides in strict series (never interleaved, §1.3), diffs per §5.2, and restores UserData. */
-    const runFixtureBothSides = async (name, fixture, options) => {
+    const runFixtureBothSides = async (name, fixture, options = {}) => {
         if (!fixture) { pushRow(name.split('-')[0], 'Playback', name, 'n/a', 'n/a', 'SKIPPED', `no fixture selected for ${name}`); return; }
+        const slug = name.replace(/[^A-Za-z0-9-]+/g, '_');
         try {
+            const details = await fixtureOptionsFor(fixture.id);
+            const runOptions = { mediaSourceId: fixture.mediaSourceId ?? details.mediaSourceId, runtimeTicks: details.runtimeTicks, hasMultiAudio: details.hasMultiAudio, hasSubs: details.hasSubs, ...options };
             await snapshotUserData(fixture.id);
-            const capS = await playFixtureOnSide(S, fixture.id, { mediaSourceId: fixture.mediaSourceId, ...options });
+            const capS = await playFixtureOnSide(S, fixture.id, runOptions);
             await restoreUserData(fixture.id);
-            const capM = await playFixtureOnSide(M, fixture.id, { mediaSourceId: fixture.mediaSourceId, ...options });
+            const capM = await playFixtureOnSide(M, fixture.id, runOptions);
             await restoreUserData(fixture.id);
+            const heavy = !!(capS.serverTranscodingInfo || capM.serverTranscodingInfo);
+            const transcode = cap => (cap.serverTranscodingInfo ? `${cap.serverTranscodingInfo.VideoCodec}/${cap.serverTranscodingInfo.AudioCodec} video-direct:${cap.serverTranscodingInfo.IsVideoDirect} audio-direct:${cap.serverTranscodingInfo.IsAudioDirect} reasons:${(cap.serverTranscodingInfo.TranscodeReasons ?? []).join('+')}` : 'none');
+            const header = { fixture: name, itemId: fixture.id, title: details.title, container: details.container, video: details.video, audioStreams: details.audioCount, subtitleStreams: details.subtitleCount };
 
             const rows_ = [
-                ['a', 'start (one Sessions/Playing, same item/source)', capS.playingCount === 1 && capM.playingCount === 1 && capS.itemId && normId(capS.itemId) === normId(capM.itemId) && normId(capS.mediaSourceId ?? '') === normId(capM.mediaSourceId ?? ''), `S:${capS.playingCount} playing, item ${capS.itemId} src ${capS.mediaSourceId}`, `M:${capM.playingCount} playing, item ${capM.itemId} src ${capM.mediaSourceId}`],
-                ['b', 'play method', capS.serverPlayMethod === capM.serverPlayMethod && !!capS.serverTranscodingInfo === !!capM.serverTranscodingInfo, capS.serverPlayMethod, capM.serverPlayMethod],
-                ['c', 'transcode reasons', !capS.serverTranscodingInfo && !capM.serverTranscodingInfo ? true : JSON.stringify((capS.serverTranscodingInfo?.reasons ?? []).sort()) === JSON.stringify((capM.serverTranscodingInfo?.reasons ?? []).sort()), JSON.stringify(capS.serverTranscodingInfo?.reasons ?? []), JSON.stringify(capM.serverTranscodingInfo?.reasons ?? [])],
-                ['d', 'stream shape', capS.streamShape === capM.streamShape, capS.streamShape, capM.streamShape],
-                ['e', 'seek', capS.seek.reported && capM.seek.reported && Math.abs(capS.seek.delta - capM.seek.delta) <= 2, JSON.stringify(capS.seek), JSON.stringify(capM.seek)]
+                ['a', 'start (one Sessions/Playing, same item/source, playing)', capS.started && capM.started && capS.playingCount === 1 && capM.playingCount === 1 && normId(capS.itemId) === normId(capM.itemId) && normId(capS.mediaSourceId ?? '') === normId(capM.mediaSourceId ?? ''),
+                    `started:${capS.started} in ${capS.startSeconds}s, ${capS.playingCount} Playing`, `started:${capM.started} in ${capM.startSeconds}s, ${capM.playingCount} Playing`, ['start'], !capS.started || !capM.started],
+                ['b', 'play method', capS.serverPlayMethod === capM.serverPlayMethod && !!capS.serverTranscodingInfo === !!capM.serverTranscodingInfo, `${capS.serverPlayMethod}; transcode ${transcode(capS)}`, `${capM.serverPlayMethod}; transcode ${transcode(capM)}`, ['start'], false],
+                ['c', 'transcode reasons', JSON.stringify((capS.serverTranscodingInfo?.TranscodeReasons ?? []).toSorted()) === JSON.stringify((capM.serverTranscodingInfo?.TranscodeReasons ?? []).toSorted()), JSON.stringify(capS.serverTranscodingInfo?.TranscodeReasons ?? []), JSON.stringify(capM.serverTranscodingInfo?.TranscodeReasons ?? []), ['start'], false],
+                ['d', 'stream shape', capS.streamShape === capM.streamShape, capS.streamShape, capM.streamShape, ['start'], false],
+                ['e', 'seek (ArrowRight x10, paced)', !!capS.seek?.playingAfter && !!capM.seek?.playingAfter && capS.seek.reported && capM.seek.reported
+                    && Math.abs(capS.seek.skipped - capM.seek.skipped) <= 2 && Math.abs(capS.seek.skipped - capS.seek.expected) <= 5,
+                JSON.stringify(capS.seek ?? null), JSON.stringify(capM.seek ?? null), ['seek'], !capS.started || !capM.started || !!capS.timedOut.seek || !!capM.timedOut.seek]
             ];
-            if (options?.hasMultiAudio) {
-                rows_.push(['f', 'audio switch (forced to a genuinely different track)',
-                    capS.audioSwitch?.actuallyChanged && capM.audioSwitch?.actuallyChanged
-                    && capS.audioSwitch.targetIndex === capM.audioSwitch.targetIndex
-                    && capS.audioSwitch.serverIndex === capM.audioSwitch.serverIndex,
-                    JSON.stringify(capS.audioSwitch), JSON.stringify(capM.audioSwitch)]);
+            if (runOptions.hasMultiAudio && !runOptions.seekOnly) {
+                rows_.push(['f', 'audio switch (to a genuinely different track, by data-id)',
+                    !!capS.audioSwitch?.actuallyChanged && !!capM.audioSwitch?.actuallyChanged && capS.audioSwitch.targetIndex === capM.audioSwitch.targetIndex && capS.audioSwitch.playingAfter && capM.audioSwitch.playingAfter,
+                    JSON.stringify(capS.audioSwitch ?? null), JSON.stringify(capM.audioSwitch ?? null), ['audio'], !capS.started || !capM.started || !!capS.timedOut.audio || !!capM.timedOut.audio]);
             }
-            if (options?.hasEmbedSub || options?.hasExtSub) {
-                rows_.push(['g', 'subtitle switch (forced to a genuinely different track) + render',
-                    capS.subtitleSwitch?.actuallyChanged && capM.subtitleSwitch?.actuallyChanged
-                    && capS.subtitleSwitch.targetIndex === capM.subtitleSwitch.targetIndex
-                    && capS.subtitleSwitch.mechanism !== 'none-observed' && capM.subtitleSwitch.mechanism !== 'none-observed'
-                    && capS.subtitleSwitch.mechanism === capM.subtitleSwitch.mechanism,
-                    JSON.stringify(capS.subtitleSwitch), JSON.stringify(capM.subtitleSwitch)]);
-                rows_.push(['h', 'subtitle off', !!capS.subtitleOff?.overlayEmpty && !!capS.subtitleOff?.noneShowing && !!capS.subtitleOff?.isOff
-                && !!capM.subtitleOff?.overlayEmpty && !!capM.subtitleOff?.noneShowing && !!capM.subtitleOff?.isOff,
-                JSON.stringify(capS.subtitleOff), JSON.stringify(capM.subtitleOff)]);
+            if (runOptions.hasSubs && !runOptions.seekOnly) {
+                rows_.push(['g', 'subtitle switch (by data-id) + render',
+                    !!capS.subtitleSwitch?.actuallyChanged && !!capM.subtitleSwitch?.actuallyChanged && capS.subtitleSwitch.targetIndex === capM.subtitleSwitch.targetIndex
+                    && capS.subtitleSwitch.mechanism !== 'none-observed' && capS.subtitleSwitch.mechanism === capM.subtitleSwitch.mechanism,
+                    JSON.stringify(capS.subtitleSwitch ?? null), JSON.stringify(capM.subtitleSwitch ?? null), ['subtitleOn'], !capS.started || !capM.started]);
+                rows_.push(['h', 'subtitle off (data-id -1)', !!capS.subtitleOff?.isOff && !!capS.subtitleOff?.overlayEmpty && !!capS.subtitleOff?.noneShowing
+                    && !!capM.subtitleOff?.isOff && !!capM.subtitleOff?.overlayEmpty && !!capM.subtitleOff?.noneShowing,
+                JSON.stringify(capS.subtitleOff ?? null), JSON.stringify(capM.subtitleOff ?? null), ['subtitleOff'], !capS.started || !capM.started]);
             }
-            rows_.push(['i', 'stop and resume', withinSeconds(capS.stoppedPositionTicks, capM.stoppedPositionTicks, 9999999) && capS.resumeOffered && capM.resumeOffered
-            && withinSeconds(capS.resumePositionTicks, capS.stoppedPositionTicks, 5) && withinSeconds(capM.resumePositionTicks, capM.stoppedPositionTicks, 5),
-            JSON.stringify({ stopped: capS.stoppedPositionTicks, resumeOffered: capS.resumeOffered, resumed: capS.resumePositionTicks }),
-            JSON.stringify({ stopped: capM.stoppedPositionTicks, resumeOffered: capM.resumeOffered, resumed: capM.resumePositionTicks })]);
-            rows_.push(['j', 'single reporting (no duplicate Playing/Stopped)', capS.playingCount === 1 && capM.playingCount === 1 && capS.stoppedCount === 1 && capM.stoppedCount === 1, `playing:${capS.playingCount} stopped:${capS.stoppedCount}`, `playing:${capM.playingCount} stopped:${capM.stoppedCount}`]);
+            const resumeSummary = cap => JSON.stringify({ stoppedAt: cap.stoppedPositionTicks === null || cap.stoppedPositionTicks === undefined ? null : Math.round(cap.stoppedPositionTicks / 1e6) / 10, stored: cap.storedResumeTicks === null ? null : Math.round(cap.storedResumeTicks / 1e6) / 10, resumeOffered: cap.resumeOffered, resumedAt: cap.resumePositionTicks == null ? null : Math.round(cap.resumePositionTicks / 1e6) / 10, resumedPlaying: cap.resumedPlaying ?? null });
+            const resumeOk = cap => cap.resumeOffered && withinSeconds(cap.storedResumeTicks, cap.stoppedPositionTicks, 5) && withinSeconds(cap.resumePositionTicks, cap.storedResumeTicks, 5);
+            rows_.push(['i', 'stop and resume (stopped at 20%)', resumeOk(capS) && resumeOk(capM), resumeSummary(capS), resumeSummary(capM), ['resumeSeek', 'stop', 'resume'], !capS.started || !capM.started]);
+            rows_.push(['j', 'single reporting (no duplicate Playing/Stopped)', capS.playingCount === 1 && capM.playingCount === 1 && capS.stoppedCount === 1 && capM.stoppedCount === 1, `playing:${capS.playingCount} stopped:${capS.stoppedCount}`, `playing:${capM.playingCount} stopped:${capM.stoppedCount}`, ['start', 'stop'], false]);
 
-            for (const [rowId, label, pass, sVal, mVal] of rows_) {
-                pushRow(`${name}-${rowId}`, 'Playback', `${fixture.title ?? fixture.id} (${fixture.id}): ${label}`, sVal, mVal, pass ? 'PASS' : 'FAIL',
-                    pass ? undefined : `stock: ${sVal}\nmod: ${mVal}`);
+            for (const [rowId, label, pass, sVal, mVal, keys, unverifiable] of rows_) {
+                const id = `${name}-${rowId}`;
+                // A row that could not be exercised because playback never reached the step within the limits is NOT
+                // VERIFIED, with the transcode recorded; it is neither a pass nor a mod failure.
+                const verdict = pass ? 'PASS' : (unverifiable ? 'NOT-VERIFIED' : 'FAIL');
+                const evidenceFile = `evidence/${slug}-${rowId}.json`;
+                await writeScrubbed(path.join(outDir, evidenceFile), {
+                    ...header, row: id, check: label, verdict, heavyTranscode: heavy,
+                    stock: { summary: sVal, timedOut: capS.timedOut, steps: Object.fromEntries(keys.map(key => [key, capS.evidence[key] ?? null])) },
+                    mod: { summary: mVal, timedOut: capM.timedOut, steps: Object.fromEntries(keys.map(key => [key, capM.evidence[key] ?? null])) }
+                });
+                pushRow(id, 'Playback', `${details.title ?? fixture.id} (${fixture.id}): ${label}`, sVal, mVal, verdict,
+                    pass ? undefined : `stock: ${sVal}\nmod: ${mVal}\nevidence: ${evidenceFile}`);
             }
         } catch (error) {
-            pushRow(name, 'Playback', `${fixture?.title ?? name}: fixture run`, 'n/a', 'n/a', 'FAIL', error.message);
+            pushRow(name, 'Playback', `${fixture?.title ?? name}: fixture run`, 'n/a', 'n/a', 'FAIL', error.stack ?? error.message);
             await restoreUserData(fixture.id).catch(ignore);
         }
     };
 
-    if (!aborted && !skipPlayback) {
+    if (!aborted && !skipPlayback && want('C')) {
         await step('C: playback fixtures', async () => {
-            const plan = [
-                ['C-4KHDR', { seekOnly: true }],
-                ['C-1080', {}],
-                ['C-MULTIAUDIO', { hasMultiAudio: true }],
-                ['C-EMBEDSUB', { hasEmbedSub: true }],
-                ['C-EXTSUB', { hasExtSub: true }],
-                ['C-M2TS', { hasMultiAudio: true, hasEmbedSub: true, hasExtSub: true }],
-                ['C-AVI', { hasMultiAudio: true, hasEmbedSub: true, hasExtSub: true }]
-            ];
-            const activePlan = quick ? plan.filter(([name]) => ['C-1080', 'C-MULTIAUDIO'].includes(name)) : plan;
+            // Audio and subtitle steps follow each file's own streams (fixtureOptionsFor); only the 4K HDR predicate
+            // fixture is capped at seek-only to bound Pi CPU time (§5.3).
+            const plan = [['C-4KHDR', { seekOnly: true }], ['C-1080', {}], ['C-MULTIAUDIO', {}], ['C-EMBEDSUB', {}], ['C-EXTSUB', {}], ['C-M2TS', {}], ['C-AVI', {}]];
+            // JELLYFINMOD_PARITY_FIXTURES narrows the predicate fixtures for an iteration run (`none`, or a comma list).
+            const fixtureFilter = process.env.JELLYFINMOD_PARITY_FIXTURES;
+            const filtered = fixtureFilter ? plan.filter(([name]) => fixtureFilter.split(',').includes(name)) : plan;
+            const activePlan = quick ? filtered.filter(([name]) => ['C-1080', 'C-MULTIAUDIO'].includes(name)) : filtered;
+            // The named titles run the full sequence (Mercy included: 4K HDR is not seek-only when it is named). A
+            // predicate fixture that is the same item as a named title runs once, under both labels.
+            const ran = new Map();
+            for (const item of namedItems) {
+                const label = 'C-NAMED-' + item.Name.replace(/[^A-Za-z0-9]+/g, '');
+                const aliases = activePlan.filter(([name]) => fixtures[name]?.id === item.Id).map(([name]) => name);
+                ran.set(item.Id, label + (aliases.length ? ' (= ' + aliases.join(', ') + ')' : ''));
+                await runFixtureBothSides(label, { id: item.Id, title: item.Name });
+            }
             for (const [name, options] of activePlan) {
+                if (fixtures[name] && ran.has(fixtures[name].id)) {
+                    pushRow(name, 'Playback', `${fixtures[name].title} (${fixtures[name].id}): covered by ${ran.get(fixtures[name].id)}`, 'see named row', 'see named row', 'RECORDED');
+                    continue;
+                }
+                if (fixtures[name]) ran.set(fixtures[name].id, name);
                 await runFixtureBothSides(name, fixtures[name], options);
             }
 
             // C-TVNEXT: play to near the end, let it end, record what each side does.
-            if (!quick) {
+            if (!quick && (!fixtureFilter || fixtureFilter.split(',').includes('C-TVNEXT'))) {
                 const tvFixture = fixtures['C-TVNEXT'];
                 if (!tvFixture) {
                     pushRow('C-TVNEXT', 'Playback', 'C-TVNEXT', 'n/a', 'n/a', 'SKIPPED', 'no eligible series/season found');
@@ -1770,6 +2205,8 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         const runtimeSeconds = (episodeRef?.RunTimeTicks ?? 12000000000) / 10000000;
                         const runToEnd = async harnessSide => {
                             await snapshotUserData(tvFixture.id);
+                            // Auto-advance starts the next episode, which then reports progress of its own.
+                            if (tvFixture.nextEpisodeId) await snapshotUserData(tvFixture.nextEpisodeId);
                             await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvFixture.id);
                             await harnessSide.networkIdle();
                             await nativeClick(harnessSide.page.locator('.btnPlay:visible').first());
@@ -1785,13 +2222,24 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                             const landed = await poll(() => harnessSide.page.evaluate(() => ({
                                 hash: window.location.hash,
                                 ended: document.querySelector('video')?.ended ?? false
-                            })), r => r.ended || r.hash !== hashDuringPlayback, { timeout: 40000, interval: 1000 });
+                            })), r => r.ended || r.hash !== hashDuringPlayback, { timeout: 60000, interval: 1000 });
+                            // After the end: which item does the server now say is playing on this device?
+                            await sleep(8000);
+                            const playingNow = normId((await sessionState(harnessSide))?.nowPlayingItemId ?? '');
+                            landed.nowPlaying = !playingNow ? 'nothing' : (playingNow === normId(tvFixture.nextEpisodeId) ? 'next episode' : (playingNow === normId(tvFixture.id) ? 'same episode' : 'other'));
+                            landed.hash = landed.hash.replace(/id=[0-9a-f]+/i, id => (normId(id.slice(3)) === normId(tvFixture.nextEpisodeId) ? 'id=<next episode>' : id));
+                            // Stop whatever is playing (episode 1, or episode 2 after auto-advance) before restoring.
+                            const stopMarker = Date.now();
+                            await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvFixture.id);
+                            await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: stopMarker, timeout: 15000 });
+                            await harnessSide.networkIdle();
                             await restoreUserData(tvFixture.id);
+                            if (tvFixture.nextEpisodeId) await restoreUserData(tvFixture.nextEpisodeId);
                             return landed;
                         };
                         const landedS = await runToEnd(S);
                         const landedM = await runToEnd(M);
-                        const same = landedS.hash === landedM.hash || (landedS.ended === landedM.ended);
+                        const same = landedS.nowPlaying === landedM.nowPlaying && landedS.hash === landedM.hash;
                         pushRow('C-TVNEXT', 'Playback', `${tvFixture.title}: end-of-episode behaviour`, JSON.stringify(landedS), JSON.stringify(landedM), same ? 'PASS' : 'FAIL');
                     } catch (error) {
                         pushRow('C-TVNEXT', 'Playback', 'C-TVNEXT', 'n/a', 'n/a', 'FAIL', error.message);
@@ -1801,17 +2249,21 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
             // C-TWOVER: explicit version selection must be honoured, and map identically on both sides.
             const twoVer = fixtures['C-TWOVER'];
-            if (!twoVer) {
+            if (fixtureFilter && !fixtureFilter.split(',').includes('C-TWOVER')) {
+                // Not selected for this iteration run.
+            } else if (!twoVer) {
                 pushRow('C-TWOVER', 'Playback', 'C-TWOVER', 'n/a', 'n/a', 'SKIPPED', 'no title with >=2 MediaSources (§8.4 known in-flight defect)');
             } else {
                 try {
+                    // Every version is its own item with its own UserData: playing version 2 writes to that item.
                     await snapshotUserData(twoVer.id);
+                    for (const source of twoVer.sources) if (normId(source.id) !== normId(twoVer.id)) await snapshotUserData(source.id);
                     const mapping = async harnessSide => {
                         const result = {};
                         for (const source of twoVer.sources) {
                             await harnessSide.navigate(harnessSide.base + '#/details?id=' + twoVer.id);
                             await harnessSide.networkIdle();
-                            const select = harnessSide.page.locator('select.selectSource');
+                            const select = harnessSide.page.locator('.page:not(.hide) select.selectSource');
                             await select.selectOption(source.id).catch(() => {});
                             await sleep(300);
                             const marker = Date.now();
@@ -1828,11 +2280,12 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     const mapS = await mapping(S);
                     const mapM = await mapping(M);
                     await restoreUserData(twoVer.id);
+                    for (const source of twoVer.sources) if (normId(source.id) !== normId(twoVer.id)) await restoreUserData(source.id);
                     const honoured = twoVer.sources.every(s => normId(mapS[s.id] ?? '') === normId(s.id) && normId(mapM[s.id] ?? '') === normId(s.id));
                     const sameMapping = JSON.stringify(mapS) === JSON.stringify(mapM);
                     pushRow('C-TWOVER', 'Playback', `${twoVer.title} (${twoVer.id}): version selection honoured`, JSON.stringify(mapS), JSON.stringify(mapM), honoured && sameMapping ? 'PASS' : 'FAIL');
                 } catch (error) {
-                    pushRow('C-TWOVER', 'Playback', 'C-TWOVER', 'n/a', 'n/a', 'FAIL', error.message);
+                    pushRow('C-TWOVER', 'Playback', 'C-TWOVER', 'n/a', 'n/a', 'FAIL', error.stack ?? error.message);
                     await restoreUserData(twoVer.id).catch(ignore);
                 }
             }
@@ -1844,7 +2297,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     // =================================================================================================
     // Area D — user-data parity (PARITY.md §6, Area D)
     // =================================================================================================
-    if (!aborted) {
+    if (!aborted && want('D')) {
         await step('D: user-data parity', async () => {
             try {
                 const movieItem = b0Sample[0];
@@ -1905,7 +2358,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     // =================================================================================================
     // Area E — mod-only surfaces are additive; stock is unchanged (PARITY.md §6, Area E)
     // =================================================================================================
-    if (!aborted) {
+    if (!aborted && want('E')) {
         await step('E: mod-only surfaces and stock-unchanged', async () => {
             try {
                 // E-1: file-state marks — recorded, not required, on either side.
@@ -1942,7 +2395,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 if (b0Sample[0]) {
                     await M.navigate(baseM + '#/details?id=' + b0Sample[0].Id);
                     await M.networkIdle();
-                    detailUsable = await pageM.evaluate(() => !!document.querySelector('.itemName') && !!document.querySelector('.btnPlay'));
+                    detailUsable = await pageM.evaluate(() => !!document.querySelector('.page:not(.hide) .itemName') && !!document.querySelector('.page:not(.hide) .btnPlay'));
                 }
                 await pageM.unroute(pluginRoute, blockPlugin);
                 pushRow('E-6', 'Mod-only', 'Degrades cleanly with plugin transport blocked (UX §14)', 'n/a', `grid:${rendersWithoutPlugin} detail:${detailUsable}`, rendersWithoutPlugin && detailUsable ? 'PASS' : 'FAIL');
@@ -1973,7 +2426,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     // =================================================================================================
     // Area F — TV layout: record, do not require (PARITY.md §6, Area F)
     // =================================================================================================
-    if (!aborted && !quick) {
+    if (!aborted && !quick && want('F')) {
         await step('F: TV layout (recorded)', async () => {
             try {
                 await pageS.evaluate(() => localStorage.setItem('layout', 'tv'));
@@ -2006,9 +2459,151 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     }
 
     // =================================================================================================
+    // Area T — TV layout, asserted (P7.S11): inventory at 1920x1080 and 1280x720, and one title played by keys
+    // only at 1920x1080. Since the P7 TV shell the mod entry serves TV on its own pages, so this is no longer the
+    // "record only" legacy fallback of area F.
+    // =================================================================================================
+    const focusByKeys = async (harnessSide, selector, keys, limit = 16) => {
+        for (let i = 0; i <= limit; i++) {
+            if (await harnessSide.activeMatches(selector)) return true;
+            if (i === limit) break;
+            await harnessSide.pressKey(keys[i % keys.length]);
+        }
+        return harnessSide.activeMatches(selector);
+    };
+    if (!aborted && want('T')) {
+        await step('T: TV layout inventory and keys-only playback', async () => {
+            const layoutBefore = await pageS.evaluate(() => localStorage.getItem('layout'));
+            try {
+                await pageS.evaluate(() => localStorage.setItem('layout', 'tv'));
+                for (const [w, h] of [[1920, 1080], [1280, 720]]) {
+                    for (const harnessSide of [S, M]) {
+                        await harnessSide.page.setViewportSize({ width: w, height: h });
+                        await harnessSide.reload();
+                    }
+                    const layoutClass = await Promise.all([S, M].map(side => side.page.evaluate(() => document.documentElement.classList.contains('layout-tv'))));
+                    for (const [name, viewId, key, route] of [['Movies', moviesViewId, 'movies', '#/movies'], ['TV', showsViewId, 'tv', '#/tv']]) {
+                        const ref = a2[key].ref.map(item => item.Id);
+                        const read = async harnessSide => {
+                            await harnessSide.navigate(harnessSide.base + route + '?topParentId=' + viewId);
+                            await harnessSide.networkIdle();
+                            return forceFullLazyLoad(harnessSide);
+                        };
+                        const gridS = await read(S);
+                        const gridM = await read(M);
+                        const titleOf = id => a2[key].ref.find(i => normId(i.Id) === id)?.Name ?? '(unknown)';
+                        const diffSM = describeSetDiff(`T ${name} ${w}x${h} stock vs mod`, gridS.ids, gridM.ids, titleOf);
+                        const diffMRef = describeSetDiff(`T ${name} ${w}x${h} mod vs API`, gridM.ids, ref, titleOf);
+                        const diffSRef = describeSetDiff(`T ${name} ${w}x${h} stock vs API`, gridS.ids, ref, titleOf);
+                        const pass = diffSM.equal && diffMRef.equal && layoutClass[0] && layoutClass[1];
+                        const verdict = pass ? 'PASS' : (diffSM.equal && !diffMRef.equal ? 'SHARED-GAP' : 'FAIL');
+                        pushRow('T-inv', 'TV layout', `${name} id set at ${w}x${h} (layout-tv ${layoutClass.join('/')}), ${gridS.mode}/${gridM.mode}`,
+                            `${normSet(gridS.ids).size} ids`, `${normSet(gridM.ids).size} ids (api ${ref.length})`, verdict,
+                            [diffSM.text, diffMRef.text, diffSRef.text].filter(Boolean).join('\n\n') || undefined);
+                    }
+                    if (w === 1280) break;
+
+                    // Keys-only playback at 1920x1080 on the TV title: Enter on the autofocused Play, ArrowRight with the
+                    // OSD hidden (videoosd -> slider seek), Back to stop, Enter on Resume.
+                    const tvItem = a2.movies.ref.find(item => item.Name === tvPlaybackName);
+                    if (!tvItem) {
+                        pushRow('T-play', 'TV layout', `keys-only playback of "${tvPlaybackName}"`, 'n/a', 'n/a', 'SKIPPED', 'title not found in the Movies library');
+                        continue;
+                    }
+                    const details = await fixtureOptionsFor(tvItem.Id);
+                    await snapshotUserData(tvItem.Id);
+                    const playByKeys = async harnessSide => {
+                        const result = { side: harnessSide.label, evidence: {} };
+                        await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
+                        await harnessSide.networkIdle();
+                        result.playFocused = await focusByKeys(harnessSide, '.btnPlay', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
+                        const marker = Date.now();
+                        await harnessSide.enterFocused();
+                        const started = await waitPlaying(harnessSide, startLimitMs);
+                        result.started = started.playing;
+                        result.evidence.start = await snapshot(harnessSide, marker);
+                        if (started.playing) {
+                            const before = (await videoState(harnessSide))?.currentTime ?? 0;
+                            const seekMarker = Date.now();
+                            await sleep(4000); // let the OSD auto-hide so ArrowRight takes the hidden-OSD path
+                            for (let i = 0; i < 3; i++) {
+                                await harnessSide.page.keyboard.press('ArrowRight');
+                                await sleep(1500);
+                            }
+                            const settled = await waitPlaying(harnessSide, startLimitMs);
+                            result.seek = { before, after: settled.state?.currentTime ?? null, delta: Math.round(((settled.state?.currentTime ?? 0) - before) * 10) / 10, playingAfter: settled.playing };
+                            result.evidence.seek = await snapshot(harnessSide, seekMarker);
+                            // Put the stop point clear of MinResumePct with the remote's own number key.
+                            await harnessSide.page.keyboard.press('Digit3');
+                            await waitPlaying(harnessSide, startLimitMs);
+                            await sleep(2000);
+                        }
+                        // The TV layout's Back from a keyboard is Escape (keyboardNavigation: Escape -> 'back' when
+                        // layoutManager.tv; Backspace is Back only on Hisense VIDAA). The first press may only close the OSD.
+                        const stopMarker = Date.now();
+                        let stopped = null;
+                        for (let press = 0; press < 3 && !stopped; press++) {
+                            await harnessSide.page.keyboard.press('Escape');
+                            stopped = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: stopMarker, timeout: 5000 });
+                        }
+                        result.stoppedByBack = !!stopped;
+                        result.stoppedPositionTicks = stopped ? parsePostData(stopped)?.PositionTicks ?? null : null;
+                        await harnessSide.networkIdle();
+                        result.hashAfterBack = await harnessSide.page.evaluate(() => window.location.hash.split('?')[0]);
+                        result.evidence.stop = await snapshot(harnessSide, stopMarker);
+                        // Resume by keys from a freshly loaded detail page.
+                        await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
+                        await harnessSide.networkIdle();
+                        result.resumeFocused = await focusByKeys(harnessSide, '.btnPlay[title*="esume"]', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
+                        if (result.resumeFocused) {
+                            const resumeMarker = Date.now();
+                            await harnessSide.enterFocused();
+                            const resumePlaying = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing', { since: resumeMarker, timeout: startLimitMs });
+                            result.resumePositionTicks = resumePlaying ? parsePostData(resumePlaying)?.PositionTicks ?? null : null;
+                            result.resumedPlaying = (await waitPlaying(harnessSide, startLimitMs)).playing;
+                            result.evidence.resume = await snapshot(harnessSide, resumeMarker);
+                            const backMarker = Date.now();
+                            let stoppedAgain = null;
+                            for (let press = 0; press < 3 && !stoppedAgain; press++) {
+                                await harnessSide.page.keyboard.press('Escape');
+                                stoppedAgain = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: backMarker, timeout: 5000 });
+                            }
+                            if (!stoppedAgain) {
+                                await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
+                                await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing/Stopped', { since: backMarker, timeout: 15000 });
+                            }
+                            await harnessSide.networkIdle();
+                        }
+                        return result;
+                    };
+                    const tvS = await playByKeys(S);
+                    await restoreUserData(tvItem.Id);
+                    const tvM = await playByKeys(M);
+                    await restoreUserData(tvItem.Id);
+                    const ok = r => r.playFocused && r.started && r.seek?.playingAfter && r.seek.delta > 5 && r.stoppedByBack && r.resumeFocused && r.resumedPlaying
+                        && withinSeconds(r.resumePositionTicks, r.stoppedPositionTicks, 5);
+                    const summarize = r => JSON.stringify({ playFocused: r.playFocused, started: r.started, seek: r.seek ?? null, stoppedByBack: r.stoppedByBack, stoppedAt: r.stoppedPositionTicks == null ? null : Math.round(r.stoppedPositionTicks / 1e6) / 10, backLandedOn: r.hashAfterBack, resumeFocused: r.resumeFocused, resumedAt: r.resumePositionTicks == null ? null : Math.round(r.resumePositionTicks / 1e6) / 10, resumedPlaying: r.resumedPlaying ?? null });
+                    const verdict = ok(tvS) && ok(tvM) ? 'PASS' : (!tvS.started && !tvM.started ? 'NOT-VERIFIED' : 'FAIL');
+                    const evidenceFile = 'evidence/T-play.json';
+                    await writeScrubbed(path.join(outDir, evidenceFile), { itemId: tvItem.Id, title: tvItem.Name, container: details.container, video: details.video, layout: 'tv 1920x1080', verdict, stock: { summary: summarize(tvS), steps: tvS.evidence }, mod: { summary: summarize(tvM), steps: tvM.evidence } });
+                    pushRow('T-play', 'TV layout', `${tvItem.Name} (${tvItem.Id}): keys-only play, seek, Back, Resume at 1920x1080`, summarize(tvS), summarize(tvM), verdict,
+                        verdict === 'PASS' ? undefined : `stock: ${summarize(tvS)}\nmod: ${summarize(tvM)}\nevidence: ${evidenceFile}`);
+                }
+            } catch (error) {
+                pushRow('T', 'TV layout', 'T', 'n/a', 'n/a', 'FAIL', error.stack ?? error.message);
+            } finally {
+                for (const harnessSide of [S, M]) await harnessSide.page.setViewportSize({ width: 1440, height: 900 }).catch(ignore);
+                await pageS.evaluate(value => (value === null ? localStorage.removeItem('layout') : localStorage.setItem('layout', value)), layoutBefore).catch(ignore);
+                await S.reload().catch(ignore);
+                await M.reload().catch(ignore);
+            }
+        });
+    }
+
+    // =================================================================================================
     // Area G — reachability smoke for stock-for-now screens (PARITY.md §6, Area G)
     // =================================================================================================
-    if (!aborted) {
+    if (!aborted && want('G')) {
         await step('G: reachability smoke', async () => {
             try {
                 for (const route of ['#/music', '#/livetv', '#/books', '#/playlists', '#/boxsets', '#/dashboard', '#/mypreferencesmenu']) {
@@ -2034,7 +2629,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     let cleanupFailed = false;
     try {
         const restored = await restoreAllUserData();
-        await fs.writeFile(path.join(outDir, 'restore-actions.json'), JSON.stringify(restored, null, 2));
+        await writeScrubbed(path.join(outDir, 'restore-actions.json'), restored);
         const mismatches = await verifyRestoration();
         if (mismatches.length) {
             cleanupFailed = true;
@@ -2060,6 +2655,9 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             pushRow('cleanup', 'Cleanup', 'No JellyfinMod-prefixed title in any library', 'none', 'none', 'PASS');
         }
         const entriesAfter = await S.apiRequest('JellyfinMod/Entries?limit=200');
+        const jfmodTitled = (entriesAfter.body?.items ?? []).filter(entry => /^JellyfinMod/i.test(entry.title ?? ''));
+        pushRow('cleanup', 'Cleanup', 'No JellyfinMod-prefixed title in GET /JellyfinMod/Entries', 'none', jfmodTitled.length ? JSON.stringify(jfmodTitled.map(e => e.title)) : 'none', jfmodTitled.length ? 'CLEANUP-FAILED' : 'PASS');
+        if (jfmodTitled.length) cleanupFailed = true;
         const idsBefore = new Set((JSON.parse(await fs.readFile(path.join(outDir, 'entries-before.json'), 'utf8').catch(() => '{"items":[]}')).items ?? []).map(e => e.id));
         const idsAfter = new Set((entriesAfter.body?.items ?? []).map(e => e.id));
         const sameEntries = idsBefore.size === idsAfter.size && [...idsBefore].every(id => idsAfter.has(id));
@@ -2079,7 +2677,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
     // Restore the /web takeover to what it was before this run, and verify.
     try {
-        if (report.takeover.before) {
+        if (report.takeover.before && toggledTakeover) {
             const wanted = report.takeover.before.TakeoverEnabled;
             await setTakeover(wanted);
             await sleep(500);
@@ -2093,6 +2691,13 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             pushRow('takeover', 'Cleanup', 'Restore /web takeover to pre-run state', JSON.stringify(report.takeover.before), JSON.stringify(report.takeover.after), restoredOk ? 'PASS' : 'CLEANUP-FAILED');
             if (!restoredOk) cleanupFailed = true;
         }
+        if (shape === 'takeover' && report.takeover.before) {
+            const health = (await S.apiRequest('JellyfinMod/Health')).body;
+            report.takeover.after = { state: health?.Web?.Takeover?.Status ?? null, bundleId: health?.Web?.BundleId ?? null };
+            const stillPatched = report.takeover.after.state === 'patched';
+            pushRow('takeover', 'Cleanup', '/web takeover untouched (read only in this shape)', JSON.stringify(report.takeover.before), JSON.stringify(report.takeover.after), stillPatched ? 'PASS' : 'CLEANUP-FAILED');
+            if (!stillPatched) cleanupFailed = true;
+        }
     } catch (error) {
         cleanupFailed = true;
         pushRow('takeover', 'Cleanup', 'Restore /web takeover', 'n/a', 'n/a', 'CLEANUP-FAILED', error.message);
@@ -2105,7 +2710,9 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     const verdictCounts = rows.reduce((acc, row) => { acc[row.verdict] = (acc[row.verdict] ?? 0) + 1; return acc; }, {});
     const summary = {
         mode: quick ? 'quick' : 'full',
-        fullAcceptance: !quick && !aborted && !gateFailed,
+        fullAcceptance: !quick && !aborted && !gateFailed && !areaFilter,
+        areas: areaFilter ? [...areaFilter] : 'all',
+        shape, baseStock: scrubUrl(baseS), baseMod: scrubUrl(baseM), servedBundleId,
         aborted,
         gateFailed,
         continuedPastGate: continuePastGate,
@@ -2131,8 +2738,8 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         timings, waits, idleTimeouts,
         cleanupFailed
     };
-    await fs.writeFile(path.join(outDir, 'parity-summary.json'), JSON.stringify(summary, null, 2));
-    console.log(JSON.stringify(summary, null, 2));
+    await writeScrubbed(path.join(outDir, 'parity-summary.json'), summary);
+    console.log(scrubText(JSON.stringify(summary.verdictCounts)));
 
     try {
         await writeMarkdownReport(summary);
@@ -2143,6 +2750,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     summarized = true;
     if (cleanupFailed) process.exitCode = 1;
     else if (aborted || verdictCounts.FAIL) process.exitCode = 1;
+    else if (verdictCounts['NOT-VERIFIED']) process.exitCode = 2;
     else if (skipped.length && !allowSkips) process.exitCode = 2;
     else process.exitCode = 0;
 
@@ -2153,4 +2761,4 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
     if (browserTier) await context.close().catch(ignore);
     else await browser.close().catch(ignore);
 }
-/* eslint-enable compat/compat, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity, no-nested-ternary, sonarjs/no-nested-conditional, @typescript-eslint/no-unused-vars, sonarjs/no-dead-store, sonarjs/no-unused-vars, no-restricted-globals, @typescript-eslint/no-shadow, sonarjs/void-use, sonarjs/no-os-command-from-path, sonarjs/slow-regex -- closes the file-level exemption above */
+/* eslint-enable compat/compat, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity, no-nested-ternary, sonarjs/no-nested-conditional, @typescript-eslint/no-unused-vars, sonarjs/no-dead-store, sonarjs/no-unused-vars, @typescript-eslint/no-shadow, sonarjs/void-use, sonarjs/no-os-command-from-path, sonarjs/slow-regex, sonarjs/no-nested-functions -- closes the file-level exemption above */
