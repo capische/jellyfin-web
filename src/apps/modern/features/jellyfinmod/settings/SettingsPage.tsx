@@ -153,7 +153,9 @@ const SettingsPage: FC = () => {
                         <a href='#/catalog/settings/setup'>Setup wizard</a>
                     </div>
                 </nav>
-                <div className='jfmod-check-main'>
+                {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
+                    beside it (REVIEW-2026-09-24 S8-R2); Left and Right still cross between the two. */}
+                <div className='jfmod-check-main focuscontainer-y'>
                     <section.Component api={api} data={data} reload={settings.refetch} onGo={go}
                         eyebrow={`Step ${index + 1} of ${SECTIONS.length}`} next={next && { id: next.id, title: next.title }} />
                 </div>

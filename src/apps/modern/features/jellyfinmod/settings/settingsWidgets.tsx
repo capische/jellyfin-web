@@ -1,9 +1,13 @@
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
-import React, { type FC, type ReactNode, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useState } from 'react';
 
 import type { SecretChange } from './settingsApi';
 
@@ -207,3 +211,38 @@ export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: (key: 
 
 /** Picks the request's keys out of a DTO, so a PATCH never carries a read-only field the server would refuse. */
 export const pick = (source: Draft, keys: string[]) => Object.fromEntries(keys.map(key => [key, source[key] ?? null]));
+
+interface PendingConfirm {
+    title: string;
+    text: string;
+    action: string;
+    onConfirm: () => void;
+}
+
+/**
+ * A confirmation as an MUI dialog rather than `window.confirm` (REVIEW-2026-09-24 S8-R2): a native dialog is one a TV
+ * remote may not be able to answer, and upstream never uses it. The dialog is an ordinary MUI modal, so on the TV
+ * `shell/dpadModals` gives it arrows, Enter and Back, and Back returns focus to the button that opened it. Focus
+ * starts on Cancel, so an Enter pressed by mistake removes nothing.
+ */
+export const useConfirm = (): [ReactNode, (pending: PendingConfirm) => void] => {
+    const [pending, setPending] = useState<PendingConfirm | null>(null);
+    const close = useCallback(() => setPending(null), []);
+    const confirm = useCallback(() => {
+        const current = pending;
+        setPending(null);
+        current?.onConfirm();
+    }, [pending]);
+    const element = pending && (
+        <Dialog open onClose={close} maxWidth='xs' fullWidth className='jfmod-settingsDialog' data-jfmod-confirm=''>
+            <DialogTitle>{pending.title}</DialogTitle>
+            <DialogContent><p className='jfmod-lead'>{pending.text}</p></DialogContent>
+            <DialogActions>
+                {/* eslint-disable-next-line jsx-a11y/no-autofocus -- a destructive confirmation starts on Cancel (MUI's own idiom) */}
+                <Button autoFocus onClick={close} data-jfmod-confirm='cancel'>Cancel</Button>
+                <Button className='jfmod-danger-text' onClick={confirm} data-jfmod-confirm='confirm'>{pending.action}</Button>
+            </DialogActions>
+        </Dialog>
+    );
+    return [element, setPending];
+};
