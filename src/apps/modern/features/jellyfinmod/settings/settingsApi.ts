@@ -16,12 +16,30 @@ export interface SettingsProblem {
     type: string;
     message: string;
     blockers: string[];
+    /** A model-validation refusal's fields, each as "field: first message". */
+    fields: string[];
 }
 
 // A plain object rather than an Error subclass: the build transpiles classes, and `instanceof` on a transpiled
 // subclass of Error is unreliable, which would turn every 409 into a generic failure.
-const problem = (status: number, type: string, message: string, blockers: string[] = []): SettingsProblem =>
-    ({ jfmodSettingsProblem: true, status, type, message, blockers });
+const problem = (status: number, type: string, message: string, blockers: string[] = [], fields: string[] = []): SettingsProblem =>
+    ({ jfmodSettingsProblem: true, status, type, message, blockers, fields });
+
+/**
+ * ASP.NET's validation `errors` map as short sentences: the field (a JSON path loses its `$.`) and its first message,
+ * cut before the serializer's "Path: … | LineNumber: …" position detail. Neither kind of message quotes a submitted
+ * value, and nothing from the request body is added here.
+ */
+const validationFields = (errors: unknown): string[] => {
+    if (typeof errors !== 'object' || errors === null) return [];
+    const map = errors as Record<string, unknown>;
+    return Object.keys(map).map(key => {
+        const messages = map[key];
+        const first = Array.isArray(messages) && typeof messages[0] === 'string' ? messages[0].split(' Path: ')[0] : 'The value is not valid.';
+        const field = key.replace(/^\$\.?/, '');
+        return field ? `${field}: ${first}` : first;
+    });
+};
 
 export const isSettingsProblem = (error: unknown): error is SettingsProblem =>
     typeof error === 'object' && error !== null && (error as SettingsProblem).jfmodSettingsProblem === true;
@@ -34,9 +52,9 @@ export const request = async <T>(api: Api, method: 'GET' | 'POST' | 'PATCH' | 'P
         return response.data;
     } catch (error) {
         if (isAxiosError(error) && error.response) {
-            const body = (error.response.data ?? {}) as { type?: string; title?: string; blockers?: string[] };
+            const body = (error.response.data ?? {}) as { type?: string; title?: string; blockers?: string[]; errors?: unknown };
             throw problem(error.response.status, body.type ?? '', body.title ?? `The request failed (${error.response.status}).`,
-                body.blockers ?? []);
+                body.blockers ?? [], validationFields(body.errors));
         }
         throw problem(0, 'unreachable', 'The server could not be reached.');
     }
@@ -153,8 +171,9 @@ export const problemText = (error: unknown) => {
         if (error.type === 'revision_conflict') return CONFLICT_MESSAGE;
         const blockers = error.blockers.map(blockerSentence).join(' ');
         if (blockers) return `${error.message} ${blockers}`;
+        const fields = error.fields.length ? ` ${error.fields.join(' ')}` : '';
         const code = error.type ? ` (${error.type})` : '';
-        return `${error.message}${code}`;
+        return `${error.message}${fields}${code}`;
     }
     return 'The request failed.';
 };
