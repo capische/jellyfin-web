@@ -849,6 +849,11 @@ explicit that TV bugs are only reachable by D-pad at 1920x1080.
 8. **Verify at 1920x1080**, with `localStorage.setItem('layout','tv')`, driven by arrow keys.
    1280x720 gets a two-row header the TV never shows, and header work verified there is aimed at
    the wrong layout.
+9. **MUI pop-ups obey the remote** (PHASE7 decision 13, 2026-09-24). Back closes the top menu,
+   popover or dialog and nothing else, whichever key the remote sends; arrows move inside it and
+   never into the page behind; Enter toggles checkboxes and switches; opening one focuses its first
+   control. `shell/dpadModals.ts` does this for every MUI pop-up, so a new screen gets it by using
+   MUI rather than by handling keys itself.
 
 **Proposed (review 2026-09-18, not user-approved):** additional TV rules from
 [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), tracked as T19 in `PHASE3.md` and W9 and W11 in
