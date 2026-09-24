@@ -370,7 +370,7 @@ struck through have been handed back and are kept for one release as a record of
 | `package.json` | `build:mod`-related scripts and the e2e runner reference | scripts missing; re-add | permanent |
 | `src/index.jsx` | only under boot option (2) | mod entry boots differently from stock; re-factor | permanent if (2) is chosen, otherwise none |
 | `src/config.json` | none planned; listed because the mod entry reads it | the mod entry fetches it by rooted URL; a schema change surfaces in `useWebConfig` | none |
-| `src/apps/legacy/controllers/hometab.js` | mounts hero and top bar (W7) | Home chrome disappears in the stock entry | **still patched.** Stage B's Home covers desktop and mobile; the TV layout routes through upstream's legacy Home, which is what this mounts. It comes out with the TV shell slice, not before |
+| ~~`src/apps/legacy/controllers/hometab.js`~~ | mounts hero and top bar (W7) | — | **removed (P7 TV shell).** The mod router owns `home` in every layout, and the mod Home tab applies the TV header's transparent bar itself; `git diff master` is empty |
 | `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |
 | `src/apps/legacy/controllers/movies/movies.js`, `shows/tvshows.js` | combined browse and File filter (W2, W3, W8) | file-less entries and the File filter vanish from the **TV layout's** grids, which is the only layout that reaches these controllers | **still patched.** Restoring them does not remove a seam, it removes the feature on TV: the legacy route table serves `movies` and `tv` whenever `layoutManager.modern` is false, and nothing else serves TV browse. Measured, not assumed (P7.S6). It comes out with the TV shell slice, like the `hometab.js` row |
 | ~~`src/apps/legacy/routes/search.tsx`~~ | Add from TMDB section (W4) | — | **removed (P7.S6).** The mod router owns `search`; `git diff master` is empty |
@@ -1695,6 +1695,59 @@ and nothing else serves TV browse.** Driven at 1920×1080 with `layout=tv`, the 
 Restoring `movies.js` and `tvshows.js` today would take the catalog off the TV grid entirely.
 They come out with the TV shell slice, alongside the `hometab.js` row that is deferred for the
 same reason.
+
+#### TV and D-pad shell — handover, 2026-09-24
+
+Work queue item 2 (PLAN). Opus, high effort. Branch `p7-tv`, worktree `.claude/worktrees/p7-tv`, pushed to
+`origin/jellyfin-mod`. This agent was stopped by the coordinator before the Chrome pass; everything below is
+Playwright-bundled Chromium, headless, against the acceptance instance (28096) serving the branch's bundle at
+`/web/` through the takeover.
+
+**Done in code.**
+
+- The mod router owns `home` in every layout. `hometab.js` is back to upstream (`git diff master` empty); the TV
+  header's transparent bar is applied by the mod Home tab (`integration/homeChrome.ts`, now a small
+  `attachLegacyTopbar` helper) and detached when the tab pauses.
+- TV first focus on Home waits for the hero's Play instead of landing on the first upstream row and having the
+  hero and merged rows drawn above it (UX §13 rule 2). Back to Home restores focus to the card the user left from
+  (UX Principle 3), because the React Home renders afresh where upstream's legacy Home was a cached view.
+- **A TV regression found and fixed:** `ModAppLayout` imported upstream's `AppOverrides.scss` statically, so its
+  modern-only `.libraryPage { padding-top: 0 !important }` applied on the TV. Every legacy page's toolbar sat
+  under `.skinHeader`, and the Movies/TV grids' paging, view, sort and **Filter** buttons were unreachable by
+  D-pad (measured: Filter at y=20 under an 87 px header; the fork's stock entry puts it at y=154). The overrides
+  now load only with the modern layout, as upstream loads them.
+- The TV chrome stays upstream's legacy header, deliberately: it is the D-pad-proven surface, and MUI menus in
+  front of a remote would trade its Back and focus model for an unproven one.
+
+**Verified (Chromium, bundle `0350bcab50fa`).** TV 1920×1080 and 1280×720, keyboard only: Home first focus on the
+hero Play; Down walks Continue watching → Recently Added → My Media; Enter on a merged-row card opens details and
+Escape (Back) returns with focus on that card; Up reaches the header tabs; Favorites and Home tabs by Enter, the
+bar detaches and re-attaches; Search opened from the header by Enter, typed query keeps focus in the field,
+upstream zone plus Add from TMDB with the file-state mark, both reachable by Down, Back returns Home. Movie detail:
+Down reaches Search releases / Get another quality / Keep, Right walks them. Grids: Shows 100 cards on page one of
+105 with 48 mod cards and 48 marks; Movies 55 of 55 with 54 and 54; Filter reached by D-pad, the dialog carries the
+File group, Back closes it and stays on the grid. No page errors. Desktop 1440×900 and mobile 390×844 (Android UA,
+`layout-mobile`): Home hero and sections, search with both zones, detail with the mod section, both grids with
+marks, no page errors.
+
+**Not done or not verified.**
+
+- **The real Google Chrome pass has not run.** Nothing here is accepted until it does.
+- Physical webOS: not run; desktop TV emulation is not device evidence.
+- `movies.js` and `tvshows.js` are **still patched**. They are the only thing that serves the catalog on the TV
+  grid, and owning them would mean mirroring `moviesrecommended.js` and `tvrecommended.js` as well (their tab
+  dispatch imports `../movies/${depends}` by path, and their Suggestions tab is module-private), about 1 500
+  lines against a ~70-line patch — the trade decision 12 already rejected for the modern grid. The alternative,
+  rendering the modern React library page on the TV, puts MUI popovers in front of the remote, where webOS's Back
+  key would navigate away instead of closing them. Left for a user decision.
+- The Search releases picker opened by Enter on TV was not reached by the probe (the walk back along the action
+  row overshot); the S6 detail evidence covers the actions' reachability, not this dialog on this bundle.
+
+**Instance state.** 28096's packaged bundle was replaced for these runs; the previous zip is kept beside it as
+`jellyfinmod-web.zip.pre-p7tv` and was restored at the end of the run.
+
+**Next step.** Re-run the probe on real Chrome (`channel: 'chrome'`) at the four layouts against a fresh deploy of
+this branch, then decide the two legacy grid rows with the user.
 
 ### S7 — one settings contract behind every form
 
