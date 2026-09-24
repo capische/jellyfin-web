@@ -95,6 +95,8 @@ export interface EntryEpisode {
     monitored: boolean;
     /** The episode's own retention override; absent from plugins before P10.E3. */
     retentionPolicy?: RetentionPolicyWire;
+    /** The episode's own window in days when `retentionPolicy` is `days` (PHASE10 Q4). */
+    reclaimAfterDays?: number | null;
     state: FileState;
     availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;

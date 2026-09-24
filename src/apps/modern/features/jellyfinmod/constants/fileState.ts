@@ -38,6 +38,10 @@ export const retentionDeadline = (retention?: RetentionSummary | null): string |
 /** Episodes are tracked one by one and carry their own Keep (P10.E1-E2). */
 export const EPISODE_RETENTION_CAPABILITY = 'retention.episodes';
 
+/** Episode un-Keep and window editor, per-file Keep and multi-episode files (PHASE10 Q3-Q5). */
+export const EPISODE_CONTROLS_CAPABILITY = 'retention.episodeControls';
+export const VERSION_KEEP_CAPABILITY = 'retention.versionKeep';
+
 export const keepButtonLabel = (busy: boolean, kept: boolean): string => {
     if (busy) return 'Keeping…';
     return kept ? 'Kept' : 'Keep';
@@ -52,7 +56,9 @@ const PROTECTION_MESSAGES = new Map([
     // The public vocabulary shown to non-administrators (P3.T15).
     ['protected', 'Protected from automatic removal.'],
     ['series_unavailable', 'Protected while its series cannot be read.'],
-    ['episode_versions_untracked', 'Kept while this episode has more than one file.']
+    ['episode_versions_untracked', 'Kept while this episode has more than one file.'],
+    ['version_kept', 'This file is kept.'],
+    ['multi_episode_not_all_due', 'Kept until every episode in this file is due.']
 ]);
 
 /** Privacy-safe wording shared by native, file-less and episode details. */
