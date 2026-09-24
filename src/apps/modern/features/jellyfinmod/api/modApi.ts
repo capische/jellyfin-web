@@ -164,6 +164,31 @@ export const keepEpisode = async (api: Api, entryId: string, episodeId: string, 
     return response.data;
 };
 
+/** Stops keeping one episode; its own or its series' window applies again (PHASE10 Q4). Administrators only. */
+export const unkeepEpisode = async (api: Api, entryId: string, episodeId: string, options?: AxiosRequestConfig): Promise<EntryEpisode> => {
+    const response = await api.axiosInstance.delete<EntryEpisode>(api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
+        + '/Episodes/' + encodeURIComponent(episodeId) + '/Keep', { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+/** Sets one episode's own retention: its series' window, its own days, or never (PHASE10 Q4). Administrators only. */
+export const setEpisodeRetention = async (api: Api, entryId: string, episodeId: string,
+    policy: 'inherit' | 'days' | 'never', reclaimAfterDays: number | null, options?: AxiosRequestConfig): Promise<EntryEpisode> => {
+    const response = await api.axiosInstance.put<EntryEpisode>(api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
+        + '/Episodes/' + encodeURIComponent(episodeId) + '/Retention', { policy, reclaimAfterDays },
+    { ...options, headers: authorization(api) });
+    return response.data;
+};
+
+/** Keeps, or stops keeping, one file of a movie or an episode (PHASE10 Q3). Administrators only. */
+export const setVersionKept = async (api: Api, entryId: string, bindingId: string, kept: boolean,
+    options?: AxiosRequestConfig): Promise<{ bindingId: string; kept: boolean }> => {
+    const url = api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId) + '/Versions/' + encodeURIComponent(bindingId) + '/Keep';
+    const config = { ...options, headers: authorization(api) };
+    if (kept) return (await api.axiosInstance.post<{ bindingId: string; kept: boolean }>(url, undefined, config)).data;
+    return (await api.axiosInstance.delete<{ bindingId: string; kept: boolean }>(url, config)).data;
+};
+
 export const patchEpisode = async (api: Api, entryId: string, episodeId: string, monitored: boolean, options?: AxiosRequestConfig): Promise<EntryEpisode> => {
     const response = await api.axiosInstance.patch<EntryEpisode>(api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId)
         + '/Episodes/' + encodeURIComponent(episodeId), { monitored }, { ...options, headers: authorization(api) });
