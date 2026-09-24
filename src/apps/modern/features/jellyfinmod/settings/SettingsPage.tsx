@@ -95,6 +95,9 @@ const SettingsPage: FC = () => {
         // Put focus on the section heading, so a keyboard or screen-reader user lands where the content changed.
         window.setTimeout(() => document.getElementById(`jfmod-h-${id}`)?.focus(), 0);
     }, [setParams]);
+    const pickSection = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => go(event.target.value), [go]);
+    // Each rail step carries its section id in `data-section`, so one handler serves the whole rail.
+    const openStep = useCallback((event: React.MouseEvent<HTMLButtonElement>) => go(event.currentTarget.dataset.section!), [go]);
 
     useEffect(() => {
         // TV: start on the current rail step, so the remote has somewhere to be (UX §13 rule 2).
@@ -125,7 +128,7 @@ const SettingsPage: FC = () => {
                         <p>In the order things have to work.</p>
                     </div>
                     <div className='jfmod-check-picker'>
-                        <TextField select fullWidth size='small' label='Section' value={current} onChange={event => go(event.target.value)}>
+                        <TextField select fullWidth size='small' label='Section' value={current} onChange={pickSection}>
                             {SECTIONS.map(item => <MenuItem key={item.id} value={item.id}>{item.title}</MenuItem>)}
                         </TextField>
                     </div>
@@ -135,7 +138,7 @@ const SettingsPage: FC = () => {
                             return (
                                 <li key={item.id}>
                                     <button type='button' className={`jfmod-step k-${summary.kind}`} data-section={item.id}
-                                        aria-current={item.id === current ? 'true' : 'false'} onClick={() => go(item.id)}
+                                        aria-current={item.id === current ? 'true' : 'false'} onClick={openStep}
                                     >
                                         <span className='jfmod-step-n' aria-hidden='true'>{at + 1}</span>
                                         <span className='jfmod-step-text'>

@@ -1,6 +1,6 @@
 import Button from '@mui/material/Button';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC } from 'react';
+import React, { type FC, useCallback } from 'react';
 
 import { useApi } from 'hooks/useApi';
 
@@ -24,6 +24,9 @@ const SetupBanner: FC = () => {
         staleTime: 0,
         refetchOnMount: 'always'
     });
+    const dismiss = useCallback(() => {
+        void request(api!, 'POST', 'Setup/Dismiss').then(() => setup.refetch());
+    }, [api, setup]);
     if (!enabled || !setup.data || setup.data.complete || setup.data.dismissedAt) return null;
     const open = setup.data.steps.filter(step => !step.optional && step.status !== 'done').length;
     return (
@@ -33,7 +36,7 @@ const SetupBanner: FC = () => {
                 <span className='jfmod-notice-text'>JellyfinMod is not set up yet: {open} step(s) left before titles can be grabbed.</span>
                 <span className='jfmod-notice-action'>
                     <Button variant='contained' size='small' href='#/catalog/settings/setup'>Set up</Button>
-                    <Button size='small' onClick={() => { void request(api!, 'POST', 'Setup/Dismiss').then(() => setup.refetch()); }}>Dismiss</Button>
+                    <Button size='small' onClick={dismiss}>Dismiss</Button>
                 </span>
             </div>
         </div>
