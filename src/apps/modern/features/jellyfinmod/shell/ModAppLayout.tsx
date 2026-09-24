@@ -41,8 +41,8 @@ if (layoutManager.modern) void import('apps/modern/AppOverrides.scss');
  *
  * The TV layout keeps upstream's legacy layout as its chrome (P7 TV shell): `.skinHeader`, `libraryMenu` and the
  * header tabs are what the D-pad already knows how to move through, and the mod's own screens — Home, search,
- * detail and the catalog grid — render inside it. The React toolbar is a mouse-and-touch surface; putting MUI menus
- * in front of a remote would trade a proven Back and focus model for an unproven one.
+ * detail and the library grid — render inside it. The library grid brings its own toolbar into the page
+ * (`LibraryGridPage`), and its MUI pop-ups get Back and D-pad handling from `dpadModals` (PHASE7 decision 13).
  */
 const ModAppLayout: FC = () => {
     const [isDrawerActive, setIsDrawerActive] = useState(false);
