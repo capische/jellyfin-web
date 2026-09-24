@@ -19,7 +19,10 @@ const SetupBanner: FC = () => {
         queryKey: ['JellyfinMod', api?.basePath, 'SetupState'],
         queryFn: () => request<SetupState>(api!, 'GET', 'Setup/State'),
         enabled,
-        retry: false
+        retry: false,
+        // The app persists its query cache across reloads; setup state must be read fresh or the banner lies.
+        staleTime: 0,
+        refetchOnMount: 'always'
     });
     if (!enabled || !setup.data || setup.data.complete || setup.data.dismissedAt) return null;
     const open = setup.data.steps.filter(step => !step.optional && step.status !== 'done').length;
