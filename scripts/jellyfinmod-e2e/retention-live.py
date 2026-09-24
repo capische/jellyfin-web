@@ -32,6 +32,8 @@ Subcommands, in scenario order:
   real                    real-window checks: one-day schedule, window editor, un-Keep restart, series Keep wins
   restore                 disable retention and restore the saved settings
   cleanup                 remove the libraries, fixture files, catalog entries and native items
+  safe-finish             restore and cleanup, each retried, then verify-safe; writes safe.OK only when all passed
+  verify-safe             prove from the instance: retention off, settings restored, no fixture left
   reacquire | unkeep-survivor | unkeep-finish | toggle | covered | late
                           the second review's acceptance checks (RET2-R1, R2, R5, R7, R3)
   seed-server             serve the fake Transmission RPC in the foreground
@@ -133,13 +135,39 @@ def call(method, path, body=None, token=None, anonymous=False):
             return response.status, (json.loads(text) if text else None)
     except urllib.error.HTTPError as error:
         return error.code, error.read().decode()[:400]
+    except (urllib.error.URLError, OSError) as error:  # refused, reset, timed out: the instance is down or busy
+        return 0, f"{type(error).__name__}: {error}"
 
 
-def must(method, path, body=None, ok=(200, 201, 202, 204), token=None):
-    status, result = call(method, path, body, token)
-    if status not in ok:
+def must(method, path, body=None, ok=(200, 201, 202, 204), token=None, tries=None, pause=15):
+    """A GET is retried on a 5xx or no answer (a busy host answers `database is locked` while the plugin re-evaluates
+    every target after a switch-on, RET3-R1); a write is not, because a revision it already applied would then 409."""
+    tries = tries or (4 if method == "GET" else 1)
+    for attempt in range(1, tries + 1):
+        status, result = call(method, path, body, token)
+        if status in ok:
+            return result
+        if attempt < tries and (status == 0 or status >= 500):
+            print(f"RETRY {method} {path} -> {status} {str(result)[:160]}; attempt {attempt}/{tries}", flush=True)
+            time.sleep(pause)
+            continue
         sys.exit(f"FAIL {method} {path} -> {status} {str(result)[:300]}")
-    return result
+
+
+def attempt(label, action, tries, pause):
+    """Runs a step that may exit or raise until it succeeds, at most `tries` times; True when it did."""
+    for number in range(1, tries + 1):
+        try:
+            action()
+            return True
+        except SystemExit as stop:
+            why = stop.code
+        except Exception as error:  # noqa: BLE001 - every failure of a safety step is retried and reported
+            why = f"{type(error).__name__}: {error}"
+        print(f"RETRY {label} attempt {number}/{tries} failed: {str(why)[:300]}", flush=True)
+        if number < tries:
+            time.sleep(pause)
+    return False
 
 
 def check(condition, message):
@@ -253,8 +281,9 @@ def cmd_login():
 
 
 def cmd_logout():
-    call("POST", "/Sessions/Logout")
-    os.remove(TOKEN_FILE)
+    if os.path.exists(TOKEN_FILE):
+        call("POST", "/Sessions/Logout")
+        os.remove(TOKEN_FILE)
     print("signed out")
 
 
@@ -519,7 +548,10 @@ def cmd_phase_b():
     try:
         announced, _ = started_events()
         cmd_configure(0, 1)
-        cmd_preview()
+        # Right after a switch-on the plugin re-evaluates every target; a preview then may meet `database is locked`
+        # (RET3-R1). `must` retries the GET; this retries the whole preview once more after a longer pause.
+        if not attempt("preview after switch-on", cmd_preview, 3, 60):
+            sys.exit("FAIL the preview never answered after the switch-on")
         check(started_events()[0] == announced, "switching retention back on announced no window again (RET2-R5)")
         cmd_hashes("phaseb-run-before")
         cmd_run()
@@ -531,9 +563,14 @@ def cmd_phase_b():
               "no missing-media event after the real-window reclaim")
         cmd_series_keep()
     finally:
-        cmd_restore()
-        cmd_cleanup()
-        cmd_logout()
+        # One pass here; the cron wrapper then runs `safe-finish`, which retries and verifies, whatever happened here.
+        try:
+            attempt("restore", cmd_restore, 2, 20)
+        finally:
+            try:
+                attempt("cleanup", cmd_cleanup, 1, 0)
+            finally:
+                cmd_logout()
 
 
 def cmd_run():
@@ -656,8 +693,17 @@ def cmd_series_keep():
 
 
 def cmd_restore():
-    saved = json.load(open(RESTORE))
+    if os.environ.get("JFMOD_INJECT_RESTORE_FAILURE") == "1":  # rehearsal of the RET3-R1 failure path only
+        sys.exit("INJECTED restore failure (JFMOD_INJECT_RESTORE_FAILURE=1)")
     retention = must("GET", "/JellyfinMod/Settings/Retention")
+    if not os.path.exists(RESTORE):
+        # Nothing saved to restore: still switch retention off, keeping every other setting as it is.
+        body = {k: retention[k] for k in ("reclaimAfterDays", "watchedUserMode", "exemptFavourites", "selectedUserId")
+                if retention.get(k) is not None}
+        must("PATCH", "/JellyfinMod/Settings/Retention", dict(body, enabled=False, revision=retention["revision"]))
+        check(must("GET", "/JellyfinMod/Settings/Retention")["enabled"] is False, "retention is disabled (no saved settings)")
+        return
+    saved = json.load(open(RESTORE))
     r = saved["retention"]
     body = {"enabled": False, "reclaimAfterDays": r["reclaimAfterDays"], "watchedUserMode": r["watchedUserMode"],
             "exemptFavourites": r["exemptFavourites"], "revision": retention["revision"]}
@@ -712,6 +758,7 @@ def cmd_cleanup():
     for extra in EXTRA_ROOTS:
         subprocess.run(["docker", "exec", CONTAINER, "rm", "-rf", extra], check=False)
     known = json.load(open(ENTRIES)) if os.path.exists(ENTRIES) else []
+    remember_ever(known)
     left = [e["id"] for e in must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["items"]]
     for entry_id in dict.fromkeys(known + left):
         status, _ = call("DELETE", f"/JellyfinMod/Entries/{entry_id}")
@@ -724,6 +771,62 @@ def cmd_cleanup():
     entries = must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["totalRecordCount"]
     files = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
     check(remaining == 0 and entries == 0 and not files, f"no JellyfinMod fixture left: items {remaining}, entries {entries}, dirs {files}")
+
+
+EVER = os.path.join(STATE, "entries-ever.json")  # every fixture entry id ever remembered; cleanup empties ENTRIES
+
+
+def remember_ever(ids):
+    ever = json.load(open(EVER)) if os.path.exists(EVER) else []
+    write_private(EVER, json.dumps(list(dict.fromkeys(ever + list(ids)))))
+
+
+def verify_safe():
+    """What `safe-finish` must prove from the instance itself before the job may call itself done."""
+    retention = must("GET", "/JellyfinMod/Settings/Retention")
+    check(retention["enabled"] is False, "retention is disabled")
+    if os.path.exists(RESTORE):
+        saved = json.load(open(RESTORE))
+        window = must("GET", f"/Plugins/{PLUGIN}/Configuration").get("RetentionTestWindowMinutes", 0)
+        check(window == saved["testWindowMinutes"], f"the test window is back to {saved['testWindowMinutes']} (now {window})")
+        seed = must("GET", "/JellyfinMod/Settings/SeedProtection")
+        check(seed["source"] == saved["seed"]["source"], f"the seed source is back to {saved['seed']['source']}")
+    ever = json.load(open(EVER)) if os.path.exists(EVER) else []
+    for entry_id in ever:
+        status, _ = call("GET", f"/JellyfinMod/Entries/{entry_id}")
+        check(status == 404, f"fixture entry {entry_id} is gone")
+    entries = must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["totalRecordCount"]
+    items = must("GET", "/Items?Recursive=true&SearchTerm=JellyfinMod&IncludeItemTypes=Movie,Series,Episode")["TotalRecordCount"]
+    libraries = [f["Name"] for f in must("GET", "/Library/VirtualFolders") if f["Name"] in (SHOW_LIBRARY, MOVIE_LIBRARY)]
+    dirs = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
+    check(entries == 0 and items == 0 and not libraries and not dirs,
+          f"no JellyfinMod fixture left: entries {entries}, items {items}, libraries {libraries}, dirs {dirs}")
+
+
+def cmd_safe_finish():
+    """RET3-R1: restore and clean up, each retried, then verify; writes safe.OK only when the instance is proven safe.
+    Idempotent: after a successful run it only re-verifies."""
+    marker = os.path.join(STATE, "safe.OK")
+    if os.path.exists(marker):
+        os.remove(marker)
+    if os.path.exists(ENTRIES):
+        remember_ever(json.load(open(ENTRIES)))
+    signed_in = attempt("login", cmd_login, 5, 30)
+    restored = signed_in and attempt("restore", cmd_restore, 6, 30)
+    cleaned = signed_in and attempt("cleanup", cmd_cleanup, 3, 60)
+    # Retention off comes first: even when the cleanup cannot finish, a restore that worked has made the instance safe
+    # to leave, and the next tick finishes the rest.
+    verified = signed_in and attempt("verify", verify_safe, 3, 30)
+    try:
+        cmd_logout()
+    except Exception as error:  # noqa: BLE001
+        print("logout failed:", type(error).__name__)
+    if not (restored and cleaned and verified):
+        print(f"!!! SAFE-FINISH FAILED: signed in {signed_in}, restored {restored}, cleaned {cleaned}, verified {verified}",
+              flush=True)
+        sys.exit(2)
+    write_private(marker, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    print("SAFE: retention off, settings restored, no fixture left", flush=True)
 
 
 def cmd_seed_server():
@@ -965,6 +1068,7 @@ if __name__ == "__main__":
         "restore": cmd_restore, "cleanup": cmd_cleanup, "seed-server": cmd_seed_server,
         "reacquire": cmd_reacquire, "unkeep-survivor": cmd_unkeep_survivor, "unkeep-finish": cmd_unkeep_finish,
         "toggle": cmd_toggle, "covered": cmd_covered, "late": cmd_late, "double": cmd_double,
+        "safe-finish": cmd_safe_finish, "verify-safe": verify_safe,
     }
     if args[0] == "configure":
         cmd_configure(int(args[1]), int(args[2]))
