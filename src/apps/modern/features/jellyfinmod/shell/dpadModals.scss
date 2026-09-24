@@ -1,0 +1,45 @@
+/* JellyfinMod — where the remote is, inside an MUI pop-up on the TV (P7 TV shell).
+ *
+ * MUI draws keyboard focus as a faint tint, and only when the engine reports `:focus-visible`, which older webOS
+ * engines do not. From across a room that is no focus at all. Upstream's TV answer for its own controls is the
+ * primary fill of `.emby-button.show-focus:focus` (`themes/_base/_theme.scss`); the same fill is used here, on
+ * `:focus`, for the controls `dpadModals.ts` lets the remote reach. Nothing outside the TV layout is affected.
+ *
+ * Additive only: no upstream selector or stylesheet is edited. Sizes are in `em` so the TV's 125% root applies.
+ * Every custom-property value is preceded by a plain one, because older webOS engines drop a `var()` declaration.
+ */
+
+$jfmod-primary: #00a4dc;
+$jfmod-on-primary: #fff;
+
+.layout-tv .MuiModal-root {
+    .MuiMenuItem-root:focus,
+    .MuiAccordionSummary-root:focus,
+    .MuiButtonBase-root.MuiButton-root:focus,
+    .MuiButtonBase-root.MuiIconButton-root:focus,
+    .MuiListItemButton-root:focus {
+        background-color: $jfmod-primary;
+        background-color: var(--jf-palette-primary-main, $jfmod-primary);
+        color: $jfmod-on-primary;
+        color: var(--jf-palette-primary-contrastText, $jfmod-on-primary);
+    }
+
+    .MuiMenuItem-root:focus .MuiListItemIcon-root,
+    .MuiMenuItem-root:focus .MuiSvgIcon-root,
+    .MuiAccordionSummary-root:focus .MuiSvgIcon-root {
+        color: inherit;
+    }
+
+    // A checkbox's input sits before its icon, so the icon can show the focus the input has.
+    .MuiCheckbox-root input:focus + .MuiSvgIcon-root,
+    .MuiRadio-root input:focus + span {
+        border-radius: 0.2em;
+        background-color: $jfmod-primary;
+        background-color: var(--jf-palette-primary-main, $jfmod-primary);
+        color: $jfmod-on-primary;
+    }
+
+    .MuiSwitch-input:focus + .MuiSwitch-thumb {
+        box-shadow: 0 0 0 0.25em $jfmod-primary;
+    }
+}
