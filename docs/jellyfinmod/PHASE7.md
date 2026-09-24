@@ -990,7 +990,9 @@ quietly drops one. The acceptance below is written against that risk.
   reports it: a `trakt` block in Health carrying `installed`, `version` and `configuredForUser`,
   derived from the host's own plugin list. The plugin's id must be read off an installed copy
   rather than hard-coded from documentation, which does not publish it.
-- **Proposed surfaces: none in the first slice.** Trakt state is not JellyfinMod state, and the
+- **Superseded 2026-09-24 by the user's answer to Q16:** the detail page shows a small Trakt indicator when the
+  plugin is installed and the title has Trakt history (§7.1.6). The proposal it replaces is kept for the record:
+- ~~**Proposed surfaces: none in the first slice.**~~ Trakt state is not JellyfinMod state, and the
   detail page already shows Jellyfin's watched state, which is what Trakt reads and writes. A
   Trakt badge would be a second source of truth for the same fact. The proposed first slice shows
   nothing and only guarantees that scrobbling keeps working.
@@ -1038,14 +1040,21 @@ the test user, plus one run with it uninstalled. No fixture left behind.
 
 ### 7.1.6 Open questions this section adds
 
-14. **Trakt-sourced watches and retention.** Should a watch that arrived *from* Trakt — watched on
+**Answered by the user directly on 2026-09-24** (question tool in the coordinating session; recorded here by S11):
+Q14 **yes** — a watch imported from Trakt counts toward retention exactly like a local watch, and only watches
+after the retention baseline count; Q15 **no** — reclaimed files are never reported to Trakt; Q16 — **show a small
+indicator** on the mod detail page, in every layout, when the Trakt plugin is installed and the title has Trakt
+history, implemented only after S11 passes. The retention-start warning (including Trakt-sourced windows) belongs to
+the retention work (PHASE10), not to Phase 7. The original questions stay below, struck through.
+
+14. ~~**Trakt-sourced watches and retention.**~~ **Answered 2026-09-24: yes.** Should a watch that arrived *from* Trakt — watched on
     another device, imported by `SyncFromTraktTask` — start a JellyfinMod retention window like a
     local watch (proposed: yes, because the user has watched it), or should retention count only
     watches observed on this server? Consumed by 7.1 and PHASE3's observation rules.
-15. **Reclaimed titles on Trakt.** Should reclaiming a file be reported to Trakt at all — for
+15. ~~**Reclaimed titles on Trakt.**~~ **Answered 2026-09-24: no.** Should reclaiming a file be reported to Trakt at all — for
     example removed from a collection list (proposed: **no**; Trakt tracks what you watched, not
     what you store, and JellyfinMod deliberately keeps the entry as the durable record)?
-16. **Trakt state on screen.** Show nothing (proposed), or show a small indicator on the detail
+16. ~~**Trakt state on screen.**~~ **Answered 2026-09-24: a small indicator on the detail page.** Show nothing (proposed), or show a small indicator on the detail
     page when the plugin is installed and the title has Trakt history?
 
 ## Entry gates and dependencies
@@ -2608,7 +2617,8 @@ Each is the conservative option behind a named setting or documented default. It
 **Answered 2026-09-20:** 1, 2, 4 and 7 — see decisions 7–10 under *Accepted user decisions*.
 **Answered 2026-09-24:** 3, 5, 6, 8, 9, 10, 11, 12 and 13, each recorded at its item. They are struck
 through below rather than deleted, so a reader of an older evidence note can still find them. None of
-questions 1–13 remains open; 14–16 (Trakt, §7.1.6) still are.
+questions 1–13 remains open. **Answered 2026-09-24 by the user directly:** 14–16 (Trakt, §7.1.6) — Q14 yes, Q15 no,
+Q16 a small indicator on the detail page; no Phase 7 question remains open.
 
 1. ~~**Takeover default.**~~ **Answered:** on wherever the web root is writable, with an explicit
    off switch, logging and Health/settings visibility (decision 7). Consumed by S4 and S5.
