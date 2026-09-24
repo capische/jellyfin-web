@@ -71,6 +71,8 @@ FIXTURE = {
     "E11": ("A", "JellyfinMod P10 Show S01E11.mkv", "kept"),               # grouped with E11-E12 by Jellyfin 12 (C1)
     "E11-E12": ("A", "JellyfinMod P10 Show S01E11-E12.mkv", "kept"),       # E12's only copy
     "E13": ("A", "JellyfinMod P10 Show S01E13.mkv", "reclaimed"),          # watched on another device (synced)
+    "E14-A": ("A", "JellyfinMod P10 Show S01E14.mkv", "kept"),             # two bindings, for the per-file Keep UI
+    "E14-B": ("B", "JellyfinMod P10 Show S01E14.mkv", "kept"),
     "M-1080p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 1080p.mkv", "kept"),  # a two-file movie on Jellyfin 12 (C7)
     "M-720p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 720p.mkv", "kept"),
 }
@@ -256,7 +258,12 @@ def make_video(target, index, key):
 
 
 def cmd_media():
+    # A file is created once: running this again adds new fixtures but never brings back a file retention reclaimed.
+    marker = os.path.join(STATE, "media-created.json")
+    created = set(json.load(open(marker))) if os.path.exists(marker) else set()
     for index, key in enumerate(FIXTURE):
+        if key in created:
+            continue
         root, name, _ = FIXTURE[key]
         directory = host_dir("S") if key in SEEDED else host_dir(root)
         os.makedirs(directory, exist_ok=True)
@@ -272,7 +279,8 @@ def cmd_media():
     with open(os.path.join(host_dir(NFO[0]), NFO[1]), "w") as handle:
         handle.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<episodedetails><title>Pilot</title>"
                      "<season>1</season><episode>1</episode></episodedetails>\n")
-    print(json.dumps({key: os.stat(host_path(key)).st_nlink for key in FIXTURE}))
+    write_private(marker, json.dumps(sorted(created | set(FIXTURE))))
+    print(json.dumps({key: os.stat(host_path(key)).st_nlink for key in FIXTURE if os.path.exists(host_path(key))}))
 
 
 def library_options(paths):
