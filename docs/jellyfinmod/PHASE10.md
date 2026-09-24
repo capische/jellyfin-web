@@ -134,7 +134,8 @@ checksums of the preserved tables.
 | Partially watched | Not watched. Any resume position on any version by any accessible user protects (`active_resume`); watched means Jellyfin's played flag with no resume. No separate percentage rule (PHASE3, accepted). |
 | Specials (season 0) | Episodes like any other; the user's decision covers every media item. Unnumbered specials stay skipped with a diagnostic (P2.R6) and are never targets. |
 | Multi-episode files | Blocked (`multi_episode_unsupported`, T16) — a file covering E01–E02 is never unlinked because E01 was watched (question 5). |
-| Newly tracked backlog | An episode target evaluated for the **first time** needs a completion **after** that first evaluation (`RequiresFreshCompletion`). Episodes already watched before tracking are not reclaimed until watched (or marked played) again. **Proposed default awaiting the user (question 1).** Movies keep today's rule. |
+| Newly tracked backlog | An episode's retention baseline is the moment it gains its **first binding** (reconciliation seeds the evaluation then; an episode bound earlier gets it at its first evaluation), and it needs a completion **after** that baseline carrying Jellyfin's own last-played date (`RequiresFreshCompletion`). Episodes already watched before tracking are not reclaimed until watched (or marked played) again; a played flag with no last-played date never counts. **Proposed default awaiting the user (question 1).** Movies keep today's rule. |
+| Several files of one episode | Jellyfin 10.11 merges them into one item with alternate media sources, and episode observations see only the item. Until E7 tracks them, such an episode is **blocked** (`episode_versions_untracked`) so no file of it is unlinked. |
 | Re-acquired episodes (T7–T10 class) | Unchanged per target: losing the last binding resets the evaluation (`RetentionTargetReset`) in the same transaction, so a returning file never inherits a deadline or an old completion. |
 | Seed protection | Per file, unchanged: a version seeding below its goal (plugin-owned or Transmission) stays blocked while a lower version of the same episode may be reclaimed (M7). |
 | Hardlinks between versions | Unchanged shared-inode rule: two bindings on one inode are one physical action and need every affected target due; hardlink count above one records zero physical bytes released. |
@@ -158,6 +159,8 @@ checksums of the preserved tables.
 | S11 | Automation re-acquires or searches discovered episodes. | Position rows are created unmonitored; reacquire of reclaimed media still follows `ReacquireReclaimed`. | Code path + live automation status unchanged. |
 | S12 | Ordinary users gain removal power. | Episode Keep is `RequiresElevation`; no Remove or settings path added; ordinary users still see the public reason vocabulary (T15). | HTTP 401 anonymous, 403 ordinary, 200 admin. |
 | S13 | Episode lookup by an alternate version's native id shows the wrong episode's controls. | The detail carries every version's item id; the web matches the page's item against versions, not only the selected binding. | Browser check on a two-version fixture episode. |
+| S15 | An episode whose files Jellyfin merged into one item loses its primary file while the others stay untracked, then re-resolve as a new item. Found by the live run. | Preview and executor block it with `episode_versions_untracked` until E7. | Live: E01 (1080p + 720p) watched and past its deadline, both files byte-identical. |
+| S16 | A first "mark played" arriving before the episode's first evaluation never counts, or an undated played flag counts as fresh. | The baseline is seeded at first binding; a fresh completion needs a last-played date at or after it. | Live: fixture episodes marked played after binding were scheduled; the backlog episode marked played with an old date stayed waiting. |
 | S14 | Migration loses Keep, deadlines or history. | Additive columns and index swap only; verified on a DB copy with preserved counts and integrity/foreign-key checks. | Migration check on the 18096 copy. |
 
 The riskiest part is **S1 together with S2**: the moment tracking starts, a library's whole watched
@@ -197,6 +200,7 @@ work without a pop-up; nothing new needs `dpadModals`.
 | E4 | Web episode page: episode Keep, episode retention, versions and History | E3 | Built bundle on `/web-mod/`, real Chromium then real Google Chrome, desktop/mobile/TV 1920×1080 and 1280×720 by keyboard: Keep focus stays, Kept shown, no page errors |
 | E5 | Live retention E2E on disposable fixtures (fast window, then real window) | E1–E3 | See below |
 | E6 | Gated on the user's answers: episode un-Keep and days editor (Q4), backlog rule change (Q1), per-version Keep (Q3) | answers | per answer |
+| E7 | Track an episode's merged files as versions (alternate media sources, as P6.M6 does for movies), then lift `episode_versions_untracked` | E5 | Live: a two-file fixture episode, watched, loses its lowest unseeded file first; a seeded file stays; the episode is reclaimed only when its last file goes |
 
 **E5 fixture and acceptance.** A disposable library on 18096 pointing at the writable test root
 holds `JellyfinMod P10 Show` with episode files carrying **no TMDB episode ids** (the production
@@ -234,15 +238,86 @@ the ones that delete less and are proposed, awaiting the user.**
 5. **Multi-episode files.** Stay blocked (**default**, T16), or be reclaimed once every covered
    episode is due?
 6. **Ordinary-user live check.** Every ordinary account on 18096 has a password the agents do not
-   know, and they must not create accounts. The 403 for ordinary users is proven by the plugin's
-   real-Kestrel suite; a live check needs a disposable non-admin account created by the user.
+   know, and they must not create accounts. The ordinary-user 403 is covered only by the supporting
+   real-Kestrel suite (test authentication scheme); a live check needs a disposable non-admin account
+   created by the user. **Not verified live.**
+
+## Evidence — 2026-09-24
+
+All on the isolated test instance (port 18096) with disposable fixtures only; production (8096) and
+the Phase 7 acceptance instance (28096) untouched. Signed in as `oleksii` with an empty password.
+
+**Deployed on 18096:** plugin commits `5637362` + `9d6d261` (DLL SHA-256
+`67fa1ee3ca9537d65e3dfc4f5681ac2dec6ff0c31e8693400ef2fd28ceb200f6`; Health has no revision field),
+web `83c75e3783` as plugin-served bundle `5ad7f9a1af3d` at `/web-mod/` (the instance's `/web`
+root is read-only). Pre-deploy backup of the DLL, web zip, XML and database in the isolated build
+directory `p10-backup-20260924T060010Z`. **Retention is disabled on 18096**, with every setting
+restored to its saved value (All users, 14 days, test window 0, seed endpoint unchanged).
+
+**E1.** The migration applied to a `.backup` copy of the 18096 database kept every row: entries
+160, episodes 17, entry bindings 158, history 161, evaluations 53, observations 212, operations 4,
+Keep 1, with identical per-table checksums, clean `integrity_check` and `foreign_key_check`. Live,
+one catalog reconciliation (15 s) tracked **514 of 514** native episodes as position rows, all
+unmonitored, 514 bindings, entries and Keep unchanged, no conflicts;
+`GET /Entries?jellyfinItemId=<native episode>` now returns its series. Finding: the 18096 database
+carries a **unique** `(EntryId, SeasonNumber, EpisodeNumber)` index although the EF model says
+non-unique (pre-existing drift); reconciliation therefore never creates a TMDB row at a position a
+position row holds.
+
+**E2/E3.** Supporting real-Kestrel suite (`PhaseThreeProtectionIntegration`, test authentication
+scheme and stubbed host services, so not acceptance): episode Keep anonymous 401, ordinary user 403,
+admin 200, idempotent with one `episode_kept` event naming the episode, only that episode kept, its
+preview row blocked. Suites Zero, One, Two, Three, ThreeProtection, Four (as root, as the existing
+runner does), Five and Six pass; `PhaseSevenSettingsIntegration` fails on macOS on a download-folder
+check that is unrelated. Live over HTTP as admin: episode Keep returned `policy never / kept`.
+
+**E5 fast window** (`RetentionTestWindowMinutes = 3`, Selected user `oleksii`, seed protection on an
+HTTP Transmission boundary server whose torrent is below its ratio goal). Fixture `JellyfinMod P10
+Show` with episode files carrying no TMDB ids: E01 in two files (1080p, and 720p hardlinked to a
+seeding copy), E02 unwatched, E03 watched and kept at episode level, E04 marked played with a date
+before tracking, E05 watched, E06 watched and hardlinked to a seeding copy. Before the deadline:
+E01, E05, E06 scheduled; E02 and E04 waiting; E03 kept. After it: E05 `due`, E06
+`seed_goal_unmet`, E01 `episode_versions_untracked`, E03 kept, E02/E04 waiting; the 7 read-only
+production rows `media_not_writable`, none due. The native task run: inspected 573, eligible 1,
+reclaimed 1, blocked 47, failed 0, 71 670 logical bytes, physical bytes unknown (last link). **Only
+E05's file was unlinked; every other fixture file, both seeding copies and the sidecar were
+SHA-256-identical before and after.** E05 became `reclaimed` with its evaluation reset, one
+`reclaimed` history event naming the episode, and no `media_missing` after a reconciliation.
+
+**T7 regression, live:** E05's file came back at the same path (same native id, Jellyfin reattached
+its old played state, last played 06:17); with retention enabled it stayed `waiting_for_completion`
+because its baseline is the reclaim time (06:23).
+
+**E5 real settings** (test window 0, 1-day window): E02 marked played was scheduled for the next
+day (2026-09-25 06:24Z); two immediate runs reclaimed nothing and every hash was unchanged. **The
+positive half (reclaim after the day) is NOT VERIFIED:** it needs the day to pass.
+
+**E4 browser** (`scripts/jellyfinmod-e2e/episode-retention.mjs`): Playwright's Chromium, then real
+Google Chrome 153 for the final pass, at desktop 1440×900, mobile 390×844, and TV 1920×1080 and
+1280×720 by keyboard only. Every layout: the episode page resolves its own episode, admin Keep keeps
+that episode only (server: episode `never`, series `inherit`), says so, keeps focus on TV, History
+lists exactly the episode's own events, the remote Back key (461) leaves the page, no page errors.
+The series page keeps series Keep; an API-kept episode shows Kept. Note: at 1920×1080, ArrowDown
+from Keep passes the History toggle and ArrowUp returns to it. The probe was lint-autofixed
+(formatting only) after the passing run. Physical webOS was not tested.
+
+**Hygiene:** fixture files, seeding copies, the disposable library, the plugin entry and every
+Jellyfin item were removed; no `JellyfinMod …` title remains in Jellyfin, the catalog or on disk.
+The boundary server was stopped. Completed retention operations stay as the audit trail with their
+entry detached (T10 design).
 
 ## Handover
 
 Kept current as work lands. Model: Opus, effort high.
 
-- **Worktrees:** plugin `.claude/worktrees/p10-plugin` (branch `p10-retention`, pushed to plugin
-  `master` by fast-forward when a slice is verified); web `.claude/worktrees/p10-web` (branch
-  `p10-retention`, fast-forwarded to `jellyfin-mod`).
+- **Worktrees:** plugin `.claude/worktrees/p10-plugin` (branch `p10-retention`); web
+  `.claude/worktrees/p10-web` (branch `p10-retention`, fast-forwarded to `jellyfin-mod`).
 - **Instances:** 18096 only. 28096 belongs to the Phase 7 agent; production 8096 is never touched.
-- **State:** D1 committed. E1–E5 not started.
+- **State:** D1, E1–E5 done as recorded above, except the real-window positive half. E6 waits for
+  the user's answers; E7 (episode files merged by Jellyfin) is the next implementation task.
+- **Push:** the plugin commits could not be pushed from this session because the SSH agent lost its
+  identities mid-session; they sit on local branch `p10-retention` in the plugin worktree, rebased
+  onto nothing newer than `cdb6e7b`. Rebase onto `origin/master` and fast-forward push once the
+  agent is available; stop if the Phase 7 agent's work conflicts.
+- **Before enabling retention on real media:** a Fable verifier reviews this delete path, and the
+  user answers questions 1–5.
