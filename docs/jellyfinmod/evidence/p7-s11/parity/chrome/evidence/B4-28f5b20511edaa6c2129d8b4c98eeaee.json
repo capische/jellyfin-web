@@ -1,0 +1,219 @@
+{
+  "itemId": "28f5b20511edaa6c2129d8b4c98eeaee",
+  "title": "The Minimalists: Less Is Now",
+  "api": {
+    "summary": "mkv h264 1920x1080 SDR",
+    "audio": [
+      "1"
+    ],
+    "subtitles": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31",
+      "32"
+    ]
+  },
+  "stock": {
+    "title": "The Minimalists: Less Is Now",
+    "parentTitle": "",
+    "miscInfo": "2021 54m 6.1 | ",
+    "endsAt": "Ends at 9:41 AM",
+    "readAt": 1790290100775,
+    "audioOptions": [
+      "1:English - Dolby Digital+ - 5.1 - Default"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:SDH - English - SUBRIP",
+      "3:Arabic - SUBRIP",
+      "4:Czech - SUBRIP",
+      "5:Danish - SUBRIP",
+      "6:German - SUBRIP",
+      "7:Greek - SUBRIP",
+      "8:Latin American - Spanish - SUBRIP",
+      "9:European - Spanish - SUBRIP",
+      "10:Finnish - SUBRIP",
+      "11:French - SUBRIP",
+      "12:Hebrew - SUBRIP",
+      "13:Croatian - SUBRIP",
+      "14:Hungarian - SUBRIP",
+      "15:Indonesian - SUBRIP",
+      "16:Italian - SUBRIP",
+      "17:Japanese - SUBRIP",
+      "18:Korean - SUBRIP",
+      "19:Malay - SUBRIP",
+      "20:Norwegian (Bokmal) - SUBRIP",
+      "21:Dutch - SUBRIP",
+      "22:Polish - SUBRIP",
+      "23:European - Portuguese - SUBRIP",
+      "24:Brazilian - Portuguese - SUBRIP",
+      "25:Romanian - SUBRIP",
+      "26:Russian - SUBRIP",
+      "27:Swedish - SUBRIP",
+      "28:Thai - SUBRIP",
+      "29:Turkish - SUBRIP",
+      "30:Vietnamese - SUBRIP",
+      "31:Simplified - Chinese - SUBRIP",
+      "32:Traditional - Chinese - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "6.1",
+    "criticRating": "",
+    "genres": [],
+    "studios": [
+      "Booklight Productions",
+      "Catalyst Films"
+    ],
+    "director": [
+      "Matt D'Avella"
+    ],
+    "writer": [],
+    "tags": [
+      "minimalism",
+      "inspirational",
+      "intimate",
+      "factual"
+    ],
+    "overview": "They've built a movement out of minimalism. Longtime friends Joshua Fields Millburn and Ryan Nicodemus share how our lives can be better with less.",
+    "castIds": [
+      "c952be26b31e440d397b47f44f5abc9e",
+      "f4592aaa7a474480099e9d8655a78d81",
+      "3a9ac862b2cf3800f0182850c9e5c33f"
+    ],
+    "mediaInfoBadges": [
+      "2021",
+      "54m",
+      "6.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=3866eedea4a03fb1998178c5bde871b6\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Logo?tag=b0c23cfc4dca15ee7e4f28c674fdebc9&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "28f5b20511edaa6c2129d8b4c98eeaee",
+        "label": "The Minimalists Less Is Now (2021) WEBDL-1080p"
+      }
+    ],
+    "sourceSelected": "28f5b20511edaa6c2129d8b4c98eeaee",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "The Minimalists: Less Is Now",
+    "parentTitle": "",
+    "miscInfo": "2021 54m 6.1 | ",
+    "endsAt": "Ends at 9:41 AM",
+    "readAt": 1790290102031,
+    "audioOptions": [
+      "1:English - Dolby Digital+ - 5.1 - Default"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "2:SDH - English - SUBRIP",
+      "3:Arabic - SUBRIP",
+      "4:Czech - SUBRIP",
+      "5:Danish - SUBRIP",
+      "6:German - SUBRIP",
+      "7:Greek - SUBRIP",
+      "8:Latin American - Spanish - SUBRIP",
+      "9:European - Spanish - SUBRIP",
+      "10:Finnish - SUBRIP",
+      "11:French - SUBRIP",
+      "12:Hebrew - SUBRIP",
+      "13:Croatian - SUBRIP",
+      "14:Hungarian - SUBRIP",
+      "15:Indonesian - SUBRIP",
+      "16:Italian - SUBRIP",
+      "17:Japanese - SUBRIP",
+      "18:Korean - SUBRIP",
+      "19:Malay - SUBRIP",
+      "20:Norwegian (Bokmal) - SUBRIP",
+      "21:Dutch - SUBRIP",
+      "22:Polish - SUBRIP",
+      "23:European - Portuguese - SUBRIP",
+      "24:Brazilian - Portuguese - SUBRIP",
+      "25:Romanian - SUBRIP",
+      "26:Russian - SUBRIP",
+      "27:Swedish - SUBRIP",
+      "28:Thai - SUBRIP",
+      "29:Turkish - SUBRIP",
+      "30:Vietnamese - SUBRIP",
+      "31:Simplified - Chinese - SUBRIP",
+      "32:Traditional - Chinese - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "6.1",
+    "criticRating": "",
+    "genres": [],
+    "studios": [
+      "Booklight Productions",
+      "Catalyst Films"
+    ],
+    "director": [
+      "Matt D'Avella"
+    ],
+    "writer": [],
+    "tags": [
+      "minimalism",
+      "inspirational",
+      "intimate",
+      "factual"
+    ],
+    "overview": "They've built a movement out of minimalism. Longtime friends Joshua Fields Millburn and Ryan Nicodemus share how our lives can be better with less.",
+    "castIds": [
+      "c952be26b31e440d397b47f44f5abc9e",
+      "f4592aaa7a474480099e9d8655a78d81",
+      "3a9ac862b2cf3800f0182850c9e5c33f"
+    ],
+    "mediaInfoBadges": [
+      "2021",
+      "54m",
+      "6.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=3866eedea4a03fb1998178c5bde871b6\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/28f5b20511edaa6c2129d8b4c98eeaee/Images/Logo?tag=b0c23cfc4dca15ee7e4f28c674fdebc9&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "28f5b20511edaa6c2129d8b4c98eeaee",
+        "label": "The Minimalists Less Is Now (2021) WEBDL-1080p"
+      }
+    ],
+    "sourceSelected": "28f5b20511edaa6c2129d8b4c98eeaee",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
