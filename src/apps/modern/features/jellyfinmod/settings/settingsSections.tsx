@@ -38,6 +38,8 @@ export interface SettingsData {
     users: { Id: string; Name: string; Policy?: { IsDisabled?: boolean } }[];
     preview?: any;
     lastRun?: any;
+    /** Prowlarr sources; undefined when the plugin build has no Prowlarr support (P7.S9). */
+    prowlarr?: any[];
 }
 
 export interface SectionProps {
@@ -87,9 +89,11 @@ const useSectionState = (reload: () => Promise<unknown>) => {
 };
 
 /** Keeps a local draft of a DTO and resets it whenever the server's copy (by revision) changes. */
-const useDraft = (source: any) => {
-    const [draft, setDraft] = useState<Draft>(source ?? {});
-    useEffect(() => { setDraft(source ?? {}); }, [source]);
+const useDraft = (source: any, fallback: Draft = {}) => {
+    const [draft, setDraft] = useState<Draft>(source ?? fallback);
+    // Keyed on the server's copy only: a fallback literal is a new object on every render and must not reset the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { setDraft(source ?? fallback); }, [source]);
     const set = (key: string, value: unknown) => setDraft(current => ({ ...current, [key]: value }));
     return [draft, set, setDraft] as const;
 };
@@ -262,7 +266,7 @@ const CLIENT_KEYS = ['name', 'kind', 'baseUrl', 'username', 'enabled', 'label', 
 export const ClientSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const client = selectedClient(data);
-    const [draft, set] = useDraft(client ?? { kind: 'transmission', enabled: true, label: 'jellyfinmod' });
+    const [draft, set] = useDraft(client, { kind: 'transmission', enabled: true, label: 'jellyfinmod' });
     const [password, setPassword] = useState<SecretChange>(UNCHANGED);
     const [mappings, setMappings] = useState<{ clientPathPrefix: string; localPathPrefix: string; verifiedAt?: string; verificationReason?: string }[]>([]);
     const [probePath, setProbePath] = useState('');
@@ -335,7 +339,7 @@ const INDEXER_KEYS = ['name', 'baseUrl', 'enabled', 'automateTitleMatches', 'cat
     'minimumSeedMinutes', 'minIntervalSeconds', 'dailyQueryBudget'];
 
 const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolean) => void }> = ({ api, indexer, onClose }) => {
-    const [draft, set] = useDraft(indexer ?? { enabled: true, categories: [2000, 5000], priority: 25, downloadHosts: [] });
+    const [draft, set] = useDraft(indexer, { enabled: true, categories: [2000, 5000], priority: 25, downloadHosts: [] });
     const [key, setKey] = useState<SecretChange>(UNCHANGED);
     const [notice, setNotice] = useState<NoticeState | null>(null);
     const fields: FieldSpec[] = [
@@ -377,6 +381,59 @@ const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolea
     );
 };
 
+// ---- Prowlarr: one source whose torrent indexers are synced in (P7.S9) ----
+
+const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
+    const source = data.prowlarr?.[0];
+    const [draft, set] = useDraft(source, { name: 'Prowlarr', baseUrl: '', enabled: true, syncIntervalMinutes: 360 });
+    const [key, setKey] = useState<SecretChange>(UNCHANGED);
+    const section = useSectionState(reload);
+    if (!data.prowlarr) return null;
+    const save = () => section.run(async () => {
+        const body = { ...pick(draft, ['name', 'baseUrl', 'enabled', 'syncIntervalMinutes']), apiKey: key };
+        if (source) await request(api, 'PATCH', `Settings/Prowlarr/${source.id}`, { ...body, revision: source.revision });
+        else await request(api, 'POST', 'Settings/Prowlarr', body);
+        setKey(UNCHANGED);
+    }, 'Saved. Sync to import its indexers.');
+    const syncNow = () => section.run(async () => {
+        const outcome = await request<any>(api, 'POST', `Settings/Prowlarr/${source.id}/Sync`);
+        section.setNotice({
+            kind: outcome.code === 'ok' ? 'ok' : 'err',
+            text: outcome.code === 'ok'
+                ? `Synced: ${outcome.seen} seen, ${outcome.created} added, ${outcome.updated} changed, ${outcome.disabled} turned off, ${outcome.removed} removed, ${outcome.verified} verified${outcome.failed.length ? `, failed: ${outcome.failed.join(', ')}` : ''}.`
+                : `The sync changed nothing (${outcome.code}).`
+        });
+    });
+    return (
+        <div className='jfmod-group' data-prowlarr='card'>
+            <h3 className='jfmod-grouptitle'>Prowlarr</h3>
+            <Notice notice={section.notice} />
+            {source && (
+                <p className='jfmod-lead fieldDescription'>
+                    {source.indexerCount} synced indexer(s) · last sync {when(source.lastSyncAt)}{source.lastSyncOutcome ? ` (${source.lastSyncOutcome})` : ''}
+                </p>
+            )}
+            <FieldForm fields={[
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', help: 'For example http://host:9696, without credentials.' },
+                { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
+                { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }
+            ]} draft={draft} onChange={set} />
+            <SecretField id='jfmodProwlarrKey' label='API key' configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
+            <div className='jfmod-inlineactions'>
+                <Button variant='outlined' size='small' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
+                {source && <Button size='small' disabled={section.busy} onClick={() => section.test(`Settings/Prowlarr/${source.id}/Test`, api)}>Test</Button>}
+                {source && <Button size='small' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync now</Button>}
+                {source && (
+                    <Button size='small' className='jfmod-danger-text' disabled={section.busy} onClick={() => {
+                        if (window.confirm('Remove Prowlarr and every indexer it synced?')) void section.run(() => request(api, 'DELETE', `Settings/Prowlarr/${source.id}`), 'Removed.');
+                    }}>Remove</Button>
+                )}
+            </div>
+        </div>
+    );
+};
+
 export const IndexersSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const section = useSectionState(reload);
@@ -392,7 +449,11 @@ export const IndexersSection: FC<SectionProps> = props => {
                     <div className='jfmod-brow' key={indexer.id} data-indexer={indexer.id}>
                         <div className='jfmod-brow-main'>
                             <strong>{indexer.name}</strong>
-                            <span className='jfmod-sub'>{indexer.managedBy === 'prowlarr' ? 'Synced from Prowlarr · ' : ''}priority {indexer.priority}{indexer.lastError ? ` · last error ${indexer.lastError}` : ''}</span>
+                            <span className='jfmod-sub'>
+                                {indexer.managedBy === 'prowlarr' ? 'Synced from Prowlarr · ' : ''}priority {indexer.priority}
+                                {indexer.lastError ? ` · last error ${indexer.lastError}` : ''}
+                                {indexer.breakerOpenUntil ? ` · paused until ${when(indexer.breakerOpenUntil)}` : ''}
+                            </span>
                         </div>
                         <StatePill kind={indexer.enabled && indexer.verified ? 'ok' : indexer.enabled ? 'warn' : 'off'}>
                             {!indexer.enabled ? 'off' : indexer.verified ? 'verified' : 'not verified'}
@@ -400,15 +461,16 @@ export const IndexersSection: FC<SectionProps> = props => {
                         <span className='jfmod-rowactions'>
                             <Button size='small' disabled={section.busy} onClick={() => section.test(`Settings/Indexers/${indexer.id}/Test`, api)}>Test</Button>
                             <Button size='small' onClick={() => setEditing(indexer)}>Edit</Button>
-                            <Button size='small' className='jfmod-danger-text' onClick={() => {
+                            {indexer.managedBy !== 'prowlarr' && <Button size='small' className='jfmod-danger-text' onClick={() => {
                                 if (window.confirm(`Remove ${indexer.name}? Grabs keep their recorded source name.`)) {
                                     void section.run(() => request(api, 'DELETE', `Settings/Indexers/${indexer.id}`), 'Removed.');
                                 }
-                            }}>Remove</Button>
+                            }}>Remove</Button>}
                         </span>
                     </div>
                 ))}
             </div>
+            <ProwlarrCard {...props} />
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={saved => { setEditing(undefined); if (saved) void reload(); }} />}
         </SectionFrame>
     );
@@ -419,7 +481,7 @@ export const IndexersSection: FC<SectionProps> = props => {
 const PROFILE_KEYS = ['name', 'minimumBytesPerHour', 'maximumBytesPerHour', 'cutoff', 'upgradeAllowed', 'upgradeMode', 'minimumAutoScore', 'minimumSeeders'];
 
 const ProfileDialog: FC<{ api: Api; profile: any | null; qualities: { id: string }[]; onClose: (saved: boolean) => void }> = ({ api, profile, qualities, onClose }) => {
-    const [draft, set] = useDraft(profile ?? { qualities: [], upgradeMode: 'replace', upgradeAllowed: false });
+    const [draft, set] = useDraft(profile, { qualities: [], upgradeMode: 'replace', upgradeAllowed: false });
     const [notice, setNotice] = useState<NoticeState | null>(null);
     const chosen = (draft.qualities as string[] | undefined) ?? [];
     const toggle = (id: string) => set('qualities', chosen.includes(id) ? chosen.filter(value => value !== id) : [...chosen, id]);
@@ -520,7 +582,7 @@ export const ProfilesSection: FC<SectionProps> = props => {
 export const GrabbingSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const acquisition = data.acquisition ?? {};
-    const [draft, set] = useDraft(acquisition);
+    const [draft, set] = useDraft(data.acquisition);
     const section = useSectionState(reload);
     const save = () => section.run(() => request(api, 'PATCH', 'Settings/Acquisition', {
         enabled: !!draft.enabled, downloadClientId: draft.downloadClientId ?? null, defaultQualityProfileId: draft.defaultQualityProfileId ?? null,
