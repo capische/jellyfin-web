@@ -100,6 +100,7 @@ interface SecretFieldProps {
 /**
  * A write-only secret (PHASE7 §5.1): "Configured" with Replace and Clear, a pending clear with Undo, and an
  * input only while a replacement is being typed. The page never receives, holds or logs a stored value.
+ * Sections key it by their revision, so a save returns it to "Configured" instead of an empty "New …" input.
  */
 export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange }) => {
     const [editing, setEditing] = useState(false);
