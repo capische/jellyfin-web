@@ -2,7 +2,7 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
 import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
-import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, TmdbMetadata } from '../types/entry';
+import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
 import type { UpgradeStateDto, VersionDto } from '../types/versions';
@@ -83,6 +83,8 @@ export interface EntryDetail {
     versions?: VersionDto[];
     /** Administrators only: whether an upgrade is due and why not (P6.M5). */
     upgrade?: UpgradeStateDto | null;
+    /** A movie's running retention window; absent from older plugins (PHASE10 Q8). */
+    retentionWarning?: RetentionWarning | null;
 }
 
 export interface DiscoveryQuery {
