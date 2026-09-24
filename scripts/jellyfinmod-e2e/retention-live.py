@@ -36,6 +36,8 @@ Subcommands, in scenario order:
   verify-safe             prove from the instance: retention off, settings restored, no fixture left
   reacquire | unkeep-survivor | unkeep-finish | toggle | covered | late
                           the second review's acceptance checks (RET2-R1, R2, R5, R7, R3)
+  merge | movie-check | movie-finish | replace | covered-refresh | lockcheck MIN DAYS
+                          the third review's checks (RET3-R2 movie versions and C2 merge, R3, R5, the database lock)
   seed-server             serve the fake Transmission RPC in the foreground
 """
 import hashlib, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -53,6 +55,7 @@ PLUGIN = "6f1a2b3c-4d5e-4f60-9a71-8b2c3d4e5f60"
 
 SHOW_LIBRARY = "JellyfinMod P10 Shows"
 MOVIE_LIBRARY = "JellyfinMod P10 Movies"
+MOVIE_LIBRARY_B = "JellyfinMod P10 Movies B"  # a second library whose copy of a movie is merged into the first (C2)
 SERIES_TMDB = 1418
 MOVIE_TMDB = 603
 SERIES_DIR = "JellyfinMod P10 Show (2007) [tmdbid-1418]"
@@ -60,6 +63,11 @@ MOVIE_DIR = "JellyfinMod P10 Movie (1999) [tmdbid-603]"
 ROOTS = {"A": "tv-p10a", "B": "tv-p10b"}
 SEED_DIR = "p10-seed"
 MOVIE_ROOT = "movies-p10"
+MOVIE_ROOT_B = "movies-p10b"
+BACKLOG_DIR = "JellyfinMod P10 Backlog (2000) [tmdbid-807]"
+MERGE_DIR = "JellyfinMod P10 Merge (2002) [tmdbid-604]"
+MERGE_TMDB = 604
+BACKLOG_TMDB = 807
 # A library root on a second filesystem inside the container (its own /dev/shm) was tried for RET2-R9 and dropped: Jellyfin
 # 12 then presents the series through that root's copy and the plugin entry, bound to another copy, is hidden from the
 # listing. The cross-filesystem move is verified in the real-Kestrel protection suite instead. Cleanup still removes it.
@@ -87,8 +95,12 @@ FIXTURE = {
     "E16": ("A", "JellyfinMod P10 Show S01E16.mkv", "kept"),               # arrives late, before any Refresh: a position row
     "E17": ("A", "JellyfinMod P10 Show S01E17.mkv", "kept"),               # arrives after a Refresh listed TMDB's E17 (RET2-R3)
     "E18-E19": ("A", "JellyfinMod P10 Show S01E18-E19.mkv", "kept"),       # a late double file: E19 gets a covered row (RET2-R7)
-    "M-1080p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 1080p.mkv", "kept"),  # a two-file movie on Jellyfin 12 (C7)
-    "M-720p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 720p.mkv", "kept"),
+    # A two-file movie on Jellyfin 12 (RET3-R2): both files tracked, the 1080p kept by itself, the 720p goes first.
+    "M-1080p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 1080p.mkv", "kept"),
+    "M-720p": ("M", "JellyfinMod P10 Movie (1999) [tmdbid-603] - 720p.mkv", "reclaimed"),
+    "MB": ("MB", "JellyfinMod P10 Backlog (2000) [tmdbid-807].mkv", "kept"),  # a movie watched before tracking (decision 12)
+    "MA": ("MA", "JellyfinMod P10 Merge (2002) [tmdbid-604].mkv", "kept"),    # merged with its copy in library B: the
+    "MM": ("MM", "JellyfinMod P10 Merge (2002) [tmdbid-604].mkv", "kept"),    # other file is untracked, so both are blocked
 }
 SEEDED = ("E06",)
 LATE = ("E16", "E17", "E18-E19")  # created later: E16 and E17 by `late`, E18-E19 by `double`
@@ -99,6 +111,12 @@ NFO = ("A", "JellyfinMod P10 Show S01E01.nfo")  # titles E01 "Pilot", TMDB's own
 def host_dir(root):
     if root == "M":
         return os.path.join(HOST_MEDIA, MOVIE_ROOT, MOVIE_DIR)
+    if root == "MB":
+        return os.path.join(HOST_MEDIA, MOVIE_ROOT, BACKLOG_DIR)
+    if root == "MA":
+        return os.path.join(HOST_MEDIA, MOVIE_ROOT, MERGE_DIR)
+    if root == "MM":
+        return os.path.join(HOST_MEDIA, MOVIE_ROOT_B, MERGE_DIR)
     if root == "S":
         return os.path.join(HOST_MEDIA, SEED_DIR)
     return os.path.join(HOST_MEDIA, ROOTS[root], SERIES_DIR, "Season 01")
@@ -340,7 +358,8 @@ def library_options(paths):
 
 def cmd_library():
     for name, kind, paths in ((SHOW_LIBRARY, "tvshows", [f"{CONTAINER_MEDIA}/{ROOTS['A']}", f"{CONTAINER_MEDIA}/{ROOTS['B']}"]),
-                              (MOVIE_LIBRARY, "movies", [f"{CONTAINER_MEDIA}/{MOVIE_ROOT}"])):
+                              (MOVIE_LIBRARY, "movies", [f"{CONTAINER_MEDIA}/{MOVIE_ROOT}"]),
+                              (MOVIE_LIBRARY_B, "movies", [f"{CONTAINER_MEDIA}/{MOVIE_ROOT_B}"])):
         if library(name) is None:
             query = urllib.parse.urlencode({"name": name, "collectionType": kind, "refreshLibrary": "true"})
             must("POST", f"/Library/VirtualFolders?{query}", library_options(paths))
@@ -381,10 +400,20 @@ def cmd_reconcile():
     print("reconcile", run_task("JellyfinModCatalogReconciliation"))
 
 
+def movie_items(name=MOVIE_LIBRARY):
+    lib = library(name)
+    return {item["Path"]: item for item in must("GET", f"/Items?ParentId={lib['ItemId']}&Recursive=true&IncludeItemTypes=Movie"
+                                                          "&Fields=Path")["Items"]}
+
+
 def cmd_backlog():
     item = native_item("E05")
     must("POST", f"/UserPlayedItems/{item['Id']}?userId={selected_user()}&datePlayed=2026-09-01T10:00:00.000Z")
     print("E05 marked played with a date before tracking")
+    # Decision 12: a movie finished before it was tracked (and before retention was ever switched on) is backlog too.
+    backlog = movie_items()[container_path("MB")]
+    must("POST", f"/UserPlayedItems/{backlog['Id']}?userId={selected_user()}&datePlayed=2026-09-01T10:00:00.000Z")
+    print("MB (movie) marked played with a date before tracking")
 
 
 def cmd_configure(minutes, days):
@@ -447,17 +476,169 @@ def cmd_act():
     must("POST", f"/JellyfinMod/Entries/{series['id']}/Versions/{version_of(e14, 'E14-B')['bindingId']}/Keep")
     mark_played("E14-B", user)
     sync_watch("E13", user)
-    # The movie: watch the main version.
-    lib, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
-    movies = must("GET", f"/Items?ParentId={lib['ItemId']}&Recursive=true&IncludeItemTypes=Movie&Fields=Path")["Items"]
-    for native in movies:
-        must("POST", f"/UserPlayedItems/{native['Id']}?userId={user}")
-    print("acted; movie items", len(movies), "movie entry", movie and movie["id"])
+    # RET3-R2: the two-file movie. On Jellyfin 12 the plugin tracks both files; keep the 1080p by itself and watch the
+    # movie, so the 720p goes at its deadline and the 1080p stays (lowest quality first, P6.M7).
+    _, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
+    detail = must("GET", f"/JellyfinMod/Entries/{movie['id']}")
+    versions = movie_versions(detail)
+    print("movie versions:", {key: (v["bindingId"], v.get("kept")) for key, v in versions.items()})
+    check(set(versions) == {"M-1080p", "M-720p"}, "both files of the two-file movie are tracked on Jellyfin 12 (RET3-R2)")
+    must("POST", f"/JellyfinMod/Entries/{movie['id']}/Versions/{versions['M-1080p']['bindingId']}/Keep")
+    main = movie_items()[container_path("M-1080p")]
+    must("DELETE", f"/UserPlayedItems/{main['Id']}?userId={user}")
+    must("POST", f"/UserPlayedItems/{main['Id']}?userId={user}")
+    # C9: Jellyfin 12 marks the other version played too, without a last-played date.
+    other = versions["M-720p"]["jellyfinItemId"]
+    data = must("GET", f"/UserItems/{other}/UserData?userId={user}")
+    print("720p user data after finishing the 1080p: played", data.get("Played"), "last played", data.get("LastPlayedDate"))
+    # The merged movie: watch the title (its copy in library B is a version Jellyfin plays but that entry does not track).
+    merged = movie_items()[container_path("MA")]
+    must("DELETE", f"/UserPlayedItems/{merged['Id']}?userId={user}")
+    must("POST", f"/UserPlayedItems/{merged['Id']}?userId={user}")
+    print("acted; movie entry", movie["id"])
+
+
+def movie_versions(detail):
+    """The movie entry's tracked versions keyed by fixture key, matched by path."""
+    result = {}
+    for version in detail.get("versions") or []:
+        status, item = call("GET", f"/Items/{version['jellyfinItemId']}?Fields=Path")
+        if status != 200:
+            continue
+        for key in ("M-1080p", "M-720p"):
+            if item.get("Path") == container_path(key):
+                result[key] = version
+    return result
+
+
+def cmd_merge():
+    """C2: a copy of the same movie in a second library, merged into the first by Jellyfin's own Merge versions. Each
+    entry now plays a file it does not track, so both titles must stay blocked (versions_untracked)."""
+    first = movie_items()[container_path("MA")]
+    second = movie_items(MOVIE_LIBRARY_B)[container_path("MM")]
+    must("POST", f"/Videos/MergeVersions?ids={first['Id']},{second['Id']}")
+    refresh_library(MOVIE_LIBRARY)
+    refresh_library(MOVIE_LIBRARY_B)
+    cmd_reconcile()
+    status, merged = call("GET", f"/Items/{first['Id']}?Fields=Path,MediaSources")
+    sources = [source.get("Path", "").replace(CONTAINER_MEDIA, "<media>") for source in (merged or {}).get("MediaSources") or []]
+    print("merged title media sources:", sources)
+    check(len(sources) == 2, "Jellyfin plays both copies as versions of one movie")
+
+
+def cmd_movie_check():
+    """After the fast run: the 720p went, the kept 1080p stayed, and the movie is still on disk (RET3-R2)."""
+    _, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
+    detail = must("GET", f"/JellyfinMod/Entries/{movie['id']}")
+    versions = movie_versions(detail)
+    print("movie", movie["state"], detail["retention"], "versions", {k: v.get("kept") for k, v in versions.items()})
+    check(set(versions) == {"M-1080p"} and versions["M-1080p"].get("kept") and movie["state"] == "onDisk",
+          "the 720p was reclaimed first; the kept 1080p stays and the movie is still on disk (RET3-R2)")
+    events = [h for h in detail["history"] if h["eventType"] in ("reclaimed", "version_kept")]
+    for h in events:
+        print("  history", h["createdAt"][:19], h["eventType"], "|", h["summary"])
+    for key in ("MA", "MM"):
+        row = next((r for r in preview_rows()[1] if r.get("path") == container_path(key)), None)
+        print(" ", key, row and (row["state"], row["reason"]))
+        check(row is not None and row["reason"] == "versions_untracked",
+              f"{key}: a merged movie with a file its entry does not track stays blocked (versions_untracked)")
+
+
+def cmd_movie_finish():
+    """RET3-R2, second half: stop keeping the 1080p; it gets a window of its own and goes at its end, and only then is the
+    movie reclaimed."""
+    _, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
+    versions = movie_versions(must("GET", f"/JellyfinMod/Entries/{movie['id']}"))
+    must("DELETE", f"/JellyfinMod/Entries/{movie['id']}/Versions/{versions['M-1080p']['bindingId']}/Keep")
+    time.sleep(5)
+    detail = must("GET", f"/JellyfinMod/Entries/{movie['id']}")
+    deadline = detail["retention"].get("deadline")
+    print("movie after un-Keep:", detail["retention"])
+    check(detail["retention"]["state"] == "scheduled" and deadline and parse_time(deadline) > now_utc(),
+          "stopping the Keep gives the 1080p a window of its own from now")
+    wait = (parse_time(deadline) - now_utc()).total_seconds() + 15
+    print("waiting", int(wait), "s for the 1080p's window")
+    time.sleep(max(0, wait))
+    before = sha(host_path("M-1080p"))
+    cmd_run()
+    _, movie = entry(MOVIE_LIBRARY, MOVIE_TMDB)
+    check(before != "ABSENT" and sha(host_path("M-1080p")) == "ABSENT" and movie["state"] == "reclaimed",
+          f"the 1080p went at the end of its own window, and only then is the movie reclaimed ({movie['state']})")
+
+
+def cmd_replace():
+    """RET3-R3: E13 is scheduled; its file is replaced at the same path with other bytes. The episode starts over, History
+    says the file was replaced, and a new watch schedules it one window out."""
+    _, detail = series_detail()
+    e13 = tracked_episode(detail, 13)
+    check(e13["retention"]["state"] == "scheduled", f"E13 is scheduled before the replacement ({e13['retention']})")
+    target = host_path("E13")
+    temporary = target + ".new.mkv"
+    make_video(temporary, 99, "E13-replacement")
+    os.replace(temporary, target)
+    rescan()
+    _, detail = series_detail()
+    e13 = tracked_episode(detail, 13)
+    r = e13["retention"]
+    print("E13 after the replacement:", r)
+    check(r["state"] == "waiting" and r["reason"] == "representation_reset" and not r.get("deadline"),
+          "a file replaced in place starts over: waiting, no deadline (RET3-R3)")
+    replaced = [h for h in detail["history"] if h["eventType"] == "retention_reset" and "replaced in place" in h["summary"]]
+    for h in replaced:
+        print("  history", h["createdAt"][:19], h["summary"])
+    check(any("S01E13" in h["summary"] for h in replaced), "History says the file was replaced in place")
+    row = next(r for r in preview_rows()[1] if (r.get("path") or "").endswith(FIXTURE["E13"][1]))
+    check(row["state"] != "due", f"the preview does not list the replaced file as due ({row['state']}/{row['reason']})")
+    started = now_utc()
+    sync_watch("E13", selected_user())
+    _, e13 = await_episode(13, lambda e: e["retention"]["state"] == "scheduled", timeout=300)
+    deadline = e13["retention"].get("deadline")
+    print("E13 after a new watch:", e13["retention"])
+    check(e13["retention"]["state"] == "scheduled" and deadline and
+          (parse_time(deadline) - started).total_seconds() >= window_minutes() * 60 - 5,
+          "after a new watch the replaced file is scheduled one window out (RET3-R3)")
+
+
+def cmd_lockcheck(minutes, days):
+    """The `database is locked` 500: switch retention on and, at once, preview twice and save the seed settings while the
+    plugin re-evaluates every target. Every request must answer 2xx."""
+    import threading
+    retention = must("GET", "/JellyfinMod/Settings/Retention")
+    config = must("GET", f"/Plugins/{PLUGIN}/Configuration")
+    config["RetentionTestWindowMinutes"] = minutes
+    must("POST", f"/Plugins/{PLUGIN}/Configuration", config)
+    retention = must("GET", "/JellyfinMod/Settings/Retention")
+    results = {}
+
+    def timed(label, method, path, body=None):
+        begin = time.time()
+        status, result = call(method, path, body)
+        results[label] = (status, round(time.time() - begin, 1), str(result)[:200] if status >= 300 or status == 0 else "")
+
+    must("PATCH", "/JellyfinMod/Settings/Retention", {"enabled": True, "reclaimAfterDays": days, "watchedUserMode": "selectedUser",
+         "selectedUserId": selected_user(), "exemptFavourites": True, "revision": retention["revision"]})
+    seed = must("GET", "/JellyfinMod/Settings/SeedProtection")
+    body = {"source": seed["source"], "password": {"action": "unchanged"}, "revision": seed["revision"]}
+    if seed["source"] == "separate":
+        body.update({"rpcUrl": seed["rpcUrl"], "username": seed.get("username") or ""})
+    threads = [threading.Thread(target=timed, args=("preview 1", "GET", "/JellyfinMod/Retention/Preview")),
+               threading.Thread(target=timed, args=("seed settings PATCH", "PATCH", "/JellyfinMod/Settings/SeedProtection", body)),
+               threading.Thread(target=lambda: (time.sleep(2), timed("preview 2", "GET", "/JellyfinMod/Retention/Preview")))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    for label, (status, seconds, detail) in sorted(results.items()):
+        print(f"  {label}: {status} in {seconds} s {detail}")
+    check(all(200 <= status < 300 for status, _, _ in results.values()),
+          "switching retention on and at once previewing and saving settings answers every request (no database is locked)")
+    time.sleep(20)
 
 
 def remember_entries():
     known = json.load(open(ENTRIES)) if os.path.exists(ENTRIES) else []
-    for name, tmdb in ((SHOW_LIBRARY, SERIES_TMDB), (MOVIE_LIBRARY, MOVIE_TMDB)):
+    for name, tmdb in ((SHOW_LIBRARY, SERIES_TMDB), (MOVIE_LIBRARY, MOVIE_TMDB), (MOVIE_LIBRARY, BACKLOG_TMDB),
+                       (MOVIE_LIBRARY, MERGE_TMDB), (MOVIE_LIBRARY_B, MERGE_TMDB)):
         _, found = entry(name, tmdb)
         if found and found["id"] not in known:
             known.append(found["id"])
@@ -487,7 +668,8 @@ def cmd_state():
 def preview_rows():
     preview = must("GET", "/JellyfinMod/Retention/Preview")
     ids = set()
-    for name, tmdb in ((SHOW_LIBRARY, SERIES_TMDB), (MOVIE_LIBRARY, MOVIE_TMDB)):
+    for name, tmdb in ((SHOW_LIBRARY, SERIES_TMDB), (MOVIE_LIBRARY, MOVIE_TMDB), (MOVIE_LIBRARY, BACKLOG_TMDB),
+                       (MOVIE_LIBRARY, MERGE_TMDB), (MOVIE_LIBRARY_B, MERGE_TMDB)):
         _, e = entry(name, tmdb)
         if e:
             ids.add(e["id"])
@@ -730,7 +912,8 @@ def cmd_cleanup():
     the libraries deleted and the entries removed. A library deleted earlier is recreated empty under its old name, which
     Jellyfin maps to the same library id, so a cleanup that was interrupted can always be finished."""
     import shutil
-    roots = [os.path.join(HOST_MEDIA, ROOTS["A"]), os.path.join(HOST_MEDIA, ROOTS["B"]), os.path.join(HOST_MEDIA, MOVIE_ROOT)]
+    roots = [os.path.join(HOST_MEDIA, ROOTS["A"]), os.path.join(HOST_MEDIA, ROOTS["B"]), os.path.join(HOST_MEDIA, MOVIE_ROOT),
+             os.path.join(HOST_MEDIA, MOVIE_ROOT_B)]
     for directory in roots:
         if os.path.isdir(directory):
             shutil.rmtree(directory)
@@ -743,12 +926,12 @@ def cmd_cleanup():
     for extra in EXTRA_ROOTS:
         subprocess.run(["docker", "exec", CONTAINER, "sh", "-c", f"mkdir -p '{extra}' && touch '{extra}/.jfmod-present'"],
                        check=False)
-    if known or library(SHOW_LIBRARY) is not None or library(MOVIE_LIBRARY) is not None:
+    if known or any(library(name) is not None for name in (SHOW_LIBRARY, MOVIE_LIBRARY, MOVIE_LIBRARY_B)):
         cmd_library()
         # Absence is confirmed by the plugin's post-scan task, which only a full library scan runs; an item refresh does not.
         print("library scan", run_task("RefreshLibrary", timeout=1800))
         cmd_reconcile()
-    for name in (SHOW_LIBRARY, MOVIE_LIBRARY):
+    for name in (SHOW_LIBRARY, MOVIE_LIBRARY, MOVIE_LIBRARY_B):
         if library(name) is not None:
             must("DELETE", "/Library/VirtualFolders?" + urllib.parse.urlencode({"name": name, "refreshLibrary": "true"}))
     wait_scan()
@@ -769,7 +952,7 @@ def cmd_cleanup():
     write_private(ENTRIES, json.dumps([]))
     remaining = must("GET", "/Items?Recursive=true&SearchTerm=JellyfinMod&IncludeItemTypes=Movie,Series,Episode")["TotalRecordCount"]
     entries = must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["totalRecordCount"]
-    files = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
+    files = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, MOVIE_ROOT_B, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
     check(remaining == 0 and entries == 0 and not files, f"no JellyfinMod fixture left: items {remaining}, entries {entries}, dirs {files}")
 
 
@@ -797,8 +980,9 @@ def verify_safe():
         check(status == 404, f"fixture entry {entry_id} is gone")
     entries = must("GET", "/JellyfinMod/Entries?limit=200&query=JellyfinMod")["totalRecordCount"]
     items = must("GET", "/Items?Recursive=true&SearchTerm=JellyfinMod&IncludeItemTypes=Movie,Series,Episode")["TotalRecordCount"]
-    libraries = [f["Name"] for f in must("GET", "/Library/VirtualFolders") if f["Name"] in (SHOW_LIBRARY, MOVIE_LIBRARY)]
-    dirs = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
+    libraries = [f["Name"] for f in must("GET", "/Library/VirtualFolders")
+                 if f["Name"] in (SHOW_LIBRARY, MOVIE_LIBRARY, MOVIE_LIBRARY_B)]
+    dirs = [d for d in (ROOTS["A"], ROOTS["B"], MOVIE_ROOT, MOVIE_ROOT_B, SEED_DIR) if os.path.exists(os.path.join(HOST_MEDIA, d))]
     check(entries == 0 and items == 0 and not libraries and not dirs,
           f"no JellyfinMod fixture left: entries {entries}, items {items}, libraries {libraries}, dirs {dirs}")
 
@@ -1045,6 +1229,24 @@ def cmd_late():
           "E01, adopted by the Refresh on its matching title, has its matching file verified")
 
 
+def cmd_covered_refresh():
+    """RET3-R5: after an admin Refresh no monitored row without a file of its own sits at a number a bound file covers:
+    S01E12 (hidden by Jellyfin 12 as a version of E11), S01E08 and S01E10 (second numbers of double files)."""
+    series, _ = series_detail()
+    status, _ = call("POST", f"/JellyfinMod/Entries/{series['id']}/Refresh")
+    print("admin Refresh ->", status)
+    _, detail = series_detail()
+    covered = {8, 10, 12}
+    rows = [e for e in detail["episodes"] if e["seasonNumber"] == 1 and e["episodeNumber"] in covered]
+    for e in rows:
+        print(f"  S01E{e['episodeNumber']:02} tmdb={e['tmdbId']} monitored={e['monitored']} versions={len(e.get('versions') or [])}")
+    check(rows and all(not e["monitored"] for e in rows if not e.get("versions")),
+          "no monitored row without a file of its own at a number a bound file covers (RET3-R5)")
+    unmonitored = [h for h in detail["history"] if h["eventType"] == "episode_unmonitored"]
+    for h in unmonitored:
+        print("  history", h["createdAt"][:19], h["summary"])
+
+
 def cmd_double():
     """RET2-R7 for the web: a double file that arrives later gives the number it covers a row of its own, and the file's
     page must open the row that holds it (checked by the browser probe with the ids printed here)."""
@@ -1068,10 +1270,13 @@ if __name__ == "__main__":
         "restore": cmd_restore, "cleanup": cmd_cleanup, "seed-server": cmd_seed_server,
         "reacquire": cmd_reacquire, "unkeep-survivor": cmd_unkeep_survivor, "unkeep-finish": cmd_unkeep_finish,
         "toggle": cmd_toggle, "covered": cmd_covered, "late": cmd_late, "double": cmd_double,
-        "safe-finish": cmd_safe_finish, "verify-safe": verify_safe,
+        "safe-finish": cmd_safe_finish, "verify-safe": verify_safe, "merge": cmd_merge, "movie-check": cmd_movie_check,
+        "movie-finish": cmd_movie_finish, "replace": cmd_replace, "covered-refresh": lambda: cmd_covered_refresh(),
     }
     if args[0] == "configure":
         cmd_configure(int(args[1]), int(args[2]))
+    elif args[0] == "lockcheck":
+        cmd_lockcheck(int(args[1]), int(args[2]))
     elif args[0] == "hashes":
         cmd_hashes(args[1] if len(args) > 1 else "now")
     elif args[0] == "compare-real":
