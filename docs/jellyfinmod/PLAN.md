@@ -465,7 +465,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
      restores. **Reassigned by the user on 2026-09-24 from Fable to Opus at high effort.** Progress and handover
      in PHASE7 "TV and D-pad shell — handover" and its part 2. **Decided 2026-09-24 (PHASE7 decision 13):** the TV
      browses on the modern React grid; the legacy grid controllers are handed back.
-  3. Per-media tracking and retention (below). **Fable implements this.**
+  3. Per-media tracking and retention (below). **Reassigned by the user on 2026-09-24 from Fable to Opus at
+     high effort** (design first, then implementation). Design, tasks, open questions and handover in
+     [`PHASE10.md`](PHASE10.md).
 - **Per-media entries and retention — accepted 2026-09-21.** Verbatim: *"We need control per media
   file no matter it's a movie or episode. Therefore, if I watched episode – remove it, and each media
   should have separate retention."* Entries bind to an individual media file, not only to a series,
