@@ -57,12 +57,14 @@ const UNCHANGED: SecretChange = { action: 'unchanged', value: null };
 const useSectionState = (reload: () => Promise<unknown>) => {
     const [notice, setNotice] = useState<NoticeState | null>(null);
     const [busy, setBusy] = useState(false);
+    // A work that reports its own outcome (the import-path probe, a Prowlarr sync) returns it as a notice; setting it
+    // before the reload would have it cleared by the line below once the reload lands (P7.S11).
     const run = async (work: () => Promise<unknown>, success?: string) => {
         setBusy(true);
         try {
-            await work();
+            const outcome = await work();
             await reload();
-            setNotice(success ? { kind: 'ok', text: success } : null);
+            setNotice(success ? { kind: 'ok', text: success } : (outcome as { jfmodNotice?: NoticeState } | undefined)?.jfmodNotice ?? null);
         } catch (error) {
             const text = problemText(error);
             setNotice({
@@ -284,7 +286,7 @@ export const ClientSection: FC<SectionProps> = props => {
     }), 'Mappings saved and probed.');
     const probe = () => section.run(async () => {
         const result = await request<any>(api, 'POST', `Settings/DownloadClients/${client.id}/TestImportPath`, { clientPath: probePath });
-        section.setNotice({ kind: result.ok ? 'ok' : 'err', text: `${pathSentence(result.code)} (${result.code})` });
+        return { jfmodNotice: { kind: result.ok ? 'ok' : 'err', text: `${pathSentence(result.code)} (${result.code})` } };
     });
     const fields: FieldSpec[] = [
         { key: 'name', label: 'Name', type: 'text' },
@@ -398,12 +400,12 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     }, 'Saved. Sync to import its indexers.');
     const syncNow = () => section.run(async () => {
         const outcome = await request<any>(api, 'POST', `Settings/Prowlarr/${source.id}/Sync`);
-        section.setNotice({
+        return { jfmodNotice: {
             kind: outcome.code === 'ok' ? 'ok' : 'err',
             text: outcome.code === 'ok'
                 ? `Synced: ${outcome.seen} seen, ${outcome.created} added, ${outcome.updated} changed, ${outcome.disabled} turned off, ${outcome.removed} removed, ${outcome.verified} verified${outcome.failed.length ? `, failed: ${outcome.failed.join(', ')}` : ''}.`
                 : `The sync changed nothing (${outcome.code}).`
-        });
+        } };
     });
     return (
         <div className='jfmod-group' data-prowlarr='card'>
