@@ -648,6 +648,28 @@ async function measurePerf(page, name, libs) {
     }
 }
 
+// ---------------------------------------------------------------- Hygiene (PHASE7 decision 6)
+
+/** No `JellyfinMod`-prefixed title in any library or in the catalog. This probe creates none; it checks anyway. */
+async function checkHygiene(page, name) {
+    try {
+        const found = await page.evaluate(async () => {
+            const userId = ApiClient.getCurrentUserId();
+            const native = await ApiClient.getItems(userId, { SearchTerm: 'JellyfinMod', Recursive: true, Limit: 50 });
+            const titles = native.Items.map(item => item.Name).filter(title => /^JellyfinMod/i.test(title));
+            let startIndex = 0;
+            for (;;) {
+                const page2 = await ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries', { startIndex, limit: 200 }));
+                titles.push(...page2.items.map(entry => entry.title).filter(title => /^JellyfinMod/i.test(title ?? '')));
+                startIndex += page2.items.length;
+                if (!page2.items.length || startIndex >= page2.totalRecordCount) break;
+            }
+            return titles;
+        });
+        record(name, 'hygiene: no JellyfinMod-prefixed title in the libraries or the catalog', found.length === 0, found.slice(0, 10));
+    } catch (e) { record(name, 'hygiene', false, notVerified(e)); }
+}
+
 // ---------------------------------------------------------------- Run
 
 async function runLayout(name) {
@@ -677,6 +699,7 @@ async function runLayout(name) {
         if (sections.has('details')) await checkDetails(page, name, cfg, movieLib);
         if (sections.has('grids')) await checkGrids(page, name, cfg, [showLib, movieLib]);
         if (sections.has('perf') && name === 'tv1080') await measurePerf(page, name, [showLib, movieLib]);
+        if (name === only[0]) await checkHygiene(page, name);
         // Upstream's emby-select leaves its action sheet's cancellation unhandled (no catch on actionsheet.show), so
         // backing out of any select on the TV logs this in stock Jellyfin too. It is reported, not counted.
         const upstreamKnown = errors.filter(e => e === 'ActionSheet closed without resolving');
