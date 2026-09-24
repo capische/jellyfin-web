@@ -1,0 +1,838 @@
+// The JellyfinMod settings stylesheet (P7.S8), lifted from the Dashboard page's Option B file
+// (plugin Configuration/configPage.html, `jfmod-settings-style`) with only the delivery changed (PHASE7 §5.1).
+// Every size is em, no flex/grid gap and no display: contents (UX §13 W11); state is never colour alone.
+
+/* ---------- shared jfmod- vocabulary (S8 lifts this block unchanged) ---------- */
+.jfmod-settings { max-width: 100%; }
+
+/* The sheet and its scrim live outside .jfmod-settings, so they carry their own hidden rule:
+   a display declaration on a class would otherwise beat the attribute selector. */
+.jfmod-settings [hidden],
+.jfmod-sheet[hidden],
+.jfmod-sheet-scrim[hidden] { display: none !important; }
+
+.jfmod-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.jfmod-two,
+.jfmod-three {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25em;
+}
+.jfmod-three { grid-template-columns: 1fr 1fr 1fr; }
+
+@media (max-width: 44em) {
+    .jfmod-two,
+    .jfmod-three { grid-template-columns: 1fr; }
+}
+
+.layout-mobile .jfmod-two,
+.layout-mobile .jfmod-three { grid-template-columns: 1fr; }
+
+.jfmod-state {
+    display: inline-flex;
+    align-items: center;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.95em;
+}
+
+.jfmod-state i {
+    flex: none;
+    width: 0.62em;
+    height: 0.62em;
+    border-radius: 50%;
+    border: 0.12em solid currentColor;
+    margin-right: 0.45em;
+}
+
+.jfmod-state-ok i {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    border-color: var(--jf-palette-primary-main, #00a4dc);
+}
+
+/* The amber "needs attention" state reuses the theme's star token: the theme has no other warm
+   colour, and the wording beside it carries the same meaning without it. */
+.jfmod-state-warn i {
+    background: var(--jf-palette-starIcon-main, #f2b01e);
+    border-color: var(--jf-palette-starIcon-main, #f2b01e);
+}
+
+.jfmod-state-err i {
+    background: var(--jf-palette-error-main, #c62828);
+    border-color: var(--jf-palette-error-main, #c62828);
+}
+.jfmod-state-err { color: var(--jf-palette-text-primary, #fff); }
+.jfmod-state-off i { background: transparent; }
+
+.jfmod-state-busy i {
+    border-color: rgba(255, 255, 255, 0.25);
+    border-top-color: var(--jf-palette-primary-main, #00a4dc);
+    animation: jfmod-spin 0.8s linear infinite;
+}
+
+@keyframes jfmod-spin { to { transform: rotate(360deg); } }
+
+.jfmod-chip {
+    display: inline-block;
+    padding: 0.05em 0.55em;
+    border-radius: 0.2em;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.82em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    white-space: nowrap;
+    vertical-align: middle;
+    margin-right: 0.4em;
+}
+
+.jfmod-chip-primary {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    color: var(--jf-palette-primary-contrastText, rgba(0, 0, 0, 0.87));
+}
+
+.jfmod-chip-warn {
+    background: var(--jf-palette-starIcon-main, #f2b01e);
+    color: rgba(0, 0, 0, 0.87);
+}
+
+.jfmod-chip-err {
+    background: var(--jf-palette-error-main, #c62828);
+    color: #fff;
+}
+
+.jfmod-notice {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.75em 0.9em;
+    border-radius: 0.2em;
+    margin-bottom: 1.2em;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 0.25em solid var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.95em;
+}
+
+.jfmod-notice i {
+    flex: none;
+    width: 0.62em;
+    height: 0.62em;
+    border-radius: 50%;
+    margin-top: 0.45em;
+    margin-right: 0.7em;
+    background: currentColor;
+}
+.jfmod-notice-ok { border-left-color: var(--jf-palette-primary-main, #00a4dc); }
+.jfmod-notice-ok i { color: var(--jf-palette-primary-main, #00a4dc); }
+.jfmod-notice-warn { border-left-color: var(--jf-palette-starIcon-main, #f2b01e); }
+.jfmod-notice-warn i { color: var(--jf-palette-starIcon-main, #f2b01e); }
+
+.jfmod-notice-err {
+    border-left-color: var(--jf-palette-error-main, #c62828);
+    background: rgba(198, 40, 40, 0.12);
+}
+.jfmod-notice-err i { color: var(--jf-palette-error-main, #c62828); }
+.jfmod-notice-text { min-width: 0; }
+
+.jfmod-notice-action {
+    margin-left: auto;
+    flex: none;
+    padding-left: 0.8em;
+}
+
+.jfmod-group { margin-top: 0.2em; }
+
+.jfmod-grouptitle {
+    margin: 1.6em 0 0.9em;
+    font-size: 0.8em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 600;
+}
+.jfmod-group:first-child .jfmod-grouptitle { margin-top: 0; }
+.jfmod-lead { margin: 0 0 1em; }
+
+.jfmod-checkdesc {
+    margin-left: 2.55em;
+    margin-top: 0;
+}
+.jfmod-refused .jfmod-checkdesc { color: var(--jf-palette-starIcon-main, #f2b01e); }
+
+.jfmod-kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1.2em;
+    margin: 0 0 1.4em;
+    font-size: 0.95em;
+}
+
+.jfmod-kv dt {
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    padding-bottom: 0.45em;
+}
+
+.jfmod-kv dd {
+    margin: 0;
+    padding-bottom: 0.45em;
+}
+
+@media (max-width: 44em) {
+    .jfmod-kv { grid-template-columns: 1fr; }
+    .jfmod-kv dt { padding-bottom: 0.1em; }
+    .jfmod-kv dd { padding-bottom: 0.8em; }
+}
+.layout-mobile .jfmod-kv { grid-template-columns: 1fr; }
+
+.jfmod-dim { color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7)); }
+
+.jfmod-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+}
+
+.jfmod-settings .emby-button.button-flat,
+.jfmod-sheet .emby-button.button-flat { color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7)); }
+
+.jfmod-settings .emby-button.button-flat:hover,
+.jfmod-sheet .emby-button.button-flat:hover {
+    color: var(--jf-palette-primary-main, #00a4dc);
+    background: var(--jf-palette-action-hover, rgba(255, 255, 255, 0.08));
+}
+
+.jfmod-btn-sm {
+    padding: 0.5em 0.8em !important;
+    font-size: 0.92em;
+    min-width: 0;
+}
+
+.jfmod-btn-icon {
+    padding: 0.4em 0.55em !important;
+    min-width: 2.1em;
+}
+.jfmod-danger-text { color: var(--jf-palette-error-main, #c62828) !important; }
+
+.jfmod-inlineactions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.4em;
+}
+
+.jfmod-inlineactions > * {
+    margin-right: 0.6em;
+    margin-top: 0.3em;
+}
+
+.jfmod-testline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: -0.6em 0 1.6em;
+}
+
+.jfmod-testline > * {
+    margin-right: 1em;
+    margin-top: 0.4em;
+}
+.jfmod-testline .fieldDescription { margin-top: 0.4em; }
+
+.jfmod-rowactions {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+.jfmod-rowactions > * { margin-left: 0.15em; }
+
+/* A refused control keeps its focus ring and its tab stop; only its look says "no". */
+.jfmod-settings [aria-disabled="true"] { cursor: not-allowed; }
+
+.jfmod-settings button[aria-disabled="true"]:not(.jfmod-busy) {
+    opacity: 0.45;
+    filter: grayscale(0.5);
+}
+
+.jfmod-settings .jfmod-busy {
+    opacity: 0.75;
+    cursor: progress;
+}
+
+/* Secrets: a component, never a password field with a placeholder. */
+.jfmod-secret .jfmod-secret-label {
+    display: block;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    margin-bottom: 0.35em;
+    font-size: 0.95em;
+}
+
+.jfmod-secret-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    min-height: 2.6em;
+    padding: 0.25em 0.3em 0.25em 0.7em;
+    background: var(--jf-palette-FilledInput-bg, rgba(255, 255, 255, 0.09));
+    border-radius: 0.2em;
+}
+
+.jfmod-secret-state {
+    display: inline-flex;
+    align-items: center;
+    margin-right: auto;
+    color: var(--jf-palette-text-primary, #fff);
+    min-width: 0;
+}
+.jfmod-secret-pending .jfmod-secret-state { color: var(--jf-palette-starIcon-main, #f2b01e); }
+
+.jfmod-lock {
+    width: 0.75em;
+    height: 0.6em;
+    border: 0.12em solid var(--jf-palette-primary-main, #00a4dc);
+    border-radius: 0.15em;
+    position: relative;
+    margin-right: 0.55em;
+    margin-left: 0.1em;
+    flex: none;
+}
+
+.jfmod-lock::before {
+    content: "";
+    position: absolute;
+    left: 0.12em;
+    right: 0.12em;
+    top: -0.5em;
+    height: 0.45em;
+    border: 0.12em solid var(--jf-palette-primary-main, #00a4dc);
+    border-bottom: 0;
+    border-radius: 0.4em 0.4em 0 0;
+}
+.jfmod-secret-edit { margin-top: 0.5em; }
+.jfmod-secret-edit .inputContainer { margin-bottom: 0.4em; }
+
+/* Ordered rows: path mappings and a profile's allowed qualities. */
+.jfmod-maprow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 0.6em;
+    padding: 0.6em 0;
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+.jfmod-maprow .inputContainer { margin-bottom: 0; }
+.jfmod-maparrow { color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7)); }
+
+.jfmod-mapfoot {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0.4em;
+}
+.jfmod-mapfoot > * { margin-right: 1em; }
+
+.jfmod-maperr {
+    grid-column: 1/-1;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+    margin-top: 0.3em;
+}
+.jfmod-maprow-err .jfmod-maperr { color: var(--jf-palette-text-primary, #fff); }
+
+.jfmod-qlist {
+    list-style: none;
+    margin: 0 0 0.6em;
+    padding: 0;
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-qrow {
+    display: flex;
+    align-items: center;
+    padding: 0.35em 0;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-qrank {
+    width: 1.6em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+    text-align: right;
+    margin-right: 0.7em;
+    flex: none;
+}
+
+.jfmod-qname {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.95em;
+    margin-right: 0.7em;
+}
+.jfmod-qrow .jfmod-rowactions { margin-left: auto; }
+
+.jfmod-qadd {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.8em;
+}
+
+.jfmod-qadd .selectContainer {
+    flex: 1;
+    min-width: 12em;
+    margin-bottom: 0;
+    margin-right: 0.6em;
+}
+.jfmod-qadd > * { margin-top: 0.4em; }
+
+/* List rows: indexers, profiles, conflicts, orphans, decisions. */
+.jfmod-blist {
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    margin-bottom: 1.4em;
+}
+
+.jfmod-brow {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    column-gap: 1em;
+    padding: 0.7em 0;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+.jfmod-brow-main { min-width: 0; }
+
+.jfmod-brow-main strong {
+    display: block;
+    font-weight: 600;
+}
+
+.jfmod-brow-main .jfmod-sub {
+    font-size: 0.88em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    display: block;
+    margin-top: 0.15em;
+    word-break: break-word;
+}
+.jfmod-brow-err { background: rgba(198, 40, 40, 0.08); }
+
+.jfmod-brow-errtext {
+    grid-column: 1/-1;
+    font-size: 0.9em;
+    margin-top: 0.3em;
+}
+.jfmod-brow .jfmod-state { margin-right: 0.6em; }
+
+@media (max-width: 48em) {
+    .jfmod-brow { grid-template-columns: 1fr; }
+
+    .jfmod-brow .jfmod-rowactions {
+        justify-content: flex-end;
+        margin-top: 0.4em;
+    }
+}
+.layout-mobile .jfmod-brow { grid-template-columns: 1fr; }
+
+.layout-mobile .jfmod-brow .jfmod-rowactions {
+    justify-content: flex-end;
+    margin-top: 0.4em;
+}
+
+.jfmod-empty {
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    padding: 0.8em 0;
+}
+.jfmod-loglist { margin-bottom: 1.2em; }
+
+.jfmod-logrow {
+    padding: 0.4em 0;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    font-size: 0.9em;
+}
+
+/* ---------- Option B: the rail, the sections and the sheet ---------- */
+.jfmod-check {
+    display: flex;
+    align-items: flex-start;
+}
+
+.jfmod-check-rail {
+    flex: none;
+    width: 21em;
+    position: sticky;
+    top: 0.5em;
+    background: var(--jf-palette-background-paper, #202020);
+    border-radius: 0.2em;
+    padding: 1em 0 0.6em;
+    margin-right: 1.5em;
+}
+
+.jfmod-check-head {
+    padding: 0 1.1em 0.8em;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-check-head h2 {
+    margin: 0 0 0.25em;
+    font-size: 1.05em;
+    font-weight: 600;
+}
+
+.jfmod-check-head p {
+    margin: 0;
+    font-size: 0.9em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-check-steps {
+    list-style: none;
+    margin: 0.5em 0 0;
+    padding: 0;
+}
+
+.jfmod-step {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    padding: 0.55em 1.1em 0.55em 0.9em;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    border-left: 0.25em solid transparent;
+    font: inherit;
+}
+.jfmod-step:hover { background: var(--jf-palette-action-hover, rgba(255, 255, 255, 0.08)); }
+
+.jfmod-step[aria-current="true"] {
+    background: var(--jf-palette-action-hover, rgba(255, 255, 255, 0.08));
+    border-left-color: var(--jf-palette-primary-main, #00a4dc);
+}
+
+.jfmod-step-n {
+    flex: none;
+    width: 1.7em;
+    height: 1.7em;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-right: 0.85em;
+    border: 0.12em solid var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-step.k-ok .jfmod-step-n {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    border-color: var(--jf-palette-primary-main, #00a4dc);
+    color: var(--jf-palette-primary-contrastText, rgba(0, 0, 0, 0.87));
+}
+
+.jfmod-step.k-warn .jfmod-step-n {
+    border-color: var(--jf-palette-starIcon-main, #f2b01e);
+    color: var(--jf-palette-starIcon-main, #f2b01e);
+}
+
+.jfmod-step.k-err .jfmod-step-n {
+    background: var(--jf-palette-error-main, #c62828);
+    border-color: var(--jf-palette-error-main, #c62828);
+    color: #fff;
+}
+
+.jfmod-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.jfmod-step-text .jfmod-t {
+    font-size: 0.95em;
+    font-weight: 600;
+}
+
+.jfmod-step-text .jfmod-s {
+    font-size: 0.8em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jfmod-check-links {
+    padding: 0.7em 1.1em 0;
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    margin-top: 0.5em;
+    font-size: 0.85em;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.jfmod-check-links a {
+    margin-right: 1em;
+    margin-top: 0.2em;
+}
+
+.jfmod-check-picker {
+    display: none;
+    padding: 0 1.1em 0.8em;
+}
+.jfmod-check-picker .selectContainer { margin-bottom: 0; }
+
+.jfmod-check-main {
+    flex: 1;
+    min-width: 0;
+    max-width: 58em;
+}
+
+.jfmod-check-section {
+    background: var(--jf-palette-background-paper, #202020);
+    border-radius: 0.2em;
+}
+
+.jfmod-check-sechead {
+    padding: 1.1em 1.5em 1em;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.jfmod-check-sechead .jfmod-eyebrow {
+    font-size: 0.78em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    margin-bottom: 0.15em;
+}
+
+.jfmod-check-sechead h2 {
+    margin: 0 0 0.3em;
+    font-size: 1.35em;
+    font-weight: 600;
+    outline-offset: 0.2em;
+}
+
+.jfmod-sec-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.jfmod-sec-actions > * {
+    margin-left: 0.4em;
+    margin-top: 0.2em;
+}
+
+.jfmod-sec-actions .selectContainer {
+    margin-bottom: 0;
+    min-width: 12em;
+}
+
+@media (max-width: 48em) {
+    .jfmod-sec-actions {
+        margin-left: 0;
+        margin-top: 0.6em;
+    }
+
+    .jfmod-sec-actions > * {
+        margin-left: 0;
+        margin-right: 0.4em;
+    }
+}
+.jfmod-check-secbody { padding: 1.4em 1.5em 0.4em; }
+.jfmod-check-secbody form { margin: 0; }
+
+.jfmod-check-secfoot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0.9em 1.5em;
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-check-secfoot > * {
+    margin-right: 1em;
+    margin-top: 0.2em;
+}
+
+.jfmod-savemeta {
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+}
+
+.jfmod-next {
+    margin-left: auto;
+    margin-right: 0 !important;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    color: var(--jf-palette-primary-main, #00a4dc);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    padding: 0.4em 0;
+}
+
+@media (max-width: 48em) { .jfmod-next { margin-left: 0; } }
+
+/* Sheet: the editor for one list item. Right side on desktop, full screen on mobile and TV. */
+
+/* The same z-index band the fork's own dialogs use, so the sheet sits over the app bar rather than under it. */
+.jfmod-sheet-scrim {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 999998;
+}
+
+.jfmod-sheet {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 34em;
+    max-width: 100%;
+    background: var(--jf-palette-background-paper, #202020);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -0.5em 0 2em rgba(0, 0, 0, 0.5);
+}
+
+.jfmod-sheet-head {
+    display: flex;
+    align-items: center;
+    padding: 1em 1.4em;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-sheet-head h2 {
+    margin: 0 0.8em;
+    font-size: 1.15em;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+}
+
+.jfmod-sheet-body {
+    flex: 1;
+    overflow: auto;
+    padding: 1.3em 1.4em 0.4em;
+}
+
+.jfmod-sheet-body form {
+    margin: 0;
+    max-width: 100%;
+}
+
+.jfmod-sheet-foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0.9em 1.4em;
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+}
+
+.jfmod-sheet-foot > * {
+    margin-right: 0.6em;
+    margin-top: 0.2em;
+}
+
+.jfmod-sheet .jfmod-two,
+.jfmod-sheet .jfmod-three { grid-template-columns: 1fr; }
+
+.layout-mobile .jfmod-sheet,
+.layout-tv .jfmod-sheet {
+    width: 100%;
+    box-shadow: none;
+}
+
+/* Narrow and mobile: the rail becomes a picker, the section fills the width. */
+@media (max-width: 60em) {
+    .jfmod-check { display: block; }
+
+    .jfmod-check-rail {
+        position: static;
+        width: auto;
+        margin-right: 0;
+        margin-bottom: 1em;
+        padding-bottom: 0.9em;
+    }
+
+    .jfmod-check-steps,
+    .jfmod-check-links { display: none; }
+
+    .jfmod-check-picker {
+        display: block;
+        padding-top: 0.8em;
+    }
+
+    .jfmod-check-sechead,
+    .jfmod-check-secbody,
+    .jfmod-check-secfoot {
+        padding-left: 1em;
+        padding-right: 1em;
+    }
+}
+.layout-mobile .jfmod-check { display: block; }
+
+.layout-mobile .jfmod-check-rail {
+    position: static;
+    width: auto;
+    margin-right: 0;
+    margin-bottom: 1em;
+    padding-bottom: 0.9em;
+}
+
+.layout-mobile .jfmod-check-steps,
+.layout-mobile .jfmod-check-links { display: none; }
+
+.layout-mobile .jfmod-check-picker {
+    display: block;
+    padding-top: 0.8em;
+}
+
+.layout-mobile .jfmod-check-sechead,
+.layout-mobile .jfmod-check-secbody,
+.layout-mobile .jfmod-check-secfoot {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+/* TV: the rail is column one, the section column two; focus is always visible. */
+.layout-tv .jfmod-check-rail { width: 24em; }
+
+.layout-tv .jfmod-step {
+    padding-top: 0.7em;
+    padding-bottom: 0.7em;
+}
+
+.layout-tv .jfmod-step:focus {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    color: var(--jf-palette-primary-contrastText, rgba(0, 0, 0, 0.87));
+    outline: 0;
+}
+
+.layout-tv .jfmod-step:focus .jfmod-s,
+.layout-tv .jfmod-step:focus .jfmod-step-n {
+    color: inherit;
+    border-color: currentColor;
+}
+
+.jfmod-settings :focus-visible {
+    outline: 0.16em solid var(--jf-palette-primary-main, #00a4dc);
+    outline-offset: 0.12em;
+}
+
+.layout-tv .jfmod-settings :focus {
+    outline: 0.16em solid var(--jf-palette-primary-main, #00a4dc);
+    outline-offset: 0.12em;
+}
