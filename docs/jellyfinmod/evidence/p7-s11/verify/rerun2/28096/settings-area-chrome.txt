@@ -1,0 +1,35 @@
+browser chrome 153.0.8010.53
+PASS [desktop] The user menu offers JellyfinMod settings to an administrator
+PASS [desktop] The menu item opens the settings area
+PASS [desktop] Overview shows the server bundle equal to this page's meta tag :: {"pageBundle":"21c0905b4568","steps":11}
+PASS [desktop] Every section opens :: ["Overview","Discovery","Download client","Indexers","Quality profiles","Grabbing","Import and seeding","Retention","Automation","Interface","Diagnostics"]
+PASS [desktop] Discovery Test shows a code and a sentence :: "TMDB accepted the token. (ok)"
+PASS [desktop] Retention saves, echoes its revision and re-reads after a reload :: {"changed":"15","reread":"15","meta":"Retention revision 47 · seed protection revision 35."}
+PASS [desktop] A stale revision shows the conflict message with Reload :: "These settings changed somewhere else since this page loaded. Reload to see the current values, then save again.\nReload"
+PASS [desktop] The original retention days are restored :: "14"
+PASS [desktop] No settings response carries a secret reference :: {"responses":85}
+PASS [desktop] No page errors :: []
+PASS [mobile] Overview shows the server bundle equal to this page's meta tag :: {"pageBundle":"21c0905b4568","steps":11}
+PASS [mobile] Every section opens :: ["Overview","Discovery","Download client","Indexers","Quality profiles","Grabbing","Import and seeding","Retention","Automation","Interface","Diagnostics"]
+PASS [mobile] Mobile: no horizontal scroll :: {"overflow":0}
+PASS [mobile] Mobile: the section picker replaces the rail
+PASS [mobile] No settings response carries a secret reference :: {"responses":13}
+PASS [mobile] No page errors :: []
+PASS [tv1080] Overview shows the server bundle equal to this page's meta tag :: {"pageBundle":"21c0905b4568","steps":11}
+PASS [tv1080] TV: focus starts on the current rail step :: "button[overview] 1OverviewEverything required i"
+PASS [tv1080] TV: every section reached by arrows and Enter :: ["Discovery","Download client","Indexers","Quality profiles","Grabbing","Import and seeding","Retention","Automation","Interface","Diagnostics"]
+PASS [tv1080] TV: Back (Escape) closes an open menu and stays on the page :: {"opened":1,"afterEscape":0}
+PASS [tv1080] TV: the remote's Back (461) closes it too, focus back on its opener :: {"reopened":1,"afterRemote":0,"focus":"div All users with library access "}
+PASS [tv1080] TV: Back with nothing open returns to the page that opened settings :: "#/home"
+PASS [tv1080] No settings response carries a secret reference :: {"responses":27}
+PASS [tv1080] No page errors :: []
+PASS [tv720] Overview shows the server bundle equal to this page's meta tag :: {"pageBundle":"21c0905b4568","steps":11}
+PASS [tv720] TV: focus starts on the current rail step :: "button[overview] 1OverviewEverything required i"
+PASS [tv720] TV: every section reached by arrows and Enter :: ["Discovery","Download client","Indexers","Quality profiles","Grabbing","Import and seeding","Retention","Automation","Interface","Diagnostics"]
+PASS [tv720] TV: Back (Escape) closes an open menu and stays on the page :: {"opened":1,"afterEscape":0}
+PASS [tv720] TV: the remote's Back (461) closes it too, focus back on its opener :: {"reopened":1,"afterRemote":0,"focus":"div All users with library access "}
+PASS [tv720] TV: Back with nothing open returns to the page that opened settings :: "#/home"
+PASS [tv720] No settings response carries a secret reference :: {"responses":27}
+PASS [tv720] No page errors :: []
+32 of 32 checks pass
+EXIT:0
