@@ -23,5 +23,10 @@
   "entriesJellyfinModTitledCount": 0,
   "sessionsTotal": 2,
   "sessionsWithNowPlaying": 0,
-  "standinProcessCount": 0
+  "standinProcessCount": 0,
+  "apiDevice": {
+    "deviceId": "verify5",
+    "deletedHttpStatus": 204,
+    "goneProof": "GET /Devices with the same (pre-delete) token returned HTTP 401 immediately after DELETE, confirming the device and its session were revoked"
+  }
 }
