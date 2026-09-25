@@ -1,0 +1,2 @@
+staged 18617478 bytes
+{"id":"s11-movie","indexerId":1,"title":"JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD","size":18617478,"seeders":40,"category":2040,"imdbid":"tt9900001","tmdbid":990001,"file":"<path>
