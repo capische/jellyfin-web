@@ -2173,6 +2173,20 @@ items, classified by the S11 agent:
 | Part B `mobile` did not assert the D8 links | **(a) checklist gap** | `db195ab8eb`: the step now checks the links are shown at 390 px and that tapping *Setup wizard* and *Dashboard* opens each |
 | The verifier printed one 28096 session token | hygiene | Its device (`verify`) deleted on 28096 (`DELETE /Devices`), which revokes the token: no device, session or `Devices` row with that app remains |
 
+**Verification re-run 2 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/rerun2/`):** smoke, review fixes,
+the settings area in four layouts (32/32 both browsers), settings-changes (20/20 both; the Chrome leftover of run 1 did
+not recur) and hygiene passed. Classified by the S11 agent:
+
+| Item | Class | Evidence and disposition |
+| --- | --- | --- |
+| Sweep, TV 720: focus "stuck at *Next: Discovery*" before the settings links, the preferences menu and the profile | **(a) harness** | Replaying the sweep's own walk: its focus key was class and position only, and on a 720p screen every rail step scrolls into the same place with the same classes, so it took *Quality profiles*, *Grabbing* … for steps already tried and gave up on keys it had never pressed there. With the element's identity in the key the same walk reaches *Setup wizard* in 13 presses (Down to the last step, Down to the link row, Right, Right), which is the path a remote user has. D9 stays: without it Right and Left left the page for the header |
+| Sweep, TV 1080: *Series detail* (`Failed to fetch`, `net::ERR_ADDRESS_UNREACHABLE` on an image) and *Search* (`net::ERR_TIMED_OUT` on an image) | **environment (network)** | Transport errors between the workstation and the test host, not HTTP answers: the same routes passed in every other layout and run. Recorded NOT VERIFIED; re-run 3 repeats the layout once when only such errors occur |
+| Sweep, mobile: *Dashboard: General* hidden by the drawer; Chrome *Plugins* and *Plugins → JellyfinMod* | **(a) harness** | On both entries and both browsers, three times each, tapping Open Menu showed the drawer in ≈ 40–80 ms, *General* and *Plugins* opened, the drawer closed, and the Plugins page listed the JellyfinMod card. The sweep pressed Open Menu a second time while the drawer was still opening, closing it; it now opens the drawer only while it is closed |
+| Fresh install, `queue` on Chrome: rows render (D6 fixed) but the "automation off" notice check failed | **(a) harness** | The queue showed "Automation paused: Automation is turned off. Free space in the library is below the configured floor." — both reasons true: the switch is off and the test host's disk is past the default 10 % floor. The queue names every reason, the switch first (`constants/queue.ts`), and says "Automation is off." only when the switch is the only one; the check now accepts either |
+
+No product code changed after re-run 2; 28096 keeps `21c0905b4568`, the image keeps `606ca92eb2dd`. Re-run 3 is the
+top section of the checklist.
+
 **Verification (new workspace rule, 2026-09-25):** re-run 2 is the section *Re-run 2* at the top of the checklist. checklist re-runs go to a separate Sonnet-high verifier, not to
 the Opus run. The checklist is `.claude/briefs/verify-s11.md` (workspace, not in this repository): part A on 28096 in
 Chromium then Chrome (smoke, review fixes, security, Queue D6, settings changes D2–D5 against stand-ins, takeover off
