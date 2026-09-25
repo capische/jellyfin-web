@@ -224,6 +224,9 @@ async function checkSearch(page, name, cfg) {
             await page.fill('#searchTextInput', searchQuery);
         }
         await page.waitForSelector('.page:not(.hide) .jfmod-discovery', { timeout: 20000 });
+        // The discovery zone shows skeletons from the first keystroke; wait (bounded) for real, focusable results in
+        // either zone before driving the D-pad, or Down has nothing to land on while TMDB is still answering.
+        await page.waitForSelector('.page:not(.hide) .jfmod-discovery button, .page:not(.hide) .verticalSection:not(.jfmod-discovery) .card', { timeout: 20000 });
         await page.waitForTimeout(3000);
         const s = await page.evaluate(() => {
             const pg = document.querySelector('.page:not(.hide)') || document;
@@ -453,8 +456,14 @@ async function checkModernGrid(page, name, lib) {
         await press(page, 'ArrowDown');
         menu.push(await describeFocus(page));
         await press(page, 'Enter');
-        await page.waitForTimeout(3000);
-        const tab = await page.evaluate(() => ({ hash: location.hash, sections: document.querySelectorAll('.page:not(.hide) .verticalSection, .page:not(.hide) .sectionTitle').length, cards: document.querySelectorAll('.page:not(.hide) .card').length }));
+        // Suggestions are computed by the server on first open and can take longer than a fixed pause; wait for the
+        // tab's cards (bounded), so a slow first load is not read as an empty tab.
+        const readTab = () => page.evaluate(() => ({ hash: location.hash, sections: document.querySelectorAll('.page:not(.hide) .verticalSection, .page:not(.hide) .sectionTitle').length, cards: document.querySelectorAll('.page:not(.hide) .card').length }));
+        let tab = await readTab();
+        for (let waited = 0; waited < 15000 && !(/tab=1/.test(tab.hash) && tab.cards > 0); waited += 500) {
+            await page.waitForTimeout(500);
+            tab = await readTab();
+        }
         record(name, `${route} grid: view menu switches to Suggestions by remote`, /tab=1/.test(tab.hash) && tab.cards > 0, { menu, tab });
         await pressRemoteBack(page);
         await page.waitForTimeout(2500);
