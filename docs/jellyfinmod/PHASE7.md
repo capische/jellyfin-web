@@ -2111,11 +2111,11 @@ Kept current by whoever works S11. Last update 2026-09-24 (review fixes), Opus 5
 - **S5 (2026-09-24):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows done; see *S5
   evidence*. Publishing to `ghcr.io/capische/jellyfinmod` was authorized by the user directly on 2026-09-24 ("Yes, once
   gh is ready"; `gh` has `write:packages`); **nothing is published yet** — it waits for S11 to pass on the final build
-  (see *S11 — handover*).
+  (see *S11 — result*).
 - **§3.4 merge routine: run for real, 2026-09-24** (authorized by the user directly: "Yes, I authorize it"). See
   *S11 evidence*, merge row.
-- **S11: in progress** — see *S11 — handover* below, which supersedes this list for S11.
-- **Instance:** see *S11 — handover*.
+- **S11: passed, 2026-09-25** — see *S11 — result* below.
+- **Instance:** see *S11 — result*.
 - **Probes:** `scripts/jellyfinmod-e2e/review-fixes.mjs` (S8-R1, S8-R2), `settings-dashboard.mjs` (S7),
   `settings-area.mjs` (S8), `settings-prowlarr.mjs` (S9), `setup-wizard.mjs` (S10), `image-review.mjs` (S5); plugin
   suites under `tests/` (the takeover suite takes a `jellyfinmod-web.zip` path) and the image test
@@ -2140,37 +2140,48 @@ on timing in one sequential run of all suites and passed on an immediate re-run,
 **Found and fixed on the way:** in the TV settings area Down from a section heading fell back into the rail and
 never reached the section's rows; the section column is now a `focuscontainer-y` (amended into `378d8ddd10`).
 
-#### S11 — handover
+#### S11 — result: passed (2026-09-25)
 
-Kept current by the S11 coordinator. Last update **2026-09-25 (after the usage reset)**, Opus 5.5, high effort.
+**S11 passed** on the final build, verified by a separate Sonnet-high verifier in five runs after the S11 agent's own
+runs; every failure was classified and either fixed (mod), corrected in the harness, or shown identical on stock. The
+user then authorized the push and the publication directly ("Yes, push and publish", 2026-09-25).
 
-**Where the work is (nothing below is pushed unless it says so).**
+**Commit ids.** Before the push the unpushed S11 history was rewritten once to take host paths out of evidence files
+and out of `fresh-env.sh` (which now requires `JFMOD_ROOT` and `JFMOD_SSH`); no source file changed, and the ids in this
+section are the published ones. Bundle `21c0905b4568` was built before that rewrite, from the tree that is now
+`448113e717`.
 
-| Repository | Branch / worktree | Tip | State |
-| --- | --- | --- | --- |
-| web | `jellyfin-mod` on origin | `a279641ebf` | the §3.4 rebase, **pushed and verified** (below) |
-| web | `p7-s11`, worktree `.claude/worktrees/p7-s11-web` | this commit | `jellyfin-mod` + every S11 commit: runners, stand-ins, evidence, the fixes D1–D8; linear, **not pushed** |
-| plugin | `master` on origin | `f443a62` | unchanged |
-| plugin | `p7-s11`, worktree `.claude/worktrees/p7-s11-plugin` | `e5b3c95` | `439f727` (release changelog, image source label), `d6fdc88` (D1), `ad06745` (D7), `e5b3c95` (README: the published image and its tag policy); all eleven suites pass; **not pushed** |
+**The accepted build.** Plugin 0.1.0.0 for Jellyfin 12.0.0 / .NET 10 — plugin `p7-s11` `e5b3c95` (code of `ad06745`):
+`439f727` release changelog and image source label, `d6fdc88` D1, `ad06745` D7, `e5b3c95` README (published image and
+tag policy). Web bundle **`21c0905b4568`** (web `448113e717`) on 28096 and in the release candidate image
+`606ca92eb2dd`; nothing under `src/` changed after it (only runners and evidence). Deploys to 28096 go *stop → copy the
+four package files → start*: copying over the loaded assembly and restarting made the old process log
+`BadImageFormatException` / `[FTL]` while shutting down. 28096 is left patched, retention 14 days and off; backups
+`backups/pre-s11`, packages `backups/s11-package*`.
 
-**Deployed on 28096 (2026-09-25, after verification run 1):** plugin code `ad06745` with bundle **`21c0905b4568`**
-(web `db195ab8eb`), takeover `patched`, clean start. Deploy by *stop → copy the four package files → start*: copying
-over the loaded assembly and then restarting made the old process log `BadImageFormatException` / `[FTL]` while it shut
-down (the new process started cleanly). Retention 14 days, off. Backups: `backups/pre-s11`; packages
-`backups/s11-package*`.
+**Chromium versus Chrome.** Every runner ran on Playwright's Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.53
+with the same results, except where noted per run: the transcode path differs (Chrome keeps HEVC video and converts only
+AC-3 audio, Chromium transcodes the video too), stock and mod always matched within a browser, and every browser-only
+miss was a race classified below (network transport errors, the double sign-out 401).
 
-**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = **`606ca92eb2dd`** (bundle `21c0905b4568`), the release
-candidate; `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) kept.
+**Verification runs (Sonnet high; evidence `evidence/p7-s11/verify/`, `rerun2/` … `rerun5/`).** Run 1 covered the
+whole checklist (`.claude/briefs/verify-s11.md` in the workspace): part A on 28096 — smoke, review fixes, security, the
+Queue, the settings changes against stand-ins, takeover off and on with hashes, `browser-review` to its end,
+`tv-shell`, the settings runners, the full-replacement sweep in four layouts, parity on Chrome (246 PASS, 0 FAIL; 55
+movies and 105 series), hygiene — and part B, the fresh install on the image through `fresh-env.sh`. Re-runs 2–5 each
+repeated only what changed and what failed. Re-run 5: mobile sweep 49 PASS, 9 NOT PRESENT, 0 FAIL in both browsers;
+hygiene PASS (5 143 of 5 143 user-data rows equal, settings equal, four users, no fixture, the verifier's device deleted
+and its token refused).
 
 **Verification run 1 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/`):** everything passed except five
 items, classified by the S11 agent:
 
 | Item | Class | Evidence and disposition |
 | --- | --- | --- |
-| Sweep, TV 1280×720: settings links and Dashboard rows unreachable ("focus stuck at the header's SyncPlay button") | **(c) mod, small** | Reproduced by keys: the links *were* reachable (Down past the last rail step, then Right), but at 720 Right from the first rail steps, and Left from the section's *Next*, jumped into the header, because its SyncPlay button was nearer than the section's first control; the sweep's geometric walk followed it there. Fixed in `8641494278` (settings area and wizard are a `focuscontainer-x`); re-probed at 720 and 1080: Right enters the section, Left returns to the rail, Up reaches the header |
-| Fresh install on Chrome: `acquire` NOT VERIFIED, then `import`, `play`, `queue` failing | **(a) harness, one root cause** | The failure screenshot shows the picker "No release passes the profile · 1 rejected": the checklist's `stage` published a 98 MB 1080p **BluRay** release with the group `S11`, and the wizard's profile allows only 1080p WEB-DL (the group `S11` also reads as season 11, found once before). Every later step depended on that grab. Fixed in `04c8ef4d09` (a ≈19 MB 1080p WEB-DL, group `JFMOD`, as the passing run staged) |
-| `settings-changes` on Chrome: the fallback removed a *JellyfinMod Standin Transmission* after the Dashboard delete passed | **not reproduced** | The page delete removed the created id (the runner waited for it); a client with the same name existed afterwards. Four targeted Chrome and Chromium probes of create → Test → delete through the Dashboard page made exactly one `POST`, one `Test` and one `DELETE` and left nothing. End state was clean. The runner now records every download-client write (`db195ab8eb`), so a recurrence names its source |
-| Part B `mobile` did not assert the D8 links | **(a) checklist gap** | `db195ab8eb`: the step now checks the links are shown at 390 px and that tapping *Setup wizard* and *Dashboard* opens each |
+| Sweep, TV 1280×720: settings links and Dashboard rows unreachable ("focus stuck at the header's SyncPlay button") | **(c) mod, small** | Reproduced by keys: the links *were* reachable (Down past the last rail step, then Right), but at 720 Right from the first rail steps, and Left from the section's *Next*, jumped into the header, because its SyncPlay button was nearer than the section's first control; the sweep's geometric walk followed it there. Fixed in `518830b551` (settings area and wizard are a `focuscontainer-x`); re-probed at 720 and 1080: Right enters the section, Left returns to the rail, Up reaches the header |
+| Fresh install on Chrome: `acquire` NOT VERIFIED, then `import`, `play`, `queue` failing | **(a) harness, one root cause** | The failure screenshot shows the picker "No release passes the profile · 1 rejected": the checklist's `stage` published a 98 MB 1080p **BluRay** release with the group `S11`, and the wizard's profile allows only 1080p WEB-DL (the group `S11` also reads as season 11, found once before). Every later step depended on that grab. Fixed in `984135d716` (a ≈19 MB 1080p WEB-DL, group `JFMOD`, as the passing run staged) |
+| `settings-changes` on Chrome: the fallback removed a *JellyfinMod Standin Transmission* after the Dashboard delete passed | **not reproduced** | The page delete removed the created id (the runner waited for it); a client with the same name existed afterwards. Four targeted Chrome and Chromium probes of create → Test → delete through the Dashboard page made exactly one `POST`, one `Test` and one `DELETE` and left nothing. End state was clean. The runner now records every download-client write (`448113e717`), so a recurrence names its source |
+| Part B `mobile` did not assert the D8 links | **(a) checklist gap** | `448113e717`: the step now checks the links are shown at 390 px and that tapping *Setup wizard* and *Dashboard* opens each |
 | The verifier printed one 28096 session token | hygiene | Its device (`verify`) deleted on 28096 (`DELETE /Devices`), which revokes the token: no device, session or `Devices` row with that app remains |
 
 **Verification re-run 2 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/rerun2/`):** smoke, review fixes,
@@ -2204,7 +2215,7 @@ twice on the fork's stock entry exactly as on the mod — 16 of 16 sign-outs, bo
 mobile, two POSTs each (one usually aborted by the navigation to the login page); the mod does not touch the logout
 path (`connectionManager.logoutOfServer`, `AppUserMenu` unchanged in that respect). When the second request arrives
 after the first has revoked the token the server answers 401; the user is signed out either way. The sweep now names it
-as benign (`c00af4e139`). Re-run 5 repeats the mobile layout and forbids API sign-ins or device changes while the sweep
+as benign (`b662b1a984`). Re-run 5 repeats the mobile layout and forbids API sign-ins or device changes while the sweep
 runs.
 
 **Local `master` (workspace note).** A worktree outside this repository's `.claude/worktrees` (not created by S11) has
@@ -2224,16 +2235,9 @@ minutes; their disposable container, TLS terminator, network, stand-ins and stat
 gone (0 containers, 0 networks, nothing listening on 38096–38119, the directory gone); 28096 was left unchanged
 (takeover `patched`, settings equal the pre-S11 snapshot, four users, no `JellyfinMod` title).
 
-**Exact next steps.**
-1. The coordinator runs `verify-s11.md` on a Sonnet-high verifier; any FAIL comes back to the S11 agent for
-   classification and a fix.
-2. When it passes: fast-forward `jellyfin-mod` to `p7-s11` and plugin `master` to `p7-s11` (both fast-forwards of the
-   pushed tips), verify the remote tips.
-3. Publish `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest` from the final release context (linux/amd64 and
-   linux/arm64, `SOURCE_DATE_EPOCH`, `--provenance=false`), verify the pushed digests and that the package is public,
-   pull on the test host and compare its plugin files with `424d897d2364`. amd64 is verified by content only: under
-   the workstation's qemu emulation stock `jellyfin/jellyfin` 12.0.0 itself crashes during startup.
-4. Record the results here, strike this handover, then Q16 (the Trakt indicator).
+**Next.** Push `jellyfin-mod` and plugin `master` (fast-forwards), publish `ghcr.io/capische/jellyfinmod:0.1.0.0`
+and `:latest` (recorded under *Release 0.1.0.0* below when done), then Q16, the Trakt indicator, with its own Fable-high
+review and Sonnet verification. The retention branch rebases on the pushed tips.
 
 #### S11 evidence
 
@@ -2271,7 +2275,7 @@ them.
 | D6 | An administrator's Queue crashed with its first row (`<button is=…>` against the custom-elements polyfill) | web `41b62de63d` — verified on a disposable container, **not yet on 28096** |
 | D7 | The indexer breaker never reached the queue banner | plugin `ad06745`, web `bf0d41131b` — suite-verified, **not yet in a browser** |
 | D8 | On a phone the settings area hid its link list, so after setup there was no way to the setup wizard or the Dashboard from it | web `5ced2c7f2a` (found by the sweep) — **not yet verified in a browser** |
-| D9 | On a TV at 1280×720, Right from the first settings-rail steps and Left from a section's *Next* jumped into the header | web `8641494278` (found by the sweep, verification run 1) — re-probed by keys; awaiting verification re-run 2 |
+| D9 | On a TV at 1280×720, Right from the first settings-rail steps and Left from a section's *Next* jumped into the header | web `518830b551` (found by the sweep, verification run 1) — re-probed by keys; awaiting verification re-run 2 |
 
 ### S7 — one settings contract behind every form
 
