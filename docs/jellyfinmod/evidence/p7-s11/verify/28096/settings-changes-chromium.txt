@@ -1,0 +1,22 @@
+browser chromium 153.0.8010.12
+PASS [chromium] 1 client: Dashboard page: a new download client with the username left blank saves (201) :: {"status":201,"username":"","passwordConfigured":false}
+PASS [chromium] 1 client: Creating a client while another exists does not select it; the acquisition switch is unchanged :: {"selectedUnchanged":true,"enabled":true,"revision":14}
+PASS [chromium] 1 client: The page edits the new client, and its Grabbing section still names the selected client :: {"editing":"JellyfinMod Standin Transmission","grabbingSelects":"Acceptance Transmission"}
+PASS [chromium] 1 client: Its Test reaches the stand-in Transmission (no credentials, as the stand-in expects here) :: "Connection and download folder verified. (ok) · client 4.0.6 (s11 stand-in)"
+PASS [chromium] 2 indexers: A provoked validation error names its field (priority left empty), with no parser detail :: "One or more validation errors occurred. request: The request field is required. priority: The JSON value could not be converted to System.Int32. (https://tools.ietf.org/html/rfc9110#section-15.5.1)"
+PASS [chromium] 2 indexers: The refused indexer was not created
+PASS [chromium] 2 indexers: Add an indexer with its defaults (stand-in Torznab) saves (201): enabled, automation off, categories 2000, 5000, priority 25 :: {"status":201,"closed":true,"enabled":true,"automateTitleMatches":false,"categories":[2000,5000],"priority":25}
+PASS [chromium] 2 indexers: Its Test verifies the stand-in Torznab feed :: "Capabilities verified: 3 movie and 3 TV search parameters. (ok)"
+PASS [chromium] 2 indexers: The indexer API key replaced from the dialog reads Configured again, and the Test follows the saved key :: {"before":{"configured":"Configured","editing":false},"after":{"configured":"Configured","editing":false},"wrongKeyTest":"The indexer rejected its credentials. (auth_failed)","rightKeyTest":"Capabilities verified: 3 movie and 3 TV search parameters. (ok)"}
+PASS [chromium] 3 prowlarr: Prowlarr: the API key replaced and saved returns to Configured (not an empty New field), and the Test uses it (unauthorized) :: {"afterAdd":{"configured":"Configured","editing":false},"afterReplace":{"configured":"Configured","editing":false},"test":"Prowlarr refused the API key. (unauthorized)"}
+PASS [chromium] 3 prowlarr: Prowlarr: the right key passes the Test; Sync adds the stand-in indexer and its outcome stays on the page :: {"test":"Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin","shown":"Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified.","final":"Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified.","synced":["JellyfinMod Standin Indexer"]}
+PASS [chromium] 3 prowlarr: Removing the Prowlarr source removes the indexer it synced :: {"indexers":3}
+PASS [chromium] 4 probe: The settings area still edits the selected client, not the new one :: {"shown":"Acceptance Transmission"}
+PASS [chromium] 4 probe: Test import path: an unmapped path and the client's download folder each show their outcome, and it stays :: {"unmapped":"No mapping turns this client path into a local path. (path_unmapped)","unmappedFinal":"No mapping turns this client path into a local path. (path_unmapped)","mapped":"The folder can receive a hardlink from the library mount. (ok)","mappedFinal":"The folder can receive a hardlink from the library mount. (ok)"}
+PASS [chromium] 5 cleanup: The fixture indexer is removed through the settings area
+PASS [chromium] 5 cleanup: The fixture client is deleted through the Dashboard page
+PASS [chromium] 5 cleanup: No fixture had to be removed by the fallback :: []
+PASS [chromium] 5 cleanup: Indexers, clients, profiles, Prowlarr sources, acquisition, retention, automation and import settings equal the snapshot :: {"differences":[],"counts":{"Settings/Indexers":2,"Settings/DownloadClients":1,"Settings/QualityProfiles":1,"Settings/Prowlarr":0}}
+PASS [chromium] 5 cleanup: No response carried a fixture secret (465 JellyfinMod responses) :: []
+PASS [chromium] 5 cleanup: No page errors :: []
+20 of 20 checks passed
