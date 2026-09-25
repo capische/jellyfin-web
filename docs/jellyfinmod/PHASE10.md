@@ -578,3 +578,57 @@ onto the Jellyfin 12 `master` `f443a62`; web `p10-retention` onto `jellyfin-mod`
   waiting on the user, after the old job has written `p10r2/state/phase-b.DONE`. The scripts now refuse any instance
   but 18096 (RET4-R4); the old job still runs its own older driver, which has no such guard but whose environment
   file names 18096.
+
+## Stale played state after an import — 2026-09-26 (Q16 review P2-2; Opus 5.5, high)
+
+**The old real-window job finished** overnight: `p10r2/state/phase-b.DONE` exists, its log ends "phase-b DONE: retention
+verified off, settings restored, no fixture left; crontab line removed", and `crontab -l` no longer lists it (checked on
+the Pi by the coordinator, 2026-09-26 08:21 Sydney). As expected, it ran against no fixtures and did not prove the real
+window's positive half.
+
+**Finding (Q16 review P2-2, verified in the Jellyfin v12.0 source):** `IUserDataManager.GetUserData(user, item)` reads
+only the user data rows loaded into the item instance it is given, and `SaveUserData` reloads only the instance it saved
+through. `ILibraryManager.GetItemById` returns the library manager's cached instance. A save made through another
+instance of the same item therefore leaves the cached one serving the old state until it is evicted or the server
+restarts. Three writers save that way:
+- the Trakt plugin's history sync (`SyncFromTraktTask` loads items with `GetItemList`, reason `Import`);
+- the NFO importer (`BaseNfoParser`, reason `Import`);
+- **stock Jellyfin's "mark season/series played" and "unplayed"** (`Folder.MarkPlayed`/`MarkUnplayed` load the episodes
+  with `GetItemList`).
+
+Retention read played state through the cached instance in three places: the evidence the listener records, the last
+check before an unlink, and a multi-episode file's completion. So an imported watch started no window. Worse, a title
+marked unwatched that way could still read as played at the last check before its unlink.
+
+**Fix** (plugin `ee385df`): those three reads use `ILibraryManager.RetrieveItem`, which loads the item and its user
+data from the database without touching the cache. An item that cannot be read counts as unavailable, which never
+deletes. The saved user data carried by the event is not used, because the listener coalesces events per user and item:
+the stored state is the newest one.
+
+**Evidence** (all on 18096 with a tagged fixture set, `P22`, removed afterwards; retention off except a one-minute test
+window for the last step):
+- *Before the fix, live:* the season holding E03 and E04 was marked played through stock Jellyfin. Jellyfin stored them
+  played, but its cached items and the plugin's observations stayed unplayed. This is the gap, reproduced on the
+  unmodified Jellyfin 12 host.
+- *After the fix, live, import direction:* the same season mark was recorded as played with its date, with no restart,
+  while Jellyfin's own cached items still said unplayed. With retention on, both windows started with the warning.
+- *After the fix, live, unwatched direction:* both episodes were played through their cached items, then the season was
+  marked unplayed through fresh instances, so the cached items still said played. The plugin recorded both as unplayed,
+  and a run after the windows had passed reclaimed nothing (every fixture byte-identical; inspected 603, reclaimed 0,
+  failed 0).
+- *Protection suite on the Pi* (models the cache: `GetItemById` returns the cached instance, `RetrieveItem` a stored copy):
+  - an unwatched import while the cached item says played is refused `live_not_completed`, with the file byte-identical;
+  - an imported watch while the cached item says unwatched is recorded played with its date;
+  - without the fix, the same suite reclaims the unwatched title.
+- Not observed live: the last check itself refusing, because the fixed evidence path already moves the title to
+  waiting before any run can pick it. That check is proven in the suite.
+
+### Handover — 2026-09-26, P2-2
+
+- Branch `p10-userdata-fresh` (plugin, off `348168b`; web, off `c554c3e312`), not pushed. Plugin `ee385df` is deployed on
+  18096 (DLL SHA-256 prefix `5315461ef93c2a23`), with the web bundle unchanged (`9d30aba7e9b3`). The live checks ran on
+  `1d3166f`, which has the same product code; the amend changed only the protection suite. **Retention is off**,
+  and no `JellyfinMod` fixture is left.
+- Next: the Fable review and the Sonnet verification (Section A of `.claude/briefs/verify-retention-r3.md`, refreshed for
+  this commit). Then the merge, the fresh real-window fixture set, and `p10r3/arm-real-window.sh` (with `--disarm`)
+  for the user.
