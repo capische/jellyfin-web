@@ -1,0 +1,10 @@
+PASS: mod entry and prefixed assets
+PASS: first failed bundle load
+PASS: reload in the same tab
+PASS: repeat visit in the same tab
+PASS: stock login and Home
+PASS: stock Dashboard
+PASS: unavailable stock copy does not loop
+PASS: mod Home, Dashboard navigation and lazy chunks
+PASS: live stock restore
+PASS: live takeover re-apply
