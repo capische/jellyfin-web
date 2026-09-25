@@ -1,0 +1,871 @@
+{
+ "runner": "replacement-sweep",
+ "browser": {
+  "tier": "chromium",
+  "version": "153.0.8010.12"
+ },
+ "bundleExpectation": "mod entry at /web/",
+ "counts": {
+  "PASS": 48,
+  "NOT PRESENT": 9,
+  "FAIL": 1
+ },
+ "timings": {
+  "mobile": 223.2,
+  "total": 223.3
+ },
+ "results": [
+  {
+   "layout": "mobile",
+   "row": "Home",
+   "verdict": "PASS",
+   "how": "landing after sign-in",
+   "detail": {
+    "ok": true,
+    "hash": "#/home",
+    "hashOk": true,
+    "found": 5,
+    "textOk": true,
+    "notFound": false,
+    "text": "Continue watching The Wheel of TimeS1:E1 - LeavetakingPeaky BlindersS3:E6 - Episode 6Sugar (2024)S2:E4 - Off 15Late ShiftGuillermo del Toro's Cabinet of Curiosi",
+    "modBundle": true,
+    "layoutTv": false
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies library",
+   "verdict": "PASS",
+   "how": "shell: drawer",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Suggestions",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 73,
+    "textOk": true,
+    "notFound": false,
+    "text": "Continue Watching | Continue Watching | Late Shift2025 | People We Meet on Vacation2026 | Interstate 602002 | Recently Added Movies | Recently Added Movies | 2N"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Favorites",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Collections",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Genres",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 151,
+    "textOk": true,
+    "notFound": false,
+    "text": "Action | Action | Borderlands2024 | Ballerina2025 | Highlander1986 | Predator: Badlands2025 | Highlander II: The Quickening1991 | Jurassic World Rebirth2025 | A"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Studios",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina",
+    "benignRequests": [
+     "aborted by navigation: GET /Studios"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Playlists",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina",
+    "benignRequests": [
+     "aborted by navigation: GET /Items"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movies tab: Movies",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/movies",
+    "hashOk": true,
+    "found": 55,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol2023 | After Porn Ends2012 | After Porn Ends 22017 | After Porn Ends 32018 | Another Simple Favor2025 | Back to the Beginning2025 | Ballerina"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movie detail",
+   "verdict": "PASS",
+   "how": "shell: first movie card in the grid",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "20 Days in Mariupol",
+    "itemType": "Movie"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Person detail (Embed)",
+   "verdict": "PASS",
+   "how": "shell: cast card on the movie detail",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Mstyslav Chernov",
+    "itemType": "Person",
+    "personType": "Person"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV library",
+   "verdict": "PASS",
+   "how": "shell: drawer",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 100,
+    "textOk": true,
+    "notFound": false,
+    "text": "19232022 - 2025 | Adolescence2025 | 8Ahsoka2023 - Present | 6Alexander: The Making of a God2024 | 8Anne Rice's Mayfair Witches2023 - Present | Another Self2022 "
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Suggestions",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 53,
+    "textOk": true,
+    "notFound": false,
+    "text": "Continue Watching | Continue Watching | S2:E4 - Off 152026 | S3:E2 - Surrender2017 | S1:E3 - Family2025 | S1:E5 - The B-Team2019 | S1:E1 - Death Becomes Her2023"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Upcoming",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 3,
+    "textOk": true,
+    "notFound": false,
+    "text": "Nothing here.Please ensure downloading of internet metadata is enabled. | Nothing here. | Please ensure downloading of internet metadata is enabled."
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Genres",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 307,
+    "textOk": true,
+    "notFound": false,
+    "text": "Action | Action | Fallout2024 - Present | Game of Thrones2011 - 2019 | Squid Game2021 - 2025 | 9Watchmen2019 | The Boys2019 - 2026 | The Old Man2022 - 2024 | 8T"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: TV Networks",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 100,
+    "textOk": true,
+    "notFound": false,
+    "text": "1:26 Pictures1:26 Pictures | 3 Arts Entertainment | 3 Chance Productions3 Chance Productions | 8th in State Productions8th in State Productions | 20th Century F",
+    "benignRequests": [
+     "aborted by navigation: GET /Studios"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Episodes",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 100,
+    "textOk": true,
+    "notFound": false,
+    "text": "A Good Girl's Guide to MurderS1:E1 - Episode 12024 | A Good Girl's Guide to MurderS1:E2 - Episode 22024 | A Good Girl's Guide to MurderS1:E3 - Episode 32024 | A",
+    "benignRequests": [
+     "aborted by navigation: GET /Items"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Collections",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 3,
+    "textOk": true,
+    "notFound": false,
+    "text": "Nothing here.Collections allow you to enjoy personalized groupings of Movies, Series, and Albums. Click the '+' button to start creating collections. | Nothing ",
+    "benignRequests": [
+     "aborted by navigation: GET /Items"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Playlists",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 3,
+    "textOk": true,
+    "notFound": false,
+    "text": "Nothing here.No Items are currently available. | Nothing here. | No Items are currently available."
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "TV tab: Shows",
+   "verdict": "PASS",
+   "how": "shell: library view menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/tv",
+    "hashOk": true,
+    "found": 100,
+    "textOk": true,
+    "notFound": false,
+    "text": "19232022 - 2025 | Adolescence2025 | 8Ahsoka2023 - Present | 6Alexander: The Making of a God2024 | 8Anne Rice's Mayfair Witches2023 - Present | Another Self2022 "
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Series detail",
+   "verdict": "PASS",
+   "how": "shell: the series card in the grid",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "A Good Girl's Guide to Murder",
+    "itemType": "Series"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Season detail",
+   "verdict": "PASS",
+   "how": "shell: first season card on the series",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 2,
+    "textOk": true,
+    "notFound": false,
+    "text": "A Good Girl's Guide to Murder | Season 1",
+    "itemType": "Season"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Episode detail",
+   "verdict": "PASS",
+   "how": "shell: first episode on the season",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 2,
+    "textOk": true,
+    "notFound": false,
+    "text": "A Good Girl's Guide to Murder | Season 1 - 1. Episode 1",
+    "itemType": "Episode"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Search",
+   "verdict": "PASS",
+   "how": "shell: toolbar Search",
+   "detail": {
+    "ok": true,
+    "hash": "#/search",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "2Night of the Living Dead1968"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Movie detail from search",
+   "verdict": "PASS",
+   "how": "shell: search result card",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Night of the Living Dead"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Video player (play a few seconds, then Back)",
+   "verdict": "PASS",
+   "how": "shell: Play, then Back",
+   "detail": {
+    "ok": true,
+    "hash": "#/details",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Night of the Living Dead",
+    "playedSeconds": 3,
+    "stillPlaying": false,
+    "benignRequests": [
+     "aborted by navigation: POST /Sessions/Playing",
+     "aborted by navigation: POST /Sessions/Playing/Progress",
+     "aborted by navigation: GET /Videos/<id>/stream.mp4",
+     "aborted by navigation: POST /Sessions/Playing/Stopped"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "played title user data restored",
+   "verdict": "PASS",
+   "how": "api",
+   "detail": {
+    "status": 200,
+    "same": true
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Queue",
+   "verdict": "PASS",
+   "how": "shell: user menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/catalog/queue",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Automation paused: Automation is turned off. Free space in the library is below the configured floor.Automatic release of seeding copies is off.Night of the Liv"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "JellyfinMod settings",
+   "verdict": "PASS",
+   "how": "shell: user menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/catalog/settings",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Step 1 of 11OverviewEverything required is readyReadinessNothing is blocked.This installationPlugin0.1.0.0Interface bundle (server)21c0905b4568Interface bundle "
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "JellyfinMod setup wizard",
+   "verdict": "PASS",
+   "how": "shell: settings area link \"Setup wizard\"",
+   "detail": {
+    "ok": true,
+    "hash": "#/catalog/settings/setup",
+    "hashOk": true,
+    "found": 7,
+    "textOk": true,
+    "notFound": false,
+    "text": "Set up JellyfinMod | Step 6 of 6RetentionOff · nothing is deletedDelete media files after they are watchedThe entry, its artwork and its history stay; only the "
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Jellyfin preferences menu",
+   "verdict": "PASS",
+   "how": "shell: user menu Settings",
+   "detail": {
+    "ok": true,
+    "hash": "#/mypreferencesmenu",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "Display"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "User profile",
+   "verdict": "PASS",
+   "how": "shell: preferences menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/userprofile",
+    "hashOk": true,
+    "found": 2,
+    "textOk": true,
+    "notFound": false,
+    "text": "oleksii | Current passwordNew passwordNew password confirmSave PasswordReset Password"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Display preferences",
+   "verdict": "PASS",
+   "how": "shell: preferences menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/mypreferencesdisplay",
+    "hashOk": true,
+    "found": 34,
+    "textOk": true,
+    "notFound": false,
+    "text": "Display languageAutoTranslating Jellyfin is an ongoing project.Learn how you can contribute. | Auto | Date time localeAuto | Auto | Display modeAutoSelect the l"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Home screen preferences",
+   "verdict": "PASS",
+   "how": "shell: preferences menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/mypreferenceshome",
+    "hashOk": true,
+    "found": 24,
+    "textOk": true,
+    "notFound": false,
+    "text": "Home screen section 1 My Media My Media (small) Active Recordings Continue Watching Continue Listening Continue Reading Recently Added Media Next Up Live TV Non"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Playback preferences",
+   "verdict": "PASS",
+   "how": "shell: preferences menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/mypreferencesplayback",
+    "hashOk": true,
+    "found": 32,
+    "textOk": true,
+    "notFound": false,
+    "text": "Maximum Allowed Audio Channels Auto Mono Stereo 5.1 Channels 7.1 Channels 0 | Auto Mono Stereo 5.1 Channels 7.1 Channels | Preferred audio languageAny languageO"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Subtitle preferences",
+   "verdict": "PASS",
+   "how": "shell: preferences menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/mypreferencessubtitles",
+    "hashOk": true,
+    "found": 19,
+    "textOk": true,
+    "notFound": false,
+    "text": "Preferred subtitle languageAny languageAbkhazianAchineseAcoliAdangmeAdyghe; AdygeiAfarAfrihiliAfrikaansAfro-Asiatic languagesAinuAkanAkkadianAlbanianAleutAlgonq"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Controls preferences",
+   "verdict": "NOT PRESENT",
+   "how": "preferences menu",
+   "detail": {
+    "reason": "upstream shows no Controls link on a mobile browser"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Quick Connect (user menu)",
+   "verdict": "PASS",
+   "how": "shell: user menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/quickconnect",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": ""
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Metadata manager",
+   "verdict": "PASS",
+   "how": "shell: user menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/metadata",
+    "hashOk": true,
+    "found": 3,
+    "textOk": true,
+    "notFound": false,
+    "text": "#editItemMetadataPage .editMetadataForm{max-width:100%} Media Folders Movies Playlists Shows | Media Folders Movies Playlists Shows | Media Folders Movies Playl"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Sign out",
+   "verdict": "FAIL",
+   "how": "shell: user menu Sign Out",
+   "detail": {
+    "ok": true,
+    "hash": "#/login",
+    "hashOk": true,
+    "found": 1,
+    "textOk": true,
+    "notFound": false,
+    "text": "",
+    "confirmDialog": false,
+    "failedRequests": [
+     {
+      "path": "/Sessions/Logout",
+      "method": "POST",
+      "status": 401
+     }
+    ],
+    "benignRequests": [
+     "aborted by navigation: POST /Sessions/Logout",
+     "aborted by navigation: GET /System/Info"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Sign back in",
+   "verdict": "PASS",
+   "how": "login form",
+   "detail": {
+    "ok": true,
+    "hash": "#/home",
+    "hashOk": true,
+    "found": 6,
+    "textOk": true,
+    "notFound": false,
+    "text": "Under the Bridge14-year-old Reena Virk joined friends at a party and never returned home. Through the eyes of Godfrey and a local police officer, the series tak",
+    "benignRequests": [
+     "aborted by navigation: POST /Sessions/Capabilities/Full",
+     "aborted by navigation: GET /System/Info"
+    ]
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard",
+   "verdict": "PASS",
+   "how": "shell: user menu",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard",
+    "hashOk": true,
+    "found": 12,
+    "textOk": true,
+    "notFound": false,
+    "text": "Server | Scan All Libraries | Restart | Shutdown | Movies55 | Series105Episodes514 | Devices | Chrome AndroidJellyfin Web 13.0.0Last activity less than a minute"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: General",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/settings",
+    "hashOk": true,
+    "found": 12,
+    "textOk": true,
+    "notFound": false,
+    "text": "Server nameThis name will be used to identify the server and will default to the server's hostname. |  | Preferred display languageEnglishTranslating Jellyfin i"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Users",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/users",
+    "hashOk": true,
+    "found": 4,
+    "textOk": true,
+    "notFound": false,
+    "text": "nataLast activity 8 days ago | oleksiiLast activity less than a minute ago | papaLast activity 11 months ago | vikaLast activity about 2 months ago"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Libraries",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/libraries",
+    "hashOk": true,
+    "found": 2,
+    "textOk": true,
+    "notFound": false,
+    "text": "ShowsShows | MoviesMovies"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Plugins",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/plugins",
+    "hashOk": true,
+    "found": 7,
+    "textOk": true,
+    "notFound": false,
+    "text": "AudioDB12.0.0.0 Active | JellyfinMod0.1.0.0 Active | ListenBrainz Similarity Provider12.0.0.0 Active | MusicBrainz12.0.0.0 Active | OMDb12.0.0.0 Active | Studio"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Plugins → JellyfinMod",
+   "verdict": "PASS",
+   "how": "shell: plugin card",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/plugins/<id>",
+    "hashOk": true,
+    "found": 5,
+    "textOk": true,
+    "notFound": false,
+    "text": "JellyfinMod | Track what you want to watch whether or not the file exists, acquire it, and reclaim the disk when you are done. | Revision History | Enable plugi"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Scheduled tasks",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/tasks",
+    "hashOk": true,
+    "found": 72,
+    "textOk": true,
+    "notFound": false,
+    "text": "Application | Update PluginsLast ran about 3 hours ago, taking less than a minute. | Update Plugins | Last ran about 3 hours ago, taking less than a minute. | J"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Dashboard: Logs",
+   "verdict": "PASS",
+   "how": "shell: Dashboard navigation",
+   "detail": {
+    "ok": true,
+    "hash": "#/dashboard/logs",
+    "hashOk": true,
+    "found": 1158,
+    "textOk": true,
+    "notFound": false,
+    "text": "Logs | Log a warning message if the server was slow to answer | log_20260925.log9/25/2026 7:04 PM | log_20260925.log9/25/2026 7:04 PM | log_20260925.log | 9/25/"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Music",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Live TV",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Books",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Photos and home videos",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Playlists",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Collections (boxsets library)",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Music videos",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "Stock for now: Mixed folders",
+   "verdict": "NOT PRESENT",
+   "how": "user views",
+   "detail": {
+    "reason": "no library of this type on the instance"
+   }
+  },
+  {
+   "layout": "mobile",
+   "row": "layout override removed",
+   "verdict": "PASS",
+   "how": "localStorage",
+   "detail": {
+    "layout": null
+   }
+  }
+ ]
+}
