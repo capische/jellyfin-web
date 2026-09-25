@@ -1,0 +1,17 @@
+secret values loaded (count only): 3
+PASS Disposable ordinary user created, not an administrator :: {"status":200,"isAdministrator":false}
+PASS Every JellyfinMod route (58): anonymous 401, ordinary user 403 on administrator routes and 200 on Health :: []
+PASS Anonymous bundle and repository routes answer 200, as designed :: [["/JellyfinMod/Repository",200],["/web-mod/bbdf78025ca2/jellyfinmod-web.json",200],["/web-mod/",200]]
+PASS Served-bundle path traversal: every form is 404 (or 400) :: [["/web-mod/../../etc/passwd",404],["/web-mod/%2e%2e/%2e%2e/etc/passwd",404],["/web-mod/..%2f..%2fetc%2fpasswd",404],["/web-mod/..%5c..%5cjellyfinmod.db",404],["/web-mod/000000000000/index.html",404],["/web-mod/{id}/../../jellyfinmod.db",404],["/web-mod/{id}/..%2f..%2facquisition-secrets.json",404],["/web-mod/{id}/%2e%2e%2f%2e%2e%2fweb-root%2fstate.json",404],["/web-mod/{id}/....//....//etc/passwd",404]]
+PASS Leak check over 146 responses (anonymous, ordinary, administrator): no secret reference, key or value :: {"leaks":[],"secretValuesCompared":3}
+browser chromium 153.0.8010.12
+PASS [desktop] Ordinary user signs in to the mod shell; Home shows no setup banner :: {"meta":"bbdf78025ca2","banner":0}
+PASS [desktop] The user menu offers neither JellyfinMod settings nor the Dashboard :: {"menu":["Profile","Settings","Quick Connect","Sign Out"]}
+PASS [desktop] The settings area and the setup wizard refuse the ordinary user :: {"settingsText":"JellyfinMod settings are for administrators. Ask an administrator to change them.","setupText":"Setting up JellyfinMod is for administrators."}
+PASS [desktop] No settings or setup request was sent for the ordinary user; no page error :: {"settingsRequests":[],"errors":[]}
+PASS [mobile] Ordinary user signs in to the mod shell; Home shows no setup banner :: {"meta":"bbdf78025ca2","banner":0}
+PASS [mobile] The user menu offers neither JellyfinMod settings nor the Dashboard :: {"menu":["Profile","Settings","Quick Connect","Sign Out"]}
+PASS [mobile] The settings area and the setup wizard refuse the ordinary user :: {"settingsText":"JellyfinMod settings are for administrators. Ask an administrator to change them.","setupText":"Setting up JellyfinMod is for administrators."}
+PASS [mobile] No settings or setup request was sent for the ordinary user; no page error :: {"settingsRequests":[],"errors":[]}
+PASS The disposable user is deleted and gone (user, list, devices) :: {"deleted":204,"get":404,"users":4,"devices":0}
+14 of 14 passed on chromium
