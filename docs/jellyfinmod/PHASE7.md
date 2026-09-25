@@ -114,7 +114,7 @@ they differ; the remaining open questions stay open and their proposed defaults 
     it. So these files are **enumerated in §3.2 with `permanent` lifetime** rather than a
     Stage-B one, and Stage B browse is complete without them.
 
-    **What would reopen this:** Phase 6 follow-up work — the quality ladder, preferred sources,
+    **What would reopen this:** Phase 12 work — the quality ladder, preferred sources,
     version ticks on cards — needing a grid upstream cannot host. Not a tidiness argument.
 
 **Accepted 2026-09-24.**
@@ -125,7 +125,7 @@ they differ; the remaining open questions stay open and their proposed defaults 
     dispatch also pulls in `moviesrecommended.js` and `tvrecommended.js`. The user chose the modern
     grid for the long term, for three reasons:
     - **one grid instead of two**, so every future grid feature — per-media retention controls, the
-      Phase 6 follow-up quality ladder, version ticks on cards, device presets — is built once;
+      Phase 12 quality ladder, version ticks on cards, device presets — is built once;
     - **D-pad handling for MUI pop-ups is needed anyway** — Back closes the open menu instead of
       leaving the page — for the settings area, the wizard and the per-media controls, so building
       it for the grid is not extra work;
@@ -406,7 +406,7 @@ change to a file and the change to its row go in the same commit.
 | ~~`src/apps/legacy/routes/search.tsx`~~ | Add from TMDB section (W4) | — | **removed (P7.S6).** The mod router owns `search`; `git diff master` is empty |
 | ~~`src/apps/legacy/controllers/itemDetails/index.js`~~ | detail augmentation (W5, T14) | — | **removed (P7.S6).** The mod router owns `details` and composes upstream's controller; `git diff master` is empty |
 | ~~`src/components/itemContextMenu.js`~~ | exported `executeCommand` for the More-menu wrap | — | **removed (P7.S6).** Nothing wraps the stock More menu; the mod's commands are buttons in its own section |
-| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `src/apps/modern/features/libraries/components/ItemsView.tsx`, `src/apps/modern/features/libraries/components/LibraryToolbar.tsx`, `src/apps/modern/features/libraries/components/PlayAllButton.tsx`, `src/apps/modern/features/libraries/components/ShuffleButton.tsx`, `src/apps/modern/features/libraries/components/filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grid, which since decision 13 serves every layout including the TV (W2, W3, W8) | every grid loses file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 6 follow-up work needs a grid upstream cannot host |
+| `src/apps/modern/features/libraries/hooks/useLibrary.tsx`, `src/apps/modern/features/libraries/components/ItemsView.tsx`, `src/apps/modern/features/libraries/components/LibraryToolbar.tsx`, `src/apps/modern/features/libraries/components/PlayAllButton.tsx`, `src/apps/modern/features/libraries/components/ShuffleButton.tsx`, `src/apps/modern/features/libraries/components/filter/FilterButton.tsx` | combined browse, File and Due filter groups, paging and Play All/Shuffle gating for the modern grid, which since decision 13 serves every layout including the TV (W2, W3, W8) | every grid loses file-less entries, the File and Due groups and the merged total | **permanent** by decision 12; revisited only if Phase 12 work needs a grid upstream cannot host |
 | `src/types/library.ts` | the `FileStates` and `RetentionDueWithinDays` fields on upstream's `Filters` (`6645d7d397`, `cb3b7daf44`), which the grid rows above read and persist with the view settings | the File and Due filters fail to type-check, or a renamed `Filters` drops them from saved view settings | **permanent** with the grid rows above (added 2026-09-24, P7-R1) |
 | ~~`src/components/filterdialog/filterdialog.js`, `src/components/filterdialog/filterdialog.template.html`, `src/components/filterdialog/filterIndicator.js`~~ | the File and Due filter groups in the legacy grids' filter dialog (W3, W8) | — | **removed (P7 TV shell, decision 13).** Only the legacy `movies.js` / `tvshows.js` opened this dialog in the movies and series modes that showed the group; the modern grid's `FilterButton` carries the File and Due groups itself. `git diff master` is empty on all three |
 | ~~`src/components/QueryClientEventHandler.tsx`~~ | catalog query invalidation on the events the mod's surfaces depend on | — | **removed (corrected 2026-09-24, P7-R1).** Moved into the mod's own `integration/queryClientEventHandler` by `f4a7e2ffc4`; `git diff master` is empty |
