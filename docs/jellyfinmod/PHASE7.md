@@ -2197,6 +2197,22 @@ Dashboard home's *Server* card also links to `#/dashboard/settings`, so its "is 
 and skipped opening the drawer. It now checks the drawer's own link (and waits for the slide-in to finish); one mobile
 run on Chromium: 49 PASS, 9 NOT PRESENT, 0 FAIL. Re-run 4 repeats that row in both browsers.
 
+**Verification re-run 4 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/rerun4/`):** mobile *Dashboard:
+General* and every other Dashboard row passed in both browsers; Chrome's mobile layout passed whole. One Chromium row
+failed, *Sign out*, with a 401 on `POST /Sessions/Logout`. **Class (b), upstream:** Sign Out posts `/Sessions/Logout`
+twice on the fork's stock entry exactly as on the mod — 16 of 16 sign-outs, both entries, both browsers, desktop and
+mobile, two POSTs each (one usually aborted by the navigation to the login page); the mod does not touch the logout
+path (`connectionManager.logoutOfServer`, `AppUserMenu` unchanged in that respect). When the second request arrives
+after the first has revoked the token the server answers 401; the user is signed out either way. The sweep now names it
+as benign (`c00af4e139`). Re-run 5 repeats the mobile layout and forbids API sign-ins or device changes while the sweep
+runs.
+
+**Local `master` (workspace note).** A worktree outside this repository's `.claude/worktrees` (not created by S11) has
+the local `master` branch checked out at `2132b05175`, the pre-rebase tip; all 14 of its commits are on
+`origin/master` `1717a170e4` as rebased equivalents (`git cherry` shows every one as `-`). `patchSurface.js` compares
+against the local `master` by default, so builds need `JELLYFINMOD_PATCH_BASE=origin/master` until the coordinator
+resets that ref.
+
 **Verification (new workspace rule, 2026-09-25):** re-run 2 is the section *Re-run 2* at the top of the checklist. checklist re-runs go to a separate Sonnet-high verifier, not to
 the Opus run. The checklist is `.claude/briefs/verify-s11.md` (workspace, not in this repository): part A on 28096 in
 Chromium then Chrome (smoke, review fixes, security, Queue D6, settings changes D2–D5 against stand-ins, takeover off
