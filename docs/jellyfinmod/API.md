@@ -636,7 +636,8 @@ single failed detail call is skipped and counted in the response instead of fail
 Health `Capabilities` adds `trakt.history`, and Health gains a `Trakt` block read from the host's own plugin list
 (`IPluginManager`, plugin id `4fe3201e-d6ae-4f2e-8917-e12bda571281`, the stock `jellyfin-plugin-trakt`). Only an
 `Active` copy counts; a copy disabled from the Dashboard, uninstalled or waiting for a restart reports
-`Installed: false`:
+`Installed: false`. `Version` is included for administrators only; an ordinary user gets `{"Installed":true}`. The web
+asks the item endpoint below only when `Installed` is true:
 
 ```json
 "Trakt":{"Installed":true,"Version":"31.0.0.0"}
@@ -652,7 +653,9 @@ user is read from authentication, never from the request:
 
 `hasHistory` means *watch history for this title arrived from Trakt for you*: JellyfinMod saw Jellyfin save this
 user's data for the movie or episode with `UserDataSaveReason.Import` (what the Trakt plugin's `SyncFromTraktTask`
-uses) while the Trakt plugin was active, and the saved data was played or had a resume point. A season or series
+uses) while the Trakt plugin was active and the host was running that task (Jellyfin's NFO parser also saves with
+`Import`; such imports are ignored), and the saved data was played or had a resume point. Rows go when their item
+leaves the library or their user is deleted. A season or series
 answers for its episodes the user can still see; `lastSyncedAt` is when that history last arrived (the newest episode's
 for a season or series). An import that clears the history (Trakt reporting the title unwatched) removes it. Without
 the plugin every visible item answers `{"installed":false,"hasHistory":false}` (a `null` `lastSyncedAt` may be omitted).
