@@ -1,0 +1,20 @@
+// P7.Q16: the Trakt indicator on a native detail page. Quiet like the retention line, sized in em so the TV's 125 % and
+// the phone's 90 % root sizes scale it, and laid out with margins rather than flex gap for older TV engines (P1.W11).
+.jfmod-traktIndicator {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0 0 0.7em;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+// The primary colour and the card radius of themes/_base/theme.ts and card.scss.
+.jfmod-traktIndicator-chip {
+    margin-right: 0.5em;
+    padding: 0.05em 0.45em;
+    border: 0.08em solid #00a4dc;
+    border-radius: 0.2em;
+    color: #00a4dc;
+    font-weight: 600;
+}
