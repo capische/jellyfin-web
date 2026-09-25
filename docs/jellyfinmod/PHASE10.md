@@ -600,9 +600,13 @@ Retention read played state through the cached instance in three places: the evi
 check before an unlink, and a multi-episode file's completion. So an imported watch started no window. Worse, a title
 marked unwatched that way could still read as played at the last check before its unlink.
 
-**Fix** (plugin `ee385df`): those three reads use `ILibraryManager.RetrieveItem`, which loads the item and its user
-data from the database without touching the cache. An item that cannot be read counts as unavailable, which never
-deletes. The saved user data carried by the event is not used, because the listener coalesces events per user and item:
+**Fix** (plugin `ee385df`, with the review fixes in `d742ffb` and `11f0a67`): those three reads use
+`ILibraryManager.RetrieveItem`, which loads the item and its user data from the database without touching the cache.
+Each read has three outcomes: found, missing (Jellyfin no longer has the item) or error. At the last check before an
+unlink, an error for any version, the operation's own item or the series blocks it (`live_state_unavailable`). A
+missing version is skipped, as before, and no readable version at all blocks. An error while recording evidence
+leaves the recorded evidence and the schedule as they were. An error in a multi-episode file's completion keeps that
+file. The saved user data carried by the event is not used, because the listener coalesces events per user and item:
 the stored state is the newest one.
 
 **Evidence** (all on 18096 with a tagged fixture set, `P22`, removed afterwards; retention off except a one-minute test
@@ -623,11 +627,30 @@ window for the last step):
 - Not observed live: the last check itself refusing, because the fixed evidence path already moves the title to
   waiting before any run can pick it. That check is proven in the suite.
 
+**Review of `ee385df`** (Fable high, 2026-09-26): no P1; `RetrieveItem` bypasses every cache and every deletion path
+reads fresh state; safe to merge with retention off. Findings fixed before the merge:
+- **P2-1** (`d742ffb`): an unreadable version was dropped like a missing one, so the last check failed open. It now
+  blocks `live_state_unavailable`. Protection suite: one of two versions unreadable while the other reads played is
+  blocked, file byte-identical; `ee385df` reclaimed it.
+- **P3-1** (`d742ffb`): a read error wrote unavailable evidence, clearing the deadline. The error is now thrown before the
+  observation changes; the evaluator leaves that target as it was. Protection suite: a read that fails once leaves the
+  observation and the deadline unchanged.
+- **P3-2** (`d742ffb`): the repair task loads each item once for all users.
+- **P3-3** (`11f0a67`): coalesced events keep the newest save reason, except that playback progress never replaces
+  another, so an import queued behind progress reports is named as an import. Not covered by a suite (the change is
+  confined to the listener's queue).
+- **P3-4** (web): the `p22` checks now assert that Jellyfin's cached items really were stale, and that retention is on
+  where it must be; `p22-stale` asserts the gap and so fails on a fixed build by design.
+- Re-run live on `11f0a67` with the stricter checks (fresh `P22` set, one-minute window, removed afterwards; retention
+  off at the end): the cached items were stale in both directions, the import was recorded played with its date and
+  started warned windows, the unwatched import was recorded not played, and a run after the windows reclaimed nothing
+  (inspected 603, reclaimed 0, failed 0; every fixture byte-identical).
+
 ### Handover — 2026-09-26, P2-2
 
-- Branch `p10-userdata-fresh` (plugin, off `348168b`; web, off `c554c3e312`), not pushed. Plugin `ee385df` is deployed on
-  18096 (DLL SHA-256 prefix `5315461ef93c2a23`), with the web bundle unchanged (`9d30aba7e9b3`). The live checks ran on
-  `1d3166f`, which has the same product code; the amend changed only the protection suite. **Retention is off**,
+- Branch `p10-userdata-fresh` (plugin, off `348168b`; web, off `c554c3e312`), not pushed. Plugin `11f0a67` is deployed on
+  18096 (DLL SHA-256 prefix `5aa596ea8aa99a62`), with the web bundle unchanged (`9d30aba7e9b3`). The first live checks
+  ran on `1d3166f` (the product code of `ee385df`). **Retention is off**,
   and no `JellyfinMod` fixture is left.
 - Next: the Fable review and the Sonnet verification (Section A of `.claude/briefs/verify-retention-r3.md`, refreshed for
   this commit). Then the merge, the fresh real-window fixture set, and `p10r3/arm-real-window.sh` (with `--disarm`)
