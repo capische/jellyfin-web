@@ -1,0 +1,22 @@
+browser chromium 153.0.8010.12
+PASS [chromium] [desktop] The Queue renders every row the API lists (2, states seeding, seeding) with no error boundary :: {"rows":2,"layoutClass":"jfmod-queue jfmod-queue--desktop","errorBoundary":false,"titles":["Night of the Living Dead (1968)","Night of the Living Dead (1968)"],"api":["seeding","seeding"]}
+PASS [chromium] [desktop] The row menu opens the stock action sheet with the admin actions (read by data-id, none activated) :: {"ids":["remove"],"title":"Night of the Living Dead (1968)","focusInside":false}
+UPSTREAM [chromium] [desktop] Escape: not a close key outside TV, identical on the fork's stock entry (upstream keyboardNavigation.js) :: {"mod":{"escapeClosed":false},"stock":{"stockEntry":true,"opened":true,"escapeClosed":false}}
+PASS [chromium] [desktop] Back closes the menu, stays on the Queue and changes nothing :: {"backClosed":true,"hash":"#/catalog/queue","queueUnchanged":true}
+PASS [chromium] [desktop] No page errors :: []
+PASS [chromium] [mobile] The Queue renders every row the API lists (2, states seeding, seeding) with no error boundary :: {"rows":2,"layoutClass":"jfmod-queue jfmod-queue--mobile","errorBoundary":false,"titles":["Night of the Living Dead (1968)","Night of the Living Dead (1968)"],"api":["seeding","seeding"]}
+PASS [chromium] [mobile] The row menu opens the stock action sheet with the admin actions (read by data-id, none activated) :: {"ids":["remove"],"title":"Night of the Living Dead (1968)","focusInside":false}
+UPSTREAM [chromium] [mobile] Escape: not a close key outside TV, identical on the fork's stock entry (upstream keyboardNavigation.js) :: {"mod":{"escapeClosed":false},"stock":{"stockEntry":true,"opened":true,"escapeClosed":false}}
+PASS [chromium] [mobile] Back closes the menu, stays on the Queue and changes nothing :: {"backClosed":true,"hash":"#/catalog/queue","queueUnchanged":true}
+PASS [chromium] [mobile] No page errors :: []
+PASS [chromium] [tv1080] The Queue renders every row the API lists (2, states seeding, seeding) with no error boundary :: {"rows":2,"layoutClass":"jfmod-queue jfmod-queue--tv","errorBoundary":false,"titles":["Night of the Living Dead (1968)","Night of the Living Dead (1968)"],"api":["seeding","seeding"]}
+PASS [chromium] [tv1080] Keys reach a Queue row :: {"tag":"BUTTON","cls":"jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus","queueId":"b512139a910e429d9cb66d207a6194a7","label":null}
+PASS [chromium] [tv1080] The row menu opens the stock action sheet with the admin actions (read by data-id, none activated) :: {"ids":["remove"],"title":"Night of the Living Dead (1968)","focusInside":false}
+PASS [chromium] [tv1080] Escape closes the menu, changes nothing, and focus returns to the opener row :: {"closed":true,"focus":{"tag":"BUTTON","cls":"jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus","queueId":"b512139a910e429d9cb66d207a6194a7","label":null},"queueUnchanged":true}
+PASS [chromium] [tv1080] No page errors :: []
+PASS [chromium] [tv720] The Queue renders every row the API lists (2, states seeding, seeding) with no error boundary :: {"rows":2,"layoutClass":"jfmod-queue jfmod-queue--tv","errorBoundary":false,"titles":["Night of the Living Dead (1968)","Night of the Living Dead (1968)"],"api":["seeding","seeding"]}
+PASS [chromium] [tv720] Keys reach a Queue row :: {"tag":"BUTTON","cls":"jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus","queueId":"b512139a910e429d9cb66d207a6194a7","label":null}
+PASS [chromium] [tv720] The row menu opens the stock action sheet with the admin actions (read by data-id, none activated) :: {"ids":["remove"],"title":"Night of the Living Dead (1968)","focusInside":false}
+PASS [chromium] [tv720] Escape closes the menu, changes nothing, and focus returns to the opener row :: {"closed":true,"focus":{"tag":"BUTTON","cls":"jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus","queueId":"b512139a910e429d9cb66d207a6194a7","label":null},"queueUnchanged":true}
+PASS [chromium] [tv720] No page errors :: []
+18 of 20 checks passed, 2 upstream, 0 failed
