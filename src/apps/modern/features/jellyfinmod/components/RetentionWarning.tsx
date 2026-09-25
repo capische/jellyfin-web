@@ -27,9 +27,10 @@ const describe = (warning: Warning, subject: 'episode' | 'movie') => {
 const RetentionWarning: FC<RetentionWarningProps> = ({ warning, subject = 'episode', keepLabel, busy, onKeep }) => {
     const date = new Date(warning.deadline).toLocaleDateString();
     const what = describe(warning, subject);
+    const verb = warning.files.length > 1 ? 'were' : 'was';
     // A date that has passed is not a countdown: the files go at the next retention run (RET2-R5).
     const when = warning.overdue ?
-        <>was due on <time dateTime={warning.deadline}>{date}</time> and will be deleted at the next retention run</> :
+        <>{verb} due on <time dateTime={warning.deadline}>{date}</time> and will be deleted at the next retention run</> :
         <>will be deleted on <time dateTime={warning.deadline}>{date}</time></>;
     return <div className='jfmod-retentionWarning' role='note' aria-label='Added to retention'>
         <p className='jfmod-retentionWarningTitle'>
