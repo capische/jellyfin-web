@@ -2153,15 +2153,27 @@ Kept current by the S11 coordinator. Last update **2026-09-25 (after the usage r
 | plugin | `master` on origin | `f443a62` | unchanged |
 | plugin | `p7-s11`, worktree `.claude/worktrees/p7-s11-plugin` | `e5b3c95` | `439f727` (release changelog, image source label), `d6fdc88` (D1), `ad06745` (D7), `e5b3c95` (README: the published image and its tag policy); all eleven suites pass; **not pushed** |
 
-**Deployed on 28096 (2026-09-25):** plugin code `ad06745` with bundle **`bbdf78025ca2`** (web `5ced2c7f2a`), takeover
-`patched`, clean start (no `ERR`/`FTL`). Deploy by *stop → copy the four package files → start*: copying over the loaded
-assembly and then restarting made the old process log `BadImageFormatException` / `[FTL]` while it shut down (the new
-process started cleanly). Retention 14 days, off (revision 38). Backups: `backups/pre-s11`; packages `backups/s11-package*`.
+**Deployed on 28096 (2026-09-25, after verification run 1):** plugin code `ad06745` with bundle **`21c0905b4568`**
+(web `db195ab8eb`), takeover `patched`, clean start. Deploy by *stop → copy the four package files → start*: copying
+over the loaded assembly and then restarting made the old process log `BadImageFormatException` / `[FTL]` while it shut
+down (the new process started cleanly). Retention 14 days, off. Backups: `backups/pre-s11`; packages
+`backups/s11-package*`.
 
-**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = **`424d897d2364`** (bundle `bbdf78025ca2`), the release
+**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = **`606ca92eb2dd`** (bundle `21c0905b4568`), the release
 candidate; `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) kept.
 
-**Verification (new workspace rule, 2026-09-25):** checklist re-runs go to a separate Sonnet-high verifier, not to
+**Verification run 1 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/`):** everything passed except five
+items, classified by the S11 agent:
+
+| Item | Class | Evidence and disposition |
+| --- | --- | --- |
+| Sweep, TV 1280×720: settings links and Dashboard rows unreachable ("focus stuck at the header's SyncPlay button") | **(c) mod, small** | Reproduced by keys: the links *were* reachable (Down past the last rail step, then Right), but at 720 Right from the first rail steps, and Left from the section's *Next*, jumped into the header, because its SyncPlay button was nearer than the section's first control; the sweep's geometric walk followed it there. Fixed in `8641494278` (settings area and wizard are a `focuscontainer-x`); re-probed at 720 and 1080: Right enters the section, Left returns to the rail, Up reaches the header |
+| Fresh install on Chrome: `acquire` NOT VERIFIED, then `import`, `play`, `queue` failing | **(a) harness, one root cause** | The failure screenshot shows the picker "No release passes the profile · 1 rejected": the checklist's `stage` published a 98 MB 1080p **BluRay** release with the group `S11`, and the wizard's profile allows only 1080p WEB-DL (the group `S11` also reads as season 11, found once before). Every later step depended on that grab. Fixed in `04c8ef4d09` (a ≈19 MB 1080p WEB-DL, group `JFMOD`, as the passing run staged) |
+| `settings-changes` on Chrome: the fallback removed a *JellyfinMod Standin Transmission* after the Dashboard delete passed | **not reproduced** | The page delete removed the created id (the runner waited for it); a client with the same name existed afterwards. Four targeted Chrome and Chromium probes of create → Test → delete through the Dashboard page made exactly one `POST`, one `Test` and one `DELETE` and left nothing. End state was clean. The runner now records every download-client write (`db195ab8eb`), so a recurrence names its source |
+| Part B `mobile` did not assert the D8 links | **(a) checklist gap** | `db195ab8eb`: the step now checks the links are shown at 390 px and that tapping *Setup wizard* and *Dashboard* opens each |
+| The verifier printed one 28096 session token | hygiene | Its device (`verify`) deleted on 28096 (`DELETE /Devices`), which revokes the token: no device, session or `Devices` row with that app remains |
+
+**Verification (new workspace rule, 2026-09-25):** re-run 2 is the section *Re-run 2* at the top of the checklist. checklist re-runs go to a separate Sonnet-high verifier, not to
 the Opus run. The checklist is `.claude/briefs/verify-s11.md` (workspace, not in this repository): part A on 28096 in
 Chromium then Chrome (smoke, review fixes, security, Queue D6, settings changes D2–D5 against stand-ins, takeover off
 with hashes, `browser-review` to its end, `tv-shell`, settings runners, the sweep in four layouts, parity on Chrome,
@@ -2219,6 +2231,7 @@ them.
 | D6 | An administrator's Queue crashed with its first row (`<button is=…>` against the custom-elements polyfill) | web `41b62de63d` — verified on a disposable container, **not yet on 28096** |
 | D7 | The indexer breaker never reached the queue banner | plugin `ad06745`, web `bf0d41131b` — suite-verified, **not yet in a browser** |
 | D8 | On a phone the settings area hid its link list, so after setup there was no way to the setup wizard or the Dashboard from it | web `5ced2c7f2a` (found by the sweep) — **not yet verified in a browser** |
+| D9 | On a TV at 1280×720, Right from the first settings-rail steps and Left from a section's *Next* jumped into the header | web `8641494278` (found by the sweep, verification run 1) — re-probed by keys; awaiting verification re-run 2 |
 
 ### S7 — one settings contract behind every form
 
