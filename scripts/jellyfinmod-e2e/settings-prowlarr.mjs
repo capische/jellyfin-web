@@ -111,6 +111,8 @@ try {
     const synced = await page.locator('.jfmod-brow .jfmod-sub', { hasText: 'Synced from Prowlarr' }).count();
     record('desktop', 'No indexer was created by the failed sync', synced === 0, { synced });
     await card().locator('button', { hasText: 'Remove' }).click();
+    // Since REVIEW-2026-09-24 S8-R2 removal asks through the settings area's own dialog, not window.confirm.
+    await page.locator('[data-jfmod-confirm="confirm"]').click({ timeout: 10000 });
     await page.waitForFunction(() => !!document.querySelector('[data-prowlarr="card"] button') &&
         [...document.querySelectorAll('[data-prowlarr="card"] button')].some(button => /Add Prowlarr/.test(button.textContent ?? '')), undefined, { timeout: 30000 });
     record('desktop', 'Removing the source leaves the card empty again', true);
