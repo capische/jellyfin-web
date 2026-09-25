@@ -1,0 +1,11 @@
+browser chromium 153.0.8010.12
+PASS [desktop] The Indexers section carries the Prowlarr card
+PASS [desktop] Adding a source saves it :: "Saved. Sync to import its indexers."
+PASS [desktop] Test reports an unreachable source with a code and a sentence :: "Prowlarr could not be reached from this server. (unreachable)"
+PASS [desktop] A failed sync says it changed nothing :: "The sync changed nothing (unreachable)."
+PASS [desktop] No indexer was created by the failed sync :: {"synced":0}
+PASS [desktop] Removing the source leaves the card empty again
+PASS [desktop] No Prowlarr source is left behind :: {"sources":0}
+PASS [desktop] No response ever carried the key :: {"responses":103}
+PASS [desktop] No page errors :: []
+9 of 9 checks pass
