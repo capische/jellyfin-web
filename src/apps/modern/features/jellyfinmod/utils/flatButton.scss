@@ -1,0 +1,9 @@
+// A visible keyboard focus ring for mod flat buttons outside the TV layout (TV uses the theme's show-focus state).
+// :focus with a :focus-visible reset keeps the ring on engines without :focus-visible (P1.W11).
+.jfmod-flatButton:focus {
+    box-shadow: 0 0 0 0.15em #00a4dc;
+}
+
+.jfmod-flatButton:focus:not(:focus-visible) {
+    box-shadow: none;
+}
