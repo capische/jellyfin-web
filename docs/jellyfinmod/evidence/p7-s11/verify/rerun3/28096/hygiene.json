@@ -1,0 +1,60 @@
+{
+  "userDataDiff": {
+    "exitCode": 0,
+    "userData": {
+      "rowsBefore": 5143,
+      "rowsAfter": 5143,
+      "onlyBefore": [],
+      "onlyAfter": []
+    },
+    "completion": {
+      "rowsBefore": 54,
+      "rowsAfter": 54,
+      "added": 0,
+      "removed": 0,
+      "changedColumns": {
+        "ObservedAt": 1
+      }
+    },
+    "tempFilesDeleted": true
+  },
+  "settingsDiffFromSnapshotBefore": {},
+  "takeover": {
+    "status": "patched",
+    "bundleId": "21c0905b4568",
+    "patchedSha256": "326a3fab479f87150c48da25c693e48e94b53abc9097d55aae04a345f1a46602",
+    "matchesSnapshotBefore": true
+  },
+  "users": [
+    "nata",
+    "oleksii",
+    "papa",
+    "vika"
+  ],
+  "jellyfinModTitleSearch": {
+    "endpoint": "GET /Items?Recursive=true&SearchTerm=JellyfinMod",
+    "count": 0
+  },
+  "jellyfinModEntries": {
+    "endpoint": "GET /JellyfinMod/Entries",
+    "jellyfinModTitleHits": 0
+  },
+  "sessions": {
+    "total": 3,
+    "playing": 0
+  },
+  "standinProcessOnHost": {
+    "found": false,
+    "note": "pgrep -af 'node standins.mjs' only matched its own invocation string; excluding self, 0 matches"
+  },
+  "s11Containers": {
+    "found": false
+  },
+  "apiDeviceCleanup": {
+    "device": "verify3b",
+    "deleteStatus": 204,
+    "provedGoneVia": "GET /Devices with a separate short-lived checking device (verify3c-cleanup-check): verify3b absent",
+    "checkingDeviceAlsoDeleted": true,
+    "checkingDeviceDeleteStatus": 204
+  }
+}
