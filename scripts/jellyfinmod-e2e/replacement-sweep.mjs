@@ -172,7 +172,11 @@ async function seek(page, q, { max = 70, timeout = 20000 } = {}) {
             if (a && a !== document.body && (a === t || t.contains(a))) return { done: true };
             const tr = t.getBoundingClientRect();
             const ar = a && a !== document.body ? a.getBoundingClientRect() : null;
-            const key = a && a !== document.body ? (a.id || '') + '|' + String(a.className) + '|' + Math.round(ar.left) + ',' + Math.round(ar.top) : 'BODY';
+            // The element's own identity as well as its place: in a scrolling list (the settings rail on a 720p TV) every
+            // step scrolls into the same spot with the same classes, and a position-only key took a new step for one
+            // already tried, so the walk gave up on keys it had never pressed there (P7.S11 verification re-run 2).
+            const who = a && a !== document.body ? (a.dataset?.section ?? a.dataset?.id ?? a.getAttribute('href') ?? (a.textContent || '').trim().slice(0, 40)) : '';
+            const key = a && a !== document.body ? (a.id || '') + '|' + String(a.className) + '|' + who + '|' + Math.round(ar.left) + ',' + Math.round(ar.top) : 'BODY';
             return { tr: { x: tr.left + tr.width / 2, y: tr.top + tr.height / 2 }, ar: ar ? { x: ar.left + ar.width / 2, y: ar.top + ar.height / 2, h: ar.height, w: ar.width } : null, key };
         }, { q, FIND });
         if (s.done) {
@@ -587,14 +591,21 @@ async function sweepLayout(name) {
             return [...document.querySelectorAll(`a[href="${href}"]`)].some(vis);
         }, { href, VISIBLE });
         if (!visible && cfg.mobile) {
-            // The Dashboard's drawer can close again while the page it just opened is still settling (seen once on the
-            // first Dashboard link at 390 px); open it, wait for the link, and open it once more if it closed.
-            const linkShown = () => poll(() => page.evaluate(({ href, VISIBLE }) => {
+            // Open the Dashboard's drawer only while it is closed, then wait for the link: pressing Open Menu again on a
+            // drawer that was still opening closed it, and the link was then hidden by the closed drawer (P7.S11
+            // verification re-run 2; tapping the menu opens the drawer every time on the mod and the stock entry).
+            const drawerState = () => page.evaluate(({ href, VISIBLE }) => {
                 const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
-                return { ok: [...document.querySelectorAll(`a[href="${href}"]`)].some(vis) || !!document.querySelector('.MuiDrawer-root:not([aria-hidden="true"]) div.MuiListItemButton-root') };
-            }, { href, VISIBLE }), { timeout: 4000 });
-            await click(page, { sel: 'button[aria-label="Open Menu"]' });
-            if (!(await linkShown()).ok) await click(page, { sel: 'button[aria-label="Open Menu"]' });
+                return { link: [...document.querySelectorAll(`a[href="${href}"]`)].some(vis),
+                    open: !!document.querySelector('.MuiDrawer-root.MuiModal-root:not([aria-hidden="true"]):not(.MuiModal-hidden)') };
+            }, { href, VISIBLE });
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const now = await drawerState();
+                if (now.link) break;
+                if (!now.open) await click(page, { sel: 'button[aria-label="Open Menu"]' });
+                const shown = await poll(async () => ({ ok: (await drawerState()).link }), { timeout: 5000 });
+                if (shown.ok) break;
+            }
         }
         const group = { '#/dashboard/libraries': 'Libraries' }[href];
         const inGroup = await page.evaluate(({ href, VISIBLE }) => {
