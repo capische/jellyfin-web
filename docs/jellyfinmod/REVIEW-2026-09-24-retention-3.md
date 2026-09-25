@@ -344,7 +344,8 @@ no page errors. Physical webOS not tested.
 
 **Suites:** the full Pi run on `15589f1` is handed to a verifier (checklist `.claude/briefs/verify-retention-r3.md` in
 the workspace). Before `15589f1`: all twelve passed on the rebased tree, and ThreeProtection and PhaseTen passed again
-after the later changes.
+after the later changes. **Suites verified on `15589f1`** (Sonnet-high verifier, 2026-09-25: all twelve `exit=0`), and
+again after the fourth review and the rebase onto the S11 release: **suites verified on `348168b`**.
 
 **The real window's positive half is still unproven.** The P10 set's deadlines had moved to 2026-09-26 (RET3-N1), so
 the 2026-09-25 12:30Z job could not test it. The P10 set was removed by the deployed `safe-finish` on 2026-09-25 at
