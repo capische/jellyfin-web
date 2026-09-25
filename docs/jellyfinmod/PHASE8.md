@@ -2,8 +2,8 @@
 
 **Future phase. Not scheduled. No entry gate is met.** Outline written 2026-09-20, completed
 2026-09-21, so the work is not lost; it will be refined into a full refinement (in the style of
-PHASE5–7) when it actually starts. Read [PLAN.md](PLAN.md), [PHASE6.md](PHASE6.md) *Phase 6
-follow-up — multiple held qualities (M10–M21)* (the ladder, copy, rule and grammar model this
+PHASE5–7) when it actually starts. Read [PLAN.md](PLAN.md), [PHASE12.md](PHASE12.md) *Phase 12 —
+multiple held qualities (M10–M21)* (the ladder, copy, rule and grammar model this
 phase extends), [PHASE7.md](PHASE7.md) §5–§6 (the settings area and Prowlarr-synced indexers) and
 [API.md](API.md) alongside it. Everything here is **Proposed, not user-approved**; nothing
 authorizes a deployment, an external service or a change to the isolated instance. Title ratings
@@ -16,7 +16,7 @@ profiles so files can be picked based on tv or general that will play everywhere
 
 ## What this phase is for
 
-The Phase 6 follow-up decides from what a release title says, with a stated confidence, and it
+Phase 12 decides from what a release title says, with a stated confidence, and it
 says `unknown` whenever the title does not say. This phase supplies the evidence the title lacks:
 
 1. **Before download**, for trackers whose titles carry no structured grammar: the indexer's own
@@ -30,7 +30,7 @@ says `unknown` whenever the title does not say. This phase supplies the evidence
    device capability catalogue that lets a ladder rank for a designated device or for maximum
    compatibility, and diagnostics that report and suggest — never re-grab on their own.
 
-It reuses the follow-up's rule engine (`Fields[]`), attribute vocabulary, confidence levels
+It reuses Phase 12's rule engine (`Fields[]`), attribute vocabulary, confidence levels
 (`parsed` / `inferred` / `unknown`, plus `enriched` and `verified` added here), copy states and
 `UpgradeOperation` kinds; it adds no second model of quality.
 
@@ -79,17 +79,17 @@ It reuses the follow-up's rule engine (`Fields[]`), attribute vocabulary, confid
 
 | ID | Task (all proposed) | Depends on | What acceptance must show |
 | --- | --- | --- | --- |
-| E1 | Decisions and contract: extractor interface, evidence levels `enriched` and `verified`, per-indexer enrichment switch, terms-of-service and rate rules, cache policy, DTOs | Phase 6 follow-up M21 accepted | A dated evidence heading with the pinned host's stream fields for DV profile, audio profile and subtitle streams, and the boundary server serving detail pages |
+| E1 | Decisions and contract: extractor interface, evidence levels `enriched` and `verified`, per-indexer enrichment switch, terms-of-service and rate rules, cache policy, DTOs | Phase 12 M21 accepted | A dated evidence heading with the pinned host's stream fields for DV profile, audio profile and subtitle streams, and the boundary server serving detail pages |
 | E2 | Detail-page fetch: Torznab `comments`/`details` URL only, same host rules as torrent downloads, budgets and breaker shared with search, HTML stripped to text, bounded size, cached per release id and indexer revision | E1 | Boundary indexer counts one fetch per release per cache window; a 429 trips the shared breaker; pages over the cap are truncated and marked |
 | E3 | Deterministic extractors: per-tracker templates for labelled fields (audio and subtitle tables, MediaInfo blocks) producing `enriched` fields with the closed vocabulary | E2 | Corpus of saved pages parsed with stated precision; a template that stops matching flags itself instead of guessing |
 | E4 | Model-assisted extractor behind the same interface: local or hosted per open question 1, schema-constrained output, validation and bounding, per-day call budget and cost display, disabled by default, no secrets or private data in the prompt | E2, E3 | A boundary model endpoint returns valid, invalid and garbage outputs; only valid ones reach fields; unavailability degrades to E3 or to unenriched; the leak check proves no credential or catalog data in requests |
 | E5 | Post-import truth: read `VideoRangeType`, DV profile and layer fields the host exposes, audio codec, profile, channels and language, embedded and external subtitle streams; store `verified` fields on the binding; reconcile with title and enriched fields; a `verified` mismatch against a copy's must criterion or a forbid makes the version a substitute of its copy, blocklists the release and writes `attribute_mismatch` — nothing is deleted or refused | E1 | Disposable files with real DV profile 5 / 7 / 8, HDR10, SDR, TrueHD Atmos, AC3 and sidecar subtitles; each row shows verified values; a mislabelled title is caught and superseded only after a compliant version plays |
-| E6 | Language and subtitle gating once evidence is trustworthy: the follow-up's language lists accept `enriched` or `verified` evidence where the administrator allows it; the subtitle-provider boundary is documented in the UI ("Jellyfin fetches subtitles; this shows what the release ships") | E3–E5 | A generic-tracker title becomes matchable through enrichment; the block `requirement_unparseable` lifts only for indexers with enrichment on |
+| E6 | Language and subtitle gating once evidence is trustworthy: Phase 12's language lists accept `enriched` or `verified` evidence where the administrator allows it; the subtitle-provider boundary is documented in the UI ("Jellyfin fetches subtitles; this shows what the release ships") | E3–E5 | A generic-tracker title becomes matchable through enrichment; the block `requirement_unparseable` lifts only for indexers with enrichment on |
 | E7 | Device capability catalogue: registered devices first (the user's LG television, phones, browsers), optionally seeded from Jellyfin's reported client device profiles, hand-maintained entries, importable shared definitions; per device: DV profiles (5 / 7 FEL / 8 / MEL), HDR10, HDR10+, HLG, codecs (HEVC Main10, AV1, VVC), container and bitrate limits, audio passthrough (TrueHD, Atmos, DTS-HD, DTS:X), known quirks; every field editable, every entry showing its source | E1 | The catalogue saves and re-reads; an imported definition is marked as such; a device's entry can be overridden field by field |
-| E8 | Selection modes: **device-targeted** (a designated primary device, or per-user device, lets the ladder prefer rungs that device direct-plays — an LG that plays DV profile 8 and hybrid but not profile 7 FEL ranks a hybrid 2160p above a UHD BDRemux); **maximum compatibility** (a ladder preset preferring what most clients direct-play — 1080p H.264 or 8-bit HEVC SDR, AC3 or AAC stereo or 5.1, no DV profile 7, no lossless audio, moderate bitrates, no huge remuxes — editable, with the trade-off against picture and sound quality stated); and **both**, one top-quality copy for the main device and one compatibility copy for everything else, which the Phase 6 follow-up's must-tier model already expresses, so this task adds only the capability awareness that decides what "compatible" means for the user's actual clients | E5, E7 | The same snapshot ranks differently under each mode with the reason shown per row; the two-copy ladder fills both copies |
+| E8 | Selection modes: **device-targeted** (a designated primary device, or per-user device, lets the ladder prefer rungs that device direct-plays — an LG that plays DV profile 8 and hybrid but not profile 7 FEL ranks a hybrid 2160p above a UHD BDRemux); **maximum compatibility** (a ladder preset preferring what most clients direct-play — 1080p H.264 or 8-bit HEVC SDR, AC3 or AAC stereo or 5.1, no DV profile 7, no lossless audio, moderate bitrates, no huge remuxes — editable, with the trade-off against picture and sound quality stated); and **both**, one top-quality copy for the main device and one compatibility copy for everything else, which Phase 12's must-tier model already expresses, so this task adds only the capability awareness that decides what "compatible" means for the user's actual clients | E5, E7 | The same snapshot ranks differently under each mode with the reason shown per row; the two-copy ladder fills both copies |
 | E9 | Direct-play diagnostics: per held version and per registered device, whether the host would direct-play, remux or transcode and why (from the host's playback info for that device profile); wrong catalogue entries detected by repeated transcoding of a version that was supposed to direct-play; suggestions shown on the detail page and in a settings report; never an automatic re-grab | E7, E8 | A version the catalogue says direct-plays but the host transcodes is flagged with the stream and the device field that disagree |
 | E10 | Caching, staleness and correction: enriched fields cached per release and indexer revision with an age; re-enrichment on demand and on template change; verified fields replace enriched ones; an administrator can correct any field by hand and the correction wins and is kept | E2–E5 | A corrected field survives re-enrichment; a stale cache is refreshed only within budgets |
-| E11 | UI: evidence level per field everywhere the follow-up shows attributes (title, enriched, verified, corrected); the detail page and version rows show real audio and subtitle tracks and direct-play status per device; the picker's "why" expander shows enrichment; a devices section and the mode selector in the settings area; desktop, mobile and TV by D-pad | E5–E10 | The built browser matrix; an ordinary user sees tracks and languages, never enrichment controls |
+| E11 | UI: evidence level per field everywhere Phase 12 shows attributes (title, enriched, verified, corrected); the detail page and version rows show real audio and subtitle tracks and direct-play status per device; the picker's "why" expander shows enrichment; a devices section and the mode selector in the settings area; desktop, mobile and TV by D-pad | E5–E10 | The built browser matrix; an ordinary user sees tracks and languages, never enrichment controls |
 | E12 | Isolated acceptance: boundary indexers with detail pages, a boundary model endpoint, disposable media with real stream variety, registered disposable devices, restarts, budgets, leak checks; production never contacted | E1–E11 | The full chain with every safeguard shown to stop it |
 
 Commit scopes would follow the convention: `docs(enrichment,p8.e1)`, `feat(enrichment,p8.e2-4)`,
@@ -124,7 +124,7 @@ and languages on the detail page and nothing else from this phase.
 
 ## How it fits the other phases
 
-- **Phase 6 follow-up** owns the model (attributes, confidence, ladders, copies, rules,
+- **Phase 12** owns the model (attributes, confidence, ladders, copies, rules,
   grammars); this phase adds two confidence levels and three evidence sources and changes no
   rule semantics. A rung or rule that never opted into `enriched` evidence behaves exactly as
   before this phase.
@@ -139,7 +139,7 @@ and languages on the detail page and nothing else from this phase.
 
 ## Entry gates (none met)
 
-1. The Phase 6 follow-up (M10–M21) is accepted on the isolated instance, so the ladder, copy,
+1. Phase 12 (M10–M21) is accepted on the isolated instance, so the ladder, copy,
    rule and grammar model this phase extends is real.
 2. Phase 7 S8 and S9 are accepted, so the settings area and Prowlarr-synced indexers exist for
    the enrichment switch, the devices section and the mode selector.
