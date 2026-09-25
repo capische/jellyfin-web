@@ -1,0 +1,3 @@
+browser chrome 153.0.8010.53 step queue
+FAIL [chrome] queue: The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice :: {"rows":0,"notices":["Automation paused: Automation is turned off. Free space in the library is below the configured floor."]}
+NOT VERIFIED [chrome] queue: queue banners :: "locator.click: Timeout 30000ms exceeded."

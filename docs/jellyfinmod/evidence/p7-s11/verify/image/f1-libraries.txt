@@ -1,0 +1,4 @@
+browser chrome 153.0.8010.53 step libraries
+PASS [chrome] libraries: Library Movies created :: {"status":204}
+PASS [chrome] libraries: Library Shows created :: {"status":204}
+PASS [chrome] libraries: Movies and Shows libraries exist on the single data mount :: [{"name":"Shows","type":"tvshows","locations":["/data/media/tv"]},{"name":"Movies","type":"movies","locations":["/data/media/movies"]}]
