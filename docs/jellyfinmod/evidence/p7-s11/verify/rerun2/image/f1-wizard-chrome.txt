@@ -1,0 +1,21 @@
+browser chrome 153.0.8010.53 step wizard
+PASS [chrome] wizard: Home banner for an administrator whose setup is incomplete :: "JellyfinMod is not set up yet: 5 step(s) left before titles can be grabbed.\nSet upDismiss"
+PASS [chrome] wizard: The wizard opens at Discovery with Continue refused :: {"step":"discovery"}
+PASS [chrome] wizard: Turning grabbing on before setup is refused with 409 acquisition_not_ready, blockers shown :: "Acquisition is not ready. No enabled indexer has verified its capabilities. No download client is selected. No default quality profile is selected."
+PASS [chrome] wizard: Discovery: a wrong token fails the Test (unauthorized) and Continue stays refused :: "TMDB rejected the token. Check it was copied completely. (unauthorized)"
+PASS [chrome] wizard: Secret field: Replace opens an empty input, Keep returns, Clear is pending until save, Undo restores Configured :: {"pending":"TMDB API Read Access Token Will be removed on save Undo","restored":"Configured"}
+PASS [chrome] wizard: Discovery: the stand-in TMDB over HTTPS accepts the token; the step is done and Continue unlocks :: "TMDB accepted the token. (ok)"
+PASS [chrome] wizard: Discovery DTO says configured and carries no token value :: {"tokenConfigured":true,"verified":true}
+PASS [chrome] wizard: Continue moves to Download client
+PASS [chrome] wizard: Download client inside a library root is refused (destination_inside_library) :: "The download folder is inside a watched library folder; the library would scan partial downloads. (destination_inside_library)"
+PASS [chrome] wizard: Download folder on a second filesystem (/dev/shm) is refused (destination_not_same_filesystem) :: "No movie or TV library root shares the download folder's filesystem and mount, so imports could not hardlink. (destination_not_same_filesystem)"
+PASS [chrome] wizard: A new client with the username left blank saves (201) and the folder on the library filesystem is accepted :: {"notice":"Saved. Test the client before grabbing.","username":"","passwordConfigured":false}
+PASS [chrome] wizard: Test verifies the stand-in Transmission and the download folder :: "Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"
+PASS [chrome] wizard: Saving the first download client selects it, so step 2 can finish inside step 2 :: {"reasons":[]}
+PASS [chrome] wizard: An unverified mapping keeps the step open and Continue refused :: {"pill":"The mapped folder does not exist or cannot be read.","status":"pending","reasons":["path_mapping_unverified"],"shown":"This step is not done yet. A path mapping has not been verified. Continue"}
+PASS [chrome] wizard: The corrected mapping verifies
+PASS [chrome] wizard: Test import path (server): an unmapped path is named; the mapped download folder hardlinks into the libraries :: {"unmapped":"path_unmapped","mapped":"ok"}
+PASS [chrome] wizard: Test import path (page): the result is shown and stays :: {"unmappedShown":"No mapping turns this client path into a local path. (path_unmapped)","unmappedFinal":"No mapping turns this client path into a local path. (path_unmapped)","probedShown":"The folder can receive a hardlink from the library mount. (ok)","probedFinal":"The folder can receive a hardlink from the library mount. (ok)"}
+PASS [chrome] wizard: Download client step done; Continue unlocks
+PASS [chrome] wizard: Continue moves to Indexers with Continue refused
+EXIT:0
