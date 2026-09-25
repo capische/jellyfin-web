@@ -1,0 +1,186 @@
+{
+  "indexers": [
+    {
+      "name": "Prowlarr 1337x",
+      "id": "cbe3c84b00f04be3a9913399de3a619d"
+    },
+    {
+      "name": "Prowlarr RuTracker",
+      "id": "8e47710661d54ffc8688403104c749e8"
+    }
+  ],
+  "downloadClients": [
+    {
+      "name": "Acceptance Transmission",
+      "id": "bb7a7653e337457abc8ee04bd68dba62"
+    }
+  ],
+  "qualityProfiles": [
+    {
+      "name": "HD 1080p",
+      "id": "bf36dd36c320411f8930105f77986c39",
+      "default": true
+    }
+  ],
+  "prowlarr": [],
+  "acquisition": {
+    "enabled": true,
+    "downloadClientId": "bb7a7653e337457abc8ee04bd68dba62",
+    "defaultQualityProfileId": "bf36dd36c320411f8930105f77986c39",
+    "revision": 14,
+    "ready": true,
+    "blockers": [],
+    "holdSeconds": 5,
+    "seedProtectionMatchesClient": true,
+    "qualities": [
+      {
+        "id": "remux-2160p",
+        "source": "remux",
+        "resolution": "2160p"
+      },
+      {
+        "id": "remux-1080p",
+        "source": "remux",
+        "resolution": "1080p"
+      },
+      {
+        "id": "bluray-2160p",
+        "source": "bluray",
+        "resolution": "2160p"
+      },
+      {
+        "id": "bluray-1080p",
+        "source": "bluray",
+        "resolution": "1080p"
+      },
+      {
+        "id": "bluray-720p",
+        "source": "bluray",
+        "resolution": "720p"
+      },
+      {
+        "id": "bluray-576p",
+        "source": "bluray",
+        "resolution": "576p"
+      },
+      {
+        "id": "bluray-480p",
+        "source": "bluray",
+        "resolution": "480p"
+      },
+      {
+        "id": "webdl-2160p",
+        "source": "webdl",
+        "resolution": "2160p"
+      },
+      {
+        "id": "webdl-1080p",
+        "source": "webdl",
+        "resolution": "1080p"
+      },
+      {
+        "id": "webdl-720p",
+        "source": "webdl",
+        "resolution": "720p"
+      },
+      {
+        "id": "webdl-576p",
+        "source": "webdl",
+        "resolution": "576p"
+      },
+      {
+        "id": "webdl-480p",
+        "source": "webdl",
+        "resolution": "480p"
+      },
+      {
+        "id": "webrip-2160p",
+        "source": "webrip",
+        "resolution": "2160p"
+      },
+      {
+        "id": "webrip-1080p",
+        "source": "webrip",
+        "resolution": "1080p"
+      },
+      {
+        "id": "webrip-720p",
+        "source": "webrip",
+        "resolution": "720p"
+      },
+      {
+        "id": "webrip-576p",
+        "source": "webrip",
+        "resolution": "576p"
+      },
+      {
+        "id": "webrip-480p",
+        "source": "webrip",
+        "resolution": "480p"
+      },
+      {
+        "id": "hdtv-2160p",
+        "source": "hdtv",
+        "resolution": "2160p"
+      },
+      {
+        "id": "hdtv-1080p",
+        "source": "hdtv",
+        "resolution": "1080p"
+      },
+      {
+        "id": "hdtv-720p",
+        "source": "hdtv",
+        "resolution": "720p"
+      },
+      {
+        "id": "hdtv-576p",
+        "source": "hdtv",
+        "resolution": "576p"
+      },
+      {
+        "id": "hdtv-480p",
+        "source": "hdtv",
+        "resolution": "480p"
+      },
+      {
+        "id": "dvd-576p",
+        "source": "dvd",
+        "resolution": "576p"
+      },
+      {
+        "id": "dvd-480p",
+        "source": "dvd",
+        "resolution": "480p"
+      }
+    ]
+  },
+  "retention": {
+    "enabled": false,
+    "reclaimAfterDays": 14,
+    "watchedUserMode": "allUsers",
+    "selectedUserMissing": false,
+    "exemptFavourites": true,
+    "testWindowMinutes": 0,
+    "revision": 38
+  },
+  "users": [
+    {
+      "name": "nata",
+      "id": "a6e8c85a06b142d7b1f4b21961a0f414"
+    },
+    {
+      "name": "oleksii",
+      "id": "56eb2b09995b48b0881e4d0f3eb15fba"
+    },
+    {
+      "name": "papa",
+      "id": "579ef65c083f4b54aae4d104c1cb2fb6"
+    },
+    {
+      "name": "vika",
+      "id": "7a7d55b1de3a48afa227237b1ba3ad7c"
+    }
+  ],
+  "patchedSha256": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e"
+}
