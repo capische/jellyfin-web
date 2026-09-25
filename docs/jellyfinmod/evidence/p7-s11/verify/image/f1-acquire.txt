@@ -1,0 +1,3 @@
+browser chrome 153.0.8010.53 step acquire
+PASS [chrome] acquire: Search finds JellyfinMod Standin Movie under Add from TMDB (stand-in) and + adds the entry :: {"state":"none","monitored":true}
+NOT VERIFIED [chrome] acquire: add and grab :: "locator.click: Timeout 30000ms exceeded."

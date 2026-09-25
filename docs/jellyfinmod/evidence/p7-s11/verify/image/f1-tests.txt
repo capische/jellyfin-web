@@ -1,0 +1,26 @@
+browser chrome 153.0.8010.53 step tests
+PASS [chrome] tests: Transmission with authentication on: refused without credentials, verified once username and password are saved :: {"without":"Transmission rejected its credentials. (client_auth_failed)","with":"Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"}
+PASS [chrome] tests: Client password: Clear is pending until save and Undo restores Configured
+PASS [chrome] tests: Transmission Test with a wrong password :: "Transmission rejected its credentials. (client_auth_failed)"
+PASS [chrome] tests: After saving a replaced password the field returns to Configured :: {"stillEditing":false}
+PASS [chrome] tests: Client password Clear saved: not configured, and the Test is refused :: {"passwordConfigured":false,"test":"Transmission rejected its credentials. (client_auth_failed)"}
+PASS [chrome] tests: Client password replaced: the Test passes again
+PASS [chrome] tests: Transmission Test against an unreachable host :: "Transmission could not be reached. (client_unreachable)"
+PASS [chrome] tests: Transmission Test against a host that never answers times out :: {"notice":"The download client did not answer in time. (timeout)","seconds":21}
+PASS [chrome] tests: Transmission restored: the Test passes
+PASS [chrome] tests: A mapping into a library folder is refused (mapping_inside_library) :: "A mapped download folder must not be inside a library folder; the library would scan partial downloads. (mapping_inside_library)"
+PASS [chrome] tests: Import path on another filesystem: the mapping is saved unverified (cross_filesystem) and imports cannot use it :: {"pill":"This folder is on a different filesystem from every library, so imports through it cannot hardlink.","probeThroughIt":"path_unmapped"}
+PASS [chrome] tests: Import path on another filesystem: the page shows the probe result and keeps it :: {"shown":"No mapping turns this client path into a local path. (path_unmapped)","final":"No mapping turns this client path into a local path. (path_unmapped)"}
+PASS [chrome] tests: Synced indexer Test: a failing feed is reported, a healthy one passes :: {"failing":"The indexer answered HTTP 500. (unavailable)","recovered":"Capabilities verified: 3 movie and 3 TV search parameters. (ok)"}
+PASS [chrome] tests: A provoked validation error names its field (priority left empty) :: "One or more validation errors occurred. request: The request field is required. priority: The JSON value could not be converted to System.Int32. (https://tools.ietf.org/html/rfc9110#section-15.5.1)"
+PASS [chrome] tests: Add an indexer with its defaults saves (automation switch untouched)
+PASS [chrome] tests: Manual indexer Test with a wrong API key :: "The indexer rejected its credentials. (auth_failed)"
+PASS [chrome] tests: Manual indexer Test against an unreachable host :: "The indexer could not be reached. (unavailable)"
+PASS [chrome] tests: Manual indexer Test against a host that never answers :: {"notice":"The indexer did not answer in time. (timeout)","seconds":21}
+PASS [chrome] tests: The probe indexer is removed
+PASS [chrome] tests: Prowlarr Test with a wrong API key :: "Prowlarr refused the API key. (unauthorized)"
+PASS [chrome] tests: Prowlarr Test against an unreachable host :: "Prowlarr could not be reached from this server. (unreachable)"
+PASS [chrome] tests: Prowlarr Test against a host that never answers times out :: {"notice":"Prowlarr did not answer in time. (timeout)","seconds":21}
+PASS [chrome] tests: Prowlarr restored: Test passes, Sync keeps one verified synced indexer :: {"test":"Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin","sync":"Synced: 1 seen, 0 added, 0 changed, 0 turned off, 0 removed, 0 verified."}
+PASS [chrome] tests: No settings response carries a secret value, reference or apikey (17 routes) :: {"leaks":[]}
+PASS [chrome] tests: No page errors :: []

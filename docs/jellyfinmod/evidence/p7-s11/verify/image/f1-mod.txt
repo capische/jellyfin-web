@@ -1,0 +1,15 @@
+browser 153.0.8010.53 step mod label mod
+PASS [chrome] mod: desktop: /web is the JellyfinMod shell :: {"bundle":true,"meta":"bbdf78025ca2","layoutClass":"layout-desktop","address":"/web/#/home","horizontalScroll":0}
+PASS [chrome] mod: desktop: no page errors :: []
+PASS [chrome] mod: mobile: /web is the JellyfinMod shell :: {"bundle":true,"meta":"bbdf78025ca2","layoutClass":"layout-mobile","address":"/web/#/home","horizontalScroll":0}
+PASS [chrome] mod: mobile: no page errors :: []
+PASS [chrome] mod: tv1080: /web is the JellyfinMod shell :: {"bundle":true,"meta":"bbdf78025ca2","layoutClass":"layout-tv","address":"/web/#/home","horizontalScroll":0}
+PASS [chrome] mod: tv1080: arrows move focus on Home :: ["body.libraryDocument HomeMedia\n                    ","button.headerSyncButton ","button.card 0%                      Movies","button.card 0%                      Shows","button.card 0%                      Shows"]
+PASS [chrome] mod: tv1080: the wizard's rail is walked by arrows and Enter opens a step :: {"steps":["downloadClient","indexers","qualityProfile"],"opened":"qualityProfile"}
+PASS [chrome] mod: tv1080: Back leaves the wizard :: {"hash":"#/home"}
+PASS [chrome] mod: tv1080: no page errors :: []
+PASS [chrome] mod: tv720: /web is the JellyfinMod shell :: {"bundle":true,"meta":"bbdf78025ca2","layoutClass":"layout-tv","address":"/web/#/home","horizontalScroll":0}
+PASS [chrome] mod: tv720: arrows move focus on Home :: ["body.libraryDocument HomeMedia\n                    ","button.headerSyncButton ","button.card 0%                      Movies","button.card 0%                      Shows","button.card 0%                      Shows"]
+PASS [chrome] mod: tv720: the wizard's rail is walked by arrows and Enter opens a step :: {"steps":["downloadClient","indexers","qualityProfile"],"opened":"qualityProfile"}
+PASS [chrome] mod: tv720: Back leaves the wizard :: {"hash":"#/home"}
+PASS [chrome] mod: tv720: no page errors :: []
