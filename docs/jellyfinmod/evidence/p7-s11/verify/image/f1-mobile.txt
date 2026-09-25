@@ -1,0 +1,4 @@
+browser chrome 153.0.8010.53 step mobile
+PASS [chrome] mobile: Settings area at 390 px: every section opens with no horizontal scroll :: [{"id":"discovery","overflow":0,"heading":"Discovery"},{"id":"client","overflow":0,"heading":"Download client"},{"id":"indexers","overflow":0,"heading":"Indexers"},{"id":"profiles","overflow":0,"heading":"Quality profiles"},{"id":"grabbing","overflow":0,"heading":"Grabbing"},{"id":"retention","overflow":0,"heading":"Retention"},{"id":"automation","overflow":0,"heading":"Automation"},{"id":"interface","overflow":0,"heading":"Interface"}]
+PASS [chrome] mobile: Mobile data entry: a secret replaced and saved, the client Test passes, the field returns to Configured :: "Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"
+PASS [chrome] mobile: No page errors :: []
