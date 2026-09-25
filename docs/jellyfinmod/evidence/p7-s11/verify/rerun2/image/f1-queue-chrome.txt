@@ -1,0 +1,6 @@
+browser chrome 153.0.8010.53 step queue
+FAIL [chrome] queue: The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice :: {"rows":1,"notices":["Automation paused: Automation is turned off. Free space in the library is below the configured floor.","Automatic release of seeding copies is off."]}
+PASS [chrome] queue: The row menu opens its actions :: ["","","","",""]
+PASS [chrome] queue: A free-space floor above the free space shows the paused banner :: ["Automation paused: Free space in the library is below the configured floor.","Automatic release of seeding copies is off."]
+PASS [chrome] queue: No page errors :: []
+EXIT:0
