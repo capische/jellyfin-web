@@ -22,6 +22,13 @@ TARGET=$3
 source "$ENV_FILE"
 STATE=$JFMOD_STATE_DIR
 LOG=$STATE/phase-b.log
+# RET4-R4: only the isolated test instance (port 18096). The driver checks the container and media root as well.
+case "${JFMOD_BASE%/}" in
+    *:18096) ;;
+    *) echo "!!! REFUSED: JFMOD_BASE is not the isolated instance on port 18096 ($(date -u +%FT%TZ))" >> "$LOG"
+       logger -t jellyfinmod-retention "REFUSED: JFMOD_BASE is not the isolated instance on port 18096" 2>/dev/null || true
+       exit 1 ;;
+esac
 
 crontab_read() {
     if [ -n "${JFMOD_CRONTAB_FILE:-}" ]; then cat "$JFMOD_CRONTAB_FILE" 2>/dev/null; else crontab -l 2>/dev/null; fi

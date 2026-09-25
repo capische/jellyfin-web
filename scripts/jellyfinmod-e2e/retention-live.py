@@ -80,6 +80,42 @@ BACKLOG_TMDB = 807
 CONTAINER = os.environ.get("JFMOD_CONTAINER", "jellyfinmod-test")
 EXTRA_ROOTS = (f"/dev/shm/tv-{tag}c",)
 
+# RET4-R4: this script can switch retention on and removes directories, libraries and entries, so it refuses to start
+# unless every target it is given is the isolated test instance: the base URL on port 18096, the container
+# `jellyfinmod-test` publishing that port, and the media root a read-write mount of that container at the container path.
+ISOLATED_PORT = 18096
+ISOLATED_CONTAINER = "jellyfinmod-test"
+
+
+def refuse(reason):
+    sys.exit(f"REFUSED (not the isolated test instance): {reason}")
+
+
+def guard_target():
+    port = urllib.parse.urlsplit(BASE).port
+    if port != ISOLATED_PORT:
+        refuse(f"JFMOD_BASE must use port {ISOLATED_PORT}, not {port}")
+    if CONTAINER != ISOLATED_CONTAINER:
+        refuse(f"JFMOD_CONTAINER must be {ISOLATED_CONTAINER}")
+    if not HOST_MEDIA or not CONTAINER_MEDIA:
+        refuse("JFMOD_HOST_MEDIA and JFMOD_CONTAINER_MEDIA are required")
+    try:
+        inspected = json.loads(subprocess.run(["docker", "inspect", CONTAINER], capture_output=True, text=True, timeout=60,
+                                              check=True).stdout)[0]
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError) as error:
+        refuse(f"cannot inspect container {CONTAINER}: {type(error).__name__}")
+    published = {binding.get("HostPort") for bindings in (inspected.get("NetworkSettings", {}).get("Ports") or {}).values()
+                 for binding in (bindings or [])}
+    if str(ISOLATED_PORT) not in published:
+        refuse(f"container {CONTAINER} does not publish port {ISOLATED_PORT}")
+    media = os.path.realpath(HOST_MEDIA)
+    if not any(os.path.realpath(mount.get("Source", "")) == media and mount.get("Destination") == CONTAINER_MEDIA.rstrip("/")
+               and mount.get("RW") for mount in inspected.get("Mounts") or []):
+        refuse(f"JFMOD_HOST_MEDIA is not the read-write media mount of {CONTAINER} at JFMOD_CONTAINER_MEDIA")
+
+
+guard_target()
+
 # FIXTURE — key: (root, file name, what the fast run must do to it)
 FIXTURE = {
     "E01-A": ("A", f"JellyfinMod {TAG} Show S01E01.mkv", "reclaimed"),        # watched copy of a two-binding episode
