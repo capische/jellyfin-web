@@ -1,0 +1,4 @@
+browser chrome 153.0.8010.53 step play
+PASS [chrome] play: The imported file plays in the browser :: {"width":1920,"height":1080,"time":2}
+PASS [chrome] play: Playing to the end marks it played for the administrator
+EXIT:0
