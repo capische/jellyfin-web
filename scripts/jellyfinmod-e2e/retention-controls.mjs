@@ -164,7 +164,7 @@ const reviewTwoAdminChecks = async (page, layout, name) => {
         await openDetails(page, overdueItem);
         const text = await warningText(page);
         record(name, 'a passed date reads as overdue, never as a past countdown (RET2-R5)',
-            !!text && /Added to retention: this file was due on .+ and will be deleted at the next retention run unless kept\./.test(text), text);
+            !!text && /Added to retention: (this file was|these \d+ files were) due on .+ and will be deleted at the next retention run unless kept\./.test(text), text);
         if (layout.tv) {
             const { reached, path } = await focusByKeys(page, isWarningKeep);
             record(name, 'Keep inside the overdue warning is reachable by arrow keys', reached, reached ? undefined : path);
