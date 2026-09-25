@@ -392,20 +392,44 @@ acceptance on the Pi. Phases 2 and 3 have task breakdowns; Phase 4 onward remain
 **Correction (review 2026-09-18):** "Phase 4 onward remain sketches" is stale: Phase 4 has a task
 breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current status:
 
-- Phase 1: accepted (see [`PHASE1.md`](PHASE1.md)).
-- Phase 2: accepted on the isolated test instance (port 18096), 2026-09-15.
-- Phase 3: implemented; see the proposed safety gate under *Automatic expiry, accepted* and the
-  Review remediation section of [`PHASE3.md`](PHASE3.md).
-- Phase 4: planned; its entry gates are amended as proposals in [`PHASE4.md`](PHASE4.md).
-- Phase 5 and Phase 6: implemented and integration-tested; live checklists pending (see
-  [`PHASE5.md`](PHASE5.md) and [`PHASE6.md`](PHASE6.md)).
-- Phase 7: planned, 2026-09-20; see [`PHASE7.md`](PHASE7.md). Starts only after the current
-  product passes live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists).
-  [`PARITY.md`](PARITY.md) plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6);
-  it is a plan, not evidence, and has not been run.
-- Phase 12 (M10–M21), Phase 8 and Phase 9: planned outlines only, 2026-09-21; not
-  scheduled, no entry gate met (see [`PHASE12.md`](PHASE12.md), [`PHASE8.md`](PHASE8.md) and
-  [`PHASE9.md`](PHASE9.md)).
+- **Acceptance is a gate (user, 2026-09-25):** a phase is done only when its live checklist
+  passes; one owner per behaviour.
+- Phase 0 — foundation: accepted.
+- Phase 1 — catalog: accepted (see [`PHASE1.md`](PHASE1.md)).
+- Phase 2 — reconciliation: accepted (18096, 2026-09-15).
+- Phase 3 — retention: built (not accepted); the real-window run is shared with Phase 10 and is
+  being re-armed on 18096 (see [`PHASE3.md`](PHASE3.md)).
+- Phase 4 — indexers and manual grab: built (not accepted); A8 live acceptance runs 2026-09-25/26
+  (brief `live-acceptance-p4-p6`) (see [`PHASE4.md`](PHASE4.md)).
+- Phase 5 — import: built (not accepted); I3–I9 live acceptance runs 2026-09-25/26. A real-service
+  pipeline was proven 2026-09-20 on 28096, except second-version import (owned by V1) (see
+  [`PHASE5.md`](PHASE5.md)).
+- Phase 6 — automation: built (not accepted); a ~24 h live run of the non-version rows is
+  scheduled for 2026-09-26; version rows (M5–M8 version parts, question 5) are owned by V1 (see
+  [`PHASE6.md`](PHASE6.md)).
+- Phase 7 — setup, admin UI and UI delivery: released as 0.1.0.0 on 2026-09-25
+  (`ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
+  `sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`); S11 accepted
+  (re-runs 1–5, Chromium and Chrome); 7.1 Trakt indicator (Q16) in progress; the physical LG C1
+  (webOS 6) check is the user's. Work on Phase 7 started before the current product passed live
+  acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists), which was the original
+  entry gate; that is now recorded as a process fault which the acceptance-is-a-gate rule above
+  (2026-09-25) prevents going forward (see [`PHASE7.md`](PHASE7.md)). [`PARITY.md`](PARITY.md)
+  plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not
+  evidence, and has not been run.
+- Phase 8 — release attributes and playback evidence: planned, not scheduled (see
+  [`PHASE8.md`](PHASE8.md)).
+- Phase 9 — ratings: planned, not scheduled (see [`PHASE9.md`](PHASE9.md)).
+- Phase 10 — per-media retention: built and merged with retention off (plugin `348168b`, web
+  `6b13699fd8`; suites 12/12 on 2026-09-25); the real-window run is pending, so not accepted (see
+  [`PHASE10.md`](PHASE10.md)).
+- Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
+- Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
+  (see [`PHASE12.md`](PHASE12.md)).
+- V1 — versions on Jellyfin 12: next, after 7.1 merges; owner of all version behaviour, and its
+  acceptance includes Phase 5/6's version rows (brief `v1-versions.md`).
+- webOS performance: postponed by the user until further notice (research in the workspace brief
+  `research-webos-targets`).
 
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
   the existing library, then maintain bindings as media changes. Phase 1 already supplies the
