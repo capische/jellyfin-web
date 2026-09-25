@@ -1,0 +1,189 @@
+{
+ "browser": "chrome",
+ "version": "153.0.8010.53",
+ "results": [
+  {
+   "step": "1 client",
+   "check": "Dashboard page: a new download client with the username left blank saves (201)",
+   "verdict": "PASS",
+   "detail": {
+    "status": 201,
+    "username": "",
+    "passwordConfigured": false
+   }
+  },
+  {
+   "step": "1 client",
+   "check": "Creating a client while another exists does not select it; the acquisition switch is unchanged",
+   "verdict": "PASS",
+   "detail": {
+    "selectedUnchanged": true,
+    "enabled": true,
+    "revision": 14
+   }
+  },
+  {
+   "step": "1 client",
+   "check": "The page edits the new client, and its Grabbing section still names the selected client",
+   "verdict": "PASS",
+   "detail": {
+    "editing": "JellyfinMod Standin Transmission",
+    "grabbingSelects": "Acceptance Transmission"
+   }
+  },
+  {
+   "step": "1 client",
+   "check": "Its Test reaches the stand-in Transmission (no credentials, as the stand-in expects here)",
+   "verdict": "PASS",
+   "detail": "Connection and download folder verified. (ok) · client 4.0.6 (s11 stand-in)"
+  },
+  {
+   "step": "2 indexers",
+   "check": "A provoked validation error names its field (priority left empty), with no parser detail",
+   "verdict": "PASS",
+   "detail": "One or more validation errors occurred. request: The request field is required. priority: The JSON value could not be converted to System.Int32. (https://tools.ietf.org/html/rfc9110#section-15.5.1)"
+  },
+  {
+   "step": "2 indexers",
+   "check": "The refused indexer was not created",
+   "verdict": "PASS"
+  },
+  {
+   "step": "2 indexers",
+   "check": "Add an indexer with its defaults (stand-in Torznab) saves (201): enabled, automation off, categories 2000, 5000, priority 25",
+   "verdict": "PASS",
+   "detail": {
+    "status": 201,
+    "closed": true,
+    "enabled": true,
+    "automateTitleMatches": false,
+    "categories": [
+     2000,
+     5000
+    ],
+    "priority": 25
+   }
+  },
+  {
+   "step": "2 indexers",
+   "check": "Its Test verifies the stand-in Torznab feed",
+   "verdict": "PASS",
+   "detail": "Capabilities verified: 3 movie and 3 TV search parameters. (ok)"
+  },
+  {
+   "step": "2 indexers",
+   "check": "The indexer API key replaced from the dialog reads Configured again, and the Test follows the saved key",
+   "verdict": "PASS",
+   "detail": {
+    "before": {
+     "configured": "Configured",
+     "editing": false
+    },
+    "after": {
+     "configured": "Configured",
+     "editing": false
+    },
+    "wrongKeyTest": "The indexer rejected its credentials. (auth_failed)",
+    "rightKeyTest": "Capabilities verified: 3 movie and 3 TV search parameters. (ok)"
+   }
+  },
+  {
+   "step": "3 prowlarr",
+   "check": "Prowlarr: the API key replaced and saved returns to Configured (not an empty New field), and the Test uses it (unauthorized)",
+   "verdict": "PASS",
+   "detail": {
+    "afterAdd": {
+     "configured": "Configured",
+     "editing": false
+    },
+    "afterReplace": {
+     "configured": "Configured",
+     "editing": false
+    },
+    "test": "Prowlarr refused the API key. (unauthorized)"
+   }
+  },
+  {
+   "step": "3 prowlarr",
+   "check": "Prowlarr: the right key passes the Test; Sync adds the stand-in indexer and its outcome stays on the page",
+   "verdict": "PASS",
+   "detail": {
+    "test": "Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin",
+    "shown": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified.",
+    "final": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified.",
+    "synced": [
+     "JellyfinMod Standin Indexer"
+    ]
+   }
+  },
+  {
+   "step": "3 prowlarr",
+   "check": "Removing the Prowlarr source removes the indexer it synced",
+   "verdict": "PASS",
+   "detail": {
+    "indexers": 3
+   }
+  },
+  {
+   "step": "4 probe",
+   "check": "The settings area still edits the selected client, not the new one",
+   "verdict": "PASS",
+   "detail": {
+    "shown": "Acceptance Transmission"
+   }
+  },
+  {
+   "step": "4 probe",
+   "check": "Test import path: an unmapped path and the client's download folder each show their outcome, and it stays",
+   "verdict": "PASS",
+   "detail": {
+    "unmapped": "No mapping turns this client path into a local path. (path_unmapped)",
+    "unmappedFinal": "No mapping turns this client path into a local path. (path_unmapped)",
+    "mapped": "The folder can receive a hardlink from the library mount. (ok)",
+    "mappedFinal": "The folder can receive a hardlink from the library mount. (ok)"
+   }
+  },
+  {
+   "step": "5 cleanup",
+   "check": "The fixture indexer is removed through the settings area",
+   "verdict": "PASS"
+  },
+  {
+   "step": "5 cleanup",
+   "check": "The fixture client is deleted through the Dashboard page",
+   "verdict": "PASS"
+  },
+  {
+   "step": "5 cleanup",
+   "check": "No fixture had to be removed by the fallback",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "5 cleanup",
+   "check": "Indexers, clients, profiles, Prowlarr sources, acquisition, retention, automation and import settings equal the snapshot",
+   "verdict": "PASS",
+   "detail": {
+    "differences": [],
+    "counts": {
+     "Settings/Indexers": 2,
+     "Settings/DownloadClients": 1,
+     "Settings/QualityProfiles": 1,
+     "Settings/Prowlarr": 0
+    }
+   }
+  },
+  {
+   "step": "5 cleanup",
+   "check": "No response carried a fixture secret (465 JellyfinMod responses)",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "5 cleanup",
+   "check": "No page errors",
+   "verdict": "PASS",
+   "detail": []
+  }
+ ]
+}
