@@ -275,3 +275,10 @@ SHA-256 prefix `665b82f60dd48fcc` (`128ec3f`); web bundle unchanged (`c22c90abb3
 the protection suite's fixtures modelled a due target as a `disabled` evaluation. Under decision 13 a never-announced
 window starts at the switch-on, so they now record the scheduled, announced window that a prepared operation implies.
 The full twelve-suite run on `128ec3f` is handed to the verifier (`.claude/briefs/verify-retention-r3.md`, Section A).
+
+**Rebased 2026-09-25 onto the S11 release** (plugin `master` `e5b3c95`, web `jellyfin-mod` `48e60121e7`), with no
+conflicts. Each branch's delta over its new base is line for line the one it had before. The plugin commits above are
+now `ecec20c` (decision 13), `582e713` (R3), `fc36b7f` (R2), `b1971ff` (R5) and `348168b` (R6); RET3's `15589f1` is
+`e0c16a6`. Deployed on 18096: plugin `348168b` (DLL SHA-256 prefix `a3cae91c7b3e0545`, JPRM `meta.json` of the S11
+package) and web bundle `9d30aba7e9b3` from the clean tree at `a30926e30c`; backup `p10r3/backup-20260925T100456Z`.
+Health `Ok`, host 12.0.0.0; retention off; no `JellyfinMod` entry.
