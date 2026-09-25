@@ -9,7 +9,9 @@
 // here ever logs a credential or a query string. TMDB is served in plain HTTP on its port; a TLS terminator in front of
 // it answers as api.themoviedb.org, so the plugin's hard-coded endpoint is used unchanged.
 //
-// Ports: TMDB 38110, Prowlarr + Torznab 38111, Transmission 38112, tarpit 38113, control 127.0.0.1:38119.
+// Ports: TMDB 38110, Prowlarr + Torznab 38111, Transmission 38112, tarpit 38113, control 127.0.0.1:38119. STANDIN_PORT_BASE
+// moves all five together (base, +1, +2, +3, +9), so two runs on one host (a disposable container's and the acceptance
+// instance's) never collide.
 // Transmission maps its download folder /downloads to STANDIN_DOWNLOADS on disk; "complete" copies a staged file in.
 import { createServer } from 'node:http';
 import { createServer as createTcpServer } from 'node:net';
@@ -19,6 +21,7 @@ import { dirname, join } from 'node:path';
 import { encode, readTorrent } from './bencode.mjs';
 
 const bind = process.env.STANDIN_BIND ?? '127.0.0.1';
+const portBase = Number(process.env.STANDIN_PORT_BASE ?? 38110);
 const stateDir = process.env.STANDIN_STATE ?? (() => { throw new Error('STANDIN_STATE is required'); })();
 const downloads = process.env.STANDIN_DOWNLOADS ?? (() => { throw new Error('STANDIN_DOWNLOADS is required'); })();
 const secrets = Object.fromEntries(readFileSync(process.env.STANDIN_SECRETS, 'utf8').split('\n')
@@ -347,9 +350,9 @@ const control = createServer(async (request, response) => {
     }
 });
 
-tmdb.listen(38110, bind);
-prowlarr.listen(38111, bind);
-transmission.listen(38112, bind);
-tarpit.listen(38113, bind);
-control.listen(38119, '127.0.0.1');
-log('stand-ins listening: tmdb 38110, prowlarr 38111, transmission 38112, tarpit 38113, control 38119 (loopback)');
+tmdb.listen(portBase, bind);
+prowlarr.listen(portBase + 1, bind);
+transmission.listen(portBase + 2, bind);
+tarpit.listen(portBase + 3, bind);
+control.listen(portBase + 9, '127.0.0.1');
+log(`stand-ins listening: tmdb ${portBase}, prowlarr ${portBase + 1}, transmission ${portBase + 2}, tarpit ${portBase + 3}, control ${portBase + 9} (loopback)`);
