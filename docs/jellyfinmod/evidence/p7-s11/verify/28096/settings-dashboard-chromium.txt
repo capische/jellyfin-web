@@ -1,0 +1,11 @@
+browser chromium 153.0.8010.12
+PASS Discovery shows the moved token as configured :: "Read access token configured · tested 9/25/2026, 2:19:35 PM"
+PASS Discovery Test reports a code and a sentence :: "TMDB accepted the token. (ok)"
+PASS A passing Test marks discovery tested :: "Read access token configured · tested 9/25/2026, 2:20:50 PM"
+PASS Retention and seed protection load from the typed endpoints :: {"days":"14","source":"acquisitionClient"}
+PASS Seed-protection Test reports a code and a sentence :: "Transmission answered; seed state can be read. (ok) · Transmission 4.0.5 (a6fe2a64aa)"
+PASS A retention save re-reads when the page is opened again :: {"saved":"15","reread":"15","meta":"Retention revision 41 · seed protection revision 30."}
+PASS The original retention days are restored :: "14"
+PASS No settings response carries a secret reference :: {"responses":67}
+PASS No page errors :: []
+9 of 9 checks pass
