@@ -1100,8 +1100,11 @@ async function queueBanners() {
     };
     try {
         const off = await read();
+        // Automation off alone reads "Automation is off."; with another safeguard also holding (on this test host the
+        // library disk is past the default 10 % free-space floor) the queue lists every reason, the switch first:
+        // "Automation paused: Automation is turned off. Free space …" (constants/queue.ts). Both say it is off.
         record('queue', 'The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice',
-            off.rows >= 1 && off.notices.some(text => /Automation is off/.test(text)), off);
+            off.rows >= 1 && off.notices.some(text => /Automation is off\.|Automation paused: Automation is turned off\./.test(text)), off);
         await page.locator('.jfmod-queueMenu').first().click();
         await page.waitForTimeout(1200);
         const menu = await page.locator('.actionSheet .actionSheetMenuItem, [role="menu"] [role="menuitem"]').allInnerTexts();
