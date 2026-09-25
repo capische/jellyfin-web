@@ -121,7 +121,10 @@ const SettingsPage: FC = () => {
         const section = SECTIONS[index];
         const next = SECTIONS[index + 1];
         content = (
-            <div className='jfmod-settings jfmod-check'>
+            // focuscontainer-x: on the TV, Left and Right cross between the rail and the section and never jump up into
+            // the header; at 1280×720 the header's SyncPlay button was nearer than the section's first control (P7.S11
+            // sweep). Up still reaches the header.
+            <div className='jfmod-settings jfmod-check focuscontainer-x'>
                 <nav className='jfmod-check-rail' aria-label='JellyfinMod settings'>
                     <div className='jfmod-check-head'>
                         <h2>JellyfinMod settings</h2>
