@@ -50,7 +50,7 @@ export const getPluginHealth = async (api: Api, options?: AxiosRequestConfig) =>
         api.basePath + BASE + '/Health',
         { ...options, headers: api.authorizationHeader ? { Authorization: api.authorizationHeader } : undefined }
     );
-    const data = response.data as { Name?: unknown; Version?: unknown; Ok?: unknown; Capabilities?: unknown };
+    const data = response.data as { Name?: unknown; Version?: unknown; Ok?: unknown; Capabilities?: unknown; Trakt?: { Installed?: unknown } | null };
     if (typeof data.Name !== 'string' || typeof data.Version !== 'string' || typeof data.Ok !== 'boolean') {
         throw new Error('Unsupported JellyfinMod health response');
     }
@@ -58,7 +58,9 @@ export const getPluginHealth = async (api: Api, options?: AxiosRequestConfig) =>
     const capabilities = Array.isArray(data.Capabilities) ?
         data.Capabilities.filter((value): value is string => typeof value === 'string') :
         [];
-    return { name: data.Name, version: data.Version, ok: data.Ok, capabilities };
+    // Whether the stock Trakt plugin is active (P7.Q16); absent from older plugins, which then never ask about Trakt.
+    const traktInstalled = data.Trakt?.Installed === true;
+    return { name: data.Name, version: data.Version, ok: data.Ok, capabilities, traktInstalled };
 };
 
 export interface CreateEntryRequest {
