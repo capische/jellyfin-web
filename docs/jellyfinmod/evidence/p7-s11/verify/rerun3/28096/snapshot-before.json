@@ -1,0 +1,44 @@
+{
+  "indexers": [
+    {
+      "id": "cbe3c84b00f04be3a9913399de3a619d",
+      "name": "Prowlarr 1337x"
+    },
+    {
+      "id": "8e47710661d54ffc8688403104c749e8",
+      "name": "Prowlarr RuTracker"
+    }
+  ],
+  "downloadClients": [
+    {
+      "id": "bb7a7653e337457abc8ee04bd68dba62",
+      "name": "Acceptance Transmission"
+    }
+  ],
+  "qualityProfiles": [
+    {
+      "id": "bf36dd36c320411f8930105f77986c39",
+      "name": "HD 1080p",
+      "isDefault": true
+    }
+  ],
+  "prowlarr": [],
+  "acquisition": {
+    "enabled": true,
+    "downloadClientId": "bb7a7653e337457abc8ee04bd68dba62",
+    "revision": 14
+  },
+  "retention": {
+    "enabled": false,
+    "reclaimAfterDays": 14,
+    "revision": 49
+  },
+  "users": [
+    "nata",
+    "oleksii",
+    "papa",
+    "vika"
+  ],
+  "takeoverPatchedSha256": "326a3fab479f87150c48da25c693e48e94b53abc9097d55aae04a345f1a46602",
+  "bundleId": "21c0905b4568"
+}
