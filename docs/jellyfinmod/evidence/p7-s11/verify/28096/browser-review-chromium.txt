@@ -1,0 +1,125 @@
+browser: {"requestedTier":"chromium","profileDir":"<cache>/jellyfinmod-e2e/profile-chromium","headless":true,"name":"chromium","version":"153.0.8010.12"}
+passed setup and hard reload (5s)
+passed sign in from a cleared session (3.3s)
+passed library countdown and due filter (0.8s)
+passed reload and open discovery (25.1s)
+passed failed add focus (1s)
+passed successful in-flight add scope (4.6s)
+seeded 20 reversible held titles for empty-page acceptance
+passed empty discovery page and continuation (20s)
+skipped home library exclusion and provider deduplication (30.1s): Home library exclusion needs two writable movie Home views; this instance has 1
+passed plugin transport outage (5.2s)
+passed home resume row (1.6s)
+passed plugin ID leak check (0.3s)
+passed search scope isolation (1.3s)
+{
+  "mode": "full",
+  "fullAcceptance": true,
+  "browser": {
+    "requestedTier": "chromium",
+    "profileDir": "<cache>/jellyfinmod-e2e/profile-chromium",
+    "headless": true,
+    "name": "chromium",
+    "version": "153.0.8010.12"
+  },
+  "acceptanceEvidence": "This ran on chromium, not real Chrome; rerun with JELLYFINMOD_BROWSER=chrome before calling anything accepted.",
+  "mediaDecodeCoverage": "no check in this suite currently exercises real playback/decode",
+  "checks": [
+    {
+      "signIn": "rendered home without a reload",
+      "modBundle": true
+    },
+    {
+      "dueFilter": "passed",
+      "eligibleSet": "passed"
+    },
+    {
+      "failedAddFocus": "passed"
+    },
+    {
+      "successfulAddScope": "passed",
+      "repeatedActivations": 2,
+      "requests": 1
+    },
+    {
+      "emptyDiscoveryPage": "passed",
+      "automaticPage": 2,
+      "explicitContinuation": "passed"
+    },
+    {
+      "pluginTransportAbsent": "passed",
+      "nativeDetails": "usable",
+      "nativeSearch": "usable",
+      "cachedPluginDetails": true,
+      "cachedDiscovery": false
+    },
+    {
+      "homeResumeRow": "passed",
+      "resumable": 12,
+      "shown": 24
+    },
+    {
+      "nativeRequestsWithPluginIds": 0,
+      "requestsChecked": 1479
+    },
+    {
+      "searchScope": "passed"
+    }
+  ],
+  "skippedGates": [
+    "normal-library countdown (JELLYFINMOD_EXPECT_NORMAL_COUNTDOWN)",
+    "filtered countdown (JELLYFINMOD_EXPECT_FILTER_COUNTDOWN)",
+    "reclaimed details without playback (JELLYFINMOD_RECLAIMED_ENTRY_ID)",
+    "native playback action (JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID)",
+    "native details and Keep by keyboard (JELLYFINMOD_NATIVE_ENTRY_ID)",
+    "home library exclusion and provider deduplication (no data on this instance: Home library exclusion needs two writable movie Home views; this instance has 1)"
+  ],
+  "skippedByQuickMode": [],
+  "timings": {
+    "setup and hard reload": 5,
+    "sign in from a cleared session": 3.3,
+    "library countdown and due filter": 0.8,
+    "reload and open discovery": 25.1,
+    "failed add focus": 1,
+    "successful in-flight add scope": 4.6,
+    "empty discovery page and continuation": 20,
+    "home library exclusion and provider deduplication": 30.1,
+    "plugin transport outage": 5.2,
+    "home resume row": 1.6,
+    "plugin ID leak check": 0.3,
+    "search scope isolation": 1.3,
+    "total": 98.3
+  },
+  "waits": {
+    "networkIdle": {
+      "seconds": 31.7,
+      "count": 24
+    },
+    "hardReloads": {
+      "seconds": 3.8,
+      "count": 2
+    },
+    "softReloads": {
+      "seconds": 3.9,
+      "count": 2
+    },
+    "discoveryWaits": {
+      "seconds": 26.5,
+      "count": 11
+    },
+    "fixtureSeeding": {
+      "seconds": 5.5,
+      "count": 1
+    },
+    "fixtureCleanup": {
+      "seconds": 0.7,
+      "count": 1
+    }
+  },
+  "idleTimeouts": {},
+  "waitNote": "Wait kinds overlap: networkIdle inside hard reloads or discovery waits counts in each.",
+  "physicalTv": "not tested",
+  "remaining": [
+    "physical webOS acceptance"
+  ]
+}
