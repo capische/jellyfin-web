@@ -1,0 +1,27 @@
+{
+  "userdataDiff": {
+    "exitCode": 0,
+    "userDataRowsBefore": 5143,
+    "userDataRowsAfter": 5143,
+    "onlyBefore": [],
+    "onlyAfter": []
+  },
+  "settingsEqualToSnapshotBefore": true,
+  "settingsDiffs": {},
+  "takeover": {
+    "status": "patched",
+    "bundleId": "21c0905b4568",
+    "patchedSha256": "326a3fab479f87150c48da25c693e48e94b53abc9097d55aae04a345f1a46602"
+  },
+  "usersExact": [
+    "nata",
+    "oleksii",
+    "papa",
+    "vika"
+  ],
+  "itemSearchJellyfinModTotalRecordCount": 0,
+  "entriesJellyfinModTitledCount": 0,
+  "sessionsTotal": 2,
+  "sessionsWithNowPlaying": 0,
+  "standinProcessCount": 0
+}
