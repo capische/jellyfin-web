@@ -39,6 +39,8 @@ Subcommands, in scenario order:
   merge | movie-check | movie-finish | replace | covered-refresh | lockcheck MIN DAYS
                           the third review's checks (RET3-R2 movie versions and C2 merge, R3, R5, the database lock)
   decision13              RET4-R1: windows finished or run out while retention is off start at the switch-on
+  p22-stale | p22-import | p22-unwatched
+                          Q16 review P2-2: watched state saved through a fresh instance (Trakt, NFO, mark season played)
   seed-server             serve the fake Transmission RPC in the foreground
 """
 import hashlib, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -807,6 +809,118 @@ def cmd_decision13():
             check(third[key] == first[key], f"{key} is unchanged")
 
 
+P22_KEYS = ("E03", "E04")
+
+
+def p22_items():
+    items = {key: native_item(key) for key in P22_KEYS}
+    seasons = {item["SeasonId"] for item in items.values()}
+    check(len(seasons) == 1, f"E03 and E04 are in one season ({len(seasons)})")
+    return items, seasons.pop()
+
+
+def p22_states(items, user):
+    """For each episode: the plugin's recorded observation, what Jellyfin answers from its cached item (GetItemById) and
+    what it answers from a fresh query (GetItemList)."""
+    fresh = {i["Id"]: i.get("UserData") or {} for i in must(
+        "GET", f"/Items?userId={user}&Ids={','.join(i['Id'] for i in items.values())}&Fields=Path&EnableUserData=true")["Items"]}
+    result = {}
+    for key, item in items.items():
+        cached = must("GET", f"/UserItems/{item['Id']}/UserData?userId={user}")
+        rows = db_rows("select Played, LastPlayedAt, SourceReason from CompletionObservations where "
+                       f"lower(replace(JellyfinItemId,'-',''))='{item['Id'].lower()}' and "
+                       f"lower(replace(UserId,'-',''))='{user.lower().replace('-', '')}'")
+        observed = rows[0] if rows else None
+        result[key] = {"observed_played": observed and observed[0] == "1", "observed_last_played": observed and observed[1],
+                       "observed_reason": observed and observed[2], "cached_played": cached.get("Played"),
+                       "stored_played": fresh.get(item["Id"], {}).get("Played")}
+        print(f"  {key}: plugin observation played={result[key]['observed_played']} ({result[key]['observed_reason']}, "
+              f"{result[key]['observed_last_played']}); Jellyfin cached item played={result[key]['cached_played']}; "
+              f"stored played={result[key]['stored_played']}")
+    return result
+
+
+def p22_settle(items, user, condition, timeout=180):
+    begin = time.time()
+    while True:
+        states = p22_states(items, user)
+        if condition(states) or time.time() - begin > timeout:
+            return states
+        time.sleep(10)
+
+
+def cmd_p22_stale():
+    """Q16 review P2-2, live on the build before the fix, retention off. Stock Jellyfin's "mark season played" saves each
+    episode through a fresh instance (Folder.MarkPlayed -> GetItemList), exactly as the Trakt sync and the NFO importer
+    do, so the instance Jellyfin caches keeps the old state. The plugin, reading the cached instance, records no watch."""
+    user = selected_user()
+    items, season = p22_items()
+    for item in items.values():
+        must("DELETE", f"/UserPlayedItems/{item['Id']}?userId={user}")
+    time.sleep(15)
+    p22_states(items, user)
+    must("POST", f"/UserPlayedItems/{season}?userId={user}")
+    print("season marked played through fresh instances")
+    time.sleep(45)
+    states = p22_states(items, user)
+    for key, st in states.items():
+        print(f"  {key}: before the fix the plugin records played={st['observed_played']} while Jellyfin stored played="
+              f"{st['stored_played']} (cached item says {st['cached_played']})")
+
+
+def cmd_p22_import():
+    """P2-2 on the fixed build: a watch saved through a fresh instance (as a Trakt import is) is recorded as played with its
+    date, without a restart; with retention on, its window starts and is announced."""
+    user = selected_user()
+    items, season = p22_items()
+    must("DELETE", f"/UserPlayedItems/{season}?userId={user}")
+    for item in items.values():  # load the cached instances, now unplayed
+        must("GET", f"/Items/{item['Id']}?userId={user}")
+    p22_settle(items, user, lambda st: all(not v["observed_played"] and not v["stored_played"] for v in st.values()))
+    must("POST", f"/UserPlayedItems/{season}?userId={user}")
+    print("season marked played through fresh instances (the Trakt import path)")
+    states = p22_settle(items, user, lambda st: all(v["observed_played"] for v in st.values()))
+    check(all(v["stored_played"] and v["observed_played"] and v["observed_last_played"] for v in states.values()),
+          "a watch saved through a fresh instance is recorded as played with its date, without a restart (P2-2)")
+    stale = [k for k, v in states.items() if not v["cached_played"]]
+    print("  Jellyfin's own cached item still says unplayed for:", stale or "none (evicted or reloaded)")
+    _, detail = series_detail()
+    rows = {n: tracked_episode(detail, n) for n in (3, 4)}
+    for n, row in rows.items():
+        print(f"  S01E{n:02}: {row['retention']['state']} {row['retention'].get('deadline')} warning={bool(row.get('retentionWarning'))}")
+    check(all(r["retention"]["state"] == "scheduled" and r.get("retentionWarning") for r in rows.values()),
+          "with retention on, the imported watches start windows with a warning")
+
+
+def cmd_p22_unwatched():
+    """P2-2 on the fixed build: the title is marked unwatched through fresh instances (a Trakt "unwatched" import) while
+    Jellyfin's cached instances still say played. The plugin records it unwatched, and after the window nothing goes."""
+    user = selected_user()
+    items, season = p22_items()
+    for item in items.values():  # through the cached instance: played again, which reloads the cache as played
+        must("POST", f"/UserPlayedItems/{item['Id']}?userId={user}")
+    p22_settle(items, user, lambda st: all(v["cached_played"] and v["observed_played"] for v in st.values()))
+    _, detail = series_detail()
+    deadlines = [tracked_episode(detail, n)["retention"].get("deadline") for n in (3, 4)]
+    cmd_hashes("p22-before")
+    must("DELETE", f"/UserPlayedItems/{season}?userId={user}")
+    print("season marked unplayed through fresh instances (a Trakt unwatched import)")
+    states = p22_settle(items, user, lambda st: all(not v["observed_played"] for v in st.values()))
+    check(all(not v["stored_played"] and not v["observed_played"] for v in states.values()),
+          "an unwatched state saved through a fresh instance is recorded as not played (P2-2)")
+    print("  Jellyfin's own cached item still says played for:", [k for k, v in states.items() if v["cached_played"]] or "none")
+    latest = max(parse_time(d) for d in deadlines if d) if any(deadlines) else now_utc()
+    wait = (latest - now_utc()).total_seconds() + 30
+    print("waiting", int(max(wait, 0)), "s past the windows the watches had started")
+    if wait > 0:
+        time.sleep(wait)
+    cmd_run()
+    cmd_hashes("p22-after")
+    first = json.load(open(os.path.join(STATE, "hashes-p22-before.json")))
+    second = json.load(open(os.path.join(STATE, "hashes-p22-after.json")))
+    check(first == second, "after the windows nothing was reclaimed: every fixture is byte-identical (P2-2)")
+
+
 def cmd_probe_ids():
     """The browser probe's item ids for this fixture set, as environment assignments (retention-controls.mjs)."""
     _, detail = series_detail()
@@ -1564,6 +1678,7 @@ if __name__ == "__main__":
         "toggle": cmd_toggle, "covered": cmd_covered, "late": cmd_late, "double": cmd_double,
         "safe-finish": cmd_safe_finish, "verify-safe": verify_safe, "merge": cmd_merge, "movie-check": cmd_movie_check,
         "movie-finish": cmd_movie_finish, "ret3": cmd_ret3, "ret3-fast": cmd_ret3_fast, "merge-recheck": cmd_merge_recheck, "probe-ids": cmd_probe_ids, "replace": cmd_replace, "covered-refresh": lambda: cmd_covered_refresh(), "decision13": cmd_decision13,
+        "p22-stale": cmd_p22_stale, "p22-import": cmd_p22_import, "p22-unwatched": cmd_p22_unwatched,
     }
     if args[0] == "configure":
         cmd_configure(int(args[1]), int(args[2]))
