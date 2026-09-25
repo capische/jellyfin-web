@@ -209,11 +209,11 @@ async function clientStep(page) {
         const client = section(page, 'client');
         await fill(client, 'Name', 'JellyfinMod Standin Transmission');
         await fill(client, 'Transmission RPC address', `http://${standin}:38112/transmission/rpc`);
-        await fill(client, 'Username', fixture.TX_USER);
+        // Username and password left blank, as for a Transmission with authentication off (the stand-in is switched so).
         await fill(client, 'Label added to every grab', 'jellyfinmod');
         await fill(client, 'Download folder as Transmission sees it', '/downloads');
         await fill(client, 'The same folder as this server sees it', '/data/media/movies');
-        await setSecret(client, 'jfmodClientPassword', fixture.TX_PASSWORD);
+        control('/fault?service=txauth&mode=off');
         await page.locator('[data-submit="client"]').click();
         const inside = await waitNotice(page, 'client', /library|filesystem|folder/i);
         record('wizard', 'Download client inside a library root is refused (destination_inside_library)', /destination_inside_library/.test(inside), inside);
@@ -224,7 +224,10 @@ async function clientStep(page) {
         await fill(client, 'The same folder as this server sees it', '/data/downloads');
         await page.locator('[data-submit="client"]').click();
         const saved = await waitNotice(page, 'client', /Saved/);
-        record('wizard', 'The download folder on the library filesystem is accepted', /Saved/.test(saved), saved);
+        const createdClient = (await api(page, 'GET', 'JellyfinMod/Settings/DownloadClients')).body[0];
+        record('wizard', 'A new client with the username left blank saves (201) and the folder on the library filesystem is accepted',
+            /Saved/.test(saved) && !!createdClient && createdClient.username === '' && createdClient.passwordConfigured === false,
+            { notice: saved, username: createdClient?.username, passwordConfigured: createdClient?.passwordConfigured });
         await page.locator('[data-test="client"]').click();
         const tested = await waitNotice(page, 'client', /\([a-z_]+\)/);
         record('wizard', 'Test verifies the stand-in Transmission and the download folder', /\(ok\)/.test(tested), tested);
@@ -428,7 +431,12 @@ const testNotice = async (page, id, button) => {
 };
 const saveSection = async (page, id) => {
     await page.locator(`[data-submit="${id}"]`).click();
-    await waitNotice(page, id, /Saved/);
+    // A click that lands while the section re-renders after its data refetch can be lost; one retry, then fail.
+    const saved = await waitNotice(page, id, /Saved/, 12000).then(() => true, () => false);
+    if (!saved) {
+        await page.locator(`[data-submit="${id}"]`).click();
+        await waitNotice(page, id, /Saved/);
+    }
     await page.waitForTimeout(1500);
 };
 
@@ -441,6 +449,15 @@ async function tests() {
         await openSection(page, 'client');
         const client = section(page, 'client');
         const clientTest = () => testNotice(page, 'client', page.locator('[data-test="client"]'));
+        // Authentication on in the stand-in; the client gets its username and password from the page.
+        control('/fault?service=txauth&mode=on');
+        const noCredentials = await clientTest();
+        await fill(client, 'Username', fixture.TX_USER);
+        await setSecret(client, 'jfmodClientPassword', fixture.TX_PASSWORD);
+        await saveSection(page, 'client');
+        const withCredentials = await clientTest();
+        record('tests', 'Transmission with authentication on: refused without credentials, verified once username and password are saved',
+            /client_auth_failed/.test(noCredentials) && /\(ok\)/.test(withCredentials), { without: noCredentials, with: withCredentials });
         await client.getByRole('button', { name: 'Clear' }).click();
         const pending = await client.locator('.jfmod-secret-pending').innerText();
         await client.getByRole('button', { name: 'Undo' }).click();
@@ -515,6 +532,18 @@ async function tests() {
         record('tests', 'Synced indexer Test: a failing feed is reported, a healthy one passes', !/\(ok\)/.test(failing), { failing, recovered });
         await indexers.getByRole('button', { name: 'Add indexer' }).click();
         let dialog = page.locator('.jfmod-settingsDialog').last();
+        await dialog.waitFor({ state: 'visible', timeout: 10000 });
+        await fill(dialog, 'Name', 'JellyfinMod Invalid Indexer');
+        await fill(dialog, 'Torznab address', `http://${standin}:38111/1/api`);
+        await field(dialog, 'Priority (lower first)').fill('');
+        await dialog.getByRole('button', { name: 'Save' }).click();
+        await dialog.locator('.jfmod-notice').waitFor({ state: 'visible', timeout: 15000 });
+        const invalid = (await dialog.locator('.jfmod-notice').innerText()).replace(/\s+/g, ' ');
+        record('tests', 'A provoked validation error names its field (priority left empty)', /priority/i.test(invalid) && !/LineNumber/.test(invalid), invalid);
+        await dialog.getByRole('button', { name: 'Cancel' }).click();
+        await dialog.waitFor({ state: 'hidden', timeout: 10000 });
+        await indexers.getByRole('button', { name: 'Add indexer' }).click();
+        dialog = page.locator('.jfmod-settingsDialog').last();
         await dialog.waitFor({ state: 'visible', timeout: 10000 });
         await fill(dialog, 'Name', 'JellyfinMod Probe Indexer');
         await fill(dialog, 'Torznab address', `http://${standin}:38111/1/api`);
@@ -675,8 +704,12 @@ async function importStep() {
         record('import', 'The stand-in Transmission reports the torrent complete with the real file in the download folder', done.percentDone === 1, { status: done.status });
         const entry = await until(async () => {
             const current = await entryByTmdb(page, tmdbId);
-            return current?.state === 'onDisk' && current.jellyfinItemId ? current : null;
-        }, { timeout: 300000, every: 5000, label: 'the entry to be on disk and bound' });
+            if (current?.state !== 'onDisk' || !current.jellyfinItemId) return null;
+            // The import is finished only when it has recorded itself; binding by reconciliation can come first, and a
+            // watch before the import completes is (rightly) not counted by retention.
+            const detail = (await api(page, 'GET', `JellyfinMod/Entries/${current.id}`)).body;
+            return (detail.history ?? []).some(event => (event.eventType ?? event.type ?? event.kind) === 'imported') ? current : null;
+        }, { timeout: 300000, every: 5000, label: 'the import to complete' });
         record('import', 'The plugin imports the download and Jellyfin indexes it: the entry is on disk and bound', true,
             { state: entry.state, bound: !!entry.jellyfinItemId });
         const links = onHost(`cd ${JSON.stringify(process.env.JELLYFINMOD_S11_HOST_ROOT)}/data && stat -c '%h %i' "downloads/${release.title}.mkv" && find media/movies -name '*.mkv' -exec stat -c '%h %i %n' {} +`);
@@ -688,7 +721,7 @@ async function importStep() {
             download[0] === '2' && !!same && same[0] === '2', { download: { links: download[0] }, library: same ? { links: same[0], path: same.slice(2).join(' ').replace(/^media\//, '') } : null });
         const history = (await api(page, 'GET', `JellyfinMod/Entries/${entry.id}`)).body;
         const events = (history.history ?? []).map(event => event.eventType ?? event.type ?? event.kind);
-        record('import', 'Entry history records the grab and the media becoming available', events.includes('grabbed') && events.includes('media_available'),
+        record('import', 'Entry history records the grab, the media becoming available and the import', events.includes('grabbed') && events.includes('media_available') && events.includes('imported'),
             { events: (history.history ?? []).map(event => event.eventType ?? event.type ?? event.kind).slice(0, 8) });
     } catch (error) {
         notVerified('import', 'import by hardlink', error);
@@ -744,15 +777,39 @@ async function retention() {
         const before = onHost(`cd ${root} && ls "${folder}" && stat -c '%h' data/downloads/*Standin.Movie*.mkv`);
         const due = await until(async () => {
             const preview = (await api(page, 'GET', 'JellyfinMod/Retention/Preview')).body;
-            return preview?.due >= 1 ? preview : null;
-        }, { timeout: 240000, every: 10000, label: 'the watched file to be due' });
-        record('retention', 'The watched file is due after the window with no repair run', true, { inspected: due.inspected, due: due.due, blocked: due.blocked });
+            const seedBlocked = (preview?.items ?? []).some(item => item.state === 'blocked' && /^seed/.test(item.reason ?? ''));
+            return preview?.due >= 1 || seedBlocked ? preview : null;
+        }, { timeout: 240000, every: 10000, label: 'the watched file to be due or held by seeding' });
+        record('retention', 'After the window the watched file is due, or held only by its seeding copy, with no repair run', true,
+            { inspected: due.inspected, due: due.due, blocked: due.blocked, items: (due.items ?? []).map(item => `${item.state}:${item.reason}`) });
         const tasks = (await api(page, 'GET', 'ScheduledTasks')).body;
         const task = tasks.find(item => item.Name === 'Reclaim expired JellyfinMod media');
-        const started = await api(page, 'POST', `ScheduledTasks/Running/${task.Id}`);
-        await until(async () => (await api(page, 'GET', `ScheduledTasks/${task.Id}`)).body.State === 'Idle' && started.status === 204,
-            { timeout: 180000, every: 3000, label: 'the reclaim task to finish' });
-        await page.waitForTimeout(3000);
+        const runTask = async () => {
+            const started = await api(page, 'POST', `ScheduledTasks/Running/${task.Id}`);
+            await page.waitForTimeout(3000);
+            await until(async () => (await api(page, 'GET', `ScheduledTasks/${task.Id}`)).body.State === 'Idle' && started.status === 204,
+                { timeout: 180000, every: 3000, label: 'the reclaim task to finish' });
+            await page.waitForTimeout(3000);
+        };
+        const release = control('/state').releases.find(item => item.tmdbid === 990001);
+        // T18 item 5: the seeding copy is below its goal (ratio 0, just added), so the due file must stay.
+        const held = control('/state').torrents.find(torrent => torrent.hashString === release.infoHash);
+        if (process.env.JELLYFINMOD_S11_SEED_MET !== 'true') {
+        await runTask();
+        const blockedRun = (await api(page, 'GET', 'JellyfinMod/Retention/Runs/Latest')).body;
+        const stillThere = onHost(`cd ${root} && ls "${folder}"`).split('\n').some(name => name.endsWith('.mkv'));
+        const blockedPreview = (await api(page, 'GET', 'JellyfinMod/Retention/Preview')).body;
+        record('retention', 'T18 item 5: with the seeding torrent below its goal the due file stays and the run counts it blocked',
+            stillThere && blockedRun?.reclaimed === 0 && blockedRun?.blocked >= 1,
+            { torrent: { uploadRatio: held?.uploadRatio, secondsSeeding: held?.secondsSeeding }, run: { status: blockedRun?.status, reclaimed: blockedRun?.reclaimed, blocked: blockedRun?.blocked },
+                reasons: JSON.stringify(blockedPreview).match(/seed[a-z_]*/g)?.filter((value, index, all) => all.indexOf(value) === index) ?? [] });
+        }
+        control(`/seed?hash=${release.infoHash}&ratio=10&seconds=864000`);
+        // The import monitor reads the client on its own poll; the goal counts as met once it has seen it.
+        const nowDue = await until(async () => ((await api(page, 'GET', 'JellyfinMod/Retention/Preview')).body?.due ?? 0) >= 1,
+            { timeout: 240000, every: 10000, label: 'the seed goal to be observed as met' });
+        record('retention', 'Once the seeding copy meets its goal the file becomes due', nowDue === true);
+        await runTask();
         const after = onHost(`cd ${root} && ls "${folder}"; stat -c '%h' data/downloads/*Standin.Movie*.mkv`);
         const run = (await api(page, 'GET', 'JellyfinMod/Retention/Runs/Latest')).body;
         const detail = (await api(page, 'GET', `JellyfinMod/Entries/${entry.id}`)).body;
@@ -778,6 +835,294 @@ async function retention() {
         await page.screenshot({ path: `${process.env.JELLYFINMOD_S11_SHOTS ?? '.'}/s11-${tier}-retention-failure.png` }).catch(() => {});
     }
     saveResults('retention', browser.version());
+    await context.close();
+}
+
+// ---- mobile: the settings area at 390 px ----
+async function mobileSettings() {
+    const { page, context } = await newPage(browser, 'mobile');
+    await signIn(page);
+    try {
+        await page.evaluate(() => { location.hash = '#/catalog/settings'; });
+        await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
+        const seen = [];
+        for (const id of ['discovery', 'client', 'indexers', 'profiles', 'grabbing', 'retention', 'automation', 'interface']) {
+            await openSection(page, id);
+            const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            seen.push({ id, overflow: width, heading: await section(page, id).locator('h2').innerText() });
+        }
+        record('mobile', 'Settings area at 390 px: every section opens with no horizontal scroll', seen.every(item => item.overflow <= 1), seen);
+        await openSection(page, 'client');
+        await setSecret(section(page, 'client'), 'jfmodClientPassword', fixture.TX_PASSWORD);
+        await saveSection(page, 'client');
+        const test = await testNotice(page, 'client', page.locator('[data-test="client"]'));
+        record('mobile', 'Mobile data entry: a secret replaced and saved, the client Test passes, the field returns to Configured',
+            /\(ok\)/.test(test) && /Configured/.test(await section(page, 'client').locator('.jfmod-secret-state').first().innerText()), test);
+        record('mobile', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
+    } catch (error) {
+        notVerified('mobile', 'settings area at 390 px', error);
+        await page.screenshot({ path: `${process.env.JELLYFINMOD_S11_SHOTS ?? '.'}/s11-${tier}-mobile-failure.png` }).catch(() => {});
+    }
+    saveResults('mobile', browser.version());
+    await context.close();
+}
+
+// ---- automation: the Phase 6 live checklist, every setting saved through the settings area ----
+const automationStatus = async page => (await api(page, 'GET', 'JellyfinMod/Automation/Status')).body;
+const decisions = async page => (await api(page, 'GET', 'JellyfinMod/Automation/Decisions?limit=200')).body.items ?? [];
+/** Run now from the Automation section; waits for a new completed run and returns it. */
+async function runNow(page) {
+    const before = (await automationStatus(page)).lastRun?.id ?? null;
+    await openSection(page, 'automation');
+    await section(page, 'automation').getByRole('button', { name: 'Run now' }).click();
+    return until(async () => {
+        const status = await automationStatus(page);
+        return status.lastRun && status.lastRun.id !== before && !status.running && status.lastRun.status !== 'running' ? status.lastRun : null;
+    }, { timeout: 300000, every: 4000, label: 'the automation run to finish' });
+}
+async function saveAutomation(page, values) {
+    await openSection(page, 'automation');
+    const area = section(page, 'automation');
+    for (const [label, value] of Object.entries(values)) {
+        if (typeof value === 'boolean') await setSwitch(area, label, value);
+        else await fill(area, label, String(value));
+    }
+    await saveSection(page, 'automation');
+}
+const since = (list, runId) => list.filter(item => item.runId === runId);
+const summary = list => list.map(item => `${(item.title ?? '').replace('JellyfinMod Standin ', '')}:${item.kind}:${item.reason}`);
+
+async function automation() {
+    const { page, context } = await newPage(browser);
+    await signIn(page);
+    const phase = process.env.JELLYFINMOD_S11_PHASE ?? 'a';
+    try {
+        if (phase === 'a') {
+            const health = (await api(page, 'GET', 'JellyfinMod/Health')).body;
+            const capabilities = health.Capabilities ?? health.capabilities ?? [];
+            const off = (await api(page, 'GET', 'JellyfinMod/Settings/Automation')).body;
+            if (process.env.JELLYFINMOD_S11_RERUN !== 'true') record('automation', '1: Health lists automation and versions; migrations applied; automation off', capabilities.includes('automation')
+                && capabilities.includes('versions') && off.automationEnabled === false, { automationEnabled: off.automationEnabled });
+            // Wanted titles: two with a release, six with none.
+            for (const [title, id] of [['JellyfinMod Standin Seeder', 990003], ['JellyfinMod Standin Sequel', 990002],
+                ...[4, 5, 6, 7, 8, 9].map(n => [`JellyfinMod Standin Extra ${n}`, 990000 + n])]) {
+                if (!await entryByTmdb(page, id)) await addTitle(page, title, id);
+            }
+            record('automation', 'Eight wanted, monitored entries added from search', (await api(page, 'GET', 'JellyfinMod/Entries?limit=200')).body.items
+                .filter(entry => entry.monitored && entry.state === 'none').length === 8);
+            // 2: profile cutoff and upgrades, indexer limits, small budgets, automation on with a 1-hour interval.
+            const profile0 = (await api(page, 'GET', 'JellyfinMod/Settings/QualityProfiles')).body[0];
+            let dialog;
+            if (!(profile0.cutoff === 'webdl-1080p' && profile0.upgradeAllowed && profile0.qualities.includes('webdl-720p'))) {
+            await openSection(page, 'profiles');
+            await section(page, 'profiles').getByRole('button', { name: 'Edit' }).first().click();
+            dialog = page.locator('.jfmod-settingsDialog').last();
+            await dialog.waitFor({ state: 'visible', timeout: 10000 });
+            await choose(page, dialog, 'Add a quality', 'webdl-720p');
+            await choose(page, dialog, 'Upgrade until', 'webdl-1080p');
+            await setSwitch(dialog, 'Upgrade automatically until the cutoff', true);
+            await saveDialog(page, dialog);
+            }
+            const profile = (await api(page, 'GET', 'JellyfinMod/Settings/QualityProfiles')).body[0];
+            await openSection(page, 'indexers');
+            await section(page, 'indexers').locator('.jfmod-brow', { hasText: 'JellyfinMod Standin Indexer' }).getByRole('button', { name: 'Edit' }).click();
+            dialog = page.locator('.jfmod-settingsDialog').last();
+            await dialog.waitFor({ state: 'visible', timeout: 10000 });
+            await fill(dialog, 'Seconds between searches', '2');
+            await fill(dialog, 'Searches per day', '60');
+            await saveDialog(page, dialog);
+            const indexer = (await api(page, 'GET', 'JellyfinMod/Settings/Indexers')).body[0];
+            // The test host's disk is over 90 % full, so the default floor (10 %, at least 25 GB) is above its free space and
+            // stops every grab (seen on the first attempt). 1 % keeps the 25 GB minimum.
+            await saveAutomation(page, { 'Search and grab on a schedule': true, 'Run every (hours)': 1, 'Automatic grabs per day': 1,
+                'Keep this much of the library disk free (%)': 1 });
+            const settings = (await api(page, 'GET', 'JellyfinMod/Settings/Automation')).body;
+            record('automation', '2: saved through the area — profile cutoff and upgrades, synced indexer limits, grab budget 1, automation on every hour',
+                profile.cutoff === 'webdl-1080p' && profile.upgradeAllowed && indexer.minIntervalSeconds === 2 && indexer.dailyQueryBudget === 60
+                && settings.automationEnabled && settings.automationIntervalHours === 1 && settings.dailyAutoGrabBudget === 1,
+                { profile: { qualities: profile.qualities, cutoff: profile.cutoff, upgradeAllowed: profile.upgradeAllowed, upgradeMode: profile.upgradeMode },
+                    indexer: { minIntervalSeconds: indexer.minIntervalSeconds, dailyQueryBudget: indexer.dailyQueryBudget },
+                    automation: { enabled: settings.automationEnabled, interval: settings.automationIntervalHours, grabBudget: settings.dailyAutoGrabBudget } });
+            // Search now on every wanted title: resets any back-off (the floor skip of a first attempt retries in 6 h).
+            for (const entry of (await api(page, 'GET', 'JellyfinMod/Entries?limit=200')).body.items.filter(item => item.state === 'none')) {
+                await api(page, 'PATCH', `JellyfinMod/Entries/${entry.id}`, { searchNow: true });
+            }
+            const feedBefore = control('/state').counters['torznab.movie'] ?? 0;
+            const run1 = await runNow(page);
+            const d1 = since(await decisions(page), run1.id);
+            const feedAfter = control('/state').counters['torznab.movie'] ?? 0;
+            const grabbed = d1.filter(item => item.reason === 'grabbed');
+            record('automation', '3: run 1 — one wanted movie auto-grabbed, the grab budget stops the second, titles with no release searched empty',
+                grabbed.length === 1 && d1.some(item => item.reason === 'budget_grabs') && d1.filter(item => item.reason === 'no_eligible_candidate').length === 6,
+                { run: { status: run1.status, targetsConsidered: run1.targetsConsidered, searched: run1.searched, grabbed: run1.grabbed }, decisions: summary(d1),
+                    feedQueries: feedAfter - feedBefore });
+            const reportedQueries = Object.values(run1.queriesByIndexer ?? {}).reduce((sum, value) => sum + value, 0);
+            record('automation', '3: the stand-in feed saw exactly the queries the run reports per indexer', feedAfter - feedBefore === reportedQueries,
+                { feed: feedAfter - feedBefore, reportedQueries, titlesSearched: run1.searched });
+        }
+        if (phase === 'a' || phase === 'a2') {
+            const lastRun = (await automationStatus(page)).lastRun;
+            const grabbed = since(await decisions(page), lastRun.id).filter(item => item.reason === 'grabbed');
+            const grabbedTitle = grabbed[0]?.title ?? '';
+            const tmdbId = /Sequel/.test(grabbedTitle) ? 990002 : 990003;
+            const release = control('/state').releases.find(item => item.tmdbid === tmdbId && /1080p/.test(item.title));
+            await until(() => control('/state').torrents.some(torrent => torrent.hashString === release.infoHash),
+                { timeout: 60000, every: 2000, label: 'the automatic grab to reach the client after its hold' });
+            control(`/complete?hash=${release.infoHash}`);
+            const imported = await until(async () => {
+                const entry = await entryByTmdb(page, tmdbId);
+                if (entry?.state !== 'onDisk') return null;
+                const detail = (await api(page, 'GET', `JellyfinMod/Entries/${entry.id}`)).body;
+                return (detail.history ?? []).some(event => (event.eventType ?? event.type) === 'imported') ? detail : null;
+            }, { timeout: 300000, every: 5000, label: 'the automatic grab to be imported' });
+            const events = (imported.history ?? []).map(event => event.eventType ?? event.type);
+            record('automation', '3: the automatic grab is imported (history auto_grabbed, imported)', events.includes('auto_grabbed') && events.includes('imported'),
+                { title: grabbedTitle, events: events.slice(0, 6) });
+            const extras = [];
+            for (const n of [4, 5, 6, 7, 8, 9]) {
+                const entry = await entryByTmdb(page, 990000 + n);
+                const answer = (await api(page, 'GET', `JellyfinMod/Automation/Targets?entryId=${entry.id}`)).body;
+                extras.push(...(Array.isArray(answer) ? answer : answer.items ?? [answer]).filter(target => target.consecutiveEmpty >= 1));
+            }
+            const hours = extras.map(target => Math.round((new Date(target.nextSearchAt) - new Date(target.lastSearchedAt)) / 36e5));
+            record('automation', '3: an empty search backs off 12 h', extras.length === 6 && hours.every(value => value === 12), { hours });
+            const status = await automationStatus(page);
+            const df = Number(onHost(`df -B1 --output=avail ${JSON.stringify(process.env.JELLYFINMOD_S11_HOST_ROOT)} | tail -1`));
+            record('automation', '6: the free space automation reports matches df for the same filesystem (within 1 %)',
+                Math.abs(status.budgets.freeBytes - df) / df < 0.01, { freeBytes: status.budgets.freeBytes, df, floorBytes: status.budgets.freeFloorBytes });
+        }
+        if (phase === 'b') {
+            const banner = async () => {
+                await page.evaluate(() => { location.hash = '#/catalog/queue'; });
+                await page.waitForTimeout(3500);
+                return (await page.locator('body').innerText()).match(/Automation[^\n]*paused[^\n]*|paused[^\n]*/i)?.[0] ?? '';
+            };
+            if (process.env.JELLYFINMOD_S11_FROM !== 'floor') {
+            // After a container restart: no duplicate grab or import; the budget still stops the other title.
+            const beforeTorrents = control('/state').torrents.length;
+            const run2 = await runNow(page);
+            const d2 = since(await decisions(page), run2.id);
+            record('automation', '4: after a restart, run 2 grabs nothing twice; the budget still holds; backed-off titles are not searched',
+                control('/state').torrents.length === beforeTorrents && d2.every(item => item.reason !== 'grabbed') && run2.searched <= 1,
+                { run: { searched: run2.searched, grabbed: run2.grabbed, targetsConsidered: run2.targetsConsidered }, decisions: summary(d2), torrents: control('/state').torrents.length });
+            // 5a: the breaker — five searches against a failing feed.
+            await saveAutomation(page, { 'Automatic grabs per day': 5 });
+            for (const n of [4, 5, 6, 7, 8]) {
+                const entry = await entryByTmdb(page, 990000 + n);
+                await api(page, 'PATCH', `JellyfinMod/Entries/${entry.id}`, { searchNow: true });
+            }
+            control('/fault?service=torznab&mode=500');
+            const run3 = await runNow(page);
+            control('/fault?service=torznab&mode=ok');
+            const status3 = await automationStatus(page);
+            const d3 = since(await decisions(page), run3.id);
+            record('automation', '5: five failing searches open the indexer breaker; the status names it', !!status3.indexers[0]?.breakerOpenUntil,
+                { breakerOpenUntil: status3.indexers[0]?.breakerOpenUntil, decisions: summary(d3), paused: status3.pausedReasons });
+            record('automation', '5: the queue shows the breaker pause', /breaker/i.test(await banner()), { banner: await banner(), pausedReasons: status3.pausedReasons });
+            }
+            // 5b: the free-space floor above the free space.
+            await saveAutomation(page, { 'Keep this much of the library disk free (%)': 90 });
+            const run4 = await runNow(page);
+            const status4 = await automationStatus(page);
+            record('automation', '5: a free-space floor above the free space stops grabs', status4.pausedReasons.includes('free_space_floor')
+                || since(await decisions(page), run4.id).some(item => item.reason === 'free_space_floor'),
+                { paused: status4.pausedReasons, decisions: summary(since(await decisions(page), run4.id)), banner: await banner() });
+            await saveAutomation(page, { 'Keep this much of the library disk free (%)': 1 });
+            // 5c: the download client down.
+            control('/fault?service=tx&mode=down');
+            const run5 = await runNow(page);
+            const status5 = await automationStatus(page);
+            control('/fault?service=tx&mode=ok');
+            record('automation', '5: the download client down stops grabs', status5.pausedReasons.includes('client_unreachable')
+                || since(await decisions(page), run5.id).some(item => item.reason === 'client_unreachable'),
+                { paused: status5.pausedReasons, run: run5.status, decisions: summary(since(await decisions(page), run5.id)) });
+            // 5d: the master switch off: the run touches no indexer.
+            await saveAutomation(page, { 'Search and grab on a schedule': false });
+            const feed = control('/state').counters['torznab.movie'] ?? 0;
+            const run6 = await runNow(page);
+            record('automation', '5: automation off — the run is recorded as disabled and queries no indexer',
+                (control('/state').counters['torznab.movie'] ?? 0) === feed && /disabled/.test(run6.status), { run: run6.status });
+            record('automation', '5: the queue shows the automation-off banner', /off|disabled/i.test(await banner()), { banner: await banner() });
+            // 9: security.
+            const anonymous = await page.evaluate(async () => Promise.all(['Automation/Status', 'Settings/Automation', 'Automation/Decisions']
+                .map(path => fetch('/JellyfinMod/' + path).then(response => response.status))));
+            const extra = await entryByTmdb(page, 990009);
+            const addVersion = await api(page, 'GET', `JellyfinMod/Releases?entryId=${extra.id}&intent=addVersion`);
+            record('automation', '9: anonymous 401 on automation routes; intent=addVersion refused for a file-less target', anonymous.every(code => code === 401)
+                && addVersion.status >= 400, { anonymous, addVersion: { status: addVersion.status, type: addVersion.body?.type ?? addVersion.body?.code } });
+            // 10: the version rows on the imported title, with Get another quality for an administrator.
+            const held = (await api(page, 'GET', 'JellyfinMod/Entries?limit=200')).body.items.find(entry => entry.state === 'onDisk');
+            await page.evaluate(id => { location.hash = '#/details?id=' + id; }, held.jellyfinItemId);
+            await page.locator('.jfmod-versions, [class*="jfmod-version"]').first().waitFor({ state: 'visible', timeout: 30000 });
+            const rows = (await page.locator('.jfmod-versions, [class*="jfmod-version"]').first().innerText()).replace(/\s+/g, ' ');
+            record('automation', '10: the version rows show resolution, codec, audio and size, with Get another quality for an administrator',
+                /1080|1920/.test(rows) && /Get another quality/i.test(rows), rows.slice(0, 300));
+            record('automation', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
+        }
+    } catch (error) {
+        notVerified('automation', `phase ${phase}`, error);
+        await page.screenshot({ path: `${process.env.JELLYFINMOD_S11_SHOTS ?? '.'}/s11-${tier}-automation-${phase}-failure.png` }).catch(() => {});
+    }
+    saveResults('automation-' + phase, browser.version());
+    await context.close();
+}
+
+// ---- queue: the page renders for an administrator with rows, and shows each automation pause ----
+async function queueBanners() {
+    const { page, context } = await newPage(browser);
+    await signIn(page);
+    const read = async () => {
+        await page.evaluate(() => { location.hash = '#/catalog/queue'; });
+        await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+        await page.waitForTimeout(2500);
+        return { rows: await page.locator('.jfmod-queueTableRow, .jfmod-queueRow').count(),
+            notices: (await page.locator('.jfmod-queueBanner, .jfmod-queueNotice').allInnerTexts()).map(text => text.replace(/\s+/g, ' ')) };
+    };
+    try {
+        const off = await read();
+        record('queue', 'The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice',
+            off.rows >= 1 && off.notices.some(text => /Automation is off/.test(text)), off);
+        await page.locator('.jfmod-queueMenu').first().click();
+        await page.waitForTimeout(1200);
+        const menu = await page.locator('.actionSheet .actionSheetMenuItem, [role="menu"] [role="menuitem"]').allInnerTexts();
+        record('queue', 'The row menu opens its actions', menu.length > 0, menu.map(text => text.trim()).slice(0, 5));
+        await page.keyboard.press('Escape');
+        await saveAutomation(page, { 'Search and grab on a schedule': true, 'Keep this much of the library disk free (%)': 90 });
+        const floor = await read();
+        record('queue', 'A free-space floor above the free space shows the paused banner', floor.notices.some(text => /Automation paused/.test(text) && /space/i.test(text)), floor.notices);
+        await saveAutomation(page, { 'Search and grab on a schedule': false, 'Keep this much of the library disk free (%)': 1 });
+        record('queue', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
+    } catch (error) {
+        notVerified('queue', 'queue banners', error);
+    }
+    saveResults('queue', browser.version());
+    await context.close();
+}
+
+// ---- restart: a run after a container restart grabs nothing twice ----
+async function afterRestart() {
+    const { page, context } = await newPage(browser);
+    await signIn(page);
+    try {
+        const phase = process.env.JELLYFINMOD_S11_PHASE ?? 'before';
+        if (phase === 'before') {
+            await saveAutomation(page, { 'Search and grab on a schedule': true });
+            record('restart', 'Automation on before the restart', (await api(page, 'GET', 'JellyfinMod/Settings/Automation')).body.automationEnabled === true);
+        } else {
+            const torrents = control('/state').torrents.map(torrent => torrent.name);
+            const run = await runNow(page);
+            const made = since(await decisions(page), run.id);
+            const after = control('/state').torrents.map(torrent => torrent.name);
+            record('restart', '4: after a container restart the run grabs nothing it already grabbed and imports nothing twice',
+                !made.some(item => item.reason === 'grabbed' && /Seeder/.test(item.title ?? '')) && after.filter(name => /Seeder/.test(name)).length === 1,
+                { decisions: summary(made), torrentsBefore: torrents.length, torrentsAfter: after.length });
+            await saveAutomation(page, { 'Search and grab on a schedule': false });
+            record('restart', '11: automation switched off through the area at the end', (await api(page, 'GET', 'JellyfinMod/Settings/Automation')).body.automationEnabled === false);
+        }
+    } catch (error) {
+        notVerified('restart', 'run after restart', error);
+    }
+    saveResults('restart', browser.version());
     await context.close();
 }
 
@@ -809,7 +1154,7 @@ async function importOnStep() {
     await context.close();
 }
 
-const steps = { libraries, dismiss, wizard, client, resume, 'import-on': importOnStep, tests, acquire, import: importStep, play, retention };
+const steps = { libraries, dismiss, wizard, client, resume, 'import-on': importOnStep, tests, acquire, import: importStep, play, retention, mobile: mobileSettings, automation, queue: queueBanners, restart: afterRestart };
 try {
     if (!steps[step]) throw new Error('unknown step ' + step);
     await steps[step]();
