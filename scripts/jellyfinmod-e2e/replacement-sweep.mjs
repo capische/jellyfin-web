@@ -586,17 +586,22 @@ async function sweepLayout(name) {
     const openDashboardLink = async href => {
         // A row that failed on the TV leaves focus wherever it stopped; every Dashboard row starts inside the Dashboard.
         if (cfg.tv && !await page.evaluate(() => location.hash.startsWith('#/dashboard'))) await tvDashboard();
+        // The navigation's own link, not any link to the same page: the Dashboard's home shows a *Server* card that also
+        // links to #/dashboard/settings, which made the drawer look open when it was closed (P7.S11 re-run 3).
         const visible = await page.evaluate(({ href, VISIBLE }) => {
             const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
-            return [...document.querySelectorAll(`a[href="${href}"]`)].some(vis);
+            return [...document.querySelectorAll(`a.MuiListItemButton-root[href="${href}"]`)].some(vis);
         }, { href, VISIBLE });
         if (!visible && cfg.mobile) {
             // Open the Dashboard's drawer only while it is closed, then wait for the link: pressing Open Menu again on a
             // drawer that was still opening closed it, and the link was then hidden by the closed drawer (P7.S11
             // verification re-run 2; tapping the menu opens the drawer every time on the mod and the stock entry).
+            // "Shown" means settled: inside the viewport, not still sliding in from the left edge, where a click at its
+            // centre lands on the backdrop and closes the drawer again.
             const drawerState = () => page.evaluate(({ href, VISIBLE }) => {
                 const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
-                return { link: [...document.querySelectorAll(`a[href="${href}"]`)].some(vis),
+                const settled = link => vis(link) && link.getBoundingClientRect().left >= 0;
+                return { link: [...document.querySelectorAll(`a.MuiListItemButton-root[href="${href}"]`)].some(settled),
                     open: !!document.querySelector('.MuiDrawer-root.MuiModal-root:not([aria-hidden="true"]):not(.MuiModal-hidden)') };
             }, { href, VISIBLE });
             for (let attempt = 0; attempt < 3; attempt++) {
@@ -604,13 +609,21 @@ async function sweepLayout(name) {
                 if (now.link) break;
                 if (!now.open) await click(page, { sel: 'button[aria-label="Open Menu"]' });
                 const shown = await poll(async () => ({ ok: (await drawerState()).link }), { timeout: 5000 });
-                if (shown.ok) break;
+                if (shown.ok) { await sleep(400); break; }
             }
+        }
+        if (process.env.JELLYFINMOD_SWEEP_DEBUG === 'true') {
+            console.log('debug drawer', href, JSON.stringify(await page.evaluate(h => {
+                const a = document.querySelector(`a.MuiListItemButton-root[href="${h}"]`);
+                const r = a?.getBoundingClientRect();
+                return { rect: r && [Math.round(r.left), Math.round(r.top), Math.round(r.width)], hidden: !!a?.closest('[aria-hidden="true"]'),
+                    modals: [...document.querySelectorAll('.MuiModal-root')].map(m => (String(m.className).match(/Mui(Drawer|Popover|Menu|Dialog)-root/)?.[0] ?? '?') + (m.getAttribute('aria-hidden') === 'true' ? '(aria-hidden)' : '')) };
+            }, href)));
         }
         const group = { '#/dashboard/libraries': 'Libraries' }[href];
         const inGroup = await page.evaluate(({ href, VISIBLE }) => {
             const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
-            return [...document.querySelectorAll(`a[href="${href}"]`)].some(vis);
+            return [...document.querySelectorAll(`a.MuiListItemButton-root[href="${href}"]`)].some(vis);
         }, { href, VISIBLE });
         // Some Dashboard links sit in a collapsed group of its navigation; open the group the way a user does.
         if (!inGroup && group) await activate(page, cfg, { sel: 'div.MuiListItemButton-root', text: `^\\s*${group}\\s*$` });
