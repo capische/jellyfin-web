@@ -310,3 +310,46 @@ becomes due one window after the first enable, and under Q9 a later off/on neith
 anything watched while off a fresh window (such titles read "overdue" and go at the next run). RET3-R1 should be fixed
 in the repository now and its recovery run by hand if tomorrow's log shows a failed safety path; RET3-R3 to RET3-R8 are
 hardening and evidence work for the next slice and do not block enabling.
+
+## Fix record — 2026-09-25 (Opus 5.5, high)
+
+Plugin `p10-retention`, rebased onto `master` `f443a62` (Jellyfin 12.0.0, .NET 10): `b93f605` (decision 12), `7fe53c1`
+(RET3-R3–R7 and the database lock), `30421c2` (RET3-N1), `2e90a54` (writer names in the lock diagnostics), `15589f1`
+(merged-version guard). Web `p10-retention`, rebased onto `jellyfin-mod` `a279641ebf`: `8204941858` (RET3-R1),
+`34c079cb94` and `c22c90abb3` (driver), `c61e89f56d` (overdue wording). Neither branch is pushed. Deployed on 18096:
+plugin DLL SHA-256 prefix `0ad08f5b323fc784` (`15589f1`), web bundle `350e27ced474` from the clean tree at `c22c90abb3`;
+backup `p10r3/backup-20260925T004520Z`. All live checks ran on 18096 with a tagged fixture set (`RET3`) of their own,
+signed in as `oleksii` with an empty password. The set has been removed. **Retention is off on 18096.**
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| RET3-R1 | The wrapper writes `phase-b.STARTED` before phase B, then on every tick runs `safe-finish`. That step restores (6 tries), cleans up (3 tries) and verifies (3 tries) from the instance. `phase-b.DONE` and the line removal happen only after `safe.OK`. Otherwise `phase-b.FAILED` counts the attempts, the log and syslog say so, and the job stays armed. `cmd_phase_b` nests restore and cleanup and retries the preview. | Rehearsed live on the `RET3` set with a fake crontab (`JFMOD_CRONTAB_FILE`). **Tick 1**, with restore failure injected: 6 restore failures. Cleanup met a 409 on four entry deletes during the library scan, retried and removed everything. Verify failed 3×. `FAILED=1`, no `DONE`, crontab file byte-identical, **retention still on**, syslog line `SAFETY PATH FAILED (attempt 1)`. **Instance down** (base URL on a closed port): `instance not answering (Health 000)`, still no `DONE`. **Tick 2**, normal: restored, then verified (retention off, test window 0, seed source back, every entry 404, no `JellyfinMod RET3` item, library or directory). Result: `safe.OK`, `DONE`, `FAILED` cleared, only its own line removed; the sentinel line and the inject line kept. |
+| RET3-R2 | `VersionsUntracked` is the union of `LocalAlternateVersions`, `LinkedAlternateVersions` (resolved through `ItemId`; an unresolvable link counts as untracked), `GetLocalAlternateVersionIds` and `GetLinkedAlternateVersions`. An exception counts as untracked. A two-file movie is blocked unless every file is tracked. | Live, two-file movie: both files tracked. Finishing the 1080p marked the 720p played with no last-played date (C9), which does not count. 720p reclaimed at its deadline; 1080p kept by itself and byte-identical. After un-Keep, the 1080p went at the end of its own window and the entry read reclaimed. Suites on the rebased branch pass (below). |
+| RET3-R2 follow-up (C2, new) | Live, a copy in a second library merged into the tracked movie (Jellyfin 12 records the merge on the main item only) was **reclaimed** at the end of its window. The preview now blocks any file another tracked title lists as its linked version (`15589f1`). | Re-run live after the fix: merged copy blocked `versions_untracked`, byte-identical after its deadline. The protection suite covers it. |
+| RET3-R3 | Bindings store `FileFingerprint` (physical identity plus size and mtime, from `statx`). A known path whose fingerprint changed is an arrival and resets the target (History "Retention restarted: a file was replaced in place", reason `replaced_in_place`). | Live: a scheduled fixture overwritten at the same path was reset with that History entry; a new watch scheduled it one window out. Protection suite `VerifyFileIdentityAsync`. |
+| RET3-R4 | The live check requires Played, position 0 and a last-played date at or after the fresh floor (`RetentionEvaluator.FreshFloor`); a missing evaluation fails `live_not_completed`. Resets and `RestartGraceAsync` run under the per-target gate. `BaselineAt` and `GraceNotBefore` are concurrency tokens. | Protection suite: a stale or undated played state is refused `live_not_completed` inside the lease. |
+| RET3-R5 | The air-date fallback counts only when exactly one listed episode is within a day of the file's date. Refresh leaves rows at covered numbers unmonitored, unmonitors an existing monitored unbound row there, and records `episode_unmonitored`. Add unions the covered numbers. | Phase 2 suite: daily and weekly fixtures. Live `covered-refresh`: every covered row without a file of its own unmonitored, with History entries. |
+| RET3-R6 | The two writes after an unlink retry on a busy database (8×10 s, then log at error). A run evaluates each action's targets only, including every title bound to the same file; full evaluations are serialized and coalesced. | Live run: 3 reclaimed, 0 failed, 21.5 s. Protection suite `VerifyUnlinkSurvivesBusyDatabaseAsync` holds `BEGIN IMMEDIATE` for 40 s across the unlink and ends `completed/reclaimed`. |
+| RET3-R7 | Reconciliation removes a `VersionKeep` that matches no binding by path or physical identity and records `version_keep_detached`. | Protection suite, after the RET2-R9 move: one `version_keep_detached`, and the Keep does not re-apply at the old path. |
+| RET3-R8 | The bundle is built from a committed tree. | Health `Web.WebCommit` `c22c90abb3` (a branch commit, no `-dirty`), bundle `350e27ced474`. |
+| RET3-N1 (new) | Found live: the RET2 probe user's access change pushed the P10 deadlines back a day. An off/on after that would have used the pre-change date instead of the announced one. When a prior deadline is kept, grace now also stays at or after it (`30421c2`); an access or policy change with no prior deadline restarts grace from now. | PhaseTen suite: off/on after an access change keeps the announced date. P10 set on 18096: grace start, announced deadline and baseline identical to the pre-deploy backup across three switch-ons (test window 3, then 0) and a switch-off. |
+| Decision 12 | See PHASE10 §7. | Migration `PhaseTenMovieBacklog` applied at startup on 18096. Live: a movie watched before tracking stays `waiting` with History `retention_rule_changed`. PhaseTen suite: migration check on a pre-migration database. |
+| `database is locked` | Evidence: on the Pi before the fix, one evaluation commit held the write lock 2–17.4 s under disk load. The listener committed once per target, and a preview ran its own full evaluation behind it for over 300 s. On 18096 a library scan held it 19.7 s. Fix: full evaluations serialized and coalesced, busy retries (1, 3, 8 s) on whole evaluations and on `SaveChanges` outside a transaction, targeted evaluation in the executor, `SqliteWriteDiagnostics` naming every holder. | PhaseTen suite (600 episodes, 20 movies, concurrent previews, Keep and a second switch-on, disk load): every request 200. Live `lockcheck`: switch-on, then two previews 200 in 23.1 s and 37.7 s, and the seed PATCH 200 in 0.1 s. This ran on the RET3 build before `2e90a54` and `15589f1`, which do not touch the write path. |
+| Overdue wording | "these 2 files was due" → "were due" (`c61e89f56d`). | Browser. |
+
+**Browser**, `retention-controls.mjs` on the deployed bundle, in Chromium 153.0.8010.12 then Google Chrome 153.0.8010.53.
+Pass 1 (test window 3 minutes, overdue and covering row) and pass 2 (real window: warning, Keep inside it, Stop keeping,
+window select, synced cause, per-file Keep by keyboard, Back key): all pass on desktop, mobile, TV 1080 and TV 720, with
+no page errors. Physical webOS not tested.
+
+**Suites:** the full Pi run on `15589f1` is handed to a verifier (checklist `.claude/briefs/verify-retention-r3.md` in
+the workspace). Before `15589f1`: all twelve passed on the rebased tree, and ThreeProtection and PhaseTen passed again
+after the later changes.
+
+**The real window's positive half is still unproven.** The P10 set's deadlines had moved to 2026-09-26 (RET3-N1), so
+the 2026-09-25 12:30Z job could not test it. The P10 set was removed by the deployed `safe-finish` on 2026-09-25 at
+03:49Z (verified: retention off, settings restored, both entries 404, nothing left). Replacing the job was refused twice
+by the permission system, so its crontab line still stands. At 12:30Z it runs phase B against no fixtures. The phase
+stops before switching retention on, because the fixture series is missing. `safe-finish` then verifies the instance
+safe, writes `DONE` and removes the line. A new real-window run on this build needs the crontab change, which the user
+must allow or make.
