@@ -1,0 +1,25 @@
+{
+  "userDataDiff": {
+    "exitCode": 0,
+    "userData": { "rowsBefore": 5143, "rowsAfter": 5143, "onlyBefore": [], "onlyAfter": [] },
+    "completion": { "rowsBefore": 54, "rowsAfter": 54, "added": 0, "removed": 0, "changedColumns": { "ObservedAt": 4 } },
+    "note": "ObservedAt is a completion-tracking timestamp, not a UserData row; all UserData rows equal as required"
+  },
+  "settingsEqualToSnapshot": {
+    "indexers": true,
+    "downloadClients": true,
+    "qualityProfiles": true,
+    "prowlarr": true,
+    "users": true,
+    "acquisitionExcludingRevision": true,
+    "acquisitionRevision": { "before": 14, "after": 14 },
+    "retentionExcludingRevision": true,
+    "retentionRevision": { "before": 38, "after": 43, "note": "moved by A5d settings-dashboard save/restore cycle" }
+  },
+  "takeover": { "status": "patched", "bundleId": "bbdf78025ca2", "patchedSha256Unchanged": true },
+  "users": ["nata", "oleksii", "papa", "vika"],
+  "jellyfinModTitlesInItems": 0,
+  "jellyfinModNamedEntries": 0,
+  "sessionsPlaying": 0,
+  "standinProcessesOnHost": 0
+}
