@@ -4,7 +4,7 @@
 // refusals, resume and Dismiss; the secret actions and connection Tests from the page; add, grab, import and play
 // through stand-ins; retention and automation with settings saved only through the settings area.
 //
-//   JELLYFINMOD_S11_STEP=libraries|dismiss|wizard|resume|tv-wizard|tests|acquire|import|play|... node s11-fresh.mjs
+//   JELLYFINMOD_S11_STEP=libraries|dismiss|wizard|resume|tv-wizard|tests|acquire|import|play|queue|mobile|breaker|... node s11-fresh.mjs
 // Environment as in s11-lib.mjs. Every fixture title carries the JellyfinMod prefix.
 import {
     api, carriesSecret, port, control, fixture, launch, newPage, notVerified, onHost, record, saveResults, setTvLayout, signIn, standin, tier, until, wrong
@@ -1099,6 +1099,38 @@ async function queueBanners() {
     await context.close();
 }
 
+// ---- breaker (D7): with the only enabled indexer behind an open breaker, the status and the queue banner say so ----
+async function breaker() {
+    const { page, context } = await newPage(browser);
+    await signIn(page);
+    const tmdbId = Number(process.env.JELLYFINMOD_S11_TMDB ?? 990001);
+    try {
+        const indexers = (await api(page, 'GET', 'JellyfinMod/Settings/Indexers')).body.filter(indexer => indexer.enabled);
+        const entry = await entryByTmdb(page, tmdbId);
+        record('breaker', 'Exactly one enabled indexer, and a catalog entry to search for', indexers.length === 1 && !!entry, { enabled: indexers.length });
+        control('/fault?service=torznab&mode=500');
+        try {
+            // Manual searches count towards the breaker (PHASE6 M3): five failures in a row open it.
+            for (let attempt = 0; attempt < 5; attempt++) await api(page, 'GET', `JellyfinMod/Releases?entryId=${entry.id}`);
+        } finally {
+            control('/fault?service=torznab&mode=ok');
+        }
+        const status = await automationStatus(page);
+        record('breaker', 'The status names the open breaker and lists breaker_open among the paused reasons',
+            !!status.indexers[0]?.breakerOpenUntil && status.pausedReasons.includes('breaker_open'), { pausedReasons: status.pausedReasons, open: !!status.indexers[0]?.breakerOpenUntil });
+        await page.evaluate(() => { location.hash = '#/catalog/queue'; });
+        await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+        await page.waitForTimeout(2500);
+        const notices = (await page.locator('.jfmod-queueBanner, .jfmod-queueNotice').allInnerTexts()).map(text => text.replace(/\s+/g, ' '));
+        record('breaker', 'The queue banner says every indexer is paused by its circuit breaker', notices.some(text => /circuit breaker/i.test(text)), notices);
+        record('breaker', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
+    } catch (error) {
+        notVerified('breaker', 'breaker banner', error);
+    }
+    saveResults('breaker', browser.version());
+    await context.close();
+}
+
 // ---- restart: a run after a container restart grabs nothing twice ----
 async function afterRestart() {
     const { page, context } = await newPage(browser);
@@ -1154,7 +1186,7 @@ async function importOnStep() {
     await context.close();
 }
 
-const steps = { libraries, dismiss, wizard, client, resume, 'import-on': importOnStep, tests, acquire, import: importStep, play, retention, mobile: mobileSettings, automation, queue: queueBanners, restart: afterRestart };
+const steps = { libraries, dismiss, wizard, client, resume, 'import-on': importOnStep, tests, acquire, import: importStep, play, retention, mobile: mobileSettings, automation, queue: queueBanners, breaker, restart: afterRestart };
 try {
     if (!steps[step]) throw new Error('unknown step ' + step);
     await steps[step]();
