@@ -1,0 +1,5 @@
+browser chrome 153.0.8010.53 step acquire
+PASS [chrome] acquire: Search finds JellyfinMod Standin Movie under Add from TMDB (stand-in) and + adds the entry :: {"state":"none","monitored":true}
+PASS [chrome] acquire: The picker lists the stand-in release; one click grabs it after the hold; the stand-in Transmission holds the torrent :: {"rows":["1080p WEB-DL · H.264 · JFMOD 19 MB · 40↑ · JellyfinMod Standin Indexer · score 120 JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD"],"status":"Releases for JellyfinMod Standin Movie Quality profile for this search Default (JellyfinMod Standin HD) JellyfinMod Standin HD 1 release 1080p WEB-DL · H.264 · JFMOD 19 MB · 40↑ · JellyfinMod Standin ","torrent":{"name":"JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD.mkv","labels":["jellyfinmod","jfmod-c66341ec48ff4fafa704ac6e75b574e7"],"percentDone":0}}
+PASS [chrome] acquire: No page errors :: []
+EXIT:0

@@ -1,0 +1,863 @@
+{
+ "browser": "chrome",
+ "version": "153.0.8010.53",
+ "runs": [
+  {
+   "step": "libraries",
+   "at": "2026-09-25T07:03:08.844Z",
+   "results": [
+    {
+     "step": "libraries",
+     "check": "Library Movies created",
+     "verdict": "PASS",
+     "detail": {
+      "status": 204
+     }
+    },
+    {
+     "step": "libraries",
+     "check": "Library Shows created",
+     "verdict": "PASS",
+     "detail": {
+      "status": 204
+     }
+    },
+    {
+     "step": "libraries",
+     "check": "Movies and Shows libraries exist on the single data mount",
+     "verdict": "PASS",
+     "detail": [
+      {
+       "name": "Shows",
+       "type": "tvshows",
+       "locations": [
+        "/data/media/tv"
+       ]
+      },
+      {
+       "name": "Movies",
+       "type": "movies",
+       "locations": [
+        "/data/media/movies"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "step": "wizard",
+   "at": "2026-09-25T07:03:37.568Z",
+   "results": [
+    {
+     "step": "wizard",
+     "check": "Home banner for an administrator whose setup is incomplete",
+     "verdict": "PASS",
+     "detail": "JellyfinMod is not set up yet: 5 step(s) left before titles can be grabbed.\nSet upDismiss"
+    },
+    {
+     "step": "wizard",
+     "check": "The wizard opens at Discovery with Continue refused",
+     "verdict": "PASS",
+     "detail": {
+      "step": "discovery"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Turning grabbing on before setup is refused with 409 acquisition_not_ready, blockers shown",
+     "verdict": "PASS",
+     "detail": "Acquisition is not ready. No enabled indexer has verified its capabilities. No download client is selected. No default quality profile is selected."
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery: a wrong token fails the Test (unauthorized) and Continue stays refused",
+     "verdict": "PASS",
+     "detail": "TMDB rejected the token. Check it was copied completely. (unauthorized)"
+    },
+    {
+     "step": "wizard",
+     "check": "Secret field: Replace opens an empty input, Keep returns, Clear is pending until save, Undo restores Configured",
+     "verdict": "PASS",
+     "detail": {
+      "pending": "TMDB API Read Access Token Will be removed on save Undo",
+      "restored": "Configured"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery: the stand-in TMDB over HTTPS accepts the token; the step is done and Continue unlocks",
+     "verdict": "PASS",
+     "detail": "TMDB accepted the token. (ok)"
+    },
+    {
+     "step": "wizard",
+     "check": "Discovery DTO says configured and carries no token value",
+     "verdict": "PASS",
+     "detail": {
+      "tokenConfigured": true,
+      "verified": true
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Continue moves to Download client",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Download client inside a library root is refused (destination_inside_library)",
+     "verdict": "PASS",
+     "detail": "The download folder is inside a watched library folder; the library would scan partial downloads. (destination_inside_library)"
+    },
+    {
+     "step": "wizard",
+     "check": "Download folder on a second filesystem (/dev/shm) is refused (destination_not_same_filesystem)",
+     "verdict": "PASS",
+     "detail": "No movie or TV library root shares the download folder's filesystem and mount, so imports could not hardlink. (destination_not_same_filesystem)"
+    },
+    {
+     "step": "wizard",
+     "check": "A new client with the username left blank saves (201) and the folder on the library filesystem is accepted",
+     "verdict": "PASS",
+     "detail": {
+      "notice": "Saved. Test the client before grabbing.",
+      "username": "",
+      "passwordConfigured": false
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Test verifies the stand-in Transmission and the download folder",
+     "verdict": "PASS",
+     "detail": "Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"
+    },
+    {
+     "step": "wizard",
+     "check": "Saving the first download client selects it, so step 2 can finish inside step 2",
+     "verdict": "PASS",
+     "detail": {
+      "reasons": []
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "An unverified mapping keeps the step open and Continue refused",
+     "verdict": "PASS",
+     "detail": {
+      "pill": "The mapped folder does not exist or cannot be read.",
+      "status": "pending",
+      "reasons": [
+       "path_mapping_unverified"
+      ],
+      "shown": "This step is not done yet. A path mapping has not been verified. Continue"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "The corrected mapping verifies",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Test import path (server): an unmapped path is named; the mapped download folder hardlinks into the libraries",
+     "verdict": "PASS",
+     "detail": {
+      "unmapped": "path_unmapped",
+      "mapped": "ok"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Test import path (page): the result is shown and stays",
+     "verdict": "PASS",
+     "detail": {
+      "unmappedShown": "No mapping turns this client path into a local path. (path_unmapped)",
+      "unmappedFinal": "No mapping turns this client path into a local path. (path_unmapped)",
+      "probedShown": "The folder can receive a hardlink from the library mount. (ok)",
+      "probedFinal": "The folder can receive a hardlink from the library mount. (ok)"
+     }
+    },
+    {
+     "step": "wizard",
+     "check": "Download client step done; Continue unlocks",
+     "verdict": "PASS"
+    },
+    {
+     "step": "wizard",
+     "check": "Continue moves to Indexers with Continue refused",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "step": "resume",
+   "at": "2026-09-25T07:04:14.106Z",
+   "results": [
+    {
+     "step": "resume",
+     "check": "A new browser session resumes the wizard at the first incomplete step",
+     "verdict": "PASS",
+     "detail": {
+      "step": "indexers"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr: a wrong API key fails the Test (unauthorized)",
+     "verdict": "PASS",
+     "detail": "Prowlarr refused the API key. (unauthorized)"
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr: the right key passes the Test",
+     "verdict": "PASS",
+     "detail": "Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin"
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr Sync adds the stand-in torrent indexer and verifies its caps",
+     "verdict": "PASS",
+     "detail": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."
+    },
+    {
+     "step": "resume",
+     "check": "Prowlarr Sync: the page keeps showing the outcome",
+     "verdict": "PASS",
+     "detail": {
+      "final": "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Indexers step done: one synced, enabled, verified indexer holding no key of its own",
+     "verdict": "PASS",
+     "detail": [
+      {
+       "name": "JellyfinMod Standin Indexer",
+       "managedBy": "prowlarr",
+       "verified": true,
+       "apiKeyConfigured": false
+      }
+     ]
+    },
+    {
+     "step": "resume",
+     "check": "Continue moves to Quality profile",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "An empty profile is refused",
+     "verdict": "PASS",
+     "detail": "The configuration is not valid. (invalid_qualities)"
+    },
+    {
+     "step": "resume",
+     "check": "A cutoff outside the allowed qualities is refused",
+     "verdict": "PASS",
+     "detail": {
+      "cutoff": "The cutoff must be one of the profile's allowed qualities, and upgrades need a cutoff. (invalid_cutoff)",
+      "allowed": "webdl-1080p",
+      "cutoffQuality": "bluray-720p"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "A valid profile made default completes the step",
+     "verdict": "PASS",
+     "detail": {
+      "quality": "webdl-1080p"
+     }
+    },
+    {
+     "step": "resume",
+     "check": "Grabbing turns on once every step passed",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "Setup reports complete; the optional step shows retention, automation and the interface",
+     "verdict": "PASS",
+     "detail": {
+      "complete": true,
+      "steps": [
+       "discovery:done",
+       "downloadClient:done",
+       "indexers:done",
+       "qualityProfile:done",
+       "enable:done",
+       "optional:done"
+      ]
+     }
+    },
+    {
+     "step": "import-on",
+     "check": "Import turned on from the settings area",
+     "verdict": "PASS"
+    },
+    {
+     "step": "import-on",
+     "check": "With setup complete the Home banner is gone",
+     "verdict": "PASS"
+    },
+    {
+     "step": "resume",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "acquire",
+   "at": "2026-09-25T07:04:38.425Z",
+   "results": [
+    {
+     "step": "acquire",
+     "check": "Search finds JellyfinMod Standin Movie under Add from TMDB (stand-in) and + adds the entry",
+     "verdict": "PASS",
+     "detail": {
+      "state": "none",
+      "monitored": true
+     }
+    },
+    {
+     "step": "acquire",
+     "check": "The picker lists the stand-in release; one click grabs it after the hold; the stand-in Transmission holds the torrent",
+     "verdict": "PASS",
+     "detail": {
+      "rows": [
+       "1080p WEB-DL · H.264 · JFMOD 19 MB · 40↑ · JellyfinMod Standin Indexer · score 120 JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD"
+      ],
+      "status": "Releases for JellyfinMod Standin Movie Quality profile for this search Default (JellyfinMod Standin HD) JellyfinMod Standin HD 1 release 1080p WEB-DL · H.264 · JFMOD 19 MB · 40↑ · JellyfinMod Standin ",
+      "torrent": {
+       "name": "JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD.mkv",
+       "labels": [
+        "jellyfinmod",
+        "jfmod-c66341ec48ff4fafa704ac6e75b574e7"
+       ],
+       "percentDone": 0
+      }
+     }
+    },
+    {
+     "step": "acquire",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "import",
+   "at": "2026-09-25T07:06:10.425Z",
+   "results": [
+    {
+     "step": "import",
+     "check": "The stand-in Transmission reports the torrent complete with the real file in the download folder",
+     "verdict": "PASS",
+     "detail": {
+      "status": 6
+     }
+    },
+    {
+     "step": "import",
+     "check": "The plugin imports the download and Jellyfin indexes it: the entry is on disk and bound",
+     "verdict": "PASS",
+     "detail": {
+      "state": "onDisk",
+      "bound": true
+     }
+    },
+    {
+     "step": "import",
+     "check": "Imported by hardlink: the library file and the download share one inode with link count 2",
+     "verdict": "PASS",
+     "detail": {
+      "download": {
+       "links": "2"
+      },
+      "library": {
+       "links": "2",
+       "path": "movies/JellyfinMod Standin Movie (2026) [tmdbid-990001]/JellyfinMod Standin Movie (2026) [tmdbid-990001] - 1080p WEB-DL.mkv"
+      }
+     }
+    },
+    {
+     "step": "import",
+     "check": "Entry history records the grab, the media becoming available and the import",
+     "verdict": "PASS",
+     "detail": {
+      "events": [
+       "imported",
+       "media_available",
+       "grabbed",
+       "added"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "step": "play",
+   "at": "2026-09-25T07:06:34.153Z",
+   "results": [
+    {
+     "step": "play",
+     "check": "The imported file plays in the browser",
+     "verdict": "PASS",
+     "detail": {
+      "width": 1920,
+      "height": 1080,
+      "time": 2
+     }
+    },
+    {
+     "step": "play",
+     "check": "Playing to the end marks it played for the administrator",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "step": "queue",
+   "at": "2026-09-25T07:07:03.313Z",
+   "results": [
+    {
+     "step": "queue",
+     "check": "The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice",
+     "verdict": "FAIL",
+     "detail": {
+      "rows": 1,
+      "notices": [
+       "Automation paused: Automation is turned off. Free space in the library is below the configured floor.",
+       "Automatic release of seeding copies is off."
+      ]
+     }
+    },
+    {
+     "step": "queue",
+     "check": "The row menu opens its actions",
+     "verdict": "PASS",
+     "detail": [
+      "",
+      "",
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "step": "queue",
+     "check": "A free-space floor above the free space shows the paused banner",
+     "verdict": "PASS",
+     "detail": [
+      "Automation paused: Free space in the library is below the configured floor.",
+      "Automatic release of seeding copies is off."
+     ]
+    },
+    {
+     "step": "queue",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "breaker",
+   "at": "2026-09-25T07:07:59.239Z",
+   "results": [
+    {
+     "step": "breaker",
+     "check": "Exactly one enabled indexer, and a catalog entry to search for",
+     "verdict": "PASS",
+     "detail": {
+      "enabled": 1
+     }
+    },
+    {
+     "step": "breaker",
+     "check": "The status names the open breaker and lists breaker_open among the paused reasons",
+     "verdict": "PASS",
+     "detail": {
+      "pausedReasons": [
+       "disabled",
+       "breaker_open"
+      ],
+      "open": true
+     }
+    },
+    {
+     "step": "breaker",
+     "check": "The queue banner says every indexer is paused by its circuit breaker",
+     "verdict": "PASS",
+     "detail": [
+      "Automation paused: Automation is turned off. Every indexer is paused by its circuit breaker after repeated failures.",
+      "Automatic release of seeding copies is off."
+     ]
+    },
+    {
+     "step": "breaker",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "mobile",
+   "at": "2026-09-25T07:08:30.350Z",
+   "results": [
+    {
+     "step": "mobile",
+     "check": "Settings area at 390 px: every section opens with no horizontal scroll",
+     "verdict": "PASS",
+     "detail": [
+      {
+       "id": "discovery",
+       "overflow": 0,
+       "heading": "Discovery"
+      },
+      {
+       "id": "client",
+       "overflow": 0,
+       "heading": "Download client"
+      },
+      {
+       "id": "indexers",
+       "overflow": 0,
+       "heading": "Indexers"
+      },
+      {
+       "id": "profiles",
+       "overflow": 0,
+       "heading": "Quality profiles"
+      },
+      {
+       "id": "grabbing",
+       "overflow": 0,
+       "heading": "Grabbing"
+      },
+      {
+       "id": "retention",
+       "overflow": 0,
+       "heading": "Retention"
+      },
+      {
+       "id": "automation",
+       "overflow": 0,
+       "heading": "Automation"
+      },
+      {
+       "id": "interface",
+       "overflow": 0,
+       "heading": "Interface"
+      }
+     ]
+    },
+    {
+     "step": "mobile",
+     "check": "Mobile data entry: a secret replaced and saved, the client Test passes, the field returns to Configured",
+     "verdict": "PASS",
+     "detail": "Connection and download folder verified. (ok) · 4.0.6 (s11 stand-in)"
+    },
+    {
+     "step": "mobile",
+     "check": "D8: the settings area at 390 px shows its links, including Setup wizard and Dashboard",
+     "verdict": "PASS",
+     "detail": [
+      {
+       "href": "#/mypreferencesmenu",
+       "text": "Jellyfin preferences",
+       "shown": true
+      },
+      {
+       "href": "#/dashboard",
+       "text": "Dashboard",
+       "shown": true
+      },
+      {
+       "href": "#/catalog/settings/setup",
+       "text": "Setup wizard",
+       "shown": true
+      }
+     ]
+    },
+    {
+     "step": "mobile",
+     "check": "D8: tapping Setup wizard opens the wizard",
+     "verdict": "PASS",
+     "detail": {
+      "hash": "#/catalog/settings/setup"
+     }
+    },
+    {
+     "step": "mobile",
+     "check": "D8: tapping Dashboard opens the Dashboard",
+     "verdict": "PASS",
+     "detail": {
+      "hash": "#/dashboard"
+     }
+    },
+    {
+     "step": "mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "mod",
+   "at": "2026-09-25T07:09:31.929Z",
+   "results": [
+    {
+     "step": "mod",
+     "check": "desktop: /web is the JellyfinMod shell",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": true,
+      "meta": "21c0905b4568",
+      "layoutClass": "layout-desktop",
+      "address": "/web/#/home",
+      "horizontalScroll": 0
+     }
+    },
+    {
+     "step": "mod",
+     "check": "desktop: no page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "mod",
+     "check": "mobile: /web is the JellyfinMod shell",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": true,
+      "meta": "21c0905b4568",
+      "layoutClass": "layout-mobile",
+      "address": "/web/#/home",
+      "horizontalScroll": 0
+     }
+    },
+    {
+     "step": "mod",
+     "check": "mobile: no page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "mod",
+     "check": "tv1080: /web is the JellyfinMod shell",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": true,
+      "meta": "21c0905b4568",
+      "layoutClass": "layout-tv",
+      "address": "/web/#/home",
+      "horizontalScroll": 0
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv1080: arrows move focus on Home",
+     "verdict": "PASS",
+     "detail": [
+      "body.libraryDocument HomeMedia\n                    ",
+      "button.headerSyncButton ",
+      "button.card 0%                      Movies",
+      "button.card 0%                      Shows",
+      "button.card 0%                      Shows"
+     ]
+    },
+    {
+     "step": "mod",
+     "check": "tv1080: the wizard's rail is walked by arrows and Enter opens a step",
+     "verdict": "PASS",
+     "detail": {
+      "steps": [
+       "downloadClient",
+       "indexers",
+       "qualityProfile"
+      ],
+      "opened": "qualityProfile"
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv1080: Back leaves the wizard",
+     "verdict": "PASS",
+     "detail": {
+      "hash": "#/home"
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv1080: no page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "mod",
+     "check": "tv720: /web is the JellyfinMod shell",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": true,
+      "meta": "21c0905b4568",
+      "layoutClass": "layout-tv",
+      "address": "/web/#/home",
+      "horizontalScroll": 0
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv720: arrows move focus on Home",
+     "verdict": "PASS",
+     "detail": [
+      "body.libraryDocument HomeMedia\n                    ",
+      "button.headerSyncButton ",
+      "button.card 0%                      Movies",
+      "button.card 0%                      Shows",
+      "button.card 0%                      Shows"
+     ]
+    },
+    {
+     "step": "mod",
+     "check": "tv720: the wizard's rail is walked by arrows and Enter opens a step",
+     "verdict": "PASS",
+     "detail": {
+      "steps": [
+       "downloadClient",
+       "indexers",
+       "qualityProfile"
+      ],
+      "opened": "qualityProfile"
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv720: Back leaves the wizard",
+     "verdict": "PASS",
+     "detail": {
+      "hash": "#/home"
+     }
+    },
+    {
+     "step": "mod",
+     "check": "tv720: no page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "interface-off",
+   "at": "2026-09-25T07:09:52.199Z",
+   "results": [
+    {
+     "step": "interface-off",
+     "check": "The Interface section's switch turns the takeover off",
+     "verdict": "PASS",
+     "detail": {
+      "enabled": false,
+      "status": "stock"
+     }
+    }
+   ]
+  },
+  {
+   "step": "stock",
+   "at": "2026-09-25T07:10:46.189Z",
+   "results": [
+    {
+     "step": "stock",
+     "check": "desktop: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": false,
+      "marker": false,
+      "meta": false,
+      "address": "/web/",
+      "layoutClass": "layout-desktop",
+      "loginVisible": true,
+      "documentLoads": 1,
+      "modRequests": 0
+     }
+    },
+    {
+     "step": "stock",
+     "check": "mobile: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": false,
+      "marker": false,
+      "meta": false,
+      "address": "/web/",
+      "layoutClass": "layout-mobile",
+      "loginVisible": true,
+      "documentLoads": 1,
+      "modRequests": 0
+     }
+    },
+    {
+     "step": "stock",
+     "check": "tv1080: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": false,
+      "marker": false,
+      "meta": false,
+      "address": "/web/",
+      "layoutClass": "layout-tv",
+      "loginVisible": true,
+      "documentLoads": 2,
+      "modRequests": 0
+     }
+    },
+    {
+     "step": "stock",
+     "check": "tv720: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": false,
+      "marker": false,
+      "meta": false,
+      "address": "/web/",
+      "layoutClass": "layout-tv",
+      "loginVisible": true,
+      "documentLoads": 1,
+      "modRequests": 0
+     }
+    },
+    {
+     "step": "stock",
+     "check": "desktop: the stock page signs in, reaches Home and the Dashboard",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": false,
+      "hash": "#/home"
+     }
+    }
+   ]
+  },
+  {
+   "step": "interface-on",
+   "at": "2026-09-25T07:10:58.114Z",
+   "results": [
+    {
+     "step": "interface-on",
+     "check": "The Interface section's switch turns the takeover on",
+     "verdict": "PASS",
+     "detail": {
+      "enabled": true,
+      "status": "patched",
+      "patchedBy": "setting"
+     }
+    }
+   ]
+  }
+ ]
+}
