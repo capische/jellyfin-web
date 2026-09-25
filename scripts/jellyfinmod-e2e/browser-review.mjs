@@ -82,6 +82,14 @@ const timed = async (kind, work) => {
     }
 };
 /** Runs one named step, records its duration and reports it as it finishes. */
+/**
+ * A step whose fixture the instance cannot supply (one movie library, no unheld provider title, ...) is a named skip,
+ * not a failure: it is listed in skippedGates with its reason, and the run goes on to the steps that do not need it.
+ */
+class NoData extends Error {}
+const needData = (condition, reason) => {
+    if (!condition) throw new NoData(reason);
+};
 const step = async (name, work) => {
     const started = Date.now();
     try {
@@ -91,6 +99,11 @@ const step = async (name, work) => {
         return result;
     } catch (error) {
         timings[name] = seconds(Date.now() - started);
+        if (error instanceof NoData) {
+            skippedGates.push(`${name} (no data on this instance: ${error.message})`);
+            console.log(`skipped ${name} (${timings[name]}s): ${error.message}`);
+            return undefined;
+        }
         console.error(`failed ${name} (${timings[name]}s)`);
         throw error;
     }
@@ -723,9 +736,10 @@ try {
             const firstAdd = page.locator('[data-jfmod-add]:not(:disabled)').first();
             await discoveryWait(() => firstAdd.waitFor({ timeout: 20000 }).catch(ignore));
             identity = await firstAdd.getAttribute('data-jfmod-add', { timeout: 1000 }).catch(() => null);
-            if (!identity) throw new Error('Fixture query needs an unheld TMDB result and a writable library');
+            needData(identity, 'the fixture query needs an unheld TMDB result and a writable library');
         });
         await step('failed add focus', async () => {
+            needData(identity, 'it needs the discovery fixture of the step before');
             // Fail the actual HTTP transport. No fake API success or client response is injected.
             const failedRequestStart = entryPostRequests.length;
             const failedPauseStart = pausedEntryRoutes.length;
@@ -767,7 +781,7 @@ try {
                     hasSelect: !!select
                 };
             });
-            if (!successfulAdd) throw new Error('Successful-add fixture needs an enabled Add button');
+            needData(successfulAdd, 'the successful-add fixture needs an enabled Add button');
             if (successfulAdd.hasSelect && !successfulAdd.targetLibraryId) {
                 throw new Error('The library select rendered without a selected library');
             }
@@ -831,7 +845,7 @@ try {
                 targetLibraryId: await movieLibrarySelect().inputValue({ timeout: 1000 }).catch(() => undefined) ?? soleMovieLibraryId
             });
             firstPage = await discoveryWait(() => poll(readFirstPage, result => result.targetLibraryId && result.ids.length >= 10));
-            if (!firstPage.targetLibraryId || firstPage.ids.length < 10) throw new Error('Paging fixture needs a writable movie library and a full discovery page');
+            needData(firstPage?.targetLibraryId && firstPage.ids.length >= 10, 'the paging fixture needs a writable movie library and a full discovery page');
             const beforeMore = firstPage.ids.length;
             const moreButton = page.locator('.jfmod-discovery > button').filter({ hasText: 'More movie results' }).first();
             if (!await moreButton.waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false)) {
@@ -905,7 +919,8 @@ try {
             const homeMovieLibraryIds = new Set((userViews.body.Items ?? [])
                 .filter(view => view.CollectionType === 'movies').map(view => view.Id));
             const homeLibraries = homeLibraryOptions.filter(id => homeMovieLibraryIds.has(id));
-            if (homeLibraries.length < 2 || continued.ids.length < 2) throw new Error('Home acceptance needs two writable movie Home views and two unheld provider titles');
+            needData(homeLibraries.length >= 2, `Home library exclusion needs two writable movie Home views; this instance has ${homeMovieLibraryIds.size}`);
+            needData(continued?.ids.length >= 2, 'provider deduplication needs two unheld provider titles from the paging step');
             const [excludedLibraryId, includedLibraryId] = homeLibraries;
             const [duplicateTmdbId, excludedTmdbId] = continued.ids;
             await movieLibrarySelect().selectOption(excludedLibraryId);
