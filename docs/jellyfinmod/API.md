@@ -631,6 +631,36 @@ continuation becomes bounded. A user who can never read file-less metadata (Allo
 single failed detail call is skipped and counted in the response instead of failing the page
 (task P8 in [PHASE1.md](PHASE1.md); the web auto-follow cap is task W13).
 
+## Trakt indicator (Phase 7 Q16)
+
+Health `Capabilities` adds `trakt.history`, and Health gains a `Trakt` block read from the host's own plugin list
+(`IPluginManager`, plugin id `4fe3201e-d6ae-4f2e-8917-e12bda571281`, the stock `jellyfin-plugin-trakt`). Only an
+`Active` copy counts; a copy disabled from the Dashboard, uninstalled or waiting for a restart reports
+`Installed: false`:
+
+```json
+"Trakt":{"Installed":true,"Version":"31.0.0.0"}
+```
+
+`GET /JellyfinMod/Trakt/Items/{itemId}` (any signed-in user; 401 anonymous or for an API key, 404 for an item that does
+not exist or that the user cannot see, by the host's own visibility check) answers for the signed-in user only — the
+user is read from authentication, never from the request:
+
+```json
+{"installed":true,"hasHistory":true,"lastSyncedAt":"2026-09-25T10:38:51.6106546Z"}
+```
+
+`hasHistory` means *watch history for this title arrived from Trakt for you*: JellyfinMod saw Jellyfin save this
+user's data for the movie or episode with `UserDataSaveReason.Import` (what the Trakt plugin's `SyncFromTraktTask`
+uses) while the Trakt plugin was active, and the saved data was played or had a resume point. A season or series
+answers for its episodes the user can still see; `lastSyncedAt` is when that history last arrived (the newest episode's
+for a season or series). An import that clears the history (Trakt reporting the title unwatched) removes it. Without
+the plugin every visible item answers `{"installed":false,"hasHistory":false}` (a `null` `lastSyncedAt` may be omitted).
+JellyfinMod never reads the Trakt plugin's configuration or tokens and never calls Trakt. Titles synced before the
+plugin started observing show history after Trakt's next sync touches them. Data: table `TraktObservations`
+(`UserId`, `JellyfinItemId`, `SeriesId`, `SeasonId`, `FirstSyncedAt`, `LastSyncedAt`; unique per user and item),
+migration `PhaseSevenTraktObservations`. Design and evidence: [PHASE7.md §7.1.3](PHASE7.md#713-detecting-the-plugin-and-what-to-show).
+
 ## Review corrections — 2026-09-18
 
 Index of the notes above, from the review of plugin 81c1aae in

@@ -1,0 +1,156 @@
+{
+ "desktop movie": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 667,
+   "overview": 667,
+   "childrenSection": null
+  }
+ },
+ "desktop episode": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 528,
+   "overview": 528,
+   "childrenSection": null
+  }
+ },
+ "desktop season": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 441,
+   "overview": 441,
+   "childrenSection": 577
+  }
+ },
+ "desktop series": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 441,
+   "overview": 441,
+   "childrenSection": 1162
+  }
+ },
+ "mobile movie": {
+  "geometry": {
+   "buttons": 383,
+   "genres": 703,
+   "overview": 703,
+   "childrenSection": null
+  }
+ },
+ "mobile episode": {
+  "geometry": {
+   "buttons": 430,
+   "genres": 597,
+   "overview": 597,
+   "childrenSection": null
+  }
+ },
+ "mobile season": {
+  "geometry": {
+   "buttons": 380,
+   "genres": 463,
+   "overview": 463,
+   "childrenSection": 613
+  }
+ },
+ "mobile series": {
+  "geometry": {
+   "buttons": 388,
+   "genres": 470,
+   "overview": 470,
+   "childrenSection": 1210
+  }
+ },
+ "tv1080 movie": {
+  "geometry": {
+   "buttons": 189,
+   "genres": 627,
+   "overview": 627,
+   "childrenSection": null
+  },
+  "walk": [
+   "button|button-flat.btnPlay.detailButton|resume|Play|",
+   "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+   "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+   "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+   "ArrowRight>a|button-link.emby-button||ukraine|",
+   "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+   "ArrowDown>button|emby-button.raised||Keep|",
+   "ArrowUp>a|button-link.emby-button||war in ukraine|",
+   "ArrowUp>a|button-link.emby-button||mourning|",
+   "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+   "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+  ]
+ },
+ "tv1080 episode": {
+  "geometry": {
+   "buttons": 222,
+   "genres": 476,
+   "overview": 476,
+   "childrenSection": null
+  }
+ },
+ "tv1080 season": {
+  "geometry": {
+   "buttons": 194,
+   "genres": 331,
+   "overview": 331,
+   "childrenSection": 475
+  }
+ },
+ "tv1080 series": {
+  "geometry": {
+   "buttons": 189,
+   "genres": 326,
+   "overview": 326,
+   "childrenSection": 1325
+  }
+ },
+ "tv720 movie": {
+  "geometry": {
+   "buttons": 188,
+   "genres": 613,
+   "overview": 613,
+   "childrenSection": null
+  },
+  "walk": [
+   "button|button-flat.btnPlay.detailButton|resume|Play|",
+   "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+   "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+   "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+   "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+   "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+   "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+   "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+   "ArrowUp>a|emby-button.button-link||Documentary|",
+   "ArrowUp>a|emby-button.button-link||The Associated Press|",
+   "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+  ]
+ },
+ "tv720 episode": {
+  "geometry": {
+   "buttons": 220,
+   "genres": 462,
+   "overview": 462,
+   "childrenSection": null
+  }
+ },
+ "tv720 season": {
+  "geometry": {
+   "buttons": 192,
+   "genres": 317,
+   "overview": 317,
+   "childrenSection": 461
+  }
+ },
+ "tv720 series": {
+  "geometry": {
+   "buttons": 188,
+   "genres": 313,
+   "overview": 313,
+   "childrenSection": 1276
+  }
+ }
+}

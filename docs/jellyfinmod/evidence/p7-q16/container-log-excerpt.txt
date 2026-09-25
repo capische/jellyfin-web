@@ -1,0 +1,27 @@
+# Disposable container jfmod-q16-jellyfin (image jellyfinmod-q16:candidate 7ea2c4597131), 2026-09-25
+# Trakt and JellyfinMod lines at WRN/ERR/FTL, and the Trakt plugin's own sync lines
+[11:00:31.608] [INF] [10] Jellyfin.Server.Migrations.JellyfinMigrationService: Seed migration 4124c2cd-e939-4ffb-9be9-9b311c413638-DisableTranscodingThrottling.
+[11:00:31.624] [INF] [10] Jellyfin.Server.Migrations.JellyfinMigrationService: Seed migration null-DisableLegacyAuthorization.
+[11:00:40.756] [INF] [4] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+[11:00:53.910] [INF] [9] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+[11:00:59.912] [ERR] [7] Emby.Server.Implementations.Updates.InstallationManager: An error occurred while accessing the plugin manifest: http://localhost:8096/JellyfinMod/Repository
+[11:02:05.403] [INF] [7] Emby.Server.Implementations.Updates.InstallationManager: Plugin installed: Trakt 31.0.0.0
+[11:03:01.488] [INF] [9] Emby.Server.Implementations.Plugins.PluginManager: Loaded plugin: Trakt 31.0.0.0
+[11:03:03.517] [INF] [13] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+[11:03:12.281] [INF] [13] Trakt.Api.TraktController: TraktDeviceAuthorization request received
+[11:03:12.293] [WRN] [13] Trakt.Api.TraktController: No associated trakt.tv user found - creating one.
+[11:03:12.373] [INF] [7] Trakt.Api.TraktApi: Polling for access token every 1s. Expires at 09/25/2026 11:13:12 UTC.
+[11:03:12.606] [INF] [7] Trakt.Api.TraktController: TraktPollAuthorizationStatus request received
+[11:03:13.388] [INF] [17] Trakt.Api.TraktApi: Device successfully authorized
+[11:03:15.515] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv watched movies for user jfmod-q16-admin: 1
+[11:03:15.515] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv watched movies history for user jfmod-q16-admin: 1
+[11:03:15.515] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv paused movies for user jfmod-q16-admin: 0
+[11:03:15.515] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv watched shows for user jfmod-q16-admin: 1
+[11:03:15.516] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv watched episodes history for user jfmod-q16-admin: 1
+[11:03:15.516] [INF] [10] Trakt.ScheduledTasks.SyncFromTraktTask: Trakt.tv paused episodes for user jfmod-q16-admin: 0
+[11:03:24.173] [INF] [9] Emby.Server.Implementations.Plugins.PluginManager: Loaded plugin: Trakt 31.0.0.0
+[11:03:26.644] [INF] [9] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+[11:03:33.078] [ERR] [13] Emby.Server.Implementations.Updates.InstallationManager: An error occurred while accessing the plugin manifest: http://localhost:8096/JellyfinMod/Repository
+[11:13:34.398] [INF] [13] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+[11:17:33.696] [INF] [17] JellyfinMod.Data.DatabaseInitializer: JellyfinMod database migrations applied
+# count of lines mentioning TraktObservationListener at WRN or ERR: 0
