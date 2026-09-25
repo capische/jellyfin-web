@@ -1,0 +1,2 @@
+health Healthy after 57 s; image 606ca92eb2dd
+up: container jfmod-s11img-jellyfin on port 38096, stand-ins at 172.31.212.1:38110..38119
