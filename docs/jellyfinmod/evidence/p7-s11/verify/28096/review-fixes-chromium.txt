@@ -1,0 +1,29 @@
+browser chromium 153.0.8010.12
+PASS [desktop] S8-R1: the mod entry's user menu offers JellyfinMod settings :: ["Profile","Settings","Queue","JellyfinMod settings","Dashboard","Metadata Manager","Quick Connect","Sign Out"]
+PASS [desktop] S8-R1: the stock entry at /web-mod/<id>/index.html offers no JellyfinMod settings item :: {"bundle":"bbdf78025ca2","stock":{"modBundle":false,"meta":false},"stockItems":["Profile","Settings","Queue","Dashboard","Metadata Manager","Quick Connect","Sign Out"]}
+PASS [desktop] no page errors :: []
+PASS [tv1080] fixture indexer created (disabled, closed port) :: 201
+PASS [tv1080] S8-R2: Down from Home reaches the JellyfinMod settings button :: {"presses":4,"focus":{"tag":"a","text":"JellyfinMod settings","remove":null,"tvSettings":true,"confirm":null,"row":null,"main":false}}
+PASS [tv1080] S8-R2: Enter opens /catalog/settings
+PASS [tv1080] S8-R2: the rail reaches Indexers by arrows and Enter :: "Indexers"
+PASS [tv1080] S8-R2: Right moves from the rail into the section :: {"tag":"h2","text":"Indexers","remove":null,"tvSettings":false,"confirm":null,"row":null,"main":true}
+PASS [tv1080] S8-R2: arrows reach the fixture's Remove button :: {"tag":"button","text":"Remove","remove":"a63ad1105bcd42cd9ca3900c165bca92","tvSettings":false,"confirm":null,"row":"a63ad1105bcd42cd9ca3900c165bca92","main":true}
+PASS [tv1080] S8-R2: Remove opens a confirmation dialog (not window.confirm) with focus on Cancel :: {"tag":"button","text":"Cancel","remove":null,"tvSettings":false,"confirm":"cancel","row":null,"main":false}
+PASS [tv1080] S8-R2: the remote's Back closes the dialog, removes nothing and returns focus to Remove :: {"tag":"button","text":"Remove","remove":"a63ad1105bcd42cd9ca3900c165bca92","tvSettings":false,"confirm":null,"row":"a63ad1105bcd42cd9ca3900c165bca92","main":true}
+PASS [tv1080] S8-R2: Right then Enter confirms and the indexer is removed :: {"tag":"button","text":"Remove","remove":null,"tvSettings":false,"confirm":"confirm","row":null,"main":false}
+PASS [tv1080] S8-R2: Back with nothing open returns to Home, the opener :: "#/home"
+PASS [tv1080] no page errors :: []
+PASS [tv1080] hygiene: no fixture indexer left :: 0
+PASS [tv720] fixture indexer created (disabled, closed port) :: 201
+PASS [tv720] S8-R2: Down from Home reaches the JellyfinMod settings button :: {"presses":4,"focus":{"tag":"a","text":"JellyfinMod settings","remove":null,"tvSettings":true,"confirm":null,"row":null,"main":false}}
+PASS [tv720] S8-R2: Enter opens /catalog/settings
+PASS [tv720] S8-R2: the rail reaches Indexers by arrows and Enter :: "Indexers"
+PASS [tv720] S8-R2: Right moves from the rail into the section :: {"tag":"h2","text":"Indexers","remove":null,"tvSettings":false,"confirm":null,"row":null,"main":true}
+PASS [tv720] S8-R2: arrows reach the fixture's Remove button :: {"tag":"button","text":"Remove","remove":"99f2b7c13b244272930accc6f5e0791f","tvSettings":false,"confirm":null,"row":"99f2b7c13b244272930accc6f5e0791f","main":true}
+PASS [tv720] S8-R2: Remove opens a confirmation dialog (not window.confirm) with focus on Cancel :: {"tag":"button","text":"Cancel","remove":null,"tvSettings":false,"confirm":"cancel","row":null,"main":false}
+PASS [tv720] S8-R2: the remote's Back closes the dialog, removes nothing and returns focus to Remove :: {"tag":"button","text":"Remove","remove":"99f2b7c13b244272930accc6f5e0791f","tvSettings":false,"confirm":null,"row":"99f2b7c13b244272930accc6f5e0791f","main":true}
+PASS [tv720] S8-R2: Right then Enter confirms and the indexer is removed :: {"tag":"button","text":"Remove","remove":null,"tvSettings":false,"confirm":"confirm","row":null,"main":false}
+PASS [tv720] S8-R2: Back with nothing open returns to Home, the opener :: "#/home"
+PASS [tv720] no page errors :: []
+PASS [tv720] hygiene: no fixture indexer left :: 0
+27 of 27 checks passed
