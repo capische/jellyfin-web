@@ -19,6 +19,9 @@ export const origin = new URL(required('JELLYFINMOD_S11_URL'));
 if (['8096', '18096', '28096'].includes(origin.port)) throw new Error('Runs only against a disposable image container');
 export const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 export const standin = required('JELLYFINMOD_S11_STANDIN');
+/** The stand-ins' port base (STANDIN_PORT_BASE there): TMDB +0, Prowlarr +1, Transmission +2, tarpit +3, control +9. */
+export const portBase = Number(process.env.JELLYFINMOD_S11_PORT_BASE ?? 38110);
+export const port = offset => portBase + offset;
 export const ADMIN = 'jfmod-image-admin';
 const adminFile = required('JELLYFINMOD_S11_ADMIN_FILE');
 export const fixture = Object.fromEntries(readFileSync(required('JELLYFINMOD_S11_FIXTURE_FILE'), 'utf8').split('\n')
@@ -130,8 +133,8 @@ export const carriesSecret = text => secretValues().some(secret => String(text).
 /** Drives the stand-ins' loopback control port on the test host. Returns parsed JSON. */
 export function control(path, body) {
     const ssh = required('JELLYFINMOD_S11_SSH');
-    const args = body === undefined ? `curl -s 'http://127.0.0.1:38119${path}'`
-        : `curl -s -X POST 'http://127.0.0.1:38119${path}' -d '${JSON.stringify(body).replace(/'/g, "'\\''")}'`;
+    const args = body === undefined ? `curl -s 'http://127.0.0.1:${portBase + 9}${path}'`
+        : `curl -s -X POST 'http://127.0.0.1:${portBase + 9}${path}' -d '${JSON.stringify(body).replace(/'/g, "'\\''")}'`;
     return JSON.parse(execFileSync('ssh', [ssh, args], { encoding: 'utf8' }));
 }
 
