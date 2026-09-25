@@ -1,0 +1,16 @@
+{
+  "userDataDiff": {
+    "exitCode": 0,
+    "userData": { "rowsBefore": 5143, "rowsAfter": 5143, "onlyBefore": [], "onlyAfter": [] },
+    "completion": { "rowsBefore": 54, "rowsAfter": 54, "added": 0, "removed": 0, "changedColumns": { "ObservedAt": 1 } }
+  },
+  "settingsMatchSnapshotBefore": true,
+  "revisionCountersChanged": [],
+  "takeover": { "status": "patched", "bundleId": "21c0905b4568", "patchedSha256": "326a3fab479f87150c48da25c693e48e94b53abc9097d55aae04a345f1a46602", "sameAsSnapshotBefore": true },
+  "users": ["nata", "oleksii", "papa", "vika"],
+  "jellyfinModTitleSearch": { "endpoint": "GET /Items?Recursive=true&SearchTerm=JellyfinMod", "totalRecordCount": 0 },
+  "jellyfinModEntriesTitleCheck": { "totalEntries": 100, "jellyfinModTitledEntries": [] },
+  "sessions": { "count": 2, "nowPlaying": [null, null] },
+  "standinProcessOnHost": { "pgrepCount": 0, "note": "pgrep -f standins.mjs matched only the invoking ssh command line itself, not a real process; ps aux confirmed no standins.mjs process running", "verifyStandinsDirGone": true },
+  "apiDevice": { "deviceId": "verify4", "deletedHttpStatus": 204, "confirmedGoneViaFreshSignIn": true }
+}
