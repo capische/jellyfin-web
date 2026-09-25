@@ -47,7 +47,7 @@ export interface UpgradeStateDto {
 
 /** Why automation is not grabbing right now; `disabled` is the master switch. */
 export type AutomationPausedReason = 'disabled' | 'budget_grabs' | 'too_many_open_imports' | 'free_space_floor'
-    | 'client_unreachable' | 'acquisition_not_ready';
+    | 'client_unreachable' | 'acquisition_not_ready' | 'breaker_open';
 
 export interface AutomationSummary {
     enabled: boolean;
