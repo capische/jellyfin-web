@@ -1,0 +1,309 @@
+{
+ "browser": "chromium",
+ "version": "153.0.8010.12",
+ "hashes": {
+  "before": {
+   "index": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+   "stockCopy": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "pristine": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "state": {
+    "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "patchedSha256": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+    "bundleId": "bbdf78025ca2",
+    "patchedBy": "bundle"
+   },
+   "bundleIndexSha": "e40349e41671194f2c22d776fdd30cf0a8fa83c80d2163b9376be958948ecdd9"
+  },
+  "off": {
+   "index": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "stockCopy": null,
+   "pristine": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "state": {
+    "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "patchedSha256": null,
+    "bundleId": null,
+    "patchedBy": null
+   }
+  },
+  "on": {
+   "index": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+   "stockCopy": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "pristine": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+   "state": {
+    "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "patchedSha256": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+    "bundleId": "bbdf78025ca2",
+    "patchedBy": "setting"
+   }
+  }
+ },
+ "results": [
+  {
+   "step": "off",
+   "check": "The Interface switch turned off in the page; the server reports stock and the section shows it",
+   "verdict": "PASS",
+   "detail": {
+    "server": {
+     "enabled": false,
+     "status": "stock",
+     "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+     "blocker": null
+    },
+    "shown": "State stock Applied not applied Web root writable Bundle none Always reachable at /web-mod/"
+   }
+  },
+  {
+   "step": "off",
+   "check": "The restored web-root index.html equals state.json stockSha256 and the pristine copy (the fork's stock entry on this shape)",
+   "verdict": "PASS",
+   "detail": {
+    "restored": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "pristine": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00"
+   }
+  },
+  {
+   "step": "off",
+   "check": "index.jellyfinmod-stock.html is gone from the web root",
+   "verdict": "PASS",
+   "detail": {
+    "stockCopy": null
+   }
+  },
+  {
+   "step": "off",
+   "check": "The served bundle's own index.html compared with the restored file (reported; equal only if the web root holds the same build)",
+   "verdict": "INFO",
+   "detail": {
+    "restored": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+    "bundleIndex": "e40349e41671194f2c22d776fdd30cf0a8fa83c80d2163b9376be958948ecdd9",
+    "equal": false
+   }
+  },
+  {
+   "step": "off",
+   "check": "The host serves the restored file at /web/ (no takeover marker, no mod meta tag)",
+   "verdict": "PASS",
+   "detail": {
+    "bytes": 5500
+   }
+  },
+  {
+   "step": "stock desktop",
+   "check": "Restored /web/ signs in to the stock entry's Home: no mod bundle, meta tag or marker, nothing fetched from /web-mod/",
+   "verdict": "PASS",
+   "detail": {
+    "bundle": false,
+    "meta": false,
+    "marker": false,
+    "forkStockClasses": [
+     "jfmod-topbar",
+     "jfmod-homeHeroMount",
+     "jfmod-homeHero",
+     "jfmod-homeHeroContent",
+     "jfmod-homeHeroActions"
+    ],
+    "sections": [
+     "Continue Watching",
+     "Next Up",
+     "Recently Added in Shows",
+     "Recently Added in Movies",
+     "My Media",
+     "Active Recordings"
+    ],
+    "cards": 56,
+    "address": "/web/",
+    "modRequests": 0
+   }
+  },
+  {
+   "step": "stock desktop",
+   "check": "Stock details page, preferences menu without JellyfinMod settings, and the Dashboard",
+   "verdict": "PASS",
+   "detail": {
+    "detail": true,
+    "jfmodSettingsInPreferences": false,
+    "dashboard": true
+   }
+  },
+  {
+   "step": "stock desktop",
+   "check": "No page errors on the restored stock page",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "stock mobile",
+   "check": "Restored /web/ signs in to the stock entry's Home: no mod bundle, meta tag or marker, nothing fetched from /web-mod/",
+   "verdict": "PASS",
+   "detail": {
+    "bundle": false,
+    "meta": false,
+    "marker": false,
+    "forkStockClasses": [
+     "jfmod-topbar",
+     "jfmod-homeHeroMount",
+     "jfmod-homeHero",
+     "jfmod-homeHeroContent",
+     "jfmod-homeHeroActions"
+    ],
+    "sections": [
+     "Continue Watching",
+     "Next Up",
+     "Recently Added in Shows",
+     "Recently Added in Movies",
+     "My Media",
+     "Active Recordings"
+    ],
+    "cards": 56,
+    "address": "/web/",
+    "modRequests": 0
+   }
+  },
+  {
+   "step": "stock mobile",
+   "check": "Stock details page, preferences menu without JellyfinMod settings, and the Dashboard",
+   "verdict": "PASS",
+   "detail": {
+    "detail": true,
+    "jfmodSettingsInPreferences": false,
+    "dashboard": true
+   }
+  },
+  {
+   "step": "stock mobile",
+   "check": "No page errors on the restored stock page",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "stock tv1080",
+   "check": "Restored /web/ signs in to the stock entry's Home: no mod bundle, meta tag or marker, nothing fetched from /web-mod/",
+   "verdict": "PASS",
+   "detail": {
+    "bundle": false,
+    "meta": false,
+    "marker": false,
+    "forkStockClasses": [
+     "jfmod-topbar",
+     "jfmod-homeHeroMount",
+     "jfmod-homeHero",
+     "jfmod-homeHeroContent",
+     "jfmod-homeHeroActions"
+    ],
+    "sections": [
+     "Continue Watching",
+     "Next Up",
+     "Recently Added in Shows",
+     "Recently Added in Movies",
+     "My Media",
+     "Active Recordings"
+    ],
+    "cards": 56,
+    "address": "/web/",
+    "modRequests": 0
+   }
+  },
+  {
+   "step": "stock tv1080",
+   "check": "Keys: a Home card takes focus, Enter opens the stock details page, Back (Escape) returns Home",
+   "verdict": "PASS",
+   "detail": {
+    "focused": true,
+    "opened": true,
+    "back": true
+   }
+  },
+  {
+   "step": "stock tv1080",
+   "check": "No page errors on the restored stock page",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "stock tv720",
+   "check": "Restored /web/ signs in to the stock entry's Home: no mod bundle, meta tag or marker, nothing fetched from /web-mod/",
+   "verdict": "PASS",
+   "detail": {
+    "bundle": false,
+    "meta": false,
+    "marker": false,
+    "forkStockClasses": [
+     "jfmod-topbar",
+     "jfmod-homeHeroMount",
+     "jfmod-homeHero",
+     "jfmod-homeHeroContent",
+     "jfmod-homeHeroActions"
+    ],
+    "sections": [
+     "Continue Watching",
+     "Next Up",
+     "Recently Added in Shows",
+     "Recently Added in Movies",
+     "My Media",
+     "Active Recordings"
+    ],
+    "cards": 56,
+    "address": "/web/",
+    "modRequests": 0
+   }
+  },
+  {
+   "step": "stock tv720",
+   "check": "Keys: a Home card takes focus, Enter opens the stock details page, Back (Escape) returns Home",
+   "verdict": "PASS",
+   "detail": {
+    "focused": true,
+    "opened": true,
+    "back": true
+   }
+  },
+  {
+   "step": "stock tv720",
+   "check": "No page errors on the restored stock page",
+   "verdict": "PASS",
+   "detail": []
+  },
+  {
+   "step": "on",
+   "check": "Turned back on from /web-mod/: the server reports patched, set by an administrator",
+   "verdict": "PASS",
+   "detail": {
+    "server": {
+     "enabled": true,
+     "status": "patched",
+     "stockSha256": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00",
+     "patchedSha256": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+     "bundleId": "bbdf78025ca2",
+     "patchedBy": "setting",
+     "blocker": null
+    },
+    "shown": "State patched Applied 9/25/2026, 2:08:43 PM by an administrator Web root writable Bundle bbdf78025ca2 Always reachable at /web-mod/"
+   }
+  },
+  {
+   "step": "on",
+   "check": "The re-patched index.html equals the patched hash recorded before; the stock copy is back and equals the stock hash",
+   "verdict": "PASS",
+   "detail": {
+    "index": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+    "recordedPatched": "afe2ca4c999c354fdcee6e58b5f97a8a3442e1c61d65539e986ace33a88e5a7e",
+    "stockCopy": "3219229cfbf0e8af9e6d1f3b815950fccddf89c779be4a37c8c029698d53db00"
+   }
+  },
+  {
+   "step": "on",
+   "check": "/web/ runs the mod bundle again",
+   "verdict": "PASS",
+   "detail": {
+    "meta": "bbdf78025ca2"
+   }
+  },
+  {
+   "step": "on",
+   "check": "No page errors in the administrator's page",
+   "verdict": "PASS",
+   "detail": []
+  }
+ ]
+}
