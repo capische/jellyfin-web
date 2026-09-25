@@ -1,0 +1,2 @@
+browser 153.0.8010.53 step interface-on label interface-on
+PASS [chrome] interface-on: The Interface section's switch turns the takeover on :: {"enabled":true,"status":"patched","patchedBy":"setting"}

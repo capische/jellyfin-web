@@ -1,0 +1,6 @@
+browser 153.0.8010.53 step stock label stock
+PASS [chrome] stock: desktop: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop :: {"bundle":false,"marker":false,"meta":false,"address":"/web/","layoutClass":"layout-desktop","loginVisible":true,"documentLoads":1,"modRequests":0}
+PASS [chrome] stock: mobile: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop :: {"bundle":false,"marker":false,"meta":false,"address":"/web/","layoutClass":"layout-mobile","loginVisible":true,"documentLoads":1,"modRequests":0}
+PASS [chrome] stock: tv1080: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop :: {"bundle":false,"marker":false,"meta":false,"address":"/web/","layoutClass":"layout-tv","loginVisible":true,"documentLoads":2,"modRequests":0}
+PASS [chrome] stock: tv720: /web renders stock Jellyfin at the same address, no mod bundle ran, no reload loop :: {"bundle":false,"marker":false,"meta":false,"address":"/web/","layoutClass":"layout-tv","loginVisible":true,"documentLoads":1,"modRequests":0}
+PASS [chrome] stock: desktop: the stock page signs in, reaches Home and the Dashboard :: {"bundle":false,"hash":"#/home"}
