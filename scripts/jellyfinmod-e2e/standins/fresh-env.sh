@@ -11,6 +11,8 @@
 #   fresh-env.sh stage-trakt  (JFMOD_TRAKT=1, P7.Q16) generates the Trakt fixture media with the image's own ffmpeg:
 #                        two movies and one show (S01E01, S01E02, S02E01) whose folders carry the TMDB/TVDB ids the
 #                        Trakt stand-in reports.
+#   fresh-env.sh downgrade <older image>  (P7.Q16) removes the container and the newer JellyfinMod plugin folder and
+#                        starts the container again from an image carrying the older plugin, same mounts.
 #   fresh-env.sh env     prints the environment the runners need (addresses and file paths only, never a value).
 #   fresh-env.sh down    removes the container, the TLS terminator, the network, the stand-ins and the state
 #                        directory, and proves each is gone.
@@ -159,6 +161,29 @@ echo "staged $(find "$ROOT/data/media" -name '*.mkv' | wc -l) fixture files"
 EOF
 }
 
+# P7.Q16: a plugin downgrade the way the plugin README describes it. The image's entrypoint never downgrades, so the
+# container is removed, the newer JellyfinMod folder deleted from the config volume, and the container started again,
+# same mounts and name, from an image that carries the older plugin (for example capische/jellyfin-mod:0.1.0.0).
+downgrade() {
+    local older=${1:?downgrade needs the older image}
+    remote "$ROOT" "$NET" "$SUB" "$PORT" "$older" "$TRAKT" <<'EOF'
+set -euo pipefail
+ROOT=$1 NET=$2 SUB=$3 PORT=$4 OLDER=$5 TRAKT=$6
+docker rm -f "$NET-jellyfin" >/dev/null
+rm -rf "$ROOT"/config/plugins/JellyfinMod_*
+TRAKT_HOST=()
+[ "$TRAKT" = 1 ] && TRAKT_HOST=(--add-host "api.trakt.tv:$SUB.10")
+docker run -d --name "$NET-jellyfin" --network "$NET" --user 1000:1000 -p "$PORT:8096" \
+  --add-host "api.themoviedb.org:$SUB.10" "${TRAKT_HOST[@]}" -e SSL_CERT_FILE=/certs/ca-bundle.crt -v "$ROOT/certs/ca-bundle.crt:/certs/ca-bundle.crt:ro" \
+  -v "$ROOT/config:/config" -v "$ROOT/cache:/cache" -v "$ROOT/data:/data" "$OLDER" >/dev/null
+for i in $(seq 1 100); do
+  [ "$(curl -s "http://127.0.0.1:$PORT/health")" = Healthy ] && curl -s "http://127.0.0.1:$PORT/web/index.html" | grep -q 'name="jellyfinmod-web"' && break
+  sleep 3
+done
+echo "health $(curl -s "http://127.0.0.1:$PORT/health") after $((i * 3)) s; image $(docker inspect -f '{{.Image}}' "$NET-jellyfin" | cut -c8-19); plugin folders: $(ls "$ROOT/config/plugins" | grep -c '^JellyfinMod_')"
+EOF
+}
+
 env_() {
     cat <<EOF
 export JELLYFINMOD_S11_URL=http://<test-host>:$PORT/          # replace <test-host> with the test host's LAN address
@@ -204,7 +229,8 @@ case ${1:-} in
     up) up ;;
     stage) stage ;;
     stage-trakt) stage_trakt ;;
+    downgrade) downgrade "${2:-}" ;;
     env) env_ ;;
     down) down ;;
-    *) sed -n '2,29p' "$0"; exit 2 ;;
+    *) sed -n '2,31p' "$0"; exit 2 ;;
 esac
