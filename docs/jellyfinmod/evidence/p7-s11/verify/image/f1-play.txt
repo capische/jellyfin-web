@@ -1,0 +1,2 @@
+browser chrome 153.0.8010.53 step play
+NOT VERIFIED [chrome] play: playback :: "locator.waitFor: Timeout 30000ms exceeded."

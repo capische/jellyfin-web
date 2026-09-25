@@ -1,0 +1,3 @@
+browser chrome 153.0.8010.53 step import
+FAIL [chrome] import: The stand-in Transmission reports the torrent complete with the real file in the download folder :: {}
+NOT VERIFIED [chrome] import: import by hardlink :: "timed out after 300s waiting for the import to complete"
