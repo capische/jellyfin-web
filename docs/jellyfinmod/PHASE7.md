@@ -1008,7 +1008,9 @@ JellyfinMod must never read that plugin's stored tokens or call Trakt itself (a 
 source of truth and would handle someone else's credentials). What JellyfinMod can see is the plugin's
 `SyncFromTraktTask` writing Trakt's history *into* Jellyfin: `IUserDataManager.SaveUserData(…, UserDataSaveReason.Import)`
 (read in its source at tag `v31`). So the indicator means **"watch history for this title arrived from Trakt for you"**,
-observed when Jellyfin raises `UserDataSaved` with reason `Import` while the Trakt plugin is active. Titles synced
+observed when Jellyfin raises `UserDataSaved` with reason `Import` while the Trakt plugin is active **and the host is
+running its import task** — Jellyfin's own NFO parser also saves with `Import` (`BaseNfoParser`, when an NFO user for
+watch data is configured), so an `Import` alone proves nothing about Trakt (review P2-1, 2026-09-26). Titles synced
 before JellyfinMod started observing show the indicator after Trakt's next sync touches them (the task only saves an
 item whose state changes, so a title already in sync is touched when its Trakt state next changes).
 
@@ -1017,28 +1019,40 @@ item whose state changes, so a title already in sync is touched when its Trakt s
   entry reports the same id — Q16 evidence). Only an `Active` copy counts: disabled, uninstalled, waiting for a restart
   (`Restart`), unsupported or failed copies do not. `configuredForUser` from the plan above is **not** built: knowing
   whether a user has linked Trakt would mean reading the Trakt plugin's configuration, which the design rules out.
+  `TraktPluginState.IsImporting()` asks the host's `ITaskManager.ScheduledTasks` whether the task with
+  `Key == "TraktSyncFromTraktTask"` is `Running` — host state only. Both lists are copied before they are read, and a
+  read that fails answers "not installed" / "not importing".
 - **Recording.** `TraktObservationListener`, an `IHostedService` separate from `RetentionEventListener`, subscribes to
-  `UserDataSaved`; for a `Movie` or `Episode` saved with `Import` while the plugin is active it queues the user and
+  `UserDataSaved`; for a `Movie` or `Episode` saved with `Import` while the plugin is active and its import task runs
+  (anything else — an NFO import, say — neither records nor removes a row) it queues the user and
   item ids on a channel and one reader writes them through a scoped `ModDbContext`, in batches of up to 200, after
   `DatabaseInitializer` is ready (a minute at most, then the batch is dropped with a warning). An import whose data is
   played or carries a resume point upserts the row; an import with neither (Trakt reporting the title unwatched)
   removes it. **Departure from the settled design:** a play count alone does not count — the plugin's "unwatched"
-  import clears `Played` and leaves Jellyfin's own play count untouched, so a count proves nothing about Trakt. Logs
-  carry ids at most, never user-data values.
+  import clears `Played` and leaves Jellyfin's own play count untouched, so a count proves nothing about Trakt. Rows
+  are pruned: `ILibraryManager.ItemRemoved` takes a movie's or episode's own rows and a season's or series' episode
+  rows, and users that no longer exist lose theirs at start and every five minutes (the host raises no deletion event a
+  plugin can rely on; the `RetentionEventListener` pattern). On stop the listener stops taking events and writes what
+  is already queued, bounded by the host's stop token. Logs carry ids at most, never user-data values.
 - **Data.** One table, `TraktObservations` (`UserId`, `JellyfinItemId`, `SeriesId`, `SeasonId` read off the episode,
   `FirstSyncedAt`, `LastSyncedAt`), unique on (`UserId`, `JellyfinItemId`), one self-contained migration
   `PhaseSevenTraktObservations`, generated with the repository's `dotnet-ef` (9.0.11 against EF Core 10.0.11; it warns
-  about the version and generates correctly) and regenerated after rebasing onto the retention migrations.
-- **API.** Health gains `Trakt: {Installed, Version}` and the capability `trakt.history`;
+  about the version and generates correctly) and regenerated after rebasing onto the retention migrations. A new
+  migration makes this plugin **0.1.0.1** (`build.yaml`, changelog). Downgrading to 0.1.0.0 (older image, the newer
+  plugin folder removed) leaves `TraktObservations` as an orphan table the older assembly ignores.
+- **API.** Health gains `Trakt: {Installed, Version}` — `Version` for administrators only — and the capability
+  `trakt.history`;
   `GET /JellyfinMod/Trakt/Items/{itemId}` (`[Authorize]`, any signed-in user) answers `{installed, hasHistory,
   lastSyncedAt}` for the signed-in user only, 404 for an item the user cannot see (`ILibraryManager.GetItemById<T>(id,
   user)`, the host's own visibility check) before anything else, and a season or series answers for its episodes the
   user can still see. [API.md](API.md#trakt-indicator-phase-7-q16).
 - **Web.** `TraktIndicator` (`components/TraktIndicator.tsx`, `traktIndicator.scss`, `api/traktApi.ts`,
   `constants/trakt.ts`) has its own mount, `jfmod-traktMount`, the first child of upstream's `.detailSectionContent`,
-  created by `integration/nativeEntryDetails.js` for every native movie, episode, season and series page — so it shows
-  on a title with no catalog entry, and an empty mount takes no space. It renders only when Health lists
-  `trakt.history`, the answer says `installed` and `hasHistory`: a primary-coloured "Trakt" chip (card radius, em
+  created by `integration/nativeEntryDetails.js` only for a native movie, episode, season or series page — so it
+  shows on a title with no catalog entry, and an empty mount takes no space. It asks
+  `GET /JellyfinMod/Trakt/Items/{id}` only when Health lists `trakt.history` and reports `Trakt.Installed` (read by
+  `getPluginHealth` as `traktInstalled`), so without the Trakt plugin a detail page sends no Trakt request at all, and
+  it renders only when the answer says `installed` and `hasHistory`: a primary-coloured "Trakt" chip (card radius, em
   sizes) and "Watch history synced · <date>", with `role="note"`, `title` and `aria-label` "Watch history synced from
   Trakt · <date>". `retry: false`; any error, an older plugin or no Trakt plugin renders nothing. It is not a control:
   nothing in it is focusable. It sits below the button row a TV's focus starts on, so arriving never moves what is
@@ -1091,27 +1105,85 @@ not focusable and the TV's D-pad walk unchanged; with the plugin disabled and th
 errors. On the acceptance instance (no Trakt plugin) nothing shows, nothing fails and the detail pages' geometry and D-pad
 walk equal the released build's. Evidence: *Q16 evidence* below.
 
-#### Q16 — handover (2026-09-25, paused at the 80 % usage rule)
+#### Q16 — handover (2026-09-26, paused by the coordinator mid-way through the review fixes)
 
-Branches `p7-q16` (plugin on `348168b`, web on `6b13699fd8`, both local, not pushed; the image-rename commits sit
-under them). 28096 runs this build: bundle `1eb0b4c6cd61`, takeover patched, retention off (14 days, revision 49); the
-released pre-Q16 state is in `backups/pre-q16`. The Fable-high review (no P1) asked for these fixes before
-verification, **not started yet**:
+**Done and committed (local, not pushed).** All review findings are implemented; the relevant commits were
+rewritten in place (amended — `reset --soft` onto the rename commit and re-committed, since nothing on top depended on
+them), not stacked as fixes:
 
-- **P2-1** record an `Import` only while the host's `TraktSyncFromTraktTask` scheduled task is `Running`
-  (`ITaskManager.ScheduledTasks`), because Jellyfin's NFO parser also saves with `Import`; suite: an `Import` with no
-  Trakt task running is not recorded; live: an NFO user plus a library refresh shows no indicator, a real sync still does.
-- **P3-1** Health's `Trakt.Version` only for administrators (or dropped). **P3-2** read `Trakt.Installed` in
-  `getPluginHealth` and query `Trakt/Items` only when it is true; mount only for Movie, Episode, Season and Series.
-  **P3-3** copy `IPluginManager.Plugins` before enumerating it, "not installed" on error. **P3-4** drain the queue on
-  shutdown, bounded by the `StopAsync` token. **P3-5** prune rows on user deletion and on `ItemRemoved`. **P3-6**
-  `fresh-env.sh` default image `capische/jellyfin-mod:0.1.0.0`. **P3-7** plugin version **0.1.0.1** (a migration was
-  added; a version tag is never overwritten; nothing is published). Add a downgrade check (0.1.0.1 → 0.1.0.0 leaves
-  an orphan table the old assembly ignores) to `.claude/briefs/verify-q16.md`.
+- Plugin `p7-q16` on `d6ec99a` (rename) on `348168b`: `2fe1c08 feat(trakt,p7.q16)` (P2-1 record and remove only while
+  the host's `TraktSyncFromTraktTask` is `Running`, via `ITaskManager.ScheduledTasks`; P3-1 Health `Trakt.Version` for
+  administrators only; P3-3 plugin and task lists copied, "not installed"/"not importing" on error; P3-4 the queue is
+  drained on stop, bounded by the stop token; P3-5 rows pruned on `ItemRemoved` — movie/episode own rows,
+  season/series their episodes' — and for users that no longer exist, at start and every 5 min; `PhaseZeroSmoke`
+  adjusted to the now-async `GetHealth`), `fd20ebb test(e2e,p7.q16)` (suite covers each of these: an `Import` with the
+  task idle or cancelling neither records nor removes, Health version hidden from an ordinary user, item/season/series
+  removal, user deletion, a 200-import burst written during stop), `ee2ee3b build(release,p7.q16)` (P3-7: **0.1.0.1**,
+  `build.yaml` changelog, csproj), `34bd383 docs(image,p7.q16)` (README *Troubleshooting*: the one start-up
+  repository 503 is harmless upstream timing). Backup of the pre-review branch: local branch `p7-q16-backup-pre-review`
+  (delete once verified).
+- Web `p7-q16` on `eddedf0e76` (rename): `192aad73b0 feat(trakt,p7.q16)` (P3-2: `getPluginHealth` returns
+  `traktInstalled`; the indicator asks `Trakt/Items` only when Health lists `trakt.history` and says Trakt is
+  installed; the mount is created only for Movie, Episode, Season and Series), `a708bc976e test(e2e,p7.q16)` (P3-6
+  `fresh-env.sh` default image `capische/jellyfin-mod:0.1.0.0`; `log-errors.sh` lists ERR/FTL lines less exactly the
+  start-up repository 503 before `Core startup complete`), `a25b484b4e docs(trakt,p7.q16)` (the earlier docs), `df06405061
+  test(e2e,p7.q16)` (runner follow-up: `q16-trakt.mjs` steps `nfo`, `logs`, `downgrade`; `fresh-env.sh downgrade
+  <image>`; it came after the bundle was built, so `a25b484b4e` stays the bundle's web commit) and this docs commit. Local branch `p7-q16-backup-pre-review` likewise.
 
-Then: redeploy 28096, update `verify-q16.md` ids and checks, a short Fable review of the fix commit, then the Sonnet
-verification. Pi memory is tight: any disposable container gets `mem_limit` ≈ 900m and none starts while
-`MemAvailable` is below 1.2 GB.
+**Build (from those commits):** web bundle **`c0f3f20de943`** (web commit `a25b484b4e`), plugin **0.1.0.1**,
+`JellyfinMod.dll` sha256 `769ebfef72aa1615…`, `jellyfinmod-web.zip` `9dbe9c37e01cf514…`, release in the plugin
+worktree's `artifacts/release-q16`, image **`jellyfinmod-q16:candidate` `6d8e56eeac31`** on the test host; `q16-src`,
+`q16-webpkg`, `q16-image` on the host match it. `q16-run-all.sh` now lists 13 suites (`PhaseTenRetentionIntegration`
+added; no runner script on the host listed it before). **Not yet:** `backups/q16-package` on 28096 still holds the
+coordinator's pre-review package, and `verify-q16.md` still names the pre-review ids.
+
+**Suites (rebuilt source, test host):** 11 of 13 passed (`PhaseZeroSmoke` … `PhaseSevenTraktIntegration`, all
+`exit=0`); `PhaseTenRetentionIntegration` and `PhaseFourIntegration` were running when the pause came and were
+stopped — **not run**. A first run on the same day failed only `PhaseZeroSmoke` to compile (the async `GetHealth`),
+fixed in `2fe1c08`. Locally every suite builds and `PhaseSevenTraktIntegration`, `PhaseZeroSmoke`, `PhaseOneSmoke`
+pass.
+
+**Live, disposable container (image `6d8e56eeac31`, torn down; evidence `evidence/p7-q16/review/live.json`):**
+setup 6/6, Dashboard install 5/5 (Health `0.1.0.1`, bundle `c0f3f20de943`), authorize 4/4, sync 14/14 + INFO
+(including an ordinary user's Health without `Trakt.Version`, the administrator's with it). **P2-1 (`nfo`) 8/8 +
+INFO:** with Jellyfin's NFO user for watch data set to the administrator and `.nfo` files carrying
+`<watched>true</watched>` (the unwatched movie) and `<watched>false</watched>` (the Trakt movie), a library and item
+refresh read both files (their plot marker reached the items) while the Trakt task was idle; JellyfinMod recorded
+nothing and deleted nothing (same `lastSyncedAt`); after unmarking the Trakt movie locally, a real Trakt sync marked it
+played again and was recorded. **Found:** Jellyfin 12.0.0 did not save the NFO watch state at all — its NFO provider
+parses into a new, id-less item and `BaseNfoParser` saves only `if (!item.Id.IsEmpty())` — so on this path the
+`Import` the review describes does not fire today; the gate is proven by the suite and stays as defence against any
+other `Import` source. (The step's first attempt, which waited for the NFO state in the database, timed out for that
+reason and is recorded NOT VERIFIED.) Browser with the indicator present: Chromium desktop + TV 1080 34/34, Chrome
+mobile + TV 1080 34/34. Disable 5/5 (`Restart`, then `Disabled` after a restart). Indicator absent with **no
+`Trakt/Items` request on any page**: Chrome mobile + TV 1080 63/63; Chromium desktop + TV 1080 62/63 — the one FAIL is
+an `ERR_ABORTED` on `/JellyfinMod/Entries/<id>` (a request cancelled by the runner's next navigation; not Trakt, not
+yet re-run). **Not run:** uninstall, `logs`, `downgrade` (fresh-env `downgrade capische/jellyfin-mod:0.1.0.0`, then the
+step), the re-run of the Chromium absent pass.
+
+**Deployed where:** 28096 is unchanged by this round: it still runs the coordinator's pre-review Q16 build — Health
+`Version` `0.1.0.0`, bundle `1eb0b4c6cd61`, takeover `patched`, `Trakt: {Installed: false}`, `trakt.history` listed,
+retention `enabled: false`, 14 days, revision 49 (read 2026-09-26 after the pause). Disposable environment: gone
+(0 containers, 0 networks, state directory gone, nothing on 38096 or 38130–38139, no Trakt stand-in; the one
+`node standins.mjs` on the host belongs to `jellyfinmod-live48096`).
+
+**Ids `verify-q16.md` must get:** plugin commits `2fe1c08`, `fd20ebb`, `ee2ee3b`, `34bd383` (version 0.1.0.1); web
+`192aad73b0`, `a708bc976e`, `a25b484b4e` (bundle's web commit), `df06405061` and this docs commit; bundle `c0f3f20de943`, DLL
+`769ebfef72aa1615`, zip `9dbe9c37e01cf514`, image `6d8e56eeac31`; 28096 Health `Version` `0.1.0.1`, bundle
+`c0f3f20de943`, `Trakt: {Installed: false}` without `Version`. New checks: part S 13 suites; V4 the Health-version
+row; V4b the `nfo` step (8 PASS + INFO); V7 no `Trakt/Items` request when not installed; V8b `logs`; V8c the
+downgrade (MemAvailable ≥ 1.2 GB, `fresh-env.sh downgrade capische/jellyfin-mod:0.1.0.0`, step `downgrade`: Health ok
+`0.1.0.0`, orphan `TraktObservations`, no ERR line); W0/W1 the new 28096 build, and W1 expects no Trakt request.
+
+**Exact next step:** (1) `ssh pi` `q16-run-all.sh PhaseTenRetentionIntegration PhaseFourIntegration` on an idle host
+(nothing else running on `q16-src`); (2) a disposable run (MemAvailable ≥ 1.2 GB first): `up`, `stage-trakt`,
+`setup`, `install`, `authorize`, `sync`, `uninstall`, Chromium absent pass (desktop, TV 1080), `logs`,
+`fresh-env.sh downgrade capische/jellyfin-mod:0.1.0.0`, `downgrade`, `down`; (3) refresh
+`backups/q16-package` from `artifacts/release-q16/package`, deploy to 28096 (stop → copy the four files → start;
+retention read before and after), run `degrade` with `JELLYFINMOD_Q16_BUILD=q16` in Chromium and Chrome against the
+committed released baselines (the "Keep indefinitely" walk row is the known retention difference); (4) update
+`verify-q16.md` with the ids and checks above; (5) replace this handover with the outcome; (6) a Fable-high review of
+the fix commits, then the Sonnet verification.
 
 #### Q16 evidence — 2026-09-25
 
