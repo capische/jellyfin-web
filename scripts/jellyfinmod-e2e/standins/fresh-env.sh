@@ -7,7 +7,7 @@
 #                        api.themoviedb.org, and the Jellyfin container from $IMAGE with --add-host and the CA
 #                        trusted through SSL_CERT_FILE; waits for /health.
 #   fresh-env.sh stage   generates a real 60 s video with the image's own ffmpeg and publishes it as a release on
-#                        the stand-in Torznab feed for TMDB 990001 ("JellyfinMod Standin Movie", tt9900001).
+#                        the stand-in Torznab feed for TMDB 990001 ("JellyfinMod Standin Movie", tt9900001), as a 1080p WEB-DL.
 #   fresh-env.sh env     prints the environment the runners need (addresses and file paths only, never a value).
 #   fresh-env.sh down    removes the container, the TLS terminator, the network, the stand-ins and the state
 #                        directory, and proves each is gone.
@@ -93,11 +93,16 @@ stage() {
     remote "$ROOT" "$BASE" "$IMAGE" <<'EOF'
 set -euo pipefail
 ROOT=$1 BASE=$2 IMAGE=$3
-TITLE='JellyfinMod.Standin.Movie.2026.1080p.BluRay.x264-S11'
+# A 1080p WEB-DL of about 19 MB for a one-minute title, which the wizard's "JellyfinMod Standin HD" profile accepts
+# (1080p WEB-DL allowed, inside its size-per-hour range). The release group must not read as an episode marker: a
+# group of "S11" parses as season 11 and the release is rejected for a movie (seen in the first S11 run).
+TITLE='JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD'
 docker run --rm --user 1000:1000 --entrypoint /usr/lib/jellyfin-ffmpeg/ffmpeg -v "$ROOT/staging:/staging" "$IMAGE" -v error -y \
   -f lavfi -i testsrc2=duration=60:size=1920x1080:rate=24 -f lavfi -i sine=frequency=440:duration=60 \
-  -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "/staging/$TITLE.mkv"
-curl -s -X POST "http://127.0.0.1:$((BASE + 9))/release" -d "{\"id\":\"s11-movie\",\"indexerId\":1,\"title\":\"$TITLE\",\"torrentName\":\"$TITLE.mkv\",\"file\":\"$ROOT/staging/$TITLE.mkv\",\"tmdbid\":990001,\"imdbid\":\"tt9900001\",\"seeders\":25,\"category\":2040}" | head -c 200; echo
+  -c:v libx264 -preset veryfast -b:v 2400k -maxrate 2400k -bufsize 4800k -pix_fmt yuv420p -c:a aac -b:a 64k -ac 1 -shortest \
+  "/staging/$TITLE.mkv"
+echo "staged $(stat -c %s "$ROOT/staging/$TITLE.mkv") bytes"
+curl -s -X POST "http://127.0.0.1:$((BASE + 9))/release" -d "{\"id\":\"s11-movie\",\"indexerId\":1,\"title\":\"$TITLE\",\"torrentName\":\"$TITLE.mkv\",\"file\":\"$ROOT/staging/$TITLE.mkv\",\"tmdbid\":990001,\"imdbid\":\"tt9900001\",\"seeders\":40,\"category\":2040}" | head -c 200; echo
 EOF
 }
 
