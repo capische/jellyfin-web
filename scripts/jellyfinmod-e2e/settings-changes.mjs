@@ -66,6 +66,15 @@ const errors = [];
 const leaks = [];
 let responses = 0;
 page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+// Every write to the download clients, in order, with the id it concerned: if a fixture client is ever left for the
+// fallback again (seen once on Chrome in the 2026-09-25 verification, not reproduced), this says who created it.
+const clientWrites = [];
+page.on('response', response => {
+    const url = new URL(response.url());
+    if (!/\/JellyfinMod\/Settings\/DownloadClients/.test(url.pathname) || response.request().method() === 'GET') return;
+    clientWrites.push({ at: new Date().toISOString().slice(11, 23), method: response.request().method(), status: response.status(),
+        path: url.pathname.replace(/^.*\/Settings\//, ''), page: new URL(response.frame().url()).hash.split('?')[0] });
+});
 page.on('response', async response => {
     if (!/\/JellyfinMod\//.test(response.url())) return;
     responses++;
@@ -383,7 +392,10 @@ try {
         if (/^JellyfinMod/.test(item.name) && item.managedBy !== 'prowlarr') { leftovers.push('indexer ' + item.name); await api('DELETE', `JellyfinMod/Settings/Indexers/${item.id}`); }
     }
     for (const item of (await api('GET', 'JellyfinMod/Settings/DownloadClients')).body ?? []) {
-        if (/^JellyfinMod/.test(item.name)) { leftovers.push('client ' + item.name); await api('DELETE', `JellyfinMod/Settings/DownloadClients/${item.id}`); }
+        if (/^JellyfinMod/.test(item.name)) {
+            leftovers.push({ kind: 'client', name: item.name, id: item.id.slice(0, 8), revision: item.revision, writes: clientWrites.map(write => ({ ...write, path: write.path.replace(/[0-9a-f]{32}/, id => id.slice(0, 8)) })) });
+            await api('DELETE', `JellyfinMod/Settings/DownloadClients/${item.id}`);
+        }
     }
     record('5 cleanup', 'No fixture had to be removed by the fallback', leftovers.length === 0, leftovers);
     const after = await snapshot();
