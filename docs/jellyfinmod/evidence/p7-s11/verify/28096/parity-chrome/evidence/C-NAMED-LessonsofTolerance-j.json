@@ -1,0 +1,271 @@
+{
+  "fixture": "C-NAMED-LessonsofTolerance",
+  "itemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+  "title": "Lessons of Tolerance",
+  "container": "mkv",
+  "video": "h264 1920x720 SDR",
+  "audioStreams": 1,
+  "subtitleStreams": 0,
+  "row": "C-NAMED-LessonsofTolerance-j",
+  "check": "single reporting (no duplicate Playing/Stopped)",
+  "verdict": "PASS",
+  "heavyTranscode": false,
+  "stock": {
+    "summary": "playing:1 stopped:1",
+    "timedOut": {},
+    "steps": {
+      "start": {
+        "session": {
+          "nowPlayingItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+          "playState": {
+            "PositionTicks": 1915690,
+            "IsPaused": false,
+            "PlayMethod": "DirectPlay",
+            "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+            "AudioStreamIndex": 1,
+            "SubtitleStreamIndex": -1,
+            "CanSeek": true
+          },
+          "transcodingInfo": null
+        },
+        "video": {
+          "currentTime": 1.1,
+          "duration": 5729,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 1,
+          "error": null,
+          "srcKind": "http",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [],
+          "overlayText": null
+        },
+        "stream": {
+          "path": "<test-host>/Videos/09be82fc66ac0aa8a3a9df0450fa7406/stream.mkv",
+          "shape": "static",
+          "AudioStreamIndex": null,
+          "SubtitleStreamIndex": null,
+          "SubtitleMethod": null,
+          "VideoCodec": null,
+          "AudioCodec": null,
+          "TranscodeReasons": null,
+          "requestsSoFar": 1
+        },
+        "requests": [
+          {
+            "t": 106,
+            "method": "POST",
+            "url": "<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/PlaybackInfo",
+            "status": 200
+          },
+          {
+            "t": 447,
+            "method": "GET",
+            "url": "<test-host>/Videos/09be82fc66ac0aa8a3a9df0450fa7406/stream.mkv?Static=true&mediaSourceId=09be82fc66ac0aa8a3a9df0450fa7406&Tag=b71744458d9255c17b75e08f8c968f6a",
+            "status": 206
+          },
+          {
+            "t": 529,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 0,
+              "IsPaused": false,
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 772,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 1915690,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      },
+      "stop": {
+        "session": {
+          "nowPlayingItemId": null,
+          "playState": {
+            "PositionTicks": null,
+            "IsPaused": false,
+            "PlayMethod": null,
+            "MediaSourceId": null,
+            "AudioStreamIndex": null,
+            "SubtitleStreamIndex": null,
+            "CanSeek": false
+          },
+          "transcodingInfo": null
+        },
+        "video": null,
+        "stream": null,
+        "requests": [
+          {
+            "t": 82,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Stopped",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 11484336100,
+              "IsPaused": true,
+              "CanSeek": true
+            }
+          }
+        ],
+        "storedResumeSeconds": 1148.4
+      }
+    }
+  },
+  "mod": {
+    "summary": "playing:1 stopped:1",
+    "timedOut": {},
+    "steps": {
+      "start": {
+        "session": {
+          "nowPlayingItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+          "playState": {
+            "PositionTicks": 1994170,
+            "IsPaused": false,
+            "PlayMethod": "DirectPlay",
+            "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+            "AudioStreamIndex": 1,
+            "SubtitleStreamIndex": -1,
+            "CanSeek": true
+          },
+          "transcodingInfo": null
+        },
+        "video": {
+          "currentTime": 1.1,
+          "duration": 5729,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 1,
+          "error": null,
+          "srcKind": "http",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [],
+          "overlayText": null
+        },
+        "stream": {
+          "path": "<test-host>/Videos/09be82fc66ac0aa8a3a9df0450fa7406/stream.mkv",
+          "shape": "static",
+          "AudioStreamIndex": null,
+          "SubtitleStreamIndex": null,
+          "SubtitleMethod": null,
+          "VideoCodec": null,
+          "AudioCodec": null,
+          "TranscodeReasons": null,
+          "requestsSoFar": 1
+        },
+        "requests": [
+          {
+            "t": 80,
+            "method": "POST",
+            "url": "<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/PlaybackInfo",
+            "status": 200
+          },
+          {
+            "t": 406,
+            "method": "GET",
+            "url": "<test-host>/Videos/09be82fc66ac0aa8a3a9df0450fa7406/stream.mkv?Static=true&mediaSourceId=09be82fc66ac0aa8a3a9df0450fa7406&Tag=b71744458d9255c17b75e08f8c968f6a",
+            "status": 206
+          },
+          {
+            "t": 436,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 0,
+              "IsPaused": false,
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 682,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 1994170,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      },
+      "stop": {
+        "session": {
+          "nowPlayingItemId": null,
+          "playState": {
+            "PositionTicks": null,
+            "IsPaused": false,
+            "PlayMethod": null,
+            "MediaSourceId": null,
+            "AudioStreamIndex": null,
+            "SubtitleStreamIndex": null,
+            "CanSeek": false
+          },
+          "transcodingInfo": null
+        },
+        "video": null,
+        "stream": null,
+        "requests": [
+          {
+            "t": 28,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Stopped",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "MediaSourceId": "09be82fc66ac0aa8a3a9df0450fa7406",
+              "PlayMethod": "DirectPlay",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 11486992810,
+              "IsPaused": true,
+              "CanSeek": true
+            }
+          }
+        ],
+        "storedResumeSeconds": 1148.7
+      }
+    }
+  }
+}

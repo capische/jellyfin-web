@@ -1,0 +1,229 @@
+{
+  "fixture": "C-NAMED-Highlander",
+  "itemId": "0b112cfd083cae1722f28359797f5b65",
+  "title": "Highlander",
+  "container": "mkv",
+  "video": "hevc 1920x1040 SDR",
+  "audioStreams": 4,
+  "subtitleStreams": 4,
+  "row": "C-NAMED-Highlander-g",
+  "check": "subtitle switch (by data-id) + render",
+  "verdict": "PASS",
+  "heavyTranscode": true,
+  "stock": {
+    "summary": "{\"fromIndex\":5,\"preOff\":null,\"targetIndex\":6,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndex\":6,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":148.5,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOn": {
+        "session": {
+          "nowPlayingItemId": "0b112cfd083cae1722f28359797f5b65",
+          "playState": {
+            "PositionTicks": 1486580000,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+            "AudioStreamIndex": 2,
+            "SubtitleStreamIndex": 6,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 1920,
+            "Height": 1040,
+            "Framerate": 497,
+            "CompletionPercentage": 6.3529434628328945,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 148.8,
+          "duration": 6998,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 886,
+              "activeCues": 1,
+              "activeText": "‎...і хлопець із Тонги."
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 499,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd-083c-ae17-22f2-8359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/6/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 5901,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": 6,
+              "PositionTicks": 664920659,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 8474,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd083cae1722f28359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/6/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 9262,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": 6,
+              "PositionTicks": 1476580000,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "mod": {
+    "summary": "{\"fromIndex\":5,\"preOff\":null,\"targetIndex\":6,\"options\":[{\"id\":\"secondarysubtitle\",\"text\":\"Secondary Subtitles – Off\"},{\"id\":\"-1\",\"text\":\"Off\"},{\"id\":\"5\",\"text\":\"Ukrainian | Forced - Default - SUBRIP\"},{\"id\":\"6\",\"text\":\"Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - \"},{\"id\":\"7\",\"text\":\"English | Full - SUBRIP\"},{\"id\":\"8\",\"text\":\"English | SDH - SUBRIP\"}],\"serverIndex\":6,\"trackLoaded\":true,\"actuallyChanged\":true,\"cueSeconds\":148.5,\"seekedToCue\":true,\"streamSubtitleStreamIndex\":null,\"subtitleMethod\":null,\"mechanism\":\"native-texttrack\"}",
+    "timedOut": {},
+    "steps": {
+      "subtitleOn": {
+        "session": {
+          "nowPlayingItemId": "0b112cfd083cae1722f28359797f5b65",
+          "playState": {
+            "PositionTicks": 1476580000,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+            "AudioStreamIndex": 2,
+            "SubtitleStreamIndex": 6,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 1920,
+            "Height": 1040,
+            "Framerate": 1638,
+            "CompletionPercentage": 21.049823264193737,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 148.6,
+          "duration": 6998,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 886,
+              "activeCues": 1,
+              "activeText": "‎...і хлопець із Тонги."
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": null,
+        "requests": [
+          {
+            "t": 481,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd-083c-ae17-22f2-8359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/6/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 6143,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": 6,
+              "PositionTicks": 691798140,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 9059,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd083cae1722f28359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/6/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 9738,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": 6,
+              "PositionTicks": 1476580000,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      }
+    }
+  }
+}

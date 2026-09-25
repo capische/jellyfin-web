@@ -1,0 +1,239 @@
+{
+  "itemId": "9f87e86fdb9995e801fd25c675b66cf4",
+  "title": "The Wonderful Story of Henry Sugar",
+  "api": {
+    "summary": "mkv hevc 3840x2160 HDR",
+    "audio": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "subtitles": [
+      "6",
+      "7",
+      "8"
+    ]
+  },
+  "stock": {
+    "title": "The Wonderful Story of Henry Sugar",
+    "parentTitle": "",
+    "miscInfo": "2023 41m PG 7.3 95 | ",
+    "endsAt": "Ends at 3:27 PM",
+    "readAt": 1790311573900,
+    "audioOptions": [
+      "1:LostFilm - Russian - Dolby Digital - Stereo - Default",
+      "2:Многоголосый - Russian - AAC - Stereo",
+      "3:OZZ - Russian - AAC - Stereo",
+      "4:Токсин - Russian - AAC - Stereo",
+      "5:English - Dolby Digital+ - 5.1 - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "6:Russian (Forced) - Default - SUBRIP",
+      "7:Russian - SUBRIP",
+      "8:English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:4K HEVC Dolby Vision Profile 8.1 (HDR10)"
+    ],
+    "officialRating": "PG",
+    "communityRating": "7.3",
+    "criticRating": "95",
+    "genres": [
+      "Fantasy",
+      "Adventure",
+      "Drama"
+    ],
+    "studios": [
+      "American Empirical Pictures",
+      "Indian Paintbrush"
+    ],
+    "director": [
+      "Wes Anderson"
+    ],
+    "writer": [],
+    "tags": [
+      "list-one",
+      "london, england",
+      "card game",
+      "casino",
+      "based on novel or book",
+      "gambling",
+      "charity",
+      "training",
+      "wealth",
+      "breaking the fourth wall",
+      "calcutta",
+      "storytelling",
+      "story within the story",
+      "1930s",
+      "yogi",
+      "informative"
+    ],
+    "overview": "A rich man learns about a guru who can see without using his eyes. He sets out to master the skill in order to cheat at gambling.",
+    "castIds": [
+      "947d1a43dc89047881eb7dc20528de5a",
+      "2f4075bf673cd22112312c42e19ecb15",
+      "626388bc598b7a187e5844ae5a0c6449",
+      "7023bab05e9f0dbea44651b0183443b3",
+      "ed2762ec96b79ec2d801c9e1b28aa898",
+      "0e828a2c73599c6c0018d99581003d55",
+      "f37e4a733f564d8e414c1d22bce063ba",
+      "f9197bd0a6edb2011a637ee1ae7bed04",
+      "de81900b79c131e21e576b90783585f8",
+      "dbc133ab8a1a2dd10504991751be8f96",
+      "03f0e8d3b8d1ca8ae93f147cb5919713",
+      "c5a51b2bf88b9d41395f01b19b5239c1",
+      "30dfea4a69967bfb5c8709dca353656e",
+      "855c282cc1773be10658b07cbd573274",
+      "cb934d63e6ce9ecf1bf0fee95f5669ba",
+      "f6ad3f14ebaa9de5752324edb8b5502f",
+      "090fdb9da259ed1363ec826fcbfff947",
+      "545ca306e1bb0c2a6b49cb9cdb1cc519",
+      "1d57312c8b014e5e8275fc16acea2bff",
+      "a0adf386a4b8ec7bf6ae30b96337d7bc",
+      "889a4543ae093c4de029a881f96e4e55",
+      "668cd05e504b4d86458acb09dfd0e19d",
+      "20b27dbf716aee42a9110a26cf773787",
+      "7dbc43a699e439aaf2783d03dbd18418",
+      "5756cb145a5321467ff82bf1889f9388",
+      "217c810ac90b040381fd928e2a388a67",
+      "62ac9e8fe808b9689f67f63cac3ab7ae",
+      "2773f38867c427b432f21c07694d42e2",
+      "55c51b49da5c7114537a1eaab6badc6f",
+      "e96946758071d689ca722d3fbe28f0b6",
+      "bdd45a81a99c08944502b56868478e2c"
+    ],
+    "mediaInfoBadges": [
+      "2023",
+      "41m",
+      "PG",
+      "7.3",
+      "95"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=c905aeee28d15f991a26e172f984a27d\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Logo?tag=a415eb888a1e9d02639e5dfac2f7fcb4&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "9f87e86fdb9995e801fd25c675b66cf4",
+        "label": "The Wonderful Story of Henry Sugar (2023) WEBDL-2160p"
+      }
+    ],
+    "sourceSelected": "9f87e86fdb9995e801fd25c675b66cf4",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "The Wonderful Story of Henry Sugar",
+    "parentTitle": "",
+    "miscInfo": "2023 41m PG 7.3 95 | ",
+    "endsAt": "Ends at 3:27 PM",
+    "readAt": 1790311575248,
+    "audioOptions": [
+      "1:LostFilm - Russian - Dolby Digital - Stereo - Default",
+      "2:Многоголосый - Russian - AAC - Stereo",
+      "3:OZZ - Russian - AAC - Stereo",
+      "4:Токсин - Russian - AAC - Stereo",
+      "5:English - Dolby Digital+ - 5.1 - Original"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "6:Russian (Forced) - Default - SUBRIP",
+      "7:Russian - SUBRIP",
+      "8:English - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:4K HEVC Dolby Vision Profile 8.1 (HDR10)"
+    ],
+    "officialRating": "PG",
+    "communityRating": "7.3",
+    "criticRating": "95",
+    "genres": [
+      "Fantasy",
+      "Adventure",
+      "Drama"
+    ],
+    "studios": [
+      "American Empirical Pictures",
+      "Indian Paintbrush"
+    ],
+    "director": [
+      "Wes Anderson"
+    ],
+    "writer": [],
+    "tags": [
+      "list-one",
+      "london, england",
+      "card game",
+      "casino",
+      "based on novel or book",
+      "gambling",
+      "charity",
+      "training",
+      "wealth",
+      "breaking the fourth wall",
+      "calcutta",
+      "storytelling",
+      "story within the story",
+      "1930s",
+      "yogi",
+      "informative"
+    ],
+    "overview": "A rich man learns about a guru who can see without using his eyes. He sets out to master the skill in order to cheat at gambling.",
+    "castIds": [
+      "947d1a43dc89047881eb7dc20528de5a",
+      "2f4075bf673cd22112312c42e19ecb15",
+      "626388bc598b7a187e5844ae5a0c6449",
+      "7023bab05e9f0dbea44651b0183443b3",
+      "ed2762ec96b79ec2d801c9e1b28aa898",
+      "0e828a2c73599c6c0018d99581003d55",
+      "f37e4a733f564d8e414c1d22bce063ba",
+      "f9197bd0a6edb2011a637ee1ae7bed04",
+      "de81900b79c131e21e576b90783585f8",
+      "dbc133ab8a1a2dd10504991751be8f96",
+      "03f0e8d3b8d1ca8ae93f147cb5919713",
+      "c5a51b2bf88b9d41395f01b19b5239c1",
+      "30dfea4a69967bfb5c8709dca353656e",
+      "855c282cc1773be10658b07cbd573274",
+      "cb934d63e6ce9ecf1bf0fee95f5669ba",
+      "f6ad3f14ebaa9de5752324edb8b5502f",
+      "090fdb9da259ed1363ec826fcbfff947",
+      "545ca306e1bb0c2a6b49cb9cdb1cc519",
+      "1d57312c8b014e5e8275fc16acea2bff",
+      "a0adf386a4b8ec7bf6ae30b96337d7bc",
+      "889a4543ae093c4de029a881f96e4e55",
+      "668cd05e504b4d86458acb09dfd0e19d",
+      "20b27dbf716aee42a9110a26cf773787",
+      "7dbc43a699e439aaf2783d03dbd18418",
+      "5756cb145a5321467ff82bf1889f9388",
+      "217c810ac90b040381fd928e2a388a67",
+      "62ac9e8fe808b9689f67f63cac3ab7ae",
+      "2773f38867c427b432f21c07694d42e2",
+      "55c51b49da5c7114537a1eaab6badc6f",
+      "e96946758071d689ca722d3fbe28f0b6",
+      "bdd45a81a99c08944502b56868478e2c"
+    ],
+    "mediaInfoBadges": [
+      "2023",
+      "41m",
+      "PG",
+      "7.3",
+      "95"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=c905aeee28d15f991a26e172f984a27d\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/9f87e86fdb9995e801fd25c675b66cf4/Images/Logo?tag=a415eb888a1e9d02639e5dfac2f7fcb4&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "9f87e86fdb9995e801fd25c675b66cf4",
+        "label": "The Wonderful Story of Henry Sugar (2023) WEBDL-2160p"
+      }
+    ],
+    "sourceSelected": "9f87e86fdb9995e801fd25c675b66cf4",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
