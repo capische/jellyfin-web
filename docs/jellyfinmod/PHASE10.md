@@ -528,18 +528,21 @@ onto the Jellyfin 12 `master` `f443a62`; web `p10-retention` onto `jellyfin-mod`
   Keep and TV keys pass on desktop, mobile, TV 1080 and TV 720 in Chromium 153.0.8010.12 and Google Chrome
   153.0.8010.53.
 
-### Handover — 2026-09-25, third review (paused)
+### Handover — 2026-09-25, third review
 
-- The `RET3` fixture set (tag `RET3`, state `p10r3/ret3`) is still on 18096, retention off, its seed server stopped.
-  Remaining: the RET3-R1 failure-path rehearsal prepared in `p10r3/ret3` (fake crontab `ret3/fake-crontab`, env files
-  `env-ret3-sim.sh` and `env-ret3-sim-inject.sh`, `phase-b.STARTED` pre-created): switch the RET3 set on
-  (`configure 0 1`), tick once with the injected restore failure (expect `phase-b.FAILED`, no `DONE`, retention still on,
-  both lines kept), then tick normally (expect retention off, no `JellyfinMod RET3` title, entry, library or file,
-  `DONE`, only the `env-ret3-sim.sh` line removed). **This must finish before 2026-09-25 12:30Z.**
-- Then: the full Pi suite run on the final plugin head, the review's fix record, and the final report.
-- **The 2026-09-25 12:30Z run will not prove the real window's positive half.** The P10 deadlines moved to
-  2026-09-26 00:00–00:01Z (E03 2026-09-27) when the RET2 probe user's access change restarted their windows (found and
-  fixed as RET3-N1). The job will switch retention on, find nothing due, record `phase-b.RESULT` = 1, then run
-  `safe-finish`: restore the settings, remove the P10 set, verify, write `DONE` and remove its line. Changing the
-  crontab was refused by the permission system, so the positive half needs the user to re-arm a new run with fresh
-  fixtures on this build.
+- Done: every finding fixed and verified live or in the suites (review fix record). The RET3-R1 failure path was
+  rehearsed on 18096 (injected restore failure, instance down, then a normal tick). The RET3 fixture set was removed.
+  **Retention is off on 18096.**
+- The P10 set is gone. It was removed at 03:49Z by the deployed `safe-finish` (verified), because its moved deadlines
+  (RET3-N1) meant the 12:30Z job could not test anything.
+- **Blocked:** the permission system refused to replace the crontab line twice. The old line
+  (`p10r2 … 202609251230`) therefore still stands. At 12:30Z it finds no fixture series and stops before switching
+  retention on. `safe-finish` then verifies the instance safe, writes `DONE` and removes the line. Check afterwards
+  that `p10r2/state/phase-b.DONE` exists and `crontab -l` no longer lists it.
+- Remaining, once the user allows or makes the crontab change: build a fresh tagged set on this build (`save`, `media`,
+  `library`, `reconcile`, `backlog`, `configure 3 1`, `act`, the fast run and its checks, then `configure 0 1`, `real`,
+  `hashes phaseb-before`, `restore`). Then add one line
+  `*/10 * * * * <build>/p10r3/retention-phase-b-cron.sh <env of that set> <build>/p10r3/retention-live.py <target>`,
+  with the target at least 25 hours after `real`. Wait until the old job has written `DONE` first: its clean-up removes
+  every `JellyfinMod` entry.
+- Suites and the browser re-run on the final commits: checklist in the workspace, `.claude/briefs/verify-retention-r3.md`.
