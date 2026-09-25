@@ -5,7 +5,7 @@ M10–M21 and question numbers 11–22 are kept unchanged so existing references
 
 Planning draft, 2026-09-21. **Proposed, not user-approved**, except where a numbered user decision
 is quoted. It plans work only; it establishes nothing about M2–M9's live acceptance, writes no
-product code and authorizes no deployment. Read the Phase 6 sections above, [PHASE4.md](PHASE4.md)
+product code and authorizes no deployment. Read [PHASE6.md](PHASE6.md) (M1–M9), [PHASE4.md](PHASE4.md)
 (candidate DTO, `match`, rejection codes), [PHASE5.md](PHASE5.md) (version labels),
 [PHASE7.md](PHASE7.md) §5–§6 (settings area, Prowlarr-synced indexers), [UX.md](UX.md) §9, §11
 and §13, and [API.md](API.md) *Acquisition* and *Automation and versions* alongside it.
@@ -272,10 +272,10 @@ rejected. S1 of Phase 7 publishes DTOs in API.md; M10 publishes these.
 | M20 | Web: ladder, rule, grammar and preset editors; Prowlarr-synced overrides | M11, PHASE7 S8 or Dashboard | Every editor saves and re-reads across a restart; synced indexer overrides survive a sync |
 | M21 | Isolated acceptance and release gate | M10–M20 | Two-copy title acquired, substituted, upgraded, watched and reclaimed unattended within budgets |
 
-Commit scopes: `docs(ladders,p6.m10)`, `feat(ladders,p6.m11)`, `feat(parsing,p6.m12)`,
-`feat(rules,p6.m13)`, `feat(ladders,p6.m14)`, `feat(automation,p6.m15-16)`,
-`feat(languages,p6.m17)`, `feat(presets,p6.m18)`, `feat(picker,p6.m19)`,
-`feat(settings,p6.m20)`, `test(ladders,p6.m21)`; fixes use `fix(<component>,p6.mN)`.
+Commit scopes: `docs(ladders,p12.m10)`, `feat(ladders,p12.m11)`, `feat(parsing,p12.m12)`,
+`feat(rules,p12.m13)`, `feat(ladders,p12.m14)`, `feat(automation,p12.m15-16)`,
+`feat(languages,p12.m17)`, `feat(presets,p12.m18)`, `feat(picker,p12.m19)`,
+`feat(settings,p12.m20)`, `test(ladders,p12.m21)`; fixes use `fix(<component>,p12.mN)`.
 
 ### M10 — settle vocabulary and evidence before modelling
 
