@@ -274,7 +274,10 @@ SHA-256 prefix `665b82f60dd48fcc` (`128ec3f`); web bundle unchanged (`c22c90abb3
 **Suites** (on the Mac: Two, Three and Ten; on the Pi: ThreeProtection, Five and Six): all pass on `128ec3f`. Three of
 the protection suite's fixtures modelled a due target as a `disabled` evaluation. Under decision 13 a never-announced
 window starts at the switch-on, so they now record the scheduled, announced window that a prepared operation implies.
-The full twelve-suite run on `128ec3f` is handed to the verifier (`.claude/briefs/verify-retention-r3.md`, Section A).
+The full twelve-suite run went to the verifier after the rebase below: **suites verified on `348168b`** (Sonnet-high
+verifier, 2026-09-25: all twelve `exit=0` in `p10r3-logs/verify-r5.out`, the decision 13 check in the PhaseTen log,
+the RET4-R checks in the synced protection suite). The browser re-run (Section B) was not repeated; the bundle's
+retention code is unchanged since the Chromium and Chrome pass on `c22c90abb3`.
 
 **Rebased 2026-09-25 onto the S11 release** (plugin `master` `e5b3c95`, web `jellyfin-mod` `48e60121e7`), with no
 conflicts. Each branch's delta over its new base is line for line the one it had before. The plugin commits above are
