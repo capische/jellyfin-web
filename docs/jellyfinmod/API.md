@@ -490,11 +490,11 @@ downloading card state and the Remove dialog when a capability is missing (old p
  "stalledAfterHours":24,"scanTimeoutMinutes":10,"queueVisibleToUsers":false,"revision":1}
 ```
 
-`GET/PUT /JellyfinMod/DownloadClients/{id}/PathMappings` replaces the ordered list
+`GET/PUT /JellyfinMod/Settings/DownloadClients/{id}/PathMappings` replaces the ordered list
 `{"pathMappings":[{"clientPathPrefix":"<client-download-dir>","localPathPrefix":"<test-root>/downloads"}],
 "revision":3}`; the client's `revision` is bumped. The first matching prefix wins; a path that no
 mapping and no `downloadDirectory`/`localDirectory` pair covers is `path_unmapped`.
-`POST /JellyfinMod/DownloadClients/{id}/TestImportPath` with `{"clientPath":"…"}` maps the path, checks
+`POST /JellyfinMod/Settings/DownloadClients/{id}/TestImportPath` with `{"clientPath":"…"}` maps the path, checks
 that it exists, and reports for each movie/TV library root whether it shares the mount and whether a
 `link(2)` probe succeeded (`linkProbe`: `linked`, `not_same_mount`, `source_not_writable`,
 `cross_device` or `failed_<errno>`). It creates one empty probe file in the download folder, links it
