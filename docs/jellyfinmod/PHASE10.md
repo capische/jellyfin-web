@@ -273,6 +273,11 @@ and summarised here. The original wording follows each answer.
 - **Q10 answered:** upgrades replace the older version immediately (Phase 6 design); per-file Keep,
   seeding and read-only media still protect it.
 - **Q11 answered:** the warning's date is shown to ordinary users too.
+- **Decision 12 (answered 2026-09-24):** movies follow the episode backlog rule. Only a watch after the movie's
+  floor counts: the later of when the plugin first tracked it and retention's first-ever switch-on. A movie watched
+  before that needs a new watch. Migration `PhaseTenMovieBacklog` sends existing movie countdowns resting on an older
+  watch back to waiting, each with a History entry (`retention_rule_changed`), so none becomes due on deployment
+  (plugin `b93f605`).
 
 1. **Backlog of already-watched episodes.** When tracking starts, should episodes watched before it
    (a) need a new completion — watched or marked played again — before they can be reclaimed
@@ -503,3 +508,38 @@ retention disabled.
   cross-filesystem move (suite only). Physical webOS not tested.
 - `EpisodeUpgradesEnabled` stays off by default; RET2-R3's guard is its precondition and is now in place.
 - Rebase of plugin `p10-retention` onto the retargeted `master` happens after this work and the retarget agent's.
+
+## Third delete-path review fixes — 2026-09-25 (Opus 5.5, high; paused at the 80 % limit)
+
+Findings of [`REVIEW-2026-09-24-retention-3.md`](REVIEW-2026-09-24-retention-3.md). Plugin `p10-retention` is rebased
+onto the Jellyfin 12 `master` `f443a62`; web `p10-retention` onto `jellyfin-mod` `a279641ebf`. Neither is pushed.
+
+- **RET3-R1** (web `8204941858`): the real-window job is fail-safe: `phase-b.STARTED` before phase B; `safe-finish`
+  (restore, clean up, verify, each retried) on every tick until it proves retention off and no fixture left; only then
+  `phase-b.DONE` and the crontab line removed; otherwise `phase-b.FAILED` counts, the log and syslog say so and the job
+  stays armed. Deployed on the Pi as `p10r2/retention-phase-b-cron.sh` (SHA-256 `96bc0cd2…`) and
+  `p10r2-retention-live.py` (`dc6d202b…`, the driver of that commit); the crontab line is unchanged.
+- **Decision 12** (plugin `b93f605`), **RET3-R2–R8, RET3-N1, the merged-version guard gap and the `database is
+  locked` preview** (plugin `7fe53c1`, `30421c2`, `2e90a54`, `15589f1`; web `34c079cb94`, `c61e89f56d`, `c22c90abb3`).
+  Live evidence goes into the review's fix record.
+- **Deployed on 18096:** plugin `15589f1` (DLL SHA-256 prefix `0ad08f5b323fc784`), web bundle `350e27ced474` from the
+  clean tree at `c22c90abb3` (`/web-mod/`); backup `p10r3/backup-20260925T004520Z`. **Retention is disabled on 18096.**
+- Browser probe on the deployed bundle: overdue, covered-number, warning, Keep and Stop keeping, window select, per-file
+  Keep and TV keys pass on desktop, mobile, TV 1080 and TV 720 in Chromium 153.0.8010.12 and Google Chrome
+  153.0.8010.53.
+
+### Handover — 2026-09-25, third review (paused)
+
+- The `RET3` fixture set (tag `RET3`, state `p10r3/ret3`) is still on 18096, retention off, its seed server stopped.
+  Remaining: the RET3-R1 failure-path rehearsal prepared in `p10r3/ret3` (fake crontab `ret3/fake-crontab`, env files
+  `env-ret3-sim.sh` and `env-ret3-sim-inject.sh`, `phase-b.STARTED` pre-created): switch the RET3 set on
+  (`configure 0 1`), tick once with the injected restore failure (expect `phase-b.FAILED`, no `DONE`, retention still on,
+  both lines kept), then tick normally (expect retention off, no `JellyfinMod RET3` title, entry, library or file,
+  `DONE`, only the `env-ret3-sim.sh` line removed). **This must finish before 2026-09-25 12:30Z.**
+- Then: the full Pi suite run on the final plugin head, the review's fix record, and the final report.
+- **The 2026-09-25 12:30Z run will not prove the real window's positive half.** The P10 deadlines moved to
+  2026-09-26 00:00–00:01Z (E03 2026-09-27) when the RET2 probe user's access change restarted their windows (found and
+  fixed as RET3-N1). The job will switch retention on, find nothing due, record `phase-b.RESULT` = 1, then run
+  `safe-finish`: restore the settings, remove the P10 set, verify, write `DONE` and remove its line. Changing the
+  crontab was refused by the permission system, so the positive half needs the user to re-arm a new run with fresh
+  fixtures on this build.
