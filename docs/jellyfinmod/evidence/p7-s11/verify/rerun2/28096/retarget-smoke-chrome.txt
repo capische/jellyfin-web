@@ -1,0 +1,11 @@
+browser chrome 153.0.8010.53
+PASS Sign-in as oleksii lands on Home in the mod shell :: {"meta":"21c0905b4568"}
+PASS Mod Home renders the hero and card rows :: {"hero":true,"cards":50,"sections":["Continue watching","Recently Added","My Media"]}
+PASS Authenticated Health is ok on host 12.0.0 with the served bundle; anonymous is refused :: {"status":200,"ok":true,"version":"0.1.0.0","hostVersion":"12.0.0.0","bundleId":"21c0905b4568","minimum":"12.0.0.0","blocker":null,"takeover":"patched","anonymous":401}
+PASS A detail page renders the title :: {"name":"20 Days in Mariupol"}
+PASS The settings area opens with its sections :: {"sections":["overview","discovery","client","indexers","profiles","grabbing","import","retention","automation","interface","diagnostics"]}
+PASS The plugin page shows its version, Active, and no repository error :: {"error":false,"active":true}
+PASS The server reports the plugin Active :: {"version":"0.1.0.0","status":"Active"}
+PASS No page errors :: []
+8 of 8 passed
+EXIT:0
