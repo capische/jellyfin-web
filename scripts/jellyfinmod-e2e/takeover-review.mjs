@@ -3,7 +3,8 @@ import { chromium } from 'playwright';
 
 const origin = process.env.JELLYFINMOD_TEST_URL ?? 'http://127.0.0.1:18096';
 const target = new URL(origin);
-if (target.port !== '18096') throw new Error('Takeover acceptance runs only on jellyfinmod-test:18096');
+// The isolated instances only (18096 test, 28096 acceptance); production 8096 stays unreachable from here.
+if (!['18096', '28096'].includes(target.port)) throw new Error('Takeover acceptance runs only on an isolated instance (18096 or 28096)');
 const prefix = process.env.JELLYFINMOD_BASE_URL ?? '';
 const browser = await chromium.launch({ headless: true, ...(process.env.JELLYFINMOD_BROWSER === 'chrome' ? { channel: 'chrome' } : {}) });
 const context = await browser.newContext({ serviceWorkers: 'block' });

@@ -51,6 +51,8 @@ const expectedDueCards = Number(process.env.JELLYFINMOD_EXPECT_DUE_CARDS ?? 0);
 const testUser = process.env.JELLYFINMOD_TEST_USER ?? 'oleksii';
 const expectAdmin = process.env.JELLYFINMOD_EXPECT_ADMIN !== 'false';
 const reclaimedEntryId = process.env.JELLYFINMOD_RECLAIMED_ENTRY_ID;
+// Keep is irreversible through the API; activate it only on a disposable entry, when this says so.
+const allowKeep = process.env.JELLYFINMOD_ALLOW_KEEP === 'true';
 const nativePlaybackItemId = process.env.JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID;
 const searchQuery = process.env.JELLYFINMOD_SEARCH_QUERY ?? 'blade';
 const pagingQuery = process.env.JELLYFINMOD_PAGING_QUERY ?? (process.env.JELLYFINMOD_SEARCH_QUERY ?? 'matrix');
@@ -551,6 +553,7 @@ try {
     if (!expectedFilteredCountdown) skippedGates.push('filtered countdown (JELLYFINMOD_EXPECT_FILTER_COUNTDOWN)');
     if (!reclaimedEntryId) skippedGates.push('reclaimed details without playback (JELLYFINMOD_RECLAIMED_ENTRY_ID)');
     if (!nativePlaybackItemId) skippedGates.push('native playback action (JELLYFINMOD_NATIVE_PLAYBACK_ITEM_ID)');
+    if (entryId && !allowKeep) skippedGates.push('Keep activation by Enter (irreversible; JELLYFINMOD_ALLOW_KEEP, reachability still checked)');
     const playbackPattern = /^(play|resume|continue)/i;
     const detailControls = () => page.evaluate(() => Array.from(document.querySelectorAll('#itemDetailPage:not(.hide) button, #itemDetailPage:not(.hide) a'))
         .filter(candidate => candidate.offsetParent !== null)
@@ -592,8 +595,27 @@ try {
         for (let press = 0; press < 40 && !reached; press++) {
             await pressKey(key);
             reached = await activeMatches(keepSelector);
+            // Since P7.S6 Keep shares a row with the mod's own actions (Search releases, Get another quality), so on
+            // the TV it can sit to the right of where Down lands: walk the row with Right before going down again.
+            for (let across = 0; layout === 'tv' && !reached && across < 6; across++) {
+                const where = () => page.evaluate(() => {
+                    const element = document.activeElement;
+                    const rect = element?.getBoundingClientRect();
+                    return element ? `${element.tagName}.${element.className}@${Math.round(rect.left)},${Math.round(rect.top)}` : '';
+                });
+                const before = await where();
+                await pressKey('ArrowRight');
+                reached = await activeMatches(keepSelector);
+                if (await where() === before) break;
+            }
         }
         if (!reached) throw new Error('Keep is not reachable by ' + key + ' in ' + layout);
+        if (!allowKeep) {
+            // Keep cannot be undone through the API (no un-Keep, open question 13), so on an instance whose entries are
+            // real titles the runner proves reachability by keyboard and stops short of Enter.
+            checks.push({ layout, width, keepByKeyboard: key + ' reached', keepActivation: 'skipped (JELLYFINMOD_ALLOW_KEEP not set)' });
+            return;
+        }
         const kept = page.waitForResponse(response => response.request().method() === 'POST'
             && /\/JellyfinMod\/Entries\/[^/]+\/Keep$/.test(new URL(response.url()).pathname), { timeout: 15000 });
         await page.keyboard.press('Enter');
@@ -630,16 +652,25 @@ try {
             const nativeOk = native => native.layoutApplied && native.nativeRoute && native.seasons && native.history && !native.filelessRoot;
             const native = await poll(readNative, nativeOk, { timeout: 20000 });
             if (!nativeOk(native)) throw new Error('Bound series lost native details in ' + layout + ': ' + JSON.stringify(native));
+            // Since P7.S6 (web 854ffd77c3) Search releases is a plain button in the mod's own action row beside Keep; the
+            // stock More menu is upstream's again and carries no mod command. Check both: the mod button is present and
+            // the stock menu still opens, without the old appended command.
+            const hasSearchButton = await page.locator('#itemDetailPage:not(.hide) .jfmod-nativeActions button')
+                .filter({ hasText: 'Search releases' }).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+            if (!hasSearchButton) throw new Error('Search releases missing from the mod action row in ' + layout);
             await page.locator('#itemDetailPage:not(.hide) .btnMoreCommands:not(.hide)').first().click();
-            const menuHasSearch = await page.locator('[data-id="jfmod-search-releases"]').filter({ hasText: 'Search releases' }).first()
+            const stockMenuOpened = await page.locator('.actionSheet [data-id]').first()
                 .waitFor({ timeout: 10000 }).then(() => true, () => false);
-            if (!menuHasSearch) throw new Error('Search releases missing from native More menu in ' + layout);
-            checks.push({ layout, width, height, nativeDetails: 'passed' });
+            if (!stockMenuOpened) throw new Error('The stock More menu did not open in ' + layout);
+            if (await page.locator('.actionSheet [data-id^="jfmod-"]').count()) {
+                throw new Error('The stock More menu still carries a mod command in ' + layout);
+            }
+            checks.push({ layout, width, height, nativeDetails: 'passed', searchReleases: 'mod action row', stockMoreMenu: 'upstream' });
             // Escape is the app's Back on TV and closes the sheet. With focus on the body, desktop and mobile keep the
             // sheet open, so waiting there only ran out its timeout; the reload that follows discards the sheet.
             await page.keyboard.press('Escape');
             if (layout === 'tv') {
-                await page.locator('[data-id="jfmod-search-releases"]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
+                await page.locator('.actionSheet [data-id]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
             }
         });
         await step(`keep by keyboard ${layout} ${width}x${height}`, async () => {
