@@ -71,7 +71,8 @@ const AUTOMATION_PAUSED_REASONS = new Map([
     ['too_many_open_imports', 'Too many downloads are still being imported.'],
     ['free_space_floor', 'Free space in the library is below the configured floor.'],
     ['client_unreachable', 'The download client cannot be reached.'],
-    ['acquisition_not_ready', 'Indexers or the download client are not ready.']
+    ['acquisition_not_ready', 'Indexers or the download client are not ready.'],
+    ['breaker_open', 'Every indexer is paused by its circuit breaker after repeated failures.']
 ]);
 
 /**
