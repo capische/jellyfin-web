@@ -1,0 +1,3 @@
+browser 153.0.8010.53 step interface-off label interface-off
+PASS [chrome] interface-off: The Interface section's switch turns the takeover off :: {"enabled":false,"status":"stock"}
+EXIT:0
