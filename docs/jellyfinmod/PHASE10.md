@@ -148,6 +148,21 @@ checksums of the preserved tables.
 
 ## 3. Retention semantics per episode
 
+**The user's rule, in plain language (2026-09-25): "watched = added to retention; if it wasn't watched, not added."**
+Every case below follows from it:
+
+- A movie or episode enters retention only when the watched-user policy has finished it: Jellyfin's played flag, no
+  resume position, and a last-played date. Nothing unwatched is ever added, and a played flag without a date (a
+  propagated version flag) is not a watch.
+- The watch must come after the title was first tracked and after retention was first switched on (decisions 1 and 12):
+  a backlog watched before then is not added until it is watched again.
+- A watch while retention is off is added at the next switch-on, with a full window from the switch-on and the warning;
+  a window that ran out while off starts over the same way (decision 13). Nothing becomes due at a switch-on.
+- A re-watch restarts the window from the re-watch date: playing it again passes through "in progress" (a resume
+  position protects it), and finishing it is a new watch with a new date. Marking an already played title played again
+  does not, because Jellyfin keeps its earlier last-played date; mark it unplayed first.
+- Adding to retention always shows the date: History `retention_started` and the detail-page warning (Q8).
+
 | Case | Behaviour |
 | --- | --- |
 | Watched-user policy | Unchanged: All users / Selected user / Any user per episode, evaluated over users with access to the series' library. |
