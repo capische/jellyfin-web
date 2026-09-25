@@ -557,7 +557,7 @@ proposal below.
     5-second cancellable hold, downloads and library share one mount with hardlink-only import,
     and T7–T10, T18, P7, X1 and X3 are entry gates.
 
-Questions 11–22 belong to the *Phase 6 follow-up* below and are listed at its end.
+Questions 11–22 moved to [PHASE12.md](PHASE12.md).
 
 ---
 
