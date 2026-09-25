@@ -182,11 +182,23 @@ async function checkHome(page, name, cfg) {
         await waitHash(page, 'details', 15000);
         await page.waitForSelector('.page:not(.hide) .detailPagePrimaryContainer', { timeout: 15000 });
         await page.waitForTimeout(1500);
+        const backAt = Date.now();
         await press(page, 'Escape');
         await waitHash(page, 'home', 15000);
-        await page.waitForTimeout(1500);
-        const after = await describeFocus(page);
-        record(name, 'Enter on a Home card opens details; Back returns with focus restored', after === before, { before, after });
+        // The mod Home is a React route that composes its rows afresh on Back (upstream's legacy Home is a cached view),
+        // so focus returns to the card once the rows' data has arrived: one server round trip, which a loaded host can
+        // stretch past a fixed pause (a 1.5 s pause read BODY once, P7.S11). Poll for it, bounded, and report the time.
+        let after = await describeFocus(page);
+        const backTrail = [after];
+        while (after !== before && Date.now() - backAt < 10000) {
+            await page.waitForTimeout(100);
+            after = await describeFocus(page);
+            if (backTrail.at(-1) !== after) backTrail.push(after);
+        }
+        await page.waitForTimeout(1000);
+        const settled = await describeFocus(page);
+        record(name, 'Enter on a Home card opens details; Back returns with focus restored', after === before && settled === before,
+            { before, after: settled, restoredMs: after === before ? Date.now() - backAt - 1000 : null, trail: backTrail });
     } catch (e) { record(name, 'Home d-pad', false, notVerified(e)); }
 }
 

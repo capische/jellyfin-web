@@ -596,8 +596,14 @@ try {
             await pressKey(key);
             reached = await activeMatches(keepSelector);
             // Since P7.S6 Keep shares a row with the mod's own actions (Search releases, Get another quality), so on
-            // the TV it can sit to the right of where Down lands: walk the row with Right before going down again.
-            for (let across = 0; layout === 'tv' && !reached && across < 6; across++) {
+            // the TV it can sit to the right of where Down lands: walk that row with Right before going down again.
+            // Only that row: walking Right from anywhere else (the stock tag links above it wrap onto two lines) strands
+            // focus at the far end of the first line, and Down from there cycles between the two tag lines forever.
+            const inKeepRow = () => page.evaluate(selector => {
+                const keep = document.querySelector(selector);
+                return !!keep && !!document.activeElement && document.activeElement.parentElement === keep.parentElement;
+            }, keepSelector);
+            for (let across = 0; layout === 'tv' && !reached && across < 6 && await inKeepRow(); across++) {
                 const where = () => page.evaluate(() => {
                     const element = document.activeElement;
                     const rect = element?.getBoundingClientRect();
