@@ -1,0 +1,906 @@
+{
+ "browser": "chromium",
+ "version": "153.0.8010.12",
+ "runs": [
+  {
+   "step": "grab desktop",
+   "at": "2026-09-25T11:30:01.823Z",
+   "results": [
+    {
+     "step": "grab desktop",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "7 releases",
+      "notice": [],
+      "eligible": [
+       "1080p BluRayFreeleech 1.6 GB · 64↑ · EN. 1337x · score 630 His Girl Friday (1940) [BluRay] [1080p] [YTS] [YIFY]",
+       "1080p BluRay · AV1 · SWAXXONFreeleech 1.5 GB · 14↑ · EN. 1337x · score 625 His.Girl.Friday.1940.1080p.BluRay.AV1-SWAXXON",
+       "1080p BluRay · H.264 · ClassicsFreeleech 1.2 GB · 12↑ · EN. 1337x · score 624 His.Girl.Friday.1940.(Howard.Hawks).1080p.BRRip.x264-Classics",
+       "720p BluRayFreeleech 784 MB · 70↑ · EN. 1337x · score 330 His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]",
+       "720p WEB-DL · H.264Freeleech 2.8 GB · 3↑ · EN. 1337x · score 218 His.Girl.Friday.1940.720p.WEB-DL.H264 BS [PublicHD]",
+       "720p WEB-DLFreeleech 735 MB · 2↑ · EN. 1337x · score 216 His Girl Friday (1940) 720p WEB-DL 700MB MkvCage",
+       "720p WEB-DL · H.264 · BSFreeleech 2.9 GB · 0↑ · EN. 1337x · score 210 His.Girl.Friday.1940.720p.WEB-DL.H264-BS"
+      ],
+      "rejected": [
+       "1080p BluRay · HEVC · AACFreeleech 5.6 GB · 16↑ · EN. 1337x · score 626 His Girl Friday (1940) Criterion + Extras (1080p BluRay x265 HEVC 10bit AAC 1.0 r00t) [QxR] The release is larger than the profile allows.",
+       "1080p BluRay · H.264 · SiNNERSFreeleech 9.6 GB · 2↑ · EN. 1337x · score 616 His.Girl.Friday.1940.1080p.BluRay.x264-SiNNERS[PRiME] The release is larger than the profile allows.",
+       "1080p BluRay · H.264 · OFTFreeleech 4.1 GB · 1↑ · EN. 1337x · score 614 His.Girl.Friday.1940.1080p.BluRay.x264-OFT The release is larger than the profile allows.",
+       "720p BluRay · H.264 · SiNNERSFreeleech 4.7 GB · 0↑ · EN. 1337x · score 310 His.Girl.Friday.1940.720p.BluRay.x264-SiNNERS[PRiME] The release is larger than the profile allows.",
+       "2160p BluRay · HEVC · DV HDR · FLAC · QxRFreeleech 14.5 GB · 27↑ · EN. 1337x · score 29 His Girl Friday 1940 2160p BluRay x265 HEVC 10bit DV HDR FLAC 2 0 English German Italian Spanish r00t-QxR bluray-2160p is not allowed by profile Live HD. The release is larger than the profile allows.",
+       "720pFreeleech 1.0 GB · 22↑ · EN. 1337x · score 28 His Girl Friday (Comedy 1940) Cary Grant 720p HD The release title does not match this title. The source could not be read from the release title.",
+       "2160p Remux · HEVC · DV · FLAC · SiCFoIFreeleech 54.2 GB · 14↑ · EN. 1337x · score 25 His.Girl.Friday.1940.2160p.UHD.Blu ray.Remux.DV.HEVC.FLAC.1.0-SiCFoI remux-2160p is not allowed by profile Live HD. The release is larger than the profile allows.",
+       "1080p Remux · H.264 · DTS-HD MA · HDTFreeleech 24.8 GB · 14↑ · EN. 1337x · score 25 His.Girl.Friday.1940.1080p.Blu ray.Remux.AVC.DTS HD.MA.2.0-HDT remux-1080p is not allowed by profile Live HD. The release is larger than the profile allows.",
+       "BluRay · H.264Freeleech 1.3 GB · 5↑ · EN. 1337x · score 20 His.Girl.Friday.1940.iNTERNAL.BDRip.x264 MANiC[TGx] ⭐ The resolution could not be read from the release title."
+      ],
+      "eligibleCount": 7,
+      "rejectedCount": 9
+     }
+    },
+    {
+     "step": "grab desktop",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "grab desktop",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      630,
+      625,
+      624,
+      330,
+      218,
+      216,
+      210
+     ]
+    },
+    {
+     "step": "grab desktop",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "grab desktop",
+     "check": "After the hold the picker reports the verified handoff",
+     "verdict": "PASS",
+     "detail": "The download client accepted the torrent."
+    },
+    {
+     "step": "grab desktop",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed",
+      "GET /JellyfinMod/Grabs/545d4d689a864377ae9bdad2004a72ed"
+     ]
+    },
+    {
+     "step": "grab desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "grab desktop",
+     "check": "Back closes the picker and restores focus to the opener",
+     "verdict": "FAIL",
+     "detail": {
+      "open": true,
+      "focus": "720p BluRayFreeleech784 MB · 70↑ · EN. 1"
+     }
+    },
+    {
+     "step": "grab desktop",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  },
+  {
+   "step": "queue desktop",
+   "at": "2026-09-25T11:32:06.875Z",
+   "results": [
+    {
+     "step": "queue desktop",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": false,
+        "inFlight": false,
+        "text": null,
+        "cards": 0
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "9%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "9%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "10%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "10%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.1138
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 10,
+      "row": {
+       "found": true,
+       "percent": 11,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]11 %89 MB of 784 MB1 MB/s11 minDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue mobile",
+   "at": "2026-09-25T11:32:27.829Z",
+   "results": [
+    {
+     "step": "queue mobile",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": false,
+        "inFlight": false,
+        "text": null,
+        "cards": 0
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "12%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "13%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "14%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "15%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.1539
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 15,
+      "row": {
+       "found": true,
+       "percent": 15,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]15 %121 MB of 784 MB · 311 kB/s · 5 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv1080",
+   "at": "2026-09-25T11:33:25.007Z",
+   "results": [
+    {
+     "step": "queue tv1080",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "15%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "16%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "16%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "17%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "17%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.1869
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 17,
+      "row": {
+       "found": true,
+       "percent": 18,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]18 %147 MB of 784 MB · 2 MB/s · 9 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       19,
+       20,
+       20,
+       21,
+       22,
+       23,
+       24,
+       24,
+       24,
+       25
+      ]
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: Enter opens the row actions (Remove, Open in client); Back closes them and focus returns to the row",
+     "verdict": "FAIL",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "listItem listItem-button actionSheetMenuItem listItem-focusscale emby-button show-focus",
+       "sheet": true
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv720",
+   "at": "2026-09-25T11:34:22.253Z",
+   "results": [
+    {
+     "step": "queue tv720",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "25%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "26%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "26%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "27%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "27%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.2803
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 27,
+      "row": {
+       "found": true,
+       "percent": 27,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]27 %217 MB of 784 MB · 827 kB/s · 11 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       28,
+       28,
+       29,
+       30,
+       31,
+       31,
+       32,
+       32,
+       32,
+       33
+      ]
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "TV: Enter opens the row actions (Remove, Open in client); Back closes them and focus returns to the row",
+     "verdict": "FAIL",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "listItem listItem-button actionSheetMenuItem listItem-focusscale emby-button show-focus",
+       "sheet": true
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue desktop",
+   "at": "2026-09-25T11:35:06.599Z",
+   "results": [
+    {
+     "step": "queue desktop",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "37%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "38%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "38%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "39%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "40%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.4128
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 40,
+      "row": {
+       "found": true,
+       "percent": 41,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]41 %324 MB of 784 MB2 MB/s5 minDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue mobile",
+   "at": "2026-09-25T11:35:29.070Z",
+   "results": [
+    {
+     "step": "queue mobile",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "42%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "43%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "43%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "44%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "45%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.4654
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 45,
+      "row": {
+       "found": true,
+       "percent": 46,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]46 %365 MB of 784 MB · 2 MB/s · 4 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv1080",
+   "at": "2026-09-25T11:36:27.770Z",
+   "results": [
+    {
+     "step": "queue tv1080",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "48%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "49%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "50%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "51%",
+        "cards": 1
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "51%",
+        "cards": 1
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.52
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 51,
+      "row": {
+       "found": true,
+       "percent": 52,
+       "text": "His Girl Friday (1940)His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY]52 %408 MB of 784 MB · 589 kB/s · 9 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       52,
+       52,
+       52,
+       53,
+       54,
+       54,
+       55,
+       56,
+       56,
+       57
+      ]
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row",
+     "verdict": "PASS",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+       "sheet": false
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "snap desktop",
+   "at": "2026-09-25T11:37:56.043Z",
+   "results": [
+    {
+     "step": "snap desktop",
+     "check": "A stale row (client unreachable) shows its age and the last progress, never 0 %",
+     "verdict": "PASS",
+     "detail": [
+      "His Girl Friday (1940) His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY] 58 % Updated 1 min ago 462 MB of 784 MB — — Status unknown Live Transmission (relay)"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "snap mobile",
+   "at": "2026-09-25T11:38:01.883Z",
+   "results": [
+    {
+     "step": "snap mobile",
+     "check": "A stale row (client unreachable) shows its age and the last progress, never 0 %",
+     "verdict": "PASS",
+     "detail": [
+      "His Girl Friday (1940) His Girl Friday (1940) [BluRay] [720p] [YTS] [YIFY] 58 % Updated 1 min ago 462 MB of 784 MB Status unknown Live Transmission (relay)"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "cancel tv1080",
+   "at": "2026-09-25T11:40:25.183Z",
+   "results": [
+    {
+     "step": "cancel tv1080",
+     "check": "Search releases is reachable by arrow keys",
+     "verdict": "PASS"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "picker flow",
+     "verdict": "NOT VERIFIED",
+     "detail": "page.waitForSelector: Timeout 15000ms exceeded."
+    }
+   ]
+  },
+  {
+   "step": "cancel tv1080",
+   "at": "2026-09-25T11:41:28.927Z",
+   "results": [
+    {
+     "step": "cancel tv1080",
+     "check": "TV: the detail page focuses a control on open",
+     "verdict": "FAIL",
+     "detail": "body"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "TV: Search releases is reachable by arrow keys",
+     "verdict": "PASS",
+     "detail": [
+      "",
+      "Search releases"
+     ]
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "1 release",
+      "notice": [],
+      "eligible": [
+       "1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD"
+      ],
+      "rejected": [],
+      "eligibleCount": 1,
+      "rejectedCount": 0
+     }
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      519
+     ]
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Cancel by Enter during the hold ends the grab as cancelled",
+     "verdict": "PASS",
+     "detail": "Quality profile for this search Default (Live HD) Live HD 1 release 1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Standin.Movie.2026.1080p.WEB-DL.H264-JFMOD Cancelled before anything was sent. Close"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "POST /JellyfinMod/Grabs/d9a3342c3a50476bbdaba99b82d0c67b/Cancel"
+     ]
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Back closes the picker and restores focus to the opener",
+     "verdict": "PASS",
+     "detail": {
+      "open": false,
+      "focus": "Search releases"
+     }
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  },
+  {
+   "step": "grab mobile",
+   "at": "2026-09-25T11:44:24.781Z",
+   "results": [
+    {
+     "step": "grab mobile",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "1 release",
+      "notice": [],
+      "eligible": [
+       "1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Live.Series.S01E01.1080p.WEB-DL.H264-JFMOD"
+      ],
+      "rejected": [],
+      "eligibleCount": 1,
+      "rejectedCount": 0
+     }
+    },
+    {
+     "step": "grab mobile",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "grab mobile",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      519
+     ]
+    },
+    {
+     "step": "grab mobile",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "grab mobile",
+     "check": "After the hold the picker reports the verified handoff",
+     "verdict": "PASS",
+     "detail": "The download client accepted the torrent."
+    },
+    {
+     "step": "grab mobile",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "GET /JellyfinMod/Grabs/7fa854f646724beea9984ae1c35bd4af",
+      "GET /JellyfinMod/Grabs/7fa854f646724beea9984ae1c35bd4af",
+      "GET /JellyfinMod/Grabs/7fa854f646724beea9984ae1c35bd4af",
+      "GET /JellyfinMod/Grabs/7fa854f646724beea9984ae1c35bd4af",
+      "GET /JellyfinMod/Grabs/7fa854f646724beea9984ae1c35bd4af"
+     ]
+    },
+    {
+     "step": "grab mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "grab mobile",
+     "check": "Back closes the picker and restores focus to the opener",
+     "verdict": "FAIL",
+     "detail": {
+      "open": false,
+      "focus": "HomeMedia\n                              "
+     }
+    },
+    {
+     "step": "grab mobile",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  }
+ ]
+}
