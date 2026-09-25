@@ -38,6 +38,7 @@ Subcommands, in scenario order:
                           the second review's acceptance checks (RET2-R1, R2, R5, R7, R3)
   merge | movie-check | movie-finish | replace | covered-refresh | lockcheck MIN DAYS
                           the third review's checks (RET3-R2 movie versions and C2 merge, R3, R5, the database lock)
+  decision13              RET4-R1: windows finished or run out while retention is off start at the switch-on
   seed-server             serve the fake Transmission RPC in the foreground
 """
 import hashlib, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -695,6 +696,115 @@ def cmd_merge_recheck():
     cmd_run()
     check(row["reason"] == "versions_untracked" and sha(host_path("MA")) == before != "ABSENT",
           "a file another tracked title plays as a merged version stays blocked and byte-identical at its deadline (C2)")
+
+
+def cmd_decision13():
+    """Decision 13 (RET4-R1), with a test window of three minutes on a fresh fixture set. (1) A countdown announced while
+    retention is on keeps its date through a short switch-off (Q9); a title finished during that switch-off gets a full
+    window from the switch-on, announced. (2) After a switch-off longer than the window, titles finished while off and
+    windows that ran out while off are all scheduled a full window from the switch-on, announced, and an immediate run
+    reclaims nothing. (3) After that window, the run reclaims them: the windows were real."""
+    import datetime
+    window = datetime.timedelta(minutes=3)
+    slack = datetime.timedelta(seconds=2)
+    user = selected_user()
+
+    def episodes():
+        _, detail = series_detail()
+        return detail, {n: tracked_episode(detail, n) for n in (3, 4, 13)}
+
+    def movie():
+        _, found = entry(MOVIE_LIBRARY, BACKLOG_TMDB)
+        return must("GET", f"/JellyfinMod/Entries/{found['id']}")
+
+    def started(history, episode_id=None):
+        return sum(1 for h in history if h["eventType"] == "retention_started" and
+                   (episode_id is None or episode_id.replace("-", "") in json.dumps(h).replace("-", "")))
+
+    def deadline(row):
+        value = (row.get("retention") or {}).get("deadline")
+        return parse_time(value) if value else None
+
+    def await_all(condition, timeout=300):
+        begin = time.time()
+        while True:
+            detail, rows = episodes()
+            film = movie()
+            if condition(rows, film) or time.time() - begin > timeout:
+                return detail, rows, film
+            time.sleep(5)
+
+    cmd_configure(3, 1)
+    mark_played("E04", user)
+    detail, rows, _ = await_all(lambda r, f: r[4]["retention"]["state"] == "scheduled")
+    d4 = deadline(rows[4])
+    s4 = started(detail["history"], rows[4]["id"])
+    print("E04 watched while on: scheduled for", d4, "announcements", s4)
+    check(d4 is not None and s4 == 1, "a watch while retention is on schedules and announces one window")
+
+    # (1) A short switch-off: E13 is finished while off.
+    cmd_restore()
+    sync_watch("E13", user)
+    time.sleep(20)
+    _, rows = episodes()
+    check(rows[13]["retention"]["state"] == "disabled", "a watch while retention is off starts nothing while off")
+    switch_on = now_utc()
+    cmd_configure(3, 1)
+    detail, rows, _ = await_all(lambda r, f: r[13]["retention"]["state"] == "scheduled")
+    print("after a short switch-off: E04", deadline(rows[4]), "E13", deadline(rows[13]))
+    check(deadline(rows[4]) == d4 and started(detail["history"], rows[4]["id"]) == 1,
+          "a countdown announced before the switch-off keeps its date and is not announced again (Q9)")
+    check(deadline(rows[13]) is not None and deadline(rows[13]) >= switch_on + window - slack and
+          started(detail["history"], rows[13]["id"]) == 1 and rows[13].get("retentionWarning"),
+          "a title finished while retention was off gets a full window from the switch-on, with a warning (decision 13)")
+
+    # (2) A switch-off longer than the window: E03 and the movie MB are finished while off; E04's and E13's windows run out.
+    cmd_restore()
+    mark_played("E03", user)
+    movie_item = movie_items()[container_path("MB")]
+    must("DELETE", f"/UserPlayedItems/{movie_item['Id']}?userId={user}")
+    must("POST", f"/UserPlayedItems/{movie_item['Id']}?userId={user}")
+    latest = max(deadline(rows[4]), deadline(rows[13]))
+    wait = (latest - now_utc()).total_seconds() + 30
+    print("retention off; waiting", int(max(wait, 0)), "s until every announced window has run out")
+    if wait > 0:
+        time.sleep(wait)
+    cmd_hashes("d13-before")
+    switch_on = now_utc()
+    cmd_configure(3, 1)
+    detail, rows, film = await_all(lambda r, f: all(r[n]["retention"]["state"] == "scheduled" for n in (3, 4, 13)) and
+                                   (f.get("retention") or {}).get("state") == "scheduled")
+    fresh = {f"E{n:02}": deadline(rows[n]) for n in (3, 4, 13)}
+    fresh["MB"] = deadline(film)
+    print("after a long switch-off:", {k: str(v) for k, v in fresh.items()})
+    check(all(v is not None and v >= switch_on + window - slack for v in fresh.values()),
+          "nothing is due at the switch-on: every title finished while off, or whose window ran out while off, is scheduled "
+          "a full window from the switch-on (decision 13)")
+    check(started(detail["history"], rows[3]["id"]) == 1 and started(detail["history"], rows[4]["id"]) == 2 and
+          started(detail["history"], rows[13]["id"]) == 2 and started(film["history"]) == 1,
+          "each of those windows is announced (History retention_started)")
+    check(all(rows[n].get("retentionWarning") for n in (3, 4, 13)) and film.get("retentionWarning"),
+          "each title shows the retention warning with its date")
+    cmd_run()
+    cmd_hashes("d13-immediate")
+    first = json.load(open(os.path.join(STATE, "hashes-d13-before.json")))
+    second = json.load(open(os.path.join(STATE, "hashes-d13-immediate.json")))
+    check(first == second, "a run right after the switch-on reclaims nothing")
+
+    # (3) After the window the run reclaims them.
+    wait = (max(fresh.values()) - now_utc()).total_seconds() + 30
+    print("waiting", int(max(wait, 0)), "s for the new windows")
+    if wait > 0:
+        time.sleep(wait)
+    cmd_run()
+    cmd_hashes("d13-after")
+    third = json.load(open(os.path.join(STATE, "hashes-d13-after.json")))
+    gone = ("E03", "E04", "E13", "MB")
+    for key in first:
+        if key in gone:
+            check(first[key] != "ABSENT" and third[key] == "ABSENT", f"{key} was reclaimed at the end of its new window")
+        else:
+            check(third[key] == first[key], f"{key} is unchanged")
 
 
 def cmd_probe_ids():
@@ -1453,7 +1563,7 @@ if __name__ == "__main__":
         "reacquire": cmd_reacquire, "unkeep-survivor": cmd_unkeep_survivor, "unkeep-finish": cmd_unkeep_finish,
         "toggle": cmd_toggle, "covered": cmd_covered, "late": cmd_late, "double": cmd_double,
         "safe-finish": cmd_safe_finish, "verify-safe": verify_safe, "merge": cmd_merge, "movie-check": cmd_movie_check,
-        "movie-finish": cmd_movie_finish, "ret3": cmd_ret3, "ret3-fast": cmd_ret3_fast, "merge-recheck": cmd_merge_recheck, "probe-ids": cmd_probe_ids, "replace": cmd_replace, "covered-refresh": lambda: cmd_covered_refresh(),
+        "movie-finish": cmd_movie_finish, "ret3": cmd_ret3, "ret3-fast": cmd_ret3_fast, "merge-recheck": cmd_merge_recheck, "probe-ids": cmd_probe_ids, "replace": cmd_replace, "covered-refresh": lambda: cmd_covered_refresh(), "decision13": cmd_decision13,
     }
     if args[0] == "configure":
         cmd_configure(int(args[1]), int(args[2]))
