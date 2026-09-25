@@ -1,5 +1,95 @@
 # P7.S11 — fresh install and image shape, on disposable image containers
 
+## Final image — 2026-09-25
+
+Opus 5.5, high effort. **`capische/jellyfinmod:0.1.0.0` (`d804cc8ecfcc`)**: plugin `p7-s11` `d6fdc88`, bundle
+`aa4774e84dbf` (web `caad4989bc`), Jellyfin 12.0.0. Same isolation, stand-ins and secret handling as below. Container 1
+(fresh config) was driven on **Google Chrome 153.0.8010.53** ([`chrome-final-image.json`](chrome-final-image.json),
+every run in order, including the harness iterations named below); container 2 (fresh config) on **Playwright's
+Chromium 153.0.8010.12** ([`chromium-final-image.json`](chromium-final-image.json): 66 of 66 PASS).
+
+### New defect, fixed
+
+**The queue crashed for an administrator as soon as it had a row**: the page showed only
+`TypeError: t.toLowerCase is not a function`. The row menu was a React `<button is='paper-icon-button-light'>`, and the
+v0 custom-elements polyfill's `createElement` accepts only a string type extension (the same trap `EmbySelect`
+documents). Present since P5.I8. Fixed in web **`96a1b360c5`** (the button drops `is`; the class keeps the look).
+Verified by building the bundle (`da4830dfc066`, from the working tree before the commit) and swapping it into the
+disposable container's plugin folder: the queue renders with two rows, the row menu opens, "Automation is off." and
+"Automation paused: Free space in the library is below the configured floor." show. **The final image still carries
+the defect**; a rebuilt image is needed to ship the fix (not built here: the brief was to leave `0.1.0.0` as it is).
+
+### Step 1 — fresh install and wizard (Chrome, then Chromium)
+
+| Check | Chrome | Chromium |
+| --- | --- | --- |
+| Fresh start: plugin installed, 22 migrations, patched automatically (`automatic`, stock `a1308635…`), repository once | PASS | PASS |
+| First-run wizard in the browser, sign-in in the shell, Health, Plugins page without repository error, settings area | PASS | first-run PASS |
+| Home banner; Dismiss hides it and the wizard stays reachable | banner PASS (Dismiss not on this container) | PASS |
+| 409 `acquisition_not_ready` shown verbatim; Discovery wrong token `unauthorized`, Replace/Keep/Clear/Undo, right token `ok` | PASS | PASS |
+| **New client with the username left blank: saved (201, `username: ''`)**, Test `ok` against a Transmission with authentication off | PASS | PASS |
+| **D1**: saving the first client selects it; step 2 completes without a detour | PASS | PASS |
+| Refusals: `destination_inside_library`, `/dev/shm` → `destination_not_same_filesystem`, unverified mapping, empty profile `invalid_qualities`, cutoff outside the allowed qualities `invalid_cutoff` | PASS | PASS |
+| **D2**: Test import path and Prowlarr Sync outcomes shown and kept | PASS | PASS |
+| Resume in a new browser session at Indexers; Prowlarr wrong key / right key / Sync | PASS | PASS |
+| Grabbing on, setup complete, banner gone; import switched on in the area | PASS | PASS |
+| **D3**: a new indexer saves with its defaults | PASS | PASS |
+| **D4**: a saved secret returns to Configured | PASS | PASS |
+| **Validation error names its field**: priority left empty → "priority: The JSON value could not be converted to System.Int32." (also a floor of 100 % → "FreeSpaceFloorPercent: … between 0 and 90") | PASS | PASS |
+| Tests from the page: Transmission with auth on refused without credentials, `ok` with them; wrong password, unreachable, timeout (21 s); indexer wrong key / unreachable / timeout; failing synced feed; Prowlarr wrong key / unreachable / timeout; import-path refusals | PASS | PASS |
+| No secret value, reference or `apikey=` in 17 responses | PASS | PASS |
+| Mobile 390 px: every settings section opens without horizontal scroll; a secret replaced, saved, Test `ok`, back to Configured | PASS | — |
+| Add from TMDB → grab from the picker → stand-in Transmission → **hardlink import (link count 2)** → Jellyfin indexes → plays to the end | PASS | — |
+| TV 1920×1080 and 1280×720: shell, arrows on Home, wizard rail by arrows, Enter, Back | PASS | — |
+
+The validation message also carries ASP.NET's generic "request: The request field is required." ahead of the named
+field (observation, not fixed).
+
+### Step 2 — T18 item 5 and the Phase 6 checklist (Chrome)
+
+| Check | Result |
+| --- | --- |
+| **T18 item 5**: watched, window passed, seeding copy at ratio 0 → preview `blocked: seed_goal_unmet`; the native reclaim task leaves the file, run `reclaimed 0, blocked 1` | PASS |
+| After the stand-in reports the goal met, the file becomes due once the import monitor has polled; the task reclaims it: media unlinked, folder, `.nfo`, `.srt`, poster kept, download back to link count 1, entry `reclaimed` with one `reclaimed` event, run `completed 1/1/0`; retention back to off / 14 days / All users through the area | PASS |
+| P6-1 Health lists `automation` and `versions`; 22 migrations; automation off | PASS |
+| P6-2 through the area: profile + 720p, cutoff 1080p, upgrades on (replace); synced indexer 2 s / 60 per day; automation on, 1 h, grab budget 1 | PASS |
+| P6-3 run 1 (Run now): one wanted movie auto-grabbed, the second stopped by `budget_grabs`, six titles with no release `no_eligible_candidate`; the feed saw 25 queries and the run reports `queriesByIndexer` 25 | PASS (the first comparison against the title count was a harness mistake) |
+| P6-3 the automatic grab is imported (history `auto_grabbed`, `imported`); empty searches back off 12 h | PASS |
+| P6-3 new episode after its delay; below-cutoff upgrade replacing the old file only after the new one plays | NOT VERIFIED (no TV stand-in; upgrade not run for time) |
+| P6-4 container restart between runs: no duplicate grab or import | PASS |
+| P6-5 breaker: five failing searches open it, `breakerOpenUntil` in the status, decision `breaker_opened` | PASS |
+| P6-5 breaker in the queue banner | **FAIL (gap)**: `pausedReasons` never includes `breaker_open` (one indexer's breaker is not a pause), so the queue shows nothing, though the checklist asks for a banner |
+| P6-5 free-space floor, client down, master switch off (run `disabled`, no indexer query), each visible in the status; queue banners for off and floor (fixed bundle) | PASS |
+| P6-6 free space reported = `df` for the same filesystem (byte-exact) | PASS |
+| **Found on the way**: the test host's disk is over 90 % full, so the default floor (10 %, at least 25 GB) stopped every grab before anything else; floor set to 1 % through the area. Floor skips retry after 6 h, so the titles needed *Search now* | observation |
+| P6-9 anonymous 401 on the automation routes; `intent=addVersion` for a file-less title → 409 `no_playable_version` | PASS; ordinary-user 403 NOT VERIFIED here |
+| P6-10 version rows: "1080p H.264 · AAC mono · 19 MB 1080p WEB-DL waiting for seeding DEFAULT + Get another quality" | PASS (desktop only) |
+| P6-11 automation off at the end through the area | PASS |
+
+### Step 3 — image shape recheck (Chrome)
+
+Fresh start patched automatically (above). Takeover off with the Interface switch: `index.html` **`cmp`-identical to
+the host image's own `index.html`** (`jellyfin/jellyfin@sha256:baba6304…`, `a1308635…cfbe3`), no JellyfinMod file left,
+stock in desktop and TV with sign-in to Home and the Dashboard; on again → patched, `patchedBy: setting`. PASS.
+
+### Harness mistakes corrected (not product)
+
+Playing before the import had recorded itself (a watch before binding rightly does not count); waiting for *due* when
+the file was correctly *blocked by seeding*; running the reclaim before the import monitor had polled the met goal;
+the free-space floor at 100 % (the maximum is 90); the query count compared with the title count; a restart that the
+test host's shell did not run (redone); a queue regex looking for "paused" in "Automation is off.".
+
+### Cleanup
+
+Both containers, the TLS terminator, the network, the stand-in process, the state directory with its certificates and
+secret files, the fixture credentials and admin password files, the tag `0.1.0.0-s11-candidate` and the local
+candidate context were removed; `docker ps -a`, `docker network ls`, `docker volume ls` show nothing of this run and no
+port 38096–38119 is listening. `0.1.0.0` (`d804cc8ecfcc`), `-pre-merge` and `-net9` are untouched.
+
+---
+
+## First pass — 2026-09-24 (shipping image before the fixes)
+
 2026-09-24, Opus 5.5, high effort. Disposable containers on the test host, on their own port, with config, cache,
 media and downloads under one new directory on one filesystem; never production, never 18096 or 28096, never the
 `jellyfinmod-test` or `jellyfinmod-acceptance` volumes, no production media mounted. Everything was removed at the end.
