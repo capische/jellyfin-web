@@ -1,0 +1,4 @@
+browser chromium 153.0.8010.12 step wizard
+PASS [chromium] A fresh server opens the first-run wizard :: {"bundle":true}
+PASS [chromium] The wizard completes and the server reports it :: {"version":"12.0.0"}
+2/2 passed

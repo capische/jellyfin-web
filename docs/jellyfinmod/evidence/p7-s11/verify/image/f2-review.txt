@@ -1,0 +1,9 @@
+browser chromium 153.0.8010.12 step review
+PASS [chromium] Sign-in lands in the JellyfinMod shell at /web :: {"bundle":true,"meta":"bbdf78025ca2","address":"/web/#/home"}
+PASS [chromium] Authenticated Health is ok; anonymous is refused :: {"status":200,"ok":true,"version":"0.1.0.0","bundleId":"bbdf78025ca2","hostVersion":"12.0.0.0","blocker":null,"takeover":{"state":"patched","webRoot":"writable","patchedBy":"automatic","blocker":null},"anonymous":401}
+PASS [chromium] Health reports the takeover of the image's own web root, patched by automatic :: {"state":"patched","webRoot":"writable","patchedBy":"automatic","blocker":null}
+PASS [chromium] Dashboard -> Plugins lists JellyfinMod
+PASS [chromium] The plugin page shows its version and no repository error :: {"error":false,"version":true,"installed":true,"ownPlugin":true}
+PASS [chromium] Manage Repositories shows the preconfigured entry once, pointing at the server itself :: {"listed":1}
+PASS [chromium] The settings area opens and names this bundle
+7/7 passed
