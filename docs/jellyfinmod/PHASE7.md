@@ -2109,9 +2109,8 @@ Kept current by whoever works S11. Last update 2026-09-24 (review fixes), Opus 5
 - **REVIEW-2026-09-24:** worked 2026-09-24. Thirteen findings fixed and verified, two fixed in the documentation (S7-R4,
   P7-R3), S4-R5 disputed with live evidence, P7-R2 partly closed. Commits and evidence per finding in [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md).
 - **S5 (2026-09-24):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows done; see *S5
-  evidence*. Publishing to `ghcr.io/capische/jellyfinmod` was authorized by the user directly on 2026-09-24 ("Yes, once
-  gh is ready"; `gh` has `write:packages`); **nothing is published yet** — it waits for S11 to pass on the final build
-  (see *S11 — result*).
+  evidence*. Publishing to `ghcr.io/capische/jellyfinmod` (renamed `ghcr.io/capische/jellyfin-mod` on 2026-09-25) was authorized by the user directly on 2026-09-24 ("Yes, once
+  gh is ready"; `gh` has `write:packages`); published 2026-09-25 after S11 passed (see *Release 0.1.0.0*).
 - **§3.4 merge routine: run for real, 2026-09-24** (authorized by the user directly: "Yes, I authorize it"). See
   *S11 evidence*, merge row.
 - **S11: passed, 2026-09-25** — see *S11 — result* below.
@@ -2244,7 +2243,8 @@ Authorized by the user directly ("Yes, push and publish", 2026-09-25).
 - **Release build from those tips:** bundle **`ee34ba8ae7a3`** (web `286df3e108`, upstream merge base `134e6add88`;
   nothing under `src/` differs from the verified bundle `21c0905b4568`), plugin 0.1.0.0 built with zero warnings.
   Deployed to 28096 (stop → copy → start, clean start); `retarget-smoke` 8 of 8 on Chromium and on Chrome.
-- **Published:** `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest`, one index
+- **Published:** `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest` (now **`ghcr.io/capische/jellyfin-mod`**, see the
+  rename below), one index
   **`sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`** for linux/amd64
   (`sha256:8366d3b6fb54…`) and linux/arm64 (`sha256:6f789416baac…`), built with buildx from the release context on
   `jellyfin/jellyfin@sha256:baba6304…5ef5` (Jellyfin 12.0.0), `SOURCE_DATE_EPOCH` of the plugin tip,
@@ -2254,10 +2254,12 @@ Authorized by the user directly ("Yes, push and publish", 2026-09-25).
   on an empty config patched `/web` with `ee34ba8ae7a3` by itself, registered its repository, Health `401`
   anonymously, the repository `200`; its `JellyfinMod.dll` and `jellyfinmod-web.zip` are byte-identical to the release
   package. amd64 is checked by content only (stock Jellyfin 12.0.0 itself crashes under the workstation's emulation).
-- **Not yet public.** The package was created private (organisation default) and GitHub offers no API to change a
-  package's visibility; an organisation owner switches it in *Package settings → Change visibility → Public* at
-  https://github.com/orgs/capische/packages/container/package/jellyfinmod/settings. The anonymous pull by digest is
-  checked after that switch.
+- **Renamed and public (2026-09-25, the user's direct decision: "Yes, rename; delete old").** The image is published as
+  **`ghcr.io/capische/jellyfin-mod`**. The exact 0.1.0.0 index was copied, not rebuilt, to `jellyfin-mod:0.1.0.0` and
+  `:latest`; the user made the package public and deleted `ghcr.io/capische/jellyfinmod`. Checked anonymously with an
+  empty Docker configuration: both tags resolve to `sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`
+  with linux/amd64 and linux/arm64, and the old name answers 403. Every later release publishes under `jellyfin-mod`
+  only, and a version tag is never overwritten (fix forward with the next version and move `latest`).
 
 **Next.** Q16, the Trakt indicator, with its own Fable-high review and Sonnet verification.
 
@@ -2763,7 +2765,7 @@ Q16 a small indicator on the detail page; no Phase 7 question remains open.
    by gate 6 and S9.
 10. ~~**Prowlarr removal window.**~~ **Answered 2026-09-24:** disable, then delete after 30 days, as built. Original question: Disable for 30 days then delete (proposed), disable forever, or
     delete immediately? Consumed by S9.
-11. ~~**Docker image name, registry and host pin.**~~ **Answered 2026-09-24:** publish as `ghcr.io/capische/jellyfinmod`, built on Jellyfin 12.0.0 pinned by digest, as tested. Original question: Under `capische/` to match the repositories
+11. ~~**Docker image name, registry and host pin.**~~ **Answered 2026-09-24:** publish as `ghcr.io/capische/jellyfinmod`, built on Jellyfin 12.0.0 pinned by digest, as tested. **Renamed 2026-09-25 by the user's direct decision:** the image is `ghcr.io/capische/jellyfin-mod`; `jellyfinmod` was deleted. Original question: Under `capische/` to match the repositories
     (proposed), published where, and is the host pinned to `10.11.11` for the first image?
     Consumed by S5.
 12. ~~**Wizard on TV.**~~ **Answered 2026-09-24:** reachable and navigable by remote only; full data entry on the TV is not required. Original question: Reachable and navigable only (proposed), or full data-entry acceptance on TV?
