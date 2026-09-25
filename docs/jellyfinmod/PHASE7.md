@@ -2235,9 +2235,31 @@ minutes; their disposable container, TLS terminator, network, stand-ins and stat
 gone (0 containers, 0 networks, nothing listening on 38096–38119, the directory gone); 28096 was left unchanged
 (takeover `patched`, settings equal the pre-S11 snapshot, four users, no `JellyfinMod` title).
 
-**Next.** Push `jellyfin-mod` and plugin `master` (fast-forwards), publish `ghcr.io/capische/jellyfinmod:0.1.0.0`
-and `:latest` (recorded under *Release 0.1.0.0* below when done), then Q16, the Trakt indicator, with its own Fable-high
-review and Sonnet verification. The retention branch rebases on the pushed tips.
+#### Release 0.1.0.0 — 2026-09-25
+
+Authorized by the user directly ("Yes, push and publish", 2026-09-25).
+
+- **Pushed (fast-forwards, remote tips checked before and after):** web `jellyfin-mod` `a279641ebf` → `286df3e108`;
+  plugin `master` `f443a62` → `e5b3c95`. The retention branch (`p10-retention`) rebases onto these tips.
+- **Release build from those tips:** bundle **`ee34ba8ae7a3`** (web `286df3e108`, upstream merge base `134e6add88`;
+  nothing under `src/` differs from the verified bundle `21c0905b4568`), plugin 0.1.0.0 built with zero warnings.
+  Deployed to 28096 (stop → copy → start, clean start); `retarget-smoke` 8 of 8 on Chromium and on Chrome.
+- **Published:** `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest`, one index
+  **`sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`** for linux/amd64
+  (`sha256:8366d3b6fb54…`) and linux/arm64 (`sha256:6f789416baac…`), built with buildx from the release context on
+  `jellyfin/jellyfin@sha256:baba6304…5ef5` (Jellyfin 12.0.0), `SOURCE_DATE_EPOCH` of the plugin tip,
+  `--provenance=false`. The registry credential lived only in a temporary Docker configuration, was logged out after
+  each use and is not in the keychain.
+- **Checked:** both tags resolve to that index with both platforms; the arm64 image pulled by digest and started
+  on an empty config patched `/web` with `ee34ba8ae7a3` by itself, registered its repository, Health `401`
+  anonymously, the repository `200`; its `JellyfinMod.dll` and `jellyfinmod-web.zip` are byte-identical to the release
+  package. amd64 is checked by content only (stock Jellyfin 12.0.0 itself crashes under the workstation's emulation).
+- **Not yet public.** The package was created private (organisation default) and GitHub offers no API to change a
+  package's visibility; an organisation owner switches it in *Package settings → Change visibility → Public* at
+  https://github.com/orgs/capische/packages/container/package/jellyfinmod/settings. The anonymous pull by digest is
+  checked after that switch.
+
+**Next.** Q16, the Trakt indicator, with its own Fable-high review and Sonnet verification.
 
 #### S11 evidence
 
