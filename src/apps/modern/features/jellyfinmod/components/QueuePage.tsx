@@ -125,9 +125,15 @@ interface RowProps {
     onMenu: (row: QueueRow, target: HTMLElement) => void;
 }
 
+/*
+ * A plain button wearing upstream's class, not `is='paper-icon-button-light'`: React creates an `is` element with an
+ * options object, which the v0 custom-elements polyfill rejects (`toLowerCase is not a function`), and the error
+ * boundary then replaced the whole Queue for an administrator as soon as one row had actions (P7.S11 sweep; the same
+ * trap `EmbySelect` documents). The class carries the look; a native button is already focusable on every layout.
+ */
 const MenuButton: FC<{ row: QueueRow; title: string; onMenu: RowProps['onMenu'] }> = ({ row, title, onMenu }) => {
     const open = useCallback((event: MouseEvent<HTMLButtonElement>) => onMenu(row, event.currentTarget), [onMenu, row]);
-    return <button type='button' is='paper-icon-button-light' className='paper-icon-button-light jfmod-queueMenu jfmod-queueFocus'
+    return <button type='button' className='paper-icon-button-light jfmod-queueMenu jfmod-queueFocus'
         title='Actions' aria-label={'Actions for ' + title} aria-haspopup='menu' onClick={open}>
         <span className='material-icons more_vert' aria-hidden='true' />
     </button>;
