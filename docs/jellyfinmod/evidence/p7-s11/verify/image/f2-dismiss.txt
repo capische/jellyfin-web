@@ -1,0 +1,4 @@
+browser chromium 153.0.8010.12 step dismiss
+PASS [chromium] dismiss: A fresh server shows the setup banner on Home to the administrator :: "JellyfinMod is not set up yet: 5 step(s) left before titles can be grabbed.\nSet upDismiss"
+PASS [chromium] dismiss: Dismiss hides the banner and the server records it :: {"dismissed":true,"complete":false}
+PASS [chromium] dismiss: After Dismiss the wizard is still reachable from the settings area :: {"step":"discovery"}
