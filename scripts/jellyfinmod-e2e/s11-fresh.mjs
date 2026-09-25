@@ -7,7 +7,7 @@
 //   JELLYFINMOD_S11_STEP=libraries|dismiss|wizard|resume|tv-wizard|tests|acquire|import|play|... node s11-fresh.mjs
 // Environment as in s11-lib.mjs. Every fixture title carries the JellyfinMod prefix.
 import {
-    api, carriesSecret, control, fixture, launch, newPage, notVerified, onHost, record, saveResults, setTvLayout, signIn, standin, tier, until, wrong
+    api, carriesSecret, port, control, fixture, launch, newPage, notVerified, onHost, record, saveResults, setTvLayout, signIn, standin, tier, until, wrong
 } from './s11-lib.mjs';
 
 const step = process.env.JELLYFINMOD_S11_STEP ?? 'wizard';
@@ -208,7 +208,7 @@ async function clientStep(page) {
     {
         const client = section(page, 'client');
         await fill(client, 'Name', 'JellyfinMod Standin Transmission');
-        await fill(client, 'Transmission RPC address', `http://${standin}:38112/transmission/rpc`);
+        await fill(client, 'Transmission RPC address', `http://${standin}:${port(2)}/transmission/rpc`);
         // Username and password left blank, as for a Transmission with authentication off (the stand-in is switched so).
         await fill(client, 'Label added to every grab', 'jellyfinmod');
         await fill(client, 'Download folder as Transmission sees it', '/downloads');
@@ -315,7 +315,7 @@ async function resume() {
         // 3 Indexers through Prowlarr: a wrong key fails its Test, the right one passes, Sync imports and verifies.
         const card = page.locator('[data-prowlarr="card"]');
         await fill(card, 'Name', 'JellyfinMod Standin Prowlarr');
-        await fill(card, 'Prowlarr address', `http://${standin}:38111`);
+        await fill(card, 'Prowlarr address', `http://${standin}:${port(1)}`);
         await page.locator('#jfmodProwlarrKey').fill(wrong.key);
         await card.getByRole('button', { name: 'Add Prowlarr' }).click();
         await card.locator('.jfmod-notice').waitFor({ state: 'visible', timeout: 20000 });
@@ -443,7 +443,7 @@ const saveSection = async (page, id) => {
 async function tests() {
     const { page, context } = await newPage(browser);
     await signIn(page);
-    const tx = `http://${standin}:38112/transmission/rpc`;
+    const tx = `http://${standin}:${port(2)}/transmission/rpc`;
     try {
         // Download client.
         await openSection(page, 'client');
@@ -479,11 +479,11 @@ async function tests() {
         await setSecret(client, 'jfmodClientPassword', fixture.TX_PASSWORD);
         await saveSection(page, 'client');
         record('tests', 'Client password replaced: the Test passes again', /\(ok\)/.test(await clientTest()));
-        await fill(client, 'Transmission RPC address', `http://${standin}:38114/transmission/rpc`);
+        await fill(client, 'Transmission RPC address', `http://${standin}:${port(4)}/transmission/rpc`);
         await saveSection(page, 'client');
         const unreachable = await clientTest();
         record('tests', 'Transmission Test against an unreachable host', !/\(ok\)/.test(unreachable) && /unreachable|connect/i.test(unreachable), unreachable);
-        await fill(client, 'Transmission RPC address', `http://${standin}:38113/transmission/rpc`);
+        await fill(client, 'Transmission RPC address', `http://${standin}:${port(3)}/transmission/rpc`);
         await saveSection(page, 'client');
         const started = Date.now();
         const timeout = await clientTest();
@@ -534,7 +534,7 @@ async function tests() {
         let dialog = page.locator('.jfmod-settingsDialog').last();
         await dialog.waitFor({ state: 'visible', timeout: 10000 });
         await fill(dialog, 'Name', 'JellyfinMod Invalid Indexer');
-        await fill(dialog, 'Torznab address', `http://${standin}:38111/1/api`);
+        await fill(dialog, 'Torznab address', `http://${standin}:${port(1)}/1/api`);
         await field(dialog, 'Priority (lower first)').fill('');
         await dialog.getByRole('button', { name: 'Save' }).click();
         await dialog.locator('.jfmod-notice').waitFor({ state: 'visible', timeout: 15000 });
@@ -546,7 +546,7 @@ async function tests() {
         dialog = page.locator('.jfmod-settingsDialog').last();
         await dialog.waitFor({ state: 'visible', timeout: 10000 });
         await fill(dialog, 'Name', 'JellyfinMod Probe Indexer');
-        await fill(dialog, 'Torznab address', `http://${standin}:38111/1/api`);
+        await fill(dialog, 'Torznab address', `http://${standin}:${port(1)}/1/api`);
         await fill(dialog, 'Categories', '2000, 5000');
         await page.locator('#jfmodIndexerKey').fill(wrong.key);
         await dialog.getByRole('button', { name: 'Save' }).click();
@@ -572,10 +572,10 @@ async function tests() {
             await fill(dialog, 'Torznab address', url);
             await saveDialog(page, dialog);
         };
-        await editBase(`http://${standin}:38114/1/api`);
+        await editBase(`http://${standin}:${port(4)}/1/api`);
         const indexerUnreachable = await probeTest();
         record('tests', 'Manual indexer Test against an unreachable host', !/\(ok\)/.test(indexerUnreachable), indexerUnreachable);
-        await editBase(`http://${standin}:38113/1/api`);
+        await editBase(`http://${standin}:${port(3)}/1/api`);
         const indexerStarted = Date.now();
         const indexerTimeout = await probeTest();
         record('tests', 'Manual indexer Test against a host that never answers', /timeout/.test(indexerTimeout),
@@ -601,11 +601,11 @@ async function tests() {
         const prowlarrWrong = await prowlarrTest();
         record('tests', 'Prowlarr Test with a wrong API key', /unauthorized/.test(prowlarrWrong), prowlarrWrong);
         await setSecret(card, 'jfmodProwlarrKey', fixture.PROWLARR_KEY);
-        await fill(card, 'Prowlarr address', `http://${standin}:38114`);
+        await fill(card, 'Prowlarr address', `http://${standin}:${port(4)}`);
         await prowlarrSave();
         const prowlarrUnreachable = await prowlarrTest();
         record('tests', 'Prowlarr Test against an unreachable host', /unreachable/.test(prowlarrUnreachable), prowlarrUnreachable);
-        await fill(card, 'Prowlarr address', `http://${standin}:38111`);
+        await fill(card, 'Prowlarr address', `http://${standin}:${port(1)}`);
         await prowlarrSave();
         control('/fault?service=prowlarr&mode=slow');
         const prowlarrStarted = Date.now();
