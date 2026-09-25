@@ -2187,6 +2187,16 @@ not recur) and hygiene passed. Classified by the S11 agent:
 No product code changed after re-run 2; 28096 keeps `21c0905b4568`, the image keeps `606ca92eb2dd`. Re-run 3 is the
 top section of the checklist.
 
+**Verification re-run 3 (Sonnet high, 2026-09-25; evidence `evidence/p7-s11/verify/rerun3/`):** every row passed —
+the TV 720 and TV 1080 settings, preferences and Dashboard rows in both browsers, the fresh-install chain on
+`606ca92eb2dd` through acquire, hardlink import and the queue — except mobile *Dashboard: General* (NOT VERIFIED, both
+browsers). **Class (a), harness.** Reproduced the runner's exact path by hand (user menu → Dashboard → Open Menu → a
+real touch tap on *General*) on the mod and the stock entry in both browsers: the drawer opens, the link is on top at
+its centre, and *General* opens every time. With a drawer trace, the runner never opened the drawer for that row: the
+Dashboard home's *Server* card also links to `#/dashboard/settings`, so its "is the link visible" check found that card
+and skipped opening the drawer. It now checks the drawer's own link (and waits for the slide-in to finish); one mobile
+run on Chromium: 49 PASS, 9 NOT PRESENT, 0 FAIL. Re-run 4 repeats that row in both browsers.
+
 **Verification (new workspace rule, 2026-09-25):** re-run 2 is the section *Re-run 2* at the top of the checklist. checklist re-runs go to a separate Sonnet-high verifier, not to
 the Opus run. The checklist is `.claude/briefs/verify-s11.md` (workspace, not in this repository): part A on 28096 in
 Chromium then Chrome (smoke, review fixes, security, Queue D6, settings changes D2–D5 against stand-ins, takeover off
