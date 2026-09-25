@@ -858,6 +858,26 @@ async function mobileSettings() {
         const test = await testNotice(page, 'client', page.locator('[data-test="client"]'));
         record('mobile', 'Mobile data entry: a secret replaced and saved, the client Test passes, the field returns to Configured',
             /\(ok\)/.test(test) && /Configured/.test(await section(page, 'client').locator('.jfmod-secret-state').first().innerText()), test);
+        // D8 (web 5ced2c7f2a): on a phone the settings area keeps its link list, so the setup wizard and the Dashboard
+        // stay reachable from it; each link is tapped and must open its page.
+        await page.evaluate(() => { location.hash = '#/catalog/settings'; });
+        await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
+        const links = await page.evaluate(() => [...document.querySelectorAll('#jfmodSettingsPage .jfmod-check-links a')].map(link => {
+            const rect = link.getBoundingClientRect();
+            return { href: link.getAttribute('href'), text: link.textContent.trim(), shown: rect.width > 0 && rect.height > 0 && getComputedStyle(link).visibility !== 'hidden' };
+        }));
+        const shown = href => links.some(link => link.href === href && link.shown);
+        record('mobile', 'D8: the settings area at 390 px shows its links, including Setup wizard and Dashboard',
+            shown('#/catalog/settings/setup') && shown('#/dashboard'), links);
+        await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/catalog/settings/setup"]').tap();
+        const wizardOpened = await page.waitForFunction(() => location.hash.startsWith('#/catalog/settings/setup') && !!document.querySelector('#jfmodSetupPage'),
+            undefined, { timeout: 20000 }).then(() => true, () => false);
+        record('mobile', 'D8: tapping Setup wizard opens the wizard', wizardOpened, { hash: await page.evaluate(() => location.hash.split('?')[0]) });
+        await page.evaluate(() => { location.hash = '#/catalog/settings'; });
+        await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/dashboard"]').waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/dashboard"]').tap();
+        const dashboardOpened = await page.waitForFunction(() => /^#\/dashboard(\?|$)/.test(location.hash), undefined, { timeout: 20000 }).then(() => true, () => false);
+        record('mobile', 'D8: tapping Dashboard opens the Dashboard', dashboardOpened, { hash: await page.evaluate(() => location.hash.split('?')[0]) });
         record('mobile', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
     } catch (error) {
         notVerified('mobile', 'settings area at 390 px', error);
