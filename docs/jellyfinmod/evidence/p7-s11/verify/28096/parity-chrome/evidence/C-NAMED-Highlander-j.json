@@ -1,0 +1,343 @@
+{
+  "fixture": "C-NAMED-Highlander",
+  "itemId": "0b112cfd083cae1722f28359797f5b65",
+  "title": "Highlander",
+  "container": "mkv",
+  "video": "hevc 1920x1040 SDR",
+  "audioStreams": 4,
+  "subtitleStreams": 4,
+  "row": "C-NAMED-Highlander-j",
+  "check": "single reporting (no duplicate Playing/Stopped)",
+  "verdict": "PASS",
+  "heavyTranscode": true,
+  "stock": {
+    "summary": "playing:1 stopped:1",
+    "timedOut": {},
+    "steps": {
+      "start": {
+        "session": {
+          "nowPlayingItemId": "0b112cfd083cae1722f28359797f5b65",
+          "playState": {
+            "PositionTicks": 1627329,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+            "AudioStreamIndex": 1,
+            "SubtitleStreamIndex": 5,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 1920,
+            "Height": 1040,
+            "Framerate": 1921,
+            "CompletionPercentage": 1.2044842423909863,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 1.1,
+          "duration": 6998,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 6,
+              "activeCues": 0,
+              "activeText": null
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": {
+          "path": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/main.m3u8",
+          "shape": "hls",
+          "AudioStreamIndex": "1",
+          "SubtitleStreamIndex": null,
+          "SubtitleMethod": null,
+          "VideoCodec": "av1,hevc,h264,vp9",
+          "AudioCodec": "aac",
+          "TranscodeReasons": "AudioCodecNotSupported",
+          "requestsSoFar": 2
+        },
+        "requests": [
+          {
+            "t": 198,
+            "method": "POST",
+            "url": "<test-host>/Items/0b112cfd083cae1722f28359797f5b65/PlaybackInfo",
+            "status": 200
+          },
+          {
+            "t": 572,
+            "method": "GET",
+            "url": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/master.m3u8?MediaSourceId=0b112cfd083cae1722f28359797f5b65&VideoCodec=av1,hevc,h264,vp9&AudioCodec=aac,opus,flac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&SegmentContainer=mp4&RequireAvc=false&Tag=9d0080a37869457672768192a3be8c03&TranscodeReasons=AudioCodecNotSupported",
+            "status": 200
+          },
+          {
+            "t": 638,
+            "method": "GET",
+            "url": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/main.m3u8?MediaSourceId=0b112cfd083cae1722f28359797f5b65&VideoCodec=av1,hevc,h264,vp9&AudioCodec=aac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&SegmentContainer=mp4&RequireAvc=false&Tag=9d0080a37869457672768192a3be8c03&TranscodeReasons=AudioCodecNotSupported",
+            "status": 200
+          },
+          {
+            "t": 1639,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": 5,
+              "PositionTicks": 3720,
+              "IsPaused": false,
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 1671,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd-083c-ae17-22f2-8359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/5/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 1841,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": 5,
+              "PositionTicks": 1627329,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      },
+      "stop": {
+        "session": {
+          "nowPlayingItemId": null,
+          "playState": {
+            "PositionTicks": null,
+            "IsPaused": false,
+            "PlayMethod": null,
+            "MediaSourceId": null,
+            "AudioStreamIndex": null,
+            "SubtitleStreamIndex": null,
+            "CanSeek": false
+          },
+          "transcodingInfo": null
+        },
+        "video": null,
+        "stream": null,
+        "requests": [
+          {
+            "t": 95,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Stopped",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 14024495340,
+              "IsPaused": true,
+              "CanSeek": true
+            }
+          }
+        ],
+        "storedResumeSeconds": 1402.4
+      }
+    }
+  },
+  "mod": {
+    "summary": "playing:1 stopped:1",
+    "timedOut": {},
+    "steps": {
+      "start": {
+        "session": {
+          "nowPlayingItemId": "0b112cfd083cae1722f28359797f5b65",
+          "playState": {
+            "PositionTicks": 1839740,
+            "IsPaused": false,
+            "PlayMethod": "Transcode",
+            "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+            "AudioStreamIndex": 1,
+            "SubtitleStreamIndex": 5,
+            "CanSeek": true
+          },
+          "transcodingInfo": {
+            "Container": "mp4",
+            "VideoCodec": "hevc",
+            "AudioCodec": "aac",
+            "IsVideoDirect": true,
+            "IsAudioDirect": false,
+            "Width": 1920,
+            "Height": 1040,
+            "Framerate": 2036,
+            "CompletionPercentage": 1.2803628914252267,
+            "HardwareAccelerationType": "none",
+            "TranscodeReasons": [
+              "AudioCodecNotSupported"
+            ]
+          }
+        },
+        "video": {
+          "currentTime": 1.1,
+          "duration": 6998,
+          "paused": false,
+          "seeking": false,
+          "ended": false,
+          "readyState": 4,
+          "networkState": 2,
+          "error": null,
+          "srcKind": "blob",
+          "audioTracks": "unsupported by this browser",
+          "textTracks": [
+            {
+              "kind": "subtitles",
+              "label": "manualTrack",
+              "language": "und",
+              "mode": "showing",
+              "cues": 6,
+              "activeCues": 0,
+              "activeText": null
+            }
+          ],
+          "overlayText": null
+        },
+        "stream": {
+          "path": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/main.m3u8",
+          "shape": "hls",
+          "AudioStreamIndex": "1",
+          "SubtitleStreamIndex": null,
+          "SubtitleMethod": null,
+          "VideoCodec": "av1,hevc,h264,vp9",
+          "AudioCodec": "aac",
+          "TranscodeReasons": "AudioCodecNotSupported",
+          "requestsSoFar": 2
+        },
+        "requests": [
+          {
+            "t": 134,
+            "method": "POST",
+            "url": "<test-host>/Items/0b112cfd083cae1722f28359797f5b65/PlaybackInfo",
+            "status": 200
+          },
+          {
+            "t": 473,
+            "method": "GET",
+            "url": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/master.m3u8?MediaSourceId=0b112cfd083cae1722f28359797f5b65&VideoCodec=av1,hevc,h264,vp9&AudioCodec=aac,opus,flac&AudioStreamIndex=1&VideoBitrate=307051895&AudioBitrate=384000&SegmentContainer=mp4&RequireAvc=false&Tag=9d0080a37869457672768192a3be8c03&TranscodeReasons=AudioCodecNotSupported",
+            "status": 200
+          },
+          {
+            "t": 503,
+            "method": "GET",
+            "url": "<test-host>/videos/0b112cfd-083c-ae17-22f2-8359797f5b65/main.m3u8?MediaSourceId=0b112cfd083cae1722f28359797f5b65&VideoCodec=av1,hevc,h264,vp9&AudioCodec=aac&AudioStreamIndex=1&VideoBitrate=307051895&AudioBitrate=384000&SegmentContainer=mp4&RequireAvc=false&Tag=9d0080a37869457672768192a3be8c03&TranscodeReasons=AudioCodecNotSupported",
+            "status": 200
+          },
+          {
+            "t": 1260,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": 5,
+              "PositionTicks": 0,
+              "IsPaused": false,
+              "CanSeek": true
+            }
+          },
+          {
+            "t": 1283,
+            "method": "GET",
+            "url": "<test-host>/Videos/0b112cfd-083c-ae17-22f2-8359797f5b65/0b112cfd083cae1722f28359797f5b65/Subtitles/5/0/Stream.js",
+            "status": 200
+          },
+          {
+            "t": 1499,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Progress",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 1,
+              "SubtitleStreamIndex": 5,
+              "PositionTicks": 1839740,
+              "IsPaused": false,
+              "EventName": "timeupdate",
+              "CanSeek": true
+            }
+          }
+        ]
+      },
+      "stop": {
+        "session": {
+          "nowPlayingItemId": null,
+          "playState": {
+            "PositionTicks": null,
+            "IsPaused": false,
+            "PlayMethod": null,
+            "MediaSourceId": null,
+            "AudioStreamIndex": null,
+            "SubtitleStreamIndex": null,
+            "CanSeek": false
+          },
+          "transcodingInfo": null
+        },
+        "video": null,
+        "stream": null,
+        "requests": [
+          {
+            "t": 127,
+            "method": "POST",
+            "url": "<test-host>/Sessions/Playing/Stopped",
+            "status": "failed: net::ERR_ABORTED",
+            "body": {
+              "ItemId": "0b112cfd083cae1722f28359797f5b65",
+              "MediaSourceId": "0b112cfd083cae1722f28359797f5b65",
+              "PlayMethod": "Transcode",
+              "AudioStreamIndex": 2,
+              "SubtitleStreamIndex": -1,
+              "PositionTicks": 14021931810,
+              "IsPaused": true,
+              "CanSeek": true
+            }
+          }
+        ],
+        "storedResumeSeconds": 1402.2
+      }
+    }
+  }
+}

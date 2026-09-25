@@ -1,0 +1,259 @@
+{
+  "itemId": "0b112cfd083cae1722f28359797f5b65",
+  "title": "Highlander",
+  "api": {
+    "summary": "mkv hevc 1920x1040 SDR",
+    "audio": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "subtitles": [
+      "5",
+      "6",
+      "7",
+      "8"
+    ]
+  },
+  "stock": {
+    "title": "Highlander",
+    "parentTitle": "",
+    "miscInfo": "1986 1h 57m R 6.9 70 | ",
+    "endsAt": "Ends at 4:42 PM",
+    "readAt": 1790311552560,
+    "audioOptions": [
+      "1:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \"ICTV\", \"1+1\" - Dolby Digital - Stereo - Default",
+      "2:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \"Україна\", \"NLO.TV\" - Dolby Digital - Stereo",
+      "3:English | AC-3 | 5.1 | 640 kbps - Dolby Digital",
+      "4:English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulcahy - Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "5:Ukrainian | Forced - Default - SUBRIP",
+      "6:Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - SUBRIP",
+      "7:English | Full - SUBRIP",
+      "8:English | SDH - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:Горець / Highlander (1986) - 1080p - HEVC - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "6.9",
+    "criticRating": "70",
+    "genres": [
+      "Adventure",
+      "Action",
+      "Fantasy"
+    ],
+    "studios": [
+      "Davis-Panzer Productions",
+      "Thorn EMI Screen Entertainment",
+      "Highlander Productions"
+    ],
+    "director": [
+      "Russell Mulcahy"
+    ],
+    "writer": [],
+    "tags": [
+      "new york city",
+      "martial arts",
+      "swordplay",
+      "immortality",
+      "scotland",
+      "sword",
+      "sword fight",
+      "fictional war",
+      "dark fantasy",
+      "warrior",
+      "sword and sorcery",
+      "supernatural power",
+      "good versus evil",
+      "depressed",
+      "suspenseful",
+      "intense",
+      "adoring",
+      "commanding",
+      "defiant",
+      "empathetic",
+      "excited",
+      "hopeful"
+    ],
+    "overview": "He fought his first battle on the Scottish Highlands in 1536. He will fight his greatest battle on the streets of New York City in 1986. His name is Connor MacLeod. He is immortal.",
+    "castIds": [
+      "f991422494ea12ce26ed8a9b7deec8f5",
+      "4630617328321104d317baa424711fe4",
+      "f8675d914d75a9ebc903cf675bc93a4e",
+      "7194cff9b32f5bbdbfdc290d6117faa8",
+      "3ddc5755c73c57d7af6190f6584ea22b",
+      "cbe85e783fd056aaa8b11f86f90ac534",
+      "fb6ffada8187c8bbe4924534fdd8ff59",
+      "5ed9a7c1ad60625e0bb48abc02e89a6f",
+      "9090d5d1c65f024c8fa98d37dfeb577a",
+      "1c389ddf24d124f44a12526c662cc960",
+      "e489deefd33b018c87404d64c7655983",
+      "647fd60e18bf81501199e263c059f3f1",
+      "aecf76305ea86647cb46840e3e16bbba",
+      "347f5c6aee41e59c91785a21f29f57c4",
+      "e0e6c7941a2d5e4bf73769b9e09bb6d3",
+      "602863fa7979a856b9114106f0d6b035",
+      "0414e12a73e54329ae755836c59f6c99",
+      "1495d6380c22b747509c8f8f11b4cf77",
+      "4bb211f785ab141f9bf3a7886f646272",
+      "9ad40b76c17b5c4c38fa251dbcc13cef",
+      "bcba86035071cb3ba7988c1e6fe29e35",
+      "b54935381e00117ce2af3df2f8172308",
+      "b7bd5dd76ec52a202ddf08b25a4acbfb",
+      "4e1925467ea8b12efea679efe1160c03",
+      "f909b58464402318e63336809aff0bac",
+      "06fda39add96e5285dbbacaa56150e32",
+      "875150b6064dd96816d493f051a3ab4a",
+      "cf80a59cd94d0d3c1836e89da292285e",
+      "0ad68692eab7f202014b7d78e41fc606",
+      "9378a4d588c8cbc6e0e76f36bc2b788b",
+      "204824efbbc6c5f1663d2d2a18f5b05b",
+      "6a9d388ffd2985f5bc33de5334562dd0",
+      "4d7ab2f8ff496144afda27407fb13a87",
+      "1ca46dd553ae94d7001fb6317c1858c6"
+    ],
+    "mediaInfoBadges": [
+      "1986",
+      "1h 57m",
+      "R",
+      "6.9",
+      "70"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/0b112cfd083cae1722f28359797f5b65/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=b933418a02e2d96d3505e5a904cd0862\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/0b112cfd083cae1722f28359797f5b65/Images/Logo?tag=1be223b1eec5fa6c6da92a26e334059b&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "0b112cfd083cae1722f28359797f5b65",
+        "label": "Highlander (1986) Bluray-1080p"
+      }
+    ],
+    "sourceSelected": "0b112cfd083cae1722f28359797f5b65",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Highlander",
+    "parentTitle": "",
+    "miscInfo": "1986 1h 57m R 6.9 70 | ",
+    "endsAt": "Ends at 4:42 PM",
+    "readAt": 1790311553915,
+    "audioOptions": [
+      "1:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТК \"ICTV\", \"1+1\" - Dolby Digital - Stereo - Default",
+      "2:Ukrainian | AC-3 | 2.0 | 192 kbps | MVO | ТРК \"Україна\", \"NLO.TV\" - Dolby Digital - Stereo",
+      "3:English | AC-3 | 5.1 | 640 kbps - Dolby Digital",
+      "4:English | AC-3 | 2.0 | 192 kbps | Commentary by Russell Mulcahy - Dolby Digital - Stereo"
+    ],
+    "subtitleOptions": [
+      "-1:Off",
+      "5:Ukrainian | Forced - Default - SUBRIP",
+      "6:Ukrainian | Full | Netflix | Переклад: Анастасія Малицька - SUBRIP",
+      "7:English | Full - SUBRIP",
+      "8:English | SDH - SUBRIP"
+    ],
+    "videoOptions": [
+      "0:Горець / Highlander (1986) - 1080p - HEVC - SDR"
+    ],
+    "officialRating": "R",
+    "communityRating": "6.9",
+    "criticRating": "70",
+    "genres": [
+      "Adventure",
+      "Action",
+      "Fantasy"
+    ],
+    "studios": [
+      "Davis-Panzer Productions",
+      "Thorn EMI Screen Entertainment",
+      "Highlander Productions"
+    ],
+    "director": [
+      "Russell Mulcahy"
+    ],
+    "writer": [],
+    "tags": [
+      "new york city",
+      "martial arts",
+      "swordplay",
+      "immortality",
+      "scotland",
+      "sword",
+      "sword fight",
+      "fictional war",
+      "dark fantasy",
+      "warrior",
+      "sword and sorcery",
+      "supernatural power",
+      "good versus evil",
+      "depressed",
+      "suspenseful",
+      "intense",
+      "adoring",
+      "commanding",
+      "defiant",
+      "empathetic",
+      "excited",
+      "hopeful"
+    ],
+    "overview": "He fought his first battle on the Scottish Highlands in 1536. He will fight his greatest battle on the streets of New York City in 1986. His name is Connor MacLeod. He is immortal.",
+    "castIds": [
+      "f991422494ea12ce26ed8a9b7deec8f5",
+      "4630617328321104d317baa424711fe4",
+      "f8675d914d75a9ebc903cf675bc93a4e",
+      "7194cff9b32f5bbdbfdc290d6117faa8",
+      "3ddc5755c73c57d7af6190f6584ea22b",
+      "cbe85e783fd056aaa8b11f86f90ac534",
+      "fb6ffada8187c8bbe4924534fdd8ff59",
+      "5ed9a7c1ad60625e0bb48abc02e89a6f",
+      "9090d5d1c65f024c8fa98d37dfeb577a",
+      "1c389ddf24d124f44a12526c662cc960",
+      "e489deefd33b018c87404d64c7655983",
+      "647fd60e18bf81501199e263c059f3f1",
+      "aecf76305ea86647cb46840e3e16bbba",
+      "347f5c6aee41e59c91785a21f29f57c4",
+      "e0e6c7941a2d5e4bf73769b9e09bb6d3",
+      "602863fa7979a856b9114106f0d6b035",
+      "0414e12a73e54329ae755836c59f6c99",
+      "1495d6380c22b747509c8f8f11b4cf77",
+      "4bb211f785ab141f9bf3a7886f646272",
+      "9ad40b76c17b5c4c38fa251dbcc13cef",
+      "bcba86035071cb3ba7988c1e6fe29e35",
+      "b54935381e00117ce2af3df2f8172308",
+      "b7bd5dd76ec52a202ddf08b25a4acbfb",
+      "4e1925467ea8b12efea679efe1160c03",
+      "f909b58464402318e63336809aff0bac",
+      "06fda39add96e5285dbbacaa56150e32",
+      "875150b6064dd96816d493f051a3ab4a",
+      "cf80a59cd94d0d3c1836e89da292285e",
+      "0ad68692eab7f202014b7d78e41fc606",
+      "9378a4d588c8cbc6e0e76f36bc2b788b",
+      "204824efbbc6c5f1663d2d2a18f5b05b",
+      "6a9d388ffd2985f5bc33de5334562dd0",
+      "4d7ab2f8ff496144afda27407fb13a87",
+      "1ca46dd553ae94d7001fb6317c1858c6"
+    ],
+    "mediaInfoBadges": [
+      "1986",
+      "1h 57m",
+      "R",
+      "6.9",
+      "70"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/0b112cfd083cae1722f28359797f5b65/Images/Primary?fillHeight=540&fillWidth=360&quality=96&tag=b933418a02e2d96d3505e5a904cd0862\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/0b112cfd083cae1722f28359797f5b65/Images/Logo?tag=1be223b1eec5fa6c6da92a26e334059b&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "0b112cfd083cae1722f28359797f5b65",
+        "label": "Highlander (1986) Bluray-1080p"
+      }
+    ],
+    "sourceSelected": "0b112cfd083cae1722f28359797f5b65",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
