@@ -32,9 +32,10 @@ mkdirSync(join(stateDir, 'torrents'), { recursive: true });
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const counters = {};
 const count = name => { counters[name] = (counters[name] ?? 0) + 1; };
-// Faults the harness switches on: tmdb 'down' | prowlarr '401' | '500' | 'slow' | torznab '500' | tx 'down' | 'slow';
+// Faults the harness switches on: tmdb 'down' | prowlarr '401' | '500' | 'slow' | torznab[<id>] '500' | '429' | 'slow' | 'redirect' |
+// 'malformed' | 'autherror' | tx 'down' | 'slow' | webseed 'down' | '<bytes per second>';
 // txauth 'off' answers without credentials, like a Transmission with authentication disabled.
-const faults = { tmdb: 'ok', prowlarr: 'ok', torznab: 'ok', tx: 'ok', txauth: 'on' };
+const faults = { tmdb: 'ok', prowlarr: 'ok', torznab: 'ok', tx: 'ok', txauth: 'on', webseed: 'ok' };
 const log = (...parts) => console.log(new Date().toISOString(), ...parts);
 const json = (response, status, body) => {
     response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -56,6 +57,43 @@ const MOVIES = [
     ...[4, 5, 6, 7, 8, 9].map(n => ({ id: 990000 + n, title: `JellyfinMod Standin Extra ${n}`, release_date: `2025-0${n}-01`, imdb_id: `tt990000${n}`, runtime: 1,
         genres: [{ id: 18, name: 'Drama' }] }))
 ];
+// Extra titles for a live acceptance instance: STANDIN_CATALOG names a JSON file { movies: [...], series: [...] } that is
+// re-read on every request, so a run can add an episode or move an air date without restarting the stand-ins.
+const catalog = () => {
+    const file = process.env.STANDIN_CATALOG;
+    if (!file || !existsSync(file)) return { movies: [], series: [] };
+    try {
+        const parsed = JSON.parse(readFileSync(file, 'utf8'));
+        return { movies: parsed.movies ?? [], series: parsed.series ?? [] };
+    } catch {
+        return { movies: [], series: [] };
+    }
+};
+const allMovies = () => [...MOVIES, ...catalog().movies.map(movie => ({ runtime: 90, genres: [{ id: 18, name: 'Drama' }], ...movie }))];
+const seriesSummary = series => ({
+    id: series.id, name: series.name, original_name: series.name, first_air_date: series.first_air_date, overview: `${series.name}, a generated fixture.`,
+    poster_path: null, backdrop_path: null, adult: false, vote_average: 5, genre_ids: [18], original_language: 'en', popularity: 1, origin_country: ['US']
+});
+const seasonName = number => number === 0 ? 'Specials' : `Season ${number}`;
+const seriesDetail = series => ({
+    ...seriesSummary(series), genres: [{ id: 18, name: 'Drama' }], status: 'Returning Series', episode_run_time: [1], in_production: true,
+    number_of_seasons: series.seasons.filter(season => season.season_number > 0).length,
+    number_of_episodes: series.seasons.reduce((sum, season) => sum + season.episodes.length, 0),
+    seasons: series.seasons.map(season => ({
+        id: series.id * 100 + season.season_number, season_number: season.season_number, name: seasonName(season.season_number),
+        episode_count: season.episodes.length, air_date: season.episodes[0]?.air_date ?? null, poster_path: null, overview: ''
+    })),
+    external_ids: { imdb_id: series.imdb_id ?? null, tvdb_id: null }, content_ratings: { results: [] }, images: { backdrops: [], posters: [], logos: [] },
+    credits: { cast: [], crew: [] }, videos: { results: [] }, keywords: { results: [] }, networks: [], production_companies: [], created_by: []
+});
+const seasonDetail = (series, season) => ({
+    id: series.id * 100 + season.season_number, _id: `${series.id}-${season.season_number}`, season_number: season.season_number,
+    name: seasonName(season.season_number), air_date: season.episodes[0]?.air_date ?? null, overview: '', poster_path: null,
+    episodes: season.episodes.map(episode => ({
+        id: episode.id, episode_number: episode.episode_number, season_number: season.season_number, name: episode.name ?? `Episode ${episode.episode_number}`,
+        overview: '', air_date: episode.air_date ?? null, runtime: 1, still_path: null, vote_average: 0, crew: [], guest_stars: []
+    }))
+});
 const movieSummary = movie => ({
     id: movie.id, title: movie.title, original_title: movie.title, release_date: movie.release_date, overview: `${movie.title}, a generated S11 fixture.`,
     poster_path: null, backdrop_path: null, adult: false, vote_average: 5, genre_ids: movie.genres.map(genre => genre.id), original_language: 'en', popularity: 1
@@ -88,22 +126,42 @@ const tmdb = createServer(async (request, response) => {
     }
     if (path === 'search/movie') {
         const query = (url.searchParams.get('query') ?? '').toLowerCase();
-        const results = MOVIES.filter(movie => query.split(/\s+/).every(word => movie.title.toLowerCase().includes(word))).map(movieSummary);
+        const results = allMovies().filter(movie => query.split(/\s+/).every(word => movie.title.toLowerCase().includes(word))).map(movieSummary);
         json(response, 200, { page: 1, results, total_pages: 1, total_results: results.length });
         return;
     }
-    if (path === 'search/tv' || path === 'search/multi' || path === 'search/person' || path === 'search/collection') {
+    if (path === 'search/tv') {
+        const query = (url.searchParams.get('query') ?? '').toLowerCase();
+        const results = catalog().series.filter(series => query.split(/\s+/).every(word => series.name.toLowerCase().includes(word))).map(seriesSummary);
+        json(response, 200, { page: 1, results, total_pages: results.length ? 1 : 0, total_results: results.length });
+        return;
+    }
+    if (path === 'search/multi' || path === 'search/person' || path === 'search/collection') {
         json(response, 200, { page: 1, results: [], total_pages: 0, total_results: 0 });
         return;
     }
     const detail = /^movie\/(\d+)$/.exec(path);
     if (detail) {
-        const movie = MOVIES.find(candidate => candidate.id === Number(detail[1]));
+        const movie = allMovies().find(candidate => candidate.id === Number(detail[1]));
         if (movie) { json(response, 200, movieDetail(movie)); return; }
+    }
+    const tvDetail = /^tv\/(\d+)$/.exec(path);
+    if (tvDetail) {
+        const series = catalog().series.find(candidate => candidate.id === Number(tvDetail[1]));
+        if (series) { json(response, 200, seriesDetail(series)); return; }
+    }
+    const tvSeason = /^tv\/(\d+)\/season\/(\d+)$/.exec(path);
+    if (tvSeason) {
+        const series = catalog().series.find(candidate => candidate.id === Number(tvSeason[1]));
+        const season = series?.seasons.find(candidate => candidate.season_number === Number(tvSeason[2]));
+        if (series && season) { json(response, 200, seasonDetail(series, season)); return; }
     }
     const byImdb = /^find\/(tt\d+)$/.exec(path);
     if (byImdb) {
-        json(response, 200, { movie_results: MOVIES.filter(movie => movie.imdb_id === byImdb[1]).map(movieSummary), tv_results: [], person_results: [] });
+        json(response, 200, {
+            movie_results: allMovies().filter(movie => movie.imdb_id === byImdb[1]).map(movieSummary),
+            tv_results: catalog().series.filter(series => series.imdb_id === byImdb[1]).map(seriesSummary), person_results: []
+        });
         return;
     }
     json(response, 404, { status_code: 34, status_message: 'The resource you requested could not be found.', success: false });
@@ -171,7 +229,18 @@ const prowlarr = createServer(async (request, response) => {
         const mode = url.searchParams.get('t');
         count('torznab.' + mode);
         log('torznab', torznab[1], 't=' + mode, url.searchParams.has('imdbid') ? 'imdbid' : '', url.searchParams.has('q') ? 'q' : '');
-        if (faults.torznab === '500') { response.writeHead(500); response.end(); return; }
+        // A fault can target one feed (service torznab<id>) or all of them (service torznab).
+        const fault = faults['torznab' + torznab[1]] ?? faults.torznab;
+        if (fault === '500') { response.writeHead(500); response.end(); return; }
+        if (fault === '429') { response.writeHead(429, { 'Retry-After': '60' }); response.end(); return; }
+        if (fault === 'slow') return;
+        if (fault === 'redirect') { response.writeHead(302, { Location: 'http://redirect.invalid/api' }); response.end(); return; }
+        if (fault === 'malformed') { response.writeHead(200, { 'Content-Type': 'application/xml' }); response.end('<?xml version="1.0"?><rss><channel><item><title>broken'); return; }
+        if (fault === 'autherror') {
+            response.writeHead(200, { 'Content-Type': 'application/xml' });
+            response.end('<?xml version="1.0"?><error code="100" description="Incorrect user credentials"/>');
+            return;
+        }
         response.writeHead(200, { 'Content-Type': 'application/xml' });
         if (!same(key, secrets.PROWLARR_KEY)) { response.end('<?xml version="1.0"?><error code="100" description="Incorrect user credentials"/>'); return; }
         if (mode === 'caps') { response.end(CAPS); return; }
@@ -285,6 +354,45 @@ const transmission = createServer(async (request, response) => {
     json(response, 200, { result: body.error ?? 'success', arguments: result });
 });
 
+// ---- Web seed (BEP 19): serves a release's files by byte range, optionally throttled ----
+// GET /<release id>/<torrent name>[/<path inside the torrent>]. faults.webseed: 'ok' | 'down' | '<bytes per second>'.
+const webseed = createServer((request, response) => {
+    count('webseed');
+    const mode = faults.webseed ?? 'ok';
+    if (mode === 'down') { request.socket.destroy(); return; }
+    const segments = new URL(request.url, 'http://webseed').pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    const release = releases().find(item => item.id === segments[0]);
+    const inner = segments.slice(2).join('/');
+    const part = release && segments[1] === release.torrentName
+        ? release.parts.find(candidate => (candidate.path ?? '') === inner) : null;
+    if (!part) { response.writeHead(404); response.end(); return; }
+    const length = statSync(part.file).size;
+    const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers.range ?? '');
+    const from = range ? Number(range[1]) : 0;
+    const to = range && range[2] ? Math.min(Number(range[2]), length - 1) : length - 1;
+    if (from > to) { response.writeHead(416, { 'Content-Range': `bytes */${length}` }); response.end(); return; }
+    response.writeHead(range ? 206 : 200, {
+        'Content-Type': 'application/octet-stream', 'Content-Length': to - from + 1, 'Accept-Ranges': 'bytes',
+        ...(range ? { 'Content-Range': `bytes ${from}-${to}/${length}` } : {})
+    });
+    const bytesPerSecond = Number(mode) > 0 ? Number(mode) : Number(process.env.STANDIN_WEBSEED_BPS ?? 0);
+    const handle = openSync(part.file, 'r');
+    let at = from;
+    const step = 65536;
+    const pump = () => {
+        if (at > to || response.destroyed) { closeSync(handle); response.end(); return; }
+        const buffer = Buffer.alloc(Math.min(step, to - at + 1));
+        const read = readSync(handle, buffer, 0, buffer.length, at);
+        at += read;
+        const ok = response.write(buffer.subarray(0, read));
+        const delay = bytesPerSecond > 0 ? Math.round(read / bytesPerSecond * 1000) : 0;
+        if (!ok) response.once('drain', () => setTimeout(pump, delay)); else setTimeout(pump, delay);
+    };
+    response.on('close', () => { at = to + 1; });
+    pump();
+});
+const webseedHost = process.env.STANDIN_WEBSEED_HOST ?? bind;
+
 // ---- Tarpit: accepts a connection and never answers, so a client's own timeout fires ----
 const held = new Set();
 const tarpit = createTcpServer(socket => { count('tarpit'); held.add(socket); socket.on('close', () => held.delete(socket)); socket.on('error', () => {}); });
@@ -300,27 +408,49 @@ const control = createServer(async (request, response) => {
         if (url.pathname === '/fault') { faults[url.searchParams.get('service')] = url.searchParams.get('mode'); json(response, 200, faults); return; }
         if (url.pathname === '/release') {
             // Publishes a release of a real, staged file: the .torrent carries the file's real piece hashes.
+            // A multi-file release lists `files: [{ path, file }]` (path inside the torrent, file on disk). `webseed: true`
+            // adds a BEP 19 url-list pointing at this stand-in's web seed, so a real Transmission can download it with no peer.
             const spec = JSON.parse((await readBody(request)).toString('utf8'));
-            const size = statSync(spec.file).size;
+            const parts = spec.files ? spec.files.map(part => ({ path: part.path, file: part.file, length: statSync(part.file).size }))
+                : [{ path: null, file: spec.file, length: statSync(spec.file).size }];
+            const size = parts.reduce((sum, part) => sum + part.length, 0);
             const pieceLength = 262144;
             const pieces = [];
-            const handle = openSync(spec.file, 'r');
+            let pending = Buffer.alloc(0);
             const chunk = Buffer.alloc(pieceLength);
-            for (let offset = 0; offset < size; offset += pieceLength) {
-                const read = readSync(handle, chunk, 0, pieceLength, offset);
-                pieces.push(createHash('sha1').update(chunk.subarray(0, read)).digest());
+            for (const part of parts) {
+                const handle = openSync(part.file, 'r');
+                for (let offset = 0; offset < part.length; offset += pieceLength) {
+                    const read = readSync(handle, chunk, 0, pieceLength, offset);
+                    pending = Buffer.concat([pending, chunk.subarray(0, read)]);
+                    while (pending.length >= pieceLength) {
+                        pieces.push(createHash('sha1').update(pending.subarray(0, pieceLength)).digest());
+                        pending = pending.subarray(pieceLength);
+                    }
+                }
+                closeSync(handle);
             }
-            closeSync(handle);
-            const torrentBytes = encode({
-                announce: 'http://tracker.invalid/announce', 'created by': 'JellyfinMod S11 stand-in',
-                info: { length: size, name: spec.torrentName, 'piece length': pieceLength, pieces: Buffer.concat(pieces), private: 1 }
-            });
+            if (pending.length) pieces.push(createHash('sha1').update(pending).digest());
+            const info = spec.files
+                ? { files: parts.map(part => ({ length: part.length, path: part.path.split('/') })), name: spec.torrentName, 'piece length': pieceLength, pieces: Buffer.concat(pieces), private: 1 }
+                : { length: size, name: spec.torrentName, 'piece length': pieceLength, pieces: Buffer.concat(pieces), private: 1 };
+            const torrent = { announce: 'http://tracker.invalid/announce', 'created by': 'JellyfinMod stand-in', info };
+            if (spec.webseed) torrent['url-list'] = [`${process.env.STANDIN_WEBSEED_BASE || `http://${webseedHost}:${portBase + 4}/`}${encodeURIComponent(spec.id)}/`];
+            const torrentBytes = encode(torrent);
             writeFileSync(join(stateDir, 'torrents', spec.id + '.torrent'), torrentBytes);
             const list = releases().filter(item => item.id !== spec.id);
             list.push({ id: spec.id, indexerId: spec.indexerId ?? 1, title: spec.title, size, seeders: spec.seeders ?? 25, category: spec.category ?? 2040,
-                imdbid: spec.imdbid, tmdbid: spec.tmdbid, file: spec.file, infoHash: readTorrent(torrentBytes).infoHash });
+                imdbid: spec.imdbid, tmdbid: spec.tmdbid, file: spec.file ?? parts[0].file, torrentName: spec.torrentName,
+                parts: parts.map(part => ({ path: part.path, file: part.file })), infoHash: readTorrent(torrentBytes).infoHash });
             writeFileSync(releasesFile, JSON.stringify(list, null, 1));
             json(response, 200, list.at(-1));
+            return;
+        }
+        if (url.pathname === '/withdraw') {
+            // Takes a release off the feeds (the torrent file stays, so a client that already has it keeps its web seed).
+            const list = releases().filter(item => item.id !== url.searchParams.get('id'));
+            writeFileSync(releasesFile, JSON.stringify(list, null, 1));
+            json(response, 200, { releases: list.length });
             return;
         }
         if (url.pathname === '/complete') {
@@ -354,5 +484,6 @@ tmdb.listen(portBase, bind);
 prowlarr.listen(portBase + 1, bind);
 transmission.listen(portBase + 2, bind);
 tarpit.listen(portBase + 3, bind);
+webseed.listen(portBase + 4, bind);
 control.listen(portBase + 9, '127.0.0.1');
-log(`stand-ins listening: tmdb ${portBase}, prowlarr ${portBase + 1}, transmission ${portBase + 2}, tarpit ${portBase + 3}, control ${portBase + 9} (loopback)`);
+log(`stand-ins listening: tmdb ${portBase}, prowlarr ${portBase + 1}, transmission ${portBase + 2}, tarpit ${portBase + 3}, webseed ${portBase + 4}, control ${portBase + 9} (loopback)`);
