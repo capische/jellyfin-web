@@ -403,8 +403,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   product passes live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists).
   [`PARITY.md`](PARITY.md) plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6);
   it is a plan, not evidence, and has not been run.
-- Phase 6 follow-up (M10–M21), Phase 8 and Phase 9: planned outlines only, 2026-09-21; not
-  scheduled, no entry gate met (see [`PHASE6.md`](PHASE6.md), [`PHASE8.md`](PHASE8.md) and
+- Phase 12 (M10–M21), Phase 8 and Phase 9: planned outlines only, 2026-09-21; not
+  scheduled, no entry gate met (see [`PHASE12.md`](PHASE12.md), [`PHASE8.md`](PHASE8.md) and
   [`PHASE9.md`](PHASE9.md)).
 
 - **Phase 2 — reconciliation.** Match entries to existing Jellyfin items by provider id; backfill
@@ -454,7 +454,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Phase 3 operation with `upgrade_replaced` provenance, Get another quality, retention per version
   and the D-pad-operable version selector. Every default is proposed; depends on Phase 5 I9.
   Phase 5 and Phase 6 open questions are listed in those documents, not renumbered here.
-  **Follow-up planned (2026-09-21, proposed):** [`PHASE6.md`](PHASE6.md) *Phase 6 follow-up —
+  **Follow-up moved to Phase 12 (2026-09-25):** [`PHASE12.md`](PHASE12.md) *Phase 12 —
   multiple held qualities (M10–M21)*: an ordered preference ladder with must-have rungs that
   define the copies a title holds, per server/library/title scope, attribute vocabulary with
   confidence, dynamic-range and audio ticks, user-defined string-match rules, per-indexer release
@@ -505,7 +505,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   deterministic or optional model-assisted extractor (output treated as untrusted input), post-import
   truth from real media streams including Dolby Vision profiles, a device capability catalogue
   favouring the user's registered devices with device-targeted and plays-everywhere selection,
-  and direct-play diagnostics that report rather than re-grab. Depends on the Phase 6 follow-up
+  and direct-play diagnostics that report rather than re-grab. Depends on Phase 12
   and Phase 7 S8–S9; its open questions are listed there.
 - **Phase 9 — ratings and title enrichment.** Future, **not scheduled**; outline only in
   [`PHASE9.md`](PHASE9.md) (R1–R8). **Accepted 2026-09-21:** MDBList is the single ratings
@@ -520,6 +520,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   starting (including Trakt-imported watches) and files about to be deleted, then downloads,
   upgrades, indexer failures and interface changes. The user asked for it to be planned, not
   implemented now. Its open questions are listed there.
+- **Phase 12 — multiple held qualities.** Future, **not scheduled**; outline in
+  [PHASE12.md](PHASE12.md). Moved out of PHASE6.md's follow-up on 2026-09-25. The user wants to
+  hold more than one quality on purpose — for example a best-possible version for the living-room
+  television and a compatible one for everything else — chosen on attributes a flat quality list
+  cannot see. Its open questions 11–22 are listed there.
 
 ---
 

@@ -190,4 +190,4 @@ Commit scopes would be `docs(ratings,p9.r1)`, `feat(ratings,p9.r2-5)`, `feat(rat
    audience, TMDB, Trakt; Metacritic, Metacritic user, Letterboxd and Roger Ebert available but
    off. Consumed by R2 and R6.
 4. **Acquisition.** May ratings ever influence release scoring or automation (proposed default:
-   **no**, display only)? Consumed by R5 and, if yes, the Phase 6 follow-up's rule model.
+   **no**, display only)? Consumed by R5 and, if yes, Phase 12's rule model.
