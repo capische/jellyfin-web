@@ -2109,19 +2109,13 @@ Kept current by whoever works S11. Last update 2026-09-24 (review fixes), Opus 5
 - **REVIEW-2026-09-24:** worked 2026-09-24. Thirteen findings fixed and verified, two fixed in the documentation (S7-R4,
   P7-R3), S4-R5 disputed with live evidence, P7-R2 partly closed. Commits and evidence per finding in [REVIEW-2026-09-24.md](REVIEW-2026-09-24.md).
 - **S5 (2026-09-24):** image, archive, `--plugin-web`, the §3.4 procedure and the §3.5 tested rows done; see *S5
-  evidence*. The image `capische/jellyfinmod:0.1.0.0` lives on the test host only. Open question 11 is answered
-  (`ghcr.io/capische/jellyfinmod`, Jellyfin 12.0.0 by digest) but **nothing was published**: publishing is a public
-  action this agent did not take on a relayed instruction; it needs the user's own go-ahead.
-- **§3.4 merge routine: not run.** The coordinator relayed on 2026-09-24 that the user authorized rebasing `master`
-  and `jellyfin-mod` onto upstream and force-pushing both. A force-push rewrites published history, and this agent
-  does not treat a relayed message as the user's own authorization; it was not run. One upstream commit was
-  pending at S5.
-- **S11: not run** (see *S11 evidence* below for what is and is not covered).
-- **Instance:** 28096 runs plugin `1c1098c` (branch `p7-r24`, fast-forwarded to `master` when pushed) and web bundle
-  `cb3ac1e01a5b` (`jellyfin-mod` `378d8ddd10`), served at `/web/` by the takeover. Backups beside it:
-  `backups/pre-r24` (database, XML, secret store, recovery state, the previous DLL, bundle zip and patched
-  `index.html` of plugin `cdb6e7b` / bundle `a3ecb472798a`) and `backups/pre-p7r2` (the state the Prowlarr run was
-  restored to). Earlier: `backups/pre-8efe9ea`, `backups/pre-s9`.
+  evidence*. Publishing to `ghcr.io/capische/jellyfinmod` was authorized by the user directly on 2026-09-24 ("Yes, once
+  gh is ready"; `gh` has `write:packages`); **nothing is published yet** — it waits for S11 to pass on the final build
+  (see *S11 — handover*).
+- **§3.4 merge routine: run for real, 2026-09-24** (authorized by the user directly: "Yes, I authorize it"). See
+  *S11 evidence*, merge row.
+- **S11: in progress** — see *S11 — handover* below, which supersedes this list for S11.
+- **Instance:** see *S11 — handover*.
 - **Probes:** `scripts/jellyfinmod-e2e/review-fixes.mjs` (S8-R1, S8-R2), `settings-dashboard.mjs` (S7),
   `settings-area.mjs` (S8), `settings-prowlarr.mjs` (S9), `setup-wizard.mjs` (S10), `image-review.mjs` (S5); plugin
   suites under `tests/` (the takeover suite takes a `jellyfinmod-web.zip` path) and the image test
@@ -2146,40 +2140,85 @@ on timing in one sequential run of all suites and passed on an immediate re-run,
 **Found and fixed on the way:** in the TV settings area Down from a section heading fell back into the rail and
 never reached the section's rows; the section column is now a `focuscontainer-y` (amended into `378d8ddd10`).
 
+#### S11 — handover
+
+Kept current by the S11 coordinator. Last update **2026-09-25**, Opus 5.5, high effort. Paused at the 80% usage rule.
+
+**Where the work is (nothing below is pushed unless it says so).**
+
+| Repository | Branch / worktree | Tip | State |
+| --- | --- | --- | --- |
+| web | `jellyfin-mod` on origin | `a279641ebf` | the §3.4 rebase, **pushed and verified** (below) |
+| web | `p7-s11`, worktree `.claude/worktrees/p7-s11-web` | this commit | `jellyfin-mod` + every S11 commit: runners, stand-ins, evidence, the fixes below; linear, **not pushed** |
+| plugin | `master` on origin | `f443a62` | unchanged |
+| plugin | `p7-s11`, worktree `.claude/worktrees/p7-s11-plugin` | `ad06745` | `439f727` (release changelog, image source label), `d6fdc88` (first download client selected), `ad06745` (breaker in `pausedReasons`); all suites pass; **not pushed** |
+
+The worker branches `p7-s11-image`, `p7-s11-image-plugin`, `p7-s11-parity`, `p7-s11-lint` and `p7-s11-runner` are fully
+cherry-picked into `p7-s11` and can be deleted with their worktrees.
+
+**Deployed on 28096:** plugin `d6fdc88` with bundle `aa4774e84dbf` (web `caad4989bc`), takeover `patched`. It lacks the
+two last fixes (queue crash, breaker banner). **Retention days on 28096 read 15 instead of 14**, left by a
+`settings-dashboard.mjs` re-run; the worker's restoring PATCH was refused by the permission system, so it is left for the
+user or the coordinator (`PATCH /JellyfinMod/Settings/Retention` with `reclaimAfterDays: 14` and the current revision;
+retention is off, so nothing is deleted meanwhile). Backups: `backups/pre-s11` (the state before S11), packages
+`backups/s11-package`, `s11-package-b`, `s11-package-final`.
+
+**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = `d804cc8ecfcc` (bundle `aa4774e84dbf`) — **superseded**, it
+carries the queue crash. `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) are kept as before.
+
+**Exact next steps.**
+1. Build the final bundle from `p7-s11` (`JELLYFINMOD_PATCH_BASE=origin/master npm run build:production`), the release
+   from plugin `p7-s11` (`scripts/build-release.sh`), deploy the four package files to 28096, restart that service only.
+2. On the final bundle, both browsers: `review-fixes`, `retarget-smoke`, the Queue row of `replacement-sweep.mjs` on
+   desktop and mobile, `browser-review.mjs` past its TV-1080 *Keep* stop (classify it: harness or product), the settings
+   changes against a stand-in Transmission (runner step 2: blank username, named validation error, indexer defaults,
+   secret back to *Configured*, probe and sync outcomes), the Chromium sweep, and step 4 — the takeover off on 28096 with
+   the restored file's hash against the recorded stock hash (the fork's stock entry on this shape) and the stock checks,
+   then on again.
+3. Rebuild the image on the test host from the final release context and re-run the fresh-install and queue check on a
+   disposable container (Chrome), then push `jellyfin-mod` (fast-forward from `a279641ebf`) and plugin `master`
+   (fast-forward from `f443a62`), then publish `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest` (linux/arm64 and
+   linux/amd64, one build with `SOURCE_DATE_EPOCH`, `--provenance=false`), verify the pushed digests and the package
+   visibility, pull on the test host and smoke it. amd64 cannot run here: under this workstation's qemu emulation stock
+   `jellyfin/jellyfin` 12.0.0 crashes the same way (segfault during startup), so amd64 is verified by content (every file
+   of `/opt/jellyfinmod/plugin` and the entrypoint byte-identical to the tested arm64 image, web root `1000 0775`).
+4. Record the results here, strike the handover, and only then Q16 (the Trakt indicator).
+
 #### S11 evidence
 
-**Not run, 2026-09-24.** This agent stopped at the 80% usage rule after the review fixes. Nothing below is claimed.
-What the review fixes already cover towards S11: the takeover history and bundle cap (step 2, isolated shape
-only), the Prowlarr search and grab through a synced indexer (step 1's "sync Prowlarr, grab", on the acceptance
-instance rather than a fresh install), the S8 TV path in both browsers (step 7, partially), and part of step 6,
-run on 28096 (plugin `1c1098c`, bundle `cb3ac1e01a5b`) on 2026-09-24: every new route (`Settings/Overview`,
-`Discovery` and its Test, `SeedProtection` and its Test, `Retention`, `Interface` and `RestoreStock`, the five
-`Prowlarr` routes, `Setup/State` and `Dismiss`, `Indexers`, `Acquisition`) and `Health` answer **401** anonymously
-with no `sec_` in any body; `/JellyfinMod/Repository` and the bundle's own files answer 200 anonymously, as designed;
-`/web-mod/../../etc/passwd`, `…/../../jellyfinmod.db`, `..%2f` and `..%5c` forms and an unknown bundle id are all
-**404**; fourteen administrator settings responses carry no secret reference, password value or `apikey=`. The
-ordinary-user half of step 6 is not run (item 2 below). Still to run, as named steps:
+Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
+[`evidence/p7-s11/`](evidence/p7-s11/) (`image/`, `parity/`, `runner/`). No LAN address, host path or secret in any of
+them.
 
-1. Step 1 from a clean isolated config in a disposable container (image): the wizard end to end with the provoked
-   refusals (`destination_inside_library`, a download directory on a second filesystem such as the container's
-   `/dev/shm`, an unverified mapping, an empty profile, a cutoff outside the allowed qualities, the 409
-   `acquisition_not_ready`), resume after closing the browser, Dismiss from the banner, the TV reachability of
-   the wizard; then sync the stand-in Prowlarr, grab, import, play; the T18 cycle and the Phase 6 checklist with
-   settings saved only through the area. TMDB needs a token, which may be configured only on 18096: use the
-   acceptance instance's database copy with its token reference kept (acquisition cleared), or decide how the
-   disposable instance gets discovery.
-2. Ordinary user in a browser (menu gate, page refusal) — needs a throwaway user in a disposable container.
-3. Secret Replace / Clear / Undo and the Transmission, import-path, indexer and Prowlarr Tests (wrong credential,
-   unreachable, timeout) driven from the page, against stand-in servers with generated fixture credentials.
-4. Steps 2–4 and 6: the takeover matrix on the image's own web directory, the plugin upgrade between two real
-   versions with sessions left open (needs a second plugin version, e.g. 0.1.0.1 built for the purpose), stock
-   parity with the plugin off and uninstalled (hashes), the security sweeps.
-5. Step 5 and the parity run against stock (every movie and show, audio-track and subtitle switching) in all four
-   layouts, Chromium then Chrome.
-6. §3.4 run for real, once the user confirms the rebase and force-push in person; image publication to
-   `ghcr.io/capische/jellyfinmod` likewise.
-7. Feature eslint in `features/jellyfinmod/settings/` (≈130 findings, unchanged in kind by the fixes).
-8. Physical LG webOS (6–22) checklist from the TV shell part 2, after fully closing and reopening the app.
+| Step | Result |
+| --- | --- |
+| §3.4 upstream merge, run for real (2026-09-24) | Upstream tip `134e6add88` (one pending Weblate translation). `master` `2132b05175` → **`1717a170e4`** (14 production commits replayed, no conflict); `jellyfin-mod` `cbaf51c6f4` → **`a279641ebf`** (`git rebase --onto` the new `master` from the old fork point, 144 commits, no conflict; the only diff against the old tip is `src/strings/ja.json`). Upstream touched no §3.2 or mirrored file and renamed nothing. Stock entry of `master` built; mod build: patch surface "§3.2 matches the 22 upstream files", boot guard passed, tsc 0, stylelint 0, bundle `9fe379afd867`, `upstreamMergeBase` `134e6add88`. `PhaseSevenTakeoverIntegration` with the new zip: exit 0. Deployed to 28096; `retarget-smoke` 8/8 on Chromium and Chrome. Pushed atomically, `--force-with-lease` against both recorded tips; `git ls-remote` shows `1717a170e4` and `a279641ebf` (re-verified 2026-09-25). `p10-retention` (web and plugin) is based on the old tips and needs a rebase before its next push. `patchSurface.js` compares against the local `master` ref, so after a remote rewrite set `JELLYFINMOD_PATCH_BASE=origin/master` until the local ref is reset |
+| 1 Fresh install, image, empty config (Chromium and Chrome) | Plugin installed, 22 migrations, `/web` patched with no administrator step (`automatic`), repository once. The JellyfinMod wizard end to end with a stand-in TMDB over real HTTPS (`--add-host` + its CA inside the disposable container only), stand-in Prowlarr, Torznab and Transmission: refusals (`destination_inside_library`, `/dev/shm` as a second filesystem, unverified mapping, empty profile, cutoff outside the allowed qualities, the 409 `acquisition_not_ready` verbatim), resume in a new session, Dismiss, TV reachability at both sizes; search, grab, hardlink import (link count 2), play to the end. **Four defects found and fixed** (D1–D4 below). Final image: 66/66 on Chromium, Chrome the same |
+| 1 T18 and Phase 6 on the fresh install | T18 with a one-minute window: the file reclaimed, folder, `.nfo`, subtitle and poster kept (decision 5), entry and history kept; item 5 (seeding below goal blocks, `seed_goal_unmet`) PASS. Phase 6 checklist through the settings area: items 1–6, 9–11 PASS; the breaker had **no queue banner** (fixed, `ad06745` + `bf0d41131b`, suite-verified, not yet in the browser); a new episode after its delay and an upgrade to cutoff were **not verified** live (no TV stand-in; time) — both stay covered by `PhaseSixIntegration` |
+| 2 Takeover matrix, image's own web directory | Restart twice (no double patch), hand edit and host-upgrade simulation repaired (`.prev` kept), `--force-recreate` re-patched, takeover off from the Interface section **byte-identical (`cmp`) to the host image's `index.html` `a1308635…cfbe3`** also after a recreate, on again, failsafe with the bundle directory deleted and with the plugin disabled (no blank page, no loop, four layouts), manual recovery, read-only web root, `JELLYFINMOD_UI_TAKEOVER=false`, repository removed / re-added / never twice. The image's entrypoint reinstalls a missing plugin at every start, so the "plugin folder removed" failsafe row cannot occur in the image shape, and a Dashboard uninstall is undone by the next start (stock stays only because the switch is off); removing the mod from the image means using the stock image |
+| 2 Upgrade with sessions left open (28096, bind-mounted shape) | `upgrade-sessions.mjs`, Chromium: a desktop and a TV-1080 session on bundle `991019ca45ec` kept working across the deploy of `9fe379afd867` and a restart (21 and 6 lazy requests served from the retained bundle path, no failure, no page error); a full reload ran the new bundle; **6/6**. Chrome not run. A real upgrade between two plugin *versions* is impossible: only 0.1.0.0 exists; not faked. Rollback to `0.1.0.0-pre-merge`: the image rolled back, the entrypoint kept the plugin folder (never downgrades), as designed |
+| 3 Stock parity (28096, takeover shape) | Mod side `/web/` (patched), stock side the fork's stock entry at `/web-mod/<id>/index.html`. **Chromium 245 PASS / 1 FAIL** (a 30 s page timeout in the two-version check, passed on two re-runs: flake) on `9fe379afd867`; **Chrome 246 PASS / 0 FAIL**, 2 allowed skips (no box set, no m2ts) on `3b7675071649`. Inventory 55 movies and 105 series identical on stock, mod and the API, every season and episode, also in both TV layouts. Seek, stop-and-resume, audio switch, subtitle switch and subtitle off pass on *Highlander*, *David Beckham Infamous*, *Mercy* (4K HDR) and *Lessons of Tolerance*. User data restored and proved at database level (5 143 rows identical) |
+| 3 Parity triage (user, 2026-09-24) | Every failure of the stale 2026-09-22 run and of the iterations is **class (a), harness**: the B4 "Ends at" badge read across a minute boundary; ten un-paced ArrowRight presses coalescing into one skip; a stop point below the server's 5 % resume minimum and a 30 s wait shorter than a 4K start; "Remember selections" carrying one side's track choice into the other; a title whose only subtitle was already on; "More like this" cards varying per request; the mod's merged Continue Watching row (accepted design); Backspace instead of Escape for TV Back. No (b), **no (c)**. Table and per-row evidence: `evidence/p7-s11/parity/parity-report.md` |
+| 3 Stock with the takeover off, 28096 | **Not yet run** (next step 2). On the image it passed byte-identically (step 2 row) |
+| 4 Image shape | As step 2 rows; mobile and TV layouts on the image pass |
+| 5 Full-replacement sweep (`replacement-sweep.mjs`, Chrome, four layouts, opened from the shell, TV by keys) | 175 PASS, 10 FAIL, 15 NOT VERIFIED, 32 NOT PRESENT (no music, live TV, books, photos, playlists or collections library on 28096). The failures: **the Queue crashed for an administrator** on desktop and mobile (product, fixed `41b62de63d`, not yet deployed); Dashboard sub-pages on TV — no arrow key leaves the drawer's first link, **identical on the stock entry** (class b); the TV shell has no link to the metadata manager or the Queue (reached by address); the rest harness (mobile selectors, a SyncPlay focus trap at 720, one missed click). Chromium sweep not run |
+| 6 Security | `security-sweep.mjs`, **14/14 on Chromium and on Chrome** (and again in the final runner pass): a disposable non-administrator (no password), 58 routes anonymous 401 and ordinary 403 (Health 200), anonymous bundle and repository 200, nine traversal forms 404, leak check over 146 responses against every value in the secret store, the ordinary user's menu without *JellyfinMod settings* or Dashboard and the settings area and wizard refusing on desktop and mobile with no settings request sent; the user deleted and gone (user, list, devices) |
+| 7 Browser runners, 28096, bundle `aa4774e84dbf` | Chromium / Chrome: `retarget-smoke` 8/8 both; `tv-shell` 135/135 and 134/135 (one Back-focus miss at 720 on Chrome only, unclassified); `review-fixes` 27/27 both; `settings-area` 32/32 both; `settings-dashboard` 9/9 and 8/9 (a first-try timeout, NOT VERIFIED); `settings-prowlarr` 9/9 both; `takeover-review` 10/10 both; `security-sweep` 14/14 both; `browser-review` stops at "Keep is not reachable by ArrowDown" on TV 1080 in both browsers (unclassified; the rest of it not run) |
+| P7-R2 remainder | Secret Replace / Clear / Undo and the Transmission, import-path, indexer and Prowlarr Tests (wrong credential, unreachable, timeout) from the page against stand-ins: PASS on the fresh install. Ordinary-user browser check: PASS (step 6). Feature eslint: **silent** (137 → 0, behaviour-neutral refactor, `0b753fbb4b`, `4f35279cff`) |
+| Plugin suites (test host, SDK 10.0.401) | All eleven pass on plugin `p7-s11` (`PhaseFourIntegration` updated for the first-client rule; `PhaseSixIntegration` for the breaker reason) |
+| Physical LG webOS (6–22) | Not run — the user's own check; checklist in the S11 report |
+
+**Defects found by S11 and fixed** (all mod-only; each re-verified live except where noted):
+
+| | Defect | Fix |
+| --- | --- | --- |
+| D1 | A fresh install could not leave wizard step 2: the step needs a *selected* client and the only selector is step 5 | plugin `d6fdc88`: a client created when none exists is selected; reviewed (Fable, high), narrowed so a deliberate "None" with clients present is never changed |
+| D2 | The import-path probe and Prowlarr *Sync now* results vanished | web `52f0b7d1b9` |
+| D3 | *Add an indexer* always failed validation (`automateTitleMatches: null`) | web `20c705934d` |
+| D4 | A saved replaced secret stayed an empty "New …" field | web `20c705934d` |
+| D5 | A new download client with a blank username failed validation (`username: null`), and validation errors named no field | web `d461cb838c`, `73c72dafef` (found by the review) |
+| D6 | An administrator's Queue crashed with its first row (`<button is=…>` against the custom-elements polyfill) | web `41b62de63d` — verified on a disposable container, **not yet on 28096** |
+| D7 | The indexer breaker never reached the queue banner | plugin `ad06745`, web `bf0d41131b` — suite-verified, **not yet in a browser** |
 
 ### S7 — one settings contract behind every form
 
