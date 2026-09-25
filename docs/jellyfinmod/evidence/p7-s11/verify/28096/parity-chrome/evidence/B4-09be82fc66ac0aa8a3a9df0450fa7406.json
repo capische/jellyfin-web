@@ -1,0 +1,137 @@
+{
+  "itemId": "09be82fc66ac0aa8a3a9df0450fa7406",
+  "title": "Lessons of Tolerance",
+  "api": {
+    "summary": "mkv h264 1920x720 SDR",
+    "audio": [
+      "1"
+    ],
+    "subtitles": []
+  },
+  "stock": {
+    "title": "Lessons of Tolerance",
+    "parentTitle": "",
+    "miscInfo": "2024 1h 35m 7.1 | ",
+    "endsAt": "Ends at 4:21 PM",
+    "readAt": 1790311549989,
+    "audioOptions": [
+      "1:Main - Stereo - Default"
+    ],
+    "subtitleOptions": [
+      "-1:Off"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "7.1",
+    "criticRating": "",
+    "genres": [
+      "Comedy",
+      "Drama"
+    ],
+    "studios": [],
+    "director": [
+      "Arkadii Nepytaliuk"
+    ],
+    "writer": [],
+    "tags": [
+      "lgbt",
+      "social justice",
+      "gay theme",
+      "social acceptance"
+    ],
+    "overview": "A Ukrainian LGBTQ+ acceptance group is formed by teacher Nadia. A stereotypically homophobic family hesitantly decides to sign up to receive tempting financial supplements. They will need to spend 24 hours with group members Vasyl, beer fan Zenyk, actress Diana and aggressive Denys. Through amusing games, they will learn about homophobia, equality, empathy, gender discrimination, and self-fulfillment.  They play games promoting equality and empathy, using humor against prejudice.",
+    "castIds": [
+      "da2495ec9e4baa65ca136ccd49b94b9c",
+      "d013c76f9efd8e74ee82fca999e8d3d1",
+      "42455803575b9620cc22e04a8c430297",
+      "b981f3e5037d44ffcd0d5a6f9c45519f",
+      "56391ac9477a76d749cfbf7c4f649846",
+      "746df775ea26dd8ea8ea0458f28a5d5b",
+      "3447b2081fcdf68867c736e205c9c16a",
+      "7e45e227000e3c3cf3a39c8340862401",
+      "011b3abbe011f043b79dad630b7c400c"
+    ],
+    "mediaInfoBadges": [
+      "2024",
+      "1h 35m",
+      "7.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Primary?fillHeight=498&fillWidth=360&quality=96&tag=10479c6c83f10a21287d10ed6bb6e0ea\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Logo?tag=4f1d11e32aefb08dc246124ec5beaab1&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "09be82fc66ac0aa8a3a9df0450fa7406",
+        "label": "Lessons.of.Tolerance.2023.P.WEB-DL.1O8Op"
+      }
+    ],
+    "sourceSelected": "09be82fc66ac0aa8a3a9df0450fa7406",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  },
+  "mod": {
+    "title": "Lessons of Tolerance",
+    "parentTitle": "",
+    "miscInfo": "2024 1h 35m 7.1 | ",
+    "endsAt": "Ends at 4:21 PM",
+    "readAt": 1790311551229,
+    "audioOptions": [
+      "1:Main - Stereo - Default"
+    ],
+    "subtitleOptions": [
+      "-1:Off"
+    ],
+    "videoOptions": [
+      "0:1080p H264 SDR"
+    ],
+    "officialRating": "",
+    "communityRating": "7.1",
+    "criticRating": "",
+    "genres": [
+      "Comedy",
+      "Drama"
+    ],
+    "studios": [],
+    "director": [
+      "Arkadii Nepytaliuk"
+    ],
+    "writer": [],
+    "tags": [
+      "lgbt",
+      "social justice",
+      "gay theme",
+      "social acceptance"
+    ],
+    "overview": "A Ukrainian LGBTQ+ acceptance group is formed by teacher Nadia. A stereotypically homophobic family hesitantly decides to sign up to receive tempting financial supplements. They will need to spend 24 hours with group members Vasyl, beer fan Zenyk, actress Diana and aggressive Denys. Through amusing games, they will learn about homophobia, equality, empathy, gender discrimination, and self-fulfillment.  They play games promoting equality and empathy, using humor against prejudice.",
+    "castIds": [
+      "da2495ec9e4baa65ca136ccd49b94b9c",
+      "d013c76f9efd8e74ee82fca999e8d3d1",
+      "42455803575b9620cc22e04a8c430297",
+      "b981f3e5037d44ffcd0d5a6f9c45519f",
+      "56391ac9477a76d749cfbf7c4f649846",
+      "746df775ea26dd8ea8ea0458f28a5d5b",
+      "3447b2081fcdf68867c736e205c9c16a",
+      "7e45e227000e3c3cf3a39c8340862401",
+      "011b3abbe011f043b79dad630b7c400c"
+    ],
+    "mediaInfoBadges": [
+      "2024",
+      "1h 35m",
+      "7.1"
+    ],
+    "primarySrc": "url(\"<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Primary?fillHeight=498&fillWidth=360&quality=96&tag=10479c6c83f10a21287d10ed6bb6e0ea\")",
+    "backdropSrc": "",
+    "logoSrc": "url(\"<test-host>/Items/09be82fc66ac0aa8a3a9df0450fa7406/Images/Logo?tag=4f1d11e32aefb08dc246124ec5beaab1&quality=90\")",
+    "sourceOptions": [
+      {
+        "value": "09be82fc66ac0aa8a3a9df0450fa7406",
+        "label": "Lessons.of.Tolerance.2023.P.WEB-DL.1O8Op"
+      }
+    ],
+    "sourceSelected": "09be82fc66ac0aa8a3a9df0450fa7406",
+    "resumeOffered": true,
+    "playButtonPresent": true
+  }
+}
