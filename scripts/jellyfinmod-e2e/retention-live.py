@@ -850,7 +850,8 @@ def p22_settle(items, user, condition, timeout=180):
 
 
 def cmd_p22_stale():
-    """Q16 review P2-2, live on the build before the fix, retention off. Stock Jellyfin's "mark season played" saves each
+    """Q16 review P2-2, live on the build before the fix (ee385df's parent), retention off; on the fixed build the same steps
+    record played, so the last check below fails there by design. Stock Jellyfin's "mark season played" saves each
     episode through a fresh instance (Folder.MarkPlayed -> GetItemList), exactly as the Trakt sync and the NFO importer
     do, so the instance Jellyfin caches keeps the old state. The plugin, reading the cached instance, records no watch."""
     user = selected_user()
@@ -863,14 +864,18 @@ def cmd_p22_stale():
     print("season marked played through fresh instances")
     time.sleep(45)
     states = p22_states(items, user)
-    for key, st in states.items():
-        print(f"  {key}: before the fix the plugin records played={st['observed_played']} while Jellyfin stored played="
-              f"{st['stored_played']} (cached item says {st['cached_played']})")
+    check(all(v["stored_played"] and not v["cached_played"] for v in states.values()),
+          "Jellyfin stored the season played while its cached items still say unplayed (the stale cache)")
+    check(all(not v["observed_played"] for v in states.values()),
+          "before the fix the plugin records the stale state: not played (P2-2 reproduced)")
 
 
 def cmd_p22_import():
     """P2-2 on the fixed build: a watch saved through a fresh instance (as a Trakt import is) is recorded as played with its
-    date, without a restart; with retention on, its window starts and is announced."""
+    date, without a restart, while Jellyfin's own cached item still says unplayed; with retention on, its window starts
+    and is announced. Needs retention on (`configure MIN DAYS` first)."""
+    check(must("GET", "/JellyfinMod/Settings/Retention")["enabled"] is True,
+          "p22-import runs with retention on (run `configure` first)")
     user = selected_user()
     items, season = p22_items()
     must("DELETE", f"/UserPlayedItems/{season}?userId={user}")
@@ -880,10 +885,10 @@ def cmd_p22_import():
     must("POST", f"/UserPlayedItems/{season}?userId={user}")
     print("season marked played through fresh instances (the Trakt import path)")
     states = p22_settle(items, user, lambda st: all(v["observed_played"] for v in st.values()))
+    stale = [k for k, v in states.items() if not v["cached_played"]]
+    check(stale == list(states), f"Jellyfin's own cached items still say unplayed ({stale}): the stale case is what is tested")
     check(all(v["stored_played"] and v["observed_played"] and v["observed_last_played"] for v in states.values()),
           "a watch saved through a fresh instance is recorded as played with its date, without a restart (P2-2)")
-    stale = [k for k, v in states.items() if not v["cached_played"]]
-    print("  Jellyfin's own cached item still says unplayed for:", stale or "none (evicted or reloaded)")
     _, detail = series_detail()
     rows = {n: tracked_episode(detail, n) for n in (3, 4)}
     for n, row in rows.items():
@@ -893,8 +898,12 @@ def cmd_p22_import():
 
 
 def cmd_p22_unwatched():
-    """P2-2 on the fixed build: the title is marked unwatched through fresh instances (a Trakt "unwatched" import) while
-    Jellyfin's cached instances still say played. The plugin records it unwatched, and after the window nothing goes."""
+    """P2-2 on the fixed build, after p22-import with retention on: the title is marked unwatched through fresh instances
+    (a Trakt "unwatched" import) while Jellyfin's cached instances still say played. The plugin records it unwatched, and
+    after the window nothing goes. This shows the evidence path; the last check before an unlink reading the stored state
+    is proven in the protection suite, because the evidence path already moves the title to waiting first."""
+    check(must("GET", "/JellyfinMod/Settings/Retention")["enabled"] is True,
+          "p22-unwatched runs with retention on (run `configure` first)")
     user = selected_user()
     items, season = p22_items()
     for item in items.values():  # through the cached instance: played again, which reloads the cache as played
@@ -906,9 +915,10 @@ def cmd_p22_unwatched():
     must("DELETE", f"/UserPlayedItems/{season}?userId={user}")
     print("season marked unplayed through fresh instances (a Trakt unwatched import)")
     states = p22_settle(items, user, lambda st: all(not v["observed_played"] for v in st.values()))
+    stale = [k for k, v in states.items() if v["cached_played"]]
+    check(stale == list(states), f"Jellyfin's own cached items still say played ({stale}): the stale case is what is tested")
     check(all(not v["stored_played"] and not v["observed_played"] for v in states.values()),
           "an unwatched state saved through a fresh instance is recorded as not played (P2-2)")
-    print("  Jellyfin's own cached item still says played for:", [k for k, v in states.items() if v["cached_played"]] or "none")
     latest = max(parse_time(d) for d in deadlines if d) if any(deadlines) else now_utc()
     wait = (latest - now_utc()).total_seconds() + 30
     print("waiting", int(max(wait, 0)), "s past the windows the watches had started")
