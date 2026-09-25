@@ -1,4 +1,5 @@
 import React, { type FC, type ReactNode, useCallback, useState } from 'react';
+import { flatButtonClass } from '../utils/flatButton';
 
 /**
  * A disclosure that spatial navigation can reach: a real button with aria-expanded instead of a
@@ -8,7 +9,7 @@ const HistoryToggle: FC<{ label: ReactNode; children: ReactNode }> = ({ label, c
     const [open, setOpen] = useState(false);
     const toggle = useCallback(() => setOpen(value => !value), []);
     return <div className='jfmod-entryHistory'>
-        <button type='button' className='emby-button jfmod-historyToggle' aria-expanded={open} onClick={toggle}>
+        <button type='button' className={flatButtonClass() + ' jfmod-historyToggle'} aria-expanded={open} onClick={toggle}>
             {open ? '▾' : '▸'} {label}
         </button>
         {open && children}

@@ -9,6 +9,7 @@ import { renderComponent } from 'utils/reactUtils';
 import { getEntry } from '../api/modApi';
 import EntryDetails from '../components/EntryDetails';
 import { getTmdbImage } from '../utils/entryLinks';
+import { createFocusOwnership } from '../utils/focusOwnership';
 
 /** Owns the file-less lifecycle before the native detail controller binds native-only actions. */
 export default function initializeEntryDetails(view, params) {
@@ -19,9 +20,12 @@ export default function initializeEntryDetails(view, params) {
     let renderMount;
     let abort;
     let generation = 0;
+    let focusOwnership;
 
     const hide = () => {
         generation++;
+        focusOwnership?.release();
+        focusOwnership = undefined;
         abort?.abort();
         abort = undefined;
         unmount?.();
@@ -39,6 +43,9 @@ export default function initializeEntryDetails(view, params) {
     };
     const show = async () => {
         hide();
+        // Focus ownership starts with the visit, before loading: input while the entry loads ends it (P4.A7).
+        focusOwnership = createFocusOwnership();
+        const ownership = focusOwnership;
         const currentGeneration = generation;
         // Let the deferred React unmount finish removing its portals before
         // restoring a cached view's template slots.
@@ -74,7 +81,7 @@ export default function initializeEntryDetails(view, params) {
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
             unmount = renderComponent(EntryDetails, { api, detail, view, isAdmin: !!user.Policy?.IsAdministrator,
-                serverId: client.serverId(), signal: abort.signal }, renderMount);
+                serverId: client.serverId(), signal: abort.signal, focusOwnership: ownership }, renderMount);
         } catch (error) {
             if (currentGeneration !== generation || error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
             mount.textContent = 'This entry is unavailable. Check that JellyfinMod is enabled, or return to your library.';

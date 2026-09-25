@@ -9,6 +9,7 @@ import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import type { GrabOperation, ReleaseCandidate, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
+import { flatButtonClass } from '../utils/flatButton';
 
 import './releasePicker.scss';
 
@@ -143,7 +144,7 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolea
             </>}
             {operation.state === 'submitting' && <span>Sending to the download client…</span>}
             {accepted && <span>The download client accepted the torrent.</span>}
-            {accepted && operation.openUrl && <a className='emby-button jfmod-grabOpen' href={operation.openUrl}
+            {accepted && operation.openUrl && <a className={flatButtonClass() + ' jfmod-grabOpen'} href={operation.openUrl}
                 target='_blank' rel='noopener noreferrer'>Open in client</a>}
             {!accepted && isFinal(operation) && <span>{operation.message}</span>}
         </div>;
@@ -312,12 +313,12 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             </Fragment>)}
         </div>
         {rejected.length > 0 && <div className='jfmod-rejectedGroup'>
-            <button type='button' className='emby-button jfmod-rejectedToggle' aria-expanded={rejectedOpen} onClick={toggleRejected}>
+            <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
                 {rejectedOpen ? '▾' : '▸'} {rejected.length} rejected
             </button>
             {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} />)}
         </div>}
-        <button type='button' className='emby-button jfmod-releaseClose' onClick={onClose}>Close</button>
+        <button type='button' className={flatButtonClass() + ' jfmod-releaseClose'} onClick={onClose}>Close</button>
     </div>;
 };
 

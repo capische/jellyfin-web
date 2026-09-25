@@ -1,8 +1,10 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import React, { type FC, type MouseEvent, useCallback, useState } from 'react';
+import React, { type FC, type MouseEvent, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import confirm from 'components/confirm/confirm';
+import focusManager from 'components/focusManager';
+import layoutManager from 'components/layoutManager';
 
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry, requestSearch } from '../api/modApi';
 import { keepButtonLabel } from '../constants/fileState';
@@ -11,10 +13,12 @@ import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisit
 import { openReleasePicker } from '../integration/releasePicker';
 import type { AcquisitionSummary } from '../types/acquisition';
 import { getTmdbImage } from '../utils/entryLinks';
+import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
+import { flatButtonClass } from '../utils/flatButton';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
     pending: 'Grab held, not sent yet', submitting: 'Sending to the download client', accepted: 'Sent to the download client',
@@ -36,10 +40,11 @@ interface EntryDetailsProps {
     isAdmin: boolean;
     serverId: string;
     signal: AbortSignal;
+    focusOwnership?: FocusOwnership;
 }
 
 /** Reuses the existing detail template's slots without constructing a synthetic native item. */
-const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal }) => {
+const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
     const [entry, setEntry] = useState(detail.entry);
     const [episodes, setEpisodes] = useState(detail.episodes);
     const [history, setHistory] = useState(detail.history);
@@ -58,6 +63,19 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         return node ? createPortal(content, node) : null;
     };
     const poster = getTmdbImage(entry.posterPath);
+    // On the TV layout the stock detail page focuses its first action; this page mounts its actions itself, so it does
+    // the same once they exist (the release action appears when the capabilities arrive), unless focus is already set.
+    // On TV the page places focus on its first action, and moves it forward when a new first action arrives (Search
+    // releases comes with the capabilities), only while it owns focus: ownership began at viewshow and ends on any user
+    // input, and a focus target that was already valid is kept (see utils/focusOwnership).
+    useEffect(() => {
+        if (!layoutManager.tv || !focusOwnership) return;
+        const first = view.querySelector<HTMLElement>('.jfmod-entryActions a, .jfmod-entryActions button');
+        if (first && focusOwnership.mayFocus(first)) {
+            focusManager.focus(first);
+            focusOwnership.placed(first);
+        }
+    }, [view, canAcquire, canSearchNow, isAdmin, focusOwnership]);
     const mutate = useCallback(async (action: () => Promise<void>) => {
         setBusy(true);
         setMessage('');
@@ -184,9 +202,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     aria-disabled={busy} onClick={toggleMonitoring}>
                     {entry.monitored ? '☑' : '☐'} Monitor
                 </button>
-                <button className='emby-button' type='button' aria-disabled={busy}
+                <button className={flatButtonClass()} type='button' aria-disabled={busy}
                     onClick={remove}>Remove entry</button>
-                {entry.mediaType === 'series' && <button className='emby-button' type='button' aria-disabled={busy}
+                {entry.mediaType === 'series' && <button className={flatButtonClass()} type='button' aria-disabled={busy}
                     onClick={refresh}>Refresh metadata</button>}
             </>}
         </div>)}
@@ -210,9 +228,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     <RetentionStatus retention={episode.retention} compact />
                     <AcquisitionLine acquisition={episode.acquisition} />
                     <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />
-                    {canAcquire && <button className='emby-button' type='button' data-episode-id={episode.id}
+                    {canAcquire && <button className={flatButtonClass()} type='button' data-episode-id={episode.id}
                         onClick={searchReleases}>Search releases</button>}
-                    {isAdmin && <button className='emby-button' type='button' role='switch' aria-checked={episode.monitored}
+                    {isAdmin && <button className={flatButtonClass()} type='button' role='switch' aria-checked={episode.monitored}
                         aria-disabled={busy} data-episode-id={episode.id} onClick={toggleEpisode}>
                         {episode.monitored ? '☑' : '☐'} Monitor
                     </button>}

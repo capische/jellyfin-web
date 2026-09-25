@@ -21,6 +21,7 @@ import type { BrowseRow } from '../types/browse';
 import { FileState, type Entry, type TmdbMetadata } from '../types/entry';
 import { getTmdbImage } from '../utils/entryLinks';
 import EntryCards from './EntryCards';
+import { flatButtonClass } from '../utils/flatButton';
 
 import './catalogSearch.scss';
 
@@ -373,7 +374,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
                 </article>)}
             </DiscoveryRow>}
             {types.map((mediaType, index) => discovery[index]?.hasNextPage && <button
-                key={mediaType} type='button' className='emby-button' disabled={discovery[index].isFetching}
+                key={mediaType} type='button' className={flatButtonClass()} disabled={discovery[index].isFetching}
                 // eslint-disable-next-line react/jsx-no-bind
                 onClick={() => { discovery[index].fetchNextPage().catch(console.error); }}>
                 {discovery[index].isFetching ? 'Loading…' : `More ${mediaType} results from TMDB`}
