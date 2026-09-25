@@ -571,8 +571,10 @@ onto the Jellyfin 12 `master` `f443a62`; web `p10-retention` onto `jellyfin-mod`
   RET4-R2's unbound-main remainder is recorded for V1. Rebased onto the S11 release (plugin `master` `e5b3c95`, web
   `jellyfin-mod` `48e60121e7`) without conflicts; plugin `348168b` and web bundle `9d30aba7e9b3` (`a30926e30c`) are
   deployed on 18096. **Retention is off on 18096**, and no `JellyfinMod` entry, library or fixture directory is left.
-- Open: the verifier's twelve-suite run on `348168b` (Section A of `.claude/briefs/verify-retention-r3.md`), then the
-  merge once the coordinator confirms it; the real-window re-arm,
+- **Suites verified on `348168b`** (Sonnet-high verifier, all twelve `exit=0`). **Merged with retention off**
+  (2026-09-25): plugin `master` and web `jellyfin-mod` fast-forwarded to the `p10-retention` tips; the branches are
+  deleted, and `p10-retention-pre-rebase4-backup` is kept in both repositories until the real-window run passes.
+- Open: the real-window re-arm,
   waiting on the user, after the old job has written `p10r2/state/phase-b.DONE`. The scripts now refuse any instance
   but 18096 (RET4-R4); the old job still runs its own older driver, which has no such guard but whose environment
   file names 18096.
