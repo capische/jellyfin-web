@@ -15,14 +15,17 @@
 //                                    JellyfinMod's answers before and after, for both users and anonymously
 //   JELLYFINMOD_Q16_STEP=nfo         (P7.Q16 review P2-1) Jellyfin's NFO user for watch data set to the administrator, a
 //                                    .nfo with <watched>true</watched> beside the unwatched movie and <watched>false</watched>
-//                                    beside the Trakt movie, a refresh: Jellyfin imports both (saved with Import) while
-//                                    no Trakt task runs, and JellyfinMod records neither and deletes nothing; then a real
-//                                    Trakt sync still records
+//                                    beside the Trakt movie, a refresh that reads both while no Trakt task runs:
+//                                    JellyfinMod records nothing and deletes nothing; then a real Trakt sync still records
 //   JELLYFINMOD_Q16_STEP=browser     the detail pages of the movie, episode, season and series (and three negative
 //                                    controls) in desktop, mobile 390 px, TV 1920×1080 and TV 1280×720, for both users;
 //                                    JELLYFINMOD_Q16_EXPECT=present|absent says whether the administrator sees it
 //   JELLYFINMOD_Q16_STEP=disable     Dashboard → Plugins → Trakt → Enable plugin off, then a restart
 //   JELLYFINMOD_Q16_STEP=uninstall   Dashboard → Plugins → Trakt → Uninstall, then a restart
+//   JELLYFINMOD_Q16_STEP=logs        the container's ERR/FTL lines through standins/log-errors.sh: none but the allowed one
+//   JELLYFINMOD_Q16_STEP=downgrade   after `fresh-env.sh downgrade <0.1.0.0 image>`: the 0.1.0.0 plugin runs on the database
+//                                    0.1.0.1 migrated (Health ok, version 0.1.0.0), the TraktObservations table is left as
+//                                    an orphan it ignores, and the container logged no ERR/FTL line (log-errors.sh)
 //
 // On the acceptance instance (28096), read-only, signed in as oleksii with an empty password:
 //
@@ -498,11 +501,11 @@ async function nfo() {
 M='${root}/data/media/movies'
 cat > "$M/JellyfinMod Trakt Unwatched (2026) [tmdbid-990103]/JellyfinMod Trakt Unwatched (2026).nfo" <<'NFO'
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<movie><title>JellyfinMod Trakt Unwatched</title><year>2026</year><uniqueid type="tmdb" default="true">990103</uniqueid><watched>true</watched><playcount>1</playcount><lastplayed>2026-09-01 12:00:00</lastplayed></movie>
+<movie><title>JellyfinMod Trakt Unwatched</title><plot>JellyfinMod NFO marker</plot><year>2026</year><uniqueid type="tmdb" default="true">990103</uniqueid><watched>true</watched><playcount>1</playcount><lastplayed>2026-09-01 12:00:00</lastplayed></movie>
 NFO
 cat > "$M/JellyfinMod Trakt Movie (2026) [tmdbid-990101]/JellyfinMod Trakt Movie (2026).nfo" <<'NFO'
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<movie><title>JellyfinMod Trakt Movie</title><year>2026</year><uniqueid type="tmdb" default="true">990101</uniqueid><watched>false</watched></movie>
+<movie><title>JellyfinMod Trakt Movie</title><plot>JellyfinMod NFO marker</plot><year>2026</year><uniqueid type="tmdb" default="true">990101</uniqueid><watched>false</watched></movie>
 NFO`);
     const tasks = await http('GET', '/ScheduledTasks', { token: admin.token });
     const traktTask = tasks.body.find(entry => entry.Key === 'TraktSyncFromTraktTask');
@@ -511,28 +514,78 @@ NFO`);
     for (const name of ['unwatched', 'movie']) {
         await http('POST', `/Items/${known[name]}/Refresh?metadataRefreshMode=FullRefresh&imageRefreshMode=None&replaceAllMetadata=false`, { token: admin.token });
     }
-    const imported = await until(() => {
-        const rows = dbPlayed([known.adminId], [known.movie, known.unwatched]);
-        const played = id => rows.find(row => row.item === id.toLowerCase().replace(/-/g, ''))?.played;
-        return played(known.unwatched) === 1 && played(known.movie) === 0 ? { unwatched: 1, movie: 0 } : null;
-    }, { timeout: 120000, every: 3000, label: 'Jellyfin to import the NFO watch state' });
-    record('Jellyfin imported the NFO watch state (Import): the other movie played, the Trakt movie unplayed', !!imported, imported);
-    // The listener would have written within a second of the save; give it five, then look.
+    // The .nfo files carry a plot marker, so the refresh is proven to have read them before anything is judged.
+    const read = await until(async () => {
+        const overviews = await Promise.all(['unwatched', 'movie'].map(async name =>
+            (await http('GET', `/Items/${known[name]}?userId=${known.adminId}`, { token: admin.token })).body?.Overview ?? ''));
+        return overviews.every(overview => overview.includes('JellyfinMod NFO marker')) ? overviews : null;
+    }, { timeout: 120000, every: 3000, label: 'the refresh to read both .nfo files' });
+    record('The refresh read both .nfo files (their plot marker is on the items) while the Trakt task was idle', read.length === 2);
+    // Jellyfin 12.0.0's NFO parser saves <watched> with UserDataSaveReason.Import only for an item with an id, and its
+    // local provider parses into a new, id-less item, so on this path the save may not happen; recorded as found.
+    const dbRows = () => dbPlayed([known.adminId], [known.movie, known.unwatched]);
+    const playedIn = (rows, id) => rows.find(row => row.item === id.toLowerCase().replace(/-/g, ''))?.played ?? null;
+    const afterNfo = dbRows();
+    record('Jellyfin\'s database after the NFO refresh (information: whether 12.0.0 saved the NFO watch state)', 'INFO',
+        { unwatchedPlayed: playedIn(afterNfo, known.unwatched), traktMoviePlayed: playedIn(afterNfo, known.movie) });
+    // The listener would have written within a second of any save; give it five, then look.
     await new Promise(resolve => setTimeout(resolve, 5000));
     const after = Object.fromEntries(await Promise.all(['movie', 'unwatched'].map(async name => [name, summary(await traktItem(admin.token, known[name]))])));
-    record('The NFO import records nothing: no Trakt history for the NFO-played movie', after.unwatched.hasHistory === false, after);
+    record('The NFO refresh records nothing: no Trakt history for the NFO-watched movie', after.unwatched.hasHistory === false, after);
     record('…and deletes nothing: the Trakt movie keeps its Trakt history, from the same time', after.movie.hasHistory === true &&
         after.movie.lastSyncedAt === before.movie.lastSyncedAt, after);
+    // A real sync still records: the movie is marked unplayed locally (TogglePlayed, not an import), and Trakt's next
+    // sync marks it played again through Import.
+    const unmarked = await http('DELETE', `/UserPlayedItems/${known.movie}?userId=${known.adminId}`, { token: admin.token });
+    await until(() => playedIn(dbRows(), known.movie) === 0, { timeout: 30000, label: 'the local unplayed mark' });
     const result = await runTraktSync(admin.token);
     const resynced = await until(async () => {
         const answer = summary(await traktItem(admin.token, known.movie));
         return answer.hasHistory && answer.lastSyncedAt !== before.movie.lastSyncedAt ? answer : null;
     }, { timeout: 30000, label: 'the Trakt movie to be recorded again' });
-    const rows = dbPlayed([known.adminId], [known.movie]);
     record('A real Trakt sync afterwards still records: it marks the Trakt movie played again and JellyfinMod records that import',
-        result.Status === 'Completed' && rows.some(row => row.played === 1) && !!resynced.lastSyncedAt, { task: result.Status, movie: resynced });
-    record('The NFO-played movie stays without Trakt history after the sync', (await traktItem(admin.token, known.unwatched)).body?.hasHistory === false);
+        unmarked.status < 300 && result.Status === 'Completed' && playedIn(dbRows(), known.movie) === 1 && !!resynced.lastSyncedAt,
+        { unmark: unmarked.status, task: result.Status, movie: resynced });
+    record('The NFO-watched movie stays without Trakt history after the sync', (await traktItem(admin.token, known.unwatched)).body?.hasHistory === false);
     await http('POST', '/Sessions/Logout', { token: admin.token });
+}
+
+async function downgrade() {
+    const admin = await signInApi(ADMIN, 'admin');
+    const health = await http('GET', '/JellyfinMod/Health', { token: admin.token });
+    record('After the downgrade the 0.1.0.0 plugin answers Health ok and knows nothing of Trakt',
+        health.status === 200 && health.body?.Ok === true && health.body?.Version === '0.1.0.0' && !health.body?.Capabilities?.includes('trakt.history') &&
+        health.body?.Trakt === undefined, { status: health.status, version: health.body?.Version, ok: health.body?.Ok });
+    const database = `${required('JELLYFINMOD_Q16_HOST_ROOT')}/config/data/jellyfinmod/jellyfinmod.db`;
+    const facts = JSON.parse(onHost(`python3 - <<'PY'
+import sqlite3, json
+c = sqlite3.connect('file:${database}?mode=ro', uri=True)
+history = [r[0] for r in c.execute('select MigrationId from __EFMigrationsHistory order by MigrationId')]
+tables = [r[0] for r in c.execute("select name from sqlite_master where type='table' and name='TraktObservations'")]
+rows = c.execute('select count(*) from TraktObservations').fetchone()[0] if tables else None
+print(json.dumps(dict(migrations=len(history), last=history[-1], trakt=bool(tables), rows=rows)))
+PY`));
+    record('The TraktObservations table and its rows stay as an orphan the older plugin ignores',
+        facts.trakt === true && facts.last.endsWith('_PhaseSevenTraktObservations'), facts);
+    const checked = containerErrors();
+    record('The downgraded container logged no ERR or FTL line (less the start-up repository 503)', checked.exit === 0, { lines: checked.lines });
+    await http('POST', '/Sessions/Logout', { token: admin.token });
+}
+
+/** The container's ERR/FTL lines through standins/log-errors.sh (which allows only the start-up repository 503). */
+function containerErrors() {
+    const script = readFileSync(new URL('./standins/log-errors.sh', import.meta.url), 'utf8');
+    try {
+        const out = execFileSync('ssh', [required('JELLYFINMOD_Q16_SSH'), 'bash', '-s', '--', required('JELLYFINMOD_Q16_CONTAINER')], { input: script, encoding: 'utf8' });
+        return { exit: 0, lines: out.trim().split('\n').slice(-8) };
+    } catch (error) {
+        return { exit: error.status, lines: String(error.stdout ?? '').trim().split('\n').slice(-8) };
+    }
+}
+
+async function logs() {
+    const checked = containerErrors();
+    record('The container logged no ERR or FTL line, less the one start-up repository 503 per start', checked.exit === 0, { lines: checked.lines });
 }
 
 async function browserPass() {
@@ -724,7 +777,7 @@ const needsBrowser = ['install', 'browser', 'disable', 'uninstall', 'degrade'].i
 if (needsBrowser) browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
 console.log('q16', step, needsBrowser ? `${tier} ${browser.version()}` : 'api');
 try {
-    const run = { setup, install, authorize, sync, nfo, browser: browserPass, disable, uninstall, degrade }[step];
+    const run = { setup, install, authorize, sync, nfo, browser: browserPass, disable, uninstall, degrade, downgrade, logs }[step];
     if (!run) throw new Error(`unknown step ${step}`);
     await run();
 } catch (error) {
