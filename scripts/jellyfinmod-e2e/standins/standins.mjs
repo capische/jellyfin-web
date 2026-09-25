@@ -29,8 +29,9 @@ mkdirSync(join(stateDir, 'torrents'), { recursive: true });
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const counters = {};
 const count = name => { counters[name] = (counters[name] ?? 0) + 1; };
-// Faults the harness switches on: tmdb 'down' | prowlarr '401' | '500' | 'slow' | torznab '500' | tx 'down' | 'slow'.
-const faults = { tmdb: 'ok', prowlarr: 'ok', torznab: 'ok', tx: 'ok' };
+// Faults the harness switches on: tmdb 'down' | prowlarr '401' | '500' | 'slow' | torznab '500' | tx 'down' | 'slow';
+// txauth 'off' answers without credentials, like a Transmission with authentication disabled.
+const faults = { tmdb: 'ok', prowlarr: 'ok', torznab: 'ok', tx: 'ok', txauth: 'on' };
 const log = (...parts) => console.log(new Date().toISOString(), ...parts);
 const json = (response, status, body) => {
     response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -47,7 +48,10 @@ const readBody = request => new Promise(resolve => {
 const MOVIES = [
     { id: 990001, title: 'JellyfinMod Standin Movie', release_date: '2026-01-16', imdb_id: 'tt9900001', runtime: 1, genres: [{ id: 18, name: 'Drama' }] },
     { id: 990002, title: 'JellyfinMod Standin Sequel', release_date: '2026-02-20', imdb_id: 'tt9900002', runtime: 1, genres: [{ id: 18, name: 'Drama' }] },
-    { id: 990003, title: 'JellyfinMod Standin Seeder', release_date: '2026-03-13', imdb_id: 'tt9900003', runtime: 1, genres: [{ id: 18, name: 'Drama' }] }
+    { id: 990003, title: 'JellyfinMod Standin Seeder', release_date: '2026-03-13', imdb_id: 'tt9900003', runtime: 1, genres: [{ id: 18, name: 'Drama' }] },
+    // Titles with no release anywhere: automation's empty searches, back-off and the indexer circuit breaker.
+    ...[4, 5, 6, 7, 8, 9].map(n => ({ id: 990000 + n, title: `JellyfinMod Standin Extra ${n}`, release_date: `2025-0${n}-01`, imdb_id: `tt990000${n}`, runtime: 1,
+        genres: [{ id: 18, name: 'Drama' }] }))
 ];
 const movieSummary = movie => ({
     id: movie.id, title: movie.title, original_title: movie.title, release_date: movie.release_date, overview: `${movie.title}, a generated S11 fixture.`,
@@ -218,7 +222,7 @@ const transmission = createServer(async (request, response) => {
     count('tx');
     if (faults.tx === 'down') { request.socket.destroy(); return; }
     if (faults.tx === 'slow') return;
-    if (request.headers.authorization !== expectedAuth) { count('tx.unauthorized'); response.writeHead(401); response.end('<h1>401: Unauthorized</h1>'); return; }
+    if (faults.txauth !== 'off' && request.headers.authorization !== expectedAuth) { count('tx.unauthorized'); response.writeHead(401); response.end('<h1>401: Unauthorized</h1>'); return; }
     if (request.headers['x-transmission-session-id'] !== sessionId) {
         response.writeHead(409, { 'X-Transmission-Session-Id': sessionId });
         response.end('<h1>409: Conflict</h1>');
