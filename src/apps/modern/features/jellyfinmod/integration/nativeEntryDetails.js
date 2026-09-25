@@ -4,6 +4,8 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
+import TraktIndicator from '../components/TraktIndicator';
+import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
@@ -40,12 +42,18 @@ async function handleMissingNativeItem(view, params, error) {
 export default function initializeNativeEntryDetails(view, params) {
     let mount;
     let versionsMount;
+    let traktMount;
     let unmount;
+    let unmountTrakt;
     let generation = 0;
     const hide = () => {
         generation++;
         unmount?.();
         unmount = undefined;
+        unmountTrakt?.();
+        unmountTrakt = undefined;
+        traktMount?.remove();
+        traktMount = undefined;
         mount?.remove();
         mount = undefined;
         versionsMount?.remove();
@@ -63,9 +71,10 @@ export default function initializeNativeEntryDetails(view, params) {
         // reading that used to mean a patch inside its catch. Owning the route means asking the same question
         // ourselves. It costs one extra request per native detail page, which is the price of the patch
         // coming out (P7.S6, P3.T14).
+        let item;
         let user;
         try {
-            [, user] = await Promise.all([
+            [item, user] = await Promise.all([
                 client.getItem(client.getCurrentUserId(), params.id),
                 client.getCurrentUser()
             ]);
@@ -85,6 +94,20 @@ export default function initializeNativeEntryDetails(view, params) {
             versionsMount.className = 'jfmod-versionsMount';
             // insertBefore rather than after(): older TV engines lack ChildNode.after.
             trackSelections.parentNode.insertBefore(versionsMount, trackSelections.nextSibling);
+        }
+        // The Trakt indicator has its own mount, so it shows on a title that has no catalog entry too (P7.Q16). It
+        // leads the content section: below the button row a TV's focus starts on, so arriving never moves what is
+        // focused, and an empty mount takes no space.
+        // Only the four types Trakt history can belong to get the mount.
+        if (TRAKT_ITEM_TYPES.includes(item?.Type)) {
+            traktMount = document.createElement('div');
+            traktMount.className = 'jfmod-traktMount';
+            target.insertBefore(traktMount, target.firstChild);
+            unmountTrakt = renderComponent(TraktIndicator, {
+                api,
+                userId: client.getCurrentUserId(),
+                itemId: params.id
+            }, traktMount);
         }
         unmount = renderComponent(NativeEntryDetails, {
             api,
