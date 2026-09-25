@@ -436,8 +436,13 @@ async function sweepLayout(name) {
                 () => activate(page, cfg, { sel: '.itemsContainer .card', text: '^\\s*' + escapeRe(seriesTitle), scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Series$' });
             await row('Season detail', (cfg.tv ? keys : shell) + ': first season card on the series',
                 () => activate(page, cfg, { sel: '#childrenContent .card, #childrenContent .listItem', scope: '#itemDetailPage:not(.hide)' }), { ...DETAIL, itemType: '^Season$' });
-            await row('Episode detail', (cfg.tv ? keys : shell) + ': first episode on the season',
-                () => activate(page, cfg, { sel: '#childrenContent .listItem, #childrenContent .card', scope: '#itemDetailPage:not(.hide)' }), { ...DETAIL, itemType: '^Episode$' });
+            // Upstream's season list gives a desktop row no action of its own (itemDetails passes action 'none' when
+            // layoutManager.desktop); there the episode opens from the row's Info button, as a mouse user does.
+            const episodeTarget = !cfg.tv && !cfg.mobile ?
+                { sel: '#childrenContent .listItem button[data-action="link"]', scope: '#itemDetailPage:not(.hide)' } :
+                { sel: '#childrenContent .listItem, #childrenContent .card', scope: '#itemDetailPage:not(.hide)' };
+            await row('Episode detail', (cfg.tv ? keys : shell) + (!cfg.tv && !cfg.mobile ? ': Info button of the first episode on the season' : ': first episode on the season'),
+                () => activate(page, cfg, episodeTarget), { ...DETAIL, itemType: '^Episode$' });
         }
     }
 
@@ -509,7 +514,7 @@ async function sweepLayout(name) {
     // ---- JellyfinMod settings and the setup wizard
     await row('JellyfinMod settings', cfg.tv ? keys + ': the settings link below the Home rows' : shell + ': user menu', async () => {
         if (cfg.tv) { await tvHome(); await activate(page, cfg, { sel: '[data-jfmod-tv-settings]' }); } else await userMenu('JellyfinMod settings');
-    }, { hash: '^#/catalog/settings$|^#/catalog/settings\\?', selector: '#jfmodSettingsPage .jfmod-step' });
+    }, { hash: '^#/catalog/settings$|^#/catalog/settings\\?', selector: '#jfmodSettingsPage .jfmod-step, #jfmodSettingsPage .jfmod-check-main section[data-section]' });
     await row('JellyfinMod setup wizard', (cfg.tv ? keys : shell) + ': settings area link "Setup wizard"',
         () => activate(page, cfg, { sel: 'a[href="#/catalog/settings/setup"]' }), { hash: '^#/catalog/settings/setup', selector: '#jfmodSetupPage .jfmod-wizardSection, #jfmodSetupPage h1, #jfmodSetupPage h2' });
 
@@ -530,6 +535,11 @@ async function sweepLayout(name) {
     for (const [label, link, route, selector] of PREFS) {
         // Outside the TV the preferences menu leaves Quick Connect to the user menu (checked below).
         if (!cfg.tv && link === '.lnkQuickConnectPreferences') continue;
+        if (cfg.mobile && link === '.lnkControlsPreferences') {
+            // Upstream's preferences menu renders the Controls link only when !browser.mobile (user/settings/index.tsx).
+            record(name, label, 'NOT PRESENT', 'preferences menu', { reason: 'upstream shows no Controls link on a mobile browser' });
+            continue;
+        }
         await row(label, (cfg.tv ? keys : shell) + ': preferences menu', async () => {
             if (!await page.evaluate(() => location.hash.startsWith('#/mypreferencesmenu'))) {
                 if (cfg.tv) await tvHome();
@@ -555,20 +565,37 @@ async function sweepLayout(name) {
     await row('Sign back in', cfg.tv ? keys + ': login form' : 'login form', () => signIn(), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .jfmod-homeHero' });
 
     // ---- Dashboard
+    /** TV: to the Dashboard by keys, the way the Dashboard row goes (Home, the settings link, the Dashboard link). */
+    const tvDashboard = async () => {
+        await tvHome();
+        await activate(page, cfg, { sel: '[data-jfmod-tv-settings]' });
+        await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('#jfmodSettingsPage .jfmod-step') })));
+        await activate(page, cfg, { sel: 'a[href="#/dashboard"]', scope: '#jfmodSettingsPage' });
+        await poll(() => page.evaluate(() => ({ ok: /^#\/dashboard/.test(location.hash) })), { timeout: 20000 });
+        await sleep(1500);
+    };
     await row('Dashboard', cfg.tv ? keys + ': settings area link "Dashboard"' : shell + ': user menu', async () => {
         if (cfg.tv) {
-            await tvHome();
-            await activate(page, cfg, { sel: '[data-jfmod-tv-settings]' });
-            await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('#jfmodSettingsPage .jfmod-step') })));
-            await activate(page, cfg, { sel: 'a[href="#/dashboard"]', scope: '#jfmodSettingsPage' });
+            await tvDashboard();
         } else await userMenu('Dashboard');
     }, { hash: '^#/dashboard$|^#/dashboard\\?', selector: 'main a[href="#/dashboard/settings"], main .MuiButton-root, main .MuiCard-root', timeout: 25000 });
     const openDashboardLink = async href => {
+        // A row that failed on the TV leaves focus wherever it stopped; every Dashboard row starts inside the Dashboard.
+        if (cfg.tv && !await page.evaluate(() => location.hash.startsWith('#/dashboard'))) await tvDashboard();
         const visible = await page.evaluate(({ href, VISIBLE }) => {
             const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
             return [...document.querySelectorAll(`a[href="${href}"]`)].some(vis);
         }, { href, VISIBLE });
-        if (!visible && cfg.mobile) await click(page, { sel: 'button[aria-label="Open Menu"]' });
+        if (!visible && cfg.mobile) {
+            // The Dashboard's drawer can close again while the page it just opened is still settling (seen once on the
+            // first Dashboard link at 390 px); open it, wait for the link, and open it once more if it closed.
+            const linkShown = () => poll(() => page.evaluate(({ href, VISIBLE }) => {
+                const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
+                return { ok: [...document.querySelectorAll(`a[href="${href}"]`)].some(vis) || !!document.querySelector('.MuiDrawer-root:not([aria-hidden="true"]) div.MuiListItemButton-root') };
+            }, { href, VISIBLE }), { timeout: 4000 });
+            await click(page, { sel: 'button[aria-label="Open Menu"]' });
+            if (!(await linkShown()).ok) await click(page, { sel: 'button[aria-label="Open Menu"]' });
+        }
         const group = { '#/dashboard/libraries': 'Libraries' }[href];
         const inGroup = await page.evaluate(({ href, VISIBLE }) => {
             const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
@@ -599,7 +626,11 @@ async function sweepLayout(name) {
     if (cfg.tv) {
         // The TV's legacy header and preferences menu do not link the metadata manager; the Dashboard's navigation is
         // the only place left to look for it, and it is not there either, so the row is typed and says so.
-        const inDashboard = await page.evaluate(() => !!document.querySelector('a[href="#/metadata"]'));
+        // Only a link the user can see counts: a hidden drawer's copy is not a way there.
+        const inDashboard = await page.evaluate(VISIBLE_SRC => {
+            const vis = (0, eval)(`(()=>{${VISIBLE_SRC};return vis;})()`);
+            return [...document.querySelectorAll('a[href="#/metadata"]')].some(vis);
+        }, VISIBLE);
         await row('Metadata manager', inDashboard ? keys + ': link' : 'address typed: the TV shell (legacy header, preferences menu, settings area, Dashboard navigation) has no link to it',
             async () => {
                 if (inDashboard) await activate(page, cfg, { sel: 'a[href="#/metadata"]' });
