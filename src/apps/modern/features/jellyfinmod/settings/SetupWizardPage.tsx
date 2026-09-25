@@ -149,7 +149,10 @@ const SetupWizardPage: FC = () => {
         content = <p className='jfmod-lead'>{settings.isError ? 'Setup could not be loaded.' : 'Loading…'}</p>;
     } else {
         content = (
-            <div className='jfmod-settings jfmod-check'>
+            // focuscontainer-x: on the TV, Left and Right cross between the rail and the section and never jump up into
+            // the header; at 1280×720 the header's SyncPlay button was nearer than the section's first control (P7.S11
+            // sweep). Up still reaches the header.
+            <div className='jfmod-settings jfmod-check focuscontainer-x'>
                 <WizardRail setup={setup} current={current} onStep={openStep} onDismiss={dismiss} />
                 {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
                     beside it (REVIEW-2026-09-24 S8-R2); Left and Right still cross between the two. */}
