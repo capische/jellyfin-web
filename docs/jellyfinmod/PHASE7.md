@@ -2142,29 +2142,28 @@ never reached the section's rows; the section column is now a `focuscontainer-y`
 
 #### S11 — handover
 
-Kept current by the S11 coordinator. Last update **2026-09-25**, Opus 5.5, high effort. Paused at the 80% usage rule.
+Kept current by the S11 coordinator. Last update **2026-09-25 (after the usage reset)**, Opus 5.5, high effort.
 
 **Where the work is (nothing below is pushed unless it says so).**
 
 | Repository | Branch / worktree | Tip | State |
 | --- | --- | --- | --- |
 | web | `jellyfin-mod` on origin | `a279641ebf` | the §3.4 rebase, **pushed and verified** (below) |
-| web | `p7-s11`, worktree `.claude/worktrees/p7-s11-web` | this commit | `jellyfin-mod` + every S11 commit: runners, stand-ins, evidence, the fixes below; linear, **not pushed** |
+| web | `p7-s11`, worktree `.claude/worktrees/p7-s11-web` | this commit | `jellyfin-mod` + every S11 commit: runners, stand-ins, evidence, the fixes D1–D8; linear, **not pushed** |
 | plugin | `master` on origin | `f443a62` | unchanged |
-| plugin | `p7-s11`, worktree `.claude/worktrees/p7-s11-plugin` | `ad06745` | `439f727` (release changelog, image source label), `d6fdc88` (first download client selected), `ad06745` (breaker in `pausedReasons`); all suites pass; **not pushed** |
+| plugin | `p7-s11`, worktree `.claude/worktrees/p7-s11-plugin` | `e5b3c95` | `439f727` (release changelog, image source label), `d6fdc88` (D1), `ad06745` (D7), `e5b3c95` (README: the published image and its tag policy); all eleven suites pass; **not pushed** |
 
-The worker branches `p7-s11-image`, `p7-s11-image-plugin`, `p7-s11-parity`, `p7-s11-lint` and `p7-s11-runner` are fully
-cherry-picked into `p7-s11` and can be deleted with their worktrees.
+**Deployed on 28096 (2026-09-25):** plugin code `ad06745` with bundle **`bbdf78025ca2`** (web `5ced2c7f2a`), takeover
+`patched`, clean start (no `ERR`/`FTL`). Deploy by *stop → copy the four package files → start*: copying over the loaded
+assembly and then restarting made the old process log `BadImageFormatException` / `[FTL]` while it shut down (the new
+process started cleanly). Retention 14 days, off (revision 38). Backups: `backups/pre-s11`; packages `backups/s11-package*`.
 
-**Deployed on 28096:** plugin `d6fdc88` with bundle `aa4774e84dbf` (web `caad4989bc`), takeover `patched`. It lacks the
-two last fixes (queue crash, breaker banner). **Retention days on 28096 read 15 instead of 14**, left by a
-`settings-dashboard.mjs` re-run; the worker's restoring PATCH was refused by the permission system, so it is left for the
-user or the coordinator (`PATCH /JellyfinMod/Settings/Retention` with `reclaimAfterDays: 14` and the current revision;
-retention is off, so nothing is deleted meanwhile). Backups: `backups/pre-s11` (the state before S11), packages
-`backups/s11-package`, `s11-package-b`, `s11-package-final`.
+**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = **`424d897d2364`** (bundle `bbdf78025ca2`), the release
+candidate; `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) kept.
 
-**Image on the test host:** `capische/jellyfinmod:0.1.0.0` = `d804cc8ecfcc` (bundle `aa4774e84dbf`) — **superseded**, it
-carries the queue crash. `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) are kept as before.
+**Running now:** the final checks on 28096 in both browsers (queue, settings changes against stand-ins, takeover off
+with hashes, `browser-review` to its end, `tv-shell`, the sweep in four layouts) and the final image pass (fresh
+install, D1–D8, queue, breaker banner, open sessions across a recreate) on a disposable container.
 
 **Exact next steps.**
 1. Build the final bundle from `p7-s11` (`JELLYFINMOD_PATCH_BASE=origin/master npm run build:production`), the release
@@ -2219,6 +2218,7 @@ them.
 | D5 | A new download client with a blank username failed validation (`username: null`), and validation errors named no field | web `d461cb838c`, `73c72dafef` (found by the review) |
 | D6 | An administrator's Queue crashed with its first row (`<button is=…>` against the custom-elements polyfill) | web `41b62de63d` — verified on a disposable container, **not yet on 28096** |
 | D7 | The indexer breaker never reached the queue banner | plugin `ad06745`, web `bf0d41131b` — suite-verified, **not yet in a browser** |
+| D8 | On a phone the settings area hid its link list, so after setup there was no way to the setup wizard or the Dashboard from it | web `5ced2c7f2a` (found by the sweep) — **not yet verified in a browser** |
 
 ### S7 — one settings contract behind every form
 
