@@ -2161,27 +2161,27 @@ process started cleanly). Retention 14 days, off (revision 38). Backups: `backup
 **Image on the test host:** `capische/jellyfinmod:0.1.0.0` = **`424d897d2364`** (bundle `bbdf78025ca2`), the release
 candidate; `-pre-merge` (`9a07af179fad`) and `-net9` (`243cc34dc4d7`) kept.
 
-**Running now:** the final checks on 28096 in both browsers (queue, settings changes against stand-ins, takeover off
-with hashes, `browser-review` to its end, `tv-shell`, the sweep in four layouts) and the final image pass (fresh
-install, D1–D8, queue, breaker banner, open sessions across a recreate) on a disposable container.
+**Verification (new workspace rule, 2026-09-25):** checklist re-runs go to a separate Sonnet-high verifier, not to
+the Opus run. The checklist is `.claude/briefs/verify-s11.md` (workspace, not in this repository): part A on 28096 in
+Chromium then Chrome (smoke, review fixes, security, Queue D6, settings changes D2–D5 against stand-ins, takeover off
+with hashes, `browser-review` to its end, `tv-shell`, settings runners, the sweep in four layouts, parity on Chrome,
+hygiene), part B the fresh install on `424d897d2364` through `scripts/jellyfinmod-e2e/standins/fresh-env.sh` (up,
+stage, the throwaway administrator, `s11-fresh.mjs` steps including `breaker` for D7 and `mobile` for D8, the image
+recheck, down). Two Opus workers that had started these runs were stopped by the coordinator after about three
+minutes; their disposable container, TLS terminator, network, stand-ins and state directory were removed and proved
+gone (0 containers, 0 networks, nothing listening on 38096–38119, the directory gone); 28096 was left unchanged
+(takeover `patched`, settings equal the pre-S11 snapshot, four users, no `JellyfinMod` title).
 
 **Exact next steps.**
-1. Build the final bundle from `p7-s11` (`JELLYFINMOD_PATCH_BASE=origin/master npm run build:production`), the release
-   from plugin `p7-s11` (`scripts/build-release.sh`), deploy the four package files to 28096, restart that service only.
-2. On the final bundle, both browsers: `review-fixes`, `retarget-smoke`, the Queue row of `replacement-sweep.mjs` on
-   desktop and mobile, `browser-review.mjs` past its TV-1080 *Keep* stop (classify it: harness or product), the settings
-   changes against a stand-in Transmission (runner step 2: blank username, named validation error, indexer defaults,
-   secret back to *Configured*, probe and sync outcomes), the Chromium sweep, and step 4 — the takeover off on 28096 with
-   the restored file's hash against the recorded stock hash (the fork's stock entry on this shape) and the stock checks,
-   then on again.
-3. Rebuild the image on the test host from the final release context and re-run the fresh-install and queue check on a
-   disposable container (Chrome), then push `jellyfin-mod` (fast-forward from `a279641ebf`) and plugin `master`
-   (fast-forward from `f443a62`), then publish `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest` (linux/arm64 and
-   linux/amd64, one build with `SOURCE_DATE_EPOCH`, `--provenance=false`), verify the pushed digests and the package
-   visibility, pull on the test host and smoke it. amd64 cannot run here: under this workstation's qemu emulation stock
-   `jellyfin/jellyfin` 12.0.0 crashes the same way (segfault during startup), so amd64 is verified by content (every file
-   of `/opt/jellyfinmod/plugin` and the entrypoint byte-identical to the tested arm64 image, web root `1000 0775`).
-4. Record the results here, strike the handover, and only then Q16 (the Trakt indicator).
+1. The coordinator runs `verify-s11.md` on a Sonnet-high verifier; any FAIL comes back to the S11 agent for
+   classification and a fix.
+2. When it passes: fast-forward `jellyfin-mod` to `p7-s11` and plugin `master` to `p7-s11` (both fast-forwards of the
+   pushed tips), verify the remote tips.
+3. Publish `ghcr.io/capische/jellyfinmod:0.1.0.0` and `:latest` from the final release context (linux/amd64 and
+   linux/arm64, `SOURCE_DATE_EPOCH`, `--provenance=false`), verify the pushed digests and that the package is public,
+   pull on the test host and compare its plugin files with `424d897d2364`. amd64 is verified by content only: under
+   the workstation's qemu emulation stock `jellyfin/jellyfin` 12.0.0 itself crashes during startup.
+4. Record the results here, strike this handover, then Q16 (the Trakt indicator).
 
 #### S11 evidence
 
