@@ -564,7 +564,11 @@ async function sweepLayout(name) {
         const confirm = await poll(() => page.evaluate(() => ({ ok: /login|selectuser/.test(location.hash) || !!document.querySelector('.dialog .btnSubmit, .actionSheet [data-id]') })), { timeout: 15000 });
         return { confirmDialog: confirm.ok && !/login|selectuser/.test(await hash(page)) };
     }, { hash: '#/(login|selectuser|selectserver)', selector: '#txtManualName, .btnManual' }, {
-        benignHere: [{ name: 'a GET still in flight with the token Sign Out just revoked (401)', test: f => f.status === 401 && f.method === 'GET' && ['/System/Info', '/Users'].includes(f.path) }]
+        benignHere: [{ name: 'a GET still in flight with the token Sign Out just revoked (401)', test: f => f.status === 401 && f.method === 'GET' && ['/System/Info', '/Users'].includes(f.path) },
+            // Upstream's Sign Out posts /Sessions/Logout twice, on the stock entry exactly as on the mod (P7.S11 re-run 4:
+            // two POSTs every time, 16 of 16 sign-outs, both entries, both browsers, desktop and mobile). When the second
+            // arrives after the first has revoked the token it is answered 401; the user is signed out either way.
+            { name: 'upstream\'s second Sign Out request after the first revoked the token (401)', test: f => f.status === 401 && f.method === 'POST' && f.path === '/Sessions/Logout' }]
     });
     await row('Sign back in', cfg.tv ? keys + ': login form' : 'login form', () => signIn(), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .jfmod-homeHero' });
 
