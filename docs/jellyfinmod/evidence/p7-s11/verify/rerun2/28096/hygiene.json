@@ -1,0 +1,23 @@
+{
+  "userDataDiff": {
+    "exitCode": 0,
+    "userData": { "rowsBefore": 5143, "rowsAfter": 5143, "onlyBefore": [], "onlyAfter": [] },
+    "completion": { "rowsBefore": 54, "rowsAfter": 54, "added": 0, "removed": 0, "changedColumns": { "ObservedAt": 1 } }
+  },
+  "tmpFilesDeleted": ["/tmp/verify-userdata-before.txt", "/tmp/verify-userdata-after.txt"],
+  "settingsEqualSnapshot": {
+    "indexers": "equal (Prowlarr 1337x, Prowlarr RuTracker)",
+    "downloadClients": "equal (Acceptance Transmission)",
+    "qualityProfiles": "equal (HD 1080p, default)",
+    "prowlarr": "equal (empty)",
+    "acquisition": { "equal": true, "revision": 14 },
+    "retention": { "enabled": false, "reclaimAfterDays": 14, "revisionBefore": 43, "revisionAfter": 49, "note": "revision moved by A3's own restore to the snapshot shape; enabled/reclaimAfterDays unchanged" }
+  },
+  "takeover": { "status": "patched", "bundleId": "21c0905b4568", "patchedSha256": "326a3fab479f87150c48da25c693e48e94b53abc9097d55aae04a345f1a46602", "equalToSnapshotBefore": true },
+  "users": ["nata", "oleksii", "papa", "vika"],
+  "itemSearchJellyfinMod": { "path": "/Items?Recursive=true&SearchTerm=JellyfinMod", "totalRecordCount": 0 },
+  "entriesEndpoint": { "status": 200, "containsJellyfinModTitle": false },
+  "sessionsPlaying": 0,
+  "standinProcessOnHost": { "checked": true, "count": 0, "note": "one real 'node standins.mjs' PID found lingering after first kill attempt (parent PID killed but not the child); killed explicitly with kill -9; re-checked, gone. Unrelated fish self-match of 'pgrep -f standins.mjs' in its own argv inflated the naive count by 1; confirmed with 'ps aux | grep -i standin' returning nothing" },
+  "apiDeviceDeleted": { "deviceId": "verify2", "deleteStatus": 204, "confirmedGoneWithFreshDevice": true, "cleanupCheckDevicesAlsoRemoved": ["verify2-check", "verify2-cleanup", "verify2-final (self-deleted, 204)"] }
+}
