@@ -1,0 +1,16 @@
+browser chrome 153.0.8010.53 step resume
+PASS [chrome] resume: A new browser session resumes the wizard at the first incomplete step :: {"step":"indexers"}
+PASS [chrome] resume: Prowlarr: a wrong API key fails the Test (unauthorized) :: "Prowlarr refused the API key. (unauthorized)"
+PASS [chrome] resume: Prowlarr: the right key passes the Test :: "Prowlarr answered and has 1 enabled torrent indexer(s). (ok) · 1.99.0-s11-standin"
+PASS [chrome] resume: Prowlarr Sync adds the stand-in torrent indexer and verifies its caps :: "Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."
+PASS [chrome] resume: Prowlarr Sync: the page keeps showing the outcome :: {"final":"Synced: 1 seen, 1 added, 0 changed, 0 turned off, 0 removed, 1 verified."}
+PASS [chrome] resume: Indexers step done: one synced, enabled, verified indexer holding no key of its own :: [{"name":"JellyfinMod Standin Indexer","managedBy":"prowlarr","verified":true,"apiKeyConfigured":false}]
+PASS [chrome] resume: Continue moves to Quality profile
+PASS [chrome] resume: An empty profile is refused :: "The configuration is not valid. (invalid_qualities)"
+PASS [chrome] resume: A cutoff outside the allowed qualities is refused :: {"cutoff":"The cutoff must be one of the profile's allowed qualities, and upgrades need a cutoff. (invalid_cutoff)","allowed":"webdl-1080p","cutoffQuality":"bluray-720p"}
+PASS [chrome] resume: A valid profile made default completes the step :: {"quality":"webdl-1080p"}
+PASS [chrome] resume: Grabbing turns on once every step passed
+PASS [chrome] resume: Setup reports complete; the optional step shows retention, automation and the interface :: {"complete":true,"steps":["discovery:done","downloadClient:done","indexers:done","qualityProfile:done","enable:done","optional:done"]}
+PASS [chrome] import-on: Import turned on from the settings area
+PASS [chrome] import-on: With setup complete the Home banner is gone
+PASS [chrome] resume: No page errors :: []

@@ -1,0 +1,6 @@
+containers: 0
+network: 0
+state directory: gone
+listening on 38096 or 38110..38119: 0
+stand-in processes: 0
+local secret copies: gone

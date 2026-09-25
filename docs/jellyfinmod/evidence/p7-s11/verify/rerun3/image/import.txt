@@ -1,0 +1,5 @@
+browser chrome 153.0.8010.53 step import
+PASS [chrome] import: The stand-in Transmission reports the torrent complete with the real file in the download folder :: {"status":6}
+PASS [chrome] import: The plugin imports the download and Jellyfin indexes it: the entry is on disk and bound :: {"state":"onDisk","bound":true}
+PASS [chrome] import: Imported by hardlink: the library file and the download share one inode with link count 2 :: {"download":{"links":"2"},"library":{"links":"2","path":"movies/JellyfinMod Standin Movie (2026) [tmdbid-990001]/JellyfinMod Standin Movie (2026) [tmdbid-990001] - 1080p WEB-DL.mkv"}}
+PASS [chrome] import: Entry history records the grab, the media becoming available and the import :: {"events":["imported","media_available","grabbed","added"]}
