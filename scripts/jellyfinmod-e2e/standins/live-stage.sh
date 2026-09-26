@@ -2,6 +2,7 @@
 # Stages the legal fixtures of the live acceptance on the private Torznab feed: real 60 s videos made with the image's own
 # ffmpeg, published as web-seeded torrents so the real Transmission downloads them with no peer. Runs on the test host.
 #   live-stage.sh <name> <torrent-name> <release title> <tmdbid> <category> [layout]
+#   FIXTURE_SECONDS (default 60) sets the single-file fixture length; the web seed serves 200 kB/s.
 #   layout: single (default) | ambiguous (two equal videos) | archive (a .rar) | extras (video + sample + nfo)
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)   # runs from <state root>/standins/bin
@@ -16,7 +17,7 @@ video() { # video <file> <seconds> <frequency>
 }
 case $layout in
   single)
-    video "$dir/$torrent" 60 440
+    video "$dir/$torrent" "${FIXTURE_SECONDS:-60}" 440
     body="{\"id\":\"$name\",\"indexerId\":1,\"title\":\"$title\",\"torrentName\":\"$torrent\",\"file\":\"$dir/$torrent\",\"tmdbid\":$tmdb,\"seeders\":30,\"category\":$category,\"webseed\":true}" ;;
   ambiguous)
     video "$dir/a.mkv" 60 440; video "$dir/b.mkv" 60 660
