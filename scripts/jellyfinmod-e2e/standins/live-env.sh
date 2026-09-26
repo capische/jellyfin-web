@@ -28,7 +28,9 @@ OTHER_DOWNLOADS=${JFMOD_LIVE_OTHER_DOWNLOADS:?JFMOD_LIVE_OTHER_DOWNLOADS is requ
 PORT=48096
 BASE=48110
 SUB=172.31.48
-STANDIN_BIND=172.24.0.1   # the acceptance network's gateway: reachable from the VPN'd Transmission without the tunnel
+# The stand-ins listen on the gateway of the separate Transmission's Docker network, which that VPN'd container reaches
+# without the tunnel; the address is read from Docker on the host, never written here.
+ACCEPT_NET=${JFMOD_LIVE_ACCEPT_NET:-jellyfinmod-acceptance_default}
 IMAGE=jellyfinmod-live:current
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
@@ -57,9 +59,10 @@ EOF
 
 standins() {
     rsync -a "$HERE/" "$SSH:$ROOT/standins/bin/"
-    remote "$ROOT" "$BASE" "$STANDIN_BIND" <<'EOF'
+    remote "$ROOT" "$BASE" "$ACCEPT_NET" <<'EOF'
 set -euo pipefail
-ROOT=$1 BASE=$2 BIND=$3
+ROOT=$1 BASE=$2
+BIND=$(docker network inspect "$3" --format '{{(index .IPAM.Config 0).Gateway}}')
 [ -s "$ROOT/standins/pid" ] && kill "$(cat "$ROOT/standins/pid")" 2>/dev/null && sleep 1 || true
 cd "$ROOT/standins/bin"
 STANDIN_BIND="$BIND" STANDIN_PORT_BASE="$BASE" STANDIN_SECRETS="$ROOT/secrets/fixture.env" STANDIN_STATE="$ROOT/standins/state" \
@@ -74,9 +77,10 @@ EOF
 
 up() {
     mem
-    remote "$ROOT" "$SHARED" "$SOURCE_CONFIG" "$BASE" "$SUB" "$STANDIN_BIND" "$PORT" "$IMAGE" "$OTHER_DOWNLOADS" <<'EOF'
+    remote "$ROOT" "$SHARED" "$SOURCE_CONFIG" "$BASE" "$SUB" "$ACCEPT_NET" "$PORT" "$IMAGE" "$OTHER_DOWNLOADS" <<'EOF'
 set -euo pipefail
-ROOT=$1 SHARED=$2 SRC=$3 BASE=$4 SUB=$5 BIND=$6 PORT=$7 IMAGE=$8 OTHER=$9
+ROOT=$1 SHARED=$2 SRC=$3 BASE=$4 SUB=$5 PORT=$7 IMAGE=$8 OTHER=$9
+BIND=$(docker network inspect "$6" --format '{{(index .IPAM.Config 0).Gateway}}')
 mkdir -p "$ROOT"/{webseed,cache,standins/state,standins/unused-downloads,staging,certs,secrets,logs} "$SHARED"/{media/movies,media/movies-b,media/tv,media-alt/movies,downloads}
 if [ ! -e "$ROOT/config/.cloned" ]; then
   # Clone rule: all of /config, metadata included, but none of the JellyfinMod plugin's own state, so this instance starts
@@ -129,7 +133,7 @@ networks:
           gateway: $SUB.1
   acceptance:
     external: true
-    name: jellyfinmod-acceptance_default
+    name: $6
 services:
   jellyfin:
     image: $IMAGE
