@@ -23,7 +23,25 @@ the Phase 6 long run.
 | Revisions | Plugin `348168b`, then `ca8a54b` (scan fix). Web `c554c3e312`, then `d17a6e2c43` (UI fixes). The bundle was `6f112530f0aa`, then `b12550036cae`; its `-dirty` marker comes only from the uncommitted runner scripts. |
 | Pi memory | MemAvailable 3.7 GB (2026-09-25), 3.3–3.6 GB (2026-09-26 morning), 2.2–2.4 GB after the redeploy. Swap is full throughout. `mem_limit` has no effect on this kernel (there is no memory cgroup); the guard is the 1 GB MemAvailable floor. |
 
-## Checklist results (Chromium; the real-Chrome re-run has not been done)
+## Checklist results
+
+Tables below are Chromium unless marked. **Real-Chrome re-run, 2026-09-26 (Chrome 153.0.8010.53, bundle `cccb8786e043`, plugin `034f039`):**
+
+| Row (Chrome) | Result | Evidence |
+| --- | --- | --- |
+| Picker grab by keys, desktop | PASS | Hold, then handoff; one POST despite a second Enter; Back closes. |
+| Cancel during the hold | PASS | TV 1080 (focus lands on Search releases on open) and mobile, on an episode. |
+| Queue matrix during a throttled download | PASS | Desktop, mobile, TV 1080, TV 720: ring and row agree, the grid never blanks, TV focus holds over 10 polls, and TV row actions work. |
+| Stale row, relay stopped | PASS | Desktop and mobile show "Updated 45 s ago" / "Updated 1 min ago" at the last progress (20 %). |
+| Finding 2 | PASS | No light buttons in any layout; TV opens on Search releases. Chromium and Chrome. |
+| Picker extras | PASS | Late feed gives one partial result with the focused row held 15 s; a profile change re-searches in place and leaves the entry's profile unchanged; with only rejected rows, focus sits on the rejected group. All four layouts, Chromium and Chrome. |
+| Playback of the imported public-domain film | PASS | Desktop, mobile, TV 1080 and TV 720 (TV by Enter on the focused Play): media time advances past 3 s, direct play of `stream.mp4`. Real Chrome only: Playwright's Chromium has no H.264 decoder. |
+| Security sweep | PASS 14/14 | Real Chrome. |
+
+The Chrome results file keeps two harness false starts, later re-run to PASS:
+- **Size rejection:** an 84 MB fixture under a stand-in title with a 1-minute runtime is rejected on size per hour, which is correct. The fixture moved to a 6-minute title.
+- **Progress gap:** a web seed without a connection limit downloaded so fast that the card and the row, read seconds apart, differed by 4 points. The web seed is now limited to one connection at 200 kB/s.
+
 
 ### Phase 4 A8
 
@@ -43,7 +61,8 @@ the Phase 6 long run.
 | Interrupt after remote accept, before local commit | NOT VERIFIED live | Needs a kill inside a millisecond window; covered by `PhaseFourIntegration` over real HTTP. |
 | Security | PASS 14/14 | `security-sweep.mjs`: anonymous 401 on every route; a disposable passwordless ordinary user gets 403 on admin routes and 200 on Health. No secret-store value or reference appears in any body. Traversal gives 404. |
 | Hosted-API faults | PASS | 500 gives `unavailable`. 429 gives `rate_limited` (Retry-After honoured). Repeated failures open the breaker (`breaker_open`, 1 h). Also: `malformed_response`; `auth_failed` for a credential error inside HTTP 200; `redirect_rejected`; `timeout`. The result is partial and the other feeds still answer. |
-| Old-plugin fallback, profile change, late result under focus | not yet run | |
+| Profile change, late result under focus, rejected-only list | PASS | `live-picker-extra.mjs`, four layouts, Chromium and Chrome. |
+| Old-plugin fallback | NOT VERIFIED live | No older plugin build can run against this database: the X4 guard refuses newer migrations, so the server reports not ready. The capability-gated path would need a purpose-built build with capabilities removed. A mocked Health response does not count as evidence (workspace rule). |
 
 ### Phase 5 I3–I9
 
@@ -70,8 +89,9 @@ the Phase 6 long run.
 | I7 Remove | PASS | Without `removeFromClient` the row goes and the torrent stays. With it, the torrent and its data go and the library is untouched. With `blocklist`, a fresh search rejects that release as `blocklisted`. |
 | I7 access | PASS | Ordinary user: 403 `queue_admin_only` on the queue, 403 on Remove, Retry and Seeding. With queue visibility on, that user sees rows without the admin block; a user without library access sees none and gets a 404 on `GET /Imports/{id}` identical to an unknown id. |
 | I7 polling cost | PASS | Two sessions polling every 3 s made 12 queue requests in 30 s and caused 9 client reads (including monitor ticks): at most one per 3 s freshness window, not one per request. |
-| I8 browser matrix beyond the above; playback in three layouts; old-plugin degradation | not yet run | |
-| I9 regressions (Phase 2 suites, T18 cycle) | partly | `PhaseFiveIntegration` and `PhaseSixIntegration` exit 0 on `ca8a54b`. The other suites and the T18 cycle belong to the retention agent's instance. |
+| I8 browser matrix | PASS | See the Chrome table: queue, stale row, TV focus and actions; the ordinary user sees no queue (security sweep). The old-plugin case is NOT VERIFIED (see A8). |
+| I5/I9 playback | PASS (Chrome) | Imported file plays in desktop, mobile, TV 1080 and TV 720. |
+| I9 regressions (Phase 2 suites, T18 cycle) | partly | `PhaseFiveIntegration` and `PhaseSixIntegration` exit 0 on `ca8a54b` and again on the rebased `034f039` (2026-09-26). The other suites and the T18 cycle belong to the retention agent's instance. |
 
 Second versions of a title (PHASE5 checklist 6, I9 case 3) are deferred to V1: the second-version import defect of
 2026-09-20.

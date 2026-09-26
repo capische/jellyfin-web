@@ -1,0 +1,452 @@
+{
+ "browser": "chromium",
+ "version": "153.0.8010.12",
+ "runs": [
+  {
+   "step": "recheck finding 2",
+   "at": "2026-09-26T01:19:14.060Z",
+   "results": [
+    {
+     "step": "recheck desktop",
+     "check": "Finding 2: no mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search release",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Ad",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "recheck tv1080",
+     "check": "Finding 2: no mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search release",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Ad",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "recheck tv1080",
+     "check": "Finding 2: on TV the file-less detail page focuses its first action on open",
+     "verdict": "PASS",
+     "detail": "Keep"
+    }
+   ]
+  },
+  {
+   "step": "focus desktop",
+   "at": "2026-09-26T04:00:37.404Z",
+   "results": [
+    {
+     "step": "focus desktop",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus mobile",
+   "at": "2026-09-26T04:00:43.328Z",
+   "results": [
+    {
+     "step": "focus mobile",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv1080",
+   "at": "2026-09-26T04:00:51.966Z",
+   "results": [
+    {
+     "step": "focus tv1080",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv720",
+   "at": "2026-09-26T04:01:00.500Z",
+   "results": [
+    {
+     "step": "focus tv720",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "\u2611 Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "\u25b8 History \u00b7 Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra desktop",
+   "at": "2026-09-26T04:03:18.040Z",
+   "results": [
+    {
+     "step": "picker-extra desktop",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 478.734375,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra mobile",
+   "at": "2026-09-26T04:04:06.600Z",
+   "results": [
+    {
+     "step": "picker-extra mobile",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 228.5,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra tv1080",
+   "at": "2026-09-26T04:04:50.526Z",
+   "results": [
+    {
+     "step": "picker-extra tv1080",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 294.140625,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra tv720",
+   "at": "2026-09-26T04:05:34.620Z",
+   "results": [
+    {
+     "step": "picker-extra tv720",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 294.140625,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,1518 @@
+{
+ "browser": "chrome",
+ "version": "153.0.8010.53",
+ "runs": [
+  {
+   "step": "focus desktop",
+   "at": "2026-09-26T04:01:10.769Z",
+   "results": [
+    {
+     "step": "focus desktop",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus mobile",
+   "at": "2026-09-26T04:01:16.846Z",
+   "results": [
+    {
+     "step": "focus mobile",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv1080",
+   "at": "2026-09-26T04:01:25.591Z",
+   "results": [
+    {
+     "step": "focus tv1080",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv720",
+   "at": "2026-09-26T04:01:34.195Z",
+   "results": [
+    {
+     "step": "focus tv720",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra desktop",
+   "at": "2026-09-26T04:06:16.942Z",
+   "results": [
+    {
+     "step": "picker-extra desktop",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 478.734375,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra mobile",
+   "at": "2026-09-26T04:06:58.405Z",
+   "results": [
+    {
+     "step": "picker-extra mobile",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 228.5,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra tv1080",
+   "at": "2026-09-26T04:07:42.597Z",
+   "results": [
+    {
+     "step": "picker-extra tv1080",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 294.140625,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "picker-extra tv720",
+   "at": "2026-09-26T04:08:27.332Z",
+   "results": [
+    {
+     "step": "picker-extra tv720",
+     "check": "A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s",
+     "verdict": "PASS",
+     "detail": {
+      "top": 294.140625,
+      "same": true,
+      "notice": "Partial results: Boundary feed C (The indexer did not answer in time.)"
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry's saved profile is unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "rowsBefore": 1,
+      "after": {
+       "open": true,
+       "eligible": 0,
+       "status": "No release passes the profile.",
+       "focus": "emby-button button-flat jfmod-rejectedToggle"
+      },
+      "before": null,
+      "saved": null
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "Rejected-only list: focus is on the rejected group, and Enter opens it with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "focus": "emby-button button-flat jfmod-rejectedToggle",
+      "opened": 1
+     }
+    },
+    {
+     "step": "picker-extra tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "play desktop",
+   "at": "2026-09-26T04:08:56.480Z",
+   "results": [
+    {
+     "step": "play desktop",
+     "check": "The imported title plays (media time advances past 3 s)",
+     "verdict": "PASS",
+     "detail": {
+      "seconds": 4,
+      "requests": [
+       "/Items/<id>/PlaybackInfo",
+       "/Videos/<id>/stream.mp4"
+      ]
+     }
+    },
+    {
+     "step": "play desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "play mobile",
+   "at": "2026-09-26T04:09:05.615Z",
+   "results": [
+    {
+     "step": "play mobile",
+     "check": "The imported title plays (media time advances past 3 s)",
+     "verdict": "PASS",
+     "detail": {
+      "seconds": 4,
+      "requests": [
+       "/Items/<id>/PlaybackInfo",
+       "/Videos/<id>/stream.mp4"
+      ]
+     }
+    },
+    {
+     "step": "play mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "play tv1080",
+   "at": "2026-09-26T04:09:17.396Z",
+   "results": [
+    {
+     "step": "play tv1080",
+     "check": "TV: Play has focus on the detail page",
+     "verdict": "PASS"
+    },
+    {
+     "step": "play tv1080",
+     "check": "The imported title plays (media time advances past 3 s)",
+     "verdict": "PASS",
+     "detail": {
+      "seconds": 3,
+      "requests": [
+       "/Items/<id>/PlaybackInfo",
+       "/Videos/<id>/stream.mp4"
+      ]
+     }
+    },
+    {
+     "step": "play tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "play tv720",
+   "at": "2026-09-26T04:09:29.206Z",
+   "results": [
+    {
+     "step": "play tv720",
+     "check": "TV: Play has focus on the detail page",
+     "verdict": "PASS"
+    },
+    {
+     "step": "play tv720",
+     "check": "The imported title plays (media time advances past 3 s)",
+     "verdict": "PASS",
+     "detail": {
+      "seconds": 3,
+      "requests": [
+       "/Items/<id>/PlaybackInfo",
+       "/Videos/<id>/stream.mp4"
+      ]
+     }
+    },
+    {
+     "step": "play tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "grab desktop",
+   "at": "2026-09-26T04:11:23.734Z",
+   "results": [
+    {
+     "step": "grab desktop",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "FAIL",
+     "detail": {
+      "status": "No release passes the profile.",
+      "notice": [],
+      "eligible": [],
+      "rejected": [
+       "1080p WEB-DL · H.264 · JFMOD 84 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Standin.Extra.9.2025.1080p.WEB-DL.H264-JFMOD The release is larger than the profile allows."
+      ],
+      "eligibleCount": 0,
+      "rejectedCount": 1
+     }
+    },
+    {
+     "step": "grab desktop",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "FAIL"
+    },
+    {
+     "step": "grab desktop",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "grab desktop",
+     "check": "picker flow",
+     "verdict": "NOT VERIFIED",
+     "detail": "no eligible row contains the wanted raw title (Extra.9)"
+    }
+   ]
+  },
+  {
+   "step": "queue desktop",
+   "at": "2026-09-26T04:12:16.927Z",
+   "results": [
+    {
+     "step": "queue desktop",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       }
+      ]
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "queue and card progress",
+     "verdict": "NOT VERIFIED",
+     "detail": "page.waitForFunction: Timeout 30000ms exceeded."
+    }
+   ]
+  },
+  {
+   "step": "queue mobile",
+   "at": "2026-09-26T04:13:09.429Z",
+   "results": [
+    {
+     "step": "queue mobile",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       }
+      ]
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "queue and card progress",
+     "verdict": "NOT VERIFIED",
+     "detail": "page.waitForFunction: Timeout 30000ms exceeded."
+    }
+   ]
+  },
+  {
+   "step": "queue tv1080",
+   "at": "2026-09-26T04:14:04.852Z",
+   "results": [
+    {
+     "step": "queue tv1080",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       }
+      ]
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "queue and card progress",
+     "verdict": "NOT VERIFIED",
+     "detail": "page.waitForFunction: Timeout 30000ms exceeded."
+    }
+   ]
+  },
+  {
+   "step": "queue tv720",
+   "at": "2026-09-26T04:15:00.110Z",
+   "results": [
+    {
+     "step": "queue tv720",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "FAIL",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": false,
+        "text": null,
+        "cards": 8
+       }
+      ]
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "queue and card progress",
+     "verdict": "NOT VERIFIED",
+     "detail": "page.waitForFunction: Timeout 30000ms exceeded."
+    }
+   ]
+  },
+  {
+   "step": "grab desktop",
+   "at": "2026-09-26T04:15:31.973Z",
+   "results": [
+    {
+     "step": "grab desktop",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "1 release",
+      "notice": [],
+      "eligible": [
+       "1080p WEB-DL · H.264 · JFMOD 84 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD"
+      ],
+      "rejected": [],
+      "eligibleCount": 1,
+      "rejectedCount": 0
+     }
+    },
+    {
+     "step": "grab desktop",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "grab desktop",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      519
+     ]
+    },
+    {
+     "step": "grab desktop",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "grab desktop",
+     "check": "After the hold the picker reports the verified handoff",
+     "verdict": "PASS",
+     "detail": "The download client accepted the torrent."
+    },
+    {
+     "step": "grab desktop",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad",
+      "GET /JellyfinMod/Grabs/e9647b6b9e6e4d9cb16fa4d141bf09ad"
+     ]
+    },
+    {
+     "step": "grab desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "grab desktop",
+     "check": "Back closes the picker",
+     "verdict": "PASS",
+     "detail": {
+      "open": false,
+      "focus": "HomeMedia\n                              "
+     }
+    },
+    {
+     "step": "grab desktop",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  },
+  {
+   "step": "queue desktop",
+   "at": "2026-09-26T04:15:55.084Z",
+   "results": [
+    {
+     "step": "queue desktop",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "2%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "7%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "10%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "13%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "20%",
+        "cards": 8
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.2431
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "FAIL",
+     "detail": {
+      "card": 20,
+      "row": {
+       "found": true,
+       "percent": 24,
+       "text": "JellyfinMod Live Long (2025)JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD24 %20 MB of 84 MB2 MB/s36 sDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue mobile",
+   "at": "2026-09-26T04:16:17.540Z",
+   "results": [
+    {
+     "step": "queue mobile",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "28%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "31%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "35%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "38%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "45%",
+        "cards": 8
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.4738
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 45,
+      "row": {
+       "found": true,
+       "percent": 47,
+       "text": "JellyfinMod Live Long (2025)JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD47 %40 MB of 84 MB · 2 MB/s · 24 s leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv1080",
+   "at": "2026-09-26T04:17:16.230Z",
+   "results": [
+    {
+     "step": "queue tv1080",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "56%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "59%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "63%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "63%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "72%",
+        "cards": 8
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.7674
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "FAIL",
+     "detail": {
+      "card": 72,
+      "row": {
+       "found": true,
+       "percent": 76,
+       "text": "JellyfinMod Live Long (2025)JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD76 %65 MB of 84 MB · 2 MB/s · 10 s leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       80,
+       83,
+       86,
+       90,
+       92,
+       96,
+       98,
+       100,
+       100,
+       100
+      ]
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row",
+     "verdict": "PASS",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+       "sheet": false
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv720",
+   "at": "2026-09-26T04:18:14.955Z",
+   "results": [
+    {
+     "step": "queue tv720",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "100%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "100%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "100%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "100%",
+        "cards": 8
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "100%",
+        "cards": 8
+       }
+      ],
+      "queue": {
+       "state": "scanning",
+       "progress": 1
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 100,
+      "row": {
+       "found": true,
+       "percent": 100,
+       "text": "JellyfinMod Live Long (2025)1080p WEB-DLJellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD100 %84 MB of 84 MBWaiting for the library scanLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       100,
+       100,
+       100,
+       100,
+       100,
+       100,
+       100,
+       100,
+       100,
+       100
+      ]
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row",
+     "verdict": "PASS",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+       "sheet": false
+      }
+     }
+    },
+    {
+     "step": "queue tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue desktop",
+   "at": "2026-09-26T04:19:13.927Z",
+   "results": [
+    {
+     "step": "queue desktop",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "0%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "1%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "1%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "2%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "4%",
+        "cards": 9
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.0473
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 4,
+      "row": {
+       "found": true,
+       "percent": 4,
+       "text": "JellyfinMod Live Longer (2025)JellyfinMod.Live.Longer.2025.1080p.WEB-DL.H264-JFMOD4 %4 MB of 84 MB393 kB/s4 minDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "queue tv1080",
+   "at": "2026-09-26T04:20:12.639Z",
+   "results": [
+    {
+     "step": "queue tv1080",
+     "check": "The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls",
+     "verdict": "PASS",
+     "detail": {
+      "samples": [
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "5%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "6%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "7%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "8%",
+        "cards": 9
+       },
+       {
+        "found": true,
+        "inFlight": true,
+        "text": "10%",
+        "cards": 9
+       }
+      ],
+      "queue": {
+       "state": "downloading",
+       "progress": 0.1091
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "The queue row shows the same progress as the card (within one poll)",
+     "verdict": "PASS",
+     "detail": {
+      "card": 10,
+      "row": {
+       "found": true,
+       "percent": 10,
+       "text": "JellyfinMod Live Longer (2025)JellyfinMod.Live.Longer.2025.1080p.WEB-DL.H264-JFMOD10 %9 MB of 84 MB · 360 kB/s · 3 min leftDownloadingLive Transmission (relay)"
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts",
+     "verdict": "PASS",
+     "detail": {
+      "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+      "percents": [
+       11,
+       12,
+       13,
+       13,
+       14,
+       15,
+       16,
+       16,
+       17,
+       18
+      ]
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row",
+     "verdict": "PASS",
+     "detail": {
+      "sheet": [
+       "Remove"
+      ],
+      "after": {
+       "focused": "jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus",
+       "sheet": false
+      }
+     }
+    },
+    {
+     "step": "queue tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "snap desktop",
+   "at": "2026-09-26T04:21:10.300Z",
+   "results": [
+    {
+     "step": "snap desktop",
+     "check": "A stale row (client unreachable) shows its age and the last progress, never 0 %",
+     "verdict": "PASS",
+     "detail": [
+      "JellyfinMod Live Longer (2025) JellyfinMod.Live.Longer.2025.1080p.WEB-DL.H264-JFMOD 20 % Updated 45 s ago 18 MB of 84 MB — — Status unknown Live Transmission (relay)",
+      "JellyfinMod Live Series (2026) · S01E01 · Pilot JellyfinMod.Live.Series.S01E01.1080p.WEB-DL.H264-JFMOD 100 % 14 MB — — Seeding Ratio 0.00 of 1.00 · seeded 16 h 29 min of 7 d · goal met. Seeding until its goal is met. Live Transmission (relay)",
+      "JellyfinMod Live Long (2025) 1080p WEB-DL JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD 100 % 84 MB — — Seeding Ratio 0.00 of 1.00 · seeded 3 min of 7 d. Seeding until its goal is met. Live Transmission (relay)"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "snap mobile",
+   "at": "2026-09-26T04:21:40.072Z",
+   "results": [
+    {
+     "step": "snap mobile",
+     "check": "A stale row (client unreachable) shows its age and the last progress, never 0 %",
+     "verdict": "PASS",
+     "detail": [
+      "JellyfinMod Live Longer (2025) JellyfinMod.Live.Longer.2025.1080p.WEB-DL.H264-JFMOD 20 % Updated 1 min ago 18 MB of 84 MB Status unknown Live Transmission (relay)",
+      "JellyfinMod Live Series (2026) · S01E01 · Pilot JellyfinMod.Live.Series.S01E01.1080p.WEB-DL.H264-JFMOD 100 % 14 MB Seeding Ratio 0.00 of 1.00 · seeded 16 h 29 min of 7 d · goal met. Seeding until its goal is met. Live Transmission (relay)",
+      "JellyfinMod Live Long (2025) 1080p WEB-DL JellyfinMod.Live.Long.2025.1080p.WEB-DL.H264-JFMOD 100 % 84 MB Seeding Ratio 0.00 of 1.00 · seeded 3 min of 7 d. Seeding until its goal is met. Live Transmission (relay)"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "cancel tv1080",
+   "at": "2026-09-26T04:22:00.967Z",
+   "results": [
+    {
+     "step": "cancel tv1080",
+     "check": "TV: the detail page focuses a control on open",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "TV: Search releases is reachable by arrow keys",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "1 release",
+      "notice": [],
+      "eligible": [
+       "1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Standin.Sequel.2026.1080p.WEB-DL.H264-JFMOD"
+      ],
+      "rejected": [],
+      "eligibleCount": 1,
+      "rejectedCount": 0
+     }
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      519
+     ]
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Cancel by Enter during the hold ends the grab as cancelled",
+     "verdict": "PASS",
+     "detail": "Quality profile for this search Default (Live HD) Live 720p only Live HD 1 release 1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Standin.Sequel.2026.1080p.WEB-DL.H264-JFMOD Cancelled before anything was sent. Close"
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "POST /JellyfinMod/Grabs/91e53f0f5ffd4f92bb04438192cdd39d/Cancel"
+     ]
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Back closes the picker and restores focus to the opener",
+     "verdict": "PASS",
+     "detail": {
+      "open": false,
+      "focus": "Search releases"
+     }
+    },
+    {
+     "step": "cancel tv1080",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  },
+  {
+   "step": "cancel mobile",
+   "at": "2026-09-26T04:22:11.043Z",
+   "results": [
+    {
+     "step": "cancel mobile",
+     "check": "The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons",
+     "verdict": "PASS",
+     "detail": {
+      "status": "1 release",
+      "notice": [],
+      "eligible": [
+       "1080p WEBRip · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 419 JellyfinMod.Live.Series.S01E02.1080p.WEBRip.H264-JFMOD"
+      ],
+      "rejected": [
+       "1080p WEB-DL · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 519 JellyfinMod.Live.Series.S01E02.1080p.WEB-DL.H264-JFMOD An administrator removed this release from the queue and blocked it."
+      ],
+      "eligibleCount": 1,
+      "rejectedCount": 1
+     }
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Focus starts on the first eligible row",
+     "verdict": "PASS"
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Eligible rows are ordered by descending score",
+     "verdict": "PASS",
+     "detail": [
+      419
+     ]
+    },
+    {
+     "step": "cancel mobile",
+     "check": "One Enter starts a held grab with a countdown and a focusable Cancel",
+     "verdict": "PASS",
+     "detail": "Sending to the download client in 5 s"
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Cancel by Enter during the hold ends the grab as cancelled",
+     "verdict": "PASS",
+     "detail": "Episode Choose an episode S00E01 · Special One S01E02 · Second S01E03 · Third S01E01 · Pilot (on disk) S01E04 · Fourth (unaired) Quality profile for this search Default (Live HD) Live 720p only Live HD 1 release 1080p WEBRip · H.264 · JFMOD 14 MB · 30↑ · Private fixture feed · score 419 JellyfinMod."
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Exactly one grab request despite the second Enter",
+     "verdict": "PASS",
+     "detail": [
+      "GET /JellyfinMod/Releases",
+      "POST /JellyfinMod/Releases/Grab",
+      "POST /JellyfinMod/Grabs/426bf5a8f3054088a20a0ffe2848835b/Cancel"
+     ]
+    },
+    {
+     "step": "cancel mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Back closes the picker",
+     "verdict": "PASS",
+     "detail": {
+      "open": false,
+      "focus": "Keep series"
+     }
+    },
+    {
+     "step": "cancel mobile",
+     "check": "Entry read",
+     "verdict": "PASS",
+     "detail": {}
+    }
+   ]
+  }
+ ]
+}
