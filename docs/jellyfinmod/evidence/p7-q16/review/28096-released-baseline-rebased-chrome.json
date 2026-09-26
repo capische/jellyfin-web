@@ -1,0 +1,140 @@
+{
+ "desktop movie": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 667,
+   "overview": 667
+  }
+ },
+ "desktop episode": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 628,
+   "overview": 628
+  }
+ },
+ "desktop season": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 441,
+   "overview": 441
+  }
+ },
+ "desktop series": {
+  "geometry": {
+   "buttons": 332,
+   "genres": 441,
+   "overview": 441
+  }
+ },
+ "mobile movie": {
+  "geometry": {
+   "buttons": 383,
+   "genres": 703,
+   "overview": 703
+  }
+ },
+ "mobile episode": {
+  "geometry": {
+   "buttons": 430,
+   "genres": 731,
+   "overview": 731
+  }
+ },
+ "mobile season": {
+  "geometry": {
+   "buttons": 380,
+   "genres": 463,
+   "overview": 463
+  }
+ },
+ "mobile series": {
+  "geometry": {
+   "buttons": 388,
+   "genres": 470,
+   "overview": 470
+  }
+ },
+ "tv1080 movie": {
+  "geometry": {
+   "buttons": 189,
+   "genres": 627,
+   "overview": 627
+  },
+  "walk": [
+   "button|button-flat.btnPlay.detailButton|resume|Play|",
+   "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+   "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+   "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+   "ArrowRight>a|button-link.emby-button||ukraine|",
+   "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+   "ArrowDown>button|emby-button.raised||Keep|",
+   "ArrowUp>a|button-link.emby-button||war in ukraine|",
+   "ArrowUp>a|button-link.emby-button||mourning|",
+   "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+   "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+  ]
+ },
+ "tv1080 episode": {
+  "geometry": {
+   "buttons": 222,
+   "genres": 608,
+   "overview": 608
+  }
+ },
+ "tv1080 season": {
+  "geometry": {
+   "buttons": 194,
+   "genres": 331,
+   "overview": 331
+  }
+ },
+ "tv1080 series": {
+  "geometry": {
+   "buttons": 189,
+   "genres": 326,
+   "overview": 326
+  }
+ },
+ "tv720 movie": {
+  "geometry": {
+   "buttons": 188,
+   "genres": 613,
+   "overview": 613
+  },
+  "walk": [
+   "button|button-flat.btnPlay.detailButton|resume|Play|",
+   "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+   "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+   "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+   "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+   "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+   "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+   "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+   "ArrowUp>a|emby-button.button-link||Documentary|",
+   "ArrowUp>a|emby-button.button-link||The Associated Press|",
+   "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+  ]
+ },
+ "tv720 episode": {
+  "geometry": {
+   "buttons": 220,
+   "genres": 595,
+   "overview": 595
+  }
+ },
+ "tv720 season": {
+  "geometry": {
+   "buttons": 192,
+   "genres": 317,
+   "overview": 317
+  }
+ },
+ "tv720 series": {
+  "geometry": {
+   "buttons": 188,
+   "genres": 313,
+   "overview": 313
+  }
+ }
+}

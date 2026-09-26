@@ -1,0 +1,2848 @@
+{
+ "runs": [
+  {
+   "step": "degrade",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "build": "q16",
+   "at": "2026-09-26T05:51:33.335Z",
+   "results": [
+    {
+     "check": "28096 runs the q16 build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "a21d1547277d",
+      "takeover": "patched",
+      "trakt": {
+       "Installed": false
+      }
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 528,
+        "overview": 528
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 597,
+        "overview": 597
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep indefinitely|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 476,
+        "overview": 476
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 462,
+        "overview": 462
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  },
+  {
+   "step": "degrade",
+   "browser": "chrome",
+   "version": "153.0.8010.53",
+   "build": "q16",
+   "at": "2026-09-26T05:52:14.935Z",
+   "results": [
+    {
+     "check": "28096 runs the q16 build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "a21d1547277d",
+      "takeover": "patched",
+      "trakt": {
+       "Installed": false
+      }
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 528,
+        "overview": 528
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 597,
+        "overview": 597
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep indefinitely|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 476,
+        "overview": 476
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: page geometry equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 462,
+        "overview": 462
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  },
+  {
+   "step": "degrade",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "build": "released",
+   "at": "2026-09-26T05:58:07.245Z",
+   "results": [
+    {
+     "check": "28096 runs the released build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "ee34ba8ae7a3",
+      "takeover": "patched",
+      "trakt": null
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  },
+  {
+   "step": "degrade",
+   "browser": "chrome",
+   "version": "153.0.8010.53",
+   "build": "released",
+   "at": "2026-09-26T05:58:48.671Z",
+   "results": [
+    {
+     "check": "28096 runs the released build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "ee34ba8ae7a3",
+      "takeover": "patched",
+      "trakt": null
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: no indicator",
+     "verdict": "PASS",
+     "detail": {
+      "mount": null,
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  },
+  {
+   "step": "degrade",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "build": "q16",
+   "at": "2026-09-26T06:00:11.011Z",
+   "results": [
+    {
+     "check": "28096 runs the q16 build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "a21d1547277d",
+      "takeover": "patched",
+      "trakt": {
+       "Installed": false
+      }
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep indefinitely|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  },
+  {
+   "step": "degrade",
+   "browser": "chrome",
+   "version": "153.0.8010.53",
+   "build": "q16",
+   "at": "2026-09-26T06:00:52.406Z",
+   "results": [
+    {
+     "check": "28096 runs the q16 build",
+     "verdict": "PASS",
+     "detail": {
+      "bundle": "a21d1547277d",
+      "takeover": "patched",
+      "trakt": {
+       "Installed": false
+      }
+     }
+    },
+    {
+     "check": "28096 has no Trakt plugin",
+     "verdict": "PASS"
+    },
+    {
+     "check": "desktop movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 667,
+        "overview": 667
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 628,
+        "overview": 628
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "desktop series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 332,
+        "genres": 441,
+        "overview": 441
+       }
+      }
+     }
+    },
+    {
+     "check": "desktop: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "mobile movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile movie: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 383,
+        "genres": 703,
+        "overview": 703
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 430,
+        "genres": 731,
+        "overview": 731
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 380,
+        "genres": 463,
+        "overview": 463
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "mobile series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 388,
+        "genres": 470,
+        "overview": 470
+       }
+      }
+     }
+    },
+    {
+     "check": "mobile: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv1080 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "FAIL",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 627,
+        "overview": 627
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>a|button-link.emby-button||ukraine|",
+        "ArrowDown>a|button-link.emby-button||russo-ukrainian war|",
+        "ArrowDown>button|emby-button.raised||Keep indefinitely|",
+        "ArrowUp>a|button-link.emby-button||war in ukraine|",
+        "ArrowUp>a|button-link.emby-button||mourning|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+        "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv1080 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 222,
+        "genres": 608,
+        "overview": 608
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 194,
+        "genres": 331,
+        "overview": 331
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv1080 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 189,
+        "genres": 326,
+        "overview": 326
+       }
+      }
+     }
+    },
+    {
+     "check": "tv1080: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    },
+    {
+     "check": "tv720 movie: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 movie: page geometry and D-pad walk equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 613,
+        "overview": 613
+       },
+       "walk": [
+        "button|button-flat.btnPlay.detailButton|resume|Play|",
+        "ArrowDown>select|selectSubtitles.detailTrackSelect.emby-select-withcolor||OffDanish - Default - SUBRIPEn|",
+        "ArrowDown>button|jfmod-versionRow||○2160p10.3 GBDefault|",
+        "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●2160pHEVC · E-AC3 2.0 · 10.3 |",
+        "ArrowRight>button|card.overflowPortraitCard.personCard|link|Irina Kalininaas Self|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowDown>button|card.overflowPortraitCard.show-animation|link|After Porn Ends2012|",
+        "ArrowUp>button|card.overflowPortraitCard.personCard|link|Oleksandr Ivanovas Self|",
+        "ArrowUp>a|emby-button.button-link||Documentary|",
+        "ArrowUp>a|emby-button.button-link||The Associated Press|",
+        "ArrowUp>a|emby-button.button-link||Mstyslav Chernov|"
+       ]
+      }
+     }
+    },
+    {
+     "check": "tv720 episode: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 episode: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 220,
+        "genres": 595,
+        "overview": 595
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 season: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 season: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 192,
+        "genres": 317,
+        "overview": 317
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720 series: no indicator, no Trakt request, and the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "answered": []
+     }
+    },
+    {
+     "check": "tv720 series: page geometry equal the released build",
+     "verdict": "PASS",
+     "detail": {
+      "released": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      },
+      "q16": {
+       "geometry": {
+        "buttons": 188,
+        "genres": 313,
+        "overview": 313
+       }
+      }
+     }
+    },
+    {
+     "check": "tv720: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": []
+     }
+    }
+   ]
+  }
+ ]
+}
