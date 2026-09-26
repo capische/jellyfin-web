@@ -10,6 +10,14 @@ client download them from the web seed, and then asserts, from the host's own lo
   live-scan.py delay ENTRY SECONDS                               with the host's LibraryMonitorDelay set to SECONDS
   live-scan.py restart ENTRY                                     container restarted while the import is scanning
   live-scan.py cancel ENTRY                                      queue Remove while scanning: cancelled, no full scan
+  live-scan.py cancel-later SERIES EP_A EP_B                     B (a sibling in A's season folder) reports its change
+                                                                 30-60 s after A and is cancelled at once: A still waits for
+                                                                 the host refresh B restarted, so no full scan (review P2-f)
+  live-scan.py unrelated-stream SERIES_X EP_A SERIES_Y EP...     imports into another series every 40 s while A scans: A binds
+                                                                 on its own refresh, no full scan (review P2-g)
+  live-scan.py related-stream SERIES EP_A EP...                  sibling imports every 40 s keep the host's refresher from
+                                                                 firing: A escalates no later than three waits after its
+                                                                 request and still binds (review P2-g bound)
 """
 import datetime, importlib.util, json, os, subprocess, sys, time
 
@@ -136,6 +144,52 @@ def main(case, args):
         check("cancel: no imported event is written for a cancelled import", "imported" not in events, events[:6])
         scans = full_scans(since)
         check("cancel: no full library scan ran", not scans, scans)
+
+    elif case == "cancel-later":
+        series, first, second = args
+        g1 = grab_one(series, first)
+        wait_state(g1, {"scanning"})
+        t0 = time.time()
+        time.sleep(25)
+        g2 = grab_one(series, second)
+        row = wait_state(g2, {"scanning", "completed"})
+        offset = round(time.time() - t0)
+        status, body = call("DELETE", f"/JellyfinMod/Queue/{row['id']}", {"removeFromClient": False, "blocklist": False})
+        print("B reported its change about", offset, "s after A and was cancelled:", status, (body or {}).get("state"))
+        check("cancel-later: B was cancelled while its report was pending (30-60 s after A)", status == 200 and 25 <= offset <= 75, [status, offset])
+        done = wait_state(g1, {"completed", "blocked"})
+        check("cancel-later: A completes", done is None or done["importState"] == "completed", done and done["importState"])
+        verify("cancel-later", since, [(series, first)])
+    elif case in ("unrelated-stream", "related-stream"):
+        if case == "unrelated-stream":
+            series, first, other, stream = args[0], args[1], args[2], args[3:]
+        else:
+            series, first, stream = args[0], args[1], args[2:]
+            other = series
+        g1 = grab_one(series, first)
+        wait_state(g1, {"scanning", "completed"})
+        t0 = time.time()
+        grabs = []
+        for episode in stream:
+            if import_for(g1) is None or import_for(g1)["importState"] != "scanning":
+                break
+            grabs.append(grab_one(other, episode))
+            time.sleep(40)
+        done = wait_state(g1, {"completed", "blocked"})
+        waited = round(time.time() - t0)
+        print(case, "A bound", waited, "s after it started scanning;", len(grabs), "stream imports started")
+        check(f"{case}: A completes", done is None or done["importState"] == "completed", done and done["importState"])
+        for g in grabs:
+            later = wait_state(g, {"completed", "blocked"})
+            check(f"{case}: stream import {g[:8]} completes", later is None or later["importState"] == "completed", later and later["importState"])
+        events = history(series, first)
+        check(f"{case}: exactly one imported event for A and no media_missing", events.count("imported") == 1 and not any("missing" in e for e in events), events[:6])
+        scans = full_scans(since)
+        if case == "unrelated-stream":
+            check("unrelated-stream: no full library scan ran (unrelated imports never postponed A)", not scans, scans)
+            check("unrelated-stream: A bound within one host delay plus margin of starting to scan", waited <= 150, waited)
+        else:
+            check("related-stream: the deferral is bounded: A bound within three waits of its request plus a scan", waited <= 3 * 90 + 120, [waited, scans[:2]])
 
 
 if __name__ == "__main__":
