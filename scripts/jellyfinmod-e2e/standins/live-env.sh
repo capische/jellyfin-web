@@ -114,7 +114,7 @@ http { server { listen 443 ssl; server_name api.themoviedb.org;
 NGINX
 cat > "$ROOT/certs/webseed.conf" <<NGINX
 events {}
-http { server { listen 80; root /webseed; location / { limit_rate 200k; } } }
+http { limit_conn_zone \$binary_remote_addr zone=peer:1m; server { listen 80; root /webseed; location / { limit_conn peer 1; limit_rate 200k; } } }
 NGINX
 TX_IP=$(docker inspect transmission-acceptance --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
 cat > "$ROOT/compose.yml" <<YAML
