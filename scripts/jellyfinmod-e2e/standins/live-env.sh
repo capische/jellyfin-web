@@ -67,7 +67,7 @@ BIND=$(docker network inspect "$3" --format '{{(index .IPAM.Config 0).Gateway}}'
 cd "$ROOT/standins/bin"
 STANDIN_BIND="$BIND" STANDIN_PORT_BASE="$BASE" STANDIN_SECRETS="$ROOT/secrets/fixture.env" STANDIN_STATE="$ROOT/standins/state" \
   STANDIN_DOWNLOADS="$ROOT/standins/unused-downloads" STANDIN_CATALOG="$ROOT/catalog.json" \
-  STANDIN_WEBSEED_BASE="http://$(docker inspect jellyfinmod-live-webseed --format '{{range $k, $v := .NetworkSettings.Networks}}{{if eq $k "jellyfinmod-acceptance_default"}}{{$v.IPAddress}}{{end}}{{end}}' 2>/dev/null)/" \
+  STANDIN_WEBSEED_BASE="http://$(docker inspect jellyfinmod-live-webseed --format '{{range $k, $v := .NetworkSettings.Networks}}{{if eq $k "'"$3"'"}}{{$v.IPAddress}}{{end}}{{end}}' 2>/dev/null)/" \
   setsid nohup node standins.mjs >> "$ROOT/logs/standins.log" 2>&1 < /dev/null &
 echo $! > "$ROOT/standins/pid"
 for i in $(seq 1 20); do curl -s -o /dev/null "http://127.0.0.1:$((BASE + 9))/state" && break; sleep 0.5; done
