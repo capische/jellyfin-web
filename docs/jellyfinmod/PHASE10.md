@@ -646,6 +646,24 @@ reads fresh state; safe to merge with retention off. Findings fixed before the m
   started warned windows, the unwatched import was recorded not played, and a run after the windows reclaimed nothing
   (inspected 603, reclaimed 0, failed 0; every fixture byte-identical).
 
+**Verified:** suites verified on `11f0a67` (Sonnet-high verifier, all twelve `exit=0`, `p10r3-logs/verify-r7.out`). A
+Fable-high re-review of the delta `ee385df..11f0a67` found no P1 and no P2: safe to merge with retention off and to run
+the real-window test on this build. It confirmed on Linux that the new suite scenarios fail on `ee385df` and pass on
+`11f0a67`.
+
+**Open follow-ups for the next slice** (P3s from that re-review; recorded, not fixed):
+- **P3-A:** the listener's `added` flag can race when two events for one key arrive together; the worst outcome is one
+  duplicate refresh. Replace it with a `TryAdd`/`TryUpdate` loop.
+- **P3-B:** the repair task's catch also swallows write failures, and only at Debug. Catch read errors only, or log a
+  Warning with a skipped count.
+- **P3-C:** the evaluator's catch for an unreadable item in the missing-user path is silent. Log a Warning with the
+  target id.
+- **P3-D:** a passing read failure in the listener drops that event until the next event or the nightly repair. It only
+  delays and never deletes early; one deferred retry would close it.
+- **P3-E:** `p22-stale` fails on any fixed build by design. Gate it behind an explicit flag.
+- Noted: a `PlaybackStart` event can displace an `Import` reason when coalesced. This affects only the cause named in
+  the warning.
+
 ### Handover — 2026-09-26, P2-2
 
 - Branch `p10-userdata-fresh` (plugin, off `348168b`; web, off `c554c3e312`), not pushed. Plugin `11f0a67` is deployed on
