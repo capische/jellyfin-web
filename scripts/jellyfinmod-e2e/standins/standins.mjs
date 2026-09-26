@@ -228,6 +228,7 @@ const prowlarr = createServer(async (request, response) => {
     if (torznab) {
         const mode = url.searchParams.get('t');
         count('torznab.' + mode);
+        count(`torznab${torznab[1]}.${mode}`); // per feed, to compare with the plugin's per-indexer query counts
         log('torznab', torznab[1], 't=' + mode, url.searchParams.has('imdbid') ? 'imdbid' : '', url.searchParams.has('q') ? 'q' : '');
         // A fault can target one feed (service torznab<id>) or all of them (service torznab).
         const fault = faults['torznab' + torznab[1]] ?? faults.torznab;
