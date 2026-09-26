@@ -1,0 +1,13 @@
+PhaseZeroSmoke exit=0
+PhaseOneSmoke exit=0
+PhaseTwoIntegration exit=0
+PhaseThreeIntegration exit=0
+PhaseThreeProtectionIntegration exit=0
+PhaseFiveIntegration exit=0
+PhaseSixIntegration exit=0
+PhaseSevenSettingsIntegration exit=0
+PhaseSevenProwlarrIntegration exit=0
+PhaseSevenTakeoverIntegration exit=0
+PhaseSevenTraktIntegration exit=0
+PhaseTenRetentionIntegration exit=0
+PhaseFourIntegration exit=0
