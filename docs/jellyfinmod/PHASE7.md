@@ -1105,85 +1105,72 @@ not focusable and the TV's D-pad walk unchanged; with the plugin disabled and th
 errors. On the acceptance instance (no Trakt plugin) nothing shows, nothing fails and the detail pages' geometry and D-pad
 walk equal the released build's. Evidence: *Q16 evidence* below.
 
-#### Q16 — handover (2026-09-26, paused by the coordinator mid-way through the review fixes)
+#### Q16 review fixes (2026-09-26)
 
-**Done and committed (local, not pushed).** All review findings are implemented; the relevant commits were
-rewritten in place (amended — `reset --soft` onto the rename commit and re-committed, since nothing on top depended on
-them), not stacked as fixes:
+The Fable-high review of Q16 found one P2 and seven P3 items plus a downgrade check; all are fixed, the branches are
+rebased onto plugin `master` `11f0a67` and web `jellyfin-mod` `be9b812da6`, and nothing is pushed. The fixes were
+folded into the commits they belong to, not stacked (each commit stands on its own); the pre-review branches are kept
+as `p7-q16-backup-pre-review` (on the old bases) and `p7-q16-pre-review-rebased` (replayed onto the new ones, so
+`git diff p7-q16-pre-review-rebased p7-q16` is exactly the fix delta).
 
-- Plugin `p7-q16` on `d6ec99a` (rename) on `348168b`: `2fe1c08 feat(trakt,p7.q16)` (P2-1 record and remove only while
-  the host's `TraktSyncFromTraktTask` is `Running`, via `ITaskManager.ScheduledTasks`; P3-1 Health `Trakt.Version` for
-  administrators only; P3-3 plugin and task lists copied, "not installed"/"not importing" on error; P3-4 the queue is
-  drained on stop, bounded by the stop token; P3-5 rows pruned on `ItemRemoved` — movie/episode own rows,
-  season/series their episodes' — and for users that no longer exist, at start and every 5 min; `PhaseZeroSmoke`
-  adjusted to the now-async `GetHealth`), `fd20ebb test(e2e,p7.q16)` (suite covers each of these: an `Import` with the
-  task idle or cancelling neither records nor removes, Health version hidden from an ordinary user, item/season/series
-  removal, user deletion, a 200-import burst written during stop), `ee2ee3b build(release,p7.q16)` (P3-7: **0.1.0.1**,
-  `build.yaml` changelog, csproj), `34bd383 docs(image,p7.q16)` (README *Troubleshooting*: the one start-up
-  repository 503 is harmless upstream timing). Backup of the pre-review branch: local branch `p7-q16-backup-pre-review`
-  (delete once verified).
-- Web `p7-q16` on `eddedf0e76` (rename): `192aad73b0 feat(trakt,p7.q16)` (P3-2: `getPluginHealth` returns
-  `traktInstalled`; the indicator asks `Trakt/Items` only when Health lists `trakt.history` and says Trakt is
-  installed; the mount is created only for Movie, Episode, Season and Series), `a708bc976e test(e2e,p7.q16)` (P3-6
-  `fresh-env.sh` default image `capische/jellyfin-mod:0.1.0.0`; `log-errors.sh` lists ERR/FTL lines less exactly the
-  start-up repository 503 before `Core startup complete`), `a25b484b4e docs(trakt,p7.q16)` (the earlier docs), `df06405061
-  test(e2e,p7.q16)` (runner follow-up: `q16-trakt.mjs` steps `nfo`, `logs`, `downgrade`; `fresh-env.sh downgrade
-  <image>`; it came after the bundle was built, so `a25b484b4e` stays the bundle's web commit) and this docs commit. Local branch `p7-q16-backup-pre-review` likewise.
+- **Plugin `p7-q16`:** `dd2f4e0` rename, `720d84d feat(trakt,p7.q16)` — P2-1 an import is recorded or removed only
+  while the host's `TraktSyncFromTraktTask` is `Running` (`ITaskManager.ScheduledTasks`), so an `Import` from any other
+  source (an NFO refresh) changes nothing; P3-1 Health's `Trakt.Version` for administrators only; P3-3 the plugin and
+  task lists are copied and an error reads as "not installed" / "not importing"; P3-4 the observation queue is drained
+  on stop, bounded by the stop token; P3-5 rows are pruned on `ItemRemoved` (a movie or episode its own rows, a season
+  or series its episodes') and for users that no longer exist, at start and every 5 minutes. `97074b6 test(e2e,p7.q16)`
+  covers each of these on the real plugin host; `2018335 build(release,p7.q16)` P3-7 version **0.1.0.1**; `6420b45
+  docs(image,p7.q16)` README *Troubleshooting*: the one start-up repository 503 is harmless upstream timing. The Trakt
+  migration `20260925104923_PhaseSevenTraktObservations` is still the last one (the retention fixes since added none).
+- **Web `p7-q16`:** `f3eb2040f1` rename, `4cd62ccceb feat(trakt,p7.q16)` — P3-2 `getPluginHealth` returns
+  `traktInstalled` and the indicator asks `Trakt/Items` only when Health lists `trakt.history` and says Trakt is
+  installed; the mount exists only on Movie, Episode, Season and Series pages. `5f2e8e4934 test(e2e,p7.q16)` P3-6
+  `fresh-env.sh` defaults to `capische/jellyfin-mod:0.1.0.0`; `log-errors.sh` lists ERR/FTL lines less the start-up
+  repository 503 before `Core startup complete` and less two upstream socket lines (below). `101682729d` adds the
+  runner steps `nfo`, `logs`, `downgrade` and `fresh-env.sh downgrade <image>`.
 
-**Build (from those commits):** web bundle **`c0f3f20de943`** (web commit `a25b484b4e`), plugin **0.1.0.1**,
-`JellyfinMod.dll` sha256 `769ebfef72aa1615…`, `jellyfinmod-web.zip` `9dbe9c37e01cf514…`, release in the plugin
-worktree's `artifacts/release-q16`, image **`jellyfinmod-q16:candidate` `6d8e56eeac31`** on the test host; `q16-src`,
-`q16-webpkg`, `q16-image` on the host match it. `q16-run-all.sh` now lists 13 suites (`PhaseTenRetentionIntegration`
-added; no runner script on the host listed it before). **Not yet:** `backups/q16-package` on 28096 still holds the
-coordinator's pre-review package, and `verify-q16.md` still names the pre-review ids.
+**Build.** Web bundle **`a21d1547277d`** (web commit `7c0b6d5ee3`, kept as local branch `p7-q16-bundle-src`: the
+rewrite after it changed only `scripts/jellyfinmod-e2e/standins/log-errors.sh`, so `src/` equals the branch tip's),
+plugin **0.1.0.1**, `JellyfinMod.dll` sha256 `80ab1532f8a7f869…`, `jellyfinmod-web.zip` `582a1e66fcf905b5…`, image
+**`jellyfinmod-q16:candidate` `e2d7ed995b6f`** on the test host.
 
-**Suites (rebuilt source, test host):** 11 of 13 passed (`PhaseZeroSmoke` … `PhaseSevenTraktIntegration`, all
-`exit=0`); `PhaseTenRetentionIntegration` and `PhaseFourIntegration` were running when the pause came and were
-stopped — **not run**. A first run on the same day failed only `PhaseZeroSmoke` to compile (the async `GetHealth`),
-fixed in `2fe1c08`. Locally every suite builds and `PhaseSevenTraktIntegration`, `PhaseZeroSmoke`, `PhaseOneSmoke`
-pass.
+**Suites (test host, SDK 10 offline, `q16-run-all.sh` on `q16-src` = plugin `6420b45`):** all **13** `exit=0`,
+`PhaseTenRetentionIntegration` and `PhaseFourIntegration` included (`evidence/p7-q16/review/suites/`).
 
-**Live, disposable container (image `6d8e56eeac31`, torn down; evidence `evidence/p7-q16/review/live.json`):**
-setup 6/6, Dashboard install 5/5 (Health `0.1.0.1`, bundle `c0f3f20de943`), authorize 4/4, sync 14/14 + INFO
-(including an ordinary user's Health without `Trakt.Version`, the administrator's with it). **P2-1 (`nfo`) 8/8 +
-INFO:** with Jellyfin's NFO user for watch data set to the administrator and `.nfo` files carrying
-`<watched>true</watched>` (the unwatched movie) and `<watched>false</watched>` (the Trakt movie), a library and item
-refresh read both files (their plot marker reached the items) while the Trakt task was idle; JellyfinMod recorded
-nothing and deleted nothing (same `lastSyncedAt`); after unmarking the Trakt movie locally, a real Trakt sync marked it
-played again and was recorded. **Found:** Jellyfin 12.0.0 did not save the NFO watch state at all — its NFO provider
-parses into a new, id-less item and `BaseNfoParser` saves only `if (!item.Id.IsEmpty())` — so on this path the
-`Import` the review describes does not fire today; the gate is proven by the suite and stays as defence against any
-other `Import` source. (The step's first attempt, which waited for the NFO state in the database, timed out for that
-reason and is recorded NOT VERIFIED.) Browser with the indicator present: Chromium desktop + TV 1080 34/34, Chrome
-mobile + TV 1080 34/34. Disable 5/5 (`Restart`, then `Disabled` after a restart). Indicator absent with **no
-`Trakt/Items` request on any page**: Chrome mobile + TV 1080 63/63; Chromium desktop + TV 1080 62/63 — the one FAIL is
-an `ERR_ABORTED` on `/JellyfinMod/Entries/<id>` (a request cancelled by the runner's next navigation; not Trakt, not
-yet re-run). **Not run:** uninstall, `logs`, `downgrade` (fresh-env `downgrade capische/jellyfin-mod:0.1.0.0`, then the
-step), the re-run of the Chromium absent pass.
+**Disposable container** (image `e2d7ed995b6f`, Trakt 31.0.0.0 from the catalog, stand-in `api.trakt.tv`; evidence
+`review/live-rebased.json`): setup 6/6, install 5/5 (Health `0.1.0.1`, bundle `a21d1547277d`), authorize 4/4, sync
+14/14 + INFO (the ordinary user's Health without `Trakt.Version`, the administrator's with it), `nfo` 8/8 + INFO (the
+refresh read both `.nfo` files while the task was idle; nothing recorded or deleted; a real sync afterwards recorded),
+indicator present Chromium desktop + TV 1080 34/34, uninstall 3/3, indicator absent Chromium desktop + TV 1080
+**63/63** with no `Trakt/Items` request on any page (the earlier `ERR_ABORTED` did not recur), `logs` 1/1, downgrade to
+`capische/jellyfin-mod:0.1.0.0` 3/3 (Health ok `0.1.0.0`; 30 migrations with the Trakt one last and its table left
+as an orphan with its 2 rows; no ERR line). Torn down and proved gone (0 containers, 0 networks, state directory and
+local secret copies gone, 38096 and 38130–38139 free; the one remaining `standins.mjs` belongs to
+`jellyfinmod-live48096`).
 
-**Deployed where:** 28096 is unchanged by this round: it still runs the coordinator's pre-review Q16 build — Health
-`Version` `0.1.0.0`, bundle `1eb0b4c6cd61`, takeover `patched`, `Trakt: {Installed: false}`, `trakt.history` listed,
-retention `enabled: false`, 14 days, revision 49 (read 2026-09-26 after the pause). Disposable environment: gone
-(0 containers, 0 networks, state directory gone, nothing on 38096 or 38130–38139, no Trakt stand-in; the one
-`node standins.mjs` on the host belongs to `jellyfinmod-live48096`).
+**Found and classified: upstream socket errors.** The first `logs` run failed on 20 `[ERR] … Token is required. URL
+GET /socket.` lines. A probe on the same container (`review/socket-probe.json`) signed in through the form, waited, and
+signed out, first with the takeover off (stock Jellyfin Web 12.0.0 from the image), then on: both clients logged two
+"Token is required" while a fresh page loads before sign-in and three "Invalid token" when a page stays open after a
+sign-out — identical, so upstream (b). `log-errors.sh` now counts exactly those two `/socket` lines apart as
+"upstream socket"; any other ERR on `/socket` is still reported. The re-run passed.
 
-**Ids `verify-q16.md` must get:** plugin commits `2fe1c08`, `fd20ebb`, `ee2ee3b`, `34bd383` (version 0.1.0.1); web
-`192aad73b0`, `a708bc976e`, `a25b484b4e` (bundle's web commit), `df06405061` and this docs commit; bundle `c0f3f20de943`, DLL
-`769ebfef72aa1615`, zip `9dbe9c37e01cf514`, image `6d8e56eeac31`; 28096 Health `Version` `0.1.0.1`, bundle
-`c0f3f20de943`, `Trakt: {Installed: false}` without `Version`. New checks: part S 13 suites; V4 the Health-version
-row; V4b the `nfo` step (8 PASS + INFO); V7 no `Trakt/Items` request when not installed; V8b `logs`; V8c the
-downgrade (MemAvailable ≥ 1.2 GB, `fresh-env.sh downgrade capische/jellyfin-mod:0.1.0.0`, step `downgrade`: Health ok
-`0.1.0.0`, orphan `TraktObservations`, no ERR line); W0/W1 the new 28096 build, and W1 expects no Trakt request.
+**28096** (acceptance; stop → copy the four files → start; retention read before and after each step: `enabled:
+false`, 14 days, revision 49 throughout; users nata, oleksii, papa, vika; no Trakt plugin; no JellyfinMod title):
+Health `0.1.0.1`, bundle `a21d1547277d`, takeover `patched`, `Trakt: {Installed: false}`, `trakt.history` listed, no
+ERR/FTL at start. `degrade` against the committed 2026-09-25 baselines failed the **episode** geometry in all four
+layouts in both browsers (overview 100–134 px lower). The episode page now shows JellyfinMod's version rows (the
+series' catalog entry answers with that episode's version, rendered about 0.6 s after the page), which the 2026-09-25
+runs did not. **A/B:** the released build (`backups/pre-q16/plugin`, bundle `ee34ba8ae7a3`) deployed the same way
+showed the same episode positions (628/731/608/595) in 22/22 per browser, so the change is 28096's data since
+2026-09-25, not Q16 — those runs are the fresh baselines `review/28096-released-baseline-rebased-<browser>.json`. The
+Q16 build redeployed and run against them: **37/38 in each browser**; the one row is the known TV 1080 movie walk,
+geometry equal and walk entry 6 alone differing ("Keep" in the released build, "Keep indefinitely" in this one —
+retention's `10ddea6478`, not Q16). The container's ERR lines during these runs were the upstream socket line only.
+28096 is left on the Q16 build.
 
-**Exact next step:** (1) `ssh pi` `q16-run-all.sh PhaseTenRetentionIntegration PhaseFourIntegration` on an idle host
-(nothing else running on `q16-src`); (2) a disposable run (MemAvailable ≥ 1.2 GB first): `up`, `stage-trakt`,
-`setup`, `install`, `authorize`, `sync`, `uninstall`, Chromium absent pass (desktop, TV 1080), `logs`,
-`fresh-env.sh downgrade capische/jellyfin-mod:0.1.0.0`, `downgrade`, `down`; (3) refresh
-`backups/q16-package` from `artifacts/release-q16/package`, deploy to 28096 (stop → copy the four files → start;
-retention read before and after), run `degrade` with `JELLYFINMOD_Q16_BUILD=q16` in Chromium and Chrome against the
-committed released baselines (the "Keep indefinitely" walk row is the known retention difference); (4) update
-`verify-q16.md` with the ids and checks above; (5) replace this handover with the outcome; (6) a Fable-high review of
-the fix commits, then the Sonnet verification.
+**Next.** A Codex (`gpt-6-astra`, high) review of the fix delta, then the Sonnet-high verification from
+`.claude/briefs/verify-q16.md`, then push and merge.
 
 #### Q16 evidence — 2026-09-25
 
