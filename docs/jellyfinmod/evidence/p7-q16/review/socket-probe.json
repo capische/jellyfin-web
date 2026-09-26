@@ -1,0 +1,36 @@
+{
+ "probe": "P7.Q16 review round 2: a fresh Chromium page on the disposable container's /web/ signs in through the form, waits 4 s on Home, calls ApiClient.logout() and stays open 6 s; the container's /socket ERR lines counted per phase, first with the takeover off (stock Jellyfin Web 12.0.0 from the image), then on (the JellyfinMod client); the takeover restored after.",
+ "image": "jellyfinmod-q16:candidate e2d7ed995b6f",
+ "runs": [
+  {
+   "mode": "stock",
+   "patch": 200,
+   "servedMod": false,
+   "socketErrorsFromLoadToHome": {
+    "tokenRequired": 2,
+    "invalidToken": 0
+   },
+   "socketErrorsFromSignOutOn": {
+    "tokenRequired": 0,
+    "invalidToken": 3
+   }
+  },
+  {
+   "mode": "mod",
+   "patch": 200,
+   "servedMod": true,
+   "socketErrorsFromLoadToHome": {
+    "tokenRequired": 2,
+    "invalidToken": 0
+   },
+   "socketErrorsFromSignOutOn": {
+    "tokenRequired": 0,
+    "invalidToken": 3
+   }
+  },
+  {
+   "restoredTakeover": 200,
+   "servedMod": true
+  }
+ ]
+}

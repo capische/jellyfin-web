@@ -1,0 +1,2584 @@
+{
+ "runs": [
+  {
+   "step": "setup",
+   "browser": "chromium",
+   "at": "2026-09-26T05:41:05.602Z",
+   "results": [
+    {
+     "check": "A fresh server has not run its first-run wizard",
+     "verdict": "PASS",
+     "detail": {
+      "version": "12.0.0"
+     }
+    },
+    {
+     "check": "The first-run wizard completes with a throwaway administrator",
+     "verdict": "PASS",
+     "detail": {
+      "user": 204,
+      "complete": 204
+     }
+    },
+    {
+     "check": "Library Movies on the fixture folder",
+     "verdict": "PASS",
+     "detail": {
+      "status": 204
+     }
+    },
+    {
+     "check": "Library Shows on the fixture folder",
+     "verdict": "PASS",
+     "detail": {
+      "status": 204
+     }
+    },
+    {
+     "check": "A second, ordinary user exists",
+     "verdict": "PASS",
+     "detail": {
+      "status": 200
+     }
+    },
+    {
+     "check": "The fixtures carry the ids the Trakt stand-in reports",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "Tmdb": "990101"
+      },
+      "unwatched": {
+       "Tmdb": "990103"
+      },
+      "series": {
+       "Tvdb": "990102"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "step": "install",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "at": "2026-09-26T05:41:33.837Z",
+   "results": [
+    {
+     "check": "Trakt is not installed before the run",
+     "verdict": "PASS"
+    },
+    {
+     "check": "The server's catalog offers Trakt 31.0.0.0 for this server",
+     "verdict": "PASS",
+     "detail": {
+      "guid": "4fe3201ed6ae4f2e8917e12bda571281",
+      "versions": [
+       {
+        "version": "31.0.0.0",
+        "targetAbi": "12.0.0.0",
+        "repository": "Jellyfin Stable"
+       },
+       {
+        "version": "30.0.0.0",
+        "targetAbi": "10.11.9.0",
+        "repository": "Jellyfin Stable"
+       },
+       {
+        "version": "29.0.0.0",
+        "targetAbi": "10.11.8.0",
+        "repository": "Jellyfin Stable"
+       }
+      ]
+     }
+    },
+    {
+     "check": "Dashboard → Plugins → Trakt → Install puts it on the server",
+     "verdict": "PASS",
+     "detail": {
+      "version": "31.0.0.0",
+      "status": "Restart"
+     }
+    },
+    {
+     "check": "After a restart the installed copy reports id 4fe3201e-d6ae-4f2e-8917-e12bda571281, 31.0.0.0, Active",
+     "verdict": "PASS",
+     "detail": {
+      "id": "4fe3201ed6ae4f2e8917e12bda571281",
+      "version": "31.0.0.0",
+      "status": "Active"
+     }
+    },
+    {
+     "check": "JellyfinMod Health reports Trakt installed with its version and lists trakt.history",
+     "verdict": "PASS",
+     "detail": {
+      "trakt": {
+       "Installed": true,
+       "Version": "31.0.0.0"
+      },
+      "bundle": "a21d1547277d",
+      "plugin": "0.1.0.1"
+     }
+    }
+   ]
+  },
+  {
+   "step": "authorize",
+   "browser": "chromium",
+   "at": "2026-09-26T05:41:35.723Z",
+   "results": [
+    {
+     "check": "The Trakt plugin starts device authorization and returns a user code",
+     "verdict": "PASS"
+    },
+    {
+     "check": "The code is approved on the stand-in, as a user entering it on trakt.tv would",
+     "verdict": "PASS"
+    },
+    {
+     "check": "The Trakt plugin reports the administrator authorized",
+     "verdict": "PASS"
+    },
+    {
+     "check": "The stand-in issued one token through the device flow; every call carried the plugin's API key and version",
+     "verdict": "PASS",
+     "detail": {
+      "routes": [
+       "POST /oauth/device/code 200",
+       "POST /oauth/device/token 400",
+       "POST /oauth/device/token 200"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "step": "sync",
+   "browser": "chromium",
+   "at": "2026-09-26T05:41:55.799Z",
+   "results": [
+    {
+     "check": "Before the sync the administrator has not played the movie or the episode",
+     "verdict": "PASS",
+     "detail": {
+      "movie": false,
+      "episode": false
+     }
+    },
+    {
+     "check": "Before the sync JellyfinMod reports Trakt installed and no history anywhere",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "series": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "season1": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "season2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode3": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "The Trakt plugin's import task is registered",
+     "verdict": "PASS",
+     "detail": {
+      "name": "Import watched states and playback progress from trakt.tv"
+     }
+    },
+    {
+     "check": "\"Import watched states and playback progress from trakt.tv\" completes",
+     "verdict": "PASS",
+     "detail": {
+      "status": "Completed"
+     }
+    },
+    {
+     "check": "Jellyfin's database now has the movie and S01E01 played for the administrator, and nothing else",
+     "verdict": "PASS",
+     "detail": {
+      "movie": true,
+      "unwatched": false,
+      "episode": true,
+      "episode2": false,
+      "episode3": false
+     }
+    },
+    {
+     "check": "The second user's data is untouched",
+     "verdict": "PASS",
+     "detail": {
+      "movie": false,
+      "episode": false
+     }
+    },
+    {
+     "check": "Jellyfin's API view of the same user data before a restart (information: upstream cache)",
+     "verdict": "INFO",
+     "detail": {
+      "movie": false,
+      "episode": false
+     }
+    },
+    {
+     "check": "JellyfinMod reports Trakt history for the movie, S01E01, season 1 and the series",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8212757Z"
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "series": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "season1": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "season2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "episode2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode3": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "…and none for the unwatched movie, S01E02, S02E01 or season 2",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8212757Z"
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "series": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "season1": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "season2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+      },
+      "episode2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode3": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "The second user sees no Trakt history on any of them",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "series": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "season1": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "season2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode2": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      },
+      "episode3": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "Anonymous is 401",
+     "verdict": "PASS",
+     "detail": {
+      "status": 401
+     }
+    },
+    {
+     "check": "Health tells an ordinary user Trakt is installed but not its version; an administrator sees the version",
+     "verdict": "PASS",
+     "detail": {
+      "viewer": {
+       "Installed": true
+      },
+      "admin": {
+       "Installed": true,
+       "Version": "31.0.0.0"
+      }
+     }
+    },
+    {
+     "check": "An unknown item is 404",
+     "verdict": "PASS",
+     "detail": {
+      "status": 404
+     }
+    },
+    {
+     "check": "The sync called the stand-in exactly as SyncFromTraktTask does, authorized, with the plugin's headers",
+     "verdict": "PASS",
+     "detail": {
+      "routes": [
+       "POST /oauth/device/code 200",
+       "POST /oauth/device/token 400",
+       "POST /oauth/device/token 200",
+       "GET /sync/watched/movies 200",
+       "GET /sync/watched/shows 200",
+       "GET /sync/history/movies 200",
+       "GET /sync/history/episodes 200",
+       "GET /sync/playback/movies 200",
+       "GET /sync/playback/episodes 200"
+      ]
+     }
+    },
+    {
+     "check": "After a restart Jellyfin's API reports the movie and S01E01 played, nothing else, and JellyfinMod's answers are unchanged",
+     "verdict": "PASS",
+     "detail": {
+      "movie": true,
+      "episode": true,
+      "episode2": false,
+      "unwatched": false
+     }
+    }
+   ]
+  },
+  {
+   "step": "nfo",
+   "browser": "chromium",
+   "at": "2026-09-26T05:42:16.893Z",
+   "results": [
+    {
+     "check": "Before: JellyfinMod has Trakt history for the Trakt movie and none for the other",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8212757Z"
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "Jellyfin's NFO user for watch data is the administrator",
+     "verdict": "PASS",
+     "detail": {
+      "status": 204
+     }
+    },
+    {
+     "check": "The Trakt import task is idle while the NFO files are read",
+     "verdict": "PASS",
+     "detail": {
+      "state": "Idle"
+     }
+    },
+    {
+     "check": "The refresh read both .nfo files (their plot marker is on the items) while the Trakt task was idle",
+     "verdict": "PASS"
+    },
+    {
+     "check": "Jellyfin's database after the NFO refresh (information: whether 12.0.0 saved the NFO watch state)",
+     "verdict": "INFO",
+     "detail": {
+      "unwatchedPlayed": null,
+      "traktMoviePlayed": 1
+     }
+    },
+    {
+     "check": "The NFO refresh records nothing: no Trakt history for the NFO-watched movie",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8212757Z"
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "…and deletes nothing: the Trakt movie keeps its Trakt history, from the same time",
+     "verdict": "PASS",
+     "detail": {
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:41:37.8212757Z"
+      },
+      "unwatched": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": false,
+       "lastSyncedAt": null
+      }
+     }
+    },
+    {
+     "check": "A real Trakt sync afterwards still records: it marks the Trakt movie played again and JellyfinMod records that import",
+     "verdict": "PASS",
+     "detail": {
+      "unmark": 200,
+      "task": "Completed",
+      "movie": {
+       "status": 200,
+       "installed": true,
+       "hasHistory": true,
+       "lastSyncedAt": "2026-09-26T05:42:14.9329977Z"
+      }
+     }
+    },
+    {
+     "check": "The NFO-watched movie stays without Trakt history after the sync",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "step": "browser",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "expect": "present",
+   "at": "2026-09-26T05:43:06.317Z",
+   "results": [
+    {
+     "check": "desktop admin movie: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 21,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 634,
+       "overview": 634,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin episode: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 21,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 524,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin season1: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 21,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 463,
+       "overview": null,
+       "childrenSection": 485
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin series: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 21,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 463,
+       "overview": null,
+       "childrenSection": 816
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 598,
+       "overview": 598,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 7,
+      "benignRequests": []
+     }
+    },
+    {
+     "check": "desktop viewer movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 560,
+       "overview": 560,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 794
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 560,
+       "overview": 560,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 7,
+      "benignRequests": [
+       {
+        "url": "/JellyfinMod/Queue",
+        "status": 403
+       }
+      ]
+     }
+    },
+    {
+     "check": "tv1080 admin movie: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 28,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 575,
+       "overview": 575,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin movie: the D-pad never lands on the indicator",
+     "verdict": "PASS",
+     "detail": {
+      "walk": [
+       "button|button-flat.btnPlay.detailButton|resume|Play|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowDown>button|emby-button.raised||Search releases|",
+       "ArrowRight>button|emby-button.raised||Get another quality|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowUp>button|emby-button.raised||Search releases|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowUp>button|button-flat.btnPlay.detailButton|resume|Play|"
+      ]
+     }
+    },
+    {
+     "check": "tv1080 admin episode: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 28,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 468,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin season1: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 28,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 359,
+       "overview": null,
+       "childrenSection": 389
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin series: the indicator shows, says Trakt and when, is not focusable and fits",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": true,
+      "text": "Trakt Watch history synced · 9/26/2026",
+      "title": "Watch history synced from Trakt · 9/26/2026",
+      "focusable": false,
+      "insideViewportWidth": true,
+      "fontEm": 0.9,
+      "mount": {
+       "children": 1,
+       "height": 28,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 346,
+       "overview": null,
+       "childrenSection": 888
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 527,
+       "overview": 527,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 7,
+      "benignRequests": []
+     }
+    },
+    {
+     "check": "tv1080 viewer movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 476,
+       "overview": 476,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 318,
+       "overview": null,
+       "childrenSection": 860
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 476,
+       "overview": 476,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 7,
+      "benignRequests": [
+       {
+        "url": "/JellyfinMod/Queue",
+        "status": 403
+       }
+      ]
+     }
+    },
+    {
+     "check": "The API agrees: installed true and history only where shown",
+     "verdict": "PASS",
+     "detail": {
+      "answers": {
+       "movie": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": true,
+        "lastSyncedAt": "2026-09-26T05:42:14.9329977Z"
+       },
+       "episode": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": true,
+        "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+       },
+       "season1": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": true,
+        "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+       },
+       "series": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": true,
+        "lastSyncedAt": "2026-09-26T05:41:37.8704175Z"
+       },
+       "unwatched": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "episode2": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "season2": {
+        "status": 200,
+        "installed": true,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       }
+      },
+      "trakt": {
+       "Installed": true,
+       "Version": "31.0.0.0"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "step": "uninstall",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "at": "2026-09-26T05:43:39.430Z",
+   "results": [
+    {
+     "check": "No page error in the Dashboard",
+     "verdict": "PASS",
+     "detail": {
+      "errors": []
+     }
+    },
+    {
+     "check": "After Uninstall and a restart the server has no Trakt plugin",
+     "verdict": "PASS",
+     "detail": {
+      "remaining": null
+     }
+    },
+    {
+     "check": "Health reports Trakt absent",
+     "verdict": "PASS",
+     "detail": {
+      "trakt": {
+       "Installed": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "step": "browser",
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "expect": "absent",
+   "at": "2026-09-26T05:44:28.097Z",
+   "results": [
+    {
+     "check": "desktop admin movie: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 598,
+       "overview": 598,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin episode: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin season1: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin series: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 794
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin unwatched: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 598,
+       "overview": 598,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin episode2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin season2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop admin season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop admin: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 0,
+      "benignRequests": []
+     }
+    },
+    {
+     "check": "desktop viewer movie: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 560,
+       "overview": 560,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer episode: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer season1: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer series: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 794
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer unwatched: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 560,
+       "overview": 560,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer episode2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 498,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer season2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "desktop viewer season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 332,
+       "genres": 441,
+       "overview": null,
+       "childrenSection": 464
+      },
+      "layout": "desktop"
+     }
+    },
+    {
+     "check": "desktop viewer: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 0,
+      "benignRequests": [
+       {
+        "url": "/JellyfinMod/Queue",
+        "status": 403
+       }
+      ]
+     }
+    },
+    {
+     "check": "tv1080 admin movie: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 527,
+       "overview": 527,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin movie: the D-pad never lands on the indicator",
+     "verdict": "PASS",
+     "detail": {
+      "walk": [
+       "button|button-flat.btnPlay.detailButton|resume|Play|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowDown>button|emby-button.raised||Search releases|",
+       "ArrowRight>button|emby-button.raised||Get another quality|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowUp>button|emby-button.raised||Search releases|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowUp>button|button-flat.btnPlay.detailButton|resume|Play|"
+      ]
+     }
+    },
+    {
+     "check": "tv1080 admin movie: the D-pad walk equals the walk with the indicator shown",
+     "verdict": "PASS",
+     "detail": {
+      "with": [
+       "button|button-flat.btnPlay.detailButton|resume|Play|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowDown>button|emby-button.raised||Search releases|",
+       "ArrowRight>button|emby-button.raised||Get another quality|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowUp>button|emby-button.raised||Search releases|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowUp>button|button-flat.btnPlay.detailButton|resume|Play|"
+      ],
+      "without": [
+       "button|button-flat.btnPlay.detailButton|resume|Play|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowDown>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowDown>button|emby-button.raised||Search releases|",
+       "ArrowRight>button|emby-button.raised||Get another quality|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowDown>button|emby-button.jfmod-historyToggle||▸ History · Discovered in Jell|",
+       "ArrowUp>button|emby-button.raised||Search releases|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--add||+Get another quality|",
+       "ArrowUp>button|jfmod-versionRow.jfmod-versionRow--selected||●480pH.264 · AAC mono · 2 MBDe|",
+       "ArrowUp>button|button-flat.btnPlay.detailButton|resume|Play|"
+      ]
+     }
+    },
+    {
+     "check": "tv1080 admin episode: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin season1: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin series: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 318,
+       "overview": null,
+       "childrenSection": 860
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin unwatched: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 527,
+       "overview": 527,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin episode2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin season2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 admin season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 admin: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 0,
+      "benignRequests": []
+     }
+    },
+    {
+     "check": "tv1080 viewer movie: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer movie: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 476,
+       "overview": 476,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer episode: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer episode: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer season1: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer season1: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer series: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer series: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 318,
+       "overview": null,
+       "childrenSection": 860
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer unwatched: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer unwatched: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 181,
+       "genres": 476,
+       "overview": 476,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer episode2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer episode2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 221,
+       "genres": 434,
+       "overview": null,
+       "childrenSection": null
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer season2: without the Trakt plugin the page asks JellyfinMod nothing about Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "requests": 0
+     }
+    },
+    {
+     "check": "tv1080 viewer season2: no indicator, the empty mount takes no space",
+     "verdict": "PASS",
+     "detail": {
+      "indicator": false,
+      "text": null,
+      "title": null,
+      "focusable": false,
+      "insideViewportWidth": null,
+      "fontEm": null,
+      "mount": {
+       "children": 0,
+       "height": 0,
+       "firstInSection": true
+      },
+      "horizontalOverflow": false,
+      "geometry": {
+       "buttons": 194,
+       "genres": 331,
+       "overview": null,
+       "childrenSection": 361
+      },
+      "layout": "tv"
+     }
+    },
+    {
+     "check": "tv1080 viewer: no failed JellyfinMod request and no page error",
+     "verdict": "PASS",
+     "detail": {
+      "failed": [],
+      "errors": [],
+      "traktRequests": 0,
+      "benignRequests": [
+       {
+        "url": "/JellyfinMod/Queue",
+        "status": 403
+       }
+      ]
+     }
+    },
+    {
+     "check": "The API agrees: installed false and history only where shown",
+     "verdict": "PASS",
+     "detail": {
+      "answers": {
+       "movie": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "episode": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "season1": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "series": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "unwatched": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "episode2": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       },
+       "season2": {
+        "status": 200,
+        "installed": false,
+        "hasHistory": false,
+        "lastSyncedAt": null
+       }
+      },
+      "trakt": {
+       "Installed": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "step": "logs",
+   "browser": "chromium",
+   "at": "2026-09-26T05:44:40.061Z",
+   "results": [
+    {
+     "check": "The container logged no ERR or FTL line, less the one start-up repository 503 per start",
+     "verdict": "FAIL",
+     "detail": {
+      "lines": [
+       "[05:43:41.097] [ERR] [25] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:43:50.546] [ERR] [11] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:43:51.562] [ERR] [25] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:44:00.460] [ERR] [9] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:44:01.475] [ERR] [9] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:44:16.063] [ERR] [11] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "[05:44:17.078] [ERR] [9] Jellyfin.Api.Middleware.ExceptionMiddleware: Error processing request: Token is required. URL GET /socket.",
+       "allowed: 1, reported: 20"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "step": "logs",
+   "browser": "chromium",
+   "at": "2026-09-26T05:48:35.244Z",
+   "results": [
+    {
+     "check": "The container logged no ERR or FTL line, less the one start-up repository 503 per start",
+     "verdict": "PASS",
+     "detail": {
+      "lines": [
+       "allowed: 1, upstream socket: 50, reported: 0"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "step": "downgrade",
+   "browser": "chromium",
+   "at": "2026-09-26T05:48:51.108Z",
+   "results": [
+    {
+     "check": "After the downgrade the 0.1.0.0 plugin answers Health ok and knows nothing of Trakt",
+     "verdict": "PASS",
+     "detail": {
+      "status": 200,
+      "version": "0.1.0.0",
+      "ok": true
+     }
+    },
+    {
+     "check": "The TraktObservations table and its rows stay as an orphan the older plugin ignores",
+     "verdict": "PASS",
+     "detail": {
+      "migrations": 30,
+      "last": "20260925104923_PhaseSevenTraktObservations",
+      "trakt": true,
+      "rows": 2
+     }
+    },
+    {
+     "check": "The downgraded container logged no ERR or FTL line (less the start-up repository 503)",
+     "verdict": "PASS",
+     "detail": {
+      "lines": [
+       "allowed: 0, upstream socket: 0, reported: 0"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
