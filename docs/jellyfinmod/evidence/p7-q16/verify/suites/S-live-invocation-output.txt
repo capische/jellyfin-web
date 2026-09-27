@@ -1,4 +1,4 @@
-Live captured stdout of `ssh pi "cd /home/pi/media/test/jellyfinmod/build && timeout 590 ./q16-run-all.sh 2>&1 | tail -60"`
+Live captured stdout of `ssh pi "cd <test-host>:<build-dir> && timeout 590 ./q16-run-all.sh 2>&1 | tail -60"`
 (the actual invocation run for this verification, host time ~2026-09-26 22:02-22:13 CDT):
 
 PhaseZeroSmoke exit=0
@@ -33,7 +33,7 @@ this verification pass, and its "PhaseFourIntegration exit=0" line is not eviden
 
 --- Addendum: 13th suite ---
 The coordinator separately ran the 13th suite as root on the test host:
-  `./q16-run-all.sh PhaseFourIntegration` from /home/pi/media/test/jellyfinmod/build, source q16-src at 5b2c969.
+  `./q16-run-all.sh PhaseFourIntegration` from <test-host>:<build-dir>, source q16-src at 5b2c969.
 Reported output: `PhaseFourIntegration exit=0`.
 
 Independently verified on the host (not taken on trust):
