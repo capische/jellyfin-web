@@ -266,43 +266,270 @@ until Sunday 12:40.
   - **Running when paused:** PhaseFive, PhaseSix and PhaseSevenTrakt plus `entrypoint-install.sh` on the squashed plugin
     tip, in the Pi's offline suite container. The container does not touch 48096. Its result lands in the suite build
     directory's `live-logs/squash-summary.txt`.
-  - **Not yet run:** the new `standins/live-scan-setup.py`, `live-scan-all.sh` and `live-scan-teardown.sh` are committed
-    but untested. They make the checklist's scan items one command each.
-- **Next, in order:**
-  1. Read `squash-summary.txt`: three `exit=0` lines and `PASS: entrypoint plugin install rule (12 cases)`.
-  2. Test the three new scan scripts once on 48096 (setup, run-all, teardown). Add a `live-upgrade.sh` for checklist
-     item 2a.
-  3. Rewrite the checklist below with ids and exact commands for the Sonnet verifier.
-  4. Report the squashed tips to the coordinator. The Sonnet verification follows, then the merge on the
-     coordinator's go-ahead.
+- **Resumed 2026-09-28 07:40 Sydney (Opus, medium effort, budget fallback):**
+  - `squash-summary.txt`: `PhaseFiveIntegration exit=0`, `PhaseSixIntegration exit=0`, `PhaseSevenTraktIntegration exit=0`,
+    `PASS: entrypoint plugin install rule (12 cases)`.
+  - **Scan scripts, one run on 48096 (07:50–08:30).** `live-scan-setup.py`: 22 fixtures staged, 4 movies and 4 series added.
+    The first `live-scan-all.sh` run failed every case at once: `run` passed its log name to `live-scan.py` as the
+    case (harness; fixed, `run` now shifts it). No case had grabbed anything. The re-run passed every case in 30 minutes:
+    ordinary, overlapping, delay, restart, cancel, cancel-later, related-stream, series-siblings (Shows' real-time
+    monitoring switched on and off, 204 each), and `unrelated-stream` refused with exit 2. `live-scan-teardown.sh` then
+    printed all zeros, 0 scan releases, the catalog restored and delay 60, poll 15, real-time off everywhere; exit 0.
+  - **Release image from the squashed tips.** Web `7bf3356f42` built on the workstation, bundle `76d08b85c7eb`. Plugin
+    `8d3c6c0` built in the Pi's offline SDK container and packaged by `build-release.sh --no-build`. The result is
+    `jellyfinmod-upgrade:candidate` (id `e58aad6d04f3`, plugin build `2026-09-27T22:30:18Z`).
+  - **`live-upgrade.sh` (new), one run: `PASS: in-place upgrade (21 checks)`, exit 0.** Start 1 (Friday's
+    `606ca92eb2dd`): installed, build `2026-09-25T06:09:17Z`, bundle `21c0905b4568`, neither new migration. Start 2:
+    "replaced JellyfinMod 0.1.0.0 build 2026-09-25T06:09:17Z with build 2026-09-27T22:30:18Z", both migrations, Health
+    0.1.0.0 Ok, bundle `76d08b85c7eb` served at `/web/`. Start 3: "does not replace it", build kept. No `[ERR]`/`[FTL]`
+    line; the container, the config copy and the port are gone afterwards. The script's first run failed 4 of its own
+    checks, all harness: Jellyfin rewrites `meta.json` timestamps with seven fractional digits, and `/web/` names its
+    bundle in `<meta name="jellyfinmod-web">`, not in a served `jellyfinmod-web.json`.
+  - `live-state.sh` (new) prints the instance's state read-only, for rows C2, C5 and C12 below.
+  - **Not done:** deploying the candidate to 48096. This agent's permission to change the running instance was refused,
+    so 48096 still runs image `6beb926ae2a8` with the plugin build `2026-09-27T07:51:58Z` and bundle `30e16f3d5f05`. Row
+    C5 does the deploy once the coordinator allows it.
+- **Next:** the coordinator reports the tips. The Sonnet verifier runs the checklist below, then the merge follows on the
+  coordinator's go-ahead.
 
 ### Final re-run checklist (Sonnet, high effort, on 48096 only)
 
-Pass means every item below holds exactly; report any failure verbatim.
+Pass means every row's output matches its **Expect** exactly, where `…` stands for any text. On the first mismatch,
+stop, run C11 and C12 so nothing is left behind, and report the row id and its output verbatim. Do not diagnose, retry
+with changes or relax a row.
 
-1. On the Pi, the suite runner exits 0 for `PhaseFiveIntegration`, `PhaseSixIntegration` and
-   `PhaseSevenTraktIntegration` on the reviewed plugin tip.
-2. 48096 runs that tip from `plugins/JellyfinMod_0.1.0.0/` (no `JellyfinMod_0.1.0.1` folder). `/health` is `Healthy`, and
-   `/JellyfinMod/Health` reports `0.1.0.0` with `Ok: true`. `__EFMigrationsHistory` lists
-   `20260927031241_PhaseFiveScanAnchor` and `20260925104923_PhaseSevenTraktObservations`.
-2a. In-place upgrade, in a disposable container on a loopback port. Use a config copy without the plugin database or
-   folder, and remove it afterwards:
-   - Start 1, `capische/jellyfin-mod:0.1.0.0`: the log says `installed JellyfinMod 0.1.0.0`; the last migration is
-     `PhaseSevenProwlarr`.
-   - Start 2, the image built from the reviewed tip: the log says `replaced JellyfinMod 0.1.0.0 build … with build …`.
-     Both migrations above are applied. Health is `0.1.0.0`, `Ok: true`, with `trakt.history`. The bundle id differs from
-     start 1 and matches the one served at `/web/`.
-   - Start 3, the same image: the log says `does not replace it`.
-   - `tests/image/entrypoint-install.sh <new image>` ends `PASS: entrypoint plugin install rule (12 cases)`.
-   - `tests/image/entrypoint-rewrite.sh <new image>` ends `PASS`.
-3. Stage fresh 12 s fixtures (`FIXTURE_SECONDS=12 live-stage.sh`, runtime-1 catalog titles). Then each of these prints
-   `all checks passed` and exits 0:
-   - `ordinary`, `overlapping`, `delay … 120`, `restart`, `cancel`, `cancel-later`, `related-stream` (12 episodes);
-   - `series-siblings`, with Shows' real-time monitoring on and the container restarted before it, and restored after.
-4. `live-scan.py unrelated-stream` exits 2 and prints `unknown case`.
-5. `live-focus.mjs` with `JELLYFINMOD_BROWSER=chromium`, then `chrome`: 20 rows, all `PASS`, none `NOT VERIFIED`.
-6. `live-cleanup.py <shared dir>` prints `catalog entries 0 native movies/series/episodes 0 torrents of this instance 0
-   files 0`. The staged `fx-scan-*` folders and feed releases are removed, and the catalog file is restored.
-7. `LibraryMonitorDelay` is 60, `importPollSeconds` 15, and every library has `EnableRealtimeMonitor` false.
+**Rules.**
+- Only 48096 (compose project `jellyfinmod-live`) and the disposable `jellyfinmod-upgrade` on port 58096.
+- Never touch 8096, 18096 or 28096, never stop or restart `transmission-acceptance`, and never touch 28096's two torrents.
+- Never print the env file, credentials or a process environment: no `pgrep -fl`, no `ps e`, no `env`.
+- Wait by wall clock only: `T=$(( $(date +%s) + <seconds> )); until [ "$(date +%s)" -ge "$T" ]; do sleep 30; done`.
 
-- **Runner:** `scripts/jellyfinmod-e2e/live-*.mjs` (browser) and `standins/live-*.{sh,py}` (host). Host paths come from an ignored local env file (`JFMOD_LIVE_*`); the helpers on the host resolve their state directory from their own location.
+**Placeholders.**
+- `<LIVE_ENV>`: the ignored 0600 env file the coordinator names, outside the repository. It exports `JFMOD_SSH`,
+  `JFMOD_LIVE_ROOT`, `JFMOD_LIVE_SHARED`, `JFMOD_LIVE_BUILD`, `JELLYFINMOD_LIVE_URL`, `JELLYFINMOD_LIVE_FIXTURE_FILE` and
+  `JELLYFINMOD_LIVE_SSH`.
+- `<WEB>` and `<PLUGIN>`: the two worktrees.
+- `<OUT>`: a scratch folder for results.
+
+**Where commands run.** Every workstation command runs in one shell after C0. Host commands run through
+`H <<'EOF' … EOF`: the test host's login shell is fish, and `H` hands the block to bash with `$1` = state root,
+`$2` = suite build directory and `$3` = shared folder.
+
+**Reference build.** Every row uses the image built on 2026-09-28:
+- `jellyfinmod-upgrade:candidate`, id `e58aad6d04f3`;
+- plugin `8d3c6c0`, build `2026-09-27T22:30:18Z`;
+- web `7bf3356f42`, bundle `76d08b85c7eb`.
+
+Web commits after `7bf3356f42` change only harness and docs. If the coordinator names a different plugin tip or a web
+tip that changes `src/`, stop and report; the image must be rebuilt first.
+
+**C0. Setup (workstation).**
+```sh
+set -a; . <LIVE_ENV>; set +a
+H() { ssh "$JFMOD_SSH" bash -s -- "$JFMOD_LIVE_ROOT" "$JFMOD_LIVE_BUILD" "$JFMOD_LIVE_SHARED"; }
+git -C <PLUGIN> rev-parse --short HEAD
+git -C <WEB> diff --stat 7bf3356f42 HEAD -- src | wc -l
+(cd <WEB>/scripts/jellyfinmod-e2e/standins && rsync -a live-scan-setup.py live-scan-all.sh live-scan-teardown.sh live-upgrade.sh live-state.sh "$JFMOD_SSH:$JFMOD_LIVE_ROOT/standins/bin/")
+H <<'EOF'
+awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo
+EOF
+```
+Expect:
+- `8d3c6c0`
+- `0`
+- the rsync prints nothing
+- a number ≥ `1229`, the 1.2 GB floor. Repeat this memory line before C3, C4, C5 and C8.
+
+**C1. Suites on the squashed plugin tip (already run).**
+```sh
+H <<'EOF'
+cat "$2/live-logs/squash-summary.txt"
+EOF
+```
+Expect these lines:
+- `PhaseFiveIntegration exit=0`
+- `PhaseSixIntegration exit=0`
+- `PhaseSevenTraktIntegration exit=0`
+- `PASS: entrypoint plugin install rule (12 cases)`
+- `squash-done`
+
+**C2. Baseline state.**
+```sh
+H <<'EOF'
+"$1/standins/bin/live-state.sh"
+EOF
+```
+Expect:
+- `health 0.1.0.0 True bundle …`
+- `automation enabled False`
+- `JellyfinMod items 0 entries 0`
+- `timing LibraryMonitorDelay 60 importPollSeconds 15 real-time on none`
+- `migration 20260925104923_PhaseSevenTraktObservations`
+- `migration 20260927031241_PhaseFiveScanAnchor`
+- `plugin folder JellyfinMod_0.1.0.0`, as the only `plugin folder` line
+- `leftovers upgrade container 0 upgrade copy 0 scan fixtures 0 catalog backup 0`
+- `started transmission-acceptance …` and `started jellyfinmod-acceptance …`. Note both times; C12 compares them.
+
+**C3. The candidate image and the entrypoint tests.**
+```sh
+H <<'EOF'
+docker image inspect jellyfinmod-upgrade:candidate --format '{{.Id}}' | cut -c8-19
+docker run --rm --entrypoint cat jellyfinmod-upgrade:candidate /opt/jellyfinmod/plugin/meta.json | grep -o '"timestamp": "[^"]*"'
+cd "$2/upg-src" && bash tests/image/entrypoint-install.sh jellyfinmod-upgrade:candidate 2>&1 | tail -1
+bash tests/image/entrypoint-rewrite.sh jellyfinmod-upgrade:candidate 2>&1 | tail -1
+EOF
+```
+Expect:
+- `e58aad6d04f3`
+- `"timestamp": "2026-09-27T22:30:18Z"`
+- `PASS: entrypoint plugin install rule (12 cases)`
+- `PASS: entrypoint system.xml rewrite (normal, full volume, read-only, one-start backup)`
+
+**C4. In-place upgrade from the first 0.1.0.0 (disposable, about 5 minutes).**
+```sh
+H <<'EOF'
+ss -ltnH 'sport = :58096' | wc -l
+cd "$1/standins/bin" && ./live-upgrade.sh jellyfinmod-upgrade:candidate; echo "exit=$?"
+EOF
+```
+Expect:
+- `0`, the port is free
+- `old image build 2026-09-25T06:09:17Z; new image build 2026-09-27T22:30:18Z`
+- 21 lines starting `PASS:`, no line starting `FAIL:`. Among them:
+  - `PASS: start 1 logs: installed JellyfinMod 0.1.0.0`
+  - `PASS: start 2 logs: replaced JellyfinMod 0.1.0.0 build … with build …`, followed by
+    `replaced JellyfinMod 0.1.0.0 build 2026-09-25T06:09:17Z with build 2026-09-27T22:30:18Z`
+  - `PASS: start 2 applied PhaseSevenTraktObservations`
+  - `PASS: start 2 applied PhaseFiveScanAnchor`
+  - `PASS: start 2 Health 0.1.0.0, Ok (got 0.1.0.0 True)`
+  - `PASS: start 2 /web/ serves the Health bundle (served 76d08b85c7eb)`
+  - `PASS: start 3 logs: does not replace it`
+  - `PASS: start 3 plugin folder keeps the new build (2026-09-27T22:30:18Z)`
+  - `PASS: no jellyfinmod-upgrade container remains`
+  - `PASS: the config copy is removed`
+  - `PASS: port 58096 is free again`
+- `PASS: in-place upgrade (21 checks)`
+- `exit=0`
+
+**C5. Deploy the candidate to 48096. Only when the coordinator's brief allows it; otherwise report C5 as "not run".**
+```sh
+H <<'EOF'
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+docker tag jellyfinmod-upgrade:candidate jellyfinmod-live:current
+docker compose -p jellyfinmod-live -f "$1/compose.yml" up -d jellyfin 2>&1 | tail -1
+T=$(( $(date +%s) + 300 )); until [ "$(curl -s -m 5 http://127.0.0.1:48096/health)" = Healthy ] || [ "$(date +%s)" -ge "$T" ]; do sleep 5; done
+curl -s http://127.0.0.1:48096/health; echo
+docker logs --since "$since" jellyfinmod-live 2>&1 | grep -oE 'replaced JellyfinMod .*|does not replace it.*' | head -1
+docker logs --since "$since" jellyfinmod-live 2>&1 | grep -cE '\[(ERR|FTL)\]'
+"$1/standins/bin/live-state.sh" | head -1
+EOF
+```
+Expect:
+- `… jellyfinmod-live …` (compose recreated the container)
+- `Healthy`
+- `replaced JellyfinMod 0.1.0.0 build 2026-09-27T07:51:58Z with build 2026-09-27T22:30:18Z`. On a second deploy of the
+  same image, a line starting `does not replace it` instead.
+- `0`
+- `health 0.1.0.0 True bundle 76d08b85c7eb`
+
+The host scripts and the browser runner sign in again by themselves after this restart.
+
+**C6. Scan setup (about 2 minutes).**
+```sh
+H <<'EOF'
+cd "$1/standins/bin" && ./live-scan-setup.py; echo "exit=$?"
+EOF
+```
+Expect:
+- `staged 22 fixtures`
+- `added 4 movies and 4 series; ids in standins/state/scan-ids.json`
+- `exit=0`
+
+**C7. Focus re-checks, Chromium then real Chrome (workstation, about 4 minutes each).** The entry is the scan movie
+700020, which is still file-less at this point.
+```sh
+export JELLYFINMOD_LIVE_ENTRY=$(ssh "$JFMOD_SSH" cat "$JFMOD_LIVE_ROOT/standins/state/scan-ids.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["700020"])')
+cd <WEB>
+for b in chromium chrome; do
+  rm -f <OUT>/focus-$b.json
+  JELLYFINMOD_BROWSER=$b JELLYFINMOD_LIVE_OUT=<OUT>/focus-$b.json node scripts/jellyfinmod-e2e/live-focus.mjs > <OUT>/focus-$b.log 2>&1; echo "$b exit=$?"
+  python3 -c 'import json,sys,collections; r=[x["verdict"] for run in json.load(open(sys.argv[1]))["runs"] for x in run["results"]]; print(sys.argv[2], len(r), dict(collections.Counter(r)))' <OUT>/focus-$b.json $b
+done
+```
+Expect:
+- `chromium exit=…`, then `chromium 20 {'PASS': 20}`
+- `chrome exit=…`, then `chrome 20 {'PASS': 20}`
+
+Chromium must pass before Chrome counts. The `exit=` values are informational; the counts decide.
+
+**C8. Scan cases (about 30 minutes; allow 60).**
+```sh
+H <<'EOF'
+cd "$1/standins/bin" && nohup ./live-scan-all.sh > ../state/scan-all.out 2>&1 < /dev/null & echo started
+EOF
+```
+Then repeat a 10-minute wall-clock wait and
+`H <<'EOF'` / `cat "$1/standins/state/scan-all.out"` / `EOF` until the last line is `ALL SCAN CASES PASSED` or
+`SOME SCAN CASES FAILED`.
+
+Expect exactly these lines:
+```
+ordinary exit=0
+overlapping exit=0
+delay exit=0
+restart exit=0
+cancel exit=0
+cancel-later exit=0
+related-stream exit=0
+Shows real-time monitoring on -> 204
+series-siblings exit=0
+Shows real-time monitoring off -> 204
+unknown-case exit=2 (unknown case 'unrelated-stream'; one of:)
+ALL SCAN CASES PASSED
+```
+On a failure, copy the failing case's `$1/standins/state/scan-logs/<case>.log` tail (20 lines) into the report.
+
+**C9. Scan teardown.** It runs even after a failure in C6–C8.
+```sh
+H <<'EOF'
+cd "$1/standins/bin" && ./live-scan-teardown.sh "$3"; echo "exit=$?"
+EOF
+```
+Expect:
+- `After cleanup: catalog entries 0 native movies/series/episodes 0 torrents of this instance 0 files 0`
+- `scan releases left on the feed: 0`
+- `catalog restored: yes`
+- `LibraryMonitorDelay 60 importPollSeconds 15 real-time [('Shows', False), ('Movies', False), ('Movies Alt', False), ('Movies B', False)]`
+- `exit=0`
+
+**C10. Workstation hygiene.**
+```sh
+git -C <WEB> status --short
+git -C <PLUGIN> status --short
+```
+Expect: no line other than `?? scripts/jellyfinmod-e2e/standins/__pycache__/`. No results file, env file or log is
+inside either repository.
+
+**C11. Cleanup after a failure (only if a row failed).**
+- Run C9.
+- Then run
+  `H <<'EOF'` / `docker rm -f jellyfinmod-upgrade 2>/dev/null; rm -rf "$1/upgrade-scratch"; echo done` / `EOF`.
+- Expect `done`.
+
+**C12. Final state, proven.**
+```sh
+H <<'EOF'
+"$1/standins/bin/live-state.sh"
+curl -s http://127.0.0.1:48096/health; echo
+EOF
+```
+Expect:
+- The C2 lines, except the bundle: `76d08b85c7eb` if C5 ran, otherwise C2's.
+- `leftovers upgrade container 0 upgrade copy 0 scan fixtures 0 catalog backup 0`.
+- Both `started` times identical to C2's, which proves the shared Transmission and 28096 were not restarted.
+- `Healthy`.
+
+**Runner.**
+- Browser runners: `scripts/jellyfinmod-e2e/live-*.mjs`.
+- Host helpers: `standins/live-*.{sh,py}`.
+- Host paths come only from `<LIVE_ENV>`. The helpers on the host resolve their state directory from their own location.
