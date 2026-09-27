@@ -1,0 +1,26 @@
+W8: hygiene - W0 snapshot repeated, then userdata-db.mjs diff, then cleanup
+
+Re-run of the W0 snapshot (same API device, DeviceId=verify-q16):
+  Health Version: 0.1.0.1, Web.BundleId: 41cd7dbe7d8d, Web.Takeover.Status: patched,
+    Trakt: {'Installed': False} (no Version), Capabilities has trakt.history: True   [unchanged from W0]
+  Retention: enabled: False, reclaimAfterDays: 14, revision: 49   [unchanged from W0]
+  Users: ['nata', 'oleksii', 'papa', 'vika']   [unchanged from W0]
+  Plugins: no Trakt   [unchanged from W0]
+  Device count: 533   [equal to W0's 533]
+  JellyfinMod title search TotalRecordCount: 0   [unchanged from W0]
+
+userdata-db.mjs snapshot (after): {"userDataRows":5143,"completionRows":570}  (same counts as W0's before-snapshot)
+userdata-db.mjs diff (before -> after):
+  userData: rowsBefore 5143, rowsAfter 5143, onlyBefore [], onlyAfter []
+  completion: rowsBefore 570, rowsAfter 570, added 0, removed 0, changedColumns {}
+  diff exit code: 0
+
+Cleanup:
+  Both temporary snapshot files ($TMPDIR/q16-userdata-before.txt, $TMPDIR/q16-userdata-after.txt) deleted -
+    confirmed gone (ls shows neither).
+  API device (DeviceId=verify-q16): POST /Sessions/Logout -> 204 for the W0/W8 session and for the brief
+    verification sign-in used to read the post-logout device count; GET /Devices count after logout: 533,
+    equal to W0's 533 - the device left no net change.
+
+Result: PASS - everything equal to W0 (device count included), diff exits 0; retention still enabled:false,
+reclaimAfterDays:14, same revision (49); temporary files and API device cleaned up.
