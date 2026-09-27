@@ -1,0 +1,19 @@
+W1: degrade step on 28096 (q16 build), read-only (signs in as oleksii, reads a movie/episode/season/series, never writes)
+
+[chromium] 37 of 38 passed {"PASS":37,"FAIL":1}
+[chrome]   37 of 38 passed {"PASS":37,"FAIL":1}
+
+The single FAIL in each browser is exactly the checklist's known exception:
+  check: "tv1080 movie: page geometry and D-pad walk equal the released build"
+  geometry: released {buttons:189, genres:627, overview:627} == q16 {buttons:189, genres:627, overview:627}  (equal)
+  walk: 11 entries each side; the only differing index is 6:
+    released: "ArrowDown>button|emby-button.raised||Keep|"
+    q16:      "ArrowDown>button|emby-button.raised||Keep indefinitely|"
+  (retention's 10ddea6478 Keep-button title change, merged before Q16 - matches the checklist's description exactly)
+
+Every other check PASS in all four layouts, both browsers: no indicator, no Trakt request at all, empty mount
+height 0, geometry/D-pad walk equal the released build elsewhere, no failed request, no page error.
+
+Result: PASS (with the one accounted-for exception, verified to be exactly entry 6 / Keep vs Keep indefinitely,
+and the geometry equal, as the checklist requires be checked).
+Full logs: 28096/W1-chromium.log, 28096/W1-chrome.log. Full JSON: 28096/degrade.json.

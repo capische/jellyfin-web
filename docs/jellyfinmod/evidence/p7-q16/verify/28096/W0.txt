@@ -1,0 +1,24 @@
+W0: snapshot on 28096 (API device DeviceId=verify-q16, signed in as oleksii)
+
+Health:
+  Version: 0.1.0.1
+  Web.BundleId: 41cd7dbe7d8d
+  Web.Takeover.Status: patched
+  Trakt: {'Installed': False}   (no Version key)
+  Capabilities has trakt.history: True
+
+GET /JellyfinMod/Settings/Retention:
+  enabled: False
+  reclaimAfterDays: 14
+  revision: 49
+
+GET /Users names: ['nata', 'oleksii', 'papa', 'vika']
+GET /Plugins names: ['AudioDB', 'JellyfinMod', 'ListenBrainz Similarity Provider', 'MusicBrainz', 'OMDb', 'Studio Images', 'TMDb']  (no Trakt)
+GET /Devices count: 533
+GET /Items?Recursive=true&SearchTerm=JellyfinMod TotalRecordCount: 0
+
+userdata-db.mjs snapshot (saved outside the repo, $TMPDIR/q16-userdata-before.txt): {"userDataRows":5143,"completionRows":570}
+
+Result: PASS - matches expected exactly (Version 0.1.0.1, bundle 41cd7dbe7d8d, patched, Trakt Installed:false
+without Version, trakt.history present; retention enabled:false/14/rev 49; users nata/oleksii/papa/vika; no
+Trakt plugin; no JellyfinMod title).
