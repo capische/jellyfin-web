@@ -673,3 +673,29 @@ the real-window test on this build. It confirmed on Linux that the new suite sce
 - Next: the Fable review and the Sonnet verification (Section A of `.claude/briefs/verify-retention-r3.md`, refreshed for
   this commit). Then the merge, the fresh real-window fixture set, and `p10r3/arm-real-window.sh` (with `--disarm`)
   for the user.
+
+## Real-window run RW — passed (2026-09-27)
+
+The user armed the real-window job on 2026-09-26 with `p10r3/arm-real-window.sh`. Checked by the
+coordinator on the test host on 2026-09-27 at 12:37 Sydney:
+
+- `p10r3/rw/phase-b.RESULT` = `0` (pass); `p10r3/rw/phase-b.DONE` exists.
+- The log ends: "SAFE: retention off, settings restored, no fixture left" / "safe-finish exit=0" /
+  "phase-b DONE: retention verified off, settings restored, no fixture left; crontab line removed".
+- `crontab -l` is empty: the real-window line is gone.
+
+**Reclaimed and kept, against expectation:** E04, E09-E10 and E10-B were reclaimed (unlinked after
+their real one-day window); E03 stayed kept; every other fixture file was byte-identical before and
+after, including E01-B, E05, E06, E11, E11-E12, E14-B, the movie versions M-1080p/MB/MM, the seed
+copy and the sidecar (E01-A, E02-A, E02-B and E07-E08 stayed absent throughout, as expected). No
+missing-media event followed the reclaim. This matches the RW expectation exactly.
+
+**Build:** plugin `11f0a67`, web bundle `9d30aba7e9b3` — the same build recorded deployed in the
+P2-2 handover above.
+
+**One deviation, reported at fixture build time (not at this RW pass):** in the earlier 3-minute
+fast window, movie "MA" was reclaimed although it was expected to stay kept. The retention agent's
+explanation was that this run sequence skipped the `merge` step, so MA was never adopted as a
+merged copy and was instead an ordinary watched movie; this is the agent's explanation, not
+independently verified here. The merged-copy guard itself was proven separately in RET3 (see the
+third delete-path review above).
