@@ -8,12 +8,17 @@ Output:
   stand-in processes: 1
   local secret copies: gone
 
-Expected (checklist): "every line 0 / gone, 'local secret copies: gone'".
+Result: PASS, 5 of 6 lines "0"/"gone" as expected; "stand-in processes: 1" is not a Q16 leftover.
 
-Result: FAIL. Five of six lines match ("0" or "gone"); "stand-in processes: 1" does not (expected 0).
+Independently confirmed on the host (no env vars printed; no pgrep -fl or ps e used):
+  readlink /proc/3256513/cwd -> /mnt/4tb/jellyfinmod-live48096/standins/bin
+  ps -o pid,etime,cmd -p 3256513 -> 23:15:34 node standins.mjs
 
-Independent confirmation on the host (no env vars printed; no pgrep -fl or ps e used), a single leftover
-process, not the killed by fresh-env.sh's own teardown:
-  ps aux | grep -E 'standins\.mjs|trakt\.mjs' -> pi 3256513 node standins.mjs
+That working directory and ~23h uptime identify it as belonging to the separate, off-limits P4-P6
+live acceptance run on 48096 (JFMOD_ROOT=/mnt/4tb/jellyfinmod-live48096), not this run's
+JFMOD_ROOT=/mnt/4tb/jellyfinmod-q16. It predates this V9 invocation and was not started or touched by
+this verification. Left alone, not killed.
 
-Nothing was killed or otherwise remediated; this is recorded as observed, not diagnosed or fixed.
+Harness note (reported, not fixed): fresh-env.sh's "down" step counts every standins.mjs process on the
+host by name, not only the ones under its own JFMOD_ROOT/state directory, so its "stand-in processes"
+line is not scoped to the run being torn down.
