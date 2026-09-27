@@ -1,0 +1,286 @@
+{
+ "browser": "chrome",
+ "version": "153.0.8010.53",
+ "runs": [
+  {
+   "step": "focus desktop",
+   "at": "2026-09-27T04:36:10.300Z",
+   "results": [
+    {
+     "step": "focus desktop",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus desktop",
+     "check": "Flat mod buttons carry no TV show-focus",
+     "verdict": "PASS",
+     "detail": [
+      false,
+      false
+     ]
+    },
+    {
+     "step": "focus desktop",
+     "check": "Desktop: a flat button shows the focus ring under keyboard focus",
+     "verdict": "PASS",
+     "detail": "rgb(0, 164, 220) 0px 0px 0px 2.232px"
+    },
+    {
+     "step": "focus desktop",
+     "check": "Desktop: a mouse click leaves no focus ring on a flat button",
+     "verdict": "PASS",
+     "detail": "none"
+    },
+    {
+     "step": "focus desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus mobile",
+   "at": "2026-09-27T04:36:16.262Z",
+   "results": [
+    {
+     "step": "focus mobile",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus mobile",
+     "check": "Flat mod buttons carry no TV show-focus",
+     "verdict": "PASS",
+     "detail": [
+      false,
+      false
+     ]
+    },
+    {
+     "step": "focus mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv1080",
+   "at": "2026-09-27T04:36:39.206Z",
+   "results": [
+    {
+     "step": "focus tv1080",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: every flat mod button carries show-focus",
+     "verdict": "PASS",
+     "detail": [
+      true,
+      true
+     ]
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: a key pressed while the entry loads keeps the page from moving focus afterwards",
+     "verdict": "PASS",
+     "detail": {
+      "held": 1,
+      "loading": 0,
+      "afterKey": "",
+      "afterLoad": ""
+     }
+    },
+    {
+     "step": "focus tv1080",
+     "check": "TV: a header control focused when the page opens keeps focus",
+     "verdict": "PASS",
+     "detail": {
+      "header": "SyncPlay",
+      "kept": {
+       "text": "",
+       "header": true,
+       "className": "headerSyncButton syncButton headerButton headerButtonRight paper-icon-button-light show-focus"
+      }
+     }
+    },
+    {
+     "step": "focus tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  },
+  {
+   "step": "focus tv720",
+   "at": "2026-09-27T04:37:02.145Z",
+   "results": [
+    {
+     "step": "focus tv720",
+     "check": "No mod button on the file-less detail page has the browser light background",
+     "verdict": "PASS",
+     "detail": [
+      [
+       "Search releases",
+       "rgb(0, 164, 220)"
+      ],
+      [
+       "Search now",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Keep",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "☑ Monitor",
+       "rgb(66, 66, 66)"
+      ],
+      [
+       "Remove entry",
+       "rgba(0, 0, 0, 0)"
+      ],
+      [
+       "▸ History · Adde",
+       "rgba(0, 0, 0, 0)"
+      ]
+     ]
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: every flat mod button carries show-focus",
+     "verdict": "PASS",
+     "detail": [
+      true,
+      true
+     ]
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: the page opens with focus on its first action (Search releases)",
+     "verdict": "PASS",
+     "detail": "Search releases"
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: a key pressed while the entry loads keeps the page from moving focus afterwards",
+     "verdict": "PASS",
+     "detail": {
+      "held": 1,
+      "loading": 0,
+      "afterKey": "",
+      "afterLoad": ""
+     }
+    },
+    {
+     "step": "focus tv720",
+     "check": "TV: a header control focused when the page opens keeps focus",
+     "verdict": "PASS",
+     "detail": {
+      "header": "SyncPlay",
+      "kept": {
+       "text": "",
+       "header": true,
+       "className": "headerSyncButton syncButton headerButton headerButtonRight paper-icon-button-light show-focus"
+      }
+     }
+    },
+    {
+     "step": "focus tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": []
+    }
+   ]
+  }
+ ]
+}
