@@ -1,0 +1,33 @@
+V0: fresh-env.sh up
+  health Healthy after 54 s; image d58a3b54a8d6
+V0: fresh-env.sh stage-trakt
+  staged 5 fixture files
+Result: PASS (matches expected: health Healthy...; image <candidate id>=d58a3b54a8d6; staged 5 fixture files)
+
+V1: setup step - 6 of 6 passed (wizard, two libraries, ordinary user, fixture ids movie TMDB 990101 / unwatched 990103 / show TVDB 990102) - PASS
+V2: install step - 5 of 5 passed (catalog Trakt 31.0.0.0 for 12.0.0.0; Dashboard install; GET /Plugins id 4fe3201ed6ae4f2e8917e12bda571281 31.0.0.0 Active; Health Trakt Installed:true Version:31.0.0.0, trakt.history; bundle 41cd7dbe7d8d, plugin 0.1.0.1) - PASS
+V3: authorize step - 4 of 4 passed (user code, stand-in approval, administrator authorized, device flow routes: POST /oauth/device/code 200, /token 400, 400, 200 - polling then success, every call carried plugin API key+version) - PASS
+
+V4: sync step - 14 of 15 passed, {"PASS":14,"INFO":1} (the one INFO row is the expected pre-import cache note) - PASS
+
+V4b: nfo step - 8 of 9 passed, {"PASS":8,"INFO":1} - PASS
+
+V5 [chromium, EXPECT=present]: 67 of 67 passed {"PASS":67} - all four layouts (desktop, mobile, tv1080, tv720), both users; indicator text "Trakt Watch history synced · 9/27/2026" on admin's movie/episode/season1/series, absent for unwatched/episode2/season2 and for the viewer everywhere; tv1080/tv720 D-pad walks never land on the indicator; no failed request/page error; benignRequests lists only the ordinary user's 403 on /JellyfinMod/Queue - PASS
+V5 [chrome, EXPECT=present]: 67 of 67 passed {"PASS":67}, no FAIL lines (full log at image/V5-chrome.log) - PASS
+
+V6: disable step - 5 of 5 passed {"PASS":5} (Dashboard switch off -> Restart status, Health Installed:false at once, no dashboard error, after restart Disabled + Installed:false) - PASS
+
+V7 (after V6's restart) [chromium, EXPECT=absent]: 125 of 125 passed {"PASS":125}, no FAIL; no indicator anywhere,
+  empty mount height 0, TV D-pad walk equals V5's walk in the same browser, no failed request/page error,
+  API installed:false, and "without the Trakt plugin the page asks JellyfinMod nothing about Trakt" {"requests":0}
+  on every page (full log at image/V7-chromium.log) - PASS
+V7 [chrome, EXPECT=absent]: 125 of 125 passed {"PASS":125}, no FAIL (full log at image/V7-chrome.log) - PASS
+
+V8: uninstall step [chromium] - 3 of 3 passed {"PASS":3} (no dashboard error, no Trakt plugin remaining, Health Installed:false) - PASS
+V8 -> V7 re-run [chromium, EXPECT=absent]: 125 of 125 passed {"PASS":125}, no FAIL - PASS
+V8 -> V7 re-run [chrome, EXPECT=absent]: 125 of 125 passed {"PASS":125}, no FAIL - PASS
+
+V8b: logs step - 1 of 1 passed {"PASS":1} :: {"lines":["allowed: 1, upstream socket: 118, reported: 0"]} - PASS
+
+V8c: fresh-env.sh downgrade capische/jellyfin-mod:0.1.0.0 -> health Healthy after 18 s; image 606ca92eb2dd; plugin folders: 1 - PASS
+V8c: downgrade step - 3 of 3 passed {"PASS":3} (Health ok version 0.1.0.0; migrations=30 last=20260925104923_PhaseSevenTraktObservations, TraktObservations orphan rows=2; downgraded container reported:0) - PASS
