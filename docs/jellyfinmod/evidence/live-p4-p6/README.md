@@ -496,7 +496,7 @@ cd "$1/standins/bin" && ./live-scan-teardown.sh "$3"; echo "exit=$?"
 EOF
 ```
 Expect:
-- `After cleanup: catalog entries 0 native movies/series/episodes 0 torrents of this instance 0 files 0`
+- `after cleanup: catalog entries 0 native movies/series/episodes 0 torrents of this instance 0 files 0`
 - `scan releases left on the feed: 0`
 - `catalog restored: yes`
 - `LibraryMonitorDelay 60 importPollSeconds 15 real-time [('Shows', False), ('Movies', False), ('Movies Alt', False), ('Movies B', False)]`
