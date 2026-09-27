@@ -1,0 +1,3 @@
+image jellyfinmod-q16:candidate d58a3b54a8d6 (docker images, matches expected)
+aeadfbb322f7b12c682d71e1609683c7fbb0bc75c447ec29a36d83fa05281c4e  /opt/jellyfinmod/plugin/JellyfinMod.dll
+a31ff1428caa5c642f25d5663855f48fbac40b5f062a1fbd725954e5d830149b  /opt/jellyfinmod/plugin/jellyfinmod-web.zip
