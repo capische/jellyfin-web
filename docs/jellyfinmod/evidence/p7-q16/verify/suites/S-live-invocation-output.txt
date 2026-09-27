@@ -30,3 +30,18 @@ Conclusion recorded verbatim, without diagnosis: this invocation of q16-run-all.
 PhaseFourIntegration and did not rewrite q16-logs/run-all.out. The copy of run-all.out placed alongside this
 file in $OUT/suites/ is the host's pre-existing (stale) copy from an earlier run, not evidence produced by
 this verification pass, and its "PhaseFourIntegration exit=0" line is not evidence of this run.
+
+--- Addendum: 13th suite ---
+The coordinator separately ran the 13th suite as root on the test host:
+  `./q16-run-all.sh PhaseFourIntegration` from /home/pi/media/test/jellyfinmod/build, source q16-src at 5b2c969.
+Reported output: `PhaseFourIntegration exit=0`.
+
+Independently verified on the host (not taken on trust):
+  q16-logs/PhaseFourIntegration.log  2026-09-26 22:19:51 -0500, owner root (fresh; supersedes the earlier
+  01:56:07 stale copy noted above)
+  content:
+    Evidence: adds=5 sets=3 torrents=2 handshakes=25 torznabDownloads=17 canaryHits=0
+    PASS: Phase 4 acquisition settings, Torznab search, scoring, held Transmission handoff, recovery and redaction (174.3s)
+
+Part S now stands at 13/13 exit=0, across two invocations: 12 suites from my own q16-run-all.sh run
+(22:02-22:13 host time) plus PhaseFourIntegration run separately by the coordinator, as root, at 22:19:51.
