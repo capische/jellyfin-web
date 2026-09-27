@@ -1,0 +1,19 @@
+V9: fresh-env.sh down
+
+Output:
+  containers: 0
+  network: 0
+  state directory: gone
+  listening on 38096 or 38130..38139: 0
+  stand-in processes: 1
+  local secret copies: gone
+
+Expected (checklist): "every line 0 / gone, 'local secret copies: gone'".
+
+Result: FAIL. Five of six lines match ("0" or "gone"); "stand-in processes: 1" does not (expected 0).
+
+Independent confirmation on the host (no env vars printed; no pgrep -fl or ps e used), a single leftover
+process, not the killed by fresh-env.sh's own teardown:
+  ps aux | grep -E 'standins\.mjs|trakt\.mjs' -> pi 3256513 node standins.mjs
+
+Nothing was killed or otherwise remediated; this is recorded as observed, not diagnosed or fixed.
