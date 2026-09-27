@@ -1169,8 +1169,35 @@ geometry equal and walk entry 6 alone differing ("Keep" in the released build, "
 retention's `10ddea6478`, not Q16). The container's ERR lines during these runs were the upstream socket line only.
 28096 is left on the Q16 build.
 
-**Next.** A Codex (`gpt-6-astra`, high) review of the fix delta, then the Sonnet-high verification from
-`.claude/briefs/verify-q16.md`, then push and merge.
+**Codex review fixes (2026-09-26/27).** The Codex (`gpt-6-astra`, high) review of that delta found one P2 and six P3
+items; all are fixed and folded into their commits (pre-fix tips kept: plugin `6420b45`, web branch
+`p7-q16-pre-codex-fix` `153907955c`). Plugin `c429873 feat(trakt,p7.q16)`: P2 an observation for a row deleted
+earlier in the same batch reuses that tracked entity (its state restored to `Modified`) instead of saving the delete;
+P3 an observation is written only while its item and user exist, and rows of items that no longer exist are removed on
+every twelfth user check (hourly); P3 `TraktPluginState` filters the workers by `TraktSyncFromTraktTask` before reading
+the one `State`, inside the `try`; P3 `StopAsync` waits for the cancelled tasks bounded by the host's stop token.
+`71274fa test(e2e,p7.q16)` adds unwatched → watched and removal → re-import in one batch, a late import of a removed
+item, the periodic check, and a task whose `State` throws. Web `283eb4abb7 feat(trakt,p7.q16)`: the indicator asks
+`Trakt/Items` only while the latest Health read succeeded (`isSuccess`), so a failed refresh over a cached
+`traktInstalled: true` stops it. `17353c44bf test(e2e,p7.q16)`: `log-errors.sh` allows exactly one repository error per
+start, before `Core startup complete`, and only with the exact level, logger and URL and the next line exactly
+`HttpRequestException: … 503 (Service Unavailable).`; a second one, another status or a `503` in a stack is reported
+(checked on synthetic logs with macOS awk and the host's mawk).
+
+Build: plugin `5b2c969`, `JellyfinMod.dll` `aeadfbb322f7b12c…`, bundle **`41cd7dbe7d8d`** (web `2d529509b5`),
+`jellyfinmod-web.zip` `a31ff1428caa5c64…`, image `jellyfinmod-q16:candidate` `d58a3b54a8d6`. Suites on `q16-src` =
+plugin `5b2c969`: all 13 `exit=0` (`review/suites/*-codex-fix*`), and after the web rebuild
+`PhaseSevenTraktIntegration` and `PhaseSevenTakeoverIntegration` (with the new zip) again `exit=0`
+(`review/codex-fix/`). tsc and feature eslint silent. 28096: `backups/q16-package` replaced, stop → copy the four
+files → start, healthy, no ERR/FTL at start; before and after: Health `0.1.0.1`, `patched`, `Trakt: {Installed:
+false}`, `trakt.history`, retention `enabled: false`, 14 days, revision 49, users nata, oleksii, papa, vika, no
+JellyfinMod title, device count unchanged; bundle `a21d1547277d` → `41cd7dbe7d8d`. `degrade` against the
+2026-09-26 released baselines: **37/38 in Chromium and in Chrome**, the one row the known TV 1080 movie walk (geometry
+equal, walk entry 6 alone: "Keep" → "Keep indefinitely", retention's). The container logged only the upstream
+`/socket` "Token is required" lines during the runs.
+
+**Next.** A Codex re-review of this delta, then the Sonnet-high verification from
+`.claude/briefs/verify-q16.md` (ids updated), then push and merge.
 
 #### Q16 evidence — 2026-09-25
 
