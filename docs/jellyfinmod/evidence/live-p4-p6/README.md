@@ -3,9 +3,11 @@
 Brief: `live-acceptance-p4-p6` (workspace `.claude/briefs/`). Agent: Opus 5.5, high effort. Times are UTC in the tables;
 Sydney is UTC+10. Services are named by role only. No address, host path or credential appears here.
 
-**Status: paused at the coordinator's request (2026-09-26, about 09:00 Sydney).** Nothing is merged or pushed. The fixes
-below wait for one Fable high review. The rows marked *not yet run* and the real-Chrome re-run are still to do, and so is
-the Phase 6 long run.
+**Status (2026-09-27, 15:10 Sydney): every row is run.** The scan-wait live E2E and the focus re-checks pass on plugin
+`bfb1df6` (0.1.0.1, rebased onto master `5b2c969`) and web `a5bf3e6f62` (rebased onto `jellyfin-mod` `43d9b9cf79`).
+Every fixture is removed. Nothing is merged or pushed. Plugin `88d5f6d..0caf039` passed the Codex re-review. Still
+waiting for Codex: the live-scan script fixes (P2-s, P2-t, P3-u, and the tick witness), finding 12's fix `bfb1df6`,
+the Trakt suite change inside `fce0663`, the cleanup fixup and the focus runner.
 
 ## Instance
 
@@ -20,7 +22,7 @@ the Phase 6 long run.
 | Download client | The separate real Transmission 4.0.5 (RPC 17) on its own VPN, shared with the acceptance instance and reached through this instance's own relay container. Stopping the relay simulates "client down" for this instance only. The Transmission container was never stopped or reconfigured. |
 | Fixtures | Real 60 s videos (x264 plus AAC) in real v1 torrents. The real Transmission downloads them from a web seed on the same Docker network: no peer, no tracker. |
 | Downloads | Public-domain only (user answer, 2026-09-25): *His Girl Friday* (1940), YTS 720p, infohash `7b7fd6f6fc54874cafeafc7aebb94c0d43ab522a`. Everything else is a legal fixture. |
-| Revisions | Plugin `348168b`, then `ca8a54b` (scan fix). Web `c554c3e312`, then `d17a6e2c43` (UI fixes). The bundle was `6f112530f0aa`, then `b12550036cae`; its `-dirty` marker comes only from the uncommitted runner scripts. |
+| Revisions | Plugin `348168b`, then `ca8a54b` (scan fix), then `034f039` for the long run. Web `c554c3e312`, then `d17a6e2c43` (UI fixes). The bundle was `6f112530f0aa`, then `b12550036cae`; its `-dirty` marker comes only from the uncommitted runner scripts. Final: plugin `bfb1df6` as 0.1.0.1 (DLL SHA-256 prefix `d1d972818c55`), bundle `30e16f3d5f05` from web `a5bf3e6f62`. |
 | Pi memory | MemAvailable 3.7 GB (2026-09-25), 3.3–3.6 GB (2026-09-26 morning), 2.2–2.4 GB after the redeploy. Swap is full throughout. `mem_limit` has no effect on this kernel (there is no memory cgroup); the guard is the 1 GB MemAvailable floor. |
 
 ## Checklist results
@@ -75,10 +77,10 @@ The Chrome results file keeps two harness false starts, later re-run to PASS:
 | I4 hardlink | PASS | Link count 2 and the same inode as the download; no second copy. Sidecar images are not imported. |
 | I4 cross-filesystem | PASS (stronger) | A grab for the library on the second bind mount is refused before anything is sent: 409 `destination_not_same_filesystem`. The import-time `cross_filesystem` state cannot be reached through the product. |
 | I4 failure fixtures | PASS | Two equal videos give `ambiguous_files`. A `.rar` gives `archive_unsupported`. S01E02 carrying an S01E03 file gives `episode_mismatch`. No file is written to the library. |
-| I4 kill in `linking` / `scanning` | NOT VERIFIED live | The window is too short with real files; covered by `PhaseFiveIntegration`. |
+| I4 kill in `linking` / `scanning` | `linking`: NOT VERIFIED live; `scanning`: PASS after fix | `linking` is too short a window with real files; `PhaseFiveIntegration` covers it. `scanning`: container restarted while scanning. First run: it completed, but only through a full library scan (finding 12). On `bfb1df6` it completed with one import and no library scan. |
 | I4 destination collision | NOT VERIFIED live | The importer appends `vN`, so only a race reaches it; covered by the suite. |
 | I5 binding | PASS | One native item; entry `onDisk`; one `imported` event; no `media_missing`. |
-| I5 targeted scan | FAIL, fixed | Every import ran a full library scan (see finding 1). On `ca8a54b` there is no library scan: the folder refresh bound the import in about 76 s. |
+| I5 targeted scan | FAIL, fixed | Every import ran a full library scan (see finding 1). On `ca8a54b` there is no library scan: the folder refresh bound the import in about 76 s. The scan-wait live E2E below passes on `bfb1df6`. |
 | I5 retention baseline | PASS | Any and All users modes give `waiting_for_completion`, with BaselineAt equal to the import time. Get again on a reclaimed title (old played observations present) leads to `retention_reset`, then `waiting`; the next run reclaims nothing. |
 | I5 episode | PASS | Only S01E01 is `onDisk`; E02 is missing, E03 and E04 unaired, the special missing. |
 | I6 seed goal blocks retention | PASS | Due and watched files show `blocked/seed_goal_unmet` until the indexer's 4-minute goal is met. |
@@ -92,6 +94,40 @@ The Chrome results file keeps two harness false starts, later re-run to PASS:
 | I8 browser matrix | PASS | See the Chrome table: queue, stale row, TV focus and actions; the ordinary user sees no queue (security sweep). The old-plugin case is NOT VERIFIED (see A8). |
 | I5/I9 playback | PASS (Chrome) | Imported file plays in desktop, mobile, TV 1080 and TV 720. |
 | I9 regressions (Phase 2 suites, T18 cycle) | partly | `PhaseFiveIntegration` and `PhaseSixIntegration` exit 0 on `ca8a54b` and again on the rebased `034f039` (2026-09-26). The other suites and the T18 cycle belong to the retention agent's instance. |
+
+#### Scan wait, live E2E (`standins/live-scan.py`, 2026-09-27 13:36–14:36 Sydney, plugin `bfb1df6`)
+
+Each case grabs legal 12 s fixtures (2.8 MB, above the profile's 150 MB/h floor) through the real API. The real Transmission
+downloads them from the web seed. Each import is followed by id. "No full scan" means no "Validating media library"
+line in the host log since the case began.
+
+| Case | Result | Evidence |
+| --- | --- | --- |
+| ordinary | PASS | Completed and bound to the target's native item; one `imported` event; no full scan. |
+| overlapping | PASS | B linked while A was still scanning, in the same season folder; both completed; no full scan. |
+| delay (monitor delay 120 s) | PASS | Bound 135 s after the scan request; no full scan. |
+| restart in `scanning` | PASS on `bfb1df6` | Before the fix it completed through a full library scan (finding 12). |
+| cancel in `scanning` | PASS | Remove answers 200 `cancelled`; no `imported` event; no full scan. |
+| cancel-later | PASS | Delay 60 s and poll 2 s, both restored. B reported 54 s after A and was cancelled (response and fresh read both `cancelled`) while A was still unbound. An import tick ran after A's 90 s first wait while A was unbound. A bound 63 s after B's request; no full scan. |
+| series-siblings | PASS | Shows' real-time monitoring switched on for this case only (restart before and after; restored off). Two new series folders under one root; B reported 54 s after A. A tick ran after A's first wait while A was unbound. A bound 67 s after B's request (one refresh); no full scan. |
+| related-stream | PASS | Sibling imports every 30 s in A's season folder; report gaps 24–33 s (< 60 s). A escalated 272 s after its request (cap 270 s), the last report 27 s before; one library scan; A and 8 stream imports completed, 1 was still pending at the escalation. |
+| unrelated reports | suite only | Live, A cannot stay unbound past its first wait while unrelated reports continue, because the host's own refresh binds it. `PhaseFiveIntegration` proves it with the host's scan held back. |
+
+A first cancel-later run failed only on its tick witness, a harness fault: the probe import's `updatedAt` does not
+change on progress. The witness now reads the monitor's "Import tick N" debug lines with docker's UTC timestamps. That
+run's "no full scan" check passed.
+
+#### Focus re-checks (`live-focus.mjs`, bundle `30e16f3d5f05`)
+
+Chromium 153.0.8010.12 and Chrome 153.0.8010.53 each give **20/20 PASS** across desktop, mobile, TV 1080 and TV 720
+(`chromium-2026-09-27-focus-results.json`, `chrome-2026-09-27-focus-results.json`):
+- no light mod buttons;
+- flat buttons carry `show-focus` on TV only;
+- TV opens on Search releases;
+- a key pressed while the entry loads (request held back 4 s) keeps the page from moving focus afterwards;
+- a header control focused when the page opens keeps focus;
+- on desktop, the focus ring shows under keyboard focus and not after a mouse click;
+- no page errors.
 
 Second versions of a title (PHASE5 checklist 6, I9 case 3) are deferred to V1: the second-version import defect of
 2026-09-20.
@@ -159,26 +195,40 @@ until Sunday 12:40.
 | 6 | harness (no defect) | The re-grabbed Extra 8 looked released early: about 3 minutes after import, against a 4-minute goal. The goal counts seeding time, which starts when the download completes; import completes about 76 s later, after the scan wait. The second release row shows Transmission's own seeding time at 251 s ≥ the 240 s goal. `goalMetAt` 22:59:56 is 4 min 31 s after the grab was accepted. Each release row is its own (two rows, two grabs); no goal carried over. The settings write at 23:00:04 came after the removal had started at 22:59:56. | Closed: the goal was met; the earlier reading was wrong. |
 | 7 | harness | The web build refuses when the local `master` is stale (patch-surface check); build with `JELLYFINMOD_PATCH_BASE=origin/master`. The image entrypoint does not replace a plugin of the same version, so redeploys copy the DLL and bundle into the plugin folder while the container is stopped. | Noted. |
 
+| 12 | mod, low | A container restart while an import was scanning lost the host's pending folder refresh (kept in memory only). The import waited out its first wait and then escalated to a full library scan. | Fixed in plugin `bfb1df6`: a scan request older than this process is repeated once, without counting an attempt. `PhaseFiveIntegration` covers it; confirmed live. |
+| 13 | harness | `PhaseSevenTraktIntegration` asserted that the Q16 migration is the newest applied. Phase 5's new migration `PhaseFiveScanAnchor` (sorted after it) broke that assumption. | The suite now finds the Q16 migration by name (in `fce0663`). |
+| 14 | harness | The cleanup's `placeholder.txt` did not stop an emptied root from reading as "inaccessible or empty". The rescan kept 35 orphaned items, and an ordinary placeholder folder became a series. | `live-cleanup.py` now uses an ignored `#recycle` folder; the re-run left 0 entries, items, torrents and files. |
+| 15 | environment | This instance's cloned configuration has real-time monitoring off on every library. It also has the OMDb provider on: it named the placeholder folder from OMDb. Review P2-n only matters with real-time monitoring on, so the series-siblings case switches it on for itself. | Recorded. |
+
 ## Where it stopped (handover)
 
-- **Instance state:**
-  - Automation, retention, seed release and queue visibility are off, and the retention test window is 0.
-  - Seed floors are back at ratio 1.0 / 168 h.
-  - The private feed indexer keeps `minimumSeedMinutes 4`; 1337x is disabled.
-  - No grab is in its hold.
+- **Instance state (2026-09-27 15:10 Sydney):**
+  - 48096 runs plugin 0.1.0.1 (`bfb1df6`). The previous 0.1.0.0 plugin folder is kept outside the config for rollback.
+  - Automation, retention, seed release and queue visibility are off.
+  - `LibraryMonitorDelay` is 60, the import poll 15 s, and real-time monitoring is off on every library.
+  - No catalog entries, native items, library files or torrents of this instance remain; staged scan fixtures and their
+    feed releases are withdrawn.
   - The relay, the web seed, the TMDB stand-in and the stand-in process are up.
-- **Client:** these legal-fixture torrents remain: the ambiguous fixture (removed from the queue without `removeFromClient`), Live Series S01E01 (re-added by hand) and the fixture movie. They are removed at cleanup.
-- **Paused again:** 2026-09-26 at about 11:45 Sydney, at the stop rule (5-hour window at 90–95%). 48096 is up, idle and safe (as above). Plugin branch `live-accept` is rebased onto master `11f0a67` as `034f039`. The deployed plugin is still the pre-rebase build, which has the same fix.
-- **Next, in order:**
-  1. Rebuild the bundle from `fedc1f466d`, deploy it to 48096, and re-check TV focus on Search releases.
-  2. Suites `PhaseFiveIntegration` and `PhaseSixIntegration` on the rebased plugin `034f039`.
-  3. The remaining A8 and I8 rows: old-plugin fallback, profile change, late result under focus, playback in three layouts.
-  4. The Chrome re-run of every browser row.
-  5. One Fable high review of `ca8a54b`, `50fa26f6cb`, `d17a6e2c43` and finding 6's fix, if any.
-  6. The M2–M9 long run.
-- **Cleanup at the end:**
-  - Remove every `JellyfinMod` fixture entry, library file and torrent.
-  - Remove the His Girl Friday media and torrent (its torrent is already released).
-  - Leave automation off.
-  - Report each public-domain hash.
+- **Public-domain downloads:** only *His Girl Friday* (hash above), removed at the M9 cleanup.
+- **Next:** Codex re-review of the items in the status line; then autosquash both branches and merge (on the
+  coordinator's go-ahead).
+
+### Final re-run checklist (Sonnet, high effort, on 48096 only)
+
+Pass means every item below holds exactly; report any failure verbatim.
+
+1. On the Pi, the suite runner exits 0 for `PhaseFiveIntegration`, `PhaseSixIntegration` and
+   `PhaseSevenTraktIntegration` on the reviewed plugin tip.
+2. 48096 runs that tip. `/health` is `Healthy`, `/JellyfinMod/Health` reports the expected version and `Ok: true`, and
+   `__EFMigrationsHistory` lists `20260927031241_PhaseFiveScanAnchor` and `20260925104923_PhaseSevenTraktObservations`.
+3. Stage fresh 12 s fixtures (`FIXTURE_SECONDS=12 live-stage.sh`, runtime-1 catalog titles). Then each of these prints
+   `all checks passed` and exits 0:
+   - `ordinary`, `overlapping`, `delay … 120`, `restart`, `cancel`, `cancel-later`, `related-stream` (12 episodes);
+   - `series-siblings`, with Shows' real-time monitoring on and the container restarted before it, and restored after.
+4. `live-scan.py unrelated-stream` exits 2 and prints `unknown case`.
+5. `live-focus.mjs` with `JELLYFINMOD_BROWSER=chromium`, then `chrome`: 20 rows, all `PASS`, none `NOT VERIFIED`.
+6. `live-cleanup.py <shared dir>` prints `catalog entries 0 native movies/series/episodes 0 torrents of this instance 0
+   files 0`. The staged `fx-scan-*` folders and feed releases are removed, and the catalog file is restored.
+7. `LibraryMonitorDelay` is 60, `importPollSeconds` 15, and every library has `EnableRealtimeMonitor` false.
+
 - **Runner:** `scripts/jellyfinmod-e2e/live-*.mjs` (browser) and `standins/live-*.{sh,py}` (host). Host paths come from an ignored local env file (`JFMOD_LIVE_*`); the helpers on the host resolve their state directory from their own location.
