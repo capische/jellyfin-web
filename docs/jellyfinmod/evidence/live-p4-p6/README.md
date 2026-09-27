@@ -3,11 +3,16 @@
 Brief: `live-acceptance-p4-p6` (workspace `.claude/briefs/`). Agent: Opus 5.5, high effort. Times are UTC in the tables;
 Sydney is UTC+10. Services are named by role only. No address, host path or credential appears here.
 
-**Status (2026-09-27, 15:10 Sydney): every row is run.** The scan-wait live E2E and the focus re-checks pass on plugin
-`bfb1df6` (0.1.0.1, rebased onto master `5b2c969`) and web `a5bf3e6f62` (rebased onto `jellyfin-mod` `43d9b9cf79`).
-Every fixture is removed. Nothing is merged or pushed. Plugin `88d5f6d..0caf039` passed the Codex re-review. Still
-waiting for Codex: the live-scan script fixes (P2-s, P2-t, P3-u, and the tick witness), finding 12's fix `bfb1df6`,
-the Trakt suite change inside `fce0663`, the cleanup fixup and the focus runner.
+**Status (2026-09-27, 15:25 Sydney): every row is run.** The scan-wait live E2E and the focus re-checks pass on plugin
+`bfb1df6` (rebased onto master `5b2c969`) and web `a5bf3e6f62` (rebased onto `jellyfin-mod` `43d9b9cf79`). By the user's
+decision of 2026-09-27 the release ships as **0.1.0.0**, republished once over the build of 2026-09-25. Plugin `7751a24`
+reverts the 0.1.0.1 bump. `ea519c2` (with fixup `35c3ab6`, review P2-v and P2-w) lets the image replace an installed 0.1.0.0 with the later build, and the in-place
+upgrade is proven below. Every fixture is removed. Nothing is merged or pushed.
+
+Plugin `88d5f6d..0caf039` passed the Codex re-review. Still waiting for Codex:
+- the live-scan script fixes (P2-s, P2-t, P3-u, and the tick witness);
+- `bfb1df6` (finding 12), the Trakt suite change inside `fce0663`, `7751a24` and `ea519c2`;
+- the cleanup fixup and the focus runner.
 
 ## Instance
 
@@ -22,7 +27,7 @@ the Trakt suite change inside `fce0663`, the cleanup fixup and the focus runner.
 | Download client | The separate real Transmission 4.0.5 (RPC 17) on its own VPN, shared with the acceptance instance and reached through this instance's own relay container. Stopping the relay simulates "client down" for this instance only. The Transmission container was never stopped or reconfigured. |
 | Fixtures | Real 60 s videos (x264 plus AAC) in real v1 torrents. The real Transmission downloads them from a web seed on the same Docker network: no peer, no tracker. |
 | Downloads | Public-domain only (user answer, 2026-09-25): *His Girl Friday* (1940), YTS 720p, infohash `7b7fd6f6fc54874cafeafc7aebb94c0d43ab522a`. Everything else is a legal fixture. |
-| Revisions | Plugin `348168b`, then `ca8a54b` (scan fix), then `034f039` for the long run. Web `c554c3e312`, then `d17a6e2c43` (UI fixes). The bundle was `6f112530f0aa`, then `b12550036cae`; its `-dirty` marker comes only from the uncommitted runner scripts. Final: plugin `bfb1df6` as 0.1.0.1 (DLL SHA-256 prefix `d1d972818c55`), bundle `30e16f3d5f05` from web `a5bf3e6f62`. |
+| Revisions | Plugin `348168b`, then `ca8a54b` (scan fix), then `034f039` for the long run. Web `c554c3e312`, then `d17a6e2c43` (UI fixes). The bundle was `6f112530f0aa`, then `b12550036cae`; its `-dirty` marker comes only from the uncommitted runner scripts. Scan-wait and focus runs: plugin `bfb1df6` as 0.1.0.1 (DLL SHA-256 prefix `d1d972818c55`), bundle `30e16f3d5f05` from web `a5bf3e6f62`. Final: plugin `ea519c2` as 0.1.0.0 with the same bundle. |
 | Pi memory | MemAvailable 3.7 GB (2026-09-25), 3.3–3.6 GB (2026-09-26 morning), 2.2–2.4 GB after the redeploy. Swap is full throughout. `mem_limit` has no effect on this kernel (there is no memory cgroup); the guard is the 1 GB MemAvailable floor. |
 
 ## Checklist results
@@ -108,14 +113,22 @@ line in the host log since the case began.
 | delay (monitor delay 120 s) | PASS | Bound 135 s after the scan request; no full scan. |
 | restart in `scanning` | PASS on `bfb1df6` | Before the fix it completed through a full library scan (finding 12). |
 | cancel in `scanning` | PASS | Remove answers 200 `cancelled`; no `imported` event; no full scan. |
-| cancel-later | PASS | Delay 60 s and poll 2 s, both restored. B reported 54 s after A and was cancelled (response and fresh read both `cancelled`) while A was still unbound. An import tick ran after A's 90 s first wait while A was unbound. A bound 63 s after B's request; no full scan. |
-| series-siblings | PASS | Shows' real-time monitoring switched on for this case only (restart before and after; restored off). Two new series folders under one root; B reported 54 s after A. A tick ran after A's first wait while A was unbound. A bound 67 s after B's request (one refresh); no full scan. |
+| cancel-later | PASS | Delay 60 s and poll 2 s, both restored. B reported 53 s after A and was cancelled (response and fresh read both `cancelled`) while A was still unbound. The plugin's own line for A, "defers its library scan N s after its request", appears at N = 91, 93, 95 … s: A's evaluation found it unbound past its 90 s first wait and held the scan back. No full scan. (Re-run 2026-09-27 17:55 on plugin `2d068f9`.) |
+| series-siblings | PASS | Shows' real-time monitoring switched on for this case only (restart before and after; restored off). Two new series folders under one root; B reported 54 s after A. A's deferral line appears at N = 90, 92, 94 … s; no full scan. (Re-run 17:58 on `2d068f9`.) |
 | related-stream | PASS | Sibling imports every 30 s in A's season folder; report gaps 24–33 s (< 60 s). A escalated 272 s after its request (cap 270 s), the last report 27 s before; one library scan; A and 8 stream imports completed, 1 was still pending at the escalation. |
 | unrelated reports | suite only | Live, A cannot stay unbound past its first wait while unrelated reports continue, because the host's own refresh binds it. `PhaseFiveIntegration` proves it with the host's scan held back. |
 
-A first cancel-later run failed only on its tick witness, a harness fault: the probe import's `updatedAt` does not
-change on progress. The witness now reads the monitor's "Import tick N" debug lines with docker's UTC timestamps. That
-run's "no full scan" check passed.
+Earlier runs used weaker witnesses:
+- A probe import's `updatedAt` failed as a witness, a harness fault: it does not change on progress.
+- The monitor's tick lines passed, but review P2-x showed that a tick could evaluate A before the deadline and log
+  after it.
+
+Review P2-x added a debug line to the plugin (`2d068f9`). It is written only by A's own evaluation, after the binding was
+looked for and not found. `PhaseFiveIntegration` asserts the line for a sibling deferral and its absence for an unrelated
+escalation.
+
+The timing setup rolls back when it fails part-way (review P2-y). Live, `Timing(45, 0)` changed the delay, got 400 on the
+poll, and restored the delay to 60 before the error propagated.
 
 #### Focus re-checks (`live-focus.mjs`, bundle `30e16f3d5f05`)
 
@@ -128,6 +141,33 @@ Chromium 153.0.8010.12 and Chrome 153.0.8010.53 each give **20/20 PASS** across 
 - a header control focused when the page opens keeps focus;
 - on desktop, the focus ring shows under keyboard focus and not after a mouse click;
 - no page errors.
+
+#### In-place upgrade from the first 0.1.0.0 (2026-09-27, disposable container)
+
+The container ran on its own loopback port, with a copy of this instance's configuration: users and libraries only. The
+copy left out metadata, the plugin database, its secrets, its XML and its folder. It was removed afterwards. Each phase is
+one start with the named image:
+
+| Phase | Entrypoint log | Plugin | Migrations (last) | Health | Bundle |
+| --- | --- | --- | --- | --- | --- |
+| A. Friday's image (`capische/jellyfin-mod:0.1.0.0`), fresh | installed 0.1.0.0 | build 2026-09-25 | `PhaseSevenProwlarr` | 0.1.0.0, Ok, no `trakt.history` | `21c0905b4568` |
+| B. New image, entrypoint before `ea519c2` | "is installed; … does not replace it" | still 2026-09-25 | unchanged | unchanged | unchanged |
+| C. New image, `ea519c2` | "replaced JellyfinMod 0.1.0.0 build 2026-09-25T06:09:17 with build 2026-09-27T05:11:47" | 2026-09-27 | `PhaseSevenTraktObservations`, `PhaseFiveScanAnchor` (table and column present) | 0.1.0.0, Ok, `trakt.history`, Trakt `{Installed: false}` | `30e16f3d5f05` (also served at `/web/`) |
+| D. New image again | "same build … does not replace it" | 2026-09-27 | unchanged | unchanged | unchanged |
+| E. Friday's image again | "does not replace it" | 2026-09-27 kept | unchanged | unchanged | unchanged |
+
+Re-run 18:02 on the final entrypoint (`35c3ab6`, image built from plugin `2d068f9`):
+- A as above.
+- C: "replaced JellyfinMod 0.1.0.0 build 2026-09-25T06:09:17Z with build 2026-09-27T07:51:58Z". Both migrations
+  applied; Health 0.1.0.0, Ok, `trakt.history`; bundle `30e16f3d5f05`, served at `/web/`.
+- D: "does not replace it: JellyfinMod_0.1.0.0 holds the same build or a later one".
+
+No `ERR` or `FTL` line in any phase. Phase B is the defect `ea519c2` fixes: without it, a volume that ran the first
+0.1.0.0 would never load the republished build. `tests/image/entrypoint-install.sh` passes 12 cases, including an offset timestamp, an unreadable one
+and several same-version folders (review P2-v, P2-w). It fails on the old entrypoint. `entrypoint-rewrite.sh` still passes.
+
+Not covered: a server that installed the plugin from a repository, not from the image. Jellyfin offers no update for the
+same version, so such a server keeps the first build until the plugin is reinstalled by hand.
 
 Second versions of a title (PHASE5 checklist 6, I9 case 3) are deferred to V1: the second-version import defect of
 2026-09-20.
@@ -203,7 +243,8 @@ until Sunday 12:40.
 ## Where it stopped (handover)
 
 - **Instance state (2026-09-27 15:10 Sydney):**
-  - 48096 runs plugin 0.1.0.1 (`bfb1df6`). The previous 0.1.0.0 plugin folder is kept outside the config for rollback.
+  - 48096 runs plugin 0.1.0.0 from `ea519c2` in `JellyfinMod_0.1.0.0`: Health 0.1.0.0, Ok, bundle `30e16f3d5f05`.
+    The earlier plugin folders (the old 0.1.0.0 and 0.1.0.1) are kept outside the config for rollback.
   - Automation, retention, seed release and queue visibility are off.
   - `LibraryMonitorDelay` is 60, the import poll 15 s, and real-time monitoring is off on every library.
   - No catalog entries, native items, library files or torrents of this instance remain; staged scan fixtures and their
@@ -219,8 +260,19 @@ Pass means every item below holds exactly; report any failure verbatim.
 
 1. On the Pi, the suite runner exits 0 for `PhaseFiveIntegration`, `PhaseSixIntegration` and
    `PhaseSevenTraktIntegration` on the reviewed plugin tip.
-2. 48096 runs that tip. `/health` is `Healthy`, `/JellyfinMod/Health` reports the expected version and `Ok: true`, and
-   `__EFMigrationsHistory` lists `20260927031241_PhaseFiveScanAnchor` and `20260925104923_PhaseSevenTraktObservations`.
+2. 48096 runs that tip from `plugins/JellyfinMod_0.1.0.0/` (no `JellyfinMod_0.1.0.1` folder). `/health` is `Healthy`, and
+   `/JellyfinMod/Health` reports `0.1.0.0` with `Ok: true`. `__EFMigrationsHistory` lists
+   `20260927031241_PhaseFiveScanAnchor` and `20260925104923_PhaseSevenTraktObservations`.
+2a. In-place upgrade, in a disposable container on a loopback port. Use a config copy without the plugin database or
+   folder, and remove it afterwards:
+   - Start 1, `capische/jellyfin-mod:0.1.0.0`: the log says `installed JellyfinMod 0.1.0.0`; the last migration is
+     `PhaseSevenProwlarr`.
+   - Start 2, the image built from the reviewed tip: the log says `replaced JellyfinMod 0.1.0.0 build … with build …`.
+     Both migrations above are applied. Health is `0.1.0.0`, `Ok: true`, with `trakt.history`. The bundle id differs from
+     start 1 and matches the one served at `/web/`.
+   - Start 3, the same image: the log says `does not replace it`.
+   - `tests/image/entrypoint-install.sh <new image>` ends `PASS: entrypoint plugin install rule (12 cases)`.
+   - `tests/image/entrypoint-rewrite.sh <new image>` ends `PASS`.
 3. Stage fresh 12 s fixtures (`FIXTURE_SECONDS=12 live-stage.sh`, runtime-1 catalog titles). Then each of these prints
    `all checks passed` and exits 0:
    - `ordinary`, `overlapping`, `delay … 120`, `restart`, `cancel`, `cancel-later`, `related-stream` (12 episodes);
