@@ -21,6 +21,8 @@ rm -rf "$root"/staging/fx-scan-* "$root"/webseed/fx-scan-*
 restored=1
 if [ -f "$root/catalog.before-scan.json" ]; then
     mv "$root/catalog.before-scan.json" "$root/catalog.json" && restored=0
+elif ! grep -q 'fx-scan-' "$root/catalog.json" 2>/dev/null; then
+    restored=0  # already restored by an earlier run: no backup and no scan titles left
 fi
 echo "catalog restored: $([ $restored -eq 0 ] && echo yes || echo NO)"
 python3 - <<'PY'
