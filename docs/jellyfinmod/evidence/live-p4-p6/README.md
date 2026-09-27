@@ -96,9 +96,56 @@ The Chrome results file keeps two harness false starts, later re-run to PASS:
 Second versions of a title (PHASE5 checklist 6, I9 case 3) are deferred to V1: the second-version import defect of
 2026-09-20.
 
-### Phase 6 M2–M9
+### Phase 6 M2–M9 (long run, 2026-09-26 14:26 to 2026-09-27 13:00 Sydney)
 
-Not started. The 24-hour run waits for the rows above and the Chrome re-run.
+**Builds.** Plugin `034f039` (DLL SHA-256 prefix `73f2696df218`) for the whole run. The web bundle was `cccb8786e043`
+until the restart at 15:40 Saturday, then `f0de1bd98fcf`. That swap carried the web review fixes only; the automation rows
+are server-side.
+
+**Setup.**
+- 1-hour interval, batch 10, 3 automatic grabs a day, 5 open imports, floor 1 % or 25 GB.
+- Real 1337x through Prowlarr for searches, with title-match automation off, so it can never auto-grab.
+- Stand-in feed B with title matches flagged, feed C unflagged.
+
+**Times.** All times in these tables are Sydney.
+
+| Row | Result | Evidence |
+| --- | --- | --- |
+| M1 free space | PASS | Automation reported 266,491,887,616 bytes free, identical to `df` for the same filesystem. |
+| M2 settings | PASS | Every automation field was saved and re-read identically across a container restart. Routes: anonymous 401, ordinary user 403 (security sweep 14/14). |
+| M3 scheduled runs | PASS | 23 scheduled hourly runs completed between Saturday 15:27 and Sunday 12:54, with no failure and no duplicates. The native task drove them. |
+| Auto-grab and import | PASS | Run 1 grabbed three fixtures (budget 3) and all imported. |
+| Title-match rule | PASS | Feed B (flagged): the title-only release was auto-grabbed. Feed C (unflagged): the identical case was not (`no_eligible_candidate`). On real 1337x, title-only rows for a public-domain title were never grabbed. |
+| Budget | PASS | `budget_grabs` was recorded for the fourth eligible target, and for every due target in each run until the UTC day turned. |
+| Back-off | PASS | An aired episode with no release was searched, found `no_eligible_candidate`, and deferred 12 hours. |
+| Specials and unaired | PASS | The special was never searched (`special_excluded`); an unaired episode was reported `unaired`. |
+| Query counts | PASS | Per-indexer query counts in the run summary (20, 25, 25) equal the stand-in feeds' own counters. |
+| M4 new episode | PASS | Aired Sunday 10:00 with its release already published; delay 120 minutes. The 10:52 and 11:53 runs did not search it; the 12:54 run grabbed it. The run's daily metadata refresh had picked up its new air date. |
+| Restart | PASS | Restart between runs 1 and 2: no duplicate grab or import; the client holds each automatic grab once. |
+| Safeguard: free-space floor | PASS | Floor set above free space: status and queue report `free_space_floor`, no grab, and the decision states the bytes. Chrome banner on desktop and TV 1080: "Automation paused: Free space in the library is below the configured floor." |
+| Safeguard: client unreachable | PASS | Relay stopped: the run ends `paused` with detail `client_unreachable` and grabs nothing. The Chrome queue banner reads "The download client cannot be reached." |
+| Safeguard: breaker | PASS | Feed C answering 500: a `breaker_opened` decision ("failed five times in a row and is paused for an hour"), `breakerOpenUntil` is set, and the other feeds keep answering. |
+| Safeguard: automation off mid-run | PASS | 6 due targets; switched off 3 s into the run. The run searched one target and ended "Automation was turned off during the run."; the queue shows `disabled`. |
+| M9.5 | PASS | `intent=addVersion` for a file-less title gives 409 `no_playable_version`. |
+| Cleanup | PASS | Automation off, the budget restored, then `live-cleanup.py`. Result: 0 catalog entries, 0 native items and 0 files in the instance's libraries, and 0 torrents of this instance in the client. Only the acceptance instance's two torrents remain. |
+| Deferred to V1 | — | Upgrade by added version, Get another quality, per-version reclaim order, the M8 version rows, question 7. |
+| M8 browser rows | partly | Queue banners (above). Picker, queue and Movies grid behaviour are in the P4/P5 tables. Version rows are deferred to V1. |
+
+**Missed or late.** A server-side outage stopped this agent's tool calls from Saturday 17:00 to 22:30, and the agent stayed idle
+until Sunday 12:40.
+- The timed safeguard check-ins (17:35, 18:35, 19:40) and the overnight and 09:00 check-ins did not happen.
+- The four safeguards ran instead as manual runs on Sunday between 12:56 and 12:59 (a manual run obeys every budget).
+- The unattended hourly runs are fully recorded in the run table.
+- The breaker case needed the grab budget raised to 10 for its run: a first attempt spent the day's last grab on a due target.
+
+**Findings from the run.**
+
+| # | Class | Finding | State |
+| --- | --- | --- | --- |
+| 8 | mod | Blocked as `source_missing` in the second Transmission reported completion, before it had moved the file out of its incomplete folder. | Recovered live by Retry. Fixed in plugin `134f60c` (a 10-minute settling grace), which is under review. |
+| 9 | mod, low | Episode releases on a feed without id search match by title only. On an unflagged feed, automation skips them, but the decision gave another row's reason (`blocklisted`). | The known M15 reason gap; not fixed. |
+| 10 | mod, low | After the client came back, the queue's automation `pausedReasons` kept `client_unreachable` until the next run, although `clientStatus.reachable` was true. | Not fixed; proposal. |
+| 11 | environment | Free space on the shared disk fell by about 37 GB overnight. This instance's fixtures total a few MB. | Recorded. |
 
 ## Findings
 
