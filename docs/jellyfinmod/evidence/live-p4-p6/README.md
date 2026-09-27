@@ -251,8 +251,30 @@ until Sunday 12:40.
     feed releases are withdrawn.
   - The relay, the web seed, the TMDB stand-in and the stand-in process are up.
 - **Public-domain downloads:** only *His Girl Friday* (hash above), removed at the M9 cleanup.
-- **Next:** Codex re-review of the items in the status line; then autosquash both branches and merge (on the
-  coordinator's go-ahead).
+- **Paused 2026-09-27 at about 18:35 Sydney (user pause for all agents).** 48096 is safe: automation off, delay 60,
+  poll 15, real-time monitoring off everywhere, 0 entries and native items, no scan fixtures, and the catalog is
+  restored.
+- **Where it stopped:**
+  - **Done:**
+    - Codex re-review 5 passed the plugin.
+    - The web P2-z fix is in and was checked live: a PATCH that applied but whose response was lost, simulated with
+      `TimeoutError`, still restored the poll to 15.
+    - Both branches are autosquashed, their messages reworded to the final content. The plugin sits on master `5b2c969`
+      and the web branch on `jellyfin-mod` `58e1a17486`.
+    - Every plugin commit builds, and the web build, type-check and lint pass on the squashed tip.
+    - The pre-squash tips are kept as `live-accept-presquash-0927` in both repositories.
+  - **Running when paused:** PhaseFive, PhaseSix and PhaseSevenTrakt plus `entrypoint-install.sh` on the squashed plugin
+    tip, in the Pi's offline suite container. The container does not touch 48096. Its result lands in the suite build
+    directory's `live-logs/squash-summary.txt`.
+  - **Not yet run:** the new `standins/live-scan-setup.py`, `live-scan-all.sh` and `live-scan-teardown.sh` are committed
+    but untested. They make the checklist's scan items one command each.
+- **Next, in order:**
+  1. Read `squash-summary.txt`: three `exit=0` lines and `PASS: entrypoint plugin install rule (12 cases)`.
+  2. Test the three new scan scripts once on 48096 (setup, run-all, teardown). Add a `live-upgrade.sh` for checklist
+     item 2a.
+  3. Rewrite the checklist below with ids and exact commands for the Sonnet verifier.
+  4. Report the squashed tips to the coordinator. The Sonnet verification follows, then the merge on the
+     coordinator's go-ahead.
 
 ### Final re-run checklist (Sonnet, high effort, on 48096 only)
 
