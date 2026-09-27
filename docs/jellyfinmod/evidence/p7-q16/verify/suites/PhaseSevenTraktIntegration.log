@@ -1,0 +1,48 @@
+ok - The 0.1.0.0 schema has no Trakt table
+ok - The Q16 migration applies on top of the released schema as its newest migration
+ok - Existing rows survive the Q16 migration
+ok - One observation per user and item is enforced by a unique index
+ok - The migrated database passes its integrity check
+ok - Anonymous callers get 401
+ok - An item the user cannot see is 404
+ok - An unknown item is 404
+ok - Health lists trakt.history and reports the Trakt plugin absent
+ok - Without the plugin the item answers installed:false, hasHistory:false
+ok - A Trakt copy waiting for a restart does not count as installed
+ok - Health reports the installed Trakt plugin and its version to an administrator
+ok - An ordinary user's Health says Trakt is installed and never which version
+ok - Imports raised while the plugin was absent or pending were never recorded
+ok - Another task whose State throws does not stop the Trakt import being recorded
+ok - The importing user sees hasHistory:true with the time the history arrived
+ok - Another user never sees the first user's Trakt history
+ok - A title without an import has no Trakt history
+ok - An Import with the Trakt task idle or cancelling records nothing and removes nothing
+ok - Only the Import with a resume point was recorded: no other save reason and no history-less import
+ok - The second user now sees their own imported resume point, and nothing for the history-less import
+ok - The episode's observation carries its series and season, read off the episode
+ok - The imported episode has Trakt history
+ok - Its season aggregates it
+ok - Its series aggregates it
+ok - The other season and an episode without an import have none
+ok - Another user's series and season pages show nothing of the first user's import
+ok - A user with TV access and no import sees no history on the series
+ok - A hidden episode is 404 and stops counting for its season and series
+ok - A repeated import keeps one row per user and item and the series reports the newest time
+ok - Unwatched then watched in one batch: the row stays, as a new observation from the later import
+ok - Removed then re-imported in one batch (the item is back in the library): both users' rows stay, one each
+ok - A late import of an item that has left the library records nothing
+ok - The periodic check removes the rows of items that no longer exist and keeps the rest
+ok - After Trakt reports the movie unwatched it has no Trakt history
+ok - A 300-item import burst is recorded in full, one row each
+ok - A removed movie takes its own row and no other
+ok - A removed season takes its episodes' rows, for every user, and leaves the other season's
+ok - A removed series takes every row of its episodes and leaves the movies'
+ok - A deleted user's rows are pruned and every other user's stay
+ok - With the plugin disabled every item answers installed:false and hasHistory:false
+ok - Health reports a disabled Trakt plugin as not installed
+ok - An import while disabled was not recorded; earlier history returns when re-enabled
+ok - With the plugin uninstalled the series answers installed:false
+ok - The 200 imports queued when the host stopped were all written before it finished stopping
+ok - Observations survive a restart
+ok - The listener logged no warning or error
+PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (9.8s)
