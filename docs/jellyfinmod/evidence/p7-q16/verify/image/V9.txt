@@ -11,12 +11,12 @@ Output:
 Result: PASS, 5 of 6 lines "0"/"gone" as expected; "stand-in processes: 1" is not a Q16 leftover.
 
 Independently confirmed on the host (no env vars printed; no pgrep -fl or ps e used):
-  readlink /proc/3256513/cwd -> /mnt/4tb/jellyfinmod-live48096/standins/bin
+  readlink /proc/3256513/cwd -> <state-root-48096>/standins/bin
   ps -o pid,etime,cmd -p 3256513 -> 23:15:34 node standins.mjs
 
 That working directory and ~23h uptime identify it as belonging to the separate, off-limits P4-P6
-live acceptance run on 48096 (JFMOD_ROOT=/mnt/4tb/jellyfinmod-live48096), not this run's
-JFMOD_ROOT=/mnt/4tb/jellyfinmod-q16. It predates this V9 invocation and was not started or touched by
+live acceptance run on 48096 (JFMOD_ROOT=<state-root-48096>), not this run's
+JFMOD_ROOT=<state-root-q16>. It predates this V9 invocation and was not started or touched by
 this verification. Left alone, not killed.
 
 Harness note (reported, not fixed): fresh-env.sh's "down" step counts every standins.mjs process on the
