@@ -791,7 +791,10 @@ proposal below.
 9. **Newest Phase 4 contract vs. review amendments.** *Answered 2026-09-19:* the client is
    Transmission, credentials follow user decision 3, mistaken grabs use the 5-second server-side
    hold, and X1 is an entry gate (PHASE4 user decisions 1–5).
-10. **What a real-service run downloads.** With real Prowlarr indexers and a real Transmission
+10. **What a real-service run downloads.** *Answered 2026-09-25 (user, through the question tool):*
+    "Public-domain titles only." The live acceptance downloaded one public-domain film, recorded by
+    title and infohash in [its evidence](evidence/live-p4-p6/README.md); every other download was a
+    generated legal fixture. With real Prowlarr indexers and a real Transmission
     (accepted 2026-09-20/21), the grab step can reach a real tracker. Should the grab evidence
     still come from the legal fixture, seeded on the separate Transmission and offered through a
     private Torznab feed beside the real indexers (proposed, so no copyrighted release is fetched
