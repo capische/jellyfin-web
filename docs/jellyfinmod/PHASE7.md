@@ -1040,6 +1040,9 @@ item whose state changes, so a title already in sync is touched when its Trakt s
   about the version and generates correctly) and regenerated after rebasing onto the retention migrations. A new
   migration makes this plugin **0.1.0.1** (`build.yaml`, changelog). Downgrading to 0.1.0.0 (older image, the newer
   plugin folder removed) leaves `TraktObservations` as an orphan table the older assembly ignores.
+  *Superseded 2026-09-27 (user decision, once):* the Trakt indicator ships as a republished **0.1.0.0**, over the
+  build of 2026-09-25. The image replaces an installed 0.1.0.0 only with a later build of it (plugin `ea519c2`;
+  in-place upgrade in `evidence/live-p4-p6/README.md`).
 - **API.** Health gains `Trakt: {Installed, Version}` — `Version` for administrators only — and the capability
   `trakt.history`;
   `GET /JellyfinMod/Trakt/Items/{itemId}` (`[Authorize]`, any signed-in user) answers `{installed, hasHistory,
