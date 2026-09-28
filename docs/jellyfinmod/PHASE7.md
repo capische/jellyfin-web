@@ -2452,6 +2452,35 @@ Authorized by the user directly ("Yes, push and publish", 2026-09-25).
 
 **Next.** Q16, the Trakt indicator, with its own Fable-high review and Sonnet verification.
 
+#### Release 0.1.0.0, republished — 2026-09-28
+
+Authorized by the user directly ("Overwrite 0.1.0.0", 2026-09-27, and "Stick to 0.1.0.0 version until I manually
+increase it or say 'publish / release 0.1.0.0 and move to the next version'"). This supersedes the rule above that a
+version tag is never overwritten, until the user moves to the next version (workspace `CLAUDE.md`, *Versioning*).
+
+- **Included:** plugin `master` `8d3c6c0` and web `jellyfin-mod` `d9718b3788`: the Trakt indicator (7.1, Q16), the
+  Phase 4–6 live-acceptance fixes, and the image entrypoint's same-version upgrade (a later build of the same version
+  replaces the installed one, compared by `meta.json` timestamp). Verified before release by the Sonnet checklist
+  C0–C12 and approved by the Codex code review.
+- **Build:** bundle **`76d08b85c7eb`** reused, not rebuilt: nothing outside `docs/` and `scripts/jellyfinmod-e2e/`
+  differs between its source `7bf3356f42` and `d9718b3788`, and re-hashing the `dist/` files the way the manifest
+  does reproduces `76d08b85c7eb` over 2367 files (upstream merge base `134e6add88`). Plugin 0.1.0.0 built with zero
+  warnings by `scripts/build-release.sh`; `meta.json` timestamp **`2026-09-27T23:54:58Z`**, later than every earlier
+  0.1.0.0 build.
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:dd0949337f166f9d52b14122ddbf3ca4ed95b5f335a0f343ff9ac94103394f89`** for linux/amd64
+  (`sha256:3c2960f0ca09…`) and linux/arm64 (`sha256:bea7de66c154…`), buildx on the same pinned Jellyfin 12.0.0 base,
+  `SOURCE_DATE_EPOCH` of the plugin tip, `--provenance=false`. The credential lived only in a temporary Docker
+  configuration without a credential store, was logged out and deleted, and no ghcr.io keychain entry exists.
+- **Checked anonymously** (empty Docker configuration): both tags resolve to that index with both platforms. The arm64
+  image, pulled by digest on the Pi and started as a throwaway container on an empty config (port 58096), installed
+  the plugin, applied migrations, patched `/web` with `76d08b85c7eb` by itself (`patchedBy: automatic`), registered its
+  repository (`200`); Health answered `401` anonymously and `0.1.0.0`, `Ok: true` for a throwaway administrator.
+  Container, volumes and image were removed afterwards.
+- **Servers already running 0.1.0.0:** the image upgrades in place on recreate, through the same-version upgrade in
+  its entrypoint. A server that installed 0.1.0.0 from a plugin repository keeps the first 0.1.0.0 build (2026-09-25)
+  until the plugin is reinstalled, because the host does not offer the same version as an update.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
