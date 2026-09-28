@@ -432,8 +432,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
   (see [`PHASE12.md`](PHASE12.md)).
-- V1 — versions on Jellyfin 12: next, after 7.1 merges; owner of all version behaviour, and its
-  acceptance includes Phase 5/6's version rows (brief `v1-versions.md`).
+- V1 — versions on Jellyfin 12: **built (not accepted)**, branch `v1-versions` in both repositories; owner of all
+  version behaviour, and its acceptance includes Phase 5/6's version rows; Phase 6 is accepted only when V1's rows
+  14–21 pass (see [`V1.md`](V1.md), handover).
 - webOS performance: postponed by the user until further notice (research in the workspace brief
   `research-webos-targets`).
 
