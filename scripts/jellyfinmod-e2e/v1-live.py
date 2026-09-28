@@ -755,19 +755,34 @@ def cmd_retention_restore():
 
 
 def cmd_cleanup():
+    """Removes every fixture in an order the plugin can follow: the files first while the libraries and their roots exist
+    (so absence is provable and the entries stay readable), then the entries, then the libraries and the folder. Deleting a
+    library first hides its entries from the API and leaves their bindings, since a missing root never proves absence.
+    Each root keeps a placeholder file meanwhile: Jellyfin keeps every item of a root that reads empty (offline media)."""
+    for sub in (MOVIES, SHOWS):
+        root = os.path.join(HOST_ROOT, sub)
+        os.makedirs(root, exist_ok=True)
+        for name in os.listdir(root):
+            if name.startswith("JellyfinMod V1 "):
+                subprocess.run(["rm", "-rf", "--", os.path.join(root, name)], check=True)
+        open(os.path.join(root, "jfmod-placeholder.txt"), "w").close()
+    scan()
+    removed, refused = 0, []
+    for item in all_entries():
+        if item["title"].startswith("JellyfinMod V1") or item["tmdbId"] in TMDB.values() or item["tmdbId"] == 9900100:
+            status, _ = call("DELETE", f"/JellyfinMod/Entries/{item['id']}")
+            removed += status in (200, 204)
+            if status not in (200, 204):
+                refused.append((item["title"], status))
+    left = [i["title"] for i in all_entries() if i["title"].startswith("JellyfinMod")]
+    check(not left, f"cleanup: {removed} entries removed while the libraries exist; left {left[:3]} refused {refused[:3]}")
     for name in (MOVIE_LIBRARY, SHOW_LIBRARY):
         if library(name) is not None:
             must("DELETE", f"/Library/VirtualFolders?name={urllib.parse.quote(name)}&refreshLibrary=false")
     subprocess.run(["rm", "-rf", "--", os.path.join(HOST_ROOT, FIXTURE_DIR)], check=True)
     scan()
-    removed = 0
-    for item in all_entries():
-        if item["title"].startswith("JellyfinMod V1") or item["tmdbId"] in TMDB.values() or item["tmdbId"] == 9900100:
-            status, _ = call("DELETE", f"/JellyfinMod/Entries/{item['id']}")
-            removed += status in (200, 204)
-    left = [i["title"] for i in all_entries() if i["title"].startswith("JellyfinMod")]
-    check(not left and not os.path.exists(os.path.join(HOST_ROOT, FIXTURE_DIR)),
-          f"cleanup: {removed} entries removed, no JellyfinMod title or fixture file left")
+    check(not os.path.exists(os.path.join(HOST_ROOT, FIXTURE_DIR)) and all(library(n) is None for n in (MOVIE_LIBRARY, SHOW_LIBRARY)),
+          "cleanup: no V1 library and no fixture file left")
 
 
 def cmd_latest():
