@@ -494,7 +494,7 @@ The user accepted every default below as chosen on 2026-09-19.
 
 ### Live acceptance checklist (M2–M9)
 
-**V1 prerequisite (2026-09-28):** the version rows below are run and accepted through [V1](V1.md) S7 (rows 14–21);
+**Accepted 2026-09-28 without exceptions:** the version rows below were run and accepted through [V1](V1.md) S7 (rows 14–21);
 everything else passed in the live P4–P6 run of 2026-09-26/28.
 
 Run after Phase 5's checklist passes, on `jellyfinmod-test` only, with the separate real
