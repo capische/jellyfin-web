@@ -24,6 +24,8 @@ Subcommands (scenario order):
                              progress reports until SECONDS pass or the file <state>.stop-playing appears, then stopped
   play-end KEY SUB [EPNO]    plays the version to its end, as a client does
   seedgoal MINUTES           the private feed's seed goal (restored by restore)
+  floor-off                  the import seed floor off for the session (restored by restore)
+  episode-meta KEY EPNO      the stand-in episode's metadata on its native versions, so reconciliation can verify them
   library-t                  a disposable TV library and entry T for one fresh episode target (removed by restore)
   profile main|episode CUTOFF MODE  cutoff and upgrade mode of the created profile (episode: created for S on first use)
   retention-run              the native reclamation task, then its summary
@@ -184,6 +186,32 @@ def cmd_library_t():
     put_state(data)
     must("PATCH", f"/JellyfinMod/Entries/{created['entry']['id']}", {"qualityProfileId": data["episodeProfile"]})
     print("library", T_LIBRARY, folder["ItemId"][:8], "entry T", created["entry"]["id"][:8])
+
+
+def cmd_floor_off():
+    """Turns the import seed floor off for the session (the instance's 1.0 / 168 h floor keeps every plugin-seeded file
+    `seed_goal_unmet` for a week, so no replacement or reclaim could run); `restore` puts it back."""
+    data = state()
+    current = must("GET", "/JellyfinMod/Settings/Import")
+    data.setdefault("import", {"seedFloorRatio": current["seedFloorRatio"], "seedFloorHours": current["seedFloorHours"]})
+    put_state(data)
+    after = must("PATCH", "/JellyfinMod/Settings/Import", current | {"seedFloorRatio": None, "seedFloorHours": None})
+    print("import seed floor", after["seedFloorRatio"], after["seedFloorHours"], "revision", after["revision"])
+
+
+def cmd_episode_meta(key, number):
+    """Gives an episode's native versions the catalog episode's title, air date and TMDB id through the stock item update.
+    The stand-in files carry no metadata, so reconciliation could not verify which episode they are (RET2-R3) and an
+    upgrade would wait with `identity_unverified`; real libraries get this from the metadata provider."""
+    target = episode(key, number)
+    info = must("POST", f"/Items/{target['jellyfinItemId']}/PlaybackInfo?userId={uid()}", {})
+    for source in info["MediaSources"]:
+        item = must("GET", f"/Items/{source['Id']}?userId={uid()}")
+        item.update({"Name": target["title"], "PremiereDate": target["airDate"],
+                     "ProviderIds": dict(item.get("ProviderIds") or {}, **({"Tmdb": str(target["tmdbId"])} if target.get("tmdbId") else {}))})
+        must("POST", f"/Items/{source['Id']}", item)
+        print("metadata", name(source.get("Path")), target["title"], (target["airDate"] or "")[:10])
+    must("POST", "/Library/Refresh")
 
 
 def cmd_restore():
@@ -475,7 +503,8 @@ COMMANDS = {"save": cmd_save, "setup": cmd_setup, "restore": cmd_restore, "stage
             "auto-on": cmd_auto_on, "auto-off": cmd_auto_off, "auto-run": cmd_auto_run, "searchnow": cmd_searchnow,
             "retention-on": cmd_retention_on, "retention-off": cmd_retention_off, "seedgoal": cmd_seedgoal,
             "retention-run": cmd_retention_run, "preview": cmd_preview, "play-hold": cmd_play_hold, "play-end": cmd_play_end,
-            "keep": cmd_keep, "sql": cmd_sql, "profile": cmd_profile, "library-t": cmd_library_t}
+            "keep": cmd_keep, "sql": cmd_sql, "profile": cmd_profile, "library-t": cmd_library_t,
+            "floor-off": cmd_floor_off, "episode-meta": cmd_episode_meta}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
