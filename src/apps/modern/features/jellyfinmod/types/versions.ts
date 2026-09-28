@@ -32,6 +32,25 @@ export interface VersionDto {
     retention: VersionRetention | null;
     /** An administrator kept this file while the title's other versions may go; absent before PHASE10 Q3. */
     kept?: boolean;
+    /** False for a file Jellyfin plays that the plugin has not bound yet (empty `bindingId`); absent before V1. */
+    tracked?: boolean;
+    /** An administrator may remove exactly this file (V1 decision 3). */
+    removable?: boolean;
+    /** Removing this file removes the title's last copy and stops monitoring it. */
+    isLast?: boolean;
+    /** The viewer is part-way through this version; no device default replaces it (V1 decision 4). */
+    inProgress?: boolean;
+    /** `S01E01-E02` for a file holding several episodes. */
+    episodeRange?: string | null;
+}
+
+/** What Remove this version did (V1). */
+export interface VersionRemoveResult {
+    bindingId: string;
+    logicalBytesUnlinked: number;
+    physicalBytesReleased: number | null;
+    state: string;
+    monitored: boolean;
 }
 
 export type UpgradeBlockedReason = 'upgrade_not_allowed' | 'already_held_at_cutoff' | 'held_quality_unknown'

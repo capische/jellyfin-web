@@ -5,7 +5,7 @@ import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseIntent, 
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
-import type { UpgradeStateDto, VersionDto } from '../types/versions';
+import type { UpgradeStateDto, VersionDto, VersionRemoveResult } from '../types/versions';
 import type { Filters } from 'types/library';
 
 /**
@@ -191,6 +191,23 @@ export const setVersionKept = async (api: Api, entryId: string, bindingId: strin
     const config = { ...options, headers: authorization(api) };
     if (kept) return (await api.axiosInstance.post<{ bindingId: string; kept: boolean }>(url, undefined, config)).data;
     return (await api.axiosInstance.delete<{ bindingId: string; kept: boolean }>(url, config)).data;
+};
+
+/** The name Jellyfin gives an item, as upstream's Delete confirmation quotes it (V1). Any item id, versions included. */
+export const getItemName = async (api: Api, itemId: string, options?: AxiosRequestConfig): Promise<string | null> => {
+    const response = await api.axiosInstance.get<{ Name?: string | null }>(api.basePath + '/Items/' + encodeURIComponent(itemId),
+        { ...options, headers: authorization(api) });
+    return response.data.Name ?? null;
+};
+
+/**
+ * Removes exactly one version's file (V1 decision 3). Administrators only; the folder, sidecars and other versions stay,
+ * and removing the last copy stops monitoring. A refusal is a 409 whose body names the `reason`.
+ */
+export const removeVersion = async (api: Api, entryId: string, bindingId: string,
+    options?: AxiosRequestConfig): Promise<VersionRemoveResult> => {
+    const url = api.basePath + BASE + '/Entries/' + encodeURIComponent(entryId) + '/Versions/' + encodeURIComponent(bindingId) + '/Remove';
+    return (await api.axiosInstance.post<VersionRemoveResult>(url, undefined, { ...options, headers: authorization(api) })).data;
 };
 
 export const patchEpisode = async (api: Api, entryId: string, episodeId: string, monitored: boolean, options?: AxiosRequestConfig): Promise<EntryEpisode> => {

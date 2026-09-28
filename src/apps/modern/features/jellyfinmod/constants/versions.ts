@@ -9,6 +9,12 @@ import { formatBytes } from './queue';
 /** The Health capability a plugin build advertises when entry details carry `versions` (P6.M8). */
 export const VERSIONS_CAPABILITY = 'versions';
 
+/** Versions read from Jellyfin 12's media sources, with untracked rows, progress and episode ranges (V1). */
+export const VERSIONS_V1_CAPABILITY = 'versions.v1';
+
+/** Remove this version (V1 decision 3). */
+export const VERSIONS_REMOVE_CAPABILITY = 'versions.remove';
+
 const VIDEO_CODECS = new Map([
     ['hevc', 'HEVC'], ['h265', 'HEVC'], ['h264', 'H.264'], ['avc', 'H.264'], ['av1', 'AV1'], ['vp9', 'VP9'], ['vp8', 'VP8'],
     ['mpeg2video', 'MPEG-2'], ['mpeg4', 'MPEG-4'], ['vc1', 'VC-1'], ['msmpeg4v3', 'DivX']
@@ -84,3 +90,83 @@ export const ADD_VERSION_UNAVAILABLE = new Map([
     ['episode_versions_unsupported', 'Another version of an episode cannot be added while episode upgrades are off.'],
     ['held_quality', 'This quality is already in the library.']
 ]);
+
+/** Which copy a device starts with (V1 decision 4, answered 2026-09-28): the TV the best, a phone at most 1080p. */
+export type DevicePreference = 'tv' | 'mobile' | 'desktop';
+
+const RESOLUTION_RANK = new Map([['2160p', 4], ['1080p', 3], ['720p', 2], ['576p', 1], ['480p', 1]]);
+
+/** 4 for 2160p down to 1 for SD, 0 when unknown: the resolution the plugin read, else the height the host reported. */
+export const versionRank = (version: VersionDto): number => {
+    const named = version.resolution ? RESOLUTION_RANK.get(version.resolution) : undefined;
+    if (named) return named;
+    const height = version.height ?? 0;
+    if (height >= 2000) return 4;
+    if (height >= 1000) return 3;
+    if (height >= 700) return 2;
+    return height > 0 ? 1 : 0;
+};
+
+/** 1 for a high dynamic range copy (HDR10, HLG, Dolby Vision as the host reports it), else 0. */
+const hdrRank = (version: VersionDto) => (version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? 1 : 0);
+
+/**
+ * The copy this device should start with, or null to leave Jellyfin's own default (V1 decision 4). The TV takes the highest
+ * resolution, high dynamic range first at equal resolution. A phone takes the best copy at or below 1080p, standard dynamic
+ * range first, or the smallest when every copy is larger. A desktop keeps Jellyfin's default. A version the viewer is
+ * part-way through always wins, so resuming never switches copies. The full device presets are Phase 12 (M10–M21).
+ */
+export const preferredVersion = (versions: VersionDto[], device: DevicePreference): VersionDto | null => {
+    if (versions.length < 2 || device === 'desktop') return null;
+    const resuming = versions.find(version => version.inProgress);
+    if (resuming) return resuming;
+    const byScore = (score: (version: VersionDto) => number) =>
+        [...versions].sort((a, b) => score(b) - score(a))[0] ?? null;
+    if (device === 'tv') return byScore(version => versionRank(version) * 10 + hdrRank(version));
+    const fitting = versions.filter(version => versionRank(version) > 0 && versionRank(version) <= 3);
+    if (fitting.length === 0) return byScore(version => -versionRank(version));
+    return [...fitting].sort((a, b) => (versionRank(b) * 10 - hdrRank(b)) - (versionRank(a) * 10 - hdrRank(a)))[0] ?? null;
+};
+
+/** How a version is named in a sentence: its label, else its resolution. */
+export const versionName = (version: VersionDto): string => {
+    const text = describeVersion(version);
+    return text.label ? `${text.resolution} ${text.label}` : text.resolution;
+};
+
+/** The confirmation for Remove this version: what goes, what stays, and that the last copy stops monitoring (V1). */
+export const removeVersionText = (version: VersionDto, mediaType: 'movie' | 'series'): string => {
+    const subject = mediaType === 'series' ? 'episode' : 'title';
+    const range = version.episodeRange ? ` This file holds ${version.episodeRange}; those episodes lose this copy.` : '';
+    if (version.isLast) {
+        return `This removes the last copy and stops monitoring. Only the ${versionName(version)} file is deleted: its folder, `
+            + `subtitles and artwork stay, and the ${subject} stays in the library as not downloaded.${range}`;
+    }
+    return `Only the ${versionName(version)} file is deleted. Its folder, subtitles, artwork and the other versions stay, `
+        + `and the ${subject} stays in the library.${range}`;
+};
+
+/** Why Remove this version refused, in words. */
+export const REMOVE_VERSION_REFUSED = new Map([
+    ['version_kept', 'This file is kept. Stop keeping it first.'],
+    ['active_session', 'This file is playing. Try again when playback stops.'],
+    ['active_session_unknown', 'Playback state could not be read. Try again.'],
+    ['multi_part_unsupported', 'This version is split into several parts and cannot be removed here.'],
+    ['media_not_writable', 'The library folder cannot be written.'],
+    ['shared_path_not_all_eligible', 'Another title uses this same file.'],
+    ['operation_open', 'A removal of this file is still in progress.']
+]);
+
+/**
+ * The line added to stock Delete media's confirmation when a title has more than one file (V1 decision 3, analysis C8).
+ * Upstream deletes a movie's whole folder when the movie has one of its own, and for an episode the file with every file
+ * whose name starts with it.
+ */
+export const deleteWarningText = (fileCount: number, mediaType: 'movie' | 'series'): string => {
+    if (mediaType === 'movie') {
+        return `This movie has ${fileCount} files. Delete removes its whole folder when it has one of its own: every version, `
+            + 'subtitles, artwork and extras. To delete one file, use Remove this version instead.';
+    }
+    return `This episode has ${fileCount} files. Delete removes the selected file and every file whose name starts with it, `
+        + 'which can include another version\'s subtitles. To delete exactly one file, use Remove this version instead.';
+};
