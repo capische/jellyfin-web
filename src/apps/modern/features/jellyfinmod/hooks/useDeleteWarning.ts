@@ -8,16 +8,28 @@ import globalize from 'lib/globalize';
  * version. The confirmation is recognised by upstream's own title and this item's name in its text, so a Delete opened
  * for another item from this page (a card's menu) is left alone. Nothing about the dialog's buttons or result changes.
  */
-export const useDeleteWarning = (itemName: string | null | undefined, warning: string | null) => {
+export const useDeleteWarning = (view: HTMLElement, itemNames: (string | null | undefined)[], warning: string | null) => {
+    const names = itemNames.filter((name): name is string => !!name).join('\u0000');
     useEffect(() => {
-        if (!warning || !itemName) return;
-        const title = globalize.translate('HeaderDeleteItem');
+        const candidates = names ? names.split('\u0000') : [];
+        if (!warning) return;
+        // The page's own More menu opened the confirmation when its button was used just before: that menu acts on this
+        // page's item. A name in the text serves as well, for a confirmation opened some other way.
+        let moreOpenedAt = 0;
+        const noteMore = (event: Event) => {
+            if (event.target instanceof Element && event.target.closest('.btnMoreCommands')) moreOpenedAt = Date.now();
+        };
+        view.addEventListener('click', noteMore, true);
         const annotate = (dialog: Element) => {
             if (dialog.querySelector('.jfmod-deleteWarning')) return;
+            // Upstream's confirmation for a deletion: its primary button is a `button-delete`, or its title is upstream's
+            // own Delete Item heading; its text quotes the item's name (ConfirmDeleteItemByName).
             const heading = dialog.querySelector('.formDialogHeaderTitle')?.textContent?.trim();
+            const deleting = !!dialog.querySelector('.formDialogFooter .button-delete')
+                || heading === globalize.translate('HeaderDeleteItem');
             const body = dialog.querySelector('.text');
-            // Upstream's ConfirmDeleteItemByName quotes the item's own name.
-            if (heading !== title || !body || !(body.textContent ?? '').includes(itemName)) return;
+            const ours = Date.now() - moreOpenedAt < 60000 || candidates.some(name => (body?.textContent ?? '').includes(name));
+            if (!deleting || !body || !ours) return;
             const line = document.createElement('p');
             line.className = 'jfmod-deleteWarning';
             line.setAttribute('role', 'alert');
@@ -30,7 +42,13 @@ export const useDeleteWarning = (itemName: string | null | undefined, warning: s
             document.querySelectorAll('.dialog').forEach(annotate);
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        return () => observer.disconnect();
-    }, [itemName, warning]);
+        // Marks the page while the warning is armed, for acceptance checks; it names nothing.
+        document.body.dataset.jfmodDeleteWarning = String(candidates.length);
+        return () => {
+            view.removeEventListener('click', noteMore, true);
+            observer.disconnect();
+            delete document.body.dataset.jfmodDeleteWarning;
+        };
+    }, [view, names, warning]);
 };
 
