@@ -107,25 +107,49 @@ export const versionRank = (version: VersionDto): number => {
     return height > 0 ? 1 : 0;
 };
 
-/** 1 for a high dynamic range copy (HDR10, HLG, Dolby Vision as the host reports it), else 0. */
-const hdrRank = (version: VersionDto) => (version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? 1 : 0);
+/**
+ * Jellyfin's `VideoRangeType` for each copy, keyed by media source id in "N" form, as the native item's media sources
+ * report it (`DOVIWithHDR10`, `HDR10`, `HLG`, `SDR`, ...). The plugin's rows carry only the broad range (`HDR` / `SDR`),
+ * which cannot tell Dolby Vision from HDR10.
+ */
+export type VideoRangeTypes = Record<string, string>;
+
+/** `VideoRangeType` keys compare in the "N" form. */
+export const mediaSourceKey = (id: string) => id.replace(/-/g, '').toLowerCase();
+
+const DOLBY_VISION = /^dovi(?!invalid)/i;
+const HIGH_RANGE_TYPES = /^(hdr10|hdr10plus|hlg)$/i;
+
+/**
+ * 2 for Dolby Vision, 1 for another high dynamic range (HDR10, HDR10+, HLG, or a range the host only calls HDR), 0 for SDR
+ * or unknown (V1 decision 4: Dolby Vision, then HDR, then SDR).
+ */
+export const dynamicRangeRank = (version: VersionDto, rangeTypes?: VideoRangeTypes | null): number => {
+    const type = rangeTypes?.[mediaSourceKey(version.mediaSourceId)] ?? '';
+    if (DOLBY_VISION.test(type) || /dovi|dolby\s*vision/i.test(version.videoRange ?? '')) return 2;
+    if (HIGH_RANGE_TYPES.test(type)) return 1;
+    return version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? 1 : 0;
+};
 
 /**
  * The copy this device should start with, or null to leave Jellyfin's own default (V1 decision 4). The TV takes the highest
- * resolution, high dynamic range first at equal resolution. A phone takes the best copy at or below 1080p, standard dynamic
- * range first, or the smallest when every copy is larger. A desktop keeps Jellyfin's default. A version the viewer is
- * part-way through always wins, so resuming never switches copies. The full device presets are Phase 12 (M10–M21).
+ * resolution and, at equal resolution, Dolby Vision, then HDR, then SDR. A phone takes the best copy at or below 1080p,
+ * standard dynamic range first, or the smallest when every copy is larger. A desktop keeps Jellyfin's default. A version
+ * the viewer is part-way through always wins, so resuming never switches copies. The full device presets are Phase 12
+ * (M10–M21).
  */
-export const preferredVersion = (versions: VersionDto[], device: DevicePreference): VersionDto | null => {
+export const preferredVersion = (versions: VersionDto[], device: DevicePreference,
+    rangeTypes?: VideoRangeTypes | null): VersionDto | null => {
     if (versions.length < 2 || device === 'desktop') return null;
     const resuming = versions.find(version => version.inProgress);
     if (resuming) return resuming;
-    const byScore = (score: (version: VersionDto) => number) =>
-        [...versions].sort((a, b) => score(b) - score(a))[0] ?? null;
-    if (device === 'tv') return byScore(version => versionRank(version) * 10 + hdrRank(version));
+    const byScore = (candidates: VersionDto[], score: (version: VersionDto) => number) =>
+        [...candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
+    const range = (version: VersionDto) => dynamicRangeRank(version, rangeTypes);
+    if (device === 'tv') return byScore(versions, version => versionRank(version) * 10 + range(version));
     const fitting = versions.filter(version => versionRank(version) > 0 && versionRank(version) <= 3);
-    if (fitting.length === 0) return byScore(version => -versionRank(version));
-    return [...fitting].sort((a, b) => (versionRank(b) * 10 - hdrRank(b)) - (versionRank(a) * 10 - hdrRank(a)))[0] ?? null;
+    if (fitting.length === 0) return byScore(versions, version => -versionRank(version));
+    return byScore(fitting, version => versionRank(version) * 10 - range(version));
 };
 
 /** How a version is named in a sentence: its label, else its resolution. */

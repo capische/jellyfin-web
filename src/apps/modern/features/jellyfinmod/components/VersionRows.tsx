@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import React, { type FC, type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 
-import { type DevicePreference, describeVersion, preferredVersion, sameItemId } from '../constants/versions';
+import { describeVersion, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
 
 import './versions.scss';
@@ -14,8 +14,8 @@ interface VersionRowsProps {
     versions: VersionDto[];
     /** Administrators with release search and `versions`: the last row is Get another quality. */
     onAddVersion?: (opener: HTMLElement) => void;
-    /** Which copy this device starts with (V1 decision 4); desktop leaves Jellyfin's default. */
-    device?: DevicePreference;
+    /** The copy this device starts with (V1 decision 4); null leaves Jellyfin's default. */
+    preferred?: VersionDto | null;
     /** A line under the rows, such as what stock Delete removes (V1); shown to administrators only. */
     note?: string | null;
     admin?: boolean;
@@ -45,39 +45,50 @@ const useSelectedSource = (view: HTMLElement) => {
     return value;
 };
 
+/**
+ * True only while this component dispatches its own `change`. Every other `change` on the select is the viewer's: a
+ * mouse or touch pick is a trusted event, but the stock `emby-select` on a TV (webOS) picks through an action sheet and
+ * dispatches a synthetic one, which must count as the viewer's choice too.
+ */
+let dispatchingOwnChange = false;
+
 /** Sets the stock select to a version and lets upstream react through its own `change` event. */
 const selectVersion = (view: HTMLElement, version: VersionDto) => {
     const select = findSelect(view);
     const option = select && Array.from(select.options).find(candidate => sameItemId(candidate.value, version.mediaSourceId));
     if (!select || !option || select.value === option.value) return;
     select.value = option.value;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    dispatchingOwnChange = true;
+    try {
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    } finally {
+        dispatchingOwnChange = false;
+    }
 };
 
 /**
  * Starts this device on the copy that suits it (V1 decision 4): once the stock select lists the versions, and again when
  * upstream rewrites its options, until the viewer chooses a copy themselves on the select or a row.
  */
-const useDevicePreference = (view: HTMLElement, versions: VersionDto[], device: DevicePreference, chosen: { current: boolean }) => {
+const useDevicePreference = (view: HTMLElement, preferred: VersionDto | null | undefined, chosen: { current: boolean }) => {
     useEffect(() => {
-        const preferred = preferredVersion(versions, device);
         const select = findSelect(view);
         if (!preferred || !select) return;
         const apply = () => {
             if (!chosen.current) selectVersion(view, preferred);
         };
-        const userChange = (event: Event) => {
-            if (event.isTrusted) chosen.current = true;
+        const viewerChange = () => {
+            if (!dispatchingOwnChange) chosen.current = true;
         };
         apply();
-        select.addEventListener('change', userChange);
+        select.addEventListener('change', viewerChange);
         const observer = new MutationObserver(apply);
         observer.observe(select, { childList: true });
         return () => {
-            select.removeEventListener('change', userChange);
+            select.removeEventListener('change', viewerChange);
             observer.disconnect();
         };
-    }, [view, versions, device, chosen]);
+    }, [view, preferred, chosen]);
 };
 
 const VersionRow: FC<{ version: VersionDto; selected: boolean; onChoose: (version: VersionDto) => void }> =
@@ -106,10 +117,10 @@ const VersionRow: FC<{ version: VersionDto; selected: boolean; onChoose: (versio
  * playback logic runs as if the viewer had used the select. Every row is a D-pad stop; nothing here injects a
  * select where upstream has none.
  */
-const VersionRows: FC<VersionRowsProps> = ({ view, versions, onAddVersion, device = 'desktop', note, admin = false }) => {
+const VersionRows: FC<VersionRowsProps> = ({ view, versions, onAddVersion, preferred, note, admin = false }) => {
     const current = useSelectedSource(view);
     const chosen = useRef(false);
-    useDevicePreference(view, versions, device, chosen);
+    useDevicePreference(view, preferred, chosen);
     const choose = useCallback((version: VersionDto) => {
         chosen.current = true;
         selectVersion(view, version);
