@@ -5,8 +5,10 @@
 //              marked); Back (the Escape key in the TV layout, the browser's Back on desktop) closes it and focus returns
 //              to that row; desktop and TV 1920x1080;
 //   ordinary   an ordinary user sees the version rows but no Remove and no Get another quality;
-//   oldplugin  with the pre-V1 plugin loaded: no version rows, no Get another quality or Remove, and no warning in the
-//              stock Delete confirmation (cancelled, nothing deleted); no page error.
+//   oldplugin  with the pre-V1 plugin loaded (it advertises `versions`, not `versions.v1`): the pre-V1 page, i.e. version
+//              rows and Get another quality, and no V1 behaviour: no Remove, no Delete note under the rows, no warning
+//              in the stock Delete confirmation (cancelled, nothing deleted), the stock select left on Jellyfin's
+//              default; no page error.
 //
 //   JELLYFINMOD_TEST_URL=http://127.0.0.1:48096/ JELLYFINMOD_V1_MOVIE=<main item id> JELLYFINMOD_V1_MODE=admin|ordinary|oldplugin
 //   [JELLYFINMOD_V1_USER=<ordinary user with an empty password>] [JELLYFINMOD_BROWSER=chrome] node v1-browser48.mjs
@@ -108,13 +110,21 @@ async function ordinaryLayout(page, layout) {
 }
 
 async function oldPluginLayout(page, layout) {
+    // The pre-V1 baseline stays: rows and Get another quality come from `versions`, which the pre-V1 plugin has.
     const rowCount = await page.locator('.jfmod-versions .jfmod-versionRow:not(.jfmod-versionRow--add)').count();
-    record(layout, 'no version rows', rowCount === 0, `${rowCount} rows`);
+    record(layout, 'the pre-V1 version rows', rowCount >= 2, `${rowCount} rows`);
     const addCount = await page.locator('.jfmod-versionRow--add').count();
-    record(layout, 'no Get another quality', addCount === 0, `${addCount}`);
+    record(layout, 'the pre-V1 Get another quality row', addCount === 1, `${addCount}`);
+    const note = await page.locator('.jfmod-versionsNote').count();
+    record(layout, 'no V1 Delete note under the rows', note === 0, `${note}`);
+    const first = await page.evaluate(() => {
+        const select = document.querySelector('.mainAnimatedPage:not(.hide) .selectSource');
+        return !!select && select.value === select.options[0]?.value;
+    });
+    record(layout, 'no V1 preselect: the stock select on Jellyfin\'s default', first);
     const removeCount = await page.locator('[data-jfmod-remove-version]').count();
     record(layout, 'no Remove this version', removeCount === 0, `${removeCount}`);
-    const sources = await page.evaluate(() => document.querySelectorAll('.selectSource option').length);
+    const sources = await page.evaluate(() => document.querySelectorAll('.mainAnimatedPage:not(.hide) .selectSource option').length);
     record(layout, 'the stock version select still lists the versions', sources >= 2, `${sources} options`);
     await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
     await page.locator('.actionSheetMenuItem[data-id="delete"]').first().click({ timeout: 5000 });
@@ -138,7 +148,7 @@ for (const layout of (process.env.JELLYFINMOD_LAYOUTS ?? 'desktop,tv1080').split
     try {
         await signIn(page);
         if (LAYOUTS[layout].tv) await setTvLayout(page);
-        await openDetail(page, mode !== 'oldplugin');
+        await openDetail(page);
         await { admin: adminLayout, ordinary: ordinaryLayout, oldplugin: oldPluginLayout }[mode](page, layout);
         record(layout, 'no page errors', errors.length === 0, errors.slice(0, 2).join(' | '));
     } catch (error) {
