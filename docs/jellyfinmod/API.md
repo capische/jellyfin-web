@@ -619,6 +619,39 @@ Entry detail adds `versions` and, for administrators, `upgrade`; episodes add `v
 A superseded version removed after an upgrade is a Phase 3 `RetentionOperation` with
 `provenance: "upgrade_replaced"` and history event `upgrade_replaced`; automatic grabs write
 `auto_grabbed`.
+
+### Versions on Jellyfin 12 (V1, 2026-09-28)
+
+Health `Capabilities` adds `versions.v1` (rows from Jellyfin's media sources) and `versions.remove`.
+
+Each `versions[]` row adds `tracked` (false for a file Jellyfin plays that the plugin has not bound yet; its
+`bindingId` is the empty GUID and it has no `retention`), `removable` (administrators: a bound single file no per-file
+Keep holds), `isLast` (removing it removes the title's last copy), `inProgress` (the viewer is part-way through it) and
+`episodeRange` (`"S01E01-E02"` for a multi-episode file, else null). `isDefault` is Jellyfin's main item.
+
+`POST /JellyfinMod/Entries/{id}/Versions/{bindingId}/Remove` — administrators only (anonymous 401, ordinary user 403,
+unknown title or binding 404). Deletes exactly that file through the plugin's exact unlink and removes its native item
+with file deletion off; the folder, sidecars and other versions stay. Removing the last copy leaves the movie (or the
+episode) `none` and unmonitored.
+
+```json
+{"bindingId":"…","logicalBytesUnlinked":64000000,"physicalBytesReleased":0,"state":"onDisk","monitored":true}
+```
+
+`physicalBytesReleased` is 0 while another link (a seeding copy) holds the file and null when unknown. A refusal is 409
+with a ProblemDetails body whose `reason` is one of `version_kept`, `active_session`, `active_session_unknown`,
+`multi_part_unsupported`, `media_not_writable`, `shared_path_not_all_eligible`, `operation_open`, or the storage and
+identity reasons of the retention preview (`storage_unavailable`, `native_binding_missing`, `media_path_unavailable`,
+`symlink_representation`, `symlink_escape`, `library_root_missing`). The operation is a `RetentionOperation` with
+`provenance: "version_removed"`, and History records `version_removed`.
+
+New reasons elsewhere: the retention preview blocks `version_identity_conflict` (the versions Jellyfin groups are not one
+title or episode), `versions_unverified` (a bound file is no longer one of its main item's versions) and, for movies as
+well as episodes, `versions_untracked` / `episode_versions_untracked` only while a played file is unbound. Imports
+block `versions_not_grouped` when Jellyfin would not group the new file with the existing one. Automation records
+`multi_episode_held` (an episode held as a multi-episode file is not upgraded) and `versions_untracked` (the best copy
+is not bound yet). Upgrades wait with `superseded_untracked` while the superseded file is on disk but unbound, and end
+`superseded_missing` only when that file is gone. `episodeUpgradesEnabled` defaults to true since V1.
 **Correction (review 2026-09-18):** the continuation is unbounded today. A user with AllowedTags
 can never read file-less metadata, so every page is empty and the web client auto-follows up to
 500 remote pages, each costing up to 21 TMDB calls. A single failed TMDB detail call other than
