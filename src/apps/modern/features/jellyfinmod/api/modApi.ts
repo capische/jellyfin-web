@@ -193,11 +193,21 @@ export const setVersionKept = async (api: Api, entryId: string, bindingId: strin
     return (await api.axiosInstance.delete<{ bindingId: string; kept: boolean }>(url, config)).data;
 };
 
-/** The name Jellyfin gives an item, as upstream's Delete confirmation quotes it (V1). Any item id, versions included. */
-export const getItemName = async (api: Api, itemId: string, options?: AxiosRequestConfig): Promise<string | null> => {
-    const response = await api.axiosInstance.get<{ Name?: string | null }>(api.basePath + '/Items/' + encodeURIComponent(itemId),
-        { ...options, headers: authorization(api) });
-    return response.data.Name ?? null;
+/**
+ * Jellyfin's `VideoRangeType` of each copy of an item, keyed by media source id in "N" form (V1 decision 4: Dolby Vision
+ * before HDR on the TV). Read from the native item's own media sources; a copy without a video stream is left out.
+ */
+export const getVideoRangeTypes = async (api: Api, userId: string, itemId: string,
+    options?: AxiosRequestConfig): Promise<Record<string, string>> => {
+    type Source = { Id?: string | null; MediaStreams?: { Type?: string | null; VideoRangeType?: string | null }[] | null };
+    const response = await api.axiosInstance.get<{ MediaSources?: Source[] | null }>(api.basePath + '/Items/'
+        + encodeURIComponent(itemId) + '?userId=' + encodeURIComponent(userId), { ...options, headers: authorization(api) });
+    const types: Record<string, string> = {};
+    for (const source of response.data.MediaSources ?? []) {
+        const video = (source.MediaStreams ?? []).find(stream => stream.Type === 'Video');
+        if (source.Id && video?.VideoRangeType) types[source.Id.replace(/-/g, '').toLowerCase()] = video.VideoRangeType;
+    }
+    return types;
 };
 
 /**

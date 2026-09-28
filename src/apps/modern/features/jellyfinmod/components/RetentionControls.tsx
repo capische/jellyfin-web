@@ -26,7 +26,7 @@ interface RetentionControlsProps {
     entryId: string;
     busy: boolean;
     /** Runs one administrator change, refreshes the page and announces `done`. */
-    change: (action: () => Promise<unknown>, done: string) => Promise<void>;
+    change: (action: () => Promise<unknown>, done: string) => Promise<unknown>;
     /** The tracked episode of an episode page with its own Keep; undefined on a series or movie page. */
     episode?: EntryEpisode;
     versions: VersionDto[];
@@ -43,7 +43,10 @@ const RetentionControls: FC<RetentionControlsProps> = ({ api, entryId, busy, cha
     const keptItself = episode?.retentionPolicy === 'never';
     // A file Jellyfin plays that the plugin has not bound yet has no binding to keep by (V1).
     const tracked = versions.filter(version => version.tracked !== false);
-    const keepable = capabilities.includes(VERSION_KEEP_CAPABILITY) && tracked.length > 1 ? tracked : [];
+    // Keep one file where the title has several tracked files; Stop keeping for every kept file, even one left alone
+    // beside an untracked copy, because a per-file Keep is what blocks Remove this version.
+    const keepable = capabilities.includes(VERSION_KEEP_CAPABILITY) ?
+        tracked.filter(version => tracked.length > 1 || version.kept) : [];
     const windowValue = episode?.retentionPolicy === 'days' && episode.reclaimAfterDays ? String(episode.reclaimAfterDays) : 'inherit';
 
     const unkeep = useCallback(() => {

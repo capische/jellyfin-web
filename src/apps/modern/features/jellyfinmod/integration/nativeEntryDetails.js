@@ -112,6 +112,7 @@ export default function initializeNativeEntryDetails(view, params) {
         unmount = renderComponent(NativeEntryDetails, {
             api,
             userId: client.getCurrentUserId(),
+            serverId: client.serverId(),
             itemId: params.id,
             isAdmin: !!user?.Policy?.IsAdministrator,
             view,

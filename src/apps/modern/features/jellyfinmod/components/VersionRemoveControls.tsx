@@ -1,5 +1,5 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import React, { type FC, type MouseEvent, useCallback, useMemo } from 'react';
+import React, { type FC, type MouseEvent, useCallback, useMemo, useRef } from 'react';
 
 import confirm from 'components/confirm/confirm';
 
@@ -14,11 +14,13 @@ interface VersionRemoveControlsProps {
     busy: boolean;
     /**
      * Runs one administrator change, refreshes the page and announces `done`; a failure carrying `jfmodMessage` is
-     * announced in those words.
+     * announced in those words. Resolves true when the change was made.
      */
-    change: (action: () => Promise<unknown>, done: string) => Promise<void>;
+    change: (action: () => Promise<unknown>, done: string) => Promise<boolean>;
     versions: VersionDto[];
     capabilities: string[];
+    /** After a removal: the native page still shows the removed copy, so the page takes the viewer on from here. */
+    onRemoved: (version: VersionDto) => void;
 }
 
 /** The refusal reason a 409 from Remove carries, if any. */
@@ -32,12 +34,17 @@ const refusal = (error: unknown): string | null => {
  * own confirmation says exactly what goes and what stays before anything happens; on a TV it is a D-pad dialog and Back
  * cancels. Plain buttons in the page's focus flow, like Keep.
  */
-const VersionRemoveControls: FC<VersionRemoveControlsProps> = ({ api, entryId, mediaType, busy, change, versions, capabilities }) => {
+const VersionRemoveControls: FC<VersionRemoveControlsProps> = ({ api, entryId, mediaType, busy, change, versions, capabilities,
+    onRemoved }) => {
     const removable = useMemo(() => (capabilities.includes(VERSIONS_REMOVE_CAPABILITY) ?
         versions.filter(version => version.removable && version.tracked !== false) : []), [capabilities, versions]);
+    // One removal at a time from the first click: a second click (or Enter) while the confirmation is opening or the request
+    // is running does nothing, whatever React has rendered yet.
+    const pending = useRef(false);
     const remove = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         const version = removable.find(candidate => candidate.bindingId === event.currentTarget.dataset.jfmodBindingId);
-        if (!version || busy) return;
+        if (!version || busy || pending.current) return;
+        pending.current = true;
         confirm({
             title: 'Remove this version',
             text: removeVersionText(version, mediaType),
@@ -53,8 +60,12 @@ const VersionRemoveControls: FC<VersionRemoveControlsProps> = ({ api, entryId, m
                 throw Object.assign(new Error(words), { jfmodMessage: words });
             }
         }, version.isLast ? 'The last copy was removed. The title is no longer monitored.' : 'The version was removed.'),
-        () => undefined).catch(() => undefined);
-    }, [api, busy, change, entryId, mediaType, removable]);
+        () => false).then(removed => {
+            if (removed) onRemoved(version);
+        }).catch(() => undefined).finally(() => {
+            pending.current = false;
+        });
+    }, [api, busy, change, entryId, mediaType, onRemoved, removable]);
 
     return <>
         {removable.map(version => <button key={'remove:' + version.bindingId} className='emby-button raised' type='button'

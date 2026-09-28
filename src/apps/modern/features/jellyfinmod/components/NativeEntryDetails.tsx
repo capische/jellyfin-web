@@ -1,19 +1,21 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
-import { type EntryDetail, getEntries, getEntry, getItemName, keepEntry, keepEpisode, requestSearch } from '../api/modApi';
+import { type EntryDetail, getEntries, getEntry, getVideoRangeTypes, keepEntry, keepEpisode, requestSearch } from '../api/modApi';
 import { EPISODE_RETENTION_CAPABILITY, keepButtonLabel } from '../constants/fileState';
 import { AUTOMATION_CAPABILITY } from '../constants/queue';
-import { type DevicePreference, deleteWarningText, sameItemId, VERSIONS_CAPABILITY } from '../constants/versions';
+import { type DevicePreference, deleteWarningText, preferredVersion, sameItemId, VERSIONS_CAPABILITY,
+    VERSIONS_V1_CAPABILITY } from '../constants/versions';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { openReleasePicker } from '../integration/releasePicker';
 import { type EntryEpisode, FileState } from '../types/entry';
+import type { VersionDto } from '../types/versions';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionControls from './RetentionControls';
@@ -26,6 +28,8 @@ import './entryDetails.scss';
 interface NativeEntryDetailsProps {
     api: Api;
     userId: string;
+    /** The server the page belongs to, for the detail routes the page moves on to after a removal. */
+    serverId: string;
     itemId: string;
     isAdmin: boolean;
     /** The native detail view, whose stock `.selectSource` the version rows drive (P6.M8). */
@@ -92,22 +96,16 @@ const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
 
 /**
  * Stock Delete media on a title with several files deletes more than one version (V1, analysis C8): its confirmation on
- * this page gets a warning, and the administrator's version list the same line.
+ * this page gets a warning, and the administrator's version list the same line. V1 only: a plugin without `versions.v1`
+ * gets the page as it was before V1.
  */
-const usePageDeleteWarning = (api: Api, userId: string, itemId: string, view: HTMLElement, data: EntryDetail | null | undefined,
-    episode: EntryEpisode | undefined, capabilities: string[]) => {
+const usePageDeleteWarning = (view: HTMLElement, data: EntryDetail | null | undefined, episode: EntryEpisode | undefined,
+    capabilities: string[]) => {
     // Every file the page lists counts, whoever looks: the warning belongs to the dialog, which only administrators reach.
     const versions = data ? versionSurfaces(data, episode, capabilities, false, false).versions : [];
-    const warning = data && versions.length > 1 ? deleteWarningText(versions.length, data.entry.mediaType) : null;
-    const itemName = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, userId, 'ItemName', itemId],
-        queryFn: ({ signal }) => getItemName(api, itemId, { signal }),
-        enabled: !!warning,
-        retry: false
-    });
-    // Upstream quotes Jellyfin's own name for the item; the catalog's title is the same for a native title and serves
-    // until that name has been read.
-    useDeleteWarning(view, [itemName.data, episode ? episode.title : data?.entry.title], warning);
+    const warning = data && capabilities.includes(VERSIONS_V1_CAPABILITY) && versions.length > 1 ?
+        deleteWarningText(versions.length, data.entry.mediaType) : null;
+    useDeleteWarning(view, warning);
     return warning;
 };
 
@@ -117,15 +115,66 @@ const devicePreference = (): DevicePreference => {
     return layoutManager.mobile ? 'mobile' : 'desktop';
 };
 
+/**
+ * The copy this device starts with, or null for Jellyfin's default (V1 decision 4). Only with `versions.v1`: an older
+ * plugin's rows do not say which copy the viewer is part-way through, so a preselect could replace a resumable copy. The TV
+ * waits for Jellyfin's range types so that Dolby Vision is told apart from HDR before anything is selected.
+ */
+const usePreferredVersion = (api: Api, userId: string, itemId: string, data: EntryDetail | null | undefined,
+    episode: EntryEpisode | undefined, capabilities: string[]) => {
+    const versions = data ? versionSurfaces(data, episode, capabilities, false, false).versions : [];
+    const device = devicePreference();
+    const active = capabilities.includes(VERSIONS_V1_CAPABILITY) && device !== 'desktop' && versions.length > 1;
+    const ranges = useQuery({
+        queryKey: ['JellyfinMod', api.basePath, userId, 'VideoRangeTypes', itemId],
+        queryFn: ({ signal }) => getVideoRangeTypes(api, userId, itemId, { signal }),
+        enabled: active && device === 'tv',
+        retry: false
+    });
+    if (!active || (device === 'tv' && ranges.isPending)) return null;
+    return preferredVersion(versions, device, ranges.data);
+};
+
+/** The copies of the page's movie or episode that the plugin lists after a removal. */
+const remainingAfterRemove = (fresh: EntryDetail, episode: EntryEpisode | undefined, removed: VersionDto): VersionDto[] => {
+    if (removed.isLast) return [];
+    const freshEpisode = episode ? fresh.episodes.find(candidate => candidate.id === episode.id) : undefined;
+    const remaining = (episode ? freshEpisode?.versions : fresh.versions) ?? [];
+    return remaining.filter(version => version.bindingId !== removed.bindingId);
+};
+
+/**
+ * Where the page goes after Remove this version: upstream's page still holds the removed copy in its select and its
+ * playback sources. With a copy left, the remaining main copy's page loads afresh; with none left, the catalog entry
+ * (a movie is Not downloaded; an episode's entry opens its series). `jfmodRefresh` makes the address differ when the
+ * main copy is this very page, so the route loads a new view instead of keeping the old one.
+ */
+const leaveAfterRemove = (serverId: string, itemId: string, fresh: EntryDetail | null | undefined, episode: EntryEpisode | undefined,
+    removed: VersionDto) => {
+    if (!fresh) return;
+    const entryId = fresh.entry.id;
+    const remaining = remainingAfterRemove(fresh, episode, removed);
+    const server = '&serverId=' + encodeURIComponent(serverId);
+    const next = remaining.find(version => version.isDefault) ?? remaining[0];
+    if (!next?.jellyfinItemId) {
+        window.location.replace('#/details?entryId=' + encodeURIComponent(entryId) + server);
+        return;
+    }
+    const refresh = sameItemId(next.jellyfinItemId, itemId) ? '&jfmodRefresh=' + Date.now() : '';
+    window.location.replace('#/details?id=' + encodeURIComponent(next.jellyfinItemId) + server + refresh);
+};
+
 /** Add catalog history without replacing native playback, seasons or track controls. */
-const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, isAdmin, view, versionsMount }) => {
+const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, isAdmin, view, versionsMount }) => {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     // Every viewer reads the version rows, so capabilities are read for ordinary users too.
     const capabilities = usePluginCapabilities(api);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
+    const queryClient = useQueryClient();
+    const detailKey = ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId];
     const detail = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId],
+        queryKey: detailKey,
         queryFn: async ({ signal }) => {
             // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14).
             const entries = await getEntries(api, { jellyfinItemId: itemId, limit: 1 }, { signal });
@@ -149,11 +198,13 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         if (target) focusManager.focus(target);
     }, [busy, data]);
     const change = useCallback(async (action: () => Promise<unknown>, done: string) => {
-        if (busy) return;
+        if (busy) return false;
         setBusy(true);
         setMessage('');
+        let made = false;
         try {
             await action();
+            made = true;
             const refreshed = await refetch();
             if (refreshed.error) throw refreshed.error;
             setMessage(done);
@@ -162,6 +213,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         } finally {
             setBusy(false);
         }
+        return made;
     }, [busy, refetch]);
     const keep = useCallback(() => {
         if (!data) return;
@@ -198,7 +250,14 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             setBusy(false);
         }
     }, [api, busy, data]);
-    const deleteWarning = usePageDeleteWarning(api, userId, itemId, view, data, episode, capabilities);
+    const deleteWarning = usePageDeleteWarning(view, data, episode, capabilities);
+    const preferred = usePreferredVersion(api, userId, itemId, data, episode, capabilities);
+    const afterRemove = useCallback((removed: VersionDto) => {
+        // The page's data was refetched by the removal; the page moves on from what the plugin now lists.
+        leaveAfterRemove(serverId, itemId, queryClient.getQueryData<EntryDetail | null>(detailKey), episode, removed);
+    // detailKey is rebuilt from these values on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [api.basePath, episode, itemId, queryClient, serverId, userId]);
     if (!detail.data) return null;
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
@@ -217,7 +276,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
         data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && versionsMount && createPortal(
             <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined}
-                device={devicePreference()} note={deleteWarning} admin={isAdmin} />, versionsMount)}
+                preferred={preferred} note={deleteWarning} admin={isAdmin} />, versionsMount)}
         <p role='status'>{message}</p>
         {warning && <RetentionWarning warning={warning} subject={warningSubject(episode)} busy={busy}
             onKeep={isAdmin ? keep : undefined}
@@ -261,7 +320,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             {isAdmin && <RetentionControls api={api} entryId={detail.data.entry.id} busy={busy} change={change}
                 episode={keepsEpisode ? episode : undefined} versions={versions} capabilities={capabilities} />}
             {isAdmin && <VersionRemoveControls api={api} entryId={detail.data.entry.id} mediaType={detail.data.entry.mediaType}
-                busy={busy} change={change} versions={versions} capabilities={capabilities} />}
+                busy={busy} change={change} versions={versions} capabilities={capabilities} onRemoved={afterRemove} />}
         </div>
         <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
             <ol>{history.map(event => <li key={event.id}>
