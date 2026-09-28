@@ -41,7 +41,9 @@ interface RetentionControlsProps {
 const RetentionControls: FC<RetentionControlsProps> = ({ api, entryId, busy, change, episode, versions, capabilities }) => {
     const canEditEpisode = !!episode && capabilities.includes(EPISODE_CONTROLS_CAPABILITY);
     const keptItself = episode?.retentionPolicy === 'never';
-    const keepable = capabilities.includes(VERSION_KEEP_CAPABILITY) && versions.length > 1 ? versions : [];
+    // A file Jellyfin plays that the plugin has not bound yet has no binding to keep by (V1).
+    const tracked = versions.filter(version => version.tracked !== false);
+    const keepable = capabilities.includes(VERSION_KEEP_CAPABILITY) && tracked.length > 1 ? tracked : [];
     const windowValue = episode?.retentionPolicy === 'days' && episode.reclaimAfterDays ? String(episode.reclaimAfterDays) : 'inherit';
 
     const unkeep = useCallback(() => {
