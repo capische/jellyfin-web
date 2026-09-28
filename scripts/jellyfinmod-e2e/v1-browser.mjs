@@ -105,34 +105,54 @@ const apiPost = (page, path, body) => page.evaluate(([p, b]) => ApiClient.ajax({
     data: JSON.stringify(b ?? {}), contentType: 'application/json' }).then(() => true), [path, body]);
 
 async function openDetail(page, id = movie) {
-    await page.goto(base('/web/') + `#/details?id=${id}`, { waitUntil: 'domcontentloaded' });
+    const target = base('/web/') + `#/details?id=${id}`;
+    // The same address again changes nothing in the page (focus stays where it was), so the app goes Home first and the
+    // detail page opens afresh, as it does for a viewer.
+    if (page.url() === target) {
+        await page.goto(base('/web/') + '#/home', { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(2000);
+    }
+    await page.goto(target, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.jfmod-versions .jfmod-versionRow', { timeout: 30000 });
     await page.waitForTimeout(2500);
 }
 
 /**
- * Moves focus to `exact` by keys only: arrow keys on TV (down to the first match of `coarse`, then right along a row of
- * buttons), Tab on desktop. Returns whether focus got there.
+ * Moves focus to `exact` by keys only: arrow keys on TV, Tab on desktop. Returns whether focus got there.
  */
-async function reachByKeys(page, layout, exact, coarse = exact) {
+async function reachByKeys(page, layout, exact) {
     const tv = !!LAYOUTS[layout].tv;
-    for (let presses = 0; presses < 60; presses++) {
+    const focused = () => page.evaluate(() => {
+        const el = document.activeElement;
+        const box = el?.getBoundingClientRect();
+        return el ? `${el.className}|${(el.textContent ?? '').slice(0, 30)}|${Math.round(box.x)},${Math.round(box.y)}` : 'none';
+    });
+    for (let presses = 0; presses < 80; presses++) {
         if (await activeMatches(page, exact)) return true;
-        let key = 'Tab';
-        if (tv) key = await activeMatches(page, coarse) ? 'ArrowRight' : 'ArrowDown';
-        await page.keyboard.press(key);
-        await page.waitForTimeout(tv ? 250 : 60);
+        if (!tv) {
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(60);
+            continue;
+        }
+        // Down through the page; where Down does not move focus (a column edge) Right, then Left, as a viewer with a
+        // remote would.
+        const before = await focused();
+        for (const key of ['ArrowDown', 'ArrowRight', 'ArrowLeft']) {
+            await page.keyboard.press(key);
+            await page.waitForTimeout(250);
+            if (await focused() !== before) break;
+        }
     }
     return activeMatches(page, exact);
 }
 
 /** Chooses a control the way this layout does: keys and Enter on TV and desktop, a tap on mobile. */
-async function chooseControl(page, layout, exact, coarse) {
+async function chooseControl(page, layout, exact) {
     if (layout === 'mobile') {
         await page.locator(exact).first().tap({ timeout: 5000 });
         return true;
     }
-    const reached = await reachByKeys(page, layout, exact, coarse);
+    const reached = await reachByKeys(page, layout, exact);
     record(layout, `${exact.includes('remove') ? 'Remove' : 'the 720p row'} reached by ${LAYOUTS[layout].tv ? 'arrow keys' : 'Tab'}`,
         reached, await activeName(page));
     if (!reached) return false;
@@ -157,7 +177,8 @@ async function checkDeleteWarning(page, layout, label, count) {
 async function checkRemoveHasNoDeleteWarning(page, layout) {
     await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
     await page.locator('.actionSheet').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    await page.keyboard.press('Escape');
+    // Desktop Back is the browser's Back (stock maps Escape to Back only in the TV layout).
+    await page.goBack();
     await page.locator('.actionSheet').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
     await page.locator('[data-jfmod-remove-version]').first().click({ timeout: 5000 });
     const dialog = page.locator('.dialog', { hasText: 'Only the' });
@@ -223,7 +244,7 @@ async function checkRemoveByKeys(page, layout, count) {
     const requests = [];
     const onRequest = request => { if (/\/Versions\/[^/]+\/Remove$/i.test(new URL(request.url()).pathname)) requests.push(request.url()); };
     page.on('request', onRequest);
-    const opened = await chooseControl(page, layout, '[data-jfmod-remove-version]', '.jfmod-nativeActions button');
+    const opened = await chooseControl(page, layout, '[data-jfmod-remove-version]');
     const dialog = page.locator('.dialog', { hasText: 'Only the' });
     await dialog.first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     record(layout, 'Enter on Remove opens its confirmation', opened && await dialog.count() > 0);
