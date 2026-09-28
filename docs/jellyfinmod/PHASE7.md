@@ -2481,6 +2481,29 @@ version tag is never overwritten, until the user moves to the next version (work
   its entrypoint. A server that installed 0.1.0.0 from a plugin repository keeps the first 0.1.0.0 build (2026-09-25)
   until the plugin is reinstalled, because the host does not offer the same version as an update.
 
+#### Release 0.1.0.0, republished with V1 — 2026-09-28
+
+Authorized by the user directly ("Overwrite 0.1.0.0", 2026-09-28), under the standing rule that merged work ships as
+0.1.0.0 until the user moves to the next version.
+
+- **Included:** plugin `master` `a48f857` and web `jellyfin-mod` `f88ad4884b`: V1, versions on Jellyfin 12 (accepted
+  2026-09-28, [V1.md](V1.md)), with everything in the previous republish.
+- **Build:** plugin built from the pushed tip with zero warnings; `scripts/build-release.sh`, DLL sha256 `4a600328…`
+  (identical to the build accepted live on 28096 and 48096); bundle **`b2255a8438fc`** reused (source `a5da07cd23`;
+  nothing outside `docs/` and `scripts/jellyfinmod-e2e/` differs up to the tip); `meta.json` timestamp
+  **`2026-09-28T11:05:58Z`**, later than `2026-09-27T23:54:58Z`, so images already on 0.1.0.0 upgrade in place.
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:00f309cd687dd0afc751d40fafb4b607eaaab94ab36de2554588410395454fe4`** for linux/amd64
+  (`sha256:e0ffefe11fdc…`) and linux/arm64 (`sha256:a757a1211b12…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0
+  base, `SOURCE_DATE_EPOCH` of the plugin tip, `--provenance=false`. The credential lived only in a temporary Docker
+  configuration with no credential helper on the path; logged out, deleted, no ghcr.io keychain entry.
+- **Checked anonymously:** both tags resolve to that index with both platforms. The arm64 image, pulled by digest on
+  the Pi and started as a throwaway container on an empty config (port 58096): Health `401` anonymously and `0.1.0.0`,
+  `Ok: true` with `versions.v1` and `versions.remove` for a throwaway administrator; `/web` patched with
+  `b2255a8438fc` by itself (`automatic`) and served from `/web-mod/b2255a8438fc/`; repository `200`. One [ERR] at
+  first start: the host read the plugin's own repository while the server still answered 503 (startup race; `200`
+  afterwards). Container, config and image removed afterwards.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
