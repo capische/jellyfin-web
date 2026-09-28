@@ -399,26 +399,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 2 — reconciliation: accepted (18096, 2026-09-15).
 - Phase 3 — retention: accepted; the real-window run RW passed on 18096 on 2026-09-27, shared with
   Phase 10 (see [`PHASE3.md`](PHASE3.md) and [`PHASE10.md`](PHASE10.md)).
-- Phase 4 — indexers and manual grab: built; live acceptance run 2026-09-26/27, final fixes in
-  review (brief `live-acceptance-p4-p6`); version rows are deferred to V1 (see
-  [`PHASE4.md`](PHASE4.md)). Not accepted.
-- Phase 5 — import: built; live acceptance run 2026-09-26/27, final fixes in review. A real-service
-  pipeline was proven 2026-09-20 on 28096; version rows (second-version import) are deferred to V1
-  (see [`PHASE5.md`](PHASE5.md)). Not accepted.
-- Phase 6 — automation: built; live acceptance run 2026-09-26/27, final fixes in review; version
-  rows (M5–M8 version parts, question 5) are deferred to V1 (see [`PHASE6.md`](PHASE6.md)). Not
-  accepted.
-- Phase 7 — setup, admin UI and UI delivery: released as 0.1.0.0 on 2026-09-25
-  (`ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
-  `sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`); S11 accepted
-  (re-runs 1–5, Chromium and Chrome); 7.1 Trakt indicator (Q16) merged 2026-09-27 as plugin
-  `5b2c969` / web `43d9b9cf79`, version 0.1.0.1, not yet published (the user decides); the physical
-  LG C1 (webOS 6) check is the user's. Work on Phase 7 started before the current product passed
-  live acceptance (T18 real-window run, Phase 4 A8, Phase 5/6 live checklists), which was the
-  original entry gate; that is now recorded as a process fault which the acceptance-is-a-gate rule
-  above (2026-09-25) prevents going forward (see [`PHASE7.md`](PHASE7.md)). [`PARITY.md`](PARITY.md)
-  plans the stock `/web` versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not
-  evidence, and has not been run.
+- Phase 4 — indexers and manual grab: accepted (live acceptance 2026-09-26/28, brief
+  `live-acceptance-p4-p6`, evidence in [`evidence/live-p4-p6/`](evidence/live-p4-p6/README.md)),
+  apart from the version rows, which are deferred to V1 (see [`PHASE4.md`](PHASE4.md)). Two rows
+  stay NOT VERIFIED live and are covered by the suite instead: the old-plugin fallback (the X4
+  guard refuses an older build against this database) and the kill after remote accept, before
+  local commit (`PhaseFourIntegration`).
+- Phase 5 — import: accepted (live acceptance 2026-09-26/28; a real-service pipeline was also
+  proven 2026-09-20 on 28096), apart from the version rows (second-version import), which are
+  deferred to V1 (see [`PHASE5.md`](PHASE5.md)).
+- Phase 6 — automation: accepted (live acceptance 2026-09-26/28), apart from the version rows
+  (M5–M8 version parts, question 5), which are deferred to V1 (see [`PHASE6.md`](PHASE6.md)).
+- Phase 7 — setup, admin UI and UI delivery, with 7.1 (the Trakt indicator, Q16): released as
+  0.1.0.0, republished on 2026-09-28 over the build of 2026-09-25 (the user's decision of
+  2026-09-27 to keep 0.1.0.0): `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
+  `sha256:dd0949337f166f9d52b14122ddbf3ca4ed95b5f335a0f343ff9ac94103394f89`, from plugin `8d3c6c0`
+  and web `d9718b3788` (bundle `76d08b85c7eb`); the first index was
+  `sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`. S11 accepted (re-runs
+  1–5, Chromium and Chrome); the physical LG C1 (webOS 6) check is the user's. Work on Phase 7
+  started before the current product passed live acceptance (T18 real-window run, Phase 4 A8,
+  Phase 5/6 live checklists), which was the original entry gate; that is now recorded as a process
+  fault which the acceptance-is-a-gate rule above (2026-09-25) prevents going forward (see
+  [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0*). [`PARITY.md`](PARITY.md) plans the stock `/web`
+  versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not evidence, and has not been run.
 - Phase 8 — release attributes and playback evidence: planned, not scheduled (see
   [`PHASE8.md`](PHASE8.md)).
 - Phase 9 — ratings: planned, not scheduled (see [`PHASE9.md`](PHASE9.md)).
