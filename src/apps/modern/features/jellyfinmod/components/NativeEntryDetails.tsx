@@ -94,7 +94,7 @@ const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
  * Stock Delete media on a title with several files deletes more than one version (V1, analysis C8): its confirmation on
  * this page gets a warning, and the administrator's version list the same line.
  */
-const usePageDeleteWarning = (api: Api, userId: string, itemId: string, data: EntryDetail | null | undefined,
+const usePageDeleteWarning = (api: Api, userId: string, itemId: string, view: HTMLElement, data: EntryDetail | null | undefined,
     episode: EntryEpisode | undefined, capabilities: string[]) => {
     // Every file the page lists counts, whoever looks: the warning belongs to the dialog, which only administrators reach.
     const versions = data ? versionSurfaces(data, episode, capabilities, false, false).versions : [];
@@ -105,7 +105,9 @@ const usePageDeleteWarning = (api: Api, userId: string, itemId: string, data: En
         enabled: !!warning,
         retry: false
     });
-    useDeleteWarning(itemName.data, warning);
+    // Upstream quotes Jellyfin's own name for the item; the catalog's title is the same for a native title and serves
+    // until that name has been read.
+    useDeleteWarning(view, [itemName.data, episode ? episode.title : data?.entry.title], warning);
     return warning;
 };
 
@@ -196,7 +198,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             setBusy(false);
         }
     }, [api, busy, data]);
-    const deleteWarning = usePageDeleteWarning(api, userId, itemId, data, episode, capabilities);
+    const deleteWarning = usePageDeleteWarning(api, userId, itemId, view, data, episode, capabilities);
     if (!detail.data) return null;
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
