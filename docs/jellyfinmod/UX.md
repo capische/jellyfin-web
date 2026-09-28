@@ -820,6 +820,36 @@ D-pad stop; and *Get another quality* opening the release picker from inside the
 Implementation shape that keeps Principles 0 and 4: a richer row renderer passed to the existing
 selector, not a replacement for it. Everything it does today it still does.
 
+### 11.1 Versions on Jellyfin 12 (V1, 2026-09-28)
+
+The rows list every file Jellyfin plays for the movie or episode, read from its media sources, so a
+copy the plugin has not bound yet still shows (marked *not tracked yet*) and a multi-episode file
+names the episodes it holds (`S01E01-E02`). *Default* is Jellyfin's own default copy.
+
+**Which copy a device starts with** (user decision 4, answered 2026-09-28): on the TV layout the
+page preselects the highest-resolution copy, high dynamic range first at equal resolution; on the
+mobile layout the best copy at or below 1080p, standard dynamic range first; on desktop Jellyfin's
+own default. The choice goes through the stock select and its `change` event, so Play sends that
+copy's `MediaSourceId`. A copy the viewer is part-way through always wins, and a copy the viewer
+picks on the select or a row is never replaced. Cards' Play buttons keep Jellyfin's default; the
+full device presets are Phase 12.
+
+**Remove this version** (decision 3, answered 2026-09-28): administrators get one *Remove* button
+per file beside Keep, in the page's focus flow. Upstream's own confirmation says what goes and what
+stays before anything happens: exactly that one file is deleted; the folder, subtitles, artwork,
+`.nfo` and every other version stay, and the title stays in the library. Removing the **last** copy
+says "This removes the last copy and stops monitoring": the folder and sidecars still stay, the title
+shows *Not downloaded* and is no longer monitored, so automation does not fetch it again. Only a
+per-file Keep, the file playing, a multi-part file, a file another title shares or unwritable media
+refuse it, each in words.
+
+**What stock Delete removes.** Upstream's *Delete media* in the More menu is unchanged. On a movie
+in its own folder it deletes the **whole folder**: every version, subtitle, artwork and extra. On an
+episode it deletes the selected file and every file whose name starts with it, which can include
+another version's subtitles. When a title has more than one file, the new interface adds that
+sentence inside the confirmation, and administrators see it under the version rows. File versions
+are split by moving files into their own folders; *Split versions* only undoes a *Group versions*.
+
 ---
 
 ## 12. Settings

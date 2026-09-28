@@ -320,8 +320,8 @@ that read `Video.PrimaryVersionId` as either a string (10.11) or a `Guid?` (12) 
 read, the extra-version lookup no longer derives a `Video`-typed item id (12 types an extra version
 like its main item and deleted every `Video`-typed one on upgrade) but reads the versions Jellyfin
 itself links (`ILibraryManager.GetLocalAlternateVersionIds`), and the compile target now matches the
-host's EF Core. Enumerating every version through `GetMediaSources` is task V1, not part of the
-retarget.
+host's EF Core. Enumerating every version through the main item's media sources is task [V1](V1.md) (2026-09-28): movies
+and episodes, merged versions included, with identity and per-file episode-range checks.
 
 *History, kept for the reasoning below.* Until 2026-09-24 the plugin compiled against 10.11.11 on
 `net9.0` with `targetAbi` `10.11.0.0` — first because the Pi then ran 10.11.11 serving this fork's
