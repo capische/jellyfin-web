@@ -424,6 +424,26 @@ and the integration suites; the live parts are in the checklist below.
   6-hour interval. They were not tuned against live Phase 4 A8 timings, which do not exist yet.
 - **Contract.** Published in [API.md](API.md) *Automation and versions (Phase 6)*.
 
+## M1 answers re-recorded against Jellyfin 12.0.0 — 2026-09-28 (V1)
+
+The 2026-09-19 answers above were written for the 10.11 host. The runtime is **Jellyfin 12.0.0** (the plugin targets it
+since the P7.S5 retarget); version behaviour is owned by [V1](V1.md), which this phase's version rows now depend on.
+
+- **Episode versions.** Jellyfin 12 groups the files of one episode in one folder as versions of one main episode,
+  keyed by season and *first* episode number (so `S01E01-E02` groups with `S01E01`), and hides the other versions from
+  queries. V1 binds every version (`EpisodeBindings.OwnerItemId`), checks identity and each file's own range, and
+  retention treats them like movie versions. **Open question 5 is re-decided** by the user (2026-09-28):
+  `episodeUpgradesEnabled` is **on by default**, and the V1 migration turns it on in existing databases. An episode
+  held as a multi-episode file is not upgraded (`multi_episode_held`).
+- **Selector data.** Versions are the main item's media sources (the list `GetMediaSources(false)` builds: the main
+  item, merged versions and each one's file versions), joined with the plugin's bindings; a source not bound yet is a
+  row with `tracked: false`. Streams come from `IMediaSourceManager.GetMediaStreams` per version item as before. The
+  default is Jellyfin's main item, which it plays first unless the viewer is part-way through another version.
+- **Free space** and **budgets:** unchanged (verified live 2026-09-26/28, evidence `live-p4-p6`).
+
+**Prerequisite:** the version rows of the checklist below (items 3's upgrade part, 7, 8's per-version order and 10's
+version rows), and M10 onward (now [PHASE12](PHASE12.md)), run on V1 and are accepted through V1's checklist.
+
 ## Implementation status — 2026-09-19
 
 Source is on the Phase 5 build branches (Phase 6 commits follow Phase 5); nothing is deployed.
@@ -473,6 +493,9 @@ The user accepted every default below as chosen on 2026-09-19.
 11. **Manual run:** `POST /Automation/Run` bypasses only the interval, never a budget.
 
 ### Live acceptance checklist (M2–M9)
+
+**V1 prerequisite (2026-09-28):** the version rows below are run and accepted through [V1](V1.md) S7 (rows 14–21);
+everything else passed in the live P4–P6 run of 2026-09-26/28.
 
 Run after Phase 5's checklist passes, on `jellyfinmod-test` only, with the separate real
 Transmission and real Prowlarr indexers (read-only) of the 2026-09-20/21 live-services decision,
