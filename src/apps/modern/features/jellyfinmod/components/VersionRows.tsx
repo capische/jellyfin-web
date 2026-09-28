@@ -67,6 +67,22 @@ const selectVersion = (view: HTMLElement, version: VersionDto) => {
 };
 
 /**
+ * Records the viewer's own choice on the stock select from the moment the rows mount, whether or not the preferred copy
+ * is known yet (the TV waits for Jellyfin's range types): a pick made while that request runs is never replaced.
+ */
+const useViewerChoice = (view: HTMLElement, chosen: { current: boolean }) => {
+    useEffect(() => {
+        const select = findSelect(view);
+        if (!select) return;
+        const viewerChange = () => {
+            if (!dispatchingOwnChange) chosen.current = true;
+        };
+        select.addEventListener('change', viewerChange);
+        return () => select.removeEventListener('change', viewerChange);
+    }, [view, chosen]);
+};
+
+/**
  * Starts this device on the copy that suits it (V1 decision 4): once the stock select lists the versions, and again when
  * upstream rewrites its options, until the viewer chooses a copy themselves on the select or a row.
  */
@@ -77,17 +93,10 @@ const useDevicePreference = (view: HTMLElement, preferred: VersionDto | null | u
         const apply = () => {
             if (!chosen.current) selectVersion(view, preferred);
         };
-        const viewerChange = () => {
-            if (!dispatchingOwnChange) chosen.current = true;
-        };
         apply();
-        select.addEventListener('change', viewerChange);
         const observer = new MutationObserver(apply);
         observer.observe(select, { childList: true });
-        return () => {
-            select.removeEventListener('change', viewerChange);
-            observer.disconnect();
-        };
+        return () => observer.disconnect();
     }, [view, preferred, chosen]);
 };
 
@@ -120,6 +129,7 @@ const VersionRow: FC<{ version: VersionDto; selected: boolean; onChoose: (versio
 const VersionRows: FC<VersionRowsProps> = ({ view, versions, onAddVersion, preferred, note, admin = false }) => {
     const current = useSelectedSource(view);
     const chosen = useRef(false);
+    useViewerChoice(view, chosen);
     useDevicePreference(view, preferred, chosen);
     const choose = useCallback((version: VersionDto) => {
         chosen.current = true;
