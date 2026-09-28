@@ -4,12 +4,14 @@ import React, { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
+import layoutManager from 'components/layoutManager';
 
-import { type EntryDetail, getEntries, getEntry, keepEntry, keepEpisode, requestSearch } from '../api/modApi';
+import { type EntryDetail, getEntries, getEntry, getItemName, keepEntry, keepEpisode, requestSearch } from '../api/modApi';
 import { EPISODE_RETENTION_CAPABILITY, keepButtonLabel } from '../constants/fileState';
 import { AUTOMATION_CAPABILITY } from '../constants/queue';
-import { sameItemId, VERSIONS_CAPABILITY } from '../constants/versions';
+import { type DevicePreference, deleteWarningText, sameItemId, VERSIONS_CAPABILITY } from '../constants/versions';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
+import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { openReleasePicker } from '../integration/releasePicker';
 import { type EntryEpisode, FileState } from '../types/entry';
 import HistoryToggle from './HistoryToggle';
@@ -17,6 +19,7 @@ import QueueStatusLine from './QueueStatusLine';
 import RetentionControls from './RetentionControls';
 import RetentionStatus from './RetentionStatus';
 import RetentionWarning from './RetentionWarning';
+import VersionRemoveControls from './VersionRemoveControls';
 import VersionRows from './VersionRows';
 import './entryDetails.scss';
 
@@ -83,8 +86,34 @@ const warningSubject = (episode: EntryEpisode | undefined) => (episode ? 'episod
  * the file (RET2-R7).
  */
 const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
-    data?.episodes.find(candidate => (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)))
+    data?.episodes.find(candidate => (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)
+        || sameItemId(version.mediaSourceId, itemId)))
         ?? data?.episodes.find(candidate => sameItemId(candidate.jellyfinItemId, itemId));
+
+/**
+ * Stock Delete media on a title with several files deletes more than one version (V1, analysis C8): its confirmation on
+ * this page gets a warning, and the administrator's version list the same line.
+ */
+const usePageDeleteWarning = (api: Api, userId: string, itemId: string, data: EntryDetail | null | undefined,
+    episode: EntryEpisode | undefined, capabilities: string[]) => {
+    // Every file the page lists counts, whoever looks: the warning belongs to the dialog, which only administrators reach.
+    const versions = data ? versionSurfaces(data, episode, capabilities, false, false).versions : [];
+    const warning = data && versions.length > 1 ? deleteWarningText(versions.length, data.entry.mediaType) : null;
+    const itemName = useQuery({
+        queryKey: ['JellyfinMod', api.basePath, userId, 'ItemName', itemId],
+        queryFn: ({ signal }) => getItemName(api, itemId, { signal }),
+        enabled: !!warning,
+        retry: false
+    });
+    useDeleteWarning(itemName.data, warning);
+    return warning;
+};
+
+/** Which copy this device starts with (V1 decision 4). */
+const devicePreference = (): DevicePreference => {
+    if (layoutManager.tv) return 'tv';
+    return layoutManager.mobile ? 'mobile' : 'desktop';
+};
 
 /** Add catalog history without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, isAdmin, view, versionsMount }) => {
@@ -126,8 +155,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             const refreshed = await refetch();
             if (refreshed.error) throw refreshed.error;
             setMessage(done);
-        } catch {
-            setMessage('The change could not be saved. Please try again.');
+        } catch (error) {
+            setMessage((error as { jfmodMessage?: string } | null)?.jfmodMessage ?? 'The change could not be saved. Please try again.');
         } finally {
             setBusy(false);
         }
@@ -167,6 +196,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             setBusy(false);
         }
     }, [api, busy, data]);
+    const deleteWarning = usePageDeleteWarning(api, userId, itemId, data, episode, capabilities);
     if (!detail.data) return null;
     // A native episode page shows its own retention; a native series page lists every episode's (P3.T14).
     const isSeriesPage = !episode && detail.data.entry.mediaType === 'series';
@@ -184,7 +214,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
     return <section ref={section} aria-label='JellyfinMod' data-jfmod-entry-id={detail.data.entry.id}
         data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && versionsMount && createPortal(
-            <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined} />, versionsMount)}
+            <VersionRows view={view} versions={versions} onAddVersion={canAddVersion ? addVersion : undefined}
+                device={devicePreference()} note={deleteWarning} admin={isAdmin} />, versionsMount)}
         <p role='status'>{message}</p>
         {warning && <RetentionWarning warning={warning} subject={warningSubject(episode)} busy={busy}
             onKeep={isAdmin ? keep : undefined}
@@ -227,6 +258,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, itemId, 
             </button>}
             {isAdmin && <RetentionControls api={api} entryId={detail.data.entry.id} busy={busy} change={change}
                 episode={keepsEpisode ? episode : undefined} versions={versions} capabilities={capabilities} />}
+            {isAdmin && <VersionRemoveControls api={api} entryId={detail.data.entry.id} mediaType={detail.data.entry.mediaType}
+                busy={busy} change={change} versions={versions} capabilities={capabilities} />}
         </div>
         <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
             <ol>{history.map(event => <li key={event.id}>
