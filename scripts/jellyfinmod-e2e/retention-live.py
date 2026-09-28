@@ -40,7 +40,8 @@ Subcommands, in scenario order:
                           the third review's checks (RET3-R2 movie versions and C2 merge, R3, R5, the database lock)
   decision13              RET4-R1: windows finished or run out while retention is off start at the switch-on
   p22-stale | p22-import | p22-unwatched
-                          Q16 review P2-2: watched state saved through a fresh instance (Trakt, NFO, mark season played)
+                          Q16 review P2-2: watched state saved through a fresh instance (Trakt, NFO, mark season played);
+                          p22-stale asserts the pre-fix gap and needs P22_EXPECT_STALE=1
   seed-server             serve the fake Transmission RPC in the foreground
 """
 import hashlib, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
@@ -853,7 +854,10 @@ def cmd_p22_stale():
     """Q16 review P2-2, live on the build before the fix (ee385df's parent), retention off; on the fixed build the same steps
     record played, so the last check below fails there by design. Stock Jellyfin's "mark season played" saves each
     episode through a fresh instance (Folder.MarkPlayed -> GetItemList), exactly as the Trakt sync and the NFO importer
-    do, so the instance Jellyfin caches keeps the old state. The plugin, reading the cached instance, records no watch."""
+    do, so the instance Jellyfin caches keeps the old state. The plugin, reading the cached instance, records no watch.
+    It asserts the gap, so it runs only when asked for explicitly with P22_EXPECT_STALE=1 (PHASE10 P3-E)."""
+    if os.environ.get("P22_EXPECT_STALE") != "1":
+        sys.exit("p22-stale asserts the pre-fix gap and fails on every fixed build; set P22_EXPECT_STALE=1 to run it on purpose")
     user = selected_user()
     items, season = p22_items()
     for item in items.values():
