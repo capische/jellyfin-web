@@ -526,6 +526,26 @@ def cmd_refusals():
     check(sha(host_path("Low-720p")) != "ABSENT", "the kept file is still there")
 
 
+def cmd_sweep():
+    """Row 21: the Remove route's refusals, on fixtures only (Finish's 1080p is kept per file; Low's 1080p is Low's only
+    copy). Ordinary users (403) and an administrator without the library (404) are `users`."""
+    import uuid
+    detail, row = version_row("Finish", "Finish-1080p")
+    low_detail, low = version_row("Low", "Low-1080p")
+    base = f"/JellyfinMod/Entries/{detail['entry']['id']}/Versions"
+    path = f"{base}/{row['bindingId']}/Remove"
+    check(call("POST", path, anonymous=True)[0] == 401, "anonymous -> 401")
+    status, body = call("POST", path)
+    check(status == 409 and "version_kept" in str(body), f"a per-file kept file -> {status} version_kept")
+    check(call("POST", f"/JellyfinMod/Entries/{uuid.uuid4()}/Versions/{row['bindingId']}/Remove")[0] == 404, "unknown entry -> 404")
+    check(call("POST", f"{base}/{uuid.uuid4()}/Remove")[0] == 404, "unknown binding -> 404")
+    check(call("POST", f"{base}/{low['bindingId']}/Remove")[0] == 404, "another title's binding under this entry -> 404")
+    check(call("POST", f"{base}/not-a-guid/Remove")[0] == 404, "a malformed binding id -> 404")
+    check(call("GET", path)[0] in (404, 405), "GET on the route -> not allowed")
+    check(sha(host_path("Finish-1080p")) != "ABSENT" and sha(host_path("Low-1080p")) != "ABSENT", "both files untouched")
+    print("entries", low_detail["entry"]["title"], "and", detail["entry"]["title"])
+
+
 def cmd_state():
     for key in TITLES:
         detail = entry(key)
@@ -837,7 +857,7 @@ COMMANDS = {
     "absent-hide": lambda: cmd_absent("hide"), "absent-show": lambda: cmd_absent("show"),
     "absent-delete": lambda: cmd_absent("delete"), "save": cmd_save, "protect": cmd_protect, "act": cmd_act,
     "preview": cmd_preview, "run": cmd_run, "retention-restore": cmd_retention_restore, "refusals": cmd_refusals,
-    "state": cmd_state, "cleanup": cmd_cleanup, "latest": cmd_latest, "users": cmd_users, "debug-low": cmd_debug_low,
+    "state": cmd_state, "sweep": cmd_sweep, "cleanup": cmd_cleanup, "latest": cmd_latest, "users": cmd_users, "debug-low": cmd_debug_low,
     "playing-refusal": cmd_playing_refusal, "prefer-id": lambda: print(movie_item("Prefer")["Id"]),
     "run-latest": lambda: print(json.dumps(must("GET", "/JellyfinMod/Retention/Runs/Latest"))[:1500]),
     "scan-only": lambda: (must("POST", "/Library/Refresh"), wait_scan(), time.sleep(30)),
