@@ -412,10 +412,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   its version rows, M5–M8 version parts and questions 5 and 7, through V1 rows 14–21) (see
   [`PHASE6.md`](PHASE6.md) and [`V1.md`](V1.md)).
 - Phase 7 — setup, admin UI and UI delivery, with 7.1 (the Trakt indicator, Q16): released as
-  0.1.0.0, republished on 2026-09-28 over the build of 2026-09-25 (the user's decision of
-  2026-09-27 to keep 0.1.0.0): `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
-  `sha256:dd0949337f166f9d52b14122ddbf3ca4ed95b5f335a0f343ff9ac94103394f89`, from plugin `8d3c6c0`
-  and web `d9718b3788` (bundle `76d08b85c7eb`); the first index was
+  0.1.0.0, republished on 2026-09-28 with V1 (the user's decision to keep 0.1.0.0):
+  `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
+  `sha256:00f309cd687dd0afc751d40fafb4b607eaaab94ab36de2554588410395454fe4`, from plugin `a48f857`
+  and web `f88ad4884b` (bundle `b2255a8438fc`); earlier the same day
+  `sha256:dd0949337f166f9d52b14122ddbf3ca4ed95b5f335a0f343ff9ac94103394f89` (plugin `8d3c6c0`, web
+  `d9718b3788`, bundle `76d08b85c7eb`); the first index was
   `sha256:beb3d41c5b00e945c70c5ef852eb3766cc61018e38adbe8ea589bde4371533bd`. S11 accepted (re-runs
   1–5, Chromium and Chrome); the physical LG C1 (webOS 6) check is the user's. Work on Phase 7
   started before the current product passed live acceptance (T18 real-window run, Phase 4 A8,
