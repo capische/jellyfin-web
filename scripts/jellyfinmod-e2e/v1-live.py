@@ -15,7 +15,7 @@ Environment:
 
 Subcommands (scenario order): login | health | media | library | reconcile | versions | row2 | row3 | row4 | row5-merge |
   absent-hide | absent-show | absent-delete | save | protect | retention-on MIN | act | due-check | run | double-watch |
-  retention-restore | remove KEY | refusals | state | hashes LABEL | compare A B | cleanup | logout
+  retention-restore | remove KEY | refusals | state | hashes LABEL | compare A B | cleanup | logout | make KEY,KEY
 """
 import hashlib, json, os, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
@@ -579,14 +579,48 @@ def retention_targets():
     return must("GET", "/JellyfinMod/Retention/Preview")["items"]
 
 
+def container_mounts():
+    """The acceptance container's mounts, longest destination first, to find a container path's file on this host."""
+    inspected = json.loads(subprocess.run(["docker", "inspect", CONTAINER], capture_output=True, text=True, timeout=60,
+                                          check=True).stdout)[0]
+    return sorted(((m["Destination"], m["Source"]) for m in inspected.get("Mounts") or []), key=lambda m: -len(m[0]))
+
+
+def host_identity(path, mounts):
+    """(device, inode) of a container path's file on this host, or None when it cannot be read."""
+    for destination, source in mounts:
+        if path == destination or path.startswith(destination + "/"):
+            try:
+                st = os.stat(source + path[len(destination):])
+                return st.st_dev, st.st_ino
+            except OSError:
+                return None
+    return None
+
+
 def unprotected():
     """Bindings outside the V1 fixtures that nothing keeps per file, from both the retention preview (what the executor
     sees) and every page of the catalog (each movie version and each episode version)."""
     missing = {}
     fixtures = fixture_libraries()
-    for item in retention_targets():
-        if not is_fixture(item.get("targetLibraryId"), item.get("path"), fixtures) and item.get("reason") != "version_kept":
-            missing[item["bindingId"]] = (item["entryId"], (item.get("path") or "no path").rsplit("/", 1)[-1])
+    targets = retention_targets()
+    mounts = container_mounts()
+    # A Keep holds a file by path or by identity; a second binding of the same file (the same disk mounted twice) stores
+    # no second Keep, and a disabled preview names only the path rule. Such a binding counts as kept only when the host
+    # proves it is the same inode as a file this entry keeps, which is the identity rule the executor's preview applies.
+    kept_identities = {}
+    for item in targets:
+        if item.get("reason") == "version_kept" and item.get("path"):
+            identity = host_identity(item["path"], mounts)
+            if identity:
+                kept_identities.setdefault(item["entryId"], set()).add(identity)
+    for item in targets:
+        if is_fixture(item.get("targetLibraryId"), item.get("path"), fixtures) or item.get("reason") == "version_kept":
+            continue
+        identity = host_identity(item["path"], mounts) if item.get("path") else None
+        if identity and identity in kept_identities.get(item["entryId"], set()):
+            continue
+        missing[item["bindingId"]] = (item["entryId"], (item.get("path") or "no path").rsplit("/", 1)[-1])
     for entry_row in all_entries():
         if (entry_row.get("targetLibraryId") or "").replace("-", "").lower() in fixtures:
             continue
@@ -829,6 +863,11 @@ if __name__ == "__main__":
         series = series_entry()
         check(all(episode(series, int(n))["monitored"] and episode(series, int(n))["state"] == "onDisk"
                   for n in arguments[1].split(",")), f"episodes {arguments[1]} on disk and monitored")
+    elif name == "make":
+        # Recreates exactly the named fixture files (keys of FIXTURE), then scans; nothing else is created.
+        for key in arguments[0].split(","):
+            make_video(key)
+        scan()
     elif name == "remove-episode-file":
         cmd_remove_episode_file(arguments[0], arguments[1])
     elif name == "monitor":
