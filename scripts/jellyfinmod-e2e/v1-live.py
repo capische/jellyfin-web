@@ -334,7 +334,7 @@ def cmd_versions():
             main = next(v for v in episode["versions"] if v["isDefault"])
             compare_title(f"S{episode['seasonNumber']:02}E{episode['episodeNumber']:02}", episode["versions"],
                           media_sources(main["jellyfinItemId"]))
-    notld = next((e for e in must("GET", "/JellyfinMod/Entries?limit=200")["items"] if e["tmdbId"] == 10331), None)
+    notld = next((e for e in all_entries() if e["tmdbId"] == 10331), None)
     if notld:
         detail = must("GET", f"/JellyfinMod/Entries/{notld['id']}")
         compare_title("Night of the Living Dead (read only)", detail.get("versions"),
@@ -551,23 +551,81 @@ def cmd_save():
     print("saved: retention enabled", saved["retention"]["enabled"], "window", saved["testWindowMinutes"])
 
 
-def cmd_protect():
-    """Keeps every file of every title that is not a V1 fixture before retention is switched on, and records them."""
-    saved = json.load(open(RESTORE))
-    for item in must("GET", "/JellyfinMod/Entries?limit=200")["items"]:
-        if item["title"].startswith("JellyfinMod V1") or item["tmdbId"] in TMDB.values() or item["tmdbId"] == 9900100:
+def fixture_libraries():
+    """The item ids of the two disposable V1 libraries; everything else on the instance is protected."""
+    return {lib["ItemId"].replace("-", "").lower() for lib in (library(MOVIE_LIBRARY), library(SHOW_LIBRARY)) if lib}
+
+
+def is_fixture(library_id, path, fixtures):
+    """A binding is a fixture only when it is in a V1 library AND its file is under the V1 fixture folder."""
+    return ((library_id or "").replace("-", "").lower() in fixtures
+            and (path or "").startswith(f"{CONTAINER_ROOT}/{FIXTURE_DIR}/"))
+
+
+def all_entries():
+    """Every catalog entry, page by page (the list returns at most 200 per request)."""
+    found, start = [], 0
+    while True:
+        page = must("GET", f"/JellyfinMod/Entries?startIndex={start}&limit=200")
+        found += page["items"]
+        start += len(page["items"])
+        if not page["items"] or start >= page["totalRecordCount"]:
+            return found
+
+
+def retention_targets():
+    """Every binding retention can act on, movies and episode versions alike: the executor takes its candidates from
+    this preview, each with its binding, entry, library and path."""
+    return must("GET", "/JellyfinMod/Retention/Preview")["items"]
+
+
+def unprotected():
+    """Bindings outside the V1 fixtures that nothing keeps per file, from both the retention preview (what the executor
+    sees) and every page of the catalog (each movie version and each episode version)."""
+    missing = {}
+    fixtures = fixture_libraries()
+    for item in retention_targets():
+        if not is_fixture(item.get("targetLibraryId"), item.get("path"), fixtures) and item.get("reason") != "version_kept":
+            missing[item["bindingId"]] = (item["entryId"], (item.get("path") or "no path").rsplit("/", 1)[-1])
+    for entry_row in all_entries():
+        if (entry_row.get("targetLibraryId") or "").replace("-", "").lower() in fixtures:
             continue
-        detail = must("GET", f"/JellyfinMod/Entries/{item['id']}")
-        for version in detail.get("versions") or []:
-            if version.get("tracked") is False or version.get("kept"):
-                continue
-            must("POST", f"/JellyfinMod/Entries/{item['id']}/Versions/{version['bindingId']}/Keep")
-            saved["keeps"].append([item["id"], version["bindingId"]])
-    write_private(RESTORE, json.dumps(saved))
-    print("kept for the session:", len(saved["keeps"]), "files of titles that are not fixtures")
+        detail = must("GET", f"/JellyfinMod/Entries/{entry_row['id']}")
+        rows = list(detail.get("versions") or [])
+        for episode_row in detail.get("episodes") or []:
+            rows += episode_row.get("versions") or []
+        for version in rows:
+            if version.get("tracked") is not False and not version.get("kept"):
+                missing.setdefault(version["bindingId"], (entry_row["id"], entry_row["title"]))
+    return missing
+
+
+def cmd_protect():
+    """Keeps, per file, every binding that is not a V1 fixture before retention is switched on, records each Keep as it
+    is made (so a failure part-way still restores), then verifies that nothing outside the fixtures is left unkept."""
+    saved = json.load(open(RESTORE))
+    recorded = {binding for _, binding in saved["keeps"]}
+    for binding_id, (entry_id, _) in unprotected().items():
+        if binding_id in recorded:
+            continue
+        must("POST", f"/JellyfinMod/Entries/{entry_id}/Versions/{binding_id}/Keep")
+        saved["keeps"].append([entry_id, binding_id])
+        write_private(RESTORE, json.dumps(saved))
+    print("kept for the session:", len(saved["keeps"]), "files outside the V1 fixtures")
+    verify_protection()
+
+
+def verify_protection():
+    """Refuses (exit) unless every binding outside the V1 fixture libraries is kept per file."""
+    missing = unprotected()
+    for binding_id, (_, name) in list(missing.items())[:10]:
+        print("  not kept:", binding_id, name)
+    check(not missing, f"every binding outside the V1 fixtures is kept per file ({len(missing)} not kept)")
 
 
 def cmd_retention_on(minutes):
+    # Global retention with a minute-scale window may reclaim any due binding: never switch it on unprotected.
+    verify_protection()
     config = must("GET", f"/Plugins/{PLUGIN}/Configuration")
     config["RetentionTestWindowMinutes"] = int(minutes)
     must("POST", f"/Plugins/{PLUGIN}/Configuration", config)
@@ -620,6 +678,7 @@ def cmd_preview():
 
 
 def cmd_run():
+    verify_protection()
     cmd_preview()
     print("reclamation", run_task("JellyfinModRetentionReclamation"))
 
@@ -648,11 +707,11 @@ def cmd_cleanup():
     subprocess.run(["rm", "-rf", "--", os.path.join(HOST_ROOT, FIXTURE_DIR)], check=True)
     scan()
     removed = 0
-    for item in must("GET", "/JellyfinMod/Entries?limit=200")["items"]:
+    for item in all_entries():
         if item["title"].startswith("JellyfinMod V1") or item["tmdbId"] in TMDB.values() or item["tmdbId"] == 9900100:
             status, _ = call("DELETE", f"/JellyfinMod/Entries/{item['id']}")
             removed += status in (200, 204)
-    left = [i["title"] for i in must("GET", "/JellyfinMod/Entries?limit=200")["items"] if i["title"].startswith("JellyfinMod")]
+    left = [i["title"] for i in all_entries() if i["title"].startswith("JellyfinMod")]
     check(not left and not os.path.exists(os.path.join(HOST_ROOT, FIXTURE_DIR)),
           f"cleanup: {removed} entries removed, no JellyfinMod title or fixture file left")
 
