@@ -92,8 +92,8 @@ const record = (layout, check, pass, detail = '') => {
 };
 const norm = id => (id ?? '').replace(/-/g, '').toLowerCase();
 
-const selectValue = page => page.evaluate(() => document.querySelector('.selectSource')?.value ?? null);
-const optionLabels = page => page.evaluate(() => Array.from(document.querySelector('.selectSource')?.options ?? [])
+const selectValue = page => page.evaluate(() => document.querySelector('.mainAnimatedPage:not(.hide) .selectSource')?.value ?? null);
+const optionLabels = page => page.evaluate(() => Array.from(document.querySelector('.mainAnimatedPage:not(.hide) .selectSource')?.options ?? [])
     .map(option => ({ value: option.value, text: option.textContent })));
 const rowSelector = id => `.jfmod-versionRow[data-jfmod-media-source-id="${id}"]`;
 const activeMatches = (page, selector) => page.evaluate(sel => !!document.activeElement?.matches(sel), selector);
@@ -193,7 +193,7 @@ async function checkRemoveHasNoDeleteWarning(page, layout) {
 /** A pick on the stock select sent as an untrusted `change` (webOS's emby-select) survives upstream's re-render. */
 async function checkUntrustedPick(page, layout, want) {
     await page.evaluate(id => {
-        const select = document.querySelector('.selectSource');
+        const select = document.querySelector('.mainAnimatedPage:not(.hide) .selectSource');
         const option = Array.from(select.options).find(candidate => candidate.value.replace(/-/g, '') === id);
         select.value = option.value;
         select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -358,7 +358,7 @@ async function checkRemove(browser) {
         await page.waitForTimeout(500);
         const dialogs = await confirmation.count();
         await page.locator('.dialog .formDialogFooter .button-delete').first().evaluate(button => { button.click(); button.click(); });
-        await page.waitForFunction(id => !Array.from(document.querySelector('.selectSource')?.options ?? [])
+        await page.waitForFunction(id => !Array.from(document.querySelector('.mainAnimatedPage:not(.hide) .selectSource')?.options ?? [])
             .some(option => option.value.replace(/-/g, '') === id), norm(removed.mediaSourceId), { timeout: 30000 }).catch(() => {});
         await page.waitForSelector('.jfmod-versions .jfmod-versionRow', { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(2500);
@@ -368,7 +368,16 @@ async function checkRemove(browser) {
         record(layout, 'a double confirm sends one request and removes exactly the 720p', removals.length === 1
             && state.versions.length === 2 && !ids.includes(removed.bindingId), `${removals.length} requests, ${state.versions.length} copies`);
         const options = await optionLabels(page);
-        record(layout, 'the page reloads: the stock select no longer offers the removed copy',
+        const reloaded = await page.evaluate(() => location.hash);
+        const pageId = new URLSearchParams(reloaded.split('?')[1] ?? '').get('id');
+        const native = await apiGet(page, `Users/${await page.evaluate(() => ApiClient.getCurrentUserId())}/Items/${pageId}`)
+            .catch(() => ({}));
+        const listed = (native.MediaSources ?? []).map(source => norm(source.Id));
+        record(layout, 'the page reloads after the removal', reloaded.includes('jfmodRefresh=') || norm(pageId) !== norm(fixture.Id),
+            reloaded.replace(/serverId=[^&]+/, 'serverId=…').slice(0, 90));
+        record(layout, "Jellyfin's own item no longer lists the removed copy", !listed.includes(norm(removed.mediaSourceId)),
+            `${listed.length} media sources`);
+        record(layout, 'the stock select no longer offers the removed copy',
             options.length === 2 && !options.some(option => norm(option.value) === norm(removed.mediaSourceId)), `${options.length} options`);
 
         // A refusal: the 1080p playing -> 409 in words, nothing removed.
@@ -427,7 +436,7 @@ async function checkRemove(browser) {
 }
 
 const browser = await launch();
-for (const layout of (process.env.JELLYFINMOD_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',')) await checkLayout(browser, layout);
+for (const layout of (process.env.JELLYFINMOD_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',').filter(Boolean)) await checkLayout(browser, layout);
 if (process.env.JELLYFINMOD_V1_REMOVE === '1') await checkRemove(browser);
 await browser.close();
 const failed = results.filter(result => !result.pass).length;
