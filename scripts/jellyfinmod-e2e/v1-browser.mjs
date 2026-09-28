@@ -75,7 +75,16 @@ async function setTvLayout(page) {
     await page.waitForTimeout(2500);
 }
 
-const movie = process.env.JELLYFINMOD_V1_MOVIE;
+/** The Prefer fixture's main item: JELLYFINMOD_V1_MOVIE, else looked up by its fixture name once signed in. */
+let movie = process.env.JELLYFINMOD_V1_MOVIE;
+async function resolvePrefer(page) {
+    if (movie) return;
+    const found = await page.evaluate(() => ApiClient.getJSON(ApiClient.getUrl(`Users/${ApiClient.getCurrentUserId()}/Items`,
+        { SearchTerm: 'JellyfinMod V1 Prefer', IncludeItemTypes: 'Movie', Recursive: true, Fields: 'Path' })));
+    const items = (found.Items ?? []).filter(item => item.Path?.includes('/v1/movies/'));
+    if (items.length !== 1) throw new Error(`expected one Prefer fixture, found ${items.length}`);
+    movie = items[0].Id;
+}
 const results = [];
 const record = (layout, check, pass, detail = '') => {
     results.push({ layout, check, pass, detail });
@@ -231,6 +240,7 @@ async function checkLayout(browser, layout) {
     const { context, page } = await newPage(browser, layout);
     try {
         await signIn(page);
+        await resolvePrefer(page);
         if (LAYOUTS[layout].tv) await setTvLayout(page);
         await openDetail(page);
         const rows = await page.locator('.jfmod-versions .jfmod-versionRow:not(.jfmod-versionRow--add)').allTextContents();
