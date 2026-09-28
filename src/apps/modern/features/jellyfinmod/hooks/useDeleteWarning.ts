@@ -24,14 +24,10 @@ export const useDeleteWarning = (itemName: string | null | undefined, warning: s
             line.textContent = warning;
             body.appendChild(line);
         };
-        const observer = new MutationObserver(records => {
-            for (const record of records) {
-                record.addedNodes.forEach(node => {
-                    if (!(node instanceof Element)) return;
-                    if (node.matches('.dialog')) annotate(node);
-                    node.querySelectorAll('.dialog').forEach(annotate);
-                });
-            }
+        // Upstream inserts the dialog before it fills in its title and text, and the order differs between layouts, so
+        // every change looks at each open dialog again until one reads as this item's Delete confirmation.
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('.dialog').forEach(annotate);
         });
         observer.observe(document.body, { childList: true, subtree: true });
         return () => observer.disconnect();
