@@ -640,7 +640,10 @@ episode) `none` and unmonitored.
 
 `physicalBytesReleased` is 0 while another link (a seeding copy) holds the file and null when unknown. A refusal is 409
 with a ProblemDetails body whose `reason` is one of `version_kept`, `active_session`, `active_session_unknown`,
-`multi_part_unsupported`, `media_not_writable`, `shared_path_not_all_eligible`, `operation_open`, or the storage and
+`multi_part_unsupported`, `media_not_writable`, `shared_path_not_all_eligible`, `operation_open`,
+`media_identity_changed` (another file now sits at the bound path) or `media_identity_unverified` (no recorded file
+identity yet), `version_identity_conflict`, `versions_unverified`, `versions_untracked` (Jellyfin plays a copy that is
+not bound yet, or another title plays this file as a merged version: reconcile first), or the storage and
 identity reasons of the retention preview (`storage_unavailable`, `native_binding_missing`, `media_path_unavailable`,
 `symlink_representation`, `symlink_escape`, `library_root_missing`). The operation is a `RetentionOperation` with
 `provenance: "version_removed"`, and History records `version_removed`.
@@ -650,7 +653,8 @@ title or episode), `versions_unverified` (a bound file is no longer one of its m
 well as episodes, `versions_untracked` / `episode_versions_untracked` only while a played file is unbound. Imports
 block `versions_not_grouped` when Jellyfin would not group the new file with the existing one. Automation records
 `multi_episode_held` (an episode held as a multi-episode file is not upgraded) and `versions_untracked` (the best copy
-is not bound yet). Upgrades wait with `superseded_untracked` while the superseded file is on disk but unbound, and end
+is not bound yet). An upgrade's replacement stops with `successor_unavailable` when its new version is no longer bound,
+on disk and playable just before the old file would go. Upgrades wait with `superseded_untracked` while the superseded file is on disk but unbound, and end
 `superseded_missing` only when that file is gone. `episodeUpgradesEnabled` defaults to true since V1.
 **Correction (review 2026-09-18):** the continuation is unbounded today. A user with AllowedTags
 can never read file-less metadata, so every page is empty and the web client auto-follows up to
