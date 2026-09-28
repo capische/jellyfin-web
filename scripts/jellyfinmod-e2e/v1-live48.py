@@ -169,7 +169,9 @@ def cmd_profile(which, cutoff, mode):
 def cmd_library_t():
     """A disposable TV library on the instance's own writable mount, and entry T for the stand-in series in it."""
     data = state()
-    host = os.path.join("/mnt/4tb/jellyfinmod-acceptance/live48096", T_FOLDER.split("/accept/live48096/", 1)[1])
+    host = host_path(T_FOLDER)
+    if not host:
+        sys.exit(f"REFUSED: {T_FOLDER} is not on a mount of {CONTAINER}")
     os.makedirs(host, exist_ok=True)
     if not any(f["Name"] == T_LIBRARY for f in must("GET", "/Library/VirtualFolders")):
         must("POST", f"/Library/VirtualFolders?name={urllib.parse.quote(T_LIBRARY)}&collectionType=tvshows&refreshLibrary=false",
@@ -393,6 +395,97 @@ def cmd_auto_run():
 
 # --- retention ---
 
+def container_mounts():
+    """The container's mounts, longest destination first, to find a container path's file on this host."""
+    inspected = json.loads(subprocess.run(["docker", "inspect", CONTAINER], capture_output=True, text=True, timeout=60,
+                                          check=True).stdout)[0]
+    return sorted(((m["Destination"], m["Source"]) for m in inspected.get("Mounts") or []), key=lambda m: -len(m[0]))
+
+
+def host_path(path, mounts=None):
+    for destination, source in mounts or container_mounts():
+        if path == destination or path.startswith(destination + "/"):
+            return source + path[len(destination):]
+    return None
+
+
+def host_identity(path, mounts):
+    host = host_path(path, mounts) if path else None
+    try:
+        st = os.stat(host) if host else None
+    except OSError:
+        return None
+    return (st.st_dev, st.st_ino) if st else None
+
+
+def harness_entries():
+    """The session's own stand-in entries (A, B, S, T); everything else on the instance is protected."""
+    return {value.replace("-", "").lower() for value in (state().get("entries") or {}).values()}
+
+
+def all_entries():
+    found, start = [], 0
+    while True:
+        page = must("GET", f"/JellyfinMod/Entries?startIndex={start}&limit=200")
+        found += page["items"]
+        start += len(page["items"])
+        if not page["items"] or start >= page["totalRecordCount"]:
+            return found
+
+
+def unprotected():
+    """Bindings outside the session's stand-in entries that nothing keeps per file: every retention preview target (what
+    the executor acts on, movies and episode versions) and every tracked version on every catalog page. A binding counts
+    as kept by identity only when this host proves it is the same inode as a file its entry keeps."""
+    own, mounts, missing, kept = harness_entries(), container_mounts(), {}, {}
+    targets = must("GET", "/JellyfinMod/Retention/Preview")["items"]
+    for item in targets:
+        if item.get("reason") == "version_kept" and item.get("path"):
+            identity = host_identity(item["path"], mounts)
+            if identity:
+                kept.setdefault(item["entryId"], set()).add(identity)
+    for item in targets:
+        if item["entryId"].replace("-", "").lower() in own or item.get("reason") == "version_kept":
+            continue
+        if host_identity(item.get("path"), mounts) in kept.get(item["entryId"], set()):
+            continue
+        missing[item["bindingId"]] = (item["entryId"], name(item.get("path")))
+    for entry_row in all_entries():
+        if entry_row["id"].replace("-", "").lower() in own:
+            continue
+        found = must("GET", f"/JellyfinMod/Entries/{entry_row['id']}")
+        rows = list(found.get("versions") or []) + [v for e in found.get("episodes") or [] for v in e.get("versions") or []]
+        for version in rows:
+            if version.get("tracked") is not False and not version.get("kept"):
+                missing.setdefault(version["bindingId"], (entry_row["id"], entry_row["title"]))
+    return missing
+
+
+def protect():
+    """Keeps, per file, every binding outside the stand-in entries (each Keep saved as it is made, so `retention-off`
+    removes them even after a failure), then refuses unless nothing outside the stand-ins is left unkept."""
+    data = state()
+    data.setdefault("keeps", [])
+    recorded = {binding for _, binding in data["keeps"]}
+    for binding_id, (entry, _) in unprotected().items():
+        if binding_id in recorded:
+            continue
+        must("POST", f"/JellyfinMod/Entries/{entry}/Versions/{binding_id}/Keep")
+        data["keeps"].append([entry, binding_id])
+        put_state(data)
+    verify_protection()
+
+
+def verify_protection():
+    missing = unprotected()
+    for binding_id, (_, label) in list(missing.items())[:10]:
+        print("  not kept:", binding_id, label)
+    if missing:
+        sys.exit(f"REFUSED: {len(missing)} bindings outside the stand-in entries are not kept; retention stays as it is")
+    print("protection verified: every binding outside the stand-in entries is kept per file,",
+          len(state().get("keeps") or []), "session Keeps")
+
+
 def set_window(minutes):
     config = must("GET", f"/Plugins/{PLUGIN}/Configuration")
     config["RetentionTestWindowMinutes"] = int(minutes)
@@ -400,6 +493,8 @@ def set_window(minutes):
 
 
 def cmd_retention_on(minutes):
+    # Global retention with a minute-scale window may reclaim any due binding: never switch it on unprotected (W-2).
+    protect()
     set_window(minutes)
     retention = must("GET", "/JellyfinMod/Settings/Retention")
     after = must("PATCH", "/JellyfinMod/Settings/Retention", {"enabled": True, "reclaimAfterDays": 1, "watchedUserMode": "selectedUser",
@@ -417,6 +512,12 @@ def cmd_retention_off():
     after = must("PATCH", "/JellyfinMod/Settings/Retention", body | {"revision": retention["revision"]})
     print("retention", after["enabled"], "window", after.get("testWindowMinutes"), "mode", after["watchedUserMode"],
           "days", after["reclaimAfterDays"], "revision", after["revision"])
+    data = state()
+    for entry, binding_id in data.get("keeps") or []:
+        call("DELETE", f"/JellyfinMod/Entries/{entry}/Versions/{binding_id}/Keep")
+    print("session Keeps removed:", len(data.get("keeps") or []))
+    data["keeps"] = []
+    put_state(data)
 
 
 def cmd_seedgoal(minutes):
@@ -428,6 +529,7 @@ def cmd_seedgoal(minutes):
 
 
 def cmd_retention_run():
+    verify_protection()
     task = next(t for t in must("GET", "/ScheduledTasks") if t["Key"] == "JellyfinModRetentionReclamation")
     started = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
     must("POST", f"/ScheduledTasks/Running/{task['Id']}")
