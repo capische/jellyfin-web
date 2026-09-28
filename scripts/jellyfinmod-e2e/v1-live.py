@@ -73,6 +73,7 @@ FIXTURE = {
     "E02-E03": (SEASON, "JellyfinMod V1 Show (2020) S01E02-E03.mkv", 1280, 720, False, True),
     "E04": (SEASON, "JellyfinMod V1 Show (2020) S01E04.mkv", 1280, 720, False, True),
     "E05": (SEASON, "JellyfinMod V1 Show (2020) S01E05.mkv", 1280, 720, False, True),
+    "E06-E07": (SEASON, "JellyfinMod V1 Show (2020) S01E06-E07.mkv", 1280, 720, False, False),
 }
 SIDECARS = {  # beside Remove: they and the folder must stay byte-identical through Remove this version (decision 3)
     "Remove-srt": (f"{MOVIES}/{TITLES['Remove']}", f"{TITLES['Remove']} - 1080p.en.srt"),
@@ -443,14 +444,22 @@ def cmd_hashes(label):
     print("hashes", label, "saved")
 
 
+REWRITTEN = {"Remove-nfo"}
+
+
 def cmd_compare(before, after, expect_gone):
     a = json.load(open(os.path.join(STATE, f"hashes-{before}.json")))
     b = json.load(open(os.path.join(STATE, f"hashes-{after}.json")))
     gone = {key for key in a if a[key] != "ABSENT" and b.get(key) == "ABSENT"}
-    changed = {key for key in a if a[key] not in ("ABSENT",) and b.get(key) not in ("ABSENT", a[key])}
+    # Jellyfin's NFO saver (on for this instance's libraries) rewrites movie.nfo whenever the movie changes, with the
+    # streams of the files that remain; the file stays, and staying is what is checked for it.
+    changed = {key for key in a if a[key] not in ("ABSENT",) and b.get(key) not in ("ABSENT", a[key]) and key not in REWRITTEN}
+    for key in REWRITTEN & set(a):
+        if a[key] != "ABSENT":
+            check(b.get(key) != "ABSENT", f"{key} stays (Jellyfin rewrote it: {b.get(key) != a[key]})")
     expected = set(filter(None, expect_gone.split(",")))
     check(gone == expected and not changed, f"{before} -> {after}: gone {sorted(gone)} (expected {sorted(expected)}), "
-          f"every other file byte-identical")
+          f"every other file byte-identical" + (f"; CHANGED {sorted(changed)}" if changed else ""))
 
 
 def version_row(title_key, file_key):
@@ -648,6 +657,86 @@ def cmd_cleanup():
           f"cleanup: {removed} entries removed, no JellyfinMod title or fixture file left")
 
 
+def cmd_latest():
+    """The latest reconciliation run: its kind, state and any absence diagnostic naming a fixture."""
+    run = must("GET", "/JellyfinMod/Reconciliation/Latest") or {}
+    text = json.dumps(run)
+    print({key: run.get(key) for key in ("kind", "status", "startedAt", "missingItems", "excludedTitles")})
+    for line in [part for part in text.split("\\n") if "V1" in part][:5]:
+        print(" ", line[:300])
+    print("mentions Absent:", "JellyfinMod V1 Absent" in text, "absence not confirmed:", "Absence was not confirmed" in text)
+
+
+def cmd_users():
+    """Row 11: an ordinary user gets 403; an administrator who cannot read the Shows library gets 404 for an episode's
+    version (review P2-5). The disposable user's password is random, kept in a 0600 file and deleted with the user."""
+    import secrets
+    name = "jfmod-v1-disposable"
+    password = secrets.token_urlsafe(24)
+    write_private(os.path.join(STATE, "disposable-password"), password)
+    created = must("POST", "/Users/New", {"Name": name, "Password": password})
+    try:
+        policy = must("GET", f"/Users/{created['Id']}")["Policy"]
+        status, result = call("POST", "/Users/AuthenticateByName", {"Username": name, "Pw": password}, anonymous=True)
+        check(status == 200, "disposable user signs in")
+        token = result["AccessToken"]
+        series = series_entry()
+        e01 = episode(series, 1)
+        path = f"/JellyfinMod/Entries/{series['entry']['id']}/Versions/{e01['versions'][1]['bindingId']}/Remove"
+
+        def as_user():
+            request = urllib.request.Request(BASE + path, data=b"", method="POST",
+                                             headers={"Authorization": AUTH + f', Token="{token}"'})
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    return response.status
+            except urllib.error.HTTPError as error:
+                return error.code
+
+        check(as_user() == 403, "an ordinary user cannot remove a version (403)")
+        movies = library(MOVIE_LIBRARY)["ItemId"]
+        policy.update({"IsAdministrator": True, "EnableAllFolders": False, "EnabledFolders": [movies]})
+        must("POST", f"/Users/{created['Id']}/Policy", policy)
+        check(as_user() == 404, "an administrator who cannot read the Shows library gets 404 for its episode's version")
+        check(sha(host_path("E01-720p")) != "ABSENT", "the episode's file is untouched")
+    finally:
+        must("DELETE", f"/Users/{created['Id']}")
+        os.remove(os.path.join(STATE, "disposable-password"))
+        print("disposable user deleted")
+
+
+def cmd_debug_low():
+    item = movie_item("Low")
+    data = must("GET", f"/Items/{item['Id']}?userId={user_id()}")["UserData"]
+    print("1080p user data", {k: data.get(k) for k in ("Played", "LastPlayedDate", "PlaybackPositionTicks", "PlayCount")})
+    import sqlite3
+    db = sqlite3.connect(f"file:{HOST_ROOT}/config/data/jellyfinmod/jellyfinmod.db?mode=ro", uri=True)
+    entry_id = entry("Low")["entry"]["id"]
+    target = entry_id.replace("-", "").upper()
+    for row in db.execute("select UserId, JellyfinItemId, Played, PlaybackPositionTicks, CompletedAt, LastPlayedAt, SourceReason "
+                          "from CompletionObservations"):
+        if row[1] and row[1].replace("-", "").lower() == item["Id"].replace("-", "").lower():
+            print("observation", row[2:])
+    print("evaluation", [r for r in db.execute("select State, Reason, BaselineAt, Deadline from RetentionEvaluations") if False][:1])
+
+
+def cmd_playing_refusal():
+    """Row 11: the file being played cannot be removed (409 active_session); another version of the same title can be."""
+    item = movie_item("Prefer")
+    sources = media_sources(item["Id"])
+    source = sources[container_path("Prefer-720p")]
+    body = {"ItemId": item["Id"], "MediaSourceId": source, "PositionTicks": 10_000_000, "PlayMethod": "DirectPlay",
+            "PlaySessionId": "jfmod-v1-refusal"}
+    must("POST", "/Sessions/Playing", body)
+    try:
+        detail, row = version_row("Prefer", "Prefer-720p")
+        status, result = call("POST", f"/JellyfinMod/Entries/{detail['entry']['id']}/Versions/{row['bindingId']}/Remove")
+        check(status == 409 and "active_session" in str(result), f"the playing 720p -> {status} {str(result)[:100]}")
+    finally:
+        must("POST", "/Sessions/Playing/Stopped", dict(body, PositionTicks=0))
+    check(sha(host_path("Prefer-720p")) != "ABSENT", "the playing file is untouched")
+
+
 COMMANDS = {
     "login": cmd_login, "logout": cmd_logout, "health": cmd_health, "media": cmd_media, "library": cmd_library,
     "reconcile": scan, "versions": cmd_versions, "row2": lambda: cmd_row("Low", "Low-720p"),
@@ -655,8 +744,13 @@ COMMANDS = {
     "absent-hide": lambda: cmd_absent("hide"), "absent-show": lambda: cmd_absent("show"),
     "absent-delete": lambda: cmd_absent("delete"), "save": cmd_save, "protect": cmd_protect, "act": cmd_act,
     "preview": cmd_preview, "run": cmd_run, "retention-restore": cmd_retention_restore, "refusals": cmd_refusals,
-    "state": cmd_state, "cleanup": cmd_cleanup,
+    "state": cmd_state, "cleanup": cmd_cleanup, "latest": cmd_latest, "users": cmd_users, "debug-low": cmd_debug_low,
+    "playing-refusal": cmd_playing_refusal, "prefer-id": lambda: print(movie_item("Prefer")["Id"]),
+    "run-latest": lambda: print(json.dumps(must("GET", "/JellyfinMod/Retention/Runs/Latest"))[:1500]),
+    "scan-only": lambda: (must("POST", "/Library/Refresh"), wait_scan(), time.sleep(30)),
     "double-watch": lambda: play_to_end(item_by_path("E02-E03")["Id"]),
+    "high-watch": lambda: play_to_end(movie_item("High")["Id"], media_sources(movie_item("High")["Id"])[container_path("High-720p")]),
+    "low-watch": lambda: play_to_end(movie_item("Low")["Id"], media_sources(movie_item("Low")["Id"])[container_path("Low-720p")]),
 }
 
 if __name__ == "__main__":
@@ -666,8 +760,22 @@ if __name__ == "__main__":
         cmd_retention_on(arguments[0])
     elif name == "remove":
         cmd_remove(arguments[0], arguments[1])
+    elif name == "monitor-episodes":
+        make_video(arguments[0])
+        scan()
+        series = series_entry()
+        for number in [int(n) for n in arguments[1].split(",")]:
+            e = episode(series, number)
+            must("PATCH", f"/JellyfinMod/Entries/{series['entry']['id']}/Episodes/{e['id']}", {"monitored": True})
+        series = series_entry()
+        check(all(episode(series, int(n))["monitored"] and episode(series, int(n))["state"] == "onDisk"
+                  for n in arguments[1].split(",")), f"episodes {arguments[1]} on disk and monitored")
     elif name == "remove-episode-file":
         cmd_remove_episode_file(arguments[0], arguments[1])
+    elif name == "monitor":
+        detail = entry(arguments[0])
+        must("PATCH", f"/JellyfinMod/Entries/{detail['entry']['id']}", {"monitored": True})
+        check(entry(arguments[0])["entry"]["monitored"], f"{arguments[0]} is monitored")
     elif name == "hashes":
         cmd_hashes(arguments[0])
     elif name == "compare":
