@@ -406,10 +406,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   guard refuses an older build against this database) and the kill after remote accept, before
   local commit (`PhaseFourIntegration`).
 - Phase 5 — import: accepted (live acceptance 2026-09-26/28; a real-service pipeline was also
-  proven 2026-09-20 on 28096), apart from the version rows (second-version import), which are
-  deferred to V1 (see [`PHASE5.md`](PHASE5.md)).
-- Phase 6 — automation: accepted (live acceptance 2026-09-26/28), apart from the version rows
-  (M5–M8 version parts, question 5), which are deferred to V1 (see [`PHASE6.md`](PHASE6.md)).
+  proven 2026-09-20 on 28096); its version rows (second-version import, checklist 6 and I9 case 3)
+  were accepted through V1 row 14 on 2026-09-28 (see [`PHASE5.md`](PHASE5.md) and [`V1.md`](V1.md)).
+- Phase 6 — automation: accepted without exceptions on 2026-09-28 (live acceptance 2026-09-26/28;
+  its version rows, M5–M8 version parts and questions 5 and 7, through V1 rows 14–21) (see
+  [`PHASE6.md`](PHASE6.md) and [`V1.md`](V1.md)).
 - Phase 7 — setup, admin UI and UI delivery, with 7.1 (the Trakt indicator, Q16): released as
   0.1.0.0, republished on 2026-09-28 over the build of 2026-09-25 (the user's decision of
   2026-09-27 to keep 0.1.0.0): `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
@@ -432,9 +433,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
   (see [`PHASE12.md`](PHASE12.md)).
-- V1 — versions on Jellyfin 12: **built (not accepted)**, branch `v1-versions` in both repositories; owner of all
-  version behaviour, and its acceptance includes Phase 5/6's version rows; Phase 6 is accepted only when V1's rows
-  14–21 pass (see [`V1.md`](V1.md), handover).
+- V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
+  Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
+  plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
+  Owner of all version behaviour, including Phase 5/6's version rows (see [`V1.md`](V1.md)).
 - webOS performance: postponed by the user until further notice (research in the workspace brief
   `research-webos-targets`).
 
