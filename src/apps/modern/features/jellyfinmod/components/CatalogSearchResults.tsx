@@ -20,8 +20,9 @@ import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import { FileState, type Entry, type TmdbMetadata } from '../types/entry';
 import { getTmdbImage } from '../utils/entryLinks';
+import EmbySelect from './EmbySelect';
 import EntryCards from './EntryCards';
-import { flatButtonClass } from '../utils/flatButton';
+import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
 
 import './catalogSearch.scss';
 
@@ -343,15 +344,20 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         {!browseFailed && <section className='verticalSection jfmod-discovery' aria-busy={discoveryPending}>
             <div className='jfmod-discoveryHeading padded-left padded-right'>
                 <h2 className='sectionTitle sectionTitle-cards'>Add from TMDB</h2>
-                {!discoveryFailed && !parentId && types.map(mediaType => libraries[mediaType].length > 1 && <label key={mediaType}>
-                    <span>{mediaType === 'movie' ? 'Movie library' : 'TV library'}</span>
-                    {/* This controlled select is scoped to its media type. */}
-                    {/* eslint-disable-next-line react/jsx-no-bind */}
-                    <select value={selectedLibraries[mediaType] ?? ''} onChange={event => setSelectedLibraries(current => ({ ...current, [mediaType]: event.target.value }))}>
-                        <option value=''>Choose library</option>
-                        {libraries[mediaType].map(library => <option key={library.Id} value={library.Id}>{library.Name}</option>)}
-                    </select>
-                </label>)}
+                {/* Upstream's emby-select, so a webOS remote gets its action sheet instead of a native menu that does not open
+                    there (whole-review chunk 4a, P2 3). Each select is scoped to its media type. */}
+                {!discoveryFailed && !parentId && types.map(mediaType => libraries[mediaType].length > 1 && <div
+                    key={mediaType} className='jfmod-discoveryLibrary' data-jfmod-library-select={mediaType}>
+                    <EmbySelect
+                        id={'jfmodDiscoveryLibrary-' + mediaType}
+                        label={mediaType === 'movie' ? 'Movie library' : 'TV library'}
+                        value={selectedLibraries[mediaType] ?? ''}
+                        options={[{ value: '', label: 'Choose library' },
+                            ...libraries[mediaType].map(library => ({ value: library.Id ?? '', label: library.Name ?? '' }))]}
+                        // eslint-disable-next-line react/jsx-no-bind
+                        onChange={value => setSelectedLibraries(current => ({ ...current, [mediaType]: value }))}
+                    />
+                </div>)}
             </div>
             {discoveryPending && <div className='jfmod-searchSkeletons padded-left padded-right' aria-label='Searching TMDB'>
                 {[0, 1, 2, 3, 4, 5].map(index => <span key={index} />)}
@@ -359,7 +365,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             {undoEntry && <div className='jfmod-undoBar padded-left padded-right' role='status'>
                 Added {undoEntry.title} to the catalog{' '}
                 {/* eslint-disable-next-line react/jsx-no-bind */}
-                <button ref={undoButton} type='button' className='emby-button raised' onClick={undo}>Undo</button>
+                <button ref={undoButton} type='button' className={raisedButtonClass()} onClick={undo}>Undo</button>
             </div>}
             {!discoveryPending && discoveryFailed && <p className='jfmod-searchNotice padded-left padded-right'>TMDB is unavailable. Your library results are still shown above.</p>}
             {!discoveryPending && !discoveryFailed && failedTypes.length > 0 && <p className='jfmod-searchNotice padded-left padded-right'>
@@ -370,7 +376,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
                     <div className='jfmod-discoveryArtwork' style={getTmdbImage(metadata.posterPath) ? { backgroundImage: `url("${getTmdbImage(metadata.posterPath)}")` } : undefined} />
                     <div className='jfmod-discoveryTitle'>{metadata.title}</div>
                     {/* eslint-disable-next-line react/jsx-no-bind */}
-                    <button type='button' className='emby-button button-submit' disabled={!targetFor(metadata.mediaType)} onClick={() => { add(metadata).catch(console.error); }} data-jfmod-add={`${metadata.mediaType}:${metadata.tmdbId}`} aria-label={`Add ${metadata.title} to catalog`}>+</button>
+                    <button type='button' className={raisedButtonClass(undefined, 'button-submit')} disabled={!targetFor(metadata.mediaType)} onClick={() => { add(metadata).catch(console.error); }} data-jfmod-add={`${metadata.mediaType}:${metadata.tmdbId}`} aria-label={`Add ${metadata.title} to catalog`}>+</button>
                 </article>)}
             </DiscoveryRow>}
             {types.map((mediaType, index) => discovery[index]?.hasNextPage && <button

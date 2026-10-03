@@ -5,6 +5,7 @@ import layoutManager from 'components/layoutManager';
 import './tvSettingsLink.scss';
 
 import { useSettingsVisible } from '../hooks/useSettingsVisible';
+import { raisedButtonClass } from '../utils/flatButton';
 
 /**
  * The TV's way into the settings area once the setup banner is gone (REVIEW-2026-09-24 S8-R2, PHASE7 default 15).
@@ -19,7 +20,7 @@ const TvSettingsLink: FC = () => {
     if (!visible || !layoutManager.tv) return null;
     return (
         <div className='padded-left padded-right jfmod-tvSettingsLink'>
-            <a className='emby-button raised' href='#/catalog/settings' data-jfmod-tv-settings=''>
+            <a className={raisedButtonClass()} href='#/catalog/settings' data-jfmod-tv-settings=''>
                 <span>JellyfinMod settings</span>
             </a>
         </div>

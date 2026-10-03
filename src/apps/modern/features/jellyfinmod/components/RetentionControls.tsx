@@ -7,6 +7,7 @@ import { describeVersion } from '../constants/versions';
 import type { EntryEpisode } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 import EmbySelect from './EmbySelect';
+import { raisedButtonClass } from '../utils/flatButton';
 
 /** The episode window choices an administrator can pick (PHASE10 Q4); `inherit` follows the series. */
 const EPISODE_WINDOWS = [1, 3, 7, 14, 30, 60, 90, 180, 365];
@@ -68,9 +69,9 @@ const RetentionControls: FC<RetentionControlsProps> = ({ api, entryId, busy, cha
     }, [api, change, entryId]);
 
     return <>
-        {canEditEpisode && keptItself && <button className='emby-button raised' type='button' aria-disabled={busy}
+        {canEditEpisode && keptItself && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
             onClick={unkeep}>Stop keeping</button>}
-        {keepable.map((version, index) => <button key={'keep:' + version.bindingId} className='emby-button raised' type='button'
+        {keepable.map((version, index) => <button key={'keep:' + version.bindingId} className={raisedButtonClass()} type='button'
             aria-disabled={busy} aria-pressed={!!version.kept} data-jfmod-binding-id={version.bindingId} onClick={toggleVersion}>
             {version.kept ? 'Stop keeping ' : 'Keep '}{versionName(keepable, version, index)}
         </button>)}

@@ -1,5 +1,11 @@
 # Phase 5 — import pipeline
 
+> **Superseded in part (user decisions 2026-10-02).** Seed release and queue removal no longer delete downloaded data:
+> the client is asked to forget the torrent with `delete-local-data: false`, the checked files are recorded, and the
+> release becomes `detached` (`cleanup_pending`, or `manual_cleanup` without a trustworthy list). 0.1.0.0 never deletes
+> downloaded files; a cleanup tool is planned for a later version. Every "removes the torrent with its data" below is the
+> earlier contract. See [API.md](API.md) and the plugin README, "Downloaded files: detach and keep".
+
 Planning draft, 2026-09-19; see *Implementation status* for what is built. Read [PLAN.md](PLAN.md), [README.md](README.md) §6–§7,
 [UX.md](UX.md) §8, §10, §13 and §14, [PHASE2.md](PHASE2.md), [PHASE3.md](PHASE3.md),
 [PHASE4.md](PHASE4.md) and [API.md](API.md) alongside this refinement. This document plans

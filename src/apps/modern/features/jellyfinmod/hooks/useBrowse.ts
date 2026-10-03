@@ -58,7 +58,9 @@ export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId,
     const missing = (result.error as { response?: { status?: number } } | null)?.response?.status === 404;
     return {
         ...result,
-        data: health.isError || missing ? undefined : result.data,
+        // Favorites, Collections, Studios and the other tabs share the Movies request's key: their cached or placeholder
+        // rows must never stand in for the tab's own native results (whole-review chunk 4c, P2 1).
+        data: !supported || health.isError || missing ? undefined : result.data,
         isSelectingSource: supported && !!user?.Id && (health.isPending || health.data?.ok === true && result.isPending)
     };
 }
