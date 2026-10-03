@@ -20,6 +20,9 @@ const JellyfinModQueryClientEventHandler: FC = () => {
         if (!user?.Id) return;
 
         void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'Items'] });
+        // The merged Home rows' native halves read these keys, not Items: a newly bound title must leave the catalog
+        // half and appear in Latest at the same refresh (whole-review chunk 4c, P2 4).
+        void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'LatestMedia'] });
         if (api) {
             void queryClient.invalidateQueries({
                 queryKey: ['JellyfinMod', api.basePath, user.Id]
@@ -31,6 +34,9 @@ const JellyfinModQueryClientEventHandler: FC = () => {
         if (!user?.Id) return;
 
         void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'Items'] });
+        // Continue Watching is drawn from these: an episode finished on another device moves it on.
+        void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'ResumeItems'] });
+        void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'NextUp'] });
         if (api) {
             const userDataSurfaces = new Set(['HomeHero', 'HomeRecent', 'Browse', 'SearchBrowse', 'NativeDetail']);
             void queryClient.invalidateQueries({

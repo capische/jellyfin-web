@@ -10,7 +10,8 @@ import Page from 'components/Page';
 import { useApi } from 'hooks/useApi';
 
 import { usePluginHealth } from '../hooks/useEntries';
-import { type Overview, request } from './settingsApi';
+import { isSettingsProblem, type Overview, request } from './settingsApi';
+import { FOCUSABLE_SELECT, Notice } from './settingsWidgets';
 import {
     AutomationSection, ClientSection, DiagnosticsSection, DiscoverySection, GrabbingSection, ImportSection, IndexersSection, InterfaceSection,
     OverviewSection, ProfilesSection, RetentionSection, type SectionProps, type SettingsData, summarise
@@ -51,9 +52,22 @@ export const useSettingsData = (enabled: boolean) => {
         staleTime: 0,
         refetchOnMount: 'always',
         queryFn: async (): Promise<SettingsData> => {
-            const get = <T, >(path: string, fallback: T) => request<T>(api!, 'GET', path).catch(() => fallback);
+            // A 404 is a plugin build without that area: it stays empty. Any other failure is recorded, so the page says what
+            // could not be read and offers a retry, instead of showing an empty area as if it had loaded (whole-review
+            // chunk 4b, P2 5). The overview is what setup is made of: without it the whole load fails.
+            const failures: string[] = [];
+            // The reads answered 404: not failures for the page, but nothing was read, so a section's Reload does not take
+            // their empty stand-ins as the server's copy (final Pi review, P2 2).
+            const unsupported: string[] = [];
+            const get = <T, >(path: string, fallback: T) => request<T>(api!, 'GET', path).catch(error => {
+                (isSettingsProblem(error) && error.status === 404 ? unsupported : failures).push(path.split('?')[0]);
+                return fallback;
+            });
             const users = api!.axiosInstance.get(api!.basePath + '/Users', { headers: { Authorization: api!.authorizationHeader } })
-                .then(response => response.data as SettingsData['users']).catch(() => []);
+                .then(response => response.data as SettingsData['users']).catch(() => {
+                    failures.push('Users');
+                    return [];
+                });
             const [overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
                 decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList, prowlarr] = await Promise.all([
                 get<Overview | undefined>('Settings/Overview', undefined), get('Settings/Discovery', undefined), get('Settings/SeedProtection', undefined),
@@ -64,9 +78,11 @@ export const useSettingsData = (enabled: boolean) => {
                 get<unknown[]>('Reconciliation/Orphans', []), get('Retention/Preview', undefined), get('Retention/Runs/Latest', undefined), users,
                 get<unknown[] | undefined>('Settings/Prowlarr', undefined)
             ]);
+            if (failures.includes('Settings/Overview')) throw new Error('The settings overview could not be read.');
             return {
                 overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
-                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr
+                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr, failures,
+                unsupported
             } as SettingsData;
         }
     });
@@ -95,6 +111,10 @@ const SettingsPage: FC = () => {
         // Put focus on the section heading, so a keyboard or screen-reader user lands where the content changed.
         window.setTimeout(() => document.getElementById(`jfmod-h-${id}`)?.focus(), 0);
     }, [setParams]);
+    const { refetch } = settings;
+    const retry = useCallback(() => {
+        refetch().catch(() => undefined);
+    }, [refetch]);
     const pickSection = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => go(event.target.value), [go]);
     // Each rail step carries its section id in `data-section`, so one handler serves the whole rail.
     const openStep = useCallback((event: React.MouseEvent<HTMLButtonElement>) => go(event.currentTarget.dataset.section!), [go]);
@@ -114,7 +134,9 @@ const SettingsPage: FC = () => {
     } else if (!available) {
         content = <p className='jfmod-lead'>The JellyfinMod plugin on this server does not offer this settings area. Use the JellyfinMod page in the Dashboard.</p>;
     } else if (!settings.data || !api) {
-        content = <p className='jfmod-lead'>{settings.isError ? 'The settings could not be loaded.' : 'Loading…'}</p>;
+        content = settings.isError ?
+            <Notice notice={{ kind: 'err', text: 'The settings could not be loaded.', action: { label: 'Retry', run: retry } }} /> :
+            <p className='jfmod-lead'>Loading…</p>;
     } else {
         const data = settings.data;
         const index = SECTIONS.findIndex(section => section.id === current);
@@ -131,7 +153,7 @@ const SettingsPage: FC = () => {
                         <p>In the order things have to work.</p>
                     </div>
                     <div className='jfmod-check-picker'>
-                        <TextField select fullWidth size='small' label='Section' value={current} onChange={pickSection}>
+                        <TextField select fullWidth size='small' label='Section' value={current} onChange={pickSection} slotProps={FOCUSABLE_SELECT}>
                             {SECTIONS.map(item => <MenuItem key={item.id} value={item.id}>{item.title}</MenuItem>)}
                         </TextField>
                     </div>
@@ -162,6 +184,10 @@ const SettingsPage: FC = () => {
                 {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
                     beside it (REVIEW-2026-09-24 S8-R2); Left and Right still cross between the two. */}
                 <div className='jfmod-check-main focuscontainer-y'>
+                    {!!data.failures?.length && <div data-jfmod-settings-failures=''><Notice notice={{
+                        kind: 'err', text: `Some settings could not be read (${data.failures.join(', ')}); what they show may be incomplete.`,
+                        action: { label: 'Retry', run: retry }
+                    }} /></div>}
                     <section.Component api={api} data={data} reload={settings.refetch} onGo={go}
                         eyebrow={`Step ${index + 1} of ${SECTIONS.length}`} next={next && { id: next.id, title: next.title }} />
                 </div>

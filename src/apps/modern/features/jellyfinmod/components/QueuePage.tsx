@@ -23,6 +23,7 @@ import type { QueueList, QueueRow } from '../types/queue';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 
 import './queue.scss';
+import { raisedButtonClass } from '../utils/flatButton';
 
 type QueueLayout = 'desktop' | 'mobile' | 'tv';
 
@@ -193,8 +194,8 @@ const applyOrder = (order: string[], sorted: QueueRow[]) => {
 
 const LibraryLinks: FC<{ views: BaseItemDto[]; types: CollectionType[]; className?: string }> = ({ views, types, className }) => {
     const matching = views.filter(view => view.CollectionType && types.includes(view.CollectionType));
-    if (!matching.length) return <a className={classNames('emby-button raised', className)} href='#/home'>Open Home</a>;
-    return <>{matching.map(view => <a key={view.Id} className={classNames('emby-button raised', className)}
+    if (!matching.length) return <a className={raisedButtonClass(className)} href='#/home'>Open Home</a>;
+    return <>{matching.map(view => <a key={view.Id} className={raisedButtonClass(className)}
         href={appRouter.getRouteUrl(view, { context: view.CollectionType })}>{'Browse ' + (view.Name ?? 'library')}</a>)}</>;
 };
 
@@ -208,20 +209,27 @@ interface ContentProps {
     /** The library links are final, so first focus cannot land on a link that is about to be replaced. */
     viewsReady: boolean;
     refetch: () => void;
+    /** The last refresh failed: the rows are the last ones read, at `updatedAt` (whole-review chunk 4a, P3 6). */
+    refreshFailed: boolean;
+    updatedAt: number;
 }
 
-const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, views, viewsReady, refetch }) => {
+const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, views, viewsReady, refetch, refreshFailed, updatedAt }) => {
     const container = useRef<HTMLDivElement>(null);
     const removal = useRef<{ id: string; index: number } | null>(null);
+    // The row that last had focus, so focus can move to its neighbour when a poll removes it (whole-review chunk 4a, P3 7).
+    const focusedRow = useRef<{ id: string; index: number } | null>(null);
     const sorted = useMemo(() => sortQueueRows(list.items), [list.items]);
     const [frozenOrder, setFrozenOrder] = useState<string[] | null>(null);
     const rows = useMemo(() => frozenOrder ? applyOrder(frozenOrder, sorted) : sorted, [frozenOrder, sorted]);
     const showClient = rows.some(row => row.client);
-    const staleAll = !list.clientStatus.reachable;
+    const staleAll = !list.clientStatus.reachable || refreshFailed;
 
     // Polls re-render rows in place; the order is frozen while focus is inside and re-sorted when it leaves (P5.I8).
-    const onFocus = useCallback(() => {
+    const onFocus = useCallback((event: FocusEvent<HTMLElement>) => {
         setFrozenOrder(previous => previous ?? rows.map(row => row.id));
+        const id = (event.target as HTMLElement).closest<HTMLElement>('[data-jfmod-queue-id]')?.dataset.jfmodQueueId;
+        focusedRow.current = id ? { id, index: Math.max(0, rows.findIndex(row => row.id === id)) } : null;
     }, [rows]);
     const onBlur = useCallback((event: FocusEvent<HTMLElement>) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFrozenOrder(null);
@@ -238,10 +246,11 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     // Once a removed row has left the list, focus its neighbour (or the empty-state link) if focus fell out with it,
     // so a D-pad user is never thrown to the top of the page.
     useEffect(() => {
-        const pending = removal.current;
+        const pending = removal.current ?? focusedRow.current;
         const root = container.current;
         if (!pending || !root || rows.some(row => row.id === pending.id)) return;
         removal.current = null;
+        focusedRow.current = null;
         const active = document.activeElement;
         if (active && active !== document.body && document.body.contains(active)) return;
         const targets = root.querySelectorAll<HTMLElement>(FOCUS_SELECTOR + ', .jfmod-queueEmpty a');
@@ -291,7 +300,10 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     }
 
     return <div className={'jfmod-queue jfmod-queue--' + layout} ref={container} onFocus={onFocus} onBlur={onBlur}>
-        {!list.clientStatus.reachable && <p className='jfmod-queueBanner' role='status'>
+        {refreshFailed && <p className='jfmod-queueBanner' role='status' data-jfmod-queue-refresh-failed=''>
+            The queue could not be refreshed. Showing the state from {new Date(updatedAt).toLocaleTimeString()}; trying again.
+        </p>}
+        {!refreshFailed && !list.clientStatus.reachable && <p className='jfmod-queueBanner' role='status'>
             The download client cannot be reached. Showing the last known state.
         </p>}
         {automation && <p className={automation.quiet ? 'jfmod-queueNotice' : 'jfmod-queueBanner'} role='status'>
@@ -355,7 +367,8 @@ const QueuePage: FC = () => {
             text='The download queue is not available to you. An administrator can make it visible to users.' />;
     } else if (queue.data && api) {
         content = <QueueContent api={api} list={queue.data} layout={layout} isAdmin={isAdmin}
-            serverId={__legacyApiClient__?.serverId()} views={views} viewsReady={viewsReady} refetch={refresh} />;
+            serverId={__legacyApiClient__?.serverId()} views={views} viewsReady={viewsReady} refetch={refresh}
+            refreshFailed={queue.isError} updatedAt={queue.dataUpdatedAt} />;
     } else if (queue.isError) {
         content = <p className='jfmod-queueStatus' role='status'>The queue could not be loaded. Trying again every few seconds.</p>;
     } else {
