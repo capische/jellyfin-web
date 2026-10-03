@@ -1,4 +1,5 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import escapeHtml from 'escape-html';
 import React, { type FC, type MouseEvent, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -18,7 +19,7 @@ import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
-import { flatButtonClass } from '../utils/flatButton';
+import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
     pending: 'Grab held, not sent yet', submitting: 'Sending to the download client', accepted: 'Sent to the download client',
@@ -117,7 +118,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const remove = useCallback(async () => {
         if (busy) return;
         try {
-            await confirm({ title: 'Remove entry', text: `Remove ${entry.title} from the catalog?`,
+            // Sanitized HTML in the stock dialog: a title from metadata is escaped (whole-review P1 11).
+            await confirm({ title: 'Remove entry', text: escapeHtml(`Remove ${entry.title} from the catalog?`),
                 confirmText: 'Remove', primary: 'delete' });
         } catch {
             return;
@@ -183,22 +185,22 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}
         {mount('.mainDetailButtons', <div className='jfmod-entryActions'>
-            {entry.jellyfinItemId && <a className='emby-button raised button-submit'
+            {entry.jellyfinItemId && <a className={raisedButtonClass('button-submit')}
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
                 Open in Jellyfin
             </a>}
-            {canAcquire && <button className='emby-button raised button-submit' type='button'
+            {canAcquire && <button className={raisedButtonClass('button-submit')} type='button'
                 onClick={searchReleases}>
                 {entry.state === 'reclaimed' ? 'Get again' : 'Search releases'}
             </button>}
             {isAdmin && <>
-                {canSearchNow && <button className='emby-button raised' type='button' aria-disabled={busy}
+                {canSearchNow && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
                     onClick={searchNow}>Search now</button>}
-                <button className='emby-button raised' type='button' aria-busy={busy}
+                <button className={raisedButtonClass()} type='button' aria-busy={busy}
                     aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
                     {keepButtonLabel(busy, retention?.reason === 'kept')}
                 </button>
-                <button className='emby-button raised' type='button' role='switch' aria-checked={entry.monitored}
+                <button className={raisedButtonClass()} type='button' role='switch' aria-checked={entry.monitored}
                     aria-disabled={busy} onClick={toggleMonitoring}>
                     {entry.monitored ? '☑' : '☐'} Monitor
                 </button>

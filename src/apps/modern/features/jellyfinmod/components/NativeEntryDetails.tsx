@@ -24,6 +24,7 @@ import RetentionWarning from './RetentionWarning';
 import VersionRemoveControls from './VersionRemoveControls';
 import VersionRows from './VersionRows';
 import './entryDetails.scss';
+import { raisedButtonClass } from '../utils/flatButton';
 
 interface NativeEntryDetailsProps {
     api: Api;
@@ -303,16 +304,16 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
           * `itemDetails/index.js` that carried it — is gone, and the commands are plain buttons beside Keep.
           */}
         <div className='jfmod-nativeActions'>
-            {canAcquire && <button className='emby-button raised' type='button' onClick={searchReleases}>
+            {canAcquire && <button className={raisedButtonClass()} type='button' onClick={searchReleases}>
                 Search releases
             </button>}
-            {canAddVersion && <button className='emby-button raised' type='button'
+            {canAddVersion && <button className={raisedButtonClass()} type='button'
                 onClick={addVersionFromButton}>
                 Get another quality
             </button>}
-            {canSearchNow && <button className='emby-button raised' type='button' aria-disabled={busy}
+            {canSearchNow && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
                 onClick={searchNow}>Search now</button>}
-            {isAdmin && <button className='emby-button raised' type='button' aria-busy={busy}
+            {isAdmin && <button className={raisedButtonClass()} type='button' aria-busy={busy}
                 aria-disabled={busy} aria-pressed={kept} onClick={keep}
                 title={keepsSeries ? 'Keep the whole series indefinitely' : 'Keep indefinitely'}>
                 {keepLabel(keepsSeries, busy, kept)}

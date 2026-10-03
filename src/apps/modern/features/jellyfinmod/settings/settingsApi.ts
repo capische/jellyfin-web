@@ -165,8 +165,12 @@ export const CONFLICT_MESSAGE = 'These settings changed somewhere else since thi
 export const blockerSentence = (code: string) => BLOCKER_SENTENCES.get(code) ?? `Blocked: ${code}.`;
 export const pathSentence = (code: string) => PATH_SENTENCES.get(code) ?? `The probe reported ${code}.`;
 
+/** A save that changed part of what was asked; its message says which part (whole-review chunk 4b, P2 1). */
+export class PartialSaveError extends Error {}
+
 /** The failure text a section shows: the conflict sentence for a stale revision, else the server's own title. */
 export const problemText = (error: unknown) => {
+    if (error instanceof PartialSaveError) return error.message;
     if (isSettingsProblem(error)) {
         if (error.type === 'revision_conflict') return CONFLICT_MESSAGE;
         const blockers = error.blockers.map(blockerSentence).join(' ');

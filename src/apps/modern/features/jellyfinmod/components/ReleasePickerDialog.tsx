@@ -9,7 +9,7 @@ import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import type { GrabOperation, ReleaseCandidate, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
-import { flatButtonClass } from '../utils/flatButton';
+import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
 
 import './releasePicker.scss';
 
@@ -138,7 +138,7 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolea
         return <div className='jfmod-grabStatus' role='status' aria-live='polite'>
             {operation.state === 'pending' && <>
                 <span>Sending to the download client in {seconds} s.</span>
-                <button type='button' className='emby-button raised jfmod-grabCancel' aria-disabled={cancelling} onClick={onCancel}>
+                <button type='button' className={raisedButtonClass('jfmod-grabCancel')} aria-disabled={cancelling} onClick={onCancel}>
                     Cancel
                 </button>
             </>}
@@ -159,8 +159,27 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     const [now, setNow] = useState(() => Date.now());
     const activating = useRef(false);
     const mounted = useRef(true);
+    // The operation this picker follows. A response about another operation, or one that would take a finished
+    // operation back to an earlier state, is stale and dropped (whole-review chunk 4a, P2 5).
+    const current = useRef<GrabOperation | null>(null);
     useEffect(() => () => {
         mounted.current = false;
+    }, []);
+
+    /** Starts following a new operation: a new generation, which no earlier response may overwrite. */
+    const follow = useCallback((next: GrabOperation) => {
+        if (!mounted.current) return;
+        current.current = next;
+        setOperation(next);
+    }, []);
+
+    /** Applies a later read of the operation being followed. */
+    const update = useCallback((latest: GrabOperation) => {
+        const known = current.current;
+        if (!mounted.current || !known || latest.id !== known.id) return;
+        if (isFinal(known) && !isFinal(latest)) return;
+        current.current = latest;
+        setOperation(latest);
     }, []);
 
     const finalKey = operation && isFinal(operation) ? operation.id + ':' + operation.state : null;
@@ -173,47 +192,64 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     const followId = operation && !isFinal(operation) ? operation.id : null;
     useEffect(() => {
         if (!followId) return;
+        // One read at a time; a read still under way when the operation followed changes or the picker closes is
+        // ignored when it lands (no AbortController: older webOS engines lack it).
+        let reading = false;
+        let stopped = false;
         const timer = window.setInterval(() => {
             setNow(Date.now());
+            if (reading) return;
+            reading = true;
             getGrab(api, followId).then(latest => {
-                if (mounted.current) setOperation(latest);
-            }).catch(() => { /* Keep the last known state; the next tick asks again. */ });
+                if (!stopped) update(latest);
+            }).catch(() => { /* Keep the last known state; the next tick asks again. */ })
+                .finally(() => { reading = false; });
         }, 1000);
-        return () => window.clearInterval(timer);
-    }, [api, followId]);
+        return () => {
+            stopped = true;
+            window.clearInterval(timer);
+        };
+    }, [api, followId, update]);
 
+    // Each grab attempt is a generation: an answer about an earlier attempt, its recovery lookup included, never replaces
+    // the grab a later attempt follows (whole-review fixes review, P2 1).
+    const attempt = useRef(0);
     const start = useCallback((searchId: string, candidate: ReleaseCandidate) => {
         // One activation grabs; another Enter or click while a grab is in flight does nothing.
         if (activating.current) return;
         activating.current = true;
+        const mine = ++attempt.current;
+        const isLatest = () => mounted.current && attempt.current === mine;
         setReleaseId(candidate.releaseId);
         setError('');
         grabRelease(api, { searchId, releaseId: candidate.releaseId, idempotencyKey: newKey() }).then(result => {
-            if (!mounted.current) return;
+            if (!isLatest()) return;
             setNow(Date.now());
-            setOperation(result);
+            follow(result);
         }).catch(failure => {
-            if (!mounted.current) return;
+            if (!isLatest()) return;
             activating.current = false;
             const problem = problemOf(failure, 'The release could not be grabbed.');
             setError(problem.title);
             if (problem.operationId) {
                 setReleaseId(null);
-                getGrab(api, problem.operationId).then(setOperation).catch(() => undefined);
+                getGrab(api, problem.operationId).then(found => {
+                    if (isLatest()) follow(found);
+                }).catch(() => undefined);
             }
         });
-    }, [api]);
+    }, [api, follow]);
 
     const cancel = useCallback(() => {
         if (!operation || cancelling) return;
         setCancelling(true);
         cancelGrab(api, operation.id)
-            .then(setOperation)
-            .catch(() => getGrab(api, operation.id).then(setOperation).catch(() => undefined))
+            .then(update)
+            .catch(() => getGrab(api, operation.id).then(update).catch(() => undefined))
             .finally(() => {
                 if (mounted.current) setCancelling(false);
             });
-    }, [api, cancelling, operation]);
+    }, [api, cancelling, operation, update]);
 
     return { operation, releaseId, cancelling, error, now, start, cancel, busy: !!operation && !isFinal(operation) };
 };
@@ -305,7 +341,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         {failedIndexers.length > 0 && <p className='jfmod-releaseNotice'>
             Partial results: {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}
         </p>}
-        {!grab.releaseId && grabStatus}
+        {/* The grab's status and Cancel stay in view for its whole hold, also when a changed search no longer lists the
+            release it grabbed (whole-review chunk 4a, P2 4). */}
+        {(!grab.releaseId || !eligible.some(candidate => candidate.releaseId === grab.releaseId)) && grabStatus}
         <div className='jfmod-releaseList'>
             {eligible.map(candidate => <Fragment key={candidate.releaseId}>
                 <ReleaseRow candidate={candidate} disabled={grabDisabled} onGrab={onGrab} />
