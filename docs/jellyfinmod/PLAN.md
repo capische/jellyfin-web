@@ -412,8 +412,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   its version rows, M5–M8 version parts and questions 5 and 7, through V1 rows 14–21) (see
   [`PHASE6.md`](PHASE6.md) and [`V1.md`](V1.md)).
 - Phase 7 — setup, admin UI and UI delivery, with 7.1 (the Trakt indicator, Q16): released as
-  0.1.0.0, republished on 2026-09-28 with V1 (the user's decision to keep 0.1.0.0):
+  0.1.0.0, republished on 2026-10-03 with the whole-review fixes (the user's decision to keep 0.1.0.0):
   `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, index
+  `sha256:b9703e07c4521c21ee56d7957b6d35232552bc91887628d3821c0ef7b98f6a82`, from plugin `abeffb7`
+  and web `1924001186` (bundle `a8d28bf5c349`); on 2026-09-28 with V1:
   `sha256:00f309cd687dd0afc751d40fafb4b607eaaab94ab36de2554588410395454fe4`, from plugin `a48f857`
   and web `f88ad4884b` (bundle `b2255a8438fc`); earlier the same day
   `sha256:dd0949337f166f9d52b14122ddbf3ca4ed95b5f335a0f343ff9ac94103394f89` (plugin `8d3c6c0`, web
@@ -435,6 +437,14 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
   (see [`PHASE12.md`](PHASE12.md)).
+- Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
+  [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
+  both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
+  live acceptance on 28096 in Chromium, Chrome and the mobile viewport; all 13 suites and the image test on the Pi.
+  0.1.0.0 ships detach and keep: nothing deletes downloaded files automatically. **Deferred to the next version
+  (user, 2026-10-02):** a manual "remove unused downloads" tool; a first implementation was withdrawn after four
+  Codex rounds kept finding serious defects in its delete code, and is kept locally at
+  `refs/keep/cleanup-button-20261002` in both repositories for its own design and review.
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
