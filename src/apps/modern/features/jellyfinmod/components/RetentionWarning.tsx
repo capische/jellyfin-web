@@ -3,6 +3,7 @@ import React, { type FC } from 'react';
 import type { RetentionWarning as Warning } from '../types/entry';
 
 import './retentionWarning.scss';
+import { raisedButtonClass } from '../utils/flatButton';
 
 interface RetentionWarningProps {
     warning: Warning;
@@ -40,7 +41,7 @@ const RetentionWarning: FC<RetentionWarningProps> = ({ warning, subject = 'episo
         {warning.files.length > 0 && <ul className='jfmod-retentionWarningFiles'>
             {warning.files.map(file => <li key={file}>{file}</li>)}
         </ul>}
-        {onKeep && <button className='emby-button raised' type='button' aria-busy={busy} aria-disabled={busy}
+        {onKeep && <button className={raisedButtonClass()} type='button' aria-busy={busy} aria-disabled={busy}
             onClick={onKeep}>{keepLabel ?? 'Keep'}</button>}
     </div>;
 };

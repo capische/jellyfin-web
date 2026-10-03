@@ -9,14 +9,17 @@ import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
- * endless spinner, or says plainly that it is unavailable (P3.T14).
+ * endless spinner, or says plainly that it is unavailable (P3.T14). `isCurrent` says whether this page visit is still
+ * the one on screen; after the lookup it is asked again, so a lookup that lands after the user moved on neither
+ * redirects nor touches the loading indicator (whole-review chunk 4c, P2 5).
  */
-async function handleMissingNativeItem(view, params, error) {
+async function handleMissingNativeItem(view, params, error, isCurrent) {
     if (error?.status !== 404 || !params.id) return;
     const client = params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
     const api = client && ServerConnections.getApi(client.serverId());
     try {
         const entries = api ? await getEntries(api, { jellyfinItemId: params.id, limit: 1 }) : null;
+        if (!isCurrent()) return;
         const entry = entries?.items[0];
         if (entry) {
             window.location.replace('#/details?entryId=' + encodeURIComponent(entry.id)
@@ -27,6 +30,7 @@ async function handleMissingNativeItem(view, params, error) {
         console.error('[JellyfinMod] Could not look up the entry for a missing item', lookupError);
     }
 
+    if (!isCurrent()) return;
     loading.hide();
     const content = view.querySelector('.detailPageContent') ?? view;
     const message = document.createElement('p');
@@ -80,7 +84,7 @@ export default function initializeNativeEntryDetails(view, params) {
             ]);
         } catch (error) {
             if (currentGeneration !== generation) return;
-            await handleMissingNativeItem(view, params, error);
+            await handleMissingNativeItem(view, params, error, () => currentGeneration === generation);
             return;
         }
         if (currentGeneration !== generation) return;
