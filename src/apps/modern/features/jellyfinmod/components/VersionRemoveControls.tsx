@@ -1,4 +1,5 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import escapeHtml from 'escape-html';
 import React, { type FC, type MouseEvent, useCallback, useMemo, useRef } from 'react';
 
 import confirm from 'components/confirm/confirm';
@@ -6,6 +7,7 @@ import confirm from 'components/confirm/confirm';
 import { removeVersion } from '../api/modApi';
 import { REMOVE_VERSION_REFUSED, removeVersionText, versionName, VERSIONS_REMOVE_CAPABILITY } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
+import { raisedButtonClass } from '../utils/flatButton';
 
 interface VersionRemoveControlsProps {
     api: Api;
@@ -47,7 +49,9 @@ const VersionRemoveControls: FC<VersionRemoveControlsProps> = ({ api, entryId, m
         pending.current = true;
         confirm({
             title: 'Remove this version',
-            text: removeVersionText(version, mediaType),
+            // The stock dialog renders its text as sanitized HTML and treats any .btnOption inside it as an answer, so
+            // file names and labels from metadata are escaped: never markup, never a working button (whole-review P1 11).
+            text: escapeHtml(removeVersionText(version, mediaType)),
             confirmText: version.isLast ? 'Remove the last copy' : 'Remove this version',
             primary: 'delete'
         }).then(() => change(async () => {
@@ -68,7 +72,7 @@ const VersionRemoveControls: FC<VersionRemoveControlsProps> = ({ api, entryId, m
     }, [api, busy, change, entryId, mediaType, onRemoved, removable]);
 
     return <>
-        {removable.map(version => <button key={'remove:' + version.bindingId} className='emby-button raised' type='button'
+        {removable.map(version => <button key={'remove:' + version.bindingId} className={raisedButtonClass()} type='button'
             aria-disabled={busy} data-jfmod-binding-id={version.bindingId} data-jfmod-remove-version='' onClick={remove}>
             Remove {versionName(version)}
         </button>)}

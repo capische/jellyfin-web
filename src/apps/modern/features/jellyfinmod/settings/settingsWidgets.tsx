@@ -7,7 +7,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
-import React, { type FC, type ReactNode, useCallback, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SecretChange } from './settingsApi';
 
@@ -177,6 +177,33 @@ export type Draft = Record<string, unknown>;
 
 type FieldChange = (key: string, value: unknown) => void;
 
+/**
+ * MUI draws a select as a `div[role=combobox]`, which upstream's focusManager does not count as focusable: the TV's arrows
+ * skipped it (whole-review chunk 4b, P2 3). Its trigger takes the `focusable` class the spatial navigation looks for;
+ * Enter opens it, and `shell/dpadModals` drives the open menu.
+ */
+export const FOCUSABLE_SELECT = { select: { SelectDisplayProps: { className: 'focusable' } } };
+
+const parseList = (text: string) => text.split(',').map(part => part.trim()).filter(Boolean);
+
+/**
+ * A comma-separated list keeps the text as typed while it is edited, so `2000,` keeps its comma (whole-review chunk 4b,
+ * P2 2); the parsed list is what the draft holds. A change from outside (a reload) shows the new list.
+ */
+const ListField: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange }> = ({ field, value, onChange }) => {
+    const list = useMemo(() => (Array.isArray(value) ? value.map(String) : []), [value]);
+    const [text, setText] = useState(() => list.join(', '));
+    useEffect(() => {
+        setText(current => (parseList(current).join(',') === list.join(',') ? current : list.join(', ')));
+    }, [list]);
+    const edit = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setText(event.target.value);
+        onChange(field.key, parseList(event.target.value));
+    }, [field.key, onChange]);
+    const tidy = useCallback(() => setText(list.join(', ')), [list]);
+    return <TextField fullWidth margin='dense' label={field.label} helperText={field.help} value={text} onChange={edit} onBlur={tidy} />;
+};
+
 /** One control of a FieldForm, chosen by the field's type. */
 const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange }> = ({ field, value, onChange }) => {
     const { key, type, optional } = field;
@@ -184,8 +211,7 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     const choose = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(key, event.target.value || null), [key, onChange]);
     const edit = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const text = event.target.value;
-        if (type === 'list') onChange(key, text.split(',').map(part => part.trim()).filter(Boolean));
-        else if (type === 'int') onChange(key, text === '' && optional ? null : parseInt(text, 10));
+        if (type === 'int') onChange(key, text === '' && optional ? null : parseInt(text, 10));
         else if (type === 'number') onChange(key, text === '' && optional ? null : Number(text));
         else onChange(key, text);
     }, [key, type, optional, onChange]);
@@ -204,15 +230,15 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
         return (
             <TextField
                 select fullWidth margin='dense' label={field.label} helperText={field.help}
-                value={value ?? ''} onChange={choose}
+                value={value ?? ''} onChange={choose} slotProps={FOCUSABLE_SELECT}
             >
                 {field.options?.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
             </TextField>
         );
     }
+    if (type === 'list') return <ListField field={field} value={value} onChange={onChange} />;
     let shown = '';
-    if (Array.isArray(value)) shown = value.join(', ');
-    else if (value !== null && value !== undefined) shown = String(value);
+    if (value !== null && value !== undefined) shown = String(value);
     return (
         <TextField
             fullWidth margin='dense' label={field.label} helperText={field.help}
@@ -249,12 +275,20 @@ interface PendingConfirm {
  */
 export const useConfirm = (): [ReactNode, (pending: PendingConfirm) => void] => {
     const [pending, setPending] = useState<PendingConfirm | null>(null);
-    const close = useCallback(() => setPending(null), []);
+    // The confirmation runs once: a second press that lands before the dialog closes finds it already taken (Codex delta
+    // review 8, P2 4, repeated activation).
+    const pendingNow = useRef<PendingConfirm | null>(null);
+    pendingNow.current = pending;
+    const close = useCallback(() => {
+        pendingNow.current = null;
+        setPending(null);
+    }, []);
     const confirm = useCallback(() => {
-        const current = pending;
+        const current = pendingNow.current;
+        pendingNow.current = null;
         setPending(null);
         current?.onConfirm();
-    }, [pending]);
+    }, []);
     const element = pending && (
         <Dialog open onClose={close} maxWidth='xs' fullWidth className='jfmod-settingsDialog' data-jfmod-confirm=''>
             <DialogTitle>{pending.title}</DialogTitle>

@@ -7,16 +7,9 @@
 
         h2 { margin-right: auto; }
 
-        label {
-            align-items: center;
-            display: flex;
+        .jfmod-discoveryLibrary {
             margin-left: 1em;
-        }
-
-        select {
-            font: inherit;
-            margin-left: 0.5em;
-            padding: 0.45em;
+            min-width: 12em;
         }
     }
 

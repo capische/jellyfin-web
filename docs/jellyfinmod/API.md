@@ -541,17 +541,22 @@ start and answers 409 `import_not_retryable`, `import_open` or `grab_missing`.
 
 `DELETE /JellyfinMod/Queue/{id}` (admin) with an optional body
 `{"removeFromClient":false,"blocklist":false}` cancels an open import. With `removeFromClient`
-the torrent and its data are removed from Transmission only if JellyfinMod added it (409
-`torrent_not_owned`) and the seeding path is outside every library (409
-`seeding_path_inside_library`); an unreachable client answers 503 `client_unreachable` and nothing
-changes. `blocklist` stores the infohash so later searches reject it as `blocklisted`. Library
+Transmission is asked to forget the torrent, with its data kept (`delete-local-data: false`), only if
+JellyfinMod added it (409 `torrent_not_owned`) and the seeding path is outside every library (409
+`seeding_path_inside_library`); the checked files are recorded on the import operation and stay on
+disk (user decisions 2026-10-02: 0.1.0.0 never deletes downloaded files; a cleanup tool is planned
+for a later version). An unreachable client answers 503 `client_unreachable` and nothing changes. `blocklist` stores the infohash so later searches reject it as `blocklisted`. Library
 files are never deleted by this route. Other refusals: 409 `not_in_queue`,
 `seed_release_in_progress`, `client_missing`.
 
 `GET /JellyfinMod/Seeding` (admin) lists seed releases with their goal, the source of each goal
 (`indexer`, `client`, `floor`), observed ratio and seeding time, `goalMetAt`, `logicalBytes` and
-whether the library link is still present. Seed release states are `waiting`, `removing`,
-`completed`, `blocked` and `cancelled`; reasons include `seed_goal_unmet`, `seeding_incomplete`,
+whether the library link is still present; it lists open releases only. Seed release states are
+`waiting`, `removing`, `completed`, `blocked`, `cancelled` and `detached`. A release whose goals are met
+has the client forget the torrent with its data kept: it becomes `detached` with reason
+`cleanup_pending` and its checked files recorded, or `manual_cleanup` when an earlier build left no
+list or its torrent left the client while the data is still on disk; nothing deletes those files. A
+release completes only when its data is confirmed gone. Reasons include `seed_goal_unmet`, `seeding_incomplete`,
 `seed_release_disabled`, `torrent_not_owned`, `retention_operation_open`,
 `seeding_path_inside_library`, `library_link_unexpected`, `seeding_path_unavailable`,
 `client_unreachable`, `seeding_copy_survived`, `released` and `seeding_copy_missing`.

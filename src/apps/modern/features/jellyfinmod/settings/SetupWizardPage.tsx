@@ -1,5 +1,5 @@
 import Button from '@mui/material/Button';
-import React, { type FC, useCallback, useEffect } from 'react';
+import React, { type FC, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Page from 'components/Page';
@@ -12,7 +12,7 @@ import {
     type SectionProps
 } from './settingsSections';
 import { useSettingsData } from './SettingsPage';
-import { StatePill } from './settingsWidgets';
+import { Notice, StatePill } from './settingsWidgets';
 
 import './settings.scss';
 
@@ -116,6 +116,20 @@ const SetupWizardPage: FC = () => {
     const health = usePluginHealth();
     const available = health.data?.ok === true && health.data.capabilities.includes(SETUP_CAPABILITY);
     const settings = useSettingsData(isAdmin && available);
+    const { refetch } = settings;
+    // The current step's first heading, read when a Retry settles: the step can change while the read is under way.
+    const stepHeading = useRef<string | undefined>(undefined);
+    const retry = useCallback(() => {
+        // A Retry that recovers removes the banner holding the focused button. Focus then moves to the current step's
+        // heading, so a keyboard or remote keeps its place in the wizard instead of starting over from the page (Codex
+        // delta review 4, P3 3).
+        refetch().catch(() => undefined).finally(() => window.setTimeout(() => {
+            const active = document.activeElement;
+            if (active && active !== document.body && active.isConnected) return;
+            const heading = stepHeading.current ? document.getElementById(stepHeading.current) : null;
+            heading?.focus();
+        }, 0));
+    }, [refetch]);
     const [params, setParams] = useSearchParams();
     const setup = settings.data?.overview?.setup;
     const status = (id: string) => setup?.steps.find(step => step.id === id);
@@ -123,6 +137,7 @@ const SetupWizardPage: FC = () => {
     const current = STEPS.some(step => step.id === params.get('step')) ? params.get('step')! : firstOpen;
     const index = STEPS.findIndex(step => step.id === current);
     const step = STEPS[index];
+    stepHeading.current = `jfmod-h-${step.sections[0].id}`;
     const next = STEPS[index + 1];
     const go = useCallback((id: string) => setParams({ step: id }, { replace: true }), [setParams]);
     // Each rail step carries its id in `data-step`, so one handler serves the whole rail.
@@ -146,7 +161,9 @@ const SetupWizardPage: FC = () => {
     } else if (!available) {
         content = <p className='jfmod-lead'>The JellyfinMod plugin on this server has no setup wizard. Use the JellyfinMod page in the Dashboard.</p>;
     } else if (!settings.data || !api || !setup) {
-        content = <p className='jfmod-lead'>{settings.isError ? 'Setup could not be loaded.' : 'Loading…'}</p>;
+        content = settings.isError ?
+            <Notice notice={{ kind: 'err', text: 'Setup could not be loaded.', action: { label: 'Retry', run: retry } }} /> :
+            <p className='jfmod-lead'>Loading…</p>;
     } else {
         content = (
             // focuscontainer-x: on the TV, Left and Right cross between the rail and the section and never jump up into
@@ -157,6 +174,12 @@ const SetupWizardPage: FC = () => {
                 {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
                     beside it (REVIEW-2026-09-24 S8-R2); Left and Right still cross between the two. */}
                 <div className='jfmod-check-main focuscontainer-y'>
+                    {/* A section whose read failed is not an empty one: say so, with a Retry, as the settings page does
+                        (whole-review fixes review, P2 4). */}
+                    {!!settings.data.failures?.length && <div data-jfmod-settings-failures=''><Notice notice={{
+                        kind: 'err', text: `Some settings could not be read (${settings.data.failures.join(', ')}); what they show may be incomplete.`,
+                        action: { label: 'Retry', run: retry }
+                    }} /></div>}
                     <StepNotice state={status(current)} hasNext={!!next} onContinue={continueToNext} />
                     {step.sections.map(({ id, Section }) => (
                         <div key={id} className='jfmod-wizardSection'>

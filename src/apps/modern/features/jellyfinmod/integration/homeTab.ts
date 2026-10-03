@@ -123,6 +123,13 @@ export default class ModHomeTab {
                     userViews: views.Items ?? []
                 });
                 if (current !== this.generation) return;
+                // As upstream's loadSections does: once composed (and, on webOS 1.2, once the polyfilled custom elements
+                // have upgraded), every native section fetches its first data. Without it Continue Listening, Continue
+                // Reading, Active Recordings and other libraries' Latest rows stayed empty (whole-review chunk 4c, P2 3).
+                await new Promise(resolve => setTimeout(resolve, 0));
+                if (current !== this.generation) return;
+                await homeSections.resume(sections, { refresh: true });
+                if (current !== this.generation) return;
                 if (!options.autoFocus) return;
                 const memory = options.restoreFocus ? rememberedFocus : null;
                 rememberedFocus = null;
@@ -140,7 +147,8 @@ export default class ModHomeTab {
         if (this.sections) homeSections.pause(this.sections);
     }
 
-    destroy() {
+    /** @param keepBackdrop leaving Home for another page, whose own backdrop must not be cleared */
+    destroy(keepBackdrop = false) {
         this.generation++;
         this.view.removeEventListener('focusin', this.onFocusIn);
         this.lastFocused = null;
@@ -155,7 +163,7 @@ export default class ModHomeTab {
         this.heroMount?.remove();
         this.heroMount = null;
         this.sections = null;
-        clearBackdrop();
+        if (!keepBackdrop) clearBackdrop();
     }
 
     /**

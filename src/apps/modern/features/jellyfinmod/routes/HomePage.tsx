@@ -28,7 +28,7 @@ type ControllerProps = {
     ) => void;
     refreshed: boolean;
     onPause: () => void;
-    destroy: () => void;
+    destroy: (keepBackdrop?: boolean) => void;
 };
 
 /**
@@ -54,6 +54,10 @@ const Home = () => {
 
     const documentRef = useRef<Document>(document);
     const element = useRef<HTMLDivElement>(null);
+    // Set when the page unmounts: a controller still loading then is destroyed instead of mounting its rows.
+    const disposed = useRef(false);
+    // The controller each tab is still loading, shared by every request for that tab until it is kept.
+    const pendingControllers = useRef<Record<number, Promise<ControllerProps>>>({});
 
     const setTitle = useCallback(async () => {
         (await libraryMenu).setTitle(null);
@@ -78,6 +82,10 @@ const Home = () => {
 
         const existing = tabControllers[index];
         if (existing) return Promise.resolve(existing);
+        // A tab asked for again while its controller is still loading shares that load: two controllers would both mount,
+        // and only the one kept would ever be destroyed (final Pi review, P3 4).
+        const loading = pendingControllers.current[index];
+        if (loading) return loading;
 
         const tabContent = element.current?.querySelector(".tabContent[data-index='" + index + "']") as HTMLElement;
 
@@ -89,10 +97,22 @@ const Home = () => {
             import(/* webpackChunkName: "[request]" */ 'apps/legacy/controllers/favorites')
                 .then(({ default: FavoritesTab }) => new FavoritesTab(tabContent, null) as unknown as ControllerProps);
 
-        return built.then(controller => {
+        const kept = built.then(controller => {
+            if (disposed.current) {
+                // Home was left meanwhile: the page shown now may have installed its own backdrop, which must stay.
+                controller.destroy?.(true);
+                throw new Error('Home was left before its tab loaded');
+            }
             tabControllers[index] = controller;
             return controller;
         });
+        // Settled either way, the next request reads the kept controller or loads again (no `finally`: older webOS lacks it).
+        const forget = () => {
+            delete pendingControllers.current[index];
+        };
+        kept.then(forget, forget);
+        pendingControllers.current[index] = kept;
+        return kept;
     }, [ tabControllers ]);
 
     const loadTab = useCallback((index: number, previousIndex: number | null) => {
@@ -108,7 +128,7 @@ const Home = () => {
             controller.refreshed = true;
             tabController.current = controller;
         }).catch(err => {
-            console.error('[Home] failed to get tab controller', err);
+            if (!disposed.current) console.error('[Home] failed to get tab controller', err);
         });
     }, [ getTabController, isReturning ]);
 
@@ -164,6 +184,17 @@ const Home = () => {
             onPause();
         };
     }, [onPause, renderHome]);
+
+    // Leaving Home destroys every tab controller: the hero and the merged rows are React roots of their own, which removing
+    // the page does not unmount, and their API listeners and query observers would outlive it (whole-review chunk 4c, P2 2).
+    useEffect(() => {
+        disposed.current = false;
+        return () => {
+            disposed.current = true;
+            for (const controller of tabControllers.splice(0)) controller?.destroy?.(true);
+            tabController.current = null;
+        };
+    }, [tabControllers]);
 
     useEffect(() => {
         const doc = documentRef.current;
