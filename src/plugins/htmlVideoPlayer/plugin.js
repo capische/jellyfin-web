@@ -1110,6 +1110,7 @@ export class HtmlVideoPlayer {
             videoElement.removeEventListener('ended', this.onEnded);
             videoElement.removeEventListener('volumechange', this.onVolumeChange);
             videoElement.removeEventListener('pause', this.onPause);
+            videoElement.removeEventListener('loadedmetadata', this.onLoadedMetadata);
             videoElement.removeEventListener('playing', this.onPlaying);
             videoElement.removeEventListener('play', this.onPlay);
             videoElement.removeEventListener('click', this.onClick);
@@ -1190,6 +1191,22 @@ export class HtmlVideoPlayer {
         const elem = e.target;
         saveVolume(elem.volume);
         Events.trigger(this, 'volumechange');
+    };
+
+    /**
+     * Selects the audio track as soon as the container's track list is known, before autoplay
+     * produces sound. Waiting for `playing` and the OSD route let the file's default track be
+     * heard for a second or two before the switch. Only the first load of a play() counts, so a
+     * later reload of the same element cannot undo a track the user picked mid-playback.
+     * @private
+     * @param e {Event} The event received from the `<video>` element
+     */
+    onLoadedMetadata = (e) => {
+        const elem = e.target;
+        if (!this.#started && this.#audioTrackIndexToSetOnPlaying != null
+            && elem.audioTracks?.length && this.canSetAudioStreamIndex()) {
+            this.setAudioStreamIndex(this.#audioTrackIndexToSetOnPlaying);
+        }
     };
 
     /**
@@ -2333,6 +2350,7 @@ export class HtmlVideoPlayer {
                 videoElement.addEventListener('ended', this.onEnded);
                 videoElement.addEventListener('volumechange', this.onVolumeChange);
                 videoElement.addEventListener('pause', this.onPause);
+                videoElement.addEventListener('loadedmetadata', this.onLoadedMetadata);
                 videoElement.addEventListener('playing', this.onPlaying);
                 videoElement.addEventListener('play', this.onPlay);
                 videoElement.addEventListener('click', this.onClick);
