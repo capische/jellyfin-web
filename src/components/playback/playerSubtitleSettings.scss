@@ -75,8 +75,9 @@ $panel-background: rgba(12, 12, 12, 0.86);
         margin: 0 -1.75em 0 -1.25em;
         padding: 1em 1.75em 0.6em 1.25em;
 
-        /* Frosts whatever scrolls beneath it, which a flat translucent fill
-           would let show straight through. */
+        /* Same fill as the panel, so the header does not read as a darker
+           band. On TV the panel is sized to fit without scrolling, so little
+           ever passes beneath it. */
         @include player-overlay-surface;
     }
 }
