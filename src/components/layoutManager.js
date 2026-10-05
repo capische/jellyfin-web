@@ -83,4 +83,11 @@ if (appHost.getDefaultLayout) {
 
 layoutManager.init();
 
+// webOS 6 (LG C1) and newer draw a backdrop-filter over the hardware video plane
+// as a solid box, hiding the video behind the player menus. webOS 5 (LG CX)
+// blurs it correctly, so only the newer engines drop the blur.
+if (browser.web0sVersion >= 6) {
+    document.documentElement.classList.add('noPlayerOverlayBlur');
+}
+
 export default layoutManager;

@@ -75,11 +75,17 @@ $panel-background: rgba(12, 12, 12, 0.86);
         margin: 0 -1.75em 0 -1.25em;
         padding: 1em 1.75em 0.6em 1.25em;
 
-        /* Same fill as the panel, so the header does not read as a darker
-           band. On TV the panel is sized to fit without scrolling, so little
-           ever passes beneath it. */
+        /* Frosts whatever scrolls beneath it, which a flat translucent fill
+           would let show straight through. */
         @include player-overlay-surface;
     }
+}
+
+/* Set on webOS 6 and newer, which render the blur over video as a solid box.
+   They keep the translucent fill alone. */
+.layout-tv.noPlayerOverlayBlur .playerSubtitleSettings,
+.layout-tv.noPlayerOverlayBlur .playerSubtitleSettings-header {
+    backdrop-filter: none;
 }
 
 .playerSubtitleSettings-title {
