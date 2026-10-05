@@ -11,17 +11,19 @@
     }
 }
 
-// The frosted surface shared by the in-player menus and the subtitle appearance
-// panel, so the two cannot drift apart again. Compile-time values rather than
-// custom properties: a var() whose substitution fails is invalid at
+// The translucent surface shared by the in-player menus and the subtitle
+// appearance panel, so the two cannot drift apart again. A compile-time value
+// rather than a custom property: a var() whose substitution fails is invalid at
 // computed-value time, and a dropped background would leave text over bare
-// video. backdrop-filter simply does nothing where it is unsupported.
+// video.
+//
+// No backdrop-filter. On a TV the video is decoded onto a hardware plane below
+// the page, so the browser has no pixels behind the surface to blur. webOS 5
+// (Chromium 68) ignores the property and shows the plain translucent fill, but
+// webOS 6 and newer (Chromium 79+) support it and render the surface solid,
+// hiding the video it is meant to show.
 $player-overlay-background: rgba(22, 22, 22, 0.78) !default;
-// rem, not em: the menus and the panel run at different font sizes, so an em
-// blur would resolve to a slightly different radius in each.
-$player-overlay-blur: blur(1.2rem) saturate(1.4) !default;
 
 @mixin player-overlay-surface {
     background-color: $player-overlay-background;
-    backdrop-filter: $player-overlay-blur;
 }
