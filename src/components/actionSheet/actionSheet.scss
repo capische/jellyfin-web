@@ -41,6 +41,12 @@
     }
 }
 
+/* Set on webOS 6 and newer, which render the blur over video as a solid box.
+   They keep the translucent fill alone. */
+.layout-tv.noPlayerOverlayBlur .actionSheet.actionSheet-boxed {
+    backdrop-filter: none;
+}
+
 .actionSheetContent-centered {
     text-align: center;
     align-items: center;
