@@ -469,6 +469,10 @@ export class HtmlVideoPlayer {
      */
     #started;
     /**
+     * @type {boolean}
+     */
+    #initialAudioPending = false;
+    /**
      * @type {boolean | undefined}
      */
     #timeUpdated;
@@ -632,6 +636,9 @@ export class HtmlVideoPlayer {
 
     async play(options) {
         this.#started = false;
+        // Disarmed until the new source is attached, so a late event from the previous source
+        // cannot apply a selection to the wrong tracks.
+        this.#initialAudioPending = false;
         this.#timeUpdated = false;
 
         this.#currentTime = null;
@@ -666,6 +673,7 @@ export class HtmlVideoPlayer {
             });
 
             flvPlayer.attachMediaElement(elem);
+            this.armInitialAudioTrack();
             flvPlayer.load();
 
             this._flvPlayer = flvPlayer;
@@ -707,6 +715,7 @@ export class HtmlVideoPlayer {
                 });
                 hls.loadSource(url);
                 hls.attachMedia(elem);
+                this.armInitialAudioTrack();
 
                 bindEventsToHlsPlayer(this, hls, elem, this.onError, resolve, reject);
 
@@ -790,6 +799,7 @@ export class HtmlVideoPlayer {
 
             return applySrc(elem, val, options).then(() => {
                 this.#currentSrc = val;
+                this.armInitialAudioTrack();
 
                 return playWithPromise(elem, this.onError);
             });
@@ -1110,7 +1120,9 @@ export class HtmlVideoPlayer {
             videoElement.removeEventListener('ended', this.onEnded);
             videoElement.removeEventListener('volumechange', this.onVolumeChange);
             videoElement.removeEventListener('pause', this.onPause);
-            videoElement.removeEventListener('loadedmetadata', this.onLoadedMetadata);
+            videoElement.removeEventListener('loadedmetadata', this.applyInitialAudioTrack);
+            videoElement.removeEventListener('canplay', this.applyInitialAudioTrack);
+            videoElement.audioTracks?.removeEventListener?.('addtrack', this.applyInitialAudioTrack);
             videoElement.removeEventListener('playing', this.onPlaying);
             videoElement.removeEventListener('play', this.onPlay);
             videoElement.removeEventListener('click', this.onClick);
@@ -1194,19 +1206,41 @@ export class HtmlVideoPlayer {
     };
 
     /**
-     * Selects the audio track as soon as the container's track list is known, before autoplay
-     * produces sound. Waiting for `playing` and the OSD route let the file's default track be
-     * heard for a second or two before the switch. Only the first load of a play() counts, so a
-     * later reload of the same element cannot undo a track the user picked mid-playback.
+     * Arms the initial audio selection once the new source is attached to the element. Media
+     * events for the new source are queued as tasks, so arming synchronously after attaching (or
+     * in the microtask that follows) is in place before the first of them. If the element already
+     * reported `playing` meanwhile, the start has been consumed and the OSD path handles it.
      * @private
-     * @param e {Event} The event received from the `<video>` element
      */
-    onLoadedMetadata = (e) => {
-        const elem = e.target;
-        if (!this.#started && this.#audioTrackIndexToSetOnPlaying != null
-            && elem.audioTracks?.length && this.canSetAudioStreamIndex()) {
-            this.setAudioStreamIndex(this.#audioTrackIndexToSetOnPlaying);
+    armInitialAudioTrack() {
+        this.#initialAudioPending = !this.#started && this.#audioTrackIndexToSetOnPlaying != null;
+    }
+
+    /**
+     * Selects the chosen audio track at the first point the element lists its tracks, before
+     * autoplay produces sound or as soon after as the engine allows. Waiting for the OSD route
+     * let the file's default track be heard for a second or two first. Engines fill
+     * `audioTracks` at different moments (desktop Chrome by `loadedmetadata`; TV engines may add
+     * them later), so this runs on `loadedmetadata`, every `addtrack`, `canplay` and once more as
+     * `playing` fires. It waits for the full list: `setAudioStreamIndex` maps by position and
+     * disables every other track, so acting on a partial list could leave the wrong track or
+     * none enabled. It is armed when play() attaches the new source and disarmed at the first
+     * `playing`, so it cannot act on the previous source's tracks or undo a track the user picks
+     * later.
+     * @private
+     */
+    applyInitialAudioTrack = () => {
+        const elem = this.#mediaElement;
+        if (!this.#initialAudioPending || !elem || !this.canSetAudioStreamIndex()) {
+            return;
         }
+
+        const trackCount = elem.audioTracks?.length || 0;
+        if (!trackCount || trackCount < this.getSupportedAudioStreams().length) {
+            return;
+        }
+
+        this.setAudioStreamIndex(this.#audioTrackIndexToSetOnPlaying);
     };
 
     /**
@@ -1253,6 +1287,8 @@ export class HtmlVideoPlayer {
          */
         const elem = e.target;
         if (!this.#started) {
+            this.applyInitialAudioTrack();
+            this.#initialAudioPending = false;
             this.#started = true;
             elem.removeAttribute('controls');
 
@@ -2350,7 +2386,9 @@ export class HtmlVideoPlayer {
                 videoElement.addEventListener('ended', this.onEnded);
                 videoElement.addEventListener('volumechange', this.onVolumeChange);
                 videoElement.addEventListener('pause', this.onPause);
-                videoElement.addEventListener('loadedmetadata', this.onLoadedMetadata);
+                videoElement.addEventListener('loadedmetadata', this.applyInitialAudioTrack);
+                videoElement.addEventListener('canplay', this.applyInitialAudioTrack);
+                videoElement.audioTracks?.addEventListener?.('addtrack', this.applyInitialAudioTrack);
                 videoElement.addEventListener('playing', this.onPlaying);
                 videoElement.addEventListener('play', this.onPlay);
                 videoElement.addEventListener('click', this.onClick);
