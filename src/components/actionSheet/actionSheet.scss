@@ -47,6 +47,12 @@
     backdrop-filter: none;
 }
 
+/* With a frost attached the frost owns the fill, so the box itself goes clear
+   and a failed image leaves the plain fill rather than a doubled one. */
+.layout-tv .actionSheet.actionSheet-boxed.playerOverlayFrost-host {
+    background-color: transparent;
+}
+
 .actionSheetContent-centered {
     text-align: center;
     align-items: center;
