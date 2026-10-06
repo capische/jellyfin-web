@@ -1,0 +1,43 @@
+@use '../../styles/mixins' as *;
+
+/* The frosted-glass stand-in for in-player overlays on TVs that cannot blur
+   the video (see playerOverlayFrost.js). Sits behind the overlay's content but
+   above its own fill, which it covers with the image and then darkens again,
+   so the result matches the fill-only look where the image fails to load. */
+.playerOverlayFrost {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+
+    &::before {
+        content: '';
+        position: absolute;
+
+        /* Bleeds past the clip so the blur's soft edge stays out of sight. */
+        top: -2rem;
+        right: -2rem;
+        bottom: -2rem;
+        left: -2rem;
+
+        /* The custom property is set inline on the element itself, so the
+           var() always substitutes; with no image the layer is simply empty. */
+        background: var(--player-overlay-frost-image) center / cover no-repeat;
+        filter: $player-overlay-blur;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: $player-overlay-background;
+    }
+}
