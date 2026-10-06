@@ -653,6 +653,9 @@ export class HtmlVideoPlayer {
 
         const elem = await this.createMediaElement(options);
         this.#applyAspectRatio(options.aspectRatio || this.getAspectRatio());
+        // Read by playerOverlayFrost. Cleared, unlike the poster, when the item has no
+        // artwork, so a frosted menu never shows the previous item's backdrop.
+        elem.dataset.backdropUrl = options.backdropUrl || '';
 
         await this.updateVideoUrl(options);
         return this.setCurrentSrc(elem, options);
