@@ -131,7 +131,7 @@ const useSectionState = (reload: () => Promise<unknown>, reads: readonly string[
         }
     }, [reload, runReload]);
     // `into` sends the result somewhere other than the section's notice, such as under the secret a test belongs to.
-    const test = useCallback(async (path: string, api: Api, into?: Dispatch<SetStateAction<NoticeState | null>>) => {
+    const test = useCallback(async (path: string, api: Api, into?: (notice: NoticeState | null) => void) => {
         const say = into ?? setNotice;
         setBusy(true);
         into?.(null);
@@ -559,13 +559,18 @@ export const DiscoverySection: FC<SectionProps> = props => {
         }
         tokenSecret.saved(token, { id: 'discovery', revision: savedRevision }, origin);
     }, 'Saved.'), [run, api, token, tokenSecret, discovery.revision]);
-    const [testResult, setTestResult] = useState<NoticeState | null>(null);
-    const testToken = useCallback(() => test('Settings/Discovery/Test', api, setTestResult), [test, api]);
-    // Test sits in the token's box as an icon, its words and its result under the box (user, 2026-10-07).
+    // Test sits in the token's box as an icon, its words and its result under the box (user, 2026-10-07). A result belongs
+    // to the revision it tested: a saved replacement or clear, or a change being typed, hides it (Codex review 1, P2 2).
+    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState } | null>(null);
+    const testedRevision = discovery.revision;
+    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice }), [testedRevision]);
+    const testToken = useCallback(() => test('Settings/Discovery/Test', api, sayTest), [test, api, sayTest]);
+    const shownResult = testResult && testResult.revision === discovery.revision && token.action === 'unchanged' && discovery.tokenConfigured ?
+        testResult.notice : null;
     const tokenTest = useMemo(() => ({
-        id: 'discovery', label: 'Test token', run: testToken, disabled: section.busy, result: testResult,
+        id: 'discovery', label: 'Test token', run: testToken, disabled: section.busy, result: shownResult,
         help: 'Asks TMDB whether it accepts the saved token. Save a new token first.'
-    }), [testToken, section.busy, testResult]);
+    }), [testToken, section.busy, shownResult]);
     return (
         <SectionFrame id='discovery' eyebrow={props.eyebrow} title='Discovery' state={summarise('discovery', data)} notice={section.notice}
             onSave={save} saving={section.busy} saveMeta={`Revision ${discovery.revision ?? '—'}.`} next={props.next} onGo={props.onGo}

@@ -107,7 +107,7 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
     // MUI's colour of a contained button: primary is blue, inherit is grey, error is red.
     const tint = el => (/MuiButton-containedPrimary/.test(el.className) ? 'blue' : /MuiButton-containedInherit/.test(el.className) ? 'grey' :
         /MuiButton-containedError/.test(el.className) ? 'red' : 'other');
-    const buttons = [...root.querySelectorAll('button.MuiButton-root, button.jfmod-iconbtn')].filter(visible).map(el => {
+    const buttons = [...root.querySelectorAll('button.MuiButton-root, a.MuiButton-root, button.jfmod-iconbtn')].filter(visible).map(el => {
         const s = getComputedStyle(el);
         unsupported = null;
         const paintedBg = surface(el);
@@ -129,7 +129,8 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
             centred: boxRect ? Math.abs((rect.top + rect.bottom) / 2 - (boxRect.top + boxRect.bottom) / 2) <= 2 : null,
             inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!box, inProwlarr: !!el.closest('[data-prowlarr="card"]'),
             sectionHasSync: !!section?.querySelector('button[data-prowlarr="sync"]'), view,
-            disabled: el.disabled, focused: el === document.activeElement,
+            disabled: !!el.disabled, focused: el === document.activeElement, marked: el.dataset.jfmodMark === '1',
+            hasIcon: !icon && !!el.querySelector('.MuiButton-startIcon, .MuiButton-endIcon, svg'),
             outline: el === document.activeElement ? { style: s.outlineStyle, width: parseFloat(s.outlineWidth) } : null,
             paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
     });
@@ -232,6 +233,8 @@ const looksWrong = (button, layoutName) => {
     const ratio = contrast(button.paintedFg, button.paintedBg);
     if (button.paintUnsupported) reasons.push('paint not read');
     if (!button.icon && button.variant !== 'contained') reasons.push(`variant ${button.variant}`);
+    // Icons only where they help (user, 2026-10-07): the secret's icon buttons; a labelled button carries none.
+    if (button.hasIcon) reasons.push('a labelled button with an icon');
     if (button.tint !== want) reasons.push(`kind ${button.tint}, want ${want}`);
     if (button.icon) {
         if (button.height < 40 || button.width < 40) reasons.push('icon under 40 px');
@@ -269,28 +272,43 @@ const checkButtons = (layout, where, buttons) => {
  * Hover: each enabled button in turn, under the pointer once its colour transition has finished; its text must stay at
  * 4.5:1 on the hover fill. Desktop only, where hover exists.
  */
-const checkHover = async (page, layout, name, where, rootSelector = '.jfmod-check-main') => {
-    const count = await page.evaluate(selector => [...document.querySelectorAll(selector)].pop()
-        ?.querySelectorAll('button.MuiButton-root:not(:disabled), button.jfmod-iconbtn:not(:disabled)').length ?? 0, rootSelector);
+const ENABLED = 'button.MuiButton-root:not(:disabled), a.MuiButton-root, button.jfmod-iconbtn:not(:disabled)';
+/**
+ * Each enabled button in turn, hovered (`state: 'hover'`) or focused (`state: 'focus'`), measured as that exact element
+ * (it is marked while it is read): its text keeps 4.5:1 on the fill it then has, and a focused one shows a ring.
+ */
+const checkStates = async (page, layout, name, where, state, rootSelector = '.jfmod-check-main') => {
+    const count = await page.evaluate(([selector, enabled]) => [...document.querySelectorAll(selector)].pop()?.querySelectorAll(enabled).length ?? 0,
+        [rootSelector, ENABLED]);
     const failures = [];
     let measured = 0;
     for (let i = 0; i < count; i++) {
-        const target = page.locator(rootSelector).last().locator('button.MuiButton-root:not(:disabled), button.jfmod-iconbtn:not(:disabled)').nth(i);
+        const target = page.locator(rootSelector).last().locator(ENABLED).nth(i);
         if (!await target.isVisible().catch(() => false)) continue;
-        await target.hover();
-        await page.waitForTimeout(350);
+        if (state === 'hover') await target.hover();
+        else await target.focus();
+        await page.waitForTimeout(state === 'hover' ? 350 : 600);
+        const ok = await target.evaluate((el, which) => {
+            el.dataset.jfmodMark = '1';
+            return which === 'hover' ? el.matches(':hover') : el === document.activeElement;
+        }, state);
         const result = await audit(page, rootSelector);
-        const hovered = await target.evaluate(el => ({ text: el.textContent.trim() || el.getAttribute('aria-label'), hovered: el.matches(':hover') }));
-        const entry = result.buttons.find(button => (button.text || button.label) === hovered.text && !button.disabled);
-        if (!entry || !hovered.hovered) continue;
+        await target.evaluate(el => { delete el.dataset.jfmodMark; });
+        const entry = result.buttons.find(button => button.marked);
+        if (!entry || !ok) continue;
         measured++;
         const ratio = contrast(entry.paintedFg, entry.paintedBg);
-        if (ratio < 4.5 || entry.paintUnsupported) failures.push({ text: hovered.text, ratio: Number(ratio.toFixed(2)), bg: entry.bg });
+        const ring = state !== 'focus' || (entry.outline && entry.outline.style !== 'none' && entry.outline.width >= 1);
+        if (ratio < 4.5 || entry.paintUnsupported || !ring) failures.push({ text: entry.text || entry.label, ratio: Number(ratio.toFixed(2)), bg: entry.bg, ring });
     }
-    await page.mouse.move(1, layout.viewport.height - 1);
-    record(name, `${where}: every enabled button keeps 4.5:1 under the pointer (${measured} measured)`, failures.length === 0 && (measured > 0 || count === 0),
+    if (state === 'hover') await page.mouse.move(1, layout.viewport.height - 1);
+    else await page.evaluate(() => document.activeElement?.blur?.());
+    const what = state === 'hover' ? 'under the pointer' : 'focused, with a visible ring';
+    record(name, `${where}: every enabled button keeps 4.5:1 ${what} (${measured} measured)`, failures.length === 0 && (measured > 0 || count === 0),
         failures.length ? failures : undefined);
 };
+const checkHover = (page, layout, name, where, rootSelector) => checkStates(page, layout, name, where, 'hover', rootSelector);
+const THEMES = ['light', 'appletv', 'blueradiance', 'purplehaze', 'wmc', 'dark'];
 
 /** WCAG contrast of two painted colours, each [r, g, b] already composited over what is behind it. */
 const contrast = (fg, bg) => {
@@ -330,10 +348,19 @@ const dashboardSection = page => page.evaluate(() => {
         return r.width > 0 && r.height > 0 && !el.classList.contains('jfmod-next') && !el.classList.contains('jfmod-visually-hidden');
     }).map(el => {
         const s = getComputedStyle(el);
-        const bg = rgb(s.backgroundColor);
-        const fgRaw = rgb(s.color);
-        const alpha = fgRaw[3] ?? 1;
-        const fg = fgRaw.slice(0, 3).map((v, i) => v * alpha + bg[i] * (1 - alpha));
+        // As painted: every translucent layer, and a one-colour gradient over a fill, composited down to an opaque one.
+        const over = (top, under) => top.slice(0, 3).map((v, i) => v * (top[3] ?? 1) + under[i] * (1 - (top[3] ?? 1)));
+        const layers = [];
+        for (let up = el; up; up = up.parentElement) {
+            const style = getComputedStyle(up);
+            const stops = style.backgroundImage.match(/^linear-gradient\((rgba?\([^)]*\)),\s*(rgba?\([^)]*\))\)$/);
+            if (stops && stops[1] === stops[2]) layers.push(rgb(stops[1]));
+            const layer = rgb(style.backgroundColor);
+            layers.push(layer);
+            if ((layer[3] ?? 1) >= 1) break;
+        }
+        const bg = layers.reverse().reduce((under, layer) => over(layer, under), [0, 0, 0]);
+        const fg = over(rgb(s.color), bg);
         const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
         const icon = el.classList.contains('jfmod-iconbtn');
         let kind = 'other';
@@ -341,7 +368,9 @@ const dashboardSection = page => page.evaluate(() => {
         else if (el.classList.contains('button-submit')) kind = 'blue';
         else if (el.classList.contains('raised') || el.classList.contains('jfmod-iconbtn-grey')) kind = 'grey';
         return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
-            width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), opaque: (bg[3] ?? 1) === 1, refused: el.getAttribute('aria-disabled') === 'true' };
+            width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), refused: el.getAttribute('aria-disabled') === 'true',
+            marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement,
+            ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1 };
     });
     return { id: section.dataset.section, saveHeight, buttons };
 });
@@ -356,13 +385,40 @@ const checkDashboardSection = (layout, view) => {
         const reasons = [];
         if (button.kind !== want(button)) reasons.push(`kind ${button.kind}, want ${want(button)}`);
         if (button.icon ? button.height < 40 || button.width < 40 : Math.abs(button.height - reference) > 0.6) reasons.push(`size ${button.width}×${button.height}`);
-        if (!button.refused && (!button.opaque || button.contrast < 4.5)) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
+        if (!button.refused && button.contrast < 4.5) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
         return reasons.length ? { text: button.text, reasons } : null;
     }).filter(Boolean);
     record(layout, `dashboard page ${view.id}: every button is red, blue or grey by its role, the size of Save and readable (${view.buttons.length})`,
         wrong.length === 0, wrong.length ? wrong : undefined);
     const blues = view.buttons.filter(button => button.kind === 'blue').map(button => button.text);
     record(layout, `dashboard page ${view.id}: at most one blue button`, blues.length <= 1, blues);
+};
+
+/** The Dashboard page's buttons in the visible section, each hovered or focused in turn and read as that element. */
+const checkDashboardStates = async (page, layout, name, where, state) => {
+    const buttons = page.locator('#JellyfinModConfigPage .jfmod-check-section:not([hidden]) button:not(.jfmod-next):not(.jfmod-visually-hidden)');
+    const count = await buttons.count();
+    const failures = [];
+    let measured = 0;
+    for (let i = 0; i < count; i++) {
+        const target = buttons.nth(i);
+        if (!await target.isVisible().catch(() => false)) continue;
+        if (await target.getAttribute('aria-disabled') === 'true') continue;
+        if (state === 'hover') await target.hover();
+        else await target.focus();
+        await page.waitForTimeout(state === 'hover' ? 350 : 500);
+        await target.evaluate(el => { el.dataset.jfmodMark = '1'; });
+        const entry = (await dashboardSection(page))?.buttons.find(button => button.marked);
+        await target.evaluate(el => { delete el.dataset.jfmodMark; });
+        if (!entry) continue;
+        measured++;
+        // A focused control on the TV must show where it is: a ring, or the cyan focus fill upstream's .raised uses.
+        if (entry.contrast < 4.5) failures.push({ text: entry.text, ratio: Number(entry.contrast.toFixed(2)) });
+    }
+    if (state === 'hover') await page.mouse.move(1, layout.viewport.height - 1);
+    else await page.evaluate(() => document.activeElement?.blur?.());
+    record(name, `${where}: every enabled button keeps 4.5:1 ${state === 'hover' ? 'under the pointer' : 'focused'} (${measured} measured)`,
+        failures.length === 0 && (measured > 0 || count === 0), failures.length ? failures : undefined);
 };
 
 const shot = async (page, name) => {
@@ -417,7 +473,7 @@ for (const name of only) {
         if (name === 'desktop') {
             // Every shipped colour scheme, switched as upstream's themeManager does (the data-theme attribute MUI's variables
             // follow): every enabled button's text keeps 4.5:1 on its fill at rest and under the pointer. Dark again after.
-            for (const theme of ['light', 'appletv', 'blueradiance', 'purplehaze', 'wmc', 'dark']) {
+            for (const theme of THEMES) {
                 await page.evaluate(id => document.documentElement.setAttribute('data-theme', id), theme);
                 for (const id of ['discovery', 'indexers', 'interface']) {
                     await page.evaluate(section => { location.hash = '#/catalog/settings?section=' + section; }, id);
@@ -469,6 +525,13 @@ for (const name of only) {
             record(name, 'discovery: the arrows walk Test, Replace, Clear, each with a visible focus ring',
                 JSON.stringify(walked) === JSON.stringify([{ action: 'test', ring: true }, { action: 'replace', ring: true }, { action: 'clear', ring: true }]), walked);
             console.log('  shot', await shot(page, `${name}-settings-discovery-clear-focus`));
+            // Enter on Test runs it and the remote keeps its place on Test through the busy state and after it.
+            await page.locator('[data-secret-action="test"]').focus();
+            await page.keyboard.press('Enter');
+            await page.locator('.jfmod-check-section[data-section="discovery"] [data-secret-test-result] .jfmod-notice').waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(800);
+            const kept = await page.evaluate(() => document.activeElement?.dataset?.secretAction ?? document.activeElement?.tagName);
+            record(name, 'discovery: Test by Enter keeps the focus on Test', kept === 'test', kept);
             await page.evaluate(() => document.activeElement?.blur?.());
         }
         if (name === 'desktop') {
@@ -505,6 +568,13 @@ for (const name of only) {
             await notice.waitFor({ state: 'visible', timeout: 30000 });
             const said = await notice.innerText();
             record(name, 'discovery Test, from the icon in the box, says "TMDB accepted the token. (ok)" under the box', /TMDB accepted the token\. \(ok\)/.test(said), said);
+            // The result belongs to the saved token: a pending clear hides it (nothing is saved; Undo puts the token back).
+            await page.locator('.jfmod-secret-row [data-secret-action="clear"]').click();
+            await page.waitForTimeout(300);
+            record(name, 'discovery: a pending clear hides the saved token\'s test result',
+                await page.locator('.jfmod-check-section[data-section="discovery"] [data-secret-test-result]').count() === 0);
+            await page.locator('.jfmod-secret-row button', { hasText: 'Undo' }).click();
+            await page.waitForTimeout(300);
             await page.locator('button[data-submit="discovery"]').click();
             await page.waitForFunction(() => /Saved/.test(document.querySelector('.jfmod-check-section[data-section="discovery"] .jfmod-notice')?.textContent ?? ''),
                 undefined, { timeout: 30000 });
@@ -582,6 +652,30 @@ for (const name of only) {
             await dialog.locator('button', { hasText: 'Cancel' }).evaluate(el => el.click());
             await dialog.waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
             await page.waitForTimeout(400);
+        }
+        if (name === 'tv1080') {
+            // Every shipped scheme on the TV: each enabled button of a section and of an indexer's editor, focused, keeps
+            // 4.5:1 on what it is then painted with and shows a ring (the focus fill in a dialog is the scheme's primary).
+            for (const theme of THEMES) {
+                await page.evaluate(id => document.documentElement.setAttribute('data-theme', id), theme);
+                await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
+                await page.locator('.jfmod-check-section[data-section="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
+                await page.waitForTimeout(500);
+                await checkStates(page, layout, name, `theme ${theme}, discovery`, 'focus');
+                await page.evaluate(() => { location.hash = '#/catalog/settings?section=indexers'; });
+                await page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first().waitFor({ state: 'visible', timeout: 30000 });
+                await checkStates(page, layout, name, `theme ${theme}, indexers`, 'focus');
+                await page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first().click();
+                const editor = page.locator('.MuiDialog-paper').last();
+                await editor.waitFor({ state: 'visible', timeout: 10000 });
+                await page.waitForTimeout(500);
+                await page.evaluate(() => { const content = [...document.querySelectorAll('.MuiDialog-paper .MuiDialogContent-root')].pop(); content.scrollTop = content.scrollHeight; });
+                await checkStates(page, layout, name, `theme ${theme}, indexer dialog`, 'focus', '.MuiDialog-paper');
+                if (theme === 'appletv') console.log('  shot', await shot(page, `${name}-theme-appletv-indexer-dialog`));
+                await editor.locator('button', { hasText: 'Cancel' }).evaluate(el => el.click());
+                await editor.waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+                await page.waitForTimeout(400);
+            }
         }
         for (const step of WIZARD_STEPS) {
             await page.evaluate(id => { location.hash = '#/catalog/settings/setup?step=' + id; }, step);
@@ -678,8 +772,38 @@ for (const name of only) {
                         }
                     }
                 }
+                if (name === 'desktop') {
+                    // The Dashboard page in every shipped scheme: kinds, sizes and 4.5:1 at rest, under the pointer and focused.
+                    for (const theme of THEMES) {
+                        await page.evaluate(id => document.documentElement.setAttribute('data-theme', id), theme);
+                        for (const id of ['discovery', 'indexers', 'interface']) {
+                            await page.evaluate(section => document.querySelector(`#JellyfinModConfigPage .jfmod-step[data-section="${section}"]`)?.click(), id);
+                            await page.waitForTimeout(600);
+                            const view = await dashboardSection(page);
+                            if (view?.id !== id) {
+                                record(name, `theme ${theme}, dashboard page ${id}: opened`, false, view?.id);
+                                continue;
+                            }
+                            const weak = view.buttons.filter(button => !button.refused && button.contrast < 4.5)
+                                .map(button => ({ text: button.text, ratio: Number(button.contrast.toFixed(2)) }));
+                            record(name, `theme ${theme}, dashboard page ${id}: every button keeps 4.5:1 at rest (${view.buttons.length})`, weak.length === 0,
+                                weak.length ? weak : undefined);
+                            await checkDashboardStates(page, layout, name, `theme ${theme}, dashboard page ${id}`, 'hover');
+                            await checkDashboardStates(page, layout, name, `theme ${theme}, dashboard page ${id}`, 'focus');
+                        }
+                    }
+                }
                 await page.evaluate(() => { try { sessionStorage.removeItem('jfmod-settings-section'); } catch { /* none */ } });
             }
+        }
+        // The Home setup banner shows only while setup is unfinished; when it does, its buttons follow the same rules.
+        await page.evaluate(() => { location.hash = '#/home'; });
+        await page.waitForTimeout(3000);
+        if (await page.locator('.jfmod-setupBanner').isVisible().catch(() => false)) {
+            const banner = await auditIdle(page, layout, '.jfmod-setupBanner');
+            checkButtons(name, 'home setup banner', banner.buttons);
+        } else {
+            console.log(`  [${name}] home setup banner not shown (setup is complete on this instance); not audited`);
         }
         record(name, 'no page errors', errors.length === 0, errors.length ? errors : undefined);
     } catch (error) {
