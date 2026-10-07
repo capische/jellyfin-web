@@ -37,6 +37,23 @@
     }
 }
 
+// On a phone, or wherever the pointer is a finger, each chip is a full touch target with room between neighbours, so a tap
+// opens the chip meant and not the one beside it (web review 2026-10-07 round 2, P3 6). 3.5em at the line's 0.9em is
+// about 44 CSS pixels at the phone's root size.
+.layout-mobile .jfmod-ratingChip-button {
+    min-height: 3.5em;
+    margin: 0.25em 0.6em 0.25em 0;
+    padding: 0.3em 0.8em;
+}
+
+@media (pointer: coarse) {
+    .jfmod-ratingChip-button {
+        min-height: 3.5em;
+        margin: 0.25em 0.6em 0.25em 0;
+        padding: 0.3em 0.8em;
+    }
+}
+
 .jfmod-ratingsChips {
     display: inline-flex;
     flex-wrap: wrap;

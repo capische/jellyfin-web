@@ -7,7 +7,6 @@ export interface Rating {
     /** `tmdb` (the entry's own snapshot), `mdblist`, or the host's own item: `host_omdb`, `host_tmdb`. */
     provider: 'tmdb' | 'mdblist' | 'host_omdb' | 'host_tmdb';
     fetchedAt?: string | null;
-    url?: string | null;
     /** Older than the server's refresh window: shown with its date, never as current. */
     stale: boolean;
 }

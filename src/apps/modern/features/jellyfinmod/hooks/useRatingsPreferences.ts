@@ -17,19 +17,18 @@ import { usePluginCapabilities } from './useAcquisition';
 /** The query key of the ratings defaults, so the settings area can invalidate it after a save. */
 export const ratingsDefaultsKey = (basePath: string | undefined) => ['JellyfinMod', basePath, 'RatingsDefaults'];
 
-/**
- * Loads what a ratings line needs before a detail page mounts it — the plugin's capabilities, the ratings defaults and the
- * user's display preferences — into the same query cache the hooks read, so the line is ready in the page's first paint and
- * never arrives later above a focused control (web review 2026-10-07, P2 2). Bounded: a slow answer does not hold the page.
- */
-export const prefetchRatingsPreferences = async (api: Api, userId: string, timeoutMs = 3000) => {
-    const work = (async () => {
-        const health = await queryClient.fetchQuery({
-            queryKey: ['JellyfinMod', api.basePath, 'HealthCapabilities'],
-            queryFn: ({ signal }) => getPluginHealth(api, { signal }),
-            staleTime: 5 * 60 * 1000,
-            retry: false
-        });
+/** The capabilities (shared with every other reader) — the first step of each ratings prefetch. */
+export const loadPluginCapabilities = (api: Api) => queryClient.fetchQuery({
+    queryKey: ['JellyfinMod', api.basePath, 'HealthCapabilities'],
+    queryFn: ({ signal }) => getPluginHealth(api, { signal }),
+    staleTime: 5 * 60 * 1000,
+    retry: false
+});
+
+/** Loads the ratings defaults and the user's display preferences into the cache, without a deadline; never throws. */
+export const loadRatingsPreferences = async (api: Api, userId: string) => {
+    try {
+        const health = await loadPluginCapabilities(api);
         if (!health.capabilities.includes(RATINGS_CAPABILITY)) return;
         await Promise.all([
             queryClient.fetchQuery({ queryKey: ratingsDefaultsKey(api.basePath), queryFn: ({ signal }) => getRatingsDefaults(api, { signal }),
@@ -37,8 +36,18 @@ export const prefetchRatingsPreferences = async (api: Api, userId: string, timeo
             queryClient.fetchQuery({ ...getDisplayPreferencesQuery(api, { displayPreferencesId: 'usersettings', client: 'emby', userId }),
                 staleTime: RATINGS_STALE_MS })
         ]);
-    })().catch(() => undefined);
-    await Promise.race([work, new Promise(resolve => setTimeout(resolve, timeoutMs))]);
+    } catch {
+        // The line's own hooks read again; a failed prefetch only means it decides later.
+    }
+};
+
+/**
+ * Loads what a ratings line needs before a detail page mounts it — the plugin's capabilities, the ratings defaults and the
+ * user's display preferences — into the same query cache the hooks read, so the line is ready in the page's first paint and
+ * never arrives later above a focused control (web review 2026-10-07, P2 2). Bounded: a slow answer does not hold the page.
+ */
+export const prefetchRatingsPreferences = async (api: Api, userId: string, timeoutMs = 3000) => {
+    await Promise.race([loadRatingsPreferences(api, userId), new Promise(resolve => setTimeout(resolve, timeoutMs))]);
 };
 
 type CustomPrefs = Record<string, string | null | undefined> | null | undefined;
