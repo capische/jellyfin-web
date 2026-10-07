@@ -716,19 +716,19 @@ adds `ratings` (the reads below and `ratings[]` on entry detail), `ratings.cards
 converted or combined.
 
 ```json
-{"source":"imdb","value":8.1,"scale":"ten","votes":250000,"provider":"mdblist","fetchedAt":"2026-10-07T05:11:19.54Z",
- "url":"https://www.imdb.com/title/tt0990901/","stale":false}
+{"source":"imdb","value":8.1,"scale":"ten","votes":250000,"provider":"mdblist","fetchedAt":"2026-10-07T05:11:19.54Z","stale":false}
 ```
 
 `source` is one of `imdb`, `tomatoes_critic`, `tomatoes_audience`, `tmdb`, `trakt`, `metacritic`, `metacritic_user`,
 `letterboxd`, `rogerebert`, always in that order; `scale` is `ten`, `percent`, `five` or `four`; `provider` is `tmdb` (the
 entry's own TMDB snapshot), `mdblist`, `host_omdb` or `host_tmdb` (read from the host's native item: `CriticRating`, and
-`CommunityRating` labelled by whichever of OMDb and TheMovieDb comes first in the library's fetcher order); `votes`,
-`fetchedAt` and `url` may be `null`; `stale` is true once `fetchedAt` is older than `refreshDays` (for a host value,
+`CommunityRating` labelled by whichever of OMDb and TheMovieDb comes first in the library's fetcher order); `votes` and
+`fetchedAt` may be `null`; `stale` is true once `fetchedAt` is older than `refreshDays` (for a host value,
 `fetchedAt` is the item's last metadata refresh). There is no `hundred` scale: a 0–100 value (TMDB through MDBList, the
-Rotten Tomatoes and Metacritic scores) is `percent`, and a client skips a scale it does not know. `url` is only ever an
-`https` link on the source's own site (imdb.com, themoviedb.org, trakt.tv, rottentomatoes.com, metacritic.com,
-letterboxd.com, rogerebert.com) with no credentials, port or query; anything else the provider sent is `null`. One value per source:
+Rotten Tomatoes and Metacritic scores) is `percent`, and a client skips a scale it does not know. There is no provider
+link: the plugin never reads, stores or returns the `url` MDBList sends (a provider-written link can carry the caller's key
+in its path or host; review 2026-10-07, round 2), and a database from the first Phase 9 build loses its stored links in
+migration `PhaseNineRatingsIdentity`. One value per source:
 `tmdb` prefers the snapshot, then MDBList, then the host; `imdb` and `tomatoes_critic` prefer MDBList, then the host.
 
 **Reads (any signed-in user; 401 anonymous).**
@@ -757,7 +757,8 @@ letterboxd.com, rogerebert.com) with no credentials, port or query; anything els
 - `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
   budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued}`.
   `queued` counts manual refreshes waiting or running; it drops when a refresh has finished, which is what the web's
-  Refresh ratings button waits for (at most a minute) before reading the title again.
+  Refresh ratings button waits for (at most a minute, each request with its own time limit) before reading the title again;
+  a failed read is asked again, and a 403 or an answer without `queued` means the server will not say, never "finished".
 - `POST /JellyfinMod/Entries/{id}/Ratings/Refresh` — 202 `{"queued":true}`; 409 with `type` `ratings_disabled`,
   `not_configured`, `unauthorized`, `breaker_open`, `budget_spent` or `queue_full` and a sentence in `title`; 404 for an
   entry the administrator cannot see.
@@ -766,14 +767,23 @@ letterboxd.com, rogerebert.com) with no credentials, port or query; anything els
 once per title identity (every entry of the same TMDB title shares the answer, and the identity's latest attempt decides
 whether it is due; a new entry of a known title adopts its siblings' values): titles never fetched first, then titles past
 `refreshDays` or with a failed attempt older than a day, each group newest first, within `dailyBudget`, one call a second.
-Saving the settings takes effect on a running fetch before its next call: turning ratings off, lowering the budget or
-replacing the key stops it, and an answer to the old key never blocks the new one. 401/403 (or a body naming a refused
-key) blocks fetching; 429 opens a breaker to the latest of `Retry-After`, `X-RateLimit-Reset` and the next UTC day; five server errors, timeouts or malformed
+A title's attempt belongs to its identity, not to an entry: removing the entry being fetched keeps it, so the same title in
+another library still waits out an interrupted attempt; a run forgets the attempt of a title no library holds once its
+refresh window and failure wait have passed. An answer about the key rather than the title (refused, or the quota spent)
+leaves the title due as soon as fetching may resume. The settings save and the fetcher share one gate: the fetcher's last
+look at the settings, the key and the provider state happens under it after the pause between calls, and it holds it
+through the call and the recording of its answer. So a save waits for a call already out (at most the 15 s call limit),
+that call's answer is recorded first and about the key it used, and no call starts after the save with what it replaced;
+turning ratings off, lowering the budget or replacing the key stops a running fetch at its next call, and replacing the key
+lifts the refused-key block and closes a 429 breaker even when the old key's answer arrived during the save. 401/403 (or a
+body naming a refused key) blocks fetching; 429 opens a breaker to the latest of `Retry-After` (however long — a delay
+past the last representable moment ends there), `X-RateLimit-Reset` and the next UTC day; five server errors, timeouts or malformed
 answers in a row open a one-hour breaker; a 404 is `not_found`. Failures keep the stored values. An answer is malformed,
 and changes nothing, when `ratings` is not a list or an item is not an object, has no string `source`, or a `value`,
 `score` or `votes` of the wrong kind; `null`, `""` and `"N/A"` mean no value. `base` is MDBList's own
 address unless the hidden XML field `RatingsProviderBaseUrl` points an isolated instance at a stand-in. Data: tables
-`RatingsSettings`, `RatingsProviderStates`, `TitleRatings`, `RatingsFetches`, migration `PhaseNineRatings`.
+`RatingsSettings`, `RatingsProviderStates`, `TitleRatings`, `RatingsFetches` (one row per title identity), migrations
+`PhaseNineRatings` and `PhaseNineRatingsIdentity`.
 
 ## Review corrections — 2026-09-18
 

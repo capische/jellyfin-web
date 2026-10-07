@@ -52,7 +52,7 @@ displayed ("via MDBList, as of <date>").
 
 ```json
 { "source": "tomatoes_audience", "value": 92, "scale": "percent", "votes": 25000,
-  "fetchedAt": "2026-09-21T10:00:00Z", "provider": "mdblist", "url": null }
+  "fetchedAt": "2026-09-21T10:00:00Z", "provider": "mdblist", "stale": false }
 ```
 
 - `source` is a closed set: `tmdb`, `imdb`, `trakt`, `tomatoes_critic`, `tomatoes_audience`,
@@ -71,8 +71,8 @@ displayed ("via MDBList, as of <date>").
 ## Storage, refresh and degradation
 
 - **Storage:** plugin SQLite (`TitleRating`: `EntryId`, `Source`, `Provider`, `Value`, `Scale`,
-  `Votes?`, `FetchedAt`, `Url?`; `RatingsFetch`: `EntryId`, `AttemptedAt`, `Outcome`,
-  `RetryAfter?`, `Error?` bounded and admin-only). No synthetic `BaseItem`, no write to the host's
+  `Votes?`, `FetchedAt`; `RatingsFetch`, one per title identity: `MediaType`, `TmdbId`, `AttemptedAt`, `Outcome`,
+  `Error?` bounded and admin-only, `Manual`). No provider link is kept (review round 2, below). No synthetic `BaseItem`, no write to the host's
   items or metadata; the OMDb fallback is read-only.
 - **When ratings are fetched:** never inline in a browse, search or detail request — reads are
   SQLite only. A native scheduled task `JellyfinModRatingsRefresh` (daily) fetches for entries
@@ -298,7 +298,10 @@ left for the user. The budget default is **500** of the free tier's 1,000 a day 
   (singleton runtime: `Blocker`, `BreakerUntil`, `BreakerReason`, `ConsecutiveFailures`, `BudgetDay`, `BudgetUsed`,
   last-run counters), `TitleRatings` (`EntryId` FK cascade, `Source`, `Provider`, `Value`, `Scale`, `Votes?`,
   `FetchedAt`, `Url?`; unique on `EntryId, Source, Provider`), `RatingsFetches` (one row per entry: `EntryId` FK
-  cascade unique, `AttemptedAt`, `Outcome`, `RetryAfter?`, `Error?` bounded to 200 characters, `Manual`).
+  cascade unique, `AttemptedAt`, `Outcome`, `RetryAfter?`, `Error?` bounded to 200 characters, `Manual`). Superseded by
+  migration `PhaseNineRatingsIdentity` (review round 2, below): `TitleRatings.Url` is dropped, and `RatingsFetches` is one
+  row per title identity (`MediaType`, `TmdbId` unique, no entry foreign key, no `RetryAfter`), keeping each title's
+  latest attempt.
 - `GET/PATCH /JellyfinMod/Settings/Ratings` (administrator; revisioned under `SettingsMutationGate`; `apiKey` is a
   `SecretChangeRequest`; unknown fields 400; history `settings_changed` with area `ratings`), `POST
   /Settings/Ratings/Test` (one call for TMDB movie 278; codes `ok`, `not_configured`, `unauthorized`, `rate_limited`,
@@ -316,8 +319,9 @@ left for the user. The budget default is **500** of the free tier's 1,000 a day 
   reader for manual refreshes).
 - Due rule, per title identity (every entry of the same TMDB title; its latest attempt decides): never attempted, then
   stored ratings older than `RefreshDays` or a failed attempt older than one day — each group **newest `AddedAt` first**
-  (decision 5; corrected 2026-10-07 from "oldest first", which the code never followed). A new entry of a title already
-  fetched adopts its siblings' latest attempt and values instead of counting as never attempted. A claim row (`Outcome = pending`) and the budget increment commit **before** the
+  (decision 5; corrected 2026-10-07 from "oldest first", which the code never followed). The attempt is the identity's
+  own row (review round 2), so a new entry of a title already fetched shares it and adopts its siblings' values instead of
+  counting as never attempted, and removing the entry being fetched does not lose it. A claim row (`Outcome = pending`) and the budget increment commit **before** the
   call; a pending claim older than ten minutes counts as a failed attempt (a killed run never fetches the same entry
   again that day). Minimum interval between calls 1 s (integration hosts shorten it).
 - Failures: 401/403 → blocker `unauthorized`, all fetching stops until the key is replaced or Test passes; 429 →
@@ -420,7 +424,8 @@ not IMDb's; 35 carry `CriticRating` (Rotten Tomatoes critics, only OMDb writes i
 no vote count. Of 160 catalog entries only the 2 added through TMDB discovery carry a TMDB score in their snapshot; the
 158 created by native backfill carry none (decision 4).
 
-**DTOs.** One rating: `{source, value, scale, votes, provider, fetchedAt, url, stale}` with `scale` in `ten`,
+**DTOs.** One rating: `{source, value, scale, votes, provider, fetchedAt, stale}` (the `url` field was removed in review
+round 2) with `scale` in `ten`,
 `percent`, `five`, `four` (there is no `hundred`: a 0–100 value is `percent`; the web skips any other scale); `provider`
 in `tmdb`, `mdblist`, `host_omdb`, `host_tmdb`; `stale` true when `fetchedAt` is older than `refreshDays` (a host value's
 `fetchedAt` is the item's last metadata refresh). API.md *Ratings (Phase 9)* records every endpoint as built.
@@ -540,11 +545,55 @@ passed); and the leak step counted a stack frame of another plugin's failed call
 only the host's request-logger categories. Fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only;
 oleksii's display preferences are as before; the stand-in is stopped and its key deleted.
 
+## Review fixes, round 2 — 2026-10-07
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high re-reviews of the first fix round (plugin `612d557..7bef3f6`: rejected, four of
+eight fixed; web `8f7809a2af..fbdc355360`: approve with fixes) were fixed as below: plugin `7bef3f6..` its branch tip, web
+`fbdc355360..` this branch's tip. Proof is the plugin suite over real Kestrel and the HTTP stand-in, and the browser and
+live runs on the isolated instance; no unit tests.
+
+**Plugin.**
+
+| # | Finding | Fix | Proof (suite unless stated) |
+|---|---|---|---|
+| 1 (P1) | The link filter still let the key through in a path, a host name or double-encoded | No provider link is read, stored or returned at all (coordinator's decision; nothing uses one). Migration `PhaseNineRatingsIdentity` drops `TitleRatings.Url`; `url` leaves the API | A stand-in answer with the key in a query, a path, a host name and double-encoded: the ratings carry no `url`, the key is in no answer; the migration from the first Phase 9 shape removes stored links |
+| 2 | Settings were checked before the pause between calls, so a call could start after a save with what it replaced | One gate, `RatingsCredentialGate`, is taken by the settings save and by the fetcher from its last look (after the pause) through the call to recording the answer; the claim and budget commit only after that look, so a refused call leaves nothing to reconcile. Test works the same way | The save waits while a call is out; with ratings turned off or the budget lowered no call starts after the save; with the key replaced mid-run the call out used the old key and every later call the new one |
+| 3 | The post-answer key comparison raced the save | Gone: the save cannot run between the look and the recording, so an answer is always about the key still saved; the save then clears what an old key's answer set | The old key's 401 and 429, answered during a save, are recorded first and lifted by it: no block, breaker closed |
+| 4 | An old key's quota deadline stayed on the title | No per-title deadline: the quota's deadline lives only on the breaker, which a new key closes; a refused or rate-limited title is due as soon as fetching may resume | The next run after a replacement fetches that title at once |
+| 5 | Removing the entry being fetched lost the attempt, so a new sibling was fetched twice | Attempts are one row per title identity, with no entry foreign key; a run forgets the attempt of a title no library holds once its refresh window and failure wait have passed | A run killed mid-call while a sibling is added and the claimed entry removed: after the restart the title still waits out the interrupted attempt, then is fetched once; past the window the orphan attempt is pruned |
+| 6 | A malformed `score` was still `ok` and cleared rows | `score` is validated like `value` and `votes` | A wrong-kind `score` is `malformed`, counts as a failure and keeps the rows |
+| 7 (P3) | A Retry-After of a year or more was dropped | Kept as given; a delay past the last representable moment ends there | A 429 asking 40,000,000 seconds holds the breaker that long |
+
+**Web.**
+
+| # | Finding | Fix | Proof (Chromium 153.0.8010.12 and Chrome 153.0.8010.54, 50/50 each) |
+|---|---|---|---|
+| 1 | A failed minute's refetch hid the line; later updates could grow it above focus | The line keeps its last answer through errors, stays mounted when ratings are turned off, and applies any later change at once only while focus is above or inside it; with focus below it a change is kept only if the line's height does not change (measured before paint) | TV 1920×1080, focus on a control below the line: a forced 500 on the minute's refetch, then a refetch with wider dated values — the focused control stays exactly where it was |
+| 2 | A status error counted as completion | Only an empty queue is completion; a failed look is asked again within the minute; a 403 or an answer without `queued` says the server will not tell | Desktop: "Ratings refreshed." after the queue empties |
+| 3 | Polling was not bounded or cancelled | One cancellable operation per press, cancelled when the page goes; every request has a 10 s limit and every wait is cancellable | Same run; lint and types |
+| 4 | `age`/`unage` could leave 18096 stopped | Every stopped-service step runs through one helper that always starts the service again and keeps the SQL's exit status | `age`, `unage`, `kill`, `cleanup` |
+| 5 (P3) | Preference snapshots were unsafe across repeats and failures | Both runners refuse to start without a valid read; `p9-live.py` restores first in cleanup and retires the snapshot once confirmed; `p9-ratings.mjs` reads and restores over plain HTTP, independent of the interface | Both runs: keys before = keys after; cleanup: snapshot retired |
+| 6 (P3) | Mobile chips were ~22 px | Outside TV on a phone or touch screen each chip is at least 3.5em (45 CSS px) with room beside it | Mobile: five chips 45 px high, 8 px apart; a tap shows the provenance, a second hides it |
+| 7 (P3) | Stale dates used the browser locale and an English "old" | Jellyfin's date locale (`scripts/datetime`); no fallback word | — |
+
+Also: cards skip a scale they do not know, as detail chips do; the native page's two 3 s waits are one shared deadline.
+
+**Live** on the isolated instance with plugin 0.1.0.0 from the plugin tip (migration `PhaseNineRatingsIdentity` applied to
+the instance's own database, integrity `ok`) and bundle `ef4d88793f5e`: `setup`, `unconfigured`, `configure`, `fetch`,
+`restart`, `age`, both browsers, `unage`, `failures`, `kill`, `leak`, `cleanup` — all pass (`evidence/p9/review-fix-2/`).
+The suite also migrated a copy of the instance's pre-Phase-9 database (the backup taken before the first deployment)
+through both Phase 9 migrations, keeping every row (170 entries) with integrity and foreign keys clean
+(`suite-phase-nine-mac.txt`). Fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only; oleksii's display
+preferences are as before and the snapshot retired; the stand-in is stopped and its key deleted. Plugin suites on the Mac: the same set passes as before
+this round (Zero, One, Two, Three, Seven Trakt, Nine, Ten); the Linux-only suites fail on macOS as they did before and were
+not re-run on the test host this round.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
-isolated instance passed in Chromium and Chrome. Both reviews' findings are fixed (above); acceptance waits for the Codex
-re-review of the fix ranges (plugin `612d557..7bef3f6`, web `8f7809a2af..` this branch's tip), and for the user. Nothing is merged; the
+isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
+waits for the Codex review of the round-2 ranges (plugin `7bef3f6..` its tip, web `fbdc355360..` this branch's tip), and for
+the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
@@ -552,7 +601,7 @@ For the next agent or reviewer:
 - Re-run the live chain with `scripts/jellyfinmod-e2e/p9-live.py` (`setup`, `unconfigured`, `configure`, `fetch`,
   `restart`, `age`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `cleanup`); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- The isolated instance runs this branch's plugin (0.1.0.0 built from `d5cdd8e`, the review fixes) and bundle `7df7b451dc4c`; ratings are on with no
+- The isolated instance runs this branch's plugin (0.1.0.0 from the round-2 tip) and bundle `ef4d88793f5e`; ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
   deployment is on the test host under the instance's `backups/p9-before-20261007` (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
