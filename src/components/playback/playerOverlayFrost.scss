@@ -2,8 +2,9 @@
 
 /* The frosted-glass stand-in for in-player overlays on TVs that cannot blur
    the video (see playerOverlayFrost.js). Sits behind the overlay's content but
-   above its own fill, which it covers with the image and then darkens again,
-   so the result matches the fill-only look where the image fails to load. */
+   above its own fill, which it covers with the server-blurred image and then
+   darkens again, so the result matches the fill-only look where the image
+   fails to load. */
 .playerOverlayFrost {
     position: absolute;
     top: 0;
@@ -19,16 +20,16 @@
         content: '';
         position: absolute;
 
-        /* Bleeds past the clip so the blur's soft edge stays out of sight. */
-        top: -2rem;
-        right: -2rem;
-        bottom: -2rem;
-        left: -2rem;
+        /* Bleeds past the clip: the server's blur darkens the image edges. */
+        top: -12%;
+        right: -12%;
+        bottom: -12%;
+        left: -12%;
 
         /* The custom property is set inline on the element itself, so the
-           var() always substitutes; with no image the layer is simply empty. */
+           var() always substitutes; with no image the layer is simply empty.
+           The image arrives blurred, so the TV draws it with no filter. */
         background: var(--player-overlay-frost-image) center / cover no-repeat;
-        filter: $player-overlay-blur;
     }
 
     &::after {
