@@ -1,0 +1,40 @@
+PASS [chrome/desktop] The user menu offers Ratings display :: ["Profile","Settings","Queue","JellyfinMod settings","Ratings display","Dashboard","Metadata Manager","Quick Connect","Sign Out"]
+PASS [chrome/desktop] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chrome/desktop] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chrome/desktop] The native page shows the Ratings line in the default order :: ["IMDb 8.1 (250K)","RT critics 91% (310)","RT audience 88% (25K)","TMDB 79% (15K)","Trakt 83% (21K)"]
+PASS [chrome/desktop] Each chip shows its value in its own scale with votes, and says where it came from :: [{"source":"imdb","provider":"mdblist","text":"IMDb 8.1 (250K)","title":"IMDb 8.1, 250,000 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site","tabIndex":-1,"inSection":true,"inMisc":false},{"source":"tomatoes_criti
+PASS [chrome/desktop] The line sits in the detail section and is not focusable
+PASS [chrome/desktop] The Ratings mount leads the detail section content :: ["jfmod-ratingsMount","jfmod-traktMount","itemGenres"]
+PASS [chrome/desktop] Refresh ratings queues a refresh and says so :: "Ratings refresh queued. New values show in a moment."
+PASS [chrome/desktop] The file-less entry page shows the line beside the TMDB star, TMDB first-party :: ["IMDb 8.1 (250K) [mdblist]","RT critics 91% (310) [mdblist]","RT audience 88% (25K) [mdblist]","TMDB 8.7 [tmdb]","Trakt 83% (21K) [mdblist]"]
+PASS [chrome/desktop] Moving a source keeps focus on the control that moved it and says it was saved :: {"focused":"up","status":"Letterboxd moved up. Saved."}
+PASS [chrome/desktop] The detail line follows the user's own sources and order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","letterboxd","trakt"]
+PASS [chrome/desktop] The choice is saved in Jellyfin's per-user display preferences :: "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"letterboxd\",\"trakt\"]"
+PASS [chrome/desktop] Cards are unchanged with the preference off: no card rating and no ratingSource sent :: {"cardText":[],"requests":1}
+PASS [chrome/desktop] With IMDb chosen each card carries it in its secondary text line, no badge :: [{"text":" · IMDb 8.1","inSecondary":true,"badge":false},{"text":" · IMDb 8.1","inSecondary":true,"badge":false}]
+PASS [chrome/desktop] The card rating adds no focus stop
+PASS [chrome/desktop] The settings area's Ratings section shows the key as configured, Test passes and the stand-in is flagged :: "STEP 10 OF 12\nRatings\nKey tested 10/7/2026, 4:50:05 PM\nMDBList accepted the key and returned ratings. (ok) Sources: IMDb, Metacritic critics, Metacritic users, Trakt, Rotten Tomatoes critics, Letterboxd, Roger Ebert, TMDB, Rotten Tomato
+PASS [chrome/desktop] A plugin without the ratings capabilities: no line, no menu item, no card rating and no ratingSource sent (card choice still on) :: {"chips":0,"cards":0,"requests":4}
+PASS [chrome/desktop] Ratings turned off: the line is absent and the page otherwise unchanged :: {"buttons":4}
+PASS [chrome/desktop] No page errors :: []
+PASS [chrome/desktop] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chrome/desktop] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chrome/mobile] The native page shows the Ratings line, wrapped, without horizontal scroll :: {"chips":5,"overflow":0}
+PASS [chrome/mobile] The file-less entry page shows the line :: ["IMDb 8.1 (250K)","RT critics 91% (310)","RT audience 88% (25K)","TMDB 8.7","Trakt 83% (21K)"]
+PASS [chrome/mobile] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chrome/mobile] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chrome/mobile] No page errors :: []
+PASS [chrome/tv1080] Down from Home reaches the Ratings display link
+PASS [chrome/tv1080] Ratings display opens with focus on its first switch :: "imdb"
+PASS [chrome/tv1080] Down reaches a source, Enter toggles it and focus stays on it :: {"target":"letterboxd","on":"true","off":"false","stillFocused":"letterboxd"}
+PASS [chrome/tv1080] The remote's Back leaves Ratings display for the page that opened it :: "#/home"
+PASS [chrome/tv1080] The line shows on the TV title page and D-pad navigation never focuses it :: {"chips":5,"start":"BUTTON"}
+PASS [chrome/tv1080] No page errors :: []
+PASS [chrome/tv720] Down from Home reaches the Ratings display link
+PASS [chrome/tv720] Ratings display opens with focus on its first switch :: "imdb"
+PASS [chrome/tv720] Down reaches a source, Enter toggles it and focus stays on it :: {"target":"letterboxd","on":"true","off":"false","stillFocused":"letterboxd"}
+PASS [chrome/tv720] The remote's Back leaves Ratings display for the page that opened it :: "#/home"
+PASS [chrome/tv720] The line shows on the TV title page and D-pad navigation never focuses it :: {"chips":5,"start":"BUTTON"}
+PASS [chrome/tv720] No page errors :: []
+PASS [chrome/all] None of the 125 JellyfinMod responses the browser received carries the key
+chrome 153.0.8010.54: 39 passed, 0 failed

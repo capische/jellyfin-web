@@ -1,0 +1,11 @@
+[16:10:15] [DBG] [28] MediaBrowser.Providers.Folders.FolderMetadataService: Running FolderImageProvider for <container-media>/jfmod-p9-ratings
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running ProbeProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Host (2026)/JellyfinMod P9 Ratings Host (2026).mkv
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running MovieNfoProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Host (2026)/JellyfinMod P9 Ratings Host (2026).mkv
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running TrickplayProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Host (2026)/JellyfinMod P9 Ratings Host (2026).mkv
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running AttachmentExtractionProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Host (2026)/JellyfinMod P9 Ratings Host (2026).mkv
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running SubtitleExtractionProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Host (2026)/JellyfinMod P9 Ratings Host (2026).mkv
+[16:10:25] [DBG] [27] MediaBrowser.Providers.Movies.MovieMetadataService: Running ProbeProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Second (2026)/JellyfinMod P9 Ratings Second (2026).mkv
+[16:10:25] [DBG] [30] MediaBrowser.Providers.Movies.MovieMetadataService: Running MovieNfoProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Second (2026)/JellyfinMod P9 Ratings Second (2026).mkv
+[16:10:25] [DBG] [30] MediaBrowser.Providers.Movies.MovieMetadataService: Running TrickplayProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Second (2026)/JellyfinMod P9 Ratings Second (2026).mkv
+[16:10:25] [DBG] [30] MediaBrowser.Providers.Movies.MovieMetadataService: Running AttachmentExtractionProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Second (2026)/JellyfinMod P9 Ratings Second (2026).mkv
+[16:10:25] [DBG] [30] MediaBrowser.Providers.Movies.MovieMetadataService: Running SubtitleExtractionProvider for <container-media>/jfmod-p9-ratings/JellyfinMod P9 Ratings Second (2026)/JellyfinMod P9 Ratings Second (2026).mkv

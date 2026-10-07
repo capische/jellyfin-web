@@ -706,6 +706,62 @@ plugin started observing show history after Trakt's next sync touches them. Data
 (`UserId`, `JellyfinItemId`, `SeriesId`, `SeasonId`, `FirstSyncedAt`, `LastSyncedAt`; unique per user and item),
 migration `PhaseSevenTraktObservations`. Design and evidence: [PHASE7.md §7.1.3](PHASE7.md#713-detecting-the-plugin-and-what-to-show).
 
+## Ratings (Phase 9)
+
+Display only (PHASE9 user decision 7): nothing in acquisition, automation or retention reads a rating. Health `Capabilities`
+adds `ratings` (the reads below and `ratings[]` on entry detail), `ratings.cards` (`POST /Browse` takes `ratingSource`) and
+`settings.ratings` (the administrator endpoints). Design, decisions and evidence: [PHASE9.md](PHASE9.md).
+
+**One rating.** A source that has no value is absent, never `0` or `null`. Values stay in their own scale; nothing is
+converted or combined.
+
+```json
+{"source":"imdb","value":8.1,"scale":"ten","votes":250000,"provider":"mdblist","fetchedAt":"2026-10-07T05:11:19.54Z",
+ "url":"https://www.imdb.com/title/tt0990901/","stale":false}
+```
+
+`source` is one of `imdb`, `tomatoes_critic`, `tomatoes_audience`, `tmdb`, `trakt`, `metacritic`, `metacritic_user`,
+`letterboxd`, `rogerebert`, always in that order; `scale` is `ten`, `percent`, `five` or `four`; `provider` is `tmdb` (the
+entry's own TMDB snapshot), `mdblist`, `host_omdb` or `host_tmdb` (read from the host's native item: `CriticRating`, and
+`CommunityRating` labelled by whichever of OMDb and TheMovieDb comes first in the library's fetcher order); `votes`,
+`fetchedAt` and `url` may be `null`; `stale` is true once `fetchedAt` is older than `refreshDays`. One value per source:
+`tmdb` prefers the snapshot, then MDBList, then the host; `imdb` and `tomatoes_critic` prefer MDBList, then the host.
+
+**Reads (any signed-in user; 401 anonymous).**
+
+- `GET /JellyfinMod/Entries/{id}` gains `ratings[]` (empty while ratings are off).
+- `GET /JellyfinMod/Ratings/Items/{itemId}` — a native movie or series page: `{"entryId": "…" | null, "ratings": [...]}`.
+  404 for an item the user cannot see (the host's own check); an episode or season answers `ratings: []`.
+- `GET /JellyfinMod/Ratings/Defaults` — `{"enabled":true,"defaultSources":["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"],
+  "availableSources":[…],"refreshDays":14}`, nothing about the key.
+- `POST /JellyfinMod/Browse` with `"ratingSource":"imdb"` (a known source; anything else 400): each row gains `rating` (one
+  value) when it has one; without the field no row carries `rating`.
+
+**Administrator only (403 for an ordinary user).**
+
+- `GET /JellyfinMod/Settings/Ratings` — `{enabled, apiKeyConfigured, refreshDays, dailyBudget, defaultSources[],
+  availableSources[], verified, verifiedAt, providerOverride, revision}`.
+- `PATCH /JellyfinMod/Settings/Ratings` — any of `enabled`, `refreshDays` (1–365), `dailyBudget` (1–250,000),
+  `defaultSources` (known, each once), `apiKey` (`{"action":"replace","value":"…"}`, `{"action":"clear"}` or
+  `{"action":"unchanged"}`) and the required `revision` (409 when stale, 400 for an unknown field). The key goes to the
+  `0600` secret store and is never returned; replacing it lifts an `unauthorized` block and closes a breaker a 429 opened.
+- `POST /JellyfinMod/Settings/Ratings/Test` — one MDBList call for TMDB movie 278, counted in the budget:
+  `{"ok":true,"code":"ok","message":"MDBList accepted the key and returned ratings.","sources":["imdb",…]}`; other codes
+  `not_configured`, `unauthorized`, `rate_limited`, `unreachable`, `timeout`, `malformed`, `not_found`.
+- `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
+  budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued}`.
+- `POST /JellyfinMod/Entries/{id}/Ratings/Refresh` — 202 `{"queued":true}`; 409 with `type` `ratings_disabled`,
+  `not_configured`, `unauthorized`, `breaker_open`, `budget_spent` or `queue_full` and a sentence in `title`; 404 for an
+  entry the administrator cannot see.
+
+**Fetching.** The native task `JellyfinModRatingsRefresh` (daily, 04:00) calls `GET {base}/tmdb/{movie|show}/{tmdbId}?apikey=…`
+once per title identity (every entry of the same TMDB title shares the answer): titles never fetched first, newest first,
+then titles past `refreshDays`, within `dailyBudget`, one call a second. 401/403 (or a body naming a refused key) blocks
+fetching; 429 opens a breaker to the later of `Retry-After` and the next UTC day; five server errors, timeouts or malformed
+answers in a row open a one-hour breaker; a 404 is `not_found`. Failures keep the stored values. `base` is MDBList's own
+address unless the hidden XML field `RatingsProviderBaseUrl` points an isolated instance at a stand-in. Data: tables
+`RatingsSettings`, `RatingsProviderStates`, `TitleRatings`, `RatingsFetches`, migration `PhaseNineRatings`.
+
 ## Review corrections — 2026-09-18
 
 Index of the notes above, from the review of plugin 81c1aae in
