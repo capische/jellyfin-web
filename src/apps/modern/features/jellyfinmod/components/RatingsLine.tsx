@@ -28,10 +28,20 @@ const focusIsPast = (node: Element | null) => {
 const keyOf = (list: Rating[]) => list.map(rating => [rating.source, rating.value, rating.scale, rating.votes ?? '', rating.provider,
     rating.fetchedAt ?? '', rating.stale ? 1 : 0].join(':')).join('|');
 
-/** Where the focused control is: a change is judged by whether this moves, wherever the line sits (its own row or a shared one). */
+/** The focused control and where it is: a change is judged by whether that same control moves (its own row or a shared one). */
 const focusPlace = () => {
-    const rect = document.activeElement?.getBoundingClientRect();
-    return rect ? { top: rect.top, left: rect.left } : null;
+    const element = document.activeElement;
+    if (!element || element === document.body) return null;
+    const rect = element.getBoundingClientRect();
+    return { element, top: rect.top, left: rect.left };
+};
+
+/** Whether the control focused when the trial began has moved, or is gone. */
+const focusMovedFrom = (before: { element: Element; top: number; left: number } | null) => {
+    if (!before) return false;
+    if (!before.element.isConnected) return true;
+    const rect = before.element.getBoundingClientRect();
+    return Math.abs(rect.top - before.top) > 0.5 || Math.abs(rect.left - before.left) > 0.5;
 };
 
 interface Shown {
@@ -41,7 +51,7 @@ interface Shown {
      * place changed. The focused control is what counts: an inline line that keeps its own height can still wrap the row it
      * shares and push everything below it down (review round 3, P2 3).
      */
-    trial?: { previous: Rating[]; height: number; focus: { top: number; left: number } | null };
+    trial?: { previous: Rating[]; height: number; focus: { element: Element; top: number; left: number } | null };
 }
 
 /**
@@ -66,15 +76,15 @@ const RatingsLine: FC<RatingsLineProps> = ({ ratings, sources, inline, ready = t
         .filter((rating): rating is Rating => !!rating && isKnownScale(rating.scale)) : null;
     const candidateKey = candidate ? keyOf(candidate) : null;
     const height = () => box.current?.getBoundingClientRect().height ?? 0;
+    // The line itself when it is shown (so focus on one of its chips counts as inside it), else its hidden anchor (review
+    // round 4, P3 3: the anchor alone does not contain the chips, so a focused chip was taken for focus below the line).
+    const place = () => box.current ?? anchor.current;
 
     useLayoutEffect(() => {
         if (!candidate || candidateKey === null) return;
         if (shown?.trial) {
-            // The trial has rendered: keep it unless it changed the line's height under a focused control below.
-            const now = focusPlace();
-            const before = shown.trial.focus;
-            const focusMoved = !!before && !!now && (Math.abs(now.top - before.top) > 0.5 || Math.abs(now.left - before.left) > 0.5);
-            const moved = focusIsPast(anchor.current) && (focusMoved || Math.abs(height() - shown.trial.height) > 0.5);
+            // The trial has rendered: keep it unless it moved the control that was focused below the line, or the line's height.
+            const moved = focusMovedFrom(shown.trial.focus) || Math.abs(height() - shown.trial.height) > 0.5;
             if (moved) rejected.current = keyOf(shown.list);
             setShown({ list: moved ? shown.trial.previous : shown.list });
             return;
@@ -84,12 +94,12 @@ const RatingsLine: FC<RatingsLineProps> = ({ ratings, sources, inline, ready = t
         if (rejected.current === candidateKey) return;
         if (!shown) {
             // The first decision: shown unless focus has already moved past where it would appear.
-            setShown({ list: focusIsPast(anchor.current) ? [] : candidate });
+            setShown({ list: focusIsPast(place()) ? [] : candidate });
             return;
         }
 
         rejected.current = null;
-        setShown(focusIsPast(anchor.current) ? { list: candidate, trial: { previous: shown.list, height: height(), focus: focusPlace() } } : { list: candidate });
+        setShown(focusIsPast(place()) ? { list: candidate, trial: { previous: shown.list, height: height(), focus: focusPlace() } } : { list: candidate });
     // `candidate` is described by `candidateKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [candidateKey, shown]);
