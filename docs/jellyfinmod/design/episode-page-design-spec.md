@@ -196,9 +196,9 @@ decided. Ask the user before treating any as settled.
    has no un-Keep route, makes the pin read-only (`aria-disabled`, titled with the reason). Without
    `retention.versionKeep` the pin toggles the episode Keep (episode pages with
    `retention.episodes`) or keeps the movie.
-7. **`∞`.** The badge shows `∞` whenever the page's file is kept and no removal is scheduled, played
+7. **`∞`.** *(Flagged: awaiting the user's ruling at acceptance.)* The badge shows `∞` whenever the page's file is kept and no removal is scheduled, played
    or not.
-8. **More-menu item scope.** "Remove after watching…" appears on episode pages only, where the
+8. **More-menu item scope.** *(Flagged: awaiting the user's ruling at acceptance.)* "Remove after watching…" appears on episode pages only, where the
    episode window exists today (`retention.episodeControls`, episode not kept by itself); movies have
    no per-title window editor, so their menu is unchanged.
 9. **Popover lines.** The plugin's event types give the action word (Grabbed, Imported, Kept,
@@ -211,7 +211,7 @@ decided. Ask the user before treating any as settled.
 11. **"Automatic removal is off." everywhere.** The one-line retention status renders nothing while
     retention is off, on every page that uses it (including the series page's per-episode list),
     so the line is gone from every detail page, as the acceptance list asks.
-12. **Search now on the file-less series page** goes too ("no Search now anywhere"); the rest of
+12. **Search now on the file-less series page** *(Flagged: awaiting the user's ruling at acceptance.)* goes too ("no Search now anywhere"); the rest of
     that page is unchanged.
 13. **The raised button's label** is always "Get a release", also for a reclaimed movie (it read
     "Get again" before).
@@ -221,7 +221,9 @@ decided. Ask the user before treating any as settled.
 
 ## Acceptance checklist and evidence
 
-Status: **built (not accepted)** until every item below passes live. Run on 18096 only
+Status: **built (not accepted)**. Every live item below passed on 18096 in Chromium and real Chrome on 2026-10-08,
+except the queue line during a grab (NOT VERIFIED: 18096 has no download client or indexer). Acceptance and the three
+flagged choices (implementation choices 7, 8 and 12) are the user's to rule on. Run on 18096 only
 (`jellyfinmod-test`), desktop, mobile and TV (1920×1080, `layout=tv`, arrow keys, Enter and Back),
 on Playwright's bundled Chromium first and then on real Google Chrome, with a minute-scale
 retention window for item 4. The runner is
@@ -229,15 +231,63 @@ retention window for item 4. The runner is
 
 | # | Check | Chromium | Chrome |
 | --- | --- | --- | --- |
-| 1 | Episode, one file: header icon present (admin) and absent (user); Video row with history, pin, cross; pin toggles Keep and the plugin reports the file kept; cross removes with the stock confirmation; history popover lists only that file's events | | |
-| 2 | Episode, two files: stock Version select hidden; chooser opens and closes; a row changes `.selectSource` and Play uses that `MediaSourceId`; audio and subtitle selects follow; device preference on TV and mobile; Get another quality opens the picker with `addVersion` | | |
-| 3 | Episode, no file: file-less page shows the raised Get a release button and the header icon; both open the picker; during a fake grab the queue line replaces the button | | |
-| 4 | Watched episode with retention scheduled: badge shows days, `0` on the day, `!` after the deadline, `∞` after keeping via the pin; no warning box; the played toggle still works | | |
-| 5 | Movie page: the same cases where they apply | | |
-| 6 | No "Automatic removal is off." and no "Search now"; More menu shows "Remove after watching…" to an admin and nothing extra to a user; the dialog's select changes the episode window; no fixtures left (`GET /UserViews` for oleksii: Movies and Shows only) | | |
-| 7 | Gates: `npx tsc --noEmit -p tsconfig.json`, feature eslint, stylelint on new scss, plugin build with warnings as errors, plugin suites | | |
+| 1 | Episode, one file: header icon present (admin) and absent (user); Video row with history, pin, cross; pin toggles Keep and the plugin reports the file kept; cross removes with the stock confirmation; history popover lists only that file's events | pass (desktop 116/0, mobile, TV 1080/720; pin read back from the plugin; history = the plugin's events for that file, newest first) | pass |
+| 2 | Episode, two files: stock Version select hidden; chooser opens and closes; a row changes `.selectSource` and Play uses that `MediaSourceId`; audio and subtitle selects follow; device preference on TV and mobile; Get another quality opens the picker with `addVersion` | pass (incl. Play's `MediaSourceId`, audio follows, device preference TV/mobile, Get another quality → picker) | pass |
+| 3 | Episode, no file: file-less page shows the raised Get a release button and the header icon; both open the picker; during a fake grab the queue line replaces the button | pass, except the queue line: NOT VERIFIED (18096 has no download client or indexer, so no grab can be made) | pass, queue line NOT VERIFIED (same reason) |
+| 4 | Watched episode with retention scheduled: badge shows days, `0` on the day, `!` after the deadline, `∞` after keeping via the pin; no warning box; the played toggle still works | pass: `7`, `0`, `!` (and an open page turns `0` into `!` at the deadline without reload), `∞` after the pin in every layout | pass (`7`, `∞`) |
+| 5 | Movie page: the same cases where they apply | pass (header icon, row icons, history, More menu unchanged on a movie) | pass |
+| 6 | No "Automatic removal is off." and no "Search now"; More menu shows "Remove after watching…" to an admin and nothing extra to a user; the dialog's select changes the episode window; no fixtures left (`GET /UserViews` for oleksii: Movies and Shows only) | pass; UserViews after cleanup and a restart: Movies, Shows | pass |
+| 7 | Gates: `npx tsc --noEmit -p tsconfig.json`, feature eslint, stylelint on new scss, plugin build with warnings as errors, plugin suites | pass (see Evidence) | — |
 
 ### Evidence
 
-To be filled in by the acceptance run: commits, Health revision, bundle hash, runner output
-verbatim, fixture cleanup proof, Codex review record path and verdict.
+Run 2026-10-08 on 18096 (`jellyfinmod-test`), Chromium 153.0.8010.12 then Google Chrome 153.0.8010.54.
+
+- **Deployed:** plugin DLL from the temporary integration branch `tmp/detailfix-on-phase9` `4bc468d` (Phase 9 `e242a9d`
+  + plugin `97e76ea`), sha256 `1193bd07a99cda40…`; web bundle `33d2bdc044c2` (web `b8b1cdb9e4`) for the full passes, then
+  the final bundle `2de0648244d8` (web `77b1e78af0`, after the review 2 fixes and the rebase onto `jellyfin-mod`
+  `70e790b26c`): desktop and TV 1080, admin and user, one-file, two-file, movie and the window dialog, 153 passed and
+  0 failed in Chromium and in Chrome. Health: version 0.1.0.0, `history.files` advertised. Database
+  migrations: … `WholeReviewQueueCleanupManifest`, `PhaseNineRatings`, `PhaseNineRatingsIdentity`, `DetailFileHistory`.
+  Backup before deploy (plugin folder, XML, secret store, database): `/mnt/4tb/jellyfin-mod/test/build/dd-plug-backup`.
+- **Gates:** `npx tsc --noEmit -p tsconfig.json` exit 0; `npx eslint src/apps/modern/features/jellyfinmod --ext .ts,.tsx`
+  silent; stylelint silent; "JellyfinMod patch surface: §3.2 matches the 22 upstream file(s) this branch changes."; plugin
+  Release build "0 Warning(s) 0 Error(s)"; "No changes have been made to the model since the last migration."; all 13 suites
+  `exit=0` on the Pi (`df-run-all.sh`, Phase 5 through `df-run.sh` with the alias mounts).
+- **Live, Chromium:** desktop admin + ordinary user 116 passed, 0 failed (pin, window dialog, cross on E04: exactly that
+  copy removed, the other kept, the page moved to the remaining copy, which plays); mobile, TV 1080 and TV 720 291 passed
+  and 2 failed, both the TV 720 file-less walk, then 32/32 after the walk fix; badges `0` and `!` on desktop, `∞` in every
+  layout (72/72). **Real Chrome:** all four layouts, admin + user, 471 passed, 1 failed (the runner: after Play, real Chrome
+  plays the fixture and the player covered the page), then 47/47 for that scenario after the runner left the player.
+  NOT VERIFIED everywhere: the queue line during a grab (no client on 18096) and the movie's history (a fixture file with
+  no events).
+- **Product defects found live and fixed (2026-10-08):** on TV the one-file Video row's icons sat at the row's far end,
+  where no header button's Down reached them (now the disabled select is as wide as its text and Down from Play lands on
+  the history icon); on the file-less page Get a release landed after More and TV focus started on More (now an explicit
+  order and the focus effect runs after the inserts; probed by keys at 1920×1080 and 1280×720).
+- **Fixtures:** created by `scripts/jellyfinmod-e2e/detail-live.py` and removed by its cleanup. Retention was switched
+  on only with every other binding kept per file (534, released afterwards); 36 orphan bindings from older runs had no file
+  to delete. After cleanup the two DD libraries' collection folders survived (deleted with `refreshLibrary=false`) and came
+  back as views after a restart; they were recreated and deleted with `refreshLibrary=true`, and the cleanup now does
+  that. Proof after a restart: `GET /UserViews` for oleksii = Movies, Shows; no `JellyfinMod` items; no disposable user;
+  no `dd` folder.
+- **Codex (gpt-6.1-sol, high):** review 1 CHANGES REQUESTED (1 P1, 5 P2, 3 P3), all fixed; re-review 1 stopped at the usage
+  limit after two findings, both fixed; re-review 2 of `4a3dc1c002..9699443e28` and the plugin diff: CHANGES REQUESTED
+  (P1 and three P2 in the fixture tool, P2 in the menu wrap, P2 in the badge clock, P2 and P3 in the runner; no plugin
+  finding), all fixed; re-review 3 of that fix delta: every finding confirmed fixed, two left in the fixture tool (P2 a
+  404 on releasing a Keep treated as resolved, P3 a failed Keep not retried), both fixed afterwards; their re-review waits
+  for the Codex 5-hour window (at the 80% stop after re-review 3). Records: the session scratchpad
+  `review-detailfix.md`, `review-detailfix-delta1.md` (stopped at the limit), `-delta2.md`, `-delta3.md`.
+
+### State at hand-over — 2026-10-08
+
+- **Branches** (not pushed, not merged): web `fix/detail-page-design` on `jellyfin-mod` `70e790b26c`; plugin
+  `fix/detail-page-design` `a0ccd77` on `master` `a11d585`. Temporary `tmp/detailfix-on-phase9` `4bc468d` (worktree
+  `plugin-tmpdd`) built the DLL now on 18096; never push or merge it; delete it when Phase 9 redeploys.
+- **18096** runs that DLL and the web bundle `2de0648244d8`; migrations `PhaseNineRatings`, `PhaseNineRatingsIdentity`,
+  `DetailFileHistory`; retention off; no fixtures (views Movies and Shows, checked after a restart); backup
+  `/mnt/4tb/jellyfin-mod/test/build/dd-plug-backup` (its database lacks `DetailFileHistory`).
+- **Open:** the queue line during a grab (needs a download client on the instance); the Codex re-review of the last
+  fixture-tool fix; the user's acceptance and rulings on choices 7, 8 and 12; republishing is the user's decision.
+
+
