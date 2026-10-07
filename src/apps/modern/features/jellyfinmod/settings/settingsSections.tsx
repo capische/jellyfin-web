@@ -484,7 +484,7 @@ const BlockerRow: FC<{ code: string; fallback: string; detail?: string; onGo: (i
         <div className='jfmod-brow'>
             <div className='jfmod-brow-main'><strong>{blockerSentence(code)}</strong>{detail !== undefined && <span className='jfmod-sub'>{detail}</span>}</div>
             <span />
-            <Button size='small' onClick={fix}>Fix</Button>
+            <Button variant='text' size='small' onClick={fix}>Fix</Button>
         </div>
     );
 };
@@ -596,7 +596,7 @@ const MappingRow: FC<{ index: number; mapping: PathMapping; setMappings: (change
                 onChange={editLocal} />
             <div className='jfmod-mapfoot'>
                 <StatePill kind={mapping.verifiedAt ? 'ok' : 'warn'}>{mapping.verifiedAt ? 'verified' : pathSentence(mapping.verificationReason ?? 'path_unmapped')}</StatePill>
-                <Button size='small' onClick={remove}>Remove</Button>
+                <Button variant='text' size='small' className='jfmod-danger-text' onClick={remove}>Remove</Button>
             </div>
         </div>
     );
@@ -785,7 +785,7 @@ export const ClientSection: FC<SectionProps> = props => {
                         <MappingRow key={index} index={index} mapping={mapping} setMappings={setMappings} />
                     ))}
                     <div className='jfmod-inlineactions'>
-                        <Button size='small' onClick={addMapping}>Add mapping</Button>
+                        <Button variant='outlined' size='small' onClick={addMapping}>Add mapping</Button>
                         <Button size='small' variant='outlined' disabled={section.busy} onClick={saveMappings}>Save mappings</Button>
                     </div>
                     <div className='jfmod-testline'>
@@ -896,7 +896,7 @@ const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolea
                 <SecretField id='jfmodIndexerKey' label='API key' configured={!!indexer?.apiKeyConfigured} change={key} onChange={setKey} />
             </DialogContent>
             <DialogActions>
-                <Button onClick={cancel}>Cancel</Button>
+                <Button variant='text' onClick={cancel}>Cancel</Button>
                 <Button variant='contained' disabled={busy} onClick={save}>Save</Button>
             </DialogActions>
         </Dialog>
@@ -977,11 +977,11 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
             ]} draft={draft} onChange={set} />
             <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
             <div className='jfmod-inlineactions'>
-                <Button variant='outlined' size='small' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
-                {source && <Button size='small' disabled={section.busy} onClick={testSource}>Test</Button>}
-                {source && <Button size='small' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync now</Button>}
+                <Button variant='contained' size='small' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
+                {source && <Button variant='outlined' size='small' disabled={section.busy} onClick={testSource}>Test</Button>}
+                {source && <Button variant='outlined' size='small' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync now</Button>}
                 {source && (
-                    <Button size='small' className='jfmod-danger-text' disabled={section.busy} data-prowlarr='remove' onClick={remove}>Remove</Button>
+                    <Button variant='text' size='small' className='jfmod-danger-text' disabled={section.busy} data-prowlarr='remove' onClick={remove}>Remove</Button>
                 )}
             </div>
             {confirmDialog}
@@ -1032,9 +1032,9 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
                 {indexerWords(indexer)}
             </StatePill>
             <span className='jfmod-rowactions'>
-                <Button size='small' disabled={busy} onClick={testIndexer}>Test</Button>
-                <Button size='small' onClick={edit}>Edit</Button>
-                {indexer.managedBy !== 'prowlarr' && <Button size='small' className='jfmod-danger-text' data-indexer-remove={indexer.id} onClick={remove}>Remove</Button>}
+                <Button variant='text' size='small' disabled={busy} onClick={testIndexer}>Test</Button>
+                <Button variant='outlined' size='small' onClick={edit}>Edit</Button>
+                {indexer.managedBy !== 'prowlarr' && <Button variant='text' size='small' className='jfmod-danger-text' data-indexer-remove={indexer.id} onClick={remove}>Remove</Button>}
             </span>
         </div>
     );
@@ -1086,8 +1086,8 @@ const QualityRow: FC<{ id: string; index: number; chosen: string[]; set: (key: s
         <li className='jfmod-qrow'>
             <span className='jfmod-qrank'>{index + 1}</span><span className='jfmod-qname'>{id}</span>
             <span className='jfmod-rowactions'>
-                <Button size='small' disabled={index === 0} onClick={moveUp}>Up</Button>
-                <Button size='small' onClick={remove}>Remove</Button>
+                <Button variant='text' size='small' disabled={index === 0} onClick={moveUp}>Up</Button>
+                <Button variant='text' size='small' className='jfmod-danger-text' onClick={remove}>Remove</Button>
             </span>
         </li>
     );
@@ -1179,7 +1179,7 @@ const ProfileDialog: FC<{ api: Api; profile: any | null; qualities: { id: string
                 ]} draft={draft} onChange={set} />
             </DialogContent>
             <DialogActions>
-                <Button onClick={cancel}>Cancel</Button>
+                <Button variant='text' onClick={cancel}>Cancel</Button>
                 <Button variant='contained' disabled={busy} onClick={save}>Save</Button>
             </DialogActions>
         </Dialog>
@@ -1213,10 +1213,10 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
                 <span className='jfmod-sub'>{(profile.qualities as string[]).join(', ')}</span>
             </div>
             {profile.isDefault ? <span className='jfmod-chip jfmod-chip-primary'>Default</span> :
-                <Button size='small' disabled={busy || !canMakeDefault} onClick={makeDefault}>Make default</Button>}
+                <Button variant='text' size='small' disabled={busy || !canMakeDefault} onClick={makeDefault}>Make default</Button>}
             <span className='jfmod-rowactions'>
-                <Button size='small' onClick={edit}>Edit</Button>
-                <Button size='small' className='jfmod-danger-text' onClick={remove}>Remove</Button>
+                <Button variant='outlined' size='small' onClick={edit}>Edit</Button>
+                <Button variant='text' size='small' className='jfmod-danger-text' onClick={remove}>Remove</Button>
             </span>
         </div>
     );

@@ -1,6 +1,11 @@
 // The JellyfinMod settings stylesheet (P7.S8), lifted from the Dashboard page's Option B file
 // (plugin Configuration/configPage.html, `jfmod-settings-style`) with only the delivery changed (PHASE7 §5.1).
 // Every size is em, no flex/grid gap and no display: contents (UX §13 W11); state is never colour alone.
+//
+// Spacing between the children of a jfmod- row is child margins (no flex gap on old webOS). An MUI control resets its
+// own margin to 0 in an emotion class of the same weight as `.jfmod-row > *`, injected after this file, so every such
+// rule also names `.MuiButtonBase-root` / `.MuiFormControl-root`: one class more, so the margin applies to MUI and
+// legacy children alike (settings design fix, 2026-10-07).
 
 /* ---------- shared jfmod- vocabulary (S8 lifts this block unchanged) ---------- */
 .jfmod-settings { max-width: 100%; }
@@ -161,6 +166,10 @@
     margin-left: 2.55em;
     margin-top: 0;
 }
+
+/* Under an MUI switch the description lines up with the switch's label. The switch is drawn in px (58 px wide, pulled
+   11 px left by its label), so the offset is px too: an em offset drifted 7 px off in the TV's 125% and mobile's 90%. */
+.jfmod-switchfield .jfmod-checkdesc { margin-left: 47px; }
 .jfmod-refused .jfmod-checkdesc { color: var(--jf-palette-starIcon-main, #f2b01e); }
 
 .jfmod-kv {
@@ -220,33 +229,49 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    margin-top: 0.5em;
     margin-bottom: 1.4em;
 }
 
-.jfmod-inlineactions > * {
+.jfmod-inlineactions > *,
+.jfmod-inlineactions > .MuiButtonBase-root {
     margin-right: 0.6em;
     margin-top: 0.3em;
 }
 
+/* A Test button and what it does, below the field it tests. The negative top margin the Dashboard page used belonged to
+   the legacy inputContainer's own bottom margin; under an MUI field or the secret component it pulled the line into
+   the box above. */
 .jfmod-testline {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    margin: -0.6em 0 1.6em;
+    margin: 0.6em 0 1.6em;
 }
 
-.jfmod-testline > * {
+.jfmod-testline > *,
+.jfmod-testline > .MuiButtonBase-root,
+.jfmod-testline > .MuiFormControl-root {
     margin-right: 1em;
     margin-top: 0.4em;
 }
-.jfmod-testline .fieldDescription { margin-top: 0.4em; }
+.jfmod-testline > :last-child { margin-right: 0; }
+
+/* The import-path probe's field takes the room its label needs instead of MUI's narrow default. */
+.jfmod-testline > .MuiFormControl-root {
+    flex: 1 1 18em;
+    max-width: 32em;
+}
+.jfmod-testline .fieldDescription { min-width: 0; }
 
 .jfmod-rowactions {
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
 }
-.jfmod-rowactions > * { margin-left: 0.15em; }
+
+.jfmod-rowactions > *,
+.jfmod-rowactions > .MuiButtonBase-root { margin-left: 0.6em; }
 
 /* A refused control keeps its focus ring and its tab stop; only its look says "no". */
 .jfmod-settings [aria-disabled="true"] { cursor: not-allowed; }
@@ -287,6 +312,9 @@
     min-width: 0;
 }
 .jfmod-secret-pending .jfmod-secret-state { color: var(--jf-palette-starIcon-main, #f2b01e); }
+
+/* Replace and Clear (or Undo) sit apart inside the box, never glued together. */
+.jfmod-secret-row > .MuiButtonBase-root { margin-left: 0.6em; }
 
 .jfmod-lock {
     width: 0.75em;
@@ -332,7 +360,9 @@
     flex-wrap: wrap;
     margin-top: 0.4em;
 }
-.jfmod-mapfoot > * { margin-right: 1em; }
+
+.jfmod-mapfoot > *,
+.jfmod-mapfoot > .MuiButtonBase-root { margin-right: 1em; }
 
 .jfmod-maperr {
     grid-column: 1/-1;
@@ -385,7 +415,9 @@
     margin-bottom: 0;
     margin-right: 0.6em;
 }
-.jfmod-qadd > * { margin-top: 0.4em; }
+
+.jfmod-qadd > *,
+.jfmod-qadd > .MuiButtonBase-root { margin-top: 0.4em; }
 
 /* List rows: indexers, profiles, conflicts, orphans, decisions. */
 .jfmod-blist {
@@ -576,6 +608,18 @@
     margin-top: 0.2em;
 }
 
+/* The mod shell has no global link colour, so the browser's own blue and purple showed on the dark rail. The links take
+   the primary colour the Dashboard page's links have. */
+.jfmod-check-links a,
+.jfmod-lead a {
+    color: var(--jf-palette-primary-main, #00a4dc);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.jfmod-check-links a:hover,
+.jfmod-lead a:hover { text-decoration: underline; }
+
 .jfmod-check-picker {
     display: none;
     padding: 0 1.1em 0.8em;
@@ -592,6 +636,9 @@
     background: var(--jf-palette-background-paper, #202020);
     border-radius: 0.2em;
 }
+
+/* The wizard's Optional step stacks three sections; each stands on its own card. */
+.jfmod-wizardSection + .jfmod-wizardSection { margin-top: 1.2em; }
 
 .jfmod-check-sechead {
     padding: 1.1em 1.5em 1em;
@@ -623,7 +670,8 @@
     flex-wrap: wrap;
 }
 
-.jfmod-sec-actions > * {
+.jfmod-sec-actions > *,
+.jfmod-sec-actions > .MuiButtonBase-root {
     margin-left: 0.4em;
     margin-top: 0.2em;
 }
@@ -639,7 +687,8 @@
         margin-top: 0.6em;
     }
 
-    .jfmod-sec-actions > * {
+    .jfmod-sec-actions > *,
+    .jfmod-sec-actions > .MuiButtonBase-root {
         margin-left: 0;
         margin-right: 0.4em;
     }
@@ -655,7 +704,8 @@
     border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
 }
 
-.jfmod-check-secfoot > * {
+.jfmod-check-secfoot > *,
+.jfmod-check-secfoot > .MuiButtonBase-root {
     margin-right: 1em;
     margin-top: 0.2em;
 }
@@ -678,7 +728,13 @@
     padding: 0.4em 0;
 }
 
-@media (max-width: 48em) { .jfmod-next { margin-left: 0; } }
+/* Narrow: Next wraps under Save onto its own line, with room between the two. */
+@media (max-width: 48em) {
+    .jfmod-next {
+        margin-left: 0;
+        margin-top: 0.6em;
+    }
+}
 
 /* Sheet: the editor for one list item. Right side on desktop, full screen on mobile and TV. */
 
@@ -741,7 +797,8 @@
     border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
 }
 
-.jfmod-sheet-foot > * {
+.jfmod-sheet-foot > *,
+.jfmod-sheet-foot > .MuiButtonBase-root {
     margin-right: 0.6em;
     margin-top: 0.2em;
 }
@@ -835,3 +892,8 @@
     outline: 0.16em solid var(--jf-palette-primary-main, #00a4dc);
     outline-offset: 0.12em;
 }
+
+/* Two actions in one notice (the Home setup banner's Set up and Dismiss) sit apart. Last, as the most specific of the
+   row-spacing rules. */
+.jfmod-notice-action > * + *,
+.jfmod-notice-action > .MuiButtonBase-root + .MuiButtonBase-root { margin-left: 0.5em; }

@@ -12,7 +12,7 @@ import {
     type SectionProps
 } from './settingsSections';
 import { useSettingsData } from './SettingsPage';
-import { Notice, StatePill } from './settingsWidgets';
+import { Notice } from './settingsWidgets';
 
 import './settings.scss';
 
@@ -84,10 +84,11 @@ const WizardRail: FC<{
 const StepNotice: FC<{ state?: SetupStep; hasNext: boolean; onContinue: () => void }> = ({ state, hasNext, onContinue }) => {
     const done = state?.status === 'done';
     return (
-        <div className='jfmod-notice jfmod-notice-ok' role='status' data-wizard-state={state?.status}>
+        // The notice's own dot and edge carry the state, with the words beside them: a state pill inside it drew a second dot.
+        <div className={`jfmod-notice jfmod-notice-${done ? 'ok' : 'warn'}`} role='status' data-wizard-state={state?.status}>
             <i aria-hidden='true' />
             <span className='jfmod-notice-text'>
-                <StatePill kind={done ? 'ok' : 'warn'}>{done ? 'This step is done.' : 'This step is not done yet.'}</StatePill>
+                {done ? 'This step is done.' : 'This step is not done yet.'}
                 {!done && state?.reasons.length ? ' ' + state.reasons.map(blockerSentence).join(' ') : ''}
             </span>
             {hasNext && (
