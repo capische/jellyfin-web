@@ -1,12 +1,17 @@
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SecretChange } from './settingsApi';
@@ -32,7 +37,7 @@ export const Notice: FC<{ notice: NoticeState | null }> = ({ notice }) => {
             <span className='jfmod-notice-text'>{notice.text}</span>
             {notice.action && (
                 <span className='jfmod-notice-action'>
-                    <Button variant='text' size='small' onClick={notice.action.run}>{notice.action.label}</Button>
+                    <Button variant='contained' color='inherit' onClick={notice.action.run}>{notice.action.label}</Button>
                 </span>
             )}
         </div>
@@ -100,14 +105,33 @@ interface SecretFieldProps {
     configured: boolean;
     change: SecretChange;
     onChange: (change: SecretChange) => void;
+    /** A test of the saved secret, offered as the first icon in its box; its words and result sit under the box. */
+    test?: { id: string; label: string; run: () => void; disabled?: boolean; help: ReactNode; result: NoticeState | null };
 }
+
+/**
+ * An icon-only action in a secret's box (user, 2026-10-07): grey, or red for Clear, as the labelled buttons are. Its
+ * name is its aria-label and its tooltip; as upstream's list actions do, a disabled one carries no tooltip.
+ */
+const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick: () => void; action: string; testId?: string; children: ReactNode }> = ({
+    label, red, disabled, onClick, action, testId, children
+}) => {
+    const button = (
+        <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}`} aria-label={label} disabled={disabled}
+            onClick={onClick} data-secret-action={action} data-test={testId}
+        >
+            {children}
+        </IconButton>
+    );
+    return disabled ? button : <Tooltip title={label}>{button}</Tooltip>;
+};
 
 /**
  * A write-only secret (PHASE7 §5.1): "Configured" with Replace and Clear, a pending clear with Undo, and an
  * input only while a replacement is being typed. The page never receives, holds or logs a stored value.
  * Sections key it by their revision, so a save returns it to "Configured" instead of an empty "New …" input.
  */
-export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange }) => {
+export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange, test }) => {
     const [editing, setEditing] = useState(false);
     const undo = useCallback(() => onChange({ action: 'unchanged', value: null }), [onChange]);
     const type = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value ?
@@ -119,16 +143,23 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
     const replace = useCallback(() => setEditing(true), []);
     const clear = useCallback(() => onChange({ action: 'clear', value: null }), [onChange]);
     const replacing = editing || change.action === 'replace' || !configured;
-    // Replace and Undo sit on the secret's filled box, which in a dialog is a mid grey where the primary colour is hard to
-    // read: they take the box's own text colour, as on the Dashboard page. Clear stays red.
+    // The box holds icon-only actions, Test (when the secret has one), Replace and Clear, in that order (user, 2026-10-07);
+    // Undo, which takes back a pending clear, is an ordinary grey button the size of Save.
+    const below = test && (
+        <div className='jfmod-secret-below'>
+            <div className='fieldDescription'>{test.help}</div>
+            {test.result && <div data-secret-test-result=''><Notice notice={test.result} /></div>}
+        </div>
+    );
     if (change.action === 'clear') {
         return (
             <div className='jfmod-secret jfmod-secret-pending'>
                 <span className='jfmod-secret-label'>{label}</span>
                 <div className='jfmod-secret-row'>
                     <span className='jfmod-secret-state'>Will be removed on save</span>
-                    <Button variant='text' color='inherit' size='small' onClick={undo}>Undo</Button>
+                    <Button variant='contained' color='inherit' onClick={undo}>Undo</Button>
                 </div>
+                {below}
             </div>
         );
     }
@@ -146,10 +177,11 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                     onChange={type}
                 />
                 {configured && (
-                    <Button variant='text' size='small' onClick={keep}>
+                    <Button variant='contained' color='inherit' onClick={keep}>
                         Keep the saved one
                     </Button>
                 )}
+                {below}
             </div>
         );
     }
@@ -158,9 +190,13 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
             <span className='jfmod-secret-label'>{label}</span>
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
-                <Button variant='text' color='inherit' size='small' onClick={replace}>Replace</Button>
-                <Button variant='text' size='small' className='jfmod-danger-text' onClick={clear}>Clear</Button>
+                {test && (
+                    <SecretIcon label={test.label} disabled={test.disabled} onClick={test.run} action='test' testId={test.id}><NetworkCheckIcon /></SecretIcon>
+                )}
+                <SecretIcon label='Replace' onClick={replace} action='replace'><EditIcon /></SecretIcon>
+                <SecretIcon label='Clear' red onClick={clear} action='clear'><DeleteIcon /></SecretIcon>
             </div>
+            {below}
         </div>
     );
 };
@@ -297,8 +333,8 @@ export const useConfirm = (): [ReactNode, (pending: PendingConfirm) => void] => 
             <DialogContent><p className='jfmod-lead'>{pending.text}</p></DialogContent>
             <DialogActions>
                 {/* eslint-disable-next-line jsx-a11y/no-autofocus -- a destructive confirmation starts on Cancel (MUI's own idiom) */}
-                <Button variant='text' autoFocus onClick={close} data-jfmod-confirm='cancel'>Cancel</Button>
-                <Button variant='text' className='jfmod-danger-text' onClick={confirm} data-jfmod-confirm='confirm'>{pending.action}</Button>
+                <Button variant='contained' color='inherit' autoFocus onClick={close} data-jfmod-confirm='cancel'>Cancel</Button>
+                <Button variant='contained' color='error' onClick={confirm} data-jfmod-confirm='confirm'>{pending.action}</Button>
             </DialogActions>
         </Dialog>
     );

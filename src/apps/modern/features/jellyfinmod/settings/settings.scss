@@ -224,14 +224,48 @@
     min-width: 2.1em;
 }
 
-/* Red text for Clear and Remove. On the Dashboard page this needed !important to beat the emby-button colours; here it
-   sits on MUI buttons, whose emotion colour one more class beats. Without !important, a disabled button still greys
-   out and the TV's focused-button fill in a dialog (shell/dpadModals.scss) still turns its text white, instead of red
-   on cyan. */
-.jfmod-danger-text,
-.MuiButtonBase-root.jfmod-danger-text {
-    color: #c62828;
-    color: var(--jf-palette-error-main, #c62828);
+/* Three kinds of button, all the size of Save (user, 2026-10-07), drawn as the Dashboard draws its own: MUI's contained
+   Button at its default size. Red (`color='error'`) destroys something; blue (primary) commits, such as Save; grey
+   (`color='inherit'`, the theme's Button.inheritContainedBg, the fill of upstream's `.raised` Cancel) is everything
+   else. Bold, as the Dashboard home's Scan All Libraries / Restart / Shutdown are. Every rule names two classes, one
+   more than the emotion class it changes, and none uses !important, so a disabled button still greys out and the TV's
+   focus fill in a dialog (shell/dpadModals.scss) still applies. */
+.jfmod-settings .MuiButton-contained,
+.jfmod-settingsDialog .MuiButton-contained { font-weight: bold; }
+
+/* Grey takes the theme's primary text rather than whatever its parent's colour is (MUI's `inherit`), so it reads the same
+   in a row, a notice, the secret's box and a dialog: white on the dark theme's #424242 is 10:1, and 6:1 on its hover
+   fill #616161, where upstream's secondary text on `.raised` would fall under 4.5:1. */
+.jfmod-settings .MuiButton-containedInherit,
+.jfmod-settingsDialog .MuiButton-containedInherit {
+    color: #fff;
+    color: var(--jf-palette-text-primary, #fff);
+}
+
+/* Blue's text is dark in every shipped scheme: each primary is a light cyan, and the Apple TV scheme's computed white on it
+   is 2.9:1. On hover MUI darkens the fill to primary.dark, where dark text falls to about 3.9:1; primary.light keeps it
+   above 6:1. */
+.jfmod-settings .MuiButton-containedPrimary,
+.jfmod-settingsDialog .MuiButton-containedPrimary { color: rgba(0, 0, 0, 0.87); }
+
+/* Grey's hover lays the text colour over its own fill at 12% instead of taking the scheme's Button hover fill, which in
+   Purple Haze is a bright cyan under white text (1.5:1). In the Dark scheme that is #5a5a5a, near MUI's #616161. The
+   hover-capable media query is MUI's own, so a tap does not leave a button lit. */
+@media (hover: hover) {
+    .jfmod-settings .MuiButton-containedPrimary:hover,
+    .jfmod-settingsDialog .MuiButton-containedPrimary:hover {
+        background-color: #33b6e3;
+        background-color: var(--jf-palette-primary-light, #33b6e3);
+    }
+
+    .jfmod-settings .MuiButton-containedInherit:hover,
+    .jfmod-settingsDialog .MuiButton-containedInherit:hover,
+    .jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root:hover {
+        background-color: #424242;
+        background-color: var(--jf-palette-Button-inheritContainedBg, #424242);
+        background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
+        background-image: linear-gradient(rgba(var(--jf-palette-text-primaryChannel) / 0.12), rgba(var(--jf-palette-text-primaryChannel) / 0.12));
+    }
 }
 
 .jfmod-inlineactions {
@@ -244,7 +278,7 @@
 
 .jfmod-inlineactions > *,
 .jfmod-inlineactions > .MuiButtonBase-root {
-    margin-right: 0.6em;
+    margin-right: 0.86em;
     margin-top: 0.3em;
 }
 
@@ -280,7 +314,7 @@
 }
 
 .jfmod-rowactions > *,
-.jfmod-rowactions > .MuiButtonBase-root { margin-left: 0.6em; }
+.jfmod-rowactions > .MuiButtonBase-root { margin-left: 0.86em; }
 
 /* A refused control keeps its focus ring and its tab stop; only its look says "no". */
 .jfmod-settings [aria-disabled="true"] { cursor: not-allowed; }
@@ -325,8 +359,57 @@
 }
 .jfmod-secret-pending .jfmod-secret-state { color: var(--jf-palette-starIcon-main, #f2b01e); }
 
-/* Replace and Clear (or Undo) sit apart inside the box, never glued together. */
-.jfmod-secret-row > .MuiButtonBase-root { margin-left: 0.6em; }
+/* Undo sits apart from the words inside the box, never glued to them. */
+.jfmod-secret-row > .MuiButtonBase-root { margin-left: 0.86em; }
+
+/* Test, Replace and Clear are icon-only in the box (user, 2026-10-07): the one exception to "the size of Save". A round
+   target of at least 40 px (2.5em, held at 40 px where mobile's 90% root would shrink it), centred in the box, filled as
+   the labelled buttons are: grey, and red for Clear. Its own font size is the root's, so its em sizes do not follow
+   MUI's 1.5rem icon size. Three classes beat MUI's own disabled and hover rules, which carry two. */
+.jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root {
+    box-sizing: border-box;
+    width: 2.5em;
+    height: 2.5em;
+    min-width: 40px;
+    min-height: 40px;
+    margin-left: 0.6em;
+    padding: 0;
+    font-size: 1rem;
+}
+.jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root:first-of-type { margin-left: 0.86em; }
+.jfmod-secret-row .jfmod-iconbtn .MuiSvgIcon-root { font-size: 1.4em; }
+
+.jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root {
+    color: #fff;
+    color: var(--jf-palette-text-primary, #fff);
+    background-color: #424242;
+    background-color: var(--jf-palette-Button-inheritContainedBg, #424242);
+}
+
+.jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root {
+    color: #fff;
+    color: var(--jf-palette-error-contrastText, #fff);
+    background-color: #c62828;
+    background-color: var(--jf-palette-error-main, #c62828);
+}
+
+@media (hover: hover) {
+    .jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root:hover {
+        background-color: #8a1c1c;
+        background-color: var(--jf-palette-error-dark, #8a1c1c);
+    }
+}
+
+.jfmod-secret-row .jfmod-iconbtn.MuiIconButton-root.Mui-disabled {
+    color: rgba(255, 255, 255, 0.3);
+    color: var(--jf-palette-action-disabled, rgba(255, 255, 255, 0.3));
+    background-color: rgba(255, 255, 255, 0.12);
+    background-color: var(--jf-palette-action-disabledBackground, rgba(255, 255, 255, 0.12));
+}
+
+/* What a secret's test does and what it found, under the box. */
+.jfmod-secret-below { margin: 0.5em 0 1.4em; }
+.jfmod-secret-below .jfmod-notice { margin-top: 0.5em; }
 
 .jfmod-lock {
     width: 0.75em;
@@ -685,7 +768,7 @@
 
 .jfmod-sec-actions > *,
 .jfmod-sec-actions > .MuiButtonBase-root {
-    margin-left: 0.4em;
+    margin-left: 0.86em;
     margin-top: 0.2em;
 }
 
@@ -694,8 +777,13 @@
     min-width: 12em;
 }
 
+/* The heading keeps room before the section's own actions; on a narrow screen they take a line of their own, as a
+   full-size button beside the heading touched it. */
+.jfmod-check-sechead > div:first-child { margin-right: 1em; }
+
 @media (max-width: 48em) {
     .jfmod-sec-actions {
+        width: 100%;
         margin-left: 0;
         margin-top: 0.6em;
     }
@@ -703,7 +791,7 @@
     .jfmod-sec-actions > *,
     .jfmod-sec-actions > .MuiButtonBase-root {
         margin-left: 0;
-        margin-right: 0.4em;
+        margin-right: 0.86em;
     }
 }
 .jfmod-check-secbody { padding: 1.4em 1.5em 0.4em; }
@@ -812,7 +900,7 @@
 
 .jfmod-sheet-foot > *,
 .jfmod-sheet-foot > .MuiButtonBase-root {
-    margin-right: 0.6em;
+    margin-right: 0.86em;
     margin-top: 0.2em;
 }
 
@@ -909,4 +997,16 @@
 /* Two actions in one notice (the Home setup banner's Set up and Dismiss) sit apart. Last, as the most specific of the
    row-spacing rules. */
 .jfmod-notice-action > * + *,
-.jfmod-notice-action > .MuiButtonBase-root + .MuiButtonBase-root { margin-left: 0.5em; }
+.jfmod-notice-action > .MuiButtonBase-root + .MuiButtonBase-root { margin-left: 0.86em; }
+
+/* TV: a focused filled button keeps a ring in the text colour. On the page the primary-coloured ring above disappears
+   against a blue fill, and in a dialog the focus fill (shell/dpadModals.scss) is the blue a primary button already
+   has. */
+.layout-tv .jfmod-settings .MuiButton-contained:focus,
+.layout-tv .jfmod-settingsDialog .MuiButton-contained:focus,
+.layout-tv .jfmod-settings .jfmod-iconbtn:focus,
+.layout-tv .jfmod-settingsDialog .jfmod-iconbtn:focus {
+    outline: 0.16em solid #fff;
+    outline: 0.16em solid var(--jf-palette-text-primary, #fff);
+    outline-offset: 0.12em;
+}

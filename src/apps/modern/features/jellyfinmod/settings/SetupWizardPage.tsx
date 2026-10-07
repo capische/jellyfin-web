@@ -93,7 +93,7 @@ const StepNotice: FC<{ state?: SetupStep; hasNext: boolean; onContinue: () => vo
             </span>
             {hasNext && (
                 <span className='jfmod-notice-action'>
-                    <Button variant='contained' size='small' disabled={!done} data-wizard='continue'
+                    <Button variant='contained' disabled={!done} data-wizard='continue'
                         onClick={onContinue}
                     >
                         Continue
