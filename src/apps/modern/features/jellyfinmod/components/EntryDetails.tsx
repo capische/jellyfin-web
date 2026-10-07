@@ -1,18 +1,24 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import escapeHtml from 'escape-html';
-import React, { type FC, type MouseEvent, useCallback, useEffect, useState } from 'react';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import React, { type FC, type MouseEvent, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
-import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry, requestSearch } from '../api/modApi';
+import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
+import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
-import { AUTOMATION_CAPABILITY } from '../constants/queue';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker } from '../integration/releasePicker';
+import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { AcquisitionSummary } from '../types/acquisition';
+import { FileState } from '../types/entry';
 import { getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
@@ -44,6 +50,28 @@ interface EntryDetailsProps {
     focusOwnership?: FocusOwnership;
 }
 
+/**
+ * Where upstream's track block would be (design step 5): a mount placed just before the hidden `.trackSelections`, so the
+ * raised Get a release (or the queue line while a grab is in flight) sits under the header row like Video, Audio and
+ * Subtitles do on a page with a file.
+ */
+const useTrackBlockMount = (view: HTMLElement, enabled: boolean) => {
+    const [node, setNode] = useState<HTMLElement | null>(null);
+    useLayoutEffect(() => {
+        const tracks = view.querySelector('.trackSelections');
+        if (!enabled || !tracks?.parentNode) return;
+        const element = document.createElement('div');
+        element.className = 'jfmod-trackBlock';
+        tracks.parentNode.insertBefore(element, tracks);
+        setNode(element);
+        return () => {
+            element.remove();
+            setNode(null);
+        };
+    }, [view, enabled]);
+    return node;
+};
+
 /** Reuses the existing detail template's slots without constructing a synthetic native item. */
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
     const [entry, setEntry] = useState(detail.entry);
@@ -56,27 +84,17 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = capabilities.includes(RELEASES_CAPABILITY);
-    // Search now asks the next automation run to search this file-less title and resets its backoff (P6.M8).
-    const canSearchNow = capabilities.includes(AUTOMATION_CAPABILITY);
     const [busy, setBusy] = useState(false);
+    // A file-less movie is the page the 2026-10-07 design fix redraws: a header icon and a More menu in upstream's header
+    // row, and one raised Get a release where the track block would be. A file-less series keeps its rows.
+    const isMovie = entry.mediaType === 'movie';
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+    const releaseMount = useTrackBlockMount(view, isMovie);
     const mount = (selector: string, content: React.ReactNode) => {
         const node = view.querySelector(selector);
         return node ? createPortal(content, node) : null;
     };
     const poster = getTmdbImage(entry.posterPath);
-    // On the TV layout the stock detail page focuses its first action; this page mounts its actions itself, so it does
-    // the same once they exist (the release action appears when the capabilities arrive), unless focus is already set.
-    // On TV the page places focus on its first action, and moves it forward when a new first action arrives (Search
-    // releases comes with the capabilities), only while it owns focus: ownership began at viewshow and ends on any user
-    // input, and a focus target that was already valid is kept (see utils/focusOwnership).
-    useEffect(() => {
-        if (!layoutManager.tv || !focusOwnership) return;
-        const first = view.querySelector<HTMLElement>('.jfmod-entryActions a, .jfmod-entryActions button');
-        if (first && focusOwnership.mayFocus(first)) {
-            focusManager.focus(first);
-            focusOwnership.placed(first);
-        }
-    }, [view, canAcquire, canSearchNow, isAdmin, focusOwnership]);
     const mutate = useCallback(async (action: () => Promise<void>) => {
         setBusy(true);
         setMessage('');
@@ -101,12 +119,34 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             // The picker already showed the outcome; the page keeps its last good state.
         }
     }, [api, entry.id, signal]);
-    const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        void openReleasePicker({
+    const openPicker = useCallback((opener: HTMLElement) => {
+        openReleasePicker({
             api, entryId: entry.id, title: entry.title, mediaType: entry.mediaType, episodes,
-            episodeId: event.currentTarget.dataset.episodeId, onChanged: reload
-        });
+            episodeId: opener.dataset.episodeId, onChanged: reload
+        }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, entry.id, entry.mediaType, entry.title, episodes, reload]);
+    const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
+    // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
+    useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a release',
+        className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-entryMore'] });
+    useStockHeaderButton(view, { enabled: isAdmin && isMovie, icon: 'more_vert', title: 'More', className: 'jfmod-entryMore',
+        onClick: setMenuAnchor });
+    const closeMenu = useCallback(() => setMenuAnchor(null), []);
+    // Declared after the header buttons' hooks, so their inserts exist when this runs (Get a release leads on the TV).
+    // On the TV layout the stock detail page focuses its first action; this page mounts its actions itself, so it does
+    // the same once they exist (the release action appears when the capabilities arrive), unless focus is already set.
+    // On TV the page places focus on its first action, and moves it forward when a new first action arrives (Search
+    // releases comes with the capabilities), only while it owns focus: ownership began at viewshow and ends on any user
+    // input, and a focus target that was already valid is kept (see utils/focusOwnership).
+    useEffect(() => {
+        if (!layoutManager.tv || !focusOwnership) return;
+        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease, .mainDetailButtons .jfmod-entryMore, '
+            + '.jfmod-entryActions a, .jfmod-entryActions button, .jfmod-getReleaseRaised');
+        if (first && focusOwnership.mayFocus(first)) {
+            focusManager.focus(first);
+            focusOwnership.placed(first);
+        }
+    }, [view, canAcquire, isAdmin, focusOwnership, releaseMount]);
     // Busy controls stay focusable (aria-disabled) so D-pad focus is not lost mid-request (P3.T19).
     const toggleMonitoring = useCallback(() => {
         if (busy) return;
@@ -152,13 +192,6 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             if (!signal.aborted) setEpisodes(episodes.map(item => item.id === updated.id ? updated : item));
         });
     }, [api, busy, entry.id, episodes, mutate, signal]);
-    const searchNow = useCallback(() => {
-        if (busy) return;
-        return mutate(async () => {
-            await requestSearch(api, entry.id, undefined, { signal });
-            if (!signal.aborted) setMessage('Search requested. The next automation run searches this title.');
-        });
-    }, [api, busy, entry.id, mutate, signal]);
     const refresh = useCallback(() => {
         if (busy) return;
         return mutate(async () => {
@@ -172,6 +205,13 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             }
         });
     }, [api, busy, entry.id, mutate, signal]);
+    const monitorFromMenu = useCallback(() => {
+        void toggleMonitoring();
+    }, [toggleMonitoring]);
+    const removeFromMenu = useCallback(() => {
+        setMenuAnchor(null);
+        void remove();
+    }, [remove]);
     const availabilityLabel = (availability: EntryDetail['episodes'][number]['availability']) => {
         if (availability === 'onDisk') return 'On disk';
         if (availability === 'unaired') return 'Unaired';
@@ -184,7 +224,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemMiscInfo-secondary', entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}
-        {mount('.mainDetailButtons', <div className='jfmod-entryActions'>
+        {!isMovie && mount('.mainDetailButtons', <div className='jfmod-entryActions'>
             {entry.jellyfinItemId && <a className={raisedButtonClass('button-submit')}
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
                 Open in Jellyfin
@@ -194,8 +234,6 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 {entry.state === 'reclaimed' ? 'Get again' : 'Search releases'}
             </button>}
             {isAdmin && <>
-                {canSearchNow && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
-                    onClick={searchNow}>Search now</button>}
                 <button className={raisedButtonClass()} type='button' aria-busy={busy}
                     aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
                     {keepButtonLabel(busy, retention?.reason === 'kept')}
@@ -210,13 +248,31 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     onClick={refresh}>Refresh metadata</button>}
             </>}
         </div>)}
+        {isMovie && <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} className='jfmod-entryMenu'>
+            <MenuItem role='menuitemcheckbox' aria-checked={entry.monitored} aria-disabled={busy} onClick={monitorFromMenu}
+                data-jfmod-menu='monitor'>
+                <ListItemIcon><span className={'material-icons ' + (entry.monitored ? 'check_box' : 'check_box_outline_blank')}
+                    aria-hidden='true' /></ListItemIcon>
+                <ListItemText>Monitor</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={removeFromMenu} aria-disabled={busy} data-jfmod-menu='remove'>
+                <ListItemIcon><span className='material-icons delete' aria-hidden='true' /></ListItemIcon>
+                <ListItemText>Remove entry</ListItemText>
+            </MenuItem>
+        </Menu>}
+        {isMovie && releaseMount && createPortal(entry.state === FileState.Grabbed || entry.state === FileState.Downloading ?
+            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} /> :
+            canAcquire && <button className={raisedButtonClass('button-submit jfmod-getReleaseRaised')} type='button' onClick={searchReleases}>
+                <span className='material-icons cloud_download' aria-hidden='true' />
+                <span>Get a release</span>
+            </button>, releaseMount)}
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}
         {mount('.overview', entry.overview)}
         {mount('.itemDetailsGroup', <>
             <p role='status'>{message}</p>
-            <RetentionStatus retention={retention} />
+            {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
             <AcquisitionLine acquisition={acquisition} />
-            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />
+            {!isMovie && <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />}
             <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
                 <ol>{history.map(event => <li key={event.id}>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
