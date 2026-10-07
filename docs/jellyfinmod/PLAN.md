@@ -437,6 +437,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
   (see [`PHASE12.md`](PHASE12.md)).
+- Phase 13 — offline episode watches to Trakt: planned, not scheduled (requested 2026-10-07;
+  see [`PHASE13.md`](PHASE13.md)). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming
+  history observations. Implementation requires connection and single-writer design refinement.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
@@ -570,6 +573,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   hold more than one quality on purpose — for example a best-possible version for the living-room
   television and a compatible one for everything else — chosen on attributes a flat quality list
   cannot see. Its open questions 11–22 are listed there.
+- **Phase 13 — offline episode watches to Trakt.** Future, **not scheduled**; outline in
+  [PHASE13.md](PHASE13.md). Requested 2026-10-07 after recovering missing Peaky Blinders watches:
+  preserve original watch times, retry after internet returns, prevent duplicate plays, offer
+  explicit missing-watch catch-up and reconnect when authorization fails. Initial scope is watches
+  received by Jellyfin while Trakt is unreachable; fully disconnected client playback needs a
+  separate scope decision. The stock-plugin integration and export ownership are design gates.
 
 ---
 
