@@ -31,7 +31,8 @@ const signedIn = () => {
 const origin = new URL(required('JFMOD_P9_URL'));
 if (origin.port !== '18096') throw new Error('Runs only against the isolated instance (18096)');
 const KEY = readFileSync(required('JFMOD_P9_KEY_FILE'), 'utf8').trim();
-const STATE = JSON.parse(readFileSync(required('JFMOD_P9_STATE'), 'utf8'));
+const STATE_FILE = required('JFMOD_P9_STATE');
+const STATE = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const SHOTS = process.env.JFMOD_P9_SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
@@ -123,6 +124,43 @@ const api = (page, method, path, body) => page.evaluate(async request => {
         return { status: response.status, body: text };
     }
 }, { method, path, body });
+
+// ---- The ratings settings are this run's only while they are as p9-live.py's chain left them (web review round 5): every
+// save here is sent against the revision the run last wrote — a save by anyone else in between (the user's own key) is
+// refused with 409 and stops the run — and the revision each save produced is handed back to that chain. Test and the
+// refresh button go only while the revision is still the run's own. The plugin has no conditional Test or refresh, so a save
+// between that check and the click is not excluded (one round trip).
+class NotOurs extends Error {}
+const lastRevision = () => JSON.parse(readFileSync(STATE_FILE, 'utf8')).lastRevision;
+const noteRevision = revision => {
+    const state = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
+    state.lastRevision = revision;
+    writeFileSync(STATE_FILE, JSON.stringify(state), { mode: 0o600 });
+};
+const expectOwn = async page => {
+    const current = await api(page, 'GET', '/JellyfinMod/Settings/Ratings');
+    if (current.status !== 200 || current.body.revision !== lastRevision()) {
+        throw new NotOurs('the ratings settings are not as this run left them');
+    }
+};
+const saveRatings = async (page, change) => {
+    const saved = await api(page, 'PATCH', '/JellyfinMod/Settings/Ratings', { ...change, revision: lastRevision() });
+    if (saved.status !== 200) throw new NotOurs(`a ratings save was refused (${saved.status})`);
+    noteRevision(saved.body.revision);
+    return saved;
+};
+/** The settings area's own Save, held to the same chain: the request's revision is the run's, and the answer's is noted. */
+const holdSettingsSaves = async page => {
+    await page.route('**/JellyfinMod/Settings/Ratings', async route => {
+        if (route.request().method() !== 'PATCH') return route.continue();
+        const body = { ...route.request().postDataJSON(), revision: lastRevision() };
+        const response = await route.fetch({ postData: JSON.stringify(body) });
+        const answer = await response.json();
+        if (response.status() === 200) noteRevision(answer.revision);
+        else page.jfmodNotOurs = `a ratings save from the settings area was refused (${response.status()})`;
+        return route.fulfill({ response, json: answer });
+    });
+};
 
 const go = async (page, hash) => {
     await page.evaluate(target => {
@@ -216,6 +254,7 @@ async function desktop(browser) {
         stalled.push(route);
     });
     const refresh = page.locator('[data-jfmod-ratings-refresh]:visible').first();
+    await expectOwn(page);
     await refresh.click();
     await page.waitForTimeout(1500);
     const message = await page.locator('.jfmod-nativeEntryDetails [role="status"]').first().innerText().catch(() => '');
@@ -308,6 +347,7 @@ async function desktop(browser) {
     // Settings area: the Ratings section and Test.
     await go(page, '#/catalog/settings?section=ratings');
     await page.waitForSelector('section[data-section="ratings"]', { timeout: 20000 });
+    await expectOwn(page);
     await page.locator('[data-test="ratings"]').click();
     await page.waitForFunction(() => /MDBList accepted the key/.test(document.querySelector('section[data-section="ratings"]')?.textContent ?? ''), undefined,
         { timeout: 20000 }).catch(ignore);
@@ -316,6 +356,7 @@ async function desktop(browser) {
         && /MDBList accepted the key/.test(sectionText) && /test address/.test(sectionText) && /calls/.test(sectionText), sectionText.slice(0, 400));
     await shot(page, `${layout}-settings`);
     // Saving the section reaches the title pages of this browser at once, not after the cache's minute (web review P2 1).
+    await holdSettingsSaves(page);
     const saveEnabled = async on => {
         await go(page, '#/catalog/settings?section=ratings');
         await page.waitForSelector('section[data-section="ratings"]', { timeout: 20000 });
@@ -324,6 +365,7 @@ async function desktop(browser) {
         await page.locator('[data-submit="ratings"]').click();
         await page.waitForFunction(() => /Saved/.test(document.querySelector('section[data-section="ratings"]')?.textContent ?? ''), undefined,
             { timeout: 20000 }).catch(ignore);
+        if (page.jfmodNotOurs) throw new NotOurs(page.jfmodNotOurs);
         await go(page, `#/details?id=${STATE.hostItem}`);
         await page.waitForTimeout(1500);
         return chips(page);
@@ -371,8 +413,7 @@ async function desktop(browser) {
     // Ratings turned off by the administrator: the line is absent on the next visit, the page otherwise unchanged.
     const reopened = await open(browser, layout);
     const page2 = reopened.page;
-    const before = await api(page2, 'GET', '/JellyfinMod/Settings/Ratings');
-    await api(page2, 'PATCH', '/JellyfinMod/Settings/Ratings', { revision: before.body.revision, enabled: false });
+    await saveRatings(page2, { enabled: false });
     await reopened.context.close();
     const off = await open(browser, layout);
     const page3 = off.page;
@@ -381,8 +422,7 @@ async function desktop(browser) {
     const offChips = await chips(page3);
     const playVisible = await page3.locator('#itemDetailPage:not(.hide) .mainDetailButtons button:visible').count();
     record(layout, 'Ratings turned off: the line is absent and the page otherwise unchanged', offChips.length === 0 && playVisible > 0, { buttons: playVisible });
-    const now = await api(page3, 'GET', '/JellyfinMod/Settings/Ratings');
-    await api(page3, 'PATCH', '/JellyfinMod/Settings/Ratings', { revision: now.body.revision, enabled: true });
+    await saveRatings(page3, { enabled: true });
     record(layout, 'No page errors', page3.jfmodErrors.length === 0, page3.jfmodErrors);
     await off.context.close();
 
@@ -731,11 +771,15 @@ const version = browser.version();
 // JFMOD_P9_ONLY (a comma list of desktop, mobile, tv1080, tv720) runs only those layouts while iterating; acceptance runs all.
 const only = (process.env.JFMOD_P9_ONLY ?? '').split(',').filter(Boolean);
 const wanted = layout => !only.length || only.includes(layout);
+let stopped = null;
 try {
     if (wanted('desktop')) await desktop(browser);
     if (wanted('mobile')) await mobile(browser);
     if (wanted('tv1080')) await tv(browser, 'tv1080');
     if (wanted('tv720')) await tv(browser, 'tv720');
+} catch (error) {
+    if (!(error instanceof NotOurs)) throw error;
+    stopped = error.message;
 } finally {
     await browser.close().catch(ignore);
     const { prefs } = await prefsSnapshot(session);
@@ -748,6 +792,10 @@ try {
     record('all', 'oleksii\'s ratings display preferences are exactly as they were before the run', JSON.stringify(after) === JSON.stringify(prefsBefore),
         { keysBefore: Object.keys(prefsBefore), keysAfter: Object.keys(after) });
     await server('POST', '/Sessions/Logout', undefined, session.token).catch(ignore);
+}
+if (stopped) {
+    record('all', 'STOPPED: the ratings settings are not as this run left them (someone else saved; perhaps the user\'s own key). Nothing '
+        + 'tested, refreshed or saved over it. Report this; do not continue the run', false, stopped);
 }
 record('all', `None of the ${responses.length} JellyfinMod responses the browser received carries the key`, responses.every(body => !body.includes(KEY)));
 const failed = results.filter(result => result.verdict !== 'PASS');
