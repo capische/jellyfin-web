@@ -119,13 +119,15 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
     const replace = useCallback(() => setEditing(true), []);
     const clear = useCallback(() => onChange({ action: 'clear', value: null }), [onChange]);
     const replacing = editing || change.action === 'replace' || !configured;
+    // Replace and Undo sit on the secret's filled box, which in a dialog is a mid grey where the primary colour is hard to
+    // read: they take the box's own text colour, as on the Dashboard page. Clear stays red.
     if (change.action === 'clear') {
         return (
             <div className='jfmod-secret jfmod-secret-pending'>
                 <span className='jfmod-secret-label'>{label}</span>
                 <div className='jfmod-secret-row'>
                     <span className='jfmod-secret-state'>Will be removed on save</span>
-                    <Button variant='text' size='small' onClick={undo}>Undo</Button>
+                    <Button variant='text' color='inherit' size='small' onClick={undo}>Undo</Button>
                 </div>
             </div>
         );
@@ -156,7 +158,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
             <span className='jfmod-secret-label'>{label}</span>
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
-                <Button variant='text' size='small' onClick={replace}>Replace</Button>
+                <Button variant='text' color='inherit' size='small' onClick={replace}>Replace</Button>
                 <Button variant='text' size='small' className='jfmod-danger-text' onClick={clear}>Clear</Button>
             </div>
         </div>
