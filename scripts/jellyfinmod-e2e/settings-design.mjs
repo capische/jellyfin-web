@@ -374,7 +374,8 @@ const dashboardSection = page => page.evaluate(() => {
         return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
             width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), refused: el.getAttribute('aria-disabled') === 'true',
             marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement, bg: bg.map(Math.round),
-            ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1 };
+            // A ring is an outline, or a solid shadow spread of at least 1 px (upstream's emby-button forbids outlines).
+            ring: (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1) || (!/inset/.test(s.boxShadow) && parseFloat((s.boxShadow.match(/(\d+(?:\.\d+)?)px\s*$/) ?? [])[1] ?? '0') >= 1) };
     });
     return { id: section.dataset.section, saveHeight, buttons };
 });
