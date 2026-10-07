@@ -295,7 +295,11 @@ const checkStates = async (page, layout, name, where, state, rootSelector = '.jf
         const result = await audit(page, rootSelector);
         await target.evaluate(el => { delete el.dataset.jfmodMark; });
         const entry = result.buttons.find(button => button.marked);
-        if (!entry || !ok) continue;
+        // A button that would not take the state, or could not be read in it, fails rather than being skipped.
+        if (!entry || !ok) {
+            failures.push({ index: i, reason: !ok ? `did not take ${state}` : 'not read' });
+            continue;
+        }
         measured++;
         const ratio = contrast(entry.paintedFg, entry.paintedBg);
         const ring = state !== 'focus' || (entry.outline && entry.outline.style !== 'none' && entry.outline.width >= 1);
@@ -369,7 +373,7 @@ const dashboardSection = page => page.evaluate(() => {
         else if (el.classList.contains('raised') || el.classList.contains('jfmod-iconbtn-grey')) kind = 'grey';
         return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
             width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), refused: el.getAttribute('aria-disabled') === 'true',
-            marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement,
+            marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement, bg: bg.map(Math.round),
             ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1 };
     });
     return { id: section.dataset.section, saveHeight, buttons };
@@ -404,16 +408,21 @@ const checkDashboardStates = async (page, layout, name, where, state) => {
         const target = buttons.nth(i);
         if (!await target.isVisible().catch(() => false)) continue;
         if (await target.getAttribute('aria-disabled') === 'true') continue;
+        await target.evaluate(el => { el.dataset.jfmodMark = '1'; });
+        const rest = (await dashboardSection(page))?.buttons.find(button => button.marked);
         if (state === 'hover') await target.hover();
         else await target.focus();
         await page.waitForTimeout(state === 'hover' ? 350 : 500);
-        await target.evaluate(el => { el.dataset.jfmodMark = '1'; });
         const entry = (await dashboardSection(page))?.buttons.find(button => button.marked);
         await target.evaluate(el => { delete el.dataset.jfmodMark; });
-        if (!entry) continue;
+        if (!entry || (state === 'focus' && !entry.focused)) {
+            failures.push({ index: i, reason: entry ? 'did not take focus' : 'not read' });
+            continue;
+        }
         measured++;
-        // A focused control on the TV must show where it is: a ring, or the cyan focus fill upstream's .raised uses.
         if (entry.contrast < 4.5) failures.push({ text: entry.text, ratio: Number(entry.contrast.toFixed(2)) });
+        // A focused control must show where it is: a ring, or a fill other than its resting one (upstream's .raised focus).
+        if (state === 'focus' && !entry.ring && JSON.stringify(entry.bg) === JSON.stringify(rest?.bg)) failures.push({ text: entry.text, reason: 'no visible focus' });
     }
     if (state === 'hover') await page.mouse.move(1, layout.viewport.height - 1);
     else await page.evaluate(() => document.activeElement?.blur?.());
