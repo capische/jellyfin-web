@@ -1,12 +1,14 @@
 # Phase 9 — ratings and title enrichment
 
-**Future phase. Not scheduled. No entry gate is met.** Outline written 2026-09-21 so the request
-and its feasibility are recorded; it becomes a full refinement (in the style of PHASE5–7) when it
-starts. Read [PLAN.md](PLAN.md), [README.md](README.md) §4–§5, [UX.md](UX.md) §3, §4, §7 and §12,
-[PHASE4.md](PHASE4.md) (secret store, user decision 3), [PHASE7.md](PHASE7.md) §5 and §7.1 and
-[API.md](API.md) alongside it. Everything here is **Proposed, not user-approved** except the two
-numbered decisions below; nothing authorizes a deployment, a third-party account or a change to
-the isolated instance.
+**Started 2026-10-07 on the user's explicit decision** (PLAN.md: Phases 8 and 9 are picked up only on an explicit later
+decision; the user asked on 2026-10-07 to start Phase 9 now). Status: **built (not accepted)** until the Codex review
+and the user's own checks pass; see *Status and handover* at the end. The outline below (2026-09-21) is kept as written;
+the **task-level plan** that turns it into work follows it, written by the implementing agent (Opus 5.5, high) on
+2026-10-07. Read [PLAN.md](PLAN.md), [README.md](README.md) §4–§5, [UX.md](UX.md) §3, §4, §7, §12 and §13,
+[PHASE4.md](PHASE4.md) (secret store, user decision 3), [PHASE7.md](PHASE7.md) §3.2, §5, §7.1 and S8, and
+[API.md](API.md#ratings-phase-9) alongside it. The two numbered decisions of 2026-09-21 and the answers to open
+questions 2–4 of 2026-10-07 are the user's; open question 1 (the MDBList key) is still open. Nothing here authorizes a
+third-party account, a key request or a production change.
 
 The user asked for these ratings on a title: IMDb, TMDB, Trakt, Google, and Rotten Tomatoes with
 **both** the critic and the audience score.
@@ -157,7 +159,11 @@ Commit scopes would be `docs(ratings,p9.r1)`, `feat(ratings,p9.r2-5)`, `feat(rat
   fixture removed at the end (PHASE7 decision 6).
 - The leak check covers every ratings response and the log for the MDBList key.
 
-## Entry gates (none met)
+## Entry gates (state on 2026-10-07)
+
+Gate 1 is met (S8 accepted through S11); gate 2 is **not** met (no key) and the work proceeds against boundary servers by
+the user's instruction of 2026-10-07; gate 3 is met by the R1 spike below.
+
 
 1. Phase 7 S8 is accepted, so the ratings settings section and the per-user source preference
    have a home; until then R2 may land on the Dashboard plugin page without a second contract.
@@ -179,6 +185,9 @@ Commit scopes would be `docs(ratings,p9.r1)`, `feat(ratings,p9.r2-5)`, `feat(rat
 
 ## Open questions for the user
 
+**2026-10-07:** questions 2–4 are answered — the user accepted the proposed defaults (see *Accepted user decisions —
+2026-10-07* in the plan below). Question 1 (the key) is still open.
+
 1. **The key.** Who creates the free MDBList account and supplies the key, and is the free tier
    (1,000 requests per day) enough for the catalog's size and refresh cadence, or is a paid tier
    wanted? The key goes into the plugin's `0600` secret store, write-only. Consumed by gate 2, R2
@@ -191,3 +200,223 @@ Commit scopes would be `docs(ratings,p9.r1)`, `feat(ratings,p9.r2-5)`, `feat(rat
    off. Consumed by R2 and R6.
 4. **Acquisition.** May ratings ever influence release scoring or automation (proposed default:
    **no**, display only)? Consumed by R5 and, if yes, Phase 12's rule model.
+
+---
+
+# Task-level plan (2026-10-07)
+
+Written by the implementing agent (Opus 5.5, high) before implementation. Branches: plugin `jellyfinmod-phase9` from
+`master` `abeffb7`, web `jellyfinmod-phase9` from `jellyfin-mod` `95709dc6ca`. The plugin version stays **0.1.0.0**.
+
+## Accepted user decisions — 2026-10-07 (open questions 2–4)
+
+The user confirmed the proposed defaults on 2026-10-07: *"Proposed defaults for questions 2–4 are fine"*.
+
+5. **Refresh** (open question 2): every **14 days** per title, **newest titles first**, within the daily budget. An
+   administrator can **refresh one title by hand** from its detail page, inside the same budget
+   (`refreshDays`; `POST /Entries/{id}/Ratings/Refresh`).
+6. **Default sources and order** (open question 3): **IMDb, Rotten Tomatoes critics, Rotten Tomatoes audience, TMDB,
+   Trakt**; Metacritic, Metacritic users, Letterboxd and Roger Ebert available but off (`defaultSources`, initialising
+   each user's own choice).
+7. **Display only** (open question 4): ratings never influence release scoring, automation or retention; no code path
+   outside the ratings projection reads `TitleRatings`.
+
+**Still open — question 1, the key.** No MDBList key has been supplied. Everything is built and accepted against a real
+HTTP boundary MDBList server; the single live call — the administrator's **Test** button with the user's own key — is
+left for the user. The budget default is **500** of the free tier's 1,000 a day (`dailyBudget`), a setting.
+
+## Decisions taken in this plan (agent, from the R1 spike; reviewable)
+
+1. **MDBList call shape.** `GET {base}/tmdb/{movie|show}/{tmdbId}?apikey=<key>` with `Accept: application/json`; the
+   key is a query parameter, as MDBList's published clients send it. Response fields read: `ratings[]` with
+   `source`, `value`, `score`, `votes`, `url`; `ids.tmdb` checked against the requested id when present. Rate-limit
+   headers `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (Unix seconds) and `Retry-After` are read
+   on 429. The shape comes from MDBList's public clients and documentation (R1 evidence) and is **still to be confirmed
+   with the user's key** through the Test button; the boundary server serves exactly this shape.
+2. **Source map.** MDBList `imdb`→`imdb` (ten), `tmdb`→`tmdb` (percent above 10, else ten), `trakt`→`trakt`
+   (percent), `tomatoes`→`tomatoes_critic` (percent), `popcorn` (and `audience`)→`tomatoes_audience` (percent),
+   `metacritic`→`metacritic` (percent), `metacriticuser`→`metacritic_user` (ten), `letterboxd`→`letterboxd` (five),
+   `rogerebert`→`rogerebert` (**four**: Roger Ebert's stars are out of four). Any other name is stored raw
+   (lower-case, `[a-z0-9_]`, at most 32) with scale `unknown` and is never exposed. A value outside its scale, a null
+   value, and a zero with no votes are treated as absent. **Deviation:** the outline's scale set gains `four`.
+3. **Host fallback is what the host actually stores (gate 3).** Jellyfin 12's OMDb provider writes `CriticRating`
+   (Rotten Tomatoes critics) and `CommunityRating` (IMDb) and **no vote count** (`VoteCount` is commented out in
+   `OmdbProvider.cs` at `v12.0`); its address is hard-coded (`https://www.omdbapi.com`), so the host cannot be pointed
+   at a boundary. The first remote provider in a library's fetcher order wins `CommunityRating`
+   (`MetadataService.MergeBaseItemData`, `replaceData` false). On the isolated instance both libraries run
+   **TheMovieDb before The Open Movie Database**, so the native `CommunityRating` is **TMDb's** value (three decimals,
+   for example 8.082), not IMDb's. The fallback therefore reads, for a title's bound native item:
+   `CriticRating` → `tomatoes_critic` / `host_omdb` when OMDb is an enabled fetcher for that item type;
+   `CommunityRating` → `imdb` / `host_omdb` when OMDb is enabled and ordered before TheMovieDb, else `tmdb` /
+   **`host_tmdb`** when TheMovieDb is enabled. **Deviation:** the provider set gains `host_tmdb`. A local NFO can also
+   set these fields and is indistinguishable; that limit is stated in the tooltip ("from this server's metadata").
+4. **TMDB first-party value.** The entry's own TMDB snapshot (`MetadataJson.communityRating`) wins for `tmdb`; the
+   snapshot now also stores `voteCount` (parsed from the same TMDB response from now on; older snapshots have none).
+   Entries created by native backfill have no TMDB score in their snapshot, so for them `tmdb` comes from MDBList, then
+   from the host. No new TMDB call is made for ratings.
+5. **Precedence per source.** `tmdb`: snapshot (`tmdb`) > `mdblist` > `host_tmdb`; `imdb`, `tomatoes_critic`:
+   `mdblist` > `host_omdb`; all others: `mdblist` only. One value per source in every response.
+6. **Where the boundary is set on an instance.** A hidden XML field `RatingsProviderBaseUrl` (not on any page, like
+   `RetentionTestWindowMinutes`), honoured only for an absolute `http(s)` URL without credentials, query or fragment;
+   empty means `https://api.mdblist.com`. Integration hosts use a DI `RatingsEndpoint`. Administrators can already
+   install code on a Jellyfin server, so this adds no new trust; the settings DTO reports `providerOverride: true`
+   whenever it is set so it is never silently left on.
+7. **The key in the URL.** MDBList takes the key as a query parameter, so the plugin never logs a request URL, and
+   relies on .NET 10's `IHttpClientFactory` logging, which redacts URI query strings; the integration suite captures
+   every log line at Debug (the factory's own request logs included) and leak-checks it, and R8 checks the host log.
+8. **Per-user preferences live in Jellyfin's per-user display preferences** (upstream `userSettings`, server-side
+   `CustomPrefs`, keys `jfmodRatingsSources` and `jfmodRatingsCardSource`), edited on a new **mod route
+   `catalog/preferences`** ("Ratings display"). **Deviation from UX §12's "the fork's display preferences":** that page is
+   upstream's legacy `mypreferencesdisplay`; editing it would add an upstream patch row. The route is reached from the user
+   menu (one more item in the already-patched `AppUserMenu.tsx`, the existing permanent §3.2 row) and, on the TV, from a
+   link under Home beside the administrator's settings link (mod-owned `TvSettingsLink`).
+9. **Placement on the detail page.** Entry (file-less) page: the line renders beside the TMDB star in
+   `.itemMiscInfo-secondary`, which the mod already fills, in the same paint as the rest of the entry. Native page: the
+   answer arrives after the page is focused, so the line leads `.detailSectionContent` (above the Trakt line), below the
+   button row a TV's focus starts on — UX §13 rule 2, nothing arrives above the focus ring. **Deviation** from "beside the
+   stock star rating" on native pages only; the stock star stays where it is.
+10. **Cards (R7) apply to the combined browse grid** (`POST /Browse` rows with an entry), which every Movies/TV grid
+    with file-less entries or a File filter uses. Upstream's native-only grid (a library with no file-less entries),
+    Home rows and search results are unchanged. `GET /Entries` does not gain the card value (no surface reads it).
+11. **Settings home.** The ratings section is added to the S8 settings area (React); the Dashboard `configPage.html` is
+    not extended (S8 superseded it; entry gate 1 is met by S8/S11's acceptance).
+
+## Tasks
+
+### R1 — spikes, DTOs and API.md (docs)
+
+- MDBList call shape from public documentation and clients; OMDb and merge behaviour from Jellyfin `v12.0` source; the
+  isolated instance's fetcher order and native rating fields read through `GET /Library/VirtualFolders` and
+  `GET /Users/{id}/Items` (read-only); the TMDB snapshot's `communityRating` across the instance's entries.
+- Record a dated *R1 evidence* section here and an API.md *Ratings (Phase 9)* section.
+- Done when: both are written and the decisions above cite them.
+
+### R2 — data model, settings, secret, Test
+
+- Migration `PhaseNineRatings`: `RatingsSettings` (singleton: `Enabled` default true, `ApiKeyRef`, `RefreshDays` 14,
+  `DailyBudget` 500, `DefaultSources` JSON, `Revision`, `VerifiedRevision`, `VerifiedAt`), `RatingsProviderStates`
+  (singleton runtime: `Blocker`, `BreakerUntil`, `BreakerReason`, `ConsecutiveFailures`, `BudgetDay`, `BudgetUsed`,
+  last-run counters), `TitleRatings` (`EntryId` FK cascade, `Source`, `Provider`, `Value`, `Scale`, `Votes?`,
+  `FetchedAt`, `Url?`; unique on `EntryId, Source, Provider`), `RatingsFetches` (one row per entry: `EntryId` FK
+  cascade unique, `AttemptedAt`, `Outcome`, `RetryAfter?`, `Error?` bounded to 200 characters, `Manual`).
+- `GET/PATCH /JellyfinMod/Settings/Ratings` (administrator; revisioned under `SettingsMutationGate`; `apiKey` is a
+  `SecretChangeRequest`; unknown fields 400; history `settings_changed` with area `ratings`), `POST
+  /Settings/Ratings/Test` (one call for TMDB movie 278; codes `ok`, `not_configured`, `unauthorized`, `rate_limited`,
+  `unreachable`, `timeout`, `malformed`, `not_found`; `ok` lists the sources returned). Replacing the key clears an
+  `unauthorized` blocker. `GET /JellyfinMod/Ratings/Defaults` (any signed-in user): `{enabled, defaultSources,
+  refreshDays}` so the web can initialise a user's preference.
+- Health capabilities `ratings`, `ratings.cards`, `settings.ratings`.
+- Acceptance: migration on a copy of the isolated database (rows kept, integrity ok); save → read → restart → read;
+  the key never in a response, a log line or history; ordinary user 403, anonymous 401.
+
+### R3 — fetcher, budget, breaker, daily task, manual refresh
+
+- `MdbListClient` (named client `NamedClient.Default`, 15 s timeout, never logs a URL), `RatingsRefreshRunner` under a
+  process-wide gate, `RatingsRefreshTask` (`JellyfinModRatingsRefresh`, daily at 04:00), `RatingsRefreshQueue` (hosted
+  reader for manual refreshes).
+- Due rule: never attempted (newest `AddedAt` first), then stored ratings older than `RefreshDays` (oldest first), then a
+  failed attempt older than one day. A claim row (`Outcome = pending`) and the budget increment commit **before** the
+  call; a pending claim older than ten minutes counts as a failed attempt (a killed run never fetches the same entry
+  again that day). Minimum interval between calls 1 s (integration hosts shorten it).
+- Failures: 401/403 → blocker `unauthorized`, all fetching stops until the key is replaced or Test passes; 429 →
+  breaker until the later of `Retry-After`/`X-RateLimit-Reset` and the next UTC day; 5xx, timeout, unreachable and
+  malformed → after five in a row a one-hour breaker; 404 → `not_found`, retried after `RefreshDays`. Malformed bodies
+  change no rating. A successful fetch replaces that entry's `mdblist` rows with what arrived (a partial answer stores
+  only what arrived; an earlier source missing now is removed).
+- `POST /Entries/{id}/Ratings/Refresh` (administrator): 202 queued; 409 `ratings_disabled`, `not_configured`,
+  `unauthorized`, `breaker_open`, `budget_spent`; 404 for an entry the administrator cannot see. `GET /Ratings/Status`
+  (administrator).
+- Acceptance: the boundary server counts one call per entry per window; 401, 429 with `Retry-After`, 5xx, timeout and
+  malformed behave as above; a killed run leaves no duplicate fetch.
+
+### R4 — first-party TMDB and host fallback
+
+- `TmdbClient` parses `vote_count` into the snapshot (`voteCount`). `HostRatingsReader` reads the bound native item and
+  its library's type options per decision 3; read-only, no write to the host.
+- Acceptance: a file-less entry shows TMDB only; an on-disk title with host data shows `tomatoes_critic` as `host_omdb`
+  (and `tmdb` as `host_tmdb` on this instance's fetcher order) while MDBList is unconfigured, and MDBList values replace
+  them once configured.
+
+### R5 — API projection and access
+
+- `GET /Entries/{id}` gains `ratings[]`; `GET /JellyfinMod/Ratings/Items/{itemId}` (any signed-in user; 404 for an item
+  the user cannot see, the host's own check; movie and series only) for native detail pages, with or without an entry;
+  `POST /Browse` takes `ratingSource` (a known source) and each row gains `rating` (one value or null) only then.
+  `ratings` is empty while ratings are disabled. Ordinary users never see provider errors, budgets or breakers.
+- Acceptance: real HTTP as administrator, ordinary user, a user without access to the library, and anonymous.
+
+### R6 — web: detail line, per-user sources, tooltips, degradation
+
+- `RatingsLine` (chips: short source name, value in its own scale, votes when present; `title`/`aria-label` "via
+  MDBList, as of …" / "via TMDB" / "from this server's metadata"; the date shown in the chip when stale; not focusable
+  on TV, focusable for its tooltip elsewhere), `NativeRatingsLine` (own mount, gated on `ratings`), admin **Refresh
+  ratings** button on both pages, `catalog/preferences` page (sources on/off and order, card source; D-pad operable).
+- Acceptance: built browser, desktop, mobile, TV 1920×1080 and 1280×720 by D-pad; a plugin without `ratings` hides the
+  line and the menu item.
+
+### R7 — web: one rating on cards
+
+- The Browse request carries `ratingSource` only when the user chose a card source and the plugin lists
+  `ratings.cards`; `EntryCard` appends the value to the secondary text line (or adds one secondary line when the card
+  shows none). No corner badge, no new focus stop.
+- Acceptance: cards unchanged with the preference off (no `ratingSource` sent, no rating rendered); one source with it on.
+
+### R8 — isolated acceptance
+
+- Plugin suite `tests/PhaseNineRatingsIntegration` (real Kestrel, auth, MVC serialization, EF migrations, SQLite and a
+  real HTTP MDBList boundary server) plus every existing suite.
+- Live on `jellyfinmod-test` (18096): a Node MDBList boundary on the Docker network gateway, set through
+  `RatingsProviderBaseUrl`; one disposable file-less entry and one disposable on-disk title with an NFO carrying
+  `<rating>`/`<criticrating>` in a disposable library; budgets, breaker, restart, leak check of every ratings response
+  and the container log; browser runner `scripts/jellyfinmod-e2e/p9-ratings.mjs` on Playwright Chromium and real
+  Google Chrome in every layout. Every fixture removed (library through `DELETE /Library/VirtualFolders`, entries,
+  ratings rows, the override and the key) and proven with `GET /UserViews`.
+
+---
+
+## R1 evidence — 2026-10-07
+
+Opus 5.5, high. Read-only on the isolated instance (18096, plugin `11f0a67`-era build at the time); no third-party call.
+
+**MDBList (from public sources; still to be confirmed with the user's key).** `api.mdblist.com/docs` and the Apiary
+documentation did not render for the fetch tool (an empty page and a 502), so the shape was taken from two maintained
+public clients and is recorded as such: the Go client `luckylittle/mdblist-cli` (`internal/client/mdblist.go`,
+`types.go`) and the Jellyfin plugin `Druidblack/Jellyfin.Plugin.MDBList_Ratings` (`Ratings/MdbListClient.cs`,
+`Models/MdbListModels.cs`, `RatingsUpdater.cs`). Both agree:
+
+- Base `https://api.mdblist.com`; the key is the query parameter `apikey` on every call.
+- Title lookup `GET /{provider}/{mediatype}/{id}` with provider `tmdb`, `imdb`, `trakt` or `tvdb` and media type `movie`
+  or `show`; a batch form `POST /{provider}/{mediatype}` with `{"ids":[…]}` exists (not used: one call per title keeps
+  claims and budgets per entry exact). `GET /user` reports `api_requests` and `api_requests_count`.
+- Response: `title`, `year`, `type`, `ids` (`imdb`, `tmdb`, `trakt`, `tvdb`, `mal`), `score`, `score_average` and
+  `ratings[]`, each `{source, value, score, votes, url}`; `value` is the provider's own number (a number, sometimes a
+  string, sometimes null), `score` MDBList's 0–100 normalisation, `votes` an integer or null.
+- Source names: `imdb`, `tmdb`, `trakt`, `tomatoes` (Rotten Tomatoes critics), `popcorn` (Rotten Tomatoes audience;
+  the outline's "`audience`" is accepted as an alias), `metacritic`, `metacriticuser`, `letterboxd`, `rogerebert`,
+  `myanimelist`.
+- Rate limiting: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (Unix seconds) on responses and 429
+  when the quota is spent. The second client removes `IHttpClientFactory`'s request loggers because the key travels in
+  the URL; this plan relies on .NET 10's query redaction instead and proves it in the suite (decision 7).
+- **Unconfirmed until a real call:** the exact status and body MDBList returns for a bad key (401/403, or a 200 with an
+  `error` field — both are handled as `unauthorized` when the body names the key) and for an unknown title (404, or a
+  200 without `ratings` — handled as `not_found` and `malformed` respectively), and whether `tmdb`'s `value` is on a
+  ten or a hundred scale (both are accepted, decision 2). The Test button reports which code the real service gave.
+
+**OMDb and the host's merge (Jellyfin `v12.0` source, `MediaBrowser.Providers`).** `Plugins/Omdb/OmdbProvider.cs`:
+`item.CriticRating = GetRottenTomatoScore()`, `item.CommunityRating = imdbRating`, and `// item.VoteCount = voteCount;`
+— no vote count survives; the URL is the constant `https://www.omdbapi.com?apikey=…`, so the host cannot be pointed at
+a boundary (the outline's NFO alternative applies in R8). `Plugins/Tmdb/Movies/TmdbMovieProvider.cs` and
+`TV/TmdbSeriesProvider.cs` set `CommunityRating = VoteAverage` and never `CriticRating`. `Manager/MetadataService.cs`
+merges remote results with `replaceData = false`, so the first provider in the fetcher order that has a value wins
+(`if (replaceData || !target.CommunityRating.HasValue)`, likewise `CriticRating`); a local NFO is merged before them.
+
+**The isolated instance** (`evidence/p9/r1-spike-instance.txt`): both libraries order **TheMovieDb before The Open
+Movie Database** for movies and series; 157 of 159 titles carry `CommunityRating`, 37 of them with more than one
+decimal (TMDb's `vote_average`, for example *20 Days in Mariupol* 8.082) — so on this host `CommunityRating` is TMDb's,
+not IMDb's; 35 carry `CriticRating` (Rotten Tomatoes critics, only OMDb writes it, for example 100). `BaseItemDto` has
+no vote count. Of 160 catalog entries only the 2 added through TMDB discovery carry a TMDB score in their snapshot; the
+158 created by native backfill carry none (decision 4).
+
+**DTOs.** One rating: `{source, value, scale, votes, provider, fetchedAt, url, stale}` with `scale` in `ten`,
+`percent`, `five`, `four`; `provider` in `tmdb`, `mdblist`, `host_omdb`, `host_tmdb`; `stale` true when `fetchedAt` is
+older than `refreshDays`. API.md *Ratings (Phase 9)* records every endpoint as built.
