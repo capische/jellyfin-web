@@ -45,7 +45,6 @@ async function handleMissingNativeItem(view, params, error, isCurrent) {
 
 export default function initializeNativeEntryDetails(view, params) {
     let mount;
-    let versionsMount;
     let traktMount;
     let unmount;
     let unmountTrakt;
@@ -60,8 +59,6 @@ export default function initializeNativeEntryDetails(view, params) {
         traktMount = undefined;
         mount?.remove();
         mount = undefined;
-        versionsMount?.remove();
-        versionsMount = undefined;
     };
     const show = async () => {
         hide();
@@ -91,14 +88,8 @@ export default function initializeNativeEntryDetails(view, params) {
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
         target.appendChild(mount);
-        // Version rows sit beside the stock track selections, outside their horizontal focus container (P6.M8).
-        const trackSelections = view.querySelector('.trackSelections');
-        if (trackSelections) {
-            versionsMount = document.createElement('div');
-            versionsMount.className = 'jfmod-versionsMount';
-            // insertBefore rather than after(): older TV engines lack ChildNode.after.
-            trackSelections.parentNode.insertBefore(versionsMount, trackSelections.nextSibling);
-        }
+        // The file chooser, the header icon, the Played badge and the More-menu item are placed by the component itself, inside
+        // upstream's Video row, header row and Played button (0.1.0.0 detail page design fix, 2026-10-07; UX §1.1).
         // The Trakt indicator has its own mount, so it shows on a title that has no catalog entry too (P7.Q16). It
         // leads the content section: below the button row a TV's focus starts on, so arriving never moves what is
         // focused, and an empty mount takes no space.
@@ -119,8 +110,7 @@ export default function initializeNativeEntryDetails(view, params) {
             serverId: client.serverId(),
             itemId: params.id,
             isAdmin: !!user?.Policy?.IsAdministrator,
-            view,
-            versionsMount
+            view
         }, mount);
     };
     const destroy = () => {

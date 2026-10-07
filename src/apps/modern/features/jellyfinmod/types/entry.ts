@@ -61,6 +61,8 @@ export interface HistoryRecord {
     createdAt: string;
     /** The episode the event is about; null for the title, absent from plugins before P10.E3. */
     episodeId?: string | null;
+    /** The binding of the one file the event is about; null for title and episode events and older events (`history.files`). */
+    bindingId?: string | null;
 }
 
 export interface TmdbMetadata {

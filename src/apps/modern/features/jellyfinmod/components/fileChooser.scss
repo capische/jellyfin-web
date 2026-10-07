@@ -1,0 +1,223 @@
+// The Video row as the file chooser (design step 2, UX §11.2). Values from the base theme and librarybrowser.scss: primary
+// #00a4dc, card radius 0.2em, secondary text 86%, the track label's 6.25em column (4.5em on mobile). No flex gap, min()/max()
+// or display: contents, for older TV engines (P1.W11); every size in em.
+
+// Upstream's Version select stays in the DOM and keeps working; it is not shown while the chooser is mounted (UX §1.1
+// exception 2). The selector is new and names upstream's classes only to outrank `.trackSelections .selectContainer`.
+.jfmod-chooserMounted > .selectSourceContainer.selectContainer {
+    display: none;
+}
+
+// With one video stream the chooser's trigger shows upstream's text, so the row's disabled select and its arrow step aside.
+.jfmod-videoHost > .emby-select,
+.jfmod-videoHost > .selectArrowContainer {
+    display: none;
+}
+
+// One file: upstream's disabled select is as wide as its text, so the file's icons follow it.
+.jfmod-videoIconsHost > .emby-select {
+    flex: 0 1 auto;
+    width: auto;
+}
+
+.jfmod-videoChooser {
+    display: flex;
+    align-items: flex-start;
+    flex: 0 0 auto;
+}
+
+.jfmod-videoHost > .jfmod-videoChooser {
+    flex: 1 1 auto;
+}
+
+// A file with several video streams: the chooser has its own row above upstream's Video select, laid out like a track row.
+.jfmod-videoChooser--row {
+    max-width: 44em;
+    margin: 0 0 0.3em;
+}
+
+.jfmod-chooserLabel {
+    flex: 0 0 6.25em;
+    margin: 0 0.2em 0 0;
+    line-height: 1.75;
+}
+
+.layout-mobile .jfmod-chooserLabel {
+    flex-basis: 4.5em;
+}
+
+.jfmod-chooserValue {
+    flex: 1 1 auto;
+}
+
+.jfmod-videoTrigger {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.3em 0 0;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.75;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+        background: rgba(0, 164, 220, 0.2);
+        outline: none;
+    }
+}
+
+.jfmod-videoChevron {
+    margin-left: 0.3em;
+    font-size: 1.4em;
+    opacity: 0.7;
+}
+
+.jfmod-fileList {
+    max-width: 44em;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+
+.jfmod-fileList--open {
+    max-height: 40em;
+    margin: 0.25em 0 0.6em;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.2em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-fileList {
+        transition: none;
+    }
+}
+
+.jfmod-fileRow {
+    display: flex;
+    align-items: center;
+}
+
+.jfmod-fileRow--selected {
+    background: rgba(0, 164, 220, 0.08);
+}
+
+.jfmod-fileChoose {
+    display: flex;
+    align-items: baseline;
+    flex: 1 1 auto;
+    padding: 0.45em 0.8em;
+    border: 0;
+    border-radius: 0.2em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+        background: rgba(0, 164, 220, 0.2);
+        outline: none;
+    }
+}
+
+.jfmod-fileRow--add .jfmod-fileChoose {
+    color: #00a4dc;
+}
+
+.jfmod-fileMark {
+    flex: 0 0 auto;
+    width: 1.4em;
+    color: #00a4dc;
+}
+
+.jfmod-fileBody {
+    display: flex;
+    align-items: baseline;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+
+    > * { margin-right: 0.8em; }
+}
+
+.jfmod-fileResolution {
+    min-width: 3.4em;
+    font-weight: 600;
+}
+
+.jfmod-fileDetails {
+    opacity: 0.86;
+}
+
+.jfmod-fileExtra {
+    font-size: 86%;
+    opacity: 0.7;
+}
+
+.jfmod-fileExtra--dot::before {
+    content: '· ';
+}
+
+.jfmod-fileDefault {
+    padding: 0 0.4em;
+    border: 1px solid #00a4dc;
+    border-radius: 0.2em;
+    font-size: 78%;
+    text-transform: uppercase;
+}
+
+// The row's icons: upstream's icon buttons, smaller, dimmed until hovered or focused; always full on the TV.
+.jfmod-fileIcons {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin-left: 0.4em;
+    font-size: 0.72em;
+}
+
+.jfmod-fileIcon {
+    margin: 0 0.1em;
+    opacity: 0.6;
+
+    &:hover,
+    &:focus {
+        opacity: 1;
+    }
+
+    &:focus {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+
+    &:focus:not(:focus-visible) {
+        box-shadow: none;
+    }
+}
+
+.jfmod-fileIcon--tv {
+    opacity: 1;
+}
+
+.jfmod-fileIcon--on {
+    color: #00a4dc;
+    opacity: 1;
+}
+
+.jfmod-fileIcon[aria-disabled='true'] {
+    cursor: default;
+}
+
+.jfmod-fileNote {
+    margin: 0.3em 0.8em 0.5em;
+    font-size: 86%;
+    opacity: 0.8;
+}
+
+// Added inside stock Delete media's confirmation when the title has several files (V1, analysis C8).
+.jfmod-deleteWarning {
+    margin: 1em 0 0;
+    color: #f2b01e;
+}

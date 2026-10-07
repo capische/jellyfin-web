@@ -1,0 +1,24 @@
+// The countdown on the stock Played tick (design step 4). A bare bold number over the tick's lower-right arm: no pill, no
+// fill, white with a soft halo in the ground colour #101010 so it reads over the red played tick; `∞` in primary #00a4dc.
+// The icon keeps its 1.6em and the button its size: the badge is absolutely placed inside the content box.
+
+.jfmod-playedBadgeHost {
+    position: relative;
+}
+
+.jfmod-playedBadge {
+    position: absolute;
+    right: -0.15em;
+    bottom: -0.1em;
+    font-size: 0.6em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 0.25em #101010, 0 0 0.25em #101010, 0 0 0.15em #101010;
+    // Its own tooltip (the date and the cause); a click falls through to the stock button and toggles played.
+    cursor: inherit;
+}
+
+.jfmod-playedBadge--kept {
+    color: #00a4dc;
+}
