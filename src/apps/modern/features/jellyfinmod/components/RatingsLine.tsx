@@ -28,10 +28,20 @@ const focusIsPast = (node: Element | null) => {
 const keyOf = (list: Rating[]) => list.map(rating => [rating.source, rating.value, rating.scale, rating.votes ?? '', rating.provider,
     rating.fetchedAt ?? '', rating.stale ? 1 : 0].join(':')).join('|');
 
+/** Where the focused control is: a change is judged by whether this moves, wherever the line sits (its own row or a shared one). */
+const focusPlace = () => {
+    const rect = document.activeElement?.getBoundingClientRect();
+    return rect ? { top: rect.top, left: rect.left } : null;
+};
+
 interface Shown {
     list: Rating[];
-    /** A change being tried while focus sits below the line: kept only if the line's height did not change. */
-    trial?: { previous: Rating[]; height: number };
+    /**
+     * A change being tried while focus sits below the line: kept only if neither the line's height nor the focused control's
+     * place changed. The focused control is what counts: an inline line that keeps its own height can still wrap the row it
+     * shares and push everything below it down (review round 3, P2 3).
+     */
+    trial?: { previous: Rating[]; height: number; focus: { top: number; left: number } | null };
 }
 
 /**
@@ -61,7 +71,10 @@ const RatingsLine: FC<RatingsLineProps> = ({ ratings, sources, inline, ready = t
         if (!candidate || candidateKey === null) return;
         if (shown?.trial) {
             // The trial has rendered: keep it unless it changed the line's height under a focused control below.
-            const moved = Math.abs(height() - shown.trial.height) > 0.5 && focusIsPast(anchor.current);
+            const now = focusPlace();
+            const before = shown.trial.focus;
+            const focusMoved = !!before && !!now && (Math.abs(now.top - before.top) > 0.5 || Math.abs(now.left - before.left) > 0.5);
+            const moved = focusIsPast(anchor.current) && (focusMoved || Math.abs(height() - shown.trial.height) > 0.5);
             if (moved) rejected.current = keyOf(shown.list);
             setShown({ list: moved ? shown.trial.previous : shown.list });
             return;
@@ -76,7 +89,7 @@ const RatingsLine: FC<RatingsLineProps> = ({ ratings, sources, inline, ready = t
         }
 
         rejected.current = null;
-        setShown(focusIsPast(anchor.current) ? { list: candidate, trial: { previous: shown.list, height: height() } } : { list: candidate });
+        setShown(focusIsPast(anchor.current) ? { list: candidate, trial: { previous: shown.list, height: height(), focus: focusPlace() } } : { list: candidate });
     // `candidate` is described by `candidateKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [candidateKey, shown]);

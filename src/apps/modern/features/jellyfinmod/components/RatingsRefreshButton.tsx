@@ -47,9 +47,9 @@ const wait = (ms: number, signal: AbortSignal) => new Promise<void>((resolve, re
 /** What one look at the server's refresh queue said. Only an empty queue is completion; a failed look is not. */
 type Look = 'done' | 'waiting' | 'transient' | 'forbidden' | 'unsupported';
 
-const look = async (api: Api, signal: AbortSignal): Promise<Look> => {
+const look = async (api: Api, signal: AbortSignal, timeout: number): Promise<Look> => {
     try {
-        return (await getRatingsQueued(api, { signal, timeout: REQUEST_MS })) === 0 ? 'done' : 'waiting';
+        return (await getRatingsQueued(api, { signal, timeout })) === 0 ? 'done' : 'waiting';
     } catch (error) {
         if (signal.aborted) throw error;
         const status = (error as { response?: { status?: number } } | null)?.response?.status;
@@ -60,16 +60,27 @@ const look = async (api: Api, signal: AbortSignal): Promise<Look> => {
     }
 };
 
-/** Follows the queue until it is empty, a look says the server will not tell, or the deadline passes. */
+/**
+ * Follows the queue until it is empty, a look says the server will not tell, or the deadline passes. Each wait and each
+ * look is cut to what is left of the minute, so the whole follow never runs past it (review round 3, P2 4).
+ */
 const follow = async (api: Api, signal: AbortSignal): Promise<Look> => {
     const deadline = Date.now() + POLL_LIMIT_MS;
     let state: Look = 'waiting';
-    while (Date.now() < deadline && (state === 'waiting' || state === 'transient')) {
-        await wait(POLL_MS, signal);
-        state = await look(api, signal);
+    while (state === 'waiting' || state === 'transient') {
+        const pause = Math.min(POLL_MS, deadline - Date.now());
+        if (pause <= 0) break;
+        await wait(pause, signal);
+        const left = Math.min(REQUEST_MS, deadline - Date.now());
+        if (left <= 0) break;
+        state = await look(api, signal, left);
     }
     return state;
 };
+
+/** The cached reads a refreshed title appears in: its ratings and the grids that show a card rating (not the whole namespace). */
+const showsRatings = (key: readonly unknown[], basePath: string) => key[0] === 'JellyfinMod' && key[1] === basePath
+    && key.some(part => ['Ratings', 'Browse', 'SearchBrowse', 'HomeRecent', 'NativeDetail'].includes(part as string));
 
 /** What the status line says once the title has been read again. */
 const outcome = (updated: boolean, state: Look) => {
@@ -114,8 +125,9 @@ const RatingsRefreshButton: FC<RatingsRefreshButtonProps> = ({ api, entryId, onM
             const ratings = (await getEntry(api, entryId, request)).ratings ?? [];
             if (signal.aborted) return;
             onDone?.(ratings);
-            await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath] });
-            if (signal.aborted) return;
+            // The page has the new values already (onDone); the other views read again in the background. Their reads are
+            // not this operation's, so the button never waits on one of them (review round 3, P2 4).
+            queryClient.invalidateQueries({ predicate: query => showsRatings(query.queryKey, api.basePath) }).catch(() => undefined);
             onMessage(outcome(newestFetch(ratings) > before, state));
         } catch (error) {
             if (signal.aborted) return;
