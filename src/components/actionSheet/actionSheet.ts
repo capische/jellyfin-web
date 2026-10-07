@@ -432,6 +432,12 @@ export function show(options: Options) {
             console.warn('DialogHelper.open error', e);
         });
 
+        // The box exists to keep the video visible, so the dim a dialog normally casts over
+        // the page is cleared here and the picture stays as bright as it was.
+        if (isCenteredBox) {
+            (dlg as HTMLElement & { backdrop?: HTMLElement }).backdrop?.classList.add('dialogBackdrop-clear');
+        }
+
         const pos = options.positionTo && !isCenteredBox && dialogOptions.size !== 'fullscreen' ?
             getPosition(options.positionTo, options, dlg) :
             null;
