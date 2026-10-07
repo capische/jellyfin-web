@@ -110,24 +110,34 @@ interface SecretFieldProps {
 }
 
 /**
- * An icon-only action in a secret's box (user, 2026-10-07): grey, or red for Clear, as the labelled buttons are. Its
- * name is its aria-label and its tooltip. While busy it is refused with aria-disabled rather than disabled, as the
- * settings area refuses controls: the element and its tooltip stay, so the focus a remote put on it stays too (Codex
- * review 1, P2 1).
+ * An icon-only action (user, 2026-10-07 and 2026-10-08): in a secret's box and in every settings list row. Grey, or red when
+ * it destroys, as the labelled buttons are; round, at least 40 px. Its name is its aria-label and its tooltip, and names
+ * the row it acts on ("Remove Prowlarr 1337x"). While busy or refused it is marked aria-disabled rather than disabled, as
+ * the settings area refuses controls: the element and its tooltip stay, so the focus a remote put on it stays too (Codex
+ * review 1, P2 1). `data` carries its data attributes (`data-secret-action`, `data-row-action`, …).
  */
-const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick: () => void; action: string; testId?: string; children: ReactNode }> = ({
-    label, red, disabled, onClick, action, testId, children
-}) => {
+export const IconAction: FC<{
+    label: string; red?: boolean; disabled?: boolean; refused?: boolean; onClick: () => void; data: Record<string, string | undefined>; children: ReactNode;
+}> = ({ label, red, disabled, refused, onClick, data, children }) => {
+    const attributes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined).map(([key, value]) => [`data-${key}`, value]));
+    // `disabled` is busy (a request is out); `refused` is "not here" (Move Up on the first row): both keep the focus.
+    const off = disabled || refused;
     return (
         <Tooltip title={label}>
             <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}${disabled ? ' jfmod-busy' : ''}`} aria-label={label}
-                aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick} data-secret-action={action} data-test={testId}
+                aria-disabled={off || undefined} onClick={off ? undefined : onClick} {...attributes}
             >
                 {children}
             </IconButton>
         </Tooltip>
     );
 };
+
+const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick: () => void; action: string; testId?: string; children: ReactNode }> = ({
+    label, red, disabled, onClick, action, testId, children
+}) => (
+    <IconAction label={label} red={red} disabled={disabled} onClick={onClick} data={{ 'secret-action': action, test: testId }}>{children}</IconAction>
+);
 
 /**
  * A write-only secret (PHASE7 §5.1): "Configured" with Replace and Clear, a pending clear with Undo, and an
@@ -181,7 +191,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                 />
                 {configured && (
                     <Button variant='contained' color='inherit' onClick={keep}>
-                        Keep the saved one
+                        Keep the Saved One
                     </Button>
                 )}
                 {below}

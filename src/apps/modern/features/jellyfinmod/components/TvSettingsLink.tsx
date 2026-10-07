@@ -21,7 +21,7 @@ const TvSettingsLink: FC = () => {
     return (
         <div className='padded-left padded-right jfmod-tvSettingsLink'>
             <a className={raisedButtonClass()} href='#/catalog/settings' data-jfmod-tv-settings=''>
-                <span>JellyfinMod settings</span>
+                <span>JellyfinMod Settings</span>
             </a>
         </div>
     );
