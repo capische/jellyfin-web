@@ -12,6 +12,8 @@ Runs in steps so the browser runner (p9-ratings.mjs) can sit between them:
   p9-live.py restart      a restart keeps settings, key and ratings
   p9-live.py failures     budget, manual refresh, 401, key error, 429, malformed, timeout, not found, five 503s
   p9-live.py kill         a container killed mid-call: its claim is counted, the title is not fetched again
+  p9-live.py interrupt    the stopped-service helper restarts 18096 when the remote shell is sent TERM mid-step and when the
+                          local call times out (needs JFMOD_P9_WORK)
   p9-live.py cleanup      every fixture, the key, the override and the ratings rows go; oleksii's ratings display
                           preferences are restored exactly (a key that did not exist is removed); UserViews shows Movies
                           and Shows only
@@ -19,14 +21,17 @@ Runs in steps so the browser runner (p9-ratings.mjs) can sit between them:
 Settings (environment, never committed): JFMOD_P9_URL (the isolated instance, port 18096 only), JFMOD_P9_SSH (ssh alias of
 the host), JFMOD_P9_KEY_FILE (local 0600 file with the stand-in's fixture key), JFMOD_P9_BOUNDARY (the stand-in's address as
 the container reaches it), JFMOD_P9_HOST_MEDIA (the host folder mounted at JFMOD_P9_CONTAINER_MEDIA), JFMOD_P9_COMPOSE (the
-isolated service's compose file on the host), JFMOD_P9_DB (the plugin database on the host), JFMOD_P9_OUT (results JSON).
+isolated service's compose file on the host), JFMOD_P9_DB (the plugin database on the host), JFMOD_P9_OUT (results JSON),
+JFMOD_P9_WORK (a scratch folder on the host, never the SD card; only the interrupt step uses it).
 Signs in as oleksii with an empty password. Never prints the key, a token, a password, an address or a host path.
 """
 import json
 import os
 import re
 import secrets
+import signal
 import subprocess
+import threading
 import sys
 import time
 import urllib.error
@@ -44,6 +49,7 @@ CONTAINER_MEDIA = os.environ.get("JFMOD_P9_CONTAINER_MEDIA", "/test-media")
 COMPOSE = os.environ.get("JFMOD_P9_COMPOSE", "")
 DB = os.environ.get("JFMOD_P9_DB", "")
 OUT = os.environ.get("JFMOD_P9_OUT")
+WORK = os.environ.get("JFMOD_P9_WORK", "")
 STATE_FILE = os.environ.get("JFMOD_P9_STATE", os.path.join(os.path.dirname(os.environ["JFMOD_P9_KEY_FILE"]), "p9-live-state.json"))
 PLUGIN_ID = "6f1a2b3c4d5e4f609a718b2c3d4e5f60"
 LIBRARY = "JellyfinMod P9 Ratings"
@@ -123,24 +129,82 @@ def sign_in():
     SECRETS.append(result["AccessToken"])
 
 
-def remote(script, *args):
-    return subprocess.run(["ssh", SSH, "bash", "-s", "--", *args], input=script, text=True, capture_output=True, timeout=600)
+def remote(script, *args, timeout=600):
+    return subprocess.run(["ssh", SSH, "bash", "-s", "--", *args], input=script, text=True, capture_output=True, timeout=timeout)
 
 
-def with_service_stopped(sql):
-    """Runs SQL on the plugin database with the isolated service stopped, and always starts the service again: a failed stop
-    or statement keeps its exit status and output, but never leaves 18096 down (web review 2026-10-07 round 2, P2 4). Waits
-    for the service to answer before returning."""
+def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
+    """Runs SQL on the plugin database with the isolated service stopped, and always starts the service again (web review
+    2026-10-07 round 2, P2 4; round 3, P2 5):
+    - on the host, a trap installed before the stop starts the service on INT, TERM or HUP, ends the SQL step and exits
+      with the signal's status; otherwise a failed stop or statement keeps its exit status and the service is started;
+    - here, a remote call that fails or times out (the remote shell may be gone or still running) is followed by a second
+      start, which does nothing when the service already runs; this process turns TERM and HUP into an exit that runs it.
+    Waits for the service to answer before returning."""
     script = (f"cd ~ || exit 1\n"
-              f"docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null; rc=$?\n"
-              f"if [ $rc -eq 0 ]; then sqlite3 '{DB}' <<'SQL'\n{sql}\nSQL\nrc=$?; fi\n"
-              f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null; started=$?\n"
+              f"service_start() {{ docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null; }}\n"
+              f"child=\n"
+              f"kill_tree() {{ for grandchild in $(pgrep -P \"$1\"); do kill_tree \"$grandchild\"; done; kill \"$1\" 2>/dev/null; }}\n"
+              f"on_signal() {{ if [ -n \"$child\" ]; then kill_tree \"$child\"; fi; service_start; exit \"$1\"; }}\n"
+              f"trap 'on_signal 130' INT; trap 'on_signal 143' TERM; trap 'on_signal 129' HUP\n"
+              + (f"echo $$ > '{pidfile}'\n" if pidfile else "")
+              + f"docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null; rc=$?\n"
+              f"if [ $rc -eq 0 ]; then\n"
+              f"  sqlite3 '{DB}' <<'SQL' &\n{sql}\nSQL\n"
+              f"  child=$!; wait \"$child\"; rc=$?; child=\n"
+              f"fi\n"
+              f"trap - INT TERM HUP\n"
+              f"service_start; started=$?\n"
               f"if [ $rc -eq 0 ]; then rc=$started; fi\n"
               f"exit $rc\n")
-    out = remote(script)
-    wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    try:
+        out = remote(script, timeout=timeout)
+    except (subprocess.TimeoutExpired, OSError) as error:
+        out = subprocess.CompletedProcess(args=[], returncode=124, stdout="", stderr=type(error).__name__)
+    finally:
+        if ensure:
+            remote(f"cd ~ && docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null", timeout=300)
+    if ensure:
+        wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
+        wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
     return out
+
+
+def service_running():
+    return remote("docker inspect -f '{{.State.Running}}' jellyfinmod-test").stdout.strip() == "true"
+
+
+def step_interrupt():
+    """The stopped-service helper under interruption: TERM to the remote shell mid-step, and a local time-out (round 3, P2 5).
+    Each step stops 18096 for a few seconds; nothing in the database changes (the SQL step only waits)."""
+    if not WORK:
+        check(False, "JFMOD_P9_WORK names a scratch folder on the host for the interrupt step")
+        return
+    pidfile = f"{WORK.rstrip('/')}/p9-stopped-step.pid"
+    remote(f"rm -f '{pidfile}'")
+    result = {}
+    worker = threading.Thread(target=lambda: result.update(out=with_service_stopped(".shell sleep 40", pidfile=pidfile, ensure=False)))
+    worker.start()
+    wait_for(lambda: remote(f"test -s '{pidfile}'").returncode == 0 and not service_running(), "the step to stop the service", 120)
+    sent = time.time()
+    remote(f"kill -TERM $(cat '{pidfile}')")
+    worker.join(120)
+    running = service_running()
+    elapsed = round(time.time() - sent)
+    out = result.get("out")
+    check(out is not None and out.returncode == 143 and running and elapsed < 25,
+          "TERM to the remote shell mid-step (its SQL step waiting 40 s): the trap ends the step, starts the service at once and "
+          "exits with the signal's status", {"exit": out.returncode if out else None, "running": running, "secondsAfterTerm": elapsed})
+    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    remote(f"rm -f '{pidfile}'")
+    started = time.time()
+    out = with_service_stopped(".shell sleep 30", timeout=8)
+    healthy = call("GET", "/JellyfinMod/Health")[0] == 200
+    check(out.returncode == 124 and healthy, "A local time-out mid-step: the service is started again from here and answers",
+          {"exit": out.returncode, "seconds": round(time.time() - started)})
+    # The remote shell of that call is still waiting; it starts the service itself when it ends (a no-op now).
+    time.sleep(25)
+    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
 
 
 def boundary(method, path, body=None):
@@ -695,12 +759,15 @@ def step_leak():
 
 
 if __name__ == "__main__":
+    # TERM and HUP end this process through SystemExit, so every finally (the service restart above) still runs.
+    for number in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(number, lambda signum, frame: sys.exit(128 + signum))
     step = sys.argv[1]
     if step != "setup" and not load_state().get("token"):
         sign_in()
     try:
         {"setup": step_setup, "unconfigured": step_unconfigured, "configure": step_configure, "fetch": step_fetch, "restart": step_restart,
-         "failures": step_failures, "kill": step_kill, "age": step_age, "unage": step_unage, "cleanup": step_cleanup, "leak": step_leak, "reset": step_reset}[step]()
+         "failures": step_failures, "kill": step_kill, "age": step_age, "unage": step_unage, "interrupt": step_interrupt, "cleanup": step_cleanup, "leak": step_leak, "reset": step_reset}[step]()
     except Exception as error:  # a crashed step still records what it checked, and says why it stopped
         check(False, f"The step ran to the end ({type(error).__name__})", scrub(error)[:300])
     if bodies:
