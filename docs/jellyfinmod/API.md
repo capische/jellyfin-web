@@ -752,7 +752,8 @@ migration `PhaseNineRatingsIdentity`. One value per source:
 - `POST /JellyfinMod/Settings/Ratings/Test` — one MDBList call for TMDB movie 278, counted in the budget:
   `{"ok":true,"code":"ok","message":"MDBList accepted the key and returned ratings.","sources":["imdb",…]}`; other codes
   `not_configured`, `unauthorized`, `rate_limited`, `unreachable`, `timeout`, `malformed`, `not_found`, and — with no
-  call made — `budget_spent` and `breaker_open`. A refused key may be tested (that is how a new one is proven); a pass
+  call made — `budget_spent` and `breaker_open`; `database_busy` when the database stayed busy past the fetcher's bound
+  (nothing was recorded; try again). A refused key may be tested (that is how a new one is proven); a pass
   marks the key verified only if the settings did not change during the call.
 - `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
   budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued}`.
@@ -772,12 +773,16 @@ another library still waits out an interrupted attempt; a run forgets the attemp
 refresh window and failure wait have passed. An answer about the key rather than the title (refused, or the quota spent)
 leaves the title due as soon as fetching may resume. The settings save and the fetcher share one gate: the fetcher's last
 look at the settings, the key and the provider state happens under it after the pause between calls, and it holds it
-through the call and the recording of its answer. So a save waits for a call already out (at most the 15 s call limit),
-that call's answer is recorded first and about the key it used, and no call starts after the save with what it replaced;
+through the call and the recording of its answer. So a save waits for a call already out (at most the 15 s call limit plus
+the recording, which is bounded to about 8 s: a database that stays busy longer leaves the answer unrecorded, the claim
+pending for the next run to count as interrupted, and the run stopped with `database_busy`), that call's answer is recorded
+first and about the key it used, and no call starts after the save with what it replaced. The ratings save takes that gate
+before the gate every settings save shares, so while it waits no other settings save waits on it;
 turning ratings off, lowering the budget or replacing the key stops a running fetch at its next call, and replacing the key
 lifts the refused-key block and closes a 429 breaker even when the old key's answer arrived during the save. 401/403 (or a
-body naming a refused key) blocks fetching; 429 opens a breaker to the latest of `Retry-After` (however long — a delay
-past the last representable moment ends there), `X-RateLimit-Reset` and the next UTC day; five server errors, timeouts or malformed
+body naming a refused key) blocks fetching; 429 opens a breaker to the latest of `Retry-After` (however long: a delay in
+seconds is read from the header's own digits, and one past the last representable moment ends there), `X-RateLimit-Reset` and
+the next UTC day; five server errors, timeouts or malformed
 answers in a row open a one-hour breaker; a 404 is `not_found`. Failures keep the stored values. An answer is malformed,
 and changes nothing, when `ratings` is not a list or an item is not an object, has no string `source`, or a `value`,
 `score` or `votes` of the wrong kind; `null`, `""` and `"N/A"` mean no value. `base` is MDBList's own

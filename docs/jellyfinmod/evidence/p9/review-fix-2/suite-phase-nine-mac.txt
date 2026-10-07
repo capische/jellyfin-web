@@ -182,5 +182,5 @@ ok - Past the window a run forgets the attempt of a title no library holds, and 
 ok - None of the 150 responses carries the key or its secret-store reference
 ok - None of the 5400 log lines carries either key
 ok - The HTTP client's own request log lines were captured (at Debug) and are among those checked
-evidence - a captured HTTP client line: Information System.Net.Http.HttpClient.Default.LogicalHandler: Start processing HTTP request GET http://<boundary>/tmdb/movie/278?* 
+evidence - a captured HTTP client line: Information System.Net.Http.HttpClient.Default.LogicalHandler: Start processing HTTP request GET http://<boundary>/tmdb/movie/278?*
 PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access (21.2s)

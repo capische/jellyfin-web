@@ -588,21 +588,45 @@ preferences are as before and the snapshot retired; the stand-in is stopped and 
 this round (Zero, One, Two, Three, Seven Trakt, Nine, Ten); the Linux-only suites fail on macOS as they did before and were
 not re-run on the test host this round.
 
+## Review fixes, round 3 — 2026-10-07
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of the round-2 ranges (plugin `7bef3f6..24e7004`, web
+`fbdc355360..fee6fb4edd`) approved both with fixes; fixed as below: plugin `24e7004..` its branch tip, web `fee6fb4edd..`
+this branch's tip. Proof through the plugin suite over real Kestrel, SQLite and the HTTP stand-in, and the browser and live
+runs on the isolated instance; no unit tests.
+
+| # | Finding | Fix | Proof |
+|---|---|---|---|
+| 1 (P2, plugin) | The recording under the credential gate was unbounded, and a waiting ratings save held the settings gate every settings write shares | The ratings save takes the credential gate first, then the shared settings gate (the fetcher never takes the latter, so no cycle). Under the credential gate each SQLite command waits at most 4 s and each save step (the claim; the recording) at most about 8 s in all; the recording stays one save. A database still busy leaves the answer unrecorded (the claim pending for the next run to count as interrupted), stops the run with `database_busy`, and Test answers `database_busy` | Suite: while a ratings save waits for a held Test call, another settings save (Discovery) goes through in under 3 s; with another connection holding SQLite's write lock as the call answers, Test gives up within the bound and says `database_busy`, and the waiting save completes once the database is free |
+| 2 (P2, plugin) | A rated sibling deleted between the adoption reads aborted the run | Adoption reads every entry and every stored value once, and saves each title on its own: a title that cannot be written is skipped and adopted next run | Suite: a SQLite trigger refuses one new entry's values (as if it vanished mid-write); the run finishes, the other title adopts, and the next run adopts the first |
+| 6 (P3, plugin) | `Retry-After: 1000000000000` was dropped by .NET's parser | The header's digits are read directly and saturate to the last representable moment | Suite: the breaker runs to year 9999 |
+| 3 (P2, web) | On the file-less page the line shares a wrapping row with the TMDB star; a wider line could keep its own height and still push focus down | A trial is judged by whether the focused control moved (or the line's height changed), measured before paint | Chromium and Chrome, TV layout: the runner finds, from the page's own CSS, a window width (1849 px) and two source counts where the line stays 24 px high but the shared row goes 27 → 51 px, confirms it in real visits, then a minute's defaults refetch with focus below leaves focus exactly in place; the next visit shows the wider line |
+| 4 (P2, web) | Refresh awaited a namespace-wide invalidation that could stall | Background invalidation of the reads that show ratings only, never awaited; waits and request limits are cut to what is left of the minute | Desktop: with every other ratings read stalled at the boundary, the page says "Ratings refreshed." and the button is free |
+| 5 (P2, runner) | A signal during a stopped-service step skipped the restart | A trap installed before the stop ends the SQL step's process tree, starts the service and exits with the signal's status; here a failed or timed-out remote call is followed by a second start, and TERM/HUP end the runner through its `finally` | Live `interrupt` step: TERM mid-step → exit 143, service running 1 s later; a local time-out → the service is started from here and answers. Its first two tries failed on timing only (an orphaned `sleep` from the test's own SQL step kept the SSH session open until the tree kill) |
+
+Also: the committed round-2 suite transcript has no trailing whitespace.
+
+**Runs.** Plugin suite with the instance-copy migration (all 170 entries kept); the Mac suites pass as before (Zero, One, Two,
+Three, Seven Trakt, Nine, Ten). Chromium 153.0.8010.12 and Chrome 153.0.8010.54: 52/52 each. Live on 18096 with plugin
+0.1.0.0 from the round-3 tip and bundle `67902e05db2b`: every step from `setup` to `cleanup`, plus `interrupt`, passes
+(`evidence/p9/review-fix-3/`). Fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only; oleksii's
+display preferences are as before; the stand-in is stopped and its key deleted.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
-waits for the Codex review of the round-2 ranges (plugin `7bef3f6..` its tip, web `fbdc355360..` this branch's tip), and for
+waits for the Codex review of the round-3 ranges (plugin `24e7004..` its tip, web `fee6fb4edd..` this branch's tip), and for
 the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
 
 - Re-run the live chain with `scripts/jellyfinmod-e2e/p9-live.py` (`setup`, `unconfigured`, `configure`, `fetch`,
-  `restart`, `age`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `cleanup`); settings come from the environment
+  `restart`, `age`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- The isolated instance runs this branch's plugin (0.1.0.0 from the round-2 tip) and bundle `ef4d88793f5e`; ratings are on with no
+- The isolated instance runs this branch's plugin (0.1.0.0 from the round-3 tip) and bundle `67902e05db2b`; ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
-  deployment is on the test host under the instance's `backups/p9-before-20261007` (migrations are forward-only).
+  deployment is on the test host in the JellyfinMod data folder's `backups/p9-before-20261007`, beside the instance's own `test` folder (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
   code and sentence say what the real service did differently from the stand-in.
