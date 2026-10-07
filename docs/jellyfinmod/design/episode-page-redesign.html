@@ -1,0 +1,274 @@
+<title>Episode Page Redesign</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<style>
+/* Layout: one reading column; each numbered step is a dark app mockup followed by short notes. */
+:root {
+  --bg: #15171a; --fg: #e6e8eb; --muted: #9aa3ad; --rule: #2a2f36; --panel: #1c1f24;
+  --accent: #00a4dc; --warn: #f2b01e;
+  --display: "Source Serif 4", Georgia, serif;
+  --body: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --app: "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f6f5f2; --fg: #1d2126; --muted: #5b6570; --rule: #d9d6cf; --panel: #ffffff; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f6f5f2; --fg: #1d2126; --muted: #5b6570; --rule: #d9d6cf; --panel: #ffffff; color-scheme: light; }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 62rem; margin: 0 auto; padding-block: 2.5rem 5rem; padding-inline: 1.25rem; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 2.2rem; line-height: 1.15; margin: 0 0 .5rem; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 1.55rem; margin: 3rem 0 .25rem; text-wrap: balance; }
+h3 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 .5rem; font-weight: 600; }
+p, li { max-width: 68ch; }
+.lede { color: var(--muted); font-size: 1.05rem; margin: 0 0 1.5rem; }
+ul { padding-left: 1.2rem; }
+li { margin: .25rem 0; }
+.eyebrow { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.ask { border-left: .25rem solid var(--warn); padding: .6rem 1rem; background: var(--panel); margin: 1.25rem 0; }
+.ask b { color: var(--warn); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.25rem 2rem; }
+.cols p { margin: .25rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: .8rem; letter-spacing: .05em; text-transform: uppercase; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background: var(--panel); padding: .05em .3em; border-radius: .2em; }
+
+/* ---- Jellyfin mockup frame: always dark, it depicts the app ---- */
+.jf { --jfbg: #101010; --jffg: #ffffff; --jfmuted: rgba(255,255,255,.72); --jfdim: rgba(255,255,255,.5);
+      --jfbtn: #3b3b3b; --jfacc: #00a4dc; --jfwarn: #f2b01e;
+  background: var(--jfbg); color: var(--jffg); font-family: var(--app); font-size: 15px; line-height: 1.45;
+  border-radius: .5rem; padding: 1.1rem 1.4rem; margin: 1rem 0; border: 1px solid #262626; overflow-x: auto; }
+.jf * { box-sizing: border-box; }
+.jf .cap { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--jfdim); margin: 0 0 .6rem; }
+.jf .cap + .cap { margin-top: 1.2rem; }
+.jf .kv { display: grid; grid-template-columns: 6.5em 1fr; gap: .35em 0; align-items: center; margin: .3rem 0; }
+.jf .kv .k { color: var(--jfmuted); }
+.jf .sel { border: 1px solid rgba(255,255,255,.3); border-radius: .2em; padding: .25em .5em; display: flex; justify-content: space-between; align-items: center; max-width: 32em; }
+.jf .sel .material-icons { font-size: 1.1em; color: var(--jfdim); }
+.jf .trig { display: inline-flex; align-items: center; gap: .3em; }
+.jf .trig .material-icons { font-size: 1.1em; color: var(--jfdim); }
+.jf .row { display: flex; align-items: center; flex-wrap: wrap; gap: .6em; margin: .6rem 0; }
+.jf .hist { color: var(--jfdim); font-size: .88em; margin: .35rem 0 0; }
+.jf .chip { display: inline-block; border: 1px solid var(--jfacc); border-radius: .2em; padding: 0 .4em; font-size: .78em; text-transform: uppercase; letter-spacing: .04em; margin-left: .6em; }
+.jf .list { max-width: 44em; border: 1px solid #2a2a2a; border-radius: .25em; background: #141414; padding: .2em 0; margin: .25em 0 .6em; }
+.jf .vrow { display: flex; align-items: center; gap: .8em; padding: .45em .8em; }
+.jf .vrow.sel { background: rgba(0,164,220,.08); }
+.jf .vrow .mark { color: var(--jfacc); width: 1.2em; }
+.jf .vrow .res { font-weight: 600; min-width: 3.4em; }
+.jf .vrow .det { color: var(--jfmuted); flex: 1 1 auto; }
+.jf .qa { display: inline-flex; gap: .2em; opacity: .6; }
+.jf .qa .material-icons { font-size: 1.15em; padding: .15em; border-radius: .2em; }
+.jf .qa .on { color: var(--jfacc); opacity: 1; }
+.jf .vrow.add { color: var(--jfacc); }
+.jf .dbtn { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: .7em .85em; color: var(--jffg); position: relative; }
+.jf .dbtn .material-icons { font-size: 1.6em; width: 1em; height: 1em; }
+.jf .dbtn .played { color: #e57373; }
+.jf .dbtn .cnt { position: absolute; right: .8em; bottom: .85em; font-size: .6em; line-height: 1; color: #ffffff; font-weight: 700; text-shadow: 0 0 .25em var(--jfbg), 0 0 .25em var(--jfbg), 0 0 .15em var(--jfbg); }
+.jf .dbtn .cnt.kept { color: var(--jfacc); }
+.jf .hdr { display: flex; align-items: center; margin: .4rem 0 .6rem; }
+.jf .bar { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+.jf .bar .ttl { font-size: 1.9em; font-weight: 600; line-height: 1.1; }
+.jf .bar .sub { font-weight: 600; margin-top: .15em; }
+.jf .bar .meta { color: var(--jfmuted); font-size: .9em; margin-top: .3em; }
+.jf .pop { border: 1px solid #333; border-radius: .25em; background: #1b1b1b; padding: .8em 1em; max-width: 30em; margin-top: .6rem; box-shadow: 0 .5em 1.5em rgba(0,0,0,.5); }
+.jf .pop h4 { margin: 0 0 .5em; font-size: .95em; font-weight: 600; display: flex; justify-content: space-between; gap: 1em; }
+.jf .pop h4 span:first-child { color: var(--jfmuted); font-weight: 400; }
+.jf .pop ol { margin: 0; padding: 0 0 0 1.3em; color: var(--jfmuted); font-size: .92em; }
+.jf .pop li { margin: .15em 0; }
+.jf .pop li b { color: var(--jffg); font-weight: 400; }
+.jf .note { color: var(--jfdim); font-size: .85em; font-style: italic; margin: .4rem 0 0; }
+.jf .rbtn { display: inline-flex; align-items: center; gap: .45em; background: var(--jfacc); color: #fff; border-radius: .2em; padding: .55em 1.1em; font-weight: 600; font-size: .95em; }
+.jf .rbtn .material-icons { font-size: 1.25em; }
+.jf .ghost { color: var(--jfdim); }
+@media (max-width: 600px) { .jf { padding: .9rem; font-size: 14px; } .jf .kv { grid-template-columns: 5.5em 1fr; } }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">JellyfinMod · UX proposal · 7 Oct 2026 · revision 7</div>
+  <h1>Episode page, built from your four points</h1>
+  <p class="lede">One design in five steps. Every step is additive to the stock page and keeps every control a D-pad stop. Two steps touch stock containers; both were approved on 7 Oct and are recorded as Principle 0 exceptions.</p>
+
+  <!-- ============================ 1 ============================ -->
+  <h2>1 · Get a release, next to Favorite</h2>
+  <p>One icon button joins upstream's header row, between Played and Favorite. It opens the release picker. With no file it is the only way in; with a file it searches for another quality.</p>
+  <div class="jf">
+    <div class="cap">With a file: the stock header, one icon added</div>
+    <div class="bar">
+      <div><div class="ttl">The Wheel of Time</div><div class="sub">Season 1 - 1. Leavetaking</div><div class="meta">11/19/2021 &nbsp; 54m &nbsp; ★ 6.7 &nbsp; Ends at 8:56 PM</div></div>
+      <div class="hdr">
+        <span class="dbtn" title="Play"><span class="material-icons">play_arrow</span></span>
+        <span class="dbtn" title="Mark played"><span class="material-icons">check</span></span>
+        <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+        <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
+        <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
+      </div>
+    </div>
+    <div class="cap">No file: Play and Played are absent, the new icon leads</div>
+    <div class="hdr">
+      <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+      <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
+      <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
+    </div>
+    <p class="note">The new button is a stock <code>button-flat detailButton</code> with a <code>detailButton-icon</code>: same 1.6em icon, same padding, same flat hover, tooltip "Get a release". Nothing about it is mod-styled.</p>
+  </div>
+  <div class="cols">
+    <div><h3>How it is built</h3>
+      <p>A DOM insert into <code>.mainDetailButtons</code> before <code>.btnUserRating</code>, the same technique as the versions mount. The row is a <code>focuscontainer-x</code>, so the D-pad reaches it without new rules. Administrators only, since the picker is admin-only today.</p></div>
+    <div><h3>Decisions</h3>
+      <p><b>Decided 7 Oct:</b> icon <code>cloud_download</code>.</p>
+      <p><b>Principle 0.</b> This is the first mod control inside a stock container. It needs a parity check on every upstream merge.</p></div>
+  </div>
+
+  <!-- ============================ 2 ============================ -->
+  <h2>2 · The Video row becomes the file chooser</h2>
+  <p>With two or more files, the Video value gains a chevron. Clicking it slides a list down in the format you drew: mark, resolution, pretty-printed quality, Default chip, then the row's own icons. Picking a row selects that file and the list slides back. Get another quality is the last row of the list. One file: the row stays as it is today, and the icons sit at the end of it.</p>
+  <div class="jf">
+    <div class="cap">Two files, closed</div>
+    <div class="kv"><span class="k">Video</span><span class="trig">1080p HEVC SDR <span class="material-icons">expand_more</span></span></div>
+    <div class="kv"><span class="k">Audio</span><span>English - HE-AAC - 5.1 - Default</span></div>
+    <div class="kv"><span class="k">Subtitles</span><span class="sel">Off <span class="material-icons">expand_more</span></span></div>
+    <div class="cap">Two files, open</div>
+    <div class="kv" style="align-items:start"><span class="k">Video</span>
+      <div>
+        <span class="trig">1080p HEVC SDR <span class="material-icons">expand_less</span></span>
+        <div class="list">
+          <div class="vrow"><span class="mark">○</span><span class="res">2160p</span><span class="det">HEVC 10-bit · DTS-HD 7.1 · 24.1 GB</span><span class="chip">Default</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons" title="Keep">push_pin</span><span class="material-icons" title="Remove">close</span></span></div>
+          <div class="vrow sel"><span class="mark">●</span><span class="res">1080p</span><span class="det">HEVC 10-bit · AAC 5.1 · 783 MB</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons on" title="Kept">push_pin</span><span class="material-icons" title="Remove">close</span></span></div>
+          <div class="vrow add"><span class="mark">+</span><span class="res" style="min-width:0">Get another quality</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="kv"><span class="k">Audio</span><span>English - DTS-HD MA - 7.1 - Default</span></div>
+    <div class="cap">One file: no chooser, icons at the end of the row</div>
+    <div class="kv"><span class="k">Video</span><span class="trig">1080p HEVC SDR <span class="qa" style="margin-left:.8em"><span class="material-icons">history</span><span class="material-icons on">push_pin</span><span class="material-icons">close</span></span></span></div>
+    <p class="note">Icons at 60% until hovered or focused on desktop; always visible on TV, each its own stop. Pin and cross are administrator-only; history shows to everyone.</p>
+  </div>
+  <div class="cols">
+    <div><h3>How it is built</h3>
+      <p>The chooser is a mod component that drives the stock <code>.selectSource</code> through its own <code>change</code> event, exactly as the current rows do, so Play, audio and subtitles follow. The slide uses a height transition on the list, with <code>prefers-reduced-motion</code> honoured.</p>
+      <p>Pin calls the existing per-file Keep; cross calls Remove this version with its stock confirmation. Both exist today as buttons, so this is a re-homing, not new behaviour.</p></div>
+    <div><h3>Decisions</h3>
+      <p><b>Decided 7 Oct: hide the stock Version select while the chooser is mounted.</b> With two files upstream shows its own Version select above Video; the chooser does that job. Upstream's select stays in the DOM and keeps working, it is only not shown, and it reappears if the chooser fails to mount. Recorded as a Principle 0 exception of the §7.3 kind.</p>
+      <p><b>Video streams.</b> Upstream's Video row is really a video-stream select. Files with one stream (nearly all) render as text, which is what the chooser replaces. A file with two video streams keeps upstream's select under the chooser.</p></div>
+  </div>
+
+  <!-- ============================ 3 ============================ -->
+  <h2>3 · History per file, in a popup</h2>
+  <p>The first icon on a row opens a small popup with that file's events only: grabbed, imported, kept, stopped keeping, removed. Short dates, no file name, since the row already is the file.</p>
+  <div class="jf">
+    <div class="cap">History popup for the 1080p file</div>
+    <div class="pop">
+      <h4><span>1080p · HEVC 10-bit · 783 MB</span><span class="material-icons" style="font-size:1.1em">close</span></h4>
+      <ol>
+        <li>28 Sep · <b>Stopped keeping</b></li>
+        <li>28 Sep · <b>Kept</b></li>
+        <li>19 Sep · <b>Imported</b> · WEBRip x265 from PSA</li>
+        <li>19 Sep · <b>Grabbed</b> from 1337x · 783 MB</li>
+      </ol>
+    </div>
+    <p class="note">A MUI popover, so it obeys the remote by §13 rule 9: Back closes it and focus returns to the history icon.</p>
+  </div>
+  <div class="cols">
+    <div><h3>How it is built</h3>
+      <p>The popup filters the entry's history to one file. Today's <code>HistoryRecord</code> carries an episode id but no file id, so the plugin gains a <code>bindingId</code> on events that concern one file (keep, unkeep, import, remove, grab once bound). Events older than that change have no file and show under a one-line "earlier" group on the episode, not in any file popup.</p></div>
+    <div><h3>Decisions</h3>
+      <p><b>Decided 7 Oct: drop episode-level events from the episode page.</b> Monitoring changes, catalog adds and window changes belong to no file; they stay out of the popups, the old History line goes, and they remain on the series page.</p></div>
+  </div>
+
+  <!-- ============================ 4 ============================ -->
+  <h2>4 · The Played tick wears a countdown badge</h2>
+  <p>Once the episode is watched and a removal is scheduled, the stock Played tick keeps its size and gains a small badge at its bottom-right corner: days until the file goes. No warning box, no sentence.</p>
+  <div class="jf">
+    <div class="cap">Watched, removal in 5 days</div>
+    <div class="hdr">
+      <span class="dbtn" title="Play"><span class="material-icons">play_arrow</span></span>
+      <span class="dbtn" title="Played · removed in 5 days unless kept"><span class="material-icons played">check</span><span class="cnt">5</span></span>
+      <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+      <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
+      <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
+    </div>
+    <div class="cap">Variants of the tick</div>
+    <div class="hdr" style="gap:1.4em">
+      <span class="dbtn" title="Unplayed"><span class="material-icons">check</span></span>
+      <span class="dbtn" title="Played, nothing scheduled (stock)"><span class="material-icons played">check</span></span>
+      <span class="dbtn" title="Played, 12 days"><span class="material-icons played">check</span><span class="cnt">12</span></span>
+      <span class="dbtn" title="Played, removed today"><span class="material-icons played">check</span><span class="cnt">0</span></span>
+      <span class="dbtn" title="Played, overdue"><span class="material-icons played">check</span><span class="cnt">!</span></span>
+      <span class="dbtn" title="Played, kept"><span class="material-icons played">check</span><span class="cnt kept">∞</span></span>
+    </div>
+    <p class="note">Stock already turns the tick red once played. The icon keeps its size; the mod adds a small badge at the icon's bottom-right corner, a bare bold number, no fill, sitting over the tick's lower-right arm with a soft dark halo so it reads against the red: the number of days ("5", "0" on the day, "!" when overdue), accent blue "∞" when kept. Tooltip: "Played · removed on 12 Oct unless kept (marked played)". Everyone sees the badge, matching the current rule that every viewer sees the date.</p>
+  </div>
+  <div class="cols">
+    <div><h3>How it is built</h3>
+      <p>The badge is a small <code>span</code> inserted <em>inside</em> the stock Played button, as the second child of its <code>.detailButton-content</code>, positioned over the icon's lower-right arm as bare bold text with a soft text-shadow in the page background colour, no pill, so it reads over the red tick without covering it. The icon is not touched and keeps its 1.6em size, so the button is exactly as wide and tall as its neighbours. The badge is inside the button's hit area and focus ring. The button itself stays upstream's: its element only ever touches the icon's classes and the title, so the span survives every played toggle. The stock click still toggles played. The number is computed from the absolute deadline the plugin already returns, never cached as a count. If upstream ever changes the button's markup the insert fails quietly and the page shows the stock tick alone.</p>
+      <p>No mod-generated Played or Favorite button is needed. Replacing a stock button would break Principle 0 and would have to re-implement its played logic; inserting one span into it does not.</p></div>
+    <div><h3>Decisions</h3>
+      <p><b>Decided 7 Oct: Keep stays on the pin only.</b> The countdown is not clickable; the stock tick keeps its stock click. The old warning box's Keep goes with the box.</p>
+      <p><b>Several files with different dates.</b> The number shows the nearest date. The chooser rows show each file's own date in the quality text, as in your sketch ("removes 12 Oct").</p></div>
+  </div>
+
+
+  <!-- ============================ 5 ============================ -->
+  <h2>5 · No file: the track block becomes Get a release</h2>
+  <p>When the episode or movie has no file, there is no Video, Audio or Subtitles to show. The whole block is replaced by one control in the same place: a raised Get a release button, with the header icon from step 1 still present above it. Nothing else fills the gap.</p>
+  <div class="jf">
+    <div class="cap">Episode with no file</div>
+    <div class="bar">
+      <div><div class="ttl">The Wheel of Time</div><div class="sub">Season 1 - 2. Shadow's Waiting</div><div class="meta">11/19/2021 &nbsp; 58m &nbsp; ★ 6.9</div></div>
+      <div class="hdr">
+        <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+        <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
+        <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
+      </div>
+    </div>
+    <div class="row" style="margin-top:1.1rem">
+      <span class="rbtn"><span class="material-icons">cloud_download</span>Get a release</span>
+    </div>
+    <p style="color:var(--jfmuted);max-width:50em;margin:.9rem 0 0">A strange noblewoman arrives in a remote mountain village, claiming one of five youths is the reincarnation of an ancient power…</p>
+    <div class="cap" style="margin-top:1.4rem">Episode being downloaded (step 5 after a grab)</div>
+    <div class="row">
+      <span class="ghost"><span class="material-icons" style="font-size:1.1em;vertical-align:-.2em">downloading</span> Downloading · 42% · 1080p WEBRip</span>
+    </div>
+  </div>
+  <div class="cols">
+    <div><h3>How it is built</h3>
+      <p>A file-less episode has no Jellyfin item, so it is served by the mod's own file-less page, which already mirrors the stock layout. That page drops its current button row and renders the raised button where <code>.trackSelections</code> would be: a stock <code>emby-button raised button-submit</code> with the same <code>cloud_download</code> icon. After a grab the button gives way to the existing queue status line until the file lands.</p></div>
+    <div><h3>Notes</h3>
+      <p>Non-administrators see neither the header icon nor the raised button, since release search is admin-only; they see the overview and, during a download, the status line. The series page keeps its per-episode rows as they are.</p></div>
+  </div>
+
+  <!-- ============================ leftovers ============================ -->
+  <h2>What this leaves unplaced</h2>
+  <p>You said no other changes yet, so these controls stay where they are today until you decide. Listed so nothing disappears by accident.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Control today</th><th>In this design</th></tr></thead>
+    <tbody>
+      <tr><td>Search releases button</td><td>Replaced by step 1.</td></tr>
+      <tr><td>Get another quality button</td><td>Last row of the chooser (step 2); with one file, step 1 covers it.</td></tr>
+      <tr><td>Keep / Keep 1080p / Stop keeping</td><td>The pin (step 2).</td></tr>
+      <tr><td>Remove 1080p</td><td>The cross (step 2).</td></tr>
+      <tr><td>History toggle and list</td><td>Per-file popup (step 3).</td></tr>
+      <tr><td>Retention warning box</td><td>Replaced by the countdown (step 4).</td></tr>
+      <tr><td>"Automatic removal is off." line</td><td>Not addressed. Proposal: drop it; the default state shows nothing.</td></tr>
+      <tr><td>"Remove this episode: Series default" window select</td><td>Not addressed. Stays below for now.</td></tr>
+      <tr><td>Search now (movies only)</td><td>Not addressed. Stays below for now.</td></tr>
+      <tr><td>Queue status line (downloading / grabbed)</td><td>Takes the raised button's place while a download runs (step 5).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="ask" style="border-left-color: var(--accent)">
+    <p style="margin:0 0 .3rem"><b style="color:var(--accent)">Decided 7 Oct 2026</b></p>
+    <ul style="margin:0">
+      <li>Hide the stock Version select while the chooser is mounted.</li>
+      <li>Header icon: <code>cloud_download</code>, in stock detail-button style.</li>
+      <li>Keep lives on the pin only; the countdown is read-only.</li>
+      <li>Episode-level history events are dropped from the episode page.</li>
+    </ul>
+    <p style="margin:.6rem 0 0">Next: an Opus 5.5 high agent writes the slice plan (UX §7, §11 and a phase file, plus the plugin's per-file history ids) and implements it on a <code>jellyfin-mod</code> worktree, then acceptance on 18096 across desktop, mobile and TV.</p>
+  </div>
+</div>
