@@ -7,6 +7,10 @@ import { useApi } from 'hooks/useApi';
 import { usePluginHealth } from '../hooks/useEntries';
 import { request, type SetupState } from '../settings/settingsApi';
 
+// The banner is drawn with the settings vocabulary (notice, buttons); Home must not depend on the settings page having
+// been opened first for it to be styled.
+import '../settings/settings.scss';
+
 /**
  * The first-run banner on the mod Home (P7.S10, PHASE7 default 14): administrators only, while setup is neither
  * complete nor dismissed. It links to the wizard and never redirects by itself.
@@ -36,7 +40,7 @@ const SetupBanner: FC = () => {
                 <span className='jfmod-notice-text'>JellyfinMod is not set up yet: {open} step(s) left before titles can be grabbed.</span>
                 <span className='jfmod-notice-action'>
                     <Button variant='contained' size='small' href='#/catalog/settings/setup'>Set up</Button>
-                    <Button size='small' onClick={dismiss}>Dismiss</Button>
+                    <Button variant='text' size='small' onClick={dismiss}>Dismiss</Button>
                 </span>
             </div>
         </div>
