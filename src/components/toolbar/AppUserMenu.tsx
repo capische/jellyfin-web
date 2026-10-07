@@ -135,7 +135,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                         <Tune />
                     </ListItemIcon>
                     <ListItemText>
-                        JellyfinMod settings
+                        JellyfinMod Settings
                     </ListItemText>
                 </MenuItem>
             )}

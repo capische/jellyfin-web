@@ -22,10 +22,10 @@ export const SETUP_CAPABILITY = 'setup';
 /** Each step shows settings-area sections; `id` names the section and keys it in the step. */
 const STEPS: { id: string; title: string; sections: { id: string; Section: FC<SectionProps> }[] }[] = [
     { id: 'discovery', title: 'Discovery', sections: [{ id: 'discovery', Section: DiscoverySection }] },
-    { id: 'downloadClient', title: 'Download client', sections: [{ id: 'client', Section: ClientSection }] },
+    { id: 'downloadClient', title: 'Download Client', sections: [{ id: 'client', Section: ClientSection }] },
     { id: 'indexers', title: 'Indexers', sections: [{ id: 'indexers', Section: IndexersSection }] },
-    { id: 'qualityProfile', title: 'Quality profile', sections: [{ id: 'profiles', Section: ProfilesSection }] },
-    { id: 'enable', title: 'Turn grabbing on', sections: [{ id: 'grabbing', Section: GrabbingSection }] },
+    { id: 'qualityProfile', title: 'Quality Profile', sections: [{ id: 'profiles', Section: ProfilesSection }] },
+    { id: 'enable', title: 'Turn Grabbing On', sections: [{ id: 'grabbing', Section: GrabbingSection }] },
     { id: 'optional', title: 'Optional', sections: [
         { id: 'retention', Section: RetentionSection }, { id: 'automation', Section: AutomationSection }, { id: 'interface', Section: InterfaceSection }
     ] }
@@ -50,7 +50,7 @@ const WizardRail: FC<{
 }> = ({ setup, current, onStep, onDismiss }) => (
     <nav className='jfmod-check-rail' aria-label='Setup steps'>
         <div className='jfmod-check-head'>
-            <h2>Set up JellyfinMod</h2>
+            <h2>Set Up JellyfinMod</h2>
             <p>{setup.complete ? 'Everything required is done.' : 'Each step unlocks when the one before it passes its test.'}</p>
         </div>
         <ol className='jfmod-check-steps'>
@@ -72,9 +72,9 @@ const WizardRail: FC<{
             })}
         </ol>
         <div className='jfmod-check-links'>
-            <a href='#/catalog/settings'>All settings</a>
+            <a href='#/catalog/settings'>All Settings</a>
             {!setup.dismissedAt && (
-                <a href='#/catalog/settings/setup' onClick={onDismiss}>Hide the Home banner</a>
+                <a href='#/catalog/settings/setup' onClick={onDismiss}>Hide the Home Banner</a>
             )}
         </div>
     </nav>
@@ -194,7 +194,7 @@ const SetupWizardPage: FC = () => {
     }
 
     return (
-        <Page id='jfmodSetupPage' title='Set up JellyfinMod' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
+        <Page id='jfmodSetupPage' title='Set Up JellyfinMod' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
             <div className='padded-left padded-right padded-top padded-bottom-page'>{content}</div>
         </Page>
     );

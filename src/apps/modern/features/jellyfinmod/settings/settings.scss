@@ -260,7 +260,8 @@
 
     .jfmod-settings .MuiButton-containedInherit:hover,
     .jfmod-settingsDialog .MuiButton-containedInherit:hover,
-    .jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root:hover {
+    .jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root:hover,
+    .jfmod-rowactions .jfmod-iconbtn-grey.MuiIconButton-root:hover {
         background-color: #424242;
         background-color: var(--jf-palette-Button-inheritContainedBg, #424242);
         background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
@@ -316,10 +317,13 @@
 .jfmod-rowactions > *,
 .jfmod-rowactions > .MuiButtonBase-root { margin-left: 0.86em; }
 
-/* A refused control keeps its focus ring and its tab stop; only its look says "no". */
-.jfmod-settings [aria-disabled="true"] { cursor: not-allowed; }
+/* A refused control keeps its focus ring and its tab stop; only its look says "no". The settings dialogs (a quality's Move
+   Up on the first row) are portalled outside .jfmod-settings and say it the same way. */
+.jfmod-settings [aria-disabled="true"],
+.jfmod-settingsDialog [aria-disabled="true"] { cursor: not-allowed; }
 
-.jfmod-settings button[aria-disabled="true"]:not(.jfmod-busy) {
+.jfmod-settings button[aria-disabled="true"]:not(.jfmod-busy),
+.jfmod-settingsDialog button[aria-disabled="true"]:not(.jfmod-busy) {
     opacity: 0.45;
     filter: grayscale(0.5);
 }
@@ -362,11 +366,13 @@
 /* Undo sits apart from the words inside the box, never glued to them. */
 .jfmod-secret-row > .MuiButtonBase-root { margin-left: 0.86em; }
 
-/* Test, Replace and Clear are icon-only in the box (user, 2026-10-07): the one exception to "the size of Save". A round
-   target of at least 40 px (2.5em, held at 40 px where mobile's 90% root would shrink it), centred in the box, filled as
-   the labelled buttons are: grey, and red for Clear. Its own font size is the root's, so its em sizes do not follow
-   MUI's 1.5rem icon size. Three classes beat MUI's own disabled and hover rules, which carry two. */
-.jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root {
+/* Test, Replace and Clear are icon-only in the box (user, 2026-10-07), and so is every action of a settings list row (user,
+   2026-10-08): the one exception to "the size of Save". A round target of at least 40 px (2.5em, held at 40 px where
+   mobile's 90% root would shrink it), centred in its box or row, filled as the labelled buttons are: grey, and red when it
+   destroys. Its own font size is the root's, so its em sizes do not follow MUI's 1.5rem icon size. Three classes beat
+   MUI's own disabled and hover rules, which carry two. */
+.jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root,
+.jfmod-rowactions > .jfmod-iconbtn.MuiButtonBase-root {
     box-sizing: border-box;
     width: 2.5em;
     height: 2.5em;
@@ -377,16 +383,23 @@
     font-size: 1rem;
 }
 .jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root:first-of-type { margin-left: 0.86em; }
-.jfmod-secret-row .jfmod-iconbtn .MuiSvgIcon-root { font-size: 1.4em; }
 
-.jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root {
+.jfmod-secret-row .jfmod-iconbtn .MuiSvgIcon-root,
+.jfmod-rowactions .jfmod-iconbtn .MuiSvgIcon-root { font-size: 1.4em; }
+
+/* A row's icons sit apart from what is beside them (its state, its chip) by the labelled buttons' own spacing. */
+.jfmod-rowactions > .jfmod-iconbtn.MuiButtonBase-root:first-child { margin-left: 0.86em; }
+
+.jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root,
+.jfmod-rowactions .jfmod-iconbtn-grey.MuiIconButton-root {
     color: #fff;
     color: var(--jf-palette-text-primary, #fff);
     background-color: #424242;
     background-color: var(--jf-palette-Button-inheritContainedBg, #424242);
 }
 
-.jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root {
+.jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root,
+.jfmod-rowactions .jfmod-iconbtn-red.MuiIconButton-root {
     color: #fff;
     color: var(--jf-palette-error-contrastText, #fff);
     background-color: #c62828;
@@ -394,13 +407,15 @@
 }
 
 @media (hover: hover) {
-    .jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root:hover {
+    .jfmod-secret-row .jfmod-iconbtn-red.MuiIconButton-root:hover,
+    .jfmod-rowactions .jfmod-iconbtn-red.MuiIconButton-root:hover {
         background-color: #8a1c1c;
         background-color: var(--jf-palette-error-dark, #8a1c1c);
     }
 }
 
-.jfmod-secret-row .jfmod-iconbtn.MuiIconButton-root.Mui-disabled {
+.jfmod-secret-row .jfmod-iconbtn.MuiIconButton-root.Mui-disabled,
+.jfmod-rowactions .jfmod-iconbtn.MuiIconButton-root.Mui-disabled {
     color: rgba(255, 255, 255, 0.3);
     color: var(--jf-palette-action-disabled, rgba(255, 255, 255, 0.3));
     background-color: rgba(255, 255, 255, 0.12);
@@ -458,6 +473,12 @@
 
 .jfmod-mapfoot > *,
 .jfmod-mapfoot > .MuiButtonBase-root { margin-right: 1em; }
+
+/* A mapping's Remove sits at the row's right edge, as every other row's actions do. */
+.jfmod-mapfoot > .jfmod-rowactions {
+    margin-left: auto;
+    margin-right: 0;
+}
 
 .jfmod-maperr {
     grid-column: 1/-1;
