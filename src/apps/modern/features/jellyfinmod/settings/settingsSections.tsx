@@ -1,4 +1,11 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import BuildIcon from '@mui/icons-material/Build';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -14,7 +21,10 @@ import {
     blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, PartialSaveError, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
 } from './settingsApi';
-import { type Draft, FieldForm, type FieldSpec, FOCUSABLE_SELECT, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill, useConfirm } from './settingsWidgets';
+import {
+    type Draft, FieldForm, type FieldSpec, FOCUSABLE_SELECT, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
+    useConfirm
+} from './settingsWidgets';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the settings DTOs are the plugin's own and are read field by field */
 
@@ -480,14 +490,20 @@ export const summarise = (id: string, data: SettingsData): Summary => {
 const selectedClient = (data: SettingsData) =>
     data.clients.find(client => client.id === data.acquisition?.downloadClientId) ?? data.clients[0];
 
-/** One blocker with its sentence and a Fix that opens the section owning it; `detail` is the Overview's area name. */
+/**
+ * One blocker with its sentence and a Fix that opens the section owning it; `detail` is the Overview's area name. Fix is a
+ * row action, so it is an icon named after the blocker it fixes (user, 2026-10-08).
+ */
 const BlockerRow: FC<{ code: string; fallback: string; detail?: string; onGo: (id: string) => void }> = ({ code, fallback, detail, onGo }) => {
     const fix = useCallback(() => onGo(BLOCKER_SECTIONS.get(code) ?? fallback), [code, fallback, onGo]);
+    const sentence = blockerSentence(code);
     return (
         <div className='jfmod-brow'>
-            <div className='jfmod-brow-main'><strong>{blockerSentence(code)}</strong>{detail !== undefined && <span className='jfmod-sub'>{detail}</span>}</div>
+            <div className='jfmod-brow-main'><strong>{sentence}</strong>{detail !== undefined && <span className='jfmod-sub'>{detail}</span>}</div>
             <span />
-            <Button variant='contained' color='inherit' onClick={fix}>Fix</Button>
+            <span className='jfmod-rowactions'>
+                <IconAction label={`Fix: ${sentence.replace(/\.$/, '')}`} onClick={fix} data={{ 'row-action': 'fix' }}><BuildIcon /></IconAction>
+            </span>
         </div>
     );
 };
@@ -523,7 +539,7 @@ export const OverviewSection: FC<SectionProps> = props => {
                 )}
             </div>
             <div className='jfmod-group'>
-                <h3 className='jfmod-grouptitle'>This installation</h3>
+                <h3 className='jfmod-grouptitle'>This Installation</h3>
                 <dl className='jfmod-kv'>
                     <dt>Plugin</dt><dd>{overview?.plugin.version ?? 'unknown'}</dd>
                     <dt>Interface bundle (server)</dt><dd className='jfmod-mono'>{serverBundle ?? 'none'}</dd>
@@ -568,7 +584,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
     const shownResult = testResult && testResult.revision === discovery.revision && token.action === 'unchanged' && discovery.tokenConfigured ?
         testResult.notice : null;
     const tokenTest = useMemo(() => ({
-        id: 'discovery', label: 'Test token', run: testToken, disabled: section.busy, result: shownResult,
+        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult,
         help: 'Asks TMDB whether it accepts the saved token. Save a new token first.'
     }), [testToken, section.busy, shownResult]);
     return (
@@ -598,6 +614,7 @@ const MappingRow: FC<{ index: number; mapping: PathMapping; setMappings: (change
     const editLocal = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         setMappings(rows => rows.map((row, at) => (at === index ? { ...row, localPathPrefix: event.target.value } : row))), [index, setMappings]);
     const remove = useCallback(() => setMappings(rows => rows.filter((_, at) => at !== index)), [index, setMappings]);
+    const paths = mapping.clientPathPrefix || mapping.localPathPrefix ? ` (${mapping.clientPathPrefix || '…'} → ${mapping.localPathPrefix || '…'})` : '';
     return (
         <div className='jfmod-maprow'>
             <TextField size='small' label='Transmission path' value={mapping.clientPathPrefix}
@@ -607,7 +624,9 @@ const MappingRow: FC<{ index: number; mapping: PathMapping; setMappings: (change
                 onChange={editLocal} />
             <div className='jfmod-mapfoot'>
                 <StatePill kind={mapping.verifiedAt ? 'ok' : 'warn'}>{mapping.verifiedAt ? 'verified' : pathSentence(mapping.verificationReason ?? 'path_unmapped')}</StatePill>
-                <Button variant='contained' color='error' onClick={remove}>Remove</Button>
+                <span className='jfmod-rowactions'>
+                    <IconAction label={`Remove Mapping ${index + 1}${paths}`} red onClick={remove} data={{ 'row-action': 'remove' }}><DeleteIcon /></IconAction>
+                </span>
             </div>
         </div>
     );
@@ -782,7 +801,7 @@ export const ClientSection: FC<SectionProps> = props => {
         { key: 'enabled', label: 'Send grabs to this client', type: 'bool' }
     ];
     return (
-        <SectionFrame id='client' eyebrow={props.eyebrow} title='Download client' state={summarise('client', data)} notice={section.notice}
+        <SectionFrame id='client' eyebrow={props.eyebrow} title='Download Client' state={summarise('client', data)} notice={section.notice}
             onSave={save} saving={section.busy} saveMeta={client ? `Revision ${client.revision}.` : 'Not saved yet.'} next={props.next} onGo={props.onGo}
             actions={client && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testClient} data-test='client'>Test</Button>}
         >
@@ -790,18 +809,18 @@ export const ClientSection: FC<SectionProps> = props => {
             <SecretField key={client?.revision ?? 'new'} id='jfmodClientPassword' label='Password' configured={!!client?.passwordConfigured} change={password} onChange={setPassword} />
             {client && (
                 <div className='jfmod-group'>
-                    <h3 className='jfmod-grouptitle'>Path mappings</h3>
+                    <h3 className='jfmod-grouptitle'>Path Mappings</h3>
                     {mappings.map((mapping, index) => (
                         // eslint-disable-next-line react/no-array-index-key -- an ordered list edited in place; order is the identity
                         <MappingRow key={index} index={index} mapping={mapping} setMappings={setMappings} />
                     ))}
                     <div className='jfmod-inlineactions'>
-                        <Button variant='contained' color='inherit' onClick={addMapping}>Add mapping</Button>
-                        <Button variant='contained' color='inherit' disabled={section.busy} onClick={saveMappings}>Save mappings</Button>
+                        <Button variant='contained' color='inherit' onClick={addMapping}>Add Mapping</Button>
+                        <Button variant='contained' color='inherit' disabled={section.busy} onClick={saveMappings}>Save Mappings</Button>
                     </div>
                     <div className='jfmod-testline'>
                         <TextField size='small' label='A path as Transmission reports it' value={probePath} onChange={editProbePath} />
-                        <Button variant='contained' color='inherit' disabled={section.busy || !probePath} onClick={probe}>Test import path</Button>
+                        <Button variant='contained' color='inherit' disabled={section.busy || !probePath} onClick={probe}>Test Import Path</Button>
                     </div>
                 </div>
             )}
@@ -900,7 +919,7 @@ const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolea
     const cancel = useCallback(() => onClose(false), [onClose]);
     return (
         <Dialog open onClose={cancel} fullWidth maxWidth='sm' className='jfmod-settingsDialog'>
-            <DialogTitle>{indexer ? `Edit ${indexer.name}` : 'Add an indexer'}</DialogTitle>
+            <DialogTitle>{indexer ? `Edit ${indexer.name}` : 'Add Indexer'}</DialogTitle>
             <DialogContent>
                 <Notice notice={notice} />
                 <FieldForm fields={fields} draft={draft} onChange={set} />
@@ -990,7 +1009,7 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
             <div className='jfmod-inlineactions'>
                 <Button variant='contained' color='inherit' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
                 {source && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testSource}>Test</Button>}
-                {source && <Button variant='contained' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync now</Button>}
+                {source && <Button variant='contained' disabled={section.busy} onClick={syncNow} data-prowlarr='sync'>Sync Now</Button>}
                 {source && (
                     <Button variant='contained' color='error' disabled={section.busy} data-prowlarr='remove' onClick={remove}>Remove</Button>
                 )}
@@ -1043,9 +1062,11 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
                 {indexerWords(indexer)}
             </StatePill>
             <span className='jfmod-rowactions'>
-                <Button variant='contained' color='inherit' disabled={busy} onClick={testIndexer}>Test</Button>
-                <Button variant='contained' color='inherit' onClick={edit}>Edit</Button>
-                {indexer.managedBy !== 'prowlarr' && <Button variant='contained' color='error' data-indexer-remove={indexer.id} onClick={remove}>Remove</Button>}
+                <IconAction label={`Test ${indexer.name}`} disabled={busy} onClick={testIndexer} data={{ 'row-action': 'test' }}><NetworkCheckIcon /></IconAction>
+                <IconAction label={`Edit ${indexer.name}`} onClick={edit} data={{ 'row-action': 'edit' }}><EditIcon /></IconAction>
+                {indexer.managedBy !== 'prowlarr' && (
+                    <IconAction label={`Remove ${indexer.name}`} red onClick={remove} data={{ 'row-action': 'remove', 'indexer-remove': indexer.id }}><DeleteIcon /></IconAction>
+                )}
             </span>
         </div>
     );
@@ -1053,8 +1074,8 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
 
 export const IndexersSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
-    // One blue button per view (user, 2026-10-07): with a Prowlarr source, Sync now is the section's main action and Add
-    // indexer is grey; without one, Add indexer is. Prowlarr's own Save / Add Prowlarr stays grey either way.
+    // One blue button per view (user, 2026-10-07): with a Prowlarr source, Sync Now is the section's main action and Add
+    // Indexer is grey; without one, Add Indexer is. Prowlarr's own Save / Add Prowlarr stays grey either way.
     const prowlarrSource = !!data.prowlarr?.[0];
     const section = useSectionState(reload);
     const [confirmDialog, ask] = useConfirm();
@@ -1067,7 +1088,7 @@ export const IndexersSection: FC<SectionProps> = props => {
     return (
         <SectionFrame id='indexers' eyebrow={props.eyebrow} title='Indexers' state={summarise('indexers', data)} notice={section.notice}
             next={props.next} onGo={props.onGo}
-            actions={<Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add indexer</Button>}
+            actions={<Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>}
         >
             <div className='jfmod-blist'>
                 {data.indexers.length === 0 && <div className='jfmod-empty'>No indexer yet.</div>}
@@ -1087,21 +1108,38 @@ export const IndexersSection: FC<SectionProps> = props => {
 
 const PROFILE_KEYS = ['name', 'minimumBytesPerHour', 'maximumBytesPerHour', 'cutoff', 'upgradeAllowed', 'upgradeMode', 'minimumAutoScore', 'minimumSeeders'];
 
-/** One allowed quality in a profile's ranked list, with Up and Remove. */
+/**
+ * One allowed quality in a profile's ranked list, with Move Up, Move Down and Remove as icons (user, 2026-10-08). A move
+ * that has nowhere to go is refused, not disabled, and the moved quality's button keeps the focus, so a remote can press it
+ * again: the row is re-rendered in its new place and the browser would otherwise drop the focus with the moved element.
+ */
 const QualityRow: FC<{ id: string; index: number; chosen: string[]; set: (key: string, value: unknown) => void; toggle: (id: string) => void }> = ({
     id, index, chosen, set, toggle
 }) => {
-    const moveUp = useCallback(() => set('qualities', chosen.map((value, at) => {
-        if (at === index - 1) return id;
-        return at === index ? chosen[index - 1] : value;
-    })), [set, chosen, index, id]);
+    const move = useCallback((offset: number, action: string) => {
+        const target = index + offset;
+        if (target < 0 || target >= chosen.length) return;
+        const next = chosen.slice();
+        next.splice(index, 1);
+        next.splice(target, 0, id);
+        set('qualities', next);
+        window.setTimeout(() => {
+            const button = [...document.querySelectorAll<HTMLElement>(`.jfmod-qrow [data-row-action="${action}"]`)].find(el => el.dataset.quality === id);
+            if (button && document.activeElement !== button) button.focus();
+        }, 0);
+    }, [set, chosen, index, id]);
+    const moveUp = useCallback(() => move(-1, 'up'), [move]);
+    const moveDown = useCallback(() => move(1, 'down'), [move]);
     const remove = useCallback(() => toggle(id), [toggle, id]);
     return (
         <li className='jfmod-qrow'>
             <span className='jfmod-qrank'>{index + 1}</span><span className='jfmod-qname'>{id}</span>
             <span className='jfmod-rowactions'>
-                <Button variant='contained' color='inherit' disabled={index === 0} onClick={moveUp}>Up</Button>
-                <Button variant='contained' color='error' onClick={remove}>Remove</Button>
+                <IconAction label={`Move ${id} Up`} refused={index === 0} onClick={moveUp} data={{ 'row-action': 'up', quality: id }}><ArrowUpwardIcon /></IconAction>
+                <IconAction label={`Move ${id} Down`} refused={index === chosen.length - 1} onClick={moveDown} data={{ 'row-action': 'down', quality: id }}>
+                    <ArrowDownwardIcon />
+                </IconAction>
+                <IconAction label={`Remove ${id}`} red onClick={remove} data={{ 'row-action': 'remove', quality: id }}><DeleteIcon /></IconAction>
             </span>
         </li>
     );
@@ -1169,11 +1207,11 @@ const ProfileDialog: FC<{ api: Api; profile: any | null; qualities: { id: string
     const addQuality = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => toggle(event.target.value), [toggle]);
     return (
         <Dialog open onClose={cancel} fullWidth maxWidth='sm' className='jfmod-settingsDialog'>
-            <DialogTitle>{profile ? `Edit ${profile.name}` : 'Add a quality profile'}</DialogTitle>
+            <DialogTitle>{profile ? `Edit ${profile.name}` : 'Add Quality Profile'}</DialogTitle>
             <DialogContent>
                 <Notice notice={notice} />
                 <FieldForm fields={[{ key: 'name', label: 'Name', type: 'text' }]} draft={draft} onChange={set} />
-                <h3 className='jfmod-grouptitle'>Allowed qualities, best first</h3>
+                <h3 className='jfmod-grouptitle'>Allowed Qualities, Best First</h3>
                 <ol className='jfmod-qlist'>
                     {chosen.map((id, index) => (
                         <QualityRow key={id} id={id} index={index} chosen={chosen} set={set} toggle={toggle} />
@@ -1220,17 +1258,23 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
             void run(() => request(api, 'DELETE', `Settings/QualityProfiles/${profile.id}`), 'Removed.');
         }
     }), [ask, run, api, profile.id, profile.name]);
+    // The Default chip is a status, not a button; Make Default is the first icon of every other row, so Edit and Remove
+    // line up at the right edge of every row (user, 2026-10-08).
     return (
-        <div className='jfmod-brow'>
+        <div className='jfmod-brow' data-profile={profile.id}>
             <div className='jfmod-brow-main'>
                 <strong>{profile.name}</strong>
                 <span className='jfmod-sub'>{(profile.qualities as string[]).join(', ')}</span>
             </div>
-            {profile.isDefault ? <span className='jfmod-chip jfmod-chip-primary'>Default</span> :
-                <Button variant='contained' color='inherit' disabled={busy || !canMakeDefault} onClick={makeDefault}>Make default</Button>}
+            {profile.isDefault ? <span className='jfmod-chip jfmod-chip-primary'>Default</span> : <span />}
             <span className='jfmod-rowactions'>
-                <Button variant='contained' color='inherit' onClick={edit}>Edit</Button>
-                <Button variant='contained' color='error' onClick={remove}>Remove</Button>
+                {!profile.isDefault && (
+                    <IconAction label={`Make ${profile.name} Default`} disabled={busy} refused={!canMakeDefault} onClick={makeDefault} data={{ 'row-action': 'default' }}>
+                        <StarBorderIcon />
+                    </IconAction>
+                )}
+                <IconAction label={`Edit ${profile.name}`} onClick={edit} data={{ 'row-action': 'edit' }}><EditIcon /></IconAction>
+                <IconAction label={`Remove ${profile.name}`} red onClick={remove} data={{ 'row-action': 'remove' }}><DeleteIcon /></IconAction>
             </span>
         </div>
     );
@@ -1252,9 +1296,9 @@ export const ProfilesSection: FC<SectionProps> = props => {
         if (saved) void reload();
     }, [reload]);
     return (
-        <SectionFrame id='profiles' eyebrow={props.eyebrow} title='Quality profiles' state={summarise('profiles', data)} notice={section.notice}
+        <SectionFrame id='profiles' eyebrow={props.eyebrow} title='Quality Profiles' state={summarise('profiles', data)} notice={section.notice}
             next={props.next} onGo={props.onGo}
-            actions={<Button variant='contained' onClick={add}>Add profile</Button>}
+            actions={<Button variant='contained' onClick={add}>Add Profile</Button>}
         >
             <div className='jfmod-blist'>
                 {data.profiles.length === 0 && <div className='jfmod-empty'>No profile yet.</div>}
@@ -1346,7 +1390,7 @@ const FlatSection: FC<SectionProps & { id: string; title: string; path: string; 
 };
 
 export const ImportSection: FC<SectionProps> = props => (
-    <FlatSection {...props} id='import' title='Import and seeding' path='Settings/Import' source={props.data.importSettings} fields={IMPORT_FIELDS} />
+    <FlatSection {...props} id='import' title='Import and Seeding' path='Settings/Import' source={props.data.importSettings} fields={IMPORT_FIELDS} />
 );
 
 // ---- Automation ----
@@ -1373,10 +1417,10 @@ export const AutomationSection: FC<SectionProps> = props => {
     const decisions = data.decisions.slice(0, 10);
     return (
         <FlatSection {...props} id='automation' title='Automation' path='Settings/Automation' source={data.automation} fields={AUTOMATION_FIELDS}
-            actions={<Button variant='contained' color='inherit' disabled={section.busy} onClick={runNow}>Run now</Button>}
+            actions={<Button variant='contained' color='inherit' disabled={section.busy} onClick={runNow}>Run Now</Button>}
             extra={<div className='jfmod-group'>
                 <Notice notice={section.notice} />
-                <h3 className='jfmod-grouptitle'>Recent decisions</h3>
+                <h3 className='jfmod-grouptitle'>Recent Decisions</h3>
                 <div className='jfmod-loglist'>
                     {decisions.length === 0 && <div className='jfmod-empty'>No decision recorded yet.</div>}
                     {decisions.map(decision => (
@@ -1457,7 +1501,7 @@ export const RetentionSection: FC<SectionProps> = props => {
                 {data.lastRun ? ` · last run ${when(data.lastRun.completedAt ?? data.lastRun.startedAt)} (${data.lastRun.status})` : ' · no run recorded yet'}
             </p>
             <div className='jfmod-group'>
-                <h3 className='jfmod-grouptitle'>Seed protection</h3>
+                <h3 className='jfmod-grouptitle'>Seed Protection</h3>
                 <FieldForm fields={[
                     { key: 'source', label: 'Read seeding state from', type: 'select', options: [
                         { value: 'acquisitionClient', label: 'The download client' }, { value: 'separate', label: 'A separate Transmission' }
@@ -1512,7 +1556,7 @@ export const InterfaceSection: FC<SectionProps> = props => {
             </dl>
             <div className='jfmod-inlineactions'>
                 <Button variant='contained' color='error' disabled={section.busy} onClick={restoreStock}>
-                    Restore stock now
+                    Restore Stock Now
                 </Button>
             </div>
             {face.Recovery && <p className='fieldDescription jfmod-lead'>{face.Recovery}</p>}

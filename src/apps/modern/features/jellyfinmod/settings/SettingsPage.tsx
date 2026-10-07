@@ -27,11 +27,11 @@ export const SETTINGS_ROUTE = '/catalog/settings';
 const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
     { id: 'overview', title: 'Overview', Component: OverviewSection },
     { id: 'discovery', title: 'Discovery', Component: DiscoverySection },
-    { id: 'client', title: 'Download client', Component: ClientSection },
+    { id: 'client', title: 'Download Client', Component: ClientSection },
     { id: 'indexers', title: 'Indexers', Component: IndexersSection },
-    { id: 'profiles', title: 'Quality profiles', Component: ProfilesSection },
+    { id: 'profiles', title: 'Quality Profiles', Component: ProfilesSection },
     { id: 'grabbing', title: 'Grabbing', Component: GrabbingSection },
-    { id: 'import', title: 'Import and seeding', Component: ImportSection },
+    { id: 'import', title: 'Import and Seeding', Component: ImportSection },
     { id: 'retention', title: 'Retention', Component: RetentionSection },
     { id: 'automation', title: 'Automation', Component: AutomationSection },
     { id: 'interface', title: 'Interface', Component: InterfaceSection },
@@ -120,8 +120,12 @@ const SettingsPage: FC = () => {
     const openStep = useCallback((event: React.MouseEvent<HTMLButtonElement>) => go(event.currentTarget.dataset.section!), [go]);
 
     useEffect(() => {
-        // TV: start on the current rail step, so the remote has somewhere to be (UX §13 rule 2).
+        // TV: start on the current rail step, so the remote has somewhere to be (UX §13 rule 2). Only when the remote has
+        // nowhere to be: every refetch brings new data (a test, a save), and moving the focus then took the remote off the
+        // row it was working on (fix/settings-rows-case, 2026-10-08).
         if (!layoutManager.tv || !settings.data) return;
+        const active = document.activeElement;
+        if (active && active !== document.body && active.isConnected) return;
         const step = railRef.current?.querySelector<HTMLElement>('.jfmod-step[aria-current="true"]');
         if (step) focusManager.focus(step);
     }, [settings.data]);
@@ -147,9 +151,9 @@ const SettingsPage: FC = () => {
             // the header; at 1280×720 the header's SyncPlay button was nearer than the section's first control (P7.S11
             // sweep). Up still reaches the header.
             <div className='jfmod-settings jfmod-check focuscontainer-x'>
-                <nav className='jfmod-check-rail' aria-label='JellyfinMod settings'>
+                <nav className='jfmod-check-rail' aria-label='JellyfinMod Settings'>
                     <div className='jfmod-check-head'>
-                        <h2>JellyfinMod settings</h2>
+                        <h2>JellyfinMod Settings</h2>
                         <p>In the order things have to work.</p>
                     </div>
                     <div className='jfmod-check-picker'>
@@ -176,9 +180,9 @@ const SettingsPage: FC = () => {
                         })}
                     </ol>
                     <div className='jfmod-check-links'>
-                        <a href='#/mypreferencesmenu'>Jellyfin preferences</a>
+                        <a href='#/mypreferencesmenu'>Jellyfin Preferences</a>
                         <a href='#/dashboard'>Dashboard</a>
-                        <a href='#/catalog/settings/setup'>Setup wizard</a>
+                        <a href='#/catalog/settings/setup'>Setup Wizard</a>
                     </div>
                 </nav>
                 {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
@@ -196,7 +200,7 @@ const SettingsPage: FC = () => {
     }
 
     return (
-        <Page id='jfmodSettingsPage' title='JellyfinMod settings' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
+        <Page id='jfmodSettingsPage' title='JellyfinMod Settings' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
             <div className='padded-left padded-right padded-top padded-bottom-page'>
                 {content}
             </div>
