@@ -11,6 +11,8 @@
 // Signs in as oleksii with an empty password. Read-only apart from one Discovery save with nothing changed (the
 // revision round-trips) and the read-only TMDB Test; it changes no setting.
 // Expects the default Dark theme: the role colours and MUI's disabled colours it checks are that theme's values.
+// Since 2026-10-08 it also checks that every list row's actions are round icons named after their row (both pages), that
+// the arrows walk a row's icons in order on the TV, and that titles, buttons and rail items are in Title Case (UX §12.1).
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -122,7 +124,14 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         const notice = el.closest('.jfmod-notice');
         const section = el.closest('.jfmod-check-section');
         const view = dialog ? 'dialog' : notice ? 'notice' : section ? 'section ' + section.dataset.section : 'page';
-        return { text: icon ? '' : el.textContent.trim(), label: el.getAttribute('aria-label'), action: el.dataset.secretAction ?? null, icon,
+        // The row a button acts on: a list row's name, a quality's id or "Mapping N"; its icon's name must say it.
+        const row = el.closest('.jfmod-brow, .jfmod-qrow, .jfmod-maprow');
+        let rowName = null;
+        if (row?.matches('.jfmod-qrow')) rowName = row.querySelector('.jfmod-qname')?.textContent.trim() ?? null;
+        else if (row?.matches('.jfmod-maprow')) rowName = 'Mapping ' + ([...row.parentElement.querySelectorAll(':scope > .jfmod-maprow')].indexOf(row) + 1);
+        else if (row) rowName = (row.querySelector('.jfmod-brow-main strong')?.firstChild?.textContent ?? '').trim().replace(/\.$/, '');
+        return { text: icon ? '' : el.textContent.trim(), label: el.getAttribute('aria-label'), action: el.dataset.secretAction ?? el.dataset.rowAction ?? null, icon,
+            inListRow: !!row, rowName, refused: el.getAttribute('aria-disabled') === 'true',
             variant: icon ? 'icon' : variant(el), tint: icon ? (el.classList.contains('jfmod-iconbtn-red') ? 'red' : 'grey') : tint(el),
             bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth, borderColor: s.borderTopColor,
             height: Math.round(rect.height * 10) / 10, width: Math.round(rect.width * 10) / 10,
@@ -197,16 +206,18 @@ const auditIdle = async (page, layout, rootSelector, { blur = true } = {}) => {
 /**
  * Three kinds of button (user, 2026-10-07): red destroys, blue is the main action of its view, grey is everything else.
  * The kind each button of the settings area must have, by its words and where it sits. Blue: Save (but Save mappings and
- * the Prowlarr card's own Save are grey: the section's Save, or Sync now, is that view's main action), Continue, Set up,
- * Add profile, Sync now, and Add indexer only when there is no Prowlarr source (then Sync now is the main action). Red:
- * Clear, Remove, Delete and Restore stock now. A button these rules do not name is grey.
+ * the Prowlarr card's own Save are grey: the section's Save, or Sync Now, is that view's main action), Continue, Set Up,
+ * Add Profile, Sync Now, and Add Indexer only when there is no Prowlarr source (then Sync Now is the main action). Red:
+ * Clear, Remove, Delete and Restore Stock Now, and the Clear and Remove icons. A button these rules do not name is grey.
  */
-const RED = ['Clear', 'Remove', 'Delete', 'Restore stock now'];
-const BLUE = ['Save', 'Saving…', 'Continue', 'Set up', 'Add profile', 'Sync now'];
+const RED = ['Clear', 'Remove', 'Delete', 'Restore Stock Now'];
+const BLUE = ['Save', 'Saving…', 'Continue', 'Set Up', 'Add Profile', 'Sync Now'];
+/** The icon actions that destroy: a secret's Clear and a row's Remove. */
+const RED_ICONS = ['clear', 'remove'];
 const expectedTint = button => {
-    if (button.icon) return button.action === 'clear' ? 'red' : 'grey';
+    if (button.icon) return RED_ICONS.includes(button.action) ? 'red' : 'grey';
     if (RED.includes(button.text)) return 'red';
-    if (button.text === 'Add indexer') return button.sectionHasSync ? 'grey' : 'blue';
+    if (button.text === 'Add Indexer') return button.sectionHasSync ? 'grey' : 'blue';
     if ((button.text === 'Save' || button.text === 'Saving…') && button.inProwlarr) return 'grey';
     return BLUE.includes(button.text) ? 'blue' : 'grey';
 };
@@ -266,6 +277,41 @@ const checkButtons = (layout, where, buttons) => {
     for (const button of buttons) if (button.tint === 'blue') blues[button.view] = [...(blues[button.view] ?? []), button.text];
     const crowded = Object.entries(blues).filter(([, list]) => list.length > 1);
     record(layout, `${where}: at most one blue button per view`, crowded.length === 0, crowded.length ? Object.fromEntries(crowded) : blues);
+    // Every action of a list row is a round icon (user, 2026-10-08), named after the row it acts on ("Remove Prowlarr 1337x").
+    const inRows = buttons.filter(button => button.inListRow);
+    const rowWrong = inRows.filter(button => !button.icon || !button.label || !button.rowName || !button.label.includes(button.rowName))
+        .map(button => ({ text: button.text, label: button.label, row: button.rowName }));
+    if (inRows.length) {
+        record(layout, `${where}: every list-row action is an icon named after its row (${inRows.length})`, rowWrong.length === 0,
+            rowWrong.length ? rowWrong : inRows.map(button => button.label).slice(0, 8));
+    }
+};
+
+/**
+ * Title Case (user, 2026-10-08; UX §12.1): every word capitalised except a short article, conjunction or preposition that
+ * is neither the first nor the last word. Words that do not start with a letter (numbers, arrows) are not judged.
+ */
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'and', 'but', 'or', 'nor', 'as', 'at', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'to', 'via', 'with']);
+const isTitleCase = text => {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lettered = words.map((word, index) => ({ index, letters: word.replace(/^[^\p{L}]+/u, '') })).filter(({ letters }) => /^\p{L}/u.test(letters));
+    const last = lettered.length ? lettered[lettered.length - 1].index : -1;
+    return lettered.every(({ index, letters }) => {
+        const bare = letters.replace(/[^\p{L}]+$/u, '').toLowerCase();
+        if (index > 0 && index !== last && SMALL_WORDS.has(bare)) return letters[0] === letters[0].toLowerCase();
+        return letters[0] === letters[0].toUpperCase();
+    });
+};
+/** The settings page's and wizard's titles: rail heading and items, its links, section and group titles, labelled buttons. */
+const settingsTitles = (page, rootSelector = '.jfmod-check-main') => page.evaluate(selector => {
+    const pick = (where, sel) => [...document.querySelectorAll(where === 'root' ? `${selector} ${sel}` : sel)].map(el => el.textContent.trim()).filter(Boolean);
+    return [...new Set([...pick('page', '.jfmod-check-rail .jfmod-check-head h2'), ...pick('page', '.jfmod-check-rail .jfmod-t'), ...pick('page', '.jfmod-check-links a'),
+        ...pick('root', 'h2:not(.MuiDialogTitle-root)'), ...pick('root', '.jfmod-grouptitle'), ...pick('root', 'button.MuiButton-root'), ...pick('root', 'a.MuiButton-root'),
+        ...pick('root', '.jfmod-next')])];
+}, rootSelector);
+const checkTitleCase = (layout, where, titles) => {
+    const wrong = titles.filter(text => !isTitleCase(text));
+    record(layout, `${where}: titles, rail items and labelled buttons are in Title Case (${titles.length})`, wrong.length === 0, wrong.length ? wrong : undefined);
 };
 
 /**
@@ -330,13 +376,13 @@ const contrast = (fg, bg) => {
 
 /**
  * The Dashboard page (plugin configPage.html) follows the same three kinds with upstream's legacy classes: blue
- * `raised button-submit` (Save; New indexer and New profile, the main action of sections without a Save), red
- * `raised button-delete` (Clear, Remove, Delete, Delete this client, Restore stock page now), grey `raised` for the rest;
- * the secret's actions are round icons. Each visible section is read in turn: kinds, one blue at most, every labelled
+ * `raised button-submit` (Save; New Indexer and New Profile, the main action of sections without a Save), red
+ * `raised button-delete` (Remove, Delete, Delete This Client, Restore Stock Page Now), grey `raised` for the rest; the
+ * secret's actions and every list row's actions are round icons, red for Clear and Remove. Each visible section is read in turn: kinds, one blue at most, every labelled
  * button the height of Save, icons at least 40 px, text at 4.5:1.
  */
-const DASH_RED = ['Remove', 'Delete', 'Delete this client', 'Restore stock page now'];
-const DASH_BLUE = ['Save', 'New indexer', 'New profile'];
+const DASH_RED = ['Remove', 'Delete', 'Delete This Client', 'Restore Stock Page Now'];
+const DASH_BLUE = ['Save', 'New Indexer', 'New Profile'];
 const dashboardSection = page => page.evaluate(() => {
     const section = [...document.querySelectorAll('#JellyfinModConfigPage .jfmod-check-section')].find(el => !el.hidden);
     if (!section) return null;
@@ -371,17 +417,25 @@ const dashboardSection = page => page.evaluate(() => {
         if (el.classList.contains('button-delete') || el.classList.contains('jfmod-iconbtn-red')) kind = 'red';
         else if (el.classList.contains('button-submit')) kind = 'blue';
         else if (el.classList.contains('raised') || el.classList.contains('jfmod-iconbtn-grey')) kind = 'grey';
+        const row = el.closest('.jfmod-brow, .jfmod-qrow, .jfmod-maprow');
         return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
+            action: el.dataset.secretAction ?? el.dataset.rowAction ?? null, inListRow: !!row,
             width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), refused: el.getAttribute('aria-disabled') === 'true',
             marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement, bg: bg.map(Math.round),
             // A ring is an outline, or a solid shadow spread of at least 1 px (upstream's emby-button forbids outlines).
             ring: (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1) || (!/inset/.test(s.boxShadow) && parseFloat((s.boxShadow.match(/(\d+(?:\.\d+)?)px\s*$/) ?? [])[1] ?? '0') >= 1) };
     });
-    return { id: section.dataset.section, saveHeight, buttons };
+    const titles = [...section.querySelectorAll('.jfmod-check-sechead h2, .jfmod-grouptitle, .jfmod-next')].map(el => el.textContent.trim())
+        .concat(buttons.filter(button => !button.icon).map(button => button.text)).filter(Boolean);
+    // A rail item's title, without the state words it carries for a screen reader (" — ready.").
+    const shown = el => [...el.childNodes].filter(node => !(node.nodeType === 1 && node.classList.contains('jfmod-visually-hidden'))).map(node => node.textContent).join('').trim();
+    const rail = [...document.querySelectorAll('#JellyfinModConfigPage .jfmod-check-rail .jfmod-check-head h2, #JellyfinModConfigPage .jfmod-step .jfmod-t, #JellyfinModConfigPage .jfmod-check-links a')]
+        .map(shown).filter(Boolean);
+    return { id: section.dataset.section, saveHeight, buttons, titles: [...new Set([...rail, ...titles])] };
 });
 const checkDashboardSection = (layout, view) => {
     const want = button => {
-        if (button.icon) return button.text === 'Clear' ? 'red' : 'grey';
+        if (button.icon) return RED_ICONS.includes(button.action) ? 'red' : 'grey';
         if (DASH_RED.includes(button.text)) return 'red';
         return DASH_BLUE.includes(button.text) ? 'blue' : 'grey';
     };
@@ -397,6 +451,12 @@ const checkDashboardSection = (layout, view) => {
         wrong.length === 0, wrong.length ? wrong : undefined);
     const blues = view.buttons.filter(button => button.kind === 'blue').map(button => button.text);
     record(layout, `dashboard page ${view.id}: at most one blue button`, blues.length <= 1, blues);
+    const inRows = view.buttons.filter(button => button.inListRow);
+    if (inRows.length) {
+        const rowWrong = inRows.filter(button => !button.icon).map(button => button.text);
+        record(layout, `dashboard page ${view.id}: every list-row action is an icon (${inRows.length})`, rowWrong.length === 0, rowWrong.length ? rowWrong : inRows.map(button => button.text).slice(0, 8));
+    }
+    checkTitleCase(layout, `dashboard page ${view.id}`, view.titles);
 };
 
 /** The Dashboard page's buttons in the visible section, each hovered or focused in turn and read as that element. */
@@ -463,6 +523,7 @@ for (const name of only) {
             const file = await shot(page, `${name}-settings-${id}`);
             const result = await auditIdle(page, layout);
             checkButtons(name, `settings ${id}`, result.buttons);
+            checkTitleCase(name, `settings ${id}`, await settingsTitles(page));
             if (name === 'desktop') await checkHover(page, layout, name, `settings ${id}`);
             record(name, `settings ${id}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `settings ${id}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
@@ -513,8 +574,8 @@ for (const name of only) {
                 help: section.querySelector('.jfmod-secret-below .fieldDescription')?.textContent ?? null
             };
         });
-        record(name, 'discovery: the token box holds Test token, Replace and Clear as icons, in that order',
-            JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
+        record(name, 'discovery: the token box holds Test Token, Replace and Clear as icons, in that order',
+            JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test Token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
         record(name, 'discovery: no standalone Test button; the test is described under the box', box.standaloneTest === 0 &&
             /Asks TMDB whether it accepts the saved token/.test(box.help ?? ''), box);
         if (layout.tv) {
@@ -544,7 +605,76 @@ for (const name of only) {
             record(name, 'discovery: Test by Enter keeps the focus on Test', kept === 'test', kept);
             await page.evaluate(() => document.activeElement?.blur?.());
         }
+        if (layout.tv) {
+            // A list row on the TV: Right walks its icons in order (Test, Edit, Remove), each with a ring; Left walks back; Down
+            // from a row's Test lands on the next row's Test.
+            await page.evaluate(() => { location.hash = '#/catalog/settings?section=indexers'; });
+            await page.locator('.jfmod-rowactions [data-row-action="test"]').first().waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(500);
+            await page.locator('.jfmod-rowactions [data-row-action="test"]').first().focus();
+            const here = () => page.evaluate(() => {
+                const el = document.activeElement;
+                const s = getComputedStyle(el);
+                return { action: el.dataset.rowAction ?? el.textContent.trim().slice(0, 20), row: el.closest('.jfmod-brow')?.dataset.indexer ?? null,
+                    ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1 };
+            });
+            const walk = [await here()];
+            const icons = await page.locator('.jfmod-brow').first().locator('.jfmod-rowactions button').count();
+            for (let step = 1; step < icons; step++) {
+                await page.keyboard.press('ArrowRight');
+                await page.waitForTimeout(200);
+                walk.push(await here());
+            }
+            const want = icons === 3 ? ['test', 'edit', 'remove'] : ['test', 'edit'];
+            record(name, 'indexers: Right walks a row\'s icons in order, each with a visible ring',
+                JSON.stringify(walk.map(step => step.action)) === JSON.stringify(want) && walk.every(step => step.ring) && new Set(walk.map(step => step.row)).size === 1, walk);
+            for (let step = 1; step < icons; step++) {
+                await page.keyboard.press('ArrowLeft');
+                await page.waitForTimeout(200);
+            }
+            const back = await here();
+            record(name, 'indexers: Left walks back to the row\'s Test', back.action === 'test' && back.row === walk[0].row, back);
+            if (await page.locator('.jfmod-brow[data-indexer]').count() > 1) {
+                await page.keyboard.press('ArrowDown');
+                await page.waitForTimeout(250);
+                const below = await here();
+                const second = await page.locator('.jfmod-brow[data-indexer]').nth(1).getAttribute('data-indexer');
+                record(name, 'indexers: Down from a row\'s Test lands on the next row\'s Test', below.action === 'test' && below.row === second, below);
+            }
+            console.log('  shot', await shot(page, `${name}-settings-indexers-row-focus`));
+            // Enter on a row's Test runs it; the refetch that follows keeps the remote on that Test (it once jumped to the rail).
+            const firstRow = await page.locator('.jfmod-brow[data-indexer]').first().getAttribute('data-indexer');
+            await page.locator(`.jfmod-brow[data-indexer="${firstRow}"] [data-row-action="test"]`).focus();
+            await page.keyboard.press('Enter');
+            await page.waitForFunction(() => /\((ok|unreachable|timeout|unauthorized|[a-z_]+)\)/.test(document.querySelector('.jfmod-check-section[data-section="indexers"] .jfmod-notice-text')?.textContent ?? ''),
+                undefined, { timeout: 60000 }).catch(() => undefined);
+            await page.waitForTimeout(6000);
+            const afterTest = await here();
+            record(name, 'indexers: Test by Enter keeps the focus on that row\'s Test after the list is read again', afterTest.action === 'test' && afterTest.row === firstRow, afterTest);
+            await page.evaluate(() => document.activeElement?.blur?.());
+        }
         if (name === 'desktop') {
+            // A row icon names itself in a tooltip, as the secret's do.
+            await page.evaluate(() => { location.hash = '#/catalog/settings?section=indexers'; });
+            const rowIcon = page.locator('.jfmod-rowactions [data-row-action="edit"]').first();
+            await rowIcon.waitFor({ state: 'visible', timeout: 30000 });
+            const rowLabel = await rowIcon.getAttribute('aria-label');
+            await rowIcon.hover();
+            const rowTip = page.locator('[role="tooltip"]', { hasText: rowLabel ?? 'Edit' });
+            record(name, `indexers: a row icon shows its name as a tooltip ("${rowLabel}")`, await rowTip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false));
+            await page.mouse.move(1, layout.viewport.height - 1);
+            // The user menu's entry is in Title Case.
+            await page.locator('button[aria-label="User Menu"]').click();
+            const menu = page.locator('.MuiPopover-root:not([aria-hidden="true"]) .MuiMenuItem-root');
+            await menu.first().waitFor({ state: 'visible', timeout: 10000 });
+            await page.waitForTimeout(300);
+            const items = (await menu.allTextContents()).map(text => text.trim());
+            record(name, 'the user menu offers "JellyfinMod Settings", and every item is in Title Case', items.includes('JellyfinMod Settings') && items.every(isTitleCase), items);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(400);
+            await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
+            await page.locator('.jfmod-check-section[data-section="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(500);
             await page.locator('[data-secret-action="clear"]').hover();
             const tip = page.locator('[role="tooltip"]', { hasText: 'Clear' });
             record(name, 'discovery: the icon buttons show their names as tooltips', await tip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false));
@@ -558,7 +688,7 @@ for (const name of only) {
             checkButtons(name, 'discovery while replacing', replacing.buttons);
             record(name, 'discovery while replacing: no overlaps or touching', !replacing.overlaps.length && !replacing.tight.length,
                 [...replacing.overlaps, ...replacing.tight]);
-            await page.locator('.jfmod-secret button', { hasText: 'Keep the saved one' }).click();
+            await page.locator('.jfmod-secret button', { hasText: 'Keep the Saved One' }).click();
             await page.locator('.jfmod-secret-row [data-secret-action="clear"]').click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-clearing`));
@@ -597,7 +727,7 @@ for (const name of only) {
             await page.evaluate(id => { location.hash = '#/catalog/settings?section=' + id; }, section);
             await page.locator(`.jfmod-check-section[data-section="${section}"]`).waitFor({ state: 'visible', timeout: 30000 });
             await page.waitForTimeout(500);
-            const edit = page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first();
+            const edit = page.locator('.jfmod-rowactions [data-row-action="edit"]').first();
             if (!await edit.count()) {
                 record(name, `${section} dialog: an Edit button exists to open it`, false);
                 continue;
@@ -629,6 +759,17 @@ for (const name of only) {
             await page.evaluate(() => { [...document.querySelectorAll('.MuiDialog-paper .MuiDialogContent-root')].pop().scrollTop = 0; });
             record(name, `${section} dialog: audited at ${positions.length} scroll position(s)`, positions.length >= 1, positions);
             checkButtons(name, `${section} dialog`, result.buttons);
+            checkTitleCase(name, `${section} dialog`, await settingsTitles(page, '.MuiDialog-paper'));
+            if (section === 'profiles') {
+                // The quality order: Move Up, Move Down and Remove on every row, the first row's Move Up and the last row's
+                // Move Down refused (aria-disabled, so the remote keeps its focus), never disabled.
+                const order = await page.evaluate(() => [...document.querySelectorAll('.MuiDialog-paper .jfmod-qrow')].map(row => [...row.querySelectorAll('.jfmod-rowactions button')]
+                    .map(el => `${el.dataset.rowAction}${el.getAttribute('aria-disabled') === 'true' ? ':refused' : ''}${el.disabled ? ':disabled' : ''}`)));
+                const last = order.length - 1;
+                const expected = order.map((_, index) => [`up${index === 0 ? ':refused' : ''}`, `down${index === last ? ':refused' : ''}`, 'remove']);
+                record(name, 'profiles dialog: every quality has Move Up, Move Down and Remove; the ends are refused, not disabled',
+                    order.length > 0 && JSON.stringify(order) === JSON.stringify(expected), order);
+            }
             record(name, `${section} dialog: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `${section} dialog: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
             if (name === 'desktop') await checkHover(page, layout, name, `${section} dialog`, '.MuiDialog-paper');
@@ -673,9 +814,9 @@ for (const name of only) {
                 await page.waitForTimeout(500);
                 await checkStates(page, layout, name, `theme ${theme}, discovery`, 'focus');
                 await page.evaluate(() => { location.hash = '#/catalog/settings?section=indexers'; });
-                await page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first().waitFor({ state: 'visible', timeout: 30000 });
+                await page.locator('.jfmod-rowactions [data-row-action="edit"]').first().waitFor({ state: 'visible', timeout: 30000 });
                 await checkStates(page, layout, name, `theme ${theme}, indexers`, 'focus');
-                await page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first().click();
+                await page.locator('.jfmod-rowactions [data-row-action="edit"]').first().click();
                 const editor = page.locator('.MuiDialog-paper').last();
                 await editor.waitFor({ state: 'visible', timeout: 10000 });
                 await page.waitForTimeout(500);
@@ -694,6 +835,7 @@ for (const name of only) {
             console.log('  shot', await shot(page, `${name}-wizard-${step}`));
             const result = await auditIdle(page, layout);
             checkButtons(name, `wizard ${step}`, result.buttons);
+            checkTitleCase(name, `wizard ${step}`, await settingsTitles(page));
             record(name, `wizard ${step}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `wizard ${step}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
             const stacked = await page.evaluate(() => {
@@ -772,13 +914,13 @@ for (const name of only) {
                         console.log('  shot', await shot(page, `${name}-dashboard-discovery`));
                         const actions = await page.evaluate(() => [...document.querySelectorAll('[data-secret-slot="TmdbReadAccessToken"] .jfmod-secret-row button')]
                             .map(el => [el.dataset.secretAction ?? null, el.getAttribute('aria-label')]));
-                        record(name, 'dashboard page: the token box holds Test token, Replace and Clear as icons, in that order',
-                            JSON.stringify(actions) === JSON.stringify([['test', 'Test token'], ['replace', 'Replace'], ['clear', 'Clear']]), actions);
+                        record(name, 'dashboard page: the token box holds Test Token, Replace and Clear as icons, in that order',
+                            JSON.stringify(actions) === JSON.stringify([['test', 'Test Token'], ['replace', 'Replace'], ['clear', 'Clear']]), actions);
                         if (name === 'desktop') {
                             await page.locator('#TestDiscovery').click();
                             const result = page.locator('[data-notice="discovery-test"] .jfmod-notice');
                             const said = await result.waitFor({ state: 'visible', timeout: 30000 }).then(() => result.innerText(), () => '');
-                            record(name, 'dashboard page: Test token says "TMDB accepted the token. (ok)" under the box', /TMDB accepted the token\. \(ok\)/.test(said), said);
+                            record(name, 'dashboard page: Test Token says "TMDB accepted the token. (ok)" under the box', /TMDB accepted the token\. \(ok\)/.test(said), said);
                         }
                     }
                 }
@@ -812,6 +954,7 @@ for (const name of only) {
         if (await page.locator('.jfmod-setupBanner').isVisible().catch(() => false)) {
             const banner = await auditIdle(page, layout, '.jfmod-setupBanner');
             checkButtons(name, 'home setup banner', banner.buttons);
+            checkTitleCase(name, 'home setup banner', banner.buttons.map(button => button.text).filter(Boolean));
         } else {
             console.log(`  [${name}] home setup banner not shown (setup is complete on this instance); not audited`);
         }

@@ -183,7 +183,7 @@ try {
         menuText = (await page.locator('.MuiMenuItem-root:visible').allInnerTexts()).map(text => text.trim());
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
-        record(`[${layout}] The user menu offers neither JellyfinMod settings nor the Dashboard`, Array.isArray(menuText) && menuText.length > 0
+        record(`[${layout}] The user menu offers neither JellyfinMod Settings nor the Dashboard`, Array.isArray(menuText) && menuText.length > 0
             && !menuText.some(text => /JellyfinMod settings|Dashboard/i.test(text)), { menu: menuText });
 
         await page.evaluate(() => { location.hash = '#/catalog/settings'; });
