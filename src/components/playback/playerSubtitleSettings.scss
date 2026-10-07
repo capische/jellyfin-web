@@ -88,6 +88,31 @@ $panel-background: rgba(12, 12, 12, 0.86);
     backdrop-filter: none;
 }
 
+/* Frosted there instead (see playerOverlayFrost.js): the fill over the
+   server-blurred backdrop, as the panel's own background so it stays put while
+   the fields scroll. Sized and placed against the viewport, 124vh tall and
+   raised 12vh so the image's darkened top and bottom edges stay out of sight;
+   the backdrop is landscape, so it is always wider than the panel. Anchored
+   left, which panel and header share, rather than centred: a scrollbar
+   narrows the header's box on the right and would shift a centred image. */
+@mixin player-overlay-frost-background {
+    background:
+        linear-gradient($player-overlay-background, $player-overlay-background),
+        var(--player-overlay-frost-image) left -12vh / auto 124vh no-repeat;
+}
+
+.layout-tv .playerSubtitleSettings.playerOverlayFrost-surface {
+    @include player-overlay-frost-background;
+}
+
+/* The sticky header must still hide the fields that scroll beneath it on a
+   short screen, so it takes the very same background. Its box spans the
+   panel's width at the panel's top, and the image is placed against the
+   viewport in both, so the two line up into one surface with no band. */
+.layout-tv .playerOverlayFrost-surface .playerSubtitleSettings-header {
+    @include player-overlay-frost-background;
+}
+
 .playerSubtitleSettings-title {
     flex: 1;
     margin: 0;
