@@ -865,6 +865,26 @@ Split by audience, and the split keeps the fork small:
 Quality profile editing deserves a real UI and still belongs on the plugin's config page. It is
 a once-a-quarter admin task, not a browsing surface.
 
+### 12.1 Words and buttons in the settings area and on the Dashboard page (user, 2026-10-07/08)
+
+- **Title Case** for button labels; page, section, group, card and dialog titles; rail item titles; menu items (the
+  user menu's *JellyfinMod Settings*, the drawer, the setup banner's *Set Up*); and the wizard's step titles, as
+  Jellyfin's own *Scan All Libraries* and *Scheduled Tasks* are. A short article, conjunction or preposition stays lower
+  case unless it is the first or last word: a, an, the, and, but, or, nor, as, at, by, for, from, in, into, of, on, to,
+  via, with (*Add from TMDB*, *Import and Seeding*, *Turn Grabbing On*). Product names keep their own spelling
+  (JellyfinMod, TMDB, Prowlarr, Transmission).
+- **Sentence case** for descriptions, help text, field labels, status lines, notices, errors, the rail's subtitles and
+  status chips (*Default*, *verified*). Sentences the server sends are shown as they come.
+- **Three kinds of button**, all the size of Save: red destroys, blue is the one main action of a view, grey is
+  everything else (PHASE7, *Settings buttons: three kinds*).
+- **List rows act through icons.** Every action of a list row (indexers, quality profiles, path mappings, a profile's
+  quality order, blockers, episode conflicts) is a round icon of at least 40 px, as in a secret's box: Test
+  `network_check`, Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows, Fix `build`,
+  Rebind `link`, Keep `push_pin`. Each one's aria-label and tooltip name the row it acts on (*Remove Prowlarr 1337x*);
+  on the TV it takes the focus ring and the arrows walk a row's icons left to right. A move with nowhere to go, or an
+  action that is busy, is refused with `aria-disabled`, never `disabled`, so the remote keeps its place. Buttons outside
+  rows (Save, Add Indexer, Sync Now, dialog buttons) stay labelled.
+
 ---
 
 ## 13. TV and D-pad rules
