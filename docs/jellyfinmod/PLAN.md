@@ -504,6 +504,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   in both repositories; design record, acceptance checklist and evidence in
   [design/episode-page-design-spec.md](design/episode-page-design-spec.md); the page is described in
   [UX.md](UX.md) §7, §7.2, §8 and §11. A candidate for republishing 0.1.0.0 once accepted; the user decides.
+  Live checklist on 18096, 2026-10-08: passed in Chromium and real Chrome except the queue line during a grab (NOT
+  VERIFIED, no download client on 18096); waiting for the user's acceptance and rulings on three flagged choices.
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
