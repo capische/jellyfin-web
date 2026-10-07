@@ -30,6 +30,9 @@ export const SOURCE_LONG = Object.fromEntries([
     ['letterboxd', 'Letterboxd'], ['rogerebert', 'Roger Ebert']
 ]) as Record<RatingSource, string>;
 
+/** The scales the plugin reports; a value in any other is not shown (there is no `hundred`: 0–100 is `percent`). */
+export const isKnownScale = (scale: unknown): scale is Rating['scale'] => scale === 'ten' || scale === 'percent' || scale === 'five' || scale === 'four';
+
 export const isRatingSource = (value: unknown): value is RatingSource =>
     typeof value === 'string' && (ALL_SOURCES as string[]).includes(value);
 
@@ -64,6 +67,16 @@ export const provenance = (rating: Rating) => {
         default: return 'from this server’s own metadata' + (asOf ? ', as of ' + asOf : '');
     }
 };
+
+/** "Sep 2026": the compact age a card shows beside a stale value (web review 2026-10-07, P2 5). */
+export const monthYear = (iso?: string | null) => {
+    const date = iso ? new Date(iso) : null;
+    return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : null;
+};
+
+/** A card's one rating: "IMDb 8.1", or "IMDb 8.1 (Sep 2026)" once it is older than the refresh window. */
+export const cardRatingText = (rating: Rating) =>
+    SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + (rating.stale ? ' (' + (monthYear(rating.fetchedAt) ?? 'old') + ')' : '');
 
 /** The chip's text, with the date when the value is older than the refresh window. */
 export const chipText = (rating: Rating) => {

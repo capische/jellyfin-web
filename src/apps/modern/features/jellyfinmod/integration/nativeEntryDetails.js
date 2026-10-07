@@ -4,7 +4,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
-import NativeRatingsLine from '../components/NativeRatingsLine';
+import NativeRatingsLine, { prefetchItemRatings } from '../components/NativeRatingsLine';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 
@@ -87,7 +87,10 @@ export default function initializeNativeEntryDetails(view, params) {
         try {
             [item, user] = await Promise.all([
                 client.getItem(client.getCurrentUserId(), params.id),
-                client.getCurrentUser()
+                client.getCurrentUser(),
+                // The Ratings line's data loads with the page, so it is in place before anything below it can take focus;
+                // bounded, so a slow plugin never holds the page (Phase 9, web review 2026-10-07 P2 2).
+                prefetchItemRatings(api, client.getCurrentUserId(), params.id)
             ]);
         } catch (error) {
             if (currentGeneration !== generation) return;

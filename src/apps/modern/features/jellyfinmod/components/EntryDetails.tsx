@@ -20,6 +20,7 @@ import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RatingsLine from './RatingsLine';
 import RatingsRefreshButton from './RatingsRefreshButton';
+import type { Rating } from '../types/ratings';
 import RetentionStatus from './RetentionStatus';
 import { useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
@@ -56,7 +57,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
     const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
     const [message, setMessage] = useState('');
-    // Ratings come with the entry, in the same paint as the rest of the page (Phase 9); an older plugin sends none.
+    // Ratings come with the entry; the user's choice is loaded before the page mounts (entryDetails.js), so the line is in the
+    // page's first paint (Phase 9). An older plugin sends none.
     const [ratings, setRatings] = useState(detail.ratings);
     const ratingsPreferences = useRatingsPreferences(api);
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
@@ -178,11 +180,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             }
         });
     }, [api, busy, entry.id, mutate, signal]);
-    const rereadRatings = useCallback(() => {
-        getEntry(api, entry.id, { signal }).then(updated => {
-            if (!signal.aborted) setRatings(updated.ratings);
-        }).catch(() => undefined);
-    }, [api, entry.id, signal]);
+    const rereadRatings = useCallback((updated: Rating[]) => {
+        if (!signal.aborted) setRatings(updated);
+    }, [signal]);
     const availabilityLabel = (availability: EntryDetail['episodes'][number]['availability']) => {
         if (availability === 'onDisk') return 'On disk';
         if (availability === 'unaired') return 'Unaired';
@@ -194,7 +194,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
             {entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null}
-            {ratingsPreferences.enabled && <RatingsLine ratings={ratings} sources={ratingsPreferences.sources} inline />}
+            {ratingsPreferences.enabled && <RatingsLine ratings={ratings} sources={ratingsPreferences.sources} inline ready={ratingsPreferences.loaded} />}
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}
@@ -222,7 +222,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     onClick={remove}>Remove entry</button>
                 {entry.mediaType === 'series' && <button className={flatButtonClass()} type='button' aria-disabled={busy}
                     onClick={refresh}>Refresh metadata</button>}
-                <RatingsRefreshButton api={api} entryId={entry.id} onMessage={setMessage} onQueued={rereadRatings} />
+                <RatingsRefreshButton api={api} entryId={entry.id} onMessage={setMessage} onDone={rereadRatings} />
             </>}
         </div>)}
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}

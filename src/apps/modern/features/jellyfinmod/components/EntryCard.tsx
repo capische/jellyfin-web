@@ -11,7 +11,7 @@ import inputManager from 'scripts/inputManager';
 
 import { useQueueVisible } from '../hooks/useQueue';
 import { openInFlightCardMenu } from '../integration/queueActions';
-import { chipLabel, formatValue, SOURCE_SHORT } from '../constants/ratings';
+import { cardRatingText, chipLabel } from '../constants/ratings';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import type { Rating } from '../types/ratings';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
@@ -31,8 +31,8 @@ interface EntryCardProps {
     rating?: Rating | null;
 }
 
-/** "IMDb 8.1", in the card's own secondary text: no badge, no corner, no new focus stop (P9.R7). */
-const cardRatingText = (rating: Rating) => SOURCE_SHORT[rating.source] + ' ' + formatValue(rating);
+/** The card rating's class: dimmed when the value is older than the refresh window, whose month it shows. */
+const cardRatingClass = (rating: Rating) => 'jfmod-cardRating' + (rating.stale ? ' jfmod-cardRating-stale' : '');
 
 /**
  * Puts the card rating into a native card's secondary text line, which upstream's card builds; a card that shows no
@@ -52,8 +52,8 @@ const NativeCardRating: FC<{ rating: Rating }> = ({ rating }) => {
     }, []);
     const text = cardRatingText(rating);
     return <><span ref={anchor} hidden />{target && createPortal(target.own ?
-        <div className='cardText cardTextCentered cardText-secondary jfmod-cardRating' title={chipLabel(rating)}>{text}</div> :
-        <span className='jfmod-cardRating' title={chipLabel(rating)}>{' · ' + text}</span>, target.node)}</>;
+        <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)} title={chipLabel(rating)}>{text}</div> :
+        <span className={cardRatingClass(rating)} title={chipLabel(rating)}>{' · ' + text}</span>, target.node)}</>;
 };
 
 /** Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. */
@@ -142,9 +142,9 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
                 {cardOptions.showTitle !== false && <div className='cardText cardTextCentered'>{entry.title}</div>}
                 {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>
                     {entry.year}
-                    {rating && <span className='jfmod-cardRating' title={chipLabel(rating)}>{' · ' + cardRatingText(rating)}</span>}
+                    {rating && <span className={cardRatingClass(rating)} title={chipLabel(rating)}>{' · ' + cardRatingText(rating)}</span>}
                 </div>}
-                {rating && !(cardOptions.showYear && entry.year) && <div className='cardText cardTextCentered cardText-secondary jfmod-cardRating'
+                {rating && !(cardOptions.showYear && entry.year) && <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}
                     title={chipLabel(rating)}>{cardRatingText(rating)}</div>}
             </div>}
         </div>

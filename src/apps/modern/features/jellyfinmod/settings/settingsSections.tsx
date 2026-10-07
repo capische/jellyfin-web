@@ -17,6 +17,8 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { queryClient } from 'utils/query/queryClient';
+
 import {
     blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, partialSave, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
@@ -1601,6 +1603,10 @@ export const DiagnosticsSection: FC<SectionProps> = props => {
 
 // ---- Ratings (Phase 9) ----
 
+/** The cached reads a ratings save changes: the defaults, each title's ratings and the grids that show a card rating. */
+const isRatingsQuery = (key: readonly unknown[], basePath: string) => key[0] === 'JellyfinMod' && key[1] === basePath
+    && key.some(part => ['RatingsDefaults', 'Ratings', 'Browse', 'SearchBrowse', 'HomeRecent', 'NativeDetail'].includes(part as string));
+
 const RATING_SOURCE_NAMES: Record<string, string> = Object.fromEntries([
     ['imdb', 'IMDb'], ['tomatoes_critic', 'Rotten Tomatoes critics'], ['tomatoes_audience', 'Rotten Tomatoes audience'], ['tmdb', 'TMDB'],
     ['trakt', 'Trakt'], ['metacritic', 'Metacritic critics'], ['metacritic_user', 'Metacritic users'], ['letterboxd', 'Letterboxd'],
@@ -1685,6 +1691,9 @@ export const RatingsSection: FC<SectionProps> = props => {
         });
         keySecret.saved(apiKey, { id: 'ratings', revision: saved?.revision }, origin);
         ratingsSaved(draft, sameRevision(saved), saved);
+        // Detail pages and grids read the defaults (order, on/off) and the ratings themselves from the shared cache; a save
+        // marks them stale so this browser shows the change at once and others within RATINGS_STALE_MS (web review 2026-10-07, P2 1).
+        queryClient.invalidateQueries({ predicate: query => isRatingsQuery(query.queryKey, api.basePath) }).catch(() => undefined);
     }, 'Saved.'), [run, api, draft, chosen, apiKey, keySecret, ratings, ratingsSaved]);
     const testKey = useCallback(() => run(async () => {
         const result = await request<{ ok: boolean; code: string; message: string; sources: string[] }>(api, 'POST', 'Settings/Ratings/Test');

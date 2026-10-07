@@ -2,15 +2,44 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useDisplayPreferences } from 'hooks/api/useDisplayPreferences';
+import { getDisplayPreferencesQuery, useDisplayPreferences } from 'hooks/api/useDisplayPreferences';
 import { useApi } from 'hooks/useApi';
 import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import Events from 'utils/events';
+import { queryClient } from 'utils/query/queryClient';
 
+import { getPluginHealth } from '../api/modApi';
 import { getRatingsDefaults } from '../api/ratingsApi';
 import { DEFAULT_SOURCES, RATINGS_CAPABILITY, RATINGS_CARD_SOURCE_KEY, RATINGS_SOURCES_KEY, RATINGS_STALE_MS, isRatingSource } from '../constants/ratings';
 import type { RatingSource } from '../types/ratings';
 import { usePluginCapabilities } from './useAcquisition';
+
+/** The query key of the ratings defaults, so the settings area can invalidate it after a save. */
+export const ratingsDefaultsKey = (basePath: string | undefined) => ['JellyfinMod', basePath, 'RatingsDefaults'];
+
+/**
+ * Loads what a ratings line needs before a detail page mounts it — the plugin's capabilities, the ratings defaults and the
+ * user's display preferences — into the same query cache the hooks read, so the line is ready in the page's first paint and
+ * never arrives later above a focused control (web review 2026-10-07, P2 2). Bounded: a slow answer does not hold the page.
+ */
+export const prefetchRatingsPreferences = async (api: Api, userId: string, timeoutMs = 3000) => {
+    const work = (async () => {
+        const health = await queryClient.fetchQuery({
+            queryKey: ['JellyfinMod', api.basePath, 'HealthCapabilities'],
+            queryFn: ({ signal }) => getPluginHealth(api, { signal }),
+            staleTime: 5 * 60 * 1000,
+            retry: false
+        });
+        if (!health.capabilities.includes(RATINGS_CAPABILITY)) return;
+        await Promise.all([
+            queryClient.fetchQuery({ queryKey: ratingsDefaultsKey(api.basePath), queryFn: ({ signal }) => getRatingsDefaults(api, { signal }),
+                staleTime: RATINGS_STALE_MS, retry: false }),
+            queryClient.fetchQuery({ ...getDisplayPreferencesQuery(api, { displayPreferencesId: 'usersettings', client: 'emby', userId }),
+                staleTime: RATINGS_STALE_MS })
+        ]);
+    })().catch(() => undefined);
+    await Promise.race([work, new Promise(resolve => setTimeout(resolve, timeoutMs))]);
+};
 
 type CustomPrefs = Record<string, string | null | undefined> | null | undefined;
 
@@ -47,11 +76,14 @@ export const useRatingsPreferences = (api: Api | undefined) => {
     const capabilities = usePluginCapabilities(api);
     const supported = capabilities.includes(RATINGS_CAPABILITY);
     const defaults = useQuery({
-        queryKey: ['JellyfinMod', api?.basePath, 'RatingsDefaults'],
+        queryKey: ratingsDefaultsKey(api?.basePath),
         queryFn: ({ signal }) => getRatingsDefaults(api!, { signal }),
         enabled: !!api && supported,
         retry: false,
-        staleTime: RATINGS_STALE_MS
+        staleTime: RATINGS_STALE_MS,
+        // An administrator turning ratings off or changing the default order reaches every open page within a minute
+        // (web review 2026-10-07, P2 1): staleness alone would only refetch on the next mount.
+        refetchInterval: RATINGS_STALE_MS
     });
     const { user } = useApi();
     // The same per-user display preferences upstream's user settings load: when they arrive, the choice is read again.

@@ -28,3 +28,11 @@ export const refreshEntryRatings = async (api: Api, entryId: string, options?: A
     await api.axiosInstance.post(api.basePath + '/JellyfinMod/Entries/' + encodeURIComponent(entryId) + '/Ratings/Refresh', undefined,
         { ...options, headers: headers(api) });
 };
+
+/** How many manual refreshes are still waiting or running (administrators); the refresh button's completion signal. */
+export const getRatingsQueued = async (api: Api, options?: AxiosRequestConfig): Promise<number> => {
+    const response = await api.axiosInstance.get<{ queued?: unknown }>(api.basePath + '/JellyfinMod/Ratings/Status',
+        { ...options, headers: headers(api) });
+    if (typeof response.data?.queued !== 'number') throw new Error('Unsupported JellyfinMod ratings status');
+    return response.data.queued;
+};
