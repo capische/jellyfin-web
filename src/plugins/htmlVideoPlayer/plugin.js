@@ -473,18 +473,6 @@ export class HtmlVideoPlayer {
      */
     #initialAudioPending = false;
     /**
-     * The mute held while a TV carries out the initial audio track switch, if one is in
-     * progress: `release` lifts it and `userMuted` is the mute state the user wants once it does.
-     * @type {{ release: () => void, userMuted: boolean } | null}
-     */
-    #initialSwitchMuteHold = null;
-    /**
-     * Element volumechange events still to arrive from this player's own muted assignments,
-     * which carry no news for the user and are swallowed.
-     * @type {number}
-     */
-    #ownVolumeChanges = 0;
-    /**
      * @type {boolean | undefined}
      */
     #timeUpdated;
@@ -651,9 +639,6 @@ export class HtmlVideoPlayer {
         // Disarmed until the new source is attached, so a late event from the previous source
         // cannot apply a selection to the wrong tracks.
         this.#initialAudioPending = false;
-        this.#initialSwitchMuteHold?.release();
-        // A new source discards the element's queued events, so nothing is owed from before.
-        this.#ownVolumeChanges = 0;
         this.#timeUpdated = false;
 
         this.#currentTime = null;
@@ -1052,26 +1037,23 @@ export class HtmlVideoPlayer {
         });
     }
 
-    /**
-     * Maps a Jellyfin audio stream index to its position among the element's audio tracks,
-     * which follow the supported streams in order. -1 when the stream is unknown or there
-     * is only one supported stream, which the player handles on its own.
-     * @private
-     * @param index {number} The Jellyfin stream index
-     * @returns {number}
-     */
-    getAudioTrackPosition(index) {
+    setAudioStreamIndex(index) {
         const streams = this.getSupportedAudioStreams();
 
         if (streams.length < 2) {
-            return -1;
+            // If there's only one supported stream then trust that the player will handle it on it's own
+            return;
         }
 
-        return streams.findIndex((stream) => stream.Index === index);
-    }
+        let audioIndex = -1;
 
-    setAudioStreamIndex(index) {
-        const audioIndex = this.getAudioTrackPosition(index);
+        for (const stream of streams) {
+            audioIndex++;
+
+            if (stream.Index === index) {
+                break;
+            }
+        }
 
         if (audioIndex === -1) {
             return;
@@ -1104,11 +1086,6 @@ export class HtmlVideoPlayer {
     stop(destroyPlayer) {
         const elem = this.#mediaElement;
         const src = this.#currentSrc;
-
-        this.#initialSwitchMuteHold?.release();
-        // Resetting the source below discards the element's queued events, including any
-        // volumechange the release has just caused.
-        this.#ownVolumeChanges = 0;
 
         if (elem) {
             if (src) {
@@ -1148,7 +1125,6 @@ export class HtmlVideoPlayer {
             videoElement.removeEventListener('pause', this.onPause);
             videoElement.removeEventListener('loadedmetadata', this.applyInitialAudioTrack);
             videoElement.removeEventListener('canplay', this.applyInitialAudioTrack);
-            this.#ownVolumeChanges = 0;
             videoElement.audioTracks?.removeEventListener?.('addtrack', this.applyInitialAudioTrack);
             videoElement.removeEventListener('playing', this.onPlaying);
             videoElement.removeEventListener('play', this.onPlay);
@@ -1224,12 +1200,6 @@ export class HtmlVideoPlayer {
      * @param e {Event} The event received from the `<video>` element
      */
     onVolumeChange = (e) => {
-        if (this.#ownVolumeChanges > 0) {
-            // Caused by the initial switch mute hold, not by the user: no volume OSD for it.
-            this.#ownVolumeChanges--;
-            return;
-        }
-
         /**
          * @type {HTMLMediaElement}
          */
@@ -1273,89 +1243,8 @@ export class HtmlVideoPlayer {
             return;
         }
 
-        const position = this.getAudioTrackPosition(this.#audioTrackIndexToSetOnPlaying);
-        if (position === -1) {
-            return;
-        }
-
-        // Already on the chosen track (the file's default, or an earlier call): nothing to switch,
-        // so nothing to mute for.
-        if (Array.from(elem.audioTracks).every((track, i) => track.enabled === (i === position))) {
-            return;
-        }
-
-        this.muteForInitialTrackSwitch(elem);
         this.setAudioStreamIndex(this.#audioTrackIndexToSetOnPlaying);
     };
-
-    /**
-     * Holds the element muted while a webOS TV carries out the initial track switch. Desktop
-     * Chrome switches between frames, but an LG C1 keeps the old track audible for a second or
-     * two while it rebuilds its audio: its track list reports the change after playback has
-     * started, then playback stalls, steps back and resumes on the new track. The mute lifts
-     * once the track list has reported the change and playback has then started or is moving
-     * forward again (a timeupdate on its own is not enough: Chromium also fires one on entering
-     * a stall), with a four second ceiling in case neither arrives. Only on webOS: a mute that
-     * lets autoplay through on a gesture-gated browser would pause playback when lifted.
-     *
-     * The user's own mute is kept apart from the hold: setMute and isMuted work on the wanted
-     * state while the hold lasts, and the release applies it. The element events the hold
-     * itself causes are swallowed in onVolumeChange, so no volume OSD appears for them.
-     * @private
-     * @param elem {HTMLMediaElement} The video element
-     */
-    muteForInitialTrackSwitch(elem) {
-        if (!browser.web0s || this.#initialSwitchMuteHold) {
-            return;
-        }
-
-        const userMuted = elem.muted;
-        if (!userMuted) {
-            this.#ownVolumeChanges++;
-            elem.muted = true;
-        }
-
-        let changed = false;
-        let lastTime = null;
-        const lift = () => this.#initialSwitchMuteHold?.release();
-        const onChange = () => {
-            changed = true;
-        };
-        const onProgress = (e) => {
-            const time = elem.currentTime;
-            const advanced = lastTime != null && time > lastTime;
-            lastTime = time;
-
-            if (!changed || elem.paused || elem.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-                return;
-            }
-            if (e.type === 'playing' || advanced) {
-                lift();
-            }
-        };
-        const timer = setTimeout(lift, 4000);
-
-        this.#initialSwitchMuteHold = {
-            userMuted,
-            release: () => {
-                clearTimeout(timer);
-                elem.audioTracks?.removeEventListener?.('change', onChange);
-                elem.removeEventListener('playing', onProgress);
-                elem.removeEventListener('timeupdate', onProgress);
-
-                const wanted = this.#initialSwitchMuteHold.userMuted;
-                this.#initialSwitchMuteHold = null;
-                if (elem.muted !== wanted) {
-                    this.#ownVolumeChanges++;
-                    elem.muted = wanted;
-                }
-            }
-        };
-
-        elem.audioTracks?.addEventListener?.('change', onChange);
-        elem.addEventListener('playing', onProgress);
-        elem.addEventListener('timeupdate', onProgress);
-    }
 
     /**
      * @private
@@ -2905,13 +2794,6 @@ export class HtmlVideoPlayer {
     }
 
     setMute(mute) {
-        if (this.#initialSwitchMuteHold) {
-            // Applied when the hold lifts; the UI learns of the choice now.
-            this.#initialSwitchMuteHold.userMuted = mute;
-            Events.trigger(this, 'volumechange');
-            return;
-        }
-
         const mediaElement = this.#mediaElement;
         if (mediaElement) {
             mediaElement.muted = mute;
@@ -2919,10 +2801,6 @@ export class HtmlVideoPlayer {
     }
 
     isMuted() {
-        if (this.#initialSwitchMuteHold) {
-            return this.#initialSwitchMuteHold.userMuted;
-        }
-
         const mediaElement = this.#mediaElement;
         if (mediaElement) {
             return mediaElement.muted;
