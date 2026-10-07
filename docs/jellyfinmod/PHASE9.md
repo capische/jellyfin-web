@@ -659,7 +659,7 @@ run again on 18096 once it is free.
 | # | Finding | Fix | Proof (simulation, 13/13) |
 |---|---|---|---|
 | 1 | Ownership was read after the save, so a key saved in between could be recorded as the run's | Every ratings save goes through `write`: it is sent against the revision this run last wrote (from setup on, kept in the state file), so any save by someone else in between is refused (409) and stops the run; ownership is then read against the revision this save produced — the revision and the key reference in one SQL statement — and nothing is recorded unless the revision is still that one | A key saved right after the run's own save is not taken for the run's (nothing recorded, the run stops); cleanup's clear is then refused and the key stays; another setting saved by someone else is not overwritten |
-| 2 | The guard ran once per step; `patch` took a fresh revision | No save takes a fresh revision any more; before every Test, refresh, daily-task run and configuration change the revision and the key reference are checked together against the run's; the browser runner holds its own saves (API and the settings area's Save, whose request is rewritten to the run's revision) to the same chain and checks the revision before Test and Refresh. **Not atomic:** the plugin has no conditional Test or refresh, so a save between the check and the call is not excluded; the window is one HTTP round trip | Test, a refresh, the daily task and a configuration change are refused before any request reaches the API; while the settings are the run's they go through |
+| 2 | The guard ran once per step; `patch` took a fresh revision | No save takes a fresh revision any more; before every Test, refresh, daily-task run and configuration change the revision and the key reference are checked together against the run's; the browser runner holds its own saves (API and the settings area's Save, whose request is rewritten to the run's revision) to the same chain and checks the revision before Test and Refresh. **Not atomic:** the plugin has no conditional Test or refresh, so a save between the check and the call is not excluded — and a running task or queued refresh reads the settings again for each title, so the exposure lasts as long as that work (corrected in round 6; see the exclusive-use rule there) | Test, a refresh, the daily task and a configuration change are refused before any request reaches the API; while the settings are the run's they go through |
 | 3 | A failed recovery call still let the service start | Recovery must succeed and confirm the operation is gone; otherwise the step raises `RecoveryFailed`, the service is left as it is, and the step reports it | With the recovery call failing (255), the service is not started and the step reports a recovery failure |
 | 4 | Only direct children were killed, nothing was confirmed, and the trap started the service at once | The step runs under a monitor shell that leads its own session; the work (the stop, then the SQL) runs in a second session and process group. On a signal the monitor ends the work's whole group (TERM, a wait, KILL, then a check that it is empty) and exits; it never starts the service. Recovery finds both groups by a marker, ends them the same way and confirms they are empty. Only then `restart_clean` waits for any stop still under way (`docker compose stop`), requires the container to be `exited`, starts it and requires `running` | Normal and failing SQL steps; TERM to the step mid-SQL (no sleeper left, start after the stop has finished); a local time-out mid-SQL (its late SQL never runs); a time-out during the stop itself (the start waits for the daemon's stop); a member that ignores TERM (killed after the wait, group empty before the start) |
 
@@ -669,12 +669,30 @@ ownership chain is new in every step that saves ratings settings or calls the pr
 in `age`, `unage`, `kill`, `interrupt` and `cleanup` (and the reset inside it), so none of the steps is unaffected; the plugin
 and the bundle are unchanged since round 4 and need no redeployment unless 18096 no longer runs them.
 
+## Review fixes, round 6 — 2026-10-08
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of web `31f8079440..ab9626857e` approved with fixes (round-5 findings 1 and 3
+fixed, 2 and 4 partly). Fixed on the web branch only (`ab9626857e..` this branch's tip), still without the test host: the
+simulation (`p9-live-sim.py`, 18/18) and a new local check of the browser runner's Save handling (`p9-saves-check.mjs`, real
+Chromium against a local page and endpoint, 4/4).
+
+| # | Finding | Fix | Proof |
+|---|---|---|---|
+| 1 | Recovery found only surviving marked group leaders, so unmarked members left behind went unseen and an empty search allowed a restart | When the work starts, the monitor reports both process-group ids (and its parent's); the runner keeps them, refuses any that is 0, 1, its own group or the parent's (or the two being the same), and before any start confirms with `kill -0` that both recorded groups — and any group a marked process still leads — are empty, ending them first if not. No valid report means nothing can be confirmed, so nothing is started | Simulation: an orphaned member whose group leader has gone is found by the recorded group, ended and the group confirmed empty; a member a finished step left in its group is ended before the start; without a valid report the service is not started |
+| 2 | The browser runner rewrote the settings-area Save's revision, which would hide broken revision handling in the page | The page's own request must carry the run's revision; it is then forwarded unchanged and the answer's revision is noted; anything else fails the check before reaching the server (the runner's chain helpers now live in `p9-saves.mjs`) | Local check: the run's revision is forwarded byte for byte and the next one noted; an older or missing revision is refused before the server; a forwarded Save the plugin refuses is not noted and stops the run. The real page's Save is checked in the live re-run (a new browser check records both Saves) |
+| 3 | The exposure was not one round trip: a running task and queued refreshes read the settings again for each title | Not more code, the rule: **the run needs 18096 to itself from `setup` to `cleanup`, including the daily task and queued refreshes draining, and no one may enter a real key while it runs**. `p9-live.py` prints this at `setup` and `cleanup` and in its help; `cleanup` first waits until no refresh is queued and the ratings task is idle, and clears nothing otherwise | Simulation: the drain waits for both and reports a task that does not finish |
+| 4 (P3) | Paths went into remote commands inside raw single quotes | Every path and value interpolated into a remote command is quoted with `shlex.quote` | Simulation (all its stopped-service steps run through the quoted commands) |
+
+**To run again on 18096 once it is free** — unchanged from round 5: `setup`, `unconfigured`, `configure`, `fetch`, `restart`,
+`age`, `guard`, the browser runner in Chromium and in Chrome, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`,
+under the exclusive-use rule above. The plugin and bundle are unchanged since round 4.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
-waits for the round-5 live re-run on 18096 (it is lent to another session for now), the Codex review of web `31f8079440..` this
-branch's tip, and the user. Nothing is merged; the
+waits for the live re-run on 18096 (it is lent to another session for now; exclusive use from `setup` to `cleanup`), the Codex
+review of web `ab9626857e..` this branch's tip, and the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
