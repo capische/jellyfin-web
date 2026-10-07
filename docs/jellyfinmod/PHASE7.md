@@ -2564,6 +2564,58 @@ Asked for by the user (session "settings design shift"), run alongside Phase 9 i
   itself, repository `200`, no [ERR]; its DLL is byte-identical to the release package; container, config and image
   removed. Rollback: the previous index `sha256:b9703e07c452…` still resolves by digest. 28096 runs this build.
 
+#### Settings buttons: three kinds at the size of Save, and icons in the secret box — 2026-10-08
+
+Asked for by the user on 2026-10-07, starting from "make the clear and remove red brighter" and settled in follow-ups:
+"use this styles for buttons in settings" (the Dashboard home's Scan All Libraries / Restart / Shutdown), "3 type of
+buttons: grey, blue and red. Red - delete (destruction), blue - important like Save, the rest are grey", grey buttons
+"must be the same size as Save", "Restore stock now should be red", blue is the main action of its view, "Icons on buttons
+only where they help", and for the secret field "these buttons can be just icons, also test you can inside the field as
+button". The user approved a preview on 28096 before review and acceptance. This replaces the red-text Clear and Remove
+of the previous section.
+
+- **Rule.** Red destroys: Clear, every Remove, the confirmation's Remove, Delete, Delete this client, Restore stock now.
+  Blue is the one main action of a view: each Save, the wizard's Continue, the Home banner's Set up, Add profile, and Sync
+  now when a Prowlarr source exists, otherwise Add indexer (the Prowlarr card's Save / Add Prowlarr and Save mappings are
+  grey); on the Dashboard page Save, New indexer and New profile. Grey is everything else, Cancel included. All are the
+  size of Save; no text, outlined or small button is left. Labelled buttons carry no icon.
+- **Web (`jellyfin-mod`, `06163fd26d`…`4d124d9f5c`, mod files only).** MUI's contained Button at its default size, bold,
+  as upstream's Dashboard draws its own: `color` primary, `inherit` (the theme's `Button.inheritContainedBg`, the fill of
+  upstream's `.raised` Cancel) or `error`. Blue text is dark in every scheme (the Apple TV scheme computes white on its
+  cyan, 2.9:1); blue's hover is primary-light (dark text on MUI's primary-dark is 3.9:1); grey's hover is its own fill
+  with 12% of the text colour over it (Purple Haze's hover fill is a bright cyan under white text, 1.5:1); in a TV dialog
+  the focus fill keeps dark text, one class above `shell/dpadModals.scss`; a focused filled or icon button on the TV gets
+  a ring in the text colour. Adjacent buttons sit 0.86em apart (about 12 px, as upstream's Stacks), still child margins;
+  a section's own actions take their own line on a narrow screen.
+- **Secret box.** Test (Discovery token only, `NetworkCheck` / `network_check`), Replace (pencil) and Clear (red, bin) are
+  round icon buttons inside the "Configured" box, at least 40 px, centred, with aria-label and tooltip ("Test token",
+  "Replace", "Clear"). The separate Test row is gone: its description and the test's result sit under the box. A result
+  shows only beside the saved token it tested (hidden by a pending clear or a later save); a busy Test is refused with
+  `aria-disabled`, so the remote keeps its focus on it. Undo is a grey labelled button.
+- **Dashboard page (plugin `master` `515e6ab`…`a11d585`).** Upstream's `raised button-submit`, `raised button-delete`
+  and `raised`, without `jfmod-btn-sm`; hover and focus states that upstream leaves under 4.5:1 are set for this page
+  only, and every focused button takes a shadow ring (upstream's `.emby-button` forbids outlines with `!important`). The
+  token's icon buttons match the settings page; a test answer that no longer belongs (a save or a clear made while it
+  was out) is dropped whole, with no notice and no reload.
+- **Contrast, Dark scheme.** Blue 6.5:1 (hover 7.7:1), grey 10.0:1 (hover 7.0:1), red 5.6:1 (hover 9.3:1); focused, at
+  least 6.5:1 in every scheme. Every enabled button in all six shipped schemes keeps 4.5:1 at rest, under the pointer and
+  focused (runner-measured).
+- **Review.** Codex GPT-6.1 Sol, high: review 1 request changes (three P2: focus lost when Test went busy, a test result
+  kept under a replaced or cleared token, Apple TV focus text 2.9:1; four P3); re-review 2 closed them in the web and
+  found the Dashboard page's async failure path still able to publish a stale answer; re-review 3 found that path's
+  error body read and a reload that dropped edits; re-review 4 **approve**; a focus-ring fix found by acceptance,
+  re-review 5 **approve**. Records under the session scratchpad (`review-dangerred-1..5.md`).
+- **Live acceptance on 28096** (bundle `3e544bd3a8f2` from web `a721d807a8`; nothing outside `scripts/` differs up to
+  `4d124d9f5c`; plugin `a11d585`). `scripts/jellyfinmod-e2e/settings-design.mjs` now asserts each button's kind by its
+  words and place, one blue per view, every labelled button the height of Save, no icon on a labelled button, 4.5:1 at
+  rest, under the pointer and focused, the six schemes on desktop and the TV, the secret box's icons (order, names,
+  size, centring, tooltips, arrow order with rings, Test by Enter keeping focus, the result under the box and hidden by
+  a pending clear), and the Dashboard page's kinds, sizes, states and token Test — **688/688 on Playwright Chromium and
+  688/688 on Google Chrome** at desktop, mobile, TV 1080 and TV 720. Regression runners on both browsers:
+  `setup-wizard` 23/23, `settings-prowlarr` 9/9, `settings-area` 28/29 (the same stale-revision harness step as before,
+  class (a)). Retention days put back to 14. **Not republished**: 0.1.0.0 / `:latest` still carry the previous section's
+  build until the user approves another overwrite. 28096 runs this build.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
