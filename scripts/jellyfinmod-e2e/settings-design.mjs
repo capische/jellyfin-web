@@ -110,7 +110,7 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         const paintUnsupported = unsupported;
         const behind = el.parentElement ? surface(el.parentElement) : [0, 0, 0];
         return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth,
-            borderColor: s.borderTopColor, danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!el.closest('.jfmod-secret-row'),
+            borderColor: s.borderTopColor, danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!el.closest('.jfmod-secret-row'), boxText: el.closest('.jfmod-secret-row') ? getComputedStyle(el.closest('.jfmod-secret-row')).color : null,
             disabled: el.disabled, focused: el === document.activeElement,
             paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
     });
@@ -190,7 +190,6 @@ const expectedFor = button => {
 const PRIMARY = 'rgb(0, 164, 220)';
 const ERROR = 'rgb(198, 40, 40)';
 const ON_PRIMARY = 'rgba(0, 0, 0, 0.87)';
-const ON_SURFACE = 'rgb(255, 255, 255)';
 /** MUI's dark-mode disabled text and disabled fill. */
 const DISABLED = 'rgba(255, 255, 255, 0.3)';
 const DISABLED_FILL = 'rgba(255, 255, 255, 0.12)';
@@ -218,7 +217,8 @@ const looksWrong = button => {
         danger: button.variant === 'text' && button.borderWidth === '0px' && button.danger
     }[want];
     if (!shape || button.paintUnsupported) return true;
-    if (!idle) return false;
+    // Focused (the TV's fill in a dialog): whatever the fill, the text on it must stay readable.
+    if (!idle) return !button.disabled && !readable;
     if (button.disabled) {
         return button.color !== DISABLED || (want === 'contained' ? button.bg !== DISABLED_FILL : !isClear(button.bg)) ||
             (want === 'outlined' && button.borderColor !== DISABLED_FILL);
@@ -226,8 +226,9 @@ const looksWrong = button => {
     switch (want) {
         case 'contained': return button.bg !== PRIMARY || button.color !== ON_PRIMARY || !readable;
         case 'outlined': return !isClear(button.bg) || button.color !== PRIMARY || !primaryBorder(button.borderColor) || !readable;
-        // On the secret's filled box, Replace and Undo take the box's own white text, as on the Dashboard page.
-        case 'text': return !isClear(button.bg) || button.color !== (button.inSecret ? ON_SURFACE : PRIMARY) || !readable;
+        // On the secret's filled box, Replace and Undo take the box's own text colour (white in the dark theme), as on the
+        // Dashboard page.
+        case 'text': return !isClear(button.bg) || button.color !== (button.inSecret ? button.boxText : PRIMARY) || !readable;
         // The theme's error red on the dark paper is about 2:1, as on the Dashboard page; it is red by design, not gated on contrast.
         default: return !isClear(button.bg) || button.color !== ERROR;
     }
