@@ -1,0 +1,298 @@
+/* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
+/* global window, document, ApiClient, location, localStorage, getComputedStyle */
+// Settings-area design acceptance (fix/settings-design, 2026-10-07): every section of /catalog/settings and every step of
+// the setup wizard, in every layout, screenshotted and checked through computed styles and geometry, beside the
+// Dashboard page (Dashboard → Plugins → JellyfinMod) that is the visual reference.
+//
+//   JELLYFINMOD_TEST_URL=http://<host>:<isolated-port>/ JELLYFINMOD_BROWSER=chromium|chrome \
+//   JELLYFINMOD_SHOTS=<dir> node settings-design.mjs
+//
+// JELLYFINMOD_DESIGN_LAYOUTS=desktop,mobile,tv1080,tv720   JELLYFINMOD_DESIGN_REPORT_ONLY=1 (record, never fail)
+// Signs in as oleksii with an empty password. Read-only apart from one Discovery save with nothing changed (the
+// revision round-trips) and the read-only TMDB Test; it changes no setting.
+import { chromium } from 'playwright';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
+if (!['28096', '18096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
+const shots = process.env.JELLYFINMOD_SHOTS ?? (() => { throw new Error('JELLYFINMOD_SHOTS is required'); })();
+mkdirSync(shots, { recursive: true });
+const base = new URL('/web/', testUrl).href;
+const only = (process.env.JELLYFINMOD_DESIGN_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
+const LAYOUTS = {
+    desktop: { viewport: { width: 1440, height: 900 } },
+    mobile: {
+        viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+        userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36'
+    },
+    tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
+    tv720: { viewport: { width: 1280, height: 720 }, tv: true }
+};
+const SECTION_IDS = ['overview', 'discovery', 'client', 'indexers', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
+const WIZARD_STEPS = ['discovery', 'downloadClient', 'indexers', 'qualityProfile', 'enable', 'optional'];
+
+const results = [];
+const record = (layout, check, ok, detail) => {
+    results.push({ layout, check, ok });
+    console.log(`${ok ? 'PASS' : 'FAIL'} [${tier}/${layout}] ${check}${detail === undefined ? '' : ' :: ' + JSON.stringify(detail).slice(0, 900)}`);
+};
+
+const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
+console.log('browser', tier, browser.version());
+
+async function signIn(page) {
+    await page.goto(base, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => {
+        try { return !!ApiClient.getCurrentUserId() || /login|selectuser|selectserver/.test(location.hash); } catch { return false; }
+    }, undefined, { timeout: 30000 });
+    if (await page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } })) return;
+    const field = page.locator('#txtManualName');
+    if (!await field.isVisible().catch(() => false)) {
+        const chooser = page.locator('.btnManual').first();
+        if (await chooser.count()) await chooser.evaluate(node => node.click());
+        await field.waitFor({ state: 'visible', timeout: 15000 });
+    }
+    await field.fill('oleksii');
+    await page.waitForTimeout(1500);
+    await field.fill('oleksii');
+    await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+    await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
+    await page.waitForTimeout(1500);
+}
+
+/**
+ * The geometry and styling audit of whatever `.jfmod-check-main` shows: every MUI button's variant and colours, every
+ * pair of controls that overlap, every pair of neighbours in one row closer than `minGap` px, and every block that
+ * starts inside the one above it.
+ */
+const audit = page => page.evaluate(() => {
+    const root = document.querySelector('.jfmod-check-main');
+    if (!root) return null;
+    const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+    };
+    const label = el => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').filter(c => /^jfmod-|^Mui(Button|FormControl)-root$|^fieldDescription$/.test(c)).join('.') : ''} "${(el.textContent || '').trim().slice(0, 28)}"`;
+    const variant = el => (/MuiButton-contained/.test(el.className) ? 'contained' : /MuiButton-outlined/.test(el.className) ? 'outlined' : /MuiButton-text/.test(el.className) ? 'text' : 'other');
+    const buttons = [...root.querySelectorAll('button.MuiButton-root')].filter(visible).map(el => {
+        const s = getComputedStyle(el);
+        return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, border: s.borderTopWidth + ' ' + s.borderTopColor,
+            danger: el.classList.contains('jfmod-danger-text') };
+    });
+    const parts = [...root.querySelectorAll('button, .MuiFormControl-root, .jfmod-secret-row, .fieldDescription, .jfmod-savemeta, .jfmod-state, .jfmod-notice, .jfmod-kv, .jfmod-brow, .jfmod-maprow, .jfmod-lead, .jfmod-grouptitle, .MuiFormControlLabel-root, a')]
+        .filter(visible).filter(el => !el.parentElement.closest('.MuiFormControl-root, button, .MuiFormControlLabel-root'));
+    const overlaps = [];
+    const tight = [];
+    const rects = parts.map(el => ({ el, r: el.getBoundingClientRect() }));
+    for (let i = 0; i < rects.length; i++) {
+        for (let j = i + 1; j < rects.length; j++) {
+            const a = rects[i];
+            const b = rects[j];
+            if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+            const ix = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+            const iy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+            if (ix > 1 && iy > 1) overlaps.push(`${label(a.el)} × ${label(b.el)} (${Math.round(ix)}×${Math.round(iy)})`);
+            // Neighbours on one row: vertical overlap of most of the shorter one, horizontal distance under 6 px.
+            const shorter = Math.min(a.r.height, b.r.height);
+            if (iy > shorter * 0.5 && ix <= 1) {
+                const gapX = Math.max(a.r.left, b.r.left) - Math.min(a.r.right, b.r.right);
+                if (gapX < 6 && (a.el.matches('button, .jfmod-savemeta, .fieldDescription') && b.el.matches('button, .jfmod-savemeta, .fieldDescription'))) {
+                    tight.push(`${label(a.el)} | ${label(b.el)} (${Math.round(gapX)} px)`);
+                }
+            }
+            // Stacked neighbours: one directly above the other, closer than 4 px.
+            if (ix > 1 && iy <= 1) {
+                const gapY = Math.max(a.r.top, b.r.top) - Math.min(a.r.bottom, b.r.bottom);
+                if (gapY < 4 && a.el.matches('button, .jfmod-secret-row, .MuiFormControl-root, .fieldDescription') &&
+                    b.el.matches('button, .jfmod-secret-row, .MuiFormControl-root, .fieldDescription')) {
+                    tight.push(`${label(a.el)} / ${label(b.el)} (${Math.round(gapY)} px vertical)`);
+                }
+            }
+        }
+    }
+    const overflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+    return { buttons, overlaps, tight, overflow };
+});
+
+/** What a button of this text must look like: commits (Save, Add Prowlarr, Continue) fill, Clear / Remove / Delete are red text, the rest are not filled. */
+const expectedFor = button => {
+    if (/^(Save|Saving…|Continue|Add Prowlarr)$/.test(button.text)) return 'contained';
+    if (/^(Clear|Remove|Delete)$/.test(button.text)) return 'danger';
+    return 'secondary';
+};
+const checkButtons = (layout, where, buttons) => {
+    const wrong = buttons.filter(button => {
+        const want = expectedFor(button);
+        if (want === 'contained') return button.variant !== 'contained';
+        if (want === 'danger') return button.variant === 'contained' || !button.danger || !/rgb\(198, 40, 40\)/.test(button.color);
+        return button.variant === 'contained';
+    });
+    record(layout, `${where}: every button carries its deliberate variant (${buttons.length} buttons)`, wrong.length === 0, wrong.length ? wrong : undefined);
+};
+
+const shot = async (page, name) => {
+    const file = join(shots, `${tier}-${name}.png`);
+    await page.screenshot({ path: file, fullPage: true });
+    return file;
+};
+
+for (const name of only) {
+    const layout = LAYOUTS[name];
+    const context = await browser.newContext({ viewport: layout.viewport, isMobile: layout.isMobile, hasTouch: layout.hasTouch, userAgent: layout.userAgent });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+    try {
+        await signIn(page);
+        if (layout.tv) {
+            await page.evaluate(() => localStorage.setItem('layout', 'tv'));
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.waitForFunction(() => document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
+            await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+        }
+        for (const id of SECTION_IDS) {
+            await page.evaluate(section => { location.hash = '#/catalog/settings?section=' + section; }, id);
+            await page.locator(`.jfmod-check-section[data-section="${id}"]`).waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(700);
+            const file = await shot(page, `${name}-settings-${id}`);
+            const result = await audit(page);
+            checkButtons(name, `settings ${id}`, result.buttons);
+            record(name, `settings ${id}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
+            record(name, `settings ${id}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
+            record(name, `settings ${id}: no horizontal scroll`, result.overflow <= 0, result.overflow > 0 ? result.overflow : undefined);
+            console.log('  shot', file);
+        }
+        // The secret's Replace state and its Clear-pending state, put back with Keep / Undo; nothing is saved.
+        await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
+        await page.locator('.jfmod-check-section[data-section="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
+        await page.waitForTimeout(500);
+        if (await page.locator('.jfmod-secret-row button', { hasText: 'Replace' }).count()) {
+            await page.locator('.jfmod-secret-row button', { hasText: 'Replace' }).click();
+            await page.waitForTimeout(300);
+            console.log('  shot', await shot(page, `${name}-settings-discovery-replacing`));
+            const replacing = await audit(page);
+            checkButtons(name, 'discovery while replacing', replacing.buttons);
+            record(name, 'discovery while replacing: no overlaps or touching', !replacing.overlaps.length && !replacing.tight.length,
+                [...replacing.overlaps, ...replacing.tight]);
+            await page.locator('.jfmod-secret button', { hasText: 'Keep the saved one' }).click();
+            await page.locator('.jfmod-secret-row button', { hasText: 'Clear' }).click();
+            await page.waitForTimeout(300);
+            console.log('  shot', await shot(page, `${name}-settings-discovery-clearing`));
+            const clearing = await audit(page);
+            checkButtons(name, 'discovery while clearing', clearing.buttons);
+            record(name, 'discovery while clearing: no overlaps or touching', !clearing.overlaps.length && !clearing.tight.length,
+                [...clearing.overlaps, ...clearing.tight]);
+            await page.locator('.jfmod-secret-row button', { hasText: 'Undo' }).click();
+            await page.waitForTimeout(300);
+            record(name, 'discovery: Undo returns the secret to Configured', await page.locator('.jfmod-secret-row', { hasText: 'Configured' }).count() === 1);
+        }
+        if (name === 'desktop') {
+            // The read-only TMDB test still answers, and a save with nothing changed round-trips the revision.
+            const before = await page.locator('[data-savemeta="discovery"]').innerText();
+            await page.locator('button[data-test="discovery"]').click();
+            const notice = page.locator('.jfmod-check-section[data-section="discovery"] .jfmod-notice');
+            await notice.waitFor({ state: 'visible', timeout: 30000 });
+            const said = await notice.innerText();
+            record(name, 'discovery Test reports a sentence and a code', /\(\w+\)/.test(said), said);
+            await page.locator('button[data-submit="discovery"]').click();
+            await page.waitForFunction(() => /Saved/.test(document.querySelector('.jfmod-check-section[data-section="discovery"] .jfmod-notice')?.textContent ?? ''),
+                undefined, { timeout: 30000 });
+            const after = await page.locator('[data-savemeta="discovery"]').innerText();
+            record(name, 'discovery Save with nothing changed round-trips the revision', before === after, { before, after });
+            // The edit sheet of an indexer and a quality profile, opened and cancelled.
+            for (const [section, opener] of [['indexers', 'Edit'], ['profiles', 'Edit']]) {
+                await page.evaluate(id => { location.hash = '#/catalog/settings?section=' + id; }, section);
+                await page.locator(`.jfmod-check-section[data-section="${section}"]`).waitFor({ state: 'visible', timeout: 30000 });
+                await page.waitForTimeout(500);
+                const edit = page.locator('.jfmod-rowactions button', { hasText: opener }).first();
+                if (!await edit.count()) continue;
+                await edit.click();
+                const dialog = page.locator('.MuiDialog-paper').last();
+                await dialog.waitFor({ state: 'visible', timeout: 10000 });
+                await page.waitForTimeout(400);
+                console.log('  shot', await shot(page, `${name}-settings-${section}-dialog`));
+                const dialogButtons = await dialog.evaluate(paper => [...paper.querySelectorAll('button.MuiButton-root')].map(el => ({
+                    text: el.textContent.trim(), danger: el.classList.contains('jfmod-danger-text'), color: getComputedStyle(el).color,
+                    variant: /MuiButton-contained/.test(el.className) ? 'contained' : /MuiButton-outlined/.test(el.className) ? 'outlined' : 'text'
+                })));
+                checkButtons(name, `${section} dialog`, dialogButtons.filter(button => button.text !== 'Cancel'));
+                record(name, `${section} dialog: Cancel is not filled`, dialogButtons.some(button => button.text === 'Cancel' && button.variant !== 'contained'), dialogButtons);
+                await dialog.locator('button', { hasText: 'Cancel' }).click();
+                await page.waitForTimeout(400);
+            }
+        }
+        for (const step of WIZARD_STEPS) {
+            await page.evaluate(id => { location.hash = '#/catalog/settings/setup?step=' + id; }, step);
+            await page.locator('.jfmod-check-main .jfmod-check-section').first().waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(700);
+            console.log('  shot', await shot(page, `${name}-wizard-${step}`));
+            const result = await audit(page);
+            checkButtons(name, `wizard ${step}`, result.buttons);
+            record(name, `wizard ${step}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
+            record(name, `wizard ${step}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
+            const stacked = await page.evaluate(() => {
+                const sections = [...document.querySelectorAll('.jfmod-check-main .jfmod-check-section')].map(el => el.getBoundingClientRect());
+                const gaps = [];
+                for (let i = 1; i < sections.length; i++) gaps.push(Math.round(sections[i].top - sections[i - 1].bottom));
+                const notice = document.querySelector('.jfmod-check-main > .jfmod-notice')?.getBoundingClientRect();
+                return { gaps, noticeGap: notice && sections[0] ? Math.round(sections[0].top - notice.bottom) : null };
+            });
+            record(name, `wizard ${step}: stacked sections and the step notice are spaced apart`,
+                stacked.gaps.every(gap => gap >= 8) && (stacked.noticeGap === null || stacked.noticeGap >= 8), stacked);
+        }
+        if (name === 'desktop' || name === 'mobile') {
+            // The Dashboard page, the visual reference, opened from the dashboard drawer's own JellyfinMod entry.
+            await page.evaluate(() => { location.hash = '#/dashboard'; });
+            await page.waitForTimeout(4000);
+            if (name === 'mobile') {
+                const toggle = page.locator('button[aria-label="Open Menu"]').first();
+                if (await toggle.count()) await toggle.click().catch(() => undefined);
+                await page.waitForTimeout(800);
+            }
+            const entry = page.locator('.MuiDrawer-root a.MuiListItemButton-root').filter({ has: page.locator('.MuiListItemText-root', { hasText: /^JellyfinMod$/ }) });
+            const present = await entry.count() > 0 && await entry.first().isVisible();
+            const iconText = present ? await entry.first().locator('.MuiIcon-root, .material-icons').first().evaluate(el => ({
+                text: el.textContent, font: getComputedStyle(el).fontFamily, width: el.getBoundingClientRect().width
+            })).catch(() => null) : null;
+            record(name, 'dashboard drawer lists JellyfinMod under Plugins with an icon glyph', present && !!iconText && /Material Icons/.test(iconText.font) && iconText.width < 40,
+                iconText);
+            if (present) {
+                await entry.first().click();
+                await page.locator('.jfmod-check-section, #JellyfinModConfigPage, [data-role="page"].page:not(.hide) .jfmod-check').first()
+                    .waitFor({ state: 'visible', timeout: 30000 }).catch(() => undefined);
+                await page.waitForTimeout(2500);
+                const where = await page.evaluate(() => location.hash);
+                record(name, 'the drawer entry opens the JellyfinMod configuration page', /configurationpage\?name=JellyfinMod/.test(where), where);
+                record(name, 'the configuration page renders its readiness rail', await page.locator('.jfmod-check-rail:visible, .jfmod-check-steps:visible').count() > 0);
+                if (name === 'mobile') {
+                    const toggle = page.locator('button[aria-label="Open Menu"]').first();
+                    if (await toggle.count()) await toggle.click().catch(() => undefined);
+                    await page.waitForTimeout(800);
+                }
+                const selected = await page.evaluate(() => [...document.querySelectorAll('.MuiDrawer-root a.MuiListItemButton-root.Mui-selected')]
+                    .map(el => el.querySelector('.MuiListItemText-root')?.textContent.trim()));
+                record(name, 'only the JellyfinMod entry is highlighted, not Plugins', selected.length === 1 && selected[0] === 'JellyfinMod', selected);
+                if (name === 'mobile') await page.keyboard.press('Escape');
+                await page.waitForTimeout(500);
+                console.log('  shot', await shot(page, `${name}-dashboard-page`));
+            }
+        }
+        record(name, 'no page errors', errors.length === 0, errors.length ? errors : undefined);
+    } catch (error) {
+        record(name, 'run completed', false, String(error.message).split('\n')[0]);
+        await shot(page, `${name}-error`).catch(() => undefined);
+    } finally {
+        if (layout.tv) await page.evaluate(() => localStorage.removeItem('layout')).catch(() => undefined);
+        await context.close();
+    }
+}
+
+await browser.close();
+const failed = results.filter(result => !result.ok);
+console.log(`\n${results.length - failed.length} of ${results.length} passed on ${tier}`);
+process.exit(failed.length && !process.env.JELLYFINMOD_DESIGN_REPORT_ONLY ? 1 : 0);
