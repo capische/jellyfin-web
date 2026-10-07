@@ -448,6 +448,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (user, 2026-10-02):** a manual "remove unused downloads" tool; a first implementation was withdrawn after four
   Codex rounds kept finding serious defects in its delete code, and is kept locally at
   `refs/keep/cleanup-button-20261002` in both repositories for its own design and review.
+- Settings area design fix and the Dashboard drawer entry (2026-10-07): **released** as 0.1.0.0, index
+  `sha256:bae873702b5cef2f486512349adb75dafe8d3dc99904dad0b767ef5ca251d667`, from plugin `e44e05f` and web `67c91a5a59`
+  (bundle `a21c898e2a4c`). Explicit button variants and working row spacing in `/catalog/settings`, the wizard and the
+  Home banner; "JellyfinMod" under Plugins in the Dashboard drawer. Codex approve with nits; settings design runner
+  354/354 on Chromium and Chrome on 28096 (see [`PHASE7.md`](PHASE7.md), *Settings area design fix*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.

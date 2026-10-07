@@ -2514,6 +2514,56 @@ Authorized by the user directly ("Squash first, then push and republish", 2026-1
 - **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index **`sha256:b9703e07c4521c21ee56d7957b6d35232552bc91887628d3821c0ef7b98f6a82`** for linux/amd64 (`sha256:3add865fafb4…`) and linux/arm64 (`sha256:0545bf47c02c…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0 base, `SOURCE_DATE_EPOCH` of the plugin tip, `--provenance=false`. The credential lived only in a temporary Docker configuration with no credential helper on the path; logged out, deleted, no ghcr.io keychain entry.
 - **Checked anonymously:** both tags resolve to that index with both platforms. The arm64 image, pulled by digest on the Pi and started as a throwaway container on an empty config (port 58096): Health `401` anonymously and `0.1.0.0`, `Ok: true` for a throwaway administrator; `/web` patched with `a8d28bf5c349` by itself (`automatic`) and served from `/web-mod/a8d28bf5c349/`; repository `200`; 34 migrations; no [ERR] (the startup race did not occur). Container, config and image removed afterwards. Rollback: the previous index `sha256:00f309cd…` still resolves.
 
+#### Settings area design fix and the Dashboard drawer entry, republished as 0.1.0.0 — 2026-10-07
+
+Asked for by the user (session "settings design shift"), run alongside Phase 9 in its own worktrees by the user's choice
+("Start now, in worktrees"); republishing authorized directly ("Yes, republish 0.1.0.0"), after review and live acceptance.
+
+- **What was wrong.** The settings area (`/catalog/settings`, §5 and S8) and the wizard looked broken next to the Dashboard
+  page: upstream's theme gives MUI `Button` the default variant `contained`, so about twenty secondary actions without a
+  variant (Replace, Clear, Undo, Test, Edit, Remove, Up, Make default…) drew as filled primary buttons; the `.jfmod-* > *`
+  row-spacing rules lost to the emotion class that resets an MUI control's margin to 0, so buttons touched each other and
+  their texts; `.jfmod-testline` kept the Dashboard page's `-0.6em` top margin, which pulled the Test line into the secret
+  box. The same sweep found the rail and lead links in the browser's default blue, the wizard's stacked Optional sections
+  touching, a double dot in the wizard's step notice, switch descriptions 7 px off their label, Next touching Save on a
+  phone, the Home setup banner unstyled until the settings page had been opened once, and red Clear/Remove unreadable
+  (about 2:1) under the TV's focus fill in a dialog because of the lifted rule's `!important`.
+- **Fix (web `jellyfin-mod` `bcc12a88c0`…`67c91a5a59`, mod files only, §3.2 unchanged).** Every button in the settings
+  area, the wizard and the Home banner names its variant: commits (Save, Add Prowlarr, Continue) contained, section
+  actions outlined, inline actions text, Clear and Remove red text as on the Dashboard page; Replace and Undo take the
+  secret box's own text colour. Row-spacing rules also name `.MuiButtonBase-root` / `.MuiFormControl-root` (one class
+  above emotion; still child margins, no flex `gap`, UX §13 W11). `.jfmod-danger-text` drops `!important`. Plain colour
+  fallbacks precede the new `var()` declarations.
+- **Dashboard drawer (plugin `master` `e44e05f`).** The configuration page sets `EnableInMainMenu`, `DisplayName`
+  "JellyfinMod" and `MenuIcon` `video_library`, so upstream's Plugins drawer section links to it; only that entry is
+  highlighted on the page. No web change.
+- **Review.** Codex GPT-6.1 Sol, high: first review request changes (three P2: red on the TV focus fill, and two runner
+  gaps); re-reviews 2–3 request changes (runner gaps only, no shipped regression); re-review 4 approve with nits (fixed);
+  re-review 5 **approve with nits** — one P3 left: the runner's disabled-colour expectations are the Dark theme's, which
+  the runner now states. Records under the session scratchpad (`review-settingsfix-1..5.md`).
+- **Live acceptance on 28096** (bundle `a21c898e2a4c` from web `2fb6e5c277`; nothing outside `scripts/` differs up to
+  `67c91a5a59`). `scripts/jellyfinmod-e2e/settings-design.mjs`, new: all eleven sections, the secret's Replace and Clear
+  states, the indexer and profile editors at every scroll position, all six wizard steps and the Dashboard drawer entry,
+  at desktop, mobile, TV 1080 and TV 720, with each button's role checked by variant and painted colours, overlaps and
+  touching neighbours, the TV focus contrast in dialogs, the TMDB Test and a Discovery save round-trip — **354/354 on
+  Playwright Chromium and 354/354 on Google Chrome**. Regression runners on both browsers: `settings-prowlarr` 9/9,
+  `setup-wizard` 23/23, `settings-area` 28/29 — its stale-revision step waits for an error notice that the whole-review
+  release (`1924001186`) replaced with the warning "changed somewhere else while you were editing" (class (a), harness;
+  the runner predates that change). Retention days put back to 14 after each run.
+- **Seen once during acceptance, upstream:** Jellyfin 12.0.0 itself crashed (`SynchronizationLockException` in
+  `WebSocketController.DisposeAsync`, `Emby.Server.Implementations`) while browser contexts closed their sockets; Docker
+  restarted it. Not mod code; not reproduced in the later runs.
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:bae873702b5cef2f486512349adb75dafe8d3dc99904dad0b767ef5ca251d667`** for linux/amd64 (`sha256:9fe2f0233ea1…`)
+  and linux/arm64 (`sha256:f6c0a1d1f872…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0 base, `SOURCE_DATE_EPOCH`
+  of the plugin tip, `--provenance=false`; DLL sha256 `e67456864cc1…`, web zip `2feb130b764b…`, `meta.json` timestamp
+  **`2026-10-07T11:24:19Z`**, later than `2026-10-03T04:29:38Z`, so images already on 0.1.0.0 upgrade in place. The
+  credential lived only in a temporary Docker configuration without a credential store; logged out, deleted, no ghcr.io
+  keychain entry. Both tags resolve anonymously (public). The arm64 image, pulled by digest on the Pi and started as a
+  throwaway container on an empty config (port 58096): Health `401` anonymously, `/web` patched with `a21c898e2a4c` by
+  itself, repository `200`, no [ERR]; its DLL is byte-identical to the release package; container, config and image
+  removed. Rollback: the previous index `sha256:b9703e07c452…` still resolves by digest. 28096 runs this build.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
