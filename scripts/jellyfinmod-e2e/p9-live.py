@@ -127,6 +127,22 @@ def remote(script, *args):
     return subprocess.run(["ssh", SSH, "bash", "-s", "--", *args], input=script, text=True, capture_output=True, timeout=600)
 
 
+def with_service_stopped(sql):
+    """Runs SQL on the plugin database with the isolated service stopped, and always starts the service again: a failed stop
+    or statement keeps its exit status and output, but never leaves 18096 down (web review 2026-10-07 round 2, P2 4). Waits
+    for the service to answer before returning."""
+    script = (f"cd ~ || exit 1\n"
+              f"docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null; rc=$?\n"
+              f"if [ $rc -eq 0 ]; then sqlite3 '{DB}' <<'SQL'\n{sql}\nSQL\nrc=$?; fi\n"
+              f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null; started=$?\n"
+              f"if [ $rc -eq 0 ]; then rc=$started; fi\n"
+              f"exit $rc\n")
+    out = remote(script)
+    wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
+    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    return out
+
+
 def boundary(method, path, body=None):
     """The stand-in's control port, which listens on the host's loopback only."""
     data = json.dumps(body) if body is not None else ""
@@ -256,20 +272,43 @@ def prefs_path(user_id):
 
 
 def prefs_snapshot(user_id):
-    """The ratings keys of oleksii's display preferences: each key's value, and which keys exist at all."""
-    custom = (call("GET", prefs_path(user_id))[1].get("CustomPrefs") or {})
+    """The ratings keys of oleksii's display preferences: each key's value, and which keys exist at all. A read that fails, or
+    an answer without its CustomPrefs object, raises: a guess would later delete keys that existed (round 2, P3 5)."""
+    status_code, prefs = call("GET", prefs_path(user_id))
+    if status_code != 200 or not isinstance(prefs, dict) or not isinstance(prefs.get("CustomPrefs"), dict):
+        raise RuntimeError(f"display preferences could not be read ({status_code})")
+    custom = prefs["CustomPrefs"]
     return {key: custom[key] for key in PREF_KEYS if key in custom}
+
+
+def restore_prefs(state):
+    """Puts oleksii's ratings keys back as setup found them and retires the snapshot once that is confirmed; the snapshot stays
+    for another try when anything fails. Returns whether the keys are as they were."""
+    before = state.get("prefsBefore")
+    if before is None:
+        return None
+    path = prefs_path(state["userId"])
+    status_code, prefs = call("GET", path)
+    if status_code != 200 or not isinstance(prefs, dict) or not isinstance(prefs.get("CustomPrefs"), dict):
+        return False
+    custom = prefs["CustomPrefs"]
+    for key in PREF_KEYS:
+        if key in before:
+            custom[key] = before[key]
+        else:
+            custom.pop(key, None)
+    call("POST", path, prefs)
+    restored = prefs_snapshot(state["userId"]) == before
+    if restored:
+        state.pop("prefsBefore", None)
+        save_state(state)
+    return restored
 
 
 def age(days):
     """Moves one title's MDBList values by `days` with the service stopped (there is no API for it)."""
-    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null && sqlite3 '{DB}' \""
-                 f"UPDATE TitleRatings SET FetchedAt = strftime('%Y-%m-%d %H:%M:%f', FetchedAt, '{days:+d} days') WHERE Provider = 'mdblist' "
-                 f"AND EntryId IN (SELECT Id FROM Entries WHERE TmdbId = {AGED_TITLE}); SELECT changes();\" && "
-                 f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null")
-    wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
-    return out
+    return with_service_stopped(f"UPDATE TitleRatings SET FetchedAt = strftime('%Y-%m-%d %H:%M:%f', FetchedAt, '{days:+d} days') "
+                                f"WHERE Provider = 'mdblist' AND EntryId IN (SELECT Id FROM Entries WHERE TmdbId = {AGED_TITLE}); SELECT changes();")
 
 
 def step_age():
@@ -299,7 +338,11 @@ def step_setup():
     # oleksii's own ratings display choice, restored exactly by cleanup (web review 2026-10-07, P3 7). A repeated setup keeps
     # the first snapshot, never one the runs themselves wrote.
     if "prefsBefore" not in state:
-        state["prefsBefore"] = prefs_snapshot(state["userId"])
+        try:
+            state["prefsBefore"] = prefs_snapshot(state["userId"])
+        except RuntimeError as error:
+            check(False, "oleksii's display preferences are read before anything changes them", str(error))
+            raise
     state["logSince"] = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True, text=True).stdout.strip()
     save_state(state)
     make_titles(TITLES)
@@ -411,14 +454,10 @@ def step_reset():
     if config.get("RatingsProviderBaseUrl"):
         config["RatingsProviderBaseUrl"] = load_state().get("overrideBefore", "")
         call("POST", f"/Plugins/{PLUGIN_ID}/Configuration", config)
-    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null && "
-                 f"sqlite3 '{DB}' \"DELETE FROM TitleRatings; DELETE FROM RatingsFetches; DELETE FROM RatingsProviderStates; DELETE FROM RatingsSettings;\" && "
-                 f"sqlite3 '{DB}' \"SELECT (SELECT COUNT(*) FROM TitleRatings) + (SELECT COUNT(*) FROM RatingsFetches) + (SELECT COUNT(*) FROM RatingsSettings)\" && "
-                 f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null")
+    out = with_service_stopped("DELETE FROM TitleRatings; DELETE FROM RatingsFetches; DELETE FROM RatingsProviderStates; DELETE FROM RatingsSettings; "
+                               "SELECT (SELECT COUNT(*) FROM TitleRatings) + (SELECT COUNT(*) FROM RatingsFetches) + (SELECT COUNT(*) FROM RatingsSettings);")
     check(out.returncode == 0 and out.stdout.strip().endswith("0"), "Every stored rating, attempt and ratings setting is removed (service stopped, then started)",
           out.stdout.strip())
-    wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
 
 
 def step_fetch():
@@ -560,11 +599,8 @@ def step_kill():
     db = DB
     # The failure breaker from the previous step is the provider's and stays for an hour; it is cleared here directly so the
     # kill can run now (the cleanup step resets all ratings state the same way).
-    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null && "
-                 f"sqlite3 '{db}' \"UPDATE RatingsProviderStates SET BreakerUntil = NULL, BreakerReason = NULL, ConsecutiveFailures = 0\" && "
-                 f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null")
+    out = with_service_stopped("UPDATE RatingsProviderStates SET BreakerUntil = NULL, BreakerReason = NULL, ConsecutiveFailures = 0;")
     check(out.returncode == 0, "The failure breaker is cleared with the service stopped (test harness, not product behaviour)")
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
     make_titles([KILL_TITLE])
     scan()
     entry = wait_for(lambda: next((e for e in entries(KILL_TITLE[1]) if e["state"] == "onDisk"), None), "the kill title's entry", 600)
@@ -575,7 +611,8 @@ def step_kill():
     target = next(item for item in tasks if item["Key"] == "JellyfinModRatingsRefresh")
     call("POST", f"/ScheduledTasks/Running/{target['Id']}")
     wait_for(lambda: calls_for(KILL_TITLE[0]) == 1, "the slow call is in flight", 60)
-    out = remote("docker kill jellyfinmod-test >/dev/null && sleep 2 && docker start jellyfinmod-test >/dev/null")
+    out = remote("docker kill jellyfinmod-test >/dev/null; rc=$?; sleep 2; docker start jellyfinmod-test >/dev/null; started=$?; "
+                 "if [ $rc -eq 0 ]; then rc=$started; fi; exit $rc")
     check(out.returncode == 0, "The container is killed (SIGKILL) while the call is in flight, then started")
     boundary("POST", "/mode", {"mode": "full", "titles": {}})
     wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health after the kill", 300)
@@ -590,6 +627,12 @@ def step_kill():
 
 def step_cleanup():
     state = load_state()
+    # oleksii's ratings display choice goes back first, before anything else here can fail: each key's value, and a key that
+    # did not exist is removed. The snapshot is retired once that is confirmed, so a later run never restores an old one.
+    keys_before = sorted(state.get("prefsBefore") or {})
+    restored = restore_prefs(state)
+    check(restored is not False, "oleksii's ratings display preferences are exactly as setup found them (or were already restored)",
+          {"keysBefore": keys_before, "snapshotRetired": "prefsBefore" not in load_state()})
     SECRETS.extend([state.get("token", ""), state.get("viewerToken", "")])
     if library_id():
         code, _ = call("DELETE", "/Library/VirtualFolders?" + urllib.parse.urlencode({"name": LIBRARY, "refreshLibrary": "true"}))
@@ -615,32 +658,13 @@ def step_cleanup():
     # outlived its library (found on 2026-10-07: the absence rules never clear it once the library is gone). The fixture
     # entries and every stand-in rating are removed with the service stopped, foreign keys on.
     ids = ", ".join(str(tmdb) for tmdb, *_ in TITLES + [KILL_TITLE])
-    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null && sqlite3 '{DB}' \""
-                 f"PRAGMA foreign_keys = ON; BEGIN; CREATE TEMP TABLE p9 AS SELECT Id FROM Entries WHERE Title LIKE 'JellyfinMod P9 Ratings%' "
-                 f"AND TmdbId IN ({ids}); DELETE FROM History WHERE EntryId IN (SELECT Id FROM p9); DELETE FROM Entries WHERE Id IN (SELECT Id FROM p9); "
-                 f"COMMIT; SELECT COUNT(*) FROM Entries WHERE Title LIKE 'JellyfinMod P9%';\" && "
-                 f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null")
+    out = with_service_stopped(f"PRAGMA foreign_keys = ON; BEGIN; CREATE TEMP TABLE p9 AS SELECT Id FROM Entries WHERE Title LIKE 'JellyfinMod P9 Ratings%' "
+                               f"AND TmdbId IN ({ids}); DELETE FROM History WHERE EntryId IN (SELECT Id FROM p9); DELETE FROM Entries WHERE Id IN (SELECT Id FROM p9); "
+                               f"COMMIT; SELECT COUNT(*) FROM Entries WHERE Title LIKE 'JellyfinMod P9%';")
     check(out.returncode == 0 and out.stdout.strip().endswith("0"), "The fixture entries are removed (service stopped, foreign keys on)", out.stdout.strip())
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
     step_reset()
     s = settings()
     check(s["enabled"] and not s["apiKeyConfigured"] and not s["providerOverride"] and s["revision"] == 1, "Ratings settings are fresh defaults again", s)
-    # oleksii's ratings display choice goes back to what setup found: each key's value, and a key that did not exist is removed.
-    before = state.get("prefsBefore")
-    path = prefs_path(state["userId"])
-    status_code, prefs = call("GET", path)
-    custom = prefs.get("CustomPrefs") or {}
-    if before is not None:
-        for key in PREF_KEYS:
-            if key in before:
-                custom[key] = before[key]
-            else:
-                custom.pop(key, None)
-        prefs["CustomPrefs"] = custom
-        call("POST", path, prefs)
-    after = prefs_snapshot(state["userId"])
-    check(before is not None and after == before, "oleksii's ratings display preferences are exactly as setup found them",
-          {"keysBefore": sorted(before or {}), "keysAfter": sorted(after)})
     status_code, views = call("GET", f"/Users/{state['userId']}/Views")
     names = sorted(view["Name"] for view in views["Items"])
     check(names == ["Movies", "Shows"], "GET /UserViews for oleksii lists only Movies and Shows", names)
