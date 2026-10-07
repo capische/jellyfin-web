@@ -4,6 +4,7 @@ import Close from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Download from '@mui/icons-material/Download';
 import Downloading from '@mui/icons-material/Downloading';
+import StarHalf from '@mui/icons-material/StarHalf';
 import Tune from '@mui/icons-material/Tune';
 import Edit from '@mui/icons-material/Edit';
 import Logout from '@mui/icons-material/Logout';
@@ -19,7 +20,7 @@ import React, { FC, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useQueueVisible } from 'apps/modern/features/jellyfinmod/hooks/useQueue';
-import { useSettingsVisible } from 'apps/modern/features/jellyfinmod/hooks/useSettingsVisible';
+import { useRatingsPreferencesVisible, useSettingsVisible } from 'apps/modern/features/jellyfinmod/hooks/useSettingsVisible';
 import { appHost } from 'components/apphost';
 import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
@@ -45,6 +46,8 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
     const isQueueVisible = useQueueVisible();
     // JellyfinMod: the settings area, for administrators of a plugin that offers it (P7.S8).
     const isSettingsVisible = useSettingsVisible();
+    // JellyfinMod: every user's choice of rating sources, for a plugin that offers ratings (Phase 9).
+    const isRatingsVisible = useRatingsPreferencesVisible();
 
     const onDownloadManagerClick = useCallback(() => {
         shell.openDownloadManager();
@@ -136,6 +139,20 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     </ListItemIcon>
                     <ListItemText>
                         JellyfinMod Settings
+                    </ListItemText>
+                </MenuItem>
+            )}
+            {isRatingsVisible && (
+                <MenuItem
+                    component={Link}
+                    to='/catalog/preferences'
+                    onClick={onMenuClose}
+                >
+                    <ListItemIcon>
+                        <StarHalf />
+                    </ListItemIcon>
+                    <ListItemText>
+                        Ratings display
                     </ListItemText>
                 </MenuItem>
             )}

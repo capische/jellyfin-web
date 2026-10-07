@@ -14,7 +14,7 @@ import { isSettingsProblem, type Overview, request } from './settingsApi';
 import { FOCUSABLE_SELECT, Notice } from './settingsWidgets';
 import {
     AutomationSection, ClientSection, DiagnosticsSection, DiscoverySection, GrabbingSection, ImportSection, IndexersSection, InterfaceSection,
-    OverviewSection, ProfilesSection, RetentionSection, type SectionProps, type SettingsData, summarise
+    OverviewSection, ProfilesSection, RatingsSection, RetentionSection, type SectionProps, type SettingsData, summarise
 } from './settingsSections';
 
 import './settings.scss';
@@ -34,6 +34,8 @@ const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
     { id: 'import', title: 'Import and Seeding', Component: ImportSection },
     { id: 'retention', title: 'Retention', Component: RetentionSection },
     { id: 'automation', title: 'Automation', Component: AutomationSection },
+    // Phase 9: optional, display only; after the acquisition pipeline, before the interface.
+    { id: 'ratings', title: 'Ratings', Component: RatingsSection },
     { id: 'interface', title: 'Interface', Component: InterfaceSection },
     { id: 'diagnostics', title: 'Diagnostics', Component: DiagnosticsSection }
 ];
@@ -69,19 +71,20 @@ export const useSettingsData = (enabled: boolean) => {
                     return [];
                 });
             const [overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
-                decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList, prowlarr] = await Promise.all([
+                decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList, prowlarr, ratings, ratingsStatus] = await Promise.all([
                 get<Overview | undefined>('Settings/Overview', undefined), get('Settings/Discovery', undefined), get('Settings/SeedProtection', undefined),
                 get('Settings/Retention', undefined), get('Settings/Acquisition', undefined), get<unknown[]>('Settings/Indexers', []),
                 get<unknown[]>('Settings/DownloadClients', []), get<unknown[]>('Settings/QualityProfiles', []), get('Settings/Import', undefined),
                 get('Settings/Automation', undefined), get('Automation/Status', undefined), get<{ items: unknown[] }>('Automation/Decisions?limit=20', { items: [] }),
                 get('Settings/Interface', undefined), get('Reconciliation/Latest', undefined), get<unknown[]>('Reconciliation/Conflicts', []),
                 get<unknown[]>('Reconciliation/Orphans', []), get('Retention/Preview', undefined), get('Retention/Runs/Latest', undefined), users,
-                get<unknown[] | undefined>('Settings/Prowlarr', undefined)
+                get<unknown[] | undefined>('Settings/Prowlarr', undefined),
+                get('Settings/Ratings', undefined), get('Ratings/Status', undefined)
             ]);
             if (failures.includes('Settings/Overview')) throw new Error('The settings overview could not be read.');
             return {
                 overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
-                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr, failures,
+                decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr, ratings, ratingsStatus, failures,
                 unsupported
             } as SettingsData;
         }

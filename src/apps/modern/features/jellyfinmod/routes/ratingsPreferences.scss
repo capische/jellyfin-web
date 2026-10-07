@@ -1,0 +1,36 @@
+// Phase 9: the Ratings display page. em sizes for the TV's 125 % and the phone's 90 % roots; margins, not flex gap, for
+// older TV engines (UX §13).
+.jfmod-ratingsPreferences {
+    max-width: 50em;
+}
+
+.jfmod-prefHeading {
+    margin: 1.2em 0 0.4em;
+    font-size: 1.2em;
+}
+
+.jfmod-prefList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.jfmod-prefRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0 0 0.3em;
+
+    > button {
+        margin: 0.15em 0.5em 0.15em 0;
+    }
+
+    > button[aria-disabled='true'] {
+        opacity: 0.45;
+    }
+}
+
+.jfmod-prefStatus {
+    min-height: 1.5em;
+    opacity: 0.8;
+}

@@ -18,6 +18,8 @@ import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
+import RatingsRefreshButton from './RatingsRefreshButton';
+import { itemRatingsKey } from './NativeRatingsLine';
 import RetentionControls from './RetentionControls';
 import RetentionStatus from './RetentionStatus';
 import RetentionWarning from './RetentionWarning';
@@ -173,6 +175,10 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const capabilities = usePluginCapabilities(api);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
     const queryClient = useQueryClient();
+    // The Ratings line has its own mount and query; a manual refresh asks it to read again (Phase 9).
+    const rereadRatings = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: itemRatingsKey(api.basePath, userId, itemId) }).catch(() => undefined);
+    }, [api.basePath, itemId, queryClient, userId]);
     const detailKey = ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId];
     const detail = useQuery({
         queryKey: detailKey,
@@ -322,6 +328,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
                 episode={keepsEpisode ? episode : undefined} versions={versions} capabilities={capabilities} />}
             {isAdmin && <VersionRemoveControls api={api} entryId={detail.data.entry.id} mediaType={detail.data.entry.mediaType}
                 busy={busy} change={change} versions={versions} capabilities={capabilities} onRemoved={afterRemove} />}
+            {isAdmin && !episode && <RatingsRefreshButton api={api} entryId={detail.data.entry.id} onMessage={setMessage}
+                onQueued={rereadRatings} />}
         </div>
         <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
             <ol>{history.map(event => <li key={event.id}>

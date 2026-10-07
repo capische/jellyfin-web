@@ -4,6 +4,7 @@ import type { AxiosRequestConfig } from 'axios';
 import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
+import type { Rating } from '../types/ratings';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
 import type { UpgradeStateDto, VersionDto, VersionRemoveResult } from '../types/versions';
 import type { Filters } from 'types/library';
@@ -76,6 +77,8 @@ export interface CreateEntryResult {
 
 export interface EntryDetail {
     entry: Entry;
+    /** One rating per source in its own scale (Phase 9); absent from an older plugin, empty while ratings are off. */
+    ratings?: Rating[];
     history: HistoryRecord[];
     episodes: EntryEpisode[];
     retention: RetentionSummary;
@@ -115,6 +118,8 @@ export interface BrowseRequest {
     startIndex?: number;
     limit?: number;
     alphabet?: string | null;
+    /** The one rating source a card may show; sent only to a plugin that lists `ratings.cards` (P9.R7). */
+    ratingSource?: string;
     filters?: Partial<Record<Uncapitalize<Exclude<keyof Filters,
         'FileStates' | 'RetentionDueWithinDays' | 'EpisodeFilter' | 'EpisodesStatus'>>, unknown>>;
 }

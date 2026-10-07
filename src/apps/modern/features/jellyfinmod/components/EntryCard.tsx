@@ -11,12 +11,15 @@ import inputManager from 'scripts/inputManager';
 
 import { useQueueVisible } from '../hooks/useQueue';
 import { openInFlightCardMenu } from '../integration/queueActions';
+import { chipLabel, formatValue, SOURCE_SHORT } from '../constants/ratings';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
+import type { Rating } from '../types/ratings';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
 
 import 'components/cardbuilder/card.scss';
 import './entryCard.scss';
+import './ratings.scss';
 
 interface EntryCardProps {
     entry: Entry;
@@ -24,7 +27,32 @@ interface EntryCardProps {
     cardOptions: CardOptions;
     retention?: RetentionSummary | null;
     alwaysShowCountdown?: boolean;
+    /** The one rating the user chose for cards (P9.R7); absent unless they chose one. */
+    rating?: Rating | null;
 }
+
+/** "IMDb 8.1", in the card's own secondary text: no badge, no corner, no new focus stop (P9.R7). */
+const cardRatingText = (rating: Rating) => SOURCE_SHORT[rating.source] + ' ' + formatValue(rating);
+
+/**
+ * Puts the card rating into a native card's secondary text line, which upstream's card builds; a card that shows no
+ * secondary line gets one of its own in the footer. A portal, so upstream's card component is unchanged.
+ */
+const NativeCardRating: FC<{ rating: Rating }> = ({ rating }) => {
+    const anchor = useRef<HTMLSpanElement>(null);
+    const [target, setTarget] = useState<{ node: Element; own: boolean } | null>(null);
+    useLayoutEffect(() => {
+        const card = anchor.current?.parentElement;
+        const secondary = card?.querySelector('.cardFooter .cardText-secondary');
+        const footer = card?.querySelector('.cardFooter');
+        if (secondary) setTarget({ node: secondary, own: false });
+        else if (footer) setTarget({ node: footer, own: true });
+    }, []);
+    const text = cardRatingText(rating);
+    return <><span ref={anchor} hidden />{target && createPortal(target.own ?
+        <div className='cardText cardTextCentered cardText-secondary jfmod-cardRating' title={chipLabel(rating)}>{text}</div> :
+        <span className='jfmod-cardRating' title={chipLabel(rating)}>{' · ' + text}</span>, target.node)}</>;
+};
 
 /** Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. */
 const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; alwaysShowCountdown?: boolean }> = ({ entry, retention, alwaysShowCountdown }) => {
@@ -39,13 +67,14 @@ const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; al
     )}</>;
 };
 
-const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, nativeItem, cardOptions, retention, alwaysShowCountdown }) => {
+const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, nativeItem, cardOptions, retention, alwaysShowCountdown, rating }) => {
     const { getCardWrapperProps, getCardBoxProps } = useCard({ item: nativeItem, cardOptions });
     const { className, dataAttributes } = getCardWrapperProps();
     const entryClassName = className + ' jfmod-entryCard';
     const content = <>
         <CardBox {...getCardBoxProps()} />
         <NativeCardMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
+        {rating && <NativeCardRating rating={rating} />}
     </>;
     return layoutManager.tv ?
         <button className={entryClassName} type='button' aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes}>{content}</button> :
@@ -83,7 +112,7 @@ const useInFlightMenu = (entry: Entry, pending: boolean) => {
 };
 
 /** File-less cards expose only an entry link; native actions require a real item. */
-const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, alwaysShowCountdown }) => {
+const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, alwaysShowCountdown, rating }) => {
     const requestedShape = cardOptions.shape;
     const shape = requestedShape && ![CardShape.Auto, CardShape.AutoHome, CardShape.AutoOverflow, CardShape.AutoVertical, CardShape.Mixed].includes(requestedShape) ?
         requestedShape : CardShape.Portrait;
@@ -109,7 +138,12 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
             </div>
             {!cardOptions.overlayText && <div className='cardFooter'>
                 {cardOptions.showTitle !== false && <div className='cardText cardTextCentered'>{entry.title}</div>}
-                {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>{entry.year}</div>}
+                {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>
+                    {entry.year}
+                    {rating && <span className='jfmod-cardRating' title={chipLabel(rating)}>{' · ' + cardRatingText(rating)}</span>}
+                </div>}
+                {rating && !(cardOptions.showYear && entry.year) && <div className='cardText cardTextCentered cardText-secondary jfmod-cardRating'
+                    title={chipLabel(rating)}>{cardRatingText(rating)}</div>}
             </div>}
         </div>
     );

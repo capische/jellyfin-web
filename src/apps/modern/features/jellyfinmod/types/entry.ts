@@ -75,6 +75,8 @@ export interface TmdbMetadata {
     tvdbId: number | null;
     adult: boolean;
     communityRating: number | null;
+    /** TMDB's vote count beside the score (Phase 9); absent from snapshots taken before it. */
+    voteCount?: number | null;
     runtimeMinutes: number | null;
     genres: string[];
     certifications: { country: string; rating: string }[];

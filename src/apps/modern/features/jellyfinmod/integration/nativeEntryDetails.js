@@ -4,6 +4,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
+import NativeRatingsLine from '../components/NativeRatingsLine';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 
@@ -47,8 +48,10 @@ export default function initializeNativeEntryDetails(view, params) {
     let mount;
     let versionsMount;
     let traktMount;
+    let ratingsMount;
     let unmount;
     let unmountTrakt;
+    let unmountRatings;
     let generation = 0;
     const hide = () => {
         generation++;
@@ -58,6 +61,10 @@ export default function initializeNativeEntryDetails(view, params) {
         unmountTrakt = undefined;
         traktMount?.remove();
         traktMount = undefined;
+        unmountRatings?.();
+        unmountRatings = undefined;
+        ratingsMount?.remove();
+        ratingsMount = undefined;
         mount?.remove();
         mount = undefined;
         versionsMount?.remove();
@@ -112,6 +119,19 @@ export default function initializeNativeEntryDetails(view, params) {
                 userId: client.getCurrentUserId(),
                 itemId: params.id
             }, traktMount);
+        }
+        // The Ratings line (Phase 9) has its own mount too and leads the content section, above the Trakt line: below the
+        // button row a TV's focus starts on, because its answer arrives after the page is focused (UX §13 rule 2). Only a
+        // movie or series has ratings; an empty mount takes no space.
+        if (item?.Type === 'Movie' || item?.Type === 'Series') {
+            ratingsMount = document.createElement('div');
+            ratingsMount.className = 'jfmod-ratingsMount';
+            target.insertBefore(ratingsMount, target.firstChild);
+            unmountRatings = renderComponent(NativeRatingsLine, {
+                api,
+                userId: client.getCurrentUserId(),
+                itemId: params.id
+            }, ratingsMount);
         }
         unmount = renderComponent(NativeEntryDetails, {
             api,

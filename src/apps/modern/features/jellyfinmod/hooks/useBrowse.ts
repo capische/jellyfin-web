@@ -6,11 +6,17 @@ import type { LibraryViewSettings, ParentId } from 'types/library';
 import { LibraryTab } from 'types/libraryTab';
 
 import { browseEntries, type BrowseRequest } from '../api/modApi';
+import { RATINGS_CARDS_CAPABILITY } from '../constants/ratings';
 import { usePluginHealth } from './useEntries';
+import { useRatingsPreferences } from './useRatingsPreferences';
 
 export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId, settings: LibraryViewSettings) {
     const { api, user } = useApi();
     const health = usePluginHealth();
+    // One rating on cards (P9.R7): asked for only when the user chose a source and this plugin understands the field, so an
+    // older plugin never sees it (P1.W14) and, with the preference off, the request and the cards are exactly as before.
+    const { cardSource } = useRatingsPreferences(api);
+    const ratingSource = cardSource && health.data?.capabilities?.includes(RATINGS_CARDS_CAPABILITY) ? cardSource : undefined;
     const { libraryPageSize } = useUserSettings();
     // This seed only stabilizes shuffle order across pages; it is not a security token.
     // eslint-disable-next-line sonarjs/pseudo-random
@@ -28,6 +34,7 @@ export function useBrowse(viewType: LibraryTab | undefined, libraryId: ParentId,
         state: filters?.FileStates,
         // An older plugin rejects the unknown field with 400 (P1.W14).
         dueWithinDays: health.data?.capabilities?.includes('browse.dueWithinDays') ? filters?.RetentionDueWithinDays : undefined,
+        ratingSource,
         filters: {
             genres: filters?.Genres,
             years: filters?.Years,
