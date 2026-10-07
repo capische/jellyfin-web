@@ -40,11 +40,11 @@ export const useVersionRemoval = ({ api, entryId, mediaType, busy, change, onRem
         if (!entryId || !mediaType || busy || pending.current) return;
         pending.current = true;
         confirm({
-            title: 'Remove this version',
+            title: 'Remove This Version',
             // The stock dialog renders its text as sanitized HTML and treats any .btnOption inside it as an answer, so file
             // names and labels from metadata are escaped: never markup, never a working button (whole-review P1 11).
             text: escapeHtml(removeVersionText(version, mediaType)),
-            confirmText: version.isLast ? 'Remove the last copy' : 'Remove this version',
+            confirmText: version.isLast ? 'Remove the Last Copy' : 'Remove This Version',
             primary: 'delete'
         }).then(() => change(async () => {
             try {

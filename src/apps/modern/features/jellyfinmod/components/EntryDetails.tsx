@@ -25,7 +25,7 @@ import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
-import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
+import { raisedButtonClass } from '../utils/flatButton';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
     pending: 'Grab held, not sent yet', submitting: 'Sending to the download client', accepted: 'Sent to the download client',
@@ -39,6 +39,7 @@ const AcquisitionLine: FC<{ acquisition?: AcquisitionSummary | null }> = ({ acqu
 };
 
 import './entryDetails.scss';
+import './fileChooser.scss';
 
 interface EntryDetailsProps {
     api: Api;
@@ -71,6 +72,9 @@ const useTrackBlockMount = (view: HTMLElement, enabled: boolean) => {
     }, [view, enabled]);
     return node;
 };
+
+/** The row actions' class: upstream's round icon button with the detail page's row-action sizing and colours; read per render, as the layout can change. */
+const rowIconClass = () => 'paper-icon-button-light jfmod-fileIcon' + (layoutManager.tv ? ' show-focus' : '');
 
 /** Reuses the existing detail template's slots without constructing a synthetic native item. */
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
@@ -127,7 +131,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     }, [api, entry.id, entry.mediaType, entry.title, episodes, reload]);
     const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
     // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
-    useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a release',
+    useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a Release',
         className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-entryMore'] });
     useStockHeaderButton(view, { enabled: isAdmin && isMovie, icon: 'more_vert', title: 'More', className: 'jfmod-entryMore',
         onClick: setMenuAnchor });
@@ -159,7 +163,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         if (busy) return;
         try {
             // Sanitized HTML in the stock dialog: a title from metadata is escaped (whole-review P1 11).
-            await confirm({ title: 'Remove entry', text: escapeHtml(`Remove ${entry.title} from the catalog?`),
+            await confirm({ title: 'Remove Entry', text: escapeHtml(`Remove ${entry.title} from the catalog?`),
                 confirmText: 'Remove', primary: 'delete' });
         } catch {
             return;
@@ -231,7 +235,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             </a>}
             {canAcquire && <button className={raisedButtonClass('button-submit')} type='button'
                 onClick={searchReleases}>
-                {entry.state === 'reclaimed' ? 'Get again' : 'Search releases'}
+                {entry.state === 'reclaimed' ? 'Get Again' : 'Search Releases'}
             </button>}
             {isAdmin && <>
                 <button className={raisedButtonClass()} type='button' aria-busy={busy}
@@ -242,10 +246,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     aria-disabled={busy} onClick={toggleMonitoring}>
                     {entry.monitored ? '☑' : '☐'} Monitor
                 </button>
-                <button className={flatButtonClass()} type='button' aria-disabled={busy}
-                    onClick={remove}>Remove entry</button>
-                {entry.mediaType === 'series' && <button className={flatButtonClass()} type='button' aria-disabled={busy}
-                    onClick={refresh}>Refresh metadata</button>}
+                <button className={raisedButtonClass('button-delete')} type='button' aria-disabled={busy}
+                    onClick={remove}>Remove Entry</button>
+                {entry.mediaType === 'series' && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
+                    onClick={refresh}>Refresh Metadata</button>}
             </>}
         </div>)}
         {isMovie && <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} className='jfmod-entryMenu'>
@@ -253,18 +257,18 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 data-jfmod-menu='monitor'>
                 <ListItemIcon><span className={'material-icons ' + (entry.monitored ? 'check_box' : 'check_box_outline_blank')}
                     aria-hidden='true' /></ListItemIcon>
-                <ListItemText>Monitor</ListItemText>
+                <ListItemText>{entry.monitored ? 'Stop Monitoring' : 'Monitor'}</ListItemText>
             </MenuItem>
             <MenuItem onClick={removeFromMenu} aria-disabled={busy} data-jfmod-menu='remove'>
                 <ListItemIcon><span className='material-icons delete' aria-hidden='true' /></ListItemIcon>
-                <ListItemText>Remove entry</ListItemText>
+                <ListItemText>Remove Entry</ListItemText>
             </MenuItem>
         </Menu>}
         {isMovie && releaseMount && createPortal(entry.state === FileState.Grabbed || entry.state === FileState.Downloading ?
             <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} /> :
             canAcquire && <button className={raisedButtonClass('button-submit jfmod-getReleaseRaised')} type='button' onClick={searchReleases}>
                 <span className='material-icons cloud_download' aria-hidden='true' />
-                <span>Get a release</span>
+                <span>Get a Release</span>
             </button>, releaseMount)}
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}
         {mount('.overview', entry.overview)}
@@ -282,15 +286,21 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 <h2>Episodes</h2>
                 {episodes.map(episode => <div className='jfmod-episodeRow' key={episode.id}>
                     <span>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</span>
-                    <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open episode</a> : availabilityLabel(episode.availability)}</span>
+                    <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open Episode</a> : availabilityLabel(episode.availability)}</span>
                     <RetentionStatus retention={episode.retention} compact />
                     <AcquisitionLine acquisition={episode.acquisition} />
                     <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />
-                    {canAcquire && <button className={flatButtonClass()} type='button' data-episode-id={episode.id}
-                        onClick={searchReleases}>Search releases</button>}
-                    {isAdmin && <button className={flatButtonClass()} type='button' role='switch' aria-checked={episode.monitored}
-                        aria-disabled={busy} data-episode-id={episode.id} onClick={toggleEpisode}>
-                        {episode.monitored ? '☑' : '☐'} Monitor
+                    {/* Row actions are round, icon-only buttons (user rules, 2026-10-08). */}
+                    {canAcquire && <button className={rowIconClass()} type='button' data-episode-id={episode.id}
+                        title='Search Releases' aria-label={`Search releases for S${episode.seasonNumber} E${episode.episodeNumber}`}
+                        onClick={searchReleases}>
+                        <span className='material-icons search' aria-hidden='true' />
+                    </button>}
+                    {isAdmin && <button className={rowIconClass()} type='button'
+                        role='switch' aria-checked={episode.monitored} aria-disabled={busy} data-episode-id={episode.id}
+                        title={episode.monitored ? 'Stop Monitoring' : 'Monitor'}
+                        aria-label={`Monitor S${episode.seasonNumber} E${episode.episodeNumber}`} onClick={toggleEpisode}>
+                        <span className={'material-icons ' + (episode.monitored ? 'bookmark' : 'bookmark_border')} aria-hidden='true' />
                     </button>}
                 </div>)}
             </section>}

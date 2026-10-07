@@ -59,9 +59,10 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background
 .jf .vrow .mark { color: var(--jfacc); width: 1.2em; }
 .jf .vrow .res { font-weight: 600; min-width: 3.4em; }
 .jf .vrow .det { color: var(--jfmuted); flex: 1 1 auto; }
-.jf .qa { display: inline-flex; gap: .2em; opacity: .6; }
-.jf .qa .material-icons { font-size: 1.15em; padding: .15em; border-radius: .2em; }
-.jf .qa .on { color: var(--jfacc); opacity: 1; }
+.jf .qa { display: inline-flex; gap: .2em; color: rgba(255,255,255,.7); }
+.jf .qa .material-icons { font-size: 1.4em; padding: .3em; border-radius: 50%; }
+.jf .qa .on { color: var(--jfacc); }
+.jf .qa .del { color: #c62828; }
 .jf .vrow.add { color: var(--jfacc); }
 .jf .dbtn { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: .7em .85em; color: var(--jffg); position: relative; }
 .jf .dbtn .material-icons { font-size: 1.6em; width: 1em; height: 1em; }
@@ -101,14 +102,14 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background
       <div class="hdr">
         <span class="dbtn" title="Play"><span class="material-icons">play_arrow</span></span>
         <span class="dbtn" title="Mark played"><span class="material-icons">check</span></span>
-        <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+        <span class="dbtn" title="Get a Release"><span class="material-icons">cloud_download</span></span>
         <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
         <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
       </div>
     </div>
     <div class="cap">No file: Play and Played are absent, the new icon leads</div>
     <div class="hdr">
-      <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+      <span class="dbtn" title="Get a Release"><span class="material-icons">cloud_download</span></span>
       <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
       <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
     </div>
@@ -135,16 +136,16 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background
       <div>
         <span class="trig">1080p HEVC SDR <span class="material-icons">expand_less</span></span>
         <div class="list">
-          <div class="vrow"><span class="mark">○</span><span class="res">2160p</span><span class="det">HEVC 10-bit · DTS-HD 7.1 · 24.1 GB</span><span class="chip">Default</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons" title="Keep">push_pin</span><span class="material-icons" title="Remove">close</span></span></div>
-          <div class="vrow sel"><span class="mark">●</span><span class="res">1080p</span><span class="det">HEVC 10-bit · AAC 5.1 · 783 MB</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons on" title="Kept">push_pin</span><span class="material-icons" title="Remove">close</span></span></div>
-          <div class="vrow add"><span class="mark">+</span><span class="res" style="min-width:0">Get another quality</span></div>
+          <div class="vrow"><span class="mark">○</span><span class="res">2160p</span><span class="det">HEVC 10-bit · DTS-HD 7.1 · 24.1 GB</span><span class="chip">Default</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons" title="Keep">push_pin</span><span class="material-icons del" title="Remove This Version">close</span></span></div>
+          <div class="vrow sel"><span class="mark">●</span><span class="res">1080p</span><span class="det">HEVC 10-bit · AAC 5.1 · 783 MB</span><span class="qa"><span class="material-icons" title="History">history</span><span class="material-icons on" title="Kept">push_pin</span><span class="material-icons del" title="Remove This Version">close</span></span></div>
+          <div class="vrow add"><span class="mark">+</span><span class="res" style="min-width:0">Get Another Quality</span></div>
         </div>
       </div>
     </div>
     <div class="kv"><span class="k">Audio</span><span>English - DTS-HD MA - 7.1 - Default</span></div>
     <div class="cap">One file: no chooser, icons at the end of the row</div>
-    <div class="kv"><span class="k">Video</span><span class="trig">1080p HEVC SDR <span class="qa" style="margin-left:.8em"><span class="material-icons">history</span><span class="material-icons on">push_pin</span><span class="material-icons">close</span></span></span></div>
-    <p class="note">Icons at 60% until hovered or focused on desktop; always visible on TV, each its own stop. Pin and cross are administrator-only; history shows to everyone.</p>
+    <div class="kv"><span class="k">Video</span><span class="trig">1080p HEVC SDR <span class="qa" style="margin-left:.8em"><span class="material-icons">history</span><span class="material-icons on">push_pin</span><span class="material-icons del">close</span></span></span></div>
+    <p class="note">Round, icon-only row actions at least 2.5em across: grey, the cross red, the pin blue while kept; each its own stop on TV (user, 8 Oct). Pin and cross are administrator-only; history shows to everyone.</p>
   </div>
   <div class="cols">
     <div><h3>How it is built</h3>
@@ -186,7 +187,7 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background
     <div class="hdr">
       <span class="dbtn" title="Play"><span class="material-icons">play_arrow</span></span>
       <span class="dbtn" title="Played · removed in 5 days unless kept"><span class="material-icons played">check</span><span class="cnt">5</span></span>
-      <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+      <span class="dbtn" title="Get a Release"><span class="material-icons">cloud_download</span></span>
       <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
       <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
     </div>
@@ -219,13 +220,13 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background
     <div class="bar">
       <div><div class="ttl">The Wheel of Time</div><div class="sub">Season 1 - 2. Shadow's Waiting</div><div class="meta">11/19/2021 &nbsp; 58m &nbsp; ★ 6.9</div></div>
       <div class="hdr">
-        <span class="dbtn" title="Get a release"><span class="material-icons">cloud_download</span></span>
+        <span class="dbtn" title="Get a Release"><span class="material-icons">cloud_download</span></span>
         <span class="dbtn" title="Add to favorites"><span class="material-icons">favorite</span></span>
         <span class="dbtn" title="More"><span class="material-icons">more_vert</span></span>
       </div>
     </div>
     <div class="row" style="margin-top:1.1rem">
-      <span class="rbtn"><span class="material-icons">cloud_download</span>Get a release</span>
+      <span class="rbtn"><span class="material-icons">cloud_download</span>Get a Release</span>
     </div>
     <p style="color:var(--jfmuted);max-width:50em;margin:.9rem 0 0">A strange noblewoman arrives in a remote mountain village, claiming one of five youths is the reincarnation of an ancient power…</p>
     <div class="cap" style="margin-top:1.4rem">Episode being downloaded (step 5 after a grab)</div>
