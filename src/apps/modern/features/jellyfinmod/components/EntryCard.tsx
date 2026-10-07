@@ -11,7 +11,7 @@ import inputManager from 'scripts/inputManager';
 
 import { useQueueVisible } from '../hooks/useQueue';
 import { openInFlightCardMenu } from '../integration/queueActions';
-import { cardRatingText, chipLabel } from '../constants/ratings';
+import { cardRatingText, chipLabel, isKnownScale } from '../constants/ratings';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import type { Rating } from '../types/ratings';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
@@ -159,8 +159,12 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...menu}>{content}</a>;
 };
 
-const EntryCard: FC<EntryCardProps> = props => props.nativeItem ?
-    <NativeEntryCard {...props} nativeItem={props.nativeItem} /> :
-    <FilelessEntryCard {...props} />;
+const EntryCard: FC<EntryCardProps> = ({ rating, ...rest }) => {
+    // A value in a scale this release does not know is not shown, on cards as on detail pages (web review 2026-10-07 round 2).
+    const props = { ...rest, rating: rating && isKnownScale(rating.scale) ? rating : null };
+    return props.nativeItem ?
+        <NativeEntryCard {...props} nativeItem={props.nativeItem} /> :
+        <FilelessEntryCard {...props} />;
+};
 
 export default EntryCard;

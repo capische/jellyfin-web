@@ -194,7 +194,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
             {entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null}
-            {ratingsPreferences.enabled && <RatingsLine ratings={ratings} sources={ratingsPreferences.sources} inline ready={ratingsPreferences.loaded} />}
+            {/* Always mounted: ratings turned off later empties it under the same never-move-focus rule as any change. */}
+            <RatingsLine ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} inline ready={ratingsPreferences.loaded} />
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}

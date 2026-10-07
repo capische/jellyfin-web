@@ -1,3 +1,5 @@
+import { toLocaleDateString } from 'scripts/datetime';
+
 import type { Rating, RatingSource } from '../types/ratings';
 
 /** Ratings on detail pages and `Ratings/Items` (Phase 9). */
@@ -53,10 +55,13 @@ export const formatVotes = (votes: number) => {
     return String(votes);
 };
 
-const formatDate = (iso?: string | null) => {
+/** A date in Jellyfin's chosen date locale (Settings → Display), not the browser's (web review 2026-10-07 round 2, P3 7). */
+const localDate = (iso: string | null | undefined, options?: Intl.DateTimeFormatOptions) => {
     const date = iso ? new Date(iso) : null;
-    return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : null;
+    return date && !Number.isNaN(date.getTime()) ? toLocaleDateString(date, options) as string : null;
 };
+
+const formatDate = (iso?: string | null) => localDate(iso);
 
 /** Where a value came from, said plainly: aggregator values can differ from the provider's own site (PHASE9 UX). */
 export const provenance = (rating: Rating) => {
@@ -68,21 +73,23 @@ export const provenance = (rating: Rating) => {
     }
 };
 
-/** "Sep 2026": the compact age a card shows beside a stale value (web review 2026-10-07, P2 5). */
-export const monthYear = (iso?: string | null) => {
-    const date = iso ? new Date(iso) : null;
-    return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : null;
-};
+/** "Sep 2026": the compact age a card shows beside a stale value (web review 2026-10-07, P2 5), in Jellyfin's date locale. */
+export const monthYear = (iso?: string | null) => localDate(iso, { month: 'short', year: 'numeric' });
 
-/** A card's one rating: "IMDb 8.1", or "IMDb 8.1 (Sep 2026)" once it is older than the refresh window. */
-export const cardRatingText = (rating: Rating) =>
-    SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + (rating.stale ? ' (' + (monthYear(rating.fetchedAt) ?? 'old') + ')' : '');
+/**
+ * A card's one rating: "IMDb 8.1", or "IMDb 8.1 (Sep 2026)" once it is older than the refresh window. A stale value without a
+ * readable date says so by its dimmed style alone; no untranslated word stands in for the date.
+ */
+export const cardRatingText = (rating: Rating) => {
+    const age = rating.stale ? monthYear(rating.fetchedAt) : null;
+    return SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + (age ? ' (' + age + ')' : '');
+};
 
 /** The chip's text, with the date when the value is older than the refresh window. */
 export const chipText = (rating: Rating) => {
     const votes = rating.votes ? ' (' + formatVotes(rating.votes) + ')' : '';
-    const stale = rating.stale ? ' · ' + (formatDate(rating.fetchedAt) ?? 'old') : '';
-    return SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + votes + stale;
+    const age = rating.stale ? formatDate(rating.fetchedAt) : null;
+    return SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + votes + (age ? ' · ' + age : '');
 };
 
 /** The sentence a screen reader and a tooltip give. */
