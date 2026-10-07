@@ -687,12 +687,24 @@ Chromium against a local page and endpoint, 4/4).
 `age`, `guard`, the browser runner in Chromium and in Chrome, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`,
 under the exclusive-use rule above. The plugin and bundle are unchanged since round 4.
 
+## Review fixes, round 7 — 2026-10-08
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of web `ab9626857e..29d70867b0` approved with fixes; round 6 fixed except the
+quoting. Fixed on the web branch only (`29d70867b0..` this branch's tip), Mac only; simulation 20/20.
+
+| # | Finding | Fix | Proof (simulation) |
+|---|---|---|---|
+| 1 (P2) | Recovery also signalled any group a marked process led, without the exclusions — the surviving `setsid --wait` wrapper leads the SSH session's group | Recovery touches only the step's two recorded, validated groups; no marker-based discovery of other groups. Without a valid recorded pair nothing is started, as before | A process carrying the step's marker and leading a group of its own is left alone; the orphaned-member, finished-step and missing-report cases still pass |
+| 2 (P3) | The late-SQL sentinel went through SQLite's `.shell`, which drops shell quoting (an apostrophe broke the path, `$(...)` expanded) | The sentinel is plain SQL: after the wait, `ATTACH DATABASE '<path>'` creates the file, the path quoted for SQL only; nothing re-reads it as shell | With a path containing an apostrophe and `$(...)`, a step allowed to finish creates exactly that file (nothing expanded); with the time-out it is never created |
+
+The live re-run list is unchanged (round 5/6, under the exclusive-use rule).
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
 waits for the live re-run on 18096 (it is lent to another session for now; exclusive use from `setup` to `cleanup`), the Codex
-review of web `ab9626857e..` this branch's tip, and the user. Nothing is merged; the
+review of web `29d70867b0..` this branch's tip, and the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
