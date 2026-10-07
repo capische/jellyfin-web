@@ -14,6 +14,7 @@ Runs in steps so the browser runner (p9-ratings.mjs) can sit between them:
   p9-live.py kill         a container killed mid-call: its claim is counted, the title is not fetched again
   p9-live.py interrupt    the stopped-service helper restarts 18096 when the remote shell is sent TERM mid-step and when the
                           local call times out (needs JFMOD_P9_WORK)
+  p9-live.py guard        only checks that no ratings key this run did not set is configured (run it before the browser runner)
   p9-live.py cleanup      every fixture, the key, the override and the ratings rows go; oleksii's ratings display
                           preferences are restored exactly (a key that did not exist is removed); UserViews shows Movies
                           and Shows only
@@ -157,17 +158,38 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
               f"service_start; started=$?\n"
               f"if [ $rc -eq 0 ]; then rc=$started; fi\n"
               f"exit $rc\n")
+    # The remote shell carries a marker of its own in its command line, so recovery can find exactly this operation.
+    marker = "p9op-" + secrets.token_hex(6)
+    interrupted = None
     try:
-        out = remote(script, timeout=timeout)
-    except (subprocess.TimeoutExpired, OSError) as error:
+        out = remote(script, marker, timeout=timeout)
+    except (subprocess.TimeoutExpired, OSError, KeyboardInterrupt, SystemExit) as error:
+        interrupted = error
         out = subprocess.CompletedProcess(args=[], returncode=124, stdout="", stderr=type(error).__name__)
-    finally:
-        if ensure:
-            remote(f"cd ~ && docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null", timeout=300)
+    if interrupted is not None or out.returncode == 255:
+        recover(marker)
     if ensure:
+        remote(f"cd ~ && docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null", timeout=300)
         wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
         wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    if isinstance(interrupted, (KeyboardInterrupt, SystemExit)):
+        raise interrupted
+    out.marker = marker
     return out
+
+
+def recover(marker):
+    """Ends a stopped-service operation whose remote shell may still be running (the call timed out, the connection dropped or
+    this runner was interrupted), before anything starts the service again (review round 4, P2 2). TERM runs the shell's
+    trap: it waits for a stop already under way, ends the SQL step's process tree and starts the service. The operation is
+    waited for until it is gone; if TERM does not end it in two minutes it is killed, and the service is left a grace period
+    for a stop the kill may have cut short, so the start that follows is the last word."""
+    remote(f"""
+pkill -TERM -f '{marker}'
+for i in $(seq 1 120); do pgrep -f '{marker}' >/dev/null || exit 0; sleep 1; done
+for pid in $(pgrep -f '{marker}'); do pkill -KILL -P "$pid"; kill -KILL "$pid"; done
+sleep 15
+""", timeout=300)
 
 
 def service_running():
@@ -197,14 +219,30 @@ def step_interrupt():
           "exits with the signal's status", {"exit": out.returncode if out else None, "running": running, "secondsAfterTerm": elapsed})
     wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
     remote(f"rm -f '{pidfile}'")
+    # A local time-out while the SQL step waits: the remote operation is ended before the service starts, so its SQL (here a
+    # marker file written after the wait) never runs once the service is back (review round 4, P2 2).
+    late = f"{WORK.rstrip('/')}/p9-late-sql"
+    remote(f"rm -f '{late}'")
     started = time.time()
-    out = with_service_stopped(".shell sleep 30", timeout=8)
+    out = with_service_stopped(f".shell sleep 30\n.shell touch '{late}'", timeout=8)
+    gone = remote(f"pgrep -f '{out.marker}'").returncode != 0
     healthy = call("GET", "/JellyfinMod/Health")[0] == 200
-    check(out.returncode == 124 and healthy, "A local time-out mid-step: the service is started again from here and answers",
-          {"exit": out.returncode, "seconds": round(time.time() - started)})
-    # The remote shell of that call is still waiting; it starts the service itself when it ends (a no-op now).
-    time.sleep(25)
-    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    wait_for(lambda: time.time() - started > 45, "the time the SQL step would have needed", 60)
+    late_ran = remote(f"test -e '{late}'").returncode == 0
+    still = call("GET", "/JellyfinMod/Health")[0] == 200 and service_running()
+    check(out.returncode == 124 and gone and healthy and not late_ran and still,
+          "A local time-out mid-step: the remote operation is ended before the service starts, its SQL never runs afterwards, and the "
+          "service stays up", {"exit": out.returncode, "operationGone": gone, "lateSqlRan": late_ran, "stillUp": still})
+    remote(f"rm -f '{late}'")
+    # A local time-out while the service is still stopping: the stop finishes before recovery starts the service, so no late stop
+    # takes it down again.
+    started = time.time()
+    out = with_service_stopped("SELECT 1;", timeout=2)
+    gone = remote(f"pgrep -f '{out.marker}'").returncode != 0
+    wait_for(lambda: time.time() - started > 30, "a stop's own time limit", 60)
+    still = call("GET", "/JellyfinMod/Health")[0] == 200 and service_running()
+    check(out.returncode == 124 and gone and still, "A local time-out during the stop itself: recovery waits for it, and the service is up "
+          "afterwards and stays up", {"exit": out.returncode, "operationGone": gone, "stillUp": still})
 
 
 def boundary(method, path, body=None):
@@ -244,6 +282,39 @@ def rstatus():
 def patch(body):
     body = {"revision": settings()["revision"], **body}
     return call("PATCH", "/JellyfinMod/Settings/Ratings", body)
+
+
+class ForeignKey(Exception):
+    """A ratings key this run did not set is configured: the user's own. Nothing may replace, clear, test or reset it."""
+
+
+def key_ref():
+    """The configured key's opaque secret-store reference ('' when none), read-only from the plugin database; never the key."""
+    out = remote(f"sqlite3 -readonly '{DB}' \"SELECT IFNULL(ApiKeyRef, '') FROM RatingsSettings LIMIT 1\"")
+    if out.returncode != 0:
+        raise RuntimeError("the ratings settings could not be read")
+    return out.stdout.strip()
+
+
+def guard():
+    """Stops the run when a key this run did not set is configured (the user may enter their real MDBList key at any time).
+    Returns the settings revision read before the check: a save that sends it fails with 409 if anything changed since."""
+    revision = settings()["revision"]
+    ref = key_ref()
+    if ref and ref != load_state().get("fixtureKeyRef"):
+        raise ForeignKey()
+    return revision
+
+
+def set_fixture_key():
+    """Saves the fixture key, only over no key or this run's own, and records its reference as this run's."""
+    revision = guard()
+    code, body = call("PATCH", "/JellyfinMod/Settings/Ratings", {"revision": revision, "apiKey": {"action": "replace", "value": KEY}})
+    if code == 200:
+        state = load_state()
+        state["fixtureKeyRef"] = key_ref()
+        save_state(state)
+    return code, body
 
 
 def by_source(ratings):
@@ -393,6 +464,9 @@ def step_unage():
 
 def step_setup():
     sign_in()
+    if settings()["apiKeyConfigured"] or key_ref():
+        check(False, "No ratings key is configured before the run starts (a key there is the user's own; nothing touches it)")
+        raise ForeignKey()
     state = load_state()
     status, health = call("GET", "/JellyfinMod/Health")
     check(all(name in health["Capabilities"] for name in ("ratings", "ratings.cards", "settings.ratings")), "Health lists the ratings capabilities",
@@ -495,7 +569,7 @@ def step_configure():
     config["RatingsProviderBaseUrl"] = BOUNDARY
     code, _ = call("POST", f"/Plugins/{PLUGIN_ID}/Configuration", config)
     check(code in (200, 204) and settings()["providerOverride"], "The instance points at the MDBList stand-in through the hidden XML field")
-    code, body = patch({"apiKey": {"action": "replace", "value": KEY}})
+    code, body = set_fixture_key()
     check(code == 200 and body["apiKeyConfigured"] and not body["verified"], "The fixture key is saved, write-only", body)
     code, _ = patch({"apiKey": {"action": "replace", "value": KEY}, "revision": body["revision"] - 1})
     check(code == 409, "A save against a stale revision is 409")
@@ -518,7 +592,10 @@ def step_reset():
     if config.get("RatingsProviderBaseUrl"):
         config["RatingsProviderBaseUrl"] = load_state().get("overrideBefore", "")
         call("POST", f"/Plugins/{PLUGIN_ID}/Configuration", config)
-    out = with_service_stopped("DELETE FROM TitleRatings; DELETE FROM RatingsFetches; DELETE FROM RatingsProviderStates; DELETE FROM RatingsSettings; "
+    # Decided inside the stopped-service step, so no save can come in between: with any key configured nothing is deleted.
+    out = with_service_stopped("CREATE TEMP TABLE keyless AS SELECT NOT EXISTS (SELECT 1 FROM RatingsSettings WHERE ApiKeyRef IS NOT NULL) AS ok; "
+                               "DELETE FROM TitleRatings WHERE (SELECT ok FROM keyless); DELETE FROM RatingsFetches WHERE (SELECT ok FROM keyless); "
+                               "DELETE FROM RatingsProviderStates WHERE (SELECT ok FROM keyless); DELETE FROM RatingsSettings WHERE (SELECT ok FROM keyless); "
                                "SELECT (SELECT COUNT(*) FROM TitleRatings) + (SELECT COUNT(*) FROM RatingsFetches) + (SELECT COUNT(*) FROM RatingsSettings);")
     check(out.returncode == 0 and out.stdout.strip().endswith("0"), "Every stored rating, attempt and ratings setting is removed (service stopped, then started)",
           out.stdout.strip())
@@ -609,7 +686,7 @@ def step_failures():
     check(code == 409 and body["type"] == "unauthorized" and kept["imdb"]["fetchedAt"] == fetched_at,
           "401 blocks fetching (409 unauthorized) and keeps the stored values with their date", body)
     boundary("POST", "/mode", {"mode": "full"})
-    patch({"apiKey": {"action": "replace", "value": KEY}})
+    set_fixture_key()
     check(rstatus()["blocker"] is None, "Replacing the key lifts the blocker")
     boundary("POST", "/mode", {"mode": "errorkey"})
     code, body = call("POST", "/JellyfinMod/Settings/Ratings/Test")
@@ -626,7 +703,7 @@ def step_failures():
     check(st["breaker"]["reason"] == "rate_limited" and st["breaker"]["until"][:10] > st["budget"]["day"][:10] and code == 409 and body["type"] == "breaker_open",
           "429 opens the breaker until the next UTC day at least; a manual refresh is 409 breaker_open", st["breaker"])
     boundary("POST", "/mode", {"mode": "full"})
-    patch({"apiKey": {"action": "replace", "value": KEY}})
+    set_fixture_key()
     check(not rstatus()["breaker"]["open"], "A new key closes a rate-limit breaker (the quota is the key's)")
     # Malformed, slow and unknown answers: recorded, nothing changed.
     second = state["entries"]["990902"]
@@ -711,9 +788,18 @@ def step_cleanup():
     if state.get("viewerId"):
         code, _ = call("DELETE", f"/Users/{state['viewerId']}")
         check(code in (200, 204), "The temporary viewer is deleted", code)
-    code, body = patch({"apiKey": {"action": "clear"}, "enabled": True, "refreshDays": 14, "dailyBudget": 500,
-                        "defaultSources": ["imdb", "tomatoes_critic", "tomatoes_audience", "tmdb", "trakt"]})
-    check(code == 200 and not body["apiKeyConfigured"], "The fixture key is cleared from the secret store; settings are back to the defaults")
+    try:
+        revision = guard()
+        foreign = False
+    except ForeignKey:
+        foreign = True
+        check(False, "A ratings key this run did not set is configured (the user's own): cleanup leaves the ratings settings, the key and "
+                     "the stored ratings alone, and removes only the fixtures")
+    if not foreign:
+        code, body = call("PATCH", "/JellyfinMod/Settings/Ratings", {"revision": revision, "apiKey": {"action": "clear"}, "enabled": True,
+                                                                     "refreshDays": 14, "dailyBudget": 500,
+                                                                     "defaultSources": ["imdb", "tomatoes_critic", "tomatoes_audience", "tmdb", "trakt"]})
+        check(code == 200 and not body["apiKeyConfigured"], "The fixture key is cleared from the secret store; settings are back to the defaults")
     status_code, config = call("GET", f"/Plugins/{PLUGIN_ID}/Configuration")
     config["RatingsProviderBaseUrl"] = state.get("overrideBefore", "")
     call("POST", f"/Plugins/{PLUGIN_ID}/Configuration", config)
@@ -724,11 +810,16 @@ def step_cleanup():
     ids = ", ".join(str(tmdb) for tmdb, *_ in TITLES + [KILL_TITLE])
     out = with_service_stopped(f"PRAGMA foreign_keys = ON; BEGIN; CREATE TEMP TABLE p9 AS SELECT Id FROM Entries WHERE Title LIKE 'JellyfinMod P9 Ratings%' "
                                f"AND TmdbId IN ({ids}); DELETE FROM History WHERE EntryId IN (SELECT Id FROM p9); DELETE FROM Entries WHERE Id IN (SELECT Id FROM p9); "
+                               f"DELETE FROM RatingsFetches WHERE MediaType = 'movie' AND TmdbId IN ({ids}); "
                                f"COMMIT; SELECT COUNT(*) FROM Entries WHERE Title LIKE 'JellyfinMod P9%';")
     check(out.returncode == 0 and out.stdout.strip().endswith("0"), "The fixture entries are removed (service stopped, foreign keys on)", out.stdout.strip())
-    step_reset()
-    s = settings()
-    check(s["enabled"] and not s["apiKeyConfigured"] and not s["providerOverride"] and s["revision"] == 1, "Ratings settings are fresh defaults again", s)
+    if not foreign:
+        step_reset()
+        s = settings()
+        check(s["enabled"] and not s["apiKeyConfigured"] and not s["providerOverride"] and s["revision"] == 1, "Ratings settings are fresh defaults again", s)
+    state = load_state()
+    state.pop("fixtureKeyRef", None)
+    save_state(state)
     status_code, views = call("GET", f"/Users/{state['userId']}/Views")
     names = sorted(view["Name"] for view in views["Items"])
     check(names == ["Movies", "Shows"], "GET /UserViews for oleksii lists only Movies and Shows", names)
@@ -766,8 +857,13 @@ if __name__ == "__main__":
     if step != "setup" and not load_state().get("token"):
         sign_in()
     try:
-        {"setup": step_setup, "unconfigured": step_unconfigured, "configure": step_configure, "fetch": step_fetch, "restart": step_restart,
+        if step not in ("setup", "cleanup"):
+            guard()
+        {"guard": lambda: check(True, "No ratings key this run did not set is configured"), "setup": step_setup, "unconfigured": step_unconfigured, "configure": step_configure, "fetch": step_fetch, "restart": step_restart,
          "failures": step_failures, "kill": step_kill, "age": step_age, "unage": step_unage, "interrupt": step_interrupt, "cleanup": step_cleanup, "leak": step_leak, "reset": step_reset}[step]()
+    except ForeignKey:
+        check(False, "STOPPED: a ratings key this run did not set is configured on the isolated instance (the user's own). Nothing replaced, "
+                     "cleared or tested it. Report this; do not continue the run")
     except Exception as error:  # a crashed step still records what it checked, and says why it stopped
         check(False, f"The step ran to the end ({type(error).__name__})", scrub(error)[:300])
     if bodies:
