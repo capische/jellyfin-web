@@ -314,8 +314,10 @@ left for the user. The budget default is **500** of the free tier's 1,000 a day 
 - `MdbListClient` (named client `NamedClient.Default`, 15 s timeout, never logs a URL), `RatingsRefreshRunner` under a
   process-wide gate, `RatingsRefreshTask` (`JellyfinModRatingsRefresh`, daily at 04:00), `RatingsRefreshQueue` (hosted
   reader for manual refreshes).
-- Due rule: never attempted (newest `AddedAt` first), then stored ratings older than `RefreshDays` (oldest first), then a
-  failed attempt older than one day. A claim row (`Outcome = pending`) and the budget increment commit **before** the
+- Due rule, per title identity (every entry of the same TMDB title; its latest attempt decides): never attempted, then
+  stored ratings older than `RefreshDays` or a failed attempt older than one day — each group **newest `AddedAt` first**
+  (decision 5; corrected 2026-10-07 from "oldest first", which the code never followed). A new entry of a title already
+  fetched adopts its siblings' latest attempt and values instead of counting as never attempted. A claim row (`Outcome = pending`) and the budget increment commit **before** the
   call; a pending claim older than ten minutes counts as a failed attempt (a killed run never fetches the same entry
   again that day). Minimum interval between calls 1 s (integration hosts shorten it).
 - Failures: 401/403 → blocker `unauthorized`, all fetching stops until the key is replaced or Test passes; 429 →
@@ -400,7 +402,8 @@ public clients and is recorded as such: the Go client `luckylittle/mdblist-cli` 
 - **Unconfirmed until a real call:** the exact status and body MDBList returns for a bad key (401/403, or a 200 with an
   `error` field — both are handled as `unauthorized` when the body names the key) and for an unknown title (404, or a
   200 without `ratings` — handled as `not_found` and `malformed` respectively), and whether `tmdb`'s `value` is on a
-  ten or a hundred scale (both are accepted, decision 2). The Test button reports which code the real service gave.
+  ten or a hundred scale (both are accepted, decision 2: a value above 10 is read as `percent`, so there is no separate
+  hundred scale). The Test button reports which code the real service gave.
 
 **OMDb and the host's merge (Jellyfin `v12.0` source, `MediaBrowser.Providers`).** `Plugins/Omdb/OmdbProvider.cs`:
 `item.CriticRating = GetRottenTomatoScore()`, `item.CommunityRating = imdbRating`, and `// item.VoteCount = voteCount;`
@@ -418,8 +421,9 @@ no vote count. Of 160 catalog entries only the 2 added through TMDB discovery ca
 158 created by native backfill carry none (decision 4).
 
 **DTOs.** One rating: `{source, value, scale, votes, provider, fetchedAt, url, stale}` with `scale` in `ten`,
-`percent`, `five`, `four`; `provider` in `tmdb`, `mdblist`, `host_omdb`, `host_tmdb`; `stale` true when `fetchedAt` is
-older than `refreshDays`. API.md *Ratings (Phase 9)* records every endpoint as built.
+`percent`, `five`, `four` (there is no `hundred`: a 0–100 value is `percent`; the web skips any other scale); `provider`
+in `tmdb`, `mdblist`, `host_omdb`, `host_tmdb`; `stale` true when `fetchedAt` is older than `refreshDays` (a host value's
+`fetchedAt` is the item's last metadata refresh). API.md *Ratings (Phase 9)* records every endpoint as built.
 
 ## R2–R8 evidence — 2026-10-07
 
@@ -493,19 +497,62 @@ defaults (on, no key, no override). The daily task stays registered and, with no
 - **An ordinary user's browser session** — the ordinary user was exercised through the API; the browser runs signed in as
   oleksii.
 
+## Review fixes — 2026-10-07
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high reviews (plugin: rejected, eight findings; web: approve with fixes, seven) were
+fixed on both `jellyfinmod-phase9` branches: plugin `612d557..7bef3f6`, web `8f7809a2af..` this branch's tip. Every fix is
+proved through a real boundary — the plugin suite over real Kestrel and the HTTP stand-in, the browser runs on the isolated
+instance — never a unit test.
+
+**Plugin.**
+
+| # | Finding | Fix | Proof |
+|---|---|---|---|
+| 1 (P1) | A provider `url` was stored and returned unfiltered and could carry the key | Only an `https`/`http` link on the source's own site, no credentials, default port, no query, no `apikey` in the path, rebuilt as `https://host/path`; checked on store and again on the way out | Suite: a stand-in answer with the key in the link, a foreign host and userinfo stores and returns none of them |
+| 2 | Settings saves and a running fetch used separate gates | Before every call the run re-reads settings, state and key; off, a spent budget or a new key stops it; a 401 or 429 answered to the old key never blocks the new one | Suite: a held call, the key replaced meanwhile, the stale 401 leaves the new key unblocked; ratings off and budget lowered mid-run stop it |
+| 3 | Test bypassed budget and breaker | Test is refused (`budget_spent`, `breaker_open`, no call) like any call; a refused key can still be tested; a pass marks verified only if the settings did not change | Suite: Test with the budget spent and with the breaker open answers the code and makes no call |
+| 4 | A new sibling entry looked never-fetched and bypassed the interrupted-claim delay | Due state is the title identity's latest attempt; a new sibling adopts the latest attempt and values | Suite: a sibling added while a claim is interrupted waits like the original, then fetches once |
+| 5 | Structurally malformed ratings came back `ok` and wiped rows | Strict reading: a non-object item, a non-string source or a value of the wrong kind makes the answer malformed and changes nothing | Suite: a structurally wrong item and a value of the wrong kind are `malformed`, count as failures and keep the stored rows; `null`, `""` and `N/A` are absent values, not malformed |
+| 6 | `Retry-After` hid `X-RateLimit-Reset` | The breaker runs to the latest of both and the next UTC day | Suite: both headers, the later one wins |
+| 7 | Overdue titles went oldest attempt first | Each group newest `AddedAt` first (decision 5); the R3 due rule and API.md now say so | Suite: the overdue order is newest first |
+| 8 (P3) | Host fallback was always `stale:false` | Stale by the item's last metadata refresh | Suite: host values refreshed a day ago are current inside the window and stale once it has passed |
+
+**Web.**
+
+| # | Finding | Fix | Proof (Chromium 153.0.8010.12 and Chrome 153.0.8010.54, 48/48 each) |
+|---|---|---|---|
+| 1 | Defaults never refetched; a settings save did not invalidate them | Defaults and title ratings refetch every minute; a save invalidates the defaults, title ratings and the grids | Ratings turned off and on in the settings area change the title page in the same visit |
+| 2 | Late defaults or ratings could insert content above a focused row (TV) | The detail pages wait (at most 3 s) for the defaults and ratings before they render; a line whose data comes after focus has moved past it stays out for that visit | TV 1920×1080 and 1280×720: the focused control is the same and in the same place once the line is there |
+| 3 | One re-read 4 s after the 202 | The button waits until `Ratings/Status` `queued` is 0 (at most a minute), reads the title again, then refreshes the page and the grids | "Ratings refreshed." with the line still shown |
+| 4 | "Use the server's default" unmounted the focused button | Focus moves to the first source switch | TV: Enter on it lands on the IMDb switch |
+| 5 | Cards did not show a stale value | A stale card value adds its month, "IMDb 8.1 (Aug 2026)", dimmed | One title aged 40 days (`p9-live.py age`): its card says so, the other does not (`shots/chrome-desktop-cards.png`) |
+| 6 (P3) | Provenance only on hover | Outside TV each chip is a button; Enter or a tap shows "IMDb: via MDBList, as of …" in a status line below the chips; on TV the chips stay read-only | Enter shows and hides it |
+| 7 (P3) | The runners wiped the user's preferences | Both snapshot oleksii's two keys, including which exist, and put them back exactly | Both runs and cleanup: keys before = keys after |
+
+Also: the two new runners are lint-clean (31 errors fixed); there is no `hundred` scale (a 0–100 value is `percent`, and the
+web skips any scale it does not know), now stated in API.md and above.
+
+**Live re-run** on the isolated instance with the new plugin (0.1.0.0 built from `d5cdd8e`; the tip `7bef3f6` changes only a comment in the suite) and bundle `7df7b451dc4c`: `setup`,
+`unconfigured`, `configure`, `fetch`, `age`, both browsers, `unage`, `restart`, `failures`, `kill`, `leak`, `cleanup` — all
+pass (`evidence/p9/review-fix/`). Two harness corrections on the way, neither a mod fault: `restart` must run before the browser
+runs, because their settings saves change the revision and `verified` is per revision (Test was pressed again, then `restart`
+passed); and the leak step counted a stack frame of another plugin's failed call as an HTTP client log line — it now counts
+only the host's request-logger categories. Fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only;
+oleksii's display preferences are as before; the stand-in is stopped and its key deleted.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
-isolated instance passed in Chromium and Chrome. Acceptance waits for the Codex GPT-6.1 Sol high review of
-`abeffb7..jellyfinmod-phase9` (plugin) and `95709dc6ca..jellyfinmod-phase9` (web), and for the user. Nothing is merged; the
+isolated instance passed in Chromium and Chrome. Both reviews' findings are fixed (above); acceptance waits for the Codex
+re-review of the fix ranges (plugin `612d557..7bef3f6`, web `8f7809a2af..` this branch's tip), and for the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
 
 - Re-run the live chain with `scripts/jellyfinmod-e2e/p9-live.py` (`setup`, `unconfigured`, `configure`, `fetch`,
-  `restart`, the browser runner `p9-ratings.mjs`, `failures`, `kill`, `leak`, `cleanup`); settings come from the environment
+  `restart`, `age`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `cleanup`); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- The isolated instance runs this branch's plugin (0.1.0.0 from `0060c32`) and bundle `619599d6e666`; ratings are on with no
+- The isolated instance runs this branch's plugin (0.1.0.0 built from `d5cdd8e`, the review fixes) and bundle `7df7b451dc4c`; ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
   deployment is on the test host under the instance's `backups/p9-before-20261007` (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
