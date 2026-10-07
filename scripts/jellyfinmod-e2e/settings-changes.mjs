@@ -152,8 +152,9 @@ const openSection = async id => {
 const busyCycle = async (button, timeout = 60000) => {
     const handle = await button.elementHandle();
     await button.click();
-    await page.waitForFunction(element => element.disabled, handle, { timeout: 5000 }).catch(() => {});
-    await page.waitForFunction(element => !element.disabled, handle, { timeout });
+    // A row's icon is refused with aria-disabled while it is busy, so the remote keeps its focus; a labelled button is disabled.
+    await page.waitForFunction(element => element.disabled || element.getAttribute('aria-disabled') === 'true', handle, { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(element => !(element.disabled || element.getAttribute('aria-disabled') === 'true'), handle, { timeout });
     await page.waitForTimeout(700);
 };
 /**
