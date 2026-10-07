@@ -85,7 +85,7 @@ async function adminLayout(page, layout) {
     const dialog = page.locator('.jfmod-releaseDialog');
     await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
     const heading = await dialog.locator('.formDialogHeaderTitle').textContent().catch(() => null);
-    record(layout, 'Enter opens the picker for another quality', !!heading && heading.startsWith('Another quality for'), heading ?? 'no dialog');
+    record(layout, 'Enter opens the picker for another quality', !!heading && heading.startsWith('Another Quality for'), heading ?? 'no dialog');
     await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').first().waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
     const held = await page.locator('.jfmod-releaseDialog .jfmod-releaseHeld').count();
     const releases = await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').count();

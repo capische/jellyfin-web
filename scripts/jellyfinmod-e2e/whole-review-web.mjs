@@ -534,7 +534,7 @@ async function restoreSeed(page, original) {
 checks.listField = async browser => {
     const { context, page } = await session(browser);
     await go(page, '#/catalog/settings?section=indexers');
-    await page.locator('.jfmod-brow button', { hasText: 'Edit' }).first().click();
+    await page.locator('.jfmod-brow [data-row-action="edit"]').first().click();
     const field = page.getByLabel('Categories');
     await field.waitFor({ timeout: 15000 });
     await field.fill('');
@@ -611,7 +611,7 @@ checks.failedReads = async browser => {
 checks.dialogReload = async browser => {
     const { context, page } = await session(browser);
     await go(page, '#/catalog/settings?section=profiles');
-    await page.locator('.jfmod-check-main button', { hasText: 'Edit' }).first().click();
+    await page.locator('.jfmod-check-main [data-row-action="edit"]').first().click();
     await page.locator('.jfmod-settingsDialog').waitFor({ timeout: 15000 });
     const title = (await page.locator('.jfmod-settingsDialog h2').innerText()).replace(/^Edit /, '');
     const profiles = (await api(page, 'GET', 'JellyfinMod/Settings/QualityProfiles')).body;
@@ -1651,7 +1651,7 @@ checks.secretIndexer = async browser => {
     const indexers = (await api(page, 'GET', 'JellyfinMod/Settings/Indexers')).body ?? [];
     try {
         await go(page, '#/catalog/settings?section=indexers');
-        await page.locator('.jfmod-check-main button', { hasText: 'Edit' }).first().click();
+        await page.locator('.jfmod-check-main [data-row-action="edit"]').first().click();
         const dialog = page.locator('.jfmod-settingsDialog');
         await dialog.waitFor({ timeout: 15000 });
         const title = (await dialog.locator('h2').innerText()).replace(/^Edit /, '');
@@ -1908,7 +1908,7 @@ checks.editorDuringSave = async browser => {
     const profiles = (await api(page, 'GET', 'JellyfinMod/Settings/QualityProfiles')).body ?? [];
     try {
         await go(page, '#/catalog/settings?section=profiles');
-        await page.locator('.jfmod-check-main button', { hasText: 'Edit' }).first().click();
+        await page.locator('.jfmod-check-main [data-row-action="edit"]').first().click();
         const dialog = page.locator('.jfmod-settingsDialog');
         await dialog.waitFor({ timeout: 15000 });
         const title = (await dialog.locator('h2').innerText()).replace(/^Edit /, '');
@@ -2002,7 +2002,7 @@ checks.saveOnce = async browser => {
     const { context, page } = await session(browser);
     try {
         await go(page, '#/catalog/settings?section=profiles');
-        await page.locator('.jfmod-check-main button', { hasText: 'Edit' }).first().click();
+        await page.locator('.jfmod-check-main [data-row-action="edit"]').first().click();
         const dialog = page.locator('.jfmod-settingsDialog');
         await dialog.waitFor({ timeout: 15000 });
         const patches = [];

@@ -4,7 +4,7 @@
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<isolated-port>/ JELLYFINMOD_BROWSER=chromium|chrome node review-fixes.mjs
 //
-// S8-R1: the mod entry's user menu offers JellyfinMod settings; the fork's stock entry, served at
+// S8-R1: the mod entry's user menu offers JellyfinMod Settings; the fork's stock entry, served at
 //        /web-mod/<bundleId>/index.html, does not.
 // S8-R2: on the TV (1920×1080 and 1280×720), from Home, arrows and Enter alone reach /catalog/settings, open the
 //        Indexers section and remove an indexer through the confirmation dialog; Back closes the dialog without
@@ -102,15 +102,15 @@ const pressUntil = async (page, key, predicate, limit) => {
         return items.map(text => text.trim());
     };
     const modItems = await menuItems();
-    record('desktop', 'S8-R1: the mod entry\'s user menu offers JellyfinMod settings', modItems.includes('JellyfinMod settings'), modItems);
+    record('desktop', 'S8-R1: the mod entry\'s user menu offers JellyfinMod Settings', modItems.includes('JellyfinMod Settings'), modItems);
     const bundle = await page.evaluate(() => document.querySelector('meta[name="jellyfinmod-web"]')?.getAttribute('content'));
     await page.goto(new URL(`/web-mod/${bundle}/index.html#/home`, testUrl).href, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => { try { return !!window.ApiClient && !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
     await page.waitForTimeout(3000);
     const stock = await page.evaluate(() => ({ modBundle: window.__jfmodBundle === true, meta: !!document.querySelector('meta[name="jellyfinmod-web"]') }));
     const stockItems = await menuItems();
-    record('desktop', 'S8-R1: the stock entry at /web-mod/<id>/index.html offers no JellyfinMod settings item',
-        !stock.modBundle && !stock.meta && !stockItems.includes('JellyfinMod settings'), { bundle, stock, stockItems });
+    record('desktop', 'S8-R1: the stock entry at /web-mod/<id>/index.html offers no JellyfinMod Settings item',
+        !stock.modBundle && !stock.meta && !stockItems.some(text => /JellyfinMod settings/i.test(text)), { bundle, stock, stockItems });
     record('desktop', 'no page errors', errors.length === 0, errors);
     await context.close();
 }
@@ -136,7 +136,7 @@ for (const [name, viewport] of [['tv1080', { width: 1920, height: 1080 }], ['tv7
         await page.locator('[data-jfmod-tv-settings]').waitFor({ state: 'attached', timeout: 30000 });
         await page.waitForTimeout(3000);
         const toLink = await pressUntil(page, 'ArrowDown', now => now?.tvSettings, 40);
-        record(name, 'S8-R2: Down from Home reaches the JellyfinMod settings button', toLink.reached, { presses: toLink.presses, focus: toLink.now });
+        record(name, 'S8-R2: Down from Home reaches the JellyfinMod Settings button', toLink.reached, { presses: toLink.presses, focus: toLink.now });
         await page.keyboard.press('Enter');
         await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
         record(name, 'S8-R2: Enter opens /catalog/settings', await page.evaluate(() => location.hash.startsWith('#/catalog/settings')));
