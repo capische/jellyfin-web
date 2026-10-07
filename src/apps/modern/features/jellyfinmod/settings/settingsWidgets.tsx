@@ -111,19 +111,22 @@ interface SecretFieldProps {
 
 /**
  * An icon-only action in a secret's box (user, 2026-10-07): grey, or red for Clear, as the labelled buttons are. Its
- * name is its aria-label and its tooltip; as upstream's list actions do, a disabled one carries no tooltip.
+ * name is its aria-label and its tooltip. While busy it is refused with aria-disabled rather than disabled, as the
+ * settings area refuses controls: the element and its tooltip stay, so the focus a remote put on it stays too (Codex
+ * review 1, P2 1).
  */
 const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick: () => void; action: string; testId?: string; children: ReactNode }> = ({
     label, red, disabled, onClick, action, testId, children
 }) => {
-    const button = (
-        <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}`} aria-label={label} disabled={disabled}
-            onClick={onClick} data-secret-action={action} data-test={testId}
-        >
-            {children}
-        </IconButton>
+    return (
+        <Tooltip title={label}>
+            <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}${disabled ? ' jfmod-busy' : ''}`} aria-label={label}
+                aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick} data-secret-action={action} data-test={testId}
+            >
+                {children}
+            </IconButton>
+        </Tooltip>
     );
-    return disabled ? button : <Tooltip title={label}>{button}</Tooltip>;
 };
 
 /**
