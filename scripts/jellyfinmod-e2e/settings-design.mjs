@@ -85,10 +85,19 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         return [r, g, b, a];
     };
     const over = (top, under) => top.slice(0, 3).map((value, i) => value * top[3] + under[i] * (1 - top[3]));
+    // A background image is understood only as MUI's elevation overlay, a gradient of one colour over the element's own
+    // background; anything else is reported, so contrast is never computed against paint that was not read.
+    let unsupported = null;
     const surface = el => {
         const layers = [];
         for (let up = el; up; up = up.parentElement) {
-            const layer = rgba(getComputedStyle(up).backgroundColor);
+            const style = getComputedStyle(up);
+            if (style.backgroundImage && style.backgroundImage !== 'none') {
+                const stops = style.backgroundImage.match(/^linear-gradient\((rgba?\([^)]*\)),\s*(rgba?\([^)]*\))\)$/);
+                if (stops && stops[1] === stops[2]) layers.push(rgba(stops[1]));
+                else unsupported = `${up.className}: ${style.backgroundImage}`.slice(0, 160);
+            }
+            const layer = rgba(style.backgroundColor);
             layers.push(layer);
             if (layer[3] >= 1) break;
         }
@@ -96,12 +105,14 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
     };
     const buttons = [...root.querySelectorAll('button.MuiButton-root')].filter(visible).map(el => {
         const s = getComputedStyle(el);
+        unsupported = null;
         const paintedBg = surface(el);
+        const paintUnsupported = unsupported;
         const behind = el.parentElement ? surface(el.parentElement) : [0, 0, 0];
         return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth,
-            borderColor: s.borderTopColor, danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'),
+            borderColor: s.borderTopColor, danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!el.closest('.jfmod-secret-row'),
             disabled: el.disabled, focused: el === document.activeElement,
-            paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind) };
+            paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
     });
     const parts = [...root.querySelectorAll('button, .MuiFormControl-root, .jfmod-secret-row, .fieldDescription, .jfmod-savemeta, .jfmod-state, .jfmod-notice, .jfmod-kv, .jfmod-brow, .jfmod-maprow, .jfmod-lead, .jfmod-grouptitle, .MuiFormControlLabel-root, a')]
         .filter(visible).filter(el => !el.parentElement.closest('.MuiFormControl-root, button, .MuiFormControlLabel-root'));
@@ -147,15 +158,17 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         }
     }
     const overflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
-    return { buttons, overlaps, tight, overflow };
+    const scrolled = root.querySelector('.MuiDialogContent-root')?.scrollTop ?? null;
+    return { buttons, overlaps, tight, overflow, unsupported, scrolled };
 }, rootSelector);
 
 /** The audit with the pointer parked in a corner, so no button is measured in its hover state. */
-const auditIdle = async (page, layout, rootSelector) => {
+const auditIdle = async (page, layout, rootSelector, { blur = true } = {}) => {
     await page.mouse.move(1, layout.viewport.height - 1);
     // Resting styles: a button that kept focus after a click (Clear becomes Undo in the same element) shows MUI's focus tint.
-    await page.evaluate(() => document.activeElement?.blur?.());
-    await page.waitForTimeout(250);
+    // Inside a dialog a blur hands focus back to the dialog, which scrolls to its first field, so the sweep does not blur.
+    if (blur) await page.evaluate(() => document.activeElement?.blur?.());
+    await page.waitForTimeout(400);
     return audit(page, rootSelector);
 };
 
@@ -177,6 +190,7 @@ const expectedFor = button => {
 const PRIMARY = 'rgb(0, 164, 220)';
 const ERROR = 'rgb(198, 40, 40)';
 const ON_PRIMARY = 'rgba(0, 0, 0, 0.87)';
+const ON_SURFACE = 'rgb(255, 255, 255)';
 /** MUI's dark-mode disabled text and disabled fill. */
 const DISABLED = 'rgba(255, 255, 255, 0.3)';
 const DISABLED_FILL = 'rgba(255, 255, 255, 0.12)';
@@ -203,13 +217,17 @@ const looksWrong = button => {
         text: button.variant === 'text' && button.borderWidth === '0px',
         danger: button.variant === 'text' && button.borderWidth === '0px' && button.danger
     }[want];
-    if (!shape) return true;
+    if (!shape || button.paintUnsupported) return true;
     if (!idle) return false;
-    if (button.disabled) return button.color !== DISABLED || (want === 'contained' ? button.bg !== DISABLED_FILL : !isClear(button.bg));
+    if (button.disabled) {
+        return button.color !== DISABLED || (want === 'contained' ? button.bg !== DISABLED_FILL : !isClear(button.bg)) ||
+            (want === 'outlined' && button.borderColor !== DISABLED_FILL);
+    }
     switch (want) {
         case 'contained': return button.bg !== PRIMARY || button.color !== ON_PRIMARY || !readable;
         case 'outlined': return !isClear(button.bg) || button.color !== PRIMARY || !primaryBorder(button.borderColor) || !readable;
-        case 'text': return !isClear(button.bg) || button.color !== PRIMARY || !readable;
+        // On the secret's filled box, Replace and Undo take the box's own white text, as on the Dashboard page.
+        case 'text': return !isClear(button.bg) || button.color !== (button.inSecret ? ON_SURFACE : PRIMARY) || !readable;
         // The theme's error red on the dark paper is about 2:1, as on the Dashboard page; it is red by design, not gated on contrast.
         default: return !isClear(button.bg) || button.color !== ERROR;
     }
@@ -329,12 +347,16 @@ for (const name of only) {
                 for (let top = 0; top < content.scrollHeight - content.clientHeight + step; top += step) list.push(Math.min(top, content.scrollHeight - content.clientHeight));
                 return [...new Set(list)];
             });
+            const reached = [];
             for (const top of positions) {
                 await page.evaluate(at => { [...document.querySelectorAll('.MuiDialog-paper .MuiDialogContent-root')].pop().scrollTop = at; }, top);
-                const at = await auditIdle(page, layout, '.MuiDialog-paper');
+                const at = await auditIdle(page, layout, '.MuiDialog-paper', { blur: false });
+                reached.push(at.scrolled);
                 if (!result.buttons.length) result.buttons = at.buttons;
                 for (const key of ['overlaps', 'tight']) for (const item of at[key]) if (!result[key].includes(item)) result[key].push(item);
             }
+            record(name, `${section} dialog: every scroll position was measured where it was asked for`,
+                positions.every((top, i) => Math.abs((reached[i] ?? -999) - top) <= 2), { positions, reached });
             await page.evaluate(() => { [...document.querySelectorAll('.MuiDialog-paper .MuiDialogContent-root')].pop().scrollTop = 0; });
             record(name, `${section} dialog: audited at ${positions.length} scroll position(s)`, positions.length >= 1, positions);
             checkButtons(name, `${section} dialog`, result.buttons);
@@ -355,9 +377,10 @@ for (const name of only) {
                     await page.waitForTimeout(600);
                     const focusedResult = await audit(page, '.MuiDialog-paper');
                     const focused = focusedResult.buttons.find(button => button.focused);
-                    const ratio = focused ? contrast(focused.paintedFg, focused.paintedBg) : 0;
+                    const ratio = focused && !focused.paintUnsupported ? contrast(focused.paintedFg, focused.paintedBg) : 0;
                     console.log('  shot', await shot(page, `${name}-settings-${section}-dialog-focus`));
-                    record(name, `${section} dialog: the focused red action is readable (contrast ${ratio.toFixed(2)} >= 3)`, ratio >= 3 && !!focused?.danger, focused);
+                    record(name, `${section} dialog: the focused red action is readable (contrast ${ratio.toFixed(2)} >= 3)`, ratio >= 3 && !!focused?.danger,
+                        focused);
                 }
             }
             await dialog.locator('button', { hasText: 'Cancel' }).evaluate(el => el.click());
