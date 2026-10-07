@@ -10,6 +10,7 @@
 // JELLYFINMOD_DESIGN_LAYOUTS=desktop,mobile,tv1080,tv720   JELLYFINMOD_DESIGN_REPORT_ONLY=1 (record, never fail)
 // Signs in as oleksii with an empty password. Read-only apart from one Discovery save with nothing changed (the
 // revision round-trips) and the read-only TMDB Test; it changes no setting.
+// Expects the default Dark theme: the role colours and MUI's disabled colours it checks are that theme's values.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
