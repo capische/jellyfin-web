@@ -35,7 +35,7 @@ const EpisodeWindowDialog: FC<EpisodeWindowDialogProps> = ({ open, value, busy, 
         if (!busy) onChange(event.target.value);
     }, [busy, onChange]);
     return <Dialog open={open} onClose={onClose} maxWidth='xs' fullWidth className='jfmod-windowDialog'>
-        <DialogTitle>Remove after watching</DialogTitle>
+        <DialogTitle>Remove After Watching</DialogTitle>
         <DialogContent>
             <TextField select fullWidth margin='dense' label='Remove this episode' value={value} onChange={choose}
                 aria-busy={busy} slotProps={FOCUSABLE_SELECT} id='jfmod-episode-window'>

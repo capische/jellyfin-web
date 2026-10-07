@@ -56,7 +56,7 @@ const keptMessage = (keepsEpisode: boolean, detail: EntryDetail): string => {
 
 const keepLabel = (keepsSeries: boolean, busy: boolean, kept: boolean): string => {
     if (!keepsSeries || busy) return keepButtonLabel(busy, kept);
-    return kept ? 'Series kept' : 'Keep series';
+    return kept ? 'Series Kept' : 'Keep Series';
 };
 
 /**
@@ -148,8 +148,8 @@ interface PinPlan extends PinState {
  * (episode pages) or the movie. An untracked file has no binding to keep by.
  */
 const keptEpisodePin = (canUnkeep: boolean): PinPlan => (canUnkeep ?
-    { kept: true, title: 'Stop keeping this episode', action: 'unkeepEpisode' } :
-    { kept: true, title: 'Kept indefinitely', locked: 'This episode is kept' });
+    { kept: true, title: 'Stop Keeping the Episode', action: 'unkeepEpisode' } :
+    { kept: true, title: 'Kept', locked: 'This episode is kept' });
 
 const pinPlan = (version: VersionDto, detail: EntryDetail, episode: EntryEpisode | undefined, capabilities: string[]): PinPlan | null => {
     const titleLock = detail.entry.mediaType === 'series' ? 'Kept with the whole series' : 'Kept indefinitely';
@@ -157,13 +157,13 @@ const pinPlan = (version: VersionDto, detail: EntryDetail, episode: EntryEpisode
     const episodePin = episode?.retentionPolicy === 'never' ? keptEpisodePin(capabilities.includes(EPISODE_CONTROLS_CAPABILITY)) : null;
     if (capabilities.includes(VERSION_KEEP_CAPABILITY)) {
         if (version.tracked === false || !/[1-9a-f]/i.test(version.bindingId ?? '')) return null;
-        if (version.kept) return { kept: true, title: 'Stop keeping this file', action: 'unkeepFile' };
-        return episodePin ?? titlePin ?? { kept: false, title: 'Keep this file', action: 'keepFile' };
+        if (version.kept) return { kept: true, title: 'Stop Keeping', action: 'unkeepFile' };
+        return episodePin ?? titlePin ?? { kept: false, title: 'Keep', action: 'keepFile' };
     }
     if (episode && capabilities.includes(EPISODE_RETENTION_CAPABILITY)) {
-        return episodePin ?? titlePin ?? { kept: false, title: 'Keep this episode', action: 'keepEpisode' };
+        return episodePin ?? titlePin ?? { kept: false, title: 'Keep the Episode', action: 'keepEpisode' };
     }
-    return titlePin ?? { kept: false, title: episode ? 'Keep the whole series' : 'Keep this movie', action: 'keepTitle' };
+    return titlePin ?? { kept: false, title: episode ? 'Keep the Whole Series' : 'Keep the Movie', action: 'keepTitle' };
 };
 
 const PIN_DONE: Record<PinAction, string> = {
@@ -191,7 +191,7 @@ const useWindowMenuItem = (view: HTMLElement, enabled: boolean, itemIds: string[
         if (!enabled) return;
         const own = ids.split(',');
         return registerMoreMenuItem({
-            name: 'Remove after watching…',
+            name: 'Remove After Watching…',
             icon: 'auto_delete',
             // Only this page's own header More button, for this page's own item (or one of its files): a card's menu
             // elsewhere on the page (Next Up, More Like This) is another item's menu and gets nothing.
@@ -276,15 +276,15 @@ const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquir
             <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
             <QueueStatusLine entryId={candidate.entryId} episodeId={candidate.id} state={candidate.state} progress={candidate.progress} />
         </div>)}
-        {detail.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode retention'>
+        {detail.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode Retention'>
             {detail.episodes.map(candidate => <div className='jfmod-episodeRow' key={candidate.id}>
                 <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
                 <RetentionStatus retention={candidate.retention} compact />
             </div>)}
         </HistoryToggle>}
         <div className='jfmod-nativeActions'>
-            {canAcquire && <button className={raisedButtonClass()} type='button' onClick={searchReleases}>
-                Search releases
+            {canAcquire && <button className={raisedButtonClass('button-submit')} type='button' onClick={searchReleases}>
+                Search Releases
             </button>}
             {isAdmin && <button className={raisedButtonClass()} type='button' aria-busy={busy}
                 aria-disabled={busy} aria-pressed={kept} onClick={keepSeries} title='Keep the whole series indefinitely'>
@@ -428,7 +428,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     useStockHeaderButton(view, {
         enabled: canAcquire && isFilePage,
         icon: 'cloud_download',
-        title: 'Get a release',
+        title: 'Get a Release',
         className: 'jfmod-getRelease',
         onClick: getRelease
     });
