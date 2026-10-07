@@ -1,4 +1,4 @@
-/* eslint-disable compat/compat, sonarjs/cognitive-complexity -- a Node test boundary, not shipped code */
+/* eslint-disable compat/compat -- a Node test boundary, not shipped code */
 // Phase 9 (R8) stand-in for api.mdblist.com, for the isolated instance only. It serves the shape the R1 evidence records:
 //
 //   GET /tmdb/{movie|show}/{tmdbId}?apikey=<key>  -> {title, year, type, ids, score, score_average, ratings: [{source, value, score, votes, url}]}
@@ -47,7 +47,7 @@ const ratings = (id, full) => {
 };
 
 createServer((request, response) => {
-    const url = new URL(request.url, 'http://boundary');
+    const url = new URL(request.url, 'https://boundary'); // only the path and query are read; the scheme is never used
     const match = /^\/tmdb\/(movie|show)\/(\d+)$/.exec(url.pathname);
     if (request.method !== 'GET' || !match) return send(response, 404, { error: 'Not found' });
     const [, kind, id] = match;
@@ -96,3 +96,4 @@ createServer((request, response) => {
         return send(response, 404, { error: 'unknown control' });
     });
 }).listen(controlPort, '127.0.0.1', () => console.log(`control on 127.0.0.1:${controlPort}`));
+/* eslint-enable compat/compat */

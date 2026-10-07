@@ -7,10 +7,14 @@ Runs in steps so the browser runner (p9-ratings.mjs) can sit between them:
   p9-live.py unconfigured host fallback and TMDB-only answers, a run that calls nothing, refusals, fetcher order
   p9-live.py configure    the stand-in address (hidden XML field), the fixture key, Test
   p9-live.py fetch        the daily task through Jellyfin's task manager: one call per title, newest first, projection, access
+  p9-live.py age          one title's MDBList values made 40 days old (service stopped), so cards show a stale value
+  p9-live.py unage        the same values made current again, before the failure steps
   p9-live.py restart      a restart keeps settings, key and ratings
   p9-live.py failures     budget, manual refresh, 401, key error, 429, malformed, timeout, not found, five 503s
   p9-live.py kill         a container killed mid-call: its claim is counted, the title is not fetched again
-  p9-live.py cleanup      every fixture, the key, the override and the ratings rows go; UserViews shows Movies and Shows only
+  p9-live.py cleanup      every fixture, the key, the override and the ratings rows go; oleksii's ratings display
+                          preferences are restored exactly (a key that did not exist is removed); UserViews shows Movies
+                          and Shows only
 
 Settings (environment, never committed): JFMOD_P9_URL (the isolated instance, port 18096 only), JFMOD_P9_SSH (ssh alias of
 the host), JFMOD_P9_KEY_FILE (local 0600 file with the stand-in's fixture key), JFMOD_P9_BOUNDARY (the stand-in's address as
@@ -49,6 +53,8 @@ TITLES = [(990901, "JellyfinMod P9 Ratings Host", "7.4", "87"), (990902, "Jellyf
 KILL_TITLE = (990903, "JellyfinMod P9 Ratings Kill", "5.5", None)
 SECRETS = [KEY]
 results = []
+PREF_KEYS = ("jfmodRatingsSources", "jfmodRatingsCardSource")
+AGED_TITLE = 990902
 
 
 def scrub(text):
@@ -245,6 +251,43 @@ def viewer_policy(user_id):
     call("POST", f"/Users/{user_id}/Policy", policy)
 
 
+def prefs_path(user_id):
+    return f"/DisplayPreferences/usersettings?userId={user_id}&client=emby"
+
+
+def prefs_snapshot(user_id):
+    """The ratings keys of oleksii's display preferences: each key's value, and which keys exist at all."""
+    custom = (call("GET", prefs_path(user_id))[1].get("CustomPrefs") or {})
+    return {key: custom[key] for key in PREF_KEYS if key in custom}
+
+
+def age(days):
+    """Moves one title's MDBList values by `days` with the service stopped (there is no API for it)."""
+    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null && sqlite3 '{DB}' \""
+                 f"UPDATE TitleRatings SET FetchedAt = strftime('%Y-%m-%d %H:%M:%f', FetchedAt, '{days:+d} days') WHERE Provider = 'mdblist' "
+                 f"AND EntryId IN (SELECT Id FROM Entries WHERE TmdbId = {AGED_TITLE}); SELECT changes();\" && "
+                 f"docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null")
+    wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the start", 300)
+    wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health", 300)
+    return out
+
+
+def step_age():
+    state = load_state()
+    out = age(-40)
+    ratings = by_source(call("GET", f"/JellyfinMod/Entries/{state['entries'][str(AGED_TITLE)]}")[1]["ratings"])
+    other = by_source(call("GET", f"/JellyfinMod/Entries/{state['entries'][str(TITLES[0][0])]}")[1]["ratings"])
+    check(out.returncode == 0 and ratings["imdb"]["stale"] and not other["imdb"]["stale"],
+          "One title's MDBList values are 40 days old and read as stale; the other title's stay current", out.stdout.strip())
+
+
+def step_unage():
+    state = load_state()
+    out = age(40)
+    ratings = by_source(call("GET", f"/JellyfinMod/Entries/{state['entries'][str(AGED_TITLE)]}")[1]["ratings"])
+    check(out.returncode == 0 and not ratings["imdb"]["stale"], "The aged title's values are current again", out.stdout.strip())
+
+
 def step_setup():
     sign_in()
     state = load_state()
@@ -253,6 +296,10 @@ def step_setup():
           {"version": health["Version"], "bundle": health["Web"]["BundleId"]})
     boundary("POST", "/reset")
     boundary("POST", "/mode", {"mode": "full", "titles": {}})
+    # oleksii's own ratings display choice, restored exactly by cleanup (web review 2026-10-07, P3 7). A repeated setup keeps
+    # the first snapshot, never one the runs themselves wrote.
+    if "prefsBefore" not in state:
+        state["prefsBefore"] = prefs_snapshot(state["userId"])
     state["logSince"] = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True, text=True).stdout.strip()
     save_state(state)
     make_titles(TITLES)
@@ -578,15 +625,22 @@ def step_cleanup():
     step_reset()
     s = settings()
     check(s["enabled"] and not s["apiKeyConfigured"] and not s["providerOverride"] and s["revision"] == 1, "Ratings settings are fresh defaults again", s)
-    # The browser run left oleksii's choice at the defaults; the two keys themselves go too.
-    path = f"/DisplayPreferences/usersettings?userId={state['userId']}&client=emby"
+    # oleksii's ratings display choice goes back to what setup found: each key's value, and a key that did not exist is removed.
+    before = state.get("prefsBefore")
+    path = prefs_path(state["userId"])
     status_code, prefs = call("GET", path)
     custom = prefs.get("CustomPrefs") or {}
-    removed = [key for key in ("jfmodRatingsSources", "jfmodRatingsCardSource") if custom.pop(key, None) is not None]
-    if removed:
+    if before is not None:
+        for key in PREF_KEYS:
+            if key in before:
+                custom[key] = before[key]
+            else:
+                custom.pop(key, None)
+        prefs["CustomPrefs"] = custom
         call("POST", path, prefs)
-    status_code, prefs = call("GET", path)
-    check(not any(key.startswith("jfmodRatings") for key in (prefs.get("CustomPrefs") or {})), "oleksii's display preferences hold no ratings keys", removed)
+    after = prefs_snapshot(state["userId"])
+    check(before is not None and after == before, "oleksii's ratings display preferences are exactly as setup found them",
+          {"keysBefore": sorted(before or {}), "keysAfter": sorted(after)})
     status_code, views = call("GET", f"/Users/{state['userId']}/Views")
     names = sorted(view["Name"] for view in views["Items"])
     check(names == ["Movies", "Shows"], "GET /UserViews for oleksii lists only Movies and Shows", names)
@@ -601,7 +655,9 @@ def step_leak():
     log = remote(f"docker logs --since '{state['logSince']}' jellyfinmod-test 2>&1").stdout
     hits = log.count(KEY)
     redacted = len(re.findall(r"/tmdb/(?:movie|show)/\d+\?\*", log))
-    client_lines = log.count("System.Net.Http.HttpClient")
+    # The host's request loggers write under the category System.Net.Http.HttpClient.<name>.LogicalHandler/ClientHandler; a
+    # stack frame of another plugin's failed call (System.Net.Http.HttpClient.SendAsync) is not a request log line.
+    client_lines = len(re.findall(r"System\.Net\.Http\.HttpClient\.[\w.-]+\.(?:LogicalHandler|ClientHandler)", log))
     outbound = sorted(set(re.findall(r"HTTP request (?:GET|POST) https?://([a-z0-9.-]+\.[a-z]{2,})/", log)))
     check(hits == 0, "The container log since the run started never contains the fixture key", {"lines": log.count("\n")})
     check(redacted > 0 or client_lines == 0,
@@ -620,7 +676,7 @@ if __name__ == "__main__":
         sign_in()
     try:
         {"setup": step_setup, "unconfigured": step_unconfigured, "configure": step_configure, "fetch": step_fetch, "restart": step_restart,
-         "failures": step_failures, "kill": step_kill, "cleanup": step_cleanup, "leak": step_leak, "reset": step_reset}[step]()
+         "failures": step_failures, "kill": step_kill, "age": step_age, "unage": step_unage, "cleanup": step_cleanup, "leak": step_leak, "reset": step_reset}[step]()
     except Exception as error:  # a crashed step still records what it checked, and says why it stopped
         check(False, f"The step ran to the end ({type(error).__name__})", scrub(error)[:300])
     if bodies:
