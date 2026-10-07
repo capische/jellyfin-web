@@ -21,6 +21,7 @@ import HomePage from '../routes/HomePage';
 import DetailsPage from '../routes/DetailsPage';
 import LibraryGridPage from '../routes/LibraryGridPage';
 import SearchPage from '../routes/SearchPage';
+import RatingsPreferencesPage from '../routes/RatingsPreferencesPage';
 import SettingsPage from '../settings/SettingsPage';
 import SetupWizardPage from '../settings/SetupWizardPage';
 
@@ -66,6 +67,9 @@ const MOD_ROUTES: RouteObject[] = [
     { path: 'catalog/settings', Component: SettingsPage },
     // The first-run wizard (P7.S10): the settings sections in setup order, gated on the server's readiness checks.
     { path: 'catalog/settings/setup', Component: SetupWizardPage },
+    // Every layout: Ratings display, every signed-in user's choice of rating sources (Phase 9, plan decision 8). A mod route,
+    // so upstream's legacy display preferences page stays unedited.
+    { path: 'catalog/preferences', Component: RatingsPreferencesPage },
     // The legacy layouts — the TV above all — browse Movies and TV on the modern React grid, the same grid the
     // modern layout reaches through upstream's own routes (PHASE7 decision 13). One grid means every grid feature
     // is built once, and upstream's legacy `movies.js` and `tvshows.js` controllers stay unedited. The modern layout

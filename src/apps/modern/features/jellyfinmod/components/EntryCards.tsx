@@ -14,7 +14,7 @@ const EntryCards: FC<{ rows: BrowseRow[]; cardOptions: CardOptions; alwaysShowCo
     ) : (
         <EntryCard key={'entry:' + row.entry!.id} entry={row.entry!}
             nativeItem={row.kind === 'native' ? row.nativeItem : undefined} retention={row.retention}
-            alwaysShowCountdown={alwaysShowCountdown} cardOptions={cardOptions} />
+            alwaysShowCountdown={alwaysShowCountdown} cardOptions={cardOptions} rating={row.rating} />
     ))}</>;
 };
 

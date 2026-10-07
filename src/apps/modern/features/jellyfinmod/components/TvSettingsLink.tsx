@@ -4,7 +4,7 @@ import layoutManager from 'components/layoutManager';
 
 import './tvSettingsLink.scss';
 
-import { useSettingsVisible } from '../hooks/useSettingsVisible';
+import { useRatingsPreferencesVisible, useSettingsVisible } from '../hooks/useSettingsVisible';
 import { raisedButtonClass } from '../utils/flatButton';
 
 /**
@@ -17,12 +17,17 @@ import { raisedButtonClass } from '../utils/flatButton';
  */
 const TvSettingsLink: FC = () => {
     const visible = useSettingsVisible();
-    if (!visible || !layoutManager.tv) return null;
+    // Ratings display is every user's (Phase 9), and the TV's header has no mod user menu either.
+    const ratings = useRatingsPreferencesVisible();
+    if (!(visible || ratings) || !layoutManager.tv) return null;
     return (
         <div className='padded-left padded-right jfmod-tvSettingsLink'>
-            <a className={raisedButtonClass()} href='#/catalog/settings' data-jfmod-tv-settings=''>
+            {ratings && <a className={raisedButtonClass()} href='#/catalog/preferences' data-jfmod-tv-ratings=''>
+                <span>Ratings display</span>
+            </a>}
+            {visible && <a className={raisedButtonClass()} href='#/catalog/settings' data-jfmod-tv-settings=''>
                 <span>JellyfinMod Settings</span>
-            </a>
+            </a>}
         </div>
     );
 };

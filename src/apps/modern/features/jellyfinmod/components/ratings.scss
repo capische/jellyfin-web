@@ -1,0 +1,35 @@
+// Phase 9: the Ratings line. Quiet like the Trakt and retention lines, sized in em so the TV's 125 % and the phone's 90 %
+// root sizes scale it, and laid out with margins rather than flex gap for older TV engines (UX §13, P1.W11).
+.jfmod-ratingsLine {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0 0 0.7em;
+    font-size: 0.9em;
+}
+
+.jfmod-ratingsLine-inline {
+    display: inline-flex;
+    margin: 0 0 0 0.8em;
+    vertical-align: middle;
+}
+
+// The card radius of card.scss; the border is the secondary text colour, so nothing is said by colour alone.
+.jfmod-ratingChip {
+    margin: 0.15em 0.5em 0.15em 0;
+    padding: 0.1em 0.5em;
+    border: 0.08em solid rgba(255, 255, 255, 0.35);
+    border-radius: 0.2em;
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+.jfmod-ratingChip-stale {
+    opacity: 0.65;
+    border-style: dashed;
+}
+
+// The one source a card may show (P9.R7), inside the card's own secondary text line.
+.jfmod-cardRating {
+    white-space: nowrap;
+}

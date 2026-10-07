@@ -54,6 +54,9 @@ export interface SettingsData {
     lastRun?: any;
     /** Prowlarr sources; undefined when the plugin build has no Prowlarr support (P7.S9). */
     prowlarr?: any[];
+    /** Ratings settings and the fetcher's status; undefined when the plugin build has no ratings (Phase 9). */
+    ratings?: any;
+    ratingsStatus?: any;
 }
 
 export interface SectionProps {
@@ -73,6 +76,7 @@ const PROWLARR_READS = ['Settings/Prowlarr'];
 const ACQUISITION_READS = ['Settings/Acquisition'];
 const RETENTION_READS = ['Settings/Retention', 'Settings/SeedProtection'];
 const DISCOVERY_READS = ['Settings/Discovery'];
+const RATINGS_READS = ['Settings/Ratings'];
 
 /** What a settings refetch resolves with: the query's own result, as `refetch` returns it. */
 interface ReloadResult {
@@ -469,6 +473,17 @@ const summariseDiagnostics = (data: SettingsData): Summary => {
     return open ? { kind: 'warn', words: `${open} item(s) need a decision` } : { kind: 'ok', words: `Last run ${when(latest.completedAt ?? latest.startedAt)}` };
 };
 
+const summariseRatings = (data: SettingsData): Summary => {
+    const ratings = data.ratings;
+    if (!ratings) return { kind: 'off', words: 'Not in this plugin build' };
+    if (!ratings.enabled) return { kind: 'off', words: 'Turned off' };
+    if (!ratings.apiKeyConfigured) return { kind: 'warn', words: 'No MDBList key · TMDB and server metadata only' };
+    const status = data.ratingsStatus;
+    if (status?.blocker === 'unauthorized') return { kind: 'err', words: 'MDBList refused the key' };
+    if (status?.breaker?.open) return { kind: 'warn', words: `Paused until ${when(status.breaker.until)}` };
+    return ratings.verified ? { kind: 'ok', words: `Key tested ${when(ratings.verifiedAt)}` } : { kind: 'warn', words: 'Key not tested since it changed' };
+};
+
 export const summarise = (id: string, data: SettingsData): Summary => {
     switch (id) {
         case 'overview': return summariseOverview(data);
@@ -482,6 +497,7 @@ export const summarise = (id: string, data: SettingsData): Summary => {
         case 'automation': return summariseAutomation(data);
         case 'interface': return summariseInterface(data);
         case 'diagnostics': return summariseDiagnostics(data);
+        case 'ratings': return summariseRatings(data);
         default:
             return data.overview?.areas.find(candidate => candidate.id === id)?.ready ? { kind: 'ok', words: 'Ready' } : { kind: 'off', words: '' };
     }
@@ -1582,3 +1598,140 @@ export const DiagnosticsSection: FC<SectionProps> = props => {
 };
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ---- Ratings (Phase 9) ----
+
+const RATING_SOURCE_NAMES: Record<string, string> = Object.fromEntries([
+    ['imdb', 'IMDb'], ['tomatoes_critic', 'Rotten Tomatoes critics'], ['tomatoes_audience', 'Rotten Tomatoes audience'], ['tmdb', 'TMDB'],
+    ['trakt', 'Trakt'], ['metacritic', 'Metacritic critics'], ['metacritic_user', 'Metacritic users'], ['letterboxd', 'Letterboxd'],
+    ['rogerebert', 'Roger Ebert']
+]);
+
+const STOP_SENTENCES: Record<string, string> = Object.fromEntries([
+    ['budget_spent', 'the daily budget was spent'], ['breaker_open', 'the provider was paused'], ['ratings_disabled', 'ratings were off'],
+    ['not_configured', 'no key was saved'], ['unauthorized', 'MDBList refused the key']
+]);
+
+interface RatingsRun {
+    startedAt: string;
+    fetched: number;
+    failed: number;
+    stopReason?: string | null;
+}
+
+/** The provider's state in words: stopped, paused and why, or ready. */
+const providerState = (status: { blocker?: string | null; breaker: { open: boolean; until?: string | null; reason?: string | null } }) => {
+    if (status.blocker === 'unauthorized') return 'Stopped: MDBList refused the key';
+    if (!status.breaker.open) return 'Ready';
+    const why = status.breaker.reason === 'rate_limited' ? 'daily limit reached' : 'repeated errors';
+    return `Paused until ${when(status.breaker.until)} (${why})`;
+};
+
+/** The last run in one line. */
+const lastRunText = (run: RatingsRun | null | undefined) => {
+    if (!run) return 'No run yet';
+    const stop = run.stopReason ? ` · stopped because ${STOP_SENTENCES[run.stopReason] ?? run.stopReason}` : '';
+    return `${when(run.startedAt)} · ${run.fetched} fetched · ${run.failed} failed${stop}`;
+};
+
+const ratingsRead = (data: SettingsData) => data.ratings !== undefined && data.ratings !== null;
+
+/** One default source: on/off and its place in the order every user starts from (user decision 6). */
+const SourceRow: FC<{ source: string; index: number; count: number; on: boolean; onToggle: (source: string) => void; onMove: (source: string, by: number) => void }> = ({
+    source, index, count, on, onToggle, onMove
+}) => {
+    const toggle = useCallback(() => onToggle(source), [onToggle, source]);
+    const up = useCallback(() => onMove(source, -1), [onMove, source]);
+    const down = useCallback(() => onMove(source, 1), [onMove, source]);
+    return (
+        <div className='jfmod-qrow' data-jfmod-default-source={source}>
+            <FormControlLabel control={<Switch checked={on} onChange={toggle} />} label={RATING_SOURCE_NAMES[source] ?? source} />
+            {on && <span className='jfmod-rowactions'>
+                <Button size='small' variant='outlined' disabled={index === 0} onClick={up} aria-label={`Move ${RATING_SOURCE_NAMES[source]} up`}>Up</Button>
+                <Button size='small' variant='outlined' disabled={index === count - 1} onClick={down} aria-label={`Move ${RATING_SOURCE_NAMES[source]} down`}>Down</Button>
+            </span>}
+        </div>
+    );
+};
+
+export const RatingsSection: FC<SectionProps> = props => {
+    const { api, data, reload } = props;
+    const ratings = data.ratings;
+    const status = data.ratingsStatus;
+    const section = useSectionState(reload, RATINGS_READS, ratingsRead);
+    const [draft, set, , ratingsSaved] = useDraft(ratings, {}, section);
+    const keySecret = useSecretChange('ratings', ratings?.revision, section.resets);
+    const apiKey = keySecret.change;
+    const { run } = section;
+    const chosen: string[] = useMemo(() => Array.isArray(draft.defaultSources) ? draft.defaultSources as string[] : ratings?.defaultSources ?? [],
+        [draft.defaultSources, ratings?.defaultSources]);
+    const available: string[] = ratings?.availableSources ?? [];
+    const toggleSource = useCallback((source: string) => {
+        set('defaultSources', chosen.includes(source) ? chosen.filter(value => value !== source) : [...chosen, source]);
+    }, [chosen, set]);
+    const moveSource = useCallback((source: string, by: number) => {
+        const index = chosen.indexOf(source);
+        const target = index + by;
+        if (index < 0 || target < 0 || target >= chosen.length) return;
+        const next = [...chosen];
+        [next[index], next[target]] = [next[target], next[index]];
+        set('defaultSources', next);
+    }, [chosen, set]);
+    const save = useCallback(() => run(async () => {
+        const revision = keySecret.revisionFor((draft.revision as number | undefined) ?? ratings.revision);
+        const origin = keySecret.origin(revision);
+        const saved = await request<{ revision?: number }>(api, 'PATCH', 'Settings/Ratings', {
+            ...pick(draft, ['enabled', 'refreshDays', 'dailyBudget']), defaultSources: chosen, apiKey, revision
+        });
+        keySecret.saved(apiKey, { id: 'ratings', revision: saved?.revision }, origin);
+        ratingsSaved(draft, sameRevision(saved), saved);
+    }, 'Saved.'), [run, api, draft, chosen, apiKey, keySecret, ratings, ratingsSaved]);
+    const testKey = useCallback(() => run(async () => {
+        const result = await request<{ ok: boolean; code: string; message: string; sources: string[] }>(api, 'POST', 'Settings/Ratings/Test');
+        const sources = result.sources?.length ? ' Sources: ' + result.sources.map(source => RATING_SOURCE_NAMES[source] ?? source).join(', ') + '.' : '';
+        return { jfmodNotice: { kind: result.ok ? 'ok' : 'err', text: `${result.message} (${result.code})${sources}` } as NoticeState };
+    }), [run, api]);
+    if (!ratings) {
+        return <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' notice={{ kind: 'warn', text: 'Unavailable in this plugin build.' }} onGo={props.onGo}><span /></SectionFrame>;
+    }
+    const rows = [...chosen, ...available.filter(source => !chosen.includes(source))];
+    return (
+        <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' state={summarise('ratings', data)} notice={section.notice}
+            onSave={save} saving={section.busy} saveMeta={`Revision ${ratings.revision}.`} next={props.next} onGo={props.onGo}
+        >
+            <FieldForm fields={[
+                { key: 'enabled', label: 'Fetch and show title ratings', type: 'bool', help: 'Display only: ratings never steer searching, grabbing or retention.' },
+                { key: 'refreshDays', label: 'Fetch a title again after (days)', type: 'int' },
+                { key: 'dailyBudget', label: 'MDBList calls per day', type: 'int', help: 'Stay below your MDBList tier (the free tier allows 1,000 a day); manual refreshes and Test count too.' }
+            ]} draft={draft} onChange={set} />
+            <div className='jfmod-group'>
+                <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set} />
+                <div className='jfmod-testline'>
+                    <Button variant='outlined' size='small' disabled={section.busy} onClick={testKey} data-test='ratings'>Test</Button>
+                    <span className='fieldDescription'>Makes one real MDBList call for a well-known title. Save a new key first.</span>
+                </div>
+                {ratings.providerOverride && <Notice notice={{ kind: 'warn', text: 'This server fetches ratings from a test address set in its configuration file, not from MDBList.' }} />}
+                <div className='fieldDescription jfmod-lead'>
+                    One MDBList key brings IMDb, Rotten Tomatoes critics and audience, TMDB, Trakt, Metacritic, Letterboxd and Roger Ebert. TMDB&apos;s own score comes
+                    from the title&apos;s TMDB metadata, and on-disk titles fall back to what this server&apos;s own metadata stored. MDBList is a cache of those sites,
+                    so its numbers can lag or differ from what each site shows today.
+                </div>
+            </div>
+            <div className='jfmod-group'>
+                <h3 className='jfmod-grouptitle'>Default sources and order</h3>
+                <div className='fieldDescription'>What every user starts from; each user can change their own in Ratings display.</div>
+                {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
+                    on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
+            </div>
+            {status && <div className='jfmod-group'>
+                <h3 className='jfmod-grouptitle'>Fetching</h3>
+                <dl className='jfmod-kv'>
+                    <dt>Today</dt><dd>{status.budget.used} of {status.budget.limit} calls</dd>
+                    <dt>Titles without ratings</dt><dd>{status.entriesWithoutRatings} of {status.entries}</dd>
+                    <dt>Provider</dt><dd>{providerState(status)}</dd>
+                    <dt>Last run</dt><dd>{lastRunText(status.lastRun)}</dd>
+                </dl>
+            </div>}
+        </SectionFrame>
+    );
+};

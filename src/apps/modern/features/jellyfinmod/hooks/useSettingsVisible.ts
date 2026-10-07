@@ -14,3 +14,13 @@ export const useSettingsVisible = () => {
     return window.__jfmodBundle === true && !!user?.Policy?.IsAdministrator && health.data?.ok === true
         && health.data.capabilities.includes('settings.overview');
 };
+
+/**
+ * Whether Ratings display belongs in the user menu (Phase 9): every signed-in user of a plugin that offers ratings, and only
+ * inside the mod entry, for the same reason as the settings item.
+ */
+export const useRatingsPreferencesVisible = () => {
+    const { user } = useApi();
+    const health = usePluginHealth();
+    return window.__jfmodBundle === true && !!user && health.data?.ok === true && health.data.capabilities.includes('ratings');
+};
