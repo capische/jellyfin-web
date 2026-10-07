@@ -303,7 +303,10 @@
     font-size: 0.95em;
 }
 
+/* The box carries its own text colour, which Replace and Undo inherit: the same on the page and in a dialog. */
 .jfmod-secret-row {
+    color: #fff;
+    color: var(--jf-palette-text-primary, #fff);
     display: flex;
     align-items: center;
     flex-wrap: wrap;
