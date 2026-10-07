@@ -104,15 +104,33 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         }
         return layers.reverse().reduce((under, layer) => over(layer, under), [0, 0, 0]);
     };
-    const buttons = [...root.querySelectorAll('button.MuiButton-root')].filter(visible).map(el => {
+    // MUI's colour of a contained button: primary is blue, inherit is grey, error is red.
+    const tint = el => (/MuiButton-containedPrimary/.test(el.className) ? 'blue' : /MuiButton-containedInherit/.test(el.className) ? 'grey' :
+        /MuiButton-containedError/.test(el.className) ? 'red' : 'other');
+    const buttons = [...root.querySelectorAll('button.MuiButton-root, button.jfmod-iconbtn')].filter(visible).map(el => {
         const s = getComputedStyle(el);
         unsupported = null;
         const paintedBg = surface(el);
         const paintUnsupported = unsupported;
         const behind = el.parentElement ? surface(el.parentElement) : [0, 0, 0];
-        return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth,
-            borderColor: s.borderTopColor, danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!el.closest('.jfmod-secret-row'), boxText: el.closest('.jfmod-secret-row') ? getComputedStyle(el.closest('.jfmod-secret-row')).color : null,
+        const icon = el.classList.contains('jfmod-iconbtn');
+        const box = el.closest('.jfmod-secret-row');
+        const rect = el.getBoundingClientRect();
+        const boxRect = box?.getBoundingClientRect();
+        // The view a button belongs to: a dialog, a notice (the wizard's step notice, the Home banner), or a section card.
+        const dialog = el.closest('.MuiDialog-paper');
+        const notice = el.closest('.jfmod-notice');
+        const section = el.closest('.jfmod-check-section');
+        const view = dialog ? 'dialog' : notice ? 'notice' : section ? 'section ' + section.dataset.section : 'page';
+        return { text: icon ? '' : el.textContent.trim(), label: el.getAttribute('aria-label'), action: el.dataset.secretAction ?? null, icon,
+            variant: icon ? 'icon' : variant(el), tint: icon ? (el.classList.contains('jfmod-iconbtn-red') ? 'red' : 'grey') : tint(el),
+            bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth, borderColor: s.borderTopColor,
+            height: Math.round(rect.height * 10) / 10, width: Math.round(rect.width * 10) / 10,
+            centred: boxRect ? Math.abs((rect.top + rect.bottom) / 2 - (boxRect.top + boxRect.bottom) / 2) <= 2 : null,
+            inRow: !!el.closest('.jfmod-rowactions'), inSecret: !!box, inProwlarr: !!el.closest('[data-prowlarr="card"]'),
+            sectionHasSync: !!section?.querySelector('button[data-prowlarr="sync"]'), view,
             disabled: el.disabled, focused: el === document.activeElement,
+            outline: el === document.activeElement ? { style: s.outlineStyle, width: parseFloat(s.outlineWidth) } : null,
             paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
     });
     const parts = [...root.querySelectorAll('button, .MuiFormControl-root, .jfmod-secret-row, .fieldDescription, .jfmod-savemeta, .jfmod-state, .jfmod-notice, .jfmod-kv, .jfmod-brow, .jfmod-maprow, .jfmod-lead, .jfmod-grouptitle, .MuiFormControlLabel-root, a')]
@@ -144,7 +162,9 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
             const shorter = Math.min(a.r.height, b.r.height);
             if (iy > shorter * 0.5 && ix <= 1) {
                 const gapX = Math.max(a.r.left, b.r.left) - Math.min(a.r.right, b.r.right);
-                if (gapX < 6 && (a.el.matches('button, .jfmod-savemeta, .fieldDescription') && b.el.matches('button, .jfmod-savemeta, .fieldDescription'))) {
+                // Two buttons side by side keep at least the 8 px upstream's dialog actions keep (its Stacks keep 12).
+                const minGap = a.el.matches('button') && b.el.matches('button') ? 7.5 : 6;
+                if (gapX < minGap && (a.el.matches('button, .jfmod-savemeta, .fieldDescription') && b.el.matches('button, .jfmod-savemeta, .fieldDescription'))) {
                     tight.push(`${label(a.el)} | ${label(b.el)} (${Math.round(gapX)} px)`);
                 }
             }
@@ -174,70 +194,102 @@ const auditIdle = async (page, layout, rootSelector, { blur = true } = {}) => {
 };
 
 /**
- * The role each button of the settings area has, by its words (and, for Test, whether it sits in a list row): commits
- * fill, section actions are outlined, inline actions are text, Clear / Remove / Delete are red text. A button this map
- * does not know fails, so a new one has to be classified on purpose.
+ * Three kinds of button (user, 2026-10-07): red destroys, blue is the main action of its view, grey is everything else.
+ * The kind each button of the settings area must have, by its words and where it sits. Blue: Save (but Save mappings and
+ * the Prowlarr card's own Save are grey: the section's Save, or Sync now, is that view's main action), Continue, Set up,
+ * Add profile, Sync now, and Add indexer only when there is no Prowlarr source (then Sync now is the main action). Red:
+ * Clear, Remove, Delete and Restore stock now. A button these rules do not name is grey.
  */
-const ROLES = {
-    contained: ['Save', 'Saving…', 'Continue', 'Add Prowlarr'],
-    outlined: ['Test', 'Add mapping', 'Save mappings', 'Test import path', 'Run now', 'Restore stock now', 'Add indexer', 'Add profile', 'Sync now', 'Edit'],
-    text: ['Replace', 'Undo', 'Keep the saved one', 'Fix', 'Up', 'Make default', 'Cancel', 'Retry', 'Reload', 'Dismiss'],
-    danger: ['Clear', 'Remove', 'Delete']
-};
-const expectedFor = button => {
-    if (button.text === 'Test' && button.inRow) return 'text';
-    return Object.keys(ROLES).find(role => ROLES[role].includes(button.text)) ?? null;
+const RED = ['Clear', 'Remove', 'Delete', 'Restore stock now'];
+const BLUE = ['Save', 'Saving…', 'Continue', 'Set up', 'Add profile', 'Sync now'];
+const expectedTint = button => {
+    if (button.icon) return button.action === 'clear' ? 'red' : 'grey';
+    if (RED.includes(button.text)) return 'red';
+    if (button.text === 'Add indexer') return button.sectionHasSync ? 'grey' : 'blue';
+    if ((button.text === 'Save' || button.text === 'Saving…') && button.inProwlarr) return 'grey';
+    return BLUE.includes(button.text) ? 'blue' : 'grey';
 };
 const PRIMARY = 'rgb(0, 164, 220)';
 const ERROR = 'rgb(198, 40, 40)';
+const GREY = 'rgb(66, 66, 66)';
+const WHITE = 'rgb(255, 255, 255)';
 const ON_PRIMARY = 'rgba(0, 0, 0, 0.87)';
 /** MUI's dark-mode disabled text and disabled fill. */
 const DISABLED = 'rgba(255, 255, 255, 0.3)';
 const DISABLED_FILL = 'rgba(255, 255, 255, 0.12)';
-/** No fill: any colour at alpha 0 (a tint still fading out after a state change is the same). */
-const isClear = bg => /^rgba\(.*,\s*0\)$/.test(bg);
-/** A border in the primary hue, at least faintly visible (MUI draws outlined borders at half the primary's alpha). */
-const primaryBorder = colour => {
-    const [r, g, b, a = 1] = colour.match(/[\d.]+/g).map(Number);
-    return r === 0 && g === 164 && b === 220 && a >= 0.3;
-};
+/** What each kind computes to in the Dark theme, idle and enabled. */
+const PAINT = { blue: [PRIMARY, ON_PRIMARY], grey: [GREY, WHITE], red: [ERROR, WHITE] };
+/** The height of Save in each layout, read from the first section that has one; every labelled button must match it. */
+const saveHeight = {};
 /**
- * The variant class and what it computes to, idle and enabled: commits fill primary with dark text readable on it;
- * outlined and text actions are primary text on no fill, outlined with a visible primary border; danger is red text on no
- * fill. Disabled buttons show MUI's disabled grey. Every enabled non-danger button's painted text keeps a contrast of 3.
+ * Each button: filled (never text or outlined), the kind its words call for, the Dark theme's colours for that kind, text
+ * at 4.5:1 or more on its fill, and the height of Save (an icon button in a secret's box: at least 40 px, centred in the
+ * box). A focused button on the TV takes the focus fill; it is checked for contrast and a visible ring instead.
  */
-const looksWrong = button => {
-    const want = expectedFor(button);
-    // A focused control on the TV takes the focus fill; it is checked for contrast instead.
-    const idle = !button.focused;
-    const readable = contrast(button.paintedFg, button.paintedBg) >= 3;
-    const shape = {
-        contained: button.variant === 'contained' && button.borderWidth === '0px',
-        outlined: button.variant === 'outlined' && button.borderWidth === '1px',
-        text: button.variant === 'text' && button.borderWidth === '0px',
-        danger: button.variant === 'text' && button.borderWidth === '0px' && button.danger
-    }[want];
-    if (!shape || button.paintUnsupported) return true;
-    // Focused (the TV's fill in a dialog): whatever the fill, the text on it must stay readable.
-    if (!idle) return !button.disabled && !readable;
-    if (button.disabled) {
-        return button.color !== DISABLED || (want === 'contained' ? button.bg !== DISABLED_FILL : !isClear(button.bg)) ||
-            (want === 'outlined' && button.borderColor !== DISABLED_FILL);
+const looksWrong = (button, layoutName) => {
+    const want = expectedTint(button);
+    const reasons = [];
+    const ratio = contrast(button.paintedFg, button.paintedBg);
+    if (button.paintUnsupported) reasons.push('paint not read');
+    if (!button.icon && button.variant !== 'contained') reasons.push(`variant ${button.variant}`);
+    if (button.tint !== want) reasons.push(`kind ${button.tint}, want ${want}`);
+    if (button.icon) {
+        if (button.height < 40 || button.width < 40) reasons.push('icon under 40 px');
+        if (button.centred === false) reasons.push('icon not centred in its box');
+    } else if (saveHeight[layoutName] && Math.abs(button.height - saveHeight[layoutName]) > 0.6) {
+        reasons.push(`height ${button.height}, Save is ${saveHeight[layoutName]}`);
     }
-    switch (want) {
-        case 'contained': return button.bg !== PRIMARY || button.color !== ON_PRIMARY || !readable;
-        case 'outlined': return !isClear(button.bg) || button.color !== PRIMARY || !primaryBorder(button.borderColor) || !readable;
-        // On the secret's filled box, Replace and Undo take the box's own text colour (white in the dark theme), as on the
-        // Dashboard page.
-        case 'text': return !isClear(button.bg) || button.color !== (button.inSecret ? button.boxText : PRIMARY) || !readable;
-        // The theme's error red on the dark paper is about 2:1, as on the Dashboard page; it is red by design, not gated on contrast.
-        default: return !isClear(button.bg) || button.color !== ERROR;
+    if (button.focused) {
+        if (!button.disabled && ratio < 4.5) reasons.push(`focused contrast ${ratio.toFixed(2)}`);
+    } else if (button.disabled) {
+        if (button.color !== DISABLED || button.bg !== DISABLED_FILL) reasons.push('not MUI disabled grey');
+    } else {
+        const [bg, fg] = PAINT[want];
+        if (button.bg !== bg || button.color !== fg) reasons.push(`colours ${button.bg} / ${button.color}`);
+        if (ratio < 4.5) reasons.push(`contrast ${ratio.toFixed(2)}`);
     }
+    return reasons.length ? reasons : null;
 };
 const checkButtons = (layout, where, buttons) => {
-    const wrong = buttons.filter(looksWrong).map(button => ({ ...button, expected: expectedFor(button) }));
-    record(layout, `${where}: every button carries its deliberate variant and look (${buttons.length} buttons)`, wrong.length === 0,
-        wrong.length ? wrong : undefined);
+    if (!saveHeight[layout]) {
+        const save = buttons.find(button => button.text === 'Save' && !button.inProwlarr);
+        if (save) saveHeight[layout] = save.height;
+    }
+    const wrong = buttons.map(button => ({ button, reasons: looksWrong(button, layout) })).filter(entry => entry.reasons)
+        .map(({ button, reasons }) => ({ text: button.text || button.label, reasons, view: button.view }));
+    record(layout, `${where}: every button is filled, of its kind (red, blue or grey), readable and the size of Save (${buttons.length} buttons)`,
+        wrong.length === 0, wrong.length ? wrong : undefined);
+    const blues = {};
+    for (const button of buttons) if (button.tint === 'blue') blues[button.view] = [...(blues[button.view] ?? []), button.text];
+    const crowded = Object.entries(blues).filter(([, list]) => list.length > 1);
+    record(layout, `${where}: at most one blue button per view`, crowded.length === 0, crowded.length ? Object.fromEntries(crowded) : blues);
+};
+
+/**
+ * Hover: each enabled button in turn, under the pointer once its colour transition has finished; its text must stay at
+ * 4.5:1 on the hover fill. Desktop only, where hover exists.
+ */
+const checkHover = async (page, layout, name, where, rootSelector = '.jfmod-check-main') => {
+    const count = await page.evaluate(selector => [...document.querySelectorAll(selector)].pop()
+        ?.querySelectorAll('button.MuiButton-root:not(:disabled), button.jfmod-iconbtn:not(:disabled)').length ?? 0, rootSelector);
+    const failures = [];
+    let measured = 0;
+    for (let i = 0; i < count; i++) {
+        const target = page.locator(rootSelector).last().locator('button.MuiButton-root:not(:disabled), button.jfmod-iconbtn:not(:disabled)').nth(i);
+        if (!await target.isVisible().catch(() => false)) continue;
+        await target.hover();
+        await page.waitForTimeout(350);
+        const result = await audit(page, rootSelector);
+        const hovered = await target.evaluate(el => ({ text: el.textContent.trim() || el.getAttribute('aria-label'), hovered: el.matches(':hover') }));
+        const entry = result.buttons.find(button => (button.text || button.label) === hovered.text && !button.disabled);
+        if (!entry || !hovered.hovered) continue;
+        measured++;
+        const ratio = contrast(entry.paintedFg, entry.paintedBg);
+        if (ratio < 4.5 || entry.paintUnsupported) failures.push({ text: hovered.text, ratio: Number(ratio.toFixed(2)), bg: entry.bg });
+    }
+    await page.mouse.move(1, layout.viewport.height - 1);
+    record(name, `${where}: every enabled button keeps 4.5:1 under the pointer (${measured} measured)`, failures.length === 0 && (measured > 0 || count === 0),
+        failures.length ? failures : undefined);
 };
 
 /** WCAG contrast of two painted colours, each [r, g, b] already composited over what is behind it. */
@@ -252,6 +304,65 @@ const contrast = (fg, bg) => {
     };
     const [a, b] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
     return (a + 0.05) / (b + 0.05);
+};
+
+/**
+ * The Dashboard page (plugin configPage.html) follows the same three kinds with upstream's legacy classes: blue
+ * `raised button-submit` (Save; New indexer and New profile, the main action of sections without a Save), red
+ * `raised button-delete` (Clear, Remove, Delete, Delete this client, Restore stock page now), grey `raised` for the rest;
+ * the secret's actions are round icons. Each visible section is read in turn: kinds, one blue at most, every labelled
+ * button the height of Save, icons at least 40 px, text at 4.5:1.
+ */
+const DASH_RED = ['Remove', 'Delete', 'Delete this client', 'Restore stock page now'];
+const DASH_BLUE = ['Save', 'New indexer', 'New profile'];
+const dashboardSection = page => page.evaluate(() => {
+    const section = [...document.querySelectorAll('#JellyfinModConfigPage .jfmod-check-section')].find(el => !el.hidden);
+    if (!section) return null;
+    const rgb = colour => colour.match(/[\d.]+/g).map(Number);
+    const lum = ([r, g, b]) => [r, g, b].map(v => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const save = section.querySelector('[data-submit]');
+    const saveHeight = save ? save.getBoundingClientRect().height : null;
+    const buttons = [...section.querySelectorAll('button')].filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && !el.classList.contains('jfmod-next') && !el.classList.contains('jfmod-visually-hidden');
+    }).map(el => {
+        const s = getComputedStyle(el);
+        const bg = rgb(s.backgroundColor);
+        const fgRaw = rgb(s.color);
+        const alpha = fgRaw[3] ?? 1;
+        const fg = fgRaw.slice(0, 3).map((v, i) => v * alpha + bg[i] * (1 - alpha));
+        const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+        const icon = el.classList.contains('jfmod-iconbtn');
+        let kind = 'other';
+        if (el.classList.contains('button-delete') || el.classList.contains('jfmod-iconbtn-red')) kind = 'red';
+        else if (el.classList.contains('button-submit')) kind = 'blue';
+        else if (el.classList.contains('raised') || el.classList.contains('jfmod-iconbtn-grey')) kind = 'grey';
+        return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
+            width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), opaque: (bg[3] ?? 1) === 1, refused: el.getAttribute('aria-disabled') === 'true' };
+    });
+    return { id: section.dataset.section, saveHeight, buttons };
+});
+const checkDashboardSection = (layout, view) => {
+    const want = button => {
+        if (button.icon) return button.text === 'Clear' ? 'red' : 'grey';
+        if (DASH_RED.includes(button.text)) return 'red';
+        return DASH_BLUE.includes(button.text) ? 'blue' : 'grey';
+    };
+    const reference = view.saveHeight ?? view.buttons.find(button => !button.icon)?.height;
+    const wrong = view.buttons.map(button => {
+        const reasons = [];
+        if (button.kind !== want(button)) reasons.push(`kind ${button.kind}, want ${want(button)}`);
+        if (button.icon ? button.height < 40 || button.width < 40 : Math.abs(button.height - reference) > 0.6) reasons.push(`size ${button.width}×${button.height}`);
+        if (!button.refused && (!button.opaque || button.contrast < 4.5)) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
+        return reasons.length ? { text: button.text, reasons } : null;
+    }).filter(Boolean);
+    record(layout, `dashboard page ${view.id}: every button is red, blue or grey by its role, the size of Save and readable (${view.buttons.length})`,
+        wrong.length === 0, wrong.length ? wrong : undefined);
+    const blues = view.buttons.filter(button => button.kind === 'blue').map(button => button.text);
+    record(layout, `dashboard page ${view.id}: at most one blue button`, blues.length <= 1, blues);
 };
 
 const shot = async (page, name) => {
@@ -274,6 +385,11 @@ for (const name of only) {
             await page.waitForFunction(() => document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
             await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
         }
+        // Save's height in this layout, the size every labelled button must have.
+        await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
+        await page.locator('button[data-submit="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
+        saveHeight[name] = await page.locator('button[data-submit="discovery"]').evaluate(el => Math.round(el.getBoundingClientRect().height * 10) / 10);
+        record(name, `Save is a full-size button (${saveHeight[name]} px high)`, saveHeight[name] >= 34, saveHeight[name]);
         for (const id of SECTION_IDS) {
             await page.evaluate(section => { location.hash = '#/catalog/settings?section=' + section; }, id);
             await page.locator(`.jfmod-check-section[data-section="${id}"]`).waitFor({ state: 'visible', timeout: 30000 });
@@ -281,17 +397,88 @@ for (const name of only) {
             const file = await shot(page, `${name}-settings-${id}`);
             const result = await auditIdle(page, layout);
             checkButtons(name, `settings ${id}`, result.buttons);
+            if (name === 'desktop') await checkHover(page, layout, name, `settings ${id}`);
             record(name, `settings ${id}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `settings ${id}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
             record(name, `settings ${id}: no horizontal scroll`, result.overflow <= 0, result.overflow > 0 ? result.overflow : undefined);
+            // The section's own actions never crowd its heading: beside it, at least 12 px away; or on a line below it.
+            const crowding = await page.evaluate(section => {
+                const head = document.querySelector(`.jfmod-check-section[data-section="${section}"] .jfmod-check-sechead`);
+                const title = head?.querySelector('h2')?.getBoundingClientRect();
+                if (!title) return [];
+                return [...head.querySelectorAll('.jfmod-sec-actions button')].map(el => el.getBoundingClientRect()).filter(r => {
+                    const besides = r.top < title.bottom && r.bottom > title.top;
+                    return besides && r.left - title.right < 12;
+                }).map(r => Math.round(r.left - title.right));
+            }, id);
+            record(name, `settings ${id}: the section's actions keep clear of its heading`, crowding.length === 0, crowding.length ? crowding : undefined);
             console.log('  shot', file);
+        }
+        if (name === 'desktop') {
+            // Every shipped colour scheme, switched as upstream's themeManager does (the data-theme attribute MUI's variables
+            // follow): every enabled button's text keeps 4.5:1 on its fill at rest and under the pointer. Dark again after.
+            for (const theme of ['light', 'appletv', 'blueradiance', 'purplehaze', 'wmc', 'dark']) {
+                await page.evaluate(id => document.documentElement.setAttribute('data-theme', id), theme);
+                for (const id of ['discovery', 'indexers', 'interface']) {
+                    await page.evaluate(section => { location.hash = '#/catalog/settings?section=' + section; }, id);
+                    await page.locator(`.jfmod-check-section[data-section="${id}"]`).waitFor({ state: 'visible', timeout: 30000 });
+                    await page.waitForTimeout(500);
+                    const result = await auditIdle(page, layout);
+                    const weak = result.buttons.filter(button => !button.disabled && (button.paintUnsupported || contrast(button.paintedFg, button.paintedBg) < 4.5))
+                        .map(button => ({ text: button.text || button.label, ratio: Number(contrast(button.paintedFg, button.paintedBg).toFixed(2)), bg: button.bg, color: button.color }));
+                    record(name, `theme ${theme}, ${id}: every enabled button keeps 4.5:1 at rest (${result.buttons.length})`, weak.length === 0, weak.length ? weak : undefined);
+                    await checkHover(page, layout, name, `theme ${theme}, ${id}`);
+                    if (id === 'indexers') console.log('  shot', await shot(page, `${name}-theme-${theme}-indexers`));
+                }
+            }
         }
         // The secret's Replace state and its Clear-pending state, put back with Keep / Undo; nothing is saved.
         await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
         await page.locator('.jfmod-check-section[data-section="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
         await page.waitForTimeout(500);
-        if (await page.locator('.jfmod-secret-row button', { hasText: 'Replace' }).count()) {
-            await page.locator('.jfmod-secret-row button', { hasText: 'Replace' }).click();
+        // The token's box (user, 2026-10-07): Test, Replace and Clear as icons in that order, named, at least 40 px, centred,
+        // Clear red; no separate Test button; the test's words under the box.
+        const box = await page.evaluate(() => {
+            const section = document.querySelector('.jfmod-check-section[data-section="discovery"]');
+            const row = section.querySelector('.jfmod-secret-row');
+            return {
+                actions: row ? [...row.querySelectorAll('button')].map(el => ({ action: el.dataset.secretAction ?? null, label: el.getAttribute('aria-label'), text: el.textContent.trim() })) : null,
+                standaloneTest: [...section.querySelectorAll('button')].filter(el => !el.closest('.jfmod-secret-row') && /^Test$/.test(el.textContent.trim())).length,
+                help: section.querySelector('.jfmod-secret-below .fieldDescription')?.textContent ?? null
+            };
+        });
+        record(name, 'discovery: the token box holds Test token, Replace and Clear as icons, in that order',
+            JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
+        record(name, 'discovery: no standalone Test button; the test is described under the box', box.standaloneTest === 0 &&
+            /Asks TMDB whether it accepts the saved token/.test(box.help ?? ''), box);
+        if (layout.tv) {
+            // Arrow keys walk the box left to right: Test, Replace, Clear, each with a visible ring.
+            await page.locator('[data-secret-action="test"]').focus();
+            const walked = [];
+            for (let step = 0; step < 3; step++) {
+                walked.push(await page.evaluate(() => {
+                    const el = document.activeElement;
+                    const s = getComputedStyle(el);
+                    return { action: el.dataset.secretAction ?? el.textContent.trim(), ring: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1 };
+                }));
+                if (step < 2) {
+                    await page.keyboard.press('ArrowRight');
+                    await page.waitForTimeout(200);
+                }
+            }
+            record(name, 'discovery: the arrows walk Test, Replace, Clear, each with a visible focus ring',
+                JSON.stringify(walked) === JSON.stringify([{ action: 'test', ring: true }, { action: 'replace', ring: true }, { action: 'clear', ring: true }]), walked);
+            console.log('  shot', await shot(page, `${name}-settings-discovery-clear-focus`));
+            await page.evaluate(() => document.activeElement?.blur?.());
+        }
+        if (name === 'desktop') {
+            await page.locator('[data-secret-action="clear"]').hover();
+            const tip = page.locator('[role="tooltip"]', { hasText: 'Clear' });
+            record(name, 'discovery: the icon buttons show their names as tooltips', await tip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false));
+            await page.mouse.move(1, layout.viewport.height - 1);
+        }
+        if (await page.locator('.jfmod-secret-row [data-secret-action="replace"]').count()) {
+            await page.locator('.jfmod-secret-row [data-secret-action="replace"]').click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-replacing`));
             const replacing = await auditIdle(page, layout);
@@ -299,7 +486,7 @@ for (const name of only) {
             record(name, 'discovery while replacing: no overlaps or touching', !replacing.overlaps.length && !replacing.tight.length,
                 [...replacing.overlaps, ...replacing.tight]);
             await page.locator('.jfmod-secret button', { hasText: 'Keep the saved one' }).click();
-            await page.locator('.jfmod-secret-row button', { hasText: 'Clear' }).click();
+            await page.locator('.jfmod-secret-row [data-secret-action="clear"]').click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-clearing`));
             const clearing = await auditIdle(page, layout);
@@ -313,11 +500,11 @@ for (const name of only) {
         if (name === 'desktop') {
             // The read-only TMDB test still answers, and a save with nothing changed round-trips the revision.
             const before = await page.locator('[data-savemeta="discovery"]').innerText();
-            await page.locator('button[data-test="discovery"]').click();
-            const notice = page.locator('.jfmod-check-section[data-section="discovery"] .jfmod-notice');
+            await page.locator('.jfmod-secret-row button[data-test="discovery"]').click();
+            const notice = page.locator('.jfmod-check-section[data-section="discovery"] [data-secret-test-result] .jfmod-notice');
             await notice.waitFor({ state: 'visible', timeout: 30000 });
             const said = await notice.innerText();
-            record(name, 'discovery Test reports a sentence and a code', /\(\w+\)/.test(said), said);
+            record(name, 'discovery Test, from the icon in the box, says "TMDB accepted the token. (ok)" under the box', /TMDB accepted the token\. \(ok\)/.test(said), said);
             await page.locator('button[data-submit="discovery"]').click();
             await page.waitForFunction(() => /Saved/.test(document.querySelector('.jfmod-check-section[data-section="discovery"] .jfmod-notice')?.textContent ?? ''),
                 undefined, { timeout: 30000 });
@@ -364,14 +551,15 @@ for (const name of only) {
             checkButtons(name, `${section} dialog`, result.buttons);
             record(name, `${section} dialog: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `${section} dialog: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
+            if (name === 'desktop') await checkHover(page, layout, name, `${section} dialog`, '.MuiDialog-paper');
             if (layout.tv) {
                 let reached = false;
                 for (let press = 0; press < 60 && !reached; press++) {
                     // Down through the editor; Right along a row that holds a red action (the secret's Replace | Clear).
-                    const inDangerRow = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-secret-row, .jfmod-qrow')?.querySelector('.jfmod-danger-text'));
+                    const inDangerRow = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-secret-row, .jfmod-qrow')?.querySelector('.MuiButton-containedError, .jfmod-iconbtn-red'));
                     await page.keyboard.press(inDangerRow ? 'ArrowRight' : 'ArrowDown');
                     await page.waitForTimeout(150);
-                    reached = await page.evaluate(() => !!document.activeElement?.matches('.MuiDialog-paper .jfmod-danger-text'));
+                    reached = await page.evaluate(() => !!document.activeElement?.matches('.MuiDialog-paper .MuiButton-containedError, .MuiDialog-paper .jfmod-iconbtn-red'));
                 }
                 record(name, `${section} dialog: a red action is reachable by the arrows`, reached);
                 if (reached) {
@@ -381,8 +569,14 @@ for (const name of only) {
                     const focused = focusedResult.buttons.find(button => button.focused);
                     const ratio = focused && !focused.paintUnsupported ? contrast(focused.paintedFg, focused.paintedBg) : 0;
                     console.log('  shot', await shot(page, `${name}-settings-${section}-dialog-focus`));
-                    record(name, `${section} dialog: the focused red action is readable (contrast ${ratio.toFixed(2)} >= 3)`, ratio >= 3 && !!focused?.danger,
-                        focused);
+                    record(name, `${section} dialog: the focused red action is readable (contrast ${ratio.toFixed(2)} >= 4.5) with a visible ring`,
+                        ratio >= 4.5 && focused?.tint === 'red' && focused.outline?.style !== 'none' && focused.outline?.width >= 1, focused);
+                    // The dialog's blue Save, focused: its fill is the focus fill's own blue, so the ring is what shows it.
+                    await page.locator('.MuiDialog-paper').last().locator('.MuiDialogActions-root .MuiButton-containedPrimary').focus();
+                    await page.waitForTimeout(400);
+                    const saveFocus = (await audit(page, '.MuiDialog-paper')).buttons.find(button => button.focused);
+                    record(name, `${section} dialog: the focused Save shows a ring and stays readable`, !!saveFocus && saveFocus.outline?.style !== 'none' &&
+                        saveFocus.outline?.width >= 1 && contrast(saveFocus.paintedFg, saveFocus.paintedBg) >= 4.5, saveFocus);
                 }
             }
             await dialog.locator('button', { hasText: 'Cancel' }).evaluate(el => el.click());
@@ -443,6 +637,48 @@ for (const name of only) {
                 if (name === 'mobile') await page.keyboard.press('Escape');
                 await page.waitForTimeout(500);
                 console.log('  shot', await shot(page, `${name}-dashboard-page`));
+                const ids = await page.evaluate(() => [...document.querySelectorAll('#JellyfinModConfigPage .jfmod-check-section')].map(el => el.dataset.section));
+                for (const id of ids) {
+                    await page.evaluate(section => {
+                        const picker = document.querySelector('#JfmodSectionPicker');
+                        const step = document.querySelector(`#JellyfinModConfigPage .jfmod-step[data-section="${section}"]`);
+                        if (step && step.getBoundingClientRect().width > 0) step.click();
+                        else if (picker) {
+                            picker.value = section;
+                            picker.dispatchEvent(new Event('change'));
+                        }
+                    }, id);
+                    await page.waitForTimeout(600);
+                    const view = await dashboardSection(page);
+                    if (view?.id !== id) {
+                        record(name, `dashboard page ${id}: opened`, false, view?.id);
+                        continue;
+                    }
+                    checkDashboardSection(name, view);
+                    const crowding = await page.evaluate(() => {
+                        const section = [...document.querySelectorAll('#JellyfinModConfigPage .jfmod-check-section')].find(el => !el.hidden);
+                        const title = section?.querySelector('.jfmod-check-sechead h2')?.getBoundingClientRect();
+                        if (!title) return [];
+                        return [...section.querySelectorAll('.jfmod-sec-actions button')].map(el => el.getBoundingClientRect())
+                            .filter(r => r.width > 0 && r.top < title.bottom && r.bottom > title.top && r.left - title.right < 12)
+                            .map(r => Math.round(r.left - title.right));
+                    });
+                    record(name, `dashboard page ${id}: the section's actions keep clear of its heading`, crowding.length === 0, crowding.length ? crowding : undefined);
+                    if (id === 'discovery') {
+                        console.log('  shot', await shot(page, `${name}-dashboard-discovery`));
+                        const actions = await page.evaluate(() => [...document.querySelectorAll('[data-secret-slot="TmdbReadAccessToken"] .jfmod-secret-row button')]
+                            .map(el => [el.dataset.secretAction ?? null, el.getAttribute('aria-label')]));
+                        record(name, 'dashboard page: the token box holds Test token, Replace and Clear as icons, in that order',
+                            JSON.stringify(actions) === JSON.stringify([['test', 'Test token'], ['replace', 'Replace'], ['clear', 'Clear']]), actions);
+                        if (name === 'desktop') {
+                            await page.locator('#TestDiscovery').click();
+                            const result = page.locator('[data-notice="discovery-test"] .jfmod-notice');
+                            const said = await result.waitFor({ state: 'visible', timeout: 30000 }).then(() => result.innerText(), () => '');
+                            record(name, 'dashboard page: Test token says "TMDB accepted the token. (ok)" under the box', /TMDB accepted the token\. \(ok\)/.test(said), said);
+                        }
+                    }
+                }
+                await page.evaluate(() => { try { sessionStorage.removeItem('jfmod-settings-section'); } catch { /* none */ } });
             }
         }
         record(name, 'no page errors', errors.length === 0, errors.length ? errors : undefined);
