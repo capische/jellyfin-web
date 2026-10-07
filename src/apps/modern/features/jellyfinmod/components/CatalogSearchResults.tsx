@@ -34,6 +34,9 @@ interface Props {
 
 type MediaType = 'movie' | 'series';
 
+/** A media type as a button's label says it, in Title Case (UX §12.1). */
+const MEDIA_WORDS: Record<MediaType, string> = { movie: 'Movie', series: 'Series' };
+
 const cardOptions = {
     shape: CardShape.AutoOverflow,
     scalable: true,
@@ -383,7 +386,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
                 key={mediaType} type='button' className={flatButtonClass()} disabled={discovery[index].isFetching}
                 // eslint-disable-next-line react/jsx-no-bind
                 onClick={() => { discovery[index].fetchNextPage().catch(console.error); }}>
-                {discovery[index].isFetching ? 'Loading…' : `More ${mediaType} results from TMDB`}
+                {discovery[index].isFetching ? 'Loading…' : `More ${MEDIA_WORDS[mediaType]} Results from TMDB`}
             </button>)}
         </section>}
         {allEmpty && !discoveryPending && !discoveryFailed && <div className='noItemsMessage centerMessage'>{globalize.translate('SearchResultsEmpty', query)}</div>}

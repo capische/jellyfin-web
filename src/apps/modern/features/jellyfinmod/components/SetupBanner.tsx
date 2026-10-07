@@ -39,7 +39,7 @@ const SetupBanner: FC = () => {
                 <i aria-hidden='true' />
                 <span className='jfmod-notice-text'>JellyfinMod is not set up yet: {open} step(s) left before titles can be grabbed.</span>
                 <span className='jfmod-notice-action'>
-                    <Button variant='contained' href='#/catalog/settings/setup'>Set up</Button>
+                    <Button variant='contained' href='#/catalog/settings/setup'>Set Up</Button>
                     <Button variant='contained' color='inherit' onClick={dismiss}>Dismiss</Button>
                 </span>
             </div>

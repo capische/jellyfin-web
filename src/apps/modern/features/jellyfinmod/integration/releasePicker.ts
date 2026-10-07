@@ -47,7 +47,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         + '<h3 class="formDialogHeaderTitle"></h3></div>'
         + '<div class="formDialogContent smoothScrollY"><div class="jfmod-releaseDialogContent"></div></div>';
     const heading = dlg.querySelector('.formDialogHeaderTitle');
-    if (heading) heading.textContent = (options.intent === 'addVersion' ? 'Another quality for ' : 'Releases for ') + options.title;
+    if (heading) heading.textContent = (options.intent === 'addVersion' ? 'Another Quality for ' : 'Releases for ') + options.title;
     const close = () => dialogHelper.close(dlg);
     dlg.querySelector('.btnCancel')?.addEventListener('click', close);
     const content = dlg.querySelector<HTMLElement>('.jfmod-releaseDialogContent')!;

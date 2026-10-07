@@ -19,7 +19,7 @@ import 'material-design-icons-iconfont';
 const DIALOG_HTML = '<div class="formDialogHeader">'
     + '<button is="paper-icon-button-light" class="btnCancel autoSize" tabindex="-1" title="Back">'
     + '<span class="material-icons arrow_back" aria-hidden="true"></span></button>'
-    + '<h3 class="formDialogHeaderTitle">Remove from queue</h3></div>'
+    + '<h3 class="formDialogHeaderTitle">Remove from Queue</h3></div>'
     + '<div class="formDialogContent smoothScrollY"><div class="dialogContentInner dialog-content-centered jfmod-queueRemove">'
     + '<p class="jfmod-queueRemoveText"></p>'
     + '<div class="checkboxContainer checkboxContainer-withDescription"><label>'
@@ -71,7 +71,7 @@ export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {
     if (!isAdmin) return [];
     const items = [{ id: 'remove', name: 'Remove', icon: 'delete' }];
     if (isRetryable(row.state)) items.push({ id: 'retry', name: 'Retry', icon: 'refresh' });
-    if (row.client?.openUrl) items.push({ id: 'open', name: 'Open in client', icon: 'open_in_new' });
+    if (row.client?.openUrl) items.push({ id: 'open', name: 'Open in Client', icon: 'open_in_new' });
     return items;
 };
 
@@ -116,7 +116,7 @@ export const openQueueRowMenu = async ({ api, row, isAdmin, positionTo, onChange
 /** A context menu for a `grabbed` or `downloading` catalog card with a single mod action (P5.I8). */
 export const openInFlightCardMenu = async (positionTo: HTMLElement) => {
     try {
-        const id = await actionsheet.show({ items: [{ id: 'queue', name: 'View queue', icon: 'download' }], positionTo });
+        const id = await actionsheet.show({ items: [{ id: 'queue', name: 'View Queue', icon: 'download' }], positionTo });
         if (id === 'queue') window.location.hash = '#' + QUEUE_ROUTE;
     } catch {
         // Closed without a choice.
