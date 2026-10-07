@@ -166,6 +166,19 @@ the plugin suites, and the Playwright runner in `scripts/jellyfinmod-e2e` extend
   series pages are unchanged, apart from the two drops that apply to every detail page (no "Automatic removal is
   off.", no Search now).
 
+- **UI rules (user, 2026-10-08), binding on these pages.** (a) Buttons, titles and menu entries use Jellyfin-style
+  Title Case; short words (a, an, the, and, but, or, nor, as, at, by, for, from, in, into, of, on, to, via, with) stay
+  lowercase unless first or last; descriptions, status text and field labels stay sentence case: "Get a Release", "Get
+  Another Quality", "Remove After Watching…", "Remove This Version" / "Remove the Last Copy", "Remove Entry", "Refresh
+  Metadata", "Monitor" / "Stop Monitoring", "Keep" / "Stop Keeping". (b) Actions on a list row are round, icon-only
+  buttons of at least 2.5em (40px at the 16px desktop root; TV and mobile scale it), with an aria-label naming the row
+  ("Keep the 1080p file", "Remove the 2160p file", "History of the 1080p file"), a title tooltip and the TV focus ring;
+  grey, red when they destroy (the cross), the pin in primary while kept. This supersedes step 2's "60% opacity until
+  hovered". The file-less series page's episode rows get the same round actions (Search Releases, Monitor). (c) Full-size
+  buttons are red (destroys), blue (the view's one main action) or grey (the rest): the file-less page's raised "Get a
+  Release" and the series pages' "Search Releases" are blue, "Remove Entry" red, the others grey. The labels in the steps
+  above are written in the old sentence case; the page uses these rules.
+
 ## Implementation choices — proposed, not user-approved (2026-10-07)
 
 The spec is silent on these; each is the smallest additive choice and changes nothing the user
@@ -275,9 +288,13 @@ Run 2026-10-08 on 18096 (`jellyfinmod-test`), Chromium 153.0.8010.12 then Google
   limit after two findings, both fixed; re-review 2 of `4a3dc1c002..9699443e28` and the plugin diff: CHANGES REQUESTED
   (P1 and three P2 in the fixture tool, P2 in the menu wrap, P2 in the badge clock, P2 and P3 in the runner; no plugin
   finding), all fixed; re-review 3 of that fix delta: every finding confirmed fixed, two left in the fixture tool (P2 a
-  404 on releasing a Keep treated as resolved, P3 a failed Keep not retried), both fixed afterwards; their re-review waits
-  for the Codex 5-hour window (at the 80% stop after re-review 3). Records: the session scratchpad
-  `review-detailfix.md`, `review-detailfix-delta1.md` (stopped at the limit), `-delta2.md`, `-delta3.md`.
+  404 on releasing a Keep treated as resolved, P3 a failed Keep not retried), both fixed afterwards; re-review 4 of
+  `77b1e78af0..6767cec591` (those two fixes and the UI rules of 2026-10-08): both fixture-tool findings confirmed fixed,
+  no P1 or P2, four P3 (a fallback pin's accessible name did not name its file; a monitored episode's bookmark turned
+  primary; the series page's TV class was read once at module load; the runner's colour and tooltip checks accepted
+  wrong values), all fixed; re-review 5 of that delta `6767cec591..121cc632e3`: APPROVE, no findings. Records: the
+  session scratchpad `review-detailfix.md`, `review-detailfix-delta1.md` (stopped at the limit), `-delta2.md` to
+  `-delta5.md`.
 
 ### State at hand-over — 2026-10-08
 
@@ -287,7 +304,19 @@ Run 2026-10-08 on 18096 (`jellyfinmod-test`), Chromium 153.0.8010.12 then Google
 - **18096** runs that DLL and the web bundle `2de0648244d8`; migrations `PhaseNineRatings`, `PhaseNineRatingsIdentity`,
   `DetailFileHistory`; retention off; no fixtures (views Movies and Shows, checked after a restart); backup
   `/mnt/4tb/jellyfin-mod/test/build/dd-plug-backup` (its database lacks `DetailFileHistory`).
-- **Open:** the queue line during a grab (needs a download client on the instance); the Codex re-review of the last
-  fixture-tool fix; the user's acceptance and rulings on choices 7, 8 and 12; republishing is the user's decision.
+- **UI rules of 2026-10-08** (Title Case, round row actions, button kinds): re-checked live on 18096 (lease held by
+  this session, 08 Oct 10:13–10:22 Sydney) with the tmp DLL (sha256 `1193bd07a99cda40…`, re-applying
+  `DetailFileHistory`) and bundle `8c17355c3aba` (web `0c23a885e4`): one-file, two-file, movie, file-less, window dialog
+  and the cross, desktop, mobile, TV 1080 and 720, admin and user: 378 passed, 0 failed in Chromium and 378 passed,
+  0 failed in real Chrome. Row actions 41px on desktop, 40px on mobile, 56px on TV; grey `rgba(255,255,255,0.7)`, cross
+  `rgb(198,40,40)`. The first run found that on TV, Down from the Video value landed on the first row's history icon
+  (the 2.5em icons stood taller than the row's button); rows now stretch to the icons' height so Down lands on the row.
+  Afterwards: fixtures removed, views Movies and Shows after a restart, retention off. 18096 was then handed back to
+  Phase 9 with this DLL and bundle in place; `build/dd-plug-backup` holds Phase 9's state from before this deploy
+  (migrations ending at `PhaseNineRatingsIdentity`), and the older backup is `build/dd-plug-backup-20261007`.
+- **Open:** the queue line during a grab (needs a download client on the instance); a live re-run of the re-review 4
+  fixes (fallback pin names, the bookmark's colour, the series page's TV class, the stricter runner checks), which needs
+  the 18096 lease (held by Phase 9 when they were made); the user's acceptance and rulings on choices 7, 8 and 12;
+  republishing is the user's decision.
 
 

@@ -98,7 +98,8 @@
 
 .jfmod-fileRow {
     display: flex;
-    align-items: center;
+    // The row's own button is as tall as its icons, so the TV's Down from the Video value lands on the row, not an icon.
+    align-items: stretch;
 }
 
 .jfmod-fileRow--selected {
@@ -107,7 +108,7 @@
 
 .jfmod-fileChoose {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex: 1 1 auto;
     padding: 0.45em 0.8em;
     border: 0;
@@ -170,23 +171,20 @@
     text-transform: uppercase;
 }
 
-// The row's icons: upstream's icon buttons, smaller, dimmed until hovered or focused; always full on the TV.
+// The row's actions (user rules, 2026-10-08): upstream's round icon buttons, icon only, at least 2.5em across (40px at the
+// 16px desktop root, scaling with TV's 125% and mobile's 90%): grey by default, red when they destroy, the pin in primary
+// while the file is kept. Colours from the base theme: text-secondary, error #c62828, primary #00a4dc.
 .jfmod-fileIcons {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
     margin-left: 0.4em;
-    font-size: 0.72em;
+    font-size: 1em;
 }
 
 .jfmod-fileIcon {
     margin: 0 0.1em;
-    opacity: 0.6;
-
-    &:hover,
-    &:focus {
-        opacity: 1;
-    }
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 
     &:focus {
         box-shadow: 0 0 0 0.15em #00a4dc;
@@ -197,13 +195,23 @@
     }
 }
 
-.jfmod-fileIcon--tv {
-    opacity: 1;
-}
-
 .jfmod-fileIcon--on {
     color: #00a4dc;
-    opacity: 1;
+}
+
+.jfmod-fileIcon--danger {
+    color: var(--jf-palette-error-main, #c62828);
+}
+
+// The stock icon button turns its glyph primary blue on hover, which outranks the plain red above; the remove button stays red
+// and takes a red tint, so a destructive action never looks like the safe ones (user, 2026-10-10).
+.jfmod-fileIcons > .jfmod-fileIcon.jfmod-fileIcon--danger:hover,
+.jfmod-fileIcons > .jfmod-fileIcon.jfmod-fileIcon--danger:focus {
+    color: var(--jf-palette-error-main, #c62828);
+}
+
+.jfmod-fileIcons > .jfmod-fileIcon.jfmod-fileIcon--danger:hover {
+    background-color: rgba(198, 40, 40, 0.2);
 }
 
 .jfmod-fileIcon[aria-disabled='true'] {

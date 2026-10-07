@@ -213,9 +213,9 @@ async function checkHeaderIcon(page, layout, label, admin) {
     record(layout, `${label}: Get a release icon in the header row`, facts.present, JSON.stringify(facts));
     if (!facts.present) return;
     record(layout, `${label}: icon sits before Favorite`, facts.beforeFavorite);
-    record(layout, `${label}: icon is a stock detailButton with cloud_download, titled "Get a release"`,
+    record(layout, `${label}: icon is a stock detailButton with cloud_download, titled "Get a Release"`,
         /\bbutton-flat\b/.test(facts.classes) && /\bdetailButton\b/.test(facts.classes) && /cloud_download/.test(facts.icon)
-        && facts.title === 'Get a release' && (!isTv(layout) || /show-focus/.test(facts.classes)), facts.classes);
+        && facts.title === 'Get a Release' && (!isTv(layout) || /show-focus/.test(facts.classes)), facts.classes);
     const sameSize = facts.stock.length === 0 || facts.stock.every(([w, h]) => Math.abs(w - facts.size[0]) <= 1 && Math.abs(h - facts.size[1]) <= 1);
     record(layout, `${label}: icon is exactly as big as its stock neighbours`, sameSize, `${facts.size} vs ${JSON.stringify(facts.stock)}`);
 }
@@ -242,17 +242,51 @@ async function checkNoOldControls(page, layout, label) {
 }
 
 /** The one-file Video row: history, pin and cross at its end (admin), history only (user). */
+const ROW_GREY = 'rgba(255, 255, 255, 0.7)';
+const ROW_PRIMARY = 'rgb(0, 164, 220)';
+const ROW_RED = 'rgb(198, 40, 40)';
+/** The pin's tooltips the page can show (implementation choice 6): file, episode and title Keep, and the read-only kinds. */
+const PIN_TITLES = { false: ['Keep', 'Keep the Episode', 'Keep the Whole Series', 'Keep the Movie'],
+    true: ['Stop Keeping', 'Stop Keeping the Episode', 'This episode is kept', 'Kept with the whole series', 'Kept indefinitely'] };
+
+/**
+ * A row action's expected colour, tooltip and accessible name at rest, from its icon and pressed state (user rules,
+ * 2026-10-08): grey, the cross red, the pin primary while kept; every name ends with its file. Null for an unknown action.
+ */
+function rowActionExpectation(button) {
+    const file = / (the \d+p file)$/.exec(button.label ?? '')?.[1];
+    if (!file) return null;
+    if (button.icon === 'history') return { color: ROW_GREY, title: 'History', label: `History of ${file}` };
+    if (button.icon === 'close') return { color: ROW_RED, title: 'Remove This Version', label: `Remove ${file}` };
+    if (button.icon !== 'push_pin') return null;
+    const kept = button.pressed === 'true';
+    // The tooltip must be one the page offers for this state; the name then follows from it exactly.
+    if (!PIN_TITLES[kept].includes(button.title)) return { color: kept ? ROW_PRIMARY : ROW_GREY, title: PIN_TITLES[kept].join(' | '), label: '?' };
+    const fileLevel = { Keep: `Keep ${file}`, 'Stop Keeping': `Stop keeping ${file}` };
+    const label = fileLevel[button.title] ?? `${button.title}, on ${file}`;
+    return { color: kept ? ROW_PRIMARY : ROW_GREY, title: button.title, label };
+}
+
 async function checkOneFile(page, layout, admin) {
     await openDetail(page, `id=${ids.one}`, `${PAGE} .selectVideoContainer .jfmod-fileIcons`);
+    // Colours are read at rest: no pointer over the row (stock icon buttons turn primary on hover).
+    await page.mouse.move(0, 0);
     await checkHeaderIcon(page, layout, 'one-file episode', admin);
     await checkNoOldControls(page, layout, 'one-file episode');
     const icons = await page.evaluate(sel => {
         const host = document.querySelector(`${sel} .selectVideoContainer .jfmod-fileIcons`);
         if (!host) return null;
         const names = [...host.querySelectorAll('button')].map(button => button.querySelector('.material-icons')?.className.replace('material-icons', '').trim());
-        const opacity = [...host.querySelectorAll('button')].map(button => getComputedStyle(button).opacity);
+        // 2.5em of the layout's root size: 40px on desktop, scaled by TV's 125% and mobile's 90%.
+        const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const buttons = [...host.querySelectorAll('button')];
+        const opacity = buttons.map(button => getComputedStyle(button).opacity);
+        const shape = buttons.map(button => ({ w: Math.round(button.getBoundingClientRect().width), h: Math.round(button.getBoundingClientRect().height),
+            min: Math.floor(2.5 * root) - 1, round: getComputedStyle(button).borderRadius === '50%', color: getComputedStyle(button).color,
+            label: button.getAttribute('aria-label'), title: button.title, pressed: button.getAttribute('aria-pressed'),
+            icon: button.querySelector('.material-icons')?.className.replace('material-icons', '').trim() }));
         const select = document.querySelector(`${sel} .selectVideoContainer select`);
-        return { names, opacity, selectShown: !!select && getComputedStyle(select).display !== 'none',
+        return { names, opacity, shape, selectShown: !!select && getComputedStyle(select).display !== 'none',
             chooser: !!document.querySelector(`${sel} .jfmod-videoTrigger`) };
     }, PAGE);
     const want = admin ? ['history', 'push_pin', 'close'] : ['history'];
@@ -260,8 +294,17 @@ async function checkOneFile(page, layout, admin) {
         JSON.stringify(icons));
     record(layout, 'one-file episode: no chooser; upstream Video text stays', !!icons && icons.selectShown && !icons.chooser);
     if (icons) {
-        const dimmed = isTv(layout) ? icons.opacity.every(value => value === '1') : icons.opacity.every(value => Number(value) < 1 || value === '1');
-        record(layout, `one-file episode: icons ${isTv(layout) ? 'always full on TV' : 'dimmed until hovered or focused'}`, dimmed, icons.opacity.join(','));
+        // User rules, 2026-10-08: round, icon-only, at least 2.5em (40px at 16px), grey, the cross red, named for the file.
+        record(layout, 'one-file episode: row actions are round icon buttons at least 2.5em across',
+            icons.shape.every(button => button.round && button.w >= button.min && button.h >= button.min), JSON.stringify(icons.shape.map(b => [b.w, b.h, b.min])));
+        const expected = icons.shape.map(rowActionExpectation);
+        record(layout, 'one-file episode: grey at rest, the cross red, the pin primary only while kept',
+            expected.every((row, index) => !!row && icons.shape[index].color === row.color),
+            icons.shape.map((b, index) => `${b.icon}=${b.color} (want ${expected[index]?.color})`).join(', '));
+        record(layout, 'one-file episode: each action names its file and has its Title Case tooltip',
+            expected.every((row, index) => !!row && icons.shape[index].label === row.label && icons.shape[index].title === row.title),
+            icons.shape.map((b, index) => `${b.label} / ${b.title} (want ${expected[index]?.label} / ${expected[index]?.title})`).join(', '));
+        record(layout, 'one-file episode: icons are not dimmed', icons.opacity.every(value => value === '1'), icons.opacity.join(','));
     }
     await checkHistoryPopover(page, layout, '.selectVideoContainer [data-jfmod-file-history]');
     if (admin) await checkMoreMenuItem(page, layout, true);
@@ -428,8 +471,8 @@ async function checkFileless(page, layout, admin) {
             !raised && await page.locator(`${PAGE} .jfmod-entryMore`).count() === 0);
         return;
     }
-    record(layout, 'file-less movie: raised "Get a release" where the track block would be',
-        !!raised && /\braised\b/.test(raised.classes) && /\bbutton-submit\b/.test(raised.classes) && raised.icon && raised.text === 'Get a release',
+    record(layout, 'file-less movie: raised blue "Get a Release" where the track block would be',
+        !!raised && /\braised\b/.test(raised.classes) && /\bbutton-submit\b/.test(raised.classes) && raised.icon && raised.text === 'Get a Release',
         JSON.stringify(raised));
     await checkPickerOpens(page, layout, '.jfmod-getReleaseRaised', 'raised Get a release');
     await checkPickerOpens(page, layout, '.jfmod-getRelease', 'header Get a release');
@@ -440,7 +483,7 @@ async function checkFileless(page, layout, admin) {
         const items = opened ? await menu.first().evaluate(node => [...node.querySelectorAll('[role^="menuitem"]')].map(item =>
             `${item.textContent.trim()}${item.hasAttribute('aria-checked') ? ':' + item.getAttribute('aria-checked') : ''}`)) : [];
         record(layout, 'file-less More holds Monitor (with its state) and Remove entry',
-            items.length === 2 && /^Monitor:(true|false)$/.test(items[0]) && items[1] === 'Remove entry', items.join(' | '));
+            items.length === 2 && /^(Monitor:false|Stop Monitoring:true)$/.test(items[0]) && items[1] === 'Remove Entry', items.join(' | '));
         await page.keyboard.press('Escape');
         await menu.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
         if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '.jfmod-entryMore'), await activeName(page));
@@ -531,7 +574,7 @@ async function checkRemove(page, layout, itemId) {
     const shown = await dialog.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, 'cross opens the stock confirmation saying what goes and what stays', shown);
     if (!shown) return;
-    await page.locator('.dialog button', { hasText: /Remove this version/ }).first().click();
+    await page.locator('.dialog button', { hasText: /Remove This Version/ }).first().click();
     await page.waitForTimeout(6000);
     const remaining = await bindings();
     const others = before.filter(id => id !== bindingId);
