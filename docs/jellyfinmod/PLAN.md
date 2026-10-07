@@ -497,6 +497,13 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   file read "1080p" by height alone); version rows and retention's ranking share the rule. `PhaseSixIntegration` covers it
   over HTTP; live on 18096, Fleabag S1E1 and Tokyo Vice S1E1 read 2160p and Foundation S3E1 and Pachinko S1E3 read 1080p,
   as stock does. Codex approve, no findings (see [`PHASE7.md`](PHASE7.md), *Resolution tier fix, republished*).
+- 0.1.0.0 detail page design fix: **built (not accepted)**. The user rejected the released episode and movie
+  page design and dictated a new one on 2026-10-07 (header *Get a release* icon, the Video row as the file chooser,
+  per-file history, a countdown badge on the Played tick, the file-less page's raised button, the episode window in
+  the stock More menu). A fix of the released page, framed like the settings design fix, on `fix/detail-page-design`
+  in both repositories; design record, acceptance checklist and evidence in
+  [design/episode-page-design-spec.md](design/episode-page-design-spec.md); the page is described in
+  [UX.md](UX.md) §7, §7.2, §8 and §11. A candidate for republishing 0.1.0.0 once accepted; the user decides.
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
