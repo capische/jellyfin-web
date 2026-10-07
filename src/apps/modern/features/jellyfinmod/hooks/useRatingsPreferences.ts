@@ -2,6 +2,8 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useDisplayPreferences } from 'hooks/api/useDisplayPreferences';
+import { useApi } from 'hooks/useApi';
 import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import Events from 'utils/events';
 
@@ -10,9 +12,18 @@ import { DEFAULT_SOURCES, RATINGS_CAPABILITY, RATINGS_CARD_SOURCE_KEY, RATINGS_S
 import type { RatingSource } from '../types/ratings';
 import { usePluginCapabilities } from './useAcquisition';
 
+type CustomPrefs = Record<string, string | null | undefined> | null | undefined;
+
+/**
+ * A stored preference: upstream's user settings once they are bound to the signed-in user, or the same display preferences
+ * as the query read them while the binding is still loading (a page mounted right after sign-in would otherwise read nothing
+ * and never read again).
+ */
+const readPref = (name: string, prefs: CustomPrefs) => userSettings.get(name) ?? prefs?.[name] ?? null;
+
 /** The user's own source list, or null when they never chose one (the administrator's default then applies). */
-const readSources = (): RatingSource[] | null => {
-    const raw = userSettings.get(RATINGS_SOURCES_KEY);
+const readSources = (prefs: CustomPrefs): RatingSource[] | null => {
+    const raw = readPref(RATINGS_SOURCES_KEY, prefs);
     if (typeof raw !== 'string' || !raw) return null;
     try {
         const parsed: unknown = JSON.parse(raw);
@@ -22,8 +33,8 @@ const readSources = (): RatingSource[] | null => {
     }
 };
 
-const readCardSource = (): RatingSource | null => {
-    const raw = userSettings.get(RATINGS_CARD_SOURCE_KEY);
+const readCardSource = (prefs: CustomPrefs): RatingSource | null => {
+    const raw = readPref(RATINGS_CARD_SOURCE_KEY, prefs);
     return isRatingSource(raw) ? raw : null;
 };
 
@@ -42,14 +53,19 @@ export const useRatingsPreferences = (api: Api | undefined) => {
         retry: false,
         staleTime: RATINGS_STALE_MS
     });
+    const { user } = useApi();
+    // The same per-user display preferences upstream's user settings load: when they arrive, the choice is read again.
+    const displayPreferences = useDisplayPreferences({ displayPreferencesId: 'usersettings', client: 'emby' });
+    const prefs = displayPreferences.data?.CustomPrefs as CustomPrefs;
     const [revision, setRevision] = useState(0);
     useEffect(() => {
         const onChange = () => setRevision(value => value + 1);
         Events.on(userSettings, 'change', onChange);
         return () => Events.off(userSettings, 'change', onChange);
     }, []);
-    // The stored values are re-read whenever a setting changes; the revision is what invalidates them.
-    const own = useMemo(() => ({ revision, sources: readSources(), cardSource: readCardSource() }), [revision]);
+    // The stored values are re-read whenever a setting changes (the revision), the preferences arrive or the user changes.
+    const own = useMemo(() => ({ revision, user: user?.Id, sources: readSources(prefs), cardSource: readCardSource(prefs) }),
+        [revision, prefs, user?.Id]);
     const enabled = supported && defaults.data?.enabled === true;
     const fallback = defaults.data?.defaultSources.filter(isRatingSource) ?? DEFAULT_SOURCES;
     const sources = own.sources ?? fallback;

@@ -42,11 +42,13 @@ const NativeCardRating: FC<{ rating: Rating }> = ({ rating }) => {
     const anchor = useRef<HTMLSpanElement>(null);
     const [target, setTarget] = useState<{ node: Element; own: boolean } | null>(null);
     useLayoutEffect(() => {
+        // Upstream's React card puts its text lines straight into the card box (an outer footer only with a card layout); the
+        // secondary line is the year or the second line it chose, wherever it sits.
         const card = anchor.current?.parentElement;
-        const secondary = card?.querySelector('.cardFooter .cardText-secondary');
-        const footer = card?.querySelector('.cardFooter');
+        const secondary = card?.querySelector('.cardText-secondary');
+        const lines = card?.querySelector('.cardText')?.parentElement;
         if (secondary) setTarget({ node: secondary, own: false });
-        else if (footer) setTarget({ node: footer, own: true });
+        else if (lines) setTarget({ node: lines, own: true });
     }, []);
     const text = cardRatingText(rating);
     return <><span ref={anchor} hidden />{target && createPortal(target.own ?
