@@ -110,7 +110,7 @@ for (const name of only) {
         await banner.waitFor({ state: 'visible', timeout: 30000 });
         record(name, 'An incomplete setup shows the Home banner to an administrator', true, await banner.innerText());
         if (layout.tv) await page.evaluate(() => { location.hash = '#/catalog/settings/setup'; });
-        else await banner.locator('a, button', { hasText: 'Set up' }).click();
+        else await banner.locator('a, button', { hasText: /^Set Up$/ }).click();
         await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
         const step = await page.locator('.jfmod-step[aria-current="true"]').getAttribute('data-step');
         const cont = page.locator('[data-wizard="continue"]');

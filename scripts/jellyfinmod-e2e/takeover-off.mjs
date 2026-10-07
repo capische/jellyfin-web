@@ -189,7 +189,7 @@ try {
                 }, undefined, { timeout: 20000 }).then(() => true, () => false);
                 await stock.evaluate(() => { location.hash = '#/mypreferencesmenu'; });
                 await stock.waitForFunction(() => !!document.querySelector('.page:not(.hide) .lnkDisplayPreferences'), undefined, { timeout: 20000 });
-                const prefs = await stock.evaluate(() => ({ jfmodSettings: /JellyfinMod settings/.test(document.querySelector('.page:not(.hide)')?.textContent ?? '') }));
+                const prefs = await stock.evaluate(() => ({ jfmodSettings: /JellyfinMod settings/i.test(document.querySelector('.page:not(.hide)')?.textContent ?? '') }));
                 await stock.evaluate(() => { location.hash = '#/dashboard'; });
                 // The mobile Dashboard has no "Dashboard" title; its server card is on every layout.
                 const dashboard = await stock.waitForFunction(() => location.hash.startsWith('#/dashboard') && /Server version/.test(document.body.innerText), undefined, { timeout: 20000 })
