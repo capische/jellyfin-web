@@ -77,5 +77,8 @@ export const chipLabel = (rating: Rating) =>
     SOURCE_LONG[rating.source] + ' ' + formatValue(rating) + (rating.votes ? ', ' + rating.votes.toLocaleString() + ' votes' : '')
     + ' — ' + provenance(rating);
 
-/** How long one answer is reused: ratings change on the server's daily schedule, not while a page is open. */
-export const RATINGS_STALE_MS = 5 * 60 * 1000;
+/**
+ * How long one answer is reused: the app's own default. Ratings change on the server's daily schedule, but an administrator
+ * turning ratings off or on should reach every page within a minute.
+ */
+export const RATINGS_STALE_MS = 60 * 1000;
