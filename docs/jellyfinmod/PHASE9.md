@@ -612,20 +612,55 @@ Three, Seven Trakt, Nine, Ten). Chromium 153.0.8010.12 and Chrome 153.0.8010.54:
 (`evidence/p9/review-fix-3/`). Fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only; oleksii's
 display preferences are as before; the stand-in is stopped and its key deleted.
 
+## Review fixes, round 4 — 2026-10-07
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of the round-3 ranges (plugin `24e7004..8cdbbf1`, web
+`fee6fb4edd..ea82d0e57f`) approved both with fixes, no lock-order cycle and no path to production; fixed as below: plugin
+`8cdbbf1..` its branch tip, web `ea82d0e57f..` this branch's tip.
+
+| # | Finding | Fix | Proof |
+|---|---|---|---|
+| 1 (P2, plugin) | `SetCommandTimeout(4)` left the connection's own default timeout at 30 s; a save's BEGIN IMMEDIATE and COMMIT run on the connection and a token does not interrupt them, so a held writer kept the gate 30 s | Under the credential gate the connection's `DefaultTimeout` is bounded too (4 s), and both values are restored as they were afterwards | Suite, ordinary manual refresh against a second connection holding SQLite's write lock: at the claim, the refresh gives up within the bound and no call is made, nothing written; at the recording (the answer arriving while the lock is held), it gives up within the bound, the claim stays pending and the stored values are kept. With the connection bound removed the claim check fails at 30.14 s |
+| 2 (P2, runner) | After a local time-out the service was started while the remote operation could still run its SQL or finish a stop | Each stopped-service operation carries a unique marker; on a time-out, a dropped connection or a local interrupt, recovery sends it TERM (its trap waits for a stop under way, ends the SQL's process tree and starts the service), waits until it is gone (KILL and a 15 s grace as a last resort), and only then makes sure the service runs | Live `interrupt`: TERM mid-step restarts within seconds; a time-out while the SQL waits — the operation is gone before the start and its SQL (a marker file written after the wait) never runs; a time-out during the stop itself — the service is up afterwards and stays up |
+| 3 (P3, web) | A focused chip was taken for focus below the line (the hidden anchor does not contain the chips), so widening updates were refused | Focus is judged against the line itself when it is shown; a trial compares the same focused element's place | Desktop: with focus on the TMDB chip, a minute's refetch with IMDb votes 1 → 123,456,789 shows "IMDb 8.1 (123M)" and focus stays on TMDB |
+
+**A real key on 18096.** From this round the user may enter their real MDBList key on 18096 at any time. `p9-live.py` now
+refuses to start when any key is configured, checks before every step that the configured key's secret-store reference (read
+only, never the key) is the one this run saved, saves its own key only against the revision read before that check, and
+`p9-live.py guard` runs the check alone before the browser runner. Cleanup clears only this run's key; with a key it did not
+set it removes the fixtures and leaves the ratings settings, the key and stored ratings alone; the reset's SQL deletes ratings
+state only when no key is configured, decided inside the stopped-service step. Before this round's run 18096 had no key
+(`apiKeyConfigured: false`, revision 1). During the run the coordinator saw a configured, verified key and the stand-in address
+on 18096 and asked whether the user's key had been replaced: it had not. The only key saved was this run's fixture key
+(10:28:50Z, revision 2), its secret-store reference stayed the one this run recorded, every later ratings save was this run's
+own on/off switching, and all 171 stand-in calls after `fetch` carried the fixture key; the address pointed at the stand-in
+before the key was saved, so no call could reach MDBList. The Chrome run was stopped while that was checked and run again in
+full afterwards.
+
+**Runs.** Plugin suite on the Mac (with the connection bound removed the claim check fails at 30.14 s). Chromium
+153.0.8010.12 and Chrome 153.0.8010.54: 53/53 each. Live on 18096 with plugin 0.1.0.0 from the round-4 tip and bundle
+`f4c3035c1649`: `setup`, `unconfigured`, `configure`, `fetch`, `restart`, `age`, `guard`, both browsers, `unage`,
+`failures`, `kill`, `leak`, `interrupt`, `cleanup` — all pass (`evidence/p9/review-fix-4/`; a first `setup` attempt hit the
+server still starting after the deploy and was re-run). Cleanup left the ratings settings at their defaults with no key and no
+provider address (`GET /JellyfinMod/Settings/Ratings` at 10:57:46Z: `apiKeyConfigured: false`, `providerOverride: false`,
+revision 1); fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only; oleksii's display preferences are as
+before; the stand-in is stopped and its key deleted. 18096 is ready for the user's real key.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
-waits for the Codex review of the round-3 ranges (plugin `24e7004..` its tip, web `fee6fb4edd..` this branch's tip), and for
+waits for the Codex review of the round-4 ranges (plugin `8cdbbf1..` its tip, web `ea82d0e57f..` this branch's tip), and for
 the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
 
 - Re-run the live chain with `scripts/jellyfinmod-e2e/p9-live.py` (`setup`, `unconfigured`, `configure`, `fetch`,
-  `restart`, `age`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`); settings come from the environment
+  `restart`, `age`, `guard`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`;
+  the run stops, touching nothing, if a ratings key it did not set is configured); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- The isolated instance runs this branch's plugin (0.1.0.0 from the round-3 tip) and bundle `67902e05db2b`; ratings are on with no
+- The isolated instance runs this branch's plugin (0.1.0.0 from the round-4 tip) and bundle `f4c3035c1649`; ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
   deployment is on the test host in the JellyfinMod data folder's `backups/p9-before-20261007`, beside the instance's own `test` folder (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
