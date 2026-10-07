@@ -576,6 +576,8 @@ file mark from §3, and season rows gain a monitor toggle.
 **Episode and movie pages as built since the 0.1.0.0 design fix (user, 2026-10-07).** The
 [design record](design/episode-page-design-spec.md) is binding; in short:
 
+- **Labels** follow the user's Title Case rule of 2026-10-08 (*Get a Release*, *Get Another Quality*, *Remove After
+  Watching…*); row actions are round icon buttons and full-size buttons are red, blue or grey (see the design record).
 - **Header.** Administrators get one stock-styled icon, *Get a release* (`cloud_download`), in
   upstream's button row before Favorite. It opens the release picker (the `addVersion` intent when
   the title has a file). With no file it leads the row, since Play and Played are absent.
@@ -970,8 +972,9 @@ The version rows below the track block are replaced by a chooser in the **Video*
   then three icons: **history** (§7.2), **pin** (per-file Keep, filled in primary when kept) and
   **cross** (Remove this version with upstream's confirmation, as in §11.1). The last row is *Get
   another quality* for administrators with release search.
-- Icons sit at 60% opacity until hovered or focused on desktop and are always visible on the TV, each
-  its own D-pad stop. Pin and cross are administrators'; history is everyone's.
+- The row's actions are round, icon-only buttons of at least 2.5em, each its own D-pad stop, named for their file
+  ("Keep the 1080p file") with a Title Case tooltip: grey, the cross red, the pin in primary while kept (user UI rules,
+  2026-10-08). Pin and cross are administrators'; history is everyone's.
 - The chooser drives upstream's `.selectSource` exactly as the rows did: it sets the value and
   dispatches a bubbling `change`, so Play, audio and subtitles follow; the viewer's own choice is
   never replaced; the device preference (§11.1) still applies.

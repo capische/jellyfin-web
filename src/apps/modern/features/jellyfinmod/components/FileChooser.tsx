@@ -30,7 +30,7 @@ export interface FileChooserProps {
     /** The copy this device starts with (V1 decision 4); null leaves Jellyfin's default. */
     preferred?: VersionDto | null;
     busy: boolean;
-    /** Administrators with release search and `versions`: the last row is Get another quality. */
+    /** Administrators with release search and `versions`: the last row is Get Another Quality. */
     onAddVersion?: (opener: HTMLElement) => void;
     /** Opens one file's history; absent when the plugin does not stamp files on history events (`history.files`). */
     onHistory?: (version: VersionDto, opener: HTMLElement) => void;
@@ -181,8 +181,21 @@ const useVideoHost = (view: HTMLElement, multi: boolean): VideoHost => {
     return state;
 };
 
-const iconClass = (extra?: string) => classNames('paper-icon-button-light jfmod-fileIcon', extra,
-    { 'show-focus jfmod-fileIcon--tv': layoutManager.tv });
+/** A row action: upstream's round icon button, grey, red when it destroys, with the TV's focus ring (user, 2026-10-08). */
+const iconClass = (extra?: string) => classNames('paper-icon-button-light jfmod-fileIcon', extra, { 'show-focus': layoutManager.tv });
+
+/** How a row's actions name their file for a screen reader: `the 1080p file`. */
+const fileName = (version: VersionDto) => `the ${describeVersion(version).resolution} file`;
+
+/**
+ * The pin's accessible name always names its row's file: the file-level Keep acts on it; an episode or title Keep, or a
+ * read-only one, says what it keeps and which file's row it is on.
+ */
+const pinLabel = (pin: PinState, version: VersionDto) => {
+    if (pin.title === 'Keep') return `Keep ${fileName(version)}`;
+    if (pin.title === 'Stop Keeping') return `Stop keeping ${fileName(version)}`;
+    return `${pin.locked ?? pin.title}, on ${fileName(version)}`;
+};
 
 interface FileIconsProps {
     version: VersionDto;
@@ -195,8 +208,8 @@ interface FileIconsProps {
 }
 
 /**
- * History, pin and cross at the end of a file's row (design step 2): stock icon buttons, each its own D-pad stop, dimmed until
- * hovered or focused on desktop and always full on the TV.
+ * History, pin and cross at the end of a file's row (design step 2): round, icon-only stock icon buttons with a 2.5em hit
+ * area, each its own D-pad stop; grey, the cross red, the pin in primary while the file is kept (user rules, 2026-10-08).
  */
 const FileIcons: FC<FileIconsProps> = ({ version, busy, onHistory, pin, onPin, removable, onRemove }) => {
     const history = useCallback((event: MouseEvent<HTMLButtonElement>) => onHistory?.(version, event.currentTarget), [onHistory, version]);
@@ -211,16 +224,17 @@ const FileIcons: FC<FileIconsProps> = ({ version, busy, onHistory, pin, onPin, r
     const hasHistory = !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
     if (!hasHistory && !pin && !removable) return null;
     return <span className='jfmod-fileIcons'>
-        {hasHistory && <button type='button' className={iconClass()} title='History' aria-label='History of this file'
+        {hasHistory && <button type='button' className={iconClass()} title='History' aria-label={`History of ${fileName(version)}`}
             data-jfmod-file-history={version.bindingId} onClick={history}>
             <span className='material-icons history' aria-hidden='true' />
         </button>}
         {pin && <button type='button' className={iconClass(pin.kept ? 'jfmod-fileIcon--on' : undefined)}
-            title={pin.locked ?? pin.title} aria-label={pin.locked ?? pin.title} aria-pressed={pin.kept}
+            title={pin.locked ?? pin.title} aria-label={pinLabel(pin, version)} aria-pressed={pin.kept}
             aria-disabled={busy || !!pin.locked} data-jfmod-file-pin={version.bindingId} onClick={keep}>
             <span className='material-icons push_pin' aria-hidden='true' />
         </button>}
-        {removable && <button type='button' className={iconClass()} title='Remove this version' aria-label='Remove this version'
+        {removable && <button type='button' className={iconClass('jfmod-fileIcon--danger')} title='Remove This Version'
+            aria-label={`Remove ${fileName(version)}`}
             aria-disabled={busy} data-jfmod-file-remove={version.bindingId} onClick={remove}>
             <span className='material-icons close' aria-hidden='true' />
         </button>}
@@ -341,7 +355,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                     {onAddVersion && <div className='jfmod-fileRow jfmod-fileRow--add'>
                         <button type='button' className='jfmod-fileChoose' data-jfmod-add-version='' onClick={addVersion}>
                             <span className='jfmod-fileMark' aria-hidden='true'>+</span>
-                            <span className='jfmod-fileBody'>Get another quality</span>
+                            <span className='jfmod-fileBody'>Get Another Quality</span>
                         </button>
                     </div>}
                     {note && <p className='jfmod-fileNote'>{note}</p>}
