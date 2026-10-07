@@ -368,6 +368,21 @@ async function mobile(browser) {
     const found = await waitChips(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     record(layout, 'The native page shows the Ratings line, wrapped, without horizontal scroll', found.length === 5 && overflow <= 0, { chips: found.length, overflow });
+    // Each chip is a real touch target, and a tap shows where its value came from (web review 2026-10-07 round 2, P3 6).
+    const chipsOnPage = page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip');
+    const boxes = [];
+    for (let index = 0; index < await chipsOnPage.count(); index++) boxes.push(await chipsOnPage.nth(index).boundingBox());
+    const gaps = boxes.slice(1).map((box, index) => Math.abs(box.y - boxes[index].y) < 2 ? box.x - (boxes[index].x + boxes[index].width) : null)
+        .filter(gap => gap !== null);
+    await chipsOnPage.nth(1).tap();
+    await page.waitForTimeout(400);
+    const tapped = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').innerText().catch(() => '');
+    await chipsOnPage.nth(1).tap();
+    await page.waitForTimeout(400);
+    const closedAfterTap = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').count();
+    record(layout, 'Each chip is at least 44 px high with room beside it, and a tap shows its provenance and a second tap hides it',
+        boxes.every(box => box.height >= 43) && gaps.every(gap => gap >= 6) && /^Rotten Tomatoes critics.*via MDBList/.test(tapped) && closedAfterTap === 0,
+        { heights: boxes.map(box => Math.round(box.height)), gaps: gaps.map(Math.round), tapped, closedAfterTap });
     await shot(page, `${layout}-native`);
     await go(page, `#/details?entryId=${STATE.fileless}`);
     const fileless = await waitChips(page);
@@ -375,6 +390,61 @@ async function mobile(browser) {
     await preferencesPage(page, layout);
     record(layout, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors);
     await context.close();
+}
+
+/**
+ * With focus on a control below the line, a minute's refetch that fails, and then one that brings wider (stale, dated) values,
+ * must not move it: the line keeps its last answer through an error and never changes height under a focused control below
+ * (web review 2026-10-07 round 2, P2 1). Each wait crosses the line's one-minute refetch.
+ */
+async function laterUpdates(page, layout) {
+    // Two minutes of waiting: once, at the larger TV size.
+    if (layout !== 'tv1080') return;
+    const lineBottom = () => page.evaluate(() => {
+        const line = [...document.querySelectorAll('.jfmod-ratingsLine')].find(node => node.offsetParent !== null);
+        return line ? line.getBoundingClientRect().bottom : null;
+    });
+    const focusedBox = () => page.evaluate(() => {
+        const node = document.activeElement;
+        const rect = node?.getBoundingClientRect();
+        return { tag: node?.tagName ?? null, text: node?.textContent?.trim().slice(0, 30) ?? null, top: Math.round(rect?.top ?? -1) };
+    });
+    let below = false;
+    for (let press = 0; press < 15 && !below; press++) {
+        const [bottom, box] = [await lineBottom(), await focusedBox()];
+        below = bottom !== null && box.top > bottom;
+        if (!below) {
+            await page.keyboard.press('ArrowDown');
+            await page.waitForTimeout(200);
+        }
+    }
+    const before = await focusedBox();
+    let reads = 0;
+    await page.route('**/JellyfinMod/Ratings/Items/**', route => {
+        reads++;
+        return route.fulfill({ status: 500, body: 'forced failure' });
+    });
+    await page.waitForTimeout(65000);
+    const afterError = await focusedBox();
+    const chipsAfterError = (await chips(page)).length;
+    await page.unroute('**/JellyfinMod/Ratings/Items/**');
+    const errorReads = reads;
+    reads = 0;
+    await page.route('**/JellyfinMod/Ratings/Items/**', async route => {
+        reads++;
+        const response = await route.fetch();
+        const body = await response.json();
+        body.ratings = body.ratings.map(rating => ({ ...rating, stale: true, fetchedAt: '2025-01-15T00:00:00Z', votes: (rating.votes ?? 0) * 1000 + 1 }));
+        return route.fulfill({ response, json: body });
+    });
+    await page.waitForTimeout(65000);
+    const afterWider = await focusedBox();
+    const chipsAfterWider = (await chips(page)).length;
+    await page.unroute('**/JellyfinMod/Ratings/Items/**');
+    record(layout, 'Focus below the line stays put through a failed refetch (the line keeps its values) and a refetch with wider values',
+        below && errorReads > 0 && reads > 0 && chipsAfterError === 5 && chipsAfterWider === 5
+        && JSON.stringify(before) === JSON.stringify(afterError) && JSON.stringify(before) === JSON.stringify(afterWider),
+        { below, errorReads, widerReads: reads, before, afterError, afterWider, chipsAfterError, chipsAfterWider });
 }
 
 async function tv(browser, layout) {
@@ -455,50 +525,66 @@ async function tv(browser, layout) {
     }
     record(layout, 'The line shows on the TV title page and D-pad navigation never focuses it', found.length === 5 && !landed && start === 'BUTTON',
         { chips: found.length, start });
+    await laterUpdates(page, layout);
     await shot(page, `${layout}-native`);
     await page.evaluate(() => localStorage.removeItem('layout'));
     record(layout, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors);
     await context.close();
 }
 
+// oleksii's own ratings display choice, read before anything changes it and put back at the end over plain HTTP — not
+// through the interface, so a failed page cannot stop it (web review 2026-10-07 round 2, P3 5). A read that fails stops the
+// run before anything is changed: a guess would later delete keys that existed.
 const PREF_KEYS = ['jfmodRatingsSources', 'jfmodRatingsCardSource'];
-const prefsPath = page => page.evaluate(() => `/DisplayPreferences/usersettings?userId=${ApiClient.getCurrentUserId()}&client=emby`);
-/** oleksii's ratings display keys: each one's value, and only the keys that exist. */
-const prefsSnapshot = async page => {
-    const prefs = await api(page, 'GET', await prefsPath(page));
-    const custom = prefs.body?.CustomPrefs ?? {};
-    return Object.fromEntries(PREF_KEYS.filter(key => key in custom).map(key => [key, custom[key]]));
+const CLIENT = 'MediaBrowser Client="jfmod-p9-ratings", Device="cli", DeviceId="jfmod-p9-ratings", Version="1"';
+const server = async (method, path, body, token) => {
+    const response = await fetch(new URL(path, origin).href, {
+        method,
+        headers: { Authorization: token ? `${CLIENT}, Token="${token}"` : CLIENT, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+        body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const text = await response.text();
+    return { status: response.status, body: text && (response.headers.get('content-type') ?? '').includes('json') ? JSON.parse(text) : null };
+};
+const signInOverHttp = async () => {
+    // A server still starting answers 503 with a text page; it is waited for, up to two minutes.
+    let signedInNow = await server('POST', '/Users/AuthenticateByName', { Username: 'oleksii', Pw: '' });
+    for (let attempt = 0; attempt < 40 && signedInNow.status === 503; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        signedInNow = await server('POST', '/Users/AuthenticateByName', { Username: 'oleksii', Pw: '' });
+    }
+    if (signedInNow.status !== 200) throw new Error(`sign-in for the preference snapshot failed (${signedInNow.status})`);
+    return { token: signedInNow.body.AccessToken, userId: signedInNow.body.User.Id };
+};
+const prefsSnapshot = async ({ token, userId }) => {
+    const prefs = await server('GET', `/DisplayPreferences/usersettings?userId=${userId}&client=emby`, undefined, token);
+    if (prefs.status !== 200 || typeof prefs.body?.CustomPrefs !== 'object' || prefs.body.CustomPrefs === null) {
+        throw new Error(`display preferences could not be read (${prefs.status})`);
+    }
+    return { prefs: prefs.body, keys: Object.fromEntries(PREF_KEYS.filter(key => key in prefs.body.CustomPrefs).map(key => [key, prefs.body.CustomPrefs[key]])) };
 };
 
+const session = await signInOverHttp();
+const prefsBefore = (await prefsSnapshot(session)).keys;
 const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
 const version = browser.version();
-let prefsBefore = null;
 try {
-    const first = await open(browser, 'desktop');
-    prefsBefore = await prefsSnapshot(first.page);
-    await first.context.close();
     await desktop(browser);
     await mobile(browser);
     await tv(browser, 'tv1080');
     await tv(browser, 'tv720');
 } finally {
-    if (prefsBefore) {
-        const last = await open(browser, 'desktop');
-        const path = await prefsPath(last.page);
-        const prefs = (await api(last.page, 'GET', path)).body;
-        const custom = prefs.CustomPrefs ?? {};
-        for (const key of PREF_KEYS) {
-            if (key in prefsBefore) custom[key] = prefsBefore[key];
-            else delete custom[key];
-        }
-        prefs.CustomPrefs = custom;
-        await api(last.page, 'POST', path, prefs);
-        const after = await prefsSnapshot(last.page);
-        record('all', 'oleksii\'s ratings display preferences are exactly as they were before the run', JSON.stringify(after) === JSON.stringify(prefsBefore),
-            { keysBefore: Object.keys(prefsBefore), keysAfter: Object.keys(after) });
-        await last.context.close();
+    await browser.close().catch(ignore);
+    const { prefs } = await prefsSnapshot(session);
+    for (const key of PREF_KEYS) {
+        if (key in prefsBefore) prefs.CustomPrefs[key] = prefsBefore[key];
+        else delete prefs.CustomPrefs[key];
     }
-    await browser.close();
+    await server('POST', `/DisplayPreferences/usersettings?userId=${session.userId}&client=emby`, prefs, session.token);
+    const after = (await prefsSnapshot(session)).keys;
+    record('all', 'oleksii\'s ratings display preferences are exactly as they were before the run', JSON.stringify(after) === JSON.stringify(prefsBefore),
+        { keysBefore: Object.keys(prefsBefore), keysAfter: Object.keys(after) });
+    await server('POST', '/Sessions/Logout', undefined, session.token).catch(ignore);
 }
 record('all', `None of the ${responses.length} JellyfinMod responses the browser received carries the key`, responses.every(body => !body.includes(KEY)));
 const failed = results.filter(result => result.verdict !== 'PASS');
