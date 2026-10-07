@@ -223,7 +223,16 @@
     padding: 0.4em 0.55em !important;
     min-width: 2.1em;
 }
-.jfmod-danger-text { color: var(--jf-palette-error-main, #c62828) !important; }
+
+/* Red text for Clear and Remove. On the Dashboard page this needed !important to beat the emby-button colours; here it
+   sits on MUI buttons, whose emotion colour one more class beats. Without !important, a disabled button still greys
+   out and the TV's focused-button fill in a dialog (shell/dpadModals.scss) still turns its text white, instead of red
+   on cyan. */
+.jfmod-danger-text,
+.MuiButtonBase-root.jfmod-danger-text {
+    color: #c62828;
+    color: var(--jf-palette-error-main, #c62828);
+}
 
 .jfmod-inlineactions {
     display: flex;
@@ -612,6 +621,7 @@
    the primary colour the Dashboard page's links have. */
 .jfmod-check-links a,
 .jfmod-lead a {
+    color: #00a4dc;
     color: var(--jf-palette-primary-main, #00a4dc);
     font-weight: 600;
     text-decoration: none;
