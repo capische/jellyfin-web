@@ -19,6 +19,11 @@ Runs in steps so the browser runner (p9-ratings.mjs) can sit between them:
                           preferences are restored exactly (a key that did not exist is removed); UserViews shows Movies
                           and Shows only
 
+EXCLUSIVE USE: the run needs 18096 to itself from `setup` to `cleanup`, including the daily task and the draining of queued
+refreshes; no one may enter a real MDBList key while it runs. The ownership checks stop the run when the settings are not as
+it left them, but they are made before an action starts: the plugin reads the settings again for each title of a running task
+and for each queued refresh, so a key saved meanwhile would be used by the work already started (against the stand-in).
+
 p9-live-sim.py runs the stopped-service helper and the key-ownership chain on this machine against a fake service and a fake
 ratings API, with no SSH and no test host.
 
@@ -33,6 +38,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import signal
 import subprocess
 import threading
@@ -103,6 +109,9 @@ def save_state(state):
 
 bodies = []
 
+# Every host path or value put into a remote command is shell-quoted (review round 6, finding 4).
+q = shlex.quote
+
 
 def call(method, path, body=None, token=None, raw=False):
     state = load_state()
@@ -164,14 +173,17 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
     session and process group, and waits for it. On INT, TERM or HUP the monitor ends the work's whole group (TERM, a wait,
     KILL, and a check that it is empty) and exits with the signal's status; it never starts the service itself.
 
-    Here the operation is always shown to have ended before anything else happens: `recover` finds both groups by a marker
-    in their command lines, ends whatever is left the same way and confirms it is gone. Only then does `restart_clean` run:
+    As soon as the work starts, the monitor reports both process-group ids (and its parent's group, which they must not be);
+    they are kept here independently of the processes that lead them (review round 6, finding 1). The operation is always
+    shown to have ended before anything else happens: `recover` ends whatever is left in both recorded groups (and in any
+    group a marked process still leads) the same way and confirms each group is empty. Without valid recorded groups nothing
+    can be confirmed, so nothing is started. Only then does `restart_clean` run:
     it waits for any stop still under way (`docker compose stop`), confirms the container has exited, starts it and confirms
     it runs. If the operation cannot be shown to have ended — the recovery call failed, or a group would not empty — the
     service is left exactly as it is and RecoveryFailed is raised for the step to report."""
     marker = "p9op-" + secrets.token_hex(6)
     script = (f"cd ~ || exit 1\n"
-              + (f"echo $$ > '{pidfile}'\n" if pidfile else "")
+              + (f"echo $$ > {q(pidfile)}\n" if pidfile else "")
               + f"work=\n"
               f"alive() {{ [ -n \"$work\" ] && pgrep -g \"$work\" >/dev/null; }}\n"
               f"end_work() {{\n"
@@ -184,11 +196,12 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
               f"}}\n"
               f"on_signal() {{ trap '' INT TERM HUP; end_work || exit 97; exit \"$1\"; }}\n"
               f"trap 'on_signal 130' INT; trap 'on_signal 143' TERM; trap 'on_signal 129' HUP\n"
-              f"setsid bash -s -- '{marker}' <<'WORK' &\n"
-              f"docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null || exit 90\n"
-              f"sqlite3 '{DB}' <<'SQL'\n{sql}\nSQL\n"
+              f"setsid bash -s -- {q(marker)} <<'WORK' &\n"
+              f"docker compose -f {q(COMPOSE)} stop jellyfinmod-test >/dev/null || exit 90\n"
+              f"sqlite3 {q(DB)} <<'SQL'\n{sql}\nSQL\n"
               f"WORK\n"
               f"work=$!\n"
+              f"echo \"p9groups $$ $work $(ps -o pgid= -p $PPID | tr -d ' ')\"\n"
               f"wait \"$work\"; rc=$?\n"
               f"trap '' INT TERM HUP\n"
               f"end_work || exit 97\n"
@@ -198,10 +211,15 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
         out = remote(script, marker, timeout=timeout, session=True)
     except (subprocess.TimeoutExpired, OSError, KeyboardInterrupt, SystemExit) as error:
         interrupted = error
-        out = subprocess.CompletedProcess(args=[], returncode=124, stdout="", stderr=type(error).__name__)
+        partial = getattr(error, "stdout", None) or ""
+        out = subprocess.CompletedProcess(args=[], returncode=124, stderr=type(error).__name__,
+                                          stdout=partial.decode(errors="replace") if isinstance(partial, bytes) else partial)
     out.marker = marker
-    if not recover(marker):
-        raise RecoveryFailed(f"the stopped-service step {marker} could not be shown to have ended; the service was left as it was")
+    out.groups = step_groups(out.stdout)
+    if out.groups is None or not recover(marker, out.groups):
+        failure = RecoveryFailed(f"the stopped-service step {marker} could not be shown to have ended; the service was left as it was")
+        failure.marker, failure.groups = marker, out.groups or []
+        raise failure
     if ensure:
         started = restart_clean()
         if started.returncode != 0:
@@ -212,21 +230,36 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
     return out
 
 
-def recover(marker):
-    """Ends whatever is left of a stopped-service operation and confirms it is gone (review rounds 4-5). Every process whose
-    command line carries the marker and leads its own process group — the monitor and the work — has that whole group sent
-    TERM, waited for, sent KILL if it has not emptied, and checked again. True only when the call itself succeeded and every
-    such group is empty; anything else (the call failed, timed out, or a group would not empty) is False."""
+def step_groups(text):
+    """The two process groups a stopped-service step reported when its work started: the monitor's and the work's. None when
+    the report is missing, or when a group is one that must never be signalled — 0, 1, this runner's own, or the group the
+    monitor was started from (the SSH session's) — or the two are the same."""
+    found = re.search(r"^p9groups (\d+) (\d+) (\d+)$", text or "", re.M)
+    if not found:
+        return None
+    monitor, work, outer = (int(value) for value in found.groups())
+    never = {0, 1, os.getpgrp(), outer}
+    if monitor in never or work in never or monitor == work:
+        return None
+    return [monitor, work]
+
+
+def recover(marker, groups):
+    """Ends whatever is left of a stopped-service step and confirms it is gone (review rounds 4-6). Its two recorded process
+    groups — kept here, so a member is found even after the processes that led them have gone — and any group a process with
+    the step's marker still leads are sent TERM, waited for, sent KILL if they have not emptied, and checked again
+    (`kill -0` on the group). True only when the call itself succeeded and every one of them is empty."""
+    listed = " ".join(str(group) for group in groups)
     try:
         out = remote(f"""
-groups=""
-for pid in $(pgrep -f '{marker}'); do
+groups="{listed}"
+for pid in $(pgrep -f {q(marker)}); do
   group=$(ps -o pgid= -p "$pid" | tr -d ' ')
   [ "$group" = "$pid" ] && groups="$groups $pid"
 done
-[ -z "$groups" ] && exit 0
+empty() {{ for group in $groups; do kill -0 -- "-$group" 2>/dev/null && return 1; done; return 0; }}
+empty && exit 0
 for group in $groups; do kill -TERM -- "-$group" 2>/dev/null; done
-empty() {{ for group in $groups; do pgrep -g "$group" >/dev/null && return 1; done; return 0; }}
 for i in $(seq 1 {TERM_WAIT}); do empty && exit 0; sleep 1; done
 for group in $groups; do kill -KILL -- "-$group" 2>/dev/null; done
 for i in $(seq 1 30); do empty && exit 0; sleep 1; done
@@ -243,9 +276,9 @@ def restart_clean():
     it must be `running`. Each failed step exits with its own status."""
     return remote(f"""
 cd ~ || exit 1
-docker compose -f '{COMPOSE}' stop jellyfinmod-test >/dev/null || exit 4
+docker compose -f {q(COMPOSE)} stop jellyfinmod-test >/dev/null || exit 4
 [ "$(docker inspect -f '{{{{.State.Status}}}}' jellyfinmod-test)" = exited ] || exit 5
-docker compose -f '{COMPOSE}' start jellyfinmod-test >/dev/null || exit 6
+docker compose -f {q(COMPOSE)} start jellyfinmod-test >/dev/null || exit 6
 [ "$(docker inspect -f '{{{{.State.Status}}}}' jellyfinmod-test)" = running ] || exit 7
 """, timeout=300)
 
@@ -261,43 +294,43 @@ def step_interrupt():
         check(False, "JFMOD_P9_WORK names a scratch folder on the host for the interrupt step")
         return
     pidfile = f"{WORK.rstrip('/')}/p9-stopped-step.pid"
-    remote(f"rm -f '{pidfile}'")
+    remote(f"rm -f {q(pidfile)}")
     result = {}
     worker = threading.Thread(target=lambda: result.update(out=with_service_stopped(".shell sleep 40", pidfile=pidfile)))
     worker.start()
-    wait_for(lambda: remote(f"test -s '{pidfile}'").returncode == 0 and not service_running(), "the step to stop the service", 120)
+    wait_for(lambda: remote(f"test -s {q(pidfile)}").returncode == 0 and not service_running(), "the step to stop the service", 120)
     sent = time.time()
-    remote(f"kill -TERM $(cat '{pidfile}')")
+    remote(f"kill -TERM \"$(cat {q(pidfile)})\"")
     worker.join(300)
     running = service_running()
     elapsed = round(time.time() - sent)
     out = result.get("out")
-    gone = out is not None and remote(f"pgrep -f '{out.marker}'").returncode != 0
+    gone = out is not None and remote(f"pgrep -f {q(out.marker)}").returncode != 0
     check(out is not None and out.returncode == 143 and gone and running and elapsed < 120,
           "TERM to the step's shell mid-SQL (waiting 40 s): its whole work group ends, the step exits with the signal's status, and the "
           "service is started only once that is confirmed", {"exit": out.returncode if out else None, "operationGone": gone, "running": running,
                                                             "secondsAfterTerm": elapsed})
-    remote(f"rm -f '{pidfile}'")
+    remote(f"rm -f {q(pidfile)}")
     # A local time-out while the SQL step waits: the remote operation is ended before the service starts, so its SQL (here a
     # marker file written after the wait) never runs once the service is back (review round 4, P2 2).
     late = f"{WORK.rstrip('/')}/p9-late-sql"
-    remote(f"rm -f '{late}'")
+    remote(f"rm -f {q(late)}")
     started = time.time()
-    out = with_service_stopped(f".shell sleep 30\n.shell touch '{late}'", timeout=8)
-    gone = remote(f"pgrep -f '{out.marker}'").returncode != 0
+    out = with_service_stopped(f".shell sleep 30\n.shell touch {q(late)}", timeout=8)
+    gone = remote(f"pgrep -f {q(out.marker)}").returncode != 0
     healthy = call("GET", "/JellyfinMod/Health")[0] == 200
     wait_for(lambda: time.time() - started > 45, "the time the SQL step would have needed", 60)
-    late_ran = remote(f"test -e '{late}'").returncode == 0
+    late_ran = remote(f"test -e {q(late)}").returncode == 0
     still = call("GET", "/JellyfinMod/Health")[0] == 200 and service_running()
     check(out.returncode == 124 and gone and healthy and not late_ran and still,
           "A local time-out mid-step: the remote operation is ended before the service starts, its SQL never runs afterwards, and the "
           "service stays up", {"exit": out.returncode, "operationGone": gone, "lateSqlRan": late_ran, "stillUp": still})
-    remote(f"rm -f '{late}'")
+    remote(f"rm -f {q(late)}")
     # A local time-out while the service is still stopping: the stop finishes before recovery starts the service, so no late stop
     # takes it down again.
     started = time.time()
     out = with_service_stopped("SELECT 1;", timeout=2)
-    gone = remote(f"pgrep -f '{out.marker}'").returncode != 0
+    gone = remote(f"pgrep -f {q(out.marker)}").returncode != 0
     wait_for(lambda: time.time() - started > 30, "a stop's own time limit", 60)
     still = call("GET", "/JellyfinMod/Health")[0] == 200 and service_running()
     check(out.returncode == 124 and gone and still, "A local time-out during the stop itself: recovery waits for it, and the service is up "
@@ -348,7 +381,7 @@ class ForeignKey(Exception):
 def snapshot():
     """The ratings settings' revision and the configured key's opaque secret-store reference ('' when none), read together in
     one statement, read-only, from the plugin database; never the key. No row yet means the defaults: revision 1, no key."""
-    out = remote(f"sqlite3 -readonly '{DB}' \"SELECT Revision || '|' || IFNULL(ApiKeyRef, '') FROM RatingsSettings LIMIT 1\"")
+    out = remote(f"sqlite3 -readonly {q(DB)} \"SELECT Revision || '|' || IFNULL(ApiKeyRef, '') FROM RatingsSettings LIMIT 1\"")
     if out.returncode != 0:
         raise RuntimeError("the ratings settings could not be read")
     text = out.stdout.strip()
@@ -358,11 +391,17 @@ def snapshot():
     return int(revision), ref
 
 
+EXCLUSIVE = ("EXCLUSIVE USE: this run needs 18096 to itself from setup to cleanup, including the daily task and queued refreshes "
+             "draining; no one may enter a real MDBList key while it runs. The checks below are made before each action starts; a task or "
+             "queued refresh already started reads the settings again for each title, so a key saved meanwhile would be used.")
+
+
 def expect_own():
     """The settings are exactly as this run last wrote them: the same revision (any save, by anyone, raises it) and the same key
-    reference. Checked before every provider action (Test, a refresh, the daily task) and every configuration change. The
-    plugin has no conditional Test or refresh, so a save between this check and the action itself is not excluded; the window
-    is one HTTP round trip (review round 5, finding 2)."""
+    reference. Checked before every provider action (Test, a refresh, the daily task) and every configuration change. This
+    cannot be atomic: the plugin has no conditional Test or refresh, and a daily task or queued refresh, once started, reads
+    the settings again for each title, so a key saved after this check would be used by work already under way. Hence the
+    rule in EXCLUSIVE (review rounds 5-6)."""
     state = load_state()
     if "lastRevision" not in state:
         raise ForeignKey()
@@ -455,9 +494,9 @@ def make_titles(titles):
     script = "set -e\n"
     for tmdb, title, rating, critic in titles:
         folder = f"{HOST_MEDIA}/{FOLDER}/{title} (2026)"
-        script += f"mkdir -p '{folder}'\ncat > '{folder}/movie.nfo' <<'NFO'\n{nfo(tmdb, title, rating, critic)}NFO\n"
+        script += f"mkdir -p {q(folder)}\ncat > {q(folder + '/movie.nfo')} <<'NFO'\n{nfo(tmdb, title, rating, critic)}NFO\n"
         script += (f"docker exec jellyfinmod-test /usr/lib/jellyfin-ffmpeg/ffmpeg -loglevel error -y -f lavfi -i color=black:s=320x240:d=3 "
-                   f"-c:v libx264 -t 3 '{CONTAINER_MEDIA}/{FOLDER}/{title} (2026)/{title} (2026).mkv'\n")
+                   f"-c:v libx264 -t 3 {q(f'{CONTAINER_MEDIA}/{FOLDER}/{title} (2026)/{title} (2026).mkv')}\n")
     out = remote(script)
     if out.returncode:
         sys.exit("fixture creation failed: " + scrub(out.stderr)[:400])
@@ -564,6 +603,7 @@ def step_unage():
 
 
 def step_setup():
+    print(EXCLUSIVE)
     sign_in()
     revision, ref = snapshot()
     if settings()["apiKeyConfigured"] or ref:
@@ -687,7 +727,7 @@ def step_configure():
 
 def identities():
     """Distinct title identities with a TMDB id, read from the plugin database (read-only)."""
-    out = remote(f"sqlite3 -readonly '{DB}' \"SELECT COUNT(*) FROM (SELECT DISTINCT MediaType, TmdbId FROM Entries WHERE TmdbId > 0)\"")
+    out = remote(f"sqlite3 -readonly {q(DB)} \"SELECT COUNT(*) FROM (SELECT DISTINCT MediaType, TmdbId FROM Entries WHERE TmdbId > 0)\"")
     return int(out.stdout.strip())
 
 
@@ -748,7 +788,7 @@ def step_fetch():
 
 def step_restart():
     state = load_state()
-    out = remote(f"cd ~ && docker compose -f '{COMPOSE}' restart jellyfinmod-test")
+    out = remote(f"cd ~ && docker compose -f {q(COMPOSE)} restart jellyfinmod-test")
     check(out.returncode == 0, "The isolated service restarts")
     wait_for(lambda: call("GET", "/System/Info/Public", token="")[0] == 200, "the restart", 300)
     wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health after the restart", 300)
@@ -865,16 +905,35 @@ def step_kill():
     check(out.returncode == 0, "The container is killed (SIGKILL) while the call is in flight, then started")
     boundary("POST", "/mode", {"mode": "full", "titles": {}})
     wait_for(lambda: call("GET", "/JellyfinMod/Health")[0] == 200, "Health after the kill", 300)
-    left = remote(f"sqlite3 '{db}' \"SELECT Outcome FROM RatingsFetches ORDER BY AttemptedAt DESC LIMIT 1\"").stdout.strip()
+    left = remote(f"sqlite3 {q(db)} \"SELECT Outcome FROM RatingsFetches ORDER BY AttemptedAt DESC LIMIT 1\"").stdout.strip()
     check(left == "pending", "The killed call left its claim behind, committed before the call", left)
     task()
     after = calls_for(KILL_TITLE[0])
-    outcome = remote(f"sqlite3 '{db}' \"SELECT Outcome FROM RatingsFetches ORDER BY AttemptedAt DESC LIMIT 1\"").stdout.strip()
+    outcome = remote(f"sqlite3 {q(db)} \"SELECT Outcome FROM RatingsFetches ORDER BY AttemptedAt DESC LIMIT 1\"").stdout.strip()
     check(after == 1 and rstatus()["lastRun"]["fetched"] == 0, "After the kill the interrupted title is not fetched again that day; the next run calls nothing",
           {"calls": after, "lastRun": rstatus()["lastRun"], "latestOutcome": outcome})
 
 
+def drain(limit=1800):
+    """Waits until no manual refresh is queued and the ratings task is not running, so nothing still in flight reads the settings
+    cleanup is about to change. False when that does not happen within `limit` seconds."""
+    deadline = time.time() + limit
+    while time.time() < deadline:
+        status_code, status = call("GET", "/JellyfinMod/Ratings/Status")
+        tasks_code, tasks = call("GET", "/ScheduledTasks")
+        task_state = next((item.get("State") for item in tasks if item.get("Key") == "JellyfinModRatingsRefresh"), None) if tasks_code == 200 else None
+        if status_code == 200 and status.get("queued") == 0 and task_state == "Idle":
+            return True
+        time.sleep(2)
+    return False
+
+
 def step_cleanup():
+    print(EXCLUSIVE)
+    if not drain():
+        check(False, "Cleanup waits until no refresh is queued and the ratings task is idle; it did not happen, so nothing was cleared")
+        return
+    check(True, "Nothing is in flight: no refresh is queued and the ratings task is idle")
     state = load_state()
     # oleksii's ratings display choice goes back first, before anything else here can fail: each key's value, and a key that
     # did not exist is removed. The snapshot is retired once that is confirmed, so a later run never restores an old one.
@@ -891,7 +950,7 @@ def step_cleanup():
         refresh_id = next(item["Id"] for item in tasks if item["Key"] == "RefreshLibrary")
         time.sleep(3)
         wait_for(lambda: call("GET", f"/ScheduledTasks/{refresh_id}")[1]["State"] == "Idle", "the library refresh", 900)
-    out = remote(f"rm -rf -- '{HOST_MEDIA}/{FOLDER}'")
+    out = remote(f"rm -rf -- {q(HOST_MEDIA + '/' + FOLDER)}")
     check(out.returncode == 0, "The disposable media and NFOs are deleted")
     if state.get("viewerId"):
         code, _ = call("DELETE", f"/Users/{state['viewerId']}")
@@ -940,7 +999,7 @@ def step_cleanup():
 
 def step_leak():
     state = load_state()
-    log = remote(f"docker logs --since '{state['logSince']}' jellyfinmod-test 2>&1").stdout
+    log = remote(f"docker logs --since {q(state['logSince'])} jellyfinmod-test 2>&1").stdout
     hits = log.count(KEY)
     redacted = len(re.findall(r"/tmdb/(?:movie|show)/\d+\?\*", log))
     # The host's request loggers write under the category System.Net.Http.HttpClient.<name>.LogicalHandler/ClientHandler; a

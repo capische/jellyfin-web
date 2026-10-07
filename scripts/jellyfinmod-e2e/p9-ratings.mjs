@@ -12,6 +12,7 @@
 import { chromium } from 'playwright';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { savesChain } from './p9-saves.mjs';
 
 const required = name => {
     const value = process.env[name];
@@ -128,15 +129,11 @@ const api = (page, method, path, body) => page.evaluate(async request => {
 // ---- The ratings settings are this run's only while they are as p9-live.py's chain left them (web review round 5): every
 // save here is sent against the revision the run last wrote — a save by anyone else in between (the user's own key) is
 // refused with 409 and stops the run — and the revision each save produced is handed back to that chain. Test and the
-// refresh button go only while the revision is still the run's own. The plugin has no conditional Test or refresh, so a save
-// between that check and the click is not excluded (one round trip).
+// refresh button go only while the revision is still the run's own. This cannot be atomic (the plugin has no conditional Test
+// or refresh, and work already started reads the settings again per title), so the run needs 18096 to itself throughout and
+// no one may enter a real key meanwhile (see p9-live.py, EXCLUSIVE).
 class NotOurs extends Error {}
-const lastRevision = () => JSON.parse(readFileSync(STATE_FILE, 'utf8')).lastRevision;
-const noteRevision = revision => {
-    const state = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
-    state.lastRevision = revision;
-    writeFileSync(STATE_FILE, JSON.stringify(state), { mode: 0o600 });
-};
+const { lastRevision, noteRevision, holdSettingsSaves } = savesChain(STATE_FILE);
 const expectOwn = async page => {
     const current = await api(page, 'GET', '/JellyfinMod/Settings/Ratings');
     if (current.status !== 200 || current.body.revision !== lastRevision()) {
@@ -148,18 +145,6 @@ const saveRatings = async (page, change) => {
     if (saved.status !== 200) throw new NotOurs(`a ratings save was refused (${saved.status})`);
     noteRevision(saved.body.revision);
     return saved;
-};
-/** The settings area's own Save, held to the same chain: the request's revision is the run's, and the answer's is noted. */
-const holdSettingsSaves = async page => {
-    await page.route('**/JellyfinMod/Settings/Ratings', async route => {
-        if (route.request().method() !== 'PATCH') return route.continue();
-        const body = { ...route.request().postDataJSON(), revision: lastRevision() };
-        const response = await route.fetch({ postData: JSON.stringify(body) });
-        const answer = await response.json();
-        if (response.status() === 200) noteRevision(answer.revision);
-        else page.jfmodNotOurs = `a ratings save from the settings area was refused (${response.status()})`;
-        return route.fulfill({ response, json: answer });
-    });
 };
 
 const go = async (page, hash) => {
@@ -372,6 +357,9 @@ async function desktop(browser) {
     };
     const offNow = await saveEnabled(false);
     const onNow = await saveEnabled(true);
+    record(layout, 'The settings area\'s Save sends the revision it loaded (the run\'s), unchanged, and the plugin answers with the next one',
+        page.jfmodSaves.length === 2 && page.jfmodSaves.every(save => save.forwarded && save.status === 200 && save.answered === save.sent + 1),
+        page.jfmodSaves);
     record(layout, 'Turning ratings off and on in the settings area changes the title page in the same visit, without waiting', offNow.length === 0
         && onNow.length > 0, { off: offNow.length, on: onNow.length });
 
