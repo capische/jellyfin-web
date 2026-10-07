@@ -233,6 +233,24 @@ async function desktop(browser) {
         { finished, busy, stalledReads, chips: after.length });
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     await Promise.all(stalled.map(route => route.abort().catch(ignore)));
+    // Focus on a chip is focus inside the line: a minute's refetch that widens an earlier chip is shown at once and focus stays
+    // on the same chip (review round 4, P3 3).
+    const tmdbChip = page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip[data-jfmod-rating="tmdb"]');
+    await tmdbChip.focus();
+    let widened = 0;
+    await page.route('**/JellyfinMod/Ratings/Items/**', async route => {
+        widened++;
+        const response = await route.fetch();
+        const body = await response.json();
+        body.ratings = body.ratings.map(rating => rating.source === 'imdb' ? { ...rating, votes: 123456789 } : rating);
+        return route.fulfill({ response, json: body });
+    });
+    await page.waitForTimeout(65000);
+    await page.unroute('**/JellyfinMod/Ratings/Items/**');
+    const imdbText = await page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip[data-jfmod-rating="imdb"]').innerText().catch(() => '');
+    const stillOn = await page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
+    record(layout, 'With focus on a chip, a refetch that widens an earlier chip is shown at once and focus stays on that chip',
+        widened > 0 && imdbText === 'IMDb 8.1 (123M)' && stillOn === 'tmdb', { widened, imdbText, stillOn });
 
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
