@@ -453,6 +453,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (bundle `a21c898e2a4c`). Explicit button variants and working row spacing in `/catalog/settings`, the wizard and the
   Home banner; "JellyfinMod" under Plugins in the Dashboard drawer. Codex approve with nits; settings design runner
   354/354 on Chromium and Chrome on 28096 (see [`PHASE7.md`](PHASE7.md), *Settings area design fix*).
+- Settings buttons as three kinds (red destroys, blue is the view's main action, grey the rest, all the size of Save) and
+  icon actions in a secret's box (2026-10-08): **accepted, not released** — merged at plugin `master` `a11d585` and web
+  `jellyfin-mod` (code `4d124d9f5c`); Codex approve after four re-reviews; settings design runner 688/688 on Chromium and
+  Chrome on 28096. Waiting for the user's approval to republish 0.1.0.0 (see [`PHASE7.md`](PHASE7.md), *Settings
+  buttons: three kinds*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
