@@ -999,6 +999,12 @@
 .jfmod-notice-action > * + *,
 .jfmod-notice-action > .MuiButtonBase-root + .MuiButtonBase-root { margin-left: 0.86em; }
 
+/* TV, in a settings dialog: the focus fill (shell/dpadModals.scss) takes the scheme's primary contrast text, which the
+   Apple TV scheme computes as white, 2.9:1 on the cyan. Every shipped primary is a light cyan, so the focused text is dark
+   in every scheme. One class more than the dpadModals rule (Codex review 1, P2 3). */
+.layout-tv .jfmod-settingsDialog.MuiModal-root .MuiButtonBase-root.MuiButton-root:focus,
+.layout-tv .jfmod-settingsDialog.MuiModal-root .MuiButtonBase-root.MuiIconButton-root:focus { color: rgba(0, 0, 0, 0.87); }
+
 /* TV: a focused filled button keeps a ring in the text colour. On the page the primary-coloured ring above disappears
    against a blue fill, and in a dialog the focus fill (shell/dpadModals.scss) is the blue a primary button already
    has. */
