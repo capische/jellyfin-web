@@ -32,7 +32,7 @@ export const Notice: FC<{ notice: NoticeState | null }> = ({ notice }) => {
             <span className='jfmod-notice-text'>{notice.text}</span>
             {notice.action && (
                 <span className='jfmod-notice-action'>
-                    <Button size='small' onClick={notice.action.run}>{notice.action.label}</Button>
+                    <Button variant='text' size='small' onClick={notice.action.run}>{notice.action.label}</Button>
                 </span>
             )}
         </div>
@@ -125,7 +125,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                 <span className='jfmod-secret-label'>{label}</span>
                 <div className='jfmod-secret-row'>
                     <span className='jfmod-secret-state'>Will be removed on save</span>
-                    <Button size='small' onClick={undo}>Undo</Button>
+                    <Button variant='text' size='small' onClick={undo}>Undo</Button>
                 </div>
             </div>
         );
@@ -144,7 +144,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                     onChange={type}
                 />
                 {configured && (
-                    <Button size='small' onClick={keep}>
+                    <Button variant='text' size='small' onClick={keep}>
                         Keep the saved one
                     </Button>
                 )}
@@ -156,8 +156,8 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
             <span className='jfmod-secret-label'>{label}</span>
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
-                <Button size='small' onClick={replace}>Replace</Button>
-                <Button size='small' onClick={clear}>Clear</Button>
+                <Button variant='text' size='small' onClick={replace}>Replace</Button>
+                <Button variant='text' size='small' className='jfmod-danger-text' onClick={clear}>Clear</Button>
             </div>
         </div>
     );
@@ -217,7 +217,7 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     }, [key, type, optional, onChange]);
     if (type === 'bool') {
         return (
-            <div>
+            <div className='jfmod-switchfield'>
                 <FormControlLabel
                     control={<Switch checked={!!value} onChange={toggle} />}
                     label={field.label}
@@ -295,8 +295,8 @@ export const useConfirm = (): [ReactNode, (pending: PendingConfirm) => void] => 
             <DialogContent><p className='jfmod-lead'>{pending.text}</p></DialogContent>
             <DialogActions>
                 {/* eslint-disable-next-line jsx-a11y/no-autofocus -- a destructive confirmation starts on Cancel (MUI's own idiom) */}
-                <Button autoFocus onClick={close} data-jfmod-confirm='cancel'>Cancel</Button>
-                <Button className='jfmod-danger-text' onClick={confirm} data-jfmod-confirm='confirm'>{pending.action}</Button>
+                <Button variant='text' autoFocus onClick={close} data-jfmod-confirm='cancel'>Cancel</Button>
+                <Button variant='text' className='jfmod-danger-text' onClick={confirm} data-jfmod-confirm='confirm'>{pending.action}</Button>
             </DialogActions>
         </Dialog>
     );
