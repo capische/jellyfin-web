@@ -55,10 +55,12 @@ const LAYOUTS = {
 };
 
 const responses = [];
-async function open(browser, layoutName) {
+async function open(browser, layoutName, prepare) {
     const layout = LAYOUTS[layoutName];
     const context = await browser.newContext({ viewport: layout.viewport, isMobile: layout.isMobile, hasTouch: layout.hasTouch,
         userAgent: layout.userAgent, serviceWorkers: 'block' });
+    // Routes a check needs from the very first request (before the app reads and caches anything).
+    if (prepare) await prepare(context);
     const page = await context.newPage();
     page.jfmodErrors = [];
     page.jfmodBrowse = [];
@@ -207,7 +209,12 @@ async function desktop(browser) {
     });
     record(layout, 'The Ratings mount leads the detail section content', order[0]?.includes('jfmod-ratingsMount'), order);
     await shot(page, `${layout}-native`);
-    // Administrator: Refresh ratings queues one fetch.
+    // Administrator: Refresh ratings queues one fetch. Every other read of this title's ratings stalls meanwhile: the button
+    // must not wait on those background reads (review round 3, P2 4).
+    const stalled = [];
+    await page.route('**/JellyfinMod/Ratings/Items/**', route => {
+        stalled.push(route);
+    });
     const refresh = page.locator('[data-jfmod-ratings-refresh]:visible').first();
     await refresh.click();
     await page.waitForTimeout(1500);
@@ -217,9 +224,15 @@ async function desktop(browser) {
     await page.waitForFunction(() => /Ratings refreshed|no new values|still waiting/.test(document.querySelector('.jfmod-nativeEntryDetails [role="status"]')
         ?.textContent ?? ''), undefined, { timeout: 75000 }).catch(ignore);
     const finished = await page.locator('.jfmod-nativeEntryDetails [role="status"]').first().innerText().catch(() => '');
+    await page.waitForTimeout(500);
+    const busy = await refresh.getAttribute('aria-busy');
+    const stalledReads = stalled.length;
     const after = await waitChips(page);
-    record(layout, 'When the queued refresh has run the page says the ratings were refreshed and still shows the line', finished === 'Ratings refreshed.'
-        && after.length === 5, { finished, chips: after.length });
+    record(layout, 'When the queued refresh has run the page says so, the button is free although a background read stalls, and the line stays',
+        finished === 'Ratings refreshed.' && busy === 'false' && stalledReads > 0 && after.length === 5,
+        { finished, busy, stalledReads, chips: after.length });
+    await page.unroute('**/JellyfinMod/Ratings/Items/**');
+    await Promise.all(stalled.map(route => route.abort().catch(ignore)));
 
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
@@ -392,6 +405,13 @@ async function mobile(browser) {
     await context.close();
 }
 
+/** The focused control and where it is (runs in the browser). */
+const focusedBox = page => page.evaluate(() => {
+    const node = document.activeElement;
+    const rect = node?.getBoundingClientRect();
+    return { tag: node?.tagName ?? null, text: node?.textContent?.trim().slice(0, 30) ?? null, top: Math.round(rect?.top ?? -1) };
+});
+
 /**
  * With focus on a control below the line, a minute's refetch that fails, and then one that brings wider (stale, dated) values,
  * must not move it: the line keeps its last answer through an error and never changes height under a focused control below
@@ -404,28 +424,23 @@ async function laterUpdates(page, layout) {
         const line = [...document.querySelectorAll('.jfmod-ratingsLine')].find(node => node.offsetParent !== null);
         return line ? line.getBoundingClientRect().bottom : null;
     });
-    const focusedBox = () => page.evaluate(() => {
-        const node = document.activeElement;
-        const rect = node?.getBoundingClientRect();
-        return { tag: node?.tagName ?? null, text: node?.textContent?.trim().slice(0, 30) ?? null, top: Math.round(rect?.top ?? -1) };
-    });
     let below = false;
     for (let press = 0; press < 15 && !below; press++) {
-        const [bottom, box] = [await lineBottom(), await focusedBox()];
+        const [bottom, box] = [await lineBottom(), await focusedBox(page)];
         below = bottom !== null && box.top > bottom;
         if (!below) {
             await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(200);
         }
     }
-    const before = await focusedBox();
+    const before = await focusedBox(page);
     let reads = 0;
     await page.route('**/JellyfinMod/Ratings/Items/**', route => {
         reads++;
         return route.fulfill({ status: 500, body: 'forced failure' });
     });
     await page.waitForTimeout(65000);
-    const afterError = await focusedBox();
+    const afterError = await focusedBox(page);
     const chipsAfterError = (await chips(page)).length;
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     const errorReads = reads;
@@ -438,13 +453,139 @@ async function laterUpdates(page, layout) {
         return route.fulfill({ response, json: body });
     });
     await page.waitForTimeout(65000);
-    const afterWider = await focusedBox();
+    const afterWider = await focusedBox(page);
     const chipsAfterWider = (await chips(page)).length;
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     record(layout, 'Focus below the line stays put through a failed refetch (the line keeps its values) and a refetch with wider values',
         below && errorReads > 0 && reads > 0 && chipsAfterError === 5 && chipsAfterWider === 5
         && JSON.stringify(before) === JSON.stringify(afterError) && JSON.stringify(before) === JSON.stringify(afterWider),
         { below, errorReads, widerReads: reads, before, afterError, afterWider, chipsAfterError, chipsAfterWider });
+}
+
+/** The file-less page's ratings line, the misc-info row it shares with the TMDB star, and the line's chips (runs in the browser). */
+const sharedRow = page => page.evaluate(() => {
+    const row = [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null);
+    const line = row?.querySelector('.jfmod-ratingsLine');
+    return { row: row ? Math.round(row.getBoundingClientRect().height) : null, line: line ? Math.round(line.getBoundingClientRect().height) : null,
+        chips: line ? line.querySelectorAll('.jfmod-ratingChip').length : 0 };
+});
+
+/** Answers the ratings defaults with `count()` sources on (in the complete order), on a page or a whole context. */
+const routeDefaults = async (target, count) => {
+    let reads = 0;
+    await target.route('**/JellyfinMod/Ratings/Defaults', async route => {
+        reads++;
+        const response = await route.fetch();
+        const body = await response.json();
+        return route.fulfill({ response, json: { ...body, defaultSources: body.availableSources.slice(0, count()) } });
+    });
+    return () => reads;
+};
+
+/**
+ * Finds, from the page's own CSS, a row width and two source counts where the shorter line sits beside the TMDB star and the
+ * longer one keeps the line's own height but no longer fits beside the star, so the shared row wraps (runs in the browser on a
+ * page showing every source, at 1920×1080). Each candidate is laid out in a hidden copy of the row.
+ */
+const findWrap = page => page.evaluate(() => {
+    const row = [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null);
+    if (!row) return null;
+    const shape = (count, width) => {
+        const copy = row.cloneNode(true);
+        Object.assign(copy.style, { position: 'absolute', visibility: 'hidden', width: width + 'px', left: '0', top: '0' });
+        [...copy.querySelectorAll('[role="listitem"]')].forEach((item, index) => {
+            if (index >= count) item.remove();
+        });
+        row.parentElement.appendChild(copy);
+        const line = copy.querySelector('.jfmod-ratingsLine');
+        const result = { row: Math.round(copy.getBoundingClientRect().height), line: Math.round(line.getBoundingClientRect().height) };
+        copy.remove();
+        return result;
+    };
+    const single = shape(1, 4000);
+    // Row widths the 1920×1080 TV window or a narrower one gives, so the window under test is a real TV size.
+    for (let width = Math.floor(row.getBoundingClientRect().width); width >= 500; width -= 10) {
+        for (let shorter = 2; shorter <= 8; shorter++) {
+            const beside = shape(shorter, width);
+            if (beside.row !== single.row || beside.line !== single.line) continue;
+            for (let longer = shorter + 1; longer <= 9; longer++) {
+                const wrapped = shape(longer, width);
+                if (wrapped.line === single.line && wrapped.row > single.row) return { width, shorter, longer, rowWidth: Math.round(row.getBoundingClientRect().width) };
+            }
+        }
+    }
+    return null;
+});
+
+/**
+ * The file-less page's line shares the misc-info row with the TMDB star (review round 3, P2 3). A wider line can keep its own
+ * height and still wrap that row, pushing everything below it down. The check finds a window width and two source counts that
+ * do exactly that, confirms it in real visits, then — with focus on a control below the row — lets a minute's defaults refetch
+ * turn the longer set on: focus must not move and the line waits; the next visit shows it. Once, at the TV layout.
+ */
+async function sharedRowWrap(browser, layout) {
+    if (layout !== 'tv1080') return;
+    // The page with every source on, at two window widths: the CSS layout, and how the row's width follows the window's.
+    const probe = await open(browser, layout, target => routeDefaults(target, () => 9));
+    await go(probe.page, `#/details?entryId=${STATE.fileless}`);
+    await waitChips(probe.page);
+    const found = await findWrap(probe.page);
+    await probe.page.setViewportSize({ width: 1600, height: 1080 });
+    await probe.page.waitForTimeout(500);
+    const narrower = await probe.page.evaluate(() => Math.round([...document.querySelectorAll('.itemMiscInfo-secondary')]
+        .find(node => node.offsetParent !== null).getBoundingClientRect().width));
+    await probe.context.close();
+    if (!found) {
+        record(layout, 'The page has a row width where a longer line keeps its height but wraps the shared row', false);
+        return;
+    }
+    const perPixel = (found.rowWidth - narrower) / 320;
+    const windowWidth = Math.round(1920 - (found.rowWidth - found.width - 5) / perPixel);
+    const visit = async count => {
+        const { context, page } = await open(browser, layout, target => routeDefaults(target, () => count));
+        await page.setViewportSize({ width: windowWidth, height: 1080 });
+        await go(page, `#/details?entryId=${STATE.fileless}`);
+        await waitChips(page);
+        const shape = await sharedRow(page);
+        await context.close();
+        return shape;
+    };
+    const base = await visit(found.shorter);
+    const wider = await visit(found.longer);
+    const exact = base.chips === found.shorter && wider.chips === found.longer && wider.line === base.line && wider.row > base.row;
+    record(layout, 'At this window width the longer line keeps its own height and wraps the shared row (the case under test)', exact,
+        { found, windowWidth, base, wider });
+    if (!exact) return;
+    let count = found.shorter;
+    const { context, page } = await open(browser, layout, target => routeDefaults(target, () => count));
+    await page.setViewportSize({ width: windowWidth, height: 1080 });
+    await go(page, `#/details?entryId=${STATE.fileless}`);
+    await waitChips(page);
+    let below = false;
+    for (let press = 0; press < 15 && !below; press++) {
+        const box = await focusedBox(page);
+        const rowBottom = await page.evaluate(() => [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null)
+            ?.getBoundingClientRect().bottom ?? null);
+        below = rowBottom !== null && box.top > rowBottom;
+        if (!below) {
+            await page.keyboard.press('ArrowDown');
+            await page.waitForTimeout(200);
+        }
+    }
+    const before = await focusedBox(page);
+    count = found.longer;
+    await page.waitForTimeout(65000);
+    const after = await focusedBox(page);
+    const held = await sharedRow(page);
+    await go(page, '#/home');
+    await go(page, `#/details?entryId=${STATE.fileless}`);
+    await waitChips(page);
+    const next = await sharedRow(page);
+    await context.close();
+    record(layout, 'A wider line that keeps its own height but wraps the shared row above a focused control waits; the next visit shows it',
+        below && JSON.stringify(before) === JSON.stringify(after) && held.chips === found.shorter && held.row === base.row
+        && next.chips === found.longer && next.row === wider.row,
+        { below, focus: [before.text, before.top, after.top], held, next });
 }
 
 async function tv(browser, layout) {
@@ -530,6 +671,7 @@ async function tv(browser, layout) {
     await page.evaluate(() => localStorage.removeItem('layout'));
     record(layout, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors);
     await context.close();
+    await sharedRowWrap(browser, layout);
 }
 
 // oleksii's own ratings display choice, read before anything changes it and put back at the end over plain HTTP — not
@@ -568,11 +710,14 @@ const session = await signInOverHttp();
 const prefsBefore = (await prefsSnapshot(session)).keys;
 const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
 const version = browser.version();
+// JFMOD_P9_ONLY (a comma list of desktop, mobile, tv1080, tv720) runs only those layouts while iterating; acceptance runs all.
+const only = (process.env.JFMOD_P9_ONLY ?? '').split(',').filter(Boolean);
+const wanted = layout => !only.length || only.includes(layout);
 try {
-    await desktop(browser);
-    await mobile(browser);
-    await tv(browser, 'tv1080');
-    await tv(browser, 'tv720');
+    if (wanted('desktop')) await desktop(browser);
+    if (wanted('mobile')) await mobile(browser);
+    if (wanted('tv1080')) await tv(browser, 'tv1080');
+    if (wanted('tv720')) await tv(browser, 'tv720');
 } finally {
     await browser.close().catch(ignore);
     const { prefs } = await prefsSnapshot(session);
