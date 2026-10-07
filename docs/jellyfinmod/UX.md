@@ -81,6 +81,22 @@ When a design cannot be built under these rules, the design changes. The one del
 recorded in §7.3: the top bar's presentation. It is a restyle, it is called out as such, and it is
 the only one.
 
+**Principle 0 exceptions on the detail page (user, 2026-10-07).** The 0.1.0.0 detail page design fix
+(§7, [design record](design/episode-page-design-spec.md)) adds two more, each a DOM insert from the
+mod's own `nativeEntryDetails.js`, with no upstream file or selector edited:
+
+1. **A mod control inside a stock container.** The *Get a release* icon is inserted into upstream's
+   `.mainDetailButtons` before `.btnUserRating`, styled entirely by upstream's own `button-flat
+   detailButton` classes; the Played countdown badge is one `span` inside the stock `btnPlaystate`
+   button. Both are the first mod content inside a stock container.
+2. **The stock Version select is hidden while the file chooser is mounted** (the §7.3 kind): it stays
+   in the DOM and keeps working, hidden by a mod class that exists only while the chooser does.
+
+Both need a parity check on every upstream merge: the insert points (`.mainDetailButtons >
+.btnUserRating`, `.btnPlaystate .detailButton-content`, `.selectSourceContainer`,
+`.selectVideoContainer`) must still exist with the same meaning; when one does not, the matching
+mod surface is simply absent and the stock page is unchanged.
+
 ---
 
 ## 2. Information architecture
@@ -557,6 +573,39 @@ in the More menu (to get a better quality) and the history line.
 For series, upstream's season and episode lists stay as they are; each episode row carries the
 file mark from §3, and season rows gain a monitor toggle.
 
+**Episode and movie pages as built since the 0.1.0.0 design fix (user, 2026-10-07).** The
+[design record](design/episode-page-design-spec.md) is binding; in short:
+
+- **Header.** Administrators get one stock-styled icon, *Get a release* (`cloud_download`), in
+  upstream's button row before Favorite. It opens the release picker (the `addVersion` intent when
+  the title has a file). With no file it leads the row, since Play and Played are absent.
+- **Video row.** With two or more files the Video value is the file chooser (§11): a chevron opens a
+  list of the files, one row each, with history, pin (Keep) and cross (Remove this version) icons and
+  a last row *Get another quality*. With one file the Video row is upstream's, with the same three
+  icons at its end. Pin and cross are administrators'; history is everyone's.
+- **History** is per file, in a popover opened from that file's history icon (§7.2).
+- **Retention** is a countdown badge on the stock Played tick (§8); the warning box is gone.
+- **More menu.** Administrators find *Remove after watching…* in upstream's More (`⋯`) menu on an
+  episode page; it opens a small dialog with the episode window select.
+- **Gone from these pages:** the mod's button row (Search releases, Get another quality, Keep,
+  Stop keeping, Keep *version*, Remove *version*, Search now), the History toggle and list, the
+  retention warning box and the "Automatic removal is off." line. A one-line retention status stays
+  only for a blocked or mixed state and the protection reasons, which the badge cannot show. The
+  queue status line stays where it is.
+- **No file** (the mod's file-less page): its button row goes; where the track block would be it shows
+  one raised *Get a release* button for administrators, replaced by the queue line while a grab or
+  download is in flight. Its header row holds the *Get a release* icon and a stock-style More (`⋯`)
+  button with **Monitor** and **Remove entry** (user, 2026-10-07), administrators only. Ordinary users
+  see the overview and, during a download, the queue line. A file-less series keeps its rows.
+- The series page is unchanged.
+
+**More-menu coupling (2026-10-07).** P7.S6 removed the More-menu hook. The design fix brings an
+item back without an upstream edit: the mod's integration wraps `itemContextMenu.show` at runtime
+for the open detail page only, adding its item to the action sheet that call opens. If the wrap finds
+nothing to wrap, the menu is exactly upstream's and the item is simply absent. Parity check on every
+upstream merge: `itemContextMenu`'s default export still has `show`, and `show` still opens the sheet
+through `actionSheet`'s default export.
+
 **Phase 1 scope accepted, 2026-09-06:** file-less shows also expose individually tracked episodes,
 not only season summaries. Show missing versus unaired availability and persist episode monitoring
 settings, editable by admins only. Existing downloaded episodes retain native navigation and
@@ -568,6 +617,11 @@ defines the identity, metadata-refresh and permission requirements.
 In upstream's existing button row for a file-less entry — where Play would be — and in the
 **More** (`⋯`) menu for an entry that has a file. Both are insertion points that already exist. It
 is also on the card's context menu in the grid, so it is reachable without opening the entry.
+
+**Since the design fix (2026-10-07)** release search on an episode or movie page is the *Get a
+release* header icon (§7), plus the raised *Get a release* button where the track block would be on
+the file-less page. *Search now* is no longer on either detail page: the picker shows the releases
+and grabs one, and automation searches on its own schedule (its API endpoint stays).
 
 ### 7.2 History is one line
 
@@ -589,6 +643,17 @@ title is the only thing the page can still tell you about your own use of it. Ev
 question you ask when something has gone wrong, and that is an expander, not a section.
 
 On the TV it costs one focusable line instead of a section the D-pad travels through every visit.
+
+**Superseded on episode and movie pages (user, 2026-10-07).** The one-line History toggle is gone
+from the episode and movie pages. History is per file: the history icon on a file's row (or at the
+end of the single Video row) opens a small MUI popover titled with the file's short description
+(`1080p · HEVC 10-bit · 783 MB`), listing only that file's events, newest first, with short dates
+(`28 Sep`, `28 Sep 2025` in another year) and action words without the file name: Grabbed, Imported,
+Kept, Stopped keeping, Removed. Back closes it and focus returns to the icon (§13 rule 9). The
+plugin stamps each history event about one file with that file's binding id (`bindingId`, Health
+capability `history.files`); older events without one appear in no popover. Episode-level events
+(monitoring changed, added to the catalog, window changed) are not shown on the episode page. The
+series page and the file-less page keep their History line.
 
 ---
 
@@ -688,6 +753,21 @@ nobody enjoys browsing.
 
 **The detail page always shows it**, as one line under the title: *"File will be removed in
 5 days"* with a single **Keep** button beside it.
+
+**Superseded on episode and movie pages (user, 2026-10-07).** The detail page shows a scheduled
+removal as a **countdown badge on upstream's Played tick**: a bare bold number over the tick's
+lower-right arm, white with a soft `#101010` halo, about 0.6em — the whole days until the deadline
+(`5`), `0` on the day, `!` once the deadline has passed (the file goes at the next retention run),
+and `∞` in primary `#00a4dc` while the file is kept. It is one `span` inside the stock
+`btnPlaystate` button (§1.1 exceptions); the icon keeps its size and the stock click still toggles
+played. It is computed from the absolute deadline the plugin returns, never cached as a count; with
+several deadlines it shows the nearest. Everyone sees it (RET2-R10); its tooltip gives the date and
+the cause ("Removed on 12 Oct unless kept · marked played"). It is read-only: **Keep is the pin on
+the file's row** (§11), and the retention warning box with its Keep is gone from these pages. The
+"Automatic removal is off." line is dropped; one retention line remains only for a blocked or mixed
+state and the protection reasons. The episode's own window ("Remove this episode") moved into the
+stock More menu as *Remove after watching…* (§7). The series page keeps its per-episode retention
+list.
 
 **Keep is admin-only, one action, no confirmation.** It sets the per-item retention policy to *never*. It
 is the safety valve for an automated deletion system, and a safety valve behind a dialog is a
@@ -869,6 +949,39 @@ episode it deletes the selected file and every file whose name starts with it, w
 another version's subtitles. When a title has more than one file, the new interface adds that
 sentence inside the confirmation, and administrators see it under the version rows. File versions
 are split by moving files into their own folders; *Split versions* only undoes a *Group versions*.
+
+### 11.2 The Video row is the file chooser (design fix, 2026-10-07)
+
+The version rows below the track block are replaced by a chooser in the **Video** row itself
+([design record](design/episode-page-design-spec.md), step 2):
+
+```
+  Video      1080p HEVC SDR  ˅
+             ○  2160p  HEVC 10-bit · DTS-HD 7.1 · 24.1 GB   DEFAULT   ⟲ 📌 ✕
+             ●  1080p  HEVC 10-bit · AAC 5.1 · 783 MB · removes 12 Oct  ⟲ 📌 ✕
+             +  Get another quality
+  Audio      English - DTS-HD MA - 7.1 - Default
+```
+
+- With two or more files the Video value carries a chevron and toggles the list (a height transition;
+  none under `prefers-reduced-motion`). Choosing a row selects that file and closes the list. Each row:
+  mark, resolution, details from `describeVersion`, the `DEFAULT` chip on Jellyfin's default copy,
+  `not tracked yet` and a multi-episode range as before, a scheduled removal as `· removes <date>`,
+  then three icons: **history** (§7.2), **pin** (per-file Keep, filled in primary when kept) and
+  **cross** (Remove this version with upstream's confirmation, as in §11.1). The last row is *Get
+  another quality* for administrators with release search.
+- Icons sit at 60% opacity until hovered or focused on desktop and are always visible on the TV, each
+  its own D-pad stop. Pin and cross are administrators'; history is everyone's.
+- The chooser drives upstream's `.selectSource` exactly as the rows did: it sets the value and
+  dispatches a bubbling `change`, so Play, audio and subtitles follow; the viewer's own choice is
+  never replaced; the device preference (§11.1) still applies.
+- **Upstream's Version select is hidden while the chooser is mounted** (§1.1 exception 2); it stays in
+  the DOM, keeps working and reappears if the chooser does not mount.
+- A file with several video streams keeps upstream's video-stream select visible under the chooser.
+- With one file there is no chooser: the Video row stays upstream's and the three icons sit at its
+  end.
+- A plugin without `versions`, `versions.v1`, `retention.versionKeep`, `versions.remove` or
+  `history.files` hides the matching part, never the page.
 
 ---
 
