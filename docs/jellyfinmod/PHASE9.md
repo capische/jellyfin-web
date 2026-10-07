@@ -646,12 +646,35 @@ provider address (`GET /JellyfinMod/Settings/Ratings` at 10:57:46Z: `apiKeyConfi
 revision 1); fixtures removed; `GET /UserViews` for oleksii lists Movies and Shows only; oleksii's display preferences are as
 before; the stand-in is stopped and its key deleted. 18096 is ready for the user's real key.
 
+## Review fixes, round 5 — 2026-10-07
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of the round-4 ranges approved the plugin (`8cdbbf1..e242a9d`, every finding
+fixed) and approved the web with fixes: four P2s, all in the live runner `p9-live.py`. Fixed on the web branch only
+(`31f8079440..` this branch's tip); the plugin is unchanged. 18096 was handed to another session meanwhile, so this round was
+proved by a local simulation (`scripts/jellyfinmod-e2e/p9-live-sim.py`: no SSH, no test host; the runner's own functions against
+a fake `docker` whose stop is carried out by a "daemon" that outlives its client, a fake `setsid`, the real `sqlite3`, and a
+local ratings API with the plugin's revision rule; port 18096 is refused in that mode). The live steps listed below are to be
+run again on 18096 once it is free.
+
+| # | Finding | Fix | Proof (simulation, 13/13) |
+|---|---|---|---|
+| 1 | Ownership was read after the save, so a key saved in between could be recorded as the run's | Every ratings save goes through `write`: it is sent against the revision this run last wrote (from setup on, kept in the state file), so any save by someone else in between is refused (409) and stops the run; ownership is then read against the revision this save produced — the revision and the key reference in one SQL statement — and nothing is recorded unless the revision is still that one | A key saved right after the run's own save is not taken for the run's (nothing recorded, the run stops); cleanup's clear is then refused and the key stays; another setting saved by someone else is not overwritten |
+| 2 | The guard ran once per step; `patch` took a fresh revision | No save takes a fresh revision any more; before every Test, refresh, daily-task run and configuration change the revision and the key reference are checked together against the run's; the browser runner holds its own saves (API and the settings area's Save, whose request is rewritten to the run's revision) to the same chain and checks the revision before Test and Refresh. **Not atomic:** the plugin has no conditional Test or refresh, so a save between the check and the call is not excluded; the window is one HTTP round trip | Test, a refresh, the daily task and a configuration change are refused before any request reaches the API; while the settings are the run's they go through |
+| 3 | A failed recovery call still let the service start | Recovery must succeed and confirm the operation is gone; otherwise the step raises `RecoveryFailed`, the service is left as it is, and the step reports it | With the recovery call failing (255), the service is not started and the step reports a recovery failure |
+| 4 | Only direct children were killed, nothing was confirmed, and the trap started the service at once | The step runs under a monitor shell that leads its own session; the work (the stop, then the SQL) runs in a second session and process group. On a signal the monitor ends the work's whole group (TERM, a wait, KILL, then a check that it is empty) and exits; it never starts the service. Recovery finds both groups by a marker, ends them the same way and confirms they are empty. Only then `restart_clean` waits for any stop still under way (`docker compose stop`), requires the container to be `exited`, starts it and requires `running` | Normal and failing SQL steps; TERM to the step mid-SQL (no sleeper left, start after the stop has finished); a local time-out mid-SQL (its late SQL never runs); a time-out during the stop itself (the start waits for the daemon's stop); a member that ignores TERM (killed after the wait, group empty before the start) |
+
+**To run again on 18096 once it is free**, in this order: `setup`, `unconfigured`, `configure`, `fetch`, `restart`, `age`,
+`guard`, the browser runner in Chromium and in Chrome, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`. The
+ownership chain is new in every step that saves ratings settings or calls the provider, and the stopped-service helper is new
+in `age`, `unage`, `kill`, `interrupt` and `cleanup` (and the reset inside it), so none of the steps is unaffected; the plugin
+and the bundle are unchanged since round 4 and need no redeployment unless 18096 no longer runs them.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
-waits for the Codex review of the round-4 ranges (plugin `8cdbbf1..` its tip, web `ea82d0e57f..` this branch's tip), and for
-the user. Nothing is merged; the
+waits for the round-5 live re-run on 18096 (it is lent to another session for now), the Codex review of web `31f8079440..` this
+branch's tip, and the user. Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
@@ -660,7 +683,7 @@ For the next agent or reviewer:
   `restart`, `age`, `guard`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`;
   the run stops, touching nothing, if a ratings key it did not set is configured); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- The isolated instance runs this branch's plugin (0.1.0.0 from the round-4 tip) and bundle `f4c3035c1649`; ratings are on with no
+- After round 4 the isolated instance ran this branch's plugin (0.1.0.0 from the round-4 tip) and bundle `f4c3035c1649`; since then another session has been given 18096 and may have deployed its own plugin (with a migration of its own) or restored the pre-Phase-9 backup, so check what it runs before the re-run and redeploy from these branches if needed; ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
   deployment is on the test host in the JellyfinMod data folder's `backups/p9-before-20261007`, beside the instance's own `test` folder (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
