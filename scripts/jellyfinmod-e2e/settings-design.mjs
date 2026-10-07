@@ -69,8 +69,8 @@ async function signIn(page) {
  * pair of controls that overlap, every pair of neighbours in one row closer than `minGap` px, and every block that
  * starts inside the one above it.
  */
-const audit = page => page.evaluate(() => {
-    const root = document.querySelector('.jfmod-check-main');
+const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(selector => {
+    const root = [...document.querySelectorAll(selector)].pop();
     if (!root) return null;
     const visible = el => {
         const r = el.getBoundingClientRect();
@@ -81,14 +81,27 @@ const audit = page => page.evaluate(() => {
     const variant = el => (/MuiButton-contained/.test(el.className) ? 'contained' : /MuiButton-outlined/.test(el.className) ? 'outlined' : /MuiButton-text/.test(el.className) ? 'text' : 'other');
     const buttons = [...root.querySelectorAll('button.MuiButton-root')].filter(visible).map(el => {
         const s = getComputedStyle(el);
-        return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, border: s.borderTopWidth + ' ' + s.borderTopColor,
-            danger: el.classList.contains('jfmod-danger-text') };
+        return { text: el.textContent.trim(), variant: variant(el), bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth,
+            danger: el.classList.contains('jfmod-danger-text'), inRow: !!el.closest('.jfmod-rowactions'), disabled: el.disabled,
+            focused: el === document.activeElement };
     });
     const parts = [...root.querySelectorAll('button, .MuiFormControl-root, .jfmod-secret-row, .fieldDescription, .jfmod-savemeta, .jfmod-state, .jfmod-notice, .jfmod-kv, .jfmod-brow, .jfmod-maprow, .jfmod-lead, .jfmod-grouptitle, .MuiFormControlLabel-root, a')]
         .filter(visible).filter(el => !el.parentElement.closest('.MuiFormControl-root, button, .MuiFormControlLabel-root'));
     const overlaps = [];
     const tight = [];
-    const rects = parts.map(el => ({ el, r: el.getBoundingClientRect() }));
+    // What is drawn, not what is laid out: a dialog's scrolled content passes under its fixed actions, so each rectangle is
+    // clipped by every scrolling ancestor inside the root, and one scrolled out of sight is left out.
+    const clipped = el => {
+        const box = el.getBoundingClientRect();
+        let r = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+        for (let up = el.parentElement; up && root.contains(up); up = up.parentElement) {
+            if (getComputedStyle(up).overflowY === 'visible' && getComputedStyle(up).overflowX === 'visible') continue;
+            const c = up.getBoundingClientRect();
+            r = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) };
+        }
+        return { ...r, width: r.right - r.left, height: r.bottom - r.top };
+    };
+    const rects = parts.map(el => ({ el, r: clipped(el) })).filter(({ r }) => r.width > 1 && r.height > 1);
     for (let i = 0; i < rects.length; i++) {
         for (let j = i + 1; j < rects.length; j++) {
             const a = rects[i];
@@ -117,22 +130,68 @@ const audit = page => page.evaluate(() => {
     }
     const overflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
     return { buttons, overlaps, tight, overflow };
-});
+}, rootSelector);
 
-/** What a button of this text must look like: commits (Save, Add Prowlarr, Continue) fill, Clear / Remove / Delete are red text, the rest are not filled. */
+/** The audit with the pointer parked in a corner, so no button is measured in its hover state. */
+const auditIdle = async (page, layout, rootSelector) => {
+    await page.mouse.move(1, layout.viewport.height - 1);
+    // Resting styles: a button that kept focus after a click (Clear becomes Undo in the same element) shows MUI's focus tint.
+    await page.evaluate(() => document.activeElement?.blur?.());
+    await page.waitForTimeout(250);
+    return audit(page, rootSelector);
+};
+
+/**
+ * The role each button of the settings area has, by its words (and, for Test, whether it sits in a list row): commits
+ * fill, section actions are outlined, inline actions are text, Clear / Remove / Delete are red text. A button this map
+ * does not know fails, so a new one has to be classified on purpose.
+ */
+const ROLES = {
+    contained: ['Save', 'Saving…', 'Continue', 'Add Prowlarr'],
+    outlined: ['Test', 'Add mapping', 'Save mappings', 'Test import path', 'Run now', 'Restore stock now', 'Add indexer', 'Add profile', 'Sync now', 'Edit'],
+    text: ['Replace', 'Undo', 'Keep the saved one', 'Fix', 'Up', 'Make default', 'Cancel', 'Retry', 'Reload', 'Dismiss'],
+    danger: ['Clear', 'Remove', 'Delete']
+};
 const expectedFor = button => {
-    if (/^(Save|Saving…|Continue|Add Prowlarr)$/.test(button.text)) return 'contained';
-    if (/^(Clear|Remove|Delete)$/.test(button.text)) return 'danger';
-    return 'secondary';
+    if (button.text === 'Test' && button.inRow) return 'text';
+    return Object.keys(ROLES).find(role => ROLES[role].includes(button.text)) ?? null;
+};
+const PRIMARY = 'rgb(0, 164, 220)';
+const ERROR = 'rgb(198, 40, 40)';
+/** No fill: any colour at alpha 0 (a tint still fading out after a state change is the same). */
+const isClear = bg => /^rgba\(.*,\s*0\)$/.test(bg);
+/** The variant class and what it computes to: a fill only on commits, a 1 px border only on outlined, red only on danger. */
+const looksWrong = button => {
+    const want = expectedFor(button);
+    // A focused control on the TV takes the focus fill; it is checked for contrast instead.
+    const idle = !button.focused;
+    switch (want) {
+        case 'contained': return button.variant !== 'contained' || (idle && !button.disabled && button.bg !== PRIMARY);
+        case 'outlined': return button.variant !== 'outlined' || (idle && !isClear(button.bg)) || button.borderWidth !== '1px';
+        case 'text': return button.variant !== 'text' || (idle && !isClear(button.bg)) || button.borderWidth !== '0px';
+        case 'danger': return button.variant !== 'text' || !button.danger || (idle && !isClear(button.bg)) || button.borderWidth !== '0px' ||
+            (idle && !button.disabled && button.color !== ERROR);
+        default: return true;
+    }
 };
 const checkButtons = (layout, where, buttons) => {
-    const wrong = buttons.filter(button => {
-        const want = expectedFor(button);
-        if (want === 'contained') return button.variant !== 'contained';
-        if (want === 'danger') return button.variant === 'contained' || !button.danger || !/rgb\(198, 40, 40\)/.test(button.color);
-        return button.variant === 'contained';
+    const wrong = buttons.filter(looksWrong).map(button => ({ ...button, expected: expectedFor(button) }));
+    record(layout, `${where}: every button carries its deliberate variant and look (${buttons.length} buttons)`, wrong.length === 0,
+        wrong.length ? wrong : undefined);
+};
+
+/** WCAG contrast of two computed colours; a transparent background is read as the surface behind it. */
+const contrast = (fg, bg) => {
+    const channels = colour => colour.match(/[\d.]+/g).slice(0, 3).map(Number).map(value => {
+        const c = value / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     });
-    record(layout, `${where}: every button carries its deliberate variant (${buttons.length} buttons)`, wrong.length === 0, wrong.length ? wrong : undefined);
+    const luminance = colour => {
+        const [r, g, b] = channels(colour);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [a, b] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
 };
 
 const shot = async (page, name) => {
@@ -160,7 +219,7 @@ for (const name of only) {
             await page.locator(`.jfmod-check-section[data-section="${id}"]`).waitFor({ state: 'visible', timeout: 30000 });
             await page.waitForTimeout(700);
             const file = await shot(page, `${name}-settings-${id}`);
-            const result = await audit(page);
+            const result = await auditIdle(page, layout);
             checkButtons(name, `settings ${id}`, result.buttons);
             record(name, `settings ${id}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `settings ${id}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
@@ -175,7 +234,7 @@ for (const name of only) {
             await page.locator('.jfmod-secret-row button', { hasText: 'Replace' }).click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-replacing`));
-            const replacing = await audit(page);
+            const replacing = await auditIdle(page, layout);
             checkButtons(name, 'discovery while replacing', replacing.buttons);
             record(name, 'discovery while replacing: no overlaps or touching', !replacing.overlaps.length && !replacing.tight.length,
                 [...replacing.overlaps, ...replacing.tight]);
@@ -183,7 +242,7 @@ for (const name of only) {
             await page.locator('.jfmod-secret-row button', { hasText: 'Clear' }).click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-clearing`));
-            const clearing = await audit(page);
+            const clearing = await auditIdle(page, layout);
             checkButtons(name, 'discovery while clearing', clearing.buttons);
             record(name, 'discovery while clearing: no overlaps or touching', !clearing.overlaps.length && !clearing.tight.length,
                 [...clearing.overlaps, ...clearing.tight]);
@@ -204,34 +263,59 @@ for (const name of only) {
                 undefined, { timeout: 30000 });
             const after = await page.locator('[data-savemeta="discovery"]').innerText();
             record(name, 'discovery Save with nothing changed round-trips the revision', before === after, { before, after });
-            // The edit sheet of an indexer and a quality profile, opened and cancelled.
-            for (const [section, opener] of [['indexers', 'Edit'], ['profiles', 'Edit']]) {
-                await page.evaluate(id => { location.hash = '#/catalog/settings?section=' + id; }, section);
-                await page.locator(`.jfmod-check-section[data-section="${section}"]`).waitFor({ state: 'visible', timeout: 30000 });
-                await page.waitForTimeout(500);
-                const edit = page.locator('.jfmod-rowactions button', { hasText: opener }).first();
-                if (!await edit.count()) continue;
-                await edit.click();
-                const dialog = page.locator('.MuiDialog-paper').last();
-                await dialog.waitFor({ state: 'visible', timeout: 10000 });
-                await page.waitForTimeout(400);
-                console.log('  shot', await shot(page, `${name}-settings-${section}-dialog`));
-                const dialogButtons = await dialog.evaluate(paper => [...paper.querySelectorAll('button.MuiButton-root')].map(el => ({
-                    text: el.textContent.trim(), danger: el.classList.contains('jfmod-danger-text'), color: getComputedStyle(el).color,
-                    variant: /MuiButton-contained/.test(el.className) ? 'contained' : /MuiButton-outlined/.test(el.className) ? 'outlined' : 'text'
-                })));
-                checkButtons(name, `${section} dialog`, dialogButtons.filter(button => button.text !== 'Cancel'));
-                record(name, `${section} dialog: Cancel is not filled`, dialogButtons.some(button => button.text === 'Cancel' && button.variant !== 'contained'), dialogButtons);
-                await dialog.locator('button', { hasText: 'Cancel' }).click();
-                await page.waitForTimeout(400);
+        }
+        // The editors of an indexer and a quality profile, in every layout: opened, audited like a section, and on the TV a
+        // red action reached by the arrows must stay readable under the focus fill. Cancelled; nothing is saved.
+        for (const section of ['indexers', 'profiles']) {
+            await page.evaluate(id => { location.hash = '#/catalog/settings?section=' + id; }, section);
+            await page.locator(`.jfmod-check-section[data-section="${section}"]`).waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(500);
+            const edit = page.locator('.jfmod-rowactions button', { hasText: 'Edit' }).first();
+            if (!await edit.count()) {
+                record(name, `${section} dialog: an Edit button exists to open it`, false);
+                continue;
             }
+            await edit.click();
+            const dialog = page.locator('.MuiDialog-paper').last();
+            await dialog.waitFor({ state: 'visible', timeout: 10000 });
+            await page.waitForTimeout(500);
+            console.log('  shot', await shot(page, `${name}-settings-${section}-dialog`));
+            const result = await auditIdle(page, layout, '.MuiDialog-paper');
+            checkButtons(name, `${section} dialog`, result.buttons);
+            record(name, `${section} dialog: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
+            record(name, `${section} dialog: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
+            if (layout.tv) {
+                let reached = false;
+                for (let press = 0; press < 60 && !reached; press++) {
+                    // Down through the editor; Right along a row that holds a red action (the secret's Replace | Clear).
+                    const inDangerRow = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-secret-row, .jfmod-qrow')?.querySelector('.jfmod-danger-text'));
+                    await page.keyboard.press(inDangerRow ? 'ArrowRight' : 'ArrowDown');
+                    await page.waitForTimeout(150);
+                    reached = await page.evaluate(() => !!document.activeElement?.matches('.MuiDialog-paper .jfmod-danger-text'));
+                }
+                record(name, `${section} dialog: a red action is reachable by the arrows`, reached);
+                if (reached) {
+                    const focused = await page.evaluate(() => {
+                        const el = document.activeElement;
+                        const own = getComputedStyle(el).backgroundColor;
+                        const paper = getComputedStyle(el.closest('.MuiDialog-paper')).backgroundColor;
+                        return { text: el.textContent.trim(), color: getComputedStyle(el).color, bg: own === 'rgba(0, 0, 0, 0)' ? paper : own };
+                    });
+                    const ratio = contrast(focused.color, focused.bg);
+                    console.log('  shot', await shot(page, `${name}-settings-${section}-dialog-focus`));
+                    record(name, `${section} dialog: the focused red action is readable (contrast ${ratio.toFixed(2)} >= 3)`, ratio >= 3, focused);
+                }
+            }
+            await dialog.locator('button', { hasText: 'Cancel' }).evaluate(el => el.click());
+            await dialog.waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+            await page.waitForTimeout(400);
         }
         for (const step of WIZARD_STEPS) {
             await page.evaluate(id => { location.hash = '#/catalog/settings/setup?step=' + id; }, step);
             await page.locator('.jfmod-check-main .jfmod-check-section').first().waitFor({ state: 'visible', timeout: 30000 });
             await page.waitForTimeout(700);
             console.log('  shot', await shot(page, `${name}-wizard-${step}`));
-            const result = await audit(page);
+            const result = await auditIdle(page, layout);
             checkButtons(name, `wizard ${step}`, result.buttons);
             record(name, `wizard ${step}: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `wizard ${step}: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
