@@ -103,9 +103,9 @@ for (const name of only) {
             await page.waitForTimeout(3000);
             const menuButton = page.locator('.MuiToolbar-root button[aria-label], .MuiToolbar-root .MuiAvatar-root').last();
             await menuButton.click();
-            const item = page.locator('.MuiMenuItem-root', { hasText: 'JellyfinMod settings' });
+            const item = page.locator('.MuiMenuItem-root', { hasText: /^\s*JellyfinMod Settings\s*$/ });
             await item.waitFor({ state: 'visible', timeout: 10000 });
-            record(name, 'The user menu offers JellyfinMod settings to an administrator', true);
+            record(name, 'The user menu offers JellyfinMod Settings to an administrator', true);
             await item.click();
             await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
             record(name, 'The menu item opens the settings area', await page.evaluate(() => location.hash.startsWith('#/catalog/settings')));

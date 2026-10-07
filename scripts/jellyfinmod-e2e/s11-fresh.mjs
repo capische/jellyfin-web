@@ -144,7 +144,7 @@ async function wizard() {
         if (!state.dismissedAt) {
             await banner.waitFor({ state: 'visible', timeout: 30000 });
             record('wizard', 'Home banner for an administrator whose setup is incomplete', true, await banner.innerText());
-            await banner.locator('a, button', { hasText: 'Set up' }).first().click();
+            await banner.locator('a, button', { hasText: /^Set Up$/ }).first().click();
             await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
         } else {
             await openWizard(page);
@@ -376,7 +376,7 @@ async function resume() {
         await dialog.getByRole('button', { name: 'Save' }).click();
         await dialog.waitFor({ state: 'hidden', timeout: 15000 });
         await page.waitForTimeout(1500);
-        await profiles.getByRole('button', { name: 'Make default' }).first().click();
+        await profiles.locator('[data-row-action="default"]').first().click();
         await waitNotice(page, 'profiles', /Default changed/);
         await page.waitForFunction(() => document.querySelector('[data-wizard-state]')?.getAttribute('data-wizard-state') === 'done', undefined, { timeout: 30000 });
         record('resume', 'A valid profile made default completes the step', !await cont(page).isDisabled(), { quality: hd });
@@ -421,8 +421,9 @@ const openSection = async (page, id) => {
 const busyCycle = async (page, button, timeout = 90000) => {
     await button.click();
     await button.waitFor({ state: 'attached' });
-    await page.waitForFunction(element => element.disabled, await button.elementHandle(), { timeout: 5000 }).catch(() => {});
-    await page.waitForFunction(element => !element.disabled, await button.elementHandle(), { timeout });
+    // A row's icon is refused with aria-disabled while it is busy, so the remote keeps its focus; a labelled button is disabled.
+    await page.waitForFunction(element => element.disabled || element.getAttribute('aria-disabled') === 'true', await button.elementHandle(), { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(element => !(element.disabled || element.getAttribute('aria-disabled') === 'true'), await button.elementHandle(), { timeout });
     await page.waitForTimeout(700);
 };
 const testNotice = async (page, id, button) => {
@@ -867,12 +868,12 @@ async function mobileSettings() {
             return { href: link.getAttribute('href'), text: link.textContent.trim(), shown: rect.width > 0 && rect.height > 0 && getComputedStyle(link).visibility !== 'hidden' };
         }));
         const shown = href => links.some(link => link.href === href && link.shown);
-        record('mobile', 'D8: the settings area at 390 px shows its links, including Setup wizard and Dashboard',
+        record('mobile', 'D8: the settings area at 390 px shows its links, including Setup Wizard and Dashboard',
             shown('#/catalog/settings/setup') && shown('#/dashboard'), links);
         await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/catalog/settings/setup"]').tap();
         const wizardOpened = await page.waitForFunction(() => location.hash.startsWith('#/catalog/settings/setup') && !!document.querySelector('#jfmodSetupPage'),
             undefined, { timeout: 20000 }).then(() => true, () => false);
-        record('mobile', 'D8: tapping Setup wizard opens the wizard', wizardOpened, { hash: await page.evaluate(() => location.hash.split('?')[0]) });
+        record('mobile', 'D8: tapping Setup Wizard opens the wizard', wizardOpened, { hash: await page.evaluate(() => location.hash.split('?')[0]) });
         await page.evaluate(() => { location.hash = '#/catalog/settings'; });
         await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/dashboard"]').waitFor({ state: 'visible', timeout: 30000 });
         await page.locator('#jfmodSettingsPage .jfmod-check-links a[href="#/dashboard"]').tap();

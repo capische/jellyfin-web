@@ -516,10 +516,10 @@ async function sweepLayout(name) {
     }
 
     // ---- JellyfinMod settings and the setup wizard
-    await row('JellyfinMod settings', cfg.tv ? keys + ': the settings link below the Home rows' : shell + ': user menu', async () => {
-        if (cfg.tv) { await tvHome(); await activate(page, cfg, { sel: '[data-jfmod-tv-settings]' }); } else await userMenu('JellyfinMod settings');
+    await row('JellyfinMod Settings', cfg.tv ? keys + ': the settings link below the Home rows' : shell + ': user menu', async () => {
+        if (cfg.tv) { await tvHome(); await activate(page, cfg, { sel: '[data-jfmod-tv-settings]' }); } else await userMenu('JellyfinMod Settings');
     }, { hash: '^#/catalog/settings$|^#/catalog/settings\\?', selector: '#jfmodSettingsPage .jfmod-step, #jfmodSettingsPage .jfmod-check-main section[data-section]' });
-    await row('JellyfinMod setup wizard', (cfg.tv ? keys : shell) + ': settings area link "Setup wizard"',
+    await row('JellyfinMod setup wizard', (cfg.tv ? keys : shell) + ': settings area link "Setup Wizard"',
         () => activate(page, cfg, { sel: 'a[href="#/catalog/settings/setup"]' }), { hash: '^#/catalog/settings/setup', selector: '#jfmodSetupPage .jfmod-wizardSection, #jfmodSetupPage h1, #jfmodSetupPage h2' });
 
     // ---- Jellyfin preferences
