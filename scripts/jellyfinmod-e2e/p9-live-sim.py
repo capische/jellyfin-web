@@ -100,6 +100,8 @@ class Api:
     tests = 0
     refreshes = 0
     after_save = None  # a save "by someone else" that lands right after the runner's own
+    queued = 0
+    task_state = "Idle"
 
 
 def settings_row():
@@ -138,6 +140,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {})
         if self.path == "/JellyfinMod/Settings/Ratings":
             return self.reply(200, self.dto())
+        if self.path == "/JellyfinMod/Ratings/Status":
+            return self.reply(200, {"queued": Api.queued})
+        if self.path == "/ScheduledTasks":
+            return self.reply(200, [{"Key": "JellyfinModRatingsRefresh", "Id": "ratings", "State": Api.task_state}])
         return self.reply(404, {})
 
     def do_POST(self):
@@ -321,19 +327,47 @@ def failing_recovery(script, *args, **kwargs):
 
 
 live.remote = failing_recovery
-raised = False
-marker = None
+raised = None
 try:
     live.with_service_stopped(".shell sleep 59", timeout=1)
 except live.RecoveryFailed as failure:
-    raised = True
-    marker = str(failure).split()[3]
+    raised = failure
 live.remote = real_remote
 time.sleep(2)  # the daemon's own stop finishes in a second
-check(raised and "start" not in events() and service() == "exited",
+check(raised is not None and "start" not in events() and service() == "exited",
       "When the recovery call itself fails, the service is not started and the step reports a recovery failure", {"events": events()})
-if marker:
-    live.recover(marker)
+if raised is not None:
+    live.recover(raised.marker, raised.groups)
+
+# An unmarked member left in a step's group after the processes that led it have gone (review round 6, finding 1): found
+# through the group recorded when the step started, ended, and the group confirmed empty.
+orphan = subprocess.Popen(["setsid", "bash", "-c", "sleep 61 >/dev/null 2>&1 & exit 0"])
+orphan.wait()
+group = orphan.pid
+alive_before = subprocess.run(["bash", "-c", f"kill -0 -- -{group}"], capture_output=True).returncode == 0
+ended = live.recover("p9op-" + "0" * 12, [group])
+alive_after = subprocess.run(["bash", "-c", f"kill -0 -- -{group}"], capture_output=True).returncode == 0
+check(alive_before and ended and not alive_after and subprocess.run(["pgrep", "-f", "sleep 61"], capture_output=True).returncode != 0,
+      "An orphaned member whose group leader has gone is found by the recorded group, ended, and the group confirmed empty",
+      {"aliveBefore": alive_before, "recovered": ended, "aliveAfter": alive_after})
+
+reset_service()
+out = live.with_service_stopped(".shell sleep 62 >/dev/null 2>&1 &")
+check(out.returncode == 0 and subprocess.run(["pgrep", "-f", "sleep 62"], capture_output=True).returncode != 0 and service() == "running"
+      and ordered(events()), "A member a finished step left behind in its group is ended before the service starts", {"events": events()})
+
+reset_service()
+real_groups = live.step_groups
+live.step_groups = lambda text: None
+missing = None
+try:
+    live.with_service_stopped("SELECT 1;")
+except live.RecoveryFailed as failure:
+    missing = failure
+live.step_groups = real_groups
+check(missing is not None and "start" not in events() and service() == "exited",
+      "Without a valid report of the step's groups nothing can be confirmed, so the service is not started", {"events": events()})
+reset_service()
 
 # ---- Key ownership (findings 1 and 2).
 live.save_state({"token": "sim", "lastRevision": 1, "fixtureKeyRef": ""})
@@ -389,6 +423,19 @@ Api.tests = Api.refreshes = 0
 live.test_key()
 live.refresh("entry")
 check(Api.tests == 1 and Api.refreshes == 1, "While the settings are as the run left them, Test and a refresh go through")
+
+# ---- Cleanup waits for work in flight (review round 6, finding 3).
+Api.queued, Api.task_state = 2, "Running"
+threading.Timer(3, lambda: setattr(Api, "queued", 0)).start()
+threading.Timer(5, lambda: setattr(Api, "task_state", "Idle")).start()
+began = time.time()
+drained = live.drain(limit=20)
+waited = time.time() - began
+check(drained and waited >= 4.5, "The drain cleanup starts with waits until no refresh is queued and the ratings task is idle",
+      {"seconds": round(waited, 1)})
+Api.task_state = "Running"
+check(not live.drain(limit=3), "If the task does not finish, the drain says so (and cleanup then clears nothing)")
+Api.task_state = "Idle"
 
 server.shutdown()
 subprocess.run(["rm", "-rf", WORK])
