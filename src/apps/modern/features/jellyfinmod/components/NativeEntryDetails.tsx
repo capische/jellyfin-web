@@ -175,7 +175,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const capabilities = usePluginCapabilities(api);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
     const queryClient = useQueryClient();
-    // The Ratings line has its own mount and query; a manual refresh asks it to read again (Phase 9).
+    // The Ratings line has its own mount and query; a finished manual refresh asks it to read again (Phase 9).
     const rereadRatings = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: itemRatingsKey(api.basePath, userId, itemId) }).catch(() => undefined);
     }, [api.basePath, itemId, queryClient, userId]);
@@ -329,7 +329,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
             {isAdmin && <VersionRemoveControls api={api} entryId={detail.data.entry.id} mediaType={detail.data.entry.mediaType}
                 busy={busy} change={change} versions={versions} capabilities={capabilities} onRemoved={afterRemove} />}
             {isAdmin && !episode && <RatingsRefreshButton api={api} entryId={detail.data.entry.id} onMessage={setMessage}
-                onQueued={rereadRatings} />}
+                onDone={rereadRatings} />}
         </div>
         <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
             <ol>{history.map(event => <li key={event.id}>

@@ -7,6 +7,7 @@ import * as userSettings from 'scripts/settings/userSettings';
 import { renderComponent } from 'utils/reactUtils';
 
 import { getEntry } from '../api/modApi';
+import { prefetchRatingsPreferences } from '../hooks/useRatingsPreferences';
 import EntryDetails from '../components/EntryDetails';
 import { getTmdbImage } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
@@ -66,7 +67,9 @@ export default function initializeEntryDetails(view, params) {
         abort = new RequestAbortController();
         loading.show();
         try {
-            const [detail, user] = await Promise.all([getEntry(api, params.entryId, { signal: abort.signal }), client.getCurrentUser()]);
+            // The ratings line's preferences load with the entry, so the line never arrives after the actions are focused (Phase 9).
+            const [detail, user] = await Promise.all([getEntry(api, params.entryId, { signal: abort.signal }), client.getCurrentUser(),
+                prefetchRatingsPreferences(api, client.getCurrentUserId())]);
             if (currentGeneration !== generation) return;
             if (detail.entry.jellyfinItemId) {
                 window.location.replace('#/details?id=' + encodeURIComponent(detail.entry.jellyfinItemId)

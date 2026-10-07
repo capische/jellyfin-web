@@ -75,6 +75,9 @@ const RatingsPreferencesPage: FC = () => {
         setSources(null);
         if (cardSource && !preferences.defaultSources.includes(cardSource)) setCardSource(null);
         setStatus('The server’s default order applies again. Saved.');
+        // The reset button leaves with the user's own order; focus goes to the first source switch, which stays, so a TV
+        // remote is never left on a control that no longer exists (web review 2026-10-07, P2 4).
+        setRefocus('#jfmodRatingsPreferencesPage [data-jfmod-source-toggle]');
     }, [cardSource, preferences.defaultSources, setCardSource, setSources]);
 
     const chooseCard = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
