@@ -270,8 +270,15 @@ check(out is not None and out.returncode == 143 and not group_left(out.marker) a
       {"exit": out.returncode if out else None, "sleeperLeft": sleeper, "events": events()})
 
 reset_service()
-late = os.path.join(WORK, "late-sql")
-out = live.with_service_stopped(f".shell sleep 4\n.shell touch '{late}'", timeout=2)
+# The sentinel's path has an apostrophe and a command substitution in it (review round 7, finding 2); first a step that is
+# allowed to finish shows the sentinel really is created, so its absence below means something.
+late = os.path.join(WORK, "it's $(touch expanded) late-sql")
+out = live.with_service_stopped(live.late_sql(late, 0))
+check(out.returncode == 0 and os.path.exists(late) and not os.path.exists(os.path.join(os.getcwd(), "expanded")),
+      "The late-SQL sentinel is created at a path with an apostrophe and $(...), taken literally", {"created": os.path.exists(late)})
+os.remove(late)
+reset_service()
+out = live.with_service_stopped(live.late_sql(late, 4), timeout=2)
 time.sleep(6)
 check(out.returncode == 124 and not group_left(out.marker) and not os.path.exists(late) and service() == "running" and ordered(events()),
       "A local time-out mid-SQL: the operation is ended and confirmed gone before the start; its SQL never runs afterwards",
@@ -321,7 +328,7 @@ real_remote = live.remote
 
 
 def failing_recovery(script, *args, **kwargs):
-    if "kill -TERM --" in script and "pgrep -f" in script:
+    if "kill -TERM --" in script and 'groups="' in script:  # the recovery call
         return subprocess.CompletedProcess(args=[], returncode=255, stdout="", stderr="ssh: connection dropped")
     return real_remote(script, *args, **kwargs)
 
@@ -337,7 +344,7 @@ time.sleep(2)  # the daemon's own stop finishes in a second
 check(raised is not None and "start" not in events() and service() == "exited",
       "When the recovery call itself fails, the service is not started and the step reports a recovery failure", {"events": events()})
 if raised is not None:
-    live.recover(raised.marker, raised.groups)
+    live.recover(raised.groups)
 
 # An unmarked member left in a step's group after the processes that led it have gone (review round 6, finding 1): found
 # through the group recorded when the step started, ended, and the group confirmed empty.
@@ -345,11 +352,28 @@ orphan = subprocess.Popen(["setsid", "bash", "-c", "sleep 61 >/dev/null 2>&1 & e
 orphan.wait()
 group = orphan.pid
 alive_before = subprocess.run(["bash", "-c", f"kill -0 -- -{group}"], capture_output=True).returncode == 0
-ended = live.recover("p9op-" + "0" * 12, [group])
+ended = live.recover([group])
 alive_after = subprocess.run(["bash", "-c", f"kill -0 -- -{group}"], capture_output=True).returncode == 0
 check(alive_before and ended and not alive_after and subprocess.run(["pgrep", "-f", "sleep 61"], capture_output=True).returncode != 0,
       "An orphaned member whose group leader has gone is found by the recorded group, ended, and the group confirmed empty",
       {"aliveBefore": alive_before, "recovered": ended, "aliveAfter": alive_after})
+
+# A process that merely carries a step's marker and leads a group of its own (as the `setsid --wait` wrapper leads the SSH
+# session's group) is not signalled: recovery touches only the step's two recorded groups (review round 7, finding 1).
+marker = "p9op-" + os.urandom(6).hex()
+bystander = subprocess.Popen(["setsid", "bash", "-c", f"exec -a '{marker}-wrapper' sleep 63"])
+time.sleep(0.5)
+recorded = []
+for _ in range(2):
+    finished = subprocess.Popen(["setsid", "true"])
+    finished.wait()
+    recorded.append(finished.pid)
+ended = live.recover(recorded)
+untouched = bystander.poll() is None and subprocess.run(["pgrep", "-f", marker], capture_output=True).returncode == 0
+bystander.kill()
+bystander.wait()
+check(ended and untouched, "A process carrying the step's marker but outside its recorded groups is left alone by recovery",
+      {"recovered": ended, "bystanderUntouched": untouched})
 
 reset_service()
 out = live.with_service_stopped(".shell sleep 62 >/dev/null 2>&1 &")

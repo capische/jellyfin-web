@@ -216,7 +216,7 @@ def with_service_stopped(sql, timeout=600, pidfile=None, ensure=True):
                                           stdout=partial.decode(errors="replace") if isinstance(partial, bytes) else partial)
     out.marker = marker
     out.groups = step_groups(out.stdout)
-    if out.groups is None or not recover(marker, out.groups):
+    if out.groups is None or not recover(out.groups):
         failure = RecoveryFailed(f"the stopped-service step {marker} could not be shown to have ended; the service was left as it was")
         failure.marker, failure.groups = marker, out.groups or []
         raise failure
@@ -244,19 +244,17 @@ def step_groups(text):
     return [monitor, work]
 
 
-def recover(marker, groups):
-    """Ends whatever is left of a stopped-service step and confirms it is gone (review rounds 4-6). Its two recorded process
-    groups — kept here, so a member is found even after the processes that led them have gone — and any group a process with
-    the step's marker still leads are sent TERM, waited for, sent KILL if they have not emptied, and checked again
-    (`kill -0` on the group). True only when the call itself succeeded and every one of them is empty."""
-    listed = " ".join(str(group) for group in groups)
+def recover(groups):
+    """Ends whatever is left of a stopped-service step and confirms it is gone (review rounds 4-7). Only the step's two recorded
+    process groups are touched — kept here, so a member is found even after the processes that led them have gone, and already
+    checked by `step_groups` against the groups that must never be signalled. No other group is looked for: a process that
+    merely carries the step's marker (the `setsid --wait` wrapper, which leads the SSH session's group) is left alone. Each group
+    is sent TERM, waited for, sent KILL if it has not emptied, and checked again (`kill -0`). True only when the call itself
+    succeeded and both are empty."""
+    listed = " ".join(str(int(group)) for group in groups)
     try:
         out = remote(f"""
 groups="{listed}"
-for pid in $(pgrep -f {q(marker)}); do
-  group=$(ps -o pgid= -p "$pid" | tr -d ' ')
-  [ "$group" = "$pid" ] && groups="$groups $pid"
-done
 empty() {{ for group in $groups; do kill -0 -- "-$group" 2>/dev/null && return 1; done; return 0; }}
 empty && exit 0
 for group in $groups; do kill -TERM -- "-$group" 2>/dev/null; done
@@ -268,6 +266,13 @@ exit 3
     except (subprocess.TimeoutExpired, OSError):
         return False
     return out.returncode == 0
+
+
+def late_sql(path, wait):
+    """SQL that waits `wait` seconds and then creates `path` — a sentinel for "this step's SQL ran after the wait". The file is
+    created by SQLite itself (ATTACH), so the path is quoted only for SQL, with no shell in between to re-read it (review
+    round 7, finding 2: SQLite's `.shell` drops shell quoting, so an apostrophe broke the path and `$(...)` was expanded)."""
+    return f".shell sleep {int(wait)}\nATTACH DATABASE '{path.replace(chr(39), chr(39) * 2)}' AS late;\nCREATE TABLE late.ran (x);"
 
 
 def restart_clean():
@@ -316,7 +321,7 @@ def step_interrupt():
     late = f"{WORK.rstrip('/')}/p9-late-sql"
     remote(f"rm -f {q(late)}")
     started = time.time()
-    out = with_service_stopped(f".shell sleep 30\n.shell touch {q(late)}", timeout=8)
+    out = with_service_stopped(late_sql(late, 30), timeout=8)
     gone = remote(f"pgrep -f {q(out.marker)}").returncode != 0
     healthy = call("GET", "/JellyfinMod/Health")[0] == 200
     wait_for(lambda: time.time() - started > 45, "the time the SQL step would have needed", 60)
