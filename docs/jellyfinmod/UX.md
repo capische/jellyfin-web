@@ -861,6 +861,7 @@ Split by audience, and the split keeps the fork small:
 | Indexers, download clients, quality profiles, global retention, TMDB key | **The plugin's own Dashboard config page** | Admin-only, never used on a TV, and a plugin config page costs the fork exactly zero lines |
 | Per-item monitor, per-item quality profile, per-item Keep | Catalog detail page | Per-title, used while browsing |
 | Catalog view preferences (sort, card layout, show wanted in Home) | The fork's display preferences | Per-user, matches where the equivalent library settings already live |
+| Rating sources, their order and the one card rating (Phase 9) | *Ratings display*, the mod route `catalog/preferences`, from the user menu and the TV's Home link; stored in the user's own Jellyfin display preferences | Per-user; a mod route rather than an edit of upstream's legacy display page ([PHASE9.md](PHASE9.md) plan decision 8) |
 
 Quality profile editing deserves a real UI and still belongs on the plugin's config page. It is
 a once-a-quarter admin task, not a browsing surface.

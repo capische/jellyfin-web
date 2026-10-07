@@ -420,3 +420,93 @@ no vote count. Of 160 catalog entries only the 2 added through TMDB discovery ca
 **DTOs.** One rating: `{source, value, scale, votes, provider, fetchedAt, url, stale}` with `scale` in `ten`,
 `percent`, `five`, `four`; `provider` in `tmdb`, `mdblist`, `host_omdb`, `host_tmdb`; `stale` true when `fetchedAt` is
 older than `refreshDays`. API.md *Ratings (Phase 9)* records every endpoint as built.
+
+## R2–R8 evidence — 2026-10-07
+
+Opus 5.5, high. Plugin `jellyfinmod-phase9` (`abeffb7..612d557`; the code as deployed and tested is `0060c32`, the last
+commit is the README), web `jellyfinmod-phase9` (`95709dc6ca..` this branch's tip). Deployed to the isolated instance only (`jellyfinmod-test`, 18096): plugin 0.1.0.0 built from `0060c32`, serving web
+bundle `619599d6e666` at `/web-mod/` (the web root there is read-only, so `/web` keeps the host's own build). Production
+was never deployed to, restarted or contacted. Nothing called MDBList, OMDb, TMDB or Trakt: every ratings call went to the
+MDBList stand-in (`scripts/jellyfinmod-e2e/standins/mdblist.mjs`) on the isolated instance's Docker network, set through the
+hidden XML field `RatingsProviderBaseUrl`, with a generated fixture key that was never printed and was deleted afterwards.
+
+**Suites.** `tests/PhaseNineRatingsIntegration` (new; real Kestrel, authentication, authorization, MVC serialization, EF
+migrations and SQLite; a real HTTP boundary answering as MDBList and TMDB; simulated host services: Jellyfin's users,
+library roots and item store, as in every plugin suite) — **120 checks pass** on the workstation, including the migration
+of a copy of the isolated instance's database taken before the deployment (six pending migrations, every row kept, integrity
+and foreign keys clean): `evidence/p9/suite-phase-nine-mac.txt`. **Suites on the test host** (offline .NET 10 SDK container, plugin
+source at `0060c32`, `evidence/p9/suites-pi/`): all **14** pass — Phase 0 and 1 smoke, Phase 2, 3, 3-protection, 4 (as root),
+5, 6, the S7 settings, S9 Prowlarr, takeover (with this branch's `jellyfinmod-web.zip`), Q16 Trakt, Phase 10 retention and
+Phase 9 ratings. Phase 5 failed its first run only because that runner did not pass the bind-mount aliases the earlier Pi
+runners give it (`JFMOD_ALIAS_A/B`); with them it passed.
+
+| Row | What acceptance had to show | Result | Evidence |
+| --- | --- | --- | --- |
+| R1 | MDBList fields, OMDb fields on native items, API.md | Recorded above; API.md *Ratings (Phase 9)* | R1 evidence, `r1-spike-instance.txt` |
+| R2 | Migration on a copy of the isolated DB; save/read/restart; key never returned; ordinary user 403 | **Passed.** Suite: migration on the released schema and on the instance copy; revision 409, unknown field 400, Google refused; key in the `0600` store only, never in a response, a log line or history. Live: defaults, key saved write-only, stale revision 409, Test against the stand-in `ok`, a restart keeps settings, key and ratings, ordinary user 403 on settings, status, Test and refresh, anonymous 401 | `suite-phase-nine-mac.txt`, `live-results.json` (`unconfigured`, `configure`, `restart`) |
+| R3 | One call per entry per window; 401, 429, 5xx, timeout, malformed; a killed run leaves no duplicate fetch | **Passed, with one refinement:** one call per **title identity** per window (the instance holds 172 entries for 166 titles; entries in two libraries share one answer). Live: the daily task through Jellyfin's task manager made 166 calls for 166 titles, all with the key, newest first; a second run made none; a spent budget stopped the task and refused a manual refresh; a manual refresh fetched once; 401 and a key-error body blocked fetching and kept values, a new key or a passing Test lifted it; 429 opened the breaker to the next UTC day and a new key closed it; malformed and timeout counted as failures, not-found did not; five 503s opened the one-hour breaker; a container killed (SIGKILL) mid-call left its committed claim, which the next start counted as interrupted, and the title was not fetched again | `live-results.json` (`fetch`, `failures`, `kill`), suite |
+| R4 | File-less entry TMDB only; on-disk title shows host data as `host_omdb` unconfigured, replaced by MDBList when configured | **Passed.** A file-less entry showed TMDB 8.7 from its own snapshot only; a disposable on-disk title (NFO `<rating>7.4</rating>`, `<criticrating>87</criticrating>`, `<lockdata>true</lockdata>`, so the host ran only local providers: `fixture-providers.txt`) showed RT critics 87 as `host_omdb` and 7.4 as TMDB (`host_tmdb`, TheMovieDb first); with OMDb ordered first the same value read as IMDb (`host_omdb`, no votes); after the first run every value came from MDBList, with TMDB staying first-party where the snapshot has one | `live-results.json` (`unconfigured`, `fetch`) |
+| R5 | Real HTTP as admin, ordinary user, no-access user, anonymous | **Passed.** A temporary viewer (Movies and Shows only, created and deleted by the run) read ratings of a title it can see without any provider state, got 404 for the disposable library's item and entry, and 403 on every administrator endpoint; anonymous 401; Browse rows carry `rating` only with `ratingSource` | `live-results.json` |
+| R6 | Built browser on desktop, mobile, TV 1920×1080 and 1280×720 by D-pad; old plugin hides the line | **Passed in Playwright Chromium 153.0.8010.12 (39/39) and real Google Chrome 153.0.8010.54 (39/39).** Native and file-less pages, chips in the user's order with votes and "via MDBList, as of …"; the line leads the detail section and is never a focus stop; Refresh ratings; Ratings display from the user menu and, on the TV, from the Home link by Down alone, Enter toggles, the remote's Back (461) leaves; the choice is stored in the user's Jellyfin display preferences; settings section with Test; a Health without the ratings capabilities hides the line, the menu item and the card field; ratings turned off hide the line; no page errors; no browser-received response carries the key | `browser-results.json`, `browser-chromium.txt`, `browser-chrome.txt`, `shots/` |
+| R7 | Cards unchanged with the preference off; one source in the secondary line with it on; no corner badge | **Passed** in both browsers: off sends no `ratingSource` and renders nothing; IMDb chosen puts "· IMDb 8.1" in each card's secondary text line, no badge, no focus stop | same |
+| R8 | The full chain with every safeguard shown to stop it; no third-party call by a test | **Passed** on the isolated instance as above; fixtures removed (below) | all of `evidence/p9/` |
+
+`live-results.json` keeps every attempt, failures included: an early cleanup could not remove the fixture entries through
+`DELETE /JellyfinMod/Entries` (see *Findings*), one leak check was reworded once it was clear the host writes no HTTP client
+log lines at its level, and the `failures` step was re-run in full after a runner typo stopped the first run at its last check.
+The browser and live runs found three defects that are fixed in this branch: cards never asked for a rating on a grid mounted
+right after sign-in, the card rating looked for the wrong footer element, and a turned-off line stayed for up to five minutes.
+
+**Cleanup, proven.** The disposable library was removed through `DELETE /Library/VirtualFolders`, its media and NFOs deleted,
+the temporary viewer deleted, the fixture key cleared from the secret store, the stand-in address removed from the XML, every
+stored rating, attempt and ratings setting removed with the service stopped (no API deletes ratings), the three fixture
+entries removed the same way (foreign keys on), oleksii's two display-preference keys removed, and the stand-in stopped.
+`GET /Users/{oleksii}/Views` then listed only Movies and Shows; no *JellyfinMod P9* title is left; ratings settings are fresh
+defaults (on, no key, no override). The daily task stays registered and, with no key, calls nothing.
+
+### Deviations from the outline, and why
+
+- `four` joins the scales (Roger Ebert is out of four) and `host_tmdb` joins the providers (on this host the native
+  `CommunityRating` is TMDb's, R1).
+- One call per title identity rather than per entry (R3 above).
+- Per-user preferences live on a mod route, not upstream's legacy display page (plan decision 8).
+- On native pages the line sits below the button row, not beside the stock star (UX §13 rule 2; plan decision 9).
+- `GET /Entries` does not gain the card value; cards are the combined Browse grid only (plan decision 10).
+- The Dashboard `configPage.html` is not extended; the settings area carries the section (plan decision 11).
+- Replacing the key also closes a breaker that a 429 opened (the quota belongs to the key).
+
+### Findings outside this phase
+
+- `DELETE /JellyfinMod/Entries/{id}` answers 409 ("still has media in the library") for a title whose native binding
+  outlived its library: once a library is removed, no scan clears the binding, so the entry can never be removed through the
+  API. The isolated instance still carries ten such entries from earlier runs (*JellyfinMod D13 …* and *JellyfinMod P22 …*,
+  in libraries that no longer exist; they do not show in any view). Not touched here; worth its own task.
+- The isolated instance logs at Debug but writes no `System.Net.Http` lines, so outbound hosts cannot be read from its log.
+
+### Not verified
+
+- **The real MDBList call** (shape, refused-key status, unknown-title status, TMDB's scale) — waits for the user's key and
+  one press of **Test** in Settings → Ratings (open question 1).
+- **OMDb writing the fields live** — the host cannot be pointed at a stand-in (hard-coded address), so the on-disk fixture
+  carried the same fields in a locked NFO, as the acceptance conventions allow.
+- **Physical webOS** — TV layout emulation only.
+- **An ordinary user's browser session** — the ordinary user was exercised through the API; the browser runs signed in as
+  oleksii.
+
+## Status and handover — 2026-10-07
+
+**Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
+isolated instance passed in Chromium and Chrome. Acceptance waits for the Codex GPT-6.1 Sol high review of
+`abeffb7..jellyfinmod-phase9` (plugin) and `95709dc6ca..jellyfinmod-phase9` (web), and for the user. Nothing is merged; the
+plugin version stays 0.1.0.0 and nothing was published.
+
+For the next agent or reviewer:
+
+- Re-run the live chain with `scripts/jellyfinmod-e2e/p9-live.py` (`setup`, `unconfigured`, `configure`, `fetch`,
+  `restart`, the browser runner `p9-ratings.mjs`, `failures`, `kill`, `leak`, `cleanup`); settings come from the environment
+  and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
+- The isolated instance runs this branch's plugin (0.1.0.0 from `0060c32`) and bundle `619599d6e666`; ratings are on with no
+  key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
+  deployment is on the test host under the instance's `backups/p9-before-20261007` (migrations are forward-only).
+- For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
+  code and sentence say what the real service did differently from the stand-in.

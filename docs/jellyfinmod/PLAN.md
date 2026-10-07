@@ -429,7 +429,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not evidence, and has not been run.
 - Phase 8 — release attributes and playback evidence: planned, not scheduled (see
   [`PHASE8.md`](PHASE8.md)).
-- Phase 9 — ratings: planned, not scheduled (see [`PHASE9.md`](PHASE9.md)).
+- Phase 9 — ratings: **built (not accepted)**, started 2026-10-07 on the user's decision (see [`PHASE9.md`](PHASE9.md)). R1–R8
+  implemented on the `jellyfinmod-phase9` branches (plugin `abeffb7..612d557`, web from `95709dc6ca`); all 14 plugin
+  suites pass on the test host (the new `PhaseNineRatingsIntegration` included), and the live chain passed on 18096 against an MDBList
+  stand-in in Chromium and real Chrome (39/39 each), fixtures removed. Waiting for the Codex review, the user's MDBList key
+  (open question 1; one press of Test) and the user. Open questions 2–4 answered by the user on 2026-10-07. Not merged;
+  still 0.1.0.0.
 - Phase 10 — per-media retention: accepted; the real-window run RW passed on 2026-09-27, merged
   with retention off at plugin `11f0a67` (web bundle `9d30aba7e9b3`); suites 12/12 on 2026-09-25.
   Retention stays off on real media until the user decides otherwise (see
@@ -583,8 +588,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   favouring the user's registered devices with device-targeted and plays-everywhere selection,
   and direct-play diagnostics that report rather than re-grab. Depends on Phase 12
   and Phase 7 S8–S9; its open questions are listed there.
-- **Phase 9 — ratings and title enrichment.** Future, **not scheduled**; outline only in
-  [`PHASE9.md`](PHASE9.md) (R1–R8). **Accepted 2026-09-21:** MDBList is the single ratings
+- **Phase 9 — ratings and title enrichment.** **Started 2026-10-07** on the user's explicit decision; task-level plan,
+  evidence and handover in [`PHASE9.md`](PHASE9.md) (R1–R8), status *built (not accepted)*. **Accepted 2026-09-21:** MDBList is the single ratings
   source (IMDb, TMDB, Trakt, Rotten Tomatoes critic and audience, plus its extra sources as
   optional), the host's OMDb plugin data is a read-only fallback for on-disk titles, and Google
   ratings are dropped. Ratings live in plugin SQLite, the key in the secret store, and a missing
