@@ -16,16 +16,30 @@
 //   [JELLYFINMOD_DD_PIN=1]          pin the one-file episode's file, read it back from the plugin, unpin it again
 //   [JELLYFINMOD_DD_REMOVE=<item id of a disposable two-file episode>]   remove one copy through the cross, confirmed
 //   [JELLYFINMOD_DD_WINDOW=1]       change the one-file episode's window through the More menu dialog and restore it
+//   [JELLYFINMOD_DD_PACK=<item id of an episode with a file>]   season and series packs (season-packs-design.md, acceptance
+//                                   items 1–3, 6–7 as far as the picker shows them, 11 and 12): the scope switch, coverage
+//                                   chips, Add and Replace and the unavailable message. Runs three real indexer searches per
+//                                   layout and never grabs; checked only when the plugin advertises acquisition.packs.
+//   [JELLYFINMOD_DD_ADDED=<item id of an episode that gained a lower-resolution version through Add after 2026-10-09>]
+//                                   its default copy must stay the higher resolution; groups made before the fix keep
+//                                   Jellyfin's order and are only checked for the desktop starting on their default
+//   [JELLYFINMOD_DD_UPGRADES=1]     with JELLYFINMOD_DD_PACK: search the Season scope again with episode upgrades switched the
+//                                   other way (Add alone when off, Add and Replace when on; user, 2026-10-09), then restore it
 //
 // Read-only unless one of the flags above asks for a change; every change is undone, except the disposable removal.
 import { chromium } from 'playwright';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (origin.port !== '18096') throw new Error('Runs on the isolated instance 18096 only');
+// The mod instances only: each Pi instance under its lease (18096 test, 28096 acceptance, 48096 live) and the Mac's local
+// copy of the test instance (envs/local, 127.0.0.1:58096); never production on 8096.
+if (!['18096', '28096', '48096', '58096'].includes(origin.port)) {
+    throw new Error('Runs on the isolated instances 18096, 28096, 48096 or the local 58096 only');
+}
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const env = name => process.env[name] || null;
 const ids = { one: env('JELLYFINMOD_DD_ONE'), two: env('JELLYFINMOD_DD_TWO'), movie: env('JELLYFINMOD_DD_MOVIE'),
-    fileless: env('JELLYFINMOD_DD_FILELESS'), grabbed: env('JELLYFINMOD_DD_GRABBED') };
+    fileless: env('JELLYFINMOD_DD_FILELESS'), grabbed: env('JELLYFINMOD_DD_GRABBED'), pack: env('JELLYFINMOD_DD_PACK'),
+    added: env('JELLYFINMOD_DD_ADDED') };
 const badges = (env('JELLYFINMOD_DD_BADGE') ?? '').split(',').filter(Boolean).map(pair => {
     const [id, text] = pair.split(':');
     return { id, text };
@@ -152,7 +166,16 @@ async function reachByKeys(page, layout, selector) {
             if (await activeMatches(page, selector)) return true;
             const before = await where();
             let moved = false;
-            for (const key of keys) {
+            // Once the focus is on the target's own row (a file row and its icons) a viewer presses Right or Left along it;
+            // the first-row check above only covered the row the walk started on.
+            const along = tv && await page.evaluate(sel => {
+                const target = document.querySelector(`.mainAnimatedPage:not(.hide) ${sel}`)?.getBoundingClientRect();
+                const active = document.activeElement;
+                const from = active && active !== document.body ? active.getBoundingClientRect() : null;
+                if (!target || !from || Math.abs((target.top + target.bottom) / 2 - (from.top + from.bottom) / 2) >= from.height / 2) return null;
+                return target.left >= from.left ? 'ArrowRight' : 'ArrowLeft';
+            }, selector);
+            for (const key of along ? [along, ...keys] : keys) {
                 await page.keyboard.press(key);
                 await page.waitForTimeout(tv ? 220 : 50);
                 if (await where() !== before) { moved = true; break; }
@@ -229,6 +252,7 @@ async function checkPickerOpens(page, layout, selector, label) {
     if (!opened) return;
     // User, 2026-10-08: a cross at the right closes it (no back arrow, no Close button); its choices share one line; on a
     // large screen it takes most of the screen and its content scrolls inside.
+    await settled(page, '.jfmod-releaseDialog');
     const shape = await page.evaluate(() => {
         const dlg = document.querySelector('.jfmod-releaseDialog');
         const box = dlg.getBoundingClientRect();
@@ -287,6 +311,20 @@ function rowActionExpectation(button) {
     const fileLevel = { Keep: `Keep ${file}`, 'Stop Keeping': `Stop keeping ${file}` };
     const label = fileLevel[button.title] ?? `${button.title}, on ${file}`;
     return { color: kept ? ROW_PRIMARY : ROW_GREY, title: button.title, label };
+}
+
+/** Waits until an element's box has stopped moving (upstream's dialog scales up from 0.5; the file list slides open). */
+async function settled(page, selector) {
+    let last = '';
+    for (let i = 0; i < 40; i++) {
+        const box = await page.evaluate(sel => {
+            const rect = document.querySelector(sel)?.getBoundingClientRect();
+            return rect ? [rect.x, rect.y, rect.width, rect.height].map(Math.round).join(',') : '';
+        }, selector);
+        if (box && box === last) return;
+        last = box;
+        await page.waitForTimeout(150);
+    }
 }
 
 /** Opens the Video row's list of files (the chooser is a dropdown also with one file, user 2026-10-08). */
@@ -384,7 +422,8 @@ async function checkHistoryPopover(page, layout, selector) {
     const detail = entryId ? await apiGet(page, `JellyfinMod/Entries/${entryId}`) : null;
     const own = (detail?.history ?? []).filter(event => norm(event.bindingId) === norm(bindingId));
     const WORDS = { grabbed: 'Grabbed', auto_grabbed: 'Grabbed', imported: 'Imported', version_kept: 'Kept', version_unkept: 'Stopped keeping',
-        version_removed: 'Removed', upgrade_replaced: 'Removed', reclaimed: 'Removed' };
+        version_removed: 'Removed', upgrade_replaced: 'Removed', reclaimed: 'Removed', pack_replaced: 'Replaced',
+        pack_replace_refused: 'Not replaced', pack_file_skipped: 'Skipped', pack_episode_skipped: 'Skipped' };
     // Each line's own time and action, against the plugin's events for that file sorted newest first.
     const expected = [...own].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
         .map(event => `${Date.parse(event.createdAt)} ${WORDS[event.eventType] ?? event.eventType}`);
@@ -513,6 +552,39 @@ async function checkDevicePreference(page, layout) {
         !!want && norm(detail) === norm(want.mediaSourceId), `${detail} vs ${want?.mediaSourceId}`);
 }
 
+/**
+ * The default copy (user, 2026-10-09). On the episode that gained a lower version through Add after the fix
+ * (JELLYFINMOD_DD_ADDED), the plugin's default row, Jellyfin's main version, is its highest resolution. On any two-file
+ * episode the desktop page, which keeps Jellyfin's default, starts on that default row; a group made before the fix keeps
+ * whatever default Jellyfin gave it (decision 5), so only that is checked there.
+ */
+async function checkDefaultVersion(page, layout, itemId, postFix) {
+    await openDetail(page, `id=${itemId}`, `${PAGE} .jfmod-videoTrigger`);
+    const selected = await page.evaluate(sel => document.querySelector(`${sel} .selectSource`)?.value ?? null, PAGE);
+    const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
+    const entry = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
+    const holds = episode => (episode.versions ?? []).some(version => norm(version.jellyfinItemId) === norm(itemId)
+        || norm(version.mediaSourceId) === norm(itemId));
+    const versions = entry.episodes.find(holds)?.versions ?? [];
+    const chosen = versions.find(version => version.isDefault);
+    const described = versions.map(version => `${version.resolution ?? version.height ?? '?'}${version.isDefault ? ' (default)' : ''}`).join(', ');
+    const which = postFix ? 'added after the fix' : 'two-file episode';
+    if (versions.length < 2) {
+        notVerified(layout, `default version (${which}): the desktop page starts on the default copy`, `copies ${described || 'none'}`);
+    } else {
+        record(layout, `default version (${which}): the desktop page starts on the default copy`, !!chosen && norm(selected) === norm(chosen.mediaSourceId),
+            `${selected} vs ${chosen?.mediaSourceId}`);
+    }
+    if (!postFix) return;
+    const rank = version => Number.parseInt(version.resolution ?? '0', 10) || version.height || 0;
+    const ranks = versions.map(rank);
+    if (versions.length < 2 || ranks.some(value => !value) || new Set(ranks).size < 2) {
+        notVerified(layout, 'default version: after Add the higher resolution stays the default copy', `copies ${described || 'none'}: no lower one to compare`);
+        return;
+    }
+    record(layout, 'default version: after Add the higher resolution stays the default copy', !!chosen && rank(chosen) === Math.max(...ranks), described);
+}
+
 /** The file-less movie page: header icon and More, the raised Get a release, the queue line during a grab. */
 async function checkFileless(page, layout, admin) {
     await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} .jfmod-getReleaseRaised` : null);
@@ -549,6 +621,264 @@ async function checkFileless(page, layout, admin) {
     const inFlight = await page.evaluate(sel => ({ line: document.querySelector(`${sel} .jfmod-trackBlock .jfmod-queueStatusLine`)?.textContent ?? null,
         raised: !!document.querySelector(`${sel} .jfmod-getReleaseRaised`) }), PAGE);
     record(layout, 'during a grab the queue line takes the raised button\'s place', !!inFlight.line && !inFlight.raised, inFlight.line ?? 'no line');
+}
+
+const PACK_CHECKS = [
+    'packs: the scope switch reads Episode / Season / All Seasons, on one line with the profile beyond a phone',
+    'packs: Season scope rows carry a "Season N · M episodes" chip',
+    'packs: All Seasons rows carry a "Complete · S01–S05" or "Seasons A–B" chip',
+    'packs: rows where the scope holds files end with Add and Replace',
+    'packs: rows where nothing is held have no Add or Replace',
+    'packs: Add and Replace are D-pad stops after their row',
+    'packs: with every indexer unavailable the status says so, never "No releases found."',
+    // The user's answer of 2026-10-09: with episode upgrades off the picker offers Add alone; with them on, Add and Replace.
+    // Read from the search's `modes`, which only plugins with the answer send.
+    'packs: with episode upgrades off, rows holding files offer Add alone, no Replace',
+    'packs: with episode upgrades on, rows holding files offer Add and Replace',
+    'packs: the search offers replace in its modes exactly while episode upgrades are on'
+];
+
+/** The answer of the search a step starts, read from the network: the runner never searches twice for one step. */
+const searchAnswer = page => page.waitForResponse(response => /\/JellyfinMod\/Releases\?/.test(response.url())
+    && response.request().method() === 'GET', { timeout: 120000 }).then(response => response.json(), () => null);
+
+/** The picker's settled state: no spinner, its status, the scope switch and every eligible row with its chips and actions. */
+async function pickerState(page) {
+    await page.waitForFunction(() => !document.querySelector('.jfmod-releaseDialog .jfmod-releaseSpinner'), undefined, { timeout: 120000 })
+        .catch(() => {});
+    await page.waitForTimeout(600);
+    return page.evaluate(() => {
+        const dlg = document.querySelector('.jfmod-releaseDialog');
+        const select = dlg?.querySelector('#jfmod-releaseEpisode');
+        const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const icon = button => {
+            if (!button) return null;
+            const box = button.getBoundingClientRect();
+            return { title: button.title, label: button.getAttribute('aria-label') ?? '', icon: button.querySelector('.material-icons')?.className ?? '',
+                size: [Math.round(box.width), Math.round(box.height)], color: getComputedStyle(button).color,
+                classes: button.className };
+        };
+        return {
+            root,
+            status: dlg?.querySelector('.jfmod-releaseStatus')?.textContent.trim() ?? '',
+            scopeLabel: select?.closest('.selectContainer')?.querySelector('label')?.textContent.trim() ?? '',
+            options: select ? [...select.options].map(option => ({ value: option.value, text: option.textContent })) : [],
+            value: select?.value ?? null,
+            selects: dlg ? dlg.querySelectorAll('.jfmod-releaseControls select').length : 0,
+            lines: dlg ? new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')]
+                .map(node => Math.round(node.getBoundingClientRect().top))).size : 0,
+            rows: dlg ? [...dlg.querySelectorAll('.jfmod-releaseList .jfmod-releaseItem')].map(item => ({
+                title: item.querySelector('.jfmod-releaseTitle')?.textContent ?? '',
+                coverage: item.querySelector('.jfmod-releaseChip--coverage')?.textContent ?? null,
+                held: [...item.querySelectorAll('.jfmod-releaseChip--held')].map(chip => chip.textContent),
+                add: icon(item.querySelector('[data-jfmod-release-add]')),
+                replace: icon(item.querySelector('[data-jfmod-release-replace]'))
+            })) : []
+        };
+    });
+}
+
+/** Changes the scope through the switch's own select, then reads the search it started and the settled picker. */
+async function chooseScope(page, value) {
+    const answer = searchAnswer(page);
+    await page.locator('.jfmod-releaseDialog #jfmod-releaseEpisode').selectOption(value);
+    return { body: await answer, state: await pickerState(page) };
+}
+
+const failedIndexer = outcome => outcome.status !== 'ok' && outcome.status !== 'no_results';
+
+/** Add and Replace on one row: Title Case tooltips, names that say which release, icons add and swap_horiz, ≥2.5em, Replace red. */
+const actionsShaped = (row, root) => !!row.add && !!row.replace && row.add.title === 'Add' && row.replace.title === 'Replace'
+    && row.add.label.includes(row.title) && row.replace.label.includes(row.title)
+    && /\badd\b/.test(row.add.icon) && /\bswap_horiz\b/.test(row.replace.icon)
+    && [row.add, row.replace].every(button => button.size[0] >= 2.5 * root - 1 && button.size[1] >= 2.5 * root - 1
+        && /paper-icon-button-light/.test(button.classes))
+    && row.replace.color === 'rgb(198, 40, 40)';
+
+/** Add alone on one row: the Add icon shaped as above, and no Replace (episode upgrades off, user 2026-10-09). */
+const addAloneShaped = (row, root) => !!row.add && !row.replace && row.add.title === 'Add' && row.add.label.includes(row.title)
+    && /\badd\b/.test(row.add.icon) && row.add.size[0] >= 2.5 * root - 1 && row.add.size[1] >= 2.5 * root - 1
+    && /paper-icon-button-light/.test(row.add.classes);
+
+/**
+ * Records one held row against the episode upgrades switch as the plugin's settings read it when the search ran (user,
+ * 2026-10-09): Add alone while it is off, Add and Replace while it is on. The search's `modes` are checked against the same
+ * switch on their own, so a plugin that advertised the opposite fails both. A plugin that sends no modes keeps the earlier
+ * check, which expects both actions.
+ */
+function recordHeldRow(layout, label, body, state, row, seen, upgrades) {
+    const modes = body?.grab?.modes;
+    if (!Array.isArray(modes)) {
+        record(layout, `${PACK_CHECKS[3]} (${label})`, actionsShaped(row, state.root), JSON.stringify(row).slice(0, 300));
+        return;
+    }
+    const detail = `episode upgrades ${upgrades}, modes ${modes.join(',')} · ${JSON.stringify(row).slice(0, 240)}`;
+    if (typeof upgrades !== 'boolean') {
+        notVerified(layout, `${PACK_CHECKS[7]} (${label})`, 'the automation settings could not be read');
+        return;
+    }
+    const shaped = upgrades ? actionsShaped(row, state.root) : addAloneShaped(row, state.root);
+    record(layout, `${PACK_CHECKS[3]} (${label})`, shaped, detail);
+    if (upgrades) seen.replaceOn = true; else seen.replaceOff = true;
+    record(layout, `${PACK_CHECKS[upgrades ? 8 : 7]} (${label})`, shaped, detail);
+    record(layout, `${PACK_CHECKS[9]} (${label})`, modes.includes('replace') === upgrades && modes.includes('add'), detail);
+}
+
+/** The episode upgrades switch as the plugin's settings read it now; null when they cannot be read. */
+const episodeUpgradesNow = async page => {
+    const settings = await apiGet(page, 'JellyfinMod/Settings/Automation').catch(() => null);
+    return typeof settings?.episodeUpgradesEnabled === 'boolean' ? settings.episodeUpgradesEnabled : null;
+};
+
+/** Records what one search shows about rows with and without held files; returns which it saw. */
+function recordRows(layout, label, body, state, seen, upgrades = null) {
+    const eligible = (body?.candidates ?? []).filter(candidate => candidate.eligible);
+    const scope = body?.target?.scope ?? 'episode';
+    const holds = candidate => (scope === 'episode' ? body.intent === 'addVersion' && !candidate.heldQuality : (candidate.coverage?.held ?? 0) > 0);
+    if (Array.isArray(body?.grab?.modes)) seen.modes = true;
+    eligible.forEach((candidate, index) => {
+        const row = state.rows[index];
+        if (!row) return;
+        if (holds(candidate)) {
+            seen.held = true;
+            recordHeldRow(layout, label, body, state, row, seen, upgrades);
+        } else if (scope !== 'episode' || body.intent !== 'addVersion') {
+            seen.empty = true;
+            record(layout, `${PACK_CHECKS[4]} (${label})`, !row.add && !row.replace, row.title);
+        }
+    });
+    return eligible;
+}
+
+/** Item 11: when every indexer failed and none returned a row, the status names the wait, never "No releases found.". */
+function recordUnavailable(layout, body, state, seen) {
+    if (!body || body.candidates?.length || !body.indexers?.length || !body.indexers.every(failedIndexer)) return;
+    seen.unavailable = true;
+    record(layout, PACK_CHECKS[6], /^Indexers are unavailable (until \d{2}:\d{2}\.|right now\.)/.test(state.status)
+        && !state.status.includes('No releases found.'), state.status);
+}
+
+/**
+ * Season and series packs in the picker (season-packs-design.md, acceptance 1–3, 6–7, 11, 12): opened from an episode page's
+ * header Get a Release, the switch reads `Episode: S01E02 · …` / `Season 1` / `All Seasons` on one line with the profile; the
+ * Season and All Seasons searches show coverage chips; rows where the scope holds files end with Add and Replace, others do not;
+ * on a TV each is a D-pad stop. Three real searches; nothing is grabbed.
+ */
+async function checkPacks(page, layout) {
+    const health = await apiGet(page, 'JellyfinMod/Health').catch(() => null);
+    if (!(health?.Capabilities ?? []).includes('acquisition.packs')) {
+        for (const check of PACK_CHECKS) notVerified(layout, check, 'the plugin does not advertise acquisition.packs');
+        return;
+    }
+    await openDetail(page, `id=${ids.pack}`, `${PAGE} .mainDetailButtons .jfmod-getRelease`);
+    const first = searchAnswer(page);
+    if (!await activate(page, layout, '.mainDetailButtons .jfmod-getRelease', 'packs: header Get a release')) {
+        record(layout, 'packs: the picker opens', false, 'not reached');
+        return;
+    }
+    await page.locator('.jfmod-releaseDialog').first().waitFor({ state: 'visible', timeout: 10000 });
+    const seen = { held: false, empty: false, unavailable: false, modes: false, replaceOn: false, replaceOff: false };
+    const upgrades = await episodeUpgradesNow(page);
+    const episode = { body: await first, state: await pickerState(page) };
+    const options = episode.state.options.map(option => option.text);
+    const seasonOption = episode.state.options.find(option => option.value.startsWith('season:'));
+    record(layout, PACK_CHECKS[0], episode.state.scopeLabel === 'Search for' && /^Episode: S\d{2}E\d{2} · /.test(options[0] ?? '')
+        && episode.state.value === episode.state.options[0]?.value && (!seasonOption || /^Season \d+$/.test(seasonOption.text))
+        // A phone's width wraps the two choices onto two lines (each takes at least 20em); elsewhere they share one.
+        && options[options.length - 1] === 'All Seasons' && options.length <= 3 && (isMobile(layout) || episode.state.lines <= 1),
+    `${JSON.stringify(options)} · ${episode.state.lines} lines`);
+    recordRows(layout, 'Episode', episode.body, episode.state, seen, upgrades);
+    recordUnavailable(layout, episode.body, episode.state, seen);
+
+    if (seasonOption) {
+        const season = await chooseScope(page, seasonOption.value);
+        const eligible = recordRows(layout, 'Season', season.body, season.state, seen, upgrades);
+        recordUnavailable(layout, season.body, season.state, seen);
+        const chips = season.state.rows.map(row => row.coverage);
+        if (eligible.length === 0) {
+            notVerified(layout, PACK_CHECKS[1], 'the Season search found no eligible pack');
+        } else {
+            record(layout, PACK_CHECKS[1], chips.length === eligible.length && chips.every(chip => /^Season \d+ · \d+ episodes?$/.test(chip ?? '')),
+                JSON.stringify(chips));
+        }
+        await checkActionStops(page, layout, season.state);
+    } else {
+        notVerified(layout, PACK_CHECKS[1], 'the episode is a special: no Season scope');
+    }
+    const series = await chooseScope(page, 'series');
+    const eligible = recordRows(layout, 'All Seasons', series.body, series.state, seen, upgrades);
+    // With JELLYFINMOD_DD_UPGRADES=1 the Season search runs again with episode upgrades switched the other way, so one run
+    // sees Add alone and Add with Replace; the switch is restored whatever happens.
+    if (UPGRADES_FLIP && seen.modes && seasonOption) {
+        await withUpgradesFlipped(page, layout, async () => {
+            const again = await chooseScope(page, seasonOption.value);
+            recordRows(layout, 'Season, episode upgrades switched', again.body, again.state, seen, await episodeUpgradesNow(page));
+            await chooseScope(page, 'series');
+        });
+    }
+    recordUnavailable(layout, series.body, series.state, seen);
+    const chips = series.state.rows.map(row => row.coverage);
+    if (eligible.length === 0) {
+        notVerified(layout, PACK_CHECKS[2], 'the All Seasons search found no eligible pack');
+    } else {
+        record(layout, PACK_CHECKS[2], chips.length === eligible.length
+            && chips.every(chip => /^(Complete( · S\d{2}(–S\d{2})?)?|Seasons \d+–\d+ · \d+ episodes)$/.test(chip ?? '')), JSON.stringify(chips));
+    }
+    if (!seen.held) notVerified(layout, PACK_CHECKS[3], 'no eligible row held files in any scope');
+    // The two answers of 2026-10-09 need the plugin's `modes`, and each one a held row searched with that switch.
+    const modesWhy = seen.modes ? 'no held row was searched with episode upgrades ' : 'the plugin sends no modes (built before 2026-10-09)';
+    if (seen.modes && !UPGRADES_FLIP) notVerified(layout, 'packs: the episode upgrades switch is flipped and restored', 'JELLYFINMOD_DD_UPGRADES not set');
+    if (!seen.replaceOff) notVerified(layout, PACK_CHECKS[7], seen.modes ? modesWhy + 'off' : modesWhy);
+    if (!seen.replaceOn) notVerified(layout, PACK_CHECKS[8], seen.modes ? modesWhy + 'on' : modesWhy);
+    if (!seen.replaceOn && !seen.replaceOff) notVerified(layout, PACK_CHECKS[9], modesWhy.trim());
+    if (!seen.empty) notVerified(layout, PACK_CHECKS[4], 'no eligible row without held files');
+    if (!seen.unavailable) notVerified(layout, PACK_CHECKS[6], 'some indexer answered every search');
+    await back(page, layout);
+    if (await page.locator('.jfmod-releaseDialog').count()) await page.locator('.jfmod-releaseDialog .jfmod-releaseDialogClose').first().click().catch(() => {});
+    await page.locator('.jfmod-releaseDialog').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+}
+
+/** JELLYFINMOD_DD_UPGRADES=1: the pack checks also search with episode upgrades switched the other way, then restore it. */
+const UPGRADES_FLIP = process.env.JELLYFINMOD_DD_UPGRADES === '1';
+
+/** Writes the plugin's automation settings (episode upgrades) with the revision just read, as the settings page does. */
+const setEpisodeUpgrades = async (page, on) => {
+    const current = await apiGet(page, 'JellyfinMod/Settings/Automation');
+    if (current.episodeUpgradesEnabled === on) return current;
+    return page.evaluate(body => ApiClient.ajax({ type: 'PATCH', url: ApiClient.getUrl('JellyfinMod/Settings/Automation'),
+        data: JSON.stringify(body), contentType: 'application/json', dataType: 'json' }), { ...current, episodeUpgradesEnabled: on });
+};
+
+/** Runs `step` with episode upgrades switched the other way and restores the switch; records the restore. */
+async function withUpgradesFlipped(page, layout, step) {
+    const before = (await apiGet(page, 'JellyfinMod/Settings/Automation')).episodeUpgradesEnabled;
+    try {
+        await setEpisodeUpgrades(page, !before);
+        await step();
+    } finally {
+        await setEpisodeUpgrades(page, before).catch(() => {});
+        const after = (await apiGet(page, 'JellyfinMod/Settings/Automation').catch(() => ({}))).episodeUpgradesEnabled;
+        record(layout, 'packs: the episode upgrades switch is flipped and restored', after === before, `${before} → ${!before} → ${after}`);
+    }
+}
+
+/** On a TV, Right from a Season row with Add and Replace reaches Add, then Replace; nothing is activated. */
+async function checkActionStops(page, layout, state) {
+    if (!isTv(layout)) return;
+    const index = state.rows.findIndex(row => row.add && row.replace);
+    if (index < 0) {
+        const why = state.rows.some(row => row.add) ? 'Season rows offer Add alone (episode upgrades off)' : 'no Season row with Add and Replace';
+        notVerified(layout, PACK_CHECKS[5], why);
+        return;
+    }
+    await page.locator('.jfmod-releaseList .jfmod-releaseItem').nth(index).locator('.jfmod-releaseRow').focus();
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+    const add = await activeMatches(page, '[data-jfmod-release-add]');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+    const replace = await activeMatches(page, '[data-jfmod-release-replace]');
+    record(layout, PACK_CHECKS[5], add && replace, await activeName(page));
 }
 
 /** The Played badge: expected text, inside the stock button, the button no bigger than its neighbours, survives a toggle. */
@@ -595,6 +925,7 @@ async function checkPin(page, layout) {
     const pin = `${PAGE} [data-jfmod-file-pin]`;
     // User, 2026-10-08: keeping a file must not push the page down; the confirmation is upstream's toast.
     const layoutTop = () => page.evaluate(sel => Math.round(document.querySelector(`${sel} .itemDetailsGroup`)?.getBoundingClientRect().top ?? -1), PAGE);
+    await settled(page, `${PAGE} .jfmod-fileList`);
     const topBefore = await layoutTop();
     const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
@@ -678,7 +1009,12 @@ async function checkLayout(browser, layout, user, admin) {
         if (ids.two) {
             await run('two-file episode', () => checkTwoFiles(page, label, admin));
             await run('device preference', () => checkDevicePreference(page, layout));
+            if (layout === 'desktop') await run('default version', () => checkDefaultVersion(page, label, ids.two, false));
         } else { notVerified(label, 'two-file episode', 'JELLYFINMOD_DD_TWO not set'); }
+        if (layout === 'desktop') {
+            if (ids.added) await run('default version', () => checkDefaultVersion(page, label, ids.added, true));
+            else if (!only) notVerified(label, 'default version: after Add the higher resolution stays the default copy', 'JELLYFINMOD_DD_ADDED not set');
+        }
         if (ids.movie) {
             await run('movie page', async () => {
                 await openDetail(page, `id=${ids.movie}`, `${PAGE} .jfmod-videoTrigger`);
@@ -690,6 +1026,11 @@ async function checkLayout(browser, layout, user, admin) {
                 await checkMoreMenuItem(page, label, false, false, 'on a movie page');
             });
         } else { notVerified(label, 'movie page', 'JELLYFINMOD_DD_MOVIE not set'); }
+        if (admin && ids.pack) {
+            await run('packs', () => checkPacks(page, label));
+        } else if (admin && !only) {
+            for (const check of PACK_CHECKS) notVerified(label, check, 'JELLYFINMOD_DD_PACK not set');
+        }
         if (ids.fileless) await run('file-less movie', () => checkFileless(page, label, admin)); else if (!only) notVerified(label, 'file-less movie', 'JELLYFINMOD_DD_FILELESS not set');
         for (const badge of badges) await run(`badge ${badge.text}`, () => checkBadge(page, label, badge));
         if (badges.length === 0 && wanted('badge')) notVerified(label, 'Played badge', 'JELLYFINMOD_DD_BADGE not set');
