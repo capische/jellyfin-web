@@ -730,10 +730,131 @@ task idle). No step failed.
 deleted. 18096 runs Phase 9 (plugin e242a9d, bundle `5c8664fc5e8b`), migrations through PhaseNineRatingsIdentity, ready for the
 user's real MDBList key; the lease stays with "Next phases in mod version" for that test.
 
+## Automatic fetching, inline ratings and source marks — 2026-10-08
+
+Opus 5.5, high. Three requests from the user on 2026-10-08, built on the same branches before acceptance. Plugin
+`e242a9d..` and web `d32c265427..` this branch's tips; no instance was used (the user's real MDBList key is saved on 18096
+since 14:24 Sydney, so the live runner, which refuses to run with a key it did not set, was not run, and nothing was deployed).
+
+### User decision 8 — ratings do not wait for 04:00
+
+The user's words: ratings should "run after movie import and when first installed run over all media". Decided with the
+coordinator's brief:
+
+8. **Automatic fetching.** A title that arrives is fetched within seconds: an entry created (`POST /Entries`, reconciliation —
+   a scan or the backfill), a file newly bound to an entry, a Phase 5 import completed. A key verified by **Test**, ratings
+   switched on with a key saved, and the first start with a key saved and no run ever completed start a full run at once,
+   newest titles first, within the daily budget; a library larger than the budget continues at the daily run. The 14-day
+   refresh and the 04:00 task are unchanged; ratings stay display only (decision 7).
+
+**How it works.** `RatingsAutoFetch` (`Services/Ratings/RatingsAutoFetch.cs`) is one hosted worker. A trigger only records what
+it asks for — an arrived entry id, or a full run — and wakes the worker through a one-slot channel; it never waits, so no
+request, reconciliation or import waits for MDBList, and the hooks run after their own transaction has committed
+(`EntriesController.Create` after its save, `ReconciliationService` after its save, `ImportService.CompleteAsync` after its
+commit). Bursts are coalesced by the worker: arrivals start a pass once they have been quiet for 2 s, or 30 s after the first
+of a steady stream; a library scan or a bulk add of 50 titles is one pass. Exactly one pass runs at a time — the worker is a
+single loop, and every pass also takes the runner's process gate, which the daily task, manual refreshes and Test share — so a
+trigger during a pass is folded into the next one. A pass is `RatingsRefreshRunner.RunAutomaticAsync`: the same claim before
+the call, budget, breaker, blocker and credential gate as the daily run. An *arrivals* pass fetches every title never
+attempted plus the arrived titles that are due by the usual rule (an import of a title fetched inside its window makes no
+call); a *setup* or *startup* run fetches exactly what the daily task would. A pass that may not fetch now (ratings off, no
+key, a refused key, an open breaker, a spent budget) does nothing at all — no adoption, no recovery, no run recorded — and its
+titles wait for the daily task; a pass with nothing due records no run. Settings PATCH only wakes the worker after its own
+save, so it never waits for the run; during a run it waits on the credential gate for at most the one call out, exactly as it
+does during the daily task (the runner holds that gate per call, never across the pause between calls). Saving a key does not
+start a run by itself (Test does); raising the budget does not either. `Ratings/Status` gains `running` (`kind`, `startedAt`,
+`remaining`), and the settings area's Ratings section shows "Fetching, N title(s) left" while a pass runs, re-reading the
+status every 5 s until it ends.
+
+### Inline ratings with source marks (design, 2026-10-08)
+
+The user asked for "website icons next to star rating" that "look nice", vote counts out of the row into a tooltip shown on
+hover on a computer and on OK on a TV (no links to the sources: withdrawn by the user).
+
+- **Placement.** Native movie and series pages: a mod mount at the end of upstream's first metadata row
+  (`.itemMiscInfo-primary`: year, parental rating, stock star), put back by a `MutationObserver` whenever upstream refills that
+  row. File-less entry pages: in the row with the page's own TMDB star (`.itemMiscInfo-secondary`), as before. No upstream file
+  changed: the mount is placed by the mod's own detail integration (`integration/nativeEntryDetails.js`), so PHASE7 §3.2 gains
+  no row. The old line at the head of `.detailSectionContent` is gone.
+- **Each rating** is its source's mark (inline SVG, 1.15em, on the text's line) and its value in its own scale, in the user's
+  order; no chip, no border, no votes. A value older than the refresh window is dimmed; the tooltip says how old.
+- **Marks.** IMDb (yellow badge), Rotten Tomatoes critics (fresh tomato at 60 % or more, green splat below), Rotten Tomatoes
+  audience (full popcorn bucket at 60 % or more, a spilled one below), TMDB (teal-to-blue bar), Trakt (red ring and tick),
+  Metacritic (black disc, critics) and Metacritic users (rounded square), Letterboxd (three dots), Roger Ebert ("RE" badge).
+- **Duplicates.** The stock star is hidden while the row shows an IMDb or TMDB value that reads the same (one decimal), and
+  upstream's own tomato while the row shows the same Rotten Tomatoes critics score — the same number twice reads as noise, and
+  the row says which source it is. A different value is a different source's and stays. Done with two mod classes on the row
+  (`jfmod-ratings-hideStar`, `jfmod-ratings-hideCritic`), undone with the line. On the file-less page the page's own
+  "★ x on TMDB" is hidden the same way when TMDB shows its value.
+- **Tooltip** (`role="tooltip"`, the rating's `aria-describedby`; fixed position, so the row's overflow never clips it and
+  nothing below moves): source and value with the vote count, where the value came from and when, and for a stale value that
+  it is older than the refresh window. Computer: shows on hover and on keyboard focus; Escape and leaving hide it; a click adds
+  nothing. Touch: a tap shows it, a tap elsewhere (or on the same rating) hides it. TV: each rating is a focus stop with the
+  app's focus ring; the page's first focus stays on Play (the ratings carry `noautofocus`, and the TV's autofocus prefers
+  Play); Up from the buttons reaches the ratings, Left and Right move between them, OK shows the tooltip, the remote's Back
+  closes only the tooltip (the `back` command is cancelled while one is open) and leaves focus where it was, and moving focus
+  closes it.
+- **Never moving a focused control.** The row is above the buttons, and on a TV the answer arrives after Play has focus. The
+  line's before-paint guard (round 4) now also covers the first answer: it is tried, and kept only if the focused control did
+  not move. When the whole list would wrap the row, the user's first ratings are tried one fewer at a time, so the row shows
+  as many as fit on its line rather than none (a 1280×720 TV with a long movie row shows four of five); a later visit where
+  the answer arrives with the page shows them all. The duplicate classes are judged in the same trial, and again (guarded the
+  same way) when upstream refills the row.
+- **Cards** show the chosen source's mark before the value in the secondary line, no tooltip and no focus stop of their own.
+
+**Source marks: origin and licence.** All marks are inline SVG in `components/RatingIcon.tsx`; none is fetched. The Rotten
+Tomatoes fresh tomato and rotten splat paths are Jellyfin Web's own `src/assets/img/fresh.svg` and `rotten.svg` (upstream
+commit `a9833ba398`, part of this GPL-2.0 project). Every other mark (IMDb, TMDB, Trakt, the two popcorn buckets, Metacritic,
+Letterboxd, Roger Ebert) is a simplified mark drawn for JellyfinMod in this file (GPL-2.0 with the rest of the fork); words in
+marks use the system's bold sans-serif. No third-party icon set was copied. **Known consideration for the user:** these
+names, logos and their likenesses are the sources' trademarks; the marks only identify where a value came from and imply no
+endorsement. A public release may want to check each site's brand guidelines (TMDB, for one, publishes logo rules for apps
+that use its data).
+
+### Evidence (development machine only)
+
+- Plugin suites on the Mac (CLAUDE.md, suites on the Mac first), all in parallel, on plugin `571de03`: Phase 0 and 1 smoke,
+  Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass. `PhaseNineRatingsIntegration` gains a second host on a fresh
+  database with automatic fetching on and the documented 2 s / 30 s windows (the first host, which proves the daily task's own
+  rules, runs with it off): no key — arrivals make no call and record no run; a key saved but not tested — no call; a start
+  with a key and no completed run — every title at once, newest first; a second start — nothing; a new entry — its ratings
+  stored 2.1 s after the add began (the add answered in 0.01 s); the same title in another library — adopted, no call; ratings off —
+  nothing; switched on — a setup run at once (the save answered in well under 2 s); breaker open — nothing, and nothing when it
+  closes until a trigger; a file bound to the entry (the reconciliation step an import completes through) — fetched within
+  seconds; a title the scan created — fetched; a file of a title inside its window — no call; 50 titles added back to back —
+  one pass, one call at a time, newest first, stopped by a budget of 20 with the other 30 counted in `entriesWithoutRatings`;
+  raising the budget — nothing; a replaced key — nothing until Test, then the 30 at once with the new key; a settings save
+  during a full run with 150 ms calls — answered in about a tenth of a second while Status showed the pass (`kind`,
+  `remaining`); a title added during the run — fetched by the next pass, no title twice. `PhaseThreeProtectionIntegration`
+  needs Linux (hardlink counts) and Phase 5 (bind-mount aliases) too; neither was run (no Pi), so `ImportService`'s hook is
+  proven only through the reconciliation step it completes through.
+- Design preview (`scripts/jellyfinmod-e2e/p9-design.mjs`): the built bundle in Playwright against a small local server that
+  answers the detail, browse and plugin reads from fixtures — **not acceptance evidence** (no Jellyfin), but the pages, CSS,
+  upstream's controller, focus handling and the ratings code are the real build. 57/57 checks in Playwright Chromium
+  153.0.8010.12 and the same 57/57 in real Google Chrome 153.0.8010.54 (`checks-*.txt`, `results-*.json`): order, marks, no
+  votes in the row, duplicates hidden, stale dimmed, hover and keyboard tooltip with votes, Escape, no links, mobile tap and
+  tap-elsewhere, 44 px targets, TV first focus on Play, Up, Right, OK, Back closing only the tooltip with the page kept, Play
+  not moved, Down back to the buttons, the 720 row fitted on one line, rotten marks below 60 %, the file-less page's star,
+  the user's own order with every source, cards with the mark and no tooltip or focus stop, no icon requested as a file and no
+  request leaving the machine (upstream's Chromecast sender script is the only outside request attempted, and it is blocked).
+  Before and after screenshots in `evidence/p9/design-20261008/` (desktop, mobile, TV 1080 and 720; the Light theme too,
+  which the mod interface draws on the same dark ground as before).
+- `p9-ratings.mjs` (the live browser runner) is updated for the design — ratings in the star's row, marks, tooltips, TV
+  focus path, fitted TV 720 row, card marks — and has not been run: it needs the isolated instance.
+
+### Not verified
+
+- The live chain and the browser runner on 18096 (Chromium and real Chrome), and the plugin suites that need Linux, wait for
+  the coordinator and the user; so does a physical TV.
+- The startup run on 18096: it starts only if no run has ever completed there. If the earlier live runs left a completed
+  run in its provider state, the user's verified key starts a full run with one more press of **Test** once this build is
+  deployed (otherwise the first start does it).
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
-isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
+isolated instance passed in Chromium and Chrome. On 2026-10-08 automatic fetching (user decision 8) and the inline ratings with
+source marks were added (above); they wait for their Codex review and a live run on the isolated instance. Both reviews' findings and both re-reviews' are fixed (above); acceptance
 waits for the Codex review of web `29d70867b0..` this branch's tip and for the user (the MDBList key test on 18096); the live
 re-run passed on 2026-10-08 (above). Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.

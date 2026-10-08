@@ -756,13 +756,28 @@ migration `PhaseNineRatingsIdentity`. One value per source:
   (nothing was recorded; try again). A refused key may be tested (that is how a new one is proven); a pass
   marks the key verified only if the settings did not change during the call.
 - `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
-  budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued}`.
-  `queued` counts manual refreshes waiting or running; it drops when a refresh has finished, which is what the web's
+  budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued,
+  running}`. `running` is `null`, or the pass in progress: `{"kind":"daily"|"arrivals"|"setup"|"startup","startedAt":"…",
+  "remaining":42}` (`remaining` counts the titles it still has before it, the current one included). `lastRun` is the last pass
+  of any kind that had titles to fetch. `queued` counts manual refreshes waiting or running; it drops when a refresh has finished, which is what the web's
   Refresh ratings button waits for (at most a minute, each request with its own time limit) before reading the title again;
   a failed read is asked again, and a 403 or an answer without `queued` means the server will not say, never "finished".
 - `POST /JellyfinMod/Entries/{id}/Ratings/Refresh` — 202 `{"queued":true}`; 409 with `type` `ratings_disabled`,
   `not_configured`, `unauthorized`, `breaker_open`, `budget_spent` or `queue_full` and a sentence in `title`; 404 for an
   entry the administrator cannot see.
+
+**Automatic fetching (user decision 8, 2026-10-08).** Ratings do not wait for 04:00. A title that arrives — an entry created by
+`POST /Entries` or by reconciliation (a library scan, the backfill), a file newly bound to an entry, a Phase 5 import completed
+— wakes a background fetcher that runs one *arrivals* pass once arrivals have been quiet for 2 s (at most 30 s after the
+first, however steady): every title never attempted, plus the arrived titles that are due by the rule below; the 14-day
+refresh of other titles stays with the daily task. A key verified by `Settings/Ratings/Test`, and ratings switched on in
+`PATCH Settings/Ratings` while a key is saved, start a *setup* run at once; a start with a key saved and no run ever
+completed starts a *startup* run. Both fetch exactly what the daily task would. Nothing is fetched, recorded or adopted while
+ratings are off, there is no key, the key is refused, the breaker is open or the budget is spent: those titles wait for the
+daily task. One pass at a time: a trigger during a pass is folded into the next one, and every pass goes through the same
+gate, claim, budget, breaker and credential gate as the daily task, so a settings save during a pass waits at most for the
+one call out, as it does during the daily task. Saving a key does not start a run by itself (Test does), and raising the
+budget does not either.
 
 **Fetching.** The native task `JellyfinModRatingsRefresh` (daily, 04:00) calls `GET {base}/tmdb/{movie|show}/{tmdbId}?apikey=…`
 once per title identity (every entry of the same TMDB title shares the answer, and the identity's latest attempt decides

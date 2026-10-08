@@ -1,0 +1,298 @@
+ok - The released 0.1.0.0 schema has no ratings tables
+ok - PhaseNineRatings adds the four ratings tables on top of the released schema
+ok - Existing rows survive the Phase 9 migration
+ok - One stored rating per entry, source and provider is enforced
+ok - One attempt per title identity keeps the attempt log bounded
+ok - No provider link is stored, and an attempt belongs to the title, not to an entry (review 2026-10-07 round 2, P1 and P2 5)
+ok - The migrated database passes its integrity check
+ok - No migration is left pending
+ok - From the first Phase 9 shape each title keeps its latest attempt, ratings stay, and stored links are gone
+ok - The converted database passes integrity and foreign-key checks
+note - RATINGS_DB_COPY not set: the instance-copy migration check is skipped in this run
+ok - Anonymous JellyfinMod/Settings/Ratings is 401
+ok - Anonymous JellyfinMod/Ratings/Status is 401
+ok - Anonymous JellyfinMod/Ratings/Defaults is 401
+ok - Anonymous JellyfinMod/Ratings/Items/f56f557a-8c34-4c5a-9804-3a5de9f2088a is 401
+ok - An ordinary user cannot read the ratings settings (403)
+ok - An ordinary user cannot change the ratings settings (403)
+ok - An ordinary user cannot run Test (403)
+ok - An ordinary user cannot read the fetcher's status (403)
+ok - Health lists ratings, ratings.cards and settings.ratings
+ok - The ratings settings start on, without a key, every 14 days, 500 calls a day, in the decided default order
+ok - An ordinary user reads the default order and nothing about the key
+ok - movie 9101 is added through the real add path (TMDB boundary)
+ok - movie 9102 is added through the real add path (TMDB boundary)
+ok - series 9201 is added through the real add path (TMDB boundary)
+ok - movie 9101 is added through the real add path (TMDB boundary)
+ok - movie 9103 is added through the real add path (TMDB boundary)
+ok - movie 9104 is added through the real add path (TMDB boundary)
+ok - movie 9105 is added through the real add path (TMDB boundary)
+ok - movie 9106 is added through the real add path (TMDB boundary)
+ok - movie 9107 is added through the real add path (TMDB boundary)
+ok - movie 9108 is added through the real add path (TMDB boundary)
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Unconfigured: a file-less entry shows TMDB only, from its own snapshot, with the vote count
+ok - entry 3fbc35f3-9aac-4091-8e4e-395239de403f is readable
+ok - Unconfigured: an on-disk title shows RT critics as host_omdb and, with TheMovieDb first, the native score as TMDB (host_tmdb), never as IMDb
+ok - entry 3fbc35f3-9aac-4091-8e4e-395239de403f is readable
+ok - With OMDb first in the fetcher order the native score is IMDb (host_omdb), without votes, as Jellyfin stores none
+ok - entry 3fbc35f3-9aac-4091-8e4e-395239de403f is readable
+ok - Without OMDb enabled the native critic score is not claimed as Rotten Tomatoes
+ok - A native series page reads its entry's ratings and the host's
+ok - The host's values refreshed a day ago are current
+ok - A native movie with no catalog entry still shows what the host stored
+ok - An episode page has no ratings line
+ok - An item the user cannot see answers 404, like an unknown one
+ok - A user without access to the movie library cannot read its entry or its ratings (404)
+ok - Unconfigured, the daily task makes no call and records why it stopped
+ok - A manual refresh without a key is 409 not_configured
+ok - An ordinary user cannot refresh ratings (403)
+ok - A save against a stale revision is 409
+ok - An unknown field is 400
+ok - Google is not a source (user decision 2) and an unknown source is 400
+ok - Out-of-range refresh days and budgets are 400
+ok - Replacing the key reports it configured, bumps the revision and is not yet verified
+ok - The key lives in the 0600 secret store, not in SQLite or the XML configuration
+ok - The change is on the record as area and revision only; SQLite holds an opaque reference
+ok - Test makes one call for the fixed title, answers ok with the sources and marks the key verified
+ok - The first run calls MDBList once per title identity (9 titles, 10 entries), with the saved key
+ok - Titles never fetched go newest first (a title's newest entry counts); a series is asked for as a show
+ok - entry dae5af41-cffd-4ef2-a653-fc4bc91ffe26 is readable
+ok - entry dae5af41-cffd-4ef2-a653-fc4bc91ffe26 is readable
+ok - One call served both libraries' entries of the same title
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Every known source arrives, one value each, in the complete order; the unknown and the zero-without-votes sources are not shown
+ok - IMDb: 8.1 on ten, with votes, via MDBList, with its fetch time
+ok - Each value stays in its own scale: RT critics and audience in percent, Letterboxd of five, Roger Ebert of four
+ok - TMDB stays first-party: the entry's own snapshot wins over MDBList's TMDB value
+ok - entry 9968022a-b054-4bf4-9fe2-b3f3d24a0a95 is readable
+ok - A partial answer stores what arrived: no audience score, and no placeholder for it
+ok - entry 3fbc35f3-9aac-4091-8e4e-395239de403f is readable
+ok - Configured: MDBList values replace the host fallback (a backfilled title's TMDB comes from MDBList)
+ok - An unknown source is stored raw and hidden; no zero is ever stored
+ok - entry 78898a35-7b41-49c6-97a9-678b7a3d17ea is readable
+ok - A rating carries no provider link, whatever the provider sent; its value is kept
+ok - No answer so far carries the key the provider echoed
+ok - A second run inside the refresh window makes no call
+ok - movie 9102 is added through the real add path (TMDB boundary)
+ok - movie 9103 is added through the real add path (TMDB boundary)
+ok - entry 35e12247-8183-48a7-9713-370cfc957daa is readable
+ok - entry 0d2a5216-46f8-49a1-930e-f23398a7be0e is readable
+ok - A title whose new entry cannot take its values is skipped; the run finishes and the other title adopts its values (round 3, P2 2)
+ok - entry 0d2a5216-46f8-49a1-930e-f23398a7be0e is readable
+ok - entry 9968022a-b054-4bf4-9fe2-b3f3d24a0a95 is readable
+ok - The same title added to another library inside the window makes no call and takes the title's stored values
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - A value older than the refresh window is marked stale, never presented as current
+ok - The host's values are marked stale too once its last metadata refresh is older than the window (review 2026-10-07, P3 8)
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Past the window each title is fetched exactly once again, and its values are current again
+ok - The administrator lowers the daily budget to 2
+ok - Among overdue titles the newest go first (9103, then 9102, were just added to a second library), not the oldest attempt (9101)
+ok - The budget holds: two calls, then the run stops with budget_spent
+ok - A manual refresh inside a spent budget is 409 budget_spent
+ok - Test inside a spent budget makes no call and spends nothing (review 2026-10-07, P2 3)
+ok - A manual refresh is accepted (202)
+ok - The attempt is recorded as manual
+ok - Refreshing an unknown entry is 404
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - refresh of 9101 queued
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - A badstructure answer is malformed and keeps every stored value
+ok - refresh of 9101 queued
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - A badvalue answer is malformed and keeps every stored value
+ok - refresh of 9101 queued
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - A badscore answer is malformed and keeps every stored value
+ok - Each counts as a provider failure
+ok - refresh of 9107 queued
+ok - Values MDBList does not have (null, "", N/A) are absent, not malformed
+ok - entry e7599918-fd73-42b0-88df-8460bc1b4941 is readable
+ok - Numbers sent as text are read; the answer resets the failure streak
+ok - The save waits while a call is out (ratings off)
+ok - Turning ratings off stops a running fetch: the call already out finishes, no other starts
+ok - The save waits while a call is out (budget lowered)
+ok - Lowering the budget stops a running fetch at the new limit: no call starts after the save
+ok - The save waits while a call is out (key replaced)
+ok - The key is replaced while a run's call is out
+ok - The call out when the key was replaced used the old key; every call after the save used the new one (round 2, P2 2)
+ok - A refresh is queued
+ok - The save waits while a call is out (old key refused)
+ok - The key is replaced while the old key's call is out
+ok - The old key's 401 is recorded before the save, and the save lifts the block: the new key is not blocked (round 2, P2 3)
+ok - refresh of 9102 queued
+ok - The new key fetches at once
+ok - A refresh is queued
+ok - The save waits while a call is out (old key rate-limited)
+ok - The key is replaced while the old key's call is out
+ok - The old key's 429 is recorded before the save, and the save closes the breaker it opened
+ok - The next run fetches that title with the new key at once: the old key's reset holds nothing back (round 2, P2 4)
+ok - The save waits while a call is out (Test out)
+ok - A save while Test's call is out
+ok - Test finishes first and marks only the revision it tested; the save after it is a new, untested revision
+ok - 401 stops the run after one call and blocks fetching
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Existing values are kept and shown with their fetch time
+ok - While blocked, the next run makes no call
+ok - A manual refresh while blocked is 409 unauthorized
+ok - Replacing the key lifts the blocker
+ok - A 200 whose body names a refused key is unauthorized too, from Test as from a run
+ok - A passing Test lifts the blocker
+ok - 429 opens the breaker past Retry-After and to the end of the UTC day
+ok - The attempt is recorded as rate_limited; the deadline lives on the breaker, the key's, not on the title
+ok - While the breaker is open nothing is called; a manual refresh is 409 breaker_open
+ok - Test while the breaker is open makes no call (review 2026-10-07, P2 3)
+ok - Replacing the key closes a breaker opened by a 429: the daily quota is the key's
+ok - refresh of 9101 queued
+ok - A 429 with a short Retry-After and a reset two days away
+ok - The breaker stays open until the later reset, not the shorter Retry-After (review 2026-10-07, P2 6)
+ok - refresh of 9101 queued
+ok - A 429 asking to wait 40,000,000 seconds
+ok - The breaker stays open for the whole delay the provider gave, more than a year
+ok - refresh of 9101 queued
+ok - A 429 asking to wait 1,000,000,000,000 seconds
+ok - The breaker stays open to the last representable moment, not to the end of the day
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Five server errors in a row open a one-hour breaker and stop the run
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - A failure changes no stored value
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - After the hour fetching resumes; malformed bodies count as failures (the remaining four titles) and change nothing
+ok - Each malformed answer is recorded as such, once per title
+ok - refresh of 9101 queued
+ok - A good answer ends the failure streak
+ok - A slow provider times out, an unknown title is not_found, an answer about another title is malformed
+ok - entry 695a00a0-991d-42e1-a261-e10b6743a04a is readable
+ok - not_found keeps the values the title already had
+ok - movie 9108 is added through the real add path (TMDB boundary)
+ok - The entry being fetched is removed while its call is out
+ok - The killed run left its claim behind, committed before the call
+ok - After a restart the left claim counts as an interrupted attempt, though the entry it was made for is gone
+ok - The interrupted title is not fetched again that day; the others are
+ok - The same title in another library does not skip the interrupted attempt's wait, even with the claimed entry removed (round 2, P2 5)
+ok - entry 0269a7ed-ab65-46d2-97ef-2bf9564969aa is readable
+ok - A day later the interrupted title is fetched once, for the entry that holds it now
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Settings, the key and the stored ratings survive a restart
+ok - Browse rows carry no rating unless the request asks for one (list payloads do not grow)
+ok - With ratingSource each row carries that one source and nothing else
+ok - An unknown card source is 400
+ok - While a ratings save waits for a call out, another settings save goes through at once
+ok - With the database held by another writer, Test gives up recording within its bound and says so
+ok - The waiting ratings save goes through once the database is free
+ok - Test works again afterwards
+ok - entry 695a00a0-991d-42e1-a261-e10b6743a04a is readable
+ok - A manual refresh is queued while another writer holds the database
+ok - The claim gives up within its bound and no call is made
+ok - Nothing of the refused claim was written
+ok - A manual refresh is queued
+ok - Its answer arrives while another writer holds the database: the recording gives up within its bound and frees the gate
+ok - entry 695a00a0-991d-42e1-a261-e10b6743a04a is readable
+ok - Nothing of the answer was recorded: the claim stays pending (the next run counts it as interrupted) and the stored values are kept
+ok - The administrator turns ratings off
+ok - entry 8b00c21b-adc8-4916-961c-ce9b50654cd8 is readable
+ok - Turned off, nothing is fetched and ratings are absent from detail, item pages and cards
+ok - Clear removes the key from the secret store
+ok - An entry is removed
+ok - An entry is removed
+ok - Its ratings go with it; the title's attempt stays
+ok - Inside the window a run keeps it
+ok - Past the window a run forgets the attempt of a title no library holds, and keeps the others'
+ok - None of the 352 responses carries the key or its secret-store reference
+ok - None of the 11388 log lines carries either key
+ok - The HTTP client's own request log lines were captured (at Debug) and are among those checked
+evidence - a captured HTTP client line: Information System.Net.Http.HttpClient.Default.LogicalHandler: Start processing HTTP request GET http://<boundary>/tmdb/movie/278?* 
+ok - Automatic fetching is on by default: a pass starts once arrivals have been quiet for 2 s, or after 30 s of steady arrivals
+ok - movie 9301 is added through the real add path
+ok - movie 9302 is added through the real add path
+ok - movie 9303 is added through the real add path
+ok - Without a key, arriving titles make no call and record no run; they are left for later
+ok - The administrator saves a key
+ok - Saving a key alone makes no call
+ok - A start with a key saved and no run ever completed fetches every title at once, newest first, and records the run
+ok - Once a run has completed, a start leaves the rest to arrivals and the daily task
+ok - movie 9304 is added through the real add path
+ok - A title added to the catalog has its ratings within seconds (one arrivals pass), and the add itself did not wait for MDBList
+evidence - add answered in 0.01s; the title's ratings were stored 2.06s after the add began
+ok - movie 9304 is added through the real add path
+ok - The same title arriving in another library takes the stored values without a call
+ok - The administrator turns ratings off
+ok - movie 9305 is added through the real add path
+ok - With ratings off an arriving title makes no call and records no run
+ok - Switching ratings on with a key saved starts a full run at once; the save answered without waiting for it
+evidence - switching ratings on answered in 0.00s
+ok - movie 9306 is added through the real add path
+ok - With the breaker open an arriving title makes no call
+ok - When the breaker closes nothing is fetched until a trigger or the daily run
+ok - A file bound to an entry (an import completing, a scan finding it) fetches its title within seconds
+ok - A title new to the catalog from a library scan is fetched within seconds too
+ok - A file of a title fetched inside its window makes no call
+ok - The budget leaves room for 20 calls today
+ok - movie 9400 is added through the real add path
+ok - movie 9401 is added through the real add path
+ok - movie 9402 is added through the real add path
+ok - movie 9403 is added through the real add path
+ok - movie 9404 is added through the real add path
+ok - movie 9405 is added through the real add path
+ok - movie 9406 is added through the real add path
+ok - movie 9407 is added through the real add path
+ok - movie 9408 is added through the real add path
+ok - movie 9409 is added through the real add path
+ok - movie 9410 is added through the real add path
+ok - movie 9411 is added through the real add path
+ok - movie 9412 is added through the real add path
+ok - movie 9413 is added through the real add path
+ok - movie 9414 is added through the real add path
+ok - movie 9415 is added through the real add path
+ok - movie 9416 is added through the real add path
+ok - movie 9417 is added through the real add path
+ok - movie 9418 is added through the real add path
+ok - movie 9419 is added through the real add path
+ok - movie 9420 is added through the real add path
+ok - movie 9421 is added through the real add path
+ok - movie 9422 is added through the real add path
+ok - movie 9423 is added through the real add path
+ok - movie 9424 is added through the real add path
+ok - movie 9425 is added through the real add path
+ok - movie 9426 is added through the real add path
+ok - movie 9427 is added through the real add path
+ok - movie 9428 is added through the real add path
+ok - movie 9429 is added through the real add path
+ok - movie 9430 is added through the real add path
+ok - movie 9431 is added through the real add path
+ok - movie 9432 is added through the real add path
+ok - movie 9433 is added through the real add path
+ok - movie 9434 is added through the real add path
+ok - movie 9435 is added through the real add path
+ok - movie 9436 is added through the real add path
+ok - movie 9437 is added through the real add path
+ok - movie 9438 is added through the real add path
+ok - movie 9439 is added through the real add path
+ok - movie 9440 is added through the real add path
+ok - movie 9441 is added through the real add path
+ok - movie 9442 is added through the real add path
+ok - movie 9443 is added through the real add path
+ok - movie 9444 is added through the real add path
+ok - movie 9445 is added through the real add path
+ok - movie 9446 is added through the real add path
+ok - movie 9447 is added through the real add path
+ok - movie 9448 is added through the real add path
+ok - movie 9449 is added through the real add path
+ok - 50 titles added back to back are one pass: one call at a time, newest first, stopped by the budget after 20; the other 30 wait
+ok - Status counts the 30 titles still without ratings
+ok - The budget is raised again
+ok - Raising the budget starts nothing by itself
+ok - The administrator replaces the key
+ok - Replacing the key starts nothing until Test verifies it
+ok - Test verifies the new key
+ok - A key verified by Test starts a full run at once: the 30 waiting titles, newest first, with the new key
+ok - Test passes again and starts another full run
+ok - Status shows the pass in progress: started by setup, with how many titles it still has
+ok - A settings save during a run answers at once (it waits at most for the one call out) and the run carries on
+evidence - settings save during a run: 0.10s; Status during the run: {"kind":"setup","startedAt":"2026-10-23T05:38:49.825675Z","remaining":57}
+ok - movie 9500 is added through the real add path
+ok - A title arriving during the run is fetched by the next pass, after it: one call at a time, no title twice
+ok - No response (156) and no log line carries either automatic-run key
+PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access, automatic fetching (109.2s)
+exit=0 seconds=111

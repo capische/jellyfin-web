@@ -1,0 +1,59 @@
+browser: chrome 153.0.8010.54
+ok - desktop: cards show the chosen source's mark and value, with no tooltip or focus stop of their own
+ok - desktop: the ratings sit in the stock star's row, in the default order
+ok - desktop: each rating renders its inline mark
+ok - desktop: vote counts are not in the row
+ok - desktop: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden
+ok - desktop: the stale Trakt value is dimmed
+ok - desktop: hovering a rating shows its tooltip with the vote count and provenance
+ok - desktop: moving away hides it
+ok - desktop: keyboard focus shows the same tooltip (stale note included)
+ok - desktop: Escape closes it
+ok - desktop: the row has no links
+ok - mobile: cards show the chosen source's mark and value, with no tooltip or focus stop of their own
+ok - mobile: the ratings sit in the stock star's row, in the default order
+ok - mobile: each rating renders its inline mark
+ok - mobile: vote counts are not in the row
+ok - mobile: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden
+ok - mobile: the stale Trakt value is dimmed
+ok - mobile: a tap shows the tooltip with the vote count
+ok - mobile: a tap elsewhere closes it
+ok - mobile: each rating is a full touch target (about 44 px)
+ok - tv1080: cards show the chosen source's mark and value, with no tooltip or focus stop of their own
+ok - tv1080: the ratings sit in the stock star's row, in the default order
+ok - tv1080: each rating renders its inline mark
+ok - tv1080: vote counts are not in the row
+ok - tv1080: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden
+ok - tv1080: the stale Trakt value is dimmed
+ok - tv1080: the first focus is Play, not a rating
+ok - tv1080: Up from the buttons reaches a rating
+ok - tv1080: Right moves to the next rating
+ok - tv1080: OK shows the tooltip with the vote count
+ok - tv1080: Back closes only the tooltip and stays on the page
+ok - tv1080: Play did not move
+ok - tv1080: no links in the ratings row
+ok - tv1080: Down returns to the button row
+ok - tv720: cards show the chosen source's mark and value, with no tooltip or focus stop of their own
+ok - tv720: the ratings sit in the stock star's row, in the default order (as many as fit)
+ok - tv720: the row stays on one line
+ok - tv720: each rating renders its inline mark
+ok - tv720: vote counts are not in the row
+ok - tv720: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden
+ok - tv720: the first focus is Play, not a rating
+ok - tv720: Up from the buttons reaches a rating
+ok - tv720: Right moves to the next rating
+ok - tv720: OK shows the tooltip with the vote count
+ok - tv720: Back closes only the tooltip and stays on the page
+ok - tv720: Play did not move
+ok - tv720: no links in the ratings row
+ok - tv720: Down returns to the button row
+ok - desktop: below 60 % the splat and the spilled bucket
+ok - desktop: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark
+ok - tv1080: below 60 % the splat and the spilled bucket
+ok - tv1080: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark
+ok - mobile: below 60 % the splat and the spilled bucket
+ok - mobile: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark
+ok - desktop: the order follows the user's preference, with every source
+ok - no request left the machine apart from upstream's cast sender (12 of those, all blocked)
+ok - no icon was requested as a file
+57 passed, 0 failed

@@ -432,8 +432,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 9 — ratings: **built (not accepted)**, started 2026-10-07 on the user's decision (see [`PHASE9.md`](PHASE9.md)). R1–R8
   implemented on the `jellyfinmod-phase9` branches (plugin `abeffb7..612d557`, web from `95709dc6ca`); all 14 plugin
   suites pass on the test host (the new `PhaseNineRatingsIntegration` included), and the live chain passed on 18096 against an MDBList
-  stand-in in Chromium and real Chrome (39/39 each), fixtures removed. Waiting for the Codex review, the user's MDBList key
-  (open question 1; one press of Test) and the user. Open questions 2–4 answered by the user on 2026-10-07. Not merged;
+  stand-in in Chromium and real Chrome (39/39 each), fixtures removed. 2026-10-08: automatic fetching on arrival and at setup
+  (user decision 8) and inline ratings with source marks and tooltips added, built on the Mac (suites and a design preview),
+  not yet reviewed or run live. Waiting for the Codex review, a live run, the user's MDBList key test and the user. Open questions 2–4 answered by the user on 2026-10-07. Not merged;
   still 0.1.0.0.
 - Phase 10 — per-media retention: accepted; the real-window run RW passed on 2026-09-27, merged
   with retention off at plugin `11f0a67` (web bundle `9d30aba7e9b3`); suites 12/12 on 2026-09-25.
