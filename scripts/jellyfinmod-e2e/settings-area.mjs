@@ -68,6 +68,14 @@ async function signIn(page) {
     await page.waitForTimeout(1500);
 }
 
+/** The origin the page's ApiClient sends every request to; each write below first checks that it is the instance under test. */
+const pageServer = page => page.evaluate(() => new URL(ApiClient.serverAddress()).origin);
+/** Stops the run before any further write when the page no longer talks to the instance under test (after a reload). */
+async function assertServer(page, when) {
+    const server = await pageServer(page);
+    if (server !== testUrl.origin) throw new Error(`after ${when} the page's server is ${server}, not ${testUrl.origin}; stopped before writing again`);
+}
+
 /** The server's retention settings, read as the signed-in administrator. */
 const retentionNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Retention'), dataType: 'json' }));
 /** The line under Retention's Save, as the server's revisions now make it (settingsSections.tsx, RetentionSection saveMeta). */
@@ -82,9 +90,13 @@ const savedMeta = page => page.evaluate(async () => {
  * Only the days change; every other field is sent as the server has it, with its current revision.
  */
 async function restoreRetentionDays(page, days) {
+    let refused;
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
-            const outcome = await page.evaluate(async target => {
+            const outcome = await page.evaluate(async ({ target, wanted }) => {
+                // A page that came back talking to another server is not written to; the run reports the days as not put back.
+                const server = new URL(ApiClient.serverAddress()).origin;
+                if (server !== wanted) return { restored: false, days: undefined, refused: server };
                 const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
                 const current = await ApiClient.ajax({ type: 'GET', url, dataType: 'json' });
                 if (current.reclaimAfterDays === target) return { restored: false, days: current.reclaimAfterDays };
@@ -93,8 +105,10 @@ async function restoreRetentionDays(page, days) {
                         selectedUserId: current.selectedUserId ?? null, exemptFavourites: current.exemptFavourites, revision: current.revision }) });
                 const after = await ApiClient.ajax({ type: 'GET', url, dataType: 'json' });
                 return { restored: true, days: after.reclaimAfterDays };
-            }, days);
+            }, { target: days, wanted: testUrl.origin });
             if (outcome.days === days) return outcome;
+            refused = outcome.refused ?? refused;
+            if (outcome.refused) await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
         } catch {
             // A page left mid-navigation: load the app again and retry.
             await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
@@ -102,7 +116,7 @@ async function restoreRetentionDays(page, days) {
                 .catch(() => undefined);
         }
     }
-    return { restored: false, days: undefined };
+    return { restored: false, days: undefined, refused };
 }
 
 const openSettings = async (page, section) => {
@@ -126,13 +140,14 @@ const pressRemoteBack = async page => {
     await page.waitForTimeout(600);
 };
 /** Saves retention through the API as another session would, unchanged, which moves its revision. */
-const competingSave = (page, current) => page.evaluate(async server => {
+const competingSave = (page, current) => page.evaluate(async ({ server, wanted }) => {
+    if (new URL(ApiClient.serverAddress()).origin !== wanted) throw new Error(`the page's server is not ${wanted}; nothing was saved`);
     const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
     const saved = await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
         data: JSON.stringify({ enabled: server.enabled, reclaimAfterDays: server.reclaimAfterDays, watchedUserMode: server.watchedUserMode,
             selectedUserId: server.selectedUserId ?? null, exemptFavourites: server.exemptFavourites, revision: server.revision }) });
     return { revision: saved.revision };
-}, current);
+}, { server: current, wanted: testUrl.origin });
 /** The answer to this page's next PATCH of `path` (Settings/Retention or Settings/SeedProtection). */
 const nextPatch = (page, path) => page.waitForResponse(response => response.request().method() === 'PATCH'
     && new URL(response.url()).pathname.endsWith('/JellyfinMod/' + path), { timeout: 30000 });
@@ -170,8 +185,8 @@ for (const name of only) {
     try {
         await signIn(page);
         // Every write below goes through the page's ApiClient: it must talk to the instance named in the URL, never another.
-        const server = await page.evaluate(() => ApiClient.serverAddress());
-        const sameServer = new URL(server).origin === testUrl.origin;
+        const server = await pageServer(page);
+        const sameServer = server === testUrl.origin;
         record(name, 'The page talks to the instance under test', sameServer, { server, wanted: testUrl.origin });
         if (!sameServer) throw new Error(`the page's server ${server} is not ${testUrl.origin}; nothing was changed`);
         if (layout.tv) {
@@ -179,6 +194,7 @@ for (const name of only) {
             await page.reload({ waitUntil: 'domcontentloaded' });
             await page.waitForFunction(() => document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
             await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+            await assertServer(page, 'the TV reload');
         }
 
         if (name === 'desktop') {
@@ -281,6 +297,7 @@ for (const name of only) {
                 const metaWanted = await savedMeta(page);
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
+                await assertServer(page, 'the reload after the save');
                 const reread = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
                 record(name, 'Retention saves, echoes its revisions and re-reads after a reload',
                     shown === original && reread === changed && meta === metaWanted, { original, shown, changed, reread, meta, metaWanted });
@@ -353,7 +370,7 @@ for (const name of only) {
     } finally {
         if (originalDays !== undefined) {
             const put = await restoreRetentionDays(page, originalDays);
-            if (put.days !== originalDays) record(name, 'Retention days put back after the run', false, { original: originalDays, now: put.days });
+            if (put.days !== originalDays) record(name, 'Retention days put back after the run', false, { original: originalDays, now: put.days, refused: put.refused });
             else if (put.restored) console.log(`NOTE [${name}] the run stopped early; retention days put back to ${originalDays} through the API`);
         }
         await page.evaluate(() => localStorage.removeItem('layout')).catch(() => {});
