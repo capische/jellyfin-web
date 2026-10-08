@@ -483,6 +483,7 @@ const summariseRatings = (data: SettingsData): Summary => {
     const status = data.ratingsStatus;
     if (status?.blocker === 'unauthorized') return { kind: 'err', words: 'MDBList refused the key' };
     if (status?.breaker?.open) return { kind: 'warn', words: `Paused until ${when(status.breaker.until)}` };
+    if (status?.running) return { kind: 'ok', words: `Fetching · ${status.running.remaining} title(s) left` };
     return ratings.verified ? { kind: 'ok', words: `Key tested ${when(ratings.verifiedAt)}` } : { kind: 'warn', words: 'Key not tested since it changed' };
 };
 
@@ -1642,6 +1643,68 @@ const lastRunText = (run: RatingsRun | null | undefined) => {
 
 const ratingsRead = (data: SettingsData) => data.ratings !== undefined && data.ratings !== null;
 
+/** What started a pass in progress (user decision 8). */
+const PASS_KINDS: Record<string, string> = { daily: 'the daily run', arrivals: 'new titles', setup: 'setup', startup: 'the first start' };
+
+/**
+ * The fetcher's state; while a pass is in progress it says so, with how many titles it has left, and reads the status again
+ * every few seconds until the pass ends (user decision 8: titles are fetched on arrival and in full at setup).
+ */
+interface RatingsStatusView {
+    blocker?: string | null;
+    breaker: { open: boolean; until?: string | null; reason?: string | null };
+    budget: { used: number; limit: number };
+    entries: number;
+    entriesWithoutRatings: number;
+    lastRun?: RatingsRun | null;
+    running?: { kind: string; startedAt: string; remaining: number } | null;
+}
+
+const RatingsFetching: FC<{ api: Api; initial: RatingsStatusView | undefined }> = ({ api, initial }) => {
+    const [status, setStatus] = useState(initial);
+    useEffect(() => {
+        setStatus(initial);
+        // A save or a Test may have just started a pass in the background: look once more shortly after.
+        let alive = true;
+        const again = window.setTimeout(() => {
+            request<RatingsStatusView>(api, 'GET', 'Ratings/Status').then(next => {
+                if (alive) setStatus(next);
+            }).catch(() => undefined);
+        }, 2500);
+        return () => {
+            alive = false;
+            window.clearTimeout(again);
+        };
+    }, [api, initial]);
+    const running = !!status?.running;
+    useEffect(() => {
+        if (!running) return;
+        let alive = true;
+        const timer = window.setInterval(() => {
+            request<RatingsStatusView>(api, 'GET', 'Ratings/Status').then(next => {
+                if (alive) setStatus(next);
+            }).catch(() => undefined);
+        }, 5000);
+        return () => {
+            alive = false;
+            window.clearInterval(timer);
+        };
+    }, [api, running]);
+    if (!status) return null;
+    return <div className='jfmod-group'>
+        <h3 className='jfmod-grouptitle'>Fetching</h3>
+        <dl className='jfmod-kv'>
+            {status.running && <><dt>Now</dt><dd role='status' data-jfmod-ratings-running={status.running.kind}>
+                Fetching, {status.running.remaining} title(s) left · started by {PASS_KINDS[status.running.kind] ?? status.running.kind} {when(status.running.startedAt)}
+            </dd></>}
+            <dt>Today</dt><dd>{status.budget.used} of {status.budget.limit} calls</dd>
+            <dt>Titles without ratings</dt><dd>{status.entriesWithoutRatings} of {status.entries}</dd>
+            <dt>Provider</dt><dd>{providerState(status)}</dd>
+            <dt>Last run</dt><dd>{lastRunText(status.lastRun)}</dd>
+        </dl>
+    </div>;
+};
+
 /** One default source: on/off and its place in the order every user starts from (user decision 6). */
 const SourceRow: FC<{ source: string; index: number; count: number; on: boolean; onToggle: (source: string) => void; onMove: (source: string, by: number) => void }> = ({
     source, index, count, on, onToggle, onMove
@@ -1717,7 +1780,7 @@ export const RatingsSection: FC<SectionProps> = props => {
                 <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set} />
                 <div className='jfmod-testline'>
                     <Button variant='outlined' size='small' disabled={section.busy} onClick={testKey} data-test='ratings'>Test</Button>
-                    <span className='fieldDescription'>Makes one real MDBList call for a well-known title. Save a new key first.</span>
+                    <span className='fieldDescription'>Makes one real MDBList call for a well-known title. Save a new key first. A key that passes starts fetching every title at once, within the daily budget.</span>
                 </div>
                 {ratings.providerOverride && <Notice notice={{ kind: 'warn', text: 'This server fetches ratings from a test address set in its configuration file, not from MDBList.' }} />}
                 <div className='fieldDescription jfmod-lead'>
@@ -1732,15 +1795,7 @@ export const RatingsSection: FC<SectionProps> = props => {
                 {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
                     on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
             </div>
-            {status && <div className='jfmod-group'>
-                <h3 className='jfmod-grouptitle'>Fetching</h3>
-                <dl className='jfmod-kv'>
-                    <dt>Today</dt><dd>{status.budget.used} of {status.budget.limit} calls</dd>
-                    <dt>Titles without ratings</dt><dd>{status.entriesWithoutRatings} of {status.entries}</dd>
-                    <dt>Provider</dt><dd>{providerState(status)}</dd>
-                    <dt>Last run</dt><dd>{lastRunText(status.lastRun)}</dd>
-                </dl>
-            </div>}
+            <RatingsFetching api={api} initial={status} />
         </SectionFrame>
     );
 };
