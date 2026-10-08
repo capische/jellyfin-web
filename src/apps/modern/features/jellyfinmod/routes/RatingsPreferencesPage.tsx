@@ -89,6 +89,10 @@ const RatingsPreferencesPage: FC = () => {
     let content: React.ReactNode;
     if (!user || !preferences.loaded) {
         content = <p className='jfmod-lead'>Loading…</p>;
+    } else if (preferences.unanswered) {
+        content = <p className='jfmod-lead' role='status' data-jfmod-ratings-unanswered=''>
+            Ratings are unavailable for now: this server&apos;s JellyfinMod plugin has not answered. This page updates by itself when it does.
+        </p>;
     } else if (!preferences.enabled) {
         content = <p className='jfmod-lead'>Ratings are not available on this server: its JellyfinMod plugin does not offer them, or an administrator turned them off.</p>;
     } else {

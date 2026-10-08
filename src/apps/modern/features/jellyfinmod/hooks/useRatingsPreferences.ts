@@ -14,6 +14,12 @@ import { DEFAULT_SOURCES, RATINGS_CAPABILITY, RATINGS_CARD_SOURCE_KEY, RATINGS_S
 import type { RatingSource } from '../types/ratings';
 import { usePluginHealthSummary } from './useAcquisition';
 
+/**
+ * How long a reader of the ratings preferences waits for the plugin's Health and the defaults before it goes on without them:
+ * the same bound as the detail pages' own prefetch.
+ */
+export const RATINGS_ANSWER_DEADLINE_MS = 3000;
+
 /** The query key of the ratings defaults, so the settings area can invalidate it after a save. */
 export const ratingsDefaultsKey = (basePath: string | undefined) => ['JellyfinMod', basePath, 'RatingsDefaults'];
 
@@ -110,6 +116,16 @@ export const useRatingsPreferences = (api: Api | undefined) => {
     // The stored values are re-read whenever a setting changes (the revision), the preferences arrive or the user changes.
     const own = useMemo(() => ({ revision, user: user?.Id, sources: readSources(prefs), cardSource: readCardSource(prefs) }),
         [revision, prefs, user?.Id]);
+    // Waiting is bounded (web review 2026-10-08 round 11, P2): when Health or the defaults have not answered within
+    // RATINGS_ANSWER_DEADLINE_MS, the reader goes on as if ratings were unavailable and says so; an answer that comes later
+    // still counts — the hooks keep reading, and ratings, the page and the detail groups come back by themselves.
+    const answered = healthKnown && (!supported || defaults.isSuccess || defaults.isError);
+    const [waitedOut, setWaitedOut] = useState(false);
+    useEffect(() => {
+        if (answered) return;
+        const timer = window.setTimeout(() => setWaitedOut(true), RATINGS_ANSWER_DEADLINE_MS);
+        return () => window.clearTimeout(timer);
+    }, [answered]);
     const enabled = supported && defaults.data?.enabled === true;
     const fallback = defaults.data?.defaultSources.filter(isRatingSource) ?? DEFAULT_SOURCES;
     const sources = own.sources ?? fallback;
@@ -122,8 +138,10 @@ export const useRatingsPreferences = (api: Api | undefined) => {
     return {
         /** The plugin offers ratings and the administrator has them on. */
         enabled,
-        /** The plugin answered, whatever it said: its Health, and, when it offers ratings, the defaults. */
-        loaded: healthKnown && (!supported || defaults.isSuccess || defaults.isError),
+        /** The plugin answered, whatever it said (its Health, and, when it offers ratings, the defaults), or the wait ran out. */
+        loaded: answered || waitedOut,
+        /** The wait ran out with no answer yet: shown as unavailable until an answer comes. */
+        unanswered: !answered && waitedOut,
         available: defaults.data?.availableSources.filter(isRatingSource) ?? [],
         defaultSources: fallback,
         sources,
