@@ -659,9 +659,15 @@ for (const name of only) {
             // The test's own answer, then the settings read that follows it: the focus is checked only once both landed.
             const tested = page.waitForResponse(response => response.request().method() === 'POST' && response.url().includes(`/Settings/Indexers/${firstRow}/Test`), { timeout: 60000 });
             const reread = tested.then(() => page.waitForResponse(response => response.request().method() === 'GET' && /\/Settings\/Indexers(\?|$)/.test(response.url()), { timeout: 60000 }));
+            const testIcon = await page.locator(`.jfmod-brow[data-indexer="${firstRow}"] [data-row-action="test"]`).elementHandle();
             await page.keyboard.press('Enter');
-            const landed = await Promise.all([tested, reread]).then(([test, list]) => test.ok() && list.ok(), () => false);
-            await page.waitForTimeout(2500);
+            const answered = await Promise.all([tested, reread]).then(([test, list]) => test.ok() && list.ok(), () => false);
+            // The icon is busy until the whole settings read after the test has finished (Codex re-review rows-case 2): only
+            // then can a focus jump on the new data have happened.
+            await page.waitForFunction(el => el.classList.contains('jfmod-busy'), testIcon, { timeout: 5000 }).catch(() => undefined);
+            const idle = await page.waitForFunction(el => el.isConnected && !el.classList.contains('jfmod-busy'), testIcon, { timeout: 90000 }).then(() => true, () => false);
+            const landed = answered && idle;
+            await page.waitForTimeout(1500);
             const afterTest = await here();
             record(name, 'indexers: Test by Enter keeps the focus on that row\'s Test after the list is read again',
                 landed && afterTest.action === 'test' && afterTest.row === firstRow, { landed, ...afterTest });
