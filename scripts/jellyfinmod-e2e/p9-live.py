@@ -666,8 +666,8 @@ def step_unconfigured():
     SECRETS.extend([state["token"], state.get("viewerToken", "")])
     s = settings()
     check(s["enabled"] and not s["apiKeyConfigured"] and s["refreshDays"] == 14 and s["dailyBudget"] == 500 and not s["providerOverride"] and
-          s["defaultSources"] == ["imdb", "tomatoes_critic", "tomatoes_audience", "tmdb", "trakt"],
-          "Unconfigured defaults: on, no key, 14 days, 500 a day, the decided order, no override", s)
+          s["defaultSources"] == ["imdb", "tomatoes_critic", "tomatoes_audience", "trakt"],
+          "Unconfigured defaults: on, no key, 14 days, 500 a day, the decided sources (user decision 9), no override", s)
     status, item = call("GET", f"/JellyfinMod/Ratings/Items/{state['hostItem']}")
     ratings = by_source(item["ratings"])
     check(status == 200 and ratings.get("tmdb", {}).get("provider") == "host_tmdb" and ratings["tmdb"]["value"] == 7.4 and
@@ -964,7 +964,7 @@ def step_cleanup():
     # has saved since (the user's own key), the plugin refuses it and the ratings settings, the key and the stored ratings stay.
     try:
         code, body = write({"apiKey": {"action": "clear"}, "enabled": True, "refreshDays": 14, "dailyBudget": 500,
-                            "defaultSources": ["imdb", "tomatoes_critic", "tomatoes_audience", "tmdb", "trakt"]})
+                            "defaultSources": ["imdb", "tomatoes_critic", "tomatoes_audience", "trakt"]})
         foreign = False
         check(code == 200 and not body["apiKeyConfigured"], "The fixture key is cleared from the secret store; settings are back to the defaults")
     except ForeignKey:

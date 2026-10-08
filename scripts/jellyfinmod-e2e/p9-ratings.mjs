@@ -1,7 +1,7 @@
 /* eslint-disable compat/compat, no-restricted-globals -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage */
-// Phase 9 (R6, R7, R8) browser acceptance on the isolated instance, after `p9-live.py setup … fetch`: the Ratings line on a
-// native and a file-less detail page, Ratings display (sources, order, the card source), the card text, the settings
+// Phase 9 (R6, R7, R8) browser acceptance on the isolated instance, after `p9-live.py setup … fetch`: the ratings group in the
+// first metadata row and its popup (user decisions 10 and 13) on a native and a file-less detail page, Ratings display (sources, order, the card source), the card text, the settings
 // section and Test, an older plugin (Health without the ratings capabilities) and ratings turned off — on desktop, mobile
 // and the TV layout at 1920×1080 and 1280×720 by keys only. Signs in as oleksii with an empty password. Run `p9-live.py age`
 // first (one title's values 40 days old, for the stale card). oleksii's own ratings display choice is read at the start and
@@ -38,7 +38,8 @@ const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const SHOTS = process.env.JFMOD_P9_SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const BASE = new URL('/web-mod/', origin).href;
-const DEFAULT_ORDER = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt'];
+// The plugin's default sources (user decision 9): IMDb, Rotten Tomatoes critics and audience, Trakt.
+const DEFAULT_ORDER = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'trakt'];
 
 const results = [];
 const record = (layout, check, verdict, detail) => {
@@ -168,19 +169,66 @@ const pressRemoteBack = async page => {
 const shot = async (page, name) => {
     if (SHOTS) await page.screenshot({ path: join(SHOTS, `${tier}-${name}.png`) });
 };
-// The ratings (inline design, 2026-10-08): each a button holding its source's mark and its value; votes and provenance are in
-// its tooltip.
-const chips = page => page.$$eval('.jfmod-rating', nodes => nodes
-    .filter(node => node.offsetParent !== null)
-    .map(node => ({ source: node.dataset.jfmodRating, provider: node.dataset.jfmodProvider, text: node.querySelector('.jfmod-ratingValue')?.textContent ?? '',
-        label: node.getAttribute('aria-label'), icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null,
-        tabIndex: node.tabIndex, tag: node.tagName, inRow: !!node.closest('.itemMiscInfo-primary'), inMisc: !!node.closest('.itemMiscInfo-secondary') })));
-const waitChips = async page => {
-    await page.waitForFunction(() => [...document.querySelectorAll('.jfmod-rating')].some(node => node.offsetParent !== null), undefined,
+// The ratings group (user decisions 10 and 13): one control in the first metadata row holding IMDb, Rotten Tomatoes critics
+// (tomato) and audience (popcorn), and Trakt when the row has room, each its mark and its value; every ticked rating is in its
+// popup, one row each (mark, value, votes), the provenance in each row's title.
+const GROUP = '[data-jfmod-ratings-group]:not(.jfmod-groupButton-standIn)';
+const POPUP = '[data-jfmod-ratings-popup]';
+const group = page => page.evaluate(selector => {
+    const button = [...document.querySelectorAll(selector)].find(node => node.getClientRects().length);
+    if (!button) return null;
+    const box = button.closest('.jfmod-ratingsGroup');
+    const row = box.closest('.itemMiscInfo');
+    const visible = node => node.getClientRects().length > 0 && getComputedStyle(node).display !== 'none';
+    const rect = box.getBoundingClientRect();
+    const items = [...row.children].filter(visible).map(node => {
+        const style = getComputedStyle(node);
+        return node.getBoundingClientRect().width + parseFloat(style.marginLeft) + parseFloat(style.marginRight);
+    });
+    return {
+        inline: [...button.querySelectorAll('[data-jfmod-rating]')].map(node => ({ source: node.dataset.jfmodRating,
+            text: node.querySelector('.jfmod-groupValue')?.textContent ?? '', icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null })),
+        tag: button.tagName, tabIndex: button.tabIndex, label: button.getAttribute('aria-label'), inRow: !!button.closest('.itemMiscInfo-primary'),
+        inMisc: !!button.closest('.itemMiscInfo-secondary'), focused: document.activeElement === button,
+        stockStar: [...row.querySelectorAll('.starRatingContainer')].some(visible), stockTomato: [...row.querySelectorAll('.mediaInfoCriticRating')].some(visible),
+        width: rect.width, fullWidth: Number(box.getAttribute('data-jfmod-full-width')) || null, rowWidth: row.getBoundingClientRect().width,
+        itemsWidth: items.reduce((sum, width) => sum + width, 0), height: button.getBoundingClientRect().height,
+        // Every item of the row on the group's line.
+        oneLine: [...row.children].filter(visible).every(node => {
+            const other = node.getBoundingClientRect();
+            return !other.width || (other.top < rect.bottom - 1 && other.bottom > rect.top + 1);
+        })
+    };
+}, GROUP);
+const sources = found => (found?.inline ?? []).map(item => item.source);
+const waitGroup = async page => {
+    await page.waitForFunction(selector => [...document.querySelectorAll(selector)].some(node => node.getClientRects().length), GROUP,
         { timeout: 20000 }).catch(ignore);
-    return chips(page);
+    return group(page);
 };
-const tooltipText = page => page.locator('[role="tooltip"].jfmod-ratingTooltip').innerText({ timeout: 3000 }).catch(() => '');
+/** Trakt is out of the row only when the row has no room for it (user decision 13); IMDb and Rotten Tomatoes never are. */
+const traktRule = (found, onPhone) => {
+    if (sources(found).includes('trakt')) return true;
+    if (onPhone) return found.fullWidth > found.rowWidth;
+    return found.itemsWidth + (found.fullWidth - found.width) > found.rowWidth;
+};
+const ROW = ['imdb', 'tomatoes_critic', 'tomatoes_audience'];
+const rowOk = (found, onPhone) => !!found && sources(found).filter(source => source !== 'trakt').join(',') === ROW.join(',') && traktRule(found, onPhone);
+/** The popup's rows (source, value, votes, title), its visible text without the hidden provenance, and its width. */
+const popup = page => page.evaluate(selector => {
+    const node = document.querySelector(selector);
+    if (!node) return null;
+    const copy = node.cloneNode(true);
+    for (const hidden of copy.querySelectorAll('.jfmod-ratingsHidden')) hidden.remove();
+    return { rows: [...node.querySelectorAll('[data-jfmod-rating]')].map(row => ({ source: row.dataset.jfmodRating,
+        value: row.querySelector('.jfmod-popValue')?.textContent ?? '', votes: row.querySelector('.jfmod-popVotes')?.textContent ?? '',
+        title: row.getAttribute('title') ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
+    links: node.querySelectorAll('a').length };
+}, POPUP);
+/** Rows only (no "via …" line, no caveat), the provenance in each row's title, the group's full width, no links. */
+const popupOk = (shown, found, expected) => !!shown && JSON.stringify(shown.rows.map(row => row.source)) === JSON.stringify(expected)
+    && !/via|as of|differ/i.test(shown.text) && shown.rows.every(row => /via (MDBList, as of|TMDB)|server/i.test(row.title)) && shown.links === 0
+    && (!found?.fullWidth || Math.abs(shown.width - found.fullWidth) <= 1);
 async function preferencesPage(page, layout) {
     await go(page, '#/catalog/preferences');
     await page.waitForSelector('[data-jfmod-source-toggle="imdb"]', { timeout: 20000 });
@@ -198,6 +246,47 @@ async function preferencesPage(page, layout) {
     record(layout, 'Ratings display has no horizontal scroll', overflow <= 0, { overflow });
 }
 
+/** The native page's group and its popup on the desktop: placement, values, one focus stop, hover, keyboard focus, Escape. */
+async function nativeGroup(page, layout) {
+    // Native page: the group sits where the stock star and tomato were; each rating its mark and its value.
+    await go(page, `#/details?id=${STATE.hostItem}`);
+    const found = await waitGroup(page);
+    const byId = Object.fromEntries((found?.inline ?? []).map(item => [item.source, item]));
+    record(layout, 'The native page shows IMDb, RT critics and RT audience in the row in place of the stock star and tomato, and Trakt',
+        rowOk(found, false) && sources(found).includes('trakt') && !found.stockStar && !found.stockTomato, found);
+    record(layout, 'Each rating is its source\'s mark and its value in its own scale (RT critics a tomato, audience a popcorn), no votes in the row',
+        byId.imdb?.text === '8.1' && byId.imdb?.icon === 'imdb' && byId.tomatoes_critic?.text === '91%' && byId.tomatoes_critic?.icon === 'tomatoesCritic'
+        && byId.tomatoes_audience?.text === '88%' && /tomatoesAudience/.test(byId.tomatoes_audience?.icon ?? '') && byId.trakt?.text === '83%'
+        && !(found?.inline ?? []).some(item => /votes/.test(item.text)), found?.inline);
+    record(layout, 'The group is one button in the first row, in the tab order, and the row stays on one line', found?.tag === 'BUTTON'
+        && found.tabIndex >= 0 && found.inRow && found.oneLine, found && { tag: found.tag, tabIndex: found.tabIndex, inRow: found.inRow, oneLine: found.oneLine });
+    // The popup: on hover and on keyboard focus, one row per ticked rating with its votes; leaving or Escape closes it.
+    await page.locator(GROUP).first().hover();
+    await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(ignore);
+    const hovered = await popup(page);
+    await shot(page, `${layout}-popup`);
+    await page.mouse.move(2, 2);
+    await page.waitForTimeout(400);
+    const goneAfterHover = await page.locator(POPUP).count();
+    await page.locator(GROUP).first().focus();
+    await page.waitForTimeout(300);
+    const focusedPopup = await popup(page);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const closed = await page.locator(POPUP).count();
+    record(layout, 'Hover and keyboard focus open the popup: rows of mark, value and votes, as wide as the group with all its sources; leaving or Escape closes it',
+        popupOk(hovered, found, DEFAULT_ORDER) && hovered.rows[0].votes === '250K votes' && /via MDBList, as of/i.test(hovered.rows[0].title)
+        && goneAfterHover === 0 && popupOk(focusedPopup, found, DEFAULT_ORDER) && closed === 0, { hovered, goneAfterHover, closed });
+    const order = await page.evaluate(() => {
+        const row = [...document.querySelectorAll('.itemMiscInfo-primary')].find(node => node.offsetParent !== null);
+        return row ? [...row.children].map(node => node.className) : [];
+    });
+    const mountAt = order.findIndex(name => name.includes('jfmod-ratingsMount'));
+    const starAt = order.findIndex(name => name.includes('starRatingContainer'));
+    record(layout, 'The ratings mount sits where the stock star was (just before it)', mountAt >= 0 && (starAt < 0 || mountAt === starAt - 1), order);
+    return found;
+}
+
 async function desktop(browser) {
     const layout = 'desktop';
     const { context, page } = await open(browser, layout);
@@ -209,39 +298,7 @@ async function desktop(browser) {
     await page.keyboard.press('Escape');
     await preferencesPage(page, layout);
 
-    // Native page: the ratings sit in the stock star's row, in the default order; each is its mark and its value.
-    await go(page, `#/details?id=${STATE.hostItem}`);
-    let found = await waitChips(page);
-    record(layout, 'The native page shows the ratings in the default order', JSON.stringify(found.map(chip => chip.source)) === JSON.stringify(DEFAULT_ORDER),
-        found.map(chip => chip.text));
-    record(layout, 'Each rating is its source\'s mark and its value in its own scale, with no votes in the row', found[0]?.text === '8.1'
-        && found[0]?.icon === 'imdb' && found[1]?.text === '91%' && found[1]?.icon === 'tomatoesCritic' && found[3]?.text === '79%'
-        && found[0]?.label === 'IMDb 8.1', found.slice(0, 4));
-    record(layout, 'The ratings sit in the stock star\'s row; outside TV each is a button in the tab order', found.every(chip => chip.inRow
-        && chip.tabIndex >= 0 && chip.tag === 'BUTTON'), found.map(chip => ({ tag: chip.tag, tabIndex: chip.tabIndex, inRow: chip.inRow })));
-    // The tooltip: on hover and on keyboard focus, with the votes and where the value came from; Escape closes it.
-    const firstChip = page.locator('.jfmod-rating:visible').first();
-    await firstChip.hover();
-    const hovered = await tooltipText(page);
-    const described = await firstChip.getAttribute('aria-describedby') === await page.locator('[role="tooltip"]').getAttribute('id').catch(() => null);
-    await page.mouse.move(2, 2);
-    await page.waitForTimeout(300);
-    const goneAfterHover = await page.locator('[role="tooltip"]').count();
-    await firstChip.focus();
-    await page.keyboard.press('Shift+Tab');
-    await page.keyboard.press('Tab');
-    const focusedNote = await tooltipText(page);
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
-    const closed = await page.locator('[role="tooltip"]').count();
-    record(layout, 'Hover and keyboard focus show the tooltip with the votes and the provenance; leaving or Escape hides it',
-        /^IMDb 8\.1 · 250,000 votes/.test(hovered) && /via MDBList, as of/i.test(hovered) && described && goneAfterHover === 0
-        && focusedNote === hovered && closed === 0, { hovered, described, goneAfterHover, focusedNote, closed });
-    const order = await page.evaluate(() => {
-        const row = [...document.querySelectorAll('.itemMiscInfo-primary')].find(node => node.offsetParent !== null);
-        return row ? [...row.children].map(node => node.className) : [];
-    });
-    record(layout, 'The ratings mount ends the stock star\'s row', order.at(-1)?.includes('jfmod-ratingsMount'), order);
+    let found = await nativeGroup(page, layout);
     await shot(page, `${layout}-native`);
     // Administrator: Refresh ratings queues one fetch. Every other read of this title's ratings stalls meanwhile: the button
     // must not wait on those background reads (review round 3, P2 4).
@@ -262,16 +319,16 @@ async function desktop(browser) {
     await page.waitForTimeout(500);
     const busy = await refresh.getAttribute('aria-busy');
     const stalledReads = stalled.length;
-    const after = await waitChips(page);
-    record(layout, 'When the queued refresh has run the page says so, the button is free although a background read stalls, and the line stays',
-        finished === 'Ratings refreshed.' && busy === 'false' && stalledReads > 0 && after.length === 5,
-        { finished, busy, stalledReads, chips: after.length });
+    const after = await waitGroup(page);
+    record(layout, 'When the queued refresh has run the page says so, the button is free although a background read stalls, and the group stays',
+        finished === 'Ratings refreshed.' && busy === 'false' && stalledReads > 0 && sources(after).length === 4,
+        { finished, busy, stalledReads, inline: sources(after) });
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     await Promise.all(stalled.map(route => route.abort().catch(ignore)));
-    // Focus on a rating is focus inside the line: a minute's refetch that widens an earlier rating is shown at once and focus
-    // stays on the same rating (review round 4, P3 3).
-    const tmdbChip = page.locator('.jfmod-rating:visible[data-jfmod-rating="tmdb"]');
-    await tmdbChip.focus();
+    // With focus on the group, a minute's refetch that changes a value is shown at once (inside the reserved space) and focus
+    // stays on the group (review round 4, P3 3).
+    await page.locator(GROUP).first().focus();
+    await page.keyboard.press('Escape');
     let widened = 0;
     await page.route('**/JellyfinMod/Ratings/Items/**', async route => {
         widened++;
@@ -282,18 +339,17 @@ async function desktop(browser) {
     });
     await page.waitForTimeout(65000);
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
-    const imdbText = await page.locator('.jfmod-rating:visible[data-jfmod-rating="imdb"] .jfmod-ratingValue').innerText().catch(() => '');
-    const stillOn = await page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
-    record(layout, 'With focus on a rating, a refetch that widens an earlier rating is shown at once and focus stays on that rating',
-        widened > 0 && imdbText === '10.0' && stillOn === 'tmdb', { widened, imdbText, stillOn });
+    const changed = await group(page);
+    record(layout, 'With focus on the group, a refetch with a wider value is shown at once, the group keeps its width and its focus',
+        widened > 0 && changed?.inline.find(item => item.source === 'imdb')?.text === '10.0' && changed.focused && Math.abs(changed.width - found.width) < 0.5,
+        { widened, inline: changed?.inline, focused: changed?.focused, width: [found?.width, changed?.width] });
 
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
-    found = await waitChips(page);
+    found = await waitGroup(page);
     const ownStar = await page.evaluate(() => [...document.querySelectorAll('.jfmod-entryStar')].some(node => node.offsetParent !== null));
-    record(layout, 'The file-less entry page shows the ratings in its star\'s row, TMDB first-party, and keeps its own star',
-        found.length === 5 && found.every(chip => chip.inMisc) && found.find(chip => chip.source === 'tmdb')?.provider === 'tmdb' && ownStar,
-        { ratings: found.map(chip => `${chip.text} [${chip.provider}]`), ownStar });
+    record(layout, 'The file-less entry page shows the group in its own star\'s row, IMDb in place of that star',
+        rowOk(found, false) && found.inMisc && !ownStar, { inline: sources(found), ownStar });
     await shot(page, `${layout}-fileless`);
 
     // Sources and order: Letterboxd on, moved above Trakt; the page follows.
@@ -306,9 +362,14 @@ async function desktop(browser) {
     const focused = await page.evaluate(() => document.activeElement?.dataset?.jfmodMove ?? null);
     record(layout, 'Moving a source keeps focus on the control that moved it and says it was saved', focused === 'up' && /Saved/.test(status), { focused, status });
     await go(page, `#/details?id=${STATE.hostItem}`);
-    found = await waitChips(page);
-    record(layout, 'The detail line follows the user\'s own sources and order', JSON.stringify(found.map(chip => chip.source))
-        === JSON.stringify([...DEFAULT_ORDER.slice(0, 4), 'letterboxd', 'trakt']), found.map(chip => chip.source));
+    found = await waitGroup(page);
+    await page.locator(GROUP).first().hover();
+    await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(ignore);
+    const own = await popup(page);
+    await page.mouse.move(2, 2);
+    record(layout, 'The popup follows the user\'s own sources and order; the row keeps IMDb, RT critics and audience, Trakt',
+        JSON.stringify(own?.rows.map(row => row.source)) === JSON.stringify([...DEFAULT_ORDER.slice(0, 3), 'letterboxd', 'trakt'])
+        && sources(found).join(',') === DEFAULT_ORDER.join(','), { popup: own?.rows.map(row => row.source), inline: sources(found) });
     const prefs = await api(page, 'GET', `/DisplayPreferences/usersettings?userId=${await page.evaluate(() => ApiClient.getCurrentUserId())}&client=emby`);
     record(layout, 'The choice is saved in Jellyfin\'s per-user display preferences', (prefs.body?.CustomPrefs?.jfmodRatingsSources ?? '').includes('letterboxd'),
         prefs.body?.CustomPrefs?.jfmodRatingsSources);
@@ -367,7 +428,7 @@ async function desktop(browser) {
         if (page.jfmodNotOurs) throw new NotOurs(page.jfmodNotOurs);
         await go(page, `#/details?id=${STATE.hostItem}`);
         await page.waitForTimeout(1500);
-        return chips(page);
+        return sources(await group(page));
     };
     const offNow = await saveEnabled(false);
     const onNow = await saveEnabled(true);
@@ -402,12 +463,12 @@ async function desktop(browser) {
     const oldCards = await oldPage.$$eval('.jfmod-cardRating', nodes => nodes.length);
     await go(oldPage, `#/details?id=${STATE.hostItem}`);
     await oldPage.waitForTimeout(2500);
-    const oldChips = await chips(oldPage);
+    const oldChips = sources(await group(oldPage));
     await oldPage.locator('[aria-controls="app-user-menu"]').first().click();
     await oldPage.waitForTimeout(800);
     const oldMenu = await oldPage.locator('#app-user-menu').innerText().catch(() => '');
     await oldPage.keyboard.press('Escape');
-    record(layout, 'A plugin without the ratings capabilities: no line, no menu item, no card rating and no ratingSource sent (card choice still on)',
+    record(layout, 'A plugin without the ratings capabilities: no group, no menu item, no card rating and no ratingSource sent (card choice still on)',
         oldChips.length === 0 && !oldMenu.includes('Ratings display') && oldCards === 0 && oldPage.jfmodBrowse.length > 0
         && oldPage.jfmodBrowse.every(body => !('ratingSource' in body)), { chips: oldChips.length, cards: oldCards, requests: oldPage.jfmodBrowse.length });
     await older.close();
@@ -421,9 +482,9 @@ async function desktop(browser) {
     const page3 = off.page;
     await go(page3, `#/details?id=${STATE.hostItem}`);
     await page3.waitForTimeout(3000);
-    const offChips = await chips(page3);
+    const offChips = sources(await group(page3));
     const playVisible = await page3.locator('#itemDetailPage:not(.hide) .mainDetailButtons button:visible').count();
-    record(layout, 'Ratings turned off: the line is absent and the page otherwise unchanged', offChips.length === 0 && playVisible > 0, { buttons: playVisible });
+    record(layout, 'Ratings turned off: the group is absent and the page otherwise unchanged', offChips.length === 0 && playVisible > 0, { buttons: playVisible });
     await saveRatings(page3, { enabled: true });
     record(layout, 'No page errors', page3.jfmodErrors.length === 0, page3.jfmodErrors);
     await off.context.close();
@@ -438,29 +499,24 @@ async function mobile(browser) {
     const layout = 'mobile';
     const { context, page } = await open(browser, layout);
     await go(page, `#/details?id=${STATE.hostItem}`);
-    const found = await waitChips(page);
+    const found = await waitGroup(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    record(layout, 'The native page shows the ratings, wrapped, without horizontal scroll', found.length === 5 && overflow <= 0, { chips: found.length, overflow });
-    // Each rating is a real touch target, and a tap shows its tooltip (web review 2026-10-07 round 2, P3 6; design 2026-10-08).
-    const chipsOnPage = page.locator('.jfmod-rating:visible');
-    const boxes = [];
-    for (let index = 0; index < await chipsOnPage.count(); index++) boxes.push(await chipsOnPage.nth(index).boundingBox());
-    const gaps = boxes.slice(1).map((box, index) => Math.abs(box.y - boxes[index].y) < 2 ? box.x - (boxes[index].x + boxes[index].width) : null)
-        .filter(gap => gap !== null);
-    await chipsOnPage.nth(1).tap();
-    await page.waitForTimeout(400);
-    const tapped = await tooltipText(page);
+    record(layout, 'The native page shows the group (Trakt only if the narrow row has room), without horizontal scroll', rowOk(found, true) && overflow <= 0,
+        { inline: sources(found), overflow });
+    // The group is a real touch target; a tap opens the popup, a tap elsewhere closes it.
+    await page.locator(GROUP).first().tap();
+    await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(ignore);
+    const tapped = await popup(page);
+    await shot(page, `${layout}-popup`);
     await page.locator('.nameContainer:visible').tap();
     await page.waitForTimeout(400);
-    const closedAfterTap = await page.locator('[role="tooltip"]').count();
-    record(layout, 'Each rating is at least 43 px high with room beside it; a tap shows its tooltip (votes, provenance) and a tap elsewhere hides it',
-        boxes.every(box => box.height >= 43) && gaps.every(gap => gap >= 6) && /^Rotten Tomatoes critics.*votes/.test(tapped)
-        && /via MDBList/i.test(tapped) && closedAfterTap === 0,
-        { heights: boxes.map(box => Math.round(box.height)), gaps: gaps.map(Math.round), tapped, closedAfterTap });
+    const closedAfterTap = await page.locator(POPUP).count();
+    record(layout, 'The group is at least 43 px high; a tap opens the popup (rows of mark, value, votes) and a tap elsewhere closes it',
+        found?.height >= 43 && popupOk(tapped, found, DEFAULT_ORDER) && closedAfterTap === 0, { height: found?.height, tapped, closedAfterTap });
     await shot(page, `${layout}-native`);
     await go(page, `#/details?entryId=${STATE.fileless}`);
-    const fileless = await waitChips(page);
-    record(layout, 'The file-less entry page shows the line', fileless.length === 5, fileless.map(chip => chip.text));
+    const fileless = await waitGroup(page);
+    record(layout, 'The file-less entry page shows the group', rowOk(fileless, true), sources(fileless));
     await preferencesPage(page, layout);
     record(layout, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors);
     await context.close();
@@ -474,16 +530,16 @@ const focusedBox = page => page.evaluate(() => {
 });
 
 /**
- * With focus on a control below the line, a minute's refetch that fails, and then one that brings wider (stale, dated) values,
- * must not move it: the line keeps its last answer through an error and never changes height under a focused control below
- * (web review 2026-10-07 round 2, P2 1). Each wait crosses the line's one-minute refetch.
+ * With focus on a control below the group's row, a minute's refetch that fails, and then one that brings wider (stale, dated)
+ * values, must not move it: the group keeps its last answer through an error and its reserved width through any change (web
+ * review 2026-10-07 round 2, P2 1). Each wait crosses the one-minute refetch.
  */
 async function laterUpdates(page, layout) {
     // Two minutes of waiting: once, at the larger TV size.
     if (layout !== 'tv1080') return;
     const lineBottom = () => page.evaluate(() => {
-        const line = [...document.querySelectorAll('.jfmod-ratingsLine')].find(node => node.offsetParent !== null);
-        return line ? line.getBoundingClientRect().bottom : null;
+        const button = [...document.querySelectorAll('[data-jfmod-ratings-group]')].find(node => node.getClientRects().length);
+        return button ? button.closest('.itemMiscInfo').getBoundingClientRect().bottom : null;
     });
     let below = false;
     for (let press = 0; press < 15 && !below; press++) {
@@ -502,7 +558,7 @@ async function laterUpdates(page, layout) {
     });
     await page.waitForTimeout(65000);
     const afterError = await focusedBox(page);
-    const chipsAfterError = (await chips(page)).length;
+    const chipsAfterError = sources(await group(page)).length;
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     const errorReads = reads;
     reads = 0;
@@ -515,140 +571,12 @@ async function laterUpdates(page, layout) {
     });
     await page.waitForTimeout(65000);
     const afterWider = await focusedBox(page);
-    const chipsAfterWider = (await chips(page)).length;
+    const chipsAfterWider = sources(await group(page)).length;
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
-    record(layout, 'Focus below the line stays put through a failed refetch (the line keeps its values) and a refetch with wider values',
-        below && errorReads > 0 && reads > 0 && chipsAfterError === 5 && chipsAfterWider === 5
+    record(layout, 'Focus below the group stays put through a failed refetch (the group keeps its values) and a refetch with wider values',
+        below && errorReads > 0 && reads > 0 && chipsAfterError >= 3 && chipsAfterWider === chipsAfterError
         && JSON.stringify(before) === JSON.stringify(afterError) && JSON.stringify(before) === JSON.stringify(afterWider),
         { below, errorReads, widerReads: reads, before, afterError, afterWider, chipsAfterError, chipsAfterWider });
-}
-
-/** The file-less page's ratings line, the misc-info row it shares with the TMDB star, and the line's chips (runs in the browser). */
-const sharedRow = page => page.evaluate(() => {
-    const row = [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null);
-    const line = row?.querySelector('.jfmod-ratingsLine');
-    return { row: row ? Math.round(row.getBoundingClientRect().height) : null, line: line ? Math.round(line.getBoundingClientRect().height) : null,
-        chips: line ? line.querySelectorAll('.jfmod-rating').length : 0 };
-});
-
-/** Answers the ratings defaults with `count()` sources on (in the complete order), on a page or a whole context. */
-const routeDefaults = async (target, count) => {
-    let reads = 0;
-    await target.route('**/JellyfinMod/Ratings/Defaults', async route => {
-        reads++;
-        const response = await route.fetch();
-        const body = await response.json();
-        return route.fulfill({ response, json: { ...body, defaultSources: body.availableSources.slice(0, count()) } });
-    });
-    return () => reads;
-};
-
-/**
- * Finds, from the page's own CSS, a row width and two source counts where the shorter line sits beside the TMDB star and the
- * longer one keeps the line's own height but no longer fits beside the star, so the shared row wraps (runs in the browser on a
- * page showing every source, at 1920×1080). Each candidate is laid out in a hidden copy of the row.
- */
-const findWrap = page => page.evaluate(() => {
-    const row = [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null);
-    if (!row) return null;
-    const shape = (count, width) => {
-        const copy = row.cloneNode(true);
-        Object.assign(copy.style, { position: 'absolute', visibility: 'hidden', width: width + 'px', left: '0', top: '0' });
-        [...copy.querySelectorAll('[role="listitem"]')].forEach((item, index) => {
-            if (index >= count) item.remove();
-        });
-        row.parentElement.appendChild(copy);
-        const line = copy.querySelector('.jfmod-ratingsLine');
-        const result = { row: Math.round(copy.getBoundingClientRect().height), line: Math.round(line.getBoundingClientRect().height) };
-        copy.remove();
-        return result;
-    };
-    const single = shape(1, 4000);
-    // Row widths the 1920×1080 TV window or a narrower one gives, so the window under test is a real TV size.
-    for (let width = Math.floor(row.getBoundingClientRect().width); width >= 500; width -= 10) {
-        for (let shorter = 2; shorter <= 8; shorter++) {
-            const beside = shape(shorter, width);
-            if (beside.row !== single.row || beside.line !== single.line) continue;
-            for (let longer = shorter + 1; longer <= 9; longer++) {
-                const wrapped = shape(longer, width);
-                if (wrapped.line === single.line && wrapped.row > single.row) return { width, shorter, longer, rowWidth: Math.round(row.getBoundingClientRect().width) };
-            }
-        }
-    }
-    return null;
-});
-
-/**
- * The file-less page's line shares the misc-info row with the TMDB star (review round 3, P2 3). A wider line can keep its own
- * height and still wrap that row, pushing everything below it down. The check finds a window width and two source counts that
- * do exactly that, confirms it in real visits, then — with focus on a control below the row — lets a minute's defaults refetch
- * turn the longer set on: focus must not move and the line waits; the next visit shows it. Once, at the TV layout.
- */
-async function sharedRowWrap(browser, layout) {
-    if (layout !== 'tv1080') return;
-    // The page with every source on, at two window widths: the CSS layout, and how the row's width follows the window's.
-    const probe = await open(browser, layout, target => routeDefaults(target, () => 9));
-    await go(probe.page, `#/details?entryId=${STATE.fileless}`);
-    await waitChips(probe.page);
-    const found = await findWrap(probe.page);
-    await probe.page.setViewportSize({ width: 1600, height: 1080 });
-    await probe.page.waitForTimeout(500);
-    const narrower = await probe.page.evaluate(() => Math.round([...document.querySelectorAll('.itemMiscInfo-secondary')]
-        .find(node => node.offsetParent !== null).getBoundingClientRect().width));
-    await probe.context.close();
-    if (!found) {
-        record(layout, 'The page has a row width where a longer line keeps its height but wraps the shared row', false);
-        return;
-    }
-    const perPixel = (found.rowWidth - narrower) / 320;
-    const windowWidth = Math.round(1920 - (found.rowWidth - found.width - 5) / perPixel);
-    const visit = async count => {
-        const { context, page } = await open(browser, layout, target => routeDefaults(target, () => count));
-        await page.setViewportSize({ width: windowWidth, height: 1080 });
-        await go(page, `#/details?entryId=${STATE.fileless}`);
-        await waitChips(page);
-        const shape = await sharedRow(page);
-        await context.close();
-        return shape;
-    };
-    const base = await visit(found.shorter);
-    const wider = await visit(found.longer);
-    const exact = base.chips === found.shorter && wider.chips === found.longer && wider.line === base.line && wider.row > base.row;
-    record(layout, 'At this window width the longer line keeps its own height and wraps the shared row (the case under test)', exact,
-        { found, windowWidth, base, wider });
-    if (!exact) return;
-    let count = found.shorter;
-    const { context, page } = await open(browser, layout, target => routeDefaults(target, () => count));
-    await page.setViewportSize({ width: windowWidth, height: 1080 });
-    await go(page, `#/details?entryId=${STATE.fileless}`);
-    await waitChips(page);
-    let below = false;
-    for (let press = 0; press < 15 && !below; press++) {
-        const box = await focusedBox(page);
-        const rowBottom = await page.evaluate(() => [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null)
-            ?.getBoundingClientRect().bottom ?? null);
-        below = rowBottom !== null && box.top > rowBottom;
-        if (!below) {
-            await page.keyboard.press('ArrowDown');
-            await page.waitForTimeout(200);
-        }
-    }
-    const before = await focusedBox(page);
-    count = found.longer;
-    await page.waitForTimeout(65000);
-    const after = await focusedBox(page);
-    const held = await sharedRow(page);
-    await go(page, '#/home');
-    await go(page, `#/details?entryId=${STATE.fileless}`);
-    await waitChips(page);
-    const next = await sharedRow(page);
-    await context.close();
-    // The longer set is tried before paint and cut back to as many as fit the row unwrapped (at least the shorter set); the next
-    // visit, where the answer arrives with the page, shows all of it.
-    record(layout, 'A wider line that would wrap the shared row above a focused control shows only what fits, focus stays; the next visit shows it',
-        below && JSON.stringify(before) === JSON.stringify(after) && held.chips >= found.shorter && held.chips < found.longer && held.row === base.row
-        && next.chips === found.longer && next.row === wider.row,
-        { below, focus: [before.text, before.top, after.top], held, next });
 }
 
 async function tv(browser, layout) {
@@ -708,50 +636,55 @@ async function tv(browser, layout) {
     const left = await page.evaluate(() => window.location.hash);
     record(layout, 'The remote\'s Back leaves Ratings display for the page that opened it', !left.includes('catalog/preferences'), left);
 
-    // The title page: the ratings are in the row above the buttons; the first focus is Play, Up reaches them, Left and Right
-    // move between them, OK shows the tooltip and the remote's Back closes only that (design 2026-10-08).
+    // The title page: the group is in the row above the buttons; the first focus is Play, Up reaches the group (one focus stop),
+    // OK opens the popup and the remote's Back closes only that; with no popup open Back leaves the page (user decisions 10, 13).
+    await go(page, '#/home');
     await go(page, `#/details?id=${STATE.hostItem}`);
     const where = () => page.evaluate(() => {
         const node = document.activeElement;
         return { tag: node?.tagName ?? null, text: node?.textContent?.trim().slice(0, 30) ?? null, top: Math.round(node?.getBoundingClientRect().top ?? -1) };
     });
     const focusedFirst = await where();
-    const found = await waitChips(page);
+    const found = await waitGroup(page);
     await page.waitForTimeout(2500);
     const focusedLater = await where();
-    record(layout, 'Nothing the ratings bring in moves the focused control (same control, same place, once the line is there)',
+    record(layout, 'Nothing the ratings bring in moves the focused control (same control, same place, once the group is there)',
         focusedFirst.tag === 'BUTTON' && JSON.stringify(focusedFirst) === JSON.stringify(focusedLater), { focusedFirst, focusedLater });
     const onPlay = await page.evaluate(() => !!document.activeElement?.classList.contains('btnPlay'));
-    // At 1280×720 a long row shows as many of the user's first ratings as fit without wrapping.
-    const shown = found.map(chip => chip.source);
-    record(layout, 'The TV title page shows the ratings (as many as fit the row, in order) and its first focus is Play, not a rating',
-        onPlay && shown.length >= (layout === 'tv720' ? 1 : 5) && DEFAULT_ORDER.join(',').startsWith(shown.join(',')), { shown, onPlay });
-    const focusedRating = () => page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
+    record(layout, 'The TV title page shows IMDb, RT critics and audience (Trakt if the row has room) on one line; its first focus is Play',
+        onPlay && rowOk(found, false) && found.oneLine, { inline: sources(found), oneLine: found?.oneLine, onPlay, rowWidth: found?.rowWidth });
+    const onGroup = () => page.evaluate(() => !!document.activeElement?.hasAttribute('data-jfmod-ratings-group'));
     await page.keyboard.press('ArrowUp');
     await page.waitForTimeout(300);
-    const up = await focusedRating();
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(300);
-    const right = await focusedRating();
+    const up = await onGroup();
+    const noPopupOnFocus = await page.locator(POPUP).count() === 0;
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
-    const tip = await tooltipText(page);
+    const shown = await popup(page);
     const hash = await page.evaluate(() => window.location.hash);
-    await shot(page, `${layout}-tooltip`);
+    await shot(page, `${layout}-popup`);
     await pressRemoteBack(page);
-    const afterBack = { hash: await page.evaluate(() => window.location.hash), tip: await page.locator('[role="tooltip"]').count(), on: await focusedRating() };
+    const afterBack = { hash: await page.evaluate(() => window.location.hash), popup: await page.locator(POPUP).count(), on: await onGroup() };
     await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(300);
     const down = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
-    record(layout, 'Up from Play reaches a rating, Right the next, OK shows its tooltip with the votes, Back closes only that, Down returns to the buttons',
-        !!up && !!right && up !== right && /votes/.test(tip) && afterBack.hash === hash && afterBack.tip === 0 && afterBack.on === right && down,
-        { up, right, tip, afterBack, down });
+    record(layout, 'Up from Play reaches the group, OK opens the popup (rows of mark, value, votes), Back closes only that, Down returns to the buttons',
+        up && noPopupOnFocus && popupOk(shown, found, DEFAULT_ORDER) && afterBack.hash === hash && afterBack.popup === 0 && afterBack.on && down,
+        { up, noPopupOnFocus, shown, afterBack, down });
+    await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(300);
+    const before = await onGroup();
+    await pressRemoteBack(page);
+    const leftPage = await page.evaluate(() => window.location.hash);
+    record(layout, 'With the group focused and no popup open, the remote\'s Back leaves the page as usual', before && leftPage !== hash, { before, leftPage });
+    await go(page, `#/details?id=${STATE.hostItem}`);
+    await waitGroup(page);
+    await page.waitForTimeout(1500);
     await laterUpdates(page, layout);
     await shot(page, `${layout}-native`);
     await page.evaluate(() => localStorage.removeItem('layout'));
     record(layout, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors);
     await context.close();
-    await sharedRowWrap(browser, layout);
 }
 
 // oleksii's own ratings display choice, read before anything changes it and put back at the end over plain HTTP — not

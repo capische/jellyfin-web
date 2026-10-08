@@ -1,4 +1,4 @@
-// Phase 9 inline ratings — design preview on the development machine (2026-10-08).
+// Phase 9 ratings group — design preview on the development machine (2026-10-08, user decisions 10 and 13).
 //
 // NOT acceptance evidence. There is no Jellyfin here: a small local server serves a built bundle (dist/) and answers the
 // handful of Jellyfin and JellyfinMod reads the detail pages and a browse grid make, from fixed fixture data. The pages,
@@ -8,7 +8,10 @@
 // server is blocked and counted, and the run fails if there is one.
 //
 //   JFMOD_DIST=<built dist/> JFMOD_DESIGN_SHOTS=<folder> [JELLYFINMOD_BROWSER=chromium|chrome] [JFMOD_DESIGN_CHECKS=0]
-//     [JFMOD_DESIGN_VARIANT=a|b|c JFMOD_DESIGN_SHEET=<contact sheet png>] node p9-design.mjs
+//     [JFMOD_DESIGN_SHEET=<contact sheet png>] [JFMOD_DESIGN_ONLY=desktop,mobile,tv1080,tv720] [JFMOD_DESIGN_SETTINGS=1] node p9-design.mjs
+//
+// Every check runs with all nine sources ticked (the server's default answered as all of them), except the fresh-default check
+// and the sources unticked in the settings area's checkboxes.
 import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
@@ -19,20 +22,16 @@ if (!DIST) throw new Error('Set JFMOD_DIST to a built dist/ folder');
 const SHOTS = process.env.JFMOD_DESIGN_SHOTS;
 const CHECKS = process.env.JFMOD_DESIGN_CHECKS !== '0';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
-const LABEL = process.env.JFMOD_DESIGN_LABEL ?? 'after';
-// One of the three looks of the ratings group offered on 2026-10-08 (design options 2: a, b, c): only those pages are taken,
-// with their own checks, with every source ticked (the server's default answered as all nine), then the fresh default and the
-// settings area's checkboxes. JFMOD_DESIGN_SHEET=<png> also composes the look's contact sheet. (The checks without a variant
-// are the earlier inline design's, at this branch's committed tip; the group's become the main run once the user has chosen.)
-const VARIANT = process.env.JFMOD_DESIGN_VARIANT ?? '';
-
+const LABEL = process.env.JFMOD_DESIGN_LABEL ?? 'final';
 const SERVER_ID = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 const USER_ID = '0123456789abcdef0123456789abcdef';
 const SERIES_ID = '5e1e5e1e5e1e5e1e5e1e5e1e5e1e5e1e';
 const MOVIE_ID = '30f130f130f130f130f130f130f130f1';
 const ROTTEN_ID = '40f140f140f140f140f140f140f140f1';
-// A movie MDBList has no IMDb or Rotten Tomatoes value for: Jellyfin's own star and tomato stay (design options 2).
+// A movie MDBList has no IMDb or Rotten Tomatoes value for: Jellyfin's own star and tomato stay (user decision 10).
 const STOCK_ID = '57c057c057c057c057c057c057c057c0';
+// A movie whose row is longer ("Not Rated", a longer runtime): on a 1280×720 TV Trakt gives way there (user decision 13).
+const LONG_ID = '10c010c010c010c010c010c010c010c0';
 const ENTRY_ID = 'e0e0e0e0-0000-4000-8000-00000000e0e0';
 const MOVIES_VIEW = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const SHOWS_VIEW = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -41,7 +40,7 @@ const old = new Date(Date.now() - 40 * 86400000).toISOString();
 
 const mdb = (source, value, scale, votes, extra = {}) => ({ source, value, scale, votes, provider: 'mdblist', fetchedAt: recent, stale: false, ...extra });
 // The user's screenshot of 2026-10-08 (a series page): IMDb 8.3, RT critics 94 %, RT audience 55 %, TMDB 83 %, Trakt 83 %.
-// With every source enabled (design options 2) the series also carries the four optional sources, with fixture values.
+// With every source ticked the series also carries the four optional sources, with fixture values.
 const RATINGS = {
     [SERIES_ID]: [mdb('imdb', 8.3, 'ten', 108000), mdb('tomatoes_critic', 94, 'percent', 56), mdb('tomatoes_audience', 55, 'percent', null),
         mdb('tmdb', 83, 'percent', 866), mdb('trakt', 83, 'percent', 5700), mdb('metacritic', 85, 'percent', 23), mdb('metacritic_user', 8.6, 'ten', 410),
@@ -52,17 +51,18 @@ const RATINGS = {
         { source: 'tmdb', value: 7.8, scale: 'ten', votes: 1234, provider: 'tmdb', fetchedAt: null, stale: false },
         mdb('trakt', 83, 'percent', 21000, { fetchedAt: old, stale: true }), mdb('metacritic', 74, 'percent', 52),
         mdb('metacritic_user', 8.4, 'ten', 1300), mdb('letterboxd', 4.1, 'five', 90000), mdb('rogerebert', 3.5, 'four', null)],
+    [LONG_ID]: [mdb('imdb', 7.6, 'ten', 98000), mdb('tomatoes_critic', 88, 'percent', 240), mdb('tomatoes_audience', 79, 'percent', 10000),
+        mdb('tmdb', 74, 'percent', 2100), mdb('trakt', 77, 'percent', 6400), mdb('letterboxd', 3.9, 'five', 41000)],
     [STOCK_ID]: [mdb('tmdb', 72, 'percent', 640), mdb('trakt', 74, 'percent', 1900), mdb('letterboxd', 3.6, 'five', 12000)],
     // Rotten on both counts.
     [ROTTEN_ID]: [mdb('imdb', 5.2, 'ten', 41000), mdb('tomatoes_critic', 42, 'percent', 120), mdb('tomatoes_audience', 38, 'percent', 2500),
         mdb('tmdb', 54, 'percent', 900), mdb('trakt', 51, 'percent', 800)]
 };
 const ALL = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt', 'metacritic', 'metacritic_user', 'letterboxd', 'rogerebert'];
-const DEFAULTS = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt'];
 // The plugin's own default since user decision 9 (2026-10-08): IMDb, Rotten Tomatoes critics and audience, Trakt.
 const FRESH_DEFAULTS = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'trakt'];
 // What the fixture server answers as the administrator's default list; a Settings/Ratings PATCH changes it, as on an instance.
-let serverDefaults = DEFAULTS;
+let serverDefaults = ALL;
 let serverRevision = 3;
 let userSources = null; // null: the server's defaults
 let currentTheme = 'dark';
@@ -104,6 +104,10 @@ const ITEMS = {
         OfficialRating: 'PG-13', CommunityRating: 8.1, CriticRating: 91, RunTimeTicks: 81000000000, IsFolder: false, MediaType: 'Video',
         Overview: 'A fixture movie whose stock star and tomato match IMDb and RT critics.', Path: '/media/movies/design.mkv',
         MediaSources: [mediaSource(MOVIE_ID)], MediaStreams: mediaSource(MOVIE_ID).MediaStreams, ParentId: MOVIES_VIEW, HasSubtitles: true },
+    [LONG_ID]: { ...base(LONG_ID, 'JellyfinMod Design Long', 'Movie'), ProductionYear: 2019, PremiereDate: '2019-03-01T00:00:00Z',
+        OfficialRating: 'Not Rated', CommunityRating: 7.6, CriticRating: 88, RunTimeTicks: 121800000000, IsFolder: false, MediaType: 'Video',
+        Overview: 'A fixture movie with a longer metadata row.', Path: '/media/movies/long.mkv', MediaSources: [mediaSource(LONG_ID)],
+        MediaStreams: mediaSource(LONG_ID).MediaStreams, ParentId: MOVIES_VIEW },
     [STOCK_ID]: { ...base(STOCK_ID, 'JellyfinMod Design Stock', 'Movie'), ProductionYear: 2021, PremiereDate: '2021-09-01T00:00:00Z',
         OfficialRating: 'PG', CommunityRating: 7.2, CriticRating: 78, RunTimeTicks: 70000000000, IsFolder: false, MediaType: 'Video',
         Overview: 'A fixture movie with Jellyfin\'s own star and tomato and no IMDb or Rotten Tomatoes value from MDBList.', Path: '/media/movies/stock.mkv',
@@ -299,12 +303,11 @@ const open = async (layoutName, theme = 'dark') => {
         if (message.type() === 'error' && process.env.JFMOD_DESIGN_DEBUG) console.log(`[${layoutName}] console: ${message.text().slice(0, 300)}`);
     });
     await page.goto(ORIGIN + '/web-mod/', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(([layoutValue, themeValue, userId, variant]) => {
+    await page.evaluate(([layoutValue, themeValue, userId]) => {
         localStorage.setItem('layout', layoutValue);
         localStorage.setItem(userId + '-appTheme', themeValue);
-        if (variant) localStorage.setItem('jfmodRatingsDesign', variant);
         localStorage.setItem('appTheme', themeValue);
-    }, [layout.layout, theme, USER_ID, VARIANT]);
+    }, [layout.layout, theme, USER_ID]);
     // A hash change alone does not reload; the layout and theme are read at start-up.
     await page.goto(ORIGIN + '/web-mod/#/login', { waitUntil: 'domcontentloaded' });
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -318,28 +321,12 @@ const open = async (layoutName, theme = 'dark') => {
     return { context, page };
 };
 
-const detail = async (page, id) => {
-    await page.goto(`${ORIGIN}/web-mod/#/details?id=${id}&serverId=${SERVER_ID}`, { waitUntil: 'domcontentloaded' });
-    try {
-        await page.locator('.itemMiscInfo-primary:visible').waitFor({ timeout: 30000 });
-        // The ratings: inline marks after the change, the chip line before it.
-        await page.locator('.jfmod-rating:visible, .jfmod-ratingChip:visible').first().waitFor({ timeout: 30000 });
-    } catch (error) {
-        if (SHOTS) await page.screenshot({ path: join(SHOTS, 'debug-detail.png') });
-        console.log('fixture server had no answer for: ' + [...unknown].join(', '));
-        throw error;
-    }
-    await page.waitForTimeout(1200);
-};
-
+/** A whole-page picture (the settings area's run). */
 const shot = async (page, name) => {
     if (!SHOTS) return;
     mkdirSync(SHOTS, { recursive: true });
     await page.screenshot({ path: join(SHOTS, `${LABEL}-${name}.png`) });
 };
-
-const rowSources = page => page.locator('.itemMiscInfo-primary:visible .jfmod-rating')
-    .evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-rating')));
 
 /** The ratings group's controls and states, read in the page. */
 const GROUP = '[data-jfmod-ratings-group]';
@@ -390,6 +377,8 @@ const groupState = page => page.evaluate(selector => {
         links: row.querySelectorAll('a').length, playMiddle: play ? Math.round((play.top + play.height / 2) * 10) / 10 : null,
         focus: document.activeElement?.hasAttribute('data-jfmod-ratings-group') ? 'group' : (document.activeElement?.className ?? '').toString().slice(0, 60),
         buttonHeight: button.getBoundingClientRect().height,
+        // The group's width with all its ticked inline sources (Trakt too), as measured at its first paint: the popup's width.
+        fullWidth: Number(group.getAttribute('data-jfmod-full-width')) || null,
         // The group inside its row's box (on a phone the row is narrow and the poster sits beside it).
         inRow: (() => {
             const own = row.getBoundingClientRect();
@@ -406,17 +395,42 @@ const groupState = page => page.evaluate(selector => {
     };
 }, GROUP);
 
-/** The popup's ratings, in order, and its text. */
+/**
+ * The popup's ratings, in order: its visible text (without the hidden provenance a screen reader gets), each row's title, its
+ * width, whether any row wraps or overflows, and whether it is wholly on screen.
+ */
 const popupState = async page => {
     const popup = page.locator(POPUP);
     if (!await popup.count()) return { open: false, sources: [], text: '' };
-    return { open: true, sources: await popup.locator('[data-jfmod-rating]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-rating'))),
-        text: (await popup.innerText()).replace(/\s+/g, ' '), links: await popup.locator('a').count(),
-        // Wholly on screen (a phone is narrow).
-        inside: await popup.evaluate(node => {
-            const rect = node.getBoundingClientRect();
-            return rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight;
-        }) };
+    return popup.evaluate(node => {
+        const copy = node.cloneNode(true);
+        copy.querySelectorAll('.jfmod-ratingsHidden').forEach(hidden => hidden.remove());
+        const rect = node.getBoundingClientRect();
+        const rows = [...node.querySelectorAll('[data-jfmod-rating]')];
+        // An empty votes cell (no count) has no height.
+        const valueHeights = [...node.querySelectorAll('.jfmod-popValue, .jfmod-popVotes')].map(cell => cell.getBoundingClientRect().height).filter(Boolean);
+        return {
+            open: true, sources: rows.map(row => row.getAttribute('data-jfmod-rating')), text: copy.textContent.replace(/\s+/g, ' ').trim(),
+            titles: rows.map(row => row.getAttribute('title') ?? ''), hiddenText: [...node.querySelectorAll('.jfmod-ratingsHidden')].map(hidden => hidden.textContent),
+            links: node.querySelectorAll('a').length, width: Math.round(rect.width),
+            // One line per row: every value and votes cell one line high, nothing wider than the popup.
+            oneLine: valueHeights.every(height => height < 2 * Math.min(...valueHeights)) && node.scrollWidth <= node.clientWidth + 1,
+            stale: rows.filter(row => row.classList.contains('jfmod-pop-stale')).map(row => row.getAttribute('data-jfmod-rating')),
+            inside: rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight
+        };
+    });
+};
+
+/**
+ * The popup as user decision 13 has it: rows only (mark, value, votes; no "via …" line, no caveat, no heading or footer),
+ * every ticked rating in order, as wide as the row's group with all its sources (on a phone, no wider than the screen allows),
+ * no row wrapping, the provenance in each row's title and hidden text.
+ */
+const popupOk = (pop, state, expected, viewportWidth) => {
+    const width = Math.min(state.fullWidth ?? 0, viewportWidth - 16);
+    return pop.open && pop.inside && pop.oneLine && pop.links === 0 && pop.sources.join(',') === expected.join(',')
+        && !/via|as of|MDBList|differ|Source|Votes/.test(pop.text) && pop.titles.every(title => /via (MDBList, as of|TMDB)/i.test(title))
+        && pop.hiddenText.every(text => /via (MDBList|TMDB)/.test(text)) && Math.abs(pop.width - width) <= 1;
 };
 
 /** The title's header (name, rows, buttons) and the popup, cropped from the page, for the contact sheet. */
@@ -439,29 +453,34 @@ const headerShot = async (page, name) => {
 };
 const shotsTaken = [];
 
-/** Rotten Tomatoes as the look shows it: two marks (A), one mark "94% | 55%" (B), one mark "94 · 55" (C). */
-const rtText = (critic, audience) => {
-    if (VARIANT === 'b') return audience === undefined ? `${critic}%` : `${critic}% ${audience}%`;
-    if (VARIANT === 'c') return audience === undefined ? `${critic}` : `${critic} · ${audience}`;
-    return null;
-};
-// The row's text without spaces: B's bar and C's dot are drawn apart, not spaced.
-const bare = text => text.replace(/\s+/g, '');
-const inlineExpected = withAudience => (VARIANT === 'a' ? ['imdb', 'tomatoes_critic', ...withAudience ? ['tomatoes_audience'] : [], 'trakt'] : ['imdb', 'tomatoes', 'trakt']);
+/** The row's sources: IMDb, Rotten Tomatoes critics and audience, each its own mark, then Trakt (when it has room). */
+const INLINE = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'trakt'];
 
 /**
- * The ratings group's own checks and pictures, for one look (design options 2, 2026-10-08), on every layout, with every source
- * ticked; then, on the desktop, the fresh default and a source unticked in the settings area.
+ * Whether Trakt is out of the row only because the row has no room for it (user decision 13): the row's items plus the width
+ * Trakt would take (the group's full width less its width now) are more than the row; on a phone, the group with Trakt is
+ * wider than the row. IMDb and Rotten Tomatoes are never out.
  */
-const variantRun = async () => {
+const traktRule = (state, layoutName) => {
+    if (state.inline.includes('trakt')) return true;
+    const traktWidth = (state.fullWidth ?? 0) - state.groupWidth;
+    if (layoutName === 'mobile') return state.fullWidth > state.rowWidth;
+    return traktWidth > 0 && state.itemWidths.reduce((sum, width) => sum + width, 0) + traktWidth > state.rowWidth;
+};
+
+/**
+ * The ratings group's checks and pictures on every layout, with every source ticked; then, on the desktop, the fresh default
+ * and sources unticked in the settings area.
+ */
+const groupRun = async () => {
     const only = (process.env.JFMOD_DESIGN_ONLY ?? '').split(',').filter(Boolean);
     serverDefaults = ALL;
     for (const layoutName of Object.keys(LAYOUTS).filter(name => !only.length || only.includes(name))) {
         const tv = layoutName.startsWith('tv');
         const { context, page } = await open(layoutName);
         try {
-            for (const [name, id] of [['series', SERIES_ID], ['movie', MOVIE_ID], ['stock', STOCK_ID]]) {
-                if (tv && CHECKS && name !== 'stock') {
+            for (const [name, id] of [['series', SERIES_ID], ['movie', MOVIE_ID], ['long', LONG_ID], ['stock', STOCK_ID]]) {
+                if (tv && CHECKS && (name === 'series' || name === 'movie')) {
                     // A late answer: the ratings arrive 5 s after the page (past its 3 s prefetch bound), with Play focused.
                     const pattern = `**/JellyfinMod/Ratings/Items/${id}`;
                     await page.route(pattern, async route => {
@@ -477,7 +496,7 @@ const variantRun = async () => {
                     await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => undefined);
                     await page.waitForTimeout(600);
                     const late = await groupState(page);
-                    check(`${VARIANT} ${layoutName} ${name}: before the answer the space is reserved; the late answer fills it and Play keeps focus and place`,
+                    check(`${layoutName} ${name}: before the answer the space is reserved; the late answer fills it and Play keeps focus and place`,
                         !!early && !!late && early.standIn && !late.standIn && /btnPlay/.test(early.focus) && /btnPlay/.test(late.focus)
                             && early.playMiddle === late.playMiddle && early.rowHeight === late.rowHeight && Math.abs(early.groupWidth - late.groupWidth) < 0.5
                             && early.groupLeft === late.groupLeft,
@@ -489,26 +508,31 @@ const variantRun = async () => {
                 await headerShot(page, `${name}-${layoutName}`);
                 if (!CHECKS) continue;
                 if (name === 'stock') {
-                    check(`${VARIANT} ${layoutName} stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt`,
+                    check(`${layoutName} stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt`,
                         state.stockStar && state.stockTomato && state.inline.join(',') === 'trakt', state);
                     continue;
                 }
-                check(`${VARIANT} ${layoutName} ${name}: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato`,
-                    state.inline.join(',') === inlineExpected(true).join(',') && !state.stockStar && !state.stockTomato
-                        && (VARIANT === 'a' || bare(state.text).includes(bare(rtText(name === 'series' ? 94 : 91, name === 'series' ? 55 : 88)))),
+                check(`${layoutName} ${name}: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too${state.inline.includes('trakt') ? '' : ' — given way, the row has no room'}`,
+                    state.inline.filter(source => source !== 'trakt').join(',') === 'imdb,tomatoes_critic,tomatoes_audience' && traktRule(state, layoutName)
+                        && !state.stockStar && !state.stockTomato,
                     state);
-                check(`${VARIANT} ${layoutName} ${name}: no votes and no links in the row; the group is the row's one focus stop`,
+                check(`${layoutName} ${name}: no votes and no links in the row; the group is the row's one focus stop`,
                     !/votes|\(\d/.test(state.text) && state.links === 0 && state.focusStops === 1, state);
-                check(`${VARIANT} ${layoutName} ${name}: every mark in the row is drawn at its size (none squeezed)`,
+                check(`${layoutName} ${name}: every mark in the row is drawn at its size (none squeezed)`,
                     state.marks.length >= 3 && state.marks.every(width => width >= 12), state.marks);
-                if (layoutName !== 'mobile') { check(`${VARIANT} ${layoutName} ${name}: the row with the group stays on one line`, state.lines === 1, state); } else {
-                    check(`${VARIANT} mobile ${name}: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster`,
+                if (layoutName !== 'mobile') { check(`${layoutName} ${name}: the row with the group stays on one line`, state.lines === 1, state); } else {
+                    check(`mobile ${name}: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster`,
                         state.inRow, state);
                 }
-                if (layoutName !== 'mobile') check(`${VARIANT} ${layoutName} ${name}: the group stays inside its row`, state.inRow, state);
+                if (layoutName !== 'mobile') check(`${layoutName} ${name}: the group stays inside its row`, state.inRow, state);
                 const expectedPopup = RATINGS[id].map(rating => rating.source).sort((a, b) => ALL.indexOf(a) - ALL.indexOf(b));
+                const viewportWidth = LAYOUTS[layoutName].viewport.width;
+                if (name === 'long') {
+                    if (layoutName === 'tv720') await headerShot(page, 'long-tv720');
+                    continue;
+                }
                 if (tv) {
-                    check(`${VARIANT} ${layoutName} ${name}: first focus is Play`, /btnPlay/.test(state.focus), state.focus);
+                    check(`${layoutName} ${name}: first focus is Play`, /btnPlay/.test(state.focus), state.focus);
                     if (name === 'movie') await headerShot(page, `movie-${layoutName}-play`);
                     await page.keyboard.press('ArrowUp');
                     await page.waitForTimeout(300);
@@ -518,7 +542,7 @@ const variantRun = async () => {
                     const right = await groupState(page);
                     await page.keyboard.press('ArrowLeft');
                     await page.waitForTimeout(250);
-                    check(`${VARIANT} ${layoutName} ${name}: Up reaches the group, one focus stop (Right leaves it), no popup on focus`,
+                    check(`${layoutName} ${name}: Up reaches the group, one focus stop (Right leaves it), no popup on focus`,
                         up.focus === 'group' && right.focus !== 'group' && !(await popupState(page)).open, { up: up.focus, right: right.focus });
                     if ((await groupState(page)).focus !== 'group') {
                         await page.locator(GROUP).first().focus();
@@ -527,16 +551,16 @@ const variantRun = async () => {
                     await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(() => undefined);
                     const pop = await popupState(page);
                     if (name === 'movie') await headerShot(page, `movie-${layoutName}-ok`);
-                    check(`${VARIANT} ${layoutName} ${name}: OK opens the popup on screen with every enabled rating, its value, votes and "via MDBList, as of"`,
-                        pop.open && pop.inside && pop.sources.join(',') === expectedPopup.join(',') && /via MDBList, as of/.test(pop.text) && pop.links === 0
-                            && (name === 'series' ? /108K|108,000/ : /250K|250,000/).test(pop.text),
-                        pop);
+                    check(`${layoutName} ${name}: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles`,
+                        popupOk(pop, state, expectedPopup, viewportWidth) && (name === 'series' ? /108K/ : /250K/).test(pop.text)
+                            && (name === 'series' || pop.stale.join(',') === 'trakt'),
+                        { pop, fullWidth: state.fullWidth });
                     const hash = await page.evaluate(() => location.hash);
                     const playBefore = (await groupState(page)).playMiddle;
                     await page.keyboard.press('Escape');
                     await page.waitForTimeout(500);
                     const afterBack = await groupState(page);
-                    check(`${VARIANT} ${layoutName} ${name}: Back closes only the popup; focus stays on the group, the page stays`,
+                    check(`${layoutName} ${name}: Back closes only the popup; focus stays on the group, the page stays`,
                         !(await popupState(page)).open && afterBack.focus === 'group' && await page.evaluate(() => location.hash) === hash, afterBack.focus);
                     // Upstream refills the row when it renders the item again (a userdata change, a return to the page):
                     // fillPrimaryMediaInfo replaces the row's content. Done here with upstream's own HTML for the row, with the
@@ -553,7 +577,7 @@ const variantRun = async () => {
                             focused: !!document.activeElement?.hasAttribute('data-jfmod-ratings-group') }));
                     }));
                     const afterRefill = await groupState(page);
-                    check(`${VARIANT} ${layoutName} ${name}: an upstream refill of the row puts the group back in its place, focused, same width, one line`,
+                    check(`${layoutName} ${name}: an upstream refill of the row puts the group back in its place, focused, same width, one line`,
                         refill.back && refill.index === refill.indexAfter && refill.focused && afterRefill.focus === 'group'
                             && Math.abs(afterRefill.groupWidth - afterBack.groupWidth) < 0.5 && afterRefill.lines === 1 && afterRefill.playMiddle === afterBack.playMiddle
                             && !afterRefill.stockStar && !afterRefill.stockTomato,
@@ -562,7 +586,7 @@ const variantRun = async () => {
                     await page.waitForTimeout(300);
                     const down = await groupState(page);
                     const inButtons = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
-                    check(`${VARIANT} ${layoutName} ${name}: Down returns to the buttons; Play never moved`,
+                    check(`${layoutName} ${name}: Down returns to the buttons; Play never moved`,
                         inButtons && down.playMiddle === playBefore, { inButtons, playBefore, down });
                     if (name === 'movie') {
                         // With no popup open, Back is the app's: it leaves the page (finding 5). Reached in the app from Home, so the
@@ -583,7 +607,7 @@ const variantRun = async () => {
                             history: await page.evaluate(() => history.length) };
                         await page.keyboard.press('Escape');
                         await page.waitForTimeout(1200);
-                        check(`${VARIANT} ${layoutName}: with the group focused and no popup open, Back leaves the page as usual`,
+                        check(`${layoutName}: with the group focused and no popup open, Back leaves the page as usual`,
                             before.focus === 'group' && !before.popup && /^#\/home/.test(await page.evaluate(() => location.hash)),
                             { before, hash: await page.evaluate(() => location.hash) });
                     }
@@ -593,34 +617,33 @@ const variantRun = async () => {
                     const pop = await popupState(page);
                     if (name === 'movie') await headerShot(page, 'movie-desktop-hover');
                     if (name === 'series') await headerShot(page, 'series-desktop-hover');
-                    check(`${VARIANT} desktop ${name}: hovering the group opens the popup on screen with every enabled rating, votes and "via MDBList, as of"`,
-                        pop.open && pop.inside && pop.sources.join(',') === expectedPopup.join(',') && /via MDBList, as of/.test(pop.text) && pop.links === 0, pop);
+                    check(`desktop ${name}: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources`,
+                        popupOk(pop, state, expectedPopup, viewportWidth), { pop, fullWidth: state.fullWidth });
                     const box = await page.locator(POPUP).boundingBox();
                     if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 });
                     await page.waitForTimeout(400);
                     const inside = (await popupState(page)).open;
                     await page.mouse.move(2, 2);
                     await page.waitForTimeout(400);
-                    check(`${VARIANT} desktop ${name}: the popup stays open with the pointer on it and closes when it leaves`, inside && !(await popupState(page)).open,
+                    check(`desktop ${name}: the popup stays open with the pointer on it and closes when it leaves`, inside && !(await popupState(page)).open,
                         { inside });
                     await page.locator(GROUP).first().focus();
                     await page.waitForTimeout(200);
                     const byKeyboard = (await popupState(page)).open;
                     await page.keyboard.press('Escape');
                     await page.waitForTimeout(200);
-                    check(`${VARIANT} desktop ${name}: keyboard focus opens it, Escape closes it`, byKeyboard && !(await popupState(page)).open, { byKeyboard });
+                    check(`desktop ${name}: keyboard focus opens it, Escape closes it`, byKeyboard && !(await popupState(page)).open, { byKeyboard });
                     await page.locator('.nameContainer:visible').first().click();
                 } else {
                     await page.locator(SHOWN_GROUP).first().tap();
                     await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(() => undefined);
                     const pop = await popupState(page);
                     if (name === 'movie') await headerShot(page, 'movie-mobile-tap');
-                    check(`${VARIANT} mobile ${name}: a tap opens the popup with every enabled rating, on screen; the group is a full touch target`,
-                        pop.open && pop.inside && pop.sources.join(',') === expectedPopup.join(',') && /via MDBList, as of/.test(pop.text) && state.buttonHeight >= 40,
-                        { pop, height: state.buttonHeight });
+                    check(`mobile ${name}: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target`,
+                        popupOk(pop, state, expectedPopup, viewportWidth) && state.buttonHeight >= 40, { pop, fullWidth: state.fullWidth, height: state.buttonHeight });
                     await page.locator('.nameContainer:visible').first().tap();
                     await page.waitForTimeout(300);
-                    check(`${VARIANT} mobile ${name}: a tap elsewhere closes it`, !(await popupState(page)).open);
+                    check(`mobile ${name}: a tap elsewhere closes it`, !(await popupState(page)).open);
                 }
             }
             if (layoutName !== 'tv720') {
@@ -628,8 +651,9 @@ const variantRun = async () => {
                 const state = await groupState(page);
                 await headerShot(page, `entry-${layoutName}`);
                 if (CHECKS) {
-                    check(`${VARIANT} ${layoutName} file-less entry: the group in the entry's row, IMDb in place of its own TMDB star`,
-                        state.inline.join(',') === inlineExpected(true).join(',') && !state.entryStar && (layoutName === 'mobile' || state.lines === 1), state);
+                    check(`${layoutName} file-less entry: the group in the entry's row, IMDb in place of its own TMDB star`,
+                        state.inline.filter(source => source !== 'trakt').join(',') === 'imdb,tomatoes_critic,tomatoes_audience' && traktRule(state, layoutName)
+                            && !state.entryStar && (layoutName === 'mobile' || state.lines === 1), state);
                 }
             }
         } finally {
@@ -637,7 +661,6 @@ const variantRun = async () => {
         }
     }
     if (!only.length || only.includes('desktop')) await defaultsAndSettings();
-    if (SHOTS && process.env.JFMOD_DESIGN_SHEET) await contactSheet(process.env.JFMOD_DESIGN_SHEET);
 };
 
 /**
@@ -656,8 +679,8 @@ const defaultsAndSettings = async () => {
         await headerShot(page, 'series-desktop-fresh-defaults');
         await page.mouse.move(2, 2);
         if (CHECKS) {
-            check(`${VARIANT} fresh default: only IMDb, RT critics, RT audience and Trakt — inline and in the popup (TMDB and the rest off)`,
-                state.inline.join(',') === inlineExpected(true).join(',') && pop.sources.join(',') === FRESH_DEFAULTS.join(','), { state, pop });
+            check('fresh default: only IMDb, RT critics, RT audience and Trakt — inline and in the popup (TMDB and the rest off)',
+                state.inline.join(',') === INLINE.join(',') && pop.sources.join(',') === FRESH_DEFAULTS.join(','), { state, pop });
         }
         // The settings area's checkboxes: every source ticked, then Trakt, RT audience and TMDB unticked and saved.
         serverDefaults = ALL;
@@ -665,7 +688,7 @@ const defaultsAndSettings = async () => {
         const section = page.locator('section[data-section="ratings"]');
         await section.waitFor({ timeout: 30000 });
         await page.waitForTimeout(800);
-        if (VARIANT === 'a' && SHOTS) {
+        if (SHOTS) {
             serverDefaults = FRESH_DEFAULTS;
             await page.reload({ waitUntil: 'domcontentloaded' });
             await section.waitFor({ timeout: 30000 });
@@ -698,10 +721,10 @@ const defaultsAndSettings = async () => {
         await page.mouse.move(2, 2);
         if (CHECKS) {
             const gone = ['trakt', 'tomatoes_audience', 'tmdb'];
-            check(`${VARIANT} unticked in the settings area (Trakt, RT audience, TMDB): gone inline and from the popup; RT shows one number`,
+            check(`unticked in the settings area (Trakt, RT audience, TMDB): gone inline and from the popup; RT shows one number`,
                 saved === ALL.filter(source => !gone.includes(source)).join(',') && !state.inline.some(source => gone.includes(source))
                     && !pop.sources.some(source => gone.includes(source)) && pop.sources.length === ALL.length - gone.length
-                    && (VARIANT === 'a' ? state.inline.join(',') === 'imdb,tomatoes_critic' : state.inline.join(',') === 'imdb,tomatoes' && bare(state.text).includes(bare(rtText(91))) && !state.text.includes('88')),
+                    && state.inline.join(',') === 'imdb,tomatoes_critic' && !state.text.includes('88'),
                 { saved, state, pop });
         }
     } finally {
@@ -710,17 +733,15 @@ const defaultsAndSettings = async () => {
     }
 };
 
-/** One picture per look: the crops of this run on one page, labelled. */
+/** The run's crops on one page, labelled. */
 const contactSheet = async path => {
-    const titles = { a: 'Option A — two Rotten Tomatoes marks; the popup is a compact list under the row',
-        b: 'Option B — one Rotten Tomatoes mark, "94% | 55%"; the popup is a small card of logos',
-        c: 'Option C — Rotten Tomatoes as "94 · 55", smaller; the popup is a source / score / votes table' };
     // Phones are narrow: one column; everything else two.
     const tiles = [
         ['series-desktop-hover', 'Desktop · series ("1923"-like values), hover popup'], ['movie-desktop-hover', 'Desktop · movie, hover popup'],
         ['stock-desktop', 'Desktop · no IMDb or RT values: stock ★ and tomato stay'], ['entry-desktop', 'Desktop · file-less entry'],
         ['movie-tv1080-play', 'TV 1920×1080 · Play focused'], ['movie-tv1080-ok', 'TV 1080 · Up, then OK: popup'],
-        ['movie-tv720-play', 'TV 1280×720 · Play focused'], ['movie-tv720-ok', 'TV 720 · Up, then OK: popup'],
+        ['movie-tv720-play', 'TV 1280×720 · Play focused (Trakt fits)'], ['long-tv720', 'TV 720 · a longer row: Trakt gives way'],
+        ['movie-tv720-ok', 'TV 720 · Up, then OK: popup'],
         ['series-tv720', 'TV 720 · series'], ['stock-tv720', 'TV 720 · stock ★ and tomato kept'],
         ['entry-tv1080', 'TV 1080 · file-less entry'], ['series-mobile', 'Mobile 390 · series'],
         ['movie-mobile-tap', 'Mobile 390 · tap: popup'], ['entry-mobile', 'Mobile 390 · file-less entry'],
@@ -734,7 +755,7 @@ const contactSheet = async path => {
         figure { margin: 0; } figcaption { font-weight: 600; margin: 0 0 6px; }
         img { width: 100%; display: block; border: 1px solid #333; }
         .wide { grid-column: span 2; }
-    </style></head><body><h1>${titles[VARIANT]}</h1>
+    </style></head><body><h1>Ratings in the metadata row and their popup (user decisions 10 and 13)</h1>
     <p>Design preview: the real build in ${tier === 'chrome' ? 'Google Chrome' : 'Chromium'} against fixture data (not a Jellyfin instance), every source ticked unless the
     tile says otherwise. Crops of the title header and the popup.</p>
     <div class="grid">${tiles.map(([name, caption]) => `<figure class="${/mobile/.test(name) ? '' : 'wide'}"><figcaption>${caption}</figcaption><img src="${image(name)}"></figure>`).join('')}</div>
@@ -788,174 +809,78 @@ const settingsRun = async () => {
     }
 };
 
-if (process.env.JFMOD_DESIGN_SETTINGS) await settingsRun();
-if (VARIANT) await variantRun();
-for (const theme of VARIANT || process.env.JFMOD_DESIGN_SETTINGS ? [] : ['dark', 'light']) {
-    for (const layoutName of Object.keys(LAYOUTS)) {
-        const { context, page } = await open(layoutName, theme);
-        try {
-            await detail(page, SERIES_ID);
-            await shot(page, `series-${layoutName}-${theme}`);
-            if (theme !== 'dark') continue;
-            await detail(page, MOVIE_ID);
-            await shot(page, `movie-${layoutName}-${theme}`);
-            await page.goto(`${ORIGIN}/web-mod/#/movies?topParentId=${MOVIES_VIEW}&collectionType=movies`, { waitUntil: 'domcontentloaded' });
-            await page.locator('.jfmod-cardRating:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
-            await page.waitForTimeout(800);
-            await shot(page, `cards-${layoutName}-${theme}`);
-            if (LABEL === 'after' && CHECKS) {
-                const cards = await page.locator('.jfmod-cardRating:visible').evaluateAll(nodes => nodes.map(node => ({
-                    icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null, text: node.textContent.trim(),
-                    title: node.getAttribute('title') ?? node.closest('[title]')?.getAttribute('title') ?? null,
-                    focusable: !!node.querySelector('button, a, [tabindex]') })));
-                check(`${layoutName}: cards show the chosen source's mark and value, with no tooltip or focus stop of their own`,
-                    cards.length === 3 && cards.every(card => card.icon === 'imdb' && /\d/.test(card.text) && !card.title && !card.focusable)
-                        && cards.some(card => /\(\w+ \d{4}\)/.test(card.text)), cards);
-            }
-            await detail(page, MOVIE_ID);
-            if (LABEL !== 'after' || !CHECKS) continue;
-            const tv = layoutName.startsWith('tv');
-            const row = page.locator('.itemMiscInfo-primary:visible');
-            const sources = await rowSources(page);
-            // A TV's focus is already on Play when the answer arrives: the row shows as many of the user's first ratings as fit
-            // without wrapping (approved as built, 2026-10-08). With the stock star and tomato kept and "Ends at" in the row, a
-            // 1280×720 TV fits two of this movie's five; everywhere else, all of them.
-            const fitted = layoutName === 'tv720';
-            check(`${layoutName}: the ratings sit in the stock star's row, in the default order${fitted ? ` (as many as fit: ${sources.length} of 5)` : ''}`,
-                fitted ? sources.length >= 1 && DEFAULTS.join(',').startsWith(sources.join(',')) : sources.join(',') === DEFAULTS.join(','), sources);
-            if (fitted) {
-                const lines = await row.evaluate(node => new Set([...node.children].filter(child => child.offsetParent).map(child =>
-                    Math.round(child.getBoundingClientRect().top + child.getBoundingClientRect().height / 2))).size);
-                check(`${layoutName}: the row stays on one line`, lines === 1, lines);
-            }
-            const icons = await row.locator('.jfmod-rating svg.jfmod-ratingIcon').evaluateAll(nodes => nodes.map(node => ({
-                kind: node.getAttribute('data-jfmod-icon'), width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height })));
-            check(`${layoutName}: each rating renders its inline mark`, icons.length === sources.length && icons.every(icon => icon.width > 4 && icon.height > 8), icons);
-            check(`${layoutName}: vote counts are not in the row`, !/\(\d|K\)|votes/.test(await row.innerText()), await row.innerText());
-            // Jellyfin's own star and tomato always stay, even when they show the same values as IMDb and RT critics (user, 2026-10-08).
-            check(`${layoutName}: the stock star and tomato stay beside IMDb 8.1 and RT 91`,
-                await row.evaluate(node => [node.querySelector('.starRatingContainer'), node.querySelector('.mediaInfoCriticRating')]
-                    .every(stock => stock && getComputedStyle(stock).display !== 'none' && stock.getBoundingClientRect().width > 0)));
-            if (sources.includes('trakt')) {
-                check(`${layoutName}: the stale Trakt value is dimmed`, await row.locator('[data-jfmod-rating="trakt"]').evaluate(node =>
-                    node.classList.contains('jfmod-rating-stale') && Number(getComputedStyle(node).opacity) < 0.7));
-            }
-            if (layoutName === 'desktop') {
-                const imdb = row.locator('[data-jfmod-rating="imdb"]');
-                await imdb.hover();
-                const tip = page.locator('[role="tooltip"].jfmod-ratingTooltip');
-                await tip.waitFor({ timeout: 3000 });
-                const text = await tip.innerText();
-                check('desktop: hovering a rating shows its tooltip with the vote count and provenance',
-                    text.includes('250,000 votes') && /via MDBList/i.test(text) && await imdb.getAttribute('aria-describedby') === await tip.getAttribute('id'), text);
-                await shot(page, 'movie-desktop-hover');
-                await page.mouse.move(5, 5);
-                await page.waitForTimeout(200);
-                check('desktop: moving away hides it', await tip.count() === 0);
-                await row.locator('[data-jfmod-rating="trakt"]').focus();
-                await page.keyboard.press('Shift+Tab');
-                await page.keyboard.press('Tab');
-                const focused = await page.locator('[role="tooltip"].jfmod-ratingTooltip').innerText().catch(() => '');
-                check('desktop: keyboard focus shows the same tooltip (stale note included)', focused.includes('21,000 votes') && focused.includes('Older than the refresh window'), focused);
-                await page.keyboard.press('Escape');
-                await page.waitForTimeout(150);
-                check('desktop: Escape closes it', await page.locator('[role="tooltip"]').count() === 0);
-                const anchors = await row.locator('a').count();
-                check('desktop: the row has no links', anchors === 0, anchors);
-            }
-            if (layoutName === 'mobile') {
-                await row.locator('[data-jfmod-rating="tomatoes_critic"]').tap();
-                const tip = page.locator('[role="tooltip"].jfmod-ratingTooltip');
-                await tip.waitFor({ timeout: 3000 });
-                const text = await tip.innerText();
-                check('mobile: a tap shows the tooltip with the vote count', text.includes('310 votes'), text);
-                await shot(page, 'movie-mobile-tap');
-                await page.locator('.nameContainer:visible').tap();
-                await page.waitForTimeout(200);
-                check('mobile: a tap elsewhere closes it', await tip.count() === 0);
-                const size = await row.locator('[data-jfmod-rating="imdb"]').evaluate(node => node.getBoundingClientRect().height);
-                check('mobile: each rating is a full touch target (about 44 px)', size >= 40, size);
-            }
-            if (tv) {
-                const focusedClass = () => page.evaluate(() => document.activeElement?.className ?? '');
-                await page.waitForTimeout(600);
-                check(`${layoutName}: the first focus is Play, not a rating`, /btnPlay|btnResume/.test(await focusedClass()), await focusedClass());
-                const playBox = await page.locator('.mainDetailButtons:visible .btnPlay').boundingBox();
-                await page.keyboard.press('ArrowUp');
-                await page.waitForTimeout(300);
-                const up = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-rating'));
-                check(`${layoutName}: Up from the buttons reaches a rating`, !!up, up);
-                await page.keyboard.press('ArrowRight');
-                await page.waitForTimeout(200);
-                const right = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-rating'));
-                check(`${layoutName}: Right moves to the next rating`, !!right && right !== up, { up, right });
-                await page.keyboard.press('Enter');
-                const tip = page.locator('[role="tooltip"].jfmod-ratingTooltip');
-                await tip.waitFor({ timeout: 3000 });
-                check(`${layoutName}: OK shows the tooltip with the vote count`, /votes/.test(await tip.innerText()), await tip.innerText());
-                await shot(page, `movie-${layoutName}-ok`);
-                const hash = await page.evaluate(() => location.hash);
-                await page.keyboard.press('Escape');
-                await page.waitForTimeout(500);
-                check(`${layoutName}: Back closes only the tooltip and stays on the page`,
-                    await tip.count() === 0 && await page.evaluate(() => location.hash) === hash
-                        && await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-rating')) === right);
-                const playAfter = await page.locator('.mainDetailButtons:visible .btnPlay').boundingBox();
-                // A focused TV button is drawn larger; its centre is where it is.
-                const middle = box => box.y + box.height / 2;
-                check(`${layoutName}: Play did not move`, playBox && playAfter && Math.abs(middle(playBox) - middle(playAfter)) < 0.5, { playBox, playAfter });
-                check(`${layoutName}: no links in the ratings row`, await row.locator('a').count() === 0);
-                await page.keyboard.press('ArrowDown');
-                await page.waitForTimeout(300);
-                check(`${layoutName}: Down returns to the button row`, await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons')),
-                    await focusedClass());
-            }
-        } finally {
-            await context.close();
-        }
-    }
-}
-
-// The other pages and states, desktop and TV only, after the change.
-if (LABEL === 'after' && !VARIANT && !process.env.JFMOD_DESIGN_SETTINGS) {
-    for (const layoutName of ['desktop', 'tv1080', 'mobile']) {
+/**
+ * The rest, on the desktop and the TV: the rotten marks below 60 %, the popup in the user's own order, a user's own choice that
+ * leaves two of the three row providers (Trakt still the one to give way), and the cards' single rating (P9.R7).
+ */
+const extrasRun = async () => {
+    const only = (process.env.JFMOD_DESIGN_ONLY ?? '').split(',').filter(Boolean);
+    // Each part opens its own visit: the user's own choice is read when the app starts.
+    const visit = async (layoutName, sourcesForUser, work) => {
+        userSources = sourcesForUser;
         const { context, page } = await open(layoutName);
         try {
-            await detail(page, ROTTEN_ID);
-            await shot(page, `rotten-${layoutName}-dark`);
-            if (CHECKS) {
-                const kinds = await page.locator('.itemMiscInfo-primary:visible .jfmod-ratingIcon')
-                    .evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-icon')));
-                check(`${layoutName}: below 60 % the splat and the spilled bucket`, kinds.includes('tomatoesCriticRotten') && kinds.includes('tomatoesAudienceSpilled'), kinds);
-            }
-            await page.goto(`${ORIGIN}/web-mod/#/details?entryId=${ENTRY_ID}&serverId=${SERVER_ID}`, { waitUntil: 'domcontentloaded' });
-            await page.locator('.jfmod-rating').first().waitFor({ timeout: 30000 });
-            await page.waitForTimeout(800);
-            await shot(page, `entry-${layoutName}-dark`);
-            if (CHECKS) {
-                const own = page.locator('.jfmod-entryStar:visible');
-                check(`${layoutName}: the file-less entry's own star stays beside the ratings (TMDB 7.8 in both)`,
-                    await own.count() === 1 && /7\.8 on TMDB/.test(await own.innerText()));
-            }
+            await work(page);
         } finally {
+            userSources = null;
             await context.close();
         }
+    };
+    for (const layoutName of ['desktop', 'tv720'].filter(name => !only.length || only.includes(name))) {
+        await visit(layoutName, null, async page => {
+            await groupDetail(page, nativeUrl(ROTTEN_ID));
+            const kinds = await page.locator(SHOWN_GROUP).first().locator('svg.jfmod-ratingIcon')
+                .evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-icon')));
+            if (CHECKS) check(`${layoutName}: below 60 % the splat and the spilled bucket`, kinds.includes('tomatoesCriticRotten') && kinds.includes('tomatoesAudienceSpilled'), kinds);
+        });
+        // A user's own choice without IMDb: Rotten Tomatoes and Trakt; Trakt still the one to give way, on the longer row too.
+        await visit(layoutName, ['tomatoes_critic', 'tomatoes_audience', 'trakt', 'tmdb'], async page => {
+            await groupDetail(page, nativeUrl(LONG_ID));
+            const state = await groupState(page);
+            await headerShot(page, `long-${layoutName}-own-sources`);
+            if (CHECKS) {
+                check(`${layoutName}: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room`,
+                    state.inline.filter(source => source !== 'trakt').join(',') === 'tomatoes_critic,tomatoes_audience' && traktRule(state, layoutName)
+                        && state.stockStar && !state.stockTomato && state.lines === 1, state);
+            }
+        });
     }
-
-    // The user's own order and every source.
-    userSources = ['letterboxd', 'trakt', 'imdb', 'metacritic', 'metacritic_user', 'rogerebert', 'tomatoes_audience', 'tomatoes_critic', 'tmdb'];
-    const { context, page } = await open('desktop');
-    try {
-        await detail(page, MOVIE_ID);
-        await shot(page, 'movie-desktop-all-sources');
+    if (only.length && !only.includes('desktop')) return;
+    // The popup follows the user's own order, with every source.
+    const order = ['letterboxd', 'trakt', 'imdb', 'metacritic', 'metacritic_user', 'rogerebert', 'tomatoes_audience', 'tomatoes_critic', 'tmdb'];
+    await visit('desktop', order, async page => {
+        await groupDetail(page, nativeUrl(MOVIE_ID));
+        const own = await groupState(page);
+        await page.locator(SHOWN_GROUP).first().hover();
+        await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(() => undefined);
+        const pop = await popupState(page);
         if (CHECKS) {
-            check('desktop: the order follows the user\'s preference, with every source', (await rowSources(page)).join(',') === userSources.join(','),
-                await rowSources(page));
+            check('desktop: the popup follows the user\'s own order with every source; the row keeps IMDb, RT critics, RT audience, Trakt',
+                pop.sources.join(',') === order.join(',') && own.inline.join(',') === INLINE.join(','), { pop: pop.sources, inline: own.inline });
         }
-    } finally {
-        await context.close();
-        userSources = null;
-    }
+    });
+    await visit('desktop', null, async page => {
+        await page.goto(`${ORIGIN}/web-mod/#/movies?topParentId=${MOVIES_VIEW}&collectionType=movies`, { waitUntil: 'domcontentloaded' });
+        await page.locator('.jfmod-cardRating:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
+        await page.waitForTimeout(800);
+        const cards = await page.locator('.jfmod-cardRating:visible').evaluateAll(nodes => nodes.map(node => ({
+            icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null, text: node.textContent.trim(),
+            title: node.getAttribute('title') ?? node.closest('[title]')?.getAttribute('title') ?? null,
+            focusable: !!node.querySelector('button, a, [tabindex]') })));
+        if (CHECKS) {
+            check('desktop: cards show the chosen source\'s mark and value, with no tooltip or focus stop of their own',
+                cards.length === 3 && cards.every(card => card.icon === 'imdb' && /\d/.test(card.text) && !card.title && !card.focusable)
+                    && cards.some(card => /\(\w+ \d{4}\)/.test(card.text)), cards);
+        }
+    });
+};
+
+if (process.env.JFMOD_DESIGN_SETTINGS) {
+    await settingsRun();
+} else {
+    await groupRun();
+    await extrasRun();
+    if (SHOTS && process.env.JFMOD_DESIGN_SHEET) await contactSheet(process.env.JFMOD_DESIGN_SHEET);
 }
 
 // Upstream's Chromecast support asks Google for its sender script on every page; that is upstream's, blocked here like
