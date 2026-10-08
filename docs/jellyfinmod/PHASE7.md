@@ -2729,9 +2729,13 @@ The rule is UX §12.1.
   one pass: **approve**, no defects (`review-errfix-4.md`). 48096 (bundle `aeb407ad49d5`, plugin `f7c274c`):
   `settings-area` **39/39 on Playwright Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.54**; 48096 restored
   byte for byte afterwards and its lease released.
-- **Follow-up (runners, not blocking, from that pass):** after the clean-up's refusal branch reloads the app, wait for a
+- **Follow-up (runners, done 2026-10-08, from that pass):** after the clean-up's refusal branch reloads the app, wait for a
   signed-in `ApiClient` as the error branch does; check the page's server after the final reload before recording that
-  the original days are restored.
+  the original days are restored. Done in `test(settings,p7.s8)` `2fd5b4ab03` (one `reloadApp` helper for both clean-up
+  branches; the restored-days check requires the reloaded page's server). Codex GPT-6.1 Sol, high, one pass: **approve**,
+  no defects, no further ideas (`review-errfix-5.md`). 48096 (bundle `aeb407ad49d5`, plugin `f7c274c`): `settings-area`
+  **39/39 on Playwright Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.54**; 48096 backed up afresh after the
+  user's manual test, restored byte for byte and its lease released. No runner follow-up is open from this work.
 
 #### S11 evidence
 
