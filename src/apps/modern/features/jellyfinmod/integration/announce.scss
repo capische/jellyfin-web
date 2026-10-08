@@ -1,0 +1,9 @@
+// The mod's live region for toasts (integration/announce.ts): read by screen readers, never seen.
+.jfmod-announce {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

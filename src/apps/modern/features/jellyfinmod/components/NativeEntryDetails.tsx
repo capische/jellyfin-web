@@ -1,12 +1,13 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
 import { type EntryDetail, getEntries, getEntry, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
     unkeepEpisode } from '../api/modApi';
+import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
 import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, keepButtonLabel, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
 import { type DevicePreference, deleteWarningText, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
@@ -21,7 +22,7 @@ import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeader
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
-import FileChooser, { type PinState } from './FileChooser';
+import FileChooser, { type PinState, useStockSourceIds } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
@@ -244,13 +245,12 @@ interface SeriesSectionProps {
     isAdmin: boolean;
     canAcquire: boolean;
     busy: boolean;
-    message: string;
     change: (action: () => Promise<unknown>, done: string) => Promise<boolean>;
     openPicker: (opener: HTMLElement) => void;
 }
 
 /** The native series page's section, unchanged by the 2026-10-07 design fix: retention list, Search releases, series Keep. */
-const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquire, busy, message, change, openPicker }) => {
+const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquire, busy, change, openPicker }) => {
     const section = useRef<HTMLElement>(null);
     // A Keep can remove the very button that made it; focus then falls to the page body, which strands a remote, so it goes
     // to the page's Keep button instead (UX §13).
@@ -270,7 +270,6 @@ const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquir
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading);
     const kept = detail.retention.reason === 'kept';
     return <section ref={section} aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
-        <p role='status'>{message}</p>
         <RetentionStatus retention={detail.retention} />
         {inFlightEpisodes.map(candidate => <div className='jfmod-episodeRow' key={'queue:' + candidate.id}>
             <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
@@ -371,7 +370,6 @@ const usePageRetention = (view: HTMLElement, data: EntryDetail | null | undefine
 /** Add catalog controls to upstream's own detail page without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, isAdmin, view }) => {
     const [busy, setBusy] = useState(false);
-    const [message, setMessage] = useState('');
     const [historyFor, setHistoryFor] = useState<{ anchor: HTMLElement; version: VersionDto } | null>(null);
     // Every viewer reads the file rows and the badge, so capabilities are read for ordinary users too.
     const capabilities = usePluginCapabilities(api);
@@ -392,20 +390,27 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const episode = pageEpisode(data, itemId);
     const isSeriesPage = !!data && !episode && data.entry.mediaType === 'series';
     const isFilePage = !!data && !isSeriesPage;
-    const versions = data && isFilePage ? pageVersions(data, episode, capabilities) : [];
+    const stockIds = useStockSourceIds(view);
+    // Only files Jellyfin still lists for this item: a binding left on an item Jellyfin re-created is not a file here.
+    const versions = useMemo(() => {
+        const listed = data && isFilePage ? pageVersions(data, episode, capabilities) : [];
+        if (stockIds === null) return listed;
+        const ids = stockIds.split(',');
+        return listed.filter(version => ids.some(id => sameItemId(id, version.mediaSourceId)));
+    }, [capabilities, data, episode, isFilePage, stockIds]);
     const change = useCallback(async (action: () => Promise<unknown>, done: string) => {
         if (busy) return false;
         setBusy(true);
-        setMessage('');
         let made = false;
         try {
             await action();
             made = true;
             const refreshed = await refetch();
             if (refreshed.error) throw refreshed.error;
-            setMessage(done);
+            // Upstream's toast, not a line in the page: a line added under the overview pushed the page down (user, 2026-10-08).
+            if (done) announce(done);
         } catch (error) {
-            setMessage((error as { jfmodMessage?: string } | null)?.jfmodMessage ?? 'The change could not be saved. Please try again.');
+            announce((error as { jfmodMessage?: string } | null)?.jfmodMessage ?? 'The change could not be saved. Please try again.');
         } finally {
             setBusy(false);
         }
@@ -461,7 +466,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const entry = detail.data.entry;
 
     if (isSeriesPage) {
-        return <SeriesSection api={api} detail={detail.data} isAdmin={isAdmin} canAcquire={canAcquire} busy={busy} message={message}
+        return <SeriesSection api={api} detail={detail.data} isAdmin={isAdmin} canAcquire={canAcquire} busy={busy}
             change={change} openPicker={openPicker} />;
     }
 
@@ -469,14 +474,13 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const history = detail.data.history;
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
-            onAddVersion={canAcquire && versions.length > 1 ? addVersion : undefined}
+            onAddVersion={canAcquire ? addVersion : undefined}
             onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
             pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}
             note={isAdmin ? deleteWarning : null} />}
         <FileHistoryPopover anchor={historyFor?.anchor ?? null} version={historyFor?.version ?? null} history={history}
             onClose={closeHistory} />
         {windowDialog}
-        <p role='status'>{message}</p>
         {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
         {episode && <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />}
         {!episode && <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />}

@@ -6,17 +6,46 @@
     padding: 0 1em 1em;
 }
 
+// Upstream draws no size for a `medium` dialog on a large screen, so the dialog grew with its list and the list never
+// scrolled (user, 2026-10-08). Here it takes most of the screen, wide for long release names; the content scrolls inside.
+// Below 80em × 45em upstream's fixed-size rule already fills the screen.
+// The TV's picker is fullscreen and keeps upstream's size.
+@media all and (min-width: 80em) and (min-height: 45em) {
+    .jfmod-releaseDialog:not(.dialog-fullscreen) {
+        width: 90%;
+        height: 90%;
+    }
+}
+
 .jfmod-releasePicker {
-    max-width: 60em;
     margin: 0 auto;
 }
 
-.jfmod-releaseControls > .selectContainer {
-    margin-bottom: 0.8em;
+// One line for the choices; each takes an equal share and wraps below 20em.
+.jfmod-releaseControls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+
+    > .selectContainer {
+        flex: 1 1 20em;
+        margin: 0 1em 0.6em 0;
+    }
+
+    > .selectContainer:last-child {
+        margin-right: 0;
+    }
 }
 
 .jfmod-releaseStatus {
-    margin: 0.6em 0;
+    display: flex;
+    align-items: center;
+    min-height: 1.6em;
+    margin: 0.4em 0;
+}
+
+.jfmod-releaseSpinner {
+    margin-right: 0.6em;
 }
 
 .jfmod-releaseNotice {
@@ -29,8 +58,8 @@
     display: block;
     width: 100%;
     box-sizing: border-box;
-    margin: 0 0 0.3em;
-    padding: 0.6em 0.8em;
+    margin: 0 0 0.1em;
+    padding: 0.3em 0.8em;
     border: 0;
     border-radius: 0.2em;
     background: transparent;
@@ -55,8 +84,12 @@
     opacity: 0.75;
 }
 
+// Summary, chips and figures on one line, the raw title on the next: two lines a row (user, 2026-10-08: thinner rows,
+// longer lines). They wrap on a narrow screen.
 .jfmod-releaseSummary {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
 }
 
 .jfmod-releaseQuality {
@@ -73,7 +106,7 @@
 }
 
 .jfmod-releaseMeta {
-    display: block;
+    margin-left: 0.8em;
     font-size: 86%;
     opacity: 0.8;
 }
@@ -81,7 +114,7 @@
 // Always visible and wrapped, never truncated: it is the diagnostic when a grab goes wrong.
 .jfmod-releaseTitle {
     display: block;
-    margin-top: 0.2em;
+    margin-top: 0.1em;
     font-size: 86%;
     opacity: 0.6;
     word-break: break-all;
@@ -109,8 +142,8 @@
     margin-top: 0.8em;
 }
 
-.jfmod-releaseClose {
-    margin-top: 1em;
+.jfmod-releaseDialogClose {
+    margin-left: auto;
 }
 
 // Acquisition summary on entry and episode detail (P4.A6).
@@ -124,13 +157,6 @@
 .jfmod-releaseChip--held {
     border-color: currentColor;
     opacity: 0.86;
-}
-
-.jfmod-releaseHeld {
-    display: block;
-    margin-top: 0.2em;
-    font-size: 86%;
-    opacity: 0.8;
 }
 
 .jfmod-releaseNotice--info {

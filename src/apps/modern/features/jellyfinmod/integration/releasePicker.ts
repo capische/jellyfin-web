@@ -41,10 +41,12 @@ export const pickerEpisodes = (episodes: EntryEpisode[]): ReleasePickerEpisode[]
 export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : 'medium' });
     dlg.classList.add('formDialog', 'jfmod-releaseDialog');
+    // The title first and a close cross at the right, in place of upstream's back arrow; Back and Escape still close it
+    // through the dialog helper (user, 2026-10-08).
     dlg.innerHTML = '<div class="formDialogHeader">'
-        + '<button is="paper-icon-button-light" class="btnCancel autoSize" tabindex="-1" title="Back">'
-        + '<span class="material-icons arrow_back" aria-hidden="true"></span></button>'
-        + '<h3 class="formDialogHeaderTitle"></h3></div>'
+        + '<h3 class="formDialogHeaderTitle"></h3>'
+        + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseDialogClose" tabindex="-1" title="Close"'
+        + ' aria-label="Close"><span class="material-icons close" aria-hidden="true"></span></button></div>'
         + '<div class="formDialogContent smoothScrollY"><div class="jfmod-releaseDialogContent"></div></div>';
     const heading = dlg.querySelector('.formDialogHeaderTitle');
     if (heading) heading.textContent = (options.intent === 'addVersion' ? 'Another Quality for ' : 'Releases for ') + options.title;
@@ -58,7 +60,6 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         episodes: pickerEpisodes(options.episodes ?? []),
         initialEpisodeId: options.episodeId,
         intent: options.intent,
-        onClose: close,
         onChanged: options.onChanged
     }, content);
     const release = () => {
