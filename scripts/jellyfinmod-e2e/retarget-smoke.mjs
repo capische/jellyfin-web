@@ -11,7 +11,7 @@
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const expectedBundle = process.env.JELLYFINMOD_EXPECT_BUNDLE;

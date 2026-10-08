@@ -22,7 +22,7 @@ import crypto from 'node:crypto';
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096', '48096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+if (!['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const origin = testUrl.origin;
 const results = [];
