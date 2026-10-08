@@ -254,18 +254,19 @@ const rowLayoutOf = (wanted: boolean | undefined, answered: boolean, inline: Rat
 /**
  * Applies the row's layout before paint. The first one (the group's first paint, before upstream focuses anything) is applied
  * as it is; every later one is a trial: kept only if the row keeps its height while focus sits past it, and never one that
- * takes the group away while it has focus. A refused change keeps the layout already on screen. Upstream refills the row's
- * content, never the row itself, so the classes stay on it across a refill. Returns whether the group has given its place back.
+ * takes the group away while it has focus. A refused change keeps the layout already on screen and is tried again when focus
+ * leaves the group (`focusMoves`) or the layout changes. Giving the place back only hides the group, so it can come back the
+ * same guarded way when there is something to show again (web review 2026-10-08 round 10, P2 2). Upstream refills the row's
+ * content, never the row itself, so the classes stay on it across a refill.
  */
-const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | null, layout: RowLayout, ownStar: boolean) => {
+const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | null, layout: RowLayout, ownStar: boolean, focusMoves: number) => {
     const applied = useRef<RowLayout | null>(null);
     const rowNode = useRef<Element | null>(null);
-    const [gone, setGone] = useState(false);
     useLayoutEffect(() => {
         const node = box.current;
         const target = row();
         const previous = applied.current;
-        if (!node || gone || (previous && sameLayout(previous, layout))) return;
+        if (!node || (previous && sameLayout(previous, layout))) return;
         if (layout.gone && node.contains(document.activeElement)) return;
         rowNode.current = target;
         const put = (next: RowLayout) => {
@@ -280,14 +281,12 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
             return;
         }
         applied.current = layout;
-        if (layout.gone) setGone(true);
     // `layout` is described by its fields; `box` and `row` read the current nodes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gone, layout.hideStar, layout.hideCritic, layout.minWidth, layout.gone, ownStar]);
+    }, [layout.hideStar, layout.hideCritic, layout.minWidth, layout.gone, ownStar, focusMoves]);
     useEffect(() => () => {
         rowNode.current?.classList.remove(STAR_CLASS, CRITIC_CLASS);
     }, []);
-    return gone;
 };
 
 /**
@@ -338,9 +337,14 @@ const useReserve = (box: React.RefObject<HTMLElement>, row: () => Element | null
         if (!measuring || !node) return;
         const target = row();
         const items = node.querySelector<HTMLElement>('.jfmod-groupItems');
+        // What the measurement changes is put back afterwards (a group that gave its place back, its reserve, the row's
+        // classes); the layout then applies whatever the new reserve asks for, under its own guard.
+        const was = { minWidth: node.style.minWidth, display: node.style.display, star: !!target?.classList.contains(STAR_CLASS),
+            critic: !!target?.classList.contains(CRITIC_CLASS) };
         // Measured at its own width on one line (a phone's group otherwise wraps inside its box), in the row as it will be:
         // without the stock marks the group stands in for.
         node.style.minWidth = '';
+        node.style.display = '';
         if (items) items.style.flexWrap = 'nowrap';
         if (!ownStar) markRow(target, standInKey.includes('imdb'), standInKey.includes('tomatoes'));
         const em = Number.parseFloat(getComputedStyle(node).fontSize) || 16;
@@ -353,6 +357,9 @@ const useReserve = (box: React.RefObject<HTMLElement>, row: () => Element | null
             trakt.style.display = '';
         }
         if (items) items.style.flexWrap = '';
+        node.style.minWidth = was.minWidth;
+        node.style.display = was.display;
+        if (!ownStar) markRow(target, was.star, was.critic);
         setReserved({ ticked: standInKey, sources: fits.sources, em: fits.em, fullEm });
     // `row` reads the current node.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,6 +382,24 @@ const inlineWithin = (enabled: Rating[], reservedFor: string[]) => {
     if (inline.length || !(reservedFor.includes(FALLBACK_KEY) || reservedFor.length >= 2)) return inline;
     const one = enabled.find(rating => rating.source === 'trakt') ?? enabled[0];
     return one ? [one] : [];
+};
+
+/**
+ * While the group has focus it keeps what it shows: an answer with nothing for the row (every source unticked, ratings turned
+ * off) would otherwise turn the focused button into the hidden stand-in and drop the focus to the page (web review 2026-10-08
+ * round 10, P2 1). The change takes effect when focus leaves (`focusLeft`, which also has the layout try again), through the
+ * same guarded layout as any other.
+ */
+const useHeldInline = (box: React.RefObject<HTMLElement>, live: Rating[], measuring: boolean) => {
+    const [focusMoves, setFocusMoves] = useState(0);
+    const lastShown = useRef<Rating[]>([]);
+    const focused = !!box.current && box.current.contains(document.activeElement);
+    const inline = !live.length && focused && !measuring ? lastShown.current : live;
+    useLayoutEffect(() => {
+        if (live.length && !measuring) lastShown.current = live;
+    });
+    const focusLeft = useCallback(() => setFocusMoves(value => value + 1), []);
+    return { inline, focused, focusMoves, focusLeft };
 };
 
 /** The popup's width in pixels: the group's with all its ticked inline sources (Trakt too, even when it gave way in the row). */
@@ -407,17 +432,22 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const shown = useAnswer(ready && ratings && wanted !== false ? enabledOf(ratings.filter(rating => isKnownScale(rating.scale)), sources) : null);
     const enabled = shown ?? [];
     const reservedFor = reserved ? reserved.sources : standInKey.split(',');
-    const inline = inlineWithin(enabled, reservedFor);
+    const live = inlineWithin(enabled, reservedFor);
+    const { inline, focused, focusMoves, focusLeft } = useHeldInline(box, live, measuring);
 
     // A phone's row is narrower than the group at its widest, so there the group wraps inside its own box and reserves no
     // width: a phone has no remote focus for a late answer to move (UX §13 rule 2 is the TV's).
     const reserve = reserved && !layoutManager.mobile ? reserved.em + 'em' : '';
-    const layout = rowLayoutOf(wanted, shown !== null, inline, reservedFor, reserve);
-    const gone = useRowLayout(box, row, layout, !!ownStar);
+    const layout = rowLayoutOf(focused && inline.length ? true : wanted, shown !== null, inline, reservedFor, reserve);
+    useRowLayout(box, row, layout, !!ownStar, focusMoves);
 
-    const popup = usePopup(box, popupId, inline.length > 0, tv);
+    // The popup closes when there is nothing to show, even while the row keeps its last values.
+    const popup = usePopup(box, popupId, live.length > 0 && wanted !== false, tv);
+    const onBlur = useCallback((event: React.FocusEvent) => {
+        popup.onBlur(event);
+        focusLeft();
+    }, [popup, focusLeft]);
 
-    if (gone) return null;
     const standIn = measuring || !inline.length;
     const label = inline.length ? 'Ratings: ' + inline.map(ratingName).join(', ') + '. More ratings' : undefined;
     const { open, enter, leave } = popup;
@@ -427,7 +457,7 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
         <button ref={button} type='button' className={'jfmod-groupButton noautofocus' + (standIn ? ' jfmod-groupButton-standIn' : '')}
             tabIndex={standIn ? -1 : undefined} aria-hidden={standIn || undefined} aria-label={label} aria-expanded={standIn ? undefined : open}
             aria-describedby={open ? popupId : undefined} onPointerDown={popup.onPointerDown} onClick={standIn ? undefined : popup.toggle}
-            onFocus={popup.onFocus} onBlur={popup.onBlur} onKeyDown={popup.onKeyDown} data-jfmod-ratings-group=''>
+            onFocus={popup.onFocus} onBlur={onBlur} onKeyDown={popup.onKeyDown} data-jfmod-ratings-group=''>
             <RowItems list={standIn ? standInList : inline} stack={standIn && standInKey === FALLBACK_KEY} />
         </button>
         {open && !standIn && button.current && <span onPointerEnter={enter} onPointerLeave={leave}>

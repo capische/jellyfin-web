@@ -12,7 +12,7 @@ import { getPluginHealth } from '../api/modApi';
 import { getRatingsDefaults } from '../api/ratingsApi';
 import { DEFAULT_SOURCES, RATINGS_CAPABILITY, RATINGS_CARD_SOURCE_KEY, RATINGS_SOURCES_KEY, RATINGS_STALE_MS, isRatingSource } from '../constants/ratings';
 import type { RatingSource } from '../types/ratings';
-import { usePluginCapabilities } from './useAcquisition';
+import { usePluginHealthSummary } from './useAcquisition';
 
 /** The query key of the ratings defaults, so the settings area can invalidate it after a save. */
 export const ratingsDefaultsKey = (basePath: string | undefined) => ['JellyfinMod', basePath, 'RatingsDefaults'];
@@ -82,8 +82,11 @@ const readCardSource = (prefs: CustomPrefs): RatingSource | null => {
  * device; until the user chooses, the administrator's default order applies.
  */
 export const useRatingsPreferences = (api: Api | undefined) => {
-    const capabilities = usePluginCapabilities(api);
-    const supported = capabilities.includes(RATINGS_CAPABILITY);
+    // Whether the plugin offers ratings stays unknown until its Health has answered (web review 2026-10-08 round 10, P2 2): an
+    // answer still on its way is not "no ratings".
+    const health = usePluginHealthSummary(api);
+    const supported = !!health.data?.capabilities.includes(RATINGS_CAPABILITY);
+    const healthKnown = health.isSuccess || health.isError;
     const defaults = useQuery({
         queryKey: ratingsDefaultsKey(api?.basePath),
         queryFn: ({ signal }) => getRatingsDefaults(api!, { signal }),
@@ -119,8 +122,8 @@ export const useRatingsPreferences = (api: Api | undefined) => {
     return {
         /** The plugin offers ratings and the administrator has them on. */
         enabled,
-        /** The plugin answered, whatever it said. */
-        loaded: !supported || defaults.isSuccess || defaults.isError,
+        /** The plugin answered, whatever it said: its Health, and, when it offers ratings, the defaults. */
+        loaded: healthKnown && (!supported || defaults.isSuccess || defaults.isError),
         available: defaults.data?.availableSources.filter(isRatingSource) ?? [],
         defaultSources: fallback,
         sources,
