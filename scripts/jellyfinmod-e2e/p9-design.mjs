@@ -875,11 +875,137 @@ const extrasRun = async () => {
     });
 };
 
+/**
+ * The web review of 2026-10-08 (round 10): each finding's own reproduction, run on the TV and the desktop.
+ * 1. With the group focused, the administrator unticks every source: the next minute's read must not take the focused group
+ *    away (focus never falls to the page); it goes once focus has left it.
+ * 2. Disappearing is not final: an empty first answer followed by a minute's read with values shows them; a cold visit whose
+ *    plugin Health answers late (past the page's 3 s bound) still shows the ratings once it has.
+ * 3. The file-less page's own star stays when IMDb is not ticked, even though the title has an IMDb value.
+ */
+const reviewFixesRun = async () => {
+    const only = (process.env.JFMOD_DESIGN_ONLY ?? '').split(',').filter(Boolean);
+    if (!only.length || only.includes('tv1080')) {
+        const { context, page } = await open('tv1080');
+        try {
+            await page.goto(`${ORIGIN}/web-mod/#/home`, { waitUntil: 'domcontentloaded' });
+            await page.waitForTimeout(500);
+            await page.evaluate(url => {
+                location.hash = url.slice(url.indexOf('#'));
+            }, nativeUrl(MOVIE_ID));
+            await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 20000 }).catch(() => undefined);
+            await page.waitForFunction(() => document.activeElement?.classList.contains('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
+            await page.waitForTimeout(500);
+            await page.keyboard.press('ArrowUp');
+            await page.waitForTimeout(300);
+            const before = await groupState(page);
+            serverDefaults = [];
+            // The defaults are read again within a minute.
+            await page.waitForTimeout(65000);
+            const during = await groupState(page);
+            const focus = await page.evaluate(() => document.activeElement?.tagName ?? null);
+            await page.keyboard.press('ArrowDown');
+            await page.waitForTimeout(800);
+            const after = await groupState(page);
+            const groupShown = await page.locator(SHOWN_GROUP).count();
+            const onButtons = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
+            if (CHECKS) {
+                check('review 10/1 tv1080: every source unticked with the group focused — the group stays visible and focused; Down then leaves it and it goes',
+                    before?.focus === 'group' && during?.focus === 'group' && !during.standIn && focus === 'BUTTON' && onButtons
+                        && (!after || after.standIn || groupShown === 0),
+                    { before: before?.focus, during: during && { focus: during.focus, standIn: during.standIn, inline: during.inline }, focus, onButtons, groupShown });
+            }
+        } finally {
+            serverDefaults = ALL;
+            await context.close();
+        }
+    }
+    if (!only.length || only.includes('desktop')) {
+        // 2a. An empty first answer, then values on the next minute's read.
+        let reads = 0;
+        const { context, page } = await open('desktop');
+        try {
+            await page.route(`**/JellyfinMod/Ratings/Items/${SERIES_ID}`, async route => {
+                reads++;
+                if (reads === 1) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entryId: null, ratings: [] }) });
+                return route.continue();
+            });
+            await page.goto(nativeUrl(SERIES_ID), { waitUntil: 'domcontentloaded' });
+            await page.locator('.itemMiscInfo:visible').first().waitFor({ timeout: 30000 });
+            await page.waitForTimeout(3000);
+            const empty = await page.locator(SHOWN_GROUP).count();
+            await page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 70000 }).catch(() => undefined);
+            const later = await groupState(page);
+            if (CHECKS) {
+                check('review 10/2 desktop: an empty first answer shows nothing; the next minute\'s read with values shows the group',
+                    empty === 0 && reads >= 2 && later?.inline.join(',') === INLINE.join(',') && !later.standIn, { empty, reads, inline: later?.inline });
+            }
+        } finally {
+            await context.close();
+        }
+        // 2b. A cold visit whose plugin Health answers after the page's 3 s bound.
+        const cold = await browser.newContext({ viewport: LAYOUTS.desktop.viewport, deviceScaleFactor: 1 });
+        try {
+            // Health answers 5 s late from the start: the detail page opens, in the app, before it has ever answered.
+            await cold.route('**/*', async route => {
+                const url = route.request().url();
+                if (!url.startsWith(ORIGIN)) return route.abort();
+                if (/\/JellyfinMod\/Health/i.test(url)) await new Promise(resolve => setTimeout(resolve, 5000));
+                return route.continue().catch(() => undefined);
+            });
+            const page = await cold.newPage();
+            await page.goto(ORIGIN + '/web-mod/', { waitUntil: 'domcontentloaded' });
+            await page.evaluate(([userId]) => {
+                localStorage.setItem('layout', 'desktop');
+                localStorage.setItem(userId + '-appTheme', 'dark');
+            }, [USER_ID]);
+            await page.goto(ORIGIN + '/web-mod/#/login', { waitUntil: 'domcontentloaded' });
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            const manual = page.locator('.btnManual');
+            await page.locator('#txtManualName, .btnManual').first().waitFor({ timeout: 30000 });
+            if (await manual.isVisible().catch(() => false)) await manual.click();
+            await page.locator('#txtManualName').fill('oleksii');
+            await page.locator('.manualLoginForm .button-submit').click();
+            await page.waitForFunction(() => !location.hash.includes('login'), null, { timeout: 30000 });
+            await page.evaluate(url => {
+                location.hash = url.slice(url.indexOf('#'));
+            }, nativeUrl(MOVIE_ID));
+            await page.locator('.itemMiscInfo:visible').first().waitFor({ timeout: 30000 });
+            await page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
+            const late = await groupState(page);
+            if (CHECKS) {
+                check('review 10/2 desktop: a cold visit whose plugin Health answers late still shows the group once it has',
+                    late?.inline.join(',') === INLINE.join(',') && !late.standIn, late && { inline: late.inline, standIn: late.standIn });
+            }
+        } finally {
+            await cold.close();
+        }
+        // 3. IMDb not ticked: the file-less page keeps its own TMDB star.
+        userSources = ['tomatoes_critic', 'tomatoes_audience', 'trakt', 'tmdb'];
+        const third = await open('desktop');
+        try {
+            await groupDetail(third.page, entryUrl());
+            const state = await groupState(third.page);
+            if (CHECKS) {
+                check('review 10/3 desktop: with IMDb unticked the file-less page keeps its own star; the group shows RT and Trakt, no IMDb',
+                    state?.entryStar && !state.inline.includes('imdb') && state.inline.includes('tomatoes_critic'), state && { entryStar: state.entryStar, inline: state.inline });
+            }
+        } finally {
+            userSources = null;
+            await third.context.close();
+        }
+    }
+};
+
 if (process.env.JFMOD_DESIGN_SETTINGS) {
     await settingsRun();
 } else {
-    await groupRun();
-    await extrasRun();
+    // JFMOD_DESIGN_REVIEW_ONLY=1 runs only the review reproductions (while iterating on a fix); JFMOD_DESIGN_REVIEW=0 skips them.
+    if (!process.env.JFMOD_DESIGN_REVIEW_ONLY) {
+        await groupRun();
+        await extrasRun();
+    }
+    if (process.env.JFMOD_DESIGN_REVIEW !== '0') await reviewFixesRun();
     if (SHOTS && process.env.JFMOD_DESIGN_SHEET) await contactSheet(process.env.JFMOD_DESIGN_SHEET);
 }
 
