@@ -325,10 +325,11 @@ for (const theme of ['dark', 'light']) {
             const row = page.locator('.itemMiscInfo-primary:visible');
             const sources = await rowSources(page);
             // A TV's focus is already on Play when the answer arrives: the row shows as many of the user's first ratings as fit
-            // without wrapping (a 1280×720 TV with a long movie row fits four); everywhere else, all of them.
+            // without wrapping (approved as built, 2026-10-08). With the stock star and tomato kept and "Ends at" in the row, a
+            // 1280×720 TV fits two of this movie's five; everywhere else, all of them.
             const fitted = layoutName === 'tv720';
-            check(`${layoutName}: the ratings sit in the stock star's row, in the default order${fitted ? ' (as many as fit)' : ''}`,
-                fitted ? sources.length >= 3 && DEFAULTS.join(',').startsWith(sources.join(',')) : sources.join(',') === DEFAULTS.join(','), sources);
+            check(`${layoutName}: the ratings sit in the stock star's row, in the default order${fitted ? ` (as many as fit: ${sources.length} of 5)` : ''}`,
+                fitted ? sources.length >= 1 && DEFAULTS.join(',').startsWith(sources.join(',')) : sources.join(',') === DEFAULTS.join(','), sources);
             if (fitted) {
                 const lines = await row.evaluate(node => new Set([...node.children].filter(child => child.offsetParent).map(child =>
                     Math.round(child.getBoundingClientRect().top + child.getBoundingClientRect().height / 2))).size);
@@ -338,9 +339,10 @@ for (const theme of ['dark', 'light']) {
                 kind: node.getAttribute('data-jfmod-icon'), width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height })));
             check(`${layoutName}: each rating renders its inline mark`, icons.length === sources.length && icons.every(icon => icon.width > 4 && icon.height > 8), icons);
             check(`${layoutName}: vote counts are not in the row`, !/\(\d|K\)|votes/.test(await row.innerText()), await row.innerText());
-            check(`${layoutName}: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden`,
-                await row.evaluate(node => node.classList.contains('jfmod-ratings-hideStar') && node.classList.contains('jfmod-ratings-hideCritic')
-                    && getComputedStyle(node.querySelector('.starRatingContainer')).display === 'none'));
+            // Jellyfin's own star and tomato always stay, even when they show the same values as IMDb and RT critics (user, 2026-10-08).
+            check(`${layoutName}: the stock star and tomato stay beside IMDb 8.1 and RT 91`,
+                await row.evaluate(node => [node.querySelector('.starRatingContainer'), node.querySelector('.mediaInfoCriticRating')]
+                    .every(stock => stock && getComputedStyle(stock).display !== 'none' && stock.getBoundingClientRect().width > 0)));
             if (sources.includes('trakt')) {
                 check(`${layoutName}: the stale Trakt value is dimmed`, await row.locator('[data-jfmod-rating="trakt"]').evaluate(node =>
                     node.classList.contains('jfmod-rating-stale') && Number(getComputedStyle(node).opacity) < 0.7));
@@ -438,9 +440,9 @@ if (LABEL === 'after') {
             await page.waitForTimeout(800);
             await shot(page, `entry-${layoutName}-dark`);
             if (CHECKS) {
-                const own = page.locator('[data-jfmod-star]');
-                check(`${layoutName}: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark`,
-                    await own.count() === 1 && !await own.isVisible());
+                const own = page.locator('.jfmod-entryStar:visible');
+                check(`${layoutName}: the file-less entry's own star stays beside the ratings (TMDB 7.8 in both)`,
+                    await own.count() === 1 && /7\.8 on TMDB/.test(await own.innerText()));
             }
         } finally {
             await context.close();

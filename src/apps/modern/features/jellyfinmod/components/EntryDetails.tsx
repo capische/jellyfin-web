@@ -193,9 +193,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
-            {/* The page's own star: the ratings row hides it while it shows the same TMDB value with its mark (PHASE9). */}
-            {entry.metadata?.communityRating ? <span className='jfmod-entryStar' data-jfmod-star={entry.metadata.communityRating.toFixed(1)}>
-                ★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
+            {/* The page's own star stays beside the ratings row, whatever the row shows (user, 2026-10-08). */}
+            {entry.metadata?.communityRating ? <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
             {/* Always mounted: ratings turned off later empties it under the same never-move-focus rule as any change. */}
             <RatingsLine ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} inline ready={ratingsPreferences.loaded} />
         </>)}

@@ -114,16 +114,6 @@
     pointer-events: none;
 }
 
-// What the row would say twice while the ratings show the same value (PHASE9, *Inline ratings*): the stock star or tomato.
-.jfmod-ratings-hideStar .starRatingContainer,
-.jfmod-ratings-hideStar [data-jfmod-star] {
-    display: none;
-}
-
-.jfmod-ratings-hideCritic .mediaInfoCriticRating {
-    display: none;
-}
-
 // The one source a card may show (P9.R7), inside the card's own secondary text line: its mark and its value.
 .jfmod-cardRating {
     white-space: nowrap;

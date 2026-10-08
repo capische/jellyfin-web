@@ -71,36 +71,6 @@ const settleTrial = (shown: Required<Shown>, candidates: number, height: number)
     return { next: { list: shown.trial.previous }, reject: true };
 };
 
-/** The stock star's value in the row the line sits in (upstream's `.starRatingContainer`, or the entry page's own star). */
-const starValue = (row: Element) => {
-    const own = row.querySelector<HTMLElement>('[data-jfmod-star]')?.dataset.jfmodStar;
-    const text = own ?? row.querySelector('.starRatingContainer')?.textContent ?? '';
-    const value = Number.parseFloat(text.replace(',', '.'));
-    return Number.isFinite(value) ? value.toFixed(1) : null;
-};
-
-/** The stock critic score (upstream's own tomato in the same row). */
-const criticValue = (row: Element) => {
-    const value = Number.parseFloat(row.querySelector('.mediaInfoCriticRating')?.textContent ?? '');
-    return Number.isFinite(value) ? Math.round(value) : null;
-};
-
-/**
- * Hides what the row would otherwise say twice (PHASE9, *Inline ratings*): the stock star when a shown IMDb or TMDB value
- * is the same number, and the stock tomato when the shown Rotten Tomatoes critics score is. A different value is a
- * different source's, so it stays. Classes on the row itself, which upstream keeps when it refills the row's content.
- */
-const markDuplicates = (row: Element | null | undefined, list: Rating[]) => {
-    if (!row) return;
-    const star = starValue(row);
-    const ten = list.filter(rating => rating.source === 'imdb' || rating.source === 'tmdb')
-        .map(rating => (rating.scale === 'percent' ? rating.value / 10 : rating.value).toFixed(1));
-    row.classList.toggle('jfmod-ratings-hideStar', star !== null && ten.includes(star));
-    const critic = criticValue(row);
-    const shownCritic = list.find(rating => rating.source === 'tomatoes_critic');
-    row.classList.toggle('jfmod-ratings-hideCritic', critic !== null && !!shownCritic && Math.round(shownCritic.value) === critic);
-};
-
 /** Where the tooltip goes: under its rating, or above it when there is no room below, always inside the window. */
 const placeTooltip = (tip: HTMLElement, anchor: Element) => {
     const rect = anchor.getBoundingClientRect();
@@ -145,28 +115,6 @@ const RatingsLine: FC<RatingsLineProps> = ({ ratings, sources, inline, ready = t
     // The line itself when it is shown (so focus on one of its ratings counts as inside it), else its hidden anchor (review
     // round 4, P3 3: the anchor alone does not contain the ratings, so a focused rating was taken for focus below the line).
     const place = () => box.current ?? anchor.current;
-    const row = () => anchor.current?.closest('.itemMiscInfo');
-
-    // Before the trial below measures anything: what the row would say twice is hidden by what is now rendered, so a trial
-    // that is undone restores the stock star too.
-    useLayoutEffect(() => {
-        markDuplicates(row(), shown?.list ?? []);
-    }, [shown]);
-    useEffect(() => () => markDuplicates(row(), []), []);
-    // Upstream fills the row (and may fill it again) after the line has rendered: the duplicates are judged again then,
-    // and a change that would move a focused control below the row is undone.
-    useEffect(() => {
-        const target = row();
-        if (!target) return;
-        const watch = new MutationObserver(() => {
-            const before = focusPlace();
-            const classes = target.className;
-            markDuplicates(target, shown?.list ?? []);
-            if (classes !== target.className && focusIsPast(target) && focusMovedFrom(before)) target.className = classes;
-        });
-        watch.observe(target, { childList: true });
-        return () => watch.disconnect();
-    }, [shown]);
 
     useLayoutEffect(() => {
         if (!candidate || candidateKey === null) return;
