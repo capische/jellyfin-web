@@ -465,8 +465,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Settings partial save message under the ES5 build (2026-10-08): **accepted, not released** — a stale retention save
   said "The request failed." with no Reload; web fix `48c68b4803` on `jellyfin-mod`, Codex approve, `settings-area` 35/35
   on Chromium and Chrome on 48096; `settings-design` 836/840 on both there, the four failures outside the change (stopped
-  TMDB stand-in; the Prowlarr row's mobile wrap, open follow-up), accepted by the user's decision to merge without waiting
-  for 18096. Waits for the combined republish after the detail-page fix (see
+  TMDB stand-in; the Prowlarr row's mobile wrap), accepted by the user's decision to merge without waiting for 18096.
+  The wrap is fixed by `807ef4bff5` (with the runner follow-ups, `643679b40a`): `settings-area` 39/39 and
+  `settings-design` 828/828 on Chromium and Chrome on 48096 with its TMDB stand-in. Waits for the combined republish
+  after the detail-page fix (see
   [`PHASE7.md`](PHASE7.md), *Partial save message under the ES5 build*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
