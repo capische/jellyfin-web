@@ -13,7 +13,7 @@
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (testUrl.port !== '18096') throw new Error('The episode retention probe runs on the isolated test instance only');
+if (!['18096', '58096'].includes(testUrl.port)) throw new Error('The episode retention probe runs on the isolated test instance only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL(process.env.JELLYFINMOD_BASE_PATH ?? '/web-mod/', testUrl).href;
 const episodes = Object.fromEntries((process.env.JELLYFINMOD_EPISODES ?? '').split(',').filter(Boolean).map(pair => pair.split(':')));

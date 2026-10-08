@@ -16,7 +16,7 @@ import os from 'node:os';
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-const ISOLATED_PORTS = ['18096', '28096'];
+const ISOLATED_PORTS = ['18096', '28096', '58096'];
 if (!ISOLATED_PORTS.includes(testUrl.port)) {
     throw new Error('Only the isolated instances on ports ' + ISOLATED_PORTS.join(' and ') + ' are allowed');
 }

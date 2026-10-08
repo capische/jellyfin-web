@@ -27,7 +27,7 @@ import { chromium } from 'playwright';
 
 const required = name => process.env[name] ?? (() => { throw new Error(`${name} is required`); })();
 const testUrl = new URL(required('JELLYFINMOD_TEST_URL'));
-if (!['18096', '28096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const standin = required('JELLYFINMOD_STANDIN');
