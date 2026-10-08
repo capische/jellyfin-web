@@ -85,6 +85,13 @@ const savedMeta = page => page.evaluate(async () => {
     return `Retention revision ${retention.revision} · seed protection revision ${seed.revision}.`;
 });
 
+/** Loads the app again from the instance under test and waits for its signed-in ApiClient, as a clean-up retry needs. */
+async function reloadApp(page) {
+    await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+    await page.waitForFunction(() => typeof ApiClient !== 'undefined' && !!ApiClient.getCurrentUserId(), undefined, { timeout: 30000 })
+        .catch(() => undefined);
+}
+
 /**
  * Puts the retention days back to `days` through the API when a run stopped before doing so, and reports what it found.
  * Only the days change; every other field is sent as the server has it, with its current revision.
@@ -108,12 +115,11 @@ async function restoreRetentionDays(page, days) {
             }, { target: days, wanted: testUrl.origin });
             if (outcome.days === days) return outcome;
             refused = outcome.refused ?? refused;
-            if (outcome.refused) await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+            // A page talking to another server: load the app from the instance under test and retry.
+            if (outcome.refused) await reloadApp(page);
         } catch {
             // A page left mid-navigation: load the app again and retry.
-            await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
-            await page.waitForFunction(() => typeof ApiClient !== 'undefined' && !!ApiClient.getCurrentUserId(), undefined, { timeout: 30000 })
-                .catch(() => undefined);
+            await reloadApp(page);
         }
     }
     return { restored: false, days: undefined, refused };
@@ -356,10 +362,12 @@ for (const name of only) {
                     afterReload === changed && acceptedStatus === 200 && ok === 'Saved.', { afterReload, acceptedStatus, ok });
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
+                // The field and the API read are this instance's only if the reloaded page still talks to it.
+                const finalServer = await pageServer(page);
                 const restoredField = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
                 const restoredServer = (await retentionNow(page)).reclaimAfterDays;
-                record(name, 'The original retention days are restored', restoredField === original && restoredServer === originalDays,
-                    { original, restoredField, restoredServer });
+                record(name, 'The original retention days are restored', finalServer === testUrl.origin && restoredField === original
+                    && restoredServer === originalDays, { original, restoredField, restoredServer, server: finalServer });
             }
         }
 
