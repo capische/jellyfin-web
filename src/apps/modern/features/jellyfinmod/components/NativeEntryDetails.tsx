@@ -423,7 +423,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         };
         openReleasePicker({
             api, entryId: data.entry.id, title: data.entry.title, mediaType: data.entry.mediaType, episodes: data.episodes,
-            episodeId: episode?.id, intent, onChanged: reload
+            episodeId: episode?.id, episodePage: !!episode?.id, intent, onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, data, episode?.id, refetch]);
     const addVersion = useCallback((opener: HTMLElement) => openPicker(opener, 'addVersion'), [openPicker]);
