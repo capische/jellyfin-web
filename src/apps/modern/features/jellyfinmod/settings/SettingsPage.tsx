@@ -119,15 +119,21 @@ const SettingsPage: FC = () => {
     // Each rail step carries its section id in `data-section`, so one handler serves the whole rail.
     const openStep = useCallback((event: React.MouseEvent<HTMLButtonElement>) => go(event.currentTarget.dataset.section!), [go]);
 
+    // Whether the TV's focus was put on the rail since the settings area was rendered.
+    const placed = useRef(false);
     useEffect(() => {
-        // TV: start on the current rail step, so the remote has somewhere to be (UX §13 rule 2). Only when the remote has
-        // nowhere to be: every refetch brings new data (a test, a save), and moving the focus then took the remote off the
-        // row it was working on (fix/settings-rows-case, 2026-10-08).
+        // TV: start on the current rail step, so the remote has somewhere to be (UX §13 rule 2), wherever the focus was when
+        // the area opened (a header button, the link that opened it). After that, a refetch (a test, a save) brings new data
+        // and must leave the remote where it is; only a focus that was lost (on the body) goes back to the rail
+        // (fix/settings-rows-case, 2026-10-08; Codex review rows-case 1, P2 1).
         if (!layoutManager.tv || !settings.data) return;
         const active = document.activeElement;
-        if (active && active !== document.body && active.isConnected) return;
+        const lost = !active || active === document.body || !active.isConnected;
+        if (placed.current && !lost) return;
         const step = railRef.current?.querySelector<HTMLElement>('.jfmod-step[aria-current="true"]');
-        if (step) focusManager.focus(step);
+        if (!step) return;
+        placed.current = true;
+        focusManager.focus(step);
     }, [settings.data]);
 
     let content: React.ReactNode;
