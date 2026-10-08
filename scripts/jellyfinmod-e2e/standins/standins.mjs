@@ -76,14 +76,14 @@ const seriesSummary = series => ({
 });
 const seasonName = number => number === 0 ? 'Specials' : `Season ${number}`;
 const seriesDetail = series => ({
-    ...seriesSummary(series), genres: [{ id: 18, name: 'Drama' }], status: 'Returning Series', episode_run_time: [1], in_production: true,
+    ...seriesSummary(series), genres: [{ id: 18, name: 'Drama' }], status: 'Returning Series', episode_run_time: [series.episode_run_time ?? 1], in_production: true,
     number_of_seasons: series.seasons.filter(season => season.season_number > 0).length,
     number_of_episodes: series.seasons.reduce((sum, season) => sum + season.episodes.length, 0),
     seasons: series.seasons.map(season => ({
         id: series.id * 100 + season.season_number, season_number: season.season_number, name: seasonName(season.season_number),
         episode_count: season.episodes.length, air_date: season.episodes[0]?.air_date ?? null, poster_path: null, overview: ''
     })),
-    external_ids: { imdb_id: series.imdb_id ?? null, tvdb_id: null }, content_ratings: { results: [] }, images: { backdrops: [], posters: [], logos: [] },
+    external_ids: { imdb_id: series.imdb_id ?? null, tvdb_id: series.tvdb_id ?? null }, content_ratings: { results: [] }, images: { backdrops: [], posters: [], logos: [] },
     credits: { cast: [], crew: [] }, videos: { results: [] }, keywords: { results: [] }, networks: [], production_companies: [], created_by: []
 });
 const seasonDetail = (series, season) => ({
@@ -91,8 +91,17 @@ const seasonDetail = (series, season) => ({
     name: seasonName(season.season_number), air_date: season.episodes[0]?.air_date ?? null, overview: '', poster_path: null,
     episodes: season.episodes.map(episode => ({
         id: episode.id, episode_number: episode.episode_number, season_number: season.season_number, name: episode.name ?? `Episode ${episode.episode_number}`,
-        overview: '', air_date: episode.air_date ?? null, runtime: 1, still_path: null, vote_average: 0, crew: [], guest_stars: []
+        overview: '', air_date: episode.air_date ?? null, runtime: episode.runtime ?? series.episode_run_time ?? 1, still_path: null, vote_average: 0, crew: [], guest_stars: []
     }))
+});
+// One episode, as TMDB's `tv/{id}/season/{n}/episode/{e}` answers it with its usual appends, so Jellyfin binds the
+// episode to its TMDB id (without it every fixture episode is identity-unverified and Replace correctly refuses it).
+const episodeDetail = (series, season, episode) => ({
+    id: episode.id, episode_number: episode.episode_number, season_number: season.season_number,
+    name: episode.name ?? `Episode ${episode.episode_number}`, overview: '', air_date: episode.air_date ?? null,
+    runtime: episode.runtime ?? series.episode_run_time ?? 1, still_path: null, vote_average: 0, vote_count: 0, production_code: '',
+    crew: [], guest_stars: [], credits: { cast: [], crew: [], guest_stars: [] }, videos: { results: [] }, images: { stills: [] },
+    external_ids: { imdb_id: null, tvdb_id: null, tvrage_id: null }
 });
 const movieSummary = movie => ({
     id: movie.id, title: movie.title, original_title: movie.title, release_date: movie.release_date, overview: `${movie.title}, a generated S11 fixture.`,
@@ -156,6 +165,13 @@ const tmdb = createServer(async (request, response) => {
         const season = series?.seasons.find(candidate => candidate.season_number === Number(tvSeason[2]));
         if (series && season) { json(response, 200, seasonDetail(series, season)); return; }
     }
+    const tvEpisode = /^tv\/(\d+)\/season\/(\d+)\/episode\/(\d+)$/.exec(path);
+    if (tvEpisode) {
+        const series = catalog().series.find(candidate => candidate.id === Number(tvEpisode[1]));
+        const season = series?.seasons.find(candidate => candidate.season_number === Number(tvEpisode[2]));
+        const episode = season?.episodes.find(candidate => candidate.episode_number === Number(tvEpisode[3]));
+        if (series && season && episode) { json(response, 200, episodeDetail(series, season, episode)); return; }
+    }
     const byImdb = /^find\/(tt\d+)$/.exec(path);
     if (byImdb) {
         json(response, 200, {
@@ -182,7 +198,7 @@ const CAPS = `<?xml version="1.0" encoding="UTF-8"?>
   <limits max="100" default="100"/>
   <searching>
     <search available="yes" supportedParams="q"/>
-    <tv-search available="yes" supportedParams="q,season,ep"/>
+    <tv-search available="yes" supportedParams="q,season,ep,tvdbid"/>
     <movie-search available="yes" supportedParams="q,imdbid,tmdbid"/>
   </searching>
   <categories>
@@ -202,6 +218,7 @@ const feed = (items, origin) => {
         body += `<torznab:attr name="seeders" value="${item.seeders ?? 25}"/><torznab:attr name="peers" value="${(item.seeders ?? 25) + 3}"/>`;
         if (item.imdbid) body += `<torznab:attr name="imdbid" value="${xml(item.imdbid.replace(/^tt/, ''))}"/>`;
         if (item.tmdbid) body += `<torznab:attr name="tmdbid" value="${item.tmdbid}"/>`;
+        if (item.tvdbid) body += `<torznab:attr name="tvdbid" value="${item.tvdbid}"/>`;
         body += '</item>';
     }
     return body + '</channel></rss>';
@@ -229,7 +246,9 @@ const prowlarr = createServer(async (request, response) => {
         const mode = url.searchParams.get('t');
         count('torznab.' + mode);
         count(`torznab${torznab[1]}.${mode}`); // per feed, to compare with the plugin's per-indexer query counts
-        log('torznab', torznab[1], 't=' + mode, url.searchParams.has('imdbid') ? 'imdbid' : '', url.searchParams.has('q') ? 'q' : '');
+        log('torznab', torznab[1], 't=' + mode, url.searchParams.has('imdbid') ? 'imdbid' : '', url.searchParams.has('tvdbid') ? 'tvdbid' : '',
+            url.searchParams.has('season') ? 'season=' + url.searchParams.get('season') : '', url.searchParams.has('ep') ? 'ep' : '',
+            url.searchParams.has('q') ? 'q' : '');
         // A fault can target one feed (service torznab<id>) or all of them (service torznab).
         const fault = faults['torznab' + torznab[1]] ?? faults.torznab;
         if (fault === '500') { response.writeHead(500); response.end(); return; }
@@ -248,9 +267,16 @@ const prowlarr = createServer(async (request, response) => {
         const imdb = url.searchParams.get('imdbid')?.replace(/^tt/, '');
         const tmdbId = url.searchParams.get('tmdbid');
         const words = (url.searchParams.get('q') ?? '').toLowerCase().split(/[\s.]+/).filter(Boolean);
+        // A TV search by the series' TVDB id, like Prowlarr's: `season` keeps the releases that cover that season (packs
+        // included), `ep` only the single-episode releases of that episode. A release lists `seasons` and `episode`.
+        const tvdbId = url.searchParams.get('tvdbid');
+        const season = url.searchParams.has('season') ? Number(url.searchParams.get('season')) : null;
+        const episode = url.searchParams.has('ep') ? Number(url.searchParams.get('ep')) : null;
+        const byTvdb = item => String(item.tvdbid) === tvdbId && (season === null || (item.seasons ?? []).includes(season))
+            && (episode === null || item.episode === episode);
         const items = releases().filter(item => String(item.indexerId) === torznab[1] && (
-            (imdb && item.imdbid?.replace(/^tt/, '') === imdb) || (tmdbId && String(item.tmdbid) === tmdbId)
-            || (!imdb && !tmdbId && words.length > 0 && words.every(word => item.title.toLowerCase().includes(word)))));
+            (imdb && item.imdbid?.replace(/^tt/, '') === imdb) || (tmdbId && String(item.tmdbid) === tmdbId) || (tvdbId && byTvdb(item))
+            || (!imdb && !tmdbId && !tvdbId && words.length > 0 && words.every(word => item.title.toLowerCase().includes(word)))));
         response.end(feed(items, origin));
         return;
     }
@@ -441,7 +467,8 @@ const control = createServer(async (request, response) => {
             writeFileSync(join(stateDir, 'torrents', spec.id + '.torrent'), torrentBytes);
             const list = releases().filter(item => item.id !== spec.id);
             list.push({ id: spec.id, indexerId: spec.indexerId ?? 1, title: spec.title, size, seeders: spec.seeders ?? 25, category: spec.category ?? 2040,
-                imdbid: spec.imdbid, tmdbid: spec.tmdbid, file: spec.file ?? parts[0].file, torrentName: spec.torrentName,
+                imdbid: spec.imdbid, tmdbid: spec.tmdbid, tvdbid: spec.tvdbid, seasons: spec.seasons, episode: spec.episode,
+                file: spec.file ?? parts[0].file, torrentName: spec.torrentName,
                 parts: parts.map(part => ({ path: part.path, file: part.file })), infoHash: readTorrent(torrentBytes).infoHash });
             writeFileSync(releasesFile, JSON.stringify(list, null, 1));
             json(response, 200, list.at(-1));
