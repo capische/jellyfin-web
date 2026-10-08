@@ -70,6 +70,12 @@ async function signIn(page) {
 
 /** The server's retention settings, read as the signed-in administrator. */
 const retentionNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Retention'), dataType: 'json' }));
+/** The line under Retention's Save, as the server's revisions now make it (settingsSections.tsx, RetentionSection saveMeta). */
+const savedMeta = page => page.evaluate(async () => {
+    const read = path => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/' + path), dataType: 'json' });
+    const [retention, seed] = await Promise.all([read('Retention'), read('SeedProtection')]);
+    return `Retention revision ${retention.revision} · seed protection revision ${seed.revision}.`;
+});
 
 /**
  * Puts the retention days back to `days` through the API when a run stopped before doing so, and reports what it found.
@@ -267,11 +273,12 @@ for (const name of only) {
                 await page.locator('[data-submit="retention"]').click();
                 await page.locator('.jfmod-check-main .jfmod-notice-ok').waitFor({ timeout: 30000 });
                 const meta = await page.locator('[data-savemeta="retention"]').innerText();
+                const metaWanted = await savedMeta(page);
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
                 const reread = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
-                record(name, 'Retention saves, echoes its revision and re-reads after a reload', shown === original && reread === changed,
-                    { original, shown, changed, reread, meta });
+                record(name, 'Retention saves, echoes its revisions and re-reads after a reload',
+                    shown === original && reread === changed && meta === metaWanted, { original, shown, changed, reread, meta, metaWanted });
 
                 // A stale revision without an edit: another session saves first, then this page saves as loaded. Seed protection
                 // is saved (200) and retention refused (409); the page says which half was saved, with the conflict sentence and
