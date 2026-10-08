@@ -1,23 +1,23 @@
 PASS: decision 12 migration takes the watched movie backlog out of the schedule and records it
-  round 1: writes by retention listener policy: 2477, 1.5 s in all, longest 0.15 s (lock wait included)
-  round 1: writes by unnamed: 2, 0.0 s in all, longest 0.00 s (lock wait included)
-  round 1: GET preview -> 200 in 6.6 s
-  round 1: POST episode Keep -> 200 in 0.5 s
+  round 1: writes by retention listener policy: 2478, 1.0 s in all, longest 0.00 s (lock wait included)
+  round 1: writes by unnamed: 2, 0.2 s in all, longest 0.15 s (lock wait included)
+  round 1: GET preview -> 200 in 5.9 s
+  round 1: POST episode Keep -> 200 in 0.3 s
   round 1: GET preview again -> 200 in 0.2 s
-  round 1: evaluations waiting/waiting_for_completion 619 after 7.0 s
-  round 1: movies: 19 backlog waiting, the one watched after the switch-on scheduled for 2026-10-22T08:40:19.9357210
-  round 2: writes by retention listener policy: 1242, 0.5 s in all, longest 0.30 s (lock wait included)
-  round 2: writes by unnamed: 11, 0.3 s in all, longest 0.30 s (lock wait included)
-  round 2: GET preview -> 200 in 0.8 s
-  round 2: POST episode Keep -> 200 in 0.5 s
-  round 2: GET preview again -> 200 in 0.2 s
-  round 2: evaluations waiting/waiting_for_completion 618 after 1.2 s
+  round 1: evaluations waiting/waiting_for_completion 619 after 6.3 s
+  round 1: movies: 19 backlog waiting, the one watched after the switch-on scheduled for 2026-10-22T08:50:57.7304810
+  round 2: writes by retention listener policy: 1241, 0.3 s in all, longest 0.15 s (lock wait included)
+  round 2: writes by unnamed: 11, 0.2 s in all, longest 0.15 s (lock wait included)
+  round 2: GET preview -> 200 in 0.6 s
+  round 2: POST episode Keep -> 200 in 0.2 s
+  round 2: GET preview again -> 200 in 0.4 s
+  round 2: evaluations waiting/waiting_for_completion 618 after 1.1 s
   round 3: writes by retention listener policy: 1242, 0.1 s in all, longest 0.00 s (lock wait included)
   round 3: writes by unnamed: 4, 0.0 s in all, longest 0.00 s (lock wait included)
   round 3: GET preview -> 200 in 0.4 s
   round 3: POST episode Keep -> 200 in 0.2 s
   round 3: GET preview again -> 200 in 0.1 s
   round 3: evaluations waiting/waiting_for_completion 618 after 0.9 s
-  RET3-N1: the deadline 2026-10-22T08:40:25.0217100 survived an access change and a switch-off and on
-  decision 13: watched while off and run out while off -> scheduled from the switch-on, 2026-11-11T08:40:27.1531430, 2026-11-11T08:40:27.1538480, 2026-11-11T08:40:27.3438110, 2026-11-11T08:40:27.1544520
+  RET3-N1: the deadline 2026-10-22T08:51:02.7106480 survived an access change and a switch-off and on
+  decision 13: watched while off and run out while off -> scheduled from the switch-on, 2026-11-11T08:51:04.9912340, 2026-11-11T08:51:04.9921290, 2026-11-11T08:51:05.0487790, 2026-11-11T08:51:04.9928440
 PASS: switching retention on while previewing, keeping and switching on again (600 targets, 3 rounds): every request answered, the Keep won, slow write-lock holds 0

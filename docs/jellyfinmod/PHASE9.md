@@ -1062,14 +1062,43 @@ popup for the movie and the series, TV 1080 and 720 with Play focused and with t
 the longer row without, the phone's tap popup, the file-less page on desktop, TV and phone, the fresh default, sources
 unticked, the user's own two of three), `checks-chromium.txt` (Chromium 153.0.8010.12, 115/115) and `checks-chrome.txt`
 (Google Chrome 153.0.8010.54, 114/114; the settings-picture check runs only in the run that takes pictures). Plugin suites on
-the Mac in parallel, on plugin `ce9d216`: Phase 0 and 1 smoke, Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass
-(`suites-mac/`).
+the Mac in parallel: Phase 0 and 1 smoke, Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass (`suites-mac/`, run again on
+the rebased plugin, below).
 
 ### Not done yet
 
 - The Codex review of the web and plugin changes since the last review, then the live chain and `p9-ratings.mjs` on an
   isolated instance in Chromium and real Chrome (the runner's new group checks have not run against Jellyfin), and the
   physical TV.
+
+## Rebase onto the settings work — 2026-10-08
+
+Opus 5.5, high, on the user's authorization of 2026-10-08 (after the design pick: rebase both Phase 9 branches, force-push them,
+no merge). Mac only. The tips before are kept as local branches `backup/p9-before-rebase-20261008` (plugin `ce9d216`, web
+`8e4377d217`).
+
+- **Plugin** onto `origin/master` `6e23b67` (the row icons and Title Case work, with master's README commit): the 18 Phase 9
+  commits replayed without a conflict, and the merge commit `1a8628a` dropped (its master commits are in the new base). The
+  rebased tree equals the old tip's plus master's README commit, byte for byte.
+- **Web** onto `origin/jellyfin-mod` `b5800afe0b` (the settings work: three kinds of button, row icons, Title Case, the partial
+  save fix, the Prowlarr wrap fix): 39 commits. One conflict, in `components/TvSettingsLink.tsx`, where Phase 9 had added the
+  TV's Ratings Display link beside the settings link and the settings work had renamed that link *JellyfinMod Settings*: both
+  kept. `settingsSections.tsx`, `SettingsPage.tsx` and `AppUserMenu.tsx` merged on their own; the change set between the old
+  and the new tip is exactly the settings work's own. One harness defect found on the way (the settings-area run still called
+  the removed whole-page picture helper) was fixed in the harness commit itself.
+- **UX §12.1 for Phase 9's own controls** (its own commit): the MDBList key's Test is the round icon in the key's box, as the
+  TMDB token's, with its words and result under the box (Replace and Clear were already the shared box's icons); a default
+  source's Move Up and Move Down are round arrow icons (`IconAction`, refused rather than disabled at the ends, the moved
+  source's button keeping the focus); *MDBList API Key*, *Ratings Shown*, and *Ratings Display* in the user menu, the TV link and
+  the page title are Title Case. Field labels, help text, the checkboxes' source names and the "Fetching, N title(s) left"
+  status line are sentence case, as §12.1 has them; the only labelled button the section has is the shared Save. The detail
+  page's *Refresh ratings* button keeps the detail page's own sentence case (Keep, Monitor, Remove entry beside it), since §12.1
+  covers the settings area and the Dashboard page.
+- **Checks after the rebase:** tsc, eslint and stylelint clean; the patch-surface guard passes (§3.2 matches the 22 upstream
+  files; Phase 9 adds no upstream file beyond `AppUserMenu.tsx`, which §3.2 already lists); design harness 115/115 in Chromium
+  153.0.8010.12 and 114/114 in Google Chrome 153.0.8010.54, the settings-area run 6/6; Mac plugin suites (Phase 0, 1, 2, 3, Q16
+  Trakt, 9, 10) pass on the rebased plugin. The screenshots, the settings checkboxes (`settings-checkboxes.png`) and the
+  section as a whole (`settings-area-ratings.png`) in `evidence/p9/final-design-20261008/` are from the rebased build.
 
 ## Status and handover — 2026-10-07
 
