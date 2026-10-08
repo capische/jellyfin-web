@@ -452,23 +452,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `sha256:bae873702b5cef2f486512349adb75dafe8d3dc99904dad0b767ef5ca251d667`, from plugin `e44e05f` and web `67c91a5a59`
   (bundle `a21c898e2a4c`). Explicit button variants and working row spacing in `/catalog/settings`, the wizard and the
   Home banner; "JellyfinMod" under Plugins in the Dashboard drawer. Codex approve with nits; settings design runner
-  354/354 on Chromium and Chrome on 28096 (see [`PHASE7.md`](PHASE7.md), *Settings area design fix*).
+  354/354 on Chromium and Chrome on 28096 (see [`PHASE7.md`](PHASE7.md), *Settings area design fix*). That index is
+  superseded by the 2026-10-08 republish below and stays the rollback target.
 - Settings buttons as three kinds (red destroys, blue is the view's main action, grey the rest, all the size of Save) and
-  icon actions in a secret's box (2026-10-08): **accepted, not released** — merged at plugin `master` `a11d585` and web
+  icon actions in a secret's box (2026-10-08): **released** 2026-10-08 as 0.1.0.0, index
+  `sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927` (web `3364b4da43`, bundle `e5ea8cf933aa`;
+  plugin `f7c274c`) — merged at plugin `master` `a11d585` and web
   `jellyfin-mod` (code `4d124d9f5c`); Codex approve after four re-reviews; settings design runner 688/688 on Chromium and
-  Chrome on 28096. Waiting for the user's approval to republish 0.1.0.0 (see [`PHASE7.md`](PHASE7.md), *Settings
-  buttons: three kinds*).
-- Settings list rows as named icons and Title Case in both settings pages (2026-10-08): **accepted, not released** —
+  Chrome on 28096 (see [`PHASE7.md`](PHASE7.md), *Settings buttons: three kinds*, and *Settings buttons, row icons,
+  Title Case and the settings fixes, republished*).
+- Settings list rows as named icons and Title Case in both settings pages (2026-10-08), with the TV focus fixes: **released** 2026-10-08 as 0.1.0.0, index
+  `sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927` (web `3364b4da43`, bundle `e5ea8cf933aa`;
+  plugin `f7c274c`) —
   merged at plugin `master` (`f7c274c`) and web `jellyfin-mod` (code `d456ab5263`); Codex re-review 2 closed every product finding
-  (its one remaining finding was in a runner, fixed without another round); settings design runner 810/810 on Chromium and Chrome on 28096. Rule in UX §12.1. Waits for the combined
-  republish after the detail-page fix (see [`PHASE7.md`](PHASE7.md), *Settings rows as named icons*).
-- Settings partial save message under the ES5 build (2026-10-08): **accepted, not released** — a stale retention save
+  (its one remaining finding was in a runner, fixed without another round); settings design runner 810/810 on Chromium and Chrome on 28096. Rule in UX §12.1. Released in the 2026-10-08
+  republish (see [`PHASE7.md`](PHASE7.md), *Settings rows as named icons*).
+- Settings partial save message under the ES5 build and the Prowlarr row's wrap on a phone (2026-10-08): **released** 2026-10-08 as 0.1.0.0, index
+  `sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927` (web `3364b4da43`, bundle `e5ea8cf933aa`;
+  plugin `f7c274c`) — a stale retention save
   said "The request failed." with no Reload; web fix `48c68b4803` on `jellyfin-mod`, Codex approve, `settings-area` 35/35
   on Chromium and Chrome on 48096; `settings-design` 836/840 on both there, the four failures outside the change (stopped
   TMDB stand-in; the Prowlarr row's mobile wrap), accepted by the user's decision to merge without waiting for 18096.
   The wrap is fixed by `807ef4bff5` (with the runner follow-ups, `643679b40a`): `settings-area` 39/39 and
-  `settings-design` 828/828 on Chromium and Chrome on 48096 with its TMDB stand-in. Waits for the combined republish
-  after the detail-page fix (see
+  `settings-design` 828/828 on Chromium and Chrome on 48096 with its TMDB stand-in. Released in the 2026-10-08 republish (see
   [`PHASE7.md`](PHASE7.md), *Partial save message under the ES5 build*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at

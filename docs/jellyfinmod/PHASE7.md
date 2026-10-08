@@ -2737,6 +2737,46 @@ The rule is UX §12.1.
   **39/39 on Playwright Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.54**; 48096 backed up afresh after the
   user's manual test, restored byte for byte and its lease released. No runner follow-up is open from this work.
 
+#### Settings buttons, row icons, Title Case and the settings fixes, republished as 0.1.0.0 — 2026-10-08
+
+Authorized by the user on 2026-10-08 ("republish now with the settings work"), one overwrite of `0.1.0.0` and `:latest`,
+without waiting for the detail-page fix (which the earlier plan was to combine with it). The version stays 0.1.0.0. This
+replaces the "Not republished" notes of the three sections above.
+
+- **Contents.** Web `jellyfin-mod` `3364b4da43` (product code `06163fd26d`…`807ef4bff5`: the three button kinds and the
+  secret box's icons, list rows as named icons and Title Case, the TV focus fixes, the partial save message under the ES5
+  build, the Prowlarr row's wrap on a phone; the commits after `807ef4bff5` touch `scripts/` and `docs/` only, so the
+  shipped code is that of `28d8951899`). Plugin `master` `f7c274c` (`515e6ab`…`f7c274c`: the Dashboard page's button
+  kinds, token icons, row icons and Title Case). Nothing from `fix/detail-page-design`, `jellyfinmod-phase9`,
+  `feat/home-hero-continue` or `fix/resolution-tier`: plugin `master` had already moved on to the Phase 9 merge
+  (`ce9d216`) when this was built, and the release was built from `f7c274c`, not from the branch tip.
+- **Build.** Clean detached worktrees of exactly those commits; `npm ci` and `npm run build:production` (bundle
+  **`e5ea8cf933aa`**: the bundle id hashes every emitted file and the main bundles embed the web commit, so it differs
+  from the `26386ef4bf23` of a `28d8951899` build with the same code); `dotnet build -c Release` 0 warnings;
+  `scripts/build-release.sh` into `plugin/artifacts/release-0.1.0.0-settings-buttons` of the main checkout. DLL sha256
+  `57e1ec783719…`, web zip `fca5aac99205…`, release archive `698e08756cdd…`, `meta.json` timestamp
+  **`2026-10-08T08:17:44Z`**, later than `2026-10-07T11:24:19Z`.
+- **Before the push, on the Pi (arm64, image built natively from the same context, throwaway container on 58096).**
+  In-place upgrade from the published index `bae873702b5c…`: the entrypoint logged "replaced JellyfinMod 0.1.0.0 build
+  2026-10-07T11:24:19Z with build 2026-10-08T08:17:44Z", installed DLL `57e1ec783719…`, `/web` patched with
+  `e5ea8cf933aa`, anonymous Health `401`, repository `200`, no [ERR]. Fresh install on an empty config: the same DLL and
+  bundle, Health `401`, repository `200`, no [ERR].
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927`** for linux/amd64
+  (`sha256:b789a33a1500…`) and linux/arm64 (`sha256:4b244169cd5f…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0
+  base, `SOURCE_DATE_EPOCH` of `f7c274c`, `--provenance=false`. The credential lived only in a temporary Docker
+  configuration with no credential helper on the `PATH`; logged out, deleted, no ghcr.io keychain entry. Both tags
+  resolve anonymously to the same index (public).
+- **arm64 smoke test after the push**, pulled anonymously by the index digest on the Pi, empty config, throwaway
+  container on 58096, run three times: Health `401` anonymously, `/web` patched with `e5ea8cf933aa` by itself,
+  repository `200` once started, the installed DLL and the image's DLL byte-identical to the release package
+  (`57e1ec783719…`), `meta.json` `2026-10-08T08:17:44Z`. Each run logged one [ERR]: the host's Update Plugins task read
+  `http://localhost:8096/JellyfinMod/Repository` before "Core startup complete" and got `503` — the documented,
+  harmless first-start race (the pre-push fresh install happened not to hit it). Containers, configs and images removed.
+- **Rollback:** the previous index `sha256:bae873702b5cef2f486512349adb75dafe8d3dc99904dad0b767ef5ca251d667` and the one
+  before it, `sha256:b9703e07c452…`, still resolve by digest
+  (`docker buildx imagetools create -t …:0.1.0.0 -t …:latest ghcr.io/capische/jellyfin-mod@<digest>`).
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
