@@ -38,7 +38,8 @@ const JellyfinModQueryClientEventHandler: FC = () => {
         void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'ResumeItems'] });
         void queryClient.invalidateQueries({ queryKey: ['User', user.Id, 'NextUp'] });
         if (api) {
-            const userDataSurfaces = new Set(['HomeHero', 'HomeRecent', 'Browse', 'SearchBrowse', 'NativeDetail']);
+            // ContinueWatching holds the show play dates Next Up is ordered by.
+            const userDataSurfaces = new Set(['HomeHero', 'HomeRecent', 'ContinueWatching', 'Browse', 'SearchBrowse', 'NativeDetail']);
             void queryClient.invalidateQueries({
                 predicate: query => query.queryKey[0] === 'JellyfinMod'
                     && query.queryKey[1] === api.basePath

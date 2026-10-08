@@ -602,6 +602,22 @@ active, sitting on a gradient over the content and turning solid `#101010` once 
 ~40px. Same items, same right-hand buttons, same routes — a restyle of `AppToolbar` /
 `UserViewNav`, not a replacement, so Principle 0 holds.
 
+**Scrolled, the bar is frosted glass on computer and phone (user, 2026-10-08):** the page shows through it, blurred and
+softened, instead of a solid colour. Readability sets the limit: light text must read at 4.5:1 even over a plain white
+area of a poster, and an even darkening strong enough for that also darkens a dark hero, so the bar gains its light from
+its tint instead. The tint is the theme's bar colour lightened a fifth of the way to its text colour, at 35 %, over the
+page at 48 % brightness, blurred 14px and saturated; light-mode themes, whose dark text has a dark poster as its worst
+case, lift and flatten the page instead, Apple TV with its own lighter tint. A hairline in the text colour marks the
+lower edge. Measured in every theme over the hero, three poster rows and plain white and black, every label reads at
+4.7:1 or better (PHASE7 §S6). The rule costs see-through in the dark themes: the bar is visibly lighter over a dark hero
+than the previous one but lets only a little more of the page through; light themes gain far more. Wherever the engine
+has no `backdrop-filter` or `color-mix()` the bar stays upstream's solid one.
+
+**On TV the bar stays transparent (user, 2026-10-08):** its top-to-bottom dark scrim is its only treatment, with no fill
+and no blur; a full-width blur would cost D-pad scrolling on the webOS engines. The TV's header is part of the page, not
+fixed, so it scrolls away with Home: it sits on the page ground above the hero and is gone before any poster row reaches
+the top of the screen, and the scrim fades to nothing at its lower edge, so there is no seam.
+
 **It only works with a billboard under it.** A transparent bar over a row of thumbnails is
 unreadable; over a full-bleed backdrop it is the whole point. So Home opens on a hero: one entry's
 backdrop, its title, a short overview, **Play** and **More info**, fading into the first row. That
@@ -626,10 +642,13 @@ download does — carrying the same mark as everywhere else; clicking one opens 
 hero, tracked as W10 and W12 in `PHASE1.md` and T14 in `PHASE3.md`
 ([`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)):
 
-- In Continue watching, a Next Up item's recency key is the date the user last played that series,
-  not the episode's library `DateCreated`. The Next Up query honours the user's Next Up settings
-  (max days in Next Up, rewatching, episode images) as upstream does (web-home-rules-tv#5, medium,
-  single-source).
+- **Approved (user, 2026-10-08: "sort next up by when I last watched the show"):** in Continue
+  watching, and so in the Home hero, a Next Up item's recency key is the date the user last played
+  any episode of that series, not the episode's library `DateCreated`; a series with no play date
+  keeps `DateCreated`, and resumed items keep their own last-played date. The Next Up query honours
+  the user's *max days in Next Up* and *rewatching* settings as upstream does; the *episode images*
+  setting is not applied to the merged row yet (web-home-rules-tv#5). Implementation and evidence:
+  [`PHASE7.md`](PHASE7.md) §S6.
 - Recently added sorts grouped series by `DateLastMediaAdded`, falling back to `DateCreated`, so a
   batch of new episodes of an old show is not buried (web-home-rules-tv#6, medium, verified).
 - Reclaimed entries are excluded from Recently added; only file-less *wanted* entries appear there

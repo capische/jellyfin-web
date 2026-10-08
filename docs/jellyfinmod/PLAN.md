@@ -382,6 +382,15 @@ when no suitable title exists. Respect the user's Home section visibility choice
 navigation, Back, restricted-library accounts and the empty-library fallback. Check the deployed
 build on webOS before calling device verification complete. See `PHASE1.md` §7.
 
+**Decision (user, 2026-10-07), owned by P7.S6:** the hero is what the user is in the middle of — the first item of the
+merged Continue watching list, from the feeds the user's Home settings show, with the series backdrop and the episode
+line for an episode, Play resuming that item — and only when nothing is in progress the newest title; its height
+follows the window width. **Built (not accepted)** on branch `feat/home-hero-continue`, Codex approved; rules and
+evidence in [`PHASE7.md`](PHASE7.md) §S6, *The hero is what you are in the middle of*.
+**Decision (user, 2026-10-08), same owner:** Next Up is ordered by when the user last watched the show (the newest play
+of any of its episodes, else when the episode was added), in the row and therefore in the hero; recorded in UX §7.3,
+evidence in [`PHASE7.md`](PHASE7.md) §S6. Built (not accepted) on the same branch.
+
 ---
 
 # Later phases
