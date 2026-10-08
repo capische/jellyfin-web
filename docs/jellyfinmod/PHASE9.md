@@ -699,12 +699,43 @@ quoting. Fixed on the web branch only (`29d70867b0..` this branch's tip), Mac on
 
 The live re-run list is unchanged (round 5/6, under the exclusive-use rule).
 
+## Live re-run — 2026-10-08
+
+Opus 5.5, high. On 18096 under the lease "Next phases in mod version" (10:52–14:52 Sydney; this run 10:53–11:22 Sydney), with
+exclusive use from `setup` to `cleanup`.
+
+**Before.** 18096 ran the detail-fix build (plugin from `tmp/detailfix-on-phase9` 4bc468d, DLL `1193bd07a99c…`, bundle
+`8c17355c3aba`, migrations through DetailFileHistory). Nothing from the Home hero session was found: no fixture title or
+library beyond the ten long-standing *JellyfinMod D13/P22* entries noted above, and the only watch-state rows changed in the last
+day were eight detached placeholders (items no longer present) from 21:48–21:56Z on Oct 7, before the detail fix's second pass.
+That state was backed up on the test host (`build/p9-before-rerun-20261007T235341Z`; an earlier copy from the first, stopped
+attempt is `build/p9-before-rerun-20261007T224704Z`), then `build/dd-plugdeploy.sh restore` put back the Phase 9 state taken
+before the detail fix: migrations end at PhaseNineRatingsIdentity, no DetailFileHistory. Neither `tmp/detailfix-on-phase9` nor
+`build/dd-plug-backup*` was changed.
+
+**Deploy.** Plugin 0.1.0.0 from e242a9d (DLL `194f00614fa3…`, the same build as round 4) and web `5030d4c3ae` (bundle
+`5c8664fc5e8b`); startup logs show the plugin loaded and migrations applied, no errors; Health 200 with `ratings`,
+`ratings.cards`, `settings.ratings`.
+
+**Run** (`evidence/p9/live-rerun-20261008/`): `setup` 5/5, `unconfigured` 12/12, `configure` 5/5, `fetch` 9/9, `restart` 3/3,
+`age` 2/2, `guard` 1/1; Chromium 153.0.8010.12 54/54 and Chrome 153.0.8010.54 54/54 (including the real settings page's Save:
+each sent the revision it loaded, unchanged, and got the next one back); `unage` 2/2, `failures` 13/13, `kill` 5/5, `leak` 4/4,
+`interrupt` 4/4 (TERM mid-SQL: the work group ended, exit 143, service started after; a time-out mid-SQL: its late SQL never
+ran; a time-out during the stop: the service up and staying up), `cleanup` 14/14 (it first waited for nothing queued and the
+task idle). No step failed.
+
+**After.** `GET /JellyfinMod/Settings/Ratings` at 00:22:14Z: `enabled: true`, `apiKeyConfigured: false`, `refreshDays: 14`,
+`dailyBudget: 500`, the default sources, `verified: false`, `providerOverride: false`, `revision: 1`. No fixtures; `GET
+/UserViews` for oleksii lists Movies and Shows; oleksii's display preferences as before; the stand-in stopped and its key
+deleted. 18096 runs Phase 9 (plugin e242a9d, bundle `5c8664fc5e8b`), migrations through PhaseNineRatingsIdentity, ready for the
+user's real MDBList key; the lease stays with "Next phases in mod version" for that test.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
 isolated instance passed in Chromium and Chrome. Both reviews' findings and both re-reviews' are fixed (above); acceptance
-waits for the live re-run on 18096 (it is lent to another session for now; exclusive use from `setup` to `cleanup`), the Codex
-review of web `29d70867b0..` this branch's tip, and the user. Nothing is merged; the
+waits for the Codex review of web `29d70867b0..` this branch's tip and for the user (the MDBList key test on 18096); the live
+re-run passed on 2026-10-08 (above). Nothing is merged; the
 plugin version stays 0.1.0.0 and nothing was published.
 
 For the next agent or reviewer:
@@ -713,7 +744,7 @@ For the next agent or reviewer:
   `restart`, `age`, `guard`, the browser runner `p9-ratings.mjs`, `unage`, `failures`, `kill`, `leak`, `interrupt`, `cleanup`;
   the run stops, touching nothing, if a ratings key it did not set is configured); settings come from the environment
   and its docstring, and the stand-in from `standins/mdblist.mjs` started on the isolated instance's Docker network.
-- After round 4 the isolated instance ran this branch's plugin (0.1.0.0 from the round-4 tip) and bundle `f4c3035c1649`; since then another session has been given 18096 and may have deployed its own plugin (with a migration of its own) or restored the pre-Phase-9 backup, so check what it runs before the re-run and redeploy from these branches if needed; ratings are on with no
+- The isolated instance runs this branch's plugin (0.1.0.0 from e242a9d) and bundle `5c8664fc5e8b` (web `5030d4c3ae`), migrations through PhaseNineRatingsIdentity (live re-run, 2026-10-08); ratings are on with no
   key, so the 04:00 task does nothing. A backup of the plugin folder, its XML, secret store and database from before the
   deployment is on the test host in the JellyfinMod data folder's `backups/p9-before-20261007`, beside the instance's own `test` folder (migrations are forward-only).
 - For the user: supply the MDBList key in Settings → Ratings and press **Test** once; if it answers anything but `ok`, the
