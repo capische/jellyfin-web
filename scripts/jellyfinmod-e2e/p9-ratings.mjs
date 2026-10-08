@@ -168,15 +168,19 @@ const pressRemoteBack = async page => {
 const shot = async (page, name) => {
     if (SHOTS) await page.screenshot({ path: join(SHOTS, `${tier}-${name}.png`) });
 };
-const chips = page => page.$$eval('#itemDetailPage:not(.hide) .jfmod-ratingChip, .page:not(.hide) .jfmod-ratingChip', nodes => nodes
+// The ratings (inline design, 2026-10-08): each a button holding its source's mark and its value; votes and provenance are in
+// its tooltip.
+const chips = page => page.$$eval('.jfmod-rating', nodes => nodes
     .filter(node => node.offsetParent !== null)
-    .map(node => ({ source: node.dataset.jfmodRating, provider: node.dataset.jfmodProvider, text: node.textContent, title: node.title,
-        tabIndex: node.tabIndex, tag: node.tagName, inSection: !!node.closest('.detailSectionContent'), inMisc: !!node.closest('.itemMiscInfo-secondary') })));
+    .map(node => ({ source: node.dataset.jfmodRating, provider: node.dataset.jfmodProvider, text: node.querySelector('.jfmod-ratingValue')?.textContent ?? '',
+        label: node.getAttribute('aria-label'), icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null,
+        tabIndex: node.tabIndex, tag: node.tagName, inRow: !!node.closest('.itemMiscInfo-primary'), inMisc: !!node.closest('.itemMiscInfo-secondary') })));
 const waitChips = async page => {
-    await page.waitForFunction(() => [...document.querySelectorAll('.jfmod-ratingChip')].some(node => node.offsetParent !== null), undefined,
+    await page.waitForFunction(() => [...document.querySelectorAll('.jfmod-rating')].some(node => node.offsetParent !== null), undefined,
         { timeout: 20000 }).catch(ignore);
     return chips(page);
 };
+const tooltipText = page => page.locator('[role="tooltip"].jfmod-ratingTooltip').innerText({ timeout: 3000 }).catch(() => '');
 async function preferencesPage(page, layout) {
     await go(page, '#/catalog/preferences');
     await page.waitForSelector('[data-jfmod-source-toggle="imdb"]', { timeout: 20000 });
@@ -205,32 +209,39 @@ async function desktop(browser) {
     await page.keyboard.press('Escape');
     await preferencesPage(page, layout);
 
-    // Native page: the line leads the detail section, in the default order, never a focus stop.
+    // Native page: the ratings sit in the stock star's row, in the default order; each is its mark and its value.
     await go(page, `#/details?id=${STATE.hostItem}`);
     let found = await waitChips(page);
-    record(layout, 'The native page shows the Ratings line in the default order', JSON.stringify(found.map(chip => chip.source)) === JSON.stringify(DEFAULT_ORDER),
+    record(layout, 'The native page shows the ratings in the default order', JSON.stringify(found.map(chip => chip.source)) === JSON.stringify(DEFAULT_ORDER),
         found.map(chip => chip.text));
-    record(layout, 'Each chip shows its value in its own scale with votes, and says where it came from', found[0]?.text === 'IMDb 8.1 (250K)'
-        && found[1]?.text === 'RT critics 91% (310)' && found[3]?.text === 'TMDB 79% (15K)' && /via MDBList, as of/.test(found[0]?.title ?? ''), found.slice(0, 4));
-    record(layout, 'The line sits in the detail section; outside TV each chip is a button in the tab order', found.every(chip => chip.inSection
-        && chip.tabIndex >= 0 && chip.tag === 'BUTTON'), found.map(chip => ({ tag: chip.tag, tabIndex: chip.tabIndex })));
-    // Provenance by keyboard: Enter on a chip shows where its value came from; Enter again hides it (web review P3 6).
-    const firstChip = page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip').first();
+    record(layout, 'Each rating is its source\'s mark and its value in its own scale, with no votes in the row', found[0]?.text === '8.1'
+        && found[0]?.icon === 'imdb' && found[1]?.text === '91%' && found[1]?.icon === 'tomatoesCritic' && found[3]?.text === '79%'
+        && found[0]?.label === 'IMDb 8.1', found.slice(0, 4));
+    record(layout, 'The ratings sit in the stock star\'s row; outside TV each is a button in the tab order', found.every(chip => chip.inRow
+        && chip.tabIndex >= 0 && chip.tag === 'BUTTON'), found.map(chip => ({ tag: chip.tag, tabIndex: chip.tabIndex, inRow: chip.inRow })));
+    // The tooltip: on hover and on keyboard focus, with the votes and where the value came from; Escape closes it.
+    const firstChip = page.locator('.jfmod-rating:visible').first();
+    await firstChip.hover();
+    const hovered = await tooltipText(page);
+    const described = await firstChip.getAttribute('aria-describedby') === await page.locator('[role="tooltip"]').getAttribute('id').catch(() => null);
+    await page.mouse.move(2, 2);
+    await page.waitForTimeout(300);
+    const goneAfterHover = await page.locator('[role="tooltip"]').count();
     await firstChip.focus();
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
-    const note = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').innerText().catch(() => '');
-    const expanded = await firstChip.getAttribute('aria-expanded');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
-    const closed = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').count();
-    record(layout, 'Enter on a chip shows where its value came from, and Enter again hides it', /^IMDb.*via MDBList, as of/.test(note)
-        && expanded === 'true' && closed === 0, { note, expanded, closed });
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    const focusedNote = await tooltipText(page);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const closed = await page.locator('[role="tooltip"]').count();
+    record(layout, 'Hover and keyboard focus show the tooltip with the votes and the provenance; leaving or Escape hides it',
+        /^IMDb 8\.1 · 250,000 votes/.test(hovered) && /via MDBList, as of/i.test(hovered) && described && goneAfterHover === 0
+        && focusedNote === hovered && closed === 0, { hovered, described, goneAfterHover, focusedNote, closed });
     const order = await page.evaluate(() => {
-        const section = document.querySelector('#itemDetailPage:not(.hide) .detailSectionContent') ?? document.querySelector('.detailSectionContent');
-        return [...section.children].slice(0, 3).map(node => node.className);
+        const row = [...document.querySelectorAll('.itemMiscInfo-primary')].find(node => node.offsetParent !== null);
+        return row ? [...row.children].map(node => node.className) : [];
     });
-    record(layout, 'The Ratings mount leads the detail section content', order[0]?.includes('jfmod-ratingsMount'), order);
+    record(layout, 'The ratings mount ends the stock star\'s row', order.at(-1)?.includes('jfmod-ratingsMount'), order);
     await shot(page, `${layout}-native`);
     // Administrator: Refresh ratings queues one fetch. Every other read of this title's ratings stalls meanwhile: the button
     // must not wait on those background reads (review round 3, P2 4).
@@ -257,30 +268,32 @@ async function desktop(browser) {
         { finished, busy, stalledReads, chips: after.length });
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
     await Promise.all(stalled.map(route => route.abort().catch(ignore)));
-    // Focus on a chip is focus inside the line: a minute's refetch that widens an earlier chip is shown at once and focus stays
-    // on the same chip (review round 4, P3 3).
-    const tmdbChip = page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip[data-jfmod-rating="tmdb"]');
+    // Focus on a rating is focus inside the line: a minute's refetch that widens an earlier rating is shown at once and focus
+    // stays on the same rating (review round 4, P3 3).
+    const tmdbChip = page.locator('.jfmod-rating:visible[data-jfmod-rating="tmdb"]');
     await tmdbChip.focus();
     let widened = 0;
     await page.route('**/JellyfinMod/Ratings/Items/**', async route => {
         widened++;
         const response = await route.fetch();
         const body = await response.json();
-        body.ratings = body.ratings.map(rating => rating.source === 'imdb' ? { ...rating, votes: 123456789 } : rating);
+        body.ratings = body.ratings.map(rating => rating.source === 'imdb' ? { ...rating, value: 10 } : rating);
         return route.fulfill({ response, json: body });
     });
     await page.waitForTimeout(65000);
     await page.unroute('**/JellyfinMod/Ratings/Items/**');
-    const imdbText = await page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip[data-jfmod-rating="imdb"]').innerText().catch(() => '');
+    const imdbText = await page.locator('.jfmod-rating:visible[data-jfmod-rating="imdb"] .jfmod-ratingValue').innerText().catch(() => '');
     const stillOn = await page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
-    record(layout, 'With focus on a chip, a refetch that widens an earlier chip is shown at once and focus stays on that chip',
-        widened > 0 && imdbText === 'IMDb 8.1 (123M)' && stillOn === 'tmdb', { widened, imdbText, stillOn });
+    record(layout, 'With focus on a rating, a refetch that widens an earlier rating is shown at once and focus stays on that rating',
+        widened > 0 && imdbText === '10.0' && stillOn === 'tmdb', { widened, imdbText, stillOn });
 
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
     found = await waitChips(page);
-    record(layout, 'The file-less entry page shows the line beside the TMDB star, TMDB first-party', found.length === 5 && found.every(chip => chip.inMisc)
-        && found.find(chip => chip.source === 'tmdb')?.provider === 'tmdb', found.map(chip => `${chip.text} [${chip.provider}]`));
+    const ownStar = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-star]')].some(node => node.offsetParent !== null));
+    record(layout, 'The file-less entry page shows the ratings in its star\'s row, TMDB first-party, and hides the star that TMDB repeats',
+        found.length === 5 && found.every(chip => chip.inMisc) && found.find(chip => chip.source === 'tmdb')?.provider === 'tmdb' && !ownStar,
+        { ratings: found.map(chip => `${chip.text} [${chip.provider}]`), ownStar });
     await shot(page, `${layout}-fileless`);
 
     // Sources and order: Letterboxd on, moved above Trakt; the page follows.
@@ -316,15 +329,16 @@ async function desktop(browser) {
     await go(page, grid);
     await page.waitForSelector('.jfmod-cardRating', { timeout: 20000 }).catch(ignore);
     cardText = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => ({ text: node.textContent, inSecondary: !!node.closest('.cardText-secondary'),
+        icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null, title: node.closest('[title]')?.getAttribute('title') ?? null,
         badge: !!node.closest('.cardIndicators, .cardOverlayContainer') })));
-    record(layout, 'With IMDb chosen each card carries it in its secondary text line, no badge', cardText.length >= 2
-        && cardText.every(card => /IMDb 8\.1/.test(card.text) && card.inSecondary && !card.badge)
+    record(layout, 'With IMDb chosen each card carries its mark and value in its secondary text line, no badge and no tooltip', cardText.length >= 2
+        && cardText.every(card => /8\.1/.test(card.text) && card.icon === 'imdb' && card.inSecondary && !card.badge && !card.title)
         && page.jfmodBrowse.some(body => body.ratingSource === 'imdb'), cardText);
     const stale = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => ({ text: node.textContent.replace(/^\s*·\s*/, ''),
         stale: node.classList.contains('jfmod-cardRating-stale'), title: node.closest('.card')?.querySelector('.cardText-first')?.textContent ?? '' })));
     record(layout, 'A stale card value says how old it is, compactly; a current one does not', stale.some(card => card.stale
-        && /^IMDb 8\.1 \([A-Z][a-z]{2} \d{4}\)$/.test(card.text) && /Second/.test(card.title))
-        && stale.some(card => !card.stale && card.text === 'IMDb 8.1' && /Host/.test(card.title)), stale);
+        && /^8\.1 \([A-Z][a-z]{2} \d{4}\)$/.test(card.text) && /Second/.test(card.title))
+        && stale.some(card => !card.stale && card.text === '8.1' && /Host/.test(card.title)), stale);
     const focusables = await page.$$eval('.card .jfmod-cardRating', nodes => nodes.filter(node => node.tabIndex >= 0 || node.querySelector('[tabindex]')).length);
     record(layout, 'The card rating adds no focus stop', focusables === 0);
     await shot(page, `${layout}-cards`);
@@ -426,21 +440,22 @@ async function mobile(browser) {
     await go(page, `#/details?id=${STATE.hostItem}`);
     const found = await waitChips(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    record(layout, 'The native page shows the Ratings line, wrapped, without horizontal scroll', found.length === 5 && overflow <= 0, { chips: found.length, overflow });
-    // Each chip is a real touch target, and a tap shows where its value came from (web review 2026-10-07 round 2, P3 6).
-    const chipsOnPage = page.locator('#itemDetailPage:not(.hide) .jfmod-ratingChip');
+    record(layout, 'The native page shows the ratings, wrapped, without horizontal scroll', found.length === 5 && overflow <= 0, { chips: found.length, overflow });
+    // Each rating is a real touch target, and a tap shows its tooltip (web review 2026-10-07 round 2, P3 6; design 2026-10-08).
+    const chipsOnPage = page.locator('.jfmod-rating:visible');
     const boxes = [];
     for (let index = 0; index < await chipsOnPage.count(); index++) boxes.push(await chipsOnPage.nth(index).boundingBox());
     const gaps = boxes.slice(1).map((box, index) => Math.abs(box.y - boxes[index].y) < 2 ? box.x - (boxes[index].x + boxes[index].width) : null)
         .filter(gap => gap !== null);
     await chipsOnPage.nth(1).tap();
     await page.waitForTimeout(400);
-    const tapped = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').innerText().catch(() => '');
-    await chipsOnPage.nth(1).tap();
+    const tapped = await tooltipText(page);
+    await page.locator('.nameContainer:visible').tap();
     await page.waitForTimeout(400);
-    const closedAfterTap = await page.locator('#itemDetailPage:not(.hide) [data-jfmod-rating-note]').count();
-    record(layout, 'Each chip is at least 44 px high with room beside it, and a tap shows its provenance and a second tap hides it',
-        boxes.every(box => box.height >= 43) && gaps.every(gap => gap >= 6) && /^Rotten Tomatoes critics.*via MDBList/.test(tapped) && closedAfterTap === 0,
+    const closedAfterTap = await page.locator('[role="tooltip"]').count();
+    record(layout, 'Each rating is at least 43 px high with room beside it; a tap shows its tooltip (votes, provenance) and a tap elsewhere hides it',
+        boxes.every(box => box.height >= 43) && gaps.every(gap => gap >= 6) && /^Rotten Tomatoes critics.*votes/.test(tapped)
+        && /via MDBList/i.test(tapped) && closedAfterTap === 0,
         { heights: boxes.map(box => Math.round(box.height)), gaps: gaps.map(Math.round), tapped, closedAfterTap });
     await shot(page, `${layout}-native`);
     await go(page, `#/details?entryId=${STATE.fileless}`);
@@ -513,7 +528,7 @@ const sharedRow = page => page.evaluate(() => {
     const row = [...document.querySelectorAll('.itemMiscInfo-secondary')].find(node => node.offsetParent !== null);
     const line = row?.querySelector('.jfmod-ratingsLine');
     return { row: row ? Math.round(row.getBoundingClientRect().height) : null, line: line ? Math.round(line.getBoundingClientRect().height) : null,
-        chips: line ? line.querySelectorAll('.jfmod-ratingChip').length : 0 };
+        chips: line ? line.querySelectorAll('.jfmod-rating').length : 0 };
 });
 
 /** Answers the ratings defaults with `count()` sources on (in the complete order), on a page or a whole context. */
@@ -628,8 +643,10 @@ async function sharedRowWrap(browser, layout) {
     await waitChips(page);
     const next = await sharedRow(page);
     await context.close();
-    record(layout, 'A wider line that keeps its own height but wraps the shared row above a focused control waits; the next visit shows it',
-        below && JSON.stringify(before) === JSON.stringify(after) && held.chips === found.shorter && held.row === base.row
+    // The longer set is tried before paint and cut back to as many as fit the row unwrapped (at least the shorter set); the next
+    // visit, where the answer arrives with the page, shows all of it.
+    record(layout, 'A wider line that would wrap the shared row above a focused control shows only what fits, focus stays; the next visit shows it',
+        below && JSON.stringify(before) === JSON.stringify(after) && held.chips >= found.shorter && held.chips < found.longer && held.row === base.row
         && next.chips === found.longer && next.row === wider.row,
         { below, focus: [before.text, before.top, after.top], held, next });
 }
@@ -691,7 +708,8 @@ async function tv(browser, layout) {
     const left = await page.evaluate(() => window.location.hash);
     record(layout, 'The remote\'s Back leaves Ratings display for the page that opened it', !left.includes('catalog/preferences'), left);
 
-    // The title page: the line is visible and the remote never lands on it.
+    // The title page: the ratings are in the row above the buttons; the first focus is Play, Up reaches them, Left and Right
+    // move between them, OK shows the tooltip and the remote's Back closes only that (design 2026-10-08).
     await go(page, `#/details?id=${STATE.hostItem}`);
     const where = () => page.evaluate(() => {
         const node = document.activeElement;
@@ -703,15 +721,31 @@ async function tv(browser, layout) {
     const focusedLater = await where();
     record(layout, 'Nothing the ratings bring in moves the focused control (same control, same place, once the line is there)',
         focusedFirst.tag === 'BUTTON' && JSON.stringify(focusedFirst) === JSON.stringify(focusedLater), { focusedFirst, focusedLater });
-    const start = focusedLater.tag;
-    let landed = false;
-    for (let press = 0; press < 25; press++) {
-        await page.keyboard.press(press % 5 === 4 ? 'ArrowRight' : 'ArrowDown');
-        await page.waitForTimeout(120);
-        landed = landed || await page.evaluate(() => !!document.activeElement?.closest('.jfmod-ratingsLine'));
-    }
-    record(layout, 'The line shows on the TV title page and D-pad navigation never focuses it', found.length === 5 && !landed && start === 'BUTTON',
-        { chips: found.length, start });
+    const onPlay = await page.evaluate(() => !!document.activeElement?.classList.contains('btnPlay'));
+    // At 1280×720 a long row shows as many of the user's first ratings as fit without wrapping.
+    const shown = found.map(chip => chip.source);
+    record(layout, 'The TV title page shows the ratings (as many as fit the row, in order) and its first focus is Play, not a rating',
+        onPlay && shown.length >= (layout === 'tv720' ? 3 : 5) && DEFAULT_ORDER.join(',').startsWith(shown.join(',')), { shown, onPlay });
+    const focusedRating = () => page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
+    await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(300);
+    const up = await focusedRating();
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+    const right = await focusedRating();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    const tip = await tooltipText(page);
+    const hash = await page.evaluate(() => window.location.hash);
+    await shot(page, `${layout}-tooltip`);
+    await pressRemoteBack(page);
+    const afterBack = { hash: await page.evaluate(() => window.location.hash), tip: await page.locator('[role="tooltip"]').count(), on: await focusedRating() };
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(300);
+    const down = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
+    record(layout, 'Up from Play reaches a rating, Right the next, OK shows its tooltip with the votes, Back closes only that, Down returns to the buttons',
+        !!up && !!right && up !== right && /votes/.test(tip) && afterBack.hash === hash && afterBack.tip === 0 && afterBack.on === right && down,
+        { up, right, tip, afterBack, down });
     await laterUpdates(page, layout);
     await shot(page, `${layout}-native`);
     await page.evaluate(() => localStorage.removeItem('layout'));

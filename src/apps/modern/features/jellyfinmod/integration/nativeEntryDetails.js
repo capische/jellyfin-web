@@ -52,6 +52,7 @@ export default function initializeNativeEntryDetails(view, params) {
     let unmount;
     let unmountTrakt;
     let unmountRatings;
+    let ratingsRowWatch;
     let generation = 0;
     const hide = () => {
         generation++;
@@ -61,6 +62,8 @@ export default function initializeNativeEntryDetails(view, params) {
         unmountTrakt = undefined;
         traktMount?.remove();
         traktMount = undefined;
+        ratingsRowWatch?.disconnect();
+        ratingsRowWatch = undefined;
         unmountRatings?.();
         unmountRatings = undefined;
         ratingsMount?.remove();
@@ -123,13 +126,21 @@ export default function initializeNativeEntryDetails(view, params) {
                 itemId: params.id
             }, traktMount);
         }
-        // The Ratings line (Phase 9) has its own mount too and leads the content section, above the Trakt line: below the
-        // button row a TV's focus starts on, because its answer arrives after the page is focused (UX §13 rule 2). Only a
-        // movie or series has ratings; an empty mount takes no space.
-        if (item?.Type === 'Movie' || item?.Type === 'Series') {
-            ratingsMount = document.createElement('div');
+        // The ratings (Phase 9, inline design of 2026-10-08) have their own mount at the end of upstream's first metadata row,
+        // right after the year, the parental rating and the stock star. Upstream refills that row's content when it renders
+        // the item again, which drops the mount, so the same mount (and the React tree in it) is put back each time. The row
+        // is above the button row a TV's focus starts on; the line itself keeps any late change from moving a focused
+        // control (UX §13 rule 2). Only a movie or series has ratings; an empty mount takes no space.
+        const ratingsRow = view.querySelector('.itemMiscInfo-primary');
+        if ((item?.Type === 'Movie' || item?.Type === 'Series') && ratingsRow) {
+            ratingsMount = document.createElement('span');
             ratingsMount.className = 'jfmod-ratingsMount';
-            target.insertBefore(ratingsMount, target.firstChild);
+            ratingsRow.appendChild(ratingsMount);
+            const mountNode = ratingsMount;
+            ratingsRowWatch = new MutationObserver(() => {
+                if (mountNode.parentNode !== ratingsRow) ratingsRow.appendChild(mountNode);
+            });
+            ratingsRowWatch.observe(ratingsRow, { childList: true });
             unmountRatings = renderComponent(NativeRatingsLine, {
                 api,
                 userId: client.getCurrentUserId(),

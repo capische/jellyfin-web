@@ -76,26 +76,26 @@ export const provenance = (rating: Rating) => {
 /** "Sep 2026": the compact age a card shows beside a stale value (web review 2026-10-07, P2 5), in Jellyfin's date locale. */
 export const monthYear = (iso?: string | null) => localDate(iso, { month: 'short', year: 'numeric' });
 
-/**
- * A card's one rating: "IMDb 8.1", or "IMDb 8.1 (Sep 2026)" once it is older than the refresh window. A stale value without a
- * readable date says so by its dimmed style alone; no untranslated word stands in for the date.
- */
-export const cardRatingText = (rating: Rating) => {
+/** The value a card shows after the source's mark: "8.1", or "8.1 (Sep 2026)" once it is older than the refresh window. */
+export const cardRatingValue = (rating: Rating) => {
     const age = rating.stale ? monthYear(rating.fetchedAt) : null;
-    return SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + (age ? ' (' + age + ')' : '');
+    return formatValue(rating) + (age ? ' (' + age + ')' : '');
 };
 
-/** The chip's text, with the date when the value is older than the refresh window. */
-export const chipText = (rating: Rating) => {
-    const votes = rating.votes ? ' (' + formatVotes(rating.votes) + ')' : '';
-    const age = rating.stale ? formatDate(rating.fetchedAt) : null;
-    return SOURCE_SHORT[rating.source] + ' ' + formatValue(rating) + votes + (age ? ' · ' + age : '');
-};
+/** A rating's name for a screen reader: the source, the value, and that it is old when it is. */
+export const ratingName = (rating: Rating) => SOURCE_LONG[rating.source] + ' ' + formatValue(rating);
 
-/** The sentence a screen reader and a tooltip give. */
-export const chipLabel = (rating: Rating) =>
-    SOURCE_LONG[rating.source] + ' ' + formatValue(rating) + (rating.votes ? ', ' + rating.votes.toLocaleString() + ' votes' : '')
-    + ' — ' + provenance(rating);
+/**
+ * What the tooltip says (user decision 2026-10-08: the row shows the mark and the value only): the source and value, the
+ * votes, where the value came from, and, for a value older than the refresh window, that it is.
+ */
+export const tooltipLines = (rating: Rating) => {
+    const lines = [ratingName(rating) + (rating.votes ? ' · ' + rating.votes.toLocaleString() + ' votes' : '')];
+    lines.push(provenance(rating).replace(/^./, first => first.toUpperCase()));
+    const asOf = formatDate(rating.fetchedAt);
+    if (rating.stale) lines.push('Older than the refresh window' + (asOf ? ': last fetched ' + asOf : ''));
+    return lines;
+};
 
 /**
  * How long one answer is reused: the app's own default. Ratings change on the server's daily schedule, but an administrator
