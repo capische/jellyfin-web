@@ -2673,13 +2673,39 @@ The rule is UX §12.1.
   Chrome 153.0.8010.54 33/33** on its second full run — the first full Chrome run was 32/33, a `CancelledError` page
   error in the mobile layout, not reproduced in nine mobile-only Chrome runs and the second full run (unclassified).
   Codex GPT-6.1 Sol, high, one pass: **approve**, no defects, no hardening ideas. 48096 restored byte for byte afterwards.
-- **Found by that run, product (open, not fixed here):** `PartialSaveError` (`settingsApi.ts`) extends `Error`, and
+- **Found by that run, product (fixed 2026-10-08, next entry):** `PartialSaveError` (`settingsApi.ts`) extends `Error`, and
   ts-loader compiles it to ES5 (`tsconfig` target `ES5`), so `error instanceof PartialSaveError` is false and
   `problemText` answers "The request failed.". Any retention refusal after seed protection was saved loses the sentence
   "Seed protection was saved; retention was not. …"; for a stale revision without an unsaved edit the page shows only
   "The request failed." with no Reload (seen live on 48096). With an edit, the draft's warning replaces it, as above.
   Fix direction: `Object.setPrototypeOf(this, PartialSaveError.prototype)` in its constructor, or a marker property as
   `isSettingsProblem` uses; then `settings-area.mjs` would see the error notice instead of the warning and needs updating.
+- **Partial save message under the ES5 build, fixed 2026-10-08** (`fix(settings,p7.s8)` `48c68b4803`, product). The
+  partial save is now a marker object, `{ jfmodPartialSave: true, message }` (`partialSave`, checked by `isPartialSave`),
+  as `SettingsProblem` already was, instead of an `Error` subclass; it was the only `extends Error` in the web source and
+  nothing else in the mod extends a built-in. A stale retention save now shows, with or without an unsaved edit, one error
+  (`role=alert`) "Seed protection was saved; retention was not. These settings changed somewhere else since this page
+  loaded. Reload to see the current values, then save again." with one Reload; the draft's warning gives way to it (it
+  keeps an error that already offers a Reload). `settings-area.mjs` (`85f0f1fb5e`, `1bac1076c0`) asserts both cases (seed
+  protection 200, retention 409, that one error, the field unchanged or the edit kept, Reload clears it, the next save
+  200) and, from Codex's P3, the revisions under Save against the API; `settings-design.mjs` accepts 48096. Codex
+  GPT-6.1 Sol, high: product **approve** with no findings (`review-errfix-1.md`); runner pass **approve** (`-2.md`).
+  Live on 48096 (plugin `f7c274c`, bundle `a9f5c21037e4` from `85f0f1fb5e`; later commits touch `scripts/` and `docs/`
+  only): `settings-area` **35/35 on Playwright Chromium 153.0.8010.12 and 35/35 on Google Chrome 153.0.8010.54**.
+  `settings-design` on 48096: Chromium 836/840, the four failures not from this change — the two TMDB Test checks (48096
+  reaches TMDB through its stand-in, which was not running: environment) and, in the mobile layout, Prowlarr's Save,
+  Test, Sync Now and Remove wrapping onto two lines 4 px apart in the Indexers section and the wizard (48096 is the only
+  instance with a Prowlarr source; 28096 and 18096 have none, which is why the 810/810 runs never met it: **product,
+  open, follow-up**). Google Chrome on 48096 the same, 836/840 with the same four. Merged on the user's decision
+  (relayed 2026-10-08) not to wait for 18096 or 28096 for a run without those four. 48096 restored afterwards: config
+  and cache byte for byte with their metadata, the container's web directory (only the takeover's `index.html` had
+  changed) and both containers exited; the TMDB stand-in's proxy was started for a check and stopped again.
+- **Follow-up (product, open):** at 390 px, with a Prowlarr source configured, the Prowlarr box's Save, Test, Sync Now and
+  Remove wrap onto two lines 4 px apart in the settings area's Indexers section and in the wizard's Indexers step
+  (`settings-design` "no buttons or texts touch", mobile, on 48096). The row needs the button gap between wrapped lines.
+- **Follow-up (runners, not blocking, from the partial save review):** `settings-area.mjs` could save once right after
+  the unedited case's Reload (only the edited case checks the 200), and could assert the page's own server address before
+  its first write, beside the port allowlist.
 
 #### S11 evidence
 
