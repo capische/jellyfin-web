@@ -11,11 +11,12 @@ import inputManager from 'scripts/inputManager';
 
 import { useQueueVisible } from '../hooks/useQueue';
 import { openInFlightCardMenu } from '../integration/queueActions';
-import { cardRatingText, chipLabel, isKnownScale } from '../constants/ratings';
+import { cardRatingValue, isKnownScale } from '../constants/ratings';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import type { Rating } from '../types/ratings';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark from './FileStateMark';
+import RatingIcon from './RatingIcon';
 
 import 'components/cardbuilder/card.scss';
 import './entryCard.scss';
@@ -35,6 +36,12 @@ interface EntryCardProps {
 const cardRatingClass = (rating: Rating) => 'jfmod-cardRating' + (rating.stale ? ' jfmod-cardRating-stale' : '');
 
 /**
+ * A card's one rating: the source's mark and the value (inline design, 2026-10-08). No tooltip and no focus stop of its own:
+ * the card stays the one control, and the mark names its source for a screen reader.
+ */
+const CardRatingValue: FC<{ rating: Rating }> = ({ rating }) => <><RatingIcon rating={rating} />{cardRatingValue(rating)}</>;
+
+/**
  * Puts the card rating into a native card's secondary text line, which upstream's card builds; a card that shows no
  * secondary line gets one of its own in the footer. A portal, so upstream's card component is unchanged.
  */
@@ -50,10 +57,9 @@ const NativeCardRating: FC<{ rating: Rating }> = ({ rating }) => {
         if (secondary) setTarget({ node: secondary, own: false });
         else if (lines) setTarget({ node: lines, own: true });
     }, []);
-    const text = cardRatingText(rating);
     return <><span ref={anchor} hidden />{target && createPortal(target.own ?
-        <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)} title={chipLabel(rating)}>{text}</div> :
-        <span className={cardRatingClass(rating)} title={chipLabel(rating)}>{' · ' + text}</span>, target.node)}</>;
+        <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}><CardRatingValue rating={rating} /></div> :
+        <span className={cardRatingClass(rating)}>{' · '}<CardRatingValue rating={rating} /></span>, target.node)}</>;
 };
 
 /** Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. */
@@ -142,10 +148,10 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
                 {cardOptions.showTitle !== false && <div className='cardText cardTextCentered'>{entry.title}</div>}
                 {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>
                     {entry.year}
-                    {rating && <span className={cardRatingClass(rating)} title={chipLabel(rating)}>{' · ' + cardRatingText(rating)}</span>}
+                    {rating && <span className={cardRatingClass(rating)}>{' · '}<CardRatingValue rating={rating} /></span>}
                 </div>}
-                {rating && !(cardOptions.showYear && entry.year) && <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}
-                    title={chipLabel(rating)}>{cardRatingText(rating)}</div>}
+                {rating && !(cardOptions.showYear && entry.year) && <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}>
+                    <CardRatingValue rating={rating} /></div>}
             </div>}
         </div>
     );

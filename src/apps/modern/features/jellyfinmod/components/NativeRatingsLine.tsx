@@ -34,7 +34,7 @@ export const prefetchItemRatings = async (api: Api, userId: string, itemId: stri
 };
 
 /**
- * The Ratings line on a native movie or series page (P9.R6). It asks only a plugin that lists `ratings`, while ratings are
+ * The ratings on a native movie or series page (P9.R6), inline in the row with the stock star. It asks only a plugin that lists `ratings`, while ratings are
  * on; any failure, an older plugin or ratings turned off renders nothing, and the page is otherwise unchanged.
  */
 const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId }) => {
@@ -54,7 +54,7 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId }) 
     // focused control. A failed minute's read keeps the last answer (react-query keeps its data): only a first answer that
     // failed counts as "nothing to show" (web review 2026-10-07 round 2, P2 1).
     const ready = preferences.loaded && (!preferences.enabled || ratings.data !== undefined || ratings.isError);
-    return <RatingsLine ratings={preferences.enabled ? ratings.data?.ratings : []} sources={preferences.sources} ready={ready} />;
+    return <RatingsLine ratings={preferences.enabled ? ratings.data?.ratings : []} sources={preferences.sources} ready={ready} inline />;
 };
 
 export default NativeRatingsLine;

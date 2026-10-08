@@ -1,35 +1,58 @@
-// Phase 9: the Ratings line. Quiet like the Trakt and retention lines, sized in em so the TV's 125 % and the phone's 90 %
-// root sizes scale it, and laid out with margins rather than flex gap for older TV engines (UX §13, P1.W11).
+// Phase 9: the ratings row (inline design, 2026-10-08). Each rating is its source's mark and its value, in the row that
+// holds the title's year and stock star. Sized in em so the TV's 125 % and the phone's 90 % root sizes scale it, and laid
+// out with margins rather than flex gap for older TV engines (UX §13, P1.W11).
 .jfmod-ratingsLine {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     margin: 0 0 0.7em;
-    font-size: 0.9em;
 }
 
 .jfmod-ratingsLine-inline {
     display: inline-flex;
-    margin: 0 0 0 0.8em;
+    margin: 0;
     vertical-align: middle;
 }
 
-// The card radius of card.scss; the border is the secondary text colour, so nothing is said by colour alone.
-.jfmod-ratingChip {
-    margin: 0.15em 0.5em 0.15em 0;
-    padding: 0.1em 0.5em;
-    border: 0.08em solid rgba(255, 255, 255, 0.35);
-    border-radius: 0.2em;
-    white-space: nowrap;
-    opacity: 0.9;
+// The entry page's own star, spaced like a row item.
+.jfmod-entryStar {
+    margin: 0 1em 0 0;
 }
 
-// Outside the TV a chip is a button (its provenance on demand); it keeps the chip's look.
-.jfmod-ratingChip-button {
+// The native page's mount is one more item of upstream's flex row (`.itemMiscInfo-primary`).
+.jfmod-ratingsMount {
+    display: inline-flex;
+    align-items: center;
+}
+
+.jfmod-ratings {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.jfmod-ratingItem {
+    display: inline-flex;
+}
+
+// No chip and no border: a mark and a number, spaced like the row's own items (`.mediaInfoItem`, 1em apart).
+.jfmod-rating {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0.85em 0 0;
+    padding: 0.1em 0.15em;
+    border: 0;
+    border-radius: 0.2em;
     background: none;
     color: inherit;
     font: inherit;
-    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: default;
+
+    &:focus {
+        outline: none;
+    }
 
     &:focus-visible {
         outline: 0.12em solid #00a4dc;
@@ -37,45 +60,79 @@
     }
 }
 
-// On a phone, or wherever the pointer is a finger, each chip is a full touch target with room between neighbours, so a tap
-// opens the chip meant and not the one beside it (web review 2026-10-07 round 2, P3 6). 3.5em at the line's 0.9em is
-// about 44 CSS pixels at the phone's root size.
-.layout-mobile .jfmod-ratingChip-button {
-    min-height: 3.5em;
-    margin: 0.25em 0.6em 0.25em 0;
-    padding: 0.3em 0.8em;
+// About a capital letter's height, on the text's line.
+.jfmod-ratingIcon {
+    flex: none;
+    width: auto;
+    height: 1.15em;
+    margin: 0 0.35em 0 0;
+    vertical-align: -0.2em;
+}
+
+// Older than the refresh window: dimmed; the tooltip says how old.
+.jfmod-rating-stale {
+    opacity: 0.55;
+}
+
+// On a phone, or wherever the pointer is a finger, each rating is a full touch target with room between neighbours, so a tap
+// opens the one meant (web review 2026-10-07 round 2, P3 6): about 44 CSS pixels at the phone's root size.
+.layout-mobile .jfmod-rating {
+    min-height: 3em;
+    padding: 0 0.3em;
+    margin-right: 0.5em;
 }
 
 @media (pointer: coarse) {
-    .jfmod-ratingChip-button {
-        min-height: 3.5em;
-        margin: 0.25em 0.6em 0.25em 0;
-        padding: 0.3em 0.8em;
+    .jfmod-rating {
+        min-height: 3em;
+        padding: 0 0.3em;
+        margin-right: 0.5em;
     }
 }
 
-.jfmod-ratingsChips {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
+// On a TV the ratings are focus stops: the focused one is marked like the app's other focused controls.
+.layout-tv .jfmod-rating:focus {
+    background: rgba(255, 255, 255, 0.18);
+    outline: 0.12em solid #00a4dc;
+    outline-offset: 0.1em;
 }
 
-.jfmod-ratingNote {
-    display: block;
-    width: 100%;
-    margin: 0.2em 0 0;
-    font-size: 0.9em;
-    opacity: 0.8;
+// The tooltip floats above the page (fixed, so the row's own overflow never clips it and nothing below moves): paper on
+// ground, the card radius, the secondary text size.
+.jfmod-ratingTooltip {
+    position: fixed;
+    z-index: 1100;
+    max-width: 24em;
+    padding: 0.5em 0.75em;
+    border-radius: 0.2em;
+    background: #202020;
+    color: rgba(255, 255, 255, 0.87);
+    box-shadow: 0 0.2em 0.8em rgba(0, 0, 0, 0.6);
+    font-size: 86%;
+    line-height: 1.4;
+    text-align: left;
+    pointer-events: none;
 }
 
-.jfmod-ratingChip-stale {
-    opacity: 0.65;
-    border-style: dashed;
+// What the row would say twice while the ratings show the same value (PHASE9, *Inline ratings*): the stock star or tomato.
+.jfmod-ratings-hideStar .starRatingContainer,
+.jfmod-ratings-hideStar [data-jfmod-star] {
+    display: none;
 }
 
-// The one source a card may show (P9.R7), inside the card's own secondary text line.
+.jfmod-ratings-hideCritic .mediaInfoCriticRating {
+    display: none;
+}
+
+// The one source a card may show (P9.R7), inside the card's own secondary text line: its mark and its value.
 .jfmod-cardRating {
     white-space: nowrap;
+
+    .jfmod-ratingIcon {
+        height: 1em;
+        margin: 0 0.25em 0 0;
+        vertical-align: -0.15em;
+    }
 }
 
 .jfmod-cardRating-stale {
