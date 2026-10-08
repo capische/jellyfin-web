@@ -23,7 +23,7 @@ import { writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? 'http://127.0.0.1:28096/');
-if (!['18096', '28096'].includes(testUrl.port)) throw new Error('The sweep runs only against an isolated instance (18096 or 28096)');
+if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('The sweep runs only against an isolated instance (18096, 28096 or the local 58096)');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const testUser = process.env.JELLYFINMOD_TEST_USER ?? 'oleksii';

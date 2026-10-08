@@ -19,7 +19,7 @@ import { join } from 'node:path';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 // The leased mod instances only (test, acceptance, live Phase 5/6); never production on 8096.
-if (!['18096', '28096', '48096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+if (!['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const shots = process.env.JELLYFINMOD_SHOTS ?? (() => { throw new Error('JELLYFINMOD_SHOTS is required'); })();
 mkdirSync(shots, { recursive: true });

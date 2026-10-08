@@ -9,7 +9,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['28096', '18096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+if (!['28096', '18096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const shots = process.env.JELLYFINMOD_SHOTS ?? (() => { throw new Error('JELLYFINMOD_SHOTS is required'); })();
 mkdirSync(shots, { recursive: true });
 const base = new URL('/web/', testUrl).href;
