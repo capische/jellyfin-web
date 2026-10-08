@@ -1,0 +1,3744 @@
+{
+  "tier": "chrome",
+  "results": [
+    {
+      "name": "desktop series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 633.5,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 680,
+        "itemWidths": [
+          96,
+          71,
+          301
+        ]
+      }
+    },
+    {
+      "name": "desktop series: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 633.5,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 680,
+        "itemWidths": [
+          96,
+          71,
+          301
+        ]
+      }
+    },
+    {
+      "name": "desktop series: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        34,
+        18,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "desktop series: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 633.5,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 680,
+        "itemWidths": [
+          96,
+          71,
+          301
+        ]
+      }
+    },
+    {
+      "name": "desktop series: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 633.5,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 680,
+        "itemWidths": [
+          96,
+          71,
+          301
+        ]
+      }
+    },
+    {
+      "name": "desktop series: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.3108K votes94%56 votes55%TMDB83%866 votes83%5.7K votesm85%23 votesm8.6410 votes4.3/562K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.3 · 108,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 94% · 56 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 55%. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 83% · 866 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt 83% · 5,700 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics 85% · 23 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.6 · 410 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.3/5 · 62,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 286,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        },
+        "fullWidth": 286
+      }
+    },
+    {
+      "name": "desktop series: the popup stays open with the pointer on it and closes when it leaves",
+      "ok": true,
+      "detail": {
+        "inside": true
+      }
+    },
+    {
+      "name": "desktop series: keyboard focus opens it, Escape closes it",
+      "ok": true,
+      "detail": {
+        "byKeyboard": true
+      }
+    },
+    {
+      "name": "desktop movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 651.3,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          68,
+          301,
+          111
+        ]
+      }
+    },
+    {
+      "name": "desktop movie: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 651.3,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          68,
+          301,
+          111
+        ]
+      }
+    },
+    {
+      "name": "desktop movie: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        34,
+        18,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "desktop movie: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 651.3,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          68,
+          301,
+          111
+        ]
+      }
+    },
+    {
+      "name": "desktop movie: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 651.3,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          68,
+          301,
+          111
+        ]
+      }
+    },
+    {
+      "name": "desktop movie: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.1250K votes91%310 votes88%25K votesTMDB7.81.2K votes83%21K votesm74%52 votesm8.41.3K votes4.1/590K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.1 · 250,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 88% · 25,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 7.8 · 1,234 votes. Via TMDB, from this title’s metadata",
+            "Trakt 83% · 21,000 votes. Via MDBList, as of 8/29/2026; may differ from the source’s own site. Older than the refresh window: last fetched 8/29/2026",
+            "Metacritic critics 74% · 52 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.4 · 1,300 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.1/5 · 90,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via TMDB, from this title’s metadata",
+            "Trakt, via MDBList, as of 8/29/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 286,
+          "oneLine": true,
+          "stale": [
+            "trakt"
+          ],
+          "inside": true
+        },
+        "fullWidth": 286
+      }
+    },
+    {
+      "name": "desktop movie: the popup stays open with the pointer on it and closes when it leaves",
+      "ok": true,
+      "detail": {
+        "inside": true
+      }
+    },
+    {
+      "name": "desktop movie: keyboard focus opens it, Escape closes it",
+      "ok": true,
+      "detail": {
+        "byKeyboard": true
+      }
+    },
+    {
+      "name": "desktop long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 677.4,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          94,
+          301,
+          120
+        ]
+      }
+    },
+    {
+      "name": "desktop long: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 677.4,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          94,
+          301,
+          120
+        ]
+      }
+    },
+    {
+      "name": "desktop long: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        34,
+        18,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "desktop long: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 677.4,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          94,
+          301,
+          120
+        ]
+      }
+    },
+    {
+      "name": "desktop long: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 286,
+        "groupLeft": 677.4,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          94,
+          301,
+          120
+        ]
+      }
+    },
+    {
+      "name": "desktop stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 53.9,
+        "groupLeft": 631.2,
+        "stockStar": true,
+        "stockTomato": true,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "trakt"
+        ],
+        "text": "74%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          48,
+          69,
+          59,
+          54,
+          111
+        ]
+      }
+    },
+    {
+      "name": "desktop file-less entry: the group in the entry's row, IMDb in place of its own TMDB star",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 20.8,
+        "groupWidth": 286,
+        "groupLeft": 467.3,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.9 72% 64% 76%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 286,
+        "inRow": true,
+        "marks": [
+          34,
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 440,
+        "itemWidths": [
+          301
+        ]
+      }
+    },
+    {
+      "name": "mobile series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.3 94% 55%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          92,
+          69,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile series: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.3 94% 55%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          92,
+          69,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile series: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        33,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "mobile series: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.3 94% 55%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          92,
+          69,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile series: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.3108K votes94%56 votes55%TMDB83%866 votes83%5.7K votesm85%23 votesm8.6410 votes4.3/562K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.3 · 108,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 94% · 56 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 55%. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 83% · 866 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt 83% · 5,700 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics 85% · 23 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.6 · 410 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.3/5 · 62,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 280,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        },
+        "fullWidth": 280,
+        "height": 43.1875
+      }
+    },
+    {
+      "name": "mobile series: a tap elsewhere closes it",
+      "ok": true
+    },
+    {
+      "name": "mobile movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.1 91% 88%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          66,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile movie: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.1 91% 88%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          66,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile movie: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        33,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "mobile movie: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 8.1 91% 88%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          66,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile movie: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.1250K votes91%310 votes88%25K votesTMDB7.81.2K votes83%21K votesm74%52 votesm8.41.3K votes4.1/590K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.1 · 250,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 88% · 25,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 7.8 · 1,234 votes. Via TMDB, from this title’s metadata",
+            "Trakt 83% · 21,000 votes. Via MDBList, as of 8/29/2026; may differ from the source’s own site. Older than the refresh window: last fetched 8/29/2026",
+            "Metacritic critics 74% · 52 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.4 · 1,300 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.1/5 · 90,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via TMDB, from this title’s metadata",
+            "Trakt, via MDBList, as of 8/29/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 280,
+          "oneLine": true,
+          "stale": [
+            "trakt"
+          ],
+          "inside": true
+        },
+        "fullWidth": 280,
+        "height": 43.1875
+      }
+    },
+    {
+      "name": "mobile movie: a tap elsewhere closes it",
+      "ok": true
+    },
+    {
+      "name": "mobile long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          91,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile long: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          91,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile long: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        33,
+        17,
+        17
+      ]
+    },
+    {
+      "name": "mobile long: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 452.5,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          91,
+          200
+        ]
+      }
+    },
+    {
+      "name": "mobile stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt",
+      "ok": true,
+      "detail": {
+        "lines": 2,
+        "rowHeight": 75.5,
+        "groupWidth": 55.1,
+        "groupLeft": 173.6,
+        "stockStar": true,
+        "stockTomato": true,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "trakt"
+        ],
+        "text": "74%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          47,
+          65,
+          46,
+          69,
+          57,
+          52
+        ]
+      }
+    },
+    {
+      "name": "mobile file-less entry: the group in the entry's row, IMDb in place of its own TMDB star",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 43.2,
+        "groupWidth": 185.9,
+        "groupLeft": 163.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.9 72% 64%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "libraryDocument",
+        "buttonHeight": 43.1875,
+        "fullWidth": 280,
+        "inRow": true,
+        "marks": [
+          33,
+          17,
+          17
+        ],
+        "rowWidth": 228,
+        "itemWidths": [
+          200
+        ]
+      }
+    },
+    {
+      "name": "tv1080 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place",
+      "ok": true,
+      "detail": {
+        "early": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 845.8,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": true,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "",
+          "focusStops": 0,
+          "links": 0,
+          "playMiddle": 221.5,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        },
+        "late": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 845.8,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 221.5,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080 series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 845.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv1080 series: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 845.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv1080 series: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23,
+        23
+      ]
+    },
+    {
+      "name": "tv1080 series: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 845.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv1080 series: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 845.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv1080 series: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv1080 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus",
+      "ok": true,
+      "detail": {
+        "up": "group",
+        "right": "card overflowPortraitCard show-focus show-animation card-wit"
+      }
+    },
+    {
+      "name": "tv1080 series: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.3108K votes94%56 votes55%TMDB83%866 votes83%5.7K votesm85%23 votesm8.6410 votes4.3/562K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.3 · 108,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 94% · 56 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 55%. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 83% · 866 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt 83% · 5,700 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics 85% · 23 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.6 · 410 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.3/5 · 62,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 385,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        },
+        "fullWidth": 385
+      }
+    },
+    {
+      "name": "tv1080 series: Back closes only the popup; focus stays on the group, the page stays",
+      "ok": true,
+      "detail": "group"
+    },
+    {
+      "name": "tv1080 series: an upstream refill of the row puts the group back in its place, focused, same width, one line",
+      "ok": true,
+      "detail": {
+        "refill": {
+          "back": true,
+          "index": 2,
+          "indexAfter": 2,
+          "focused": true
+        },
+        "afterRefill": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 845.8,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 221.5,
+          "focus": "group",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080 series: Down returns to the buttons; Play never moved",
+      "ok": true,
+      "detail": {
+        "inButtons": true,
+        "playBefore": 221.5,
+        "down": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 845.8,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 221.5,
+          "focus": "button-flat btnUserRating detailButton emby-button show-focu",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place",
+      "ok": true,
+      "detail": {
+        "early": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 869.7,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": true,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "",
+          "focusStops": 0,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        },
+        "late": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 869.7,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080 movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 869.7,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv1080 movie: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 869.7,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv1080 movie: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23,
+        23
+      ]
+    },
+    {
+      "name": "tv1080 movie: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 869.7,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv1080 movie: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 869.7,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv1080 movie: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv1080 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus",
+      "ok": true,
+      "detail": {
+        "up": "group",
+        "right": "selectSubtitles detailTrackSelect emby-select-withcolor emby"
+      }
+    },
+    {
+      "name": "tv1080 movie: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.1250K votes91%310 votes88%25K votesTMDB7.81.2K votes83%21K votesm74%52 votesm8.41.3K votes4.1/590K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.1 · 250,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 88% · 25,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 7.8 · 1,234 votes. Via TMDB, from this title’s metadata",
+            "Trakt 83% · 21,000 votes. Via MDBList, as of 8/29/2026; may differ from the source’s own site. Older than the refresh window: last fetched 8/29/2026",
+            "Metacritic critics 74% · 52 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.4 · 1,300 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.1/5 · 90,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via TMDB, from this title’s metadata",
+            "Trakt, via MDBList, as of 8/29/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 385,
+          "oneLine": true,
+          "stale": [
+            "trakt"
+          ],
+          "inside": true
+        },
+        "fullWidth": 385
+      }
+    },
+    {
+      "name": "tv1080 movie: Back closes only the popup; focus stays on the group, the page stays",
+      "ok": true,
+      "detail": "group"
+    },
+    {
+      "name": "tv1080 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line",
+      "ok": true,
+      "detail": {
+        "refill": {
+          "back": true,
+          "index": 3,
+          "indexAfter": 3,
+          "focused": true
+        },
+        "afterRefill": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 869.7,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "group",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080 movie: Down returns to the buttons; Play never moved",
+      "ok": true,
+      "detail": {
+        "inButtons": true,
+        "playBefore": 0,
+        "down": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 869.7,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnMoreCommands detailButton emby-button show-fo",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 1234,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv1080: with the group focused and no popup open, Back leaves the page as usual",
+      "ok": true,
+      "detail": {
+        "before": {
+          "focus": "group",
+          "popup": false,
+          "history": 12
+        },
+        "hash": "#/home"
+      }
+    },
+    {
+      "name": "tv1080 long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 904.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          405,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv1080 long: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 904.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          405,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv1080 long: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23,
+        23
+      ]
+    },
+    {
+      "name": "tv1080 long: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 904.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          405,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv1080 long: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 904.8,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.6 88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 221.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          405,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv1080 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 72.5,
+        "groupLeft": 842.7,
+        "stockStar": true,
+        "stockTomato": true,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "trakt"
+        ],
+        "text": "74%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          66,
+          91,
+          63,
+          93,
+          80,
+          73,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv1080 file-less entry: the group in the entry's row, IMDb in place of its own TMDB star",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 28,
+        "groupWidth": 384.5,
+        "groupLeft": 623,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 7.9 72% 64% 76%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "emby-button raised show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 1234,
+        "itemWidths": [
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv720 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place",
+      "ok": true,
+      "detail": {
+        "early": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 638.2,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": true,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "",
+          "focusStops": 0,
+          "links": 0,
+          "playMiddle": 217.5,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        },
+        "late": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 638.2,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 217.5,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720 series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 638.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv720 series: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 638.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv720 series: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23,
+        23
+      ]
+    },
+    {
+      "name": "tv720 series: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 638.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv720 series: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 638.2,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.3 94% 55% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          128,
+          94,
+          405
+        ]
+      }
+    },
+    {
+      "name": "tv720 series: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv720 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus",
+      "ok": true,
+      "detail": {
+        "up": "group",
+        "right": "headerButton headerButtonRight headerSearchButton paper-icon"
+      }
+    },
+    {
+      "name": "tv720 series: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.3108K votes94%56 votes55%TMDB83%866 votes83%5.7K votesm85%23 votesm8.6410 votes4.3/562K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.3 · 108,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 94% · 56 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 55%. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 83% · 866 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt 83% · 5,700 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics 85% · 23 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.6 · 410 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.3/5 · 62,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 385,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        },
+        "fullWidth": 385
+      }
+    },
+    {
+      "name": "tv720 series: Back closes only the popup; focus stays on the group, the page stays",
+      "ok": true,
+      "detail": "group"
+    },
+    {
+      "name": "tv720 series: an upstream refill of the row puts the group back in its place, focused, same width, one line",
+      "ok": true,
+      "detail": {
+        "refill": {
+          "back": true,
+          "index": 2,
+          "indexAfter": 2,
+          "focused": true
+        },
+        "afterRefill": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 638.2,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 217.5,
+          "focus": "group",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720 series: Down returns to the buttons; Play never moved",
+      "ok": true,
+      "detail": {
+        "inButtons": true,
+        "playBefore": 217.5,
+        "down": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 638.2,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 217.5,
+          "focus": "button-flat btnUserRating detailButton emby-button show-focu",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            128,
+            94,
+            405
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place",
+      "ok": true,
+      "detail": {
+        "early": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 662,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": true,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "",
+          "focusStops": 0,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        },
+        "late": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 662,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnPlay detailButton emby-button show-focus",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720 movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 662,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv720 movie: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 662,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv720 movie: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23,
+        23
+      ]
+    },
+    {
+      "name": "tv720 movie: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 662,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv720 movie: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 384.5,
+        "groupLeft": 662,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "IMDb 8.1 91% 88% 83%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          90,
+          405,
+          149
+        ]
+      }
+    },
+    {
+      "name": "tv720 movie: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv720 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus",
+      "ok": true,
+      "detail": {
+        "up": "group",
+        "right": "headerButton headerButtonRight headerSearchButton paper-icon"
+      }
+    },
+    {
+      "name": "tv720 movie: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles",
+      "ok": true,
+      "detail": {
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "tmdb",
+            "trakt",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.1250K votes91%310 votes88%25K votesTMDB7.81.2K votes83%21K votesm74%52 votesm8.41.3K votes4.1/590K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.1 · 250,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 88% · 25,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB 7.8 · 1,234 votes. Via TMDB, from this title’s metadata",
+            "Trakt 83% · 21,000 votes. Via MDBList, as of 8/29/2026; may differ from the source’s own site. Older than the refresh window: last fetched 8/29/2026",
+            "Metacritic critics 74% · 52 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.4 · 1,300 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.1/5 · 90,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "TMDB, via TMDB, from this title’s metadata",
+            "Trakt, via MDBList, as of 8/29/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 385,
+          "oneLine": true,
+          "stale": [
+            "trakt"
+          ],
+          "inside": true
+        },
+        "fullWidth": 385
+      }
+    },
+    {
+      "name": "tv720 movie: Back closes only the popup; focus stays on the group, the page stays",
+      "ok": true,
+      "detail": "group"
+    },
+    {
+      "name": "tv720 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line",
+      "ok": true,
+      "detail": {
+        "refill": {
+          "back": true,
+          "index": 3,
+          "indexAfter": 3,
+          "focused": true
+        },
+        "afterRefill": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 662,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "group",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720 movie: Down returns to the buttons; Play never moved",
+      "ok": true,
+      "detail": {
+        "inButtons": true,
+        "playBefore": 0,
+        "down": {
+          "lines": 1,
+          "rowHeight": 34.9,
+          "groupWidth": 384.5,
+          "groupLeft": 662,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.1 91% 88% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "button-flat btnMoreCommands detailButton emby-button show-fo",
+          "buttonHeight": 28,
+          "fullWidth": 385,
+          "inRow": true,
+          "marks": [
+            46,
+            24,
+            23,
+            23
+          ],
+          "rowWidth": 822,
+          "itemWidths": [
+            66,
+            91,
+            90,
+            405,
+            149
+          ]
+        }
+      }
+    },
+    {
+      "name": "tv720: with the group focused and no popup open, Back leaves the page as usual",
+      "ok": true,
+      "detail": {
+        "before": {
+          "focus": "group",
+          "popup": false,
+          "history": 12
+        },
+        "hash": "#/home"
+      }
+    },
+    {
+      "name": "tv720 long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 304.6,
+        "groupLeft": 697.1,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          325,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv720 long: no votes and no links in the row; the group is the row's one focus stop",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 304.6,
+        "groupLeft": 697.1,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          325,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv720 long: every mark in the row is drawn at its size (none squeezed)",
+      "ok": true,
+      "detail": [
+        46,
+        24,
+        23
+      ]
+    },
+    {
+      "name": "tv720 long: the row with the group stays on one line",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 304.6,
+        "groupLeft": 697.1,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          325,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv720 long: the group stays inside its row",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 304.6,
+        "groupLeft": 697.1,
+        "stockStar": false,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience"
+        ],
+        "text": "IMDb 7.6 88% 79%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          46,
+          24,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          325,
+          161
+        ]
+      }
+    },
+    {
+      "name": "tv720 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 72.5,
+        "groupLeft": 635,
+        "stockStar": true,
+        "stockTomato": true,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "trakt"
+        ],
+        "text": "74%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 0,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 385,
+        "inRow": true,
+        "marks": [
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          63,
+          93,
+          80,
+          73,
+          149
+        ]
+      }
+    },
+    {
+      "name": "fresh default: only IMDb, RT critics, RT audience and Trakt — inline and in the popup (TMDB and the rest off)",
+      "ok": true,
+      "detail": {
+        "state": {
+          "lines": 1,
+          "rowHeight": 26.5,
+          "groupWidth": 286,
+          "groupLeft": 633.5,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb 8.3 94% 55% 83%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 354.4,
+          "focus": "libraryDocument",
+          "buttonHeight": 20.8125,
+          "fullWidth": 286,
+          "inRow": true,
+          "marks": [
+            34,
+            18,
+            17,
+            17
+          ],
+          "rowWidth": 680,
+          "itemWidths": [
+            96,
+            71,
+            301
+          ]
+        },
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "tomatoes_audience",
+            "trakt"
+          ],
+          "text": "IMDb8.3108K votes94%56 votes55%83%5.7K votes",
+          "titles": [
+            "IMDb 8.3 · 108,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 94% · 56 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter) 55%. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt 83% · 5,700 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes audience (Popcornmeter), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Trakt, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 286,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        }
+      }
+    },
+    {
+      "name": "unticked in the settings area (Trakt, RT audience, TMDB): gone inline and from the popup; RT shows one number",
+      "ok": true,
+      "detail": {
+        "saved": "imdb,tomatoes_critic,metacritic,metacritic_user,letterboxd,rogerebert",
+        "state": {
+          "lines": 1,
+          "rowHeight": 26.5,
+          "groupWidth": 143.3,
+          "groupLeft": 651.3,
+          "stockStar": false,
+          "stockTomato": false,
+          "entryStar": false,
+          "standIn": false,
+          "inline": [
+            "imdb",
+            "tomatoes_critic"
+          ],
+          "text": "IMDb 8.1 91%",
+          "focusStops": 1,
+          "links": 0,
+          "playMiddle": 0,
+          "focus": "libraryDocument",
+          "buttonHeight": 20.8125,
+          "fullWidth": 143,
+          "inRow": true,
+          "marks": [
+            34,
+            18
+          ],
+          "rowWidth": 729,
+          "itemWidths": [
+            49,
+            67,
+            68,
+            158,
+            111
+          ]
+        },
+        "pop": {
+          "open": true,
+          "sources": [
+            "imdb",
+            "tomatoes_critic",
+            "metacritic",
+            "metacritic_user",
+            "letterboxd",
+            "rogerebert"
+          ],
+          "text": "IMDb8.1250K votes91%310 votesm74%52 votesm8.41.3K votes4.1/590K votesRE3.5/4",
+          "titles": [
+            "IMDb 8.1 · 250,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics 74% · 52 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users 8.4 · 1,300 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd 4.1/5 · 90,000 votes. Via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert 3.5/4. Via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "hiddenText": [
+            "IMDb, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Rotten Tomatoes critics (Tomatometer), via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic critics, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Metacritic users, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Letterboxd, via MDBList, as of 10/5/2026; may differ from the source’s own site",
+            "Roger Ebert, via MDBList, as of 10/5/2026; may differ from the source’s own site"
+          ],
+          "links": 0,
+          "width": 143,
+          "oneLine": true,
+          "stale": [],
+          "inside": true
+        }
+      }
+    },
+    {
+      "name": "desktop: below 60 % the splat and the spilled bucket",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoesCriticRotten",
+        "tomatoesAudienceSpilled",
+        "trakt"
+      ]
+    },
+    {
+      "name": "desktop: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 26.5,
+        "groupWidth": 205.9,
+        "groupLeft": 677.4,
+        "stockStar": true,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 354.4,
+        "focus": "libraryDocument",
+        "buttonHeight": 20.8125,
+        "fullWidth": 206,
+        "inRow": true,
+        "marks": [
+          18,
+          17,
+          17
+        ],
+        "rowWidth": 729,
+        "itemWidths": [
+          49,
+          67,
+          94,
+          221,
+          59,
+          120
+        ]
+      }
+    },
+    {
+      "name": "tv720: below 60 % the splat and the spilled bucket",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoesCriticRotten",
+        "tomatoesAudienceSpilled",
+        "trakt"
+      ]
+    },
+    {
+      "name": "tv720: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room",
+      "ok": true,
+      "detail": {
+        "lines": 1,
+        "rowHeight": 34.9,
+        "groupWidth": 276.9,
+        "groupLeft": 697.1,
+        "stockStar": true,
+        "stockTomato": false,
+        "entryStar": false,
+        "standIn": false,
+        "inline": [
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ],
+        "text": "88% 79% 77%",
+        "focusStops": 1,
+        "links": 0,
+        "playMiddle": 217.5,
+        "focus": "button-flat btnPlay detailButton emby-button show-focus",
+        "buttonHeight": 28,
+        "fullWidth": 277,
+        "inRow": true,
+        "marks": [
+          24,
+          23,
+          23
+        ],
+        "rowWidth": 822,
+        "itemWidths": [
+          66,
+          91,
+          125,
+          297,
+          80,
+          161
+        ]
+      }
+    },
+    {
+      "name": "desktop: the popup follows the user's own order with every source; the row keeps IMDb, RT critics, RT audience, Trakt",
+      "ok": true,
+      "detail": {
+        "pop": [
+          "letterboxd",
+          "trakt",
+          "imdb",
+          "metacritic",
+          "metacritic_user",
+          "rogerebert",
+          "tomatoes_audience",
+          "tomatoes_critic",
+          "tmdb"
+        ],
+        "inline": [
+          "imdb",
+          "tomatoes_critic",
+          "tomatoes_audience",
+          "trakt"
+        ]
+      }
+    },
+    {
+      "name": "desktop: cards show the chosen source's mark and value, with no tooltip or focus stop of their own",
+      "ok": true,
+      "detail": [
+        {
+          "icon": "imdb",
+          "text": "· IMDb8.1",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb5.2 (Aug 2026)",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb7.9",
+          "title": null,
+          "focusable": false
+        }
+      ]
+    },
+    {
+      "name": "no request left the machine apart from upstream's cast sender (11 of those, all blocked)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no icon was requested as a file",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

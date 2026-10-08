@@ -972,7 +972,7 @@ critics, RT audience and Trakt ticked) are in `settings-checkboxes.png`.
   its last column wraps.
 
 **Recommendation (agent):** A if the 720 movie row's narrow margin is acceptable — it reads best and matches Rotten Tomatoes'
-own marks; B if a safer TV margin matters more than a mark per number. The user picks.
+own marks; B if a safer TV margin matters more than a mark per number. The user picks. **Picked: A, with changes — user decision 13, *Final design* below.**
 
 ### Evidence (development machine only; not acceptance)
 
@@ -993,6 +993,83 @@ own marks; B if a safer TV margin matters more than a mark per number. The user 
 - The user's pick; then the chosen look is committed alone (the other two removed, with `ratingsGroupDesign()` and its
   `localStorage` switch), the harness's group checks become its main run, `p9-ratings.mjs` (the live runner) is updated for
   the group, and the Codex review and the live run on an instance follow.
+
+## Final design — user decision 13, 2026-10-08
+
+Opus 5.5, high. Mac only (no instance, no Pi, no Codex). The user picked look A of *design options 2* with changes; built,
+checked in the design harness in Chromium and Chrome, committed. It supersedes the three looks above (B and C are removed,
+with the look switch).
+
+### User decision 13 (2026-10-08)
+
+The user's words: "Use two RT marks. If 3rd provider (Trakt) is not fitting - hide it, in popup remove 'via ...' and text at
+the bottom (use simpler design / syntax) like <logo> <rating> <votes> this will make much smaller and nicer popup. it would be
+the best to have width of popup exactly like 'all 2 or 3 providers'."
+
+13. **Row:** look A — IMDb, then Rotten Tomatoes critics (tomato) and audience (popcorn), each its own mark and value, then
+    Trakt. **Trakt gives way** when the row does not fit on one line with it; it stays in the popup. IMDb and Rotten Tomatoes
+    never give way. The same rule applies when the user's own choice leaves two of the three.
+    **Popup:** only rows of `<mark> <value> <votes>` in aligned columns, one per ticked rating (RT critics and audience each
+    their own row) — no "via …" line, no caveat, no heading or footer; a stale value is dimmed; where a value came from and
+    when is the row's native `title` and hidden text for a screen reader. It is exactly as wide as the row's group with all of
+    its ticked providers (the widest stand-in, Trakt included even when Trakt gave way); a row never wraps or widens it —
+    votes are compact (108K, 5.7K) and a row that cannot fit is clipped with an ellipsis. Hover on a computer, a tap on a
+    phone, OK on a TV; Back closes only the popup; no links.
+
+### How Trakt's place and the popup's width are decided
+
+- **Once, at the group's first paint.** The group is rendered synchronously when upstream first fills the row (before it
+  focuses Play), as a hidden stand-in of the ticked row providers at their widest values ("10.0", "100%"), with the stock ★
+  and tomato it stands in for already out of the row. That width is the popup's width (`fullEm`). If the row's items are not
+  all on the group's line (on a phone: if the group is wider than the row), the Trakt stand-in is taken out and the group
+  measured again; that narrower width is the reserve, and the row shows Trakt only in the popup. Nothing is measured or
+  decided again while focus is past the row or on the group (a change of the ticked sources then keeps the earlier decision),
+  so nothing moves under a focused control, and focus findings 2–5 hold as described in *design options 2*.
+- **A title without IMDb or Rotten Tomatoes values** gives the stock ★ and tomato back and shows one rating in the space for
+  two or more — Trakt first (it then has room), else the first ticked rating.
+- **On the 1280×720 TV** the fixture movie's row (2024, 2h 15m, PG-13, the group, "Ends at") uses 801 of its 822 px with Trakt,
+  so Trakt stays; the longer fixture row ("Not Rated", 3h 23m) would need 848 px, so Trakt gives way there and the row is
+  IMDb 7.6 · 88% · 79% (`shots/final-movie-tv720-play.png`, `shots/final-long-tv720.png`). With a 21 px margin, a real movie
+  with a longer rating badge or "Ends at" loses Trakt at 720 in the same way. At 1920×1080 and on the desktop Trakt fits all
+  fixtures. On a 390 px phone the row is about 228 px and the full group 280, so Trakt gives way and IMDb and both RT marks
+  fit on their own line.
+- **Popup width** = the full stand-in's width: 286 px on the desktop, 385 px on a TV, 280 px on the phone (in the group's
+  font size, so it follows TV and phone sizing). With Trakt and RT audience unticked the group is IMDb and RT critics only, the
+  popup is that narrow, and a long vote count is clipped ("250K …"), as decided.
+
+### What changed in the code
+
+- `RatingsGroup.tsx`: one look (two RT marks); the reserve records the ticked sources it was measured for, the sources it has
+  room for (Trakt out when it gave way) and the full width; the popup is rows only with its width set; the look switch
+  (`ratingsGroupDesign()`, `localStorage.jfmodRatingsDesign`) and looks B and C are gone. `ratings.scss`: B and C styles gone;
+  the popup is a three-column grid (`auto auto minmax(0, 1fr)`, `white-space: nowrap`, votes ellipsed); on a phone the group's
+  items may still wrap as a last resort (no percentage widths, which had squeezed them). `settingsSections.tsx`: the help text
+  says IMDb and Rotten Tomatoes show beside the title, Trakt when the line has room, and every ticked rating with its votes in
+  the popup.
+- `p9-design.mjs`: the group's checks are the main run (every source ticked except the fresh-default and unticked checks), with
+  a longer-row fixture for Trakt giving way, the popup's rows-only content, width and no-wrap checks, the rotten marks, the
+  user's own order and two-of-three choice, and the cards; `JFMOD_DESIGN_SHEET` composes the contact sheet.
+- `p9-ratings.mjs` (live runner, not run: it needs the isolated instance): the chip and tooltip checks are replaced by the group
+  and popup (placement before the stock ★, values and marks, one focus stop, hover/focus/Escape, tap, OK and the remote's Back,
+  Back leaving the page with no popup open, Trakt's rule, the popup in the user's order), the old shared-row wrap probe is
+  removed (nothing is fitted after the first paint any more), and the default order is decision 9's. `p9-live.py` expects
+  decision 9's default and restores it at cleanup.
+
+### Evidence (development machine only; not acceptance)
+
+`evidence/p9/final-design-20261008/`: `contact-final.png`, `settings-checkboxes.png`, every crop in `shots/` (desktop hover
+popup for the movie and the series, TV 1080 and 720 with Play focused and with the OK popup, the 720 movie row with Trakt and
+the longer row without, the phone's tap popup, the file-less page on desktop, TV and phone, the fresh default, sources
+unticked, the user's own two of three), `checks-chromium.txt` (Chromium 153.0.8010.12, 115/115) and `checks-chrome.txt`
+(Google Chrome 153.0.8010.54, 114/114; the settings-picture check runs only in the run that takes pictures). Plugin suites on
+the Mac in parallel, on plugin `ce9d216`: Phase 0 and 1 smoke, Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass
+(`suites-mac/`).
+
+### Not done yet
+
+- The Codex review of the web and plugin changes since the last review, then the live chain and `p9-ratings.mjs` on an
+  isolated instance in Chromium and real Chrome (the runner's new group checks have not run against Jellyfin), and the
+  physical TV.
 
 ## Status and handover — 2026-10-07
 
