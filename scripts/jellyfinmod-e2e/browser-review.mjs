@@ -21,7 +21,7 @@ import { chromium } from 'playwright';
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL);
 // The isolated instances, and nothing else. Production is 8096 and must stay impossible to reach from here,
 // whatever else this list grows to hold.
-const ISOLATED_PORTS = ['18096', '28096'];
+const ISOLATED_PORTS = ['18096', '28096', '58096'];
 if (!ISOLATED_PORTS.includes(testUrl.port)) {
     throw new Error('Only the isolated instances on ports ' + ISOLATED_PORTS.join(' and ') + ' are allowed');
 }

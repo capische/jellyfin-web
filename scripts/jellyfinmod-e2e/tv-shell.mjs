@@ -16,7 +16,7 @@
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096'].includes(testUrl.port)) throw new Error('The TV-shell probe runs on the isolated instances only');
+if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('The TV-shell probe runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL(process.env.JELLYFINMOD_BASE_PATH ?? '/web/', testUrl).href;
 const only = (process.env.JELLYFINMOD_TV_LAYOUTS ?? 'tv1080,tv720,desktop,mobile').split(',');
