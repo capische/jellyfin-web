@@ -736,8 +736,11 @@ migration `PhaseNineRatingsIdentity`. One value per source:
 - `GET /JellyfinMod/Entries/{id}` gains `ratings[]` (empty while ratings are off).
 - `GET /JellyfinMod/Ratings/Items/{itemId}` — a native movie or series page: `{"entryId": "…" | null, "ratings": [...]}`.
   404 for an item the user cannot see (the host's own check); an episode or season answers `ratings: []`.
-- `GET /JellyfinMod/Ratings/Defaults` — `{"enabled":true,"defaultSources":["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"],
-  "availableSources":[…],"refreshDays":14}`, nothing about the key.
+- `GET /JellyfinMod/Ratings/Defaults` — `{"enabled":true,"defaultSources":["imdb","tomatoes_critic","tomatoes_audience","trakt"],
+  "availableSources":[…],"refreshDays":14}`, nothing about the key. `defaultSources` is the sources shown, in order (user
+  decision 9, 2026-10-08: TMDB and the four optional sources off by default); migration `PhaseNineRatingsDisplayDefaults`
+  moves a server still holding decision 6's exact list (`…,"tmdb","trakt"`) to it and keeps any other list
+  ([PHASE9.md](PHASE9.md), design options 2).
 - `POST /JellyfinMod/Browse` with `"ratingSource":"imdb"` (a known source; anything else 400): each row gains `rating` (one
   value) when it has one; without the field no row carries `rating`.
 

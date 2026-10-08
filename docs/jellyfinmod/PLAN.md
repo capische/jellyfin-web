@@ -434,7 +434,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   suites pass on the test host (the new `PhaseNineRatingsIntegration` included), and the live chain passed on 18096 against an MDBList
   stand-in in Chromium and real Chrome (39/39 each), fixtures removed. 2026-10-08: automatic fetching on arrival and at setup
   (user decision 8) and inline ratings with source marks and tooltips added, built on the Mac (suites and a design preview),
-  not yet reviewed or run live. Waiting for the Codex review, a live run, the user's MDBList key test and the user. Open questions 2–4 answered by the user on 2026-10-07. Not merged;
+  not yet reviewed or run live. Later on 2026-10-08 the user moved the ratings back into the first metadata row with a popup and
+  changed the default sources (decision 9: IMDb, RT critics and audience, Trakt); the plugin default and settings checkboxes are
+  committed, and three looks of the row and popup wait for the user's pick (PHASE9 *design options 2*). Waiting for the Codex review, a live run, the user's MDBList key test and the user. Open questions 2–4 answered by the user on 2026-10-07. Not merged;
   still 0.1.0.0.
 - Phase 10 — per-media retention: accepted; the real-window run RW passed on 2026-09-27, merged
   with retention off at plugin `11f0a67` (web bundle `9d30aba7e9b3`); suites 12/12 on 2026-09-25.
