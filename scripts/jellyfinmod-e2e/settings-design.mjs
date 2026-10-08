@@ -112,9 +112,17 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
     const buttons = [...root.querySelectorAll('button.MuiButton-root, a.MuiButton-root, button.jfmod-iconbtn')].filter(visible).map(el => {
         const s = getComputedStyle(el);
         unsupported = null;
-        const paintedBg = surface(el);
+        let paintedBg = surface(el);
         const paintUnsupported = unsupported;
         const behind = el.parentElement ? surface(el.parentElement) : [0, 0, 0];
+        // A button drawn at reduced opacity (a refused or busy one) fades its fill and its glyph into what is behind it.
+        let opacity = 1;
+        for (let up = el; up; up = up.parentElement) opacity *= Number(getComputedStyle(up).opacity);
+        let paintedFgOwn = over(rgba(s.color), paintedBg);
+        if (opacity < 1) {
+            paintedFgOwn = over([...paintedFgOwn, opacity], behind);
+            paintedBg = over([...paintedBg, opacity], behind);
+        }
         const icon = el.classList.contains('jfmod-iconbtn');
         const box = el.closest('.jfmod-secret-row');
         const rect = el.getBoundingClientRect();
@@ -141,7 +149,7 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
             disabled: !!el.disabled, focused: el === document.activeElement, marked: el.dataset.jfmodMark === '1',
             hasIcon: !icon && !!el.querySelector('.MuiButton-startIcon, .MuiButton-endIcon, svg'),
             outline: el === document.activeElement ? { style: s.outlineStyle, width: parseFloat(s.outlineWidth) } : null,
-            paintedFg: over(rgba(s.color), paintedBg), paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
+            paintedFg: paintedFgOwn, paintedBg, paintedBorder: over(rgba(s.borderTopColor), behind), paintUnsupported };
     });
     const parts = [...root.querySelectorAll('button, .MuiFormControl-root, .jfmod-secret-row, .fieldDescription, .jfmod-savemeta, .jfmod-state, .jfmod-notice, .jfmod-kv, .jfmod-brow, .jfmod-maprow, .jfmod-lead, .jfmod-grouptitle, .MuiFormControlLabel-root, a')]
         .filter(visible).filter(el => !el.parentElement.closest('.MuiFormControl-root, button, .MuiFormControlLabel-root'));
@@ -255,6 +263,9 @@ const looksWrong = (button, layoutName) => {
     }
     if (button.focused) {
         if (!button.disabled && ratio < 4.5) reasons.push(`focused contrast ${ratio.toFixed(2)}`);
+    } else if (button.refused && button.icon && button.inListRow) {
+        // A refused row icon (Move Up on the first row) has no fill of its own: only its glyph's contrast is checked.
+        if (ratio < 4.5) reasons.push(`refused contrast ${ratio.toFixed(2)}`);
     } else if (button.disabled) {
         if (button.color !== DISABLED || button.bg !== DISABLED_FILL) reasons.push('not MUI disabled grey');
     } else {
@@ -444,7 +455,7 @@ const checkDashboardSection = (layout, view) => {
         const reasons = [];
         if (button.kind !== want(button)) reasons.push(`kind ${button.kind}, want ${want(button)}`);
         if (button.icon ? button.height < 40 || button.width < 40 : Math.abs(button.height - reference) > 0.6) reasons.push(`size ${button.width}×${button.height}`);
-        if (!button.refused && button.contrast < 4.5) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
+        if ((!button.refused || (button.icon && button.inListRow)) && button.contrast < 4.5) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
         return reasons.length ? { text: button.text, reasons } : null;
     }).filter(Boolean);
     record(layout, `dashboard page ${view.id}: every button is red, blue or grey by its role, the size of Save and readable (${view.buttons.length})`,
@@ -645,12 +656,15 @@ for (const name of only) {
             // Enter on a row's Test runs it; the refetch that follows keeps the remote on that Test (it once jumped to the rail).
             const firstRow = await page.locator('.jfmod-brow[data-indexer]').first().getAttribute('data-indexer');
             await page.locator(`.jfmod-brow[data-indexer="${firstRow}"] [data-row-action="test"]`).focus();
+            // The test's own answer, then the settings read that follows it: the focus is checked only once both landed.
+            const tested = page.waitForResponse(response => response.request().method() === 'POST' && response.url().includes(`/Settings/Indexers/${firstRow}/Test`), { timeout: 60000 });
+            const reread = tested.then(() => page.waitForResponse(response => response.request().method() === 'GET' && /\/Settings\/Indexers(\?|$)/.test(response.url()), { timeout: 60000 }));
             await page.keyboard.press('Enter');
-            await page.waitForFunction(() => /\((ok|unreachable|timeout|unauthorized|[a-z_]+)\)/.test(document.querySelector('.jfmod-check-section[data-section="indexers"] .jfmod-notice-text')?.textContent ?? ''),
-                undefined, { timeout: 60000 }).catch(() => undefined);
-            await page.waitForTimeout(6000);
+            const landed = await Promise.all([tested, reread]).then(([test, list]) => test.ok() && list.ok(), () => false);
+            await page.waitForTimeout(2500);
             const afterTest = await here();
-            record(name, 'indexers: Test by Enter keeps the focus on that row\'s Test after the list is read again', afterTest.action === 'test' && afterTest.row === firstRow, afterTest);
+            record(name, 'indexers: Test by Enter keeps the focus on that row\'s Test after the list is read again',
+                landed && afterTest.action === 'test' && afterTest.row === firstRow, { landed, ...afterTest });
             await page.evaluate(() => document.activeElement?.blur?.());
         }
         if (name === 'desktop') {
@@ -769,6 +783,22 @@ for (const name of only) {
                 const expected = order.map((_, index) => [`up${index === 0 ? ':refused' : ''}`, `down${index === last ? ':refused' : ''}`, 'remove']);
                 record(name, 'profiles dialog: every quality has Move Up, Move Down and Remove; the ends are refused, not disabled',
                     order.length > 0 && JSON.stringify(order) === JSON.stringify(expected), order);
+                if (layout.tv) {
+                    // The remote walks onto a refused arrow too: Left from the first quality's Move Down reaches its Move Up,
+                    // and Enter there moves nothing.
+                    const firstDown = page.locator('.MuiDialog-paper .jfmod-qrow').first().locator('[data-row-action="down"]');
+                    await firstDown.focus();
+                    await page.keyboard.press('ArrowLeft');
+                    await page.waitForTimeout(250);
+                    const onUp = await page.evaluate(() => ({ action: document.activeElement?.dataset?.rowAction ?? null,
+                        first: document.activeElement?.closest('.jfmod-qrow') === document.querySelector('.MuiDialog-paper .jfmod-qrow') }));
+                    const before = await page.locator('.MuiDialog-paper .jfmod-qname').allTextContents();
+                    await page.keyboard.press('Enter');
+                    await page.waitForTimeout(300);
+                    const after = await page.locator('.MuiDialog-paper .jfmod-qname').allTextContents();
+                    record(name, 'profiles dialog: Left from the first quality\'s Move Down reaches its refused Move Up, and Enter there moves nothing',
+                        onUp.action === 'up' && onUp.first && JSON.stringify(before) === JSON.stringify(after), onUp);
+                }
             }
             record(name, `${section} dialog: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `${section} dialog: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);

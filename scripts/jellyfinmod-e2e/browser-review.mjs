@@ -860,7 +860,7 @@ try {
                 active: document.activeElement?.textContent?.trim()
             }));
             if (explicitContinuation.ids.length <= beforeMore || new Set(explicitContinuation.ids).size !== explicitContinuation.ids.length
-                || !explicitContinuation.active?.includes('More movie results')) {
+                || !explicitContinuation.active?.includes('More Movie Results')) {
                 throw new Error('Explicit discovery continuation repeated titles or lost focus: ' + JSON.stringify(explicitContinuation));
             }
 
@@ -889,7 +889,7 @@ try {
             await navigate(server + '#/search?query=' + encodeURIComponent(verificationQuery));
             const readContinuation = () => page.evaluate(() => ({
                 ids: Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]')).map(button => Number(button.dataset.jfmodAdd.split(':')[1])),
-                more: Array.from(document.querySelectorAll('.jfmod-discovery > button')).some(button => button.textContent.includes('More movie results')),
+                more: Array.from(document.querySelectorAll('.jfmod-discovery > button')).some(button => button.textContent.includes('More Movie Results')),
                 busy: document.querySelector('.jfmod-discovery')?.getAttribute('aria-busy'),
                 notice: document.querySelector('.jfmod-searchNotice')?.textContent?.trim(),
                 query: document.querySelector('#searchTextInput')?.value,
