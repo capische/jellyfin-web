@@ -668,9 +668,10 @@ const groupRun = async () => {
  * and in the popup; and a source unticked in the settings area's checkboxes is gone from both, with RT down to one number.
  */
 const defaultsAndSettings = async () => {
+    // Set before the app starts: it may read the defaults on its first page and keep them for a minute.
+    serverDefaults = FRESH_DEFAULTS;
     const { context, page } = await open('desktop');
     try {
-        serverDefaults = FRESH_DEFAULTS;
         await groupDetail(page, nativeUrl(SERIES_ID));
         let state = await groupState(page);
         await page.locator(SHOWN_GROUP).first().hover();
@@ -997,6 +998,112 @@ const reviewFixesRun = async () => {
     }
 };
 
+/**
+ * A fresh browser whose plugin Health answers `healthDelayMs` late, or never (null), from its first request; signed in, then
+ * sent in the app to `hash`. Returns the context and the page.
+ */
+const coldVisit = async (healthDelayMs, hash) => {
+    const context = await browser.newContext({ viewport: LAYOUTS.desktop.viewport, deviceScaleFactor: 1 });
+    await context.route('**/*', async route => {
+        const url = route.request().url();
+        if (!url.startsWith(ORIGIN)) return route.abort();
+        if (/\/JellyfinMod\/Health/i.test(url)) {
+            if (healthDelayMs === null) return new Promise(() => undefined);
+            await new Promise(resolve => setTimeout(resolve, healthDelayMs));
+        }
+        return route.continue().catch(() => undefined);
+    });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + '/web-mod/', { waitUntil: 'domcontentloaded' });
+    await page.evaluate(([userId]) => {
+        localStorage.setItem('layout', 'desktop');
+        localStorage.setItem(userId + '-appTheme', 'dark');
+    }, [USER_ID]);
+    await page.goto(ORIGIN + '/web-mod/#/login', { waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const manual = page.locator('.btnManual');
+    await page.locator('#txtManualName, .btnManual').first().waitFor({ timeout: 30000 });
+    if (await manual.isVisible().catch(() => false)) await manual.click();
+    await page.locator('#txtManualName').fill('oleksii');
+    await page.locator('.manualLoginForm .button-submit').click();
+    await page.waitForFunction(() => !location.hash.includes('login'), null, { timeout: 30000 });
+    await page.evaluate(target => {
+        location.hash = target;
+    }, hash);
+    return { context, page };
+};
+
+/** The Ratings Display page's state: still loading, the "not answered" notice, or its source switches. */
+const preferencesState = page => page.evaluate(() => {
+    const root = document.querySelector('#jfmodRatingsPreferencesPage');
+    return { loading: /Loading…/.test(root?.textContent ?? ''), unanswered: !!root?.querySelector('[data-jfmod-ratings-unanswered]'),
+        switches: root?.querySelectorAll('[data-jfmod-source-toggle]').length ?? 0 };
+});
+
+/** Whether the detail page's ratings group shows its values, and whether it still holds a blank reserved space. */
+const groupPresence = page => page.evaluate(() => {
+    const group = [...document.querySelectorAll('.jfmod-ratingsGroup')].find(node => node.closest('.page:not(.hide)') || node.getClientRects().length);
+    const shown = group && getComputedStyle(group).display !== 'none' && group.getClientRects().length > 0;
+    const button = group?.querySelector('[data-jfmod-ratings-group]');
+    return { shown: !!shown, standIn: !!button?.classList.contains('jfmod-groupButton-standIn'),
+        stockStar: [...document.querySelectorAll('.itemMiscInfo-primary .starRatingContainer')].some(star => star.getClientRects().length > 0) };
+});
+
+/**
+ * The web review of 2026-10-08 (round 11): waiting for the plugin's Health is bounded. A Health that never answers: Ratings
+ * Display says ratings are unavailable instead of loading for ever, and a detail page keeps no blank reserved space and shows
+ * the stock star. A Health that answers late (8 s): both recover by themselves, without a reload.
+ */
+const healthBoundRun = async () => {
+    const hang = await coldVisit(null, '#/catalog/preferences');
+    try {
+        await hang.page.waitForTimeout(6000);
+        const page = await preferencesState(hang.page);
+        await hang.page.evaluate(url => {
+            location.hash = url.slice(url.indexOf('#'));
+        }, nativeUrl(MOVIE_ID));
+        await hang.page.locator('.itemMiscInfo-primary:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
+        await hang.page.waitForTimeout(6000);
+        const detail = await groupPresence(hang.page);
+        if (CHECKS) {
+            check('review 11 desktop: a Health that never answers — Ratings Display says ratings are unavailable instead of loading for ever',
+                !page.loading && page.unanswered && page.switches === 0, page);
+            check('review 11 desktop: a Health that never answers — the detail page keeps no blank reserved space and shows the stock star',
+                !detail.shown && detail.stockStar, detail);
+        }
+    } finally {
+        await hang.context.close();
+    }
+    const latePage = await coldVisit(8000, '#/catalog/preferences');
+    try {
+        await latePage.page.waitForTimeout(5000);
+        const early = await preferencesState(latePage.page);
+        await latePage.page.locator('[data-jfmod-source-toggle="imdb"]').waitFor({ timeout: 20000 }).catch(() => undefined);
+        const later = await preferencesState(latePage.page);
+        if (CHECKS) {
+            check('review 11 desktop: a Health that answers after 8 s — Ratings Display first says unavailable, then shows its switches by itself',
+                early.unanswered && !early.loading && !later.unanswered && later.switches > 0, { early, later });
+        }
+    } finally {
+        await latePage.context.close();
+    }
+    const lateDetail = await coldVisit(8000, nativeUrl(MOVIE_ID).slice(nativeUrl(MOVIE_ID).indexOf('#')));
+    try {
+        await lateDetail.page.locator('.itemMiscInfo-primary:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
+        await lateDetail.page.waitForTimeout(4500);
+        const early = await groupPresence(lateDetail.page);
+        await lateDetail.page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
+        const later = await groupState(lateDetail.page);
+        if (CHECKS) {
+            check('review 11 desktop: a Health that answers after 8 s — the detail page shows the ratings group by itself once it has',
+                !early.shown && later?.inline.join(',') === INLINE.join(',') && !later.standIn && !later.stockStar,
+                { early, later: later && { inline: later.inline, standIn: later.standIn, stockStar: later.stockStar } });
+        }
+    } finally {
+        await lateDetail.context.close();
+    }
+};
+
 if (process.env.JFMOD_DESIGN_SETTINGS) {
     await settingsRun();
 } else {
@@ -1005,7 +1112,10 @@ if (process.env.JFMOD_DESIGN_SETTINGS) {
         await groupRun();
         await extrasRun();
     }
-    if (process.env.JFMOD_DESIGN_REVIEW !== '0') await reviewFixesRun();
+    if (process.env.JFMOD_DESIGN_REVIEW !== '0') {
+        await reviewFixesRun();
+        await healthBoundRun();
+    }
     if (SHOTS && process.env.JFMOD_DESIGN_SHEET) await contactSheet(process.env.JFMOD_DESIGN_SHEET);
 }
 
