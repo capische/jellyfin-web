@@ -17,6 +17,8 @@ interface OpenOptions {
     episodes?: EntryEpisode[];
     /** Preselects an episode, for example from a native episode page or an episode row. */
     episodeId?: string;
+    /** Opened from `episodeId`'s own page: the scope switch offers that episode, its season and All Seasons. */
+    episodePage?: boolean;
     /** `addVersion` for Get another quality (P6.M8); omitted is an ordinary acquire search. */
     intent?: ReleaseIntent;
     onChanged?: () => void;
@@ -31,7 +33,11 @@ export const pickerEpisodes = (episodes: EntryEpisode[]): ReleasePickerEpisode[]
 ].map(episode => ({
     id: episode.id,
     label: `S${pad(episode.seasonNumber)}E${pad(episode.episodeNumber)} · ${episode.title}`
-        + (episode.availability === 'onDisk' ? ' (on disk)' : '') + (episode.availability === 'unaired' ? ' (unaired)' : '')
+        + (episode.availability === 'onDisk' ? ' (on disk)' : '') + (episode.availability === 'unaired' ? ' (unaired)' : ''),
+    seasonNumber: episode.seasonNumber,
+    episodeNumber: episode.episodeNumber,
+    title: episode.title,
+    unaired: episode.availability === 'unaired'
 }));
 
 /**
@@ -59,6 +65,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         mediaType: options.mediaType,
         episodes: pickerEpisodes(options.episodes ?? []),
         initialEpisodeId: options.episodeId,
+        episodePage: options.episodePage,
         intent: options.intent,
         onChanged: options.onChanged
     }, content);
@@ -74,14 +81,16 @@ export const openReleasePickerForEntry = async (api: Api, entryId: string, nativ
     const detail = await getEntry(api, entryId);
     const sameId = (value?: string | null) => !!value && !!nativeItemId
         && value.replace(/-/g, '').toLowerCase() === nativeItemId.replace(/-/g, '').toLowerCase();
+    // An episode page names its episode, since the More menu's item may be another version of it.
+    const pageEpisodeId = episodeId ?? detail.episodes.find(episode => sameId(episode.jellyfinItemId))?.id;
     await openReleasePicker({
         api,
         entryId,
         title: detail.entry.title,
         mediaType: detail.entry.mediaType,
         episodes: detail.episodes,
-        // An episode page names its episode, since the More menu's item may be another version of it.
-        episodeId: episodeId ?? detail.episodes.find(episode => sameId(episode.jellyfinItemId))?.id,
+        episodeId: pageEpisodeId,
+        episodePage: !!pageEpisodeId,
         intent
     });
 };

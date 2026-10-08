@@ -1,7 +1,7 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
-import type { AcquisitionSummary, GrabOperation, QualityProfile, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
+import type { AcquisitionSummary, GrabMode, GrabOperation, QualityProfile, ReleaseIntent, ReleaseScope, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
@@ -254,6 +254,13 @@ export interface ReleaseQuery {
     profileId?: string;
     /** Omitted means `acquire`; `addVersion` needs the `versions` capability (P6.M6). */
     intent?: ReleaseIntent;
+    /**
+     * `season` or `series` searches packs and takes no `episodeId` and only the acquire intent; omitted is the episode (or
+     * movie) search. Needs the `acquisition.packs` capability (season packs, 2026-10-08).
+     */
+    scope?: Exclude<ReleaseScope, 'episode'>;
+    /** The season of a `season` search. */
+    seasonNumber?: number;
 }
 
 /** Searches enabled indexers for one target. Never starts a download. Administrator-only. */
@@ -263,8 +270,12 @@ export const searchReleases = async (api: Api, params: ReleaseQuery, options?: A
     return response.data;
 };
 
-/** Grabs one eligible release; the server holds it before sending it to the client (user decision 2). */
-export const grabRelease = async (api: Api, request: { searchId: string; releaseId: string; idempotencyKey: string },
+/**
+ * Grabs one eligible release; the server holds it before sending it to the client (user decision 2). `mode` (fill, add or
+ * replace) is sent only to plugins with `acquisition.packs`.
+ */
+export const grabRelease = async (api: Api,
+    request: { searchId: string; releaseId: string; idempotencyKey: string; mode?: GrabMode },
     options?: AxiosRequestConfig): Promise<GrabOperation> => {
     const response = await api.axiosInstance.post<GrabOperation>(api.basePath + BASE + '/Releases/Grab', request,
         { ...options, headers: authorization(api) });

@@ -79,6 +79,60 @@
     }
 }
 
+// An eligible row with its actions (season packs, 2026-10-08): the grab button takes the line, Add and Replace follow it as
+// sibling buttons, so nothing is nested and each is its own D-pad stop.
+.jfmod-releaseItem {
+    display: flex;
+    align-items: center;
+    margin: 0 0 0.1em;
+
+    > .jfmod-releaseRow {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        margin: 0;
+    }
+}
+
+// Upstream's round icon buttons, icon only, as the file rows' actions (user rules, 2026-10-08): a 2.5em circle (40px at the
+// 16px desktop root, scaling with TV's 125% and mobile's 90%), grey, Replace red as it removes files. Colours from the base
+// theme: text-secondary, error #c62828, primary #00a4dc.
+.jfmod-releaseActions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin-left: 0.4em;
+}
+
+.jfmod-releaseAction {
+    width: 2.5em;
+    height: 2.5em;
+    margin: 0 0.1em;
+    padding: 0;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+
+    > .material-icons {
+        font-size: 1.4em;
+    }
+
+    &[aria-disabled='true'] {
+        cursor: default;
+        opacity: 0.5;
+    }
+}
+
+.jfmod-releaseAction--danger {
+    color: var(--jf-palette-error-main, #c62828);
+}
+
+.jfmod-releaseAction:focus {
+    box-shadow: 0 0 0 0.15em #00a4dc;
+}
+
+.jfmod-releaseAction:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
 .jfmod-releaseRow--rejected {
     cursor: default;
     opacity: 0.75;
@@ -153,7 +207,12 @@
     opacity: 0.8;
 }
 
-// Get another quality (P6.M8): a quality already held is marked and cannot be grabbed.
+// What a pack covers (season packs, 2026-10-08), in the secondary text colour rather than primary: it describes the row.
+.jfmod-releaseChip--coverage {
+    border-color: currentColor;
+}
+
+// Get another quality (P6.M8): a quality already held is marked and cannot be grabbed. Also a pack's `N held`.
 .jfmod-releaseChip--held {
     border-color: currentColor;
     opacity: 0.86;
