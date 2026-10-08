@@ -2722,8 +2722,16 @@ The rule is UX §12.1.
   48096 restored afterwards: config,
   cache and certificates byte for byte with their metadata, the stand-ins and logs folders unchanged, the container's
   web directory, the stand-in process stopped and all four containers exited.
-- **Follow-up (runners, not blocking):** `settings-area.mjs` could check the page's server again after each reload and
-  in the clean-up retries, not only before the first write.
+- **Follow-up (runners, done 2026-10-08):** `settings-area.mjs` could check the page's server again after each reload and
+  in the clean-up retries, not only before the first write. Done in `test(settings,p7.s8)` `b06afdba29`: the check runs
+  after the TV layout reload and the reload that re-reads the saved days, inside the competing save before its PATCH,
+  and inside every clean-up attempt, which refuses to write and reports the server it found. Codex GPT-6.1 Sol, high,
+  one pass: **approve**, no defects (`review-errfix-4.md`). 48096 (bundle `aeb407ad49d5`, plugin `f7c274c`):
+  `settings-area` **39/39 on Playwright Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.54**; 48096 restored
+  byte for byte afterwards and its lease released.
+- **Follow-up (runners, not blocking, from that pass):** after the clean-up's refusal branch reloads the app, wait for a
+  signed-in `ApiClient` as the error branch does; check the page's server after the final reload before recording that
+  the original days are restored.
 
 #### S11 evidence
 
