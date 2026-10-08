@@ -27,7 +27,7 @@ const gitRevShort = () => new Promise(resolve => {
 // ---------------------------------------------------------------------------------------------
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 // Production 8096 must stay unreachable from this script no matter what else changes.
-const ISOLATED_PORTS = ['18096', '28096'];
+const ISOLATED_PORTS = ['18096', '28096', '58096'];
 if (!ISOLATED_PORTS.includes(testUrl.port)) {
     throw new Error('Only the isolated instances on ports ' + ISOLATED_PORTS.join(' and ') + ' are allowed');
 }
