@@ -1,4 +1,5 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useQuery } from '@tanstack/react-query';
 import React, { type FC, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -26,7 +27,6 @@ export interface ReleasePickerProps {
     initialEpisodeId?: string;
     /** `addVersion` searches for another version beside the held file (P6.M6, opened by Get another quality). */
     intent?: ReleaseIntent;
-    onClose: () => void;
     /** Called after a grab reaches a final state, so the opener can refresh history and summaries. */
     onChanged?: () => void;
 }
@@ -80,7 +80,8 @@ const newKey = () => 'grab-' + Date.now().toString(36) + '-' + Math.random().toS
 
 const statusText = (search: ReleaseSearch | undefined, waitingForEpisode: boolean, loading: boolean, error: string) => {
     if (waitingForEpisode) return 'Choose an episode to search for.';
-    if (loading) return 'Searching indexers…';
+    // A search in progress shows the spinner instead of words (user, 2026-10-08).
+    if (loading) return '';
     if (error) return error;
     if (!search) return '';
     let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}`;
@@ -105,6 +106,7 @@ const ReleaseLines: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => <>
         <span className='jfmod-releaseMeta'>
             {formatSize(candidate.size)} · {candidate.seeders === null ? 'seeders unknown' : candidate.seeders + '↑'}
             {' · '}{candidate.indexerName} · score {candidate.score}
+            {candidate.heldQuality && <span className='jfmod-releaseHeld'> · this quality is already in the library</span>}
         </span>
     </span>
     {/* The raw title is always visible: it is the only diagnostic when a grab goes wrong (UX §9). */}
@@ -120,7 +122,6 @@ const ReleaseRow: FC<{ candidate: ReleaseCandidate; disabled: boolean; onGrab: (
         const activate = useCallback(() => onGrab(candidate), [candidate, onGrab]);
         return <button type='button' className='jfmod-releaseRow' aria-disabled={disabled || !!candidate.heldQuality} onClick={activate}>
             <ReleaseLines candidate={candidate} />
-            {candidate.heldQuality && <span className='jfmod-releaseHeld'>This quality is already in the library.</span>}
         </button>;
     };
 
@@ -260,7 +261,7 @@ const useGrab = (api: Api, onChanged?: () => void) => {
  * Cancel follows the grabbed row during the hold (user decision 2). Rows only change on a deliberate search:
  * a new episode or profile. Nothing refetches underneath a focused row.
  */
-const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, intent, onClose, onChanged }) => {
+const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, intent, onChanged }) => {
     const [episodeId, setEpisodeId] = useState(initialEpisodeId ?? '');
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
@@ -330,14 +331,21 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         && <GrabStatus operation={operation} now={grab.now} cancelling={grab.cancelling} onCancel={grab.cancel} />;
 
     return <div className='jfmod-releasePicker' ref={container}>
-        {mediaType === 'series' && <EmbySelect id='jfmod-releaseEpisode' label='Episode' value={episodeId}
-            options={episodeOptions} onChange={setEpisodeId} />}
-        {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile for this search'
-            value={profileId} options={profileOptions} onChange={setProfileId} />}
+        {/* The choices share one line where the screen allows (user, 2026-10-08). */}
+        <div className='jfmod-releaseControls'>
+            {mediaType === 'series' && <EmbySelect id='jfmod-releaseEpisode' label='Episode' value={episodeId}
+                options={episodeOptions} onChange={setEpisodeId} />}
+            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile for this search'
+                value={profileId} options={profileOptions} onChange={setProfileId} />}
+        </div>
         {intent === 'addVersion' && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>
             The release you grab is added as another version; the ones you have stay.
         </p>}
-        <p className='jfmod-releaseStatus' role='status' tabIndex={-1}>{status}</p>
+        <p className='jfmod-releaseStatus' role='status' tabIndex={-1}>
+            {search.isFetching && <CircularProgress className='jfmod-releaseSpinner' size='1.4em' thickness={5} color='inherit'
+                aria-label='Searching indexers' />}
+            {status}
+        </p>
         {failedIndexers.length > 0 && <p className='jfmod-releaseNotice'>
             Partial results: {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}
         </p>}
@@ -356,7 +364,6 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             </button>
             {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} />)}
         </div>}
-        <button type='button' className={flatButtonClass() + ' jfmod-releaseClose'} onClick={onClose}>Close</button>
     </div>;
 };
 

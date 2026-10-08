@@ -71,6 +71,30 @@ const useSelectedSource = (view: HTMLElement) => {
 };
 
 /**
+ * The media source ids upstream's Version select lists for this page's item, or null when the page has no such select.
+ * A file the plugin still lists but Jellyfin no longer has (an item Jellyfin re-created under a new id) is not among them,
+ * and the page shows only these (user, 2026-10-08: a ghost second row on a one-file movie). Returned as one string so it
+ * stays the same value between renders.
+ */
+export const useStockSourceIds = (view: HTMLElement): string | null => {
+    const read = () => {
+        const select = findSelect(view);
+        return select ? Array.from(select.options).map(option => option.value).join(',') : null;
+    };
+    const [ids, setIds] = useState<string | null>(read);
+    useEffect(() => {
+        const select = findSelect(view);
+        if (!select) return;
+        const update = () => setIds(Array.from(select.options).map(option => option.value).join(','));
+        update();
+        const observer = new MutationObserver(update);
+        observer.observe(select, { childList: true });
+        return () => observer.disconnect();
+    }, [view]);
+    return ids;
+};
+
+/**
  * True only while this component dispatches its own `change`. Every other `change` on the select is the viewer's: a
  * mouse or touch pick is a trusted event, but the stock `emby-select` on a TV (webOS) picks through an action sheet and
  * dispatches a synthetic one, which must count as the viewer's choice too.
@@ -134,13 +158,13 @@ interface VideoHost {
 }
 
 /**
- * Where the chooser lives (design step 2): inside upstream's Video row, after its select. With two or more files and one
- * video stream, the row's disabled select is hidden by a mod class on the row while the chooser's trigger shows the same
- * text, so the row reads as one value with a chevron. A file with several video streams keeps upstream's select visible
+ * Where the chooser lives (design step 2): inside upstream's Video row, after its select. With one video stream, the row's
+ * disabled select is hidden by a mod class on the row while the chooser's trigger shows the same text, so the row reads as
+ * one value with a chevron. A file with several video streams keeps upstream's select visible
  * and the chooser takes a row of its own directly above it. Upstream's Version select is hidden only while the chooser is
  * mounted (UX §1.1 exception 2). Nothing here edits upstream's markup beyond these mod classes and the mount.
  */
-const useVideoHost = (view: HTMLElement, multi: boolean): VideoHost => {
+const useVideoHost = (view: HTMLElement): VideoHost => {
     const [state, setState] = useState<VideoHost>({ host: null, inline: true, videoText: '' });
     useEffect(() => {
         const container = view.querySelector<HTMLElement>(VIDEO_SELECTOR);
@@ -155,29 +179,24 @@ const useVideoHost = (view: HTMLElement, multi: boolean): VideoHost => {
             if (!inline && host.nextSibling !== container) form.insertBefore(host, container);
             if (inline) host.classList.remove('jfmod-videoChooser--row');
             else host.classList.add('jfmod-videoChooser--row');
-            if (inline && multi) container.classList.add('jfmod-videoHost');
+            if (inline) container.classList.add('jfmod-videoHost');
             else container.classList.remove('jfmod-videoHost');
-            // One file: the icons follow the Video text rather than the row's far end, where no header button's Down reaches
-            // them on the TV (each must be a D-pad stop, design step 2).
-            if (inline && !multi) container.classList.add('jfmod-videoIconsHost');
-            else container.classList.remove('jfmod-videoIconsHost');
             const videoText = select.options[select.selectedIndex]?.text ?? '';
             setState(current => (current.host === host && current.inline === inline && current.videoText === videoText ?
                 current : { host, inline, videoText }));
         };
         place();
-        if (multi) form.classList.add('jfmod-chooserMounted');
+        form.classList.add('jfmod-chooserMounted');
         const observer = new MutationObserver(place);
         observer.observe(select, { childList: true });
         return () => {
             observer.disconnect();
             host.remove();
             container.classList.remove('jfmod-videoHost');
-            container.classList.remove('jfmod-videoIconsHost');
             form.classList.remove('jfmod-chooserMounted');
             setState({ host: null, inline: true, videoText: '' });
         };
-    }, [view, multi]);
+    }, [view]);
     return state;
 };
 
@@ -228,7 +247,7 @@ const FileIcons: FC<FileIconsProps> = ({ version, busy, onHistory, pin, onPin, r
             data-jfmod-file-history={version.bindingId} onClick={history}>
             <span className='material-icons history' aria-hidden='true' />
         </button>}
-        {pin && <button type='button' className={iconClass(pin.kept ? 'jfmod-fileIcon--on' : undefined)}
+        {pin && <button type='button' className={iconClass(pin.kept ? 'jfmod-fileIcon--pin jfmod-fileIcon--on' : 'jfmod-fileIcon--pin')}
             title={pin.locked ?? pin.title} aria-label={pinLabel(pin, version)} aria-pressed={pin.kept}
             aria-disabled={busy || !!pin.locked} data-jfmod-file-pin={version.bindingId} onClick={keep}>
             <span className='material-icons push_pin' aria-hidden='true' />
@@ -294,16 +313,15 @@ const useSlide = () => {
 };
 
 /**
- * The Video row as the file chooser (design step 2, user 2026-10-07; UX §11.2). With two or more files its value carries a
- * chevron and opens a list of the files; choosing one sets upstream's `.selectSource` and dispatches its bubbling `change`,
+ * The Video row as the file chooser (design step 2, user 2026-10-07; UX §11.2). Its value carries a chevron and opens a list
+ * of the files, also when there is only one (user, 2026-10-08: one dropdown everywhere, with Get Another Quality in it); choosing one sets upstream's `.selectSource` and dispatches its bubbling `change`,
  * exactly as the version rows did, so Play, audio and subtitles follow, the viewer's own choice is never replaced and the
- * device preference still applies. With one file there is no chooser: upstream's row stays and the file's icons sit at its
- * end. If upstream's Video row is not there, nothing is mounted and the stock Version select stays visible.
+ * device preference still applies. If upstream's Video row is not there, nothing is mounted and the stock Version select stays visible.
  */
 const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onAddVersion, onHistory, pin, onPin, canRemove,
     onRemove, removeDate, note }) => {
     const multi = versions.length > 1;
-    const { host, inline, videoText } = useVideoHost(view, multi);
+    const { host, inline, videoText } = useVideoHost(view);
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
@@ -332,10 +350,6 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         removable: canRemove(version)
     });
 
-    if (!multi) {
-        return createPortal(<FileIcons version={versions[0]} {...iconProps(versions[0])} />, host);
-    }
-
     const triggerText = (inline && videoText) || [describeVersion(selected).resolution, describeVersion(selected).video]
         .filter(Boolean).join(' ');
     const listId = 'jfmod-fileList-' + (selected?.mediaSourceId ?? 'files');
@@ -343,7 +357,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         {!inline && <span className='jfmod-chooserLabel'>Version</span>}
         <div className='jfmod-chooserValue'>
             <button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
-                aria-label={`Video: ${triggerText}. ${versions.length} files`} onClick={toggle}>
+                aria-label={`Video: ${triggerText}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`} onClick={toggle}>
                 <span className='jfmod-videoTriggerText'>{triggerText}</span>
                 <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
             </button>
