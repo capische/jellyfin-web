@@ -81,7 +81,13 @@ const ACTION_WORDS = new Map([
     ['version_unkept', 'Stopped keeping'],
     ['version_removed', 'Removed'],
     ['upgrade_replaced', 'Removed'],
-    ['reclaimed', 'Removed']
+    ['reclaimed', 'Removed'],
+    // Season and series packs (2026-10-08): a Replace that removed the older files, or kept them and says why; files and
+    // episodes a pack skipped.
+    ['pack_replaced', 'Replaced'],
+    ['pack_replace_refused', 'Not replaced'],
+    ['pack_file_skipped', 'Skipped'],
+    ['pack_episode_skipped', 'Skipped']
 ]);
 
 /** The release group at the end of a scene-style release title (`…x265-PSA` → `PSA`). */
@@ -95,6 +101,11 @@ const eventDetail = (event: HistoryRecord): string | null => {
     const summary = event.summary;
     if (event.eventType === 'grabbed' || event.eventType === 'auto_grabbed') {
         const rest = summary.replace(/^(Automatically grabbed|Grabbed)\s+/, '').replace(/^S\d+E\d+\s+/, '');
+        return rest || null;
+    }
+    if (event.eventType === 'pack_replaced' || event.eventType === 'pack_replace_refused') {
+        // `S01E01: replaced old.mkv.` → `old.mkv`; `S01E01: kept old.mkv (kept) beside the new file.` → that sentence.
+        const rest = summary.replace(/^S\d+E\d+:\s*/, '').replace(/^replaced\s+/, '').replace(/\.$/, '');
         return rest || null;
     }
     if (event.eventType === 'imported') {

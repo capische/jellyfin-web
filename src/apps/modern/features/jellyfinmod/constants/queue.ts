@@ -49,7 +49,10 @@ const IMPORT_REASONS = new Map([
     ['import_disabled', 'Importing is turned off.'],
     ['cancelled', 'It was removed from the queue.'],
     ['target_missing', 'The title was removed from the catalog.'],
-    ['client_missing', 'The download client is no longer configured.']
+    ['client_missing', 'The download client is no longer configured.'],
+    // Season and series packs (2026-10-08).
+    ['pack_episode_missing', 'The pack holds no file for this episode.'],
+    ['pack_no_files', 'No file of the pack matched an episode it was grabbed for.']
 ]);
 
 const SEED_REASONS = new Map([
@@ -61,7 +64,10 @@ const SEED_REASONS = new Map([
     ['seeding_path_inside_library', 'The seeding copy is inside a library folder.'],
     ['library_link_unexpected', 'The library file disappeared outside JellyfinMod.'],
     ['seeding_path_unavailable', 'The seeding copy is not where it was imported from.'],
-    ['seeding_copy_survived', 'The client removed the torrent but its file is still on disk.']
+    ['seeding_copy_survived', 'The client removed the torrent but its file is still on disk.'],
+    // A pack's torrent is released once, after every one of its files (season and series packs, 2026-10-08).
+    ['pack_importing', 'Waiting for the pack\'s other files to be imported.'],
+    ['pack_waiting', 'Waiting for the pack\'s other files before the torrent is released.']
 ]);
 
 /** Why automation is not grabbing, one short sentence per `pausedReasons` code (P6.M8). */
@@ -172,13 +178,32 @@ export const updatedAgo = (observedAt: string | null, generatedAt: string): stri
 export const episodeCode = (seasonNumber: number, episodeNumber: number) =>
     'S' + String(seasonNumber).padStart(2, '0') + 'E' + String(episodeNumber).padStart(2, '0');
 
-/** The parsed primary line: the entry title, and for an episode its code and name. */
+/** The parsed primary line: the entry title, and for an episode its code and name, for a pack its label. */
 export const queueRowTitle = (row: QueueRow): string => {
     let title = row.releaseTitle;
     if (row.entry) title = row.entry.year ? row.entry.title + ' (' + row.entry.year + ')' : row.entry.title;
+    // One row for a whole pack: `Season 1 pack · 4 episodes` (season and series packs, 2026-10-08).
+    if (row.pack) return title + ' · ' + row.pack.label;
     if (!row.episode) return title;
     return title + ' · ' + episodeCode(row.episode.seasonNumber, row.episode.episodeNumber)
         + (row.episode.title ? ' · ' + row.episode.title : '');
+};
+
+const PACK_PROBLEM_STATES = new Set(['blocked', 'failed']);
+
+/** A blocked or failed import of a pack's episode, or one the pack skipped because it holds no file for it. */
+export const packProblem = (importState: string | null, reason: string | null) => !!importState
+    && (PACK_PROBLEM_STATES.has(importState) || (importState === 'cancelled' && reason === 'pack_episode_missing'));
+
+/**
+ * A pack row's episodes that need attention while the torrent's own row reads otherwise: `S01E03: The pack holds no file
+ * for this episode.` One sentence per episode, or null when none.
+ */
+export const packEpisodeProblems = (row: QueueRow): string | null => {
+    const problems = row.pack?.episodes.filter(episode => packProblem(episode.importState, episode.reason)) ?? [];
+    if (problems.length === 0) return null;
+    return problems.map(episode => episodeCode(episode.seasonNumber, episode.episodeNumber) + ': '
+        + (reasonMessage(episode.reason) ?? 'Something needs attention.')).join(' ');
 };
 
 const WAIT_WORDS: Record<SeedWaitReason, string> = {

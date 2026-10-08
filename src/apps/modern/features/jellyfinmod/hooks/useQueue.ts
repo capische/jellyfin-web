@@ -25,10 +25,16 @@ export const useQueueCapability = () => {
     };
 };
 
+const QUEUE_SLOW_POLL_MS = 60 * 1000;
+const intervalOf = (poll: true | 'slow') => (poll === 'slow' ? QUEUE_SLOW_POLL_MS : QUEUE_POLL_MS);
+
 interface UseQueueOptions {
     enabled: boolean;
-    /** Poll every 3 s while the consumer is mounted (UX §10); react-query pauses it while the tab is hidden. */
-    poll: boolean;
+    /**
+     * `true` polls every 3 s while the consumer is mounted (UX §10); `'slow'` once a minute, for a held episode's page that
+     * only watches for a pack starting on it (season packs, 2026-10-08); react-query pauses either while the tab is hidden.
+     */
+    poll: boolean | 'slow';
 }
 
 /**
@@ -45,27 +51,61 @@ export const useQueue = ({ enabled, poll }: UseQueueOptions) => {
         placeholderData: previous => previous,
         retry: false,
         // A probe (menu item, View queue links) reuses whatever the last read said for a minute.
-        staleTime: poll ? 0 : 60 * 1000,
-        refetchOnWindowFocus: poll,
+        staleTime: poll === true ? 0 : QUEUE_SLOW_POLL_MS,
+        refetchOnWindowFocus: poll === true,
         // A private queue answers 403 until an administrator changes the setting; asking every 3 s changes nothing.
-        refetchInterval: (current: Query<QueueList>) => poll && !isQueueAdminOnly(current.state.error) ? QUEUE_POLL_MS : false
+        refetchInterval: (current: Query<QueueList>) => (!poll || isQueueAdminOnly(current.state.error) ? false : intervalOf(poll)),
+        // A queue that answered 403 is not asked again on every page that mounts a probe; polling consumers still recover.
+        retryOnMount: false
     });
     return { ...query, adminOnly: isQueueAdminOnly(query.error) };
 };
 
 const IMPORT_FINISHED = new Set(['seeding']);
+/** A pack episode's import that is over: it no longer stands for that episode's current work. */
+const EPISODE_IMPORT_OVER = new Set(['completed', 'done', 'cancelled', 'failed', 'refused']);
+
+const ownEpisode = (row: QueueRow, episodeId: string | null | undefined) => row.pack?.episodes.find(item => item.episodeId === episodeId);
+
+/** The pack row still holds this episode: the torrent is not finished and the episode's own import is not over. */
+export const packHolds = (row: QueueRow, episodeId: string | null | undefined) => {
+    const own = ownEpisode(row, episodeId);
+    return !!own && !IMPORT_FINISHED.has(row.state) && (own.importState === null || !EPISODE_IMPORT_OVER.has(own.importState));
+};
+
+/** The pack row is moving this episode along: it holds it and the episode's import is not blocked. */
+const packWorksOn = (row: QueueRow, episodeId: string | null | undefined) =>
+    packHolds(row, episodeId) && ownEpisode(row, episodeId)?.importState !== 'blocked';
+
+/** 2 = current work for the target, 1 = needs attention, 0 = history. */
+const rank = (row: QueueRow, episodeId: string | null | undefined) => {
+    if (row.pack) {
+        if (packWorksOn(row, episodeId)) return 2;
+        const own = ownEpisode(row, episodeId);
+        return own?.importState === 'failed' || own?.importState === 'blocked' ? 1 : 0;
+    }
+    if (row.state === 'failed' || row.state === 'blocked') return 1;
+    return IMPORT_FINISHED.has(row.state) ? 0 : 2;
+};
 
 /**
- * The live queue row for one movie entry or one episode, for marks and detail lines that show `grabbed` or
- * `downloading`. Reading the queue keeps a card ring and the queue row on the same value within one poll (P5.I3).
+ * The live row for one movie entry or one episode (or a pack that claimed the episode), for marks and detail lines that
+ * show `grabbed` or `downloading`. Reading the queue keeps a card ring and the queue row on the same value within one
+ * poll (P5.I3). Current work wins over a row needing attention, which wins over history; the newest first within each,
+ * so an older pack's failure never hides an episode's current download (season packs, 2026-10-08). `poll` `'slow'`
+ * reads the queue once a minute, for a page that only watches whether a pack starts on a held episode.
  */
-export const useQueueRowFor = (entryId: string | undefined, episodeId: string | null | undefined, active: boolean): QueueRow | undefined => {
+export const useQueueRowFor = (entryId: string | undefined, episodeId: string | null | undefined, active: boolean,
+    poll: boolean | 'slow' = true):
+    QueueRow | undefined => {
     const capability = useQueueCapability();
-    const queue = useQueue({ enabled: active && capability.available && !!entryId, poll: true });
+    const queue = useQueue({ enabled: active && capability.available && !!entryId, poll });
     if (!active || !capability.available || !entryId) return undefined;
+    // A pack is one row with no episode of its own; it stands for every episode it claimed.
     const rows = queue.data?.items.filter(row => row.entry?.id === entryId
-        && (episodeId ? row.episode?.id === episodeId : !row.episode)) ?? [];
-    return rows.find(row => !IMPORT_FINISHED.has(row.state)) ?? rows[0];
+        && (episodeId ? row.episode?.id === episodeId || !!row.pack?.episodes.some(episode => episode.episodeId === episodeId) :
+            !row.episode && !row.pack)) ?? [];
+    return [...rows].sort((a, b) => rank(b, episodeId) - rank(a, episodeId) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
 };
 
 /**
