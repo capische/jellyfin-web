@@ -6,8 +6,8 @@
 //
 // JELLYFINMOD_SETTINGS_LAYOUTS=desktop,mobile,tv1080,tv720
 // Signs in as oleksii with an empty password. Changes the retention days by one and puts them back (through the API in a
-// `finally` when a step throws), runs the read-only TMDB test, forces one stale-revision refusal and reloads past it, and
-// leaves every value as it was. Saving retention also re-saves seed protection unchanged, which moves both revisions.
+// `finally` when a step throws), runs the read-only TMDB test, forces two stale-revision refusals (without and with an
+// unsaved edit) and reloads past each, and leaves every value as it was. Saving retention also re-saves seed protection unchanged, which moves both revisions.
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
@@ -30,8 +30,11 @@ const SECTION_IDS = ['overview', 'discovery', 'client', 'indexers', 'profiles', 
 const SECTION_TITLES = ['Overview', 'Discovery', 'Download Client', 'Indexers', 'Quality Profiles', 'Grabbing', 'Import and Seeding', 'Retention',
     'Automation', 'Interface', 'Diagnostics'];
 const sameList = (seen, wanted) => seen.length === wanted.length && seen.every((title, index) => title === wanted[index]);
-// The warning a section shows when its record changed on the server under unsaved edits (settingsSections.tsx, useDraft).
-const STALE_WARNING = 'These settings changed somewhere else while you were editing. Your edits are kept until you reload.';
+// What Retention says when seed protection was saved and retention was refused for a stale revision (settingsSections.tsx,
+// RetentionSection's save; settingsApi.ts, CONFLICT_MESSAGE). It is an error with a Reload, and it outranks the draft's
+// "changed somewhere else while you were editing" warning, which keeps an error that already offers a Reload.
+const PARTIAL_CONFLICT = 'Seed protection was saved; retention was not. These settings changed somewhere else since this page loaded. '
+    + 'Reload to see the current values, then save again.';
 
 const results = [];
 const record = (layout, check, ok, detail) => {
@@ -115,6 +118,35 @@ const pressRemoteBack = async page => {
         await client.detach();
     }
     await page.waitForTimeout(600);
+};
+/** Saves retention through the API as another session would, unchanged, which moves its revision. */
+const competingSave = (page, current) => page.evaluate(async server => {
+    const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
+    const saved = await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
+        data: JSON.stringify({ enabled: server.enabled, reclaimAfterDays: server.reclaimAfterDays, watchedUserMode: server.watchedUserMode,
+            selectedUserId: server.selectedUserId ?? null, exemptFavourites: server.exemptFavourites, revision: server.revision }) });
+    return { revision: saved.revision };
+}, current);
+/** The answer to this page's next PATCH of `path` (Settings/Retention or Settings/SeedProtection). */
+const nextPatch = (page, path) => page.waitForResponse(response => response.request().method() === 'PATCH'
+    && new URL(response.url()).pathname.endsWith('/JellyfinMod/' + path), { timeout: 30000 });
+/** Every notice in the open section, once its save has settled, so a notice that replaces another would be seen. */
+const settledNotices = async page => {
+    await page.locator('[data-submit="retention"]:not([disabled])').waitFor({ timeout: 30000 });
+    await page.waitForTimeout(1000);
+    return page.locator('.jfmod-check-main .jfmod-notice').evaluateAll(nodes => nodes.map(node => ({
+        kind: node.className, role: node.getAttribute('role'), text: node.querySelector('.jfmod-notice-text')?.textContent ?? '',
+        actions: [...node.querySelectorAll('.jfmod-notice-action button')].map(button => button.textContent.trim())
+    })));
+};
+/** Exactly one notice: the partial-save error with the conflict sentence and one Reload. */
+const isPartialConflict = notices => notices.length === 1 && notices[0].kind === 'jfmod-notice jfmod-notice-err' && notices[0].role === 'alert'
+    && notices[0].text === PARTIAL_CONFLICT && notices[0].actions.length === 1 && notices[0].actions[0] === 'Reload';
+/** Presses the notice's Reload and waits for the notice to go and the field to show the server's days. */
+const reloadPast = async (page, days) => {
+    await page.locator('.jfmod-check-main .jfmod-notice .jfmod-notice-action button', { hasText: /^Reload$/ }).click();
+    await page.locator('.jfmod-check-main .jfmod-notice').waitFor({ state: 'detached', timeout: 30000 });
+    await page.waitForFunction(value => document.querySelector('.jfmod-check-main input[type="number"]')?.value === value, days, { timeout: 30000 });
 };
 const openMenus = page => page.evaluate(() => document.querySelectorAll('.MuiPopover-root:not([aria-hidden="true"]), .MuiMenu-root:not([aria-hidden="true"])').length);
 
@@ -241,49 +273,50 @@ for (const name of only) {
                 record(name, 'Retention saves, echoes its revision and re-reads after a reload', shown === original && reread === changed,
                     { original, shown, changed, reread, meta });
 
-                // A stale revision: another session saves first, then this page saves an edit. The server refuses it (409), the
-                // page reads the settings again and, the record having changed under the edit, shows the warning with its
-                // Reload; the edit stays in the field. Reload takes the server's copy, and the next save is accepted.
-                const before = await retentionNow(page);
-                const elsewhere = await page.evaluate(async current => {
-                    const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
-                    const saved = await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
-                        data: JSON.stringify({ enabled: current.enabled, reclaimAfterDays: current.reclaimAfterDays, watchedUserMode: current.watchedUserMode,
-                            selectedUserId: current.selectedUserId ?? null, exemptFavourites: current.exemptFavourites, revision: current.revision }) });
-                    return { revision: saved.revision };
-                }, before);
-                await days.fill(original);
-                const refused = page.waitForResponse(response => response.request().method() === 'PATCH'
-                    && /\/JellyfinMod\/Settings\/Retention$/.test(new URL(response.url()).pathname), { timeout: 30000 });
+                // A stale revision without an edit: another session saves first, then this page saves as loaded. Seed protection
+                // is saved (200) and retention refused (409); the page says which half was saved, with the conflict sentence and
+                // a Reload, and Reload clears it. Before the fix this showed only "The request failed." with no Reload.
+                const plain = await retentionNow(page);
+                const plainElsewhere = await competingSave(page, plain);
+                const plainSeed = nextPatch(page, 'Settings/SeedProtection');
+                const plainRefused = nextPatch(page, 'Settings/Retention');
                 await page.locator('[data-submit="retention"]').click();
-                const refusedStatus = (await refused).status();
-                const warning = page.locator('.jfmod-check-main .jfmod-notice-warn');
-                await warning.waitFor({ state: 'visible', timeout: 30000 });
-                // Let the save settle, so a notice that replaces the warning would be seen.
-                await page.locator('[data-submit="retention"]:not([disabled])').waitFor({ timeout: 30000 });
-                await page.waitForTimeout(1000);
-                const notices = await page.locator('.jfmod-check-main .jfmod-notice').evaluateAll(nodes => nodes.map(node => ({
-                    kind: node.className, role: node.getAttribute('role'), text: node.querySelector('.jfmod-notice-text')?.textContent ?? '',
-                    actions: [...node.querySelectorAll('.jfmod-notice-action button')].map(button => button.textContent.trim())
-                })));
-                const kept = await days.inputValue();
-                record(name, 'A stale revision is refused and shows the warning with Reload, keeping the edit',
-                    elsewhere.revision > before.revision && refusedStatus === 409 && notices.length === 1
-                    && notices[0].kind === 'jfmod-notice jfmod-notice-warn' && notices[0].role === 'status'
-                    && notices[0].text === STALE_WARNING && notices[0].actions.length === 1 && notices[0].actions[0] === 'Reload' && kept === original,
-                    { before: before.revision, elsewhere: elsewhere.revision, refusedStatus, notices, kept });
+                const plainStatuses = [(await plainSeed).status(), (await plainRefused).status()];
+                await page.locator('.jfmod-check-main .jfmod-notice-err').waitFor({ state: 'visible', timeout: 30000 });
+                const plainNotices = await settledNotices(page);
+                const plainField = await days.inputValue();
+                record(name, 'A stale save without an edit says seed protection was saved and retention was not, with Reload',
+                    plainElsewhere.revision > plain.revision && plainStatuses[0] === 200 && plainStatuses[1] === 409
+                    && isPartialConflict(plainNotices) && plainField === changed,
+                    { before: plain.revision, elsewhere: plainElsewhere.revision, statuses: plainStatuses, notices: plainNotices, field: plainField });
+                await reloadPast(page, changed);
+                record(name, 'Its Reload clears the notice and shows the server\'s days', await days.inputValue() === changed);
 
-                await warning.locator('.jfmod-notice-action button', { hasText: /^Reload$/ }).click();
-                await page.locator('.jfmod-check-main .jfmod-notice').waitFor({ state: 'detached', timeout: 30000 });
-                await page.waitForFunction(value => document.querySelector('.jfmod-check-main input[type="number"]')?.value === value, changed, { timeout: 30000 });
+                // A stale revision with an edit: the same refusal while the field holds an unsaved value. The partial-save error
+                // with its Reload stays (the draft's own warning gives way to an error that offers a Reload) and the edit is
+                // kept. Reload takes the server's copy, and the next save is accepted.
+                const before = await retentionNow(page);
+                const elsewhere = await competingSave(page, before);
+                await days.fill(original);
+                const editedSeed = nextPatch(page, 'Settings/SeedProtection');
+                const refused = nextPatch(page, 'Settings/Retention');
+                await page.locator('[data-submit="retention"]').click();
+                const statuses = [(await editedSeed).status(), (await refused).status()];
+                await page.locator('.jfmod-check-main .jfmod-notice-err').waitFor({ state: 'visible', timeout: 30000 });
+                const notices = await settledNotices(page);
+                const kept = await days.inputValue();
+                record(name, 'A stale save with an edit shows the same error with Reload, keeping the edit',
+                    elsewhere.revision > before.revision && statuses[0] === 200 && statuses[1] === 409 && isPartialConflict(notices) && kept === original,
+                    { before: before.revision, elsewhere: elsewhere.revision, statuses, notices, kept });
+
+                await reloadPast(page, changed);
                 const afterReload = await days.inputValue();
                 await days.fill(original);
-                const accepted = page.waitForResponse(response => response.request().method() === 'PATCH'
-                    && /\/JellyfinMod\/Settings\/Retention$/.test(new URL(response.url()).pathname), { timeout: 30000 });
+                const accepted = nextPatch(page, 'Settings/Retention');
                 await page.locator('[data-submit="retention"]').click();
                 const acceptedStatus = (await accepted).status();
                 const ok = await page.locator('.jfmod-check-main .jfmod-notice-ok .jfmod-notice-text').innerText({ timeout: 30000 });
-                record(name, 'Reload takes the server\'s copy and clears the warning; the next save succeeds',
+                record(name, 'Reload takes the server\'s copy and clears the error; the next save succeeds',
                     afterReload === changed && acceptedStatus === 200 && ok === 'Saved.', { afterReload, acceptedStatus, ok });
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
