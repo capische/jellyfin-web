@@ -227,8 +227,30 @@ async function checkPickerOpens(page, layout, selector, label) {
     const opened = await dialog.first().waitFor({ state: 'visible', timeout: 10000 }).then(() => true, () => false);
     record(layout, `${label} opens the release picker`, opened);
     if (!opened) return;
+    // User, 2026-10-08: a cross at the right closes it (no back arrow, no Close button); its choices share one line; on a
+    // large screen it takes most of the screen and its content scrolls inside.
+    const shape = await page.evaluate(() => {
+        const dlg = document.querySelector('.jfmod-releaseDialog');
+        const box = dlg.getBoundingClientRect();
+        const title = dlg.querySelector('.formDialogHeaderTitle')?.getBoundingClientRect();
+        const cross = dlg.querySelector('.jfmod-releaseDialogClose');
+        const content = dlg.querySelector('.formDialogContent');
+        const lines = new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')].map(node => Math.round(node.getBoundingClientRect().top)));
+        return { cross: !!cross && cross.querySelector('.material-icons')?.classList.contains('close') && cross.getBoundingClientRect().left > (title?.right ?? 0),
+            back: !!dlg.querySelector('.material-icons.arrow_back'), closeButton: [...dlg.querySelectorAll('button')].some(button => button.textContent.trim() === 'Close'),
+            lines: lines.size, size: [Math.round(box.width), Math.round(box.height)], viewport: [innerWidth, innerHeight],
+            scrolls: !!content && ['auto', 'scroll'].includes(getComputedStyle(content).overflowY) && content.clientHeight < box.height };
+    });
+    record(layout, `${label}: the picker closes with a cross at the right; no back arrow, no Close button`, shape.cross && !shape.back && !shape.closeButton,
+        JSON.stringify(shape));
+    // A phone's width wraps the two choices by design (each takes at least 20em).
+    if (!isMobile(layout)) record(layout, `${label}: the picker's choices share one line`, shape.lines <= 1, `${shape.lines} lines`);
+    if (layoutOf(layout) === 'desktop' && shape.viewport[0] >= 1280) {
+        record(layout, `${label}: the picker takes most of a large screen and scrolls inside`, shape.size[0] >= 0.85 * shape.viewport[0]
+            && shape.size[1] >= 0.85 * shape.viewport[1] && shape.scrolls, `${shape.size} of ${shape.viewport}`);
+    }
     await back(page, layout);
-    if (await dialog.count()) await page.locator('.jfmod-releaseDialog .btnCancel, .jfmod-releaseDialog .btnCloseDialog').first().click().catch(() => {});
+    if (await dialog.count()) await page.locator('.jfmod-releaseDialog .jfmod-releaseDialogClose').first().click().catch(() => {});
     await dialog.first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     if (!isMobile(layout)) record(layout, `${label}: focus returns to the opener after the picker`, await activeMatches(page, selector), await activeName(page));
 }
@@ -267,46 +289,80 @@ function rowActionExpectation(button) {
     return { color: kept ? ROW_PRIMARY : ROW_GREY, title: button.title, label };
 }
 
+/** Opens the Video row's list of files (the chooser is a dropdown also with one file, user 2026-10-08). */
+async function openFileList(page, layout) {
+    if (await page.locator(`${PAGE} .jfmod-fileList--open`).count()) return true;
+    if (!await activate(page, layout, '.jfmod-videoTrigger', 'Video dropdown')) return false;
+    return page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
+}
+
 async function checkOneFile(page, layout, admin) {
-    await openDetail(page, `id=${ids.one}`, `${PAGE} .selectVideoContainer .jfmod-fileIcons`);
+    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
     // Colours are read at rest: no pointer over the row (stock icon buttons turn primary on hover).
     await page.mouse.move(0, 0);
     await checkHeaderIcon(page, layout, 'one-file episode', admin);
     await checkNoOldControls(page, layout, 'one-file episode');
+    // User, 2026-10-08: the Video row keeps upstream's track-row height and its label stays level with the value.
+    const row = await page.evaluate(sel => {
+        const box = el => el?.getBoundingClientRect();
+        const video = document.querySelector(`${sel} .selectVideoContainer`);
+        const audio = document.querySelector(`${sel} .selectAudioContainer`);
+        const label = box(video?.querySelector('label, .selectLabel'));
+        const trigger = box(document.querySelector(`${sel} .jfmod-videoTrigger`));
+        return { video: Math.round(box(video)?.height ?? 0), audio: Math.round(box(audio)?.height ?? 0),
+            labelTop: Math.round(label?.top ?? -1), valueTop: Math.round(trigger?.top ?? -2) };
+    }, PAGE);
+    record(layout, 'one-file episode: the Video value is a dropdown, the row as tall as Audio, its label level',
+        row.video > 0 && Math.abs(row.video - row.audio) <= 1 && Math.abs(row.labelTop - row.valueTop) <= 1, JSON.stringify(row));
+    if (!await openFileList(page, layout)) { record(layout, 'one-file episode: the dropdown opens its one file', false); return; }
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(300);
     const icons = await page.evaluate(sel => {
-        const host = document.querySelector(`${sel} .selectVideoContainer .jfmod-fileIcons`);
+        const rows = document.querySelectorAll(`${sel} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--add)`);
+        const host = rows[0]?.querySelector('.jfmod-fileIcons');
         if (!host) return null;
-        const names = [...host.querySelectorAll('button')].map(button => button.querySelector('.material-icons')?.className.replace('material-icons', '').trim());
-        // 2.5em of the layout's root size: 40px on desktop, scaled by TV's 125% and mobile's 90%.
         const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
         const buttons = [...host.querySelectorAll('button')];
-        const opacity = buttons.map(button => getComputedStyle(button).opacity);
-        const shape = buttons.map(button => ({ w: Math.round(button.getBoundingClientRect().width), h: Math.round(button.getBoundingClientRect().height),
-            min: Math.floor(2.5 * root) - 1, round: getComputedStyle(button).borderRadius === '50%', color: getComputedStyle(button).color,
-            label: button.getAttribute('aria-label'), title: button.title, pressed: button.getAttribute('aria-pressed'),
-            icon: button.querySelector('.material-icons')?.className.replace('material-icons', '').trim() }));
-        const select = document.querySelector(`${sel} .selectVideoContainer select`);
-        return { names, opacity, shape, selectShown: !!select && getComputedStyle(select).display !== 'none',
-            chooser: !!document.querySelector(`${sel} .jfmod-videoTrigger`) };
+        const shape = buttons.map(button => {
+            const glyph = button.querySelector('.material-icons');
+            const hit = getComputedStyle(button, '::before');
+            return { w: Math.round(button.getBoundingClientRect().width), h: Math.round(button.getBoundingClientRect().height),
+                hitW: parseFloat(hit.width) || 0, hitH: parseFloat(hit.height) || 0, min: Math.floor(2.5 * root) - 1,
+                round: getComputedStyle(button).borderRadius === '50%', color: getComputedStyle(button).color, opacity: getComputedStyle(button).opacity,
+                label: button.getAttribute('aria-label'), title: button.title, pressed: button.getAttribute('aria-pressed'),
+                icon: glyph?.className.replace('material-icons', '').trim(), tilt: glyph ? getComputedStyle(glyph).transform : 'none',
+                background: getComputedStyle(button).backgroundColor };
+        });
+        return { rows: rows.length, add: !!document.querySelector(`${sel} [data-jfmod-add-version]`), names: shape.map(button => button.icon), shape };
     }, PAGE);
+    record(layout, 'one-file episode: the list has one file' + (admin ? ' and Get Another Quality' : ''),
+        !!icons && icons.rows === 1 && icons.add === admin, JSON.stringify({ rows: icons?.rows, add: icons?.add }));
     const want = admin ? ['history', 'push_pin', 'close'] : ['history'];
-    record(layout, `one-file episode: Video row ends with ${want.join(', ')}`, !!icons && JSON.stringify(icons.names) === JSON.stringify(want),
-        JSON.stringify(icons));
-    record(layout, 'one-file episode: no chooser; upstream Video text stays', !!icons && icons.selectShown && !icons.chooser);
+    record(layout, `one-file episode: the file's row ends with ${want.join(', ')}`, !!icons && JSON.stringify(icons.names) === JSON.stringify(want),
+        JSON.stringify(icons?.names));
     if (icons) {
-        // User rules, 2026-10-08: round, icon-only, at least 2.5em (40px at 16px), grey, the cross red, named for the file.
-        record(layout, 'one-file episode: row actions are round icon buttons at least 2.5em across',
-            icons.shape.every(button => button.round && button.w >= button.min && button.h >= button.min), JSON.stringify(icons.shape.map(b => [b.w, b.h, b.min])));
+        // User, 2026-10-08: drawn the track row's height, round, each answering a 2.5em circle; grey, the cross red.
+        record(layout, 'one-file episode: row actions are round, no taller than the row, each answering a 2.5em circle',
+            icons.shape.every(button => button.round && button.h <= row.audio + 1 && button.hitW >= button.min && button.hitH >= button.min),
+            JSON.stringify(icons.shape.map(b => [b.w, b.h, b.hitW, b.hitH, b.min])));
         const expected = icons.shape.map(rowActionExpectation);
         record(layout, 'one-file episode: grey at rest, the cross red, the pin primary only while kept',
-            expected.every((row, index) => !!row && icons.shape[index].color === row.color),
+            expected.every((rowWant, index) => !!rowWant && icons.shape[index].color === rowWant.color),
             icons.shape.map((b, index) => `${b.icon}=${b.color} (want ${expected[index]?.color})`).join(', '));
         record(layout, 'one-file episode: each action names its file and has its Title Case tooltip',
-            expected.every((row, index) => !!row && icons.shape[index].label === row.label && icons.shape[index].title === row.title),
+            expected.every((rowWant, index) => !!rowWant && icons.shape[index].label === rowWant.label && icons.shape[index].title === rowWant.title),
             icons.shape.map((b, index) => `${b.label} / ${b.title} (want ${expected[index]?.label} / ${expected[index]?.title})`).join(', '));
-        record(layout, 'one-file episode: icons are not dimmed', icons.opacity.every(value => value === '1'), icons.opacity.join(','));
+        record(layout, 'one-file episode: icons are not dimmed', icons.shape.every(button => button.opacity === '1'), icons.shape.map(b => b.opacity).join(','));
+        const pin = icons.shape.find(button => button.icon === 'push_pin');
+        if (pin) {
+            // The pin looks pinned: tilted while loose, upright on the primary tint while kept.
+            const pinned = pin.pressed === 'true';
+            record(layout, 'one-file episode: the pin is tilted when loose and upright on a tint when kept',
+                pinned ? pin.tilt === 'none' && pin.background !== 'rgba(0, 0, 0, 0)' : pin.tilt !== 'none',
+                `${pin.pressed} ${pin.tilt} ${pin.background}`);
+        }
     }
-    await checkHistoryPopover(page, layout, '.selectVideoContainer [data-jfmod-file-history]');
+    await checkHistoryPopover(page, layout, '.jfmod-fileList [data-jfmod-file-history]');
     if (admin) await checkMoreMenuItem(page, layout, true);
     else await checkMoreMenuItem(page, layout, false);
 }
@@ -534,8 +590,12 @@ async function checkBadge(page, layout, { id, text }) {
 
 /** Pin on the one-file episode: the plugin reports the file kept; pressing it again stops keeping it. */
 async function checkPin(page, layout) {
-    await openDetail(page, `id=${ids.one}`, `${PAGE} [data-jfmod-file-pin]`);
+    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
+    if (!await openFileList(page, layout)) { record(layout, 'pin: the Video dropdown opens', false); return; }
     const pin = `${PAGE} [data-jfmod-file-pin]`;
+    // User, 2026-10-08: keeping a file must not push the page down; the confirmation is upstream's toast.
+    const layoutTop = () => page.evaluate(sel => Math.round(document.querySelector(`${sel} .itemDetailsGroup`)?.getBoundingClientRect().top ?? -1), PAGE);
+    const topBefore = await layoutTop();
     const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const kept = async () => {
@@ -548,6 +608,10 @@ async function checkPin(page, layout) {
     await page.waitForTimeout(3000);
     const after = await kept();
     record(layout, 'pin toggles Keep and the plugin reports the file kept', before === false && after === true, `${before} → ${after}`);
+    const topAfter = await layoutTop();
+    const toast = await page.locator('.toast').allTextContents().catch(() => []);
+    record(layout, 'keeping does not move the page; the confirmation is a toast', topBefore === topAfter && toast.some(text => /kept/i.test(text)),
+        `${topBefore} → ${topAfter}; toast ${JSON.stringify(toast)}`);
     record(layout, 'the pin shows kept (pressed, primary)', await page.locator(pin).first().getAttribute('aria-pressed') === 'true');
     await page.locator(pin).first().click();
     await page.waitForTimeout(3000);
@@ -617,10 +681,11 @@ async function checkLayout(browser, layout, user, admin) {
         } else { notVerified(label, 'two-file episode', 'JELLYFINMOD_DD_TWO not set'); }
         if (ids.movie) {
             await run('movie page', async () => {
-                await openDetail(page, `id=${ids.movie}`, `${PAGE} .selectVideoContainer .jfmod-fileIcons`);
+                await openDetail(page, `id=${ids.movie}`, `${PAGE} .jfmod-videoTrigger`);
                 await checkHeaderIcon(page, label, 'movie', admin);
                 await checkNoOldControls(page, label, 'movie');
-                await checkHistoryPopover(page, label, '[data-jfmod-file-history]');
+                if (await openFileList(page, label)) await checkHistoryPopover(page, label, '.jfmod-fileList [data-jfmod-file-history]');
+                else record(label, 'movie: the Video dropdown opens', false);
                 // Movies have no per-title window, so their menu is upstream's for everyone (implementation choice 8).
                 await checkMoreMenuItem(page, label, false, false, 'on a movie page');
             });
@@ -631,7 +696,7 @@ async function checkLayout(browser, layout, user, admin) {
         if (admin && layout === 'desktop') {
             if (process.env.JELLYFINMOD_DD_WINDOW === '1' && ids.one) {
                 await run('window dialog', async () => {
-                    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-fileIcons`);
+                    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
                     await checkMoreMenuItem(page, label, true, true);
                 });
             } else { notVerified(label, 'the window dialog changes the episode window', 'JELLYFINMOD_DD_WINDOW not set'); }
