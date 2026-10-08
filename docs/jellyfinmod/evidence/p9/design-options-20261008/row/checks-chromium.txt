@@ -1,0 +1,42 @@
+browser: chromium 153.0.8010.12
+ok - row desktop series: every enabled source on the ratings' own line, in order
+ok - row desktop series: the line sits under the stock rows, outside them, within its reserved height
+ok - row desktop series: the stock star repeating IMDb is hidden
+ok - row desktop movie: every enabled source on the ratings' own line, in order
+ok - row desktop movie: the line sits under the stock rows, outside them, within its reserved height
+ok - row desktop movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - row desktop: hover shows the tooltip with the votes
+ok - row mobile series: every enabled source on the ratings' own line, in order
+ok - row mobile series: the line sits under the stock rows, outside them, within its reserved height
+ok - row mobile series: the stock star repeating IMDb is hidden
+ok - row mobile movie: every enabled source on the ratings' own line, in order
+ok - row mobile movie: the line sits under the stock rows, outside them, within its reserved height
+ok - row mobile movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - row mobile: a tap shows the tooltip with the votes
+ok - row tv1080 series: a late answer fills the reserved line and the focused Play does not move
+ok - row tv1080 series: every enabled source on the ratings' own line, in order
+ok - row tv1080 series: the line sits under the stock rows, outside them, within its reserved height
+ok - row tv1080 series: the stock star repeating IMDb is hidden
+ok - row tv1080 series: first focus is Play
+ok - row tv1080 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - row tv1080 movie: a late answer fills the reserved line and the focused Play does not move
+ok - row tv1080 movie: every enabled source on the ratings' own line, in order
+ok - row tv1080 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - row tv1080 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - row tv1080 movie: first focus is Play
+ok - row tv1080 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - row tv720 series: a late answer fills the reserved line and the focused Play does not move
+ok - row tv720 series: every enabled source on the ratings' own line, in order
+ok - row tv720 series: the line sits under the stock rows, outside them, within its reserved height
+ok - row tv720 series: the stock star repeating IMDb is hidden
+ok - row tv720 series: first focus is Play
+ok - row tv720 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - row tv720 movie: a late answer fills the reserved line and the focused Play does not move
+ok - row tv720 movie: every enabled source on the ratings' own line, in order
+ok - row tv720 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - row tv720 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - row tv720 movie: first focus is Play
+ok - row tv720 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - no request left the machine apart from upstream's cast sender (4 of those, all blocked)
+ok - no icon was requested as a file
+40 passed, 0 failed
