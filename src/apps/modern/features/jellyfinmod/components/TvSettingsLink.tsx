@@ -23,7 +23,7 @@ const TvSettingsLink: FC = () => {
     return (
         <div className='padded-left padded-right jfmod-tvSettingsLink'>
             {ratings && <a className={raisedButtonClass()} href='#/catalog/preferences' data-jfmod-tv-ratings=''>
-                <span>Ratings display</span>
+                <span>Ratings Display</span>
             </a>}
             {visible && <a className={raisedButtonClass()} href='#/catalog/settings' data-jfmod-tv-settings=''>
                 <span>JellyfinMod Settings</span>

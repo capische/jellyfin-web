@@ -133,9 +133,9 @@ const RatingsPreferencesPage: FC = () => {
     }
 
     return (
-        <Page id='jfmodRatingsPreferencesPage' title='Ratings display' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
+        <Page id='jfmodRatingsPreferencesPage' title='Ratings Display' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
             <div className='padded-left padded-right padded-top padded-bottom-page jfmod-ratingsPreferences'>
-                <h1>Ratings display</h1>
+                <h1>Ratings Display</h1>
                 {content}
             </div>
         </Page>

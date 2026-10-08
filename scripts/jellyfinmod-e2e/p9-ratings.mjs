@@ -294,7 +294,7 @@ async function desktop(browser) {
     await page.locator('[aria-controls="app-user-menu"]').first().click();
     await page.waitForTimeout(800);
     const menu = await page.locator('#app-user-menu').innerText().catch(() => '');
-    record(layout, 'The user menu offers Ratings display', menu.includes('Ratings display'), menu.split('\n').filter(Boolean));
+    record(layout, 'The user menu offers Ratings display', menu.includes('Ratings Display'), menu.split('\n').filter(Boolean));
     await page.keyboard.press('Escape');
     await preferencesPage(page, layout);
 
@@ -469,7 +469,7 @@ async function desktop(browser) {
     const oldMenu = await oldPage.locator('#app-user-menu').innerText().catch(() => '');
     await oldPage.keyboard.press('Escape');
     record(layout, 'A plugin without the ratings capabilities: no group, no menu item, no card rating and no ratingSource sent (card choice still on)',
-        oldChips.length === 0 && !oldMenu.includes('Ratings display') && oldCards === 0 && oldPage.jfmodBrowse.length > 0
+        oldChips.length === 0 && !oldMenu.includes('Ratings Display') && oldCards === 0 && oldPage.jfmodBrowse.length > 0
         && oldPage.jfmodBrowse.every(body => !('ratingSource' in body)), { chips: oldChips.length, cards: oldCards, requests: oldPage.jfmodBrowse.length });
     await older.close();
 

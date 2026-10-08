@@ -1713,19 +1713,34 @@ const RatingsFetching: FC<{ status: RatingsStatusView | undefined }> = ({ status
     </div>;
 };
 
-/** One default source: ticked or not, and its place in the order every user starts from (user decisions 6 and 9). */
+/**
+ * One default source: ticked or not, and its place in the order every user starts from (user decisions 6 and 9). Move Up and
+ * Move Down are round icons (UX §12.1); a move with nowhere to go is refused, not disabled, and the moved source's button
+ * keeps the focus, as a quality's does, so a remote can press it again.
+ */
 const SourceRow: FC<{ source: string; index: number; count: number; on: boolean; onToggle: (source: string) => void; onMove: (source: string, by: number) => void }> = ({
     source, index, count, on, onToggle, onMove
 }) => {
+    const name = RATING_SOURCE_NAMES[source] ?? source;
     const toggle = useCallback(() => onToggle(source), [onToggle, source]);
-    const up = useCallback(() => onMove(source, -1), [onMove, source]);
-    const down = useCallback(() => onMove(source, 1), [onMove, source]);
+    const move = useCallback((by: number, action: string) => {
+        onMove(source, by);
+        window.setTimeout(() => {
+            const button = [...document.querySelectorAll<HTMLElement>(`[data-jfmod-default-source] [data-row-action="${action}"]`)]
+                .find(element => element.dataset.source === source);
+            if (button && document.activeElement !== button) button.focus();
+        }, 0);
+    }, [onMove, source]);
+    const up = useCallback(() => move(-1, 'up'), [move]);
+    const down = useCallback(() => move(1, 'down'), [move]);
     return (
         <div className='jfmod-qrow' data-jfmod-default-source={source}>
-            <FormControlLabel control={<Checkbox checked={on} onChange={toggle} />} label={RATING_SOURCE_NAMES[source] ?? source} />
+            <FormControlLabel control={<Checkbox checked={on} onChange={toggle} />} label={name} />
             {on && <span className='jfmod-rowactions'>
-                <Button size='small' variant='outlined' disabled={index === 0} onClick={up} aria-label={`Move ${RATING_SOURCE_NAMES[source]} up`}>Up</Button>
-                <Button size='small' variant='outlined' disabled={index === count - 1} onClick={down} aria-label={`Move ${RATING_SOURCE_NAMES[source]} down`}>Down</Button>
+                <IconAction label={`Move ${name} Up`} refused={index === 0} onClick={up} data={{ 'row-action': 'up', source }}><ArrowUpwardIcon /></IconAction>
+                <IconAction label={`Move ${name} Down`} refused={index === count - 1} onClick={down} data={{ 'row-action': 'down', source }}>
+                    <ArrowDownwardIcon />
+                </IconAction>
             </span>}
         </div>
     );
@@ -1740,7 +1755,7 @@ export const RatingsSection: FC<SectionProps> = props => {
     const [draft, set, , ratingsSaved] = useDraft(ratings, {}, section);
     const keySecret = useSecretChange('ratings', ratings?.revision, section.resets);
     const apiKey = keySecret.change;
-    const { run } = section;
+    const { run, test } = section;
     const chosen: string[] = useMemo(() => Array.isArray(draft.defaultSources) ? draft.defaultSources as string[] : ratings?.defaultSources ?? [],
         [draft.defaultSources, ratings?.defaultSources]);
     const available: string[] = ratings?.availableSources ?? [];
@@ -1767,11 +1782,18 @@ export const RatingsSection: FC<SectionProps> = props => {
         // marks them stale so this browser shows the change at once and others within RATINGS_STALE_MS (web review 2026-10-07, P2 1).
         queryClient.invalidateQueries({ predicate: query => isRatingsQuery(query.queryKey, api.basePath) }).catch(() => undefined);
     }, 'Saved.'), [run, api, draft, chosen, apiKey, keySecret, ratings, ratingsSaved]);
-    const testKey = useCallback(() => run(async () => {
-        const result = await request<{ ok: boolean; code: string; message: string; sources: string[] }>(api, 'POST', 'Settings/Ratings/Test');
-        const sources = result.sources?.length ? ' Sources: ' + result.sources.map(source => RATING_SOURCE_NAMES[source] ?? source).join(', ') + '.' : '';
-        return { jfmodNotice: { kind: result.ok ? 'ok' : 'err', text: `${result.message} (${result.code})${sources}` } as NoticeState };
-    }), [run, api]);
+    // Test sits in the key's box as an icon, its words and its result under the box, as the TMDB token's does (UX §12.1). A
+    // result belongs to the revision it tested: a saved replacement or clear, or a key being typed, hides it.
+    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState } | null>(null);
+    const testedRevision = ratings?.revision;
+    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice }), [testedRevision]);
+    const testKey = useCallback(() => test('Settings/Ratings/Test', api, sayTest), [test, api, sayTest]);
+    const shownResult = testResult && testResult.revision === ratings?.revision && apiKey.action === 'unchanged' && ratings?.apiKeyConfigured ?
+        testResult.notice : null;
+    const keyTest = useMemo(() => ({
+        id: 'ratings', label: 'Test Key', run: testKey, disabled: section.busy, result: shownResult,
+        help: 'Makes one real MDBList call for a well-known title. Save a new key first. A key that passes starts fetching every title at once, within the daily budget.'
+    }), [testKey, section.busy, shownResult]);
     if (!ratings) {
         return <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' notice={{ kind: 'warn', text: 'Unavailable in this plugin build.' }} onGo={props.onGo}><span /></SectionFrame>;
     }
@@ -1786,11 +1808,8 @@ export const RatingsSection: FC<SectionProps> = props => {
                 { key: 'dailyBudget', label: 'MDBList calls per day', type: 'int', help: 'Stay below your MDBList tier (the free tier allows 1,000 a day); manual refreshes and Test count too.' }
             ]} draft={draft} onChange={set} />
             <div className='jfmod-group'>
-                <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set} />
-                <div className='jfmod-testline'>
-                    <Button variant='outlined' size='small' disabled={section.busy} onClick={testKey} data-test='ratings'>Test</Button>
-                    <span className='fieldDescription'>Makes one real MDBList call for a well-known title. Save a new key first. A key that passes starts fetching every title at once, within the daily budget.</span>
-                </div>
+                <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API Key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set}
+                    test={keyTest} />
                 {ratings.providerOverride && <Notice notice={{ kind: 'warn', text: 'This server fetches ratings from a test address set in its configuration file, not from MDBList.' }} />}
                 <div className='fieldDescription jfmod-lead'>
                     One MDBList key brings IMDb, Rotten Tomatoes critics and audience, TMDB, Trakt, Metacritic, Letterboxd and Roger Ebert. TMDB&apos;s own score comes
@@ -1799,9 +1818,9 @@ export const RatingsSection: FC<SectionProps> = props => {
                 </div>
             </div>
             <div className='jfmod-group'>
-                <h3 className='jfmod-grouptitle'>Ratings shown</h3>
+                <h3 className='jfmod-grouptitle'>Ratings Shown</h3>
                 <div className='fieldDescription'>
-                    Ticked ratings show for every user who has not chosen their own in Ratings display. IMDb and Rotten Tomatoes show
+                    Ticked ratings show for every user who has not chosen their own in Ratings Display. IMDb and Rotten Tomatoes show
                     beside the title, and Trakt when the line has room; every ticked rating shows with its votes, in this order, in the
                     popup that opens on hover, a tap or OK. Fetching is the same either way.
                 </div>
