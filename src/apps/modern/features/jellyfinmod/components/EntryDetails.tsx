@@ -11,6 +11,7 @@ import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
+import { announce } from '../integration/announce';
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
@@ -84,7 +85,6 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // An older plugin omits the summary; the page must still render (P1.W14).
     const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
     const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
-    const [message, setMessage] = useState('');
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = capabilities.includes(RELEASES_CAPABILITY);
@@ -101,11 +101,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const poster = getTmdbImage(entry.posterPath);
     const mutate = useCallback(async (action: () => Promise<void>) => {
         setBusy(true);
-        setMessage('');
         try {
             await action();
         } catch {
-            if (!signal.aborted) setMessage('The change could not be saved. Please try again.');
+            if (!signal.aborted) announce('The change could not be saved. Please try again.');
         } finally {
             if (!signal.aborted) setBusy(false);
         }
@@ -183,7 +182,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 setEpisodes(updated.episodes);
                 setHistory(updated.history);
                 setRetention(updated.retention);
-                setMessage('This title will be kept.');
+                announce('This title will be kept.');
             }
         });
     }, [api, busy, entry.id, mutate, signal]);
@@ -205,7 +204,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 setEpisodes(updated.episodes);
                 setHistory(updated.history);
                 setRetention(updated.retention);
-                setMessage('Metadata refreshed.');
+                announce('Metadata refreshed.');
             }
         });
     }, [api, busy, entry.id, mutate, signal]);
@@ -273,7 +272,6 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}
         {mount('.overview', entry.overview)}
         {mount('.itemDetailsGroup', <>
-            <p role='status'>{message}</p>
             {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
             <AcquisitionLine acquisition={acquisition} />
             {!isMovie && <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />}
