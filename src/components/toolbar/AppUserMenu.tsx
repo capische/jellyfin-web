@@ -152,7 +152,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                         <StarHalf />
                     </ListItemIcon>
                     <ListItemText>
-                        Ratings display
+                        Ratings Display
                     </ListItemText>
                 </MenuItem>
             )}
