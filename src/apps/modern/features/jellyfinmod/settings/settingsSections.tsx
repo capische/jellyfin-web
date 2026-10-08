@@ -1660,36 +1660,43 @@ interface RatingsStatusView {
     running?: { kind: string; startedAt: string; remaining: number } | null;
 }
 
-const RatingsFetching: FC<{ api: Api; initial: RatingsStatusView | undefined }> = ({ api, initial }) => {
-    const [status, setStatus] = useState(initial);
-    useEffect(() => {
-        setStatus(initial);
-        // A save or a Test may have just started a pass in the background: look once more shortly after.
-        let alive = true;
-        const again = window.setTimeout(() => {
-            request<RatingsStatusView>(api, 'GET', 'Ratings/Status').then(next => {
-                if (alive) setStatus(next);
-            }).catch(() => undefined);
-        }, 2500);
-        return () => {
-            alive = false;
-            window.clearTimeout(again);
-        };
-    }, [api, initial]);
+/** How often the open Ratings section reads the status again: often while a pass runs, slowly while idle. */
+const STATUS_BUSY_MS = 3000;
+const STATUS_IDLE_MS = 15000;
+
+/**
+ * Keeps `Ratings/Status` current while the Ratings section is open (review 2026-10-08, P3 6-7): a bounded read every few
+ * seconds while a pass runs and every 15 s while idle (none while the page is hidden), written into the settings area's own
+ * cached data, so the section's header and the rail's summary read the same live status as the panel — without reading the
+ * whole settings area again, and without touching any form the administrator is editing.
+ */
+const useLiveRatingsStatus = (api: Api, status: RatingsStatusView | undefined, enabled: boolean) => {
     const running = !!status?.running;
     useEffect(() => {
-        if (!running) return;
+        if (!enabled) return;
         let alive = true;
-        const timer = window.setInterval(() => {
-            request<RatingsStatusView>(api, 'GET', 'Ratings/Status').then(next => {
-                if (alive) setStatus(next);
-            }).catch(() => undefined);
-        }, 5000);
+        let timer: number | undefined;
+        const tick = async () => {
+            if (!document.hidden) {
+                const next = await request<RatingsStatusView>(api, 'GET', 'Ratings/Status').catch(() => undefined);
+                if (!alive) return;
+                if (next) {
+                    queryClient.setQueryData<SettingsData>(['JellyfinMod', api.basePath, 'SettingsArea'],
+                        current => current ? { ...current, ratingsStatus: next } : current);
+                }
+            }
+            if (alive) timer = window.setTimeout(tick, running ? STATUS_BUSY_MS : STATUS_IDLE_MS);
+        };
+        // A save or a Test may just have started a pass in the background: the first look comes soon.
+        timer = window.setTimeout(tick, running ? STATUS_BUSY_MS : 2500);
         return () => {
             alive = false;
-            window.clearInterval(timer);
+            window.clearTimeout(timer);
         };
-    }, [api, running]);
+    }, [api, running, enabled]);
+};
+
+const RatingsFetching: FC<{ status: RatingsStatusView | undefined }> = ({ status }) => {
     if (!status) return null;
     return <div className='jfmod-group'>
         <h3 className='jfmod-grouptitle'>Fetching</h3>
@@ -1728,6 +1735,7 @@ export const RatingsSection: FC<SectionProps> = props => {
     const ratings = data.ratings;
     const status = data.ratingsStatus;
     const section = useSectionState(reload, RATINGS_READS, ratingsRead);
+    useLiveRatingsStatus(api, status, !!ratings);
     const [draft, set, , ratingsSaved] = useDraft(ratings, {}, section);
     const keySecret = useSecretChange('ratings', ratings?.revision, section.resets);
     const apiKey = keySecret.change;
@@ -1795,7 +1803,7 @@ export const RatingsSection: FC<SectionProps> = props => {
                 {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
                     on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
             </div>
-            <RatingsFetching api={api} initial={status} />
+            <RatingsFetching status={status} />
         </SectionFrame>
     );
 };
