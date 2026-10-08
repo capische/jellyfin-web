@@ -16,8 +16,8 @@ export const RATINGS_CARD_SOURCE_KEY = 'jfmodRatingsCardSource';
 /** Every source this release shows, in the complete order; the server's list wins when it has one. */
 export const ALL_SOURCES: RatingSource[] = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt', 'metacritic', 'metacritic_user',
     'letterboxd', 'rogerebert'];
-/** The decided default order (user decision 6, 2026-10-07), used until the server's answer arrives. */
-export const DEFAULT_SOURCES: RatingSource[] = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt'];
+/** The decided default sources (user decision 9, 2026-10-08; decision 6 also had TMDB), used until the server's answer arrives. */
+export const DEFAULT_SOURCES: RatingSource[] = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'trakt'];
 
 /** Short names for the chips; the long ones for preferences and tooltips. */
 // Keyed by the wire names, which are snake_case; built from pairs so the names stay exactly the server's.

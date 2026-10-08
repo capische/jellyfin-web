@@ -11,6 +11,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
@@ -1712,7 +1713,7 @@ const RatingsFetching: FC<{ status: RatingsStatusView | undefined }> = ({ status
     </div>;
 };
 
-/** One default source: on/off and its place in the order every user starts from (user decision 6). */
+/** One default source: ticked or not, and its place in the order every user starts from (user decisions 6 and 9). */
 const SourceRow: FC<{ source: string; index: number; count: number; on: boolean; onToggle: (source: string) => void; onMove: (source: string, by: number) => void }> = ({
     source, index, count, on, onToggle, onMove
 }) => {
@@ -1721,7 +1722,7 @@ const SourceRow: FC<{ source: string; index: number; count: number; on: boolean;
     const down = useCallback(() => onMove(source, 1), [onMove, source]);
     return (
         <div className='jfmod-qrow' data-jfmod-default-source={source}>
-            <FormControlLabel control={<Switch checked={on} onChange={toggle} />} label={RATING_SOURCE_NAMES[source] ?? source} />
+            <FormControlLabel control={<Checkbox checked={on} onChange={toggle} />} label={RATING_SOURCE_NAMES[source] ?? source} />
             {on && <span className='jfmod-rowactions'>
                 <Button size='small' variant='outlined' disabled={index === 0} onClick={up} aria-label={`Move ${RATING_SOURCE_NAMES[source]} up`}>Up</Button>
                 <Button size='small' variant='outlined' disabled={index === count - 1} onClick={down} aria-label={`Move ${RATING_SOURCE_NAMES[source]} down`}>Down</Button>
@@ -1798,8 +1799,11 @@ export const RatingsSection: FC<SectionProps> = props => {
                 </div>
             </div>
             <div className='jfmod-group'>
-                <h3 className='jfmod-grouptitle'>Default sources and order</h3>
-                <div className='fieldDescription'>What every user starts from; each user can change their own in Ratings display.</div>
+                <h3 className='jfmod-grouptitle'>Ratings shown</h3>
+                <div className='fieldDescription'>
+                    Ticked ratings show for every user who has not chosen their own in Ratings display, in this order. Fetching is the
+                    same either way.
+                </div>
                 {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
                     on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
             </div>
