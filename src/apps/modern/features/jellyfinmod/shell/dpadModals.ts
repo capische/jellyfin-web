@@ -88,9 +88,13 @@ const isVisible = (element: HTMLElement) => (
     element.offsetParent !== null || element.getClientRects().length > 0
 );
 
+/**
+ * A refused mod icon (a quality's Move Up on the first row, a busy Test) stays reachable: it is refused with aria-disabled
+ * precisely so the remote can stand on it and walk past it (Codex review rows-case 1, P2 3); its click does nothing.
+ */
 const isEnabled = (element: HTMLElement) => (
     !(element as HTMLButtonElement).disabled
-    && element.getAttribute('aria-disabled') !== 'true'
+    && (element.getAttribute('aria-disabled') !== 'true' || element.classList.contains('jfmod-iconbtn'))
     && !element.classList.contains('Mui-disabled')
 );
 
