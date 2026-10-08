@@ -70,10 +70,10 @@
     {
       "name": "desktop: vote counts are not in the row",
       "ok": true,
-      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:26 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+      "detail": "2024\n2h 15m\nPG-13\n8.1\n91\nEnds at 6:09 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
     },
     {
-      "name": "desktop: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "name": "desktop: the stock star and tomato stay beside IMDb 8.1 and RT 91",
       "ok": true
     },
     {
@@ -172,10 +172,10 @@
     {
       "name": "mobile: vote counts are not in the row",
       "ok": true,
-      "detail": "2024\n2h 15m\nPG-13\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+      "detail": "2024\n2h 15m\nPG-13\n8.1\n91\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
     },
     {
-      "name": "mobile: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "name": "mobile: the stock star and tomato stay beside IMDb 8.1 and RT 91",
       "ok": true
     },
     {
@@ -265,10 +265,10 @@
     {
       "name": "tv1080: vote counts are not in the row",
       "ok": true,
-      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:26 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+      "detail": "2024\n2h 15m\nPG-13\n8.1\n91\nEnds at 6:10 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
     },
     {
-      "name": "tv1080: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "name": "tv1080: the stock star and tomato stay beside IMDb 8.1 and RT 91",
       "ok": true
     },
     {
@@ -354,13 +354,11 @@
       ]
     },
     {
-      "name": "tv720: the ratings sit in the stock star's row, in the default order (as many as fit)",
+      "name": "tv720: the ratings sit in the stock star's row, in the default order (as many as fit: 2 of 5)",
       "ok": true,
       "detail": [
         "imdb",
-        "tomatoes_critic",
-        "tomatoes_audience",
-        "tmdb"
+        "tomatoes_critic"
       ]
     },
     {
@@ -381,26 +379,16 @@
           "kind": "tomatoesCritic",
           "width": 22.578125,
           "height": 23
-        },
-        {
-          "kind": "tomatoesAudience",
-          "width": 23,
-          "height": 23
-        },
-        {
-          "kind": "tmdb",
-          "width": 48.078125,
-          "height": 23
         }
       ]
     },
     {
       "name": "tv720: vote counts are not in the row",
       "ok": true,
-      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:26 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8"
+      "detail": "2024\n2h 15m\nPG-13\n8.1\n91\nEnds at 6:10 PM\nIMDb\n8.1\n91%"
     },
     {
-      "name": "tv720: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "name": "tv720: the stock star and tomato stay beside IMDb 8.1 and RT 91",
       "ok": true
     },
     {
@@ -469,7 +457,7 @@
       ]
     },
     {
-      "name": "desktop: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "name": "desktop: the file-less entry's own star stays beside the ratings (TMDB 7.8 in both)",
       "ok": true
     },
     {
@@ -484,7 +472,7 @@
       ]
     },
     {
-      "name": "tv1080: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "name": "tv1080: the file-less entry's own star stays beside the ratings (TMDB 7.8 in both)",
       "ok": true
     },
     {
@@ -499,7 +487,7 @@
       ]
     },
     {
-      "name": "mobile: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "name": "mobile: the file-less entry's own star stays beside the ratings (TMDB 7.8 in both)",
       "ok": true
     },
     {

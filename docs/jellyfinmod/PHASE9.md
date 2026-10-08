@@ -781,11 +781,10 @@ hover on a computer and on OK on a TV (no links to the sources: withdrawn by the
 - **Marks.** IMDb (yellow badge), Rotten Tomatoes critics (fresh tomato at 60 % or more, green splat below), Rotten Tomatoes
   audience (full popcorn bucket at 60 % or more, a spilled one below), TMDB (teal-to-blue bar), Trakt (red ring and tick),
   Metacritic (black disc, critics) and Metacritic users (rounded square), Letterboxd (three dots), Roger Ebert ("RE" badge).
-- **Duplicates.** The stock star is hidden while the row shows an IMDb or TMDB value that reads the same (one decimal), and
-  upstream's own tomato while the row shows the same Rotten Tomatoes critics score — the same number twice reads as noise, and
-  the row says which source it is. A different value is a different source's and stays. Done with two mod classes on the row
-  (`jfmod-ratings-hideStar`, `jfmod-ratings-hideCritic`), undone with the line. On the file-less page the page's own
-  "★ x on TMDB" is hidden the same way when TMDB shows its value.
+- **Jellyfin's own values always stay** (user, 2026-10-08, on approving the design): the stock ★ community rating and
+  upstream's own tomato keep their place in the row even when they show the same number as IMDb, TMDB or RT critics in the
+  ratings beside them, and the file-less page keeps its own "★ x on TMDB". The first build hid such duplicates; that was
+  removed before review.
 - **Tooltip** (`role="tooltip"`, the rating's `aria-describedby`; fixed position, so the row's overflow never clips it and
   nothing below moves): source and value with the vote count, where the value came from and when, and for a stale value that
   it is older than the refresh window. Computer: shows on hover and on keyboard focus; Escape and leaving hide it; a click adds
@@ -797,9 +796,9 @@ hover on a computer and on OK on a TV (no links to the sources: withdrawn by the
 - **Never moving a focused control.** The row is above the buttons, and on a TV the answer arrives after Play has focus. The
   line's before-paint guard (round 4) now also covers the first answer: it is tried, and kept only if the focused control did
   not move. When the whole list would wrap the row, the user's first ratings are tried one fewer at a time, so the row shows
-  as many as fit on its line rather than none (a 1280×720 TV with a long movie row shows four of five); a later visit where
-  the answer arrives with the page shows them all. The duplicate classes are judged in the same trial, and again (guarded the
-  same way) when upstream refills the row.
+  as many as fit on its line rather than none; a later visit where the answer arrives with the page shows them all (approved
+  as built by the user, 2026-10-08). On a 1280×720 TV the design fixture's series row (years, rating, star) shows all five;
+  its movie row, which also carries runtime, the stock tomato and "Ends at", shows two of five.
 - **Cards** show the chosen source's mark before the value in the secondary line, no tooltip and no focus stop of their own.
 
 **Source marks: origin and licence.** All marks are inline SVG in `components/RatingIcon.tsx`; none is fetched. The Rotten
@@ -813,8 +812,9 @@ that use its data).
 
 ### Evidence (development machine only)
 
-- Plugin suites on the Mac (CLAUDE.md, suites on the Mac first), all in parallel, on plugin `571de03`: Phase 0 and 1 smoke,
-  Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass. `PhaseNineRatingsIntegration` gains a second host on a fresh
+- Plugin suites on the Mac (CLAUDE.md, suites on the Mac first), all in parallel, on plugin `571de03` and again on `1a8628a`
+  (plugin `master` merged in, with the Codex-approved Phase 3 test fix `9a7f05c` and master's dashboard-page commits): Phase 0
+  and 1 smoke, Phase 2, Phase 3, Q16 Trakt, Phase 9 and Phase 10 pass. `PhaseNineRatingsIntegration` gains a second host on a fresh
   database with automatic fetching on and the documented 2 s / 30 s windows (the first host, which proves the daily task's own
   rules, runs with it off): no key — arrivals make no call and record no run; a key saved but not tested — no call; a start
   with a key and no completed run — every title at once, newest first; a second start — nothing; a new entry — its ratings
@@ -832,9 +832,9 @@ that use its data).
   answers the detail, browse and plugin reads from fixtures — **not acceptance evidence** (no Jellyfin), but the pages, CSS,
   upstream's controller, focus handling and the ratings code are the real build. 57/57 checks in Playwright Chromium
   153.0.8010.12 and the same 57/57 in real Google Chrome 153.0.8010.54 (`checks-*.txt`, `results-*.json`): order, marks, no
-  votes in the row, duplicates hidden, stale dimmed, hover and keyboard tooltip with votes, Escape, no links, mobile tap and
+  votes in the row, the stock star and tomato kept, stale dimmed, hover and keyboard tooltip with votes, Escape, no links, mobile tap and
   tap-elsewhere, 44 px targets, TV first focus on Play, Up, Right, OK, Back closing only the tooltip with the page kept, Play
-  not moved, Down back to the buttons, the 720 row fitted on one line, rotten marks below 60 %, the file-less page's star,
+  not moved, Down back to the buttons, the 720 row fitted on one line, rotten marks below 60 %, the file-less page's own star kept,
   the user's own order with every source, cards with the mark and no tooltip or focus stop, no icon requested as a file and no
   request leaving the machine (upstream's Chromecast sender script is the only outside request attempted, and it is blocked).
   Before and after screenshots in `evidence/p9/design-20261008/` (desktop, mobile, TV 1080 and 720; the Light theme too,
