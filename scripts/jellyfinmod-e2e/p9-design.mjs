@@ -19,6 +19,8 @@ const SHOTS = process.env.JFMOD_DESIGN_SHOTS;
 const CHECKS = process.env.JFMOD_DESIGN_CHECKS !== '0';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const LABEL = process.env.JFMOD_DESIGN_LABEL ?? 'after';
+// One of the three two-line looks offered on 2026-10-08 (row, badges, lead): only those pages are taken, with their own checks.
+const VARIANT = process.env.JFMOD_DESIGN_VARIANT ?? '';
 
 const SERVER_ID = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 const USER_ID = '0123456789abcdef0123456789abcdef';
@@ -50,6 +52,14 @@ const ALL = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt', 'm
 const DEFAULTS = ['imdb', 'tomatoes_critic', 'tomatoes_audience', 'tmdb', 'trakt'];
 let userSources = null; // null: the server's defaults
 let currentTheme = 'dark';
+// The fetcher's state the settings area reads (review 2026-10-08, P3 6-7): the run changes it while the page stays open.
+const ratingsStatus = {
+    enabled: true, apiKeyConfigured: true, blocker: null, breaker: { open: false, until: null, reason: null, consecutiveFailures: 0 },
+    budget: { day: new Date().toISOString().slice(0, 10) + 'T00:00:00Z', used: 12, limit: 500 },
+    lastRun: { startedAt: recent, finishedAt: recent, fetched: 12, failed: 0, stopReason: null }, entries: 40, entriesWithoutRatings: 3, queued: 0,
+    running: null
+};
+let statusReads = 0;
 
 const user = {
     Name: 'oleksii', ServerId: SERVER_ID, Id: USER_ID, HasPassword: false, HasConfiguredPassword: false, EnableAutoLogin: false,
@@ -144,7 +154,16 @@ const api = (method, path, query) => {
     if (p === `/shows/${SERIES_ID}/seasons`) return { Items: seasons, TotalRecordCount: seasons.length };
     if (p.startsWith('/shows/') && p.endsWith('/nextup')) return { Items: [], TotalRecordCount: 0 };
     if (p === '/jellyfinmod/health') {
-        return { Name: 'JellyfinMod', Version: '0.1.0.0', Ok: true, Capabilities: ['ratings', 'ratings.cards', 'settings.ratings'], Trakt: { Installed: false } };
+        return { Name: 'JellyfinMod', Version: '0.1.0.0', Ok: true, Capabilities: ['ratings', 'ratings.cards', 'settings.ratings', 'settings.overview'], Trakt: { Installed: false } };
+    }
+    if (p === '/jellyfinmod/settings/overview') return { plugin: { version: '0.1.0.0' }, areas: [], setup: { complete: true, steps: [] } };
+    if (p === '/jellyfinmod/settings/ratings') {
+        return { enabled: true, apiKeyConfigured: true, refreshDays: 14, dailyBudget: 500, defaultSources: DEFAULTS, availableSources: ALL,
+            verified: true, verifiedAt: recent, providerOverride: false, revision: 3 };
+    }
+    if (p === '/jellyfinmod/ratings/status') {
+        statusReads++;
+        return ratingsStatus;
     }
     if (p === '/jellyfinmod/ratings/defaults') return { enabled: true, defaultSources: DEFAULTS, availableSources: ALL, refreshDays: 14 };
     if (p === '/jellyfinmod/entries') return { items: [], totalRecordCount: 0 };
@@ -256,11 +275,12 @@ const open = async (layoutName, theme = 'dark') => {
         if (message.type() === 'error' && process.env.JFMOD_DESIGN_DEBUG) console.log(`[${layoutName}] console: ${message.text().slice(0, 300)}`);
     });
     await page.goto(ORIGIN + '/web-mod/', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(([layoutValue, themeValue, userId]) => {
+    await page.evaluate(([layoutValue, themeValue, userId, variant]) => {
         localStorage.setItem('layout', layoutValue);
         localStorage.setItem(userId + '-appTheme', themeValue);
+        if (variant) localStorage.setItem('jfmodRatingsDesign', variant);
         localStorage.setItem('appTheme', themeValue);
-    }, [layout.layout, theme, USER_ID]);
+    }, [layout.layout, theme, USER_ID, VARIANT]);
     // A hash change alone does not reload; the layout and theme are read at start-up.
     await page.goto(ORIGIN + '/web-mod/#/login', { waitUntil: 'domcontentloaded' });
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -297,7 +317,144 @@ const shot = async (page, name) => {
 const rowSources = page => page.locator('.itemMiscInfo-primary:visible .jfmod-rating')
     .evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-rating')));
 
-for (const theme of ['dark', 'light']) {
+/** The two-line design's own checks and pictures, for one look, on every layout (design options, 2026-10-08). */
+const variantRun = async () => {
+    const only = (process.env.JFMOD_DESIGN_ONLY ?? '').split(',').filter(Boolean);
+    for (const layoutName of Object.keys(LAYOUTS).filter(name => !only.length || only.includes(name))) {
+        const { context, page } = await open(layoutName);
+        try {
+            for (const [name, id, expected] of [['series', SERIES_ID, DEFAULTS], ['movie', MOVIE_ID, DEFAULTS]]) {
+                if (layoutName.startsWith('tv') && CHECKS) {
+                    // A late answer: the ratings arrive 5 s after the page (past its 3 s prefetch bound), with Play focused.
+                    const pattern = `**/JellyfinMod/Ratings/Items/${id}`;
+                    await page.route(pattern, async route => {
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        await route.continue().catch(() => undefined);
+                    });
+                    await page.goto(`${ORIGIN}/web-mod/#/home`, { waitUntil: 'domcontentloaded' });
+                    await page.waitForTimeout(500);
+                    await page.goto(`${ORIGIN}/web-mod/#/details?id=${id}&serverId=${SERVER_ID}`, { waitUntil: 'domcontentloaded' });
+                    await page.waitForFunction(() => document.activeElement?.classList.contains('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
+                    const centre = () => page.evaluate(() => {
+                        const rect = document.activeElement?.getBoundingClientRect();
+                        return rect ? Math.round((rect.top + rect.height / 2) * 10) / 10 : null;
+                    });
+                    const early = await centre();
+                    if (process.env.JFMOD_DESIGN_DEBUG) await page.screenshot({ path: join(SHOTS, `debug-early-${layoutName}-${name}.png`) });
+                    const hadRatings = await page.locator('.jfmod-ratingsOwn:visible .jfmod-rating').count();
+                    await page.locator('.jfmod-ratingsOwn:visible .jfmod-rating').first().waitFor({ timeout: 15000 }).catch(() => undefined);
+                    await page.waitForTimeout(500);
+                    const late = await centre();
+                    check(`${VARIANT} ${layoutName} ${name}: a late answer fills the reserved line and the focused Play does not move`,
+                        hadRatings === 0 && early !== null && early === late && await page.locator('.jfmod-ratingsOwn:visible .jfmod-rating').count() === 5,
+                        { hadRatings, early, late });
+                    await page.unroute(pattern);
+                }
+                await detail(page, id);
+                const line = page.locator('.jfmod-ratingsOwn:visible');
+                const sources = await line.locator('.jfmod-rating').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-jfmod-rating')));
+                await shot(page, `${name}-${layoutName}`);
+                if (!CHECKS) continue;
+                check(`${VARIANT} ${layoutName} ${name}: every enabled source on the ratings' own line, in order`, sources.join(',') === expected.join(','), sources);
+                const shape = await line.evaluate(node => {
+                    const rows = [...node.parentElement.querySelectorAll('.itemMiscInfo')].filter(row => row.offsetParent);
+                    const stockStar = rows.some(row => [...row.querySelectorAll('.starRatingContainer')].some(star => getComputedStyle(star).display !== 'none'));
+                    const stockTomato = rows.some(row => [...row.querySelectorAll('.mediaInfoCriticRating')].some(t => getComputedStyle(t).display !== 'none'));
+                    return { below: rows.every(row => row.getBoundingClientRect().bottom <= node.getBoundingClientRect().top + 0.5),
+                        reserved: parseFloat(node.style.minHeight) * parseFloat(getComputedStyle(node).fontSize), height: node.getBoundingClientRect().height,
+                        stockStar, stockTomato, inUpstreamRow: !!node.closest('.itemMiscInfo') };
+                });
+                check(`${VARIANT} ${layoutName} ${name}: the line sits under the stock rows, outside them, within its reserved height`,
+                    shape.below && !shape.inUpstreamRow && shape.height <= shape.reserved + 0.5, shape);
+                check(`${VARIANT} ${layoutName} ${name}: the stock star repeating IMDb is hidden${name === 'movie' ? ', and the tomato repeating RT critics' : ''}`,
+                    !shape.stockStar && !shape.stockTomato, shape);
+                if (layoutName.startsWith('tv')) {
+                    const focused = await page.evaluate(() => document.activeElement?.className ?? '');
+                    check(`${VARIANT} ${layoutName} ${name}: first focus is Play`, /btnPlay/.test(focused), focused);
+                    await page.keyboard.press('ArrowUp');
+                    await page.waitForTimeout(250);
+                    const up = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-rating'));
+                    await page.keyboard.press('Enter');
+                    const tip = await page.locator('[role="tooltip"]').innerText({ timeout: 3000 }).catch(() => '');
+                    if (name === 'movie') await shot(page, `movie-${layoutName}-ok`);
+                    const hash = await page.evaluate(() => location.hash);
+                    await page.keyboard.press('Escape');
+                    await page.waitForTimeout(300);
+                    check(`${VARIANT} ${layoutName} ${name}: Up reaches a rating, OK shows its tooltip, Back closes only that`,
+                        !!up && /votes/.test(tip) && await page.locator('[role="tooltip"]').count() === 0 && await page.evaluate(() => location.hash) === hash,
+                        { up, tip });
+                } else if (layoutName === 'desktop' && name === 'movie') {
+                    await line.locator('.jfmod-rating').first().hover();
+                    const tip = await page.locator('[role="tooltip"]').innerText({ timeout: 3000 }).catch(() => '');
+                    await shot(page, 'movie-desktop-hover');
+                    check(`${VARIANT} desktop: hover shows the tooltip with the votes`, /250,000 votes/.test(tip), tip);
+                    await page.mouse.move(2, 2);
+                } else if (layoutName === 'mobile' && name === 'movie') {
+                    await line.locator('.jfmod-rating').nth(1).tap();
+                    const tip = await page.locator('[role="tooltip"]').innerText({ timeout: 3000 }).catch(() => '');
+                    await shot(page, 'movie-mobile-tap');
+                    check(`${VARIANT} mobile: a tap shows the tooltip with the votes`, /310 votes/.test(tip), tip);
+                    await page.locator('.nameContainer:visible').tap();
+                }
+            }
+            if (layoutName === 'desktop' || layoutName === 'tv1080') {
+                await page.goto(`${ORIGIN}/web-mod/#/details?entryId=${ENTRY_ID}&serverId=${SERVER_ID}`, { waitUntil: 'domcontentloaded' });
+                await page.locator('.jfmod-rating:visible').first().waitFor({ timeout: 30000 });
+                await page.waitForTimeout(800);
+                await shot(page, `entry-${layoutName}`);
+            }
+        } finally {
+            await context.close();
+        }
+    }
+};
+
+/** The settings area's Ratings section keeps its status, header and rail summary current while it is open (P3 6-7). */
+const settingsRun = async () => {
+    const { context, page } = await open('desktop');
+    try {
+        await page.goto(`${ORIGIN}/web-mod/#/catalog/settings?section=ratings`, { waitUntil: 'domcontentloaded' });
+        try {
+            await page.locator('section[data-section="ratings"]').waitFor({ timeout: 30000 });
+        } catch (error) {
+            if (SHOTS) await page.screenshot({ path: join(SHOTS, 'debug-settings.png') });
+            console.log('fixture server had no answer for: ' + [...unknown].join(', '));
+            throw error;
+        }
+        const rail = () => page.locator('.jfmod-step[data-section="ratings"] .jfmod-s').innerText().catch(() => '');
+        const header = () => page.locator('section[data-section="ratings"]').innerText().catch(() => '');
+        check('settings: idle at first, nothing says fetching', !/Fetching/.test(await rail()) && !/title\(s\) left/.test(await header()), await rail());
+        await page.waitForTimeout(4000);
+        // A pass starts later, while the section stays open and idle.
+        Object.assign(ratingsStatus, { running: { kind: 'arrivals', startedAt: new Date().toISOString(), remaining: 7 } });
+        const started = Date.now();
+        await page.waitForFunction(() => /Fetching, 7 title/.test(document.querySelector('section[data-section="ratings"]')?.textContent ?? ''), null,
+            { timeout: 25000 }).catch(() => undefined);
+        const seenAfter = (Date.now() - started) / 1000;
+        const railRunning = await rail();
+        check(`settings: a pass that starts while the section is idle appears within the idle interval (${seenAfter.toFixed(1)} s), panel and rail alike`,
+            /Fetching, 7 title/.test(await header()) && /Fetching · 7/.test(railRunning) && seenAfter < 20, { seenAfter, railRunning });
+        await shot(page, 'settings-running');
+        Object.assign(ratingsStatus, { running: null, entriesWithoutRatings: 0, lastRun: { ...ratingsStatus.lastRun, startedAt: new Date().toISOString(), fetched: 7 } });
+        const ended = Date.now();
+        await page.waitForFunction(() => !/Fetching, \d+ title/.test(document.querySelector('section[data-section="ratings"]')?.textContent ?? ''), null,
+            { timeout: 15000 }).catch(() => undefined);
+        await page.waitForTimeout(300);
+        const railAfter = await rail();
+        check(`settings: when the pass ends, panel, header and rail all stop saying fetching (${((Date.now() - ended) / 1000).toFixed(1)} s)`,
+            !/Fetching/.test(railAfter) && !/title\(s\) left/.test(await header()) && /0 of 40/.test(await header()), { railAfter });
+        const reads = statusReads;
+        await page.waitForTimeout(16000);
+        check('settings: idle, it keeps reading the status, slowly (bounded)', statusReads - reads >= 1 && statusReads - reads <= 2, statusReads - reads);
+        await shot(page, 'settings-idle');
+    } finally {
+        await context.close();
+    }
+};
+
+if (process.env.JFMOD_DESIGN_SETTINGS) await settingsRun();
+if (VARIANT) await variantRun();
+for (const theme of VARIANT || process.env.JFMOD_DESIGN_SETTINGS ? [] : ['dark', 'light']) {
     for (const layoutName of Object.keys(LAYOUTS)) {
         const { context, page } = await open(layoutName, theme);
         try {
@@ -424,7 +581,7 @@ for (const theme of ['dark', 'light']) {
 }
 
 // The other pages and states, desktop and TV only, after the change.
-if (LABEL === 'after') {
+if (LABEL === 'after' && !VARIANT && !process.env.JFMOD_DESIGN_SETTINGS) {
     for (const layoutName of ['desktop', 'tv1080', 'mobile']) {
         const { context, page } = await open(layoutName);
         try {
