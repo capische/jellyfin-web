@@ -1,0 +1,40 @@
+{
+  "tier": "chromium",
+  "results": [
+    {
+      "name": "settings: idle at first, nothing says fetching",
+      "ok": true,
+      "detail": "Key tested 10/5/2026, 7:49:38 PM"
+    },
+    {
+      "name": "settings: a pass that starts while the section is idle appears within the idle interval (13.5 s), panel and rail alike",
+      "ok": true,
+      "detail": {
+        "seenAfter": 13.478,
+        "railRunning": "Fetching · 7 title(s) left"
+      }
+    },
+    {
+      "name": "settings: when the pass ends, panel, header and rail all stop saying fetching (3.3 s)",
+      "ok": true,
+      "detail": {
+        "railAfter": "Key tested 10/5/2026, 7:49:38 PM"
+      }
+    },
+    {
+      "name": "settings: idle, it keeps reading the status, slowly (bounded)",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "name": "no request left the machine apart from upstream's cast sender (1 of those, all blocked)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no icon was requested as a file",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

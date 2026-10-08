@@ -45,4 +45,4 @@ ok - With the plugin uninstalled the series answers installed:false
 ok - The 200 imports queued when the host stopped were all written before it finished stopping
 ok - Observations survive a restart
 ok - The listener logged no warning or error
-PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (6.9s)
+PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (6.1s)

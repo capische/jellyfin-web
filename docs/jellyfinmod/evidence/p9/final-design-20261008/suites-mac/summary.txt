@@ -1,9 +1,9 @@
 BUILT
-PhaseZeroSmoke exit=0 3s :: PASS: migrations, restart persistence, health readiness/failure, configuration XML
-PhaseThreeIntegration exit=0 5s :: PASS: Phase 3 policy and completion evidence survive real events, SQLite migration and restart
-PhaseSevenTraktIntegration exit=0 8s :: PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (6.9s)
-PhaseOneSmoke exit=0 8s :: PASS: real SQLite migration/restart and authenticated HTTP integration workflows
-PhaseTwoIntegration exit=0 15s :: PASS: deterministic Phase 2 reconciliation persists across real SQLite transactions and restart
-PhaseTenRetentionIntegration exit=0 21s :: PASS: switching retention on while previewing, keeping and switching on again (600 targets, 3 rounds): every request answered, the Keep won, slow write-lock hol
-PhaseNineRatingsIntegration exit=0 119s :: PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access, automatic fetching (118.1s)
+PhaseZeroSmoke exit=0 2s :: PASS: migrations, restart persistence, health readiness/failure, configuration XML
+PhaseThreeIntegration exit=0 4s :: PASS: Phase 3 policy and completion evidence survive real events, SQLite migration and restart
+PhaseOneSmoke exit=0 5s :: PASS: real SQLite migration/restart and authenticated HTTP integration workflows
+PhaseSevenTraktIntegration exit=0 7s :: PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (6.1s)
+PhaseTwoIntegration exit=0 13s :: PASS: deterministic Phase 2 reconciliation persists across real SQLite transactions and restart
+PhaseTenRetentionIntegration exit=0 19s :: PASS: switching retention on while previewing, keeping and switching on again (600 targets, 3 rounds): every request answered, the Keep won, slow write-lock hol
+PhaseNineRatingsIntegration exit=0 117s :: PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access, automatic fetching (116.0s)
 DONE
