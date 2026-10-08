@@ -2700,12 +2700,30 @@ The rule is UX §12.1.
   (relayed 2026-10-08) not to wait for 18096 or 28096 for a run without those four. 48096 restored afterwards: config
   and cache byte for byte with their metadata, the container's web directory (only the takeover's `index.html` had
   changed) and both containers exited; the TMDB stand-in's proxy was started for a check and stopped again.
-- **Follow-up (product, open):** at 390 px, with a Prowlarr source configured, the Prowlarr box's Save, Test, Sync Now and
+- **Follow-up (product, fixed 2026-10-08, entry below):** at 390 px, with a Prowlarr source configured, the Prowlarr box's Save, Test, Sync Now and
   Remove wrap onto two lines 4 px apart in the settings area's Indexers section and in the wizard's Indexers step
   (`settings-design` "no buttons or texts touch", mobile, on 48096). The row needs the button gap between wrapped lines.
-- **Follow-up (runners, not blocking, from the partial save review):** `settings-area.mjs` could save once right after
+- **Follow-up (runners, done 2026-10-08, entry below; from the partial save review):** `settings-area.mjs` could save once right after
   the unedited case's Reload (only the edited case checks the 200), and could assert the page's own server address before
   its first write, beside the port allowlist.
+- **Prowlarr row on a phone and the runner follow-ups, fixed 2026-10-08** (`fix(settings,p7.s8)` `807ef4bff5`, product;
+  `test(settings,p7.s8)` `643679b40a`, runner). `.jfmod-inlineactions` buttons gain a 0.56em bottom margin, so wrapped
+  lines keep the 0.86em the buttons keep side by side, and the row's bottom margin goes from 1.4em to 0.9em; margins,
+  not flex `gap`, for older webOS. Measured on 48096 for every such row (Path Mappings, Prowlarr, Restore Stock Now):
+  the space below it is 20.67 px against 20.83 px before on desktop and mobile, 27.8 against 28 px on TV 1080; only the
+  mobile Prowlarr row wraps. `settings-area.mjs` checks before any write that the page's `ApiClient` talks to the
+  instance in `JELLYFINMOD_TEST_URL` and stops otherwise, and saves once after the unedited case's Reload (200,
+  "Saved."). Live on 48096 (plugin `f7c274c`, bundle `aeb407ad49d5` from `643679b40a`) with its TMDB stand-in running
+  from a scratch state, its 7-day certificates (expired 2026-10-02) re-issued for the run: `settings-area` **39/39** and
+  `settings-design` **828/828 on Playwright Chromium 153.0.8010.12 and on Google Chrome 153.0.8010.54**. 828 rather than
+  840: with TMDB answering, setup is complete, so the Home setup banner is not shown and its three checks per layout
+  are not audited (they passed on 48096 in the partial save run). Codex GPT-6.1 Sol, high:
+  product **approve** with no findings, runner pass no defects (`review-errfix-3.md`); one hardening idea left open below.
+  48096 restored afterwards: config,
+  cache and certificates byte for byte with their metadata, the stand-ins and logs folders unchanged, the container's
+  web directory, the stand-in process stopped and all four containers exited.
+- **Follow-up (runners, not blocking):** `settings-area.mjs` could check the page's server again after each reload and
+  in the clean-up retries, not only before the first write.
 
 #### S11 evidence
 
