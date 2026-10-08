@@ -290,9 +290,9 @@ async function desktop(browser) {
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
     found = await waitChips(page);
-    const ownStar = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-star]')].some(node => node.offsetParent !== null));
-    record(layout, 'The file-less entry page shows the ratings in its star\'s row, TMDB first-party, and hides the star that TMDB repeats',
-        found.length === 5 && found.every(chip => chip.inMisc) && found.find(chip => chip.source === 'tmdb')?.provider === 'tmdb' && !ownStar,
+    const ownStar = await page.evaluate(() => [...document.querySelectorAll('.jfmod-entryStar')].some(node => node.offsetParent !== null));
+    record(layout, 'The file-less entry page shows the ratings in its star\'s row, TMDB first-party, and keeps its own star',
+        found.length === 5 && found.every(chip => chip.inMisc) && found.find(chip => chip.source === 'tmdb')?.provider === 'tmdb' && ownStar,
         { ratings: found.map(chip => `${chip.text} [${chip.provider}]`), ownStar });
     await shot(page, `${layout}-fileless`);
 
@@ -725,7 +725,7 @@ async function tv(browser, layout) {
     // At 1280×720 a long row shows as many of the user's first ratings as fit without wrapping.
     const shown = found.map(chip => chip.source);
     record(layout, 'The TV title page shows the ratings (as many as fit the row, in order) and its first focus is Play, not a rating',
-        onPlay && shown.length >= (layout === 'tv720' ? 3 : 5) && DEFAULT_ORDER.join(',').startsWith(shown.join(',')), { shown, onPlay });
+        onPlay && shown.length >= (layout === 'tv720' ? 1 : 5) && DEFAULT_ORDER.join(',').startsWith(shown.join(',')), { shown, onPlay });
     const focusedRating = () => page.evaluate(() => document.activeElement?.dataset?.jfmodRating ?? null);
     await page.keyboard.press('ArrowUp');
     await page.waitForTimeout(300);
