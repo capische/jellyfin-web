@@ -5,12 +5,14 @@
 //   JELLYFINMOD_TEST_URL=http://<host>:<isolated-port>/ JELLYFINMOD_BROWSER=chromium|chrome node settings-area.mjs
 //
 // JELLYFINMOD_SETTINGS_LAYOUTS=desktop,mobile,tv1080,tv720
-// Signs in as oleksii with an empty password. Changes the retention days by one and puts them back, runs the
-// read-only TMDB test, forces one stale-revision refusal and reloads past it, and leaves every value as it was.
+// Signs in as oleksii with an empty password. Changes the retention days by one and puts them back (through the API in a
+// `finally` when a step throws), runs the read-only TMDB test, forces one stale-revision refusal and reloads past it, and
+// leaves every value as it was. Saving retention also re-saves seed protection unchanged, which moves both revisions.
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+// The leased mod instances only (test, acceptance, live Phase 5/6); never production on 8096.
+if (!['18096', '28096', '48096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const only = (process.env.JELLYFINMOD_SETTINGS_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
@@ -24,6 +26,12 @@ const LAYOUTS = {
     tv720: { viewport: { width: 1280, height: 720 }, tv: true }
 };
 const SECTION_IDS = ['overview', 'discovery', 'client', 'indexers', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
+// The headings the page shows for those sections, in order (SettingsPage.tsx, SECTIONS; Title Case since 2026-10-08).
+const SECTION_TITLES = ['Overview', 'Discovery', 'Download Client', 'Indexers', 'Quality Profiles', 'Grabbing', 'Import and Seeding', 'Retention',
+    'Automation', 'Interface', 'Diagnostics'];
+const sameList = (seen, wanted) => seen.length === wanted.length && seen.every((title, index) => title === wanted[index]);
+// The warning a section shows when its record changed on the server under unsaved edits (settingsSections.tsx, useDraft).
+const STALE_WARNING = 'These settings changed somewhere else while you were editing. Your edits are kept until you reload.';
 
 const results = [];
 const record = (layout, check, ok, detail) => {
@@ -55,6 +63,37 @@ async function signIn(page) {
     // The sign-in flow navigates to Home on its own a moment later; a deep link set before that is overwritten.
     await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
     await page.waitForTimeout(1500);
+}
+
+/** The server's retention settings, read as the signed-in administrator. */
+const retentionNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Retention'), dataType: 'json' }));
+
+/**
+ * Puts the retention days back to `days` through the API when a run stopped before doing so, and reports what it found.
+ * Only the days change; every other field is sent as the server has it, with its current revision.
+ */
+async function restoreRetentionDays(page, days) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const outcome = await page.evaluate(async target => {
+                const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
+                const current = await ApiClient.ajax({ type: 'GET', url, dataType: 'json' });
+                if (current.reclaimAfterDays === target) return { restored: false, days: current.reclaimAfterDays };
+                await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
+                    data: JSON.stringify({ enabled: current.enabled, reclaimAfterDays: target, watchedUserMode: current.watchedUserMode,
+                        selectedUserId: current.selectedUserId ?? null, exemptFavourites: current.exemptFavourites, revision: current.revision }) });
+                const after = await ApiClient.ajax({ type: 'GET', url, dataType: 'json' });
+                return { restored: true, days: after.reclaimAfterDays };
+            }, days);
+            if (outcome.days === days) return outcome;
+        } catch {
+            // A page left mid-navigation: load the app again and retry.
+            await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+            await page.waitForFunction(() => typeof ApiClient !== 'undefined' && !!ApiClient.getCurrentUserId(), undefined, { timeout: 30000 })
+                .catch(() => undefined);
+        }
+    }
+    return { restored: false, days: undefined };
 }
 
 const openSettings = async (page, section) => {
@@ -89,6 +128,7 @@ for (const name of only) {
     page.on('response', async response => {
         if (/\/JellyfinMod\/(Settings|Setup)\//.test(response.url())) bodies.push(await response.text().catch(() => ''));
     });
+    let originalDays;
     try {
         await signIn(page);
         if (layout.tv) {
@@ -133,7 +173,7 @@ for (const name of only) {
                 // Enter moves focus to the heading; the rail step is the D-pad's way back.
                 await page.evaluate(id => document.querySelector(`.jfmod-step[data-section="${id}"]`)?.focus(), SECTION_IDS[index]);
             }
-            record(name, 'TV: every section reached by arrows and Enter', seen.length === SECTION_IDS.length - 1 && seen.every(Boolean), seen);
+            record(name, 'TV: every section reached by arrows and Enter', sameList(seen, SECTION_TITLES.slice(1)), seen);
             await openSettings(page, 'retention');
             await page.waitForTimeout(500);
             const select = page.locator('.jfmod-check-main [role="combobox"]').first();
@@ -152,9 +192,10 @@ for (const name of only) {
             const reopened = await openMenus(page);
             await pressRemoteBack(page);
             const afterRemote = await openMenus(page);
+            const onOpener = await select.evaluate(node => node === document.activeElement);
             record(name, 'TV: the remote\'s Back (461) closes it too, focus back on its opener',
-                reopened > 0 && afterRemote === 0 && await page.evaluate(() => location.hash.includes('catalog/settings')),
-                { reopened, afterRemote, focus: await focusInfo(page) });
+                reopened > 0 && afterRemote === 0 && onOpener && await page.evaluate(() => location.hash.includes('catalog/settings')),
+                { reopened, afterRemote, onOpener, focus: await focusInfo(page) });
             await page.evaluate(() => { location.hash = '#/home'; });
             await page.waitForTimeout(2500);
             await openSettings(page, 'interface');
@@ -170,7 +211,7 @@ for (const name of only) {
                 await page.waitForTimeout(300);
                 titles.push(await heading(page));
             }
-            record(name, 'Every section opens', titles.every(Boolean) && titles.length === SECTION_IDS.length, titles);
+            record(name, 'Every section opens', sameList(titles, SECTION_TITLES), titles);
             if (name === 'mobile') {
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
                 record(name, 'Mobile: no horizontal scroll', overflow <= 1, { overflow });
@@ -185,8 +226,11 @@ for (const name of only) {
 
                 await openSettings(page, 'retention');
                 const days = page.locator('.jfmod-check-main input[type="number"]').first();
-                const original = await days.inputValue();
-                const changed = String(Number(original) + 1);
+                // The value to put back, read from the server before anything changes; restored in `finally` even when a step throws.
+                originalDays = (await retentionNow(page)).reclaimAfterDays;
+                const original = String(originalDays);
+                const shown = await days.inputValue();
+                const changed = String(originalDays + 1);
                 await days.fill(changed);
                 await page.locator('[data-submit="retention"]').click();
                 await page.locator('.jfmod-check-main .jfmod-notice-ok').waitFor({ timeout: 30000 });
@@ -194,28 +238,59 @@ for (const name of only) {
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
                 const reread = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
-                record(name, 'Retention saves, echoes its revision and re-reads after a reload', reread === changed, { changed, reread, meta });
+                record(name, 'Retention saves, echoes its revision and re-reads after a reload', shown === original && reread === changed,
+                    { original, shown, changed, reread, meta });
 
-                // A stale revision: another session saves first, then this page's save must be refused with a Reload.
-                await page.evaluate(async () => {
+                // A stale revision: another session saves first, then this page saves an edit. The server refuses it (409), the
+                // page reads the settings again and, the record having changed under the edit, shows the warning with its
+                // Reload; the edit stays in the field. Reload takes the server's copy, and the next save is accepted.
+                const before = await retentionNow(page);
+                const elsewhere = await page.evaluate(async current => {
                     const url = ApiClient.getUrl('JellyfinMod/Settings/Retention');
-                    const current = await ApiClient.ajax({ type: 'GET', url, dataType: 'json' });
-                    await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
+                    const saved = await ApiClient.ajax({ type: 'PATCH', url, contentType: 'application/json', dataType: 'json',
                         data: JSON.stringify({ enabled: current.enabled, reclaimAfterDays: current.reclaimAfterDays, watchedUserMode: current.watchedUserMode,
                             selectedUserId: current.selectedUserId ?? null, exemptFavourites: current.exemptFavourites, revision: current.revision }) });
-                });
-                await page.locator('.jfmod-check-main input[type="number"]').first().fill(original);
+                    return { revision: saved.revision };
+                }, before);
+                await days.fill(original);
+                const refused = page.waitForResponse(response => response.request().method() === 'PATCH'
+                    && /\/JellyfinMod\/Settings\/Retention$/.test(new URL(response.url()).pathname), { timeout: 30000 });
                 await page.locator('[data-submit="retention"]').click();
-                const conflict = await page.locator('.jfmod-check-main .jfmod-notice-err').innerText({ timeout: 30000 });
-                record(name, 'A stale revision shows the conflict message with Reload', /changed somewhere else/.test(conflict), conflict);
-                await page.locator('.jfmod-check-main .jfmod-notice-err button', { hasText: 'Reload' }).click();
-                await page.waitForTimeout(1500);
-                await page.locator('.jfmod-check-main input[type="number"]').first().fill(original);
+                const refusedStatus = (await refused).status();
+                const warning = page.locator('.jfmod-check-main .jfmod-notice-warn');
+                await warning.waitFor({ state: 'visible', timeout: 30000 });
+                // Let the save settle, so a notice that replaces the warning would be seen.
+                await page.locator('[data-submit="retention"]:not([disabled])').waitFor({ timeout: 30000 });
+                await page.waitForTimeout(1000);
+                const notices = await page.locator('.jfmod-check-main .jfmod-notice').evaluateAll(nodes => nodes.map(node => ({
+                    kind: node.className, role: node.getAttribute('role'), text: node.querySelector('.jfmod-notice-text')?.textContent ?? '',
+                    actions: [...node.querySelectorAll('.jfmod-notice-action button')].map(button => button.textContent.trim())
+                })));
+                const kept = await days.inputValue();
+                record(name, 'A stale revision is refused and shows the warning with Reload, keeping the edit',
+                    elsewhere.revision > before.revision && refusedStatus === 409 && notices.length === 1
+                    && notices[0].kind === 'jfmod-notice jfmod-notice-warn' && notices[0].role === 'status'
+                    && notices[0].text === STALE_WARNING && notices[0].actions.length === 1 && notices[0].actions[0] === 'Reload' && kept === original,
+                    { before: before.revision, elsewhere: elsewhere.revision, refusedStatus, notices, kept });
+
+                await warning.locator('.jfmod-notice-action button', { hasText: /^Reload$/ }).click();
+                await page.locator('.jfmod-check-main .jfmod-notice').waitFor({ state: 'detached', timeout: 30000 });
+                await page.waitForFunction(value => document.querySelector('.jfmod-check-main input[type="number"]')?.value === value, changed, { timeout: 30000 });
+                const afterReload = await days.inputValue();
+                await days.fill(original);
+                const accepted = page.waitForResponse(response => response.request().method() === 'PATCH'
+                    && /\/JellyfinMod\/Settings\/Retention$/.test(new URL(response.url()).pathname), { timeout: 30000 });
                 await page.locator('[data-submit="retention"]').click();
-                await page.locator('.jfmod-check-main .jfmod-notice-ok').waitFor({ timeout: 30000 });
+                const acceptedStatus = (await accepted).status();
+                const ok = await page.locator('.jfmod-check-main .jfmod-notice-ok .jfmod-notice-text').innerText({ timeout: 30000 });
+                record(name, 'Reload takes the server\'s copy and clears the warning; the next save succeeds',
+                    afterReload === changed && acceptedStatus === 200 && ok === 'Saved.', { afterReload, acceptedStatus, ok });
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
-                record(name, 'The original retention days are restored', await page.locator('.jfmod-check-main input[type="number"]').first().inputValue() === original, original);
+                const restoredField = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
+                const restoredServer = (await retentionNow(page)).reclaimAfterDays;
+                record(name, 'The original retention days are restored', restoredField === original && restoredServer === originalDays,
+                    { original, restoredField, restoredServer });
             }
         }
 
@@ -224,6 +299,11 @@ for (const name of only) {
     } catch (error) {
         record(name, 'run completed', false, 'NOT VERIFIED: ' + String(error?.message ?? error).split('\n')[0]);
     } finally {
+        if (originalDays !== undefined) {
+            const put = await restoreRetentionDays(page, originalDays);
+            if (put.days !== originalDays) record(name, 'Retention days put back after the run', false, { original: originalDays, now: put.days });
+            else if (put.restored) console.log(`NOTE [${name}] the run stopped early; retention days put back to ${originalDays} through the API`);
+        }
         await page.evaluate(() => localStorage.removeItem('layout')).catch(() => {});
         await context.close();
     }
