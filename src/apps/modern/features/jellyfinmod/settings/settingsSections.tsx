@@ -18,7 +18,7 @@ import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-    blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, PartialSaveError, PAUSE_SENTENCES, pathSentence, problemText, request,
+    blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, partialSave, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
 } from './settingsApi';
 import {
@@ -1469,7 +1469,7 @@ export const RetentionSection: FC<SectionProps> = props => {
             });
         } catch (error) {
             await reload();
-            throw new PartialSaveError('Seed protection was saved; retention was not. ' + problemText(error));
+            throw partialSave('Seed protection was saved; retention was not. ' + problemText(error));
         }
         retentionSaved(draft, sameRevision(savedRetention), savedRetention);
     }, 'Saved.'), [run, api, draft, seedDraft, seedSaved, retentionSaved, password, passwordSecret, reload, data.retention, data.seed]);

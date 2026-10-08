@@ -166,11 +166,21 @@ export const blockerSentence = (code: string) => BLOCKER_SENTENCES.get(code) ?? 
 export const pathSentence = (code: string) => PATH_SENTENCES.get(code) ?? `The probe reported ${code}.`;
 
 /** A save that changed part of what was asked; its message says which part (whole-review chunk 4b, P2 1). */
-export class PartialSaveError extends Error {}
+export interface PartialSave {
+    jfmodPartialSave: true;
+    message: string;
+}
+
+// A plain object for the same reason as `SettingsProblem`: under the ES5 build an Error subclass loses its prototype, so
+// `instanceof` was always false and the sentence became "The request failed." with no Reload (PHASE7, S8 runner fix).
+export const partialSave = (message: string): PartialSave => ({ jfmodPartialSave: true, message });
+
+const isPartialSave = (error: unknown): error is PartialSave =>
+    typeof error === 'object' && error !== null && (error as PartialSave).jfmodPartialSave === true;
 
 /** The failure text a section shows: the conflict sentence for a stale revision, else the server's own title. */
 export const problemText = (error: unknown) => {
-    if (error instanceof PartialSaveError) return error.message;
+    if (isPartialSave(error)) return error.message;
     if (isSettingsProblem(error)) {
         if (error.type === 'revision_conflict') return CONFLICT_MESSAGE;
         const blockers = error.blockers.map(blockerSentence).join(' ');
