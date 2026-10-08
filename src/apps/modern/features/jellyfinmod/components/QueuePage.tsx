@@ -14,8 +14,8 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    automationPausedText, formatBytes, formatDuration, formatRate, progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage,
-    seedingSummary, sortQueueRows, updatedAgo
+    automationPausedText, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent, QUEUE_STATE_LABEL,
+    queueRowTitle, reasonMessage, seedingSummary, sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
 import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
@@ -42,6 +42,9 @@ const freshnessOf = (row: QueueRow, generatedAt: string) => {
 /** The reason sentence for a blocked or failed import, or the seeding goals in words. */
 const detailOf = (row: QueueRow) => {
     if (row.state === 'blocked' || row.state === 'failed') return reasonMessage(row.reason, row.message);
+    // A pack's own episodes that were skipped or need attention, while its torrent reads otherwise.
+    const episodes = packEpisodeProblems(row);
+    if (episodes) return episodes;
     if (row.state !== 'seeding' || !row.seeding) return null;
     const summary = seedingSummary(row.seeding);
     let reason = row.seeding.reason;
@@ -51,6 +54,9 @@ const detailOf = (row: QueueRow) => {
 };
 
 const versionOf = (row: QueueRow) => {
+    // A pack adding or replacing held files says so; one filling missing episodes needs no words.
+    if (row.pack?.mode === 'add') return 'Added beside the files held';
+    if (row.pack?.mode === 'replace') return 'Replaces the files held';
     if (row.intent !== 'addVersion') return row.versionLabel;
     return 'Another version' + (row.versionLabel ? ': ' + row.versionLabel : '');
 };

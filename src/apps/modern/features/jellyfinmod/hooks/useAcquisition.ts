@@ -6,6 +6,9 @@ import { getPluginHealth } from '../api/modApi';
 /** The capability a plugin build advertises when it serves release search and held grabs (P4.A7). */
 export const RELEASES_CAPABILITY = 'acquisition.releases';
 
+/** Season and series pack search and grabs with fill, add and replace (season packs, 2026-10-08). */
+export const PACKS_CAPABILITY = 'acquisition.packs';
+
 const NO_CAPABILITIES: string[] = [];
 
 /**

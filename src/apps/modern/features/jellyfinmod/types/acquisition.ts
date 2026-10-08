@@ -56,6 +56,30 @@ export interface ReleaseCandidate {
     seedMinutes: number | null;
     /** The candidate's quality is already held; grabbing it as another version answers 409 `held_quality` (P6.M6). */
     heldQuality?: boolean;
+    /** What a pack row covers; null outside season and series searches, absent from plugins without `acquisition.packs`. */
+    coverage?: PackCoverage | null;
+}
+
+/** `episode` searches one episode, `season` packs of one season, `series` complete-series packs (season packs, 2026-10-08). */
+export type ReleaseScope = 'episode' | 'season' | 'series';
+
+/** How a grab writes held episodes: `fill` only the missing ones, `add` another version beside, `replace` it. */
+export type GrabMode = 'fill' | 'add' | 'replace';
+
+/** A pack row's seasons (empty for a complete pack that names none) and the searched episodes it covers. */
+export interface PackCoverage {
+    seasons: number[];
+    complete: boolean;
+    missing: number;
+    held: number;
+}
+
+/** One episode a season or series search covers. */
+export interface CoveredEpisode {
+    episodeId: string;
+    seasonNumber: number;
+    episodeNumber: number;
+    held: boolean;
 }
 
 /** `addVersion` adds a version beside the held file (P6.M6); the default is `acquire`. */
@@ -86,9 +110,22 @@ export interface ReleaseSearch {
         year: number | null;
         seasonNumber: number | null;
         episodeNumber: number | null;
+        /** Absent from plugins without `acquisition.packs`, which search one episode or a movie. */
+        scope?: ReleaseScope;
+        covered?: CoveredEpisode[];
     };
     profile: { id: string; name: string; revision: number; inherited: boolean };
-    grab: { available: boolean; reason: string | null; holdSeconds: number; activeOperationId: string | null };
+    grab: {
+        available: boolean;
+        reason: string | null;
+        holdSeconds: number;
+        activeOperationId: string | null;
+        /**
+         * The modes this search's rows may offer (user, 2026-10-09): `replace` only while episode upgrades are on. Absent from
+         * older plugins, whose rows offer what they did before.
+         */
+        modes?: GrabMode[];
+    };
     candidates: ReleaseCandidate[];
     eligibleCount: number;
     rejectedCount: number;
@@ -125,6 +162,10 @@ export interface GrabOperation {
     message: string;
     /** Credential-free client link, only after verified acceptance. */
     openUrl: string | null;
+    /** Absent from plugins without `acquisition.packs`. */
+    scope?: ReleaseScope | 'title';
+    seasonNumber?: number | null;
+    mode?: GrabMode;
 }
 
 export interface QualityProfile {

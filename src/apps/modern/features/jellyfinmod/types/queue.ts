@@ -87,6 +87,26 @@ export interface QueueRow {
     client: QueueClient | null;
     seeding: QueueSeeding | null;
     admin?: QueueAdminDetail;
+    /** A season or series pack's one row; `episode` is then null. Absent from plugins without `acquisition.packs`. */
+    pack?: QueuePack | null;
+}
+
+/** One claimed episode of a pack and its newest import, if one has started. */
+export interface QueuePackEpisode {
+    episodeId: string;
+    seasonNumber: number;
+    episodeNumber: number;
+    importId: string | null;
+    importState: string | null;
+    reason: string | null;
+}
+
+/** A pack's row detail (season packs, 2026-10-08): `Season 1 pack · 4 episodes`, its mode and each claimed episode. */
+export interface QueuePack {
+    scope: 'season' | 'series';
+    label: string;
+    mode: 'fill' | 'add' | 'replace';
+    episodes: QueuePackEpisode[];
 }
 
 export interface QueueClientStatus {
