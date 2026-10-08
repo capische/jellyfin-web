@@ -1801,8 +1801,9 @@ export const RatingsSection: FC<SectionProps> = props => {
             <div className='jfmod-group'>
                 <h3 className='jfmod-grouptitle'>Ratings shown</h3>
                 <div className='fieldDescription'>
-                    Ticked ratings show for every user who has not chosen their own in Ratings display, in this order. Fetching is the
-                    same either way.
+                    Ticked ratings show for every user who has not chosen their own in Ratings display. IMDb and Rotten Tomatoes show
+                    beside the title, and Trakt when the line has room; every ticked rating shows with its votes, in this order, in the
+                    popup that opens on hover, a tap or OK. Fetching is the same either way.
                 </div>
                 {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
                     on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}

@@ -73,6 +73,60 @@ export default function initializeNativeEntryDetails(view, params) {
         versionsMount?.remove();
         versionsMount = undefined;
     };
+    /**
+     * The ratings group (user decisions 10 and 13, 2026-10-08) lives in upstream's first metadata row, where the stock star and tomato
+     * are. Upstream fills that row when it renders the item — before it focuses Play, which it does asynchronously — and
+     * fills it again on later renders by replacing the row's content, which drops the group. A MutationObserver on the row
+     * puts the same mount (and its React tree) back in place in the same microtask, before paint: the first time, before
+     * Play has focus, so the reserved space is there from the first paint; on a refill, at the same place, giving focus back
+     * to the group if the refill took it away (web review 2026-10-08, P2 2).
+     */
+    const watchRatingsRow = (itemRequest, api, userId) => {
+        const row = view.querySelector('.detailRibbon .itemMiscInfo-primary');
+        if (!row) return;
+        ratingsMount = document.createElement('span');
+        ratingsMount.className = 'jfmod-ratingsMount';
+        const mountNode = ratingsMount;
+        // The item's type, once this page's own request for it has answered: usually before upstream fills the row (it asks
+        // the same question), so the group knows at its first paint whether it belongs here at all.
+        let knownType;
+        itemRequest.then(found => {
+            knownType = found?.Type ?? null;
+        }, () => {
+            knownType = null;
+        });
+        // Whether the group had focus when upstream's refill took it out. Focus moving elsewhere names where it went; a removal
+        // does not, and the refill's MutationObserver (a microtask) runs before the timer that settles an unexplained loss
+        // (a click on nothing, the window losing focus) once the group is back in the page.
+        let focused = false;
+        mountNode.addEventListener('focusin', () => {
+            focused = true;
+        });
+        mountNode.addEventListener('focusout', event => {
+            if (event.relatedTarget) {
+                focused = false;
+                return;
+            }
+            setTimeout(() => {
+                if (mountNode.isConnected && !mountNode.contains(document.activeElement)) focused = false;
+            });
+        });
+        const place = () => {
+            if (!row.firstChild) return;
+            const before = row.querySelector('.starRatingContainer, .closedCaptionMediaInfoText, .mediaInfoCriticRating, .endsAt');
+            if (mountNode.parentNode === row && (!before || mountNode.nextSibling === before)) return;
+            row.insertBefore(mountNode, before);
+            if (!unmountRatings) {
+                unmountRatings = renderComponent(NativeRatingsLine, { api, userId, itemId: params.id, knownType,
+                    itemType: itemRequest.then(found => found?.Type) }, mountNode);
+            } else if (focused && (!document.activeElement || document.activeElement === document.body)) {
+                mountNode.querySelector('[data-jfmod-ratings-group]')?.focus({ preventScroll: true });
+            }
+        };
+        ratingsRowWatch = new MutationObserver(place);
+        ratingsRowWatch.observe(row, { childList: true });
+        place();
+    };
     const show = async () => {
         hide();
         const currentGeneration = generation;
@@ -80,6 +134,8 @@ export default function initializeNativeEntryDetails(view, params) {
         const api = client && ServerConnections.getApi(client.serverId());
         const target = view.querySelector('.detailSectionContent');
         if (!api || !target || !params.id) return;
+        const itemRequest = client.getItem(client.getCurrentUserId(), params.id);
+        watchRatingsRow(itemRequest, api, client.getCurrentUserId());
         // Asked for here rather than read out of upstream's failure. Upstream's controller does its own
         // getItem and, when the item is gone (a reclaim, a library removal), logs and leaves the page empty;
         // reading that used to mean a patch inside its catch. Owning the route means asking the same question
@@ -89,7 +145,7 @@ export default function initializeNativeEntryDetails(view, params) {
         let user;
         try {
             [item, user] = await Promise.all([
-                client.getItem(client.getCurrentUserId(), params.id),
+                itemRequest,
                 client.getCurrentUser(),
                 // The Ratings line's data loads with the page, so it is in place before anything below it can take focus;
                 // bounded, so a slow plugin never holds the page (Phase 9, web review 2026-10-07 P2 2).
@@ -125,27 +181,6 @@ export default function initializeNativeEntryDetails(view, params) {
                 userId: client.getCurrentUserId(),
                 itemId: params.id
             }, traktMount);
-        }
-        // The ratings (Phase 9, inline design of 2026-10-08) have their own mount at the end of upstream's first metadata row,
-        // right after the year, the parental rating and the stock star. Upstream refills that row's content when it renders
-        // the item again, which drops the mount, so the same mount (and the React tree in it) is put back each time. The row
-        // is above the button row a TV's focus starts on; the line itself keeps any late change from moving a focused
-        // control (UX §13 rule 2). Only a movie or series has ratings; an empty mount takes no space.
-        const ratingsRow = view.querySelector('.itemMiscInfo-primary');
-        if ((item?.Type === 'Movie' || item?.Type === 'Series') && ratingsRow) {
-            ratingsMount = document.createElement('span');
-            ratingsMount.className = 'jfmod-ratingsMount';
-            ratingsRow.appendChild(ratingsMount);
-            const mountNode = ratingsMount;
-            ratingsRowWatch = new MutationObserver(() => {
-                if (mountNode.parentNode !== ratingsRow) ratingsRow.appendChild(mountNode);
-            });
-            ratingsRowWatch.observe(ratingsRow, { childList: true });
-            unmountRatings = renderComponent(NativeRatingsLine, {
-                api,
-                userId: client.getCurrentUserId(),
-                itemId: params.id
-            }, ratingsMount);
         }
         unmount = renderComponent(NativeEntryDetails, {
             api,

@@ -18,7 +18,7 @@ import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
-import RatingsLine from './RatingsLine';
+import RatingsGroup from './RatingsGroup';
 import RatingsRefreshButton from './RatingsRefreshButton';
 import type { Rating } from '../types/ratings';
 import RetentionStatus from './RetentionStatus';
@@ -193,10 +193,11 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
-            {/* The page's own star stays beside the ratings row, whatever the row shows (user, 2026-10-08). */}
-            {entry.metadata?.communityRating ? <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
-            {/* Always mounted: ratings turned off later empties it under the same never-move-focus rule as any change. */}
-            <RatingsLine ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} inline ready={ratingsPreferences.loaded} />
+            {/* The page's own star gives way to IMDb when there is one (user decisions 10 and 13, 2026-10-08). */}
+            {entry.metadata?.communityRating && !(ratingsPreferences.enabled && ratings?.some(rating => rating.source === 'imdb')) ?
+                <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
+            <RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
+                wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar />
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}

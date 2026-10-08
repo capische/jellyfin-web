@@ -1,46 +1,54 @@
-// Phase 9: the ratings row (inline design, 2026-10-08). Each rating is its source's mark and its value, in the row that
-// holds the title's year and stock star. Sized in em so the TV's 125 % and the phone's 90 % root sizes scale it, and laid
-// out with margins rather than flex gap for older TV engines (UX §13, P1.W11).
-.jfmod-ratingsLine {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    margin: 0 0 0.7em;
-}
-
-.jfmod-ratingsLine-inline {
-    display: inline-flex;
-    margin: 0;
-    vertical-align: middle;
-}
+// Phase 9: the ratings in the title's first metadata row (user decisions 10 and 13, 2026-10-08). Sized in em so the TV's 125 % and
+// the phone's 90 % root sizes scale it, and laid out with margins rather than flex gap for older TV engines (UX §13, P1.W11).
 
 // The entry page's own star, spaced like a row item.
 .jfmod-entryStar {
     margin: 0 1em 0 0;
 }
 
-// The native page's mount is one more item of upstream's flex row (`.itemMiscInfo-primary`).
+// The native page's mount is one more item of upstream's flex row (`.itemMiscInfo-primary`), where the star was.
 .jfmod-ratingsMount {
     display: inline-flex;
     align-items: center;
 }
 
-.jfmod-ratings {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
+// About a capital letter's height, on the text's line.
+.jfmod-ratingIcon {
+    flex: none;
+    width: auto;
+    height: 1.15em;
+    margin: 0 0.35em 0 0;
+    vertical-align: -0.2em;
 }
 
-.jfmod-ratingItem {
-    display: inline-flex;
+// The one source a card may show (P9.R7), inside the card's own secondary text line: its mark and its value.
+.jfmod-cardRating {
+    white-space: nowrap;
+
+    .jfmod-ratingIcon {
+        height: 1em;
+        margin: 0 0.25em 0 0;
+        vertical-align: -0.15em;
+    }
 }
 
-// No chip and no border: a mark and a number, spaced like the row's own items (`.mediaInfoItem`, 1em apart).
-.jfmod-rating {
+.jfmod-cardRating-stale {
+    opacity: 0.7;
+}
+
+// The ratings group: one control holding IMDb, Rotten Tomatoes critics and audience, and Trakt, each its mark and its value
+// (user decisions 10 and 13).
+.jfmod-ratingsGroup {
     display: inline-flex;
     align-items: center;
-    margin: 0 0.85em 0 0;
-    padding: 0.1em 0.15em;
+    margin: 0 1em 0 0;
+}
+
+.jfmod-groupButton {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1em 0.2em;
+    margin: 0 0 0 -0.2em;
     border: 0;
     border-radius: 0.2em;
     background: none;
@@ -60,71 +68,152 @@
     }
 }
 
-// About a capital letter's height, on the text's line.
-.jfmod-ratingIcon {
-    flex: none;
-    width: auto;
-    height: 1.15em;
-    margin: 0 0.35em 0 0;
-    vertical-align: -0.2em;
+// The space reserved before the answer: laid out, never seen.
+.jfmod-groupButton-standIn {
+    visibility: hidden;
 }
 
-// Older than the refresh window: dimmed; the tooltip says how old.
-.jfmod-rating-stale {
-    opacity: 0.55;
-}
-
-// On a phone, or wherever the pointer is a finger, each rating is a full touch target with room between neighbours, so a tap
-// opens the one meant (web review 2026-10-07 round 2, P3 6): about 44 CSS pixels at the phone's root size.
-.layout-mobile .jfmod-rating {
+// On a phone, or wherever the pointer is a finger, the group is a full touch target: about 44 CSS pixels at the phone's root size.
+// A phone's row is narrow: Trakt gives way first (user decision 13); should IMDb and Rotten Tomatoes still not fit, the row's
+// flex layout shrinks the group and its items wrap inside it, centred like the row.
+.layout-mobile .jfmod-groupButton {
+    justify-content: center;
     min-height: 3em;
     padding: 0 0.3em;
-    margin-right: 0.5em;
+    white-space: normal;
 }
 
 @media (pointer: coarse) {
-    .jfmod-rating {
+    .jfmod-groupButton {
         min-height: 3em;
         padding: 0 0.3em;
-        margin-right: 0.5em;
     }
 }
 
-// On a TV the ratings are focus stops: the focused one is marked like the app's other focused controls.
-.layout-tv .jfmod-rating:focus {
+// On a TV the group is one focus stop: marked like the app's other focused controls.
+.layout-tv .jfmod-groupButton:focus {
     background: rgba(255, 255, 255, 0.18);
     outline: 0.12em solid #00a4dc;
     outline-offset: 0.1em;
 }
 
-// The tooltip floats above the page (fixed, so the row's own overflow never clips it and nothing below moves): paper on
-// ground, the card radius, the secondary text size.
-.jfmod-ratingTooltip {
-    position: fixed;
-    z-index: 1100;
-    max-width: 24em;
-    padding: 0.5em 0.75em;
-    border-radius: 0.2em;
-    background: #202020;
-    color: rgba(255, 255, 255, 0.87);
-    box-shadow: 0 0.2em 0.8em rgba(0, 0, 0, 0.6);
-    font-size: 86%;
-    line-height: 1.4;
-    text-align: left;
-    pointer-events: none;
+// The stock star and tomato the group stands in for (classes the group puts on the row while it shows IMDb or Rotten Tomatoes).
+.jfmod-ratings-hideStar > .starRatingContainer,
+.jfmod-ratings-hideCritic > .mediaInfoCriticRating {
+    display: none;
 }
 
-// The one source a card may show (P9.R7), inside the card's own secondary text line: its mark and its value.
-.jfmod-cardRating {
-    white-space: nowrap;
+// A little closer than the row's own items (1em), so the group leaves room for upstream's "Ends at" on a 1280×720 TV.
+.jfmod-groupItem {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0.8em 0 0;
 
-    .jfmod-ratingIcon {
-        height: 1em;
-        margin: 0 0.25em 0 0;
-        vertical-align: -0.15em;
+    &:last-child {
+        margin-right: 0;
     }
 }
 
-.jfmod-cardRating-stale {
+// The two tomato marks (fresh and splat) differ a little in their aspect: one width for both keeps the reserved space exact.
+.jfmod-groupItem .jfmod-ratingIcon {
+    margin-right: 0.3em;
+
+    &[data-jfmod-icon^='tomatoesCritic'] {
+        width: 1.2em;
+    }
+}
+
+// The row's items, side by side.
+.jfmod-groupItems {
+    display: inline-flex;
+    align-items: center;
+}
+
+.layout-mobile .jfmod-groupItems {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+// The fallback's stand-ins (none of IMDb, Rotten Tomatoes or Trakt ticked) laid out on top of each other: one line, the
+// widest one's width.
+.jfmod-groupStack {
+    display: inline-flex;
+    flex-direction: column;
+    height: 1.2em;
+    overflow: hidden;
+
+    .jfmod-groupItem {
+        margin-right: 0;
+    }
+}
+
+.jfmod-groupItem-stale {
+    opacity: 0.55;
+}
+
+// The popup (user decision 13): only rows of mark, value and votes in aligned columns, paper on ground with the card radius,
+// above the page (fixed, so nothing below moves). Its width is set to the group's with all its sources; a row never wraps
+// and never widens it (the votes are clipped first).
+.jfmod-groupPopup {
+    position: fixed;
+    z-index: 1100;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    padding: 0.45em 0.6em;
+    border-radius: 0.2em;
+    background: #202020;
+    color: rgba(255, 255, 255, 0.87);
+    box-shadow: 0 0.2em 0.9em rgba(0, 0, 0, 0.6);
+    box-sizing: border-box;
+    // Never wider or taller than the screen (a phone): a taller list scrolls inside.
+    max-width: calc(100vw - 1em);
+    max-height: calc(100vh - 1em);
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-size: 86%;
+    line-height: 1.5;
+    text-align: left;
+    white-space: nowrap;
+}
+
+// Each row's cells sit in the popup's three columns.
+.jfmod-popRow {
+    display: contents;
+}
+
+.jfmod-popMark {
+    display: flex;
+    align-items: center;
+    padding: 0.15em 0.6em 0.15em 0;
+
+    .jfmod-ratingIcon {
+        margin: 0;
+    }
+}
+
+.jfmod-popValue {
+    padding: 0 0.7em 0 0;
+    font-weight: 600;
+}
+
+.jfmod-popVotes {
+    min-width: 0;
+    overflow: hidden;
     opacity: 0.7;
+    text-overflow: ellipsis;
+}
+
+.jfmod-pop-stale > * {
+    opacity: 0.55;
+}
+
+// Where a value came from, for a screen reader only (the row's title says it on hover).
+.jfmod-ratingsHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
