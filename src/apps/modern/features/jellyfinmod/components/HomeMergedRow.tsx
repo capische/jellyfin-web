@@ -4,8 +4,6 @@ import { useQueries } from '@tanstack/react-query';
 import React, { type FC, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { getNextUpQuery } from 'apps/legacy/features/libraries/api/useNextUp';
-import { getResumeItemsQuery } from 'apps/legacy/features/libraries/api/useResumeItems';
 import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
 import Card from 'components/cardbuilder/Card/Card';
 import { setCardData } from 'components/cardbuilder/cardBuilder';
@@ -14,6 +12,7 @@ import { useApi } from 'hooks/useApi';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 import { browseEntries } from '../api/modApi';
+import { useContinueWatching } from '../hooks/useContinueWatching';
 import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import { FileState } from '../types/entry';
@@ -75,32 +74,11 @@ const RowShell: FC<{ title: string; children: React.ReactNode }> = ({ title, chi
 };
 
 const ContinueRow: FC<ContinueProps> = ({ includeResume, includeNextUp }) => {
-    const { api, user, __legacyApiClient__ } = useApi();
-    const queries = useQueries({ queries: [
-        { ...getResumeItemsQuery(api, {
-            userId: user?.Id, limit: 12, fields: [ItemFields.PrimaryImageAspectRatio], imageTypeLimit: 1,
-            enableImageTypes: [ImageType.Primary, ImageType.Backdrop, ImageType.Thumb], enableTotalRecordCount: false, mediaTypes: ['Video']
-        }), enabled: !!api && !!user?.Id && includeResume },
-        { ...getNextUpQuery(api, {
-            userId: user?.Id, limit: 24, fields: [ItemFields.PrimaryImageAspectRatio, ItemFields.DateCreated], imageTypeLimit: 1,
-            enableImageTypes: [ImageType.Primary, ImageType.Backdrop, ImageType.Thumb], enableTotalRecordCount: false, enableResumable: false
-        }), enabled: !!api && !!user?.Id && includeNextUp }
-    ] });
-    const items = useMemo(() => {
-        const byId = new Map<string, ItemDto>();
-        const resume = (queries[0].data?.Items ?? []) as ItemDto[];
-        const next = (queries[1].data?.Items ?? []) as ItemDto[];
-        // Resume wins when the same episode occurs in both feeds.
-        for (const item of [...resume, ...next]) if (item.Id && !byId.has(item.Id)) byId.set(item.Id, item);
-        return [...byId.values()].sort((left, right) => {
-            const leftDate = left.UserData?.LastPlayedDate ?? left.DateCreated;
-            const rightDate = right.UserData?.LastPlayedDate ?? right.DateCreated;
-            return String(rightDate ?? '').localeCompare(String(leftDate ?? ''));
-        }).slice(0, 24);
-    }, [queries]);
+    const { __legacyApiClient__ } = useApi();
+    const { items } = useContinueWatching({ includeResume, includeNextUp });
     setCardData(items, { ...rowOptions, serverId: __legacyApiClient__?.serverId() });
     if (!items.length) return null;
-    return <RowShell title='Continue watching'>{items.map(item => <Card key={item.Id} item={item} cardOptions={{ ...rowOptions, serverId: __legacyApiClient__?.serverId() }} />)}</RowShell>;
+    return <RowShell title='Continue Watching'>{items.map(item => <Card key={item.Id} item={item} cardOptions={{ ...rowOptions, serverId: __legacyApiClient__?.serverId() }} />)}</RowShell>;
 };
 
 const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
