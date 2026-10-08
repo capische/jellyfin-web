@@ -458,6 +458,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `jellyfin-mod` (code `4d124d9f5c`); Codex approve after four re-reviews; settings design runner 688/688 on Chromium and
   Chrome on 28096. Waiting for the user's approval to republish 0.1.0.0 (see [`PHASE7.md`](PHASE7.md), *Settings
   buttons: three kinds*).
+- Settings list rows as named icons and Title Case in both settings pages (2026-10-08): **accepted, not released** —
+  merged at plugin `master` (`f7c274c`) and web `jellyfin-mod` (code `d456ab5263`); Codex re-review 2 closed every product finding
+  (its one remaining finding was in a runner, fixed without another round); settings design runner 810/810 on Chromium and Chrome on 28096. Rule in UX §12.1. Waits for the combined
+  republish after the detail-page fix (see [`PHASE7.md`](PHASE7.md), *Settings rows as named icons*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.

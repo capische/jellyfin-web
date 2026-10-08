@@ -2616,6 +2616,52 @@ of the previous section.
   class (a)). Retention days put back to 14. **Not republished**: 0.1.0.0 / `:latest` still carry the previous section's
   build until the user approves another overwrite. 28096 runs this build.
 
+#### Settings rows as named icons, and Title Case — 2026-10-08
+
+Asked for by the user on 2026-10-08 from a screenshot of the Indexers rows ("replace this to icons"), then the Quality
+profiles rows ("The same here. Find other places like this and update"), and "Replace 'JellyfinMod settings' to
+JellyfinMod Settings. Also update Add indexer to Add Indexer and similar." The user approved a preview on 28096 ("go").
+The rule is UX §12.1.
+
+- **Row icons.** Every action of a list row is a round icon of at least 40 px, as in a secret's box, named after its row
+  in its aria-label and tooltip ("Remove Prowlarr 1337x"): Test `network_check`, Edit pencil, Remove red bin, Make
+  Default `star_border`, Move Up / Move Down arrows, Fix `build` (blocker rows), and on the Dashboard page Rebind `link`
+  and Keep `push_pin` (episode conflicts). Rows: indexers, quality profiles, path mappings, a profile's quality order
+  (the web gains Move Down), blockers, conflicts. Busy actions and moves with nowhere to go are refused with
+  aria-disabled, never disabled; a refused icon drops its fill and keeps its glyph in the secondary text colour (8:1);
+  the TV's dialog navigation reaches it. The Default chip stays a status chip. Buttons outside rows stay labelled.
+- **Title Case** for buttons, page, section, group and dialog titles, rail items, the user menu's *JellyfinMod
+  Settings*, the TV settings link, the setup banner's *Set Up*, the wizard's steps, and the queue and release picker's
+  own labels (*Remove from Queue*, *Open in Client*, *View Queue*, *Another Quality for …*, *More Movie Results from
+  TMDB*), on both pages. Descriptions, status lines, chips and server sentences unchanged; no API change. Left to the
+  detail-page and Home hero sessions, which own those files: *Continue watching*, *More info*, and the detail page's
+  *Remove entry*, *Search releases*, *Search now*, *Refresh metadata*, *Get again*, *Keep series*, *Stop keeping*,
+  *Get another quality*, *Remove this version*.
+- **Found by acceptance, fixed:** on the TV the settings page moved the focus to its rail step whenever its data was read
+  again, so a row's Test sent the remote to the rail when the list refreshed (pre-existing since S8). It now places the
+  focus on the rail once, when the area renders, and afterwards only when the focus was lost.
+- **Web** (`jellyfin-mod`, `63a5a6cc87`…`6fa09c7bf7`, mod files only; `AppUserMenu.tsx` changes one string on the mod's
+  own line). **Plugin** (`master`, `c86271a`, `f7c274c`, `configPage.html`). Version stays 0.1.0.0.
+- **Review.** Codex GPT-6.1 Sol, high: review 1 request changes (P2: initial TV focus could stay outside settings,
+  refused arrows faded under 4.5:1, the TV dialog skipped refused icons, two runner defects; P3: an empty refusal note,
+  a title-cased section name in a sentence — withdrawn on re-review); re-review 2: every product finding closed, no
+  regression, one runner defect left (the focus check could read before the settings reread finished), fixed in
+  `6fa09c7bf7` without another round (runner scope rule). Records under the session scratchpad
+  (`review-rowscase-1..2.md`).
+- **Live acceptance on 28096** (bundle `d58eb8c49a49` from `d456ab5263`; nothing outside `scripts/` and `docs/` differs
+  up to the tip; plugin DLL from `f7c274c`). `settings-design.mjs` now also asserts that every list-row action is an
+  icon named after its row on both pages, the quality order's refused ends, the TV arrow order along a row and onto a
+  refused arrow, the focus after a row's Test once the reread has finished, the row tooltips, and Title Case of titles,
+  rail items, labelled buttons and the user menu — **810/810 on Playwright Chromium and 810/810 on Google Chrome** at
+  desktop, mobile, TV 1080 and TV 720 (the TV-only check changed after review re-run on Chromium TV 1080, 168/168).
+  Regression runners: Chromium `setup-wizard` 23/23, `settings-prowlarr` 9/9, `review-fixes` 27/27 (on the pre-review
+  build; `settings-area` TV layouts re-run on the final build, 16/16); Chrome on the final build `setup-wizard` 23/23,
+  `settings-prowlarr` 9/9, `review-fixes` 27/27, `settings-area` 28/29 (the known stale-revision harness step, class
+  (a)). Retention days put back to 14 after each run; no fixture left. **Not republished**: waits for the combined
+  republish after the detail-page fix. 28096 runs this build.
+- **Follow-up (runners, not blocking):** `rows-preview.mjs` should delete its preview profile in a `finally` and check the
+  deletion; the stale-revision step of `settings-area.mjs` still waits for the old error notice.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
