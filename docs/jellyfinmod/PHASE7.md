@@ -2002,6 +2002,145 @@ evidenced by the same `playbackManager.play({ ids })` call the hero makes, drive
 any type gate in the component. Producing a genuine movie hero needs either a movie newer than all 105 series or
 a deliberate fixture, and neither was worth doing inside a window the parity run was waiting on.
 
+#### The hero is what you are in the middle of, and as tall as the window is wide — decided 2026-10-07
+
+**Decision (user, 2026-10-07), reviewing Home on a ~2000 px desktop window:** the hero shows what the user is in the
+middle of, like Continue watching; only when nothing is in progress does it fall back to the newest title. Its height
+follows the window width so the backdrop fits instead of being cropped to a strip with heads cut off.
+
+**Selection** (`HomeHero.tsx`, `hooks/useContinueWatching.ts`). The hero is the first item of the merged Continue
+watching list, read through the same hook as the row (`HomeMergedRow` `ContinueRow`), so both use the same request
+parameters, share one cache entry per feed and cannot disagree: upstream's resume and Next Up feeds, resume winning
+on a duplicate id, newest first. A resumed item sorts by its own `UserData.LastPlayedDate`; **a Next Up episode sorts
+by when the user last played any episode of its show** (decided 2026-10-08, below); each falls back to `DateCreated`
+(now requested for resume items too, which need it when a resume point has no play date). The Next Up request now honours the user's own Next Up
+settings as upstream's Next Up section does (*max days in Next Up* as `nextUpDateCutoff`, *rewatching* as
+`enableRewatching`); the merged row gains the same, which it did not have before. **Each feed takes part only when the
+user's Home settings show its section** (Continue Watching, Next Up), for the row and the hero alike, and the hook
+ignores a left-out feed's cached data: a disabled query still hands back what another reader cached, which put a
+hidden section back into the row (Codex review 2026-10-08, P2).
+
+- A movie shows its own backdrop, name and overview; **Play** resumes it from `UserData.PlaybackPositionTicks` with the
+  call upstream's Continue watching card makes (`playbackManager.play({ ids, startPositionTicks, serverId })`).
+- An episode (resumed or Next Up) shows the **series** backdrop and the series name, with the episode line under it in
+  the cards' form (`itemHelper.getDisplayName`, e.g. "S2:E4 - Off 15"); the overview is the episode's, else the
+  series'. The backdrop is the inherited pair (`ParentBackdropItemId` + `ParentBackdropImageTags`) when the episode
+  carries it; Jellyfin only fills that pair for an episode with no artwork of its own, so otherwise the series is read
+  (one lookup for all such episodes, which also supplies missing overviews) before the episode is passed over.
+  **Play** plays or resumes that exact episode; **More info** opens the episode, as the card does.
+- Only movies and episodes are candidates, and one with no backdrop at all is skipped for the next (on 18096 another
+  session's backdrop-less fixture episode headed the row on 2026-10-08 and the hero correctly passed it over); when
+  none is left the hero falls back to the previous newest-with-backdrop-and-file query, unchanged in what it asks for
+  (its query key, 200 candidates, the `RecursiveItemCount` filter, Play resolved by `playbackManager`).
+- **The fallback is fetched alongside the feeds, and the hero keeps what it shows while the next choice is worked
+  out** (Codex review 2026-10-08, P2): a cold Home with nothing in progress has its hero, and its Play, inside
+  `homeTab.ts`'s 3-second TV first-focus window, and finishing the last in-progress title swaps the hero instead of
+  unmounting a focused Play while the fallback loads.
+- **Next Up is ordered by when the show was last watched — decided 2026-10-08.** The user, verbatim: *"sort next up
+  by when I last watched the show"*. Before, a Next Up episode sorted by its own play date, else when it was added, so
+  the next episode of the show watched last night sank below older resumed titles whenever it had been in the library
+  for a while. The server gives no show-level play date (a series' own `UserData.LastPlayedDate` comes back empty), so
+  the hook reads the user's 100 most recently played episodes in one request (`DatePlayed` descending) and takes each
+  show's newest; only when that batch is full of dated plays and a Next Up show is missing from it is that show read on
+  its own (one episode, `parentId`, `DatePlayed` descending). A show with no play date keeps `DateCreated`. The dates
+  are keyed `['JellyfinMod', basePath, userId, 'ContinueWatching', …]`, which `queryClientEventHandler.tsx` now
+  invalidates on `UserDataChanged` with the feeds, and the list does not count as settled until they are read, so the
+  hero never shows the old order first.
+- **Moving on needs no reload.** The feeds' keys (`['User', id, 'ResumeItems' | 'NextUp', …]`) and every `HomeHero`
+  key are already invalidated by `integration/queryClientEventHandler.tsx` on the server's `UserDataChanged`, which
+  playback stop sends; nothing had to be added there. Proven both ways below.
+
+**Sizing** (`homeChrome.scss`). `height: 43.5vw` (about 2.3:1) between the old `min-height: 34em` floor and a
+`max-height: 80vh` cap (min-height wins on a short window); mobile `56.25vw` (a whole 16:9 frame) over its 29em floor,
+and on a phone on its side (`max-height: 30em`) the floor gives way to the cap and the overview to two lines, so Play
+stays on screen; TV keeps its 37em floor under the same width rule. `background-position: center top` keeps the top
+of the frame, where faces are, and lets the crop fall under the gradient and text. Plain `vw`/`em`/`vh`: no
+`clamp()`, `min()`, `max()` or `aspect-ratio`, which the webOS 6–22 targets (Chromium 79–87, decision 5) do not all
+have, and still no flex `gap` or `display: contents`.
+
+#### S6 evidence — the hero follows what you are watching, 2026-10-07/08
+
+`scripts/jellyfinmod-e2e/home-hero.mjs` against the isolated instance 18096 as `oleksii`, branch
+`feat/home-hero-continue`, final runs on 2026-10-08 against tip `2f4d3fe608` on `jellyfin-mod` `d2088c8a5e` (bundle
+`f26dd03564f9`), then again after rebasing onto `jellyfin-mod` `70e790b26c` (the settings design fix) against tip
+`5844e6cb9a` (bundle `b5558841b693`) with identical verdicts; this record's own amendment followed. **How the bundle
+ran:** 18096 was serving another session's bundle, so rather than replace it the runner served this branch's `dist/`
+(`jellyfinmod.html`, the takeover entry) from a loopback port with `config.json` naming 18096 — upstream's own dev
+arrangement — against the real server, its auth, sessions, websocket and playback. Real Google Chrome 153.0.8010.54 and
+Playwright's Chromium 153.0.8010.12, both headless. The in-progress states were produced by playing real items
+(*Tacoma FD* S1:E5 "The B-Team", *Interstate 60*, both played before, so playing them can be undone exactly).
+
+| Check | Result — **every check passes on real Chrome and on Chromium** (63 verdicts each, plus INFO records) |
+| --- | --- |
+| (a) Partly watched episode | Hero `Tacoma FD`, line `S1:E5 - The B-Team`, series backdrop, More info → the episode; it is the first Continue watching card with a backdrop |
+| (a) Episode Play | Server session `NowPlayingItem` = that episode id, first reported at 881 s against 881 s saved (resumed, not restarted) |
+| Episode finished, hero moves on | Resumed at 95 % (1 398 of 1 472 s) and stopped: the server marks it played; the hero moves to `Sugar (2024)` / `S2:E4 - Off 15`, the new first card with a backdrop, **same page, no reload** |
+| (b) Partly watched movie, newer than any episode | Hero `Interstate 60`, no episode line, the first card; Play resumed at 5 366 s against 5 363 s saved (Chromium: 5 366 against 5 356) |
+| Invalidation alone | Home left open, the movie's old state written back over the API: the hero followed the pushed `UserDataChanged` to the next first card, no navigation, no reload |
+| (c) Nothing in progress | All 12 resume positions cleared and *max days in Next Up* 0 (the user setting): both feeds empty; the hero showed the newest playable title with a backdrop, `Peaky Blinders: The Immortal Man`, as before |
+| Home settings honoured | Next Up hidden from Home: the hero and all 12 row cards come from resume only, none of the 8 cached Next Up-only cards return. Resume hidden: the hero (*Guillermo del Toro's Cabinet of Curiosities*) and all 8 cards come from Next Up only, none of the 12 cached resume-only cards return. Home settings written back exactly. The same check **failed on the pre-fix bundle** (21 cards with Next Up hidden, the resume item *Sugar* as hero with Resume hidden), which is the shared-cache fault the fix closes |
+| Backdrop-less candidate | On 2026-10-08 another session's fixture episode with no backdrop headed the row; the hero passed it over for the next card, as the rule says |
+| (d) Desktop height = the width rule, to the pixel | 1280×800 601 px (0.84 of the frame shown, was 551 / 0.76); 1920×1080 880 (0.81, was 0.51); 2000×1125 915 (0.81, was 0.49); 2560×1440 1 158 (0.80, was 551 / 0.38) |
+| (d) Mobile | 390×844 461 px, the floor, unchanged; 844×390 355 px, title and Play inside a hero that fits the screen (was 461 px, Play below the fold) |
+| (d) TV | 1920×1080 895 px (0.83, was 800 / 0.74); 1280×720 800 px, the floor, unchanged. First focus on Play; Down to the first card, on screen; Up back to the hero (through the plugin's setup banner on this instance). The first-focus scroll is upstream's centring and predates this: the Continue watching title lands at 777 px against 778 px with the old rules |
+| Run hygiene | Every user-data change goes through one ledger and is written back and read back equal (12 items); only the two snapshotted items may play (anything else is refused before it starts: none was); only an allowlist of writes may reach the server (none refused); database snapshot before and after: every UserData row of every item the run touched or played identical, hidden fields included, and no other changed row named by any request the run sent (rows another session changed meanwhile are listed, not restored) |
+| Page errors | None in any layout |
+
+Screenshots and `results.json`: the session scratchpad (`final/chrome`, `final/chromium`), not committed:
+`a-episode-hero-1920.png`, `b-movie-hero-1920.png`, `c-newest-hero-1920.png`, `finish-moved-on-1920.png`,
+`sections-*-hidden-1920.png`, `d-<layout>.png` with `d-<layout>-before.png` (the previous rules put back in the same
+page). Review: Codex GPT-6.1 Sol high, full review of `jellyfin-mod...feat/home-hero-continue` ("approve with fixes",
+seven findings, all fixed except that a remembered audio or subtitle choice cannot be written back through the API, so
+the database check fails the run instead, which Codex accepted) and six re-reviews of the fix deltas, the last
+"approve".
+
+**Not verified here:** the bundle deployed on 18096 itself (it was serving another session's work) and the physical
+LG TV; both belong to this slice's acceptance before it is called accepted. Status: **built (not accepted)**.
+
+#### S6 evidence — Next Up by when the show was last watched, 2026-10-08
+
+Same runner, its new `nextup` step, against 18096 as `oleksii` under this session's lease (10:22–10:52 Sydney), tip
+`44733d1b66` on `jellyfin-mod` `70e790b26c` (bundle `600992f20c40`). **76 of 76 on Playwright's Chromium 153.0.8010.12
+and 76 of 76 on real Google Chrome 153.0.8010.54**, every earlier check included.
+
+| Check | Result (both browsers) |
+| --- | --- |
+| The show watched most recently | *South Park* S1:E6 "Death" (played, last played 2024-11-10) resumed at 95 % and stopped: watched again now; the show's Next Up stays S1:E10 "Damien" |
+| Old rule would have buried it | "Damien" was added 2024-01-10 and last touched 2026-03-16, so 8 resumed titles (*Sugar*, *Late Shift*, *Outlander*, *Bad Thoughts*, *Tacoma FD*, *People We Meet on Vacation*, *Interstate 60*, *Obituary*) would have led it |
+| New rule | "Damien" leads Continue Watching, all 8 resumed titles after it; the hero shows *South Park* / `S1:E10 - Damien` |
+| Finishing an episode | After *Tacoma FD* S1:E5 is finished the hero moves to *Tacoma FD*'s next episode — the show just watched — rather than to an older title |
+| Restored | Every changed item written back and read back equal; every database row of every item played or written identical before and after |
+
+**Two traces the API cannot undo, left on 18096 by runs on 2026-10-08 before the runner's guards existed:**
+*Brave New World (2020)* S1:E1 "Pilot" gained two user-data rows under its own id (keys `643e3f99-…` and
+`tt9814116001001`), value-identical to its older rows kept under the placeholder item, because Jellyfin writes a row
+for every key when it saves an item not saved since the 10.11 migration; and *South Park* S1:E6 "Death" now remembers
+audio track 1 and subtitles off (`1|-1`, was `null|null`), which playback stores and the API cannot clear. The watch
+state of both (played, play count, position, last played) is as it was. Removing them needs the database itself and
+waits for the user's decision. The runner now refuses, before touching it, any item that would gain rows or remembered
+tracks this way.
+
+#### S6 evidence — the frosted bar, and the hero over a stale cache, 2026-10-08
+
+Codex (gpt-6.1-sol, high) rejected the Next Up fix delta with one runner P1 (an episode could autoplay before the run
+had guarded and remembered it) and two P2s (a Home opened over a stale cache withheld the hero until every refetch
+finished, so on a slow network a row took the TV's first focus and the hero then arrived above it; the frosted bar's
+fixed dark tint left the light theme's black text unreadable). Fixed: playback is allowed per item only once it is
+guarded and remembered; the hero's first choice comes from the cache, later ones wait for the refetches; the tint is
+the theme's own bar colour (`--AppBar-background`) at 72 %. The fix delta's re-review: approve, no findings.
+
+Deployed to 28096 through the plugin's web zip (bundle `0205a6d181af` from `4a5554b930`) and run against the served
+bundle as `oleksii` under this session's lease (13:02–13:25 Sydney): **98 of 98 on Playwright's Chromium and 98 of 98
+on real Google Chrome**, every earlier check included.
+
+| Check | Result (both browsers) |
+| --- | --- |
+| TV over a stale cache | Cache older than the one-minute staleness, the three feed refetches held 5 s: Play took the first focus 0.7–0.9 s after reload, before any feed answered, and kept it once they did |
+| Scrolled bar, dark theme | Glass (blur 14px, tint 72 %) on every computer and phone layout; white text 17.2:1 over the tint on the page ground |
+| Scrolled bar, light theme | Glass with the light theme's bar colour; black text 17.6:1 over the tint on the page ground (#f2f2f2) |
+| TV bar | Solid `#101010`, no blur |
+| Restored | Every database row of every item played or written identical before and after; no other changed row named by any request |
+
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:
 
