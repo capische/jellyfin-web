@@ -1,0 +1,8 @@
+browser: chromium 153.0.8010.12
+FAIL - review 10/1 tv1080: every source unticked with the group focused — the group stays visible and focused; Down then leaves it and it goes :: {"before":"group","during":null,"focus":"BODY","onButtons":false,"groupShown":0}
+FAIL - review 10/2 desktop: an empty first answer shows nothing; the next minute's read with values shows the group :: {"empty":0,"reads":2}
+FAIL - review 10/2 desktop: a cold visit whose plugin Health answers late still shows the group once it has :: null
+FAIL - review 10/3 desktop: with IMDb unticked the file-less page keeps its own star; the group shows RT and Trakt, no IMDb :: {"entryStar":false,"inline":["tomatoes_critic","tomatoes_audience","trakt"]}
+ok - no request left the machine apart from upstream's cast sender (4 of those, all blocked)
+ok - no icon was requested as a file
+2 passed, 4 failed

@@ -1100,6 +1100,22 @@ no merge). Mac only. The tips before are kept as local branches `backup/p9-befor
   Trakt, 9, 10) pass on the rebased plugin. The screenshots, the settings checkboxes (`settings-checkboxes.png`) and the
   section as a whole (`settings-area-ratings.png`) in `evidence/p9/final-design-20261008/` are from the rebased build.
 
+## Review fixes, round 10 — 2026-10-08
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of the rebased branches approved the plugin and approved the web with three
+P2 fixes; fixed on the web branch in new commits (`daa54847f3..` this branch's tip), Mac only. Each finding has its own design
+harness check, which failed on the build before the fix and passes after it (`evidence/p9/review-fix-10/`).
+
+| # | Finding | Fix | Check |
+|---|---|---|---|
+| 1 | With the group focused on a TV, every source unticked made the next read render the hidden stand-in: focus fell to the page and the group vanished | While the group has focus it keeps what it shows; the empty answer takes effect when focus leaves, through the same guarded layout | TV 1080: Up to the group, every source unticked, a minute's read: the group is still visible and focused; Down reaches the buttons and the group goes |
+| 2 | Once the group gave its place back it never came back: an empty first answer followed by values, or a cold visit whose plugin Health answered late (read as "no ratings"), left it gone for the visit | Giving the place back only hides the group; a later answer with values brings it back under the same guard (kept only if the row keeps its height while focus is below it). Support for ratings stays unknown until Health has answered (`useRatingsPreferences.loaded`). A re-measure while hidden restores what it changed | Desktop: an empty first answer, then the minute's read shows the group; a cold visit with Health 5 s late shows the group once Health answers |
+| 3 | The file-less page hid its own star whenever the title had an IMDb value, even with IMDb unticked | The star gives way only when ratings are on, IMDb is ticked and its value is in a scale the page reads | Desktop, IMDb unticked: the page's own star stays, the group shows RT and Trakt |
+
+**Runs:** tsc, eslint and stylelint clean; the patch-surface guard passes (22 files); design harness 119/119 in Chromium
+153.0.8010.12 and 118/118 in Google Chrome 153.0.8010.54 (the four review checks included), the settings-area run 6/6. The
+plugin is unchanged since the rebase (its suites passed then).
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the

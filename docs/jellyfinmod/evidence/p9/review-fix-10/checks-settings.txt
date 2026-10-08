@@ -1,0 +1,8 @@
+browser: chromium 153.0.8010.12
+ok - settings: idle at first, nothing says fetching
+ok - settings: a pass that starts while the section is idle appears within the idle interval (13.5 s), panel and rail alike
+ok - settings: when the pass ends, panel, header and rail all stop saying fetching (3.3 s)
+ok - settings: idle, it keeps reading the status, slowly (bounded)
+ok - no request left the machine apart from upstream's cast sender (1 of those, all blocked)
+ok - no icon was requested as a file
+6 passed, 0 failed
