@@ -217,7 +217,8 @@ The user confirmed the proposed defaults on 2026-10-07: *"Proposed defaults for 
    (`refreshDays`; `POST /Entries/{id}/Ratings/Refresh`).
 6. **Default sources and order** (open question 3): **IMDb, Rotten Tomatoes critics, Rotten Tomatoes audience, TMDB,
    Trakt**; Metacritic, Metacritic users, Letterboxd and Roger Ebert available but off (`defaultSources`, initialising
-   each user's own choice).
+   each user's own choice). **The list is superseded by decision 9 (user, 2026-10-08): IMDb, RT critics, RT
+   audience and Trakt; TMDB off too** (see *design options 2*, below).
 7. **Display only** (open question 4): ratings never influence release scoring, automation or retention; no code path
    outside the ratings projection reads `TitleRatings`.
 
@@ -849,6 +850,149 @@ that use its data).
 - The startup run on 18096: it starts only if no run has ever completed there. If the earlier live runs left a completed
   run in its provider state, the user's verified key starts a full run with one more press of **Test** once this build is
   deployed (otherwise the first start does it).
+
+## Ratings in the metadata row, the popup and the shown-source checkboxes — design options 2, 2026-10-08
+
+Opus 5.5, high (taking over mid-task from an Opus and then a Fable agent; their work in progress was reviewed and kept, with
+the changes listed below). Mac only: no instance, no Pi, no Codex. The two-line design of the first options was rejected by the
+user; its work in progress is kept outside the repository as reference only.
+
+### User decisions — 2026-10-08
+
+The user's answers to the two-line options, recorded as decided:
+
+9. **Default sources** (replaces decision 6's list): **IMDb, Rotten Tomatoes critics, Rotten Tomatoes audience and Trakt** are
+   shown by default; **TMDB**, Metacritic, Metacritic users, Letterboxd and Roger Ebert are off. A source that is not ticked
+   shows nowhere (not in the row, not in the popup); Rotten Tomatoes with only critics ticked shows one number. Fetching is
+   unchanged (every source MDBList returns is still stored). Untouched servers take the new default; an administrator's own
+   choice is kept (below). Each user may still choose their own in *Ratings display* (plan decision 8's per-user preference,
+   unchanged).
+10. **Placement and the popup.** The ratings go back into the first metadata row, where Jellyfin's ★ and tomato are; there is no
+    second line. The row shows IMDb (in place of the stock ★, which stays when there is no IMDb value), Rotten Tomatoes critics
+    and audience (in place of the stock tomato, which stays when there is no Rotten Tomatoes value) and Trakt, in the plain
+    style of the first options' Option 1: mark and value, no pills, no lead number. Every ticked rating, with its mark, value,
+    vote count and "via MDBList, as of …", is in a popup that replaces the per-rating tooltips: hover on a computer, a tap on a
+    phone, OK on a TV, where the group is one focus stop reached by Up from the buttons and Back closes only the popup. No links
+    to the sources. First focus stays on Play; a late answer never moves a focused control (the space is reserved before the
+    data arrives); the group fits on one line on a 1280×720 TV.
+11. **Settings checkboxes.** One checkbox per source in the settings area's Ratings section, as the server's default.
+12. **Testing.** Every check and every design picture runs with all nine sources ticked, plus a check that a fresh default
+    shows only IMDb, RT critics, RT audience and Trakt, and one that unticking a source hides it in the row and in the popup.
+
+Decision 6 (2026-10-07) is superseded by decision 9 for the list; its order rule (the ticked sources in the administrator's,
+or the user's, order) stands.
+
+### Telling an untouched server from an administrator's choice
+
+Migration `PhaseNineRatingsDisplayDefaults` (plugin) replaces the stored default list only when it is **exactly** decision 6's
+list — the same five sources in the same order, as the plugin itself wrote it
+(`["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]`). Any other list — a source added or removed, or the same five
+reordered — is an administrator's choice and is kept. The revision cannot tell them apart: the settings area's Save sends the
+list as shown with every save, so a server whose administrator saved only the key (18096 since 14:24 today) has a higher
+revision but an unchanged list, and should get the new default; nothing records which fields a save changed. The one case
+the rule cannot see is an administrator who deliberately re-ticked exactly decision 6's five in its order: that server takes
+the new default too, which is what an untouched server does. A fresh installation has no settings row and starts from the new
+default in code. Users who chose their own list in *Ratings display* keep it (it lives in their display preferences, which
+no migration touches); users who follow the server's default see the new one. Proof
+(`PhaseNineRatingsIntegration`, a database migrated to `PhaseNineRatingsIdentity`, a settings row written as each case, then
+the remaining migrations): untouched with revision 3 → the new list; an own list, decision 6's five reordered, and a trimmed
+reordered list → kept; and a fresh host's `GET /Settings/Ratings` and `GET /Ratings/Defaults` answer the four.
+
+### What was kept and changed from the work in progress
+
+- **Plugin** — kept as found: the new default in `RatingsSettings`/`RatingSources`, the migration and its suite cases. Added two
+  more kept-list cases (reordered, trimmed) and named each case in its check.
+- **Web** — kept: `RatingsGroup` (one control in the row, the reserve measured from a hidden stand-in at the widest values,
+  the popup's three looks, the hover/tap/OK/Back handling), the mount before the stock ★ in `nativeEntryDetails.js` with the
+  `MutationObserver` that puts it back on a refill, `NativeRatingsLine` waiting for the item type, `EntryDetails` giving the
+  file-less page's own star way to IMDb, and the settings area's checkboxes. Changed:
+  - the stock ★ and tomato are now hidden from the group's first paint for the IMDb and Rotten Tomatoes values it has room for
+    (before, they were hidden only when the answer came, which on a 1280×720 TV made the movie row wrap and then kept both
+    under the focused Play); an answer without those values gives them back together with the reserve, in one before-paint
+    trial (`useRowLayout`), and the place is given back the same way when there is nothing to show;
+  - the refill's focus record was cleared by Chromium's `focusout` on removal, so a refill lost the group's focus; it now waits
+    for the refill's microtask before deciding;
+  - the item's type is passed when already known, so a non-movie page never reserves or hides anything;
+  - the fallback reserve (none of IMDb, RT, Trakt ticked) is the widest of the other ticked sources, laid on top of each other,
+    instead of one assumed widest;
+  - a phone's row (about 228 px at 390) is narrower than the group: there the group wraps inside its own box and reserves no
+    width (a phone has no remote focus to move); the popup never leaves the screen (width and height bounded, placed wholly on
+    screen, scrolling inside if taller);
+  - the popup shows each rating's "via MDBList, as of …" without the caveat, and the caveat once at its foot; B's tiles carry
+    the line too; C's table uses the short names;
+  - the group's items sit 0.8em apart (the row's own are 1em), which gives the 720 movie row its margin;
+  - the design harness's variant run was rewritten for the group (the two-line checks were still in it).
+
+### How the earlier focus findings hold by construction (web review 2026-10-08, P2 2–5)
+
+- **(2) A refill re-checks fit and keeps focus.** Upstream's `fillPrimaryMediaInfo` replaces the row's content, not the row.
+  The group's mount is one node that the row's `MutationObserver` puts back at the same place in the same microtask, before
+  paint, with its React tree, its reserved width and the row's classes (which hide the stock ★ and tomato) intact; so the row
+  lays out exactly as before the refill — there is no fit to compute again. If the refill took focus from the group, it is
+  given back. Checked on TV 1080 and 720 in all three looks: the group back at the same index, focused, the same width, one
+  line, Play not moved, the stock ★ and tomato still hidden.
+- **(3) Fit does not depend on autofocus timing.** Nothing is fitted. The group is rendered synchronously (`flushSync`) inside
+  the observer's callback when upstream first fills the row, before upstream focuses Play; its width is measured then from a
+  hidden stand-in at the widest values ("10.0", "100%") and becomes its least width, and the stock marks it stands in for are
+  hidden in the same paint. The row's line count is decided at that first paint; the answer only fills the space.
+- **(4) An update never moves or removes a focused control.** The answer fills the reserved width; every other change (stock
+  marks back, reserve released, place given back) is tried before paint and kept only if the row keeps its height while focus
+  is past it, and the group is never taken away while it has focus. Checked: a 5 s late answer with Play focused (Play's
+  place, the row's height and the group's box unchanged; the stand-in before, the values after), Up/OK/Back/Down and the
+  refill with Play's place compared each time.
+- **(5) Back is never swallowed when no popup is open.** The group listens for the app's `back` command only while its popup
+  is open (the listener is added when it opens and removed when it closes). Checked: Back with the popup open closes it and
+  keeps the page and focus; Back with the group focused and no popup open leaves the page to Home.
+
+### The three looks
+
+Every look shares the row placement, the reserve, the focus behaviour and the checkbox rule; only Rotten Tomatoes' two
+numbers and the popup differ. Contact sheets (`evidence/p9/design-options-2-20261008/contact-option-{a,b,c}.png`): desktop
+with the hover popup (series with "1923"'s values and the movie), the stock ★ and tomato kept for a movie without IMDb or RT
+values, TV 1920×1080 and 1280×720 with Play focused and with the OK popup, the file-less entry page on desktop, TV and a 390 px
+phone, the phone's tap popup, the fresh default and the unticked sources. The settings checkboxes (a fresh server: IMDb, RT
+critics, RT audience and Trakt ticked) are in `settings-checkboxes.png`.
+
+- **A — two Rotten Tomatoes marks; the popup is a compact list under the row.** The clearest row: each number has its own
+  mark (tomato for critics, popcorn for audience, as Rotten Tomatoes itself shows them), so nobody has to know which number is
+  which. It is also the widest: on the 1280×720 TV the fixture movie's row (year, runtime, rating, group, "Ends at") uses
+  801 of 822 px, so a longer rating badge or a longer "Ends at" in another language can push "Ends at" to a second line (it
+  would do so from the first paint, never under focus). The list popup reads like a sentence per source (name, value, votes,
+  then "via MDBList, as of …" under it) and is the easiest to scan for one source, but it is the tallest: nine sources fill
+  most of a 720 screen.
+- **B — one Rotten Tomatoes mark, "94% | 55%"; the popup is a small card of logos.** One mark saves width (773 of 822 px on
+  the 720 movie row) while keeping both percentages; the cost is that the audience number has no mark of its own and is known
+  only by its place after the bar. The card of tiles is the most visual and the most compact popup (three by three, the mark
+  large, the value, the votes and "via MDBList, as of …" small under it) and suits a TV glance; sources are known by their logos
+  only (Metacritic critics and users differ by disc and square), and the provenance line is the smallest text on the page.
+- **C — Rotten Tomatoes as "94 · 55", smaller; the popup is a source / score / votes table.** The narrowest row (731 of 822 px),
+  so it fits the most generous margin on a TV, but dropping the "%" and shrinking the pair make RT read as secondary and
+  slightly harder at TV distance. The table is the densest and most exact popup (aligned columns, full vote counts, short
+  names, the date in its own column) — the best for comparing sources, the least like the rest of the TV interface; on a phone
+  its last column wraps.
+
+**Recommendation (agent):** A if the 720 movie row's narrow margin is acceptable — it reads best and matches Rotten Tomatoes'
+own marks; B if a safer TV margin matters more than a mark per number. The user picks.
+
+### Evidence (development machine only; not acceptance)
+
+- Plugin suites on the Mac, in parallel (CLAUDE.md, suites on the Mac first): Phase 0 and 1 smoke, Phase 2, Phase 3, Q16
+  Trakt, Phase 9 (298 checks, with the migration cases above) and Phase 10 pass (`suites-mac/`). The instance-copy migration
+  check was not run (the copy is on the test host).
+- Design harness `scripts/jellyfinmod-e2e/p9-design.mjs` with `JFMOD_DESIGN_VARIANT=a|b|c` (and `JFMOD_DESIGN_SHEET` for the
+  contact sheet): the built bundle against a local fixture server — the real pages, CSS, upstream's detail controller, focus
+  handling and ratings code, not Jellyfin's answers. Chromium 153.0.8010.12: A 90/90, B 89/89, C 89/89; Google Chrome
+  153.0.8010.54: 89/89 each (`checks-*.txt`, `results-*.json` per option; A's settings-picture check runs only in the run that
+  takes the pictures). Every source ticked except in the two default checks; no request left the
+  machine except upstream's blocked cast sender; no mark requested as a file.
+- The inline/popup product code is **not committed** until the user picks (a backup patch is kept outside the repository);
+  the committed branch still carries the earlier inline design, which the harness's run without a variant checks.
+
+### Not done yet
+
+- The user's pick; then the chosen look is committed alone (the other two removed, with `ratingsGroupDesign()` and its
+  `localStorage` switch), the harness's group checks become its main run, `p9-ratings.mjs` (the live runner) is updated for
+  the group, and the Codex review and the live run on an instance follow.
 
 ## Status and handover — 2026-10-07
 

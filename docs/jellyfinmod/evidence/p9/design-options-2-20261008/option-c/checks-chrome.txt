@@ -1,0 +1,91 @@
+browser: chrome 153.0.8010.54
+ok - c desktop series: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c desktop series: no votes and no links in the row; the group is the row's one focus stop
+ok - c desktop series: every mark in the row is drawn at its size (none squeezed)
+ok - c desktop series: the row with the group stays on one line
+ok - c desktop series: the group stays inside its row
+ok - c desktop series: hovering the group opens the popup on screen with every enabled rating, votes and "via MDBList, as of"
+ok - c desktop series: the popup stays open with the pointer on it and closes when it leaves
+ok - c desktop series: keyboard focus opens it, Escape closes it
+ok - c desktop movie: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c desktop movie: no votes and no links in the row; the group is the row's one focus stop
+ok - c desktop movie: every mark in the row is drawn at its size (none squeezed)
+ok - c desktop movie: the row with the group stays on one line
+ok - c desktop movie: the group stays inside its row
+ok - c desktop movie: hovering the group opens the popup on screen with every enabled rating, votes and "via MDBList, as of"
+ok - c desktop movie: the popup stays open with the pointer on it and closes when it leaves
+ok - c desktop movie: keyboard focus opens it, Escape closes it
+ok - c desktop stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - c desktop file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - c mobile series: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c mobile series: no votes and no links in the row; the group is the row's one focus stop
+ok - c mobile series: every mark in the row is drawn at its size (none squeezed)
+ok - c mobile series: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster
+ok - c mobile series: a tap opens the popup with every enabled rating, on screen; the group is a full touch target
+ok - c mobile series: a tap elsewhere closes it
+ok - c mobile movie: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c mobile movie: no votes and no links in the row; the group is the row's one focus stop
+ok - c mobile movie: every mark in the row is drawn at its size (none squeezed)
+ok - c mobile movie: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster
+ok - c mobile movie: a tap opens the popup with every enabled rating, on screen; the group is a full touch target
+ok - c mobile movie: a tap elsewhere closes it
+ok - c mobile stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - c mobile file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - c tv1080 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - c tv1080 series: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c tv1080 series: no votes and no links in the row; the group is the row's one focus stop
+ok - c tv1080 series: every mark in the row is drawn at its size (none squeezed)
+ok - c tv1080 series: the row with the group stays on one line
+ok - c tv1080 series: the group stays inside its row
+ok - c tv1080 series: first focus is Play
+ok - c tv1080 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - c tv1080 series: OK opens the popup on screen with every enabled rating, its value, votes and "via MDBList, as of"
+ok - c tv1080 series: Back closes only the popup; focus stays on the group, the page stays
+ok - c tv1080 series: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - c tv1080 series: Down returns to the buttons; Play never moved
+ok - c tv1080 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - c tv1080 movie: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c tv1080 movie: no votes and no links in the row; the group is the row's one focus stop
+ok - c tv1080 movie: every mark in the row is drawn at its size (none squeezed)
+ok - c tv1080 movie: the row with the group stays on one line
+ok - c tv1080 movie: the group stays inside its row
+ok - c tv1080 movie: first focus is Play
+ok - c tv1080 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - c tv1080 movie: OK opens the popup on screen with every enabled rating, its value, votes and "via MDBList, as of"
+ok - c tv1080 movie: Back closes only the popup; focus stays on the group, the page stays
+ok - c tv1080 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - c tv1080 movie: Down returns to the buttons; Play never moved
+ok - c tv1080: with the group focused and no popup open, Back leaves the page as usual
+ok - c tv1080 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - c tv1080 file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - c tv720 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - c tv720 series: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c tv720 series: no votes and no links in the row; the group is the row's one focus stop
+ok - c tv720 series: every mark in the row is drawn at its size (none squeezed)
+ok - c tv720 series: the row with the group stays on one line
+ok - c tv720 series: the group stays inside its row
+ok - c tv720 series: first focus is Play
+ok - c tv720 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - c tv720 series: OK opens the popup on screen with every enabled rating, its value, votes and "via MDBList, as of"
+ok - c tv720 series: Back closes only the popup; focus stays on the group, the page stays
+ok - c tv720 series: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - c tv720 series: Down returns to the buttons; Play never moved
+ok - c tv720 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - c tv720 movie: IMDb, Rotten Tomatoes (both numbers) and Trakt inline, in place of the stock star and tomato
+ok - c tv720 movie: no votes and no links in the row; the group is the row's one focus stop
+ok - c tv720 movie: every mark in the row is drawn at its size (none squeezed)
+ok - c tv720 movie: the row with the group stays on one line
+ok - c tv720 movie: the group stays inside its row
+ok - c tv720 movie: first focus is Play
+ok - c tv720 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - c tv720 movie: OK opens the popup on screen with every enabled rating, its value, votes and "via MDBList, as of"
+ok - c tv720 movie: Back closes only the popup; focus stays on the group, the page stays
+ok - c tv720 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - c tv720 movie: Down returns to the buttons; Play never moved
+ok - c tv720: with the group focused and no popup open, Back leaves the page as usual
+ok - c tv720 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - c fresh default: only IMDb, RT critics, RT audience and Trakt — inline and in the popup (TMDB and the rest off)
+ok - c unticked in the settings area (Trakt, RT audience, TMDB): gone inline and from the popup; RT shows one number
+ok - no request left the machine apart from upstream's cast sender (5 of those, all blocked)
+ok - no icon was requested as a file
+89 passed, 0 failed
