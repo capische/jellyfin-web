@@ -2660,7 +2660,26 @@ The rule is UX §12.1.
   (a)). Retention days put back to 14 after each run; no fixture left. **Not republished**: waits for the combined
   republish after the detail-page fix. 28096 runs this build.
 - **Follow-up (runners, not blocking):** `rows-preview.mjs` should delete its preview profile in a `finally` and check the
-  deletion; the stale-revision step of `settings-area.mjs` still waits for the old error notice.
+  deletion.
+- **`settings-area.mjs` stale-revision step, fixed 2026-10-08** (`test(settings,p7.s8)`, runner only). It now asserts
+  what the shipped page shows for a retention save against a stale revision with an unsaved edit: the competing save,
+  the server's 409, exactly one notice, a warning (`role=status`) reading "These settings changed somewhere else while
+  you were editing. Your edits are kept until you reload." with one Reload, the edit kept; Reload takes the server's copy
+  and clears it; the next save answers 200 with "Saved."; the original days back in the field and the API. The original
+  days are read from the API and put back in a `finally` when a step throws (checked with an injected failure). Also
+  tightened: both "every section" checks compare the headings with the shipped Title Case titles in order, and the
+  remote's Back (461) check asserts the focus on its opener that it names. Port 48096 is accepted. Run on 48096
+  (plugin `f7c274c`, bundle `166f18f69c7f` from `9805c2eb8b`): **33/33 on Playwright Chromium 153.0.8010.12; Google
+  Chrome 153.0.8010.54 33/33** on its second full run — the first full Chrome run was 32/33, a `CancelledError` page
+  error in the mobile layout, not reproduced in nine mobile-only Chrome runs and the second full run (unclassified).
+  Codex GPT-6.1 Sol, high, one pass: **approve**, no defects, no hardening ideas. 48096 restored byte for byte afterwards.
+- **Found by that run, product (open, not fixed here):** `PartialSaveError` (`settingsApi.ts`) extends `Error`, and
+  ts-loader compiles it to ES5 (`tsconfig` target `ES5`), so `error instanceof PartialSaveError` is false and
+  `problemText` answers "The request failed.". Any retention refusal after seed protection was saved loses the sentence
+  "Seed protection was saved; retention was not. …"; for a stale revision without an unsaved edit the page shows only
+  "The request failed." with no Reload (seen live on 48096). With an edit, the draft's warning replaces it, as above.
+  Fix direction: `Object.setPrototypeOf(this, PartialSaveError.prototype)` in its constructor, or a marker property as
+  `isSettingsProblem` uses; then `settings-area.mjs` would see the error notice instead of the warning and needs updating.
 
 #### S11 evidence
 
