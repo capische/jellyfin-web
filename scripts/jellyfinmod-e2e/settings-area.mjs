@@ -169,6 +169,11 @@ for (const name of only) {
     let originalDays;
     try {
         await signIn(page);
+        // Every write below goes through the page's ApiClient: it must talk to the instance named in the URL, never another.
+        const server = await page.evaluate(() => ApiClient.serverAddress());
+        const sameServer = new URL(server).origin === testUrl.origin;
+        record(name, 'The page talks to the instance under test', sameServer, { server, wanted: testUrl.origin });
+        if (!sameServer) throw new Error(`the page's server ${server} is not ${testUrl.origin}; nothing was changed`);
         if (layout.tv) {
             await page.evaluate(() => localStorage.setItem('layout', 'tv'));
             await page.reload({ waitUntil: 'domcontentloaded' });
@@ -297,7 +302,14 @@ for (const name of only) {
                     && isPartialConflict(plainNotices) && plainField === changed,
                     { before: plain.revision, elsewhere: plainElsewhere.revision, statuses: plainStatuses, notices: plainNotices, field: plainField });
                 await reloadPast(page, changed);
-                record(name, 'Its Reload clears the notice and shows the server\'s days', await days.inputValue() === changed);
+                const plainCleared = await days.inputValue();
+                // The Reload took the server's revisions: the same save, still unedited, is accepted now.
+                const plainAccepted = nextPatch(page, 'Settings/Retention');
+                await page.locator('[data-submit="retention"]').click();
+                const plainAcceptedStatus = (await plainAccepted).status();
+                const plainOk = await page.locator('.jfmod-check-main .jfmod-notice-ok .jfmod-notice-text').innerText({ timeout: 30000 });
+                record(name, 'Its Reload clears the notice and shows the server\'s days; the save is then accepted',
+                    plainCleared === changed && plainAcceptedStatus === 200 && plainOk === 'Saved.', { plainCleared, plainAcceptedStatus, plainOk });
 
                 // A stale revision with an edit: the same refusal while the field holds an unsaved value. The partial-save error
                 // with its Reload stays (the draft's own warning gives way to an error that offers a Reload) and the edit is
