@@ -1,0 +1,531 @@
+{
+  "tier": "chrome",
+  "results": [
+    {
+      "name": "desktop: cards show the chosen source's mark and value, with no tooltip or focus stop of their own",
+      "ok": true,
+      "detail": [
+        {
+          "icon": "imdb",
+          "text": "· IMDb8.1",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb5.2 (Aug 2026)",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb7.9",
+          "title": null,
+          "focusable": false
+        }
+      ]
+    },
+    {
+      "name": "desktop: the ratings sit in the stock star's row, in the default order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "desktop: each rating renders its inline mark",
+      "ok": true,
+      "detail": [
+        {
+          "kind": "imdb",
+          "width": 34.21875,
+          "height": 17.109375
+        },
+        {
+          "kind": "tomatoesCritic",
+          "width": 16.796875,
+          "height": 17.109375
+        },
+        {
+          "kind": "tomatoesAudience",
+          "width": 17.109375,
+          "height": 17.109375
+        },
+        {
+          "kind": "tmdb",
+          "width": 35.765625,
+          "height": 17.109375
+        },
+        {
+          "kind": "trakt",
+          "width": 17.109375,
+          "height": 17.109375
+        }
+      ]
+    },
+    {
+      "name": "desktop: vote counts are not in the row",
+      "ok": true,
+      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:27 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+    },
+    {
+      "name": "desktop: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "ok": true
+    },
+    {
+      "name": "desktop: the stale Trakt value is dimmed",
+      "ok": true
+    },
+    {
+      "name": "desktop: hovering a rating shows its tooltip with the vote count and provenance",
+      "ok": true,
+      "detail": "IMDb 8.1 · 250,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "desktop: moving away hides it",
+      "ok": true
+    },
+    {
+      "name": "desktop: keyboard focus shows the same tooltip (stale note included)",
+      "ok": true,
+      "detail": "Trakt 83% · 21,000 votes\nVia MDBList, as of 8/29/2026; may differ from the source’s own site\nOlder than the refresh window: last fetched 8/29/2026"
+    },
+    {
+      "name": "desktop: Escape closes it",
+      "ok": true
+    },
+    {
+      "name": "desktop: the row has no links",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "mobile: cards show the chosen source's mark and value, with no tooltip or focus stop of their own",
+      "ok": true,
+      "detail": [
+        {
+          "icon": "imdb",
+          "text": "· IMDb8.1",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb5.2 (Aug 2026)",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb7.9",
+          "title": null,
+          "focusable": false
+        }
+      ]
+    },
+    {
+      "name": "mobile: the ratings sit in the stock star's row, in the default order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "mobile: each rating renders its inline mark",
+      "ok": true,
+      "detail": [
+        {
+          "kind": "imdb",
+          "width": 33.09375,
+          "height": 16.546875
+        },
+        {
+          "kind": "tomatoesCritic",
+          "width": 16.25,
+          "height": 16.546875
+        },
+        {
+          "kind": "tomatoesAudience",
+          "width": 16.546875,
+          "height": 16.546875
+        },
+        {
+          "kind": "tmdb",
+          "width": 34.59375,
+          "height": 16.546875
+        },
+        {
+          "kind": "trakt",
+          "width": 16.546875,
+          "height": 16.546875
+        }
+      ]
+    },
+    {
+      "name": "mobile: vote counts are not in the row",
+      "ok": true,
+      "detail": "2024\n2h 15m\nPG-13\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+    },
+    {
+      "name": "mobile: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "ok": true
+    },
+    {
+      "name": "mobile: the stale Trakt value is dimmed",
+      "ok": true
+    },
+    {
+      "name": "mobile: a tap shows the tooltip with the vote count",
+      "ok": true,
+      "detail": "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "mobile: a tap elsewhere closes it",
+      "ok": true
+    },
+    {
+      "name": "mobile: each rating is a full touch target (about 44 px)",
+      "ok": true,
+      "detail": 43.1875
+    },
+    {
+      "name": "tv1080: cards show the chosen source's mark and value, with no tooltip or focus stop of their own",
+      "ok": true,
+      "detail": [
+        {
+          "icon": "imdb",
+          "text": "· IMDb8.1",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb5.2 (Aug 2026)",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb7.9",
+          "title": null,
+          "focusable": false
+        }
+      ]
+    },
+    {
+      "name": "tv1080: the ratings sit in the stock star's row, in the default order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "tv1080: each rating renders its inline mark",
+      "ok": true,
+      "detail": [
+        {
+          "kind": "imdb",
+          "width": 46,
+          "height": 23
+        },
+        {
+          "kind": "tomatoesCritic",
+          "width": 22.578125,
+          "height": 23
+        },
+        {
+          "kind": "tomatoesAudience",
+          "width": 23,
+          "height": 23
+        },
+        {
+          "kind": "tmdb",
+          "width": 48.078125,
+          "height": 23
+        },
+        {
+          "kind": "trakt",
+          "width": 23,
+          "height": 23
+        }
+      ]
+    },
+    {
+      "name": "tv1080: vote counts are not in the row",
+      "ok": true,
+      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:27 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8\n83%"
+    },
+    {
+      "name": "tv1080: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "ok": true
+    },
+    {
+      "name": "tv1080: the stale Trakt value is dimmed",
+      "ok": true
+    },
+    {
+      "name": "tv1080: the first focus is Play, not a rating",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv1080: Up from the buttons reaches a rating",
+      "ok": true,
+      "detail": "imdb"
+    },
+    {
+      "name": "tv1080: Right moves to the next rating",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "right": "tomatoes_critic"
+      }
+    },
+    {
+      "name": "tv1080: OK shows the tooltip with the vote count",
+      "ok": true,
+      "detail": "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "tv1080: Back closes only the tooltip and stays on the page",
+      "ok": true
+    },
+    {
+      "name": "tv1080: Play did not move",
+      "ok": true,
+      "detail": {
+        "playBox": {
+          "x": 615.9046630859375,
+          "y": 182.6484375,
+          "width": 85.518798828125,
+          "height": 77.71875
+        },
+        "playAfter": {
+          "x": 623.03125,
+          "y": 189.125,
+          "width": 71.265625,
+          "height": 64.765625
+        }
+      }
+    },
+    {
+      "name": "tv1080: no links in the ratings row",
+      "ok": true
+    },
+    {
+      "name": "tv1080: Down returns to the button row",
+      "ok": true,
+      "detail": "button-flat btnMoreCommands detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv720: cards show the chosen source's mark and value, with no tooltip or focus stop of their own",
+      "ok": true,
+      "detail": [
+        {
+          "icon": "imdb",
+          "text": "· IMDb8.1",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb5.2 (Aug 2026)",
+          "title": null,
+          "focusable": false
+        },
+        {
+          "icon": "imdb",
+          "text": "· IMDb7.9",
+          "title": null,
+          "focusable": false
+        }
+      ]
+    },
+    {
+      "name": "tv720: the ratings sit in the stock star's row, in the default order (as many as fit)",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb"
+      ]
+    },
+    {
+      "name": "tv720: the row stays on one line",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "name": "tv720: each rating renders its inline mark",
+      "ok": true,
+      "detail": [
+        {
+          "kind": "imdb",
+          "width": 46,
+          "height": 23
+        },
+        {
+          "kind": "tomatoesCritic",
+          "width": 22.578125,
+          "height": 23
+        },
+        {
+          "kind": "tomatoesAudience",
+          "width": 23,
+          "height": 23
+        },
+        {
+          "kind": "tmdb",
+          "width": 48.078125,
+          "height": 23
+        }
+      ]
+    },
+    {
+      "name": "tv720: vote counts are not in the row",
+      "ok": true,
+      "detail": "2024\n2h 15m\nPG-13\nEnds at 5:27 PM\nIMDb\n8.1\n91%\n88%\nTMDB\n7.8"
+    },
+    {
+      "name": "tv720: the stock star and tomato that repeat IMDb 8.1 and RT 91 are hidden",
+      "ok": true
+    },
+    {
+      "name": "tv720: the first focus is Play, not a rating",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "tv720: Up from the buttons reaches a rating",
+      "ok": true,
+      "detail": "imdb"
+    },
+    {
+      "name": "tv720: Right moves to the next rating",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "right": "tomatoes_critic"
+      }
+    },
+    {
+      "name": "tv720: OK shows the tooltip with the vote count",
+      "ok": true,
+      "detail": "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "tv720: Back closes only the tooltip and stays on the page",
+      "ok": true
+    },
+    {
+      "name": "tv720: Play did not move",
+      "ok": true,
+      "detail": {
+        "playBox": {
+          "x": 408.7593688964844,
+          "y": 181.53125,
+          "width": 79.20001220703125,
+          "height": 72
+        },
+        "playAfter": {
+          "x": 415.359375,
+          "y": 187.53125,
+          "width": 66,
+          "height": 60
+        }
+      }
+    },
+    {
+      "name": "tv720: no links in the ratings row",
+      "ok": true
+    },
+    {
+      "name": "tv720: Down returns to the button row",
+      "ok": true,
+      "detail": "button-flat btnMoreCommands detailButton emby-button show-focus"
+    },
+    {
+      "name": "desktop: below 60 % the splat and the spilled bucket",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoesCriticRotten",
+        "tomatoesAudienceSpilled",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "desktop: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "ok": true
+    },
+    {
+      "name": "tv1080: below 60 % the splat and the spilled bucket",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoesCriticRotten",
+        "tomatoesAudienceSpilled",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "tv1080: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "ok": true
+    },
+    {
+      "name": "mobile: below 60 % the splat and the spilled bucket",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoesCriticRotten",
+        "tomatoesAudienceSpilled",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "mobile: the file-less entry's own star is hidden while TMDB 7.8 shows with its mark",
+      "ok": true
+    },
+    {
+      "name": "desktop: the order follows the user's preference, with every source",
+      "ok": true,
+      "detail": [
+        "letterboxd",
+        "trakt",
+        "imdb",
+        "metacritic",
+        "metacritic_user",
+        "rogerebert",
+        "tomatoes_audience",
+        "tomatoes_critic",
+        "tmdb"
+      ]
+    },
+    {
+      "name": "no request left the machine apart from upstream's cast sender (12 of those, all blocked)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no icon was requested as a file",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

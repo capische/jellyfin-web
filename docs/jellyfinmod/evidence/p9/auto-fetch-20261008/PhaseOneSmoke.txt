@@ -1,0 +1,5 @@
+HTTP smoke: starting isolated loopback host
+HTTP smoke: host ready
+PASS: HTTP auth/access/CRUD, duplicate history, wire-state filter binding, unknown fields and no media deletion
+PASS: real SQLite migration/restart and authenticated HTTP integration workflows
+exit=0 seconds=7
