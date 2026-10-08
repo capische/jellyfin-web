@@ -14,12 +14,6 @@
     display: none;
 }
 
-// One file: upstream's disabled select is as wide as its text, so the file's icons follow it.
-.jfmod-videoIconsHost > .emby-select {
-    flex: 0 1 auto;
-    width: auto;
-}
-
 .jfmod-videoChooser {
     display: flex;
     align-items: flex-start;
@@ -178,21 +172,13 @@
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
-    margin-left: 0.4em;
+    margin-left: 0.2em;
     font-size: 1em;
 }
 
 .jfmod-fileIcon {
     margin: 0 0.1em;
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
-
-    &:focus {
-        box-shadow: 0 0 0 0.15em #00a4dc;
-    }
-
-    &:focus:not(:focus-visible) {
-        box-shadow: none;
-    }
 }
 
 .jfmod-fileIcon--on {
@@ -216,6 +202,57 @@
 
 .jfmod-fileIcon[aria-disabled='true'] {
     cursor: default;
+}
+
+// The pin looks pinned, not only coloured (user, 2026-10-08): loose, it lies tilted; kept, it stands upright, pressed into
+// the base palette's primary-hover tint, the stock icon button's hover and active background.
+.jfmod-fileIcon--pin > .material-icons {
+    transform: rotate(45deg);
+    transition: transform 0.2s;
+}
+
+// In the Video row the actions are drawn the height of upstream's track rows (1.75em, the Audio select's height), so the
+// row keeps its height and its label stays level with the value (user, 2026-10-08: the 2.5em icons were too big and pushed
+// the row out of line). Each still answers a 2.5em circle: an invisible ::before centred on the button, and margins that let
+// neighbouring circles meet without overlapping. `overflow: visible` lets that circle take clicks outside the drawn one.
+.jfmod-fileIcons > .jfmod-fileIcon {
+    width: 1.75em;
+    height: 1.75em;
+    margin: 0 0.375em;
+    padding: 0;
+    overflow: visible;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2.5em;
+        height: 2.5em;
+        margin: -1.25em 0 0 -1.25em;
+        border-radius: 50%;
+    }
+
+    > .material-icons {
+        font-size: 1.25em;
+    }
+}
+
+.jfmod-fileIcons > .jfmod-fileIcon--pin.jfmod-fileIcon--on {
+    background-color: rgba(0, 164, 220, 0.2);
+
+    > .material-icons {
+        transform: none;
+    }
+}
+
+// Last, so the focus ring outranks every rule above.
+.jfmod-fileIcon:focus {
+    box-shadow: 0 0 0 0.15em #00a4dc;
+}
+
+.jfmod-fileIcon:focus:not(:focus-visible) {
+    box-shadow: none;
 }
 
 .jfmod-fileNote {
