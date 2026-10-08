@@ -274,13 +274,17 @@
     align-items: center;
     flex-wrap: wrap;
     margin-top: 0.5em;
-    margin-bottom: 1.4em;
+    margin-bottom: 0.9em;
 }
 
+/* A row that wraps (Prowlarr's four buttons on a phone) keeps the gap between its lines that its buttons keep side by
+   side: each button's bottom margin adds to the top one, and the row's own bottom margin gives the same back. Margins,
+   not `gap`, which older webOS lacks in flex layout. */
 .jfmod-inlineactions > *,
 .jfmod-inlineactions > .MuiButtonBase-root {
     margin-right: 0.86em;
     margin-top: 0.3em;
+    margin-bottom: 0.56em;
 }
 
 /* A Test button and what it does, below the field it tests. The negative top margin the Dashboard page used belonged to
