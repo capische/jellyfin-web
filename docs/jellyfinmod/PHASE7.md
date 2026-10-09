@@ -2143,11 +2143,34 @@ on real Google Chrome**, every earlier check included.
 
 #### S6 — the frosted bar made more see-through, 2026-10-09
 
-Built (not accepted): first look on 18096 only. The user found the 2026-10-08 bar too opaque, then the 22 % / 0.66
-brightness retune too subtle, and chose see-through over the 4.5:1 floor: dark themes the bar colour at 12 %, blur 12,
-brightness 0.85; light 20 % (contrast 0.85, brightness 1.1); Apple TV 30 % (contrast 0.8, brightness 1.15); a soft
-halo behind the labels and icons. The measured table, the full matrix and the real-Chrome pass follow the first look's
-approval; `home-hero.mjs`'s glass step still asserts the old 4.5:1 bound and the old tint range and is updated then.
+Built (not accepted): the user approved the first look on 18096 (bundle `e670776beceb`, `ce2fd6063a`) and is
+re-verifying. The 2026-10-08 bar was too opaque, and a first retune (22 %, brightness 0.66) too subtle; the user chose
+see-through over the 4.5:1 floor. Values: dark themes the bar colour at 12 %, blur 12, brightness 0.85, saturate 180; light
+20 % (contrast 0.85, brightness 1.1); Apple TV 30 % (contrast 0.8, brightness 1.15); a soft halo in the opposite tone
+behind the labels and icons (text-shadow, drop-shadow for the SVG icons). No line or shadow under the bar: the 1px
+hairline the first version drew read as a white line and is gone (`box-shadow: none`). TV is unchanged: transparent
+gradient scrim, no backdrop filter.
+
+Looked at, not run through the playback runner (a style change is tested by looking): plain page loads of the deployed
+18096 bundle as `oleksii`, bar scrolled over the hero and over the first three poster rows, Playwright Chromium and real
+Google Chrome (the two agree within 0.1). Show-through is the slope of the bar's grey on the page's, in 16 × 8 px blocks;
+the label contrast is the labels' colour against the bar's pixels with the labels hidden, brightest 5 % of blocks, so
+the halo is not counted and the figures are conservative. Chromium, desktop 1920 and phone:
+
+| Theme / layout | Show-through, hero (rows) | Worst label over the hero | Worst label over a poster row |
+| --- | --- | --- | --- |
+| Dark, desktop 1920 | 0.67 (0.57-0.68) | 3.35 | 2.59 (Movies, brightest poster) |
+| Light | 0.67 (0.57-0.67) | 3.11 | 3.70 |
+| Apple TV | 0.57 (0.48-0.55) | 3.98 | 4.61 |
+| wmc / blueradiance / purplehaze | 0.67 (0.55-0.62) | 2.89 / 2.97 / 3.25 | 2.24 / 2.29 / 2.51 |
+| Phone 390 portrait: dark / light / Apple TV | 0.60 / 0.49 / 0.51 | 5.25 / 9.53 / 6.21 | 2.44 / 6.58 / 7.33 |
+| Phone 844 landscape: dark / light | 0.63 / 0.64 | 5.85 / 5.75 | 3.87 / 3.74 |
+| (2026-10-08 bar, dark, desktop 1920) | 0.27 (0.23-0.28) | 7.62 | 6.82 |
+
+The cost of the user's choice: the worst label over a real poster falls below 4.5:1 in most themes, to 2.2-2.6:1 over
+the brightest poster in the dark themes. TV: the header is transparent with its gradient scrim and no backdrop filter on
+both browsers. Still to do after the re-verification: `home-hero.mjs`'s glass step asserts the old 4.5:1 bound and the old
+tint range and is brought to these values (or retired for this bar), then the one review.
 
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:
