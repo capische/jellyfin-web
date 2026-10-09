@@ -2153,25 +2153,27 @@ hairline the first version drew read as a white line and is gone (`box-shadow: n
 gradient scrim, no backdrop filter.
 
 Looked at, not run through the playback runner (a style change is tested by looking): plain page loads of the deployed
-18096 bundle as `oleksii`, bar scrolled over the hero and over the first three poster rows, Playwright Chromium and real
-Google Chrome (the two agree within 0.1). Show-through is the slope of the bar's grey on the page's, in 16 × 8 px blocks;
-the label contrast is the labels' colour against the bar's pixels with the labels hidden, brightest 5 % of blocks, so
-the halo is not counted and the figures are conservative. Chromium, desktop 1920 and phone:
+18096 bundle as `oleksii`, bar scrolled over the hero and over the first three poster rows, Playwright Chromium. Show-through
+is the slope of the bar's grey on the page's, in 16 × 8 px blocks; the label contrast is the labels' colour against the bar's
+pixels with the labels hidden, brightest 5 % of blocks (method in the design notes). Bundle `0251b4e71958`
+(`7084d7976d`: flatten, no halo), desktop 1920 and phone:
 
 | Theme / layout | Show-through, hero (rows) | Worst label over the hero | Worst label over a poster row |
 | --- | --- | --- | --- |
-| Dark, desktop 1920 | 0.67 (0.57-0.68) | 3.35 | 2.59 (Movies, brightest poster) |
-| Light | 0.67 (0.57-0.67) | 3.11 | 3.70 |
-| Apple TV | 0.57 (0.48-0.55) | 3.98 | 4.61 |
-| wmc / blueradiance / purplehaze | 0.67 (0.55-0.62) | 2.89 / 2.97 / 3.25 | 2.24 / 2.29 / 2.51 |
-| Phone 390 portrait: dark / light / Apple TV | 0.60 / 0.49 / 0.51 | 5.25 / 9.53 / 6.21 | 2.44 / 6.58 / 7.33 |
-| Phone 844 landscape: dark / light | 0.63 / 0.64 | 5.85 / 5.75 | 3.87 / 3.74 |
+| Dark, desktop 1920 | 0.47 (0.40-0.48) | 3.95 | 3.27 (Movies, brightest poster) |
+| Light | 0.55 (0.46-0.54) | 3.73 | 4.27 |
+| Apple TV | 0.50 (0.42-0.49) | 4.42 | 5.01 |
+| wmc / blueradiance / purplehaze | 0.47 (0.39-0.43) | 3.42 / 3.51 / 3.84 | 2.83 / 2.90 / 3.17 |
+| Phone 390 portrait: dark / light / Apple TV | 0.42 / 0.49 / 0.45 | 5.47 / 5.72 / 6.47 | 3.11 / 6.78 / 7.48 |
+| Phone 844 landscape: dark / light | 0.44 / 0.52 | 5.91 / 6.09 | 4.40 / 4.30 |
 | (2026-10-08 bar, dark, desktop 1920) | 0.27 (0.23-0.28) | 7.62 | 6.82 |
+| (see-through bar with a halo, before flatten) | 0.67 (0.57-0.68) | 3.35 | 2.59 |
 
-The cost of the user's choice: the worst label over a real poster falls below 4.5:1 in most themes, to 2.2-2.6:1 over
-the brightest poster in the dark themes. TV: the header is transparent with its gradient scrim and no backdrop filter on
-both browsers. Still to do after the re-verification: `home-hero.mjs`'s glass step asserts the old 4.5:1 bound and the old
-tint range and is brought to these values (or retired for this bar), then the one review.
+Flatten trades about 0.2 of show-through for 0.6-0.8 of a contrast point over the worst spots. The cost of the user's
+choice remains: the worst label over a real poster is below 4.5:1 in the dark themes (2.8-3.3:1 over the brightest
+poster). TV: the header is transparent with its gradient scrim and no backdrop filter, no shadow (unchanged). The runner
+`home-hero.mjs` asserts these values (tint, blur 12, contrast 0.7, brightness per theme, no shadow, no hairline, no label
+halo) in its layout and glass steps and records the label contrast as information; the TV assertions are unchanged.
 
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:

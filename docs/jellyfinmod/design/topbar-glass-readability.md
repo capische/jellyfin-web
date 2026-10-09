@@ -104,3 +104,10 @@ original and measures better.
 A soft backing behind the label clusters only (a faint radial or rounded dark patch behind the left nav labels and the
 right icons), a stronger blur (about 20px, which averages the bright patches), bolder label weight, and checking the
 nav links' own opacity. Listed in the order they were proposed.
+
+## Result of the choice (flatten, no halo), deployed bundle `0251b4e71958`
+
+Plain page loads of the deployed build, Chromium, over the hero and the first three poster rows. The full per-theme and
+per-layout table is in PHASE7 §S6. Dark, desktop 1920: show-through 0.47 over the hero (0.40-0.48 over the rows), worst
+label 3.95:1 over the hero and 3.27:1 over the brightest poster; light 0.55 with 3.73:1 / 4.27:1; Apple TV 0.50 with
+4.42:1 / 5.01:1. Phone and the other dark themes follow the same pattern. TV is unchanged.
