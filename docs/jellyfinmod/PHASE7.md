@@ -2141,6 +2141,14 @@ on real Google Chrome**, every earlier check included.
 | TV bar | Solid `#101010`, no blur |
 | Restored | Every database row of every item played or written identical before and after; no other changed row named by any request |
 
+#### S6 — the frosted bar made more see-through, 2026-10-09
+
+Built (not accepted): first look on 18096 only. The user found the 2026-10-08 bar too opaque, then the 22 % / 0.66
+brightness retune too subtle, and chose see-through over the 4.5:1 floor: dark themes the bar colour at 12 %, blur 12,
+brightness 0.85; light 20 % (contrast 0.85, brightness 1.1); Apple TV 30 % (contrast 0.8, brightness 1.15); a soft
+halo behind the labels and icons. The measured table, the full matrix and the real-Chrome pass follow the first look's
+approval; `home-hero.mjs`'s glass step still asserts the old 4.5:1 bound and the old tint range and is updated then.
+
 **Acceptance** — built browser on the isolated instance in every layout, with disposable
 fixtures only, each removed at the end:
 
