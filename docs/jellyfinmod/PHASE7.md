@@ -2146,8 +2146,9 @@ on real Google Chrome**, every earlier check included.
 Built (not accepted): the user approved the first look on 18096 (bundle `e670776beceb`, `ce2fd6063a`) and is
 re-verifying. The 2026-10-08 bar was too opaque, and a first retune (22 %, brightness 0.66) too subtle; the user chose
 see-through over the 4.5:1 floor. Values: dark themes the bar colour at 12 %, blur 12, brightness 0.85, saturate 180; light
-20 % (contrast 0.85, brightness 1.1); Apple TV 30 % (contrast 0.8, brightness 1.15); a soft halo in the opposite tone
-behind the labels and icons (text-shadow, drop-shadow for the SVG icons). No line or shadow under the bar: the 1px
+20 % (brightness 1.1); Apple TV 30 % (brightness 1.15); `contrast(0.7)` in every theme's backdrop filter to flatten the
+bright patches behind the labels (chosen over a text halo, an outline and a darker tint: see
+`design/topbar-glass-readability.md`). No line or shadow under the bar: the 1px
 hairline the first version drew read as a white line and is gone (`box-shadow: none`). TV is unchanged: transparent
 gradient scrim, no backdrop filter.
 

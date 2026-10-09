@@ -91,43 +91,43 @@
 
 .skinHeader.jfmod-topbarSolid { background: #101010; }
 
-// Scrolled, Home's bar is frosted glass on computer and phone (user, 2026-10-08, and again 2026-10-09: "make blur more
-// opaque, so you can see through", then "can it be more transparent?"): the page shows through, blurred and softened.
-// Upstream's OffsetAppBar turns the bar from transparent to MUI's solid default colour as soon as the page scrolls; on
-// Home that solid state is replaced here. The user chose see-through over the old readability floor (4.5:1 over a plain
+// Scrolled, the bar is frosted glass on every page on computer and phone (user, 2026-10-08, and again 2026-10-09: "make
+// blur more opaque, so you can see through", then "can it be more transparent?"): the page shows through, blurred and
+// softened. Upstream's OffsetAppBar turns the bar from transparent to MUI's solid default colour as soon as the page
+// scrolls; on every page that solid state is replaced here (the class keeps its Home-era name). The user chose
+// see-through over the old readability floor (4.5:1 over a plain
 // white area of a poster), so the bar barely tints or darkens the page: the theme's own bar colour at 12 %, over the
-// page at 85 % brightness, blurred 12px. Readability comes from a soft halo in the opposite tone behind the labels and
-// icons (a text-shadow, and a drop-shadow for the SVG icons), not from a darker tint. Light-mode themes draw dark text,
-// so there the page is lifted and flattened a little instead; Apple TV's darker bar colour gets its own lighter tint.
-// Measured over the library's real posters (PHASE7 §S6). No line or shadow marks the bar's lower edge (user, 2026-10-09):
-// MUI's elevation shadow is switched off, and the background shorthand also drops the dark theme's elevation overlay. An
-// engine without backdrop-filter or color-mix() keeps upstream's solid bar. The build's autoprefixer adds the -webkit-
-// forms Safari needs, in the test and the property alike.
+// page at 85 % brightness, blurred 12px. What keeps the labels readable is flattening the page behind them, contrast(0.7)
+// in the backdrop filter, which squeezes the bright patches that wash a label out while the colours still show through;
+// the user picked it over a text halo, an outline or a darker tint (docs/jellyfinmod/design-notes/topbar-glass-readability.md).
+// Light-mode themes draw dark text, so there the page is lifted a little as well (brightness 1.1); Apple TV's darker bar
+// colour gets its own lighter tint. Measured over the library's real posters (PHASE7 §S6). No line or shadow marks the
+// bar's lower edge (user, 2026-10-09): MUI's elevation shadow is switched off, and the background shorthand also drops
+// the dark theme's elevation overlay. An engine without backdrop-filter or color-mix() keeps upstream's solid bar. The
+// build's autoprefixer adds the -webkit- forms Safari needs, in the test and the property alike.
 @supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
-    .jfmod-homeAppBar.MuiAppBar-colorDefault {
-        background: color-mix(in srgb, var(--AppBar-background) 12%, transparent);
-        backdrop-filter: blur(12px) saturate(180%) brightness(0.85);
-        box-shadow: none;
-        text-shadow: 0 0 3px rgba(0, 0, 0, 0.7), 0 1px 6px rgba(0, 0, 0, 0.5);
-
-        svg { filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) drop-shadow(0 1px 6px rgba(0, 0, 0, 0.5)); }
+    // The bar fades into the glass instead of switching (user, 2026-10-10: it flipped when the page started to scroll).
+    // The transparent state carries the same filter list at its neutral values, so backdrop-filter can interpolate;
+    // the .MuiAppBar-root pair outranks MUI's own box-shadow-only transition.
+    .jfmod-homeAppBar.MuiAppBar-root {
+        backdrop-filter: blur(0) saturate(1) contrast(1) brightness(1);
+        transition: background-color 250ms ease, backdrop-filter 250ms ease, box-shadow 250ms ease;
     }
 
-    [data-theme='light'] .jfmod-homeAppBar.MuiAppBar-colorDefault,
-    [data-theme='appletv'] .jfmod-homeAppBar.MuiAppBar-colorDefault {
-        text-shadow: 0 0 3px rgba(255, 255, 255, 0.7), 0 1px 6px rgba(255, 255, 255, 0.5);
-
-        svg { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.7)) drop-shadow(0 1px 6px rgba(255, 255, 255, 0.5)); }
+    .jfmod-homeAppBar.MuiAppBar-colorDefault {
+        background: color-mix(in srgb, var(--AppBar-background) 12%, transparent);
+        backdrop-filter: blur(12px) saturate(180%) contrast(0.7) brightness(0.85);
+        box-shadow: none;
     }
 
     [data-theme='light'] .jfmod-homeAppBar.MuiAppBar-colorDefault {
         background: color-mix(in srgb, var(--AppBar-background) 20%, transparent);
-        backdrop-filter: blur(12px) saturate(170%) contrast(0.85) brightness(1.1);
+        backdrop-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.1);
     }
 
     [data-theme='appletv'] .jfmod-homeAppBar.MuiAppBar-colorDefault {
         background: color-mix(in srgb, color-mix(in srgb, var(--AppBar-background) 70%, #fff) 30%, transparent);
-        backdrop-filter: blur(12px) saturate(170%) contrast(0.8) brightness(1.15);
+        backdrop-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.15);
     }
 }
 
