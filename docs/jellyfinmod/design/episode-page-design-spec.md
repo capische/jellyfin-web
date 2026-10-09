@@ -320,3 +320,26 @@ Run 2026-10-08 on 18096 (`jellyfinmod-test`), Chromium 153.0.8010.12 then Google
   republishing is the user's decision.
 
 
+
+### Acceptance run on 28096 — 2026-10-09
+
+Full live list on `jellyfinmod-acceptance` (28096, the clone with the user's Movies and Shows), lease "Phase 14: episode
+page redesign" 09 Oct 13:11 Sydney, held afterwards for the user's own testing. Build: plugin `9e0ae54` (sha256
+`db6d350e515d737b…`), web `63e4ff7cc6` (bundle `138c9b9aa22f`); 36 migrations ending `DetailFileHistory`, `SeasonPacks`;
+Health lists `acquisition.packs` and `history.files`. Desktop, mobile, TV 1080 and 720, admin and ordinary user:
+Chromium 153.0.8010.12 498 passed, 0 failed; Google Chrome 153.0.8010.54 498 passed, 0 failed; badges `7`, `0`, `∞` in
+every layout and `!` on desktop, both browsers; movie history, picker size and scope switch, the series page and one
+real release search (nothing grabbed) by probe. Every live item of the checklist passed except the queue line during a
+grab and the pack rows, NOT VERIFIED there (28096 must not download; accepted on 48096). The first Chromium run's ten
+FAILs were runner defects, fixed only in a scratch copy and still in `detail-design.mjs`: it measures the picker during
+upstream's `scaleup` animation and the page top during the file list's slide-down, and on TV its walk never presses Right
+on a file row to reach the row icons. Release searches were refused at the browser during the runs. Fixtures removed,
+retention back to off, UserViews for oleksii = Movies, Shows. Results:
+`side-session-notes/local_136dbe22-08ac-41e4-a1a0-24b15c9322ad/detail-acceptance-28096-results.md`.
+
+- **Backup before deploy:** `/mnt/4tb/jellyfinmod-acceptance/backups/detailfix-20261009`; restore with
+  `/mnt/4tb/jellyfin-mod/test/build/dd-acceptdeploy-20261009.sh restore` on the Pi (not run: the user tests this build).
+- **Left on 28096:** protecting the real library before switching retention on wrote 536 "Kept" and 536 "Stopped keeping"
+  history events on the user's real files (no Keep left in force). `dd-acceptdeploy-20261009.sh reset` returns the plugin
+  data, XML and `jellyfin.db` to the post-deploy snapshot `backups/detailfix-20261009-postdeploy` (approved build kept);
+  it needs the user's approval.
