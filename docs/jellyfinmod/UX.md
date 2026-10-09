@@ -602,14 +602,17 @@ active, sitting on a gradient over the content and turning solid `#101010` once 
 ~40px. Same items, same right-hand buttons, same routes — a restyle of `AppToolbar` /
 `UserViewNav`, not a replacement, so Principle 0 holds.
 
-**Scrolled, the bar is frosted glass on computer and phone (user, 2026-10-08; made more see-through twice on 2026-10-09):**
+**Scrolled, the bar is frosted glass on computer and phone, on every page (user, 2026-10-08; made more see-through twice on 2026-10-09; extended from Home to all pages 2026-10-10):**
 the page shows through it, blurred and softened, instead of a solid colour. The first version held light text at 4.5:1
 even over a plain white area of a poster, which kept the dark themes to about a quarter of the page showing through; the
 user tried it and asked for more, then for more again. Readability no longer sets the limit: the bar barely tints or
 darkens the page (the theme's bar colour at 12 %, page at 85 % brightness, blurred 12px; light themes 20 % with a lift,
-Apple TV 30 % with its own lighter tint) and the labels and icons carry a soft halo in the opposite tone instead of a
-darker tint. Over real posters the worst label falls below 4.5:1 (PHASE7 §S6); the user accepted that trade-off.
-Wherever the engine has no `backdrop-filter` or `color-mix()` the bar stays upstream's solid one.
+Apple TV 30 % with its own lighter tint). What keeps the labels readable is flattening the page behind them,
+`contrast(0.7)` in the backdrop filter in every theme, which squeezes the bright patches that wash a label out; the user
+picked it over a text halo, an outline and a darker tint (options and measurements in
+`design/topbar-glass-readability.md`). No line or shadow marks the bar's lower edge. Over real posters the worst label
+still falls below 4.5:1 (PHASE7 §S6); the user accepted that trade-off. Wherever the engine has no `backdrop-filter` or
+`color-mix()` the bar stays upstream's solid one.
 
 **On TV the bar stays transparent (user, 2026-10-08):** its top-to-bottom dark scrim is its only treatment, with no fill
 and no blur; a full-width blur would cost D-pad scrolling on the webOS engines. The TV's header is part of the page, not

@@ -70,8 +70,8 @@ const ModAppLayout: FC = () => {
                 }}
             >
                 <StrictMode>
-                    {/* On Home the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
-                    <OffsetAppBar dense className={location.pathname === '/home' ? 'jfmod-homeAppBar' : undefined}>
+                    {/* On every page the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
+                    <OffsetAppBar dense className='jfmod-homeAppBar'>
                         <ModToolbar
                             isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
                             isDrawerOpen={isDrawerOpen}
