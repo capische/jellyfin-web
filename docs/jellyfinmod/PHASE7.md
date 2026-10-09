@@ -3008,7 +3008,7 @@ republish"), one overwrite of `0.1.0.0` and `:latest`. The version stays 0.1.0.0
   JellyfinMod 0.1.0.0 build 2026-10-09T02:48:51Z with build 2026-10-09T10:54:49Z"): Health `Ok`, plugin 0.1.0.0 `Active`,
   bundle `d3efe2e4444e`, takeover `patched`.
 - **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
-  **`sha256:73e5fb87ec56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00`** for linux/amd64 (`sha256:299b1cfb6f95…`) and
+  **`sha256:73e5fb87ec5e56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00`** for linux/amd64 (`sha256:299b1cfb6f95…`) and
   linux/arm64 (`sha256:7ffc6571ce0e…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0 base, `SOURCE_DATE_EPOCH` of
   plugin `7290d31`, `--provenance=false`. The first push moved only `:latest`; `0.1.0.0` was then pointed at the same index
   with `imagetools create`. Credential only in a temporary Docker configuration with no credential helper; logged out,
