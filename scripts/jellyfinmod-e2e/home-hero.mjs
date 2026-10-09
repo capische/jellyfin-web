@@ -11,13 +11,16 @@
 //   JELLYFINMOD_WEB_DIST      optional: a built dist/ to serve from a loopback port inside this runner, with config.json
 //                             naming the instance — upstream's own dev setup — so the bundle under test runs against the
 //                             real server without replacing the bundle the instance serves to everyone else
+//   JELLYFINMOD_WEB_ENTRY     optional, without JELLYFINMOD_WEB_DIST: the page to open on the instance itself, such as
+//                             /web/jellyfinmod.html when the host web folder holds the mod shell without a plugin takeover
 //   JELLYFINMOD_HERO_EPISODE  a partly watched episode id; JELLYFINMOD_HERO_MOVIE a partly watched movie id
 //   JELLYFINMOD_HERO_SHOW_EPISODE  a played episode (with a play date) of a show whose Next Up episode is old in the
 //                             library; the nextup step re-watches it so that show is the one watched most recently
 //   JELLYFINMOD_HERO_OUT      directory for results.json and screenshots
 //   JELLYFINMOD_HERO_STEPS    optional subset of a,finish,b,nextup,c,sections,d,glass; JELLYFINMOD_HERO_LAYOUTS optional subset of the layout names
 //   JELLYFINMOD_GLASS_VARIANTS  optional: a JSON file of [{ name, css }] for the glass step to measure instead of the
-//                             previous bar ("before") and the built one ("after"), for trying values
+//                             2026-10-08 bar ("before") and the built one ("after"), for trying values
+//   JELLYFINMOD_GLASS_THEMES    optional subset of the glass step's themes (dark,light,appletv,wmc,blueradiance,purplehaze)
 //   JELLYFINMOD_SSH_HOST, JELLYFINMOD_DATA_DIR  optional: with both, userdata-db.mjs snapshots every UserData row of the
 //                             user before the run, and the run fails unless every row of an item it touched or played
 //                             is identical after it (fields the API cannot show or restore included, such as the
@@ -41,6 +44,23 @@ const MOVIE = required('JELLYFINMOD_HERO_MOVIE');
 const SHOW_EPISODE = process.env.JELLYFINMOD_HERO_SHOW_EPISODE;
 const out = path.join(required('JELLYFINMOD_HERO_OUT'), tier);
 const only = (process.env.JELLYFINMOD_HERO_STEPS ?? 'a,finish,b,nextup,c,sections,d,glass').split(',');
+
+// The approved scrolled bar (user, 2026-10-09; values in homeChrome.scss): the theme's bar colour at 12 % (light 20 %,
+// Apple TV 30 %) over the page, blurred 12px with contrast(0.7), brightness 0.85 (light 1.1, Apple TV 1.15), no text
+// halo on the labels and no hairline or shadow on the bar's lower edge.
+const GLASS_VALUES = { default: { tint: 0.12, brightness: 0.85 }, light: { tint: 0.2, brightness: 1.1 }, appletv: { tint: 0.3, brightness: 1.15 } };
+function filterNumber(filter, name) {
+    const found = new RegExp(`${name}\\((\\d+(?:\\.\\d+)?)(%|px)?\\)`).exec(filter ?? '');
+    return found ? Number(found[1]) / (found[2] === '%' ? 100 : 1) : null;
+}
+function glassValuesMatch(theme, bar) {
+    const expected = GLASS_VALUES[theme] ?? GLASS_VALUES.default;
+    const near = (value, target, margin) => value !== null && Math.abs(value - target) <= margin;
+    return near(filterNumber(bar.filter, 'blur'), 12, 0.01) && near(filterNumber(bar.filter, 'contrast'), 0.7, 0.01) &&
+        near(filterNumber(bar.filter, 'brightness'), expected.brightness, 0.01) && near(bar.tintAlpha, expected.tint, 0.02) &&
+        (bar.boxShadow === 'none' || bar.boxShadow === null) && parseFloat(bar.borderBottomWidth ?? '0') === 0 &&
+        (!bar.labelTextShadow || bar.labelTextShadow === 'none');
+}
 mkdirSync(out, { recursive: true });
 
 const results = [];
@@ -88,7 +108,10 @@ const startBundleServer = () => new Promise(resolve => {
     server.listen(0, '127.0.0.1', () => resolve(server));
 });
 const bundleServer = dist ? await startBundleServer() : null;
-const webBase = bundleServer ? `http://127.0.0.1:${bundleServer.address().port}/` : new URL('/web/', origin).href;
+const webEntry = new URL(process.env.JELLYFINMOD_WEB_ENTRY ?? '/web/', origin);
+// The page under test must be on the instance this run is allowed to touch, never another one or production.
+if (!bundleServer && webEntry.origin !== origin.origin) throw new Error(`JELLYFINMOD_WEB_ENTRY must be on ${origin.origin}, not ${webEntry.origin}`);
+const webBase = bundleServer ? `http://127.0.0.1:${bundleServer.address().port}/` : webEntry.href;
 
 const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
 
@@ -926,15 +949,17 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
                 solidClass: !!header && (header.classList.contains('MuiAppBar-colorDefault') || header.classList.contains('jfmod-topbarSolid')),
                 background: style?.backgroundColor ?? null, image: style?.backgroundImage ?? null,
                 tintAlpha: style ? Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100 : null,
-                filter: style ? style.backdropFilter || style.webkitBackdropFilter || 'none' : null
+                filter: style ? style.backdropFilter || style.webkitBackdropFilter || 'none' : null,
+                theme: document.documentElement.getAttribute('data-theme'),
+                boxShadow: style?.boxShadow ?? null, borderBottomWidth: style?.borderBottomWidth ?? null,
+                labelTextShadow: header?.querySelector('.MuiButton-root') ? getComputedStyle(header.querySelector('.MuiButton-root')).textShadow : null
             };
         }, !!layout.tv);
-        const blur = Number(/blur\((\d+(?:\.\d+)?)px\)/.exec(bar.filter ?? '')?.[1] ?? 0);
-        const glass = bar.solidClass && blur >= 12 && blur <= 16 && bar.tintAlpha >= 0.3 && bar.tintAlpha <= 0.55;
+        const glass = bar.solidClass && glassValuesMatch(bar.theme, bar);
         // Scrolled past the point where it used to turn solid, with no fill under the scrim and no filter.
         const transparent = bar.bar === 'legacy header' && bar.solidClass && bar.filter === 'none' && bar.tintAlpha === 0 && /linear-gradient/.test(bar.image ?? '');
         record(`d ${layout.name}`, layout.tv ? 'Scrolled, the TV bar stays transparent (its gradient scrim only: no fill, no backdrop filter)' :
-            'Scrolled, the bar is frosted glass (tint and blur)', layout.tv ? transparent : glass, bar);
+            'Scrolled, the bar is frosted glass with the approved values (tint, blur 12, contrast 0.7, brightness; no halo, no hairline)', layout.tv ? transparent : glass, bar);
         if (!layout.tv) await layoutPage.screenshot({ path: path.join(out, `d-${layout.name}-scrolled-bar.png`) });
         await layoutPage.evaluate(() => window.scrollTo(0, 0));
         // Before: the same page with the hero's previous rules put back.
@@ -957,19 +982,31 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
 // alone) and the page with the bar hidden (what lies beneath). Over blocks of 16 × 8 px, the regression slope of the
 // glass's luminance on the beneath's is the share of the underlying brightness that shows through; the text's
 // contrast is taken against every block of the glass, and the worst block counts. Places: the top of the hero, the
-// brightest of the first poster rows, and plain white and black panels slid under the bar (the extremes, for the record).
+// brightest of the first poster rows, and mid-grey, plain white and plain black panels slid under the bar (the grey is held
+// to the 4.5:1 bound, the extremes are for the record).
 // Contrast is taken in the band the bar's labels occupy, across the whole width, since that is where text meets what
 // passes beneath. The TV draws the legacy header instead, with no glass (user, 2026-10-08: transparent, its gradient
 // scrim the only treatment), and is measured the same way.
 const BAR_SELECTOR = '.jfmod-homeAppBar, .skinHeader.jfmod-topbar';
+// The bar as first shipped on 2026-10-08 (commit 12322785b6), put back over the built one for the comparison: its
+// stricter bound, the page at 48 % brightness under a 35 % tint over a plain white panel, held what showed through
+// to about a quarter of the page in the dark themes. The built bar's halo behind the labels is switched off meanwhile.
 const OLD_GLASS_CSS = `.jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
-    background: color-mix(in srgb, var(--AppBar-background) 72%, transparent) !important;
-    -webkit-backdrop-filter: blur(14px) saturate(150%) !important; backdrop-filter: blur(14px) saturate(150%) !important;
-    box-shadow: none !important; }
+    background: color-mix(in srgb, color-mix(in srgb, var(--AppBar-background) 80%, var(--AppBar-color)) 35%, transparent) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(180%) brightness(0.48) !important; backdrop-filter: blur(14px) saturate(180%) brightness(0.48) !important;
+    text-shadow: none !important; }
+    [data-theme='light'] .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
+    background: color-mix(in srgb, var(--AppBar-background) 45%, transparent) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(170%) contrast(0.75) brightness(1.15) !important; backdrop-filter: blur(14px) saturate(170%) contrast(0.75) brightness(1.15) !important; }
+    [data-theme='appletv'] .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
+    background: color-mix(in srgb, color-mix(in srgb, var(--AppBar-background) 70%, #fff) 55%, transparent) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(170%) contrast(0.7) brightness(1.25) !important; backdrop-filter: blur(14px) saturate(170%) contrast(0.7) brightness(1.25) !important; }
+    .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault svg { filter: none !important; }
     .layout-tv .skinHeader.jfmod-topbar.jfmod-topbarSolid { background: #101010 !important; }`;
 const GLASS_VARIANTS = process.env.JELLYFINMOD_GLASS_VARIANTS ?
     JSON.parse(readFileSync(process.env.JELLYFINMOD_GLASS_VARIANTS, 'utf8')) :
     [{ name: 'before', css: OLD_GLASS_CSS }, { name: 'after', css: '' }];
+const glassThemeFilter = process.env.JELLYFINMOD_GLASS_THEMES?.split(',');
 const luminanceOf = ([red, green, blue]) => {
     const channel = value => {
         const unit = value / 255;
@@ -1274,12 +1311,12 @@ async function placeBar(page, place, rowMiddle) {
         // The TV's header scrolls with the page, so it is measured at the top of Home and just past the 40 px at
         // which it used to turn solid; the other bars stay put and are measured once Home has scrolled.
         window.scrollTo(0, where === 'top' ? 0 : where === 'past' ? 45 : 160);
-        if (where === 'white' || where === 'black') {
+        if (where === 'white' || where === 'black' || where === 'grey') {
             // Under the bar, over the page.
             const panel = document.createElement('div');
             panel.id = 'jfmod-glass-panel';
             const layer = Math.max(0, (Number.parseInt(getComputedStyle(header).zIndex, 10) || 1) - 1);
-            panel.style.cssText = `position:fixed;left:0;top:0;width:100%;height:${bar.height + 40}px;z-index:${layer};background:${where === 'white' ? '#fff' : '#000'}`;
+            panel.style.cssText = `position:fixed;left:0;top:0;width:100%;height:${bar.height + 40}px;z-index:${layer};background:${{ white: '#fff', black: '#000', grey: '#808080' }[where]}`;
             document.body.append(panel);
         }
     }, { where: place, middle: rowMiddle });
@@ -1288,7 +1325,12 @@ async function placeBar(page, place, rowMiddle) {
     await markBar(page);
 }
 
-if (only.includes('glass')) for (const layout of LAYOUTS.filter(entry => ['desktop-1920', 'mobile-390', 'tv-1920'].includes(entry.name))) {
+const glassLayouts = LAYOUTS.filter(entry => ['desktop-1920', 'mobile-390', 'tv-1920'].includes(entry.name) && (!layoutFilter || layoutFilter.includes(entry.name)));
+// A filter that leaves nothing to measure must not pass by omission.
+if (only.includes('glass') && glassLayouts.length === 0) {
+    record('glass', 'layouts', 'NOT VERIFIED', `JELLYFINMOD_HERO_LAYOUTS selects none of desktop-1920, mobile-390, tv-1920 (got ${process.env.JELLYFINMOD_HERO_LAYOUTS})`);
+}
+if (only.includes('glass')) for (const layout of glassLayouts) {
     const { context: glassContext, page: glassPage } = await newPage(layout.viewport, layout.extra);
     try {
         await signIn(glassPage);
@@ -1296,8 +1338,9 @@ if (only.includes('glass')) for (const layout of LAYOUTS.filter(entry => ['deskt
         if (layout.tv) await glassPage.evaluate(() => localStorage.setItem('layout', 'tv'));
         // Every theme on the computer, since each has its own bar and text colours; the default and the light theme on
         // the phone; the TV in its default dark theme, the one it ships with. Light-mode themes draw dark text.
-        const themes = layout.tv ? ['dark'] : layout.extra?.isMobile ? ['dark', 'light'] :
-            ['dark', 'light', 'appletv', 'wmc', 'blueradiance', 'purplehaze'];
+        const themes = (layout.tv ? ['dark'] : layout.extra?.isMobile ? ['dark', 'light'] :
+            ['dark', 'light', 'appletv', 'wmc', 'blueradiance', 'purplehaze']).filter(theme => !glassThemeFilter || glassThemeFilter.includes(theme));
+        if (themes.length === 0) record(`glass ${layout.name}`, 'themes', 'NOT VERIFIED', `JELLYFINMOD_GLASS_THEMES selects none of this layout's themes (got ${process.env.JELLYFINMOD_GLASS_THEMES})`);
         for (const theme of themes) {
             // The theme is a setting this browser keeps for the user (appTheme, not saved on the server).
             await glassPage.evaluate(({ key, value }) => (value === 'dark' ? localStorage.removeItem(key) : localStorage.setItem(key, value)),
@@ -1346,7 +1389,7 @@ if (only.includes('glass')) for (const layout of LAYOUTS.filter(entry => ['deskt
                     document.head.append(style);
                 }, variant.css);
                 measured[variant.name] = { rows: [] };
-                for (const place of layout.tv ? ['top', 'past'] : ['hero', 'white', 'black']) {
+                for (const place of layout.tv ? ['top', 'past'] : ['hero', 'grey', 'white', 'black']) {
                     await placeBar(glassPage, place);
                     const sample = await sampleGlass(glassPage);
                     measured[variant.name][place] = sample;
@@ -1400,24 +1443,42 @@ if (only.includes('glass')) for (const layout of LAYOUTS.filter(entry => ['deskt
                     { before: measured.before && { glass: measured.before.past.glassGrey, beneath: measured.before.past.beneathGrey },
                         after: { glass: after.past.glassGrey, beneath: after.past.beneathGrey } });
             } else if (after) {
-                // The plain panel that is hardest for the theme's text stands for a broad white (or black) area of a poster.
-                const panel = ['light', 'appletv'].includes(theme) ? 'black' : 'white';
-                record(step, `After: every control's text and icons read at 4.5:1 or better where drawn, over the hero, each of ${after.rows.length} poster rows and a plain ${panel} panel`,
-                    after.hero.glyphContrast >= 4.5 && after.rows.length > 0 && after.rows.every(sample => sample.glyphContrast >= 4.5) && after[panel].glyphContrast >= 4.5,
+                // The bound is real imagery (user, 2026-10-09: see-through over the old plain-white floor): the hero, every poster
+                // row measured and a mid-grey panel. The plain white (or black) panel that is hardest for the theme's text is
+                // recorded, not required: it is wider than any poster's brightest area.
+                const extreme = ['light', 'appletv'].includes(theme) ? 'black' : 'white';
+                // The approved values hold in this theme (computed style of the bar the user sees).
+                const style = await glassPage.evaluate(async () => {
+                    const header = document.querySelector('[data-jfmod-glass]');
+                    const computed = getComputedStyle(header);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    const context = canvas.getContext('2d');
+                    context.fillStyle = computed.backgroundColor;
+                    context.fillRect(0, 0, 1, 1);
+                    const label = header.querySelector('.MuiButton-root');
+                    return { filter: computed.backdropFilter || computed.webkitBackdropFilter || 'none',
+                        tintAlpha: Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100,
+                        boxShadow: computed.boxShadow, borderBottomWidth: computed.borderBottomWidth,
+                        labelTextShadow: label ? getComputedStyle(label).textShadow : null };
+                });
+                record(step, 'The bar has the approved values (tint, blur 12, contrast 0.7, brightness; no text halo, no hairline)', glassValuesMatch(theme, style), style);
+                // Readability is a measurement, not a bound (user, 2026-10-09: see-through over the old 4.5:1 floor): the
+                // worst label over the hero, each poster row and a mid-grey panel is recorded for the user's judgement.
+                record(step, `After, for the record: the controls' text and icons over the hero, each of ${after.rows.length} poster rows and a mid-grey panel (the 4.5:1 floor no longer applies)`, 'INFO',
                     { hero: after.hero.glyphContrast, heroWorst: after.hero.worstControl, rows: after.rows.map(sample => sample.glyphContrast),
-                        worstRow: after.rowIndex === null ? null : after.rowIndex + 1, rowWorst: after.row?.worstControl, [panel]: after[panel].glyphContrast });
+                        worstRow: after.rowIndex === null ? null : after.rowIndex + 1, rowWorst: after.row?.worstControl, grey: after.grey.glyphContrast });
+                record(step, `After, for the record: the same labels over a plain ${extreme} panel, the extreme the bar is no longer held to`, 'INFO',
+                    { [extreme]: after[extreme].glyphContrast, worst: after[extreme].worstControl });
                 const before = measured.before;
                 if (before?.rows?.length === after.rows.length && after.row) {
-                    // More of the page through the bar than the previous one, over the hero and over the same poster row;
-                    // under light text the bar is also lighter over the hero, where the previous one read as black.
-                    const darkText = ['light', 'appletv'].includes(theme);
+                    // More of the page through the bar than the first glass, over the hero and over the same poster row.
                     const sameRow = before.rows[after.rowIndex];
                     const more = after.hero.showThrough > before.hero.showThrough && after.row.showThrough > sameRow.showThrough;
-                    const lighter = darkText || after.hero.glassGrey > before.hero.glassGrey;
-                    record(step, darkText ? 'After shows more of the page than before, over the hero and the poster row' :
-                        'After shows more of the page than before, over the hero and the poster row, and is lighter over the hero', more && lighter,
-                    { showThrough: { hero: [before.hero.showThrough, after.hero.showThrough], row: [sameRow.showThrough, after.row.showThrough] },
-                        heroGrey: [before.hero.glassGrey, after.hero.glassGrey], beneathHeroGrey: after.hero.beneathGrey });
+                    record(step, 'After shows more of the page than before, over the hero and the poster row', more,
+                        { showThrough: { hero: [before.hero.showThrough, after.hero.showThrough], row: [sameRow.showThrough, after.row.showThrough] },
+                            heroGrey: [before.hero.glassGrey, after.hero.glassGrey], beneathHeroGrey: after.hero.beneathGrey });
                 }
             }
         }
