@@ -602,16 +602,14 @@ active, sitting on a gradient over the content and turning solid `#101010` once 
 ~40px. Same items, same right-hand buttons, same routes — a restyle of `AppToolbar` /
 `UserViewNav`, not a replacement, so Principle 0 holds.
 
-**Scrolled, the bar is frosted glass on computer and phone (user, 2026-10-08):** the page shows through it, blurred and
-softened, instead of a solid colour. Readability sets the limit: light text must read at 4.5:1 even over a plain white
-area of a poster, and an even darkening strong enough for that also darkens a dark hero, so the bar gains its light from
-its tint instead. The tint is the theme's bar colour lightened a fifth of the way to its text colour, at 35 %, over the
-page at 48 % brightness, blurred 14px and saturated; light-mode themes, whose dark text has a dark poster as its worst
-case, lift and flatten the page instead, Apple TV with its own lighter tint. A hairline in the text colour marks the
-lower edge. Measured in every theme over the hero, three poster rows and plain white and black, every label reads at
-4.7:1 or better (PHASE7 §S6). The rule costs see-through in the dark themes: the bar is visibly lighter over a dark hero
-than the previous one but lets only a little more of the page through; light themes gain far more. Wherever the engine
-has no `backdrop-filter` or `color-mix()` the bar stays upstream's solid one.
+**Scrolled, the bar is frosted glass on computer and phone (user, 2026-10-08; made more see-through twice on 2026-10-09):**
+the page shows through it, blurred and softened, instead of a solid colour. The first version held light text at 4.5:1
+even over a plain white area of a poster, which kept the dark themes to about a quarter of the page showing through; the
+user tried it and asked for more, then for more again. Readability no longer sets the limit: the bar barely tints or
+darkens the page (the theme's bar colour at 12 %, page at 85 % brightness, blurred 12px; light themes 20 % with a lift,
+Apple TV 30 % with its own lighter tint) and the labels and icons carry a soft halo in the opposite tone instead of a
+darker tint. Over real posters the worst label falls below 4.5:1 (PHASE7 §S6); the user accepted that trade-off.
+Wherever the engine has no `backdrop-filter` or `color-mix()` the bar stays upstream's solid one.
 
 **On TV the bar stays transparent (user, 2026-10-08):** its top-to-bottom dark scrim is its only treatment, with no fill
 and no blur; a full-width blur would cost D-pad scrolling on the webOS engines. The TV's header is part of the page, not
