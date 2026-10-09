@@ -109,8 +109,7 @@ nav links' own opacity. Listed in the order they were proposed.
 
 Plain page loads of the deployed build (`7084d7976d`), Chromium, bar scrolled over the hero and over the first three poster
 rows; labels measured as in "How the numbers were taken". Phone is the same CSS. TV is unchanged (transparent gradient
-scrim, no backdrop filter). Screenshots of this build were kept outside the repo; the comparison images above show the
-same bar.
+scrim, no backdrop filter). Screenshots of this build (bar over the hero and over the first poster row in each theme and layout: desktop 1920 in dark, light, Apple TV, wmc, blueradiance and purplehaze; phone 390 in dark, light and Apple TV; phone 844 landscape in dark and light) are kept locally and not published.
 
 | Theme / layout | Show-through, hero (rows) | Worst label over the hero | Worst label over a poster row |
 | --- | --- | --- | --- |
