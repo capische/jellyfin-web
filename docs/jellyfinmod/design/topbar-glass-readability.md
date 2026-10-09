@@ -107,7 +107,21 @@ nav links' own opacity. Listed in the order they were proposed.
 
 ## Result of the choice (flatten, no halo), deployed bundle `0251b4e71958`
 
-Plain page loads of the deployed build, Chromium, over the hero and the first three poster rows. The full per-theme and
-per-layout table is in PHASE7 §S6. Dark, desktop 1920: show-through 0.47 over the hero (0.40-0.48 over the rows), worst
-label 3.95:1 over the hero and 3.27:1 over the brightest poster; light 0.55 with 3.73:1 / 4.27:1; Apple TV 0.50 with
-4.42:1 / 5.01:1. Phone and the other dark themes follow the same pattern. TV is unchanged.
+Plain page loads of the deployed build (`7084d7976d`), Chromium, bar scrolled over the hero and over the first three poster
+rows; labels measured as in "How the numbers were taken". Phone is the same CSS. TV is unchanged (transparent gradient
+scrim, no backdrop filter). Screenshots of this build were kept outside the repo; the comparison images above show the
+same bar.
+
+| Theme / layout | Show-through, hero (rows) | Worst label over the hero | Worst label over a poster row |
+| --- | --- | --- | --- |
+| Dark, desktop 1920 | 0.47 (0.40-0.48) | 3.95 | **3.27** (Movies, brightest poster) |
+| Light | 0.55 (0.46-0.54) | 3.73 | 4.27 |
+| Apple TV | 0.50 (0.42-0.49) | 4.42 | 5.01 |
+| wmc / blueradiance / purplehaze | 0.47 (0.39-0.43) | 3.42 / 3.51 / 3.84 | 2.83 / 2.90 / 3.17 |
+| Phone 390 portrait: dark / light / Apple TV | 0.42 / 0.49 / 0.45 | 5.47 / 5.72 / 6.47 | 3.11 / 6.78 / 7.48 |
+| Phone 844 landscape: dark / light | 0.44 / 0.52 | 5.91 / 6.09 | 4.40 / 4.30 |
+| (2026-10-08 bar, dark, desktop 1920) | 0.27 (0.23-0.28) | 7.62 | 6.82 |
+| (see-through bar with a halo, before flatten) | 0.67 (0.57-0.68) | 3.35 | 2.59 |
+
+Flatten trades about 0.2 of show-through for 0.6-0.8 of a contrast point over the worst spots; the worst label over a real
+poster is still below 4.5:1 in the dark themes, which is the cost of the user's choice of see-through over readability.
