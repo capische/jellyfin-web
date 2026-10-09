@@ -385,11 +385,15 @@ build on webOS before calling device verification complete. See `PHASE1.md` §7.
 **Decision (user, 2026-10-07), owned by P7.S6:** the hero is what the user is in the middle of — the first item of the
 merged Continue watching list, from the feeds the user's Home settings show, with the series backdrop and the episode
 line for an episode, Play resuming that item — and only when nothing is in progress the newest title; its height
-follows the window width. **Built (not accepted)** on branch `feat/home-hero-continue`, Codex approved; rules and
-evidence in [`PHASE7.md`](PHASE7.md) §S6, *The hero is what you are in the middle of*.
+follows the window width. **Released** 2026-10-09 as 0.1.0.0, index
+`sha256:73e5fb87ec56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00` (web bundle `d3efe2e4444e`); rules and
+evidence in [`PHASE7.md`](PHASE7.md) §S6, *The hero is what you are in the middle of*, and *Home hero and frosted top bar,
+republished*.
 **Decision (user, 2026-10-08), same owner:** Next Up is ordered by when the user last watched the show (the newest play
 of any of its episodes, else when the episode was added), in the row and therefore in the hero; recorded in UX §7.3,
-evidence in [`PHASE7.md`](PHASE7.md) §S6. Built (not accepted) on the same branch.
+evidence in [`PHASE7.md`](PHASE7.md) §S6. Released with the hero.
+**Decision (user, 2026-10-09), same owner:** the scrolled Home top bar is see-through frosted glass on computer and phone
+(values in `homeChrome.scss`, design notes in `design/topbar-glass-readability.md`), transparent on TV. **Released** with the hero.
 
 ---
 

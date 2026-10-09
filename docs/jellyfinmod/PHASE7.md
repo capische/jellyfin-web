@@ -2980,6 +2980,45 @@ bundle.
 - **Rollback:** the previous index `sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927`, then
   `sha256:bae873702b5c…`, still resolve by digest.
 
+#### Home hero and frosted top bar, republished as 0.1.0.0 — 2026-10-09
+
+Authorized by the user on 2026-10-09 after testing both on the isolated instance ("Looks great. Push and release and
+republish"), one overwrite of `0.1.0.0` and `:latest`. The version stays 0.1.0.0.
+
+- **Contents.** Web `jellyfin-mod` `aa88dbd42d`, bundle **`d3efe2e4444e`**: the Home hero and Continue watching (`12322785b6`,
+  Next Up ordered by last watched) and the final scrolled top bar (see-through glass: the theme's bar colour at 12 %, light
+  20 %, Apple TV 30 %; blur 12px, `contrast(0.7)`, brightness 0.85 / 1.1 / 1.15; no label halo, no hairline; TV bar stays
+  transparent), with the runner and design notes (`docs/jellyfinmod/design/topbar-glass-readability.md`; the comparison
+  images show the user's library artwork, are kept locally and are not in the public repository). Plugin `master` `7290d31`,
+  code unchanged since `cb5c6f9`; Phase 9 and `fix/detail-page-design` do not ship.
+- **Build.** Clean detached worktree of plugin `7290d31`; `dotnet build -c Release` 0 warnings; the web dist built once from
+  `aa88dbd42d` (the bundle tested below); `scripts/build-release.sh` into
+  `plugin/artifacts/release-0.1.0.0-hero-glass` of the main checkout. DLL sha256 `46a07045bd52…`, `meta.json` timestamp
+  **`2026-10-09T10:54:49Z`**, later than `2026-10-09T02:48:51Z`.
+- **Before the push.** On 18096: `home-hero.mjs` steps `d` and `glass` (layout and glass, desktop 1920, phone 390, 844
+  landscape, TV 1920, all themes) 187/187 on Chromium and 187/187 on real Chrome, plus plain page loads of Home over the hero
+  and a poster row in dark, light and Apple TV on desktop, phone 390 and 844 landscape and the TV bar transparent, 23/23 on
+  each. Not run in this pass: the playback steps (`a`, `finish`, `b`, `nextup`, `c`, `sections`), unchanged since their
+  acceptance. Known intermittent: the TV step "Up from the hero reaches the bar" failed in about half of the repeat runs when
+  the instance served the page (focus on "Set Up"), passed in both full runs and 4/4 when the runner served the bundle from
+  loopback; cause not found, not caused by the glass change (TV styles unchanged). Codex `gpt-6.1-sol` high: first pass
+  approve with fixes (P1 the runner's `JELLYFINMOD_WEB_ENTRY` could name another instance, fixed; P3 stale handover text),
+  re-review of the fix approve. On the Pi (arm64, image built natively, throwaway containers on 58096, throwaway
+  administrator): fresh install and in-place upgrade from the published index `9c352554…` (the entrypoint logged "replaced
+  JellyfinMod 0.1.0.0 build 2026-10-09T02:48:51Z with build 2026-10-09T10:54:49Z"): Health `Ok`, plugin 0.1.0.0 `Active`,
+  bundle `d3efe2e4444e`, takeover `patched`.
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:73e5fb87ec56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00`** for linux/amd64 (`sha256:299b1cfb6f95…`) and
+  linux/arm64 (`sha256:7ffc6571ce0e…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0 base, `SOURCE_DATE_EPOCH` of
+  plugin `7290d31`, `--provenance=false`. The first push moved only `:latest`; `0.1.0.0` was then pointed at the same index
+  with `imagetools create`. Credential only in a temporary Docker configuration with no credential helper; logged out,
+  deleted, no ghcr.io keychain entry. Both tags resolve anonymously to the same index.
+- **arm64 start after the push**, pulled by the index digest on the Pi: first start (two "Startup complete" lines), Health
+  `Ok`, version 0.1.0.0, bundle `d3efe2e4444e`, commit `aa88dbd42d`, takeover `patched`. Container, config and image removed.
+- **Rollback:** the previous index `sha256:9c3525549ed611922384b4a22bb260578282ba7e14c5d26918e0baed651a3970`, then
+  `sha256:5c81e4839c15…`, still resolve by digest
+  (`docker buildx imagetools create -t …:0.1.0.0 -t …:latest ghcr.io/capische/jellyfin-mod@<digest>`).
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
