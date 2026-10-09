@@ -485,6 +485,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   The wrap is fixed by `807ef4bff5` (with the runner follow-ups, `643679b40a`): `settings-area` 39/39 and
   `settings-design` 828/828 on Chromium and Chrome on 48096 with its TMDB stand-in. Released in the 2026-10-08 republish (see
   [`PHASE7.md`](PHASE7.md), *Partial save message under the ES5 build*).
+- Resolution tier by width and height (2026-10-08): **released** 2026-10-09 as 0.1.0.0, index
+  `sha256:9c3525549ed611922384b4a22bb260578282ba7e14c5d26918e0baed651a3970` (plugin `cb5c6f9`, web bundle `e5ea8cf933aa`
+  unchanged) — a version's resolution is the larger of its width and height tiers on Jellyfin 12's boundaries (a 3840×1600
+  file read "1080p" by height alone); version rows and retention's ranking share the rule. `PhaseSixIntegration` covers it
+  over HTTP; live on 18096, Fleabag S1E1 and Tokyo Vice S1E1 read 2160p and Foundation S3E1 and Pachinko S1E3 read 1080p,
+  as stock does. Codex approve, no findings (see [`PHASE7.md`](PHASE7.md), *Resolution tier fix, republished*).
 - V1 — versions on Jellyfin 12: **accepted** 2026-09-28 (rows 1–21 live on 28096 and 48096, Chromium and Chrome;
   Codex re-review of the final plugin delta `1e56db4..a48f857` with no findings, web passed re-review 3); merged at
   plugin `master` `a48f857` and web `jellyfin-mod` (V1 code `2580d5d67d`, plus these status notes), still 0.1.0.0.
