@@ -1007,6 +1007,10 @@ const GLASS_VARIANTS = process.env.JELLYFINMOD_GLASS_VARIANTS ?
     JSON.parse(readFileSync(process.env.JELLYFINMOD_GLASS_VARIANTS, 'utf8')) :
     [{ name: 'before', css: OLD_GLASS_CSS }, { name: 'after', css: '' }];
 const glassThemeFilter = process.env.JELLYFINMOD_GLASS_THEMES?.split(',');
+// Lowest label contrast and share of the page that must show through the scrolled bar. The measured worst cases of the
+// flatten bar on 18096, Chromium, 2026-10-09: 2.6:1 (the light theme, a dark poster or the grey panel) and 0.31 (phone, dark).
+const READABLE_FLOOR = 2.5;
+const SHOW_THROUGH_FLOOR = 0.3;
 const luminanceOf = ([red, green, blue]) => {
     const channel = value => {
         const unit = value / 255;
@@ -1471,6 +1475,16 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                         worstRow: after.rowIndex === null ? null : after.rowIndex + 1, rowWorst: after.row?.worstControl, grey: after.grey.glyphContrast });
                 record(step, `After, for the record: the same labels over a plain ${extreme} panel, the extreme the bar is no longer held to`, 'INFO',
                     { [extreme]: after[extreme].glyphContrast, worst: after[extreme].worstControl });
+                // Two guards that keep the user's choice from sliding into an unreadable or an opaque bar (follow-up, not part of the
+                // approved values above): the lowest label contrast over the hero, every poster row and the grey panel stays at
+                // READABLE_FLOOR, and the share of the page showing through stays at SHOW_THROUGH_FLOOR over the hero and the rows.
+                const places = [after.hero, ...after.rows, after.grey];
+                record(step, `After: every control's text and icons read at ${READABLE_FLOOR}:1 or better where drawn, over the hero, each of ${after.rows.length} poster rows and a mid-grey panel`,
+                    after.rows.length > 0 && places.every(sample => sample.glyphContrast >= READABLE_FLOOR),
+                    { lowest: Math.min(...places.map(sample => sample.glyphContrast)), reaches4_5: places.every(sample => sample.glyphContrast >= 4.5) });
+                record(step, `After: at least ${SHOW_THROUGH_FLOOR * 100} % of the page shows through the bar over the hero and every poster row`,
+                    after.hero.showThrough >= SHOW_THROUGH_FLOOR && after.rows.every(sample => sample.showThrough >= SHOW_THROUGH_FLOOR),
+                    { hero: after.hero.showThrough, rows: after.rows.map(sample => sample.showThrough) });
                 const before = measured.before;
                 if (before?.rows?.length === after.rows.length && after.row) {
                     // More of the page through the bar than the first glass, over the hero and over the same poster row.
