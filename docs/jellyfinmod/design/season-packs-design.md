@@ -2,7 +2,7 @@
 
 Part of the 0.1.0.0 detail page design fix (`fix/detail-page-design`), not a phase: the user chose on 2026-10-08, during
 their own test on 28096, to build pack acquisition inside this fix ("Build Season / All Seasons now"). The fix is not
-accepted until this part passes its live acceptance too. Status: **built (not accepted)** for the plugin (`4074ca7`, `f440381`, Codex review 1 CHANGES REQUESTED, fixes in progress); web built (the commits *search season and series packs from the release picker* and its runner checks; rendering checked with route fixtures only, not yet reviewed).
+accepted until this part passes its live acceptance too. Status: **built (not accepted)** for the plugin (the commits *acquire season and series packs with claims, fill, add and replace* and *cover season and series pack search, claims, import, seeding, queue, automation and migration*; rebased on 2026-10-09 onto plugin `master`'s *classify resolution by width and height* and *reconcile bindings whose item is gone*, with the pack import's resolution order now built on that classification, see decision 5); web built (the commits *search season and series packs from the release picker* and its runner checks; rendering checked with route fixtures only, not yet reviewed).
 
 Design by Opus 5.5 high. Code map: an exploration of the plugin at `a0ccd77` (summarised in "Where one episode is assumed
 today" below).
@@ -31,7 +31,8 @@ wide and scrolling, a cross to close it.
    The plugin's own first import of an episode carries no label, so any added version won. The fix is at that layer, in the
    plugin's naming of the new file, and never renames or moves a held file: a new version names its resolution only when it
    is known to be higher than every version held (held resolutions read from the file name, the release it was imported
-   from, else the width Jellyfin probed; an unknown one is never assumed lower). A lower or equal one is named after the main
+   from, else the size Jellyfin probed, read like the versions row as the larger of its width and height tiers, with a picture
+   in the lowest tier at least 540 lines tall ordered as 576p above 480p; an unknown one is never assumed lower). A lower or equal one is named after the main
    file it goes beside with a label without a resolution (`<main file> - WEB-DL`), so it sorts right after it; a resolution
    the main file names (`720p`, `4K`, `UHD`) is never copied into it, and no name is ever cut short. Every name is checked
    with Jellyfin's own grouping of the folder before anything is linked; when no name would keep the higher file first, the
