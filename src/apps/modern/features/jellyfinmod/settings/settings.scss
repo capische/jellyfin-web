@@ -50,6 +50,9 @@
 
 .jfmod-state i {
     flex: none;
+    position: relative;
+    // Centred on the line box the dot sits above the middle of lowercase text, which hangs lower (user, 2026-10-10).
+    top: 0.14em;
     width: 0.62em;
     height: 0.62em;
     border-radius: 50%;
@@ -259,9 +262,7 @@
     }
 
     .jfmod-settings .MuiButton-containedInherit:hover,
-    .jfmod-settingsDialog .MuiButton-containedInherit:hover,
-    .jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root:hover,
-    .jfmod-rowactions .jfmod-iconbtn-grey.MuiIconButton-root:hover {
+    .jfmod-settingsDialog .MuiButton-containedInherit:hover {
         background-color: #424242;
         background-color: var(--jf-palette-Button-inheritContainedBg, #424242);
         background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
@@ -376,6 +377,7 @@
    destroys. Its own font size is the root's, so its em sizes do not follow MUI's 1.5rem icon size. Three classes beat
    MUI's own disabled and hover rules, which carry two. */
 .jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root,
+.jfmod-secret-inputrow > .jfmod-iconbtn.MuiButtonBase-root,
 .jfmod-rowactions > .jfmod-iconbtn.MuiButtonBase-root {
     box-sizing: border-box;
     width: 2.5em;
@@ -389,12 +391,14 @@
 .jfmod-secret-row > .jfmod-iconbtn.MuiButtonBase-root:first-of-type { margin-left: 0.86em; }
 
 .jfmod-secret-row .jfmod-iconbtn .MuiSvgIcon-root,
+.jfmod-secret-inputrow .jfmod-iconbtn .MuiSvgIcon-root,
 .jfmod-rowactions .jfmod-iconbtn .MuiSvgIcon-root { font-size: 1.4em; }
 
 /* A row's icons sit apart from what is beside them (its state, its chip) by the labelled buttons' own spacing. */
 .jfmod-rowactions > .jfmod-iconbtn.MuiButtonBase-root:first-child { margin-left: 0.86em; }
 
 .jfmod-secret-row .jfmod-iconbtn-grey.MuiIconButton-root,
+.jfmod-secret-inputrow .jfmod-iconbtn-grey.MuiIconButton-root,
 .jfmod-rowactions .jfmod-iconbtn-grey.MuiIconButton-root {
     color: #fff;
     color: var(--jf-palette-text-primary, #fff);
@@ -422,11 +426,13 @@
 /* A refused row icon (a quality's Move Up on the first row) drops its fill and keeps its glyph in the secondary text
    colour, 8:1 on the dialog: dimming the whole button took it under 4.5:1, and to 2.3:1 under the TV's focus ring. It
    stays focusable; focused, it takes the focus fill like any other icon (Codex review rows-case 1, P2 2). */
+.jfmod-secret-inputrow .jfmod-iconbtn.MuiIconButton-root[aria-disabled="true"]:not(.jfmod-busy),
 .jfmod-rowactions .jfmod-iconbtn.MuiIconButton-root[aria-disabled="true"]:not(.jfmod-busy) {
     opacity: 1;
     filter: none;
 }
 
+.jfmod-secret-inputrow .jfmod-iconbtn.MuiIconButton-root[aria-disabled="true"]:not(.jfmod-busy):not(:focus),
 .jfmod-rowactions .jfmod-iconbtn.MuiIconButton-root[aria-disabled="true"]:not(.jfmod-busy):not(:focus) {
     color: rgba(255, 255, 255, 0.7);
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
@@ -442,6 +448,21 @@
 }
 
 /* What a secret's test does and what it found, under the box. */
+// The edit field is the Configured box in another state (user, 2026-10-10): the same height, and its text starts where
+// "Configured" starts, measured against the box (3.19em tall, text 0.7em in) rather than the stock filled input.
+.jfmod-secret .jfmod-secret-input.MuiFormControl-root {
+    margin: 0;
+}
+
+.jfmod-secret .jfmod-secret-input .MuiFilledInput-root {
+    min-height: 3.19em;
+    padding-left: 0;
+}
+
+.jfmod-secret .jfmod-secret-input .MuiFilledInput-input {
+    padding: 0 0 0 0.7em;
+}
+
 .jfmod-secret-below { margin: 0.5em 0 1.4em; }
 .jfmod-secret-below .jfmod-notice { margin-top: 0.5em; }
 
@@ -1055,4 +1076,113 @@
     outline: 0.16em solid #fff;
     outline: 0.16em solid var(--jf-palette-text-primary, #fff);
     outline-offset: 0.12em;
+}
+
+/* A secret's Save and Keep sit inside its field, at the right end, round and grey like the box's icons (user, 2026-10-09). */
+.jfmod-secret-inputrow {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.4em;
+}
+
+/* Hover (user, 2026-10-09): the icon grows a little and a veil of its own text colour lightens it, both over 140 ms. The veil
+   is a pseudo-element whose opacity moves, since a gradient fill cannot be animated; only transform and opacity move, so an
+   older webOS pays nothing for it. A focused icon keeps its ring and its fill, and a pointer-less device never sees it. */
+.jfmod-iconbtn.MuiIconButton-root {
+    position: relative;
+    transition: transform 0.14s ease-out, background-color 0.14s ease-out;
+}
+
+.jfmod-iconbtn.MuiIconButton-root::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 50%;
+    background: currentcolor;
+    opacity: 0;
+    transition: opacity 0.14s ease-out;
+    pointer-events: none;
+}
+
+@media (hover: hover) {
+    .jfmod-iconbtn.MuiIconButton-root:hover:not([aria-disabled="true"]):not(:focus) { transform: scale(1.08); }
+    .jfmod-iconbtn-grey.MuiIconButton-root:hover:not([aria-disabled="true"]):not(:focus)::before { opacity: 0.12; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-iconbtn.MuiIconButton-root,
+    .jfmod-iconbtn.MuiIconButton-root::before { transition: none; }
+    .jfmod-iconbtn.MuiIconButton-root:hover:not([aria-disabled="true"]):not(:focus) { transform: none; }
+}
+
+/* A Test icon (user, 2026-10-09, design C2 "Gauge"): the signal arcs with a needle across them are the indicator, with no mark
+   on the corner. Idle it is the text colour; while the test runs the needle sweeps across the arcs; a pass turns the whole
+   glyph green; a failure turns it red and drops the needle to zero. Only transform moves, on one group, and the shapes differ
+   as well as the colours. The needle's cut (a wider stroke in the button's fill) clears the arcs it crosses. */
+.jfmod-testglyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.jfmod-testsig {
+    display: block;
+    width: 1.4em;
+    height: 1.4em;
+}
+
+.jfmod-testsig-cut {
+    stroke: #424242;
+    stroke: var(--jf-palette-Button-inheritContainedBg, #424242);
+}
+
+.jfmod-testsig-needle { transform-origin: 12px 19.2px; }
+.jfmod-testing .jfmod-testsig-needle { animation: jfmod-testsweep 1.4s ease-in-out infinite alternate; }
+
+@keyframes jfmod-testsweep {
+    from { transform: rotate(-58deg); }
+    to { transform: rotate(14deg); }
+}
+
+.jfmod-test-ok .jfmod-testsig { color: #81c784; }
+.jfmod-test-fail .jfmod-testsig { color: #ff7b72; }
+.jfmod-test-fail .jfmod-testsig-needle { transform: rotate(-70deg); }
+
+.jfmod-teststatus {
+    margin-right: 0.2em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+}
+
+/* The number fields' spin arrows are the browser's own, drawn for a light field unless the field says it is dark, which made
+   them nearly invisible (user, 2026-10-09); the light scheme is the one light field. */
+.jfmod-settings input[type="number"],
+.jfmod-settingsDialog input[type="number"] { color-scheme: dark; }
+
+:root[data-theme="light"] .jfmod-settings input[type="number"],
+:root[data-theme="light"] .jfmod-settingsDialog input[type="number"] { color-scheme: light; }
+
+/* Diagnostics entries scroll in an area of their own (user, 2026-10-09), so a long list does not push the page: it is a tab
+   stop, takes the arrow keys while it can still scroll (a remote has no wheel), and shows a ring while focused. Every entry
+   carries when it happened, small and dim. */
+.jfmod-scrolllist {
+    max-height: 17em;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.jfmod-scrolllist:focus {
+    outline: 0.16em solid #00a4dc;
+    outline: 0.16em solid var(--jf-palette-primary-main, #00a4dc);
+    outline-offset: 0.12em;
+}
+
+.jfmod-when {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 0.78em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }

@@ -4,7 +4,6 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import BuildIcon from '@mui/icons-material/Build';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -23,7 +22,7 @@ import {
 } from './settingsApi';
 import {
     type Draft, FieldForm, type FieldSpec, FOCUSABLE_SELECT, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
-    useConfirm
+    ScrollList, type TestState, TestIcon, useConfirm, WhenLine
 } from './settingsWidgets';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the settings DTOs are the plugin's own and are read field by field */
@@ -566,7 +565,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
     const token = tokenSecret.change;
     const setToken = tokenSecret.set;
     const { run, test } = section;
-    const save = useCallback(() => run(async () => {
+    const saveWork = useCallback(async () => {
         let savedRevision: number | undefined;
         const revision = tokenSecret.revisionFor(discovery.revision);
         const origin = tokenSecret.origin(revision);
@@ -574,26 +573,71 @@ export const DiscoverySection: FC<SectionProps> = props => {
             savedRevision = (await request<any>(api, 'PATCH', 'Settings/Discovery', { token, revision }))?.revision;
         }
         tokenSecret.saved(token, { id: 'discovery', revision: savedRevision }, origin);
-    }, 'Saved.'), [run, api, token, tokenSecret, discovery.revision]);
+    }, [api, token, tokenSecret, discovery.revision]);
+    const save = useCallback(() => run(saveWork, 'Saved.'), [run, saveWork]);
     // Test sits in the token's box as an icon, its words and its result under the box (user, 2026-10-07). A result belongs
     // to the revision it tested: a saved replacement or clear, or a change being typed, hides it (Codex review 1, P2 2).
-    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState } | null>(null);
+    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState; at: string } | null>(null);
+    const [testing, setTesting] = useState(false);
     const testedRevision = discovery.revision;
-    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice }), [testedRevision]);
-    const testToken = useCallback(() => test('Settings/Discovery/Test', api, sayTest), [test, api, sayTest]);
+    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice, at: new Date().toISOString() }), [testedRevision]);
+    // Only the latest run ends the spinner: a test that a newer one has superseded must not stop it early.
+    const testRun = useRef(0);
+    const testToken = useCallback(async () => {
+        testRun.current += 1;
+        const mine = testRun.current;
+        setTesting(true);
+        try {
+            await test('Settings/Discovery/Test', api, sayTest);
+        } finally {
+            if (mine === testRun.current) setTesting(false);
+        }
+    }, [test, api, sayTest]);
+    // The Save at the end of the input saves just the token, then starts its Test (user, 2026-10-09). The test waits until the
+    // save has landed and the record has been read again, so it is the new token that is tested, and its result is kept.
+    const [testAfterSave, setTestAfterSave] = useState<{ from: unknown } | null>(null);
+    const savingToken = useRef(false);
+    const saveToken = useCallback(async () => {
+        if (savingToken.current) return;
+        savingToken.current = true;
+        let saved = false;
+        try {
+            await run(async () => {
+                await saveWork();
+                saved = true;
+            }, 'Saved.');
+        } finally {
+            savingToken.current = false;
+        }
+        if (saved) setTestAfterSave({ from: discovery.revision });
+    }, [run, saveWork, discovery.revision]);
+    useEffect(() => {
+        if (!testAfterSave || section.busy || discovery.revision === testAfterSave.from || !discovery.tokenConfigured) return;
+        setTestAfterSave(null);
+        // The box was drawn again, so a focus that sat on the Save or the input is gone: it goes to the Test that follows.
+        const active = document.activeElement;
+        if (!active || active === document.body) document.querySelector<HTMLElement>('.jfmod-check-section[data-section="discovery"] [data-secret-action="test"]')?.focus();
+        void testToken();
+    }, [testAfterSave, section.busy, discovery.revision, discovery.tokenConfigured, testToken]);
     const shownResult = testResult && testResult.revision === discovery.revision && token.action === 'unchanged' && discovery.tokenConfigured ?
-        testResult.notice : null;
+        testResult : null;
+    const testState: TestState = useMemo(() => {
+        if (testing) return { kind: 'testing' };
+        if (shownResult) return { kind: shownResult.notice.kind === 'ok' ? 'ok' : 'fail', reason: shownResult.notice.kind === 'ok' ? null : shownResult.notice.text, checkedAt: shownResult.at };
+        return discovery.verified ? { kind: 'ok', checkedAt: discovery.verifiedAt } : { kind: 'idle' };
+    }, [testing, shownResult, discovery.verified, discovery.verifiedAt]);
     const tokenTest = useMemo(() => ({
-        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult,
+        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult?.notice ?? null, state: testState,
         help: 'Asks TMDB whether it accepts the saved token. Save a new token first.'
-    }), [testToken, section.busy, shownResult]);
+    }), [testToken, section.busy, shownResult, testState]);
+    const tokenSave = useMemo(() => ({ label: 'Save TMDB Token', run: saveToken, busy: section.busy }), [saveToken, section.busy]);
     return (
         <SectionFrame id='discovery' eyebrow={props.eyebrow} title='Discovery' state={summarise('discovery', data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={`Revision ${discovery.revision ?? '—'}.`} next={props.next} onGo={props.onGo}
+            onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
             <div className='jfmod-group'>
                 <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
-                    test={tokenTest} />
+                    test={tokenTest} save={tokenSave} />
                 <div className='fieldDescription jfmod-lead'>
                     Used for JellyfinMod discovery only. Jellyfin&apos;s own TMDb metadata plugin keeps its separate key, so a discovery result and the item
                     Jellyfin later creates can disagree about title, poster and language.
@@ -802,7 +846,7 @@ export const ClientSection: FC<SectionProps> = props => {
     ];
     return (
         <SectionFrame id='client' eyebrow={props.eyebrow} title='Download Client' state={summarise('client', data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={client ? `Revision ${client.revision}.` : 'Not saved yet.'} next={props.next} onGo={props.onGo}
+            onSave={save} saving={section.busy} saveMeta={client ? undefined : 'Not saved yet.'} next={props.next} onGo={props.onGo}
             actions={client && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testClient} data-test='client'>Test</Button>}
         >
             <FieldForm fields={fields} draft={draft} onChange={set} />
@@ -1021,12 +1065,21 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
 
 const indexerKind = (indexer: any): StateKind => {
     if (!indexer.enabled) return 'off';
+    if (indexer.lastError) return 'err';
     return indexer.verified ? 'ok' : 'warn';
 };
 
 const indexerWords = (indexer: any) => {
     if (!indexer.enabled) return 'off';
+    if (indexer.lastError) return 'last test failed';
     return indexer.verified ? 'verified' : 'not verified';
+};
+
+/** What the server remembers of an indexer's last test: a failure first, then a pass, else it was never tested. */
+const indexerTestState = (indexer: any): TestState => {
+    if (indexer.lastError) return { kind: 'fail', reason: indexer.lastError };
+    if (indexer.verified) return { kind: 'ok', checkedAt: indexer.capabilitiesFetchedAt };
+    return { kind: 'idle' };
 };
 
 interface IndexerRowProps {
@@ -1040,7 +1093,16 @@ interface IndexerRowProps {
 }
 
 const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, onEdit }) => {
-    const testIndexer = useCallback(() => test(`Settings/Indexers/${indexer.id}/Test`, api), [test, api, indexer.id]);
+    // The icon spins and the status says "Testing…" until the answer is in (user, 2026-10-09).
+    const [testing, setTesting] = useState(false);
+    const testIndexer = useCallback(async () => {
+        setTesting(true);
+        try {
+            await test(`Settings/Indexers/${indexer.id}/Test`, api);
+        } finally {
+            setTesting(false);
+        }
+    }, [test, api, indexer.id]);
     const edit = useCallback(() => onEdit(indexer), [onEdit, indexer]);
     const remove = useCallback(() => ask({
         title: `Remove ${indexer.name}?`, text: 'Grabs keep their recorded source name.', action: 'Remove',
@@ -1058,11 +1120,13 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
                     {indexer.breakerOpenUntil ? ` · paused until ${when(indexer.breakerOpenUntil)}` : ''}
                 </span>
             </div>
-            <StatePill kind={indexerKind(indexer)}>
-                {indexerWords(indexer)}
-            </StatePill>
+            <span className='jfmod-teststate' aria-live='polite'>
+                <StatePill kind={testing ? 'busy' : indexerKind(indexer)}>
+                    {testing ? 'Testing…' : indexerWords(indexer)}
+                </StatePill>
+            </span>
             <span className='jfmod-rowactions'>
-                <IconAction label={`Test ${indexer.name}`} disabled={busy} onClick={testIndexer} data={{ 'row-action': 'test' }}><NetworkCheckIcon /></IconAction>
+                <TestIcon label={`Test ${indexer.name}`} test={testing ? { kind: 'testing' } : indexerTestState(indexer)} busy={busy} onClick={testIndexer} data={{ 'row-action': 'test' }} />
                 <IconAction label={`Edit ${indexer.name}`} onClick={edit} data={{ 'row-action': 'edit' }}><EditIcon /></IconAction>
                 {indexer.managedBy !== 'prowlarr' && (
                     <IconAction label={`Remove ${indexer.name}`} red onClick={remove} data={{ 'row-action': 'remove', 'indexer-remove': indexer.id }}><DeleteIcon /></IconAction>
@@ -1090,6 +1154,10 @@ export const IndexersSection: FC<SectionProps> = props => {
             next={props.next} onGo={props.onGo}
             actions={<Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>}
         >
+            {/* Prowlarr first: one address and a key is all most people give; the indexers it syncs, and the ones added by
+                hand, are the advanced part and follow it (user, 2026-10-10). */}
+            <ProwlarrCard {...props} />
+            {data.prowlarr && <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>}
             <div className='jfmod-blist'>
                 {data.indexers.length === 0 && <div className='jfmod-empty'>No indexer yet.</div>}
                 {data.indexers.map(indexer => (
@@ -1097,7 +1165,6 @@ export const IndexersSection: FC<SectionProps> = props => {
                         onEdit={setEditing} />
                 ))}
             </div>
-            <ProwlarrCard {...props} />
             {editing !== undefined && <IndexerDialog api={api} indexer={editing} onClose={closeDialog} />}
             {confirmDialog}
         </SectionFrame>
@@ -1333,7 +1400,7 @@ export const GrabbingSection: FC<SectionProps> = props => {
     }, 'Saved.'), [run, api, draft, acquisition.revision, acquisitionSaved]);
     return (
         <SectionFrame id='grabbing' eyebrow={props.eyebrow} title='Grabbing' state={summarise('grabbing', data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={`Revision ${acquisition.revision ?? '—'}.`} next={props.next} onGo={props.onGo}
+            onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
             {(acquisition.blockers ?? []).length > 0 && (
                 <div className='jfmod-blist'>
@@ -1381,7 +1448,7 @@ const FlatSection: FC<SectionProps & { id: string; title: string; path: string; 
     }
     return (
         <SectionFrame id={props.id} eyebrow={props.eyebrow} title={props.title} state={summarise(props.id, props.data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={`Revision ${source.revision}.`} next={props.next} onGo={props.onGo} actions={props.actions}
+            onSave={save} saving={section.busy} next={props.next} onGo={props.onGo} actions={props.actions}
         >
             <FieldForm fields={fields} draft={draft} onChange={set} />
             {props.extra}
@@ -1480,7 +1547,7 @@ export const RetentionSection: FC<SectionProps> = props => {
     const preview = data.preview;
     return (
         <SectionFrame id='retention' eyebrow={props.eyebrow} title='Retention' state={summarise('retention', data)} notice={section.notice}
-            onSave={save} saving={section.busy} saveMeta={`Retention revision ${data.retention.revision} · seed protection revision ${data.seed.revision}.`}
+            onSave={save} saving={section.busy}
             next={props.next} onGo={props.onGo}
         >
             <FieldForm fields={[
@@ -1566,9 +1633,14 @@ export const InterfaceSection: FC<SectionProps> = props => {
 
 // ---- Diagnostics ----
 
+const pad = (value: number) => (value < 10 ? '0' : '') + value;
+const newestFirst = (items: any[], field: string) => items.slice().sort((a, b) => String(b[field] ?? '').localeCompare(String(a[field] ?? '')));
+
 export const DiagnosticsSection: FC<SectionProps> = props => {
     const { data } = props;
     const latest = data.reconciliation;
+    const conflicts = useMemo(() => newestFirst(data.conflicts, 'detectedAt'), [data.conflicts]);
+    const orphans = useMemo(() => newestFirst(data.orphans, 'addedAt'), [data.orphans]);
     return (
         <SectionFrame id='diagnostics' eyebrow={props.eyebrow} title='Diagnostics' state={summarise('diagnostics', data)} notice={null} onGo={props.onGo}>
             <dl className='jfmod-kv'>
@@ -1576,6 +1648,38 @@ export const DiagnosticsSection: FC<SectionProps> = props => {
                 <dt>Conflicts</dt><dd>{data.conflicts.length}</dd>
                 <dt>Orphaned entries</dt><dd>{data.orphans.length}</dd>
             </dl>
+            <div className='jfmod-group'>
+                <h3 className='jfmod-grouptitle'>Episode Conflicts</h3>
+                <ScrollList label='Episode conflicts, newest first'>
+                    {conflicts.length === 0 && <div className='jfmod-empty'>No episode conflicts.</div>}
+                    {conflicts.map((conflict: any) => (
+                        <div className='jfmod-brow' key={conflict.id}>
+                            <div className='jfmod-brow-main'>
+                                <strong>{conflict.title}</strong>
+                                <span className='jfmod-sub'>
+                                    tracked S{pad(conflict.trackedSeasonNumber)}E{pad(conflict.trackedEpisodeNumber)}, Jellyfin now reports S{pad(conflict.observedSeasonNumber)}E{pad(conflict.observedEpisodeNumber)}
+                                </span>
+                                <WhenLine words='Detected' at={conflict.detectedAt} />
+                            </div>
+                        </div>
+                    ))}
+                </ScrollList>
+            </div>
+            <div className='jfmod-group'>
+                <h3 className='jfmod-grouptitle'>Entries in Removed Libraries</h3>
+                <ScrollList label='Entries in removed libraries, newest first'>
+                    {orphans.length === 0 && <div className='jfmod-empty'>No entries are waiting for a removed library.</div>}
+                    {orphans.map((orphan: any) => (
+                        <div className='jfmod-brow' key={orphan.id}>
+                            <div className='jfmod-brow-main'>
+                                <strong>{orphan.title}</strong>
+                                <span className='jfmod-sub'>({orphan.mediaType}) — its library was removed; hidden from users until its media reappears</span>
+                                <WhenLine words='Added' at={orphan.addedAt} />
+                            </div>
+                        </div>
+                    ))}
+                </ScrollList>
+            </div>
             <p className='fieldDescription jfmod-lead'>Conflicts and orphans are resolved on the JellyfinMod page in the Jellyfin Dashboard.</p>
         </SectionFrame>
     );
