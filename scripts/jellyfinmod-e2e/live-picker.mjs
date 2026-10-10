@@ -25,6 +25,7 @@ page.on('request', request => { if (/\/JellyfinMod\/(Releases|Grabs)/.test(reque
 try {
     await signIn(page);
     if (tv) await setTvLayout(page);
+    await page.evaluate(() => localStorage.removeItem('jfmod-releaseNames'));
     const detail = await api(page, 'GET', `JellyfinMod/Entries/${entryId}`);
     await page.evaluate(id => { location.hash = '#/details?entryId=' + encodeURIComponent(id); }, entryId);
     const search = page.locator('button', { hasText: 'Search releases' }).first();
@@ -33,7 +34,7 @@ try {
         // Reach the action by keys only: record what has focus on open, then arrow along until Search releases has it.
         await page.waitForTimeout(1500);
         const onOpen = await page.evaluate(() => document.activeElement === document.body ? 'body' : (document.activeElement?.textContent ?? '').trim().slice(0, 30));
-        const isSearch = () => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && /Search releases/.test(document.activeElement.textContent ?? ''));
+        const isSearch = () => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && /Search releases/i.test(document.activeElement.textContent ?? ''));
         let reached = await isSearch();
         const path = [];
         for (let i = 0; i < 25 && !reached; i++) {
@@ -55,18 +56,54 @@ try {
     await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
     const status = (await page.locator('.jfmod-releaseStatus').innerText()).trim();
     const notice = await page.locator('.jfmod-releaseNotice').allInnerTexts();
-    const eligible = (await page.locator('.jfmod-releaseList .jfmod-releaseRow').allInnerTexts()).map(text => text.replace(/\s+/g, ' ').trim());
+    // textContent, not innerText: the file name shows only while Show Names is on, but it is always in the page.
+    const rowTexts = locator => locator.evaluateAll(nodes => nodes.map(node => node.textContent));
+    const eligible = (await rowTexts(page.locator('.jfmod-releaseList .jfmod-releaseRow'))).map(text => text.replace(/\s+/g, ' ').trim());
     const firstFocused = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-releaseRow') ?? false);
     const toggle = page.locator('.jfmod-rejectedToggle');
     let rejected = [];
     if (await toggle.count()) {
         await toggle.click();
-        rejected = (await page.locator('.jfmod-releaseRow--rejected').allInnerTexts()).map(text => text.replace(/\s+/g, ' ').trim());
+        rejected = (await rowTexts(page.locator('.jfmod-releaseRow--rejected'))).map(text => text.replace(/\s+/g, ' ').trim());
         await toggle.click();
     }
-    record(label, 'The picker lists eligible rows (raw title visible) and a collapsed rejected group with reasons', eligible.length > 0,
+    record(label, 'The picker lists eligible rows (raw title present; shown while Show Names is on) and a collapsed rejected group with reasons', eligible.length > 0,
         { status, notice, eligible: eligible.slice(0, 12), rejected: rejected.slice(0, 12), eligibleCount: eligible.length, rejectedCount: rejected.length });
     record(label, 'Focus starts on the first eligible row', firstFocused);
+    // Show Names (user, 2026-10-11, look T3): off by default; the glyph's state is aria-pressed and the label, not a colour.
+    const namesToggle = page.locator('.jfmod-namesToggle');
+    const namesState = () => page.evaluate(() => {
+        const button = document.querySelector('.jfmod-namesToggle');
+        const titles = [...document.querySelectorAll('.jfmod-releaseList .jfmod-releaseItem .jfmod-releaseTitle')];
+        return { pressed: button?.getAttribute('aria-pressed'), label: button?.getAttribute('aria-label'), tooltip: button?.getAttribute('title'),
+            rows: titles.length, shown: titles.filter(node => node.getBoundingClientRect().height > 0).length, stored: localStorage.getItem('jfmod-releaseNames') };
+    });
+    const before = await namesState();
+    record(label, 'Show Names is off by default: aria-pressed false, label Show Names, no row shows a file name',
+        before.pressed === 'false' && before.label === 'Show Names' && before.tooltip === 'Show Names' && before.rows > 0 && before.shown === 0, before);
+    if (tv) {
+        // One D-pad stop in the title row: arrow up from the first row until it has focus.
+        await page.locator('.jfmod-releaseList .jfmod-releaseRow').first().focus();
+        const path = [];
+        let onToggle = false;
+        for (let i = 0; i < 6 && !onToggle; i++) {
+            await page.keyboard.press('ArrowUp');
+            onToggle = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-namesToggle') ?? false);
+            path.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.className ?? '').slice(0, 30)));
+        }
+        record(label, 'TV: Show Names is reached by arrow keys', onToggle, path);
+        if (!onToggle) await namesToggle.focus();
+        await page.keyboard.press('Enter');
+    } else {
+        await namesToggle.click();
+    }
+    const on = await namesState();
+    record(label, 'Show Names on: aria-pressed true, label Hide Names, every row shows its file name, the choice is stored',
+        on.pressed === 'true' && on.label === 'Hide Names' && on.tooltip === 'Hide Names' && on.shown === on.rows && on.rows > 0 && on.stored === '1', on);
+    if (tv) await page.keyboard.press('Enter'); else await namesToggle.click();
+    const off = await namesState();
+    record(label, 'Show Names off again: no file names, stored 0', off.pressed === 'false' && off.shown === 0 && off.stored === '0', off);
+    if (tv) await page.keyboard.press('Enter'); else await namesToggle.click(); // on again: the reload check below needs it stored
     const order = eligible.map(text => Number(/score (-?\d+)/.exec(text)?.[1]));
     record(label, 'Eligible rows are ordered by descending score', order.every((score, index) => index === 0 || order[index - 1] >= score), order);
 
@@ -87,9 +124,11 @@ try {
         if (step === 'cancel') {
             await page.locator('.jfmod-grabCancel').focus();
             await page.keyboard.press('Enter');
+            // A cancelled grab leaves nothing behind: the status block goes and every action is idle again (picker redesign).
             const cancelled = await until(async () => {
-                const text = (await page.locator('.jfmod-releasePicker').innerText()).replace(/\s+/g, ' ');
-                return /cancel/i.test(text) && !/Sending to the download client in/.test(text) ? text.slice(0, 300) : null;
+                const block = await page.locator('.jfmod-grabStatus').count();
+                const working = await page.locator('.jfmod-releaseAction--working').count();
+                return block === 0 && working === 0 ? 'the status block is gone and no action is working' : null;
             }, { timeout: 20000, every: 500, label: 'the cancelled state' });
             record(label, 'Cancel by Enter during the hold ends the grab as cancelled', !!cancelled, cancelled);
         } else {
@@ -108,8 +147,18 @@ try {
     await page.waitForTimeout(800);
     const back = await page.evaluate(() => ({ open: !!document.querySelector('.jfmod-releasePicker'), focus: document.activeElement?.textContent?.trim().slice(0, 40) }));
     // Stock dialogHelper restores focus to the opener only on the TV layout; elsewhere closing is the whole contract.
-    if (tv) record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Search releases/.test(back.focus ?? ''), back);
+    if (tv) record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Search releases/i.test(back.focus ?? ''), back);
     else record(label, 'Back closes the picker', !back.open, back);
+    // The choice survives a reload: reopen the picker and read the toggle, then switch it off for the next run.
+    await page.reload();
+    const reopen = page.locator('button', { hasText: 'Search releases' }).first();
+    await reopen.waitFor({ state: 'visible', timeout: 30000 });
+    if (tv) { await reopen.focus(); await page.keyboard.press('Enter'); } else await reopen.click();
+    await page.waitForSelector('.jfmod-releasePicker .jfmod-namesToggle, .jfmod-releaseDialog .jfmod-namesToggle', { timeout: 15000 });
+    const kept = await namesState();
+    record(label, 'Show Names survives a reload', kept.pressed === 'true' && kept.label === 'Hide Names', kept);
+    await namesToggle.click();
+    await page.evaluate(() => localStorage.setItem('jfmod-releaseNames', '0'));
     record(label, 'Entry read', detail.status === 200, { title: detail.body?.title });
 } catch (error) {
     notVerified(label, 'picker flow', error);

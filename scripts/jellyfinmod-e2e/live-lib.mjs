@@ -14,7 +14,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const required = name => process.env[name] ?? (() => { throw new Error(`${name} is required`); })();
 export const origin = new URL(required('JELLYFINMOD_LIVE_URL'));
-if (['8096', '18096', '28096', '38096'].includes(origin.port)) throw new Error('Runs only against the live acceptance instance');
+// Port 8096 is production on the Pi, but a local Mac environment (alpha) listens on 127.0.0.1:8096.
+if (!['127.0.0.1', 'localhost'].includes(origin.hostname) && ['8096', '18096', '28096', '38096'].includes(origin.port)) throw new Error('Runs only against the live acceptance instance');
 export const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 export const portBase = 48110;
 export const USER = 'oleksii';
