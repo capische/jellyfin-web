@@ -45,27 +45,32 @@
 }
 
 .jfmod-videoTrigger {
-    display: inline-flex;
+    // The closed Video value is a dropdown like the Audio and Subtitles selects beside it (user, 2026-10-10), measured against
+    // them: the same width, the 1.75em height, the 2px border, the paper background and the chevron at the right end.
+    display: flex;
     align-items: center;
-    padding: 0 0.3em 0 0;
-    border: 0;
+    width: 100%;
+    box-sizing: border-box;
+    height: 1.75em;
+    padding: 0 0 0 0.4em;
+    border: 0.135em solid rgba(255, 255, 255, 0.09);
     border-radius: 0.2em;
-    background: transparent;
+    background: #202020;
     color: inherit;
     font: inherit;
-    line-height: 1.75;
+    line-height: normal;
     text-align: left;
     cursor: pointer;
 
     &:hover,
     &:focus {
-        background: rgba(0, 164, 220, 0.2);
+        border-color: #00a4dc;
         outline: none;
     }
 }
 
 .jfmod-videoChevron {
-    margin-left: 0.3em;
+    margin: 0 0 0 auto;
     font-size: 1.4em;
     opacity: 0.7;
 }
@@ -97,7 +102,7 @@
 }
 
 .jfmod-fileRow--selected {
-    background: rgba(0, 164, 220, 0.08);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .jfmod-fileChoose {
@@ -121,13 +126,13 @@
 }
 
 .jfmod-fileRow--add .jfmod-fileChoose {
-    color: #00a4dc;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }
 
 .jfmod-fileMark {
     flex: 0 0 auto;
     width: 1.4em;
-    color: #00a4dc;
+    color: var(--jf-palette-text-primary, #fff);
 }
 
 .jfmod-fileBody {
@@ -159,7 +164,7 @@
 
 .jfmod-fileDefault {
     padding: 0 0.4em;
-    border: 1px solid #00a4dc;
+    border: 1px solid rgba(255, 255, 255, 0.45);
     border-radius: 0.2em;
     font-size: 78%;
     text-transform: uppercase;
