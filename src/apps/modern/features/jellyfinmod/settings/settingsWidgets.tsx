@@ -1,6 +1,7 @@
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -106,7 +107,9 @@ interface SecretFieldProps {
     change: SecretChange;
     onChange: (change: SecretChange) => void;
     /** A test of the saved secret, offered as the first icon in its box; its words and result sit under the box. */
-    test?: { id: string; label: string; run: () => void; disabled?: boolean; help: ReactNode; result: NoticeState | null };
+    test?: { id: string; label: string; run: () => void; disabled?: boolean; help: ReactNode; result: NoticeState | null; state: TestState };
+    /** A Save at the end of the input (user, 2026-10-09): it saves just this secret, and the caller then starts the field's test. */
+    save?: { label: string; run: () => void; busy?: boolean };
 }
 
 /**
@@ -118,13 +121,15 @@ interface SecretFieldProps {
  */
 export const IconAction: FC<{
     label: string; red?: boolean; disabled?: boolean; refused?: boolean; onClick: () => void; data: Record<string, string | undefined>; children: ReactNode;
-}> = ({ label, red, disabled, refused, onClick, data, children }) => {
+    /** The tooltip when it says more than the name (a Test icon's last check), and extra classes. */
+    tip?: string; className?: string;
+}> = ({ label, red, disabled, refused, onClick, data, children, tip, className }) => {
     const attributes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined).map(([key, value]) => [`data-${key}`, value]));
     // `disabled` is busy (a request is out); `refused` is "not here" (Move Up on the first row): both keep the focus.
     const off = disabled || refused;
     return (
-        <Tooltip title={label}>
-            <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}${disabled ? ' jfmod-busy' : ''}`} aria-label={label}
+        <Tooltip title={tip ?? label}>
+            <IconButton className={`jfmod-iconbtn jfmod-iconbtn-${red ? 'red' : 'grey'}${disabled ? ' jfmod-busy' : ''}${className ? ' ' + className : ''}`} aria-label={label}
                 aria-disabled={off || undefined} onClick={off ? undefined : onClick} {...attributes}
             >
                 {children}
@@ -133,10 +138,63 @@ export const IconAction: FC<{
     );
 };
 
-const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick: () => void; action: string; testId?: string; children: ReactNode }> = ({
-    label, red, disabled, onClick, action, testId, children
+/** What a Test icon shows: untested, running, passed or failed; when it last checked and why it failed go in its tooltip. */
+export interface TestState {
+    kind: 'idle' | 'testing' | 'ok' | 'fail';
+    checkedAt?: string | null;
+    reason?: string | null;
+}
+
+/** A date and time in the viewer's locale, as the Dashboard page's `when` writes them. */
+const localeWhen = (value: string) => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+};
+
+const testTip = (label: string, test: TestState) => {
+    const checked = test.checkedAt ? ` · last checked ${localeWhen(test.checkedAt)}` : '';
+    const reason = test.reason ? `: ${test.reason}` : '';
+    switch (test.kind) {
+        case 'testing': return `${label} — testing…`;
+        case 'fail': return `${label} — failed${reason}${checked}`;
+        case 'ok': return `${label} — passed${checked}`;
+        default: return `${label} — not tested yet`;
+    }
+};
+
+/**
+ * The Test icon's glyph (user, 2026-10-09, design C2 "Gauge"): signal arcs with a needle across them. It is the whole
+ * indicator: the needle sweeps while the test runs, a pass colours the glyph green, a failure red with the needle dropped.
+ * The classes on the button (`jfmod-testing`, `jfmod-test-ok`, `jfmod-test-fail`) drive it; the words are said by the live
+ * status beside the icon, and the tooltip adds when it last checked or why it failed.
+ */
+const TestSignal: FC = () => (
+    <svg className='jfmod-testsig' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.7' strokeLinecap='round' aria-hidden='true'>
+        <path d='M8.46 16.46A5 5 0 0 1 15.54 16.46' />
+        <path d='M5.64 13.64A9 9 0 0 1 18.36 13.64' />
+        <path d='M2.81 10.81A13 13 0 0 1 21.19 10.81' />
+        <circle cx='12' cy='19.2' r='1.7' fill='currentColor' stroke='none' />
+        <g className='jfmod-testsig-needle'>
+            <path className='jfmod-testsig-cut' d='M12 19.2L16.2 7.2' strokeWidth='5.4' />
+            <path d='M12 19.2L16.2 7.2' />
+        </g>
+    </svg>
+);
+
+export const TestIcon: FC<{
+    label: string; test: TestState; busy?: boolean; onClick: () => void; data: Record<string, string | undefined>;
+}> = ({ label, test, busy, onClick, data }) => (
+    <IconAction label={label} tip={testTip(label, test)} disabled={busy || test.kind === 'testing'} onClick={onClick} data={{ ...data, 'test-state': test.kind }}
+        className={`jfmod-iconbtn-test${test.kind === 'testing' ? ' jfmod-testing' : ''}${test.kind === 'ok' ? ' jfmod-test-ok' : ''}${test.kind === 'fail' ? ' jfmod-test-fail' : ''}`}
+    >
+        <span className='jfmod-testglyph' aria-hidden='true'><TestSignal /></span>
+    </IconAction>
+);
+
+const SecretIcon: FC<{ label: string; red?: boolean; onClick: () => void; action: string; children: ReactNode }> = ({
+    label, red, onClick, action, children
 }) => (
-    <IconAction label={label} red={red} disabled={disabled} onClick={onClick} data={{ 'secret-action': action, test: testId }}>{children}</IconAction>
+    <IconAction label={label} red={red} onClick={onClick} data={{ 'secret-action': action }}>{children}</IconAction>
 );
 
 /**
@@ -144,7 +202,7 @@ const SecretIcon: FC<{ label: string; red?: boolean; disabled?: boolean; onClick
  * input only while a replacement is being typed. The page never receives, holds or logs a stored value.
  * Sections key it by their revision, so a save returns it to "Configured" instead of an empty "New …" input.
  */
-export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange, test }) => {
+export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange, test, save }) => {
     const [editing, setEditing] = useState(false);
     const undo = useCallback(() => onChange({ action: 'unchanged', value: null }), [onChange]);
     const type = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value ?
@@ -156,6 +214,14 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
     const replace = useCallback(() => setEditing(true), []);
     const clear = useCallback(() => onChange({ action: 'clear', value: null }), [onChange]);
     const replacing = editing || change.action === 'replace' || !configured;
+    const typedNow = change.action === 'replace' && !!change.value;
+    // Enter in the input saves it, as the Save beside it does.
+    const saveOnEnter = useCallback((event: React.KeyboardEvent) => {
+        if (save && event.key === 'Enter' && typedNow && !save.busy) {
+            event.preventDefault();
+            save.run();
+        }
+    }, [save, typedNow]);
     // The box holds icon-only actions, Test (when the secret has one), Replace and Clear, in that order (user, 2026-10-07);
     // Undo, which takes back a pending clear, is an ordinary grey button the size of Save.
     const below = test && (
@@ -177,23 +243,42 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
         );
     }
     if (replacing) {
+        const typed = typedNow;
+        // A stored secret's edit field is the Configured box in another state: a placeholder, no floating label (its height and
+        // text start are the box's, see settings.scss); a secret with nothing stored keeps its labelled field.
+        const fieldNaming = configured ? { className: 'jfmod-secret-input', placeholder: 'New value', hiddenLabel: true } : { label };
+        const accessibleName = configured ? { 'aria-label': `New ${label}` } : undefined;
+        // One field: the buttons sit inside it, at its right end, as the Configured box holds its own (user, 2026-10-09).
+        const buttons = (save || configured) && (
+            <span className='jfmod-secret-inputrow'>
+                {save && (
+                    <IconAction label={save.label} refused={!typed} disabled={save.busy} onClick={save.run} data={{ 'secret-action': 'save' }}><SaveIcon /></IconAction>
+                )}
+                {configured && (
+                    <IconAction label='Keep the Saved One' onClick={keep} data={{ 'secret-action': 'keep' }}><CloseIcon /></IconAction>
+                )}
+            </span>
+        );
         return (
             <div className='jfmod-secret'>
+                {/* The header stays while a replacement is typed, as in the Configured view (user, 2026-10-10); the input's own
+                    label is then a short prompt, and its accessible name still says which secret it replaces. */}
+                {configured && <span className='jfmod-secret-label'>{label}</span>}
                 <TextField
                     id={id}
-                    label={configured ? `New ${label.toLowerCase()}` : label}
+                    {...fieldNaming}
                     type='password'
                     autoComplete='off'
                     fullWidth
                     margin='dense'
                     value={change.action === 'replace' ? change.value ?? '' : ''}
                     onChange={type}
+                    onKeyDown={saveOnEnter}
+                    slotProps={{
+                        input: { endAdornment: buttons || undefined },
+                        htmlInput: accessibleName
+                    }}
                 />
-                {configured && (
-                    <Button variant='contained' color='inherit' onClick={keep}>
-                        Keep the Saved One
-                    </Button>
-                )}
                 {below}
             </div>
         );
@@ -203,8 +288,9 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
             <span className='jfmod-secret-label'>{label}</span>
             <div className='jfmod-secret-row'>
                 <span className='jfmod-secret-state'><span className='jfmod-lock' aria-hidden='true' />Configured</span>
+                {test && <span className='jfmod-teststatus' aria-live='polite'>{test.state.kind === 'testing' ? 'Testing…' : ''}</span>}
                 {test && (
-                    <SecretIcon label={test.label} disabled={test.disabled} onClick={test.run} action='test' testId={test.id}><NetworkCheckIcon /></SecretIcon>
+                    <TestIcon label={test.label} test={test.state} busy={test.disabled} onClick={test.run} data={{ 'secret-action': 'test', test: test.id }} />
                 )}
                 <SecretIcon label='Replace' onClick={replace} action='replace'><EditIcon /></SecretIcon>
                 <SecretIcon label='Clear' red onClick={clear} action='clear'><DeleteIcon /></SecretIcon>
@@ -353,3 +439,35 @@ export const useConfirm = (): [ReactNode, (pending: PendingConfirm) => void] => 
     );
     return [element, setPending];
 };
+
+/**
+ * A fixed-height scrolling list (user, 2026-10-09): a tab stop with a visible ring, so the keyboard and the TV's remote can
+ * reach it, and the arrows scroll it while it has room to go and then let go, so the focus moves on (a remote has no wheel).
+ * Its class `focusable` is what upstream's spatial navigation looks for.
+ */
+export const ScrollList: FC<{ label: string; children: ReactNode }> = ({ label, children }) => {
+    const area = useRef<HTMLDivElement>(null);
+    const scroll = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        const node = area.current;
+        const down = event.key === 'ArrowDown';
+        // Only from the region itself: an action inside a row keeps the arrows for moving between rows.
+        if (!node || event.target !== node || (!down && event.key !== 'ArrowUp')) return;
+        const room = down ? node.scrollHeight - node.clientHeight - node.scrollTop > 1 : node.scrollTop > 0;
+        if (!room) return;
+        event.preventDefault();
+        event.stopPropagation();
+        node.scrollTop += (down ? 1 : -1) * parseFloat(getComputedStyle(node).fontSize) * 3;
+    }, []);
+    return (
+        // A region that scrolls has to be reachable without a pointer (WCAG 2.1.1), hence the tab stop on a non-interactive role.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex
+        <div ref={area} className='jfmod-blist jfmod-scrolllist focusable' role='region' aria-label={label} tabIndex={0} onKeyDown={scroll}>
+            {children}
+        </div>
+    );
+};
+
+/** When something happened, small and dim, in the viewer's locale. */
+export const WhenLine: FC<{ words: string; at?: string | null }> = ({ words, at }) => (
+    at ? <time className='jfmod-when' dateTime={at}>{words} {localeWhen(at)}</time> : null
+);
