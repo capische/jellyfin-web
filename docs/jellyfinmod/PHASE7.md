@@ -398,7 +398,7 @@ change to a file and the change to its row go in the same commit.
 
 | Upstream file | Why | What breaks if upstream changes it | Lifetime |
 | --- | --- | --- | --- |
-| `webpack.common.js` | second entry, second `HtmlWebpackPlugin`, `publicPath: 'auto'`, the `jellyfinmod-web.json` emit, the boot guard and the patch-surface check | build fails loudly; re-apply the additions | permanent |
+| `webpack.common.js` | second entry, second `HtmlWebpackPlugin`, `publicPath: 'auto'`, the `jellyfinmod-web.json` emit, the boot guard, the patch-surface check, and a `?raw` rule that imports the picker's media-mark SVGs as source text | build fails loudly; re-apply the additions | permanent |
 | ~~`package.json`~~ | `build:mod`-related scripts and the e2e runner reference | — | **never needed (corrected 2026-09-24, P7-R1).** The e2e runner is its own package under `scripts/jellyfinmod-e2e/`; `git diff master` is empty |
 | ~~`src/apps/legacy/controllers/hometab.js`~~ | mounts hero and top bar (W7) | — | **removed (P7 TV shell).** The mod router owns `home` in every layout, and the mod Home tab applies the TV header's transparent bar itself; `git diff master` is empty |
 | `src/components/homesections/homesections.js` | ~~merged rows (W6)~~ **one exported keyword**: `getAllSectionsToShow` (P7.S6) | the mod Home cannot read the user's section choices and would have to copy the selection rule, which would then drift | permanent, and deliberately small |

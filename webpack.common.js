@@ -402,7 +402,14 @@ const config = {
                 ]
             },
             {
+                // The mod's media marks are imported as source text (`?raw`), so they draw inline in currentColor with no request.
+                test: /\.svg$/i,
+                resourceQuery: /raw/,
+                type: 'asset/source'
+            },
+            {
                 test: /\.(ico|png|jpg|gif|svg)$/i,
+                resourceQuery: { not: [/raw/] },
                 type: 'asset/resource'
             },
             {
