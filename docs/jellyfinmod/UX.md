@@ -1015,11 +1015,35 @@ a once-a-quarter admin task, not a browsing surface.
   everything else (PHASE7, *Settings buttons: three kinds*).
 - **List rows act through icons.** Every action of a list row (indexers, quality profiles, path mappings, a profile's
   quality order, blockers, episode conflicts) is a round icon of at least 40 px, as in a secret's box: Test
-  `network_check`, Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows, Fix `build`,
+  `wifi` (states below), Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows, Fix `build`,
   Rebind `link`, Keep `push_pin`. Each one's aria-label and tooltip name the row it acts on (*Remove Prowlarr 1337x*);
   on the TV it takes the focus ring and the arrows walk a row's icons left to right. A move with nowhere to go, or an
   action that is busy, is refused with `aria-disabled`, never `disabled`, so the remote keeps its place. Buttons outside
   rows (Save, Add Indexer, Sync Now, dialog buttons) stay labelled.
+- **Settings polish (user, 2026-10-09)**, on the settings area and the Dashboard page alike. Where it differs from the
+  rules above, the user's rule wins and the difference is said here:
+  - **A Test icon shows what the test did.** Its glyph is `wifi` (it was `network_check`, which already carries a
+    tick of its own); untested it is the plain glyph; while the test runs it is a spinner and the row's status reads
+    "Testing…" (said once, politely); a pass puts a green tick on the glyph's corner, a failure after a pass a red
+    cross, drawn as bare glyphs on the icon's corner with no disc behind them (the user, 2026-10-09; their final position and
+    weight are a separate design session). Tick and cross are shapes as well as colours. The name stays "Test <row>"; the tooltip adds "last checked
+    <date and time in the viewer's locale>" or why it failed. The date is no longer a line of the row ("verified
+    10/9/2026, 10:06:58 PM" is now "verified").
+  - **A secret is one field.** Configured, it is the box with its icons (Test, Replace, Clear); Replace turns the box into
+    the input, with its buttons inside it at the right: a round Save (only a secret that has a test of its own, the TMDB
+    token, has one: it writes just that secret, then starts the Test; refused while the input is empty; Enter does the same)
+    and a round Keep (cross) that turns the box back. The view's blue Save stays the one main action. Save is the one
+    icon-only button outside a row or a secret's box; the other secrets are saved with the record they belong to.
+  - **Icon hover** scales the icon to 1.08 and lightens it over 140 ms (transform and opacity only, no filter), and
+    does neither under `prefers-reduced-motion`; a focused icon keeps its ring and fill.
+  - **Number fields' spin arrows** are drawn for a dark field (the light colour scheme excepted), so they read at
+    4.5:1 in all six schemes.
+  - **Fields side by side start their inputs on one line**: on the Dashboard page every label of a row of columns
+    takes the height of the tallest, whatever wraps at that width. The settings area has no such rows.
+  - **Diagnostics entries** (episode conflicts, entries in removed libraries, a run's library reasons) scroll in a
+    fixed-height area that is a tab stop with a ring, takes the arrow keys while it can scroll (a remote has no wheel),
+    and carries a small dim time on every entry, newest first: *Detected* for a conflict, *Added* for an entry (the plugin
+    records when it was catalogued, not when its library was removed), *Found* for a run's reason.
 
 ---
 
