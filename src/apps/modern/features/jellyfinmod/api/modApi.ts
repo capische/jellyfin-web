@@ -275,7 +275,7 @@ export const searchReleases = async (api: Api, params: ReleaseQuery, options?: A
  * replace) is sent only to plugins with `acquisition.packs`.
  */
 export const grabRelease = async (api: Api,
-    request: { searchId: string; releaseId: string; idempotencyKey: string; mode?: GrabMode },
+    request: { searchId: string; releaseId: string; idempotencyKey: string; mode?: GrabMode; acceptRejected?: boolean },
     options?: AxiosRequestConfig): Promise<GrabOperation> => {
     const response = await api.axiosInstance.post<GrabOperation>(api.basePath + BASE + '/Releases/Grab', request,
         { ...options, headers: authorization(api) });
