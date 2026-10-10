@@ -858,6 +858,11 @@ Design rules:
 - **Rejected releases are listed, collapsed, with their reject reason.** This is the thing Sonarr
   and Radarr get right and every lightweight clone gets wrong: the interesting question is
   usually "why did it not grab the obvious one".
+  **A rejection is soft (user, 2026-10-10).** The profile and identity checks say why a release was rejected; the person
+  decides. A rejected row ends with Add, and Replace where the row offers it, as their own D-pad stops; the row itself only
+  reads, so a stray Enter never grabs it. Each action asks first and names the reasons ("The profile rejected this release: …").
+  The grab request carries `acceptRejected`; the plugin honours it for a person only, never for automation, and a release with
+  no torrent or magnet link stays refused because there is nothing to grab.
 - **Freeleech, proper and repack get chips**, because they change the decision.
 - **Enter grabs.** One keypress, no confirmation — the queue is where a mistake gets undone.
 - **On the TV** the table becomes a single-column list, one focusable row each, parsed summary as
