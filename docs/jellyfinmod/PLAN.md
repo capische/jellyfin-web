@@ -482,6 +482,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   merged at plugin `master` (`f7c274c`) and web `jellyfin-mod` (code `d456ab5263`); Codex re-review 2 closed every product finding
   (its one remaining finding was in a runner, fixed without another round); settings design runner 810/810 on Chromium and Chrome on 28096. Rule in UX §12.1. Released in the 2026-10-08
   republish (see [`PHASE7.md`](PHASE7.md), *Settings rows as named icons*).
+- Settings polish (2026-10-09/10: Test icon states as the gauge glyph, the TMDB token as one field with Save, hover, spin
+  arrows, aligned Dashboard fields, timed scrolling diagnostics): **built (not accepted)** on `fix/settings-polish` of both
+  repositories (not merged); Codex fix-delta re-review waits for the usage reset (see [`PHASE7.md`](PHASE7.md), *Settings
+  polish*).
 - Settings partial save message under the ES5 build and the Prowlarr row's wrap on a phone (2026-10-08): **released** 2026-10-08 as 0.1.0.0, index
   `sha256:5c81e4839c152cc00fd47f30cd4eccb1b43a87d5fe50bff647c7f48d384a5927` (web `3364b4da43`, bundle `e5ea8cf933aa`;
   plugin `f7c274c`) — a stale retention save
