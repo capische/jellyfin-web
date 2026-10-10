@@ -1,5 +1,4 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import CircularProgress from '@mui/material/CircularProgress';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
 import escapeHtml from 'escape-html';
@@ -9,14 +8,17 @@ import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
-import { cancelGrab, getGrab, getQualityProfiles, grabRelease, searchReleases } from '../api/modApi';
+import { cancelGrab, getGrab, getQualityProfiles, getReleaseProgress, grabRelease, searchReleases } from '../api/modApi';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
-import type { GrabMode, GrabOperation, IndexerOutcome, ReleaseCandidate, ReleaseIntent, ReleaseSearch } from '../types/acquisition';
+import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
+import { AddGlyph, qualityText, ReleaseLines, ReplaceGlyph } from './ReleaseRowParts';
+import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
 import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
 
+import './interFont.scss';
 import './releasePicker.scss';
 
 export interface ReleasePickerEpisode {
@@ -46,10 +48,6 @@ export interface ReleasePickerProps {
     onChanged?: () => void;
 }
 
-const SOURCES = new Map([
-    ['remux', 'Remux'], ['bluray', 'BluRay'], ['webdl', 'WEB-DL'], ['webrip', 'WEBRip'], ['hdtv', 'HDTV'], ['dvd', 'DVD'], ['cam', 'CAM']
-]);
-const CODECS = new Map([['h264', 'H.264'], ['h265', 'HEVC'], ['av1', 'AV1'], ['xvid', 'XviD'], ['vc1', 'VC-1'], ['mpeg2', 'MPEG-2']]);
 const GRAB_REASONS = new Map([
     ['acquisition_disabled', 'Grabbing is turned off in the plugin settings.'],
     ['grab_active', 'This title already has an active grab.'],
@@ -70,20 +68,6 @@ const FINAL_STATES = new Set(['accepted', 'failed', 'unknown', 'cancelled']);
 
 const isFinal = (operation: GrabOperation | null) => !!operation && FINAL_STATES.has(operation.state);
 
-const formatSize = (bytes: number | null) => {
-    if (bytes === null) return 'size unknown';
-    if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
-    return Math.max(1, Math.round(bytes / 1e6)) + ' MB';
-};
-
-const summary = (candidate: ReleaseCandidate) => {
-    const parsed = candidate.parsed;
-    const source = parsed.source ? SOURCES.get(parsed.source) ?? parsed.source : null;
-    const quality = [parsed.resolution, source].filter(Boolean).join(' ') || 'Unknown quality';
-    const codec = parsed.codec ? CODECS.get(parsed.codec) ?? parsed.codec : null;
-    return [quality, codec, parsed.hdr, parsed.audio, parsed.group].filter(Boolean).join(' · ');
-};
-
 /** Reads the plugin's problem details, which are written for people and never carry a credential. */
 const problemOf = (error: unknown, fallback: string) => {
     const data = (error as { response?: { data?: { type?: unknown; title?: unknown; operationId?: unknown } } })?.response?.data;
@@ -96,33 +80,173 @@ const problemOf = (error: unknown, fallback: string) => {
     };
 };
 
-// An idempotency key only has to be unique per grab attempt; it is not a secret.
+// An idempotency key only has to be unique per grab attempt, and a progress key per search; neither is a secret.
 // eslint-disable-next-line sonarjs/pseudo-random
-const newKey = () => 'grab-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+const newKey = (prefix = 'grab') => prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 
 const failed = (outcome: IndexerOutcome) => outcome.status !== 'ok' && outcome.status !== 'no_results';
 
+/** The clock time (24 h, the viewer's locale) a wait of `seconds` from `receivedAt` ends. */
+const clockTime = (receivedAt: number, seconds: number) =>
+    new Date((receivedAt || Date.now()) + seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
 /**
  * When every indexer failed and none returned a row, the search found nothing because nothing answered (rate limits, an
- * open breaker): `Indexers are unavailable until 16:05.` from the longest wait, else `right now` (coordinator, 2026-10-08).
- * Null when any indexer answered.
+ * open breaker): `No indexer answered · try again at 16:05` from the longest wait, else `try again later`. Null when any
+ * indexer answered. Never "No releases found" here (release picker design, 2026-10-10).
  */
 const unavailableText = (search: ReleaseSearch | undefined, receivedAt: number): string | null => {
     if (!search || search.candidates.length > 0 || search.indexers.length === 0 || !search.indexers.every(failed)) return null;
     const wait = Math.max(0, ...search.indexers.map(outcome => outcome.retryAfterSeconds ?? 0));
-    if (wait <= 0) return 'Indexers are unavailable right now.';
-    const until = new Date((receivedAt || Date.now()) + wait * 1000);
-    return 'Indexers are unavailable until ' + until.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) + '.';
+    return 'No indexer answered · try ' + (wait > 0 ? 'again at ' + clockTime(receivedAt, wait) : 'again later');
+};
+
+const answeredCount = (search: ReleaseSearch) => search.indexers.filter(outcome => !failed(outcome)).length;
+
+/** Why an indexer gave nothing, in the picker's words (Sentence case). `base` is when the wait began. */
+const failureText = (status: string, message: string | null, retry: number | null, base: number) => {
+    switch (status) {
+        case 'timeout': return 'timed out';
+        case 'rate_limited': return retry ? 'rate limited · retry ' + clockTime(base, retry) : 'rate limited';
+        case 'breaker_open': return retry ? 'paused until ' + clockTime(base, retry) : 'paused';
+        case 'budget_exhausted': return 'daily budget used up';
+        case 'secret_unavailable': return 'no API key';
+        case 'unsupported_search': return 'cannot search this';
+        default: return message ?? status.replace(/_/g, ' ');
+    }
+};
+
+const releaseCount = (count: number) => count + (count === 1 ? ' release' : ' releases');
+
+/** One indexer's line while its search runs, from the plugin's progress. */
+const progressLine = (line: IndexerProgress, now: number, base: number): SearchLine => {
+    const id = line.indexerId;
+    const { name } = line;
+    if (line.state === 'queued') return { id, name, kind: 'waiting', text: 'waiting' };
+    if (line.state === 'verifying' || line.state === 'asking') {
+        const seconds = line.startedAt ? Math.max(0, Math.floor((now - Date.parse(line.startedAt)) / 1000)) : null;
+        return { id, name, kind: 'asking', text: 'asking…' + (seconds === null ? '' : ' ' + seconds + ' s') };
+    }
+    if (line.state === 'ok') return { id, name, kind: 'ok', text: releaseCount(line.resultCount) };
+    if (line.state === 'no_results') return { id, name, kind: 'none', text: 'nothing' };
+    return { id, name, kind: 'failed', text: failureText(line.state, null, line.retryAfterSeconds, base) };
+};
+
+/** One indexer's line once the search is over, from its outcome. */
+const outcomeLine = (outcome: IndexerOutcome, base: number): SearchLine => {
+    const id = outcome.indexerId;
+    const { name } = outcome;
+    if (outcome.status === 'ok') return { id, name, kind: 'ok', text: releaseCount(outcome.resultCount) };
+    if (outcome.status === 'no_results') return { id, name, kind: 'none', text: 'nothing' };
+    return { id, name, kind: 'failed', text: failureText(outcome.status, outcome.message, outcome.retryAfterSeconds, base) };
+};
+
+/**
+ * Reads what each indexer is doing while a search runs: the page's fresh key per search, polled about once a second (one read
+ * at a time; no AbortController, older webOS engines lack it). A plugin without progress answers 404 and the block keeps its
+ * first look. Also counts the seconds the search has taken.
+ */
+const useSearchProgress = (api: Api, key: string | null, active: boolean) => {
+    const [progress, setProgress] = useState<ReleaseProgress | null>(null);
+    const [now, setNow] = useState(() => Date.now());
+    const started = useRef(Date.now());
+    useEffect(() => {
+        setProgress(null);
+        started.current = Date.now();
+        setNow(started.current);
+        if (!active || !key) return;
+        let reading = false;
+        let stopped = false;
+        const read = () => {
+            if (reading) return;
+            reading = true;
+            getReleaseProgress(api, key).then(next => {
+                if (!stopped && next) setProgress(next);
+            }).catch(() => { /* The next tick asks again. */ }).finally(() => {
+                reading = false;
+            });
+        };
+        const first = window.setTimeout(read, 250);
+        const timer = window.setInterval(() => {
+            setNow(Date.now());
+            read();
+        }, 1000);
+        return () => {
+            stopped = true;
+            window.clearTimeout(first);
+            window.clearInterval(timer);
+        };
+    }, [api, key, active]);
+    return { progress, now, startedAt: started.current };
+};
+
+interface SearchBlockInput {
+    searching: boolean;
+    nothingFound: boolean;
+    data: ReleaseSearch | undefined;
+    progress: ReleaseProgress | null;
+    now: number;
+    startedAt: number;
+    unavailable: string | null;
+    receivedAt: number;
+}
+
+/** What the search block shows: a running search with its progress, or a finished one with no rows (quiet, or every indexer down). */
+const searchBlockOf = (input: SearchBlockInput): { mode: 'searching' | 'quiet' | 'error'; caption: string; lines: SearchLine[] } | null => {
+    if (input.searching) {
+        const lines = (input.progress?.indexers ?? []).map(line => progressLine(line, input.now, input.startedAt));
+        const seconds = Math.max(0, Math.floor((input.now - input.startedAt) / 1000));
+        const noun = lines.length === 1 ? ' indexer' : ' indexers';
+        const what = lines.length > 0 ? 'Searching ' + lines.length + noun : 'Searching';
+        return { mode: 'searching', lines, caption: what + ' · ' + seconds + ' s' };
+    }
+    if (!input.nothingFound || !input.data) return null;
+    const lines = input.data.indexers.map(outcome => outcomeLine(outcome, input.receivedAt));
+    return input.unavailable ? { mode: 'error', caption: input.unavailable, lines } : { mode: 'quiet', caption: 'No releases found', lines };
+};
+
+interface SearchViewInput {
+    api: Api;
+    progressKey: string | null;
+    fetching: boolean;
+    waiting: string;
+    error: string;
+    data: ReleaseSearch | undefined;
+    unavailable: string | null;
+    receivedAt: number;
+    status: string;
+    grabError: string;
+}
+
+/**
+ * The search block while a search runs (over the old rows when it replaces a list) and where a finished one has no rows. The
+ * block draws its own caption, so the status line then only tells screen readers: once at the start, once at the end.
+ */
+const useSearchView = (input: SearchViewInput) => {
+    const { progress, now, startedAt } = useSearchProgress(input.api, input.progressKey, input.fetching);
+    const hasRows = (input.data?.candidates.length ?? 0) > 0;
+    const searching = input.fetching && !input.waiting;
+    const nothingFound = !searching && !input.waiting && !input.error && !!input.data && !hasRows;
+    const block = searchBlockOf({ searching, nothingFound, data: input.data, progress, now, startedAt, unavailable: input.unavailable,
+        receivedAt: input.receivedAt });
+    // With no rows the block is the whole list area: it draws the caption itself, and the notice and status lines give way to it
+    // (the mock shows none of them), so the status line only tells screen readers, once at the start and once at the end.
+    const bare = !!block && !hasRows && !input.grabError;
+    let spoken = '';
+    if (searching) spoken = 'Searching indexers';
+    else if (bare) spoken = input.status;
+    return { block, hasRows, bare, spoken, shown: bare ? '' : input.status, searching };
 };
 
 const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null) => {
     if (waiting) return waiting;
-    // A search in progress shows the spinner instead of words (user, 2026-10-08).
+    // A search in progress shows its block; the status line only says it started, for screen readers.
     if (loading) return '';
     if (error) return error;
     if (!search) return '';
     let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}`;
-    if (search.eligibleCount === 0) text = search.rejectedCount === 0 ? unavailable ?? 'No releases found.' : 'No release passes the profile.';
+    if (search.eligibleCount === 0) text = search.rejectedCount === 0 ? unavailable ?? 'No releases found' : 'No release passes the profile';
+    else if (search.indexers.length > 0) text += ` · ${answeredCount(search)} of ${search.indexers.length} indexers answered`;
     if (search.truncated) text += ' · more results exist than were read';
     if (!search.grab.available && search.grab.reason) text += ' · ' + (GRAB_REASONS.get(search.grab.reason) ?? 'Grabbing is unavailable.');
     return text;
@@ -156,28 +280,8 @@ const coverageText = (candidate: ReleaseCandidate, search: ReleaseSearch | undef
     return 'Seasons ' + seasons[0] + '–' + seasons[seasons.length - 1] + ' · ' + episodes;
 };
 
-const ReleaseLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined }> = ({ candidate, search }) => {
-    const coverage = coverageText(candidate, search);
-    const held = candidate.coverage?.held ?? 0;
-    return <>
-        <span className='jfmod-releaseSummary'>
-            <span className='jfmod-releaseQuality'>{summary(candidate)}</span>
-            {coverage && <span className='jfmod-releaseChip jfmod-releaseChip--coverage'>{coverage}</span>}
-            {held > 0 && <span className='jfmod-releaseChip jfmod-releaseChip--held'>{held} held</span>}
-            {candidate.freeleech && <span className='jfmod-releaseChip'>Freeleech</span>}
-            {candidate.proper && <span className='jfmod-releaseChip'>Proper</span>}
-            {candidate.repack && <span className='jfmod-releaseChip'>Repack</span>}
-            {candidate.heldQuality && <span className='jfmod-releaseChip jfmod-releaseChip--held'>In library</span>}
-            <span className='jfmod-releaseMeta'>
-                {formatSize(candidate.size)} · {candidate.seeders === null ? 'seeders unknown' : candidate.seeders + '↑'}
-                {' · '}{candidate.indexerName} · score {candidate.score}
-                {candidate.heldQuality && <span className='jfmod-releaseHeld'> · this quality is already in the library</span>}
-            </span>
-        </span>
-        {/* The raw title is always visible: it is the only diagnostic when a grab goes wrong (UX §9). */}
-        <span className='jfmod-releaseTitle'>{candidate.rawTitle}</span>
-    </>;
-};
+const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined }> = ({ candidate, search }) =>
+    <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)} />;
 
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
@@ -198,7 +302,15 @@ interface RowPlan {
 const PLAIN_ROW: RowPlan = { first: undefined, choices: false, replace: false, held: 0, pack: false };
 
 /** A row action: upstream's round icon button, grey, red when it destroys, with the TV's focus ring (user rules, 2026-10-08). */
-const actionClass = (extra?: string) => classNames('paper-icon-button-light jfmod-releaseAction', extra, { 'show-focus': layoutManager.tv });
+const actionClass = (extra?: string, state: ActionState = 'idle') => classNames('paper-icon-button-light jfmod-releaseAction', extra,
+    state !== 'idle' && 'jfmod-releaseAction--' + state, { 'show-focus': layoutManager.tv });
+
+/** Where a row's Add or Replace is in a grab: the glyph works, ticks (stays) or shows a bang for three seconds. */
+type ActionState = 'idle' | 'working' | 'done' | 'failed';
+
+const ACTION_SUFFIXES = new Map<ActionState, string>([['done', ' — In the Download Queue'], ['failed', ' — Failed']]);
+
+const actionTitle = (base: string, state: ActionState) => base + (ACTION_SUFFIXES.get(state) ?? '');
 
 interface ReleaseRowProps {
     candidate: ReleaseCandidate;
@@ -206,39 +318,58 @@ interface ReleaseRowProps {
     disabled: boolean;
     plan: RowPlan;
     onGrab: (candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => void;
+    actionState: (releaseId: string, mode: 'add' | 'replace') => ActionState;
 }
+
+/** Add, and Replace where the row offers it: each its own D-pad stop. A rejected row's actions ask first, so they say so. */
+const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, disabled, plan, onGrab, actionState, rejected }) => {
+    const off = disabled || !!candidate.heldQuality;
+    const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onGrab(candidate, rejected && !plan.choices ? plan.first : 'add', plan);
+    }, [candidate, onGrab, plan, rejected]);
+    const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onGrab(candidate, 'replace', plan);
+    }, [candidate, onGrab, plan]);
+    // A held quality has no actions, but keeps their room so the columns do not drift.
+    if (candidate.heldQuality) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
+    const addState = actionState(candidate.releaseId, 'add');
+    const replaceState = actionState(candidate.releaseId, 'replace');
+    const showReplace = plan.choices && plan.replace;
+    if (!rejected && !plan.choices) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
+    return <span className={classNames('jfmod-releaseActions', { 'jfmod-releaseActions--pressed': addState !== 'idle' || replaceState !== 'idle' })}>
+        <button type='button' className={actionClass(undefined, addState)} title={actionTitle('Add', addState)}
+            aria-label={(rejected ? 'Add the rejected release ' + candidate.rawTitle : 'Add ' + candidate.rawTitle + ' beside the files held')}
+            aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
+            <AddGlyph />
+        </button>
+        {showReplace ? <button type='button' className={actionClass('jfmod-releaseAction--danger', replaceState)}
+            title={actionTitle('Replace', replaceState)}
+            aria-label={'Replace the files held with ' + (rejected ? 'the rejected release ' : '') + candidate.rawTitle} aria-disabled={off}
+            data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
+            <ReplaceGlyph />
+        </button> : null}
+    </span>;
+};
+
+const rowLabel = (candidate: ReleaseCandidate) => qualityText(candidate.parsed) + (candidate.heldQuality ? ', in library' : '')
+    + (candidate.eligible ? '' : ', rejected: ' + candidate.rejections.map(rejection => rejection.message).join(' '));
 
 /**
  * One eligible release: the row is a button that grabs with the first action; where the scope holds files, Add and Replace
  * follow it as sibling icon buttons, each its own D-pad stop (no nested buttons). A quality already in the library stays
  * focusable for reading, but cannot be grabbed: the server would answer 409 `held_quality` (P6.M6).
  */
-const ReleaseRow: FC<ReleaseRowProps> = ({ candidate, search, disabled, plan, onGrab }) => {
+const ReleaseRow: FC<ReleaseRowProps> = props => {
+    const { candidate, search, disabled, plan, onGrab } = props;
     const off = disabled || !!candidate.heldQuality;
     const activate = useCallback(() => onGrab(candidate, plan.first, plan), [candidate, onGrab, plan]);
-    const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        onGrab(candidate, 'add', plan);
-    }, [candidate, onGrab, plan]);
-    const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        onGrab(candidate, 'replace', plan);
-    }, [candidate, onGrab, plan]);
     return <div className='jfmod-releaseItem'>
-        <button type='button' className='jfmod-releaseRow' aria-disabled={off} onClick={activate}>
-            <ReleaseLines candidate={candidate} search={search} />
+        <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate)} onClick={activate}>
+            <RowLines candidate={candidate} search={search} />
         </button>
-        {plan.choices && <span className='jfmod-releaseActions'>
-            <button type='button' className={actionClass()} title='Add' aria-label={'Add ' + candidate.rawTitle + ' beside the files held'}
-                aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
-                <span className='material-icons add' aria-hidden='true' />
-            </button>
-            {plan.replace && <button type='button' className={actionClass('jfmod-releaseAction--danger')} title='Replace'
-                aria-label={'Replace the files held with ' + candidate.rawTitle} aria-disabled={off}
-                data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
-                <span className='material-icons swap_horiz' aria-hidden='true' />
-            </button>}
-        </span>}
+        <RowActions {...props} rejected={false} />
     </div>;
 };
 
@@ -247,32 +378,14 @@ const ReleaseRow: FC<ReleaseRowProps> = ({ candidate, search, disabled, plan, on
  * stray Enter never grabs it; Add, and Replace where the row offers it, follow as their own D-pad stops and ask first, naming
  * what the profile rejected it for. Automation never grabs a rejected release.
  */
-const RejectedRow: FC<ReleaseRowProps> = ({ candidate, search, disabled, plan, onGrab }) => {
-    const off = disabled || !!candidate.heldQuality;
-    const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        onGrab(candidate, plan.choices ? 'add' : plan.first, plan);
-    }, [candidate, onGrab, plan]);
-    const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        onGrab(candidate, 'replace', plan);
-    }, [candidate, onGrab, plan]);
-    return <div className='jfmod-releaseItem'>
-        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'>
-            <ReleaseLines candidate={candidate} search={search} />
+const RejectedRow: FC<ReleaseRowProps> = props => {
+    const { candidate, search } = props;
+    return <div className='jfmod-releaseItem jfmod-releaseItem--rejected'>
+        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true' aria-label={rowLabel(candidate)}>
+            <RowLines candidate={candidate} search={search} />
             <span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>
         </button>
-        <span className='jfmod-releaseActions'>
-            <button type='button' className={actionClass()} title='Add' aria-label={'Add the rejected release ' + candidate.rawTitle}
-                aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
-                <span className='material-icons add' aria-hidden='true' />
-            </button>
-            {plan.choices && plan.replace && <button type='button' className={actionClass('jfmod-releaseAction--danger')} title='Replace'
-                aria-label={'Replace the files held with the rejected release ' + candidate.rawTitle} aria-disabled={off}
-                data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
-                <span className='material-icons swap_horiz' aria-hidden='true' />
-            </button>}
-        </span>
+        <RowActions {...props} rejected />
     </div>;
 };
 
@@ -304,9 +417,13 @@ const confirmationFor = (candidate: ReleaseCandidate, mode: GrabMode | undefined
 
 const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolean; onCancel: () => void }> =
     ({ operation, now, cancelling, onCancel }) => {
+        // A cancelled grab leaves nothing behind: the block goes and every action is idle again.
+        if (operation.state === 'cancelled') return null;
         const seconds = Math.max(0, Math.ceil((Date.parse(operation.holdUntil) - now) / 1000));
         const accepted = operation.state === 'accepted';
-        return <div className='jfmod-grabStatus' role='status' aria-live='polite'>
+        const refused = !accepted && isFinal(operation);
+        return <div className={classNames('jfmod-grabStatus', { 'jfmod-grabStatus--ok': accepted, 'jfmod-grabStatus--error': refused })}
+            role='status' aria-live='polite'>
             {operation.state === 'pending' && <>
                 <span>Sending to the download client in {seconds} s.</span>
                 <button type='button' className={raisedButtonClass('jfmod-grabCancel')} aria-disabled={cancelling} onClick={onCancel}>
@@ -318,6 +435,8 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolea
             {accepted && operation.openUrl && <a className={flatButtonClass() + ' jfmod-grabOpen'} href={operation.openUrl}
                 target='_blank' rel='noopener noreferrer'>Open in Client</a>}
             {!accepted && isFinal(operation) && <span>{operation.message}</span>}
+            {/* The file name is the diagnostic when a grab goes wrong, so the block carries it (UX §9). */}
+            <span className='jfmod-grabStatus-title'>{operation.releaseTitle}</span>
         </div>;
     };
 
@@ -325,6 +444,11 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolea
 const useGrab = (api: Api, onChanged?: () => void) => {
     const [operation, setOperation] = useState<GrabOperation | null>(null);
     const [releaseId, setReleaseId] = useState<string | null>(null);
+    // The button that was pressed, whether its request is still on the way, and a refusal's three seconds of "!" (release
+    // picker design, action states).
+    const [pressed, setPressed] = useState<GrabMode | undefined>(undefined);
+    const [starting, setStarting] = useState(false);
+    const [flash, setFlash] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [error, setError] = useState('');
     const [now, setNow] = useState(() => Date.now());
@@ -335,6 +459,13 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     const current = useRef<GrabOperation | null>(null);
     useEffect(() => () => {
         mounted.current = false;
+    }, []);
+
+    const flashFailed = useCallback(() => {
+        setFlash(true);
+        window.setTimeout(() => {
+            if (mounted.current) setFlash(false);
+        }, 3000);
     }, []);
 
     /** Starts following a new operation: a new generation, which no earlier response may overwrite. */
@@ -357,8 +488,9 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     useEffect(() => {
         if (!finalKey) return;
         activating.current = false;
+        if (finalKey.endsWith(':failed') || finalKey.endsWith(':unknown')) flashFailed();
         onChanged?.();
-    }, [finalKey, onChanged]);
+    }, [finalKey, flashFailed, onChanged]);
 
     const followId = operation && !isFinal(operation) ? operation.id : null;
     useEffect(() => {
@@ -392,16 +524,22 @@ const useGrab = (api: Api, onChanged?: () => void) => {
         const mine = ++attempt.current;
         const isLatest = () => mounted.current && attempt.current === mine;
         setReleaseId(candidate.releaseId);
+        setPressed(mode);
+        setStarting(true);
+        setFlash(false);
         setError('');
         // A mode is sent only by plugins with packs; an older plugin's grab reads exactly as before.
         grabRelease(api, { searchId, releaseId: candidate.releaseId, idempotencyKey: newKey(), ...(mode ? { mode } : {}),
             ...(acceptRejected ? { acceptRejected: true } : {}) }).then(result => {
             if (!isLatest()) return;
+            setStarting(false);
             setNow(Date.now());
             follow(result);
         }).catch(failure => {
             if (!isLatest()) return;
             activating.current = false;
+            setStarting(false);
+            flashFailed();
             const problem = problemOf(failure, 'The release could not be grabbed.');
             setError(problem.title);
             if (problem.operationId) {
@@ -411,7 +549,7 @@ const useGrab = (api: Api, onChanged?: () => void) => {
                 }).catch(() => undefined);
             }
         });
-    }, [api, follow]);
+    }, [api, flashFailed, follow]);
 
     const cancel = useCallback(() => {
         if (!operation || cancelling) return;
@@ -424,7 +562,7 @@ const useGrab = (api: Api, onChanged?: () => void) => {
             });
     }, [api, cancelling, operation, update]);
 
-    return { operation, releaseId, cancelling, error, now, start, cancel, busy: !!operation && !isFinal(operation) };
+    return { operation, releaseId, pressed, starting, flash, cancelling, error, now, start, cancel, busy: !!operation && !isFinal(operation) };
 };
 
 /** What the scope switch chose: an episode id, `season:<n>` or `series`; empty while nothing is chosen. */
@@ -462,7 +600,7 @@ const scopeOptions = ({ episodes, packs, pageEpisode }: ScopeOptions): { label: 
     const episodeOptions = episodes.map(episode => ({ value: episode.id, label: episode.label }));
     if (!packs) return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...episodeOptions] };
     if (pageEpisode) {
-        return { label: 'Search for', options: [
+        return { label: 'Search For', options: [
             { value: pageEpisode.id, label: 'Episode: ' + episodeCode(pageEpisode) + ' · ' + pageEpisode.title },
             ...(pageEpisode.seasonNumber > 0 ?
                 [{ value: SEASON_PREFIX + pageEpisode.seasonNumber, label: 'Season ' + pageEpisode.seasonNumber }] : []),
@@ -471,7 +609,7 @@ const scopeOptions = ({ episodes, packs, pageEpisode }: ScopeOptions): { label: 
     }
     const seasons = Array.from(new Set(episodes.filter(episode => episode.seasonNumber > 0 && !episode.unaired)
         .map(episode => episode.seasonNumber))).sort((a, b) => a - b);
-    return { label: 'Search for', options: [
+    return { label: 'Search For', options: [
         { value: '', label: 'Choose what to search for' },
         ...(seasons.length > 0 ? [{ value: SERIES_VALUE, label: 'All Seasons' }] : []),
         ...seasons.map(season => ({ value: SEASON_PREFIX + season, label: 'Season ' + season })),
@@ -547,6 +685,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const [choice, setChoice] = useState(initialEpisodeId ?? '');
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
+    const [progressKey, setProgressKey] = useState<string | null>(null);
     const container = useRef<HTMLDivElement>(null);
     const grab = useGrab(api, onChanged);
     // Pack scopes only where the plugin serves them; an older plugin keeps the episode list (season packs, 2026-10-08).
@@ -562,13 +701,19 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         queryKey: ['JellyfinMod', api.basePath, 'Releases', entryId, choice, profileId, searchIntent ?? 'acquire'],
         // `intent` is sent only for another version, and `scope` only for a pack, so an acquire search of one episode or a
         // movie reads exactly as it did before.
-        queryFn: ({ signal }) => searchReleases(api, {
-            entryId,
-            episodeId: chosen.episodeId,
-            profileId: profileId || undefined,
-            intent: searchIntent === 'addVersion' ? searchIntent : undefined,
-            ...(isPack ? { scope: chosen.scope as 'season' | 'series', seasonNumber: chosen.seasonNumber } : {})
-        }, { signal }),
+        queryFn: ({ signal }) => {
+            // A fresh key per search: the page reads what each indexer is doing from it while the search runs.
+            const key = newKey('search');
+            setProgressKey(key);
+            return searchReleases(api, {
+                entryId,
+                episodeId: chosen.episodeId,
+                profileId: profileId || undefined,
+                intent: searchIntent === 'addVersion' ? searchIntent : undefined,
+                progressKey: key,
+                ...(isPack ? { scope: chosen.scope as 'season' | 'series', seasonNumber: chosen.seasonNumber } : {})
+            }, { signal });
+        },
         enabled: !waiting,
         retry: false,
         gcTime: 0,
@@ -594,11 +739,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const data = search.data;
     const { busy, operation, start } = grab;
-    const stale = search.isFetching || search.isPlaceholderData;
     // One Replace confirmation at a time; a second activation while it is open does nothing.
     const confirming = useRef(false);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || stale || candidate.heldQuality) return;
+        if (!data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || search.isPlaceholderData || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
         if (mode !== 'replace' && !chosenRejection) {
             start(data.searchId, candidate, mode);
@@ -610,7 +754,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             .then(() => start(data.searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, mediaType, operation, stale, start]);
+    }, [busy, data, mediaType, operation, search.isFetching, search.isPlaceholderData, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
     const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode }), [episodes, packs, pageEpisode]);
@@ -624,10 +768,13 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const eligible = data?.candidates.filter(candidate => candidate.eligible) ?? [];
     const rejected = data?.candidates.filter(candidate => !candidate.eligible) ?? [];
     // Rows from a previous search stay visible while a new one loads, but only current rows can grab.
-    const grabDisabled = !data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || search.isPlaceholderData;
+    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || search.isFetching
+        || search.isPlaceholderData;
     const failedIndexers = data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
-    const status = [statusText(data, waiting, search.isFetching, searchError, unavailable), grab.error].filter(Boolean).join(' · ');
+    // A new search over the rows of the last keeps their summary on screen; the block says it is searching.
+    const status = [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), grab.error]
+        .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
@@ -637,41 +784,54 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
+    const { block, hasRows, bare, spoken, shown, searching } = useSearchView({ api, progressKey, fetching: search.isFetching, waiting,
+        error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status, grabError: grab.error });
+    const stale = search.isFetching || search.isPlaceholderData;
+
+    const { releaseId: grabbedId, pressed, flash, starting } = grab;
+    const operationState = operation?.state;
+    const actionState = useCallback((releaseId: string, mode: 'add' | 'replace'): ActionState => {
+        if (releaseId !== grabbedId || mode !== (pressed === 'replace' ? 'replace' : 'add')) return 'idle';
+        if (flash) return 'failed';
+        if (starting || operationState === 'pending' || operationState === 'submitting') return 'working';
+        return operationState === 'accepted' ? 'done' : 'idle';
+    }, [flash, grabbedId, operationState, pressed, starting]);
+
     return <div className='jfmod-releasePicker' ref={container}>
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>
             {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choice}
                 options={scope.options} onChange={setChoice} />}
-            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile'
+            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality Profile'
                 value={profileId} options={profileOptions} onChange={setProfileId} />}
         </div>
-        {notice && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}
-        <p className='jfmod-releaseStatus' role='status' tabIndex={-1}>
-            {search.isFetching && <CircularProgress className='jfmod-releaseSpinner' size='1.4em' thickness={5} color='inherit'
-                aria-label='Searching indexers' />}
-            {status}
+        {notice && !bare && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}
+        <p className={classNames('jfmod-releaseStatus', { 'jfmod-releaseStatus--bare': bare })} role='status' tabIndex={-1}>
+            {spoken && <span className='jfmod-releaseStatus-spoken'>{spoken}</span>}
+            {shown && <span aria-hidden={searching}>{shown}</span>}
         </p>
-        {failedIndexers.length > 0 && <p className='jfmod-releaseNotice'>
+        {failedIndexers.length > 0 && !bare && <p className='jfmod-releaseNotice'>
             {unavailable ? '' : 'Partial results: '}
             {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}
         </p>}
         {/* The grab's status and Cancel stay in view for its whole hold, also when a changed search no longer lists the
             release it grabbed (whole-review chunk 4a, P2 4). */}
         {(!grab.releaseId || !eligible.some(candidate => candidate.releaseId === grab.releaseId)) && grabStatus}
-        <div className='jfmod-releaseList'>
+        <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
             {eligible.map(candidate => <Fragment key={candidate.releaseId}>
                 <ReleaseRow candidate={candidate} search={data} disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW}
-                    onGrab={onGrab} />
+                    onGrab={onGrab} actionState={actionState} />
                 {grab.releaseId === candidate.releaseId && grabStatus}
             </Fragment>)}
+            {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
         </div>
         {rejected.length > 0 && <div className='jfmod-rejectedGroup'>
             <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
                 {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
             </button>
             {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} search={data} disabled={grabDisabled}
-                plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} />)}
+                plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState} />)}
         </div>}
     </div>;
 };

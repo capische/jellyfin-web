@@ -2,32 +2,25 @@
 // Values come from the base theme: primary #00a4dc, error #c62828, card radius 0.2em, secondary text 86%.
 // No flex gap, min()/max() or display: contents, for older TV engines (P1.W11).
 
-.jfmod-releaseDialog .formDialogContent {
-    padding: 0 1em 1em;
-}
-
 // Upstream draws no size for a `medium` dialog on a large screen, so the dialog grew with its list and the list never
 // scrolled (user, 2026-10-08). Here it takes most of the screen, wide for long release names; the content scrolls inside.
 // Below 80em × 45em upstream's fixed-size rule already fills the screen.
 // The TV's picker is fullscreen and keeps upstream's size.
 @media all and (min-width: 80em) and (min-height: 45em) {
     .jfmod-releaseDialog:not(.dialog-fullscreen) {
-        width: 80%;
-        height: 80%;
+        width: 64%;
+        height: 64%;
     }
 }
 
-// On a large screen it is smaller still, about 28% below the 90% it was: the list is short, and a dialog the size of the
-// window made every row a long trip from its buttons (user, 2026-10-10).
+// On a large screen it is smaller still: 65% was about 28% below the 90% it was, and the user asked for 20% less again
+// (2026-10-11), so 80% and 65% became 64% and 52%: the list is short, and a dialog the size of the window made every row a
+// long trip from its buttons (user, 2026-10-10).
 @media all and (min-width: 100em) and (min-height: 56em) {
     .jfmod-releaseDialog:not(.dialog-fullscreen) {
-        width: 65%;
-        height: 65%;
+        width: 52%;
+        height: 52%;
     }
-}
-
-.jfmod-releasePicker {
-    margin: 0 auto;
 }
 
 // One line for the choices; each takes an equal share and wraps below 20em.
@@ -35,32 +28,25 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-
-    > .selectContainer {
-        flex: 1 1 20em;
-        margin: 0 1em 0.6em 0;
-    }
-
-    > .selectContainer:last-child {
-        margin-right: 0;
-    }
 }
 
-.jfmod-releaseStatus {
-    display: flex;
-    align-items: center;
-    min-height: 1.6em;
-    margin: 0.4em 0;
-}
-
-.jfmod-releaseSpinner {
-    margin-right: 0.6em;
+// Said to screen readers only: the start and end of a search that the block draws itself.
+.jfmod-releaseStatus-spoken,
+.jfmod-releaseStatus--bare {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }
 
 .jfmod-releaseNotice {
     margin: 0 0 0.6em;
     font-size: 86%;
-    color: #c62828;
+    color: #ff7b72;
 }
 
 .jfmod-releaseRow {
@@ -77,9 +63,13 @@
     text-align: left;
     cursor: pointer;
 
-    &:hover,
-    &:focus {
+    // A mouse click or the dialog's own first focus leaves no "selected" look; keys and the D-pad do (the TV rule below).
+    &:focus-visible {
         background: rgba(0, 164, 220, 0.2);
+        outline: none;
+    }
+
+    &:focus {
         outline: none;
     }
 
@@ -92,8 +82,8 @@
 // sibling buttons, so nothing is nested and each is its own D-pad stop.
 .jfmod-releaseItem {
     display: flex;
-    align-items: center;
     margin: 0 0 0.1em;
+    border-radius: 0.2em;
 
     > .jfmod-releaseRow {
         flex: 1 1 auto;
@@ -103,6 +93,20 @@
     }
 }
 
+// The mouse hover covers the whole row, its Add and Replace buttons too (user, 2026-10-11).
+@media (hover: hover) {
+    .jfmod-releaseItem:hover {
+        background: rgba(0, 164, 220, 0.2);
+    }
+}
+
+// On a TV the focused row is marked with the white ring the theme paints on a focused button.
+.layout-tv .jfmod-releaseRow:focus {
+    background: rgba(0, 164, 220, 0.2);
+    outline: 0.16em solid #fff;
+    outline-offset: 0.12em;
+}
+
 // Upstream's round icon buttons, icon only, as the file rows' actions (user rules, 2026-10-08): a 2.5em circle (40px at the
 // 16px desktop root, scaling with TV's 125% and mobile's 90%), grey, Replace red as it removes files. Colours from the base
 // theme: text-secondary, error #c62828, primary #00a4dc.
@@ -110,23 +114,75 @@
     display: flex;
     flex: 0 0 auto;
     align-items: center;
+    // The actions stay level with the quality and marks lines when Show Names adds a third line (user, 2026-10-11); the row
+    // beside them stretches to the item's full height, so its highlight covers them. 0.1em centres them on a two-line row.
+    align-self: flex-start;
+    margin-top: 0.1em;
     margin-left: 0.4em;
 }
 
+// A row without actions (a quality already in the library) keeps their room, so the columns do not drift.
+.jfmod-releaseActions--empty {
+    width: 5.4em;
+}
+
 .jfmod-releaseAction {
+    position: relative;
     width: 2.5em;
     height: 2.5em;
     margin: 0 0.1em;
     padding: 0;
-    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
-
-    > .material-icons {
-        font-size: 1.4em;
-    }
+    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    transition: transform 0.14s ease-out;
 
     &[aria-disabled='true'] {
         cursor: default;
         opacity: 0.5;
+    }
+
+    // Hover: the glyph's own colour, a touch larger and a veil of the same colour; it beats upstream's blue hover.
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0;
+        transition: opacity 0.14s ease-out;
+    }
+}
+
+// A row's Add and Replace have no hover of their own (user, 2026-10-11): the whole row is highlighted, and the glyph keeps its
+// colour against upstream's blue hover. Only the Show Names toggle in the title bar grows and takes a veil.
+@media (hover: hover) {
+    // Whatever the state (dimmed while a grab runs, focused after a click), a row action keeps its colour and takes no disc.
+    .jfmod-releaseActions .jfmod-releaseAction.paper-icon-button-light:hover {
+        background: transparent;
+        color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    }
+
+    .jfmod-releaseActions .jfmod-releaseAction--danger.paper-icon-button-light:hover {
+        color: var(--jf-palette-error-main, #c62828);
+    }
+
+    .jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
+        color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+        background: transparent;
+    }
+
+    .jfmod-namesToggle.jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
+        transform: scale(1.08);
+
+        &::before {
+            opacity: 0.12;
+        }
+    }
+
+    .jfmod-releaseAction--danger.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
+        color: var(--jf-palette-error-main, #c62828);
     }
 }
 
@@ -142,52 +198,390 @@
     box-shadow: none;
 }
 
+// The glyphs are strokes, so each part can move or hide: Add is a plus, Replace two curved arrows in a circle with the
+// outgoing one faint; a tick and a bang stand by for the done and failed states.
+.jfmod-releaseGlyph {
+    display: block;
+    width: 1.4em;
+    height: 1.4em;
+    margin: 0 auto;
+}
+
+.jfmod-releaseGlyph-out {
+    opacity: 0.5;
+}
+
+.jfmod-releaseGlyph-tick,
+.jfmod-releaseGlyph-bang {
+    display: none;
+}
+
+// Working: Add pulses, Replace's circle turns.
+.jfmod-releaseAction--working .jfmod-releaseGlyph-plus {
+    transform-origin: 12px 12px;
+    animation: jfmod-releasePulse 1.1s ease-in-out infinite;
+}
+
+.jfmod-releaseAction--working .jfmod-releaseGlyph-swap {
+    transform-origin: 12px 12px;
+    animation: jfmod-releaseTurn 1.4s linear infinite;
+}
+
+@keyframes jfmod-releasePulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(0.78);
+        opacity: 0.6;
+    }
+}
+
+@keyframes jfmod-releaseTurn {
+    to { transform: rotate(360deg); }
+}
+
+// Done: a green tick, one pop; it stays while the picker is open.
+.jfmod-releaseAction.jfmod-releaseAction--done.paper-icon-button-light {
+    color: #81c784;
+}
+
+.jfmod-releaseAction--done .jfmod-releaseGlyph-plus,
+.jfmod-releaseAction--done .jfmod-releaseGlyph-swap,
+.jfmod-releaseAction--failed .jfmod-releaseGlyph-plus,
+.jfmod-releaseAction--failed .jfmod-releaseGlyph-swap {
+    display: none;
+}
+
+.jfmod-releaseAction--done .jfmod-releaseGlyph-tick {
+    display: block;
+    transform-origin: 12px 12px;
+    animation: jfmod-releasePop 0.3s ease-out;
+}
+
+@keyframes jfmod-releasePop {
+    from { transform: scale(1.35); }
+    to { transform: scale(1); }
+}
+
+// Failed: a red bang for three seconds (a timer in the grab hook), then idle again.
+.jfmod-releaseAction.jfmod-releaseAction--failed.paper-icon-button-light {
+    color: #ff7b72;
+}
+
+.jfmod-releaseAction--failed .jfmod-releaseGlyph-bang {
+    display: block;
+}
+
 .jfmod-releaseRow--rejected {
     cursor: default;
     opacity: 0.75;
 }
 
-// Summary, chips and figures on one line, the raw title on the next: two lines a row (user, 2026-10-08: thinner rows,
-// longer lines). They wrap on a narrow screen.
-.jfmod-releaseSummary {
+// A row (release picker redesign, 2026-10-10): line 1 holds the quality, flags and languages at the left and three fixed
+// columns (size, seeds, indexer) at the right; line 2 the media marks; the file name while Show Names is on.
+// Every mark after the quality sits on a 1.2em-tall track, centred: no baseline mixing.
+.jfmod-releaseLine {
     display: flex;
+    align-items: flex-start;
+    line-height: 1.3;
+}
+
+.jfmod-releaseLeft {
+    display: inline-flex;
+    flex: 1 1 0;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
+    min-width: 0;
+
+    > * {
+        display: inline-flex;
+        align-items: center;
+    }
 }
 
 .jfmod-releaseQuality {
+    margin-right: 0.35em;
     font-weight: 600;
 }
 
+.jfmod-releaseGlyph-small {
+    display: block;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+}
+
+.jfmod-releaseFlag--freeleech,
+.jfmod-releaseBadge--note {
+    box-sizing: border-box;
+    height: 1.2em;
+    margin-right: 0.3em;
+    padding: 0 0.3em;
+    border: 1px solid;
+    border-radius: 0.18em;
+    font-size: 60%;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.jfmod-releaseFlag--freeleech {
+    color: #81c784;
+}
+
+// PROPER and REPACK: a boxed flag in the primary colour, not a brand.
+.jfmod-releaseBadge--note {
+    color: #00a4dc;
+}
+
+// A quality already in the library: a green check circle right after the quality.
+.jfmod-releaseFlag--held {
+    margin-right: 0.4em;
+    color: #81c784;
+
+    .jfmod-releaseGlyph-small {
+        width: 1.1em;
+        height: 1.1em;
+    }
+}
+
 .jfmod-releaseChip {
-    display: inline-block;
-    margin-left: 0.4em;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 1.2em;
+    margin-right: 0.3em;
     padding: 0 0.4em;
     border: 1px solid #00a4dc;
     border-radius: 0.2em;
-    font-size: 86%;
+    font-size: 70%;
 }
 
-.jfmod-releaseMeta {
-    margin-left: 0.8em;
-    font-size: 86%;
-    opacity: 0.8;
+.jfmod-releaseLang {
+    margin-right: 0.9em;
+    font-size: 74%;
+    opacity: 0.75;
+
+    &:first-of-type {
+        margin-left: 0.2em;
+    }
+
+    // The speaker and the subtitle box are a little larger than a text-sized glyph (user, 2026-10-11).
+    .jfmod-releaseGlyph-small {
+        position: relative;
+        // Placed by eye (user, 2026-10-11): 1px below where the capitals' middle would put it, which reads as centred.
+        top: 0.015em;
+        width: 1.35em;
+        height: 1.35em;
+        margin-right: 0.35em;
+        opacity: 0.9;
+    }
 }
 
-// Always visible and wrapped, never truncated: it is the diagnostic when a grab goes wrong.
-.jfmod-releaseTitle {
+.jfmod-releaseRight {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    height: 1.3em;
+    margin-left: auto;
+    padding-left: 0.6em;
+    font-size: 74%;
+    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    opacity: 0.9;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.jfmod-releaseCol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.jfmod-releaseCol--size { min-width: 4.6em; }
+.jfmod-releaseCol--seeds { min-width: 3.4em; }
+.jfmod-releaseCol--indexer { min-width: 7.4em; }
+
+.jfmod-releaseCol--seeds .jfmod-releaseGlyph-small {
+    width: 0.95em;
+    height: 0.95em;
+    margin-right: 0.1em;
+}
+
+// Line 2: the media marks, brand-style rather than boxed; they wrap freely.
+.jfmod-releaseLine2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.15em;
+    line-height: 1.3;
+}
+
+.jfmod-releaseMark {
+    display: inline-flex;
+    align-items: center;
+    height: 1.2em;
+    margin-right: 0.6em;
+    font-size: 60%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.82;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+// A format chip (user, 2026-10-11): a filled rounded chip in the mark colour, its icon and word knocked out in the paper colour.
+.jfmod-releaseTag {
+    height: 1.3em;
+    // The capitals sit a little high in a line box, so the text gets 0.1em on top and the pill reads as centred.
+    padding: 0.1em 0.4em 0;
+    border-radius: 0.3em;
+    background: currentColor;
+    box-sizing: border-box;
+    font-size: 52%;
+
+    > * {
+        color: var(--jfmod-paper, #202020);
+    }
+}
+
+// Each chip is as tall as the channel tag (1.3em of 52%). Each icon has its drawing's own width at its height (the viewBox's
+// width over 14, times the height), so no browser has to size an auto-width SVG.
+.jfmod-releaseTag-icon {
     display: block;
+    height: 0.75em;
+    margin: -0.1em 0.3em 0 0;
+
+    > svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.jfmod-releaseTag--half .jfmod-releaseTag-icon {
+    width: 0.54em;
+    height: 0.75em;
+}
+
+.jfmod-releaseTag--wave .jfmod-releaseTag-icon { width: 1.125em; }
+
+.jfmod-releaseTag--dd .jfmod-releaseTag-icon,
+.jfmod-releaseTag--ddplus .jfmod-releaseTag-icon {
+    height: 0.865em;
+    margin-right: 0;
+}
+
+.jfmod-releaseTag--dd .jfmod-releaseTag-icon { width: 1.3em; }
+.jfmod-releaseTag--ddplus .jfmod-releaseTag-icon { width: 2.04em; }
+
+// The divider between the video marks and the audio ones.
+.jfmod-releaseDivider {
+    align-self: center;
+    width: 0;
+    height: 1.1em;
+    margin: 0 0.7em 0 0.1em;
+    border-left: 1px solid currentColor;
+    font-size: 60%;
+    opacity: 0.35;
+}
+
+// The channel count (and DTS-HD's MA tier) is the outlined second piece of the audio marks, the same size as a word chip.
+.jfmod-releaseMark--channels,
+.jfmod-releaseMark--tier {
+    height: 1.3em;
+    margin-left: -0.3em;
+    padding: 0.1em 0.4em 0;
+    border: 0.1em solid currentColor;
+    border-radius: 0.3em;
+    box-sizing: border-box;
+    font-size: 52%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.82;
+}
+
+// The audio format chip and its channel count are one unit: the chip's right corners and the tag's left side are squared off.
+.jfmod-releaseJoin {
+    display: inline-flex;
+    margin-right: 0.36em;
+
+    > .jfmod-releaseTag {
+        margin-right: 0;
+        border-radius: 0.3em 0 0 0.3em;
+    }
+
+    > .jfmod-releaseMark--channels,
+    > .jfmod-releaseMark--tier {
+        margin: 0;
+        border-left-width: 0;
+        border-radius: 0 0.3em 0.3em 0;
+    }
+
+    // Between two outlined pieces (MA, then the channels) one hairline, and only the last piece rounds its right side.
+    > .jfmod-releaseMark--tier:not(:last-child) {
+        border-right-width: 0;
+        border-radius: 0;
+    }
+
+    > .jfmod-releaseMark--tier + .jfmod-releaseMark--channels {
+        border-left-width: 0.1em;
+    }
+}
+
+.jfmod-releaseMark--hdr { opacity: 0.9; }
+.jfmod-releaseMark--codec { opacity: 0.7; }
+
+// The file name: shown on every row while the dialog's Show Names toggle is on (user, 2026-10-11). It is the diagnostic, so it
+// wraps and is never cut short.
+.jfmod-releaseTitle {
+    display: none;
     margin-top: 0.1em;
-    font-size: 86%;
-    opacity: 0.6;
+    font-size: 80%;
+    opacity: 0.55;
     word-break: break-all;
+}
+
+.jfmod-releaseDialog--names .jfmod-releaseTitle {
+    display: block;
+}
+
+// A phone shows three lines: quality and flags | size and seeds, then languages | indexer, then the marks.
+.layout-mobile {
+    .jfmod-releaseLine {
+        align-items: center;
+    }
+
+    .jfmod-releaseRight {
+        padding-left: 0.5em;
+    }
+
+    .jfmod-releaseLang {
+        margin-right: 0.7em;
+    }
+
+    .jfmod-releaseCol--size { min-width: 0; }
+
+    .jfmod-releaseCol--seeds {
+        min-width: 0;
+        margin-left: 0.6em;
+    }
+    .jfmod-releaseCol--indexer { min-width: 0; }
+
+    .jfmod-releaseLine--sub {
+        margin-top: 0.05em;
+        align-items: center;
+    }
 }
 
 .jfmod-releaseReasons {
     display: block;
     margin-top: 0.2em;
     font-size: 86%;
-    color: #c62828;
+    color: #ff7b72;
 }
 
 .jfmod-grabStatus {
@@ -199,6 +593,23 @@
     border-left: 0.2em solid #00a4dc;
 
     > * { margin: 0.2em 0.8em 0.2em 0; }
+}
+
+.jfmod-grabStatus--ok {
+    border-left-color: #81c784;
+}
+
+.jfmod-grabStatus--error {
+    border-left-color: #ff7b72;
+    color: #ff7b72;
+}
+
+// The file name of the grabbed release, on its own line.
+.jfmod-grabStatus-title {
+    flex-basis: 100%;
+    font-size: 80%;
+    opacity: 0.55;
+    word-break: break-all;
 }
 
 .jfmod-rejectedGroup {
@@ -230,4 +641,535 @@
 .jfmod-releaseNotice--info {
     color: inherit;
     opacity: 0.8;
+}
+
+// A new search over the rows of the last one: they dim and stay put, and the block sits over them.
+.jfmod-releaseList {
+    position: relative;
+}
+
+.jfmod-releaseList--stale {
+    min-height: 14em;
+
+    > .jfmod-releaseItem {
+        opacity: 0.3;
+    }
+}
+
+// The search block (docs/jellyfinmod/design/release-picker-searching.md): the G2 torrent ring and one line per indexer.
+.jfmod-searchBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 14em;
+    text-align: center;
+}
+
+.jfmod-searchBlock--over {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    min-height: 0;
+
+    // A panel of the paper colour behind the block: a plain colour, no blur.
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0.4em;
+        right: 2em;
+        bottom: 0.4em;
+        left: 2em;
+        border-radius: 0.2em;
+        background: var(--jf-palette-background-paper, #202020);
+        opacity: 0.94;
+    }
+
+    > * {
+        position: relative;
+    }
+}
+
+.jfmod-searchGlyph {
+    display: block;
+    width: 4em;
+    height: 4em;
+    color: #00a4dc;
+}
+
+// Strokes only: a fill on an arc would paint its chord and bend the ring into "D" shapes.
+.jfmod-searchGlyph path {
+    fill: none;
+}
+
+.jfmod-searchGlyph-segs {
+    transform-origin: 24px 24px;
+    animation: jfmod-searchTurn 2.4s linear infinite;
+}
+
+.jfmod-searchGlyph-seg {
+    animation: jfmod-searchBreathe 1.6s ease-in-out infinite;
+}
+
+.jfmod-searchGlyph-seg--ok {
+    stroke: #43a047;
+    opacity: 1;
+    animation: none;
+}
+
+.jfmod-searchGlyph-seg--failed {
+    stroke: #e53935;
+    opacity: 1;
+    animation: none;
+}
+
+.jfmod-searchGlyph-seg--asking {
+    stroke: #74c9ec;
+    animation: jfmod-searchAsk 1.2s ease-in-out infinite;
+}
+
+.jfmod-searchGlyph-seg--waiting {
+    stroke: #a9ddf3;
+    opacity: 1;
+    animation: none;
+}
+
+.jfmod-searchGlyph-seg--none {
+    opacity: 0.3;
+    animation: none;
+}
+
+@keyframes jfmod-searchTurn {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes jfmod-searchBreathe {
+    0%,
+    100% { opacity: 0.35; }
+    30% { opacity: 1; }
+}
+
+@keyframes jfmod-searchAsk {
+    0%,
+    100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.jfmod-searchCaption {
+    margin: 0.6em 0 0.4em;
+    font-size: 95%;
+}
+
+.jfmod-searchIndexers {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 82%;
+    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-searchIndexer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.7;
+}
+
+.jfmod-searchIndexer-dot {
+    width: 0.55em;
+    height: 0.55em;
+    margin-right: 0.5em;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+}
+
+.jfmod-searchIndexer-name {
+    margin-right: 0.4em;
+    font-weight: 600;
+}
+
+.jfmod-searchIndexer--asking .jfmod-searchIndexer-dot {
+    background: #00a4dc;
+    opacity: 1;
+    animation: jfmod-searchBlink 1s ease-in-out infinite;
+}
+.jfmod-searchIndexer--waiting .jfmod-searchIndexer-dot { opacity: 0.3; }
+
+.jfmod-searchIndexer--ok .jfmod-searchIndexer-dot {
+    background: #81c784;
+    opacity: 1;
+}
+.jfmod-searchIndexer--ok .jfmod-searchIndexer-state { color: #81c784; }
+.jfmod-searchIndexer--none .jfmod-searchIndexer-dot { opacity: 0.35; }
+
+.jfmod-searchIndexer--failed .jfmod-searchIndexer-dot {
+    background: #ff7b72;
+    opacity: 1;
+}
+.jfmod-searchIndexer--failed .jfmod-searchIndexer-state { color: #ff7b72; }
+
+@keyframes jfmod-searchBlink {
+    50% { opacity: 0.25; }
+}
+
+// Nothing found: the ring still and dimmed. Every indexer down: ring and caption in the error colour.
+.jfmod-searchBlock--quiet .jfmod-searchGlyph {
+    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    opacity: 0.6;
+}
+
+.jfmod-searchBlock--quiet .jfmod-searchGlyph *,
+.jfmod-searchBlock--error .jfmod-searchGlyph * {
+    animation: none;
+}
+
+.jfmod-searchBlock--error .jfmod-searchGlyph,
+.jfmod-searchBlock--error .jfmod-searchCaption {
+    color: #ff7b72;
+}
+
+// Light scheme: the greens and reds darken for white paper (the ring's segment colours stay as they are).
+[data-theme='light'] {
+    .jfmod-releaseFlag--freeleech,
+    .jfmod-releaseFlag--held,
+    .jfmod-releaseAction.jfmod-releaseAction--done.paper-icon-button-light,
+    .jfmod-searchIndexer--ok .jfmod-searchIndexer-state {
+        color: #2e7d32;
+    }
+
+    .jfmod-releaseAction.jfmod-releaseAction--failed.paper-icon-button-light,
+    .jfmod-searchIndexer--failed .jfmod-searchIndexer-state,
+    .jfmod-searchBlock--error .jfmod-searchGlyph,
+    .jfmod-searchBlock--error .jfmod-searchCaption,
+    .jfmod-grabStatus--error,
+    .jfmod-releaseNotice,
+    .jfmod-releaseReasons {
+        color: #c62828;
+    }
+
+    .jfmod-releaseNotice--info {
+        color: inherit;
+    }
+
+    .jfmod-grabStatus--ok {
+        border-left-color: #2e7d32;
+    }
+
+    .jfmod-grabStatus--error {
+        border-left-color: #c62828;
+    }
+
+    .jfmod-searchIndexer--ok .jfmod-searchIndexer-dot {
+        background: #2e7d32;
+    }
+
+    .jfmod-searchIndexer--failed .jfmod-searchIndexer-dot {
+        background: #c62828;
+    }
+}
+
+// Reduced motion: nothing turns, pulses, blinks or pops; a working action shows its glyph dimmed instead.
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-searchGlyph *,
+    .jfmod-searchIndexer-dot,
+    .jfmod-releaseAction--working .jfmod-releaseGlyph-plus,
+    .jfmod-releaseAction--working .jfmod-releaseGlyph-swap,
+    .jfmod-releaseAction--done .jfmod-releaseGlyph-tick {
+        animation: none;
+    }
+
+    .jfmod-releaseAction {
+        transition: none;
+    }
+
+    .jfmod-releaseAction--working .jfmod-releaseGlyph {
+        opacity: 0.55;
+    }
+}
+
+// Inter (SIL Open Font License 1.1, assets/fonts/inter/OFL.txt; the @font-face rules are in interFont.scss), so the picker looks
+// the same on every device (user, 2026-10-11). Scoped by its family name; static weights, no variable font, which very old webOS
+// engines handle badly.
+
+// The dialog skin (docs/jellyfinmod/design/release-picker-design.html, user 2026-10-10: "mimic 100%"): the mock's own paper,
+// type scale, header, hairline selects and spacing over upstream's dialog and select styles. A desktop dialog is 16px, as drawn
+// (upstream sets 93%); the TV's 125% and a phone's 90% already match the mock's 20px and 14.4px. It comes last so it wins.
+.formDialog.jfmod-releaseDialog {
+    --jfmod-sec: rgba(255, 255, 255, 0.7);
+    --jfmod-line: rgba(255, 255, 255, 0.14);
+    --jfmod-paper: #202020;
+    --jfmod-on: #00a4dc;
+
+    border-radius: 0.2em;
+    background: var(--jfmod-paper);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+    color: #fff;
+    // The mock drew the system font (its "Noto Sans" never matched); the user approved that look and chose a bundled font so it
+    // is the same everywhere: Inter first, then the system font and Noto Sans as fallbacks.
+    font-family: 'jfmod-inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+    line-height: 1.35;
+
+    // The mock was drawn with the browser's default smoothing; Jellyfin sets `antialiased` on the page, which on macOS draws
+    // about 16% less ink than the mock. Measured against the mock's text rows (2026-10-11): default smoothing brings the ink
+    // to within about 5% of the mock. It has no effect outside macOS.
+    &,
+    * {
+        -webkit-font-smoothing: auto;
+    }
+
+    button,
+    select,
+    input,
+    h3 {
+        font-family: inherit;
+    }
+
+    .formDialogHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0.5em 0.6em 0.3em 1em;
+        background: transparent;
+    }
+
+    .formDialogHeader .formDialogHeaderTitle {
+        margin: 0;
+        padding: 0;
+        font-size: 1.15em;
+        font-weight: 600;
+        line-height: 1.35;
+        color: inherit;
+        // The title gives way (an ellipsis) so the two round buttons keep their size on a narrow phone.
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .btnCancel.jfmod-releaseDialogClose,
+    .jfmod-namesToggle {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 2.5em;
+        height: 2.5em;
+        margin: 0 0.1em;
+        padding: 0;
+        line-height: 1.35;
+        color: var(--jfmod-sec);
+    }
+
+    // Show Names, left of Close (user, 2026-10-11): off a title line over a short line, on the same two lines and a third below them, so nothing moves. The state is
+    // `aria-pressed`; on, the glyph is the primary blue (the light scheme's own blue), so it reads from across a room.
+    .jfmod-namesToggle {
+        --jfmod-names-color: var(--jfmod-sec);
+
+        margin-left: auto;
+
+        .jfmod-namesGlyph-on {
+            display: none;
+        }
+
+        &[aria-pressed='true'] {
+            --jfmod-names-color: var(--jfmod-on);
+
+            color: var(--jfmod-names-color);
+
+            // The row actions' hover turns a glyph grey; this one keeps its blue.
+            &:hover {
+                color: var(--jfmod-names-color);
+            }
+
+            .jfmod-namesGlyph-on {
+                display: inline;
+            }
+
+            .jfmod-namesGlyph-off {
+                display: none;
+            }
+        }
+    }
+
+    .formDialogContent {
+        padding: 0;
+        background: transparent;
+    }
+
+    .jfmod-releasePicker {
+        margin: 0;
+        padding: 0 1em 1em;
+    }
+
+    .jfmod-releaseControls {
+        margin-bottom: 0.2em;
+        padding: 0 0 0.3em;
+    }
+
+    // The two choices: a small label over a value with a hairline under it and a small chevron, not upstream's boxed select.
+    .jfmod-releaseControls > .selectContainer {
+        position: relative;
+        flex: 1 1 15em;
+        margin: 0 1em 0.5em 0;
+        font-size: 0.8em;
+    }
+
+    .jfmod-releaseControls .selectLabel {
+        position: static;
+        display: block;
+        margin: 0 0 0.15em;
+        padding: 0;
+        font-size: 1em;
+        line-height: 1.35;
+        color: var(--jfmod-sec);
+        transform: none;
+    }
+
+    .jfmod-releaseControls select.emby-select {
+        display: block;
+        box-sizing: content-box;
+        width: 100%;
+        height: 1.35em;
+        margin: 0;
+        padding: 0.25em 0;
+        border: 0;
+        border-bottom: 1px solid var(--jfmod-line);
+        border-radius: 0;
+        background: transparent;
+        font-size: 1.2em;
+        font-weight: 400;
+        line-height: 1.35;
+        color: inherit;
+    }
+
+    .jfmod-releaseControls .selectArrowContainer {
+        display: none;
+    }
+
+    .jfmod-releaseControls > .selectContainer::after {
+        content: '\25BE';
+        position: absolute;
+        right: 0;
+        bottom: 0.3em;
+        font-size: 1.2em;
+        line-height: 1.35;
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .jfmod-releaseNotice {
+        margin: 0 0 0.5em;
+    }
+
+    .jfmod-releaseNotice--info {
+        margin: 0.4em 0 0.5em;
+        color: var(--jfmod-sec);
+        opacity: 1;
+    }
+
+    .jfmod-releaseStatus {
+        display: flex;
+        align-items: center;
+        min-height: 1.6em;
+        margin: 0.2em 0 0.1em;
+        font-size: 0.86em;
+        color: var(--jfmod-sec);
+    }
+
+    .jfmod-releaseCol--size {
+        margin-right: 0.45em;
+    }
+
+    .jfmod-releaseBadge--note {
+        letter-spacing: 0.02em;
+        opacity: 0.9;
+    }
+
+    .jfmod-releaseAction {
+        line-height: 1.35;
+    }
+
+    // The pressed action shows its state at full strength while every other one is off.
+    .jfmod-releaseList--stale .jfmod-releaseAction,
+    .jfmod-releaseActions--pressed .jfmod-releaseAction,
+    .jfmod-releaseAction--working,
+    .jfmod-releaseAction--done,
+    .jfmod-releaseAction--failed {
+        opacity: 1;
+    }
+
+    // The grab block under its row, and its two buttons (the mock's .gs, .btn.raised and .btn.flat).
+    .jfmod-grabStatus {
+        margin: 0.1em 0 0.6em 0.8em;
+        padding: 0.5em 0.8em;
+        font-size: 0.95em;
+    }
+
+    .jfmod-grabCancel,
+    .jfmod-grabOpen {
+        box-sizing: border-box;
+        height: auto;
+        min-height: 0;
+        min-width: 0;
+        padding: 0.35em 1em;
+        border-radius: 0.2em;
+        font-size: 0.9em;
+        font-weight: 600;
+        line-height: 1.35;
+        text-transform: none;
+    }
+
+    .jfmod-grabCancel {
+        color: #fff;
+    }
+
+    .jfmod-grabOpen {
+        padding: 0.35em 0.4em;
+        color: #00a4dc;
+    }
+
+    .jfmod-rejectedToggle {
+        margin: 0;
+        padding: 0.35em 0.4em;
+        font-size: 0.9em;
+        font-weight: 600;
+        line-height: 1.35;
+        text-transform: none;
+        color: var(--jfmod-sec);
+    }
+}
+
+.layout-desktop .formDialog.jfmod-releaseDialog {
+    font-size: 16px;
+}
+
+.layout-tv .formDialog.jfmod-releaseDialog {
+    border-radius: 0;
+    box-shadow: none;
+
+    // Show Names on a TV: the white ring of the design (.16em wide, .12em off the circle), the glyph itself unchanged (no blue,
+    // no scaling). Upstream's round buttons carry `outline: none !important`, so the ring is a pair of shadows.
+    .jfmod-namesToggle:focus {
+        box-shadow: 0 0 0 0.12em var(--jfmod-paper), 0 0 0 0.28em var(--jfmod-focus, #fff);
+        background: transparent;
+        color: var(--jfmod-names-color);
+        transform: none;
+    }
+}
+
+[data-theme='light'] .formDialog.jfmod-releaseDialog {
+    --jfmod-sec: rgba(0, 0, 0, 0.6);
+    --jfmod-line: rgba(0, 0, 0, 0.14);
+    --jfmod-paper: #fff;
+    --jfmod-on: #0277a8;
+    --jfmod-focus: #222;
+
+    color: #222;
 }
