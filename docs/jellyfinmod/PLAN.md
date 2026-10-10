@@ -386,9 +386,11 @@ build on webOS before calling device verification complete. See `PHASE1.md` §7.
 merged Continue watching list, from the feeds the user's Home settings show, with the series backdrop and the episode
 line for an episode, Play resuming that item — and only when nothing is in progress the newest title; its height
 follows the window width. **Released** 2026-10-09 as 0.1.0.0, index
-`sha256:73e5fb87ec5e56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00` (web bundle `d3efe2e4444e`); rules and
-evidence in [`PHASE7.md`](PHASE7.md) §S6, *The hero is what you are in the middle of*, and *Home hero and frosted top bar,
-republished*.
+`sha256:73e5fb87ec5e56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00` (web bundle `d3efe2e4444e`), and again on
+2026-10-10, index `sha256:041c81fa3432b326d30491eb8d1da1476a98a6ef8d4a35d1be52842fe08dcfef` (web bundle `63b3d9261349`),
+which puts the frosted bar on every page with a fade; rules and
+evidence in [`PHASE7.md`](PHASE7.md) §S6, *The hero is what you are in the middle of*, *Home hero and frosted top bar,
+republished* and *Top bar on every page with a fade, republished*.
 **Decision (user, 2026-10-08), same owner:** Next Up is ordered by when the user last watched the show (the newest play
 of any of its episodes, else when the episode was added), in the row and therefore in the hero; recorded in UX §7.3,
 evidence in [`PHASE7.md`](PHASE7.md) §S6. Released with the hero.
