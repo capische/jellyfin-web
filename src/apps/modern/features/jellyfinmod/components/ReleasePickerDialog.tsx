@@ -601,7 +601,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         <div className='jfmod-releaseControls'>
             {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choice}
                 options={scope.options} onChange={setChoice} />}
-            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile for this search'
+            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality profile'
                 value={profileId} options={profileOptions} onChange={setProfileId} />}
         </div>
         {notice && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}
