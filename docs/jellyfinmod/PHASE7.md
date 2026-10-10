@@ -3019,6 +3019,40 @@ republish"), one overwrite of `0.1.0.0` and `:latest`. The version stays 0.1.0.0
   `sha256:5c81e4839c15…`, still resolve by digest
   (`docker buildx imagetools create -t …:0.1.0.0 -t …:latest ghcr.io/capische/jellyfin-mod@<digest>`).
 
+#### Top bar on every page with a fade, republished as 0.1.0.0 — 2026-10-10
+
+Authorized by the user on 2026-10-10 ("Release the lease and republish 0.1.0.0") after they looked at it on 18096 (reload of
+`/web-mod/`), one more overwrite of `0.1.0.0` and `:latest`. The version stays 0.1.0.0.
+
+- **Contents.** Web `jellyfin-mod` `2c83810caf`, bundle **`63b3d9261349`**: the frosted top bar now applies on every page on
+  computer and phone, not only Home (`ModAppLayout` no longer gates `jfmod-homeAppBar` on `/home`; the class keeps its
+  Home-era name), and it fades between transparent and glass over 250 ms instead of switching (the transparent state carries
+  the neutral filter list so `backdrop-filter` interpolates). Both were folded into the flatten commit, so every web commit from
+  it on was rewritten (the hashes quoted in the entry above are the pre-rewrite ones the image of 2026-10-09 was built from).
+  TV bar unchanged (transparent). Plugin `master` `9459ce5`, code unchanged since `cb5c6f9`; Phase 9 and
+  `fix/detail-page-design` do not ship.
+- **Build.** Clean detached worktree of plugin `9459ce5`; `dotnet build -c Release` 0 warnings; the web dist built once from
+  `2c83810caf` (the bundle the user looked at); `scripts/build-release.sh` into
+  `plugin/artifacts/release-0.1.0.0-topbar-all-pages` of the main checkout. DLL sha256 `6b553b4f6354…`, `meta.json` timestamp
+  **`2026-10-10T04:09:07Z`**, later than `2026-10-09T10:54:49Z`.
+- **Before the push.** The user checked the finished bar on the isolated instance 18096. Run on the Mac (linux/arm64, image built
+  there, throwaway container on 127.0.0.1:58096, throwaway administrator): fresh install and in-place upgrade from the published
+  index `73e5fb87…` (the entrypoint logged "replaced JellyfinMod 0.1.0.0 build 2026-10-09T10:54:49Z with build
+  2026-10-10T04:09:07Z"): Health `Ok`, plugin 0.1.0.0 `Active`, bundle `63b3d9261349`, takeover `patched`. **Not run in this pass:**
+  the `home-hero.mjs` runner and the real-Chrome pass, and a Codex review of this delta (a one-line class change and one CSS
+  rule, accepted by the user's own check).
+- **Published:** `ghcr.io/capische/jellyfin-mod:0.1.0.0` and `:latest`, one index
+  **`sha256:041c81fa3432b326d30491eb8d1da1476a98a6ef8d4a35d1be52842fe08dcfef`** for linux/amd64 (`sha256:1b5774593082…`) and
+  linux/arm64 (`sha256:ed5893da9fb2…`); buildx builder `multiarch`, pinned Jellyfin 12.0.0 base, `SOURCE_DATE_EPOCH` of plugin
+  `9459ce5`, `--provenance=false`. `:latest` was pushed by the build and `0.1.0.0` pointed at the same index with
+  `imagetools create`. Credential only in a temporary Docker configuration with no credential helper; logged out, deleted, no
+  ghcr.io keychain entry. Both tags resolve anonymously to the same index.
+- **arm64 start after the push**, pulled by the index digest (on the Mac): first start (two "Startup complete" lines), Health
+  `Ok`, version 0.1.0.0, bundle `63b3d9261349`, commit `2c83810caf`, takeover `patched`. Container, config and image removed.
+- **Rollback:** the previous index `sha256:73e5fb87ec5e56103795a3e070bfe7b30b2aa93309e229cdacef4b8c9e934d00`, then
+  `sha256:9c3525549ed6…`, still resolve by digest
+  (`docker buildx imagetools create -t …:0.1.0.0 -t …:latest ghcr.io/capische/jellyfin-mod@<digest>`).
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
