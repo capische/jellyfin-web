@@ -12,8 +12,17 @@
 // The TV's picker is fullscreen and keeps upstream's size.
 @media all and (min-width: 80em) and (min-height: 45em) {
     .jfmod-releaseDialog:not(.dialog-fullscreen) {
-        width: 90%;
-        height: 90%;
+        width: 80%;
+        height: 80%;
+    }
+}
+
+// On a large screen it is smaller still, about 28% below the 90% it was: the list is short, and a dialog the size of the
+// window made every row a long trip from its buttons (user, 2026-10-10).
+@media all and (min-width: 100em) and (min-height: 56em) {
+    .jfmod-releaseDialog:not(.dialog-fullscreen) {
+        width: 65%;
+        height: 65%;
     }
 }
 
