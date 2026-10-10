@@ -2,6 +2,7 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
+import escapeHtml from 'escape-html';
 import React, { type FC, Fragment, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import confirm from 'components/confirm/confirm';
@@ -241,12 +242,39 @@ const ReleaseRow: FC<ReleaseRowProps> = ({ candidate, search, disabled, plan, on
     </div>;
 };
 
-/** Rejected rows stay focusable for reading on a D-pad, but nothing can grab them (P4.A1). */
-const RejectedRow: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined }> = ({ candidate, search }) =>
-    <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'>
-        <ReleaseLines candidate={candidate} search={search} />
-        <span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>
-    </button>;
+/**
+ * A rejected release (user, 2026-10-10: a rejection is soft, the choice is the person's). The row itself only reads, so a
+ * stray Enter never grabs it; Add, and Replace where the row offers it, follow as their own D-pad stops and ask first, naming
+ * what the profile rejected it for. Automation never grabs a rejected release.
+ */
+const RejectedRow: FC<ReleaseRowProps> = ({ candidate, search, disabled, plan, onGrab }) => {
+    const off = disabled || !!candidate.heldQuality;
+    const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onGrab(candidate, plan.choices ? 'add' : plan.first, plan);
+    }, [candidate, onGrab, plan]);
+    const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onGrab(candidate, 'replace', plan);
+    }, [candidate, onGrab, plan]);
+    return <div className='jfmod-releaseItem'>
+        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'>
+            <ReleaseLines candidate={candidate} search={search} />
+            <span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>
+        </button>
+        <span className='jfmod-releaseActions'>
+            <button type='button' className={actionClass()} title='Add' aria-label={'Add the rejected release ' + candidate.rawTitle}
+                aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
+                <span className='material-icons add' aria-hidden='true' />
+            </button>
+            {plan.choices && plan.replace && <button type='button' className={actionClass('jfmod-releaseAction--danger')} title='Replace'
+                aria-label={'Replace the files held with the rejected release ' + candidate.rawTitle} aria-disabled={off}
+                data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
+                <span className='material-icons swap_horiz' aria-hidden='true' />
+            </button>}
+        </span>
+    </div>;
+};
 
 /** Replace's confirmation (user decision 2): what goes, and that nothing goes before the new files are in the library. */
 const replaceText = (plan: RowPlan, mediaType: 'movie' | 'series') => {
@@ -256,6 +284,22 @@ const replaceText = (plan: RowPlan, mediaType: 'movie' | 'series') => {
     let target = mediaType === 'movie' ? 'this movie' : 'this episode';
     if (plan.pack) target = 'one episode';
     return `Replace the file of ${target}? Its current file is removed once the new one is in the library.`;
+};
+
+/** The question before a grab that needs one: Replace, or any action on a rejected release, which names why it was rejected. */
+const confirmationFor = (candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan, mediaType: 'movie' | 'series') => {
+    const replacing = mode === 'replace';
+    const why = candidate.eligible ? '' : 'The profile rejected this release: ' + escapeHtml(candidate.rejections.map(rejection => rejection.message).join(' ')) + ' ';
+    if (!candidate.eligible) {
+        return {
+            title: replacing ? 'Replace With a Rejected Release' : 'Add a Rejected Release',
+            text: why + (replacing ? replaceText(plan, mediaType) : 'Add it anyway?'),
+            confirmText: replacing ? 'Replace' : 'Add Anyway',
+            primary: replacing ? 'delete' as const : undefined
+        };
+    }
+    return { title: plan.held > 1 ? 'Replace the Files' : 'Replace the File', text: replaceText(plan, mediaType), confirmText: 'Replace',
+        primary: 'delete' as const };
 };
 
 const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolean; onCancel: () => void }> =
@@ -341,7 +385,7 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     // Each grab attempt is a generation: an answer about an earlier attempt, its recovery lookup included, never replaces
     // the grab a later attempt follows (whole-review fixes review, P2 1).
     const attempt = useRef(0);
-    const start = useCallback((searchId: string, candidate: ReleaseCandidate, mode?: GrabMode) => {
+    const start = useCallback((searchId: string, candidate: ReleaseCandidate, mode?: GrabMode, acceptRejected?: boolean) => {
         // One activation grabs; another Enter or click while a grab is in flight does nothing.
         if (activating.current) return;
         activating.current = true;
@@ -350,7 +394,8 @@ const useGrab = (api: Api, onChanged?: () => void) => {
         setReleaseId(candidate.releaseId);
         setError('');
         // A mode is sent only by plugins with packs; an older plugin's grab reads exactly as before.
-        grabRelease(api, { searchId, releaseId: candidate.releaseId, idempotencyKey: newKey(), ...(mode ? { mode } : {}) }).then(result => {
+        grabRelease(api, { searchId, releaseId: candidate.releaseId, idempotencyKey: newKey(), ...(mode ? { mode } : {}),
+            ...(acceptRejected ? { acceptRejected: true } : {}) }).then(result => {
             if (!isLatest()) return;
             setNow(Date.now());
             follow(result);
@@ -554,20 +599,17 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const confirming = useRef(false);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
         if (!data?.grab.available || busy || operation?.state === 'accepted' || stale || candidate.heldQuality) return;
-        if (mode !== 'replace') {
+        const chosenRejection = !candidate.eligible;
+        if (mode !== 'replace' && !chosenRejection) {
             start(data.searchId, candidate, mode);
             return;
         }
         if (confirming.current) return;
         confirming.current = true;
-        confirm({
-            title: plan.held > 1 ? 'Replace the Files' : 'Replace the File',
-            text: replaceText(plan, mediaType),
-            confirmText: 'Replace',
-            primary: 'delete'
-        }).then(() => start(data.searchId, candidate, 'replace'), () => undefined).finally(() => {
-            confirming.current = false;
-        });
+        confirm(confirmationFor(candidate, mode, plan, mediaType))
+            .then(() => start(data.searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
+                confirming.current = false;
+            });
     }, [busy, data, mediaType, operation, stale, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
@@ -586,7 +628,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const failedIndexers = data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
     const status = [statusText(data, waiting, search.isFetching, searchError, unavailable), grab.error].filter(Boolean).join(' · ');
-    const plans = new Map(data ? eligible.map(candidate => [candidate.releaseId,
+    const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
     const replaceChoices = Array.from(plans.values()).some(plan => plan.choices && plan.replace);
@@ -628,7 +670,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
                 {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
             </button>
-            {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} search={data} />)}
+            {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} search={data} disabled={grabDisabled}
+                plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} />)}
         </div>}
     </div>;
 };
