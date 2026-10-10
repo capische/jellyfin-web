@@ -630,7 +630,7 @@ const PACK_CHECKS = [
     'packs: rows where the scope holds files end with Add and Replace',
     'packs: rows where nothing is held have no Add or Replace',
     'packs: Add and Replace are D-pad stops after their row',
-    'packs: with every indexer unavailable the status says so, never "No releases found."',
+    'packs: with every indexer unavailable the status says so, never "No releases found"',
     // The user's answer of 2026-10-09: with episode upgrades off the picker offers Add alone; with them on, Add and Replace.
     // Read from the search's `modes`, which only plugins with the answer send.
     'packs: with episode upgrades off, rows holding files offer Add alone, no Replace',
@@ -642,9 +642,9 @@ const PACK_CHECKS = [
 const searchAnswer = page => page.waitForResponse(response => /\/JellyfinMod\/Releases\?/.test(response.url())
     && response.request().method() === 'GET', { timeout: 120000 }).then(response => response.json(), () => null);
 
-/** The picker's settled state: no spinner, its status, the scope switch and every eligible row with its chips and actions. */
+/** The picker's settled state: no search block running, its status, the scope switch and every eligible row with its chips and actions. */
 async function pickerState(page) {
-    await page.waitForFunction(() => !document.querySelector('.jfmod-releaseDialog .jfmod-releaseSpinner'), undefined, { timeout: 120000 })
+    await page.waitForFunction(() => !document.querySelector('.jfmod-releaseDialog .jfmod-searchBlock--searching'), undefined, { timeout: 120000 })
         .catch(() => {});
     await page.waitForTimeout(600);
     return page.evaluate(() => {
@@ -654,7 +654,7 @@ async function pickerState(page) {
         const icon = button => {
             if (!button) return null;
             const box = button.getBoundingClientRect();
-            return { title: button.title, label: button.getAttribute('aria-label') ?? '', icon: button.querySelector('.material-icons')?.className ?? '',
+            return { title: button.title, label: button.getAttribute('aria-label') ?? '', icon: button.querySelector('.jfmod-releaseGlyph-plus') ? 'add' : button.querySelector('.jfmod-releaseGlyph-swap') ? 'swap_horiz' : '',
                 size: [Math.round(box.width), Math.round(box.height)], color: getComputedStyle(button).color,
                 classes: button.className };
         };
@@ -668,7 +668,7 @@ async function pickerState(page) {
             lines: dlg ? new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')]
                 .map(node => Math.round(node.getBoundingClientRect().top))).size : 0,
             rows: dlg ? [...dlg.querySelectorAll('.jfmod-releaseList .jfmod-releaseItem')].map(item => ({
-                title: item.querySelector('.jfmod-releaseTitle')?.textContent ?? '',
+                title: (item.querySelector('.jfmod-releaseTitle')?.textContent ?? '').replace(/ · score -?\d+$/, ''),
                 coverage: item.querySelector('.jfmod-releaseChip--coverage')?.textContent ?? null,
                 held: [...item.querySelectorAll('.jfmod-releaseChip--held')].map(chip => chip.textContent),
                 add: icon(item.querySelector('[data-jfmod-release-add]')),
@@ -750,12 +750,12 @@ function recordRows(layout, label, body, state, seen, upgrades = null) {
     return eligible;
 }
 
-/** Item 11: when every indexer failed and none returned a row, the status names the wait, never "No releases found.". */
+/** Item 11: when every indexer failed and none returned a row, the status names the wait, never "No releases found". */
 function recordUnavailable(layout, body, state, seen) {
     if (!body || body.candidates?.length || !body.indexers?.length || !body.indexers.every(failedIndexer)) return;
     seen.unavailable = true;
-    record(layout, PACK_CHECKS[6], /^Indexers are unavailable (until \d{2}:\d{2}\.|right now\.)/.test(state.status)
-        && !state.status.includes('No releases found.'), state.status);
+    record(layout, PACK_CHECKS[6], /^No indexer answered · try (again at \d{2}:\d{2}|again later)$/.test(state.status)
+        && !state.status.includes('No releases found'), state.status);
 }
 
 /**
@@ -782,7 +782,7 @@ async function checkPacks(page, layout) {
     const episode = { body: await first, state: await pickerState(page) };
     const options = episode.state.options.map(option => option.text);
     const seasonOption = episode.state.options.find(option => option.value.startsWith('season:'));
-    record(layout, PACK_CHECKS[0], episode.state.scopeLabel === 'Search for' && /^Episode: S\d{2}E\d{2} · /.test(options[0] ?? '')
+    record(layout, PACK_CHECKS[0], episode.state.scopeLabel === 'Search For' && /^Episode: S\d{2}E\d{2} · /.test(options[0] ?? '')
         && episode.state.value === episode.state.options[0]?.value && (!seasonOption || /^Season \d+$/.test(seasonOption.text))
         // A phone's width wraps the two choices onto two lines (each takes at least 20em); elsewhere they share one.
         && options[options.length - 1] === 'All Seasons' && options.length <= 3 && (isMobile(layout) || episode.state.lines <= 1),
