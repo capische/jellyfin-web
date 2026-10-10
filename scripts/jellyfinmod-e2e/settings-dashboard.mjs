@@ -9,7 +9,14 @@
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+// The leased mod instances, or a local environment of this Mac (alpha..echo on 127.0.0.1, envs/pool.list); never production on 8096 of the Pi.
+const localEnvironment = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) && ['8096', '9096', '10096', '11096', '12096'].includes(testUrl.port);
+// A loopback port is only a local environment if it answers as one: 8096 on this Mac may also be a tunnel to production.
+if (localEnvironment) {
+    const publicInfo = await fetch(new URL('/System/Info/Public', testUrl)).then(response => response.json()).catch(() => ({}));
+    if (!/^jellyfinmod-(alpha|bravo|charlie|delta|echo)$/.test(publicInfo.ServerName ?? '')) throw new Error(`${testUrl.host} answers as "${publicInfo.ServerName}", not as a JellyfinMod local environment`);
+}
+if (!localEnvironment && !['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const results = [];
@@ -69,9 +76,9 @@ try {
     const discoveryState = await page.locator('[data-secstate="discovery"]').innerText();
     record('Discovery shows the moved token as configured', /Read access token configured/.test(discoveryState), discoveryState);
     await page.locator('#TestDiscovery').click();
-    const discoveryNotice = await noticeText('discovery');
+    const discoveryNotice = await noticeText('discovery-test');
     record('Discovery Test reports a code and a sentence', /\((ok|unauthorized|timeout|unreachable|not_configured)\)$/.test(discoveryNotice), discoveryNotice);
-    await page.locator('[data-notice="discovery"]').waitFor();
+    await page.locator('[data-notice="discovery"]').waitFor({ state: 'attached' });
     const testedState = await page.locator('[data-secstate="discovery"]').innerText();
     record('A passing Test marks discovery tested', /tested/.test(testedState) && !/not tested/.test(testedState), testedState);
 
@@ -87,13 +94,14 @@ try {
     const changed = String(Number(days) + 1);
     await page.locator('#ReclaimAfterDays').fill(changed);
     await page.locator('[data-submit="retention"]').click();
-    await page.waitForFunction(value => document.querySelector('[data-savemeta="retention"]')?.textContent.includes('Retention revision') &&
-        !document.querySelector('[data-notice="retention"] .jfmod-notice-err'), changed, { timeout: 30000 });
-    const meta = await page.locator('[data-savemeta="retention"]').innerText();
+    // The revisions are no longer shown (2026-10-10); the save is complete when its notice says so and the line under Save is empty.
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-notice="retention"]')?.textContent ?? '') &&
+        !document.querySelector('[data-notice="retention"] .jfmod-notice-err'), undefined, { timeout: 30000 });
+    const meta = (await page.locator('[data-savemeta="retention"]').innerText()).trim();
     await openPage();
     await page.locator('.jfmod-step[data-section="retention"]').click();
     const reread = await page.locator('#ReclaimAfterDays').inputValue();
-    record('A retention save re-reads when the page is opened again', reread === changed, { saved: changed, reread, meta });
+    record('A retention save re-reads when the page is opened again and shows no revision text', reread === changed && meta === '', { saved: changed, reread, meta });
 
     await page.locator('#ReclaimAfterDays').fill(days);
     await page.locator('[data-submit="retention"]').click();
