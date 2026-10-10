@@ -12,7 +12,14 @@ import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 // The leased mod instances only (test, acceptance, live Phase 5/6); never production on 8096.
-if (!['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+// The leased mod instances, or a local environment of this Mac (alpha..echo on 127.0.0.1, envs/pool.list); never production on 8096 of the Pi.
+const localEnvironment = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) && ['8096', '9096', '10096', '11096', '12096'].includes(testUrl.port);
+// A loopback port is only a local environment if it answers as one: 8096 on this Mac may also be a tunnel to production.
+if (localEnvironment) {
+    const publicInfo = await fetch(new URL('/System/Info/Public', testUrl)).then(response => response.json()).catch(() => ({}));
+    if (!/^jellyfinmod-(alpha|bravo|charlie|delta|echo)$/.test(publicInfo.ServerName ?? '')) throw new Error(`${testUrl.host} answers as "${publicInfo.ServerName}", not as a JellyfinMod local environment`);
+}
+if (!localEnvironment && !['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const only = (process.env.JELLYFINMOD_SETTINGS_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
@@ -78,13 +85,6 @@ async function assertServer(page, when) {
 
 /** The server's retention settings, read as the signed-in administrator. */
 const retentionNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Retention'), dataType: 'json' }));
-/** The line under Retention's Save, as the server's revisions now make it (settingsSections.tsx, RetentionSection saveMeta). */
-const savedMeta = page => page.evaluate(async () => {
-    const read = path => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/' + path), dataType: 'json' });
-    const [retention, seed] = await Promise.all([read('Retention'), read('SeedProtection')]);
-    return `Retention revision ${retention.revision} · seed protection revision ${seed.revision}.`;
-});
-
 /** Loads the app again from the instance under test and waits for its signed-in ApiClient, as a clean-up retry needs. */
 async function reloadApp(page) {
     await page.goto(base, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
@@ -299,14 +299,15 @@ for (const name of only) {
                 await days.fill(changed);
                 await page.locator('[data-submit="retention"]').click();
                 await page.locator('.jfmod-check-main .jfmod-notice-ok').waitFor({ timeout: 30000 });
-                const meta = await page.locator('[data-savemeta="retention"]').innerText();
-                const metaWanted = await savedMeta(page);
+                // The revisions are no longer shown to the user (2026-10-10): no line under Save says them, and the save is proved
+                // by the server's value after a reload.
+                const metaShown = await page.locator('[data-savemeta="retention"]').count();
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
                 await assertServer(page, 'the reload after the save');
                 const reread = await page.locator('.jfmod-check-main input[type="number"]').first().inputValue();
-                record(name, 'Retention saves, echoes its revisions and re-reads after a reload',
-                    shown === original && reread === changed && meta === metaWanted, { original, shown, changed, reread, meta, metaWanted });
+                record(name, 'Retention saves, shows no revision text and re-reads after a reload',
+                    shown === original && reread === changed && metaShown === 0, { original, shown, changed, reread, metaShown });
 
                 // A stale revision without an edit: another session saves first, then this page saves as loaded. Seed protection
                 // is saved (200) and retention refused (409); the page says which half was saved, with the conflict sentence and

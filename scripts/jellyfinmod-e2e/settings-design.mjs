@@ -19,7 +19,14 @@ import { join } from 'node:path';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 // The leased mod instances only (test, acceptance, live Phase 5/6); never production on 8096.
-if (!['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+// The leased mod instances, or a local environment of this Mac (alpha..echo on 127.0.0.1, envs/pool.list); never production on 8096 of the Pi.
+const localEnvironment = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) && ['8096', '9096', '10096', '11096', '12096'].includes(testUrl.port);
+// A loopback port is only a local environment if it answers as one: 8096 on this Mac may also be a tunnel to production.
+if (localEnvironment) {
+    const publicInfo = await fetch(new URL('/System/Info/Public', testUrl)).then(response => response.json()).catch(() => ({}));
+    if (!/^jellyfinmod-(alpha|bravo|charlie|delta|echo)$/.test(publicInfo.ServerName ?? '')) throw new Error(`${testUrl.host} answers as "${publicInfo.ServerName}", not as a JellyfinMod local environment`);
+}
+if (!localEnvironment && !['18096', '28096', '48096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const shots = process.env.JELLYFINMOD_SHOTS ?? (() => { throw new Error('JELLYFINMOD_SHOTS is required'); })();
 mkdirSync(shots, { recursive: true });
@@ -140,7 +147,7 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         else if (row?.matches('.jfmod-maprow')) rowName = 'Mapping ' + ([...row.parentElement.querySelectorAll(':scope > .jfmod-maprow')].indexOf(row) + 1);
         else if (row) rowName = (row.querySelector('.jfmod-brow-main strong')?.firstChild?.textContent ?? '').trim().replace(/\.$/, '');
         return { text: icon ? '' : el.textContent.trim(), label: el.getAttribute('aria-label'), action: el.dataset.secretAction ?? el.dataset.rowAction ?? null, icon,
-            inListRow: !!row, rowName, refused: el.getAttribute('aria-disabled') === 'true',
+            inListRow: !!row, fieldSave: !!el.closest('.jfmod-secret-inputrow'), rowName, refused: el.getAttribute('aria-disabled') === 'true',
             variant: icon ? 'icon' : variant(el), tint: icon ? (el.classList.contains('jfmod-iconbtn-red') ? 'red' : 'grey') : tint(el),
             bg: s.backgroundColor, color: s.color, borderWidth: s.borderTopWidth, borderColor: s.borderTopColor,
             height: Math.round(rect.height * 10) / 10, width: Math.round(rect.width * 10) / 10,
@@ -264,8 +271,8 @@ const looksWrong = (button, layoutName) => {
     }
     if (button.focused) {
         if (!button.disabled && ratio < 4.5) reasons.push(`focused contrast ${ratio.toFixed(2)}`);
-    } else if (button.refused && button.icon && button.inListRow) {
-        // A refused row icon (Move Up on the first row) has no fill of its own: only its glyph's contrast is checked.
+    } else if (button.refused && button.icon && (button.inListRow || button.fieldSave)) {
+        // A refused row icon (Move Up on the first row, or the Save of an empty secret input) has no fill of its own: only its glyph's contrast is checked.
         if (ratio < 4.5) reasons.push(`refused contrast ${ratio.toFixed(2)}`);
     } else if (button.disabled) {
         if (button.color !== DISABLED || button.bg !== DISABLED_FILL) reasons.push('not MUI disabled grey');
@@ -431,7 +438,7 @@ const dashboardSection = page => page.evaluate(() => {
         else if (el.classList.contains('raised') || el.classList.contains('jfmod-iconbtn-grey')) kind = 'grey';
         const row = el.closest('.jfmod-brow, .jfmod-qrow, .jfmod-maprow');
         return { text: icon ? el.getAttribute('aria-label') : el.textContent.trim(), icon, kind, height: el.getBoundingClientRect().height,
-            action: el.dataset.secretAction ?? el.dataset.rowAction ?? null, inListRow: !!row,
+            action: el.dataset.secretAction ?? el.dataset.rowAction ?? null, inListRow: !!row, fieldSave: !!el.closest('.jfmod-secret-inputrow'),
             width: el.getBoundingClientRect().width, contrast: (a + 0.05) / (b + 0.05), refused: el.getAttribute('aria-disabled') === 'true',
             marked: el.dataset.jfmodMark === '1', focused: el === document.activeElement, bg: bg.map(Math.round),
             // A ring is an outline, or a solid shadow spread of at least 1 px (upstream's emby-button forbids outlines).
@@ -456,7 +463,7 @@ const checkDashboardSection = (layout, view) => {
         const reasons = [];
         if (button.kind !== want(button)) reasons.push(`kind ${button.kind}, want ${want(button)}`);
         if (button.icon ? button.height < 40 || button.width < 40 : Math.abs(button.height - reference) > 0.6) reasons.push(`size ${button.width}×${button.height}`);
-        if ((!button.refused || (button.icon && button.inListRow)) && button.contrast < 4.5) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
+        if ((!button.refused || (button.icon && (button.inListRow || button.fieldSave))) && button.contrast < 4.5) reasons.push(`contrast ${button.contrast.toFixed(2)}`);
         return reasons.length ? { text: button.text, reasons } : null;
     }).filter(Boolean);
     record(layout, `dashboard page ${view.id}: every button is red, blue or grey by its role, the size of Save and readable (${view.buttons.length})`,
@@ -514,7 +521,7 @@ for (const name of only) {
     const context = await browser.newContext({ viewport: layout.viewport, isMobile: layout.isMobile, hasTouch: layout.hasTouch, userAgent: layout.userAgent });
     const page = await context.newPage();
     const errors = [];
-    page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+    page.on('pageerror', error => errors.push(`${String(error.message).split('\n')[0]} @ ${String(error.stack ?? '').split('\n').slice(1, 3).join(' | ').replace(/https?:\/\/[^/]+/g, '').slice(0, 200)}`));
     try {
         await signIn(page);
         if (layout.tv) {
@@ -709,7 +716,7 @@ for (const name of only) {
             checkButtons(name, 'discovery while replacing', replacing.buttons);
             record(name, 'discovery while replacing: no overlaps or touching', !replacing.overlaps.length && !replacing.tight.length,
                 [...replacing.overlaps, ...replacing.tight]);
-            await page.locator('.jfmod-secret button', { hasText: 'Keep the Saved One' }).click();
+            await page.locator('.jfmod-secret [data-secret-action="keep"]').click();
             await page.locator('.jfmod-secret-row [data-secret-action="clear"]').click();
             await page.waitForTimeout(300);
             console.log('  shot', await shot(page, `${name}-settings-discovery-clearing`));
@@ -723,7 +730,8 @@ for (const name of only) {
         }
         if (name === 'desktop') {
             // The read-only TMDB test still answers, and a save with nothing changed round-trips the revision.
-            const before = await page.locator('[data-savemeta="discovery"]').innerText();
+            const revisionNow = () => page.evaluate(async () => (await ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Discovery'), dataType: 'json' })).revision);
+            const before = await revisionNow();
             await page.locator('.jfmod-secret-row button[data-test="discovery"]').click();
             const notice = page.locator('.jfmod-check-section[data-section="discovery"] [data-secret-test-result] .jfmod-notice');
             await notice.waitFor({ state: 'visible', timeout: 30000 });
@@ -739,8 +747,9 @@ for (const name of only) {
             await page.locator('button[data-submit="discovery"]').click();
             await page.waitForFunction(() => /Saved/.test(document.querySelector('.jfmod-check-section[data-section="discovery"] .jfmod-notice')?.textContent ?? ''),
                 undefined, { timeout: 30000 });
-            const after = await page.locator('[data-savemeta="discovery"]').innerText();
-            record(name, 'discovery Save with nothing changed round-trips the revision', before === after, { before, after });
+            const after = await revisionNow();
+            const metaShown = (await page.locator('[data-savemeta="discovery"]').innerText().catch(() => '')).trim();
+            record(name, 'discovery Save with nothing changed round-trips the revision, and no revision text is shown', before === after && metaShown === '', { before, after, metaShown });
         }
         // The editors of an indexer and a quality profile, in every layout: opened, audited like a section, and on the TV a
         // red action reached by the arrows must stay readable under the focus fill. Cancelled; nothing is saved.
