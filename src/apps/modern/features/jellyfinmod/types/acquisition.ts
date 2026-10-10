@@ -20,6 +20,11 @@ export interface ParsedRelease {
     proper: boolean;
     repack: boolean;
     quality: string | null;
+    /** Upper-case ISO 639-1 codes, `MULTI` or `DUAL`; absent from plugins before the picker redesign (2026-10-10). */
+    languages?: string[] | null;
+    subtitles?: string[] | null;
+    /** `5.1`, `7.1`; null when the title names none. */
+    audioChannels?: string | null;
 }
 
 export interface ReleaseRejection {
@@ -94,6 +99,22 @@ export interface IndexerOutcome {
     resultCount: number;
     truncated: boolean;
     retryAfterSeconds: number | null;
+}
+
+/** One indexer's line of a running search (`GET /Releases/Progress/{key}`). */
+export interface IndexerProgress {
+    indexerId: string;
+    name: string;
+    /** `queued`, `verifying`, `asking`, or the final status (`ok`, `no_results`, a failure code). */
+    state: string;
+    startedAt: string | null;
+    resultCount: number;
+    retryAfterSeconds: number | null;
+}
+
+export interface ReleaseProgress {
+    indexers: IndexerProgress[];
+    finished: boolean;
 }
 
 export interface ReleaseSearch {

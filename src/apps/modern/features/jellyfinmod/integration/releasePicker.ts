@@ -9,6 +9,10 @@ import ReleasePickerDialog, { type ReleasePickerEpisode } from '../components/Re
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
 
+// webpack's `?raw` rule (webpack.common.js) hands the drawing over as text; the eslint resolver does not know the query.
+// eslint-disable-next-line import/no-unresolved
+import namesToggleGlyph from '../assets/names-toggle.svg?raw';
+
 interface OpenOptions {
     api: Api;
     entryId: string;
@@ -23,6 +27,34 @@ interface OpenOptions {
     intent?: ReleaseIntent;
     onChanged?: () => void;
 }
+
+/** Show Names (user, 2026-10-11): every row shows its file name while it is on. Off by default, remembered per browser. */
+const NAMES_KEY = 'jfmod-releaseNames';
+
+const readNames = () => {
+    try {
+        return localStorage.getItem(NAMES_KEY) === '1';
+    } catch {
+        return false;
+    }
+};
+
+const saveNames = (on: boolean) => {
+    try {
+        localStorage.setItem(NAMES_KEY, on ? '1' : '0');
+    } catch {
+        // A browser without storage just forgets the choice.
+    }
+};
+
+/** Puts the state on the dialog (its class shows the names), on the button (pressed, label, tooltip) and in storage. */
+const applyNames = (dlg: HTMLElement, toggle: HTMLElement, on: boolean) => {
+    const label = on ? 'Hide Names' : 'Show Names';
+    dlg.classList.toggle('jfmod-releaseDialog--names', on);
+    toggle.setAttribute('aria-pressed', String(on));
+    toggle.setAttribute('aria-label', label);
+    toggle.setAttribute('title', label);
+};
 
 const pad = (value: number) => (value < 10 ? '0' : '') + value;
 
@@ -51,11 +83,23 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     // through the dialog helper (user, 2026-10-08).
     dlg.innerHTML = '<div class="formDialogHeader">'
         + '<h3 class="formDialogHeaderTitle"></h3>'
+        + '<button is="paper-icon-button-light" type="button" class="autoSize jfmod-releaseAction jfmod-namesToggle"'
+        + ' title="Show Names" aria-label="Show Names" aria-pressed="false">'
+        + namesToggleGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</button>'
         + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseDialogClose" tabindex="-1" title="Close"'
-        + ' aria-label="Close"><span class="material-icons close" aria-hidden="true"></span></button></div>'
+        + ' aria-label="Close"><svg class="jfmod-releaseGlyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"'
+        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div>'
         + '<div class="formDialogContent smoothScrollY"><div class="jfmod-releaseDialogContent"></div></div>';
     const heading = dlg.querySelector('.formDialogHeaderTitle');
-    if (heading) heading.textContent = (options.intent === 'addVersion' ? 'Another Quality for ' : 'Releases for ') + options.title;
+    // The title the design draws: what the dialog does, in Title Case; the choices below name the episode or season.
+    if (heading) heading.textContent = options.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release';
+    const toggle = dlg.querySelector<HTMLElement>('.jfmod-namesToggle')!;
+    applyNames(dlg, toggle, readNames());
+    toggle.addEventListener('click', () => {
+        const on = toggle.getAttribute('aria-pressed') !== 'true';
+        applyNames(dlg, toggle, on);
+        saveNames(on);
+    });
     const close = () => dialogHelper.close(dlg);
     dlg.querySelector('.btnCancel')?.addEventListener('click', close);
     const content = dlg.querySelector<HTMLElement>('.jfmod-releaseDialogContent')!;

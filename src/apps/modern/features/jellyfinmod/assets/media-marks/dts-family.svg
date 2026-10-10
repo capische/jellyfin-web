@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <!-- Original mark of this fork for the DTS family of formats (DTS, DTS-HD, DTS:X): a wave held between two end bars. -->
+    <path d="M2.5 4V12M21.5 4V12"/>
+    <path d="M6 8C7.6 3.6 9.4 3.6 12 8S16.4 12.4 18 8"/>
+</svg>

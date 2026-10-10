@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <!-- Original drawing of this fork for the release picker's Show Names toggle. Off: a title line with a short line under it.
+         On: the same two lines, where they are, and a long line added below (the file names the rows then show). -->
+    <g class="jfmod-namesGlyph-off"><path d="M5 7H19M5 12H11"/></g>
+    <g class="jfmod-namesGlyph-on"><path d="M5 7H19M5 12H11M5 17H19"/></g>
+</svg>

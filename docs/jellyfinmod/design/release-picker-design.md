@@ -47,6 +47,10 @@ confirmation naming the reasons) already on `next-release` is kept as it is.
 - `.../api/modApi.ts`, `.../types/acquisition.ts`: `progressKey`, `getReleaseProgress`, `parsed.languages/subtitles`.
 - Runners: `scripts/jellyfinmod-e2e/live-picker.mjs`, `live-picker-extra.mjs`, `detail-design.mjs` (and `s11-fresh.mjs` where it reads
   the removed spinner or "No releases found.").
+- Type (user, 2026-10-11): the mock drew the system font (its "Noto Sans" never matched), and the user chose a bundled font so the
+  dialog is the same on every device: **Inter** (SIL OFL 1.1, Copyright 2016 The Inter Project Authors), static woff2 for weights
+  400, 500 and 600 in Latin and Cyrillic from `@fontsource/inter` 5.3.0, family `jfmod-inter`, first in the stack with the system
+  font and Noto Sans as fallbacks; the mock's 700 draws as 600. Licence text beside the files in `assets/fonts/inter/`.
 - Decisions recorded at the first look (2026-10-10): the indexer stays plain right-aligned text in its column (the final rows
   mockup), not a primary-outline chip; a cancelled grab removes its status block and returns every action to idle; the channel
   count is `parsed.audioChannels`; a plugin without the progress route keeps a four-segment ring and no per-indexer lines.

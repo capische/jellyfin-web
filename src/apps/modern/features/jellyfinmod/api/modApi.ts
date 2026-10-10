@@ -1,7 +1,7 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { AxiosRequestConfig } from 'axios';
 
-import type { AcquisitionSummary, GrabMode, GrabOperation, QualityProfile, ReleaseIntent, ReleaseScope, ReleaseSearch } from '../types/acquisition';
+import type { AcquisitionSummary, GrabMode, GrabOperation, QualityProfile, ReleaseIntent, ReleaseProgress, ReleaseScope, ReleaseSearch } from '../types/acquisition';
 import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
@@ -261,6 +261,8 @@ export interface ReleaseQuery {
     scope?: Exclude<ReleaseScope, 'episode'>;
     /** The season of a `season` search. */
     seasonNumber?: number;
+    /** A fresh key per search; the page reads what each indexer is doing from `getReleaseProgress` while the search runs. */
+    progressKey?: string;
 }
 
 /** Searches enabled indexers for one target. Never starts a download. Administrator-only. */
@@ -268,6 +270,13 @@ export const searchReleases = async (api: Api, params: ReleaseQuery, options?: A
     const response = await api.axiosInstance.get<ReleaseSearch>(api.basePath + BASE + '/Releases',
         { ...options, headers: authorization(api), params });
     return response.data;
+};
+
+/** What a running search has done so far; null while the key is unknown (not started yet, or a plugin without progress). */
+export const getReleaseProgress = async (api: Api, key: string, options?: AxiosRequestConfig): Promise<ReleaseProgress | null> => {
+    const response = await api.axiosInstance.get<ReleaseProgress>(api.basePath + BASE + '/Releases/Progress/' + encodeURIComponent(key),
+        { ...options, headers: authorization(api), validateStatus: status => status === 200 || status === 404 });
+    return response.status === 200 ? response.data : null;
 };
 
 /**

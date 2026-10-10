@@ -25,3 +25,12 @@ components/   the additions themselves
 
 File-less entries appear in `/movies` and `/tv` carrying a mark, and nothing else in the app looks
 or behaves differently.
+
+## Credits
+
+- The release picker's type is **Inter** (Copyright 2016 The Inter Project Authors, SIL Open Font License 1.1): static woff2 files
+  for weights 400, 500, 600 and 700 in every Latin, Cyrillic and Greek subset (24 files, about 380 KB, each fetched only when a
+  page shows a character from its range), from the `@fontsource/inter` 5.3.0 package, in `assets/fonts/inter/` with `OFL.txt`
+  beside them. They are declared by `@font-face` in `components/interFont.scss` under the family name `jfmod-inter`, first in
+  the picker dialog's font stack. The family is complete enough to replace Jellyfin's default font later: put `jfmod-inter`
+  first in the theme's font stack and import `interFont.scss` from the mod shell.
