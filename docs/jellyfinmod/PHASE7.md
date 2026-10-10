@@ -3053,6 +3053,33 @@ Authorized by the user on 2026-10-10 ("Release the lease and republish 0.1.0.0")
   `sha256:9c3525549ed6…`, still resolve by digest
   (`docker buildx imagetools create -t …:0.1.0.0 -t …:latest ghcr.io/capische/jellyfin-mod@<digest>`).
 
+#### Settings polish — 2026-10-09/10 (`fix/settings-polish`, built, not accepted)
+
+The user's list after looking at the live Dashboard page on an acceptance instance (UX §12.1, *Settings polish*). Both
+pages carry it: the settings area (React) and the plugin's Dashboard page `configPage.html`, which the screenshots showed.
+
+- **Test icon.** Design C2 "Gauge" (user, 2026-10-10, designed in its own session; the first build drew a tick or cross
+  on the corner and was replaced): signal arcs with a needle as the whole indicator, with no corner mark. Idle is the text
+  colour; while the test runs the needle sweeps across the arcs and the row's status reads "Testing…" (a polite live
+  region); a pass turns the glyph green; a failure red with the needle dropped. The row no longer carries "verified
+  <date>": the date is in the tooltip ("last checked …", or why it failed). Applies to the indexer rows and the TMDB token's
+  box.
+- **Hover** scales an icon 1.08 over 140 ms (transform and opacity only), none under reduced motion.
+- **The TMDB token is one field.** Replace turns the Configured box into the input with a round Save and a round Keep inside
+  it at the right; Save writes just the token (one PATCH) and then starts its Test. The other secrets have no field Save.
+- **Number fields' spin arrows** are drawn for a dark field (`color-scheme`), ≥ 4.5:1 in all six schemes.
+- **Aligned fields (Dashboard page only).** `alignFieldRows()` gives every label of a row of columns the height of the
+  tallest; changed screens: Download Client (Username/Password, folders, label/link), Grabbing, Import and Seeding (Seed
+  Floor, Cadence and Files), Retention, Automation; the settings area has no side-by-side rows.
+- **Diagnostics** lists scroll in a fixed-height focusable region with a time on each entry, newest first. Plugin: additive
+  `detectedAt` (episode conflict) and `addedAt` (entry in a removed library, when it was catalogued), UTC, no migration;
+  `PhaseOneSmoke` asserts them through the real host.
+- **Evidence** (local environment `alpha`, Playwright Chromium 153 and Google Chrome): see the run results in the session
+  report; runner `scripts/jellyfinmod-e2e/settings-polish.mjs` (Torznab server of its own, real pass and fail, hover, token
+  Save then Test, alignment, spin arrows, scrolling diagnostics). Codex review 1: request changes, seven findings, six closed
+  (the reduced-motion veil was declined: a colour change is not motion); the fix-delta re-review waits for the Codex usage
+  reset.
+
 #### S11 evidence
 
 Running record, 2026-09-24/25. Plugin revisions and bundle ids per row; evidence files under
