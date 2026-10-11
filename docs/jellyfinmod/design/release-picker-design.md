@@ -16,52 +16,6 @@ Code: `ReleasePickerDialog.tsx` (`ReleaseLines`, `ReleaseRow`, `RejectedRow`, `G
 `noticeText`), `releasePicker.scss`. Get Another Quality and Get Release are the same dialog; everything here applies to
 both.
 
-## Build plan (branch `feat/release-picker-design`, 2026-10-10)
-
-Status: **built (not accepted)** once the gates in the last list pass; this section is the plan, updated when the work lands.
-The three records here (this page, `release-picker-searching.md`, `release-picker-action-states.md`) are the design and are
-not reopened. Owner of the picker's look and behaviour: this slice; the soft rejection (Add/Replace on rejected rows behind a
-confirmation naming the reasons) already on `next-release` is kept as it is.
-
-**Plugin** (`plugin`, branch `feat/release-picker-design`, no migration, version stays 0.1.0.0):
-- `Services/Acquisition/ReleaseProgress.cs` (new): an in-memory `ConcurrentDictionary` of per-key snapshots. A snapshot holds
-  one line per enabled indexer (`queued`, `asking` with `startedAt`, then the final outcome status, `resultCount`,
-  `retryAfterSeconds`) and `finished`. Entries are dropped 60 s after the search ends and the table is capped.
-- `ReleaseSearchService.SearchAsync` takes an optional progress key (inside `ReleaseSearchOptions`) and writes the snapshot as
-  each indexer is seeded, starts its query and ends. Without a key nothing is written; other callers are unchanged.
-- `ReleasesController`: `GET /JellyfinMod/Releases?progressKey=...` passes the key on; `GET /JellyfinMod/Releases/Progress/{key}`
-  answers `{ indexers[], finished }` or 404 for an unknown key. Same authorization as `/Releases`; a key belongs to the user who
-  started the search.
-- `Services/Acquisition/ReleaseParser.cs`, `TorznabClient.cs` (`language`, `subs` attributes on `TorznabItem`),
-  `ReleaseSearchService.Evaluate` (merge) and `ReleaseParser` title tokens: `ParsedRelease.Languages` and `.Subtitles`
-  (additive, optional, upper-case ISO 639-1 codes; `MULTI`/`DUAL` kept as words), and the channel count at the end of `Audio`.
-- Test: `tests/PhaseFourIntegration` (Program.cs, Boundaries.cs): the Torznab boundary sends `language`/`subs` attributes and a
-  per-indexer delay, the suite polls the progress route over real HTTP while a search runs.
-
-**Web** (`jellyfin-web`, branch `feat/release-picker-design`):
-- `src/apps/modern/features/jellyfinmod/components/ReleasePickerDialog.tsx`: the row (`ReleaseLines`), grab block, rejected group,
-  action states, labels (Search For, Quality Profile), empty and error states, the progress poll.
-- `.../components/ReleaseRowParts.tsx` (new): quality, marks (codec, HDR, Dolby/DTS marks), flags, language lines, glyphs.
-- `.../components/ReleaseSearchBlock.tsx` (new): the G2 glyph, caption and indexer lines.
-- `.../components/releasePicker.scss`: the style deltas of this page and of the two linked specs.
-- `.../api/modApi.ts`, `.../types/acquisition.ts`: `progressKey`, `getReleaseProgress`, `parsed.languages/subtitles`.
-- Runners: `scripts/jellyfinmod-e2e/live-picker.mjs`, `live-picker-extra.mjs`, `detail-design.mjs` (and `s11-fresh.mjs` where it reads
-  the removed spinner or "No releases found.").
-- Type (user, 2026-10-11): the mock drew the system font (its "Noto Sans" never matched), and the user chose a bundled font so the
-  dialog is the same on every device: **Inter** (SIL OFL 1.1, Copyright 2016 The Inter Project Authors), static woff2 for weights
-  400, 500 and 600 in Latin and Cyrillic from `@fontsource/inter` 5.3.0, family `jfmod-inter`, first in the stack with the system
-  font and Noto Sans as fallbacks; the mock's 700 draws as 600. Licence text beside the files in `assets/fonts/inter/`.
-- Decisions recorded at the first look (2026-10-10): the indexer stays plain right-aligned text in its column (the final rows
-  mockup), not a primary-outline chip; a cancelled grab removes its status block and returns every action to idle; the channel
-  count is `parsed.audioChannels`; a plugin without the progress route keeps a four-segment ring and no per-indexer lines.
-- Media marks (user decision, 2026-10-10): **no official Dolby or DTS logos.** The two family marks are this fork's own
-  drawings, stored as `src/apps/modern/features/jellyfinmod/assets/media-marks/dolby-family.svg` (two staggered arcs) and
-  `dts-family.svg` (a wave between two end bars): one 24 x 16 viewBox, stroke in `currentColor`, `aria-hidden`, imported as
-  source text through a `?raw` rule in `webpack.common.js` (listed in PHASE7 §3.5) so they draw inline with no request. They
-  are original, not traced from or proportioned like the vendors' marks; the word beside each (VISION, ATMOS, TRUEHD, DIGITAL+,
-  DTS, DTS-HD MA, DTS:X) names the format. A format with no family mark stays text-only. The channel count is the plugin's new
-  `parsed.audioChannels`, not part of `parsed.audio`.
-
 ## Layout (unchanged structure, restyled)
 
 Title row: title in 600 weight, a round grey Close icon (2.5em, cross glyph) at the right, the same icon language as the
@@ -101,8 +55,10 @@ CSS-only switch); desktop and TV keep the two-line form above.
 the same 1.2em track: codec as plain text (HEVC, AVC, XVID; 0.7 opacity); HDR10+/HDR10/HDR as plain text (0.9);
 Dolby formats as the **Dolby double-D mark + word** (VISION, ATMOS, TRUEHD, DIGITAL / DIGITAL+); DTS as the **dts
 wordmark** + variant (HD MA, X); AAC/MP3 as plain text; the channel count (7.1, 5.1, 2.0) as a dimmer 600-weight
-suffix. The mockup draws monochrome approximations of the Dolby and DTS marks. **Superseded (user, 2026-10-10): the build draws
-its own marks, see the build plan above; the official logos are not used.** Mapping from the parser: `parsed.codec` → codec mark;
+suffix. The mockup draws monochrome approximations of the Dolby and DTS marks; the build should use the official
+monochrome SVGs (the `simple-icons` set has Dolby; DTS from its brand kit), 1.05em tall, `fill: currentColor`,
+`aria-hidden`, with the word beside them as text. Both are trademarks: the user decides whether the fork ships them;
+the text-only fallback is the same mark without the glyph. Mapping from the parser: `parsed.codec` → codec mark;
 `parsed.hdr` split on " " → DV → Dolby VISION, HDR10+/HDR10/HDR → text; `parsed.audio` split → Atmos → Dolby ATMOS,
 TrueHD → Dolby TRUEHD, DD+/DD → Dolby DIGITAL+/DIGITAL, DTS-HD MA / DTS:X / DTS → dts + variant, AAC/MP3/FLAC → text,
 a trailing N.N → channel suffix.
@@ -116,7 +72,68 @@ track** (row em): badges and FL are 60% text in a 1.2em-tall bordered box; size 
 check-circle is a 1.05em glyph; the indexer is 74% text. No `vertical-align` tricks, no baseline mixing. A row without
 actions (held quality) keeps an empty action slot of the same width (`5.4em`) so the indexer column does not drift.
 
-### Hiding the file name — TV first (user's question, 2026-10-10) — **the user chose A**
+### File name, round 2 (2026-10-11): option A is REJECTED after the user tried the built version
+
+The user does not like the hover/selected reveal. Three new routes are in §4 of the mockup
+(https://claude.ai/artifact/UhaoaWjf5cbnb6xNAFtpVa, version 16; `release-picker-file-name-options.png` here). In all three
+the name still appears in the grab block during the hold (Cancel beside it) and in the Replace confirmation, as designed.
+
+- **N1 · Hidden until the grab.** No name on any row, ever. It is readable in the grab block during the server hold
+  ("Sending in N s" + Cancel), so a scene-literate user can still stop a grab after seeing the name, and in the Replace
+  confirmation. Zero new controls, zero D-pad stops. Loses: reading the name *before* pressing Add.
+- **N2 · "Show Names" toggle in the title row (recommended).** One round icon button (notes glyph, 2.5em) left of
+  Close, `aria-pressed`, tooltip "Show Names" / "Hide Names"; off by default. On: every row (rejected ones too) carries its
+  file name as a third line at 80% / 0.55 opacity, wrapped, plus ` · score N`; the icon takes the primary colour with a
+  14% primary disc behind it. Remembered per user (`localStorage` key `jfmod-releaseNames`, as other view preferences;
+  or the user settings store if the picker already has one). Exactly **one** D-pad stop for the whole dialog, in the
+  title row (not a new row above the list, UX §13.4): D-pad path is selects → toggle → Close, then the rows. The
+  scene-literate user turns it on once and never again; everyone else never sees a file name. This is "hide it until
+  something" with the something being a deliberate, remembered choice.
+- **N3 · Details per row.** An Info icon (round, grey, "i" in a circle) as each row's last stop, after Replace (a
+  held-quality row gets only the Info stop). Enter/click opens a compact details block under the row, in the grab
+  block's style (left primary border): the file name, then "score · group · indexer · size · seeders", then flat
+  **Copy Name** and **Close**. Opening focuses Copy Name; Back/Escape or Close closes it and returns focus to the Info
+  icon; opening another row's details closes the first. The TV's Info key (where the remote has one) opens it for the
+  focused row as a shortcut, never as the only way. Costs one extra stop on every row walk (row → Add → Replace →
+  Info); Copy Name is the one thing N2 cannot do. Phone: a tap target per row, no long-press needed.
+- Dropped: the fixed details strip (the user's "selected effect" objection applies to it too), copy-name alone (does
+  not solve reading on TV), long-press / Info key as the only route (undiscoverable, no key on phones).
+
+**Recommendation: N2.** It is the only route that lets a scene-literate user read every name before grabbing, costs one
+stop in the whole dialog, adds nothing to a row walk, and is off for everyone who never asked. If the user also wants
+Copy Name, N3's details block can be added later without changing N2.
+
+**The user picked N2 (2026-10-11).** Three looks for the toggle are in §5 of the mockup (version 17;
+`release-picker-names-toggle.png` here). Common to all three: it sits in the title row left of Close, one D-pad stop
+(D-pad path: selects → toggle → Close → rows); `button type=button aria-pressed=false|true`, `aria-label` and `title`
+"Show Names" when off and "Hide Names" when on; hover scales 1.08 and lightens (own-colour veil, 140 ms); pressed scales
+to 0.96; keyboard focus = cyan ring (`box-shadow 0 0 0 .15em #00a4dc`), TV = white ring (`outline .16em`, offset .12em);
+remembered per user (`localStorage` `jfmod-releaseNames`, "1"/"0"); on, every row (rejected too) shows its file name as
+a third line at 80% / 0.55 with ` · score N`. Narrow widths: the title gets `min-width: 0; overflow: hidden;
+text-overflow: ellipsis`, the toggle and Close keep their size.
+
+- **T1 · Notes glyph in the round grey button (recommended).** Same `.jfmod-iconbtn`-style 2.5em round button as
+  Close (40 px desktop, 36 phone, 50 TV); three-line glyph (`M5 7H19M5 12H19M5 17H13`, stroke 2.3, 1.4em). Off: glyph in
+  text-secondary, no fill (like Close). On: a filled disc (white at 12% on dark, black at 8% on light) and the glyph in
+  the primary blue — blue only as the highlight, per the grey-theme rule. Contrast: off glyph 9.2:1 on #202020; on
+  glyph #00a4dc 3.8:1 on the disc (non-text, ≥3:1); light scheme uses `#0277a8` for the on glyph (4.9:1 on white; plain
+  #00a4dc is 2.9:1 there). Reads as a sibling of the X on every layout; on TV the 50 px disc + blue glyph is visible from
+  the sofa; the narrow phone title loses nothing.
+- **T2 · "Names" pill with a switch knob.** 2.2em tall, ~5.4em wide; hollow knob left + "Names" (80%, 600). On:
+  primary-blue outline and text, knob filled and moved to the right. Most explicit (a word, not a glyph); readable on TV;
+  but it is the one wide element among round icons (a fourth button kind) and on a narrow phone title it forces the
+  title to truncate ("Get Another Qu…"). Text contrast 5.6:1 on dark; needs `#0277a8` on light too.
+- **T3 · Shape-changing glyph, monochrome.** Same round button; off = a title line with a short line under it
+  (`M5 9.5H19M5 14.5H11`), on = three full lines plus a thin bar under the glyph (0.12em, text colour, 0.9). No colour
+  change. Quietest and theme-proof, but the state is the hardest to read at a glance on a TV (the difference is one
+  short line and a hairline).
+
+**Recommendation: T1.** It is the Close button's twin, uses blue only as the on-highlight, costs no width, and its on
+state (disc + blue) is legible at 50 px on the TV and 36 px on the phone.
+
+(The option-A / option-B text below is kept for history; it is superseded.)
+
+### Hiding the file name — TV first (user's question, 2026-10-10) — option A was chosen, then rejected on 2026-10-11
 
 What the TV has: no hover; Enter on a row grabs, so a click or Enter cannot be a reveal; **focus** is what every row
 gets before Enter. Two proposals, both in §4 of the mockup:
