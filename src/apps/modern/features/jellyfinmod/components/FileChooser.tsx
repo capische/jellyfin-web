@@ -275,11 +275,9 @@ const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, ..
     return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
         <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
-            <span className='jfmod-fileMark' aria-hidden='true'>{selected ? '●' : '○'}</span>
             <span className='jfmod-fileBody'>
                 <span className='jfmod-fileResolution'>{text.resolution}</span>
                 {details && <span className='jfmod-fileDetails'>{details}</span>}
-                {text.label && <span className='jfmod-fileExtra'>{text.label}</span>}
                 {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
                 {version.tracked === false && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>not tracked yet</span>}
                 {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
