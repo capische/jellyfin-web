@@ -97,12 +97,20 @@
 
 .jfmod-fileRow {
     display: flex;
+    border-radius: 0.2em;
     // The row's own button is as tall as its icons, so the TV's Down from the Video value lands on the row, not an icon.
     align-items: stretch;
 }
 
 .jfmod-fileRow--selected {
     background: rgba(255, 255, 255, 0.07);
+}
+
+// The mouse hover covers the whole row, its History, Pin and Remove buttons too (user, 2026-10-11).
+@media (hover: hover) {
+    .jfmod-fileRow:hover {
+        background: rgba(0, 164, 220, 0.2);
+    }
 }
 
 .jfmod-fileChoose {
@@ -118,7 +126,6 @@
     text-align: left;
     cursor: pointer;
 
-    &:hover,
     &:focus {
         background: rgba(0, 164, 220, 0.2);
         outline: none;
