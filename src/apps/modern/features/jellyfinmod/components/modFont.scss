@@ -1,0 +1,23 @@
+// The mod draws in Inter (bundled, interFont.scss) with the browser's default font smoothing, not Noto Sans and not the
+// machine's font (user, 2026-10-11). The design mocks were rendered in macOS's system font with default smoothing; Jellyfin sets
+// `antialiased` on the page, which on macOS draws about 16% less ink, so the mod's own surfaces turn it back to `auto` (no effect
+// outside macOS). Icon fonts and the two monospace classes keep their own family.
+$font: 'jfmod-inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+
+// The mod's own pages: everything inside them, upstream's controls too.
+.jfmod-settings,
+.jfmod-queue,
+.jfmod-searchResults,
+.jfmod-homeHero {
+    &,
+    *:not([class*='material-'], .jfmod-mono, .jfmod-qname) {
+        font-family: $font;
+        -webkit-font-smoothing: auto;
+    }
+}
+
+// The mod's pieces on upstream's pages (the detail page's Version dropdown, file list and action row): their own text only.
+[class*='jfmod-']:not([class*='material-'], .jfmod-mono, .jfmod-qname) {
+    font-family: $font;
+    -webkit-font-smoothing: auto;
+}

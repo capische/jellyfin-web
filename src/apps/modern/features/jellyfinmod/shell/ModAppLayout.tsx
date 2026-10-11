@@ -17,6 +17,8 @@ import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import ModToolbar from './ModToolbar';
+import '../components/interFont.scss';
+import '../components/modFont.scss';
 
 /*
  * Upstream's modern overrides, for the modern layout only.
