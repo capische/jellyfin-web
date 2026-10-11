@@ -144,6 +144,11 @@
     > * { margin-right: 0.8em; }
 }
 
+// A file row has no mark of its own; its text starts where the Get Another Quality text does, past the plus.
+.jfmod-fileRow:not(.jfmod-fileRow--add) .jfmod-fileBody {
+    padding-left: 1.4em;
+}
+
 .jfmod-fileResolution {
     min-width: 3.4em;
     font-weight: 600;
