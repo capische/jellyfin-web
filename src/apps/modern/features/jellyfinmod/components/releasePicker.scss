@@ -54,7 +54,7 @@
     width: 100%;
     box-sizing: border-box;
     margin: 0 0 0.1em;
-    padding: 0.3em 0.8em;
+    padding: calc(0.3em + 2px) 0.8em;
     border: 0;
     border-radius: 0.2em;
     background: transparent;
@@ -114,10 +114,9 @@
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    // The actions stay level with the quality and marks lines when Show Names adds a third line (user, 2026-10-11); the row
-    // beside them stretches to the item's full height, so its highlight covers them. 0.1em centres them on a two-line row.
-    align-self: flex-start;
-    margin-top: 0.1em;
+    // Centred on the row's full height, a third line (Show Names) included (user, 2026-10-11); the row beside them stretches to
+    // the item's height, so its highlight covers them.
+    align-self: center;
     margin-left: 0.4em;
 }
 
@@ -155,34 +154,24 @@
     }
 }
 
-// A row's Add and Replace have no hover of their own (user, 2026-10-11): the whole row is highlighted, and the glyph keeps its
-// colour against upstream's blue hover. Only the Show Names toggle in the title bar grows and takes a veil.
+// Every round button, a row's Add and Replace included, grows a touch and takes a veil of its own colour on a mouse hover (user,
+// 2026-10-11); the glyph keeps its colour against upstream's blue hover, and a dimmed button takes nothing.
 @media (hover: hover) {
-    // Whatever the state (dimmed while a grab runs, focused after a click), a row action keeps its colour and takes no disc.
-    .jfmod-releaseActions .jfmod-releaseAction.paper-icon-button-light:hover {
+    .jfmod-releaseAction.paper-icon-button-light:hover {
         background: transparent;
         color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
     }
 
-    .jfmod-releaseActions .jfmod-releaseAction--danger.paper-icon-button-light:hover {
+    .jfmod-releaseAction--danger.paper-icon-button-light:hover {
         color: var(--jf-palette-error-main, #c62828);
     }
 
-    .jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
-        color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
-        background: transparent;
-    }
-
-    .jfmod-namesToggle.jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
+    .jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']) {
         transform: scale(1.08);
 
         &::before {
             opacity: 0.12;
         }
-    }
-
-    .jfmod-releaseAction--danger.paper-icon-button-light:hover:not([aria-disabled='true']):not(:focus) {
-        color: var(--jf-palette-error-main, #c62828);
     }
 }
 
@@ -403,7 +392,11 @@
 
 .jfmod-releaseCol--size { min-width: 4.6em; }
 .jfmod-releaseCol--seeds { min-width: 3.4em; }
-.jfmod-releaseCol--indexer { min-width: 7.4em; }
+
+.jfmod-releaseCol--indexer {
+    min-width: 7.4em;
+    margin-left: 1.1em;
+}
 
 .jfmod-releaseCol--seeds .jfmod-releaseGlyph-small {
     width: 0.95em;
@@ -569,7 +562,11 @@
         min-width: 0;
         margin-left: 0.6em;
     }
-    .jfmod-releaseCol--indexer { min-width: 0; }
+
+    .jfmod-releaseCol--indexer {
+        min-width: 0;
+        margin-left: 0;
+    }
 
     .jfmod-releaseLine--sub {
         margin-top: 0.05em;
