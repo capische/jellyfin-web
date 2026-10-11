@@ -733,7 +733,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             const target = root?.querySelector<HTMLElement>('.jfmod-releaseRow:not([aria-disabled="true"])')
                 ?? root?.querySelector<HTMLElement>('.jfmod-releaseRow, .jfmod-rejectedToggle')
                 ?? root?.querySelector<HTMLElement>('.jfmod-releaseStatus');
-            if (target) focusManager.focus(target);
+            // Only the TV's D-pad needs a row focused for it: on a desktop the script focus left the first row highlighted as if
+            // it were selected after a mouse click (user, 2026-10-11).
+            if (target && layoutManager.tv) focusManager.focus(target);
         });
     }, [resultKey]);
 
