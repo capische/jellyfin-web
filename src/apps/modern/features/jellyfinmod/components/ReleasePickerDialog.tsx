@@ -718,9 +718,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         retry: false,
         gcTime: 0,
         refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-        // The previous rows stay mounted while a deliberate new search loads, so focus is never thrown away.
-        placeholderData: previous => previous
+        refetchOnReconnect: false
     });
 
     let resultKey: string | null = null;
@@ -744,7 +742,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // One Replace confirmation at a time; a second activation while it is open does nothing.
     const confirming = useRef(false);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || search.isPlaceholderData || candidate.heldQuality) return;
+        if (!data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
         if (mode !== 'replace' && !chosenRejection) {
             start(data.searchId, candidate, mode);
@@ -756,7 +754,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             .then(() => start(data.searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, mediaType, operation, search.isFetching, search.isPlaceholderData, start]);
+    }, [busy, data, mediaType, operation, search.isFetching, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
     const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode }), [episodes, packs, pageEpisode]);
@@ -769,12 +767,11 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
     const eligible = data?.candidates.filter(candidate => candidate.eligible) ?? [];
     const rejected = data?.candidates.filter(candidate => !candidate.eligible) ?? [];
-    // Rows from a previous search stay visible while a new one loads, but only current rows can grab.
-    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || search.isFetching
-        || search.isPlaceholderData;
+    // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
+    // current rows can grab.
+    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || search.isFetching;
     const failedIndexers = data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
-    // A new search over the rows of the last keeps their summary on screen; the block says it is searching.
     const status = [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), grab.error]
         .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
@@ -788,7 +785,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const { block, hasRows, bare, spoken, shown, searching } = useSearchView({ api, progressKey, fetching: search.isFetching, waiting,
         error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status, grabError: grab.error });
-    const stale = search.isFetching || search.isPlaceholderData;
+    const stale = search.isFetching;
 
     const { releaseId: grabbedId, pressed, flash, starting } = grab;
     const operationState = operation?.state;
