@@ -34,8 +34,12 @@ const QUIET_RANGES = new Set(['sdr', 'unknown', '']);
 export const sameItemId = (a: string | null | undefined, b: string | null | undefined) =>
     !!a && !!b && a.replace(/-/g, '').toLowerCase() === b.replace(/-/g, '').toLowerCase();
 
-/** `2160p`, else a height the host reported, else the plugin's label. */
+/**
+ * `2160p`, else a height the host reported, else the plugin's label. The plugin files every standard-definition size
+ * under `480p`, so a standard-definition file shows its real height (a 576-line file reads `576p`, as the stock row says).
+ */
 export const versionResolution = (version: VersionDto): string => {
+    if (version.resolution === '480p' && version.height) return version.height + 'p';
     if (version.resolution) return version.resolution;
     if (version.height) return version.height + 'p';
     return version.label ?? 'Unknown quality';
