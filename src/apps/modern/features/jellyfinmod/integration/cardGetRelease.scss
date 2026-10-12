@@ -1,0 +1,14 @@
+// Get a Release in a card's hover overlay (P1.FU12): upstream's overlay button classes give it its look; these rules only keep
+// it hidden until its card's answer arrives and draw the keyboard focus ring.
+.jfmod-cardGet[hidden] {
+    display: none;
+}
+
+.jfmod-cardGet:focus {
+    outline: none;
+}
+
+.jfmod-cardGet:focus-visible {
+    border-radius: 50%;
+    box-shadow: 0 0 0 0.15em #00a4dc;
+}

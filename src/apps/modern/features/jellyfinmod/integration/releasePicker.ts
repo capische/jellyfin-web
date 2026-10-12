@@ -191,14 +191,23 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     return dialogHelper.open(dlg).then(release, release);
 };
 
-/** Loads an entry's episodes first, for openers that only know its id (native Details More menu). */
-export const openReleasePickerForEntry = async (api: Api, entryId: string, nativeItemId?: string, intent?: ReleaseIntent,
-    episodeId?: string) => {
+/** Where a picker opened by entry id starts: a native episode (its page's scope list) or a season (that season's scope). */
+export interface PickerScope {
+    /** A native episode's Jellyfin id; its version on another item still finds its episode. */
+    nativeItemId?: string;
+    intent?: ReleaseIntent;
+    /** A season's number, for a season card (P1.FU12). */
+    seasonNumber?: number;
+}
+
+/** Loads an entry's episodes first, for openers that only know its id (a card's mark, a card's Get a Release). */
+export const openReleasePickerForEntry = async (api: Api, entryId: string, { nativeItemId, intent, seasonNumber }: PickerScope = {}) => {
     const detail = await getEntry(api, entryId);
     const sameId = (value?: string | null) => !!value && !!nativeItemId
         && value.replace(/-/g, '').toLowerCase() === nativeItemId.replace(/-/g, '').toLowerCase();
     // An episode page names its episode, since the More menu's item may be another version of it.
-    const pageEpisodeId = episodeId ?? detail.episodes.find(episode => sameId(episode.jellyfinItemId))?.id;
+    const pageEpisodeId = nativeItemId ? detail.episodes.find(episode => sameId(episode.jellyfinItemId)
+        || (episode.versions ?? []).some(version => sameId(version.jellyfinItemId)))?.id : undefined;
     await openReleasePicker({
         api,
         entryId,
@@ -207,6 +216,7 @@ export const openReleasePickerForEntry = async (api: Api, entryId: string, nativ
         episodes: detail.episodes,
         episodeId: pageEpisodeId,
         episodePage: !!pageEpisodeId,
+        seasonNumber,
         intent,
         episodeListLoaded: detail.episodeListLoaded
     });
