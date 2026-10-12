@@ -173,8 +173,10 @@
     }
 }
 
+// The red X (cancel, remove from queue) is the one red on a row: Replace is grey like Add, and its red is only the confirmation's
+// commit button (user, 2026-10-12). The lighter red keeps 4.7:1 on the dark dialog, 5.6:1 for #c62828 on white.
 .jfmod-releaseAction--danger {
-    --jfmod-btn: var(--jf-palette-error-main, #c62828);
+    --jfmod-btn: #ef5350;
 }
 
 .jfmod-releaseAction:focus {
@@ -998,6 +1000,10 @@
 
     .jfmod-releaseAction--done {
         --jfmod-btn: #2e7d32;
+    }
+
+    .jfmod-releaseAction--danger {
+        --jfmod-btn: #c62828;
     }
 
     .jfmod-releaseAction--failed {
