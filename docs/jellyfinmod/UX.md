@@ -1148,7 +1148,7 @@ Split by audience, and the split keeps the fork small:
 
 | Setting | Home | Why |
 | --- | --- | --- |
-| Indexers, download clients, quality profiles, global retention, TMDB key | **The plugin's own Dashboard config page** | Admin-only, never used on a TV, and a plugin config page costs the fork exactly zero lines |
+| Indexers, download clients, quality profiles, global retention, TMDB key (optional since P1.FU13) | **The plugin's own Dashboard config page** | Admin-only, never used on a TV, and a plugin config page costs the fork exactly zero lines |
 | Per-item monitor, per-item quality profile, per-item Keep | Catalog detail page | Per-title, used while browsing |
 | Catalog view preferences (sort, card layout, show wanted in Home) | The fork's display preferences | Per-user, matches where the equivalent library settings already live |
 
@@ -1183,6 +1183,11 @@ a once-a-quarter admin task, not a browsing surface.
     weight are a separate design session). Tick and cross are shapes as well as colours. The name stays "Test <row>"; the tooltip adds "last checked
     <date and time in the viewer's locale>" or why it failed. The date is no longer a line of the row ("verified
     10/9/2026, 10:06:58 PM" is now "verified").
+  - **The TMDB token is optional (P1.FU13, user 2026-10-12).** Its note, in the settings area and on the Dashboard page,
+    reads "Optional. Leave empty to use Jellyfin's built-in TMDb connection. A saved token is used instead, for JellyfinMod
+    discovery only." Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
+    "Using your token · tested …" / "Using your token · not tested since it changed". With no token there is no Test icon
+    (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
   - **A secret is one field.** Configured, it is the box with its icons (Test, Replace, Clear); Replace turns the box into
     the input, with its buttons inside it at the right: a round Save (only a secret that has a test of its own, the TMDB
     token, has one: it writes just that secret, then starts the Test; refused while the input is empty; Enter does the same)

@@ -65,7 +65,7 @@ Once you accept that, nothing left in the feature list needs a core change:
 | Feature | Needs core change? | Where it lives |
 | --- | --- | --- |
 | File-less catalog | No — separate store | Plugin DB + web `/catalog` section |
-| TMDB / Trakt search | No | Plugin proxies the API (keeps keys server-side) |
+| TMDB / Trakt search | No | Plugin proxies the API (keeps keys server-side); with no TMDB token saved it uses Jellyfin's built-in TMDb connection (P1.FU13) |
 | Indexer search, grab, import | No | Plugin: Torznab client, download client, importer |
 | Delete N days after watched | No | Plugin scheduled task + `ILibraryManager.DeleteItem` |
 | Multiple qualities, selectable | **Already native** | Ride it; improve the web UI |
