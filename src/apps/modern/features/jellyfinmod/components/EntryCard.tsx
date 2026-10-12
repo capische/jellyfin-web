@@ -130,13 +130,16 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         </div>
     );
     const className = 'card ' + shape + 'Card jfmod-entryCard';
+    // The title's download, drawn for every card of the page at once (integration/downloadMarks, P4.FU1).
+    const download = pending ? undefined : entry.id;
     if (layoutManager.tv) {
         return <button className={className} type='button' aria-label={entry.title} aria-disabled={pending || undefined}
-            data-jfmod-tmdb-id={entry.tmdbId} onClick={openEntry} {...menu}>{content}</button>;
+            data-jfmod-tmdb-id={entry.tmdbId} data-jfmod-entry-id={download} onClick={openEntry} {...menu}>{content}</button>;
     }
     return pending ?
         <div className={className} aria-label={entry.title} aria-busy='true' data-jfmod-tmdb-id={entry.tmdbId}>{content}</div> :
-        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...menu}>{content}</a>;
+        <a className={className} href={'#' + path} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} data-jfmod-entry-id={download}
+            {...menu}>{content}</a>;
 };
 
 const EntryCard: FC<EntryCardProps> = props => props.nativeItem ?

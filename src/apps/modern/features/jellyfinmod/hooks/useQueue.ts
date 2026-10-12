@@ -26,15 +26,21 @@ export const useQueueCapability = () => {
 };
 
 const QUEUE_SLOW_POLL_MS = 60 * 1000;
-const intervalOf = (poll: true | 'slow') => (poll === 'slow' ? QUEUE_SLOW_POLL_MS : QUEUE_POLL_MS);
+/** Cards and rows that show a download refresh it every 5 s, as the picker's added row does (P4.FU1). */
+const QUEUE_CARDS_POLL_MS = 5000;
+const intervalOf = (poll: true | 'slow' | 'cards') => {
+    if (poll === 'slow') return QUEUE_SLOW_POLL_MS;
+    return poll === 'cards' ? QUEUE_CARDS_POLL_MS : QUEUE_POLL_MS;
+};
 
 interface UseQueueOptions {
     enabled: boolean;
     /**
      * `true` polls every 3 s while the consumer is mounted (UX §10); `'slow'` once a minute, for a held episode's page that
-     * only watches for a pack starting on it (season packs, 2026-10-08); react-query pauses either while the tab is hidden.
+     * only watches for a pack starting on it (season packs, 2026-10-08); `'cards'` every 5 s, while a card or row on the page
+     * shows a download (P4.FU1); react-query pauses each while the tab is hidden.
      */
-    poll: boolean | 'slow';
+    poll: boolean | 'slow' | 'cards';
 }
 
 /**
@@ -89,11 +95,22 @@ const rank = (row: QueueRow, episodeId: string | null | undefined) => {
 };
 
 /**
- * The live row for one movie entry or one episode (or a pack that claimed the episode), for marks and detail lines that
- * show `grabbed` or `downloading`. Reading the queue keeps a card ring and the queue row on the same value within one
- * poll (P5.I3). Current work wins over a row needing attention, which wins over history; the newest first within each,
- * so an older pack's failure never hides an episode's current download (season packs, 2026-10-08). `poll` `'slow'`
- * reads the queue once a minute, for a page that only watches whether a pack starts on a held episode.
+ * The current row for one movie entry (`episodeId` null) or one episode (or a pack that claimed the episode) among the queue's
+ * rows. Current work wins over a row needing attention, which wins over history; the newest first within each, so an older
+ * pack's failure never hides an episode's current download (season packs, 2026-10-08).
+ */
+export const currentRowFor = (items: QueueRow[], entryId: string, episodeId: string | null | undefined): QueueRow | undefined => {
+    // A pack is one row with no episode of its own; it stands for every episode it claimed.
+    const rows = items.filter(row => row.entry?.id === entryId
+        && (episodeId ? row.episode?.id === episodeId || !!row.pack?.episodes.some(episode => episode.episodeId === episodeId) :
+            !row.episode && !row.pack));
+    return [...rows].sort((a, b) => rank(b, episodeId) - rank(a, episodeId) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+};
+
+/**
+ * The live row for one movie entry or one episode, for marks and detail lines that show `grabbed` or `downloading`. Reading
+ * the queue keeps the detail line and the queue row on the same value within one poll (P5.I3). `poll` `'slow'` reads the
+ * queue once a minute, for a page that only watches whether a pack starts on a held episode.
  */
 export const useQueueRowFor = (entryId: string | undefined, episodeId: string | null | undefined, active: boolean,
     poll: boolean | 'slow' = true):
@@ -101,11 +118,7 @@ export const useQueueRowFor = (entryId: string | undefined, episodeId: string | 
     const capability = useQueueCapability();
     const queue = useQueue({ enabled: active && capability.available && !!entryId, poll });
     if (!active || !capability.available || !entryId) return undefined;
-    // A pack is one row with no episode of its own; it stands for every episode it claimed.
-    const rows = queue.data?.items.filter(row => row.entry?.id === entryId
-        && (episodeId ? row.episode?.id === episodeId || !!row.pack?.episodes.some(episode => episode.episodeId === episodeId) :
-            !row.episode && !row.pack)) ?? [];
-    return [...rows].sort((a, b) => rank(b, episodeId) - rank(a, episodeId) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+    return currentRowFor(queue.data?.items ?? [], entryId, episodeId);
 };
 
 /**

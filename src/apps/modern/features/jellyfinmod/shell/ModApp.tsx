@@ -12,6 +12,7 @@ import { persister, queryClient } from 'utils/query/queryClient';
 
 import ModAppRouter from './ModAppRouter';
 import { installDpadModals } from './dpadModals';
+import DownloadMarks from '../integration/downloadMarks';
 import JellyfinModQueryClientEventHandler from '../integration/queryClientEventHandler';
 
 /**
@@ -43,6 +44,7 @@ const ModApp = () => (
                 <WebConfigProvider>
                     <QueryClientEventHandler />
                     <JellyfinModQueryClientEventHandler />
+                    <DownloadMarks />
                     <ModAppRouter />
                 </WebConfigProvider>
             </UserSettingsProvider>

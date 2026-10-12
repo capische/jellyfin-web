@@ -1,0 +1,192 @@
+/* JellyfinMod — a download's look, wherever it shows (P4.FU1, user-approved design 2026-10-12; UX §3.3).
+ *
+ * One set for the release picker's added row, the season page's and list views' rows and the cards: amber `#ffb300` is the
+ * app's one progress colour (also the light scheme's: 4.6:1 on white), stalled a darker amber, a failure red at its last
+ * value, importing a full bar that breathes. The figure on white takes a darker amber, as the picker's did. Additive only:
+ * every class is `jfmod-`, sizes are in `em` (TV 125 %, mobile 90 %), and no flex gap, min() or max() for older TV engines.
+ */
+
+:root {
+    --jfmod-dl: #ffb300;
+    --jfmod-dl-stalled: #e0a030;
+    --jfmod-dl-failed: #e53935;
+    --jfmod-dl-text: #ffb300;
+    --jfmod-dl-text-stalled: #e0a030;
+    --jfmod-dl-text-failed: #ff7b72;
+    --jfmod-dl-track: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] {
+    --jfmod-dl-text: #9a6700;
+    --jfmod-dl-text-stalled: #8d5a00;
+    --jfmod-dl-text-failed: #c62828;
+    --jfmod-dl-track: rgba(0, 0, 0, 0.1);
+}
+
+/* The bar: a track and the amber fill; where it sits is its placement class's (the picker's `.jfmod-addedBar`, a row's, a
+ * card's). */
+.jfmod-dlBar {
+    display: block;
+    overflow: hidden;
+    border-radius: 0.08em;
+    background: var(--jfmod-dl-track);
+    pointer-events: none;
+}
+
+.jfmod-dlBar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 0.08em;
+    background: var(--jfmod-dl);
+}
+
+.jfmod-dlBar--stalled .jfmod-dlBar-fill { background: var(--jfmod-dl-stalled); }
+.jfmod-dlBar--failed .jfmod-dlBar-fill { background: var(--jfmod-dl-failed); }
+
+.jfmod-dlBar--importing .jfmod-dlBar-fill {
+    animation: jfmod-dlBreathe 1.2s ease-in-out infinite;
+}
+
+@keyframes jfmod-dlBreathe {
+    0%,
+    100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* The figure: `42% · 12 min left`, `Queued`, `42% · stalled`, `Importing…`, `Failed · reason`. */
+.jfmod-dlFigure {
+    color: var(--jfmod-dl-text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.jfmod-dlFigure--queued { color: var(--jfmod-sec, rgba(255, 255, 255, 0.7)); }
+.jfmod-dlFigure--stalled { color: var(--jfmod-dl-text-stalled); }
+.jfmod-dlFigure--failed { color: var(--jfmod-dl-text-failed); }
+.jfmod-dlFigure--stale { opacity: 0.55; }
+
+[data-theme='light'] .jfmod-dlFigure--queued { color: var(--jfmod-sec, rgba(0, 0, 0, 0.6)); }
+
+/* Downloading wins over Not Downloaded and Unaired in the card's corner. */
+.jfmod-dlCard .jfmod-mark--none,
+.jfmod-dlCard .jfmod-mark--unaired {
+    display: none;
+}
+
+/* A season page's or list view's row: the bar along its bottom edge, inset like the row's content, and the figure at its
+ * end, where the Not Downloaded icon would be (downloading wins over it). */
+.jfmod-dlRow {
+    position: relative;
+}
+
+.jfmod-dlRowBar {
+    position: absolute;
+    right: 0.6em;
+    bottom: 0;
+    left: 0.6em;
+    height: 0.16em;
+}
+
+.jfmod-dlRowFigure {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 0 0.4em;
+    font-size: 0.8em;
+}
+
+/* A failure keeps the Not Downloaded button beside its figure, so the episode can be searched again. */
+.jfmod-dlRow:not(.jfmod-dlRow--failed) .jfmod-mark--none {
+    display: none;
+}
+
+/* A card: the bar along the poster's bottom edge over a dark track, beneath nothing and with no figure. While the card
+ * downloads the mod draws both layers, the download in amber and the watched part in the primary on top (read from
+ * upstream's own bar, which hides meanwhile: its opaque track would cover the amber). */
+.jfmod-dlCardBar {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    height: 0.24em;
+    border-radius: 0 0 0.2em 0.2em;
+    background: rgba(0, 0, 0, 0.45);
+
+    .jfmod-dlBar-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        border-radius: 0;
+
+        [dir="ltr"] & { left: 0; }
+        [dir="rtl"] & { right: 0; }
+    }
+}
+
+/* The watched layer keeps the primary in every state of the download beneath it, and never breathes. */
+.jfmod-dlBar .jfmod-dlBar-fill.jfmod-dlBar-watched {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    animation: none;
+}
+
+.jfmod-dlCard .itemProgressBar,
+.jfmod-dlCard .itemLinearProgress {
+    visibility: hidden;
+}
+
+/* The arrow: white inside upstream's count pill, before the number (the pill widens with it); amber in the dark disc on a card
+ * with no count. It bobs 0.2em every 1.4 s, transform only, and rests under reduced motion. */
+.countIndicator.jfmod-countArrow {
+    width: auto;
+    min-width: 2em;
+    box-sizing: border-box;
+    padding: 0 0.5em 0 0.35em;
+    font-variant-numeric: tabular-nums;
+
+    &::before {
+        content: '';
+        display: block;
+        flex: 0 0 auto;
+        width: 1.05em;
+        height: 1.05em;
+        margin-right: 0.1em;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4V17'/%3E%3Cpath d='M6.5 11.5L12 17L17.5 11.5'/%3E%3C/svg%3E") center / contain no-repeat;
+        animation: jfmod-dlBob 1.4s ease-in-out infinite;
+    }
+
+    [dir="rtl"] &::before {
+        margin-right: 0;
+        margin-left: 0.1em;
+    }
+}
+
+// Two classes, so the mark's own white (fileStateMark.scss) never wins, whichever bundle loads first.
+.jfmod-mark.jfmod-mark--downloading {
+    color: var(--jfmod-dl);
+
+    svg {
+        animation: jfmod-dlBob 1.4s ease-in-out infinite;
+    }
+}
+
+/* Inside upstream's indicator cluster the disc comes first, before the played tick. */
+.cardIndicators > .jfmod-mark--downloading {
+    position: static;
+
+    [dir="ltr"] & { margin-right: 0.25em; }
+    [dir="rtl"] & { margin-left: 0.25em; }
+}
+
+@keyframes jfmod-dlBob {
+    0%,
+    100% { transform: translateY(-0.08em); }
+    50% { transform: translateY(0.12em); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-dlBar--importing .jfmod-dlBar-fill,
+    .countIndicator.jfmod-countArrow::before,
+    .jfmod-mark--downloading svg {
+        animation: none;
+    }
+}

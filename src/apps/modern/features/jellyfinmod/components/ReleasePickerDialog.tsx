@@ -10,6 +10,7 @@ import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, grabRelease, removeQueueRow, searchReleases } from '../api/modApi';
+import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
@@ -21,6 +22,7 @@ import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
 import { flatButtonClass } from '../utils/flatButton';
 
 import './interFont.scss';
+import './downloadProgress.scss';
 import './releasePicker.scss';
 
 export interface ReleasePickerEpisode {
@@ -289,16 +291,6 @@ const coverageText = (candidate: ReleaseCandidate, search: ReleaseSearch | undef
     return 'Seasons ' + seasons[0] + '–' + seasons[seasons.length - 1] + ' · ' + episodes;
 };
 
-/** What the added row's download looks like (2026-10-12, §1b): a bar along the row's bottom and a figure on its marks line. */
-interface AddedProgress {
-    kind: 'queued' | 'downloading' | 'stalled' | 'importing' | 'failed';
-    /** 0..100; null draws the track only. */
-    percent: number | null;
-    text: string;
-    /** The client could not be read: the last value, dimmed. */
-    stale: boolean;
-}
-
 /**
  * The added row (user, 2026-10-12, §1): the tick takes the Add slot and the X the Replace slot. While the grab is held or being
  * sent, Add shows the falling arrow and the X cancels at once; once the client has the torrent, Add is a green tick and the X
@@ -310,16 +302,17 @@ interface AddedRow {
     /** A cancel or removal is under way, or the queue row is not read yet. */
     xOff: boolean;
     onX: () => void;
-    progress: AddedProgress | null;
+    progress: DownloadProgress | null;
 }
 
-const ProgressFigure: FC<{ progress: AddedProgress }> = ({ progress }) =>
-    <span className={classNames('jfmod-addedFigure', 'jfmod-addedFigure--' + progress.kind, { 'jfmod-addedFigure--stale': progress.stale })}
+// The figure and the bar share their colours with the season page's rows and the cards (downloadProgress.scss, P4.FU1).
+const ProgressFigure: FC<{ progress: DownloadProgress }> = ({ progress }) =>
+    <span className={classNames('jfmod-addedFigure jfmod-dlFigure', 'jfmod-dlFigure--' + progress.kind, { 'jfmod-dlFigure--stale': progress.stale })}
         aria-live='off'>{progress.text}</span>;
 
-const ProgressBar: FC<{ progress: AddedProgress }> = ({ progress }) =>
-    <span className={classNames('jfmod-addedBar', 'jfmod-addedBar--' + progress.kind)} aria-hidden='true'>
-        <span className='jfmod-addedBar-fill' style={{ width: (progress.percent ?? 0) + '%' }} />
+const ProgressBar: FC<{ progress: DownloadProgress }> = ({ progress }) =>
+    <span className={classNames('jfmod-addedBar jfmod-dlBar', 'jfmod-dlBar--' + progress.kind)} aria-hidden='true'>
+        <span className='jfmod-dlBar-fill' style={{ width: (progress.percent ?? 0) + '%' }} />
     </span>;
 
 const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null }> = ({ candidate, search, added }) =>
@@ -856,35 +849,6 @@ const useEpisodeList = (given: ReleasePickerEpisode[], load: (() => Promise<Rele
     return { episodes: loaded ?? given, loading, listError };
 };
 
-/** `12 min left`, `1 h 5 min left`. */
-const etaText = (seconds: number) => {
-    const minutes = Math.max(1, Math.round(seconds / 60));
-    if (minutes < 60) return minutes + ' min left';
-    const rest = minutes % 60;
-    return Math.floor(minutes / 60) + ' h' + (rest ? ' ' + rest + ' min' : '') + ' left';
-};
-
-const IMPORTING = new Set(['identifying', 'linking', 'scanning']);
-
-/**
- * The added row's bar and figure from its queue row (§1b): queued, downloading, stalled, importing, failed or blocked. A client
- * that cannot be read (`unknown`) keeps the last value, dimmed.
- */
-const progressOf = (row: QueueRow | null, last: QueueRow | null): AddedProgress => {
-    const stale = row?.state === 'unknown';
-    const shown = stale ? last : row;
-    const percent = shown?.progress === null || shown?.progress === undefined ? null : Math.floor(shown.progress * 100);
-    if (!shown || shown.state === 'queued' || percent === null) {
-        return { kind: 'queued', percent: null, text: 'Queued', stale };
-    }
-    if (IMPORTING.has(shown.state)) return { kind: 'importing', percent: 100, text: 'Importing…', stale };
-    if (shown.state === 'stalled') return { kind: 'stalled', percent, text: percent + '% · stalled', stale };
-    if (shown.state === 'failed' || shown.state === 'blocked') {
-        return { kind: 'failed', percent, text: 'Failed · ' + (shown.message ?? shown.reason ?? 'see the download queue'), stale };
-    }
-    return { kind: 'downloading', percent, text: percent + '%' + (shown.etaSeconds ? ' · ' + etaText(shown.etaSeconds) : ''), stale };
-};
-
 interface QueueRead {
     grabId: string;
     row: QueueRow | null;
@@ -1001,7 +965,7 @@ const addedView = ({ accepted, isAdmin, queue, removing, cancelling, cancel, rem
         x: isAdmin ? 'remove' : null,
         xOff: !queue?.row || removing,
         onX: remove,
-        progress: queue?.denied ? null : progressOf(queue?.row ?? null, queue?.last ?? null)
+        progress: queue?.denied ? null : downloadProgress(queue?.row ?? null, queue?.last ?? null)
     };
 };
 
