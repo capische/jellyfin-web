@@ -22,7 +22,7 @@ never loaded. The fix has three parts:
 
 Nothing else changes: no new table or column, no migration, no new TMDB call path, no new background work. What this
 loses is that a series nobody opens keeps today's short list. A one-time bulk fill would avoid that, at the cost of
-about 1,000 TMDB calls and a library-wide change to episode binding at once.
+about 420 TMDB calls and a library-wide change to episode binding at once.
 
 ## 1. How a discovered series is identified at TMDB
 
@@ -51,8 +51,8 @@ entry page), through the existing Refresh endpoint.**
 
 | Option | Cost | Verdict |
 | --- | --- | --- |
-| On demand, admin opens the picker | 1 + seasons TMDB calls, 4 in parallel (`TmdbClient.GetEpisodesAsync`, `MaxDegreeOfParallelism = 4`), once per series an admin actually opens. A 5-season show is 6 calls, about 1–2 s. | **Chosen.** Covers the path the user uses (picking a release), costs nothing for series nobody opens, and changes binding only for those series. |
-| At reconciliation (backfill) | Every discovered series at once: about 212 series × (1 + ~4 seasons) ≈ 1,000 calls on 28096, each followed by a write under the library lease and a series re-reconcile on the Pi. | Not chosen. It slows the first backfill and changes binding behaviour (see §4) for the whole library at once. |
+| On demand, admin opens the picker | 2 TMDB calls (series details, then every season appended; one more per further 20 seasons), once per series an admin actually opens. A 5-season show is 2 calls. | **Chosen.** Covers the path the user uses (picking a release), costs nothing for series nobody opens, and changes binding only for those series. |
+| At reconciliation (backfill) | Every discovered series at once: about 212 series × 2 ≈ 420 calls on 28096, each followed by a write under the library lease and a series re-reconcile on the Pi. | Not chosen. It slows the first backfill and changes binding behaviour (see §4) for the whole library at once. |
 | In the daily metadata refresh (`AutomationRunner.RefreshAiringSeriesAsync`) | Runs only when automation is on and acquisition is ready, and only for monitored series. | Not chosen. A discovered series is unmonitored and automation is often off. |
 | GET entry detail fetches inline | Adds TMDB latency to a page load. | Not chosen. It would slow page loads. |
 
@@ -250,11 +250,11 @@ Per CLAUDE.md: real HTTP boundary E2E, no unit tests, isolated instances only, n
    (recommended). The alternative is a new missing/unaired episode list on the native series page, which needs a
    mockup first.
 3. **When to load:** on demand when an administrator opens the picker (recommended). The alternative is a one-time
-   background fill of every discovered series, about 1,000 TMDB calls on 28096 and a library-wide binding change at
+   background fill of every discovered series, about 420 TMDB calls on 28096 and a library-wide binding change at
    once.
 
-**Estimate (agent time).** The plugin side (tasks 1–3) is about one hour of one 5-hour window, suites included. The web
-side (tasks 4–7) is about 1.5 hours, plus the first-look gate. One Codex review at the end. In total, under one
+**Estimate (agent time).** The plugin side (tasks 1–4) is about one hour of one 5-hour window, suites included. The web
+side (tasks 5–8) is about 1.5 hours, plus the first-look gate. One Codex review at the end. In total, under one
 5-hour window and about 3–5% of the weekly allowance.
 
 ## Tasks for the implementer
@@ -271,13 +271,16 @@ Plugin (`plugin-nextrelease`, branch `next-release`):
      that event.
 3. **p1.fu3** `test(catalog,p1.fu3): cover the full episode list of a discovered series`. Add the Phase 1 smoke cases in
    §6, then run the Mac suites.
+4. **p1.fu4** `perf(catalog,p1.fu4): fetch a series' seasons in one TMDB request`: `TmdbClient.GetEpisodesAsync`
+   appends up to 20 seasons per request (`append_to_response=season/N`) and reads any season TMDB leaves out on its
+   own. A series takes 2 requests: its details, then every season appended.
 
 Web (`jellyfin-web-nextrelease`, branch `next-release`, after the other agent's work lands):
 
-4. **p1.fu4** `feat(release-picker,p1.fu4): load a discovered series' full episode list when the picker opens`: the
+5. **p1.fu5** `feat(release-picker,p1.fu5): load a discovered series' full episode list when the picker opens`: the
    type, the helper, the picker loading row and the failure line.
-5. **p1.fu5** `feat(entry-page,p1.fu5): load the full episode list on a file-less series page`.
-6. **p1.fu6** `docs(api,p1.fu6): document episodeListLoaded and episodes_listed`, in `API.md`. Update the PLAN.md entry
+6. **p1.fu6** `feat(entry-page,p1.fu6): load the full episode list on a file-less series page`.
+7. **p1.fu7** `docs(api,p1.fu7): document episodeListLoaded and episodes_listed`, in `API.md`. Update the PLAN.md entry
    to *built (not accepted)*.
-7. **p1.fu7** Live: the first look on one local environment, then the matrix (Chromium, real Chrome; desktop, mobile,
+8. **p1.fu8** Live: the first look on one local environment, then the matrix (Chromium, real Chrome; desktop, mobile,
    TV), then the Codex review of both diffs.
