@@ -3,6 +3,7 @@ import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-ite
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
+import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import { getEntries } from '../api/modApi';
@@ -238,11 +239,17 @@ const drawRow = (row: HTMLElement, progress: DownloadProgress | null) => {
     setWidth(bar.firstElementChild as HTMLElement, progress.percent);
     // Upstream's React list rows wrap their content once (`.listItem-content`); the legacy rows and the mod's do not.
     const line = ownChild(row, 'listItem-content') ?? row;
-    let figure = ownChild(line, 'jfmod-dlRowFigure');
+    let figure = row.querySelector<HTMLElement>('.jfmod-dlRowFigure') ?? undefined;
     if (!figure) figure = document.createElement('span');
     setClass(figure, 'jfmod-dlFigure jfmod-dlRowFigure jfmod-dlFigure--' + progress.kind + (progress.stale ? ' jfmod-dlFigure--stale' : ''));
     if (figure.textContent !== progress.text) figure.textContent = progress.text;
     const body = ownChild(line, 'listItemBody');
+    // On the phone the row's end has no room beside its buttons (the title shrank to "1. Leave…" on 28096): the figure is the
+    // last line of the row's text instead.
+    if (layoutManager.mobile && body) {
+        if (body.lastElementChild !== figure) body.appendChild(figure);
+        return;
+    }
     if (body ? body.nextElementSibling !== figure : figure.parentElement !== line) line.insertBefore(figure, body ? body.nextSibling : null);
 };
 
