@@ -81,6 +81,7 @@
 // An eligible row with its actions (season packs, 2026-10-08): the grab button takes the line, Add and Replace follow it as
 // sibling buttons, so nothing is nested and each is its own D-pad stop.
 .jfmod-releaseItem {
+    position: relative;
     display: flex;
     margin: 0 0 0.1em;
     border-radius: 0.2em;
@@ -91,6 +92,11 @@
         min-width: 0;
         margin: 0;
     }
+}
+
+// The added row's bar sits along the row button's bottom edge (2026-10-12).
+.jfmod-releaseItem--added > .jfmod-releaseRow {
+    position: relative;
 }
 
 // The mouse hover covers the whole row, its Add and Replace buttons too (user, 2026-10-11).
@@ -257,9 +263,146 @@
     display: block;
 }
 
+// Add while the torrent goes to the client (I1 "Drop", user 2026-10-12): a down arrow falls onto a tray line and repeats, in
+// place of the pulsing plus. The arrow and tray stand by in Add's glyph; translateY is in the glyph's own 24-unit space.
+.jfmod-releaseGlyph-drop {
+    display: none;
+}
+
+.jfmod-releaseAction--add.jfmod-releaseAction--working {
+    .jfmod-releaseGlyph-plus {
+        display: none;
+    }
+
+    .jfmod-releaseGlyph-drop {
+        display: inline;
+    }
+}
+
+.jfmod-releaseGlyph-fall {
+    animation: jfmod-releaseFall 1.1s ease-in infinite;
+}
+
+.jfmod-releaseGlyph-tray {
+    opacity: 0.6;
+}
+
+@keyframes jfmod-releaseFall {
+    0% {
+        transform: translateY(-5px);
+        opacity: 0;
+    }
+
+    25% { opacity: 1; }
+
+    80% {
+        transform: translateY(3px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(5px);
+        opacity: 0;
+    }
+}
+
 .jfmod-releaseRow--rejected {
     cursor: default;
     opacity: 0.75;
+}
+
+// The added row's download (2026-10-12, §1b): a thin bar along the row's bottom edge over a faint track, inset from the rounded
+// corners, and the figure at the right end of the marks line. Amber, the one progress colour of the app (user, 2026-10-12);
+// stalled keeps its own darker amber, a failure is red at the last value, and importing breathes at full width.
+.jfmod-addedBar {
+    position: absolute;
+    right: 0.8em;
+    bottom: 0;
+    left: 0.8em;
+    height: 0.16em;
+    overflow: hidden;
+    border-radius: 0.08em;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.jfmod-addedBar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 0.08em;
+    background: #ffb300;
+}
+
+.jfmod-addedBar--stalled .jfmod-addedBar-fill { background: #e0a030; }
+.jfmod-addedBar--failed .jfmod-addedBar-fill { background: #e53935; }
+
+.jfmod-addedBar--importing .jfmod-addedBar-fill {
+    animation: jfmod-addedBreathe 1.2s ease-in-out infinite;
+}
+
+@keyframes jfmod-addedBreathe {
+    0%,
+    100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+.jfmod-addedFigure {
+    align-self: center;
+    margin-left: auto;
+    padding-left: 0.6em;
+    font-size: 74%;
+    color: #ffb300;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.jfmod-addedFigure--queued { color: var(--jfmod-sec, rgba(255, 255, 255, 0.7)); }
+.jfmod-addedFigure--stalled { color: #e0a030; }
+.jfmod-addedFigure--failed { color: #ff7b72; }
+.jfmod-addedFigure--stale { opacity: 0.55; }
+
+// The indexer name as a link (user, 2026-10-12): the copy inside the row's button keeps the column's place, and the link, the
+// item's last child, is laid over it (IndexerLink measures the box), so it looks exactly like the plain name at rest.
+.jfmod-releaseCol--linked {
+    visibility: hidden;
+}
+
+.jfmod-releaseIndexerLink {
+    position: absolute;
+    // Shown once it is placed over the name.
+    visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    border-radius: 0.15em;
+    font-size: 74%;
+    line-height: 1.3;
+    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    opacity: 0.9;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.12em #00a4dc;
+    }
+}
+
+// The file name under the question of Remove the Torrent.
+.jfmod-confirmName {
+    display: block;
+    margin-top: 0.3em;
+    font-size: 80%;
+    opacity: 0.55;
+    word-break: break-all;
 }
 
 // A row (release picker redesign, 2026-10-10): line 1 holds the quality, flags and languages at the left and three fixed
@@ -564,6 +707,11 @@
         margin-top: 0.05em;
         align-items: center;
     }
+
+    .jfmod-addedBar {
+        right: 0.5em;
+        left: 0.5em;
+    }
 }
 
 .jfmod-releaseReasons {
@@ -643,6 +791,12 @@
     > .jfmod-releaseItem {
         opacity: 0.3;
     }
+}
+
+// While a grab holds the added row, the other rows dim (the approved sheet, 2026-10-12); they come back when it is cancelled,
+// removed or imported.
+.jfmod-releasePicker--holding .jfmod-releaseItem:not(.jfmod-releaseItem--added) {
+    opacity: 0.35;
 }
 
 // The search block (docs/jellyfinmod/design/release-picker-searching.md): the G2 torrent ring and one line per indexer. The ring
@@ -839,6 +993,19 @@
         --jfmod-btn: #c62828;
     }
 
+    .jfmod-addedBar {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    // The amber reads too faint as text on white; the figure takes a darker amber, the bar keeps the app's.
+    .jfmod-addedFigure {
+        color: #9a6700;
+    }
+
+    .jfmod-addedFigure--queued { color: var(--jfmod-sec, rgba(0, 0, 0, 0.6)); }
+    .jfmod-addedFigure--stalled { color: #8d5a00; }
+    .jfmod-addedFigure--failed { color: #c62828; }
+
     .jfmod-searchIndexer--failed .jfmod-searchIndexer-state,
     .jfmod-searchBlock--error .jfmod-searchGlyph,
     .jfmod-searchBlock--error .jfmod-searchCaption,
@@ -875,7 +1042,14 @@
     .jfmod-searchIndexer-dot,
     .jfmod-releaseAction--working .jfmod-releaseGlyph-plus,
     .jfmod-releaseAction--working .jfmod-releaseGlyph-swap,
-    .jfmod-releaseAction--done .jfmod-releaseGlyph-tick {
+    .jfmod-releaseAction--done .jfmod-releaseGlyph-tick,
+    .jfmod-addedBar--importing .jfmod-addedBar-fill {
+        animation: none;
+    }
+
+    // The arrow rests on the tray.
+    .jfmod-releaseGlyph-fall {
+        transform: translateY(4px);
         animation: none;
     }
 
@@ -951,7 +1125,8 @@
     }
 
     .btnCancel.jfmod-releaseDialogClose,
-    .jfmod-namesToggle {
+    .jfmod-namesToggle,
+    .jfmod-clientOpen {
         position: relative;
         display: flex;
         align-items: center;
@@ -983,6 +1158,16 @@
             .jfmod-namesGlyph-off {
                 display: none;
             }
+        }
+    }
+
+    // Open Transmission, between Show Names and Close (user, 2026-10-12): a link drawn as the same round grey button, hidden
+    // until an administrator's settings read gives the client's web link.
+    .jfmod-clientOpen {
+        text-decoration: none;
+
+        &[hidden] {
+            display: none;
         }
     }
 
@@ -1093,33 +1278,24 @@
         opacity: 1;
     }
 
-    // The grab block under its row, and its two buttons (the mock's .gs, .btn.raised and .btn.flat).
+    // The grab block under its row, and its Open in Client link (the mock's .gs and .btn.flat).
     .jfmod-grabStatus {
         margin: 0.1em 0 0.6em 0.8em;
         padding: 0.5em 0.8em;
         font-size: 0.95em;
     }
 
-    .jfmod-grabCancel,
     .jfmod-grabOpen {
         box-sizing: border-box;
         height: auto;
         min-height: 0;
         min-width: 0;
-        padding: 0.35em 1em;
+        padding: 0.35em 0.4em;
         border-radius: 0.2em;
         font-size: 0.9em;
         font-weight: 600;
         line-height: 1.35;
         text-transform: none;
-    }
-
-    .jfmod-grabCancel {
-        color: #fff;
-    }
-
-    .jfmod-grabOpen {
-        padding: 0.35em 0.4em;
         color: #00a4dc;
     }
 
@@ -1147,12 +1323,6 @@
             color: var(--jfmod-btn, var(--jfmod-sec));
         }
     }
-
-    // Cancel is a raised button: the theme paints a focused one primary blue, which a click left behind. Outside the TV (where that
-    // blue is the focus mark) it keeps the raised grey.
-    .jfmod-grabCancel:not(.show-focus):focus {
-        background: var(--jf-palette-Button-inheritContainedBg, #292929);
-    }
 }
 
 .layout-desktop .formDialog.jfmod-releaseDialog {
@@ -1163,9 +1333,10 @@
     border-radius: 0;
     box-shadow: none;
 
-    // Show Names on a TV: the white ring of the design (.16em wide, .12em off the circle), the glyph itself unchanged (no blue,
+    // Show Names and the added row's X on a TV: the white ring of the design (.16em wide, .12em off the circle), the glyph itself unchanged (no blue,
     // no scaling). Upstream's round buttons carry `outline: none !important`, so the ring is a pair of shadows.
-    .jfmod-namesToggle:focus {
+    .jfmod-namesToggle:focus,
+    .jfmod-releaseAction--x:focus {
         box-shadow: 0 0 0 0.12em var(--jfmod-paper), 0 0 0 0.28em var(--jfmod-focus, #fff);
         transform: none;
     }
