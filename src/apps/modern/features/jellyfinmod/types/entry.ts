@@ -87,6 +87,35 @@ export interface TmdbMetadata {
      * makes opening the series load its list once more.
      */
     episodeRatings?: Record<string, number> | null;
+    /**
+     * The series' regular cast as TMDB credits it, by billing, at most 15 (P1.FU15); absent when the series' metadata predates
+     * it, which makes opening the series load its list once more, and empty when TMDB names nobody.
+     */
+    cast?: TmdbCastCredit[] | null;
+}
+
+/** A person TMDB credits as cast (P1.FU15): a series' regular, or an episode's guest star. */
+export interface TmdbCastCredit {
+    id: number;
+    name: string;
+    character?: string | null;
+    profilePath?: string | null;
+    order: number;
+}
+
+/** A person on an episode's crew whom Jellyfin keeps (P1.FU15): `type` is Jellyfin's person kind, `job` TMDB's job. */
+export interface TmdbCrewCredit {
+    id: number;
+    name: string;
+    type: 'Director' | 'Writer' | 'Producer';
+    job: string;
+    profilePath?: string | null;
+}
+
+/** An episode's guest stars and crew as Jellyfin's TMDB provider keeps them for an episode it has (P1.FU15). */
+export interface EpisodeCredits {
+    guestStars: TmdbCastCredit[];
+    crew: TmdbCrewCredit[];
 }
 
 export interface EntryEpisode {
@@ -117,6 +146,8 @@ export interface EntryEpisode {
     retentionWarning?: RetentionWarning | null;
     /** Playable versions, empty unless the episode has a file; absent from plugins without `versions` (P6.M8). */
     versions?: VersionDto[];
+    /** TMDB's guest stars and crew (P1.FU15); null until the series' list is loaded with them, absent from older plugins. */
+    credits?: EpisodeCredits | null;
 }
 
 /** A running retention window, shown to every viewer (PHASE10 Q8, Q11). */

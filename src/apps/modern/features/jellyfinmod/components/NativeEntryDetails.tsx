@@ -477,7 +477,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
     if (isSeasonPage) {
-        return <MissingEpisodeRows api={api} userId={userId} view={view} detail={detail.data} season={seasonOf ?? 0}
+        return <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail.data} season={seasonOf ?? 0}
             native={{ seriesItemId: seriesId ?? '', seasonItemId: itemId }} canAcquire={canAcquire} onChanged={refreshAfterPlayed} />;
     }
     const entry = detail.data.entry;

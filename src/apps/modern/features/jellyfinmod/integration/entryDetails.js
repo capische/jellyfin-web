@@ -8,6 +8,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntry } from '../api/modApi';
 import EntryDetails from '../components/EntryDetails';
+import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
 import { getTmdbImage } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
@@ -72,6 +73,17 @@ export default function initializeEntryDetails(view, params) {
             // `season=N` is the mod's page for a season Jellyfin has no item for (P1.FU11): it stays, file or no file.
             const season = Number(params.season);
             const isSeason = detail.entry.mediaType === 'series' && params.season !== undefined && Number.isInteger(season) && season >= 0;
+            // `&episode=M` on it is the mod's page for an episode Jellyfin has no item for (P1.FU15); once Jellyfin has the
+            // episode, its own page opens instead.
+            const episodeNumber = Number(params.episode);
+            const isEpisode = isSeason && params.episode !== undefined && Number.isInteger(episodeNumber) && episodeNumber >= 0;
+            const held = isEpisode ? detail.episodes.find(episode => episode.seasonNumber === season
+                && episode.episodeNumber === episodeNumber && episode.availability === 'onDisk' && episode.jellyfinItemId) : undefined;
+            if (held) {
+                window.location.replace('#/details?id=' + encodeURIComponent(held.jellyfinItemId)
+                    + '&serverId=' + encodeURIComponent(client.serverId()));
+                return;
+            }
             if (detail.entry.jellyfinItemId && !isSeason) {
                 window.location.replace('#/details?id=' + encodeURIComponent(detail.entry.jellyfinItemId)
                     + '&serverId=' + encodeURIComponent(client.serverId()));
@@ -84,11 +96,15 @@ export default function initializeEntryDetails(view, params) {
             if (backdrop && image && userSettings.detailsBanner()) backdrop.style.backgroundImage = `url("${image}")`;
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
-            unmount = isSeason ?
-                renderComponent(EntrySeasonDetails, { api, userId: client.getCurrentUserId(), detail, season, view,
-                    isAdmin: !!user.Policy?.IsAdministrator, signal: abort.signal, focusOwnership: ownership }, renderMount) :
-                renderComponent(EntryDetails, { api, detail, view, isAdmin: !!user.Policy?.IsAdministrator,
+            const seasonProps = { api, userId: client.getCurrentUserId(), serverId: client.serverId(), detail, season, view,
+                isAdmin: !!user.Policy?.IsAdministrator, signal: abort.signal, focusOwnership: ownership };
+            const render = () => {
+                if (isEpisode) return renderComponent(EntryEpisodeDetails, { ...seasonProps, episodeNumber }, renderMount);
+                if (isSeason) return renderComponent(EntrySeasonDetails, seasonProps, renderMount);
+                return renderComponent(EntryDetails, { api, detail, view, isAdmin: !!user.Policy?.IsAdministrator,
                     serverId: client.serverId(), signal: abort.signal, focusOwnership: ownership }, renderMount);
+            };
+            unmount = render();
         } catch (error) {
             if (currentGeneration !== generation || error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
             mount.textContent = 'This entry is unavailable. Check that JellyfinMod is enabled, or return to your library.';
