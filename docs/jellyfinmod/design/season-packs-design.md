@@ -165,7 +165,10 @@ except specials (series). The requester must be able to read every one (`CanRead
 
 - **Picker scope switch** (`ReleasePickerDialog`): on an episode page one dropdown `Episode: S01E01 · Name` /
   `Season 1` / `All Seasons`, default Episode; on a series page `All Seasons`, `Season 1…n`, then the episodes, default the
-  first missing episode as today. Same line as the quality profile.
+  first missing episode as today. Same line as the quality profile. **Changed (user, 2026-10-12):** a series page offers
+  only `All Seasons` and each season with aired episodes, after the non-selectable *Choose what to search for*; an episode
+  is searched from its own page or its row on a file-less series page (that episode, its season, All Seasons). A plugin
+  without packs keeps the episode list.
 - **Rows**: coverage chips (`Season 2 · 8 episodes`, `Complete · S01–S05`), and where the scope holds files two actions at
   the row's end: **+ Add** and a **Replace** icon (`swap_horiz`, red confirm through upstream's `confirm`: "Replace the
   files of N episodes? Their current files are removed once the new ones are in the library."). Enter on a row is the
