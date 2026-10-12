@@ -397,8 +397,11 @@ const summariseOverview = (data: SettingsData): Summary => {
 const summariseDiscovery = (data: SettingsData): Summary => {
     const discovery = data.discovery;
     if (!discovery) return { kind: 'off', words: 'Not loaded' };
+    // The token is optional: with none saved, discovery uses Jellyfin's built-in TMDb connection (P1.FU13).
+    if (discovery.source === 'jellyfin') return { kind: 'ok', words: 'Using Jellyfin\'s TMDb connection' };
     if (!discovery.tokenConfigured) return { kind: 'warn', words: discovery.apiKeyConfigured ? 'Only the v3 API key is configured' : 'No TMDB token' };
-    return discovery.verified ? { kind: 'ok', words: `Token tested ${when(discovery.verifiedAt)}` } : { kind: 'warn', words: 'Token not tested since it changed' };
+    return discovery.verified ? { kind: 'ok', words: `Using your token · tested ${when(discovery.verifiedAt)}` } :
+        { kind: 'warn', words: 'Using your token · not tested since it changed' };
 };
 
 const summariseClient = (data: SettingsData): Summary => {
@@ -639,8 +642,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
                 <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
                     test={tokenTest} save={tokenSave} />
                 <div className='fieldDescription jfmod-lead'>
-                    Used for JellyfinMod discovery only. Jellyfin&apos;s own TMDb metadata plugin keeps its separate key, so a discovery result and the item
-                    Jellyfin later creates can disagree about title, poster and language.
+                    Optional. Leave empty to use Jellyfin&apos;s built-in TMDb connection. A saved token is used instead, for JellyfinMod discovery only.
                 </div>
             </div>
         </SectionFrame>
