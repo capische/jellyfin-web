@@ -546,6 +546,25 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `7402853b1c` (runner), and the docs commit after. Mac suites (Phase 0, 1, 2, 3, 10) and Linux suites (Phase 1, 4, 5, 6) pass; typecheck,
   lint, stylelint and the production build pass. Not deployed; live check `missing-seasons-episodes.mjs` on 28096 pending;
   no Codex review yet.
+  **P1.FU15, built (not accepted) 2026-10-12: cast, guest stars and crew for a missing episode, on its own page** (user
+  2026-10-12: "yes, go ahead and implement this part too. it should be identical to what downloaded have."; [UX.md](UX.md)
+  §7.2.1, [API.md](API.md) *Cast, guest stars and crew*). Owner: Phase 1 (episode records and TMDB metadata); the P1.FU11 rows
+  open the page. Plugin: each episode keeps TMDB's guest stars and crew as Jellyfin 12.0's TMDB episode provider keeps them
+  (15 guest stars by order; directors, writers by writer, screenplay or novel, producers, 15 at most) in the new nullable
+  `Episodes.CreditsJson` column (migration `20261012095715_EpisodeCredits`, forward-only, one added column, no table rebuild;
+  it applied cleanly to a copy of 28096's database at `SeasonPacks`), returned as `credits` on every episode (null: not loaded;
+  empty lists: none); the series keeps its regular cast (TMDB's series `credits`, 15 at most) as `cast` in its metadata, read by
+  appending `credits` to the details request it already makes, or through Jellyfin's TMDb connection. A series loaded before
+  has no `cast` and loads its list once more on opening (the P1.FU14 pattern). Web: the missing episode's row (mod and native
+  season pages) opens `#/details?entryId=…&season=N&episode=M` (on the TV the row is now a stop, Right reaches its icon); the
+  page is upstream's episode layout with the plugin's data, person cards without links. Differences from a downloaded
+  episode's page: no file actions or media info; the regulars are the series' current ones, not the episode's own cast; names
+  link nowhere. Plugin `next-release` `410b380..4f92ecb` (code, migration and suites), web `next-release` `13c08e411a` (code) and
+  `7e7f59fd9f` (runner), and the docs commit after. Mac suites (Phase 0, 1 with the old-schema upgrade and the credits checks)
+  and all 14 suites (Mac and Linux, Phase 10 after writing its old-schema episode as that schema had it) pass; typecheck, lint, stylelint and the production build pass; the runner passed in
+  Chromium (456 checks) and Chrome on desktop, phone and TV against local environment alpha with both builds; the Jellyfin
+  TMDb path was read against real TMDB outside a host. Not deployed to a Pi instance; no ordinary-user run (no user with an
+  empty password); no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

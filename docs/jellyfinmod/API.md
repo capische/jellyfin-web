@@ -283,6 +283,30 @@ before P1.FU14 has `episodeRatings: null`: for such a series with a loaded list,
 web calls it when `episodeRatings` is null), after which it is answered unchanged as above. A movie's `episodeRatings` is
 null. Episode rows already carried `stillPath`, `overview`, `runtimeMinutes` and `airDate`.
 
+**Cast, guest stars and crew (P1.FU15, user 2026-10-12).** So that an episode Jellyfin has no item for shows the people a
+downloaded one shows, every episode in `episodes[]` (entry detail, EpisodeList and Refresh answers) carries `credits`:
+
+```json
+{
+  "guestStars": [{ "id": 500, "name": "Olivia Colman", "character": "Sophie Chapman", "profilePath": "/a.jpg", "order": 4 }],
+  "crew": [{ "id": 71, "name": "Tristram Shapeero", "type": "Director", "job": "Director", "profilePath": "/d.jpg" }]
+}
+```
+
+They are kept as Jellyfin 12.0's own TMDB episode provider keeps them with its default settings: at most 15 guest stars by
+TMDB's `order`, and at most 15 of the crew Jellyfin maps to a person kind (`type`: `Director` for Directing/Director, `Writer`
+for Writing/Writer, Screenplay or Novel, `Producer` for Production/Producer; every other job, Executive Producer and Story
+included, is dropped), in TMDB's order; unnamed people are left out and names trimmed. `credits` is `null` until the series'
+list is loaded with credits (every episode row after the `EpisodeCredits` migration, a row added from a library file) and has
+empty lists when TMDB names nobody. The series' `metadata` also carries `cast`: its regular cast as TMDB's series `credits`
+list it (the latest season's regulars), at most 15 named people by `order` (`id`, `name`, `character`, `profilePath`,
+`order`), `[]` when TMDB names none. All of it comes from the requests the add, the Refresh and the EpisodeList load already
+make: `credits` is appended to the series' details request (`append_to_response=external_ids,content_ratings,credits`), each
+episode's `guest_stars` and `crew` come with its season; through Jellyfin's TMDb connection the manager's series and season
+reads carry the same lists. Metadata stored before P1.FU15 has no `cast`: for such a series with a loaded list, `EpisodeList`
+runs the load once more (the web calls it when `cast` is absent or null), as for `episodeRatings`. Episode credits are stored
+in the nullable `Episodes.CreditsJson` column (migration `20261012095715_EpisodeCredits`, forward-only).
+
 ## Automatic retention
 
 Entry and episode detail uses a privacy-safe retention summary:

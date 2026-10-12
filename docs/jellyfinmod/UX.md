@@ -769,14 +769,32 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   May 2027*), the runtime in upstream's format (*42m*, *1h 2m*) and TMDB's rating with upstream's star
   (*★ 7.6*, only when TMDB rates it); unlike upstream's `listItemMediaInfo` it stays on the phone, so the
   air date does. The overview when the plugin has one (none on the phone, by upstream's own rule), no
-  play overlay, and the mark at the row's end. The administrator's icon is the row's only
-  stop; for everyone else the row is plain text and no focus stop. The D-pad walks upstream's rows
-  and the icons.
+  play overlay, and the mark at the row's end. Since P1.FU15 (user, 2026-10-12) the whole row opens the
+  episode's page (below): a click anywhere on it, its title being the link for the keyboard; the
+  administrator's icon keeps its own click and opens the picker, as on the season cards. On the TV the row
+  is a focus stop like upstream's rows (Enter opens the page) and the icon a second stop inside it: Right
+  on the row reaches the icon, Left returns. This replaces "rows are not stops".
 - **The mod's season page**, `#/details?entryId=<entry>&season=N`, for a season Jellyfin has no item
   for: upstream's detail template with the series' name, *Season N · 8 episodes · 2023* (the season's
   first air year), the TMDB season poster, TMDB's season overview where upstream puts an item's
   overview, Get a Release for the season in the header (administrators, where packs are served), and the
   season's episodes as the same mod rows in upstream's episode list.
+- **The mod's episode page**, `#/details?entryId=<entry>&season=N&episode=M` (P1.FU15, user 2026-10-12: "it
+  should be identical to what downloaded have"), for an episode Jellyfin has no item for, laid out as
+  upstream's page for a downloaded episode: the series' name over *Season N - M. Title* (both links, to
+  Jellyfin's series and season pages where it has them, else to the mod's), the meta line (the air date in
+  upstream's short form, the runtime, TMDB's rating), TMDB's still (w300, w500 on the TV) as the detail
+  image with the mark on it (else the dashed placeholder), the overview, the *Director* and *Writers* lines,
+  **Cast & Crew** (the series' regular cast with "as Character", then the directors, writers and producers,
+  one card per person with their roles joined by " / ", as upstream merges them) and **Guest Stars** (TMDB's
+  order). Person cards are upstream's people cards: TMDB's portrait (w185) or the person icon on the default
+  background, the name and the role; they link nowhere, as Jellyfin has no person items for these people
+  (on the TV they are focus stops that only scroll their row, as upstream's are). Administrators get Get a
+  Release for the episode in the header. Once Jellyfin has the episode, the route opens Jellyfin's own page.
+  Differences from a downloaded episode's page, and why: no play, played, favourite or More buttons, media
+  info or chapters (no file); the regulars are the series' current regulars from TMDB's series credits, not
+  the episode's own cast list (one more request per episode otherwise); the series backdrop, not one of the
+  episode's own; names are plain text, not links to person pages.
 - **Pickers from the marks**: a season card opens the picker on that season (*Season N*, *All
   Seasons*), an episode row on that episode (its page's scope list), a movie card as the movie page,
   a series card as the series page.
@@ -787,9 +805,9 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
 The season overview and the episode ratings are kept in the entry's TMDB metadata (`seasons[].overview`,
 `episodeRatings` by TMDB episode id), not on the episode rows, so no column was added. A series whose
 list was loaded before P1.FU14 has neither; opening it loads its list once more (the P1.FU9 load), and
-an administrator's Refresh does the same. Not shown for a missing episode: cast, guest stars and crew
-(TMDB lists them per episode, but keeping them needs a new column or table and the row opens no page
-to show them on), nor upstream's *Ends at* (nothing to play).
+an administrator's Refresh does the same. Cast, guest stars and crew came with P1.FU15: each episode's in the
+nullable `Episodes.CreditsJson` column, the series' regulars as `cast` in its metadata; a series loaded before
+loads its list once more the same way. Not shown for a missing episode: upstream's *Ends at* (nothing to play).
 
 Not in this slice: the downloading states (the two-layer progress bar, the arrow in the count pill,
 the row's percentage and time left; §3.3, P4.FU1), the card hover Get a Release (§5.7) and the
