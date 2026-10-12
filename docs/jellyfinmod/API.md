@@ -275,6 +275,14 @@ itself. The web calls it once per entry per page visit when anyone opens a serie
 of an entry with `episodeListLoaded: false`, quietly, then refetches the entry; the release picker uses the same call and
 shares the page's request. An older plugin (no field, or 404 for the route) changes nothing.
 
+**Season overviews and episode ratings (P1.FU14, user 2026-10-12).** A series' `metadata` also carries each season's
+TMDB `overview` (`seasons[].overview`, null when TMDB has none) and `episodeRatings`, TMDB's rating of each listed episode
+by TMDB episode id, one decimal, unrated episodes left out (`{"8841": 7.5}`; `{}` when none is rated). Both are written by
+the add, the Refresh and the EpisodeList load, from the same TMDB requests; no episode column holds them. Metadata stored
+before P1.FU14 has `episodeRatings: null`: for such a series with a loaded list, `EpisodeList` runs the load once more (the
+web calls it when `episodeRatings` is null), after which it is answered unchanged as above. A movie's `episodeRatings` is
+null. Episode rows already carried `stillPath`, `overview`, `runtimeMinutes` and `airDate`.
+
 ## Automatic retention
 
 Entry and episode detail uses a privacy-safe retention summary:

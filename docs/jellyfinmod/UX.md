@@ -748,24 +748,34 @@ series page and the file-less page keep their History line.
 
 A series' native pages list every season and episode the plugin knows, not only those Jellyfin
 holds. The plugin's list comes from the one entry read the page already makes, after the page-open
-TMDB load (P1.FU9); nothing new is asked of the plugin.
+TMDB load (P1.FU9); nothing new is asked of the plugin. Since P1.FU14 (user, 2026-10-12: "those must be
+imported too with all descriptions and related information - exact like when episode exists") they
+look like items that exist: TMDB's art, overview, runtime, air date and rating, from the entry's own
+data. Images come from `image.tmdb.org` (`<img loading="lazy">`, `object-fit: cover` in upstream's
+image box, so nothing moves while they load); one that fails to load (offline, a blocked CDN) falls
+back to the dashed placeholder with the number, as does a season or episode TMDB has no image for.
 
 - **Series page.** For each plugin season (specials excluded) with no Jellyfin season item, a mod card
   in upstream's Seasons row (`#listChildrenCollapsible .itemsContainer`), in season order among
-  upstream's cards, same size and card classes: a dark placeholder with a 1px dashed edge and the
-  season number, the mark top-right (§3.1), *Season N* and *8 episodes* (*1 episode*) as the footer.
+  upstream's cards, same size and card classes: TMDB's season poster (w342) in the card's image box,
+  rounded as upstream's (else a dark placeholder with a 1px dashed edge and the season number), the
+  mark top-right (§3.1), *Season N* and *8 episodes* (*1 episode*) as the footer.
   Clicking it (Enter on the TV, where the card is a focus stop and an administrator's icon a second)
   opens the mod's season page. Upstream's own season cards are untouched: no mark, no footer rewrite.
 - **Season page.** For each plugin episode with no Jellyfin episode at its number (a multi-episode
   file holds every number it spans) and not on disk, a mod row among upstream's `listView` rows in
-  episode order: a dashed 16:9 placeholder with the number, *4. Title*, the air date (*19 May 2027*)
-  as the meta line, the overview when the plugin has one (none on the phone, by upstream's own rule),
-  no play overlay or runtime, and the mark at the row's end. The administrator's icon is the row's only
+  episode order: TMDB's still (w300, w500 on the TV) in upstream's row image box (else a dashed 16:9
+  placeholder with the number), *4. Title*, the meta line in upstream's own items: the air date (*19
+  May 2027*), the runtime in upstream's format (*42m*, *1h 2m*) and TMDB's rating with upstream's star
+  (*★ 7.6*, only when TMDB rates it); unlike upstream's `listItemMediaInfo` it stays on the phone, so the
+  air date does. The overview when the plugin has one (none on the phone, by upstream's own rule), no
+  play overlay, and the mark at the row's end. The administrator's icon is the row's only
   stop; for everyone else the row is plain text and no focus stop. The D-pad walks upstream's rows
   and the icons.
 - **The mod's season page**, `#/details?entryId=<entry>&season=N`, for a season Jellyfin has no item
-  for: upstream's detail template with the series' name, *Season N · 8 episodes*, the TMDB season
-  poster, Get a Release for the season in the header (administrators, where packs are served), and the
+  for: upstream's detail template with the series' name, *Season N · 8 episodes · 2023* (the season's
+  first air year), the TMDB season poster, TMDB's season overview where upstream puts an item's
+  overview, Get a Release for the season in the header (administrators, where packs are served), and the
   season's episodes as the same mod rows in upstream's episode list.
 - **Pickers from the marks**: a season card opens the picker on that season (*Season N*, *All
   Seasons*), an episode row on that episode (its page's scope list), a movie card as the movie page,
@@ -773,6 +783,13 @@ TMDB load (P1.FU9); nothing new is asked of the plugin.
 - **How it is mounted**: DOM inserts into upstream's list, placed again by a `MutationObserver` when
   upstream redraws the list, drawn by React through portals (`components/MissingChildren.tsx`). No
   upstream file is edited.
+
+The season overview and the episode ratings are kept in the entry's TMDB metadata (`seasons[].overview`,
+`episodeRatings` by TMDB episode id), not on the episode rows, so no column was added. A series whose
+list was loaded before P1.FU14 has neither; opening it loads its list once more (the P1.FU9 load), and
+an administrator's Refresh does the same. Not shown for a missing episode: cast, guest stars and crew
+(TMDB lists them per episode, but keeping them needs a new column or table and the row opens no page
+to show them on), nor upstream's *Ends at* (nothing to play).
 
 Not in this slice: the downloading states (the two-layer progress bar, the arrow in the count pill,
 the row's percentage and time left; §3.3, P4.FU1), the card hover Get a Release (§5.7) and the
