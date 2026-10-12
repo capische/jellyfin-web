@@ -39,6 +39,8 @@ interface EntryEpisodeDetailsProps {
     isAdmin: boolean;
     signal: AbortSignal;
     focusOwnership?: FocusOwnership;
+    /** The fresh read of the entry, when the page was drawn from what was known of it (P1.FU16). */
+    update?: Promise<EntryDetail>;
 }
 
 /** One person card's data: upstream's card shows the name and, below it, the role or the person's kind. */
@@ -132,8 +134,13 @@ const DetailsLine: FC<{ label: string; names: string[] }> = ({ label, names }) =
  * Guest Stars. Administrators get Get a Release for the episode in the header.
  */
 const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, serverId, detail: initial, season, episodeNumber, view,
-    isAdmin, signal, focusOwnership }) => {
+    isAdmin, signal, focusOwnership, update }) => {
     const [detail, setDetail] = useState(initial);
+    useEffect(() => {
+        update?.then(fresh => {
+            if (!signal.aborted) setDetail(fresh);
+        }, () => undefined);
+    }, [signal, update]);
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
     const entry = detail.entry;

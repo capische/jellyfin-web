@@ -1,5 +1,4 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import { getShowApi } from '@jellyfin/sdk/lib/utils/api/show-api';
 import { useQuery } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,6 +10,7 @@ import datetime from 'scripts/datetime';
 
 import type { EntryDetail } from '../api/modApi';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
+import { nativeEpisodesQuery, nativeSeasonsQuery } from '../hooks/useEntries';
 import { airDateLong, episodeMark, seasonMark } from '../constants/fileState';
 import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
@@ -198,11 +198,8 @@ interface SeasonCardsProps {
 /** The native series page's Seasons row: one mod card per plugin season with no Jellyfin season item. */
 export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId, view, seriesItemId, detail, canAcquire, onChanged }) => {
     const container = useChildrenContainer(view);
-    const seasons = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, userId, 'NativeSeasons', seriesItemId],
-        queryFn: async ({ signal }) => (await getShowApi(api).getSeasons({ seriesId: seriesItemId, userId }, { signal })).data.Items ?? [],
-        retry: false
-    });
+    // Started by the route with the page's entry (P1.FU16).
+    const seasons = useQuery(nativeSeasonsQuery(api, userId, seriesItemId));
     const natives = useMemo<NativeOrder>(() => new Map((seasons.data ?? []).filter(item => item.Id && typeof item.IndexNumber === 'number')
         .map(item => [normalId(item.Id!), item.IndexNumber!])), [seasons.data]);
     const missing = useMemo(() => (seasons.data ? missingSeasons(detail.episodes, new Set(natives.values())) : []),
@@ -311,13 +308,9 @@ interface EpisodeRowsProps {
 /** A season page's episode list: one mod row per plugin episode with no Jellyfin episode, in episode order. */
 export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, detail, season, native, serverId, canAcquire, onChanged }) => {
     const container = useChildrenContainer(view);
-    const jellyfin = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, userId, 'NativeEpisodes', native?.seasonItemId],
-        queryFn: async ({ signal }) => (await getShowApi(api).getEpisodes({ seriesId: native!.seriesItemId, seasonId: native!.seasonItemId,
-            userId }, { signal })).data.Items ?? [],
-        enabled: !!native,
-        retry: false
-    });
+    // Started by the route with the page's entry (P1.FU16).
+    const jellyfin = useQuery({ ...nativeEpisodesQuery(api, userId, native?.seriesItemId ?? '', native?.seasonItemId ?? ''),
+        enabled: !!native });
     const ready = !native || !!jellyfin.data;
     const natives = useMemo<NativeOrder>(() => new Map((jellyfin.data ?? []).filter(item => item.Id && typeof item.IndexNumber === 'number')
         .map(item => [normalId(item.Id!), item.IndexNumber!])), [jellyfin.data]);
