@@ -89,17 +89,16 @@
 
 // The list slides open on a grid row growing from 0fr to 1fr, so it moves at its own height for the whole 0.18s (a max-height
 // of 40em was over in about 30 ms opening and waited about 140 ms before closing; user, 2026-10-12). An engine that cannot
-// animate the row (older webOS) just opens it. The panel reaches 1.4em left of the Video value, so each row's text starts
-// where the value's text does and Get Another Quality's plus hangs in that margin (user, 2026-10-12).
-$gutter: 1.4em;
+// animate the row (older webOS) just opens it. The panel is as wide as the Video value and never reaches left of it: each
+// row's text starts where the value's text does, and Get Another Quality's plus starts there too, its text after it (user,
+// 2026-10-12).
 // Where the closed value's text starts: its 0.4em padding inside its 0.135em border.
 $text-inset: 0.535em;
 
 .jfmod-fileList {
     display: grid;
     grid-template-rows: 0fr;
-    max-width: 44em + $gutter;
-    margin-left: -$gutter;
+    max-width: 44em;
     transition: grid-template-rows 0.18s ease-out;
 }
 
@@ -148,8 +147,8 @@ $text-inset: 0.535em;
     align-items: center;
     flex: 1 1 auto;
     min-width: 0;
-    // The list's 1px border is inside the gutter.
-    padding: 0.45em 0.8em 0.45em calc(#{$gutter + $text-inset} - 1px);
+    // The list's 1px border is inside the inset.
+    padding: 0.45em 0.8em 0.45em calc(#{$text-inset} - 1px);
     border: 0;
     border-radius: 0.2em;
     background: transparent;
@@ -169,10 +168,7 @@ $text-inset: 0.535em;
 }
 
 .jfmod-fileMark {
-    position: absolute;
-    left: 0;
-    width: calc(#{$gutter + $text-inset} - 1px);
-    text-align: center;
+    margin-right: 0.7em;
     color: var(--jf-palette-text-primary, #fff);
 }
 
