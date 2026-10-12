@@ -1,8 +1,10 @@
 import loading from 'components/loading/loading';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { queryClient } from 'utils/query/queryClient';
 import { renderComponent } from 'utils/reactUtils';
 
 import { getEntries } from '../api/modApi';
+import { nativeItemFacts, nativeItemKey, prefetchNativeChildren, prefetchNativeEntry } from '../hooks/useEntries';
 import NativeEntryDetails from '../components/NativeEntryDetails';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
@@ -71,24 +73,42 @@ export default function initializeNativeEntryDetails(view, params) {
         const api = client && ServerConnections.getApi(client.serverId());
         const target = view.querySelector('.detailSectionContent');
         if (!api || !target || !params.id) return;
+        const userId = client.getCurrentUserId();
+        // The page's entry is read from the moment the route is known, beside upstream's own loading, not after the reads
+        // below (P1.FU16). A season's own id finds no entry; its series' is read once its series is known.
+        prefetchNativeEntry(api, userId, params.id);
         // Asked for here rather than read out of upstream's failure. Upstream's controller does its own
         // getItem and, when the item is gone (a reclaim, a library removal), logs and leaves the page empty;
         // reading that used to mean a patch inside its catch. Owning the route means asking the same question
         // ourselves. It costs one extra request per native detail page, which is the price of the patch
-        // coming out (P7.S6, P3.T14).
+        // coming out (P7.S6, P3.T14). An item seen before (or a season listed on its series' page) is not waited for: the page
+        // draws at once from what it knows, and a read that finds the item gone still takes the page over (P1.FU16).
+        const itemKey = nativeItemKey(api, userId, params.id);
+        const known = queryClient.getQueryData(itemKey);
+        const missing = error => {
+            if (error?.status !== 404 || currentGeneration !== generation) return;
+            hide();
+            const visit = generation;
+            handleMissingNativeItem(view, params, error, () => visit === generation);
+        };
+        const read = client.getItem(userId, params.id).then(fresh => {
+            const facts = nativeItemFacts(fresh);
+            queryClient.setQueryData(itemKey, facts);
+            return facts;
+        });
+        if (known) read.catch(missing);
         let item;
         let user;
         try {
-            [item, user] = await Promise.all([
-                client.getItem(client.getCurrentUserId(), params.id),
-                client.getCurrentUser()
-            ]);
+            [item, user] = await Promise.all([known ?? read, client.getCurrentUser()]);
         } catch (error) {
             if (currentGeneration !== generation) return;
             await handleMissingNativeItem(view, params, error, () => currentGeneration === generation);
             return;
         }
         if (currentGeneration !== generation) return;
+        if (item?.Type === 'Season' && item.SeriesId) prefetchNativeEntry(api, userId, item.SeriesId);
+        prefetchNativeChildren(api, userId, params.id, item ?? {});
         // Shuffle stays in the header only for shows watched in any order; elsewhere it moves into More (P1.FU12).
         undoShuffle = moveShuffle(view, item, client);
         mount = document.createElement('div');
