@@ -198,6 +198,23 @@ right, following the same `[dir]` pattern the stock rule uses.
 `CardOptions.disableIndicators` already exists, so a catalog surface that wants only its own
 badge — the release picker's poster thumbs, say — can suppress the stock set without a fork.
 
+**Changed 2026-10-12 (user-approved design, P1.FU11): every mark sits top-right, and on disk shows
+nothing.** The file mark leaves top-left and joins the top-right corner. On a card that has
+upstream's `.cardIndicators`, the mark sits just before that cluster (the played tick or the count),
+moved left by the cluster's width, so the two never collide, and above the desktop hover overlay so an
+administrator's button stays clickable; a card without it gets the mark alone at the same spot. A list row (library list view, search list, season page) carries the mark in its action slot at
+the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss` everywhere:
+
+| What | Mark | Administrators | Everyone else |
+| --- | --- | --- | --- |
+| On disk | none | — | — |
+| No file (not downloaded, reclaimed, or unaired with no air date) | amber `#ffb74d` icon (the existing glyph) on a dark 65% disc | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
+| Unaired, with an air date | clock + the short air date: `10 Aug` this year, `Aug ’27` in another (month in the viewer's locale) | not clickable; tooltip *Airs 10 Aug 2026* | the same |
+
+In flight (searching, grabbed, downloading) and the retention countdown keep their marks in the same
+corner until the downloading states are redrawn (next slice). The quiet on-disk mark and the 60 %
+dimming rule above are retired with this change; the file-less cards keep their own dimmed artwork.
+
 ### 3.2 Colour
 
 State reads from shape and opacity first, colour second, because the TV is viewed at three
@@ -599,7 +616,7 @@ file mark from §3, and season rows gain a monitor toggle.
   download is in flight. Its header row holds the *Get a release* icon and a stock-style More (`⋯`)
   button with **Monitor** and **Remove entry** (user, 2026-10-07), administrators only. Ordinary users
   see the overview and, during a download, the queue line. A file-less series keeps its rows.
-- The series page is unchanged.
+- The series page is unchanged (since P1.FU11 it also lists every season, §7.2.1).
 
 **More-menu coupling (2026-10-07).** P7.S6 removed the More-menu hook. The design fix brings an
 item back without an upstream edit: the mod's integration wraps `itemContextMenu.show` at runtime
@@ -656,6 +673,39 @@ plugin stamps each history event about one file with that file's binding id (`bi
 capability `history.files`); older events without one appear in no popover. Episode-level events
 (monitoring changed, added to the catalog, window changed) are not shown on the episode page. The
 series page and the file-less page keep their History line.
+
+### 7.2.1 Native pages show every season and episode (P1.FU11, user-approved design 2026-10-12)
+
+A series' native pages list every season and episode the plugin knows, not only those Jellyfin
+holds. The plugin's list comes from the one entry read the page already makes, after the page-open
+TMDB load (P1.FU9); nothing new is asked of the plugin.
+
+- **Series page.** For each plugin season (specials excluded) with no Jellyfin season item, a mod card
+  in upstream's Seasons row (`#listChildrenCollapsible .itemsContainer`), in season order among
+  upstream's cards, same size and card classes: a dark placeholder with a 1px dashed edge and the
+  season number, the mark top-right (§3.1), *Season N* and *8 episodes* (*1 episode*) as the footer.
+  Clicking it (Enter on the TV, where the card is a focus stop and an administrator's icon a second)
+  opens the mod's season page. Upstream's own season cards are untouched: no mark, no footer rewrite.
+- **Season page.** For each plugin episode with no Jellyfin episode at its number (a multi-episode
+  file holds every number it spans) and not on disk, a mod row among upstream's `listView` rows in
+  episode order: a dashed 16:9 placeholder with the number, *4. Title*, the air date (*19 May 2027*)
+  as the meta line, the overview when the plugin has one (none on the phone, by upstream's own rule),
+  no play overlay or runtime, and the mark at the row's end. The administrator's icon is the row's only
+  stop; for everyone else the row is plain text and no focus stop. The D-pad walks upstream's rows
+  and the icons.
+- **The mod's season page**, `#/details?entryId=<entry>&season=N`, for a season Jellyfin has no item
+  for: upstream's detail template with the series' name, *Season N · 8 episodes*, the TMDB season
+  poster, Get a Release for the season in the header (administrators, where packs are served), and the
+  season's episodes as the same mod rows in upstream's episode list.
+- **Pickers from the marks**: a season card opens the picker on that season (*Season N*, *All
+  Seasons*), an episode row on that episode (its page's scope list), a movie card as the movie page,
+  a series card as the series page.
+- **How it is mounted**: DOM inserts into upstream's list, placed again by a `MutationObserver` when
+  upstream redraws the list, drawn by React through portals (`components/MissingChildren.tsx`). No
+  upstream file is edited.
+
+Not in this slice: the downloading states (the two-layer progress bar, the arrow in the count pill,
+the row's percentage and time left), the card hover Get a Release and the Shuffle change.
 
 ---
 

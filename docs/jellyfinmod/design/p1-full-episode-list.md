@@ -38,7 +38,8 @@ nothing, because only the picker and the file-less page asked, and only for admi
   its *Loading Seasons…* step and shares the page's request.
 - **Picker scope (user, 2026-10-12):** opened from a series page it offers only *All Seasons* and each season, after the
   non-selectable *Choose what to search for*; an episode is searched from its own page or its row.
-- **Unchanged:** the native pages show no new missing-seasons list; that is a separate design.
+- **Unchanged here:** the native pages show no new missing-seasons list; that is a separate design, built as P1.FU11
+  (UX §7.2.1).
 
 Where this document says "an administrator opens", read "anyone opens".
 

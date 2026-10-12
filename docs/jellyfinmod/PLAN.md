@@ -482,6 +482,15 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `next-release`: plugin `bf2d471..8d468e5` (Phase 4, 5, 6 and 7 Prowlarr suites pass in the Linux container) and web
   `8b0bafae08..9947e2337e`; described in [UX.md](UX.md) §9.1. Layout checked in Chromium and Chrome against local env
   bravo with intercepted picker answers (not E2E); not deployed, no live first look yet, no Codex review yet.
+  **P1.FU11, built (not accepted) 2026-10-12: every season and episode on the native pages** (user-approved design,
+  version 9 of the sheet; UX §3.1 and §7.2.1): web `feat/missing-seasons-episodes` from `8b0bafae08`. The series page shows
+  a mod card for each plugin season with no Jellyfin season item, in season order among upstream's cards; the season page a
+  mod row for each plugin episode with no Jellyfin episode, in episode order; a missing season opens the mod's season page
+  (`#/details?entryId=…&season=N`). Every mark moves top-right, on disk shows nothing, the amber Not Downloaded is an
+  administrator's button opening the picker in its scope (season, episode, movie, series) and an indicator for others, and
+  Unaired is the clock with the short air date. Runner `missing-seasons-episodes.mjs`; `tv-shell.mjs` no longer requires a
+  mark on a grid. Typecheck, lint and the production build pass; not deployed, no live first look yet, no Codex review yet.
+  The downloading states, the card hover Get a Release and the Shuffle change are the next slice.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
