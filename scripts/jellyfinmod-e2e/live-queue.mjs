@@ -1,6 +1,6 @@
 /* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global document */
-// Live acceptance (P5 I3/I8/I9.7): while a real download runs, the Movies card ring and the queue row agree; the grid
+// Live acceptance (P5 I3/I8/I9.7, card bar P4.FU1): while a real download runs, the Movies card's bar and the queue row agree; the grid
 // never blanks during polls; on TV the focused queue row keeps focus through ten polls and the list never unmounts.
 //
 //   JELLYFINMOD_LIVE_ENTRY   entry id of the downloading title;  JELLYFINMOD_LIVE_LIBRARY  its Movies library id
@@ -13,10 +13,14 @@ const title = process.env.JELLYFINMOD_LIVE_TITLE;
 const layouts = (process.env.JELLYFINMOD_LIVE_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
 const browser = await launch();
 
+// A downloading card (P4.FU1): the amber bar at the poster's bottom, whose length is the percentage (cards show no figure), and
+// the arrow, in the count pill or in the dark disc.
 const cardPercent = page => page.evaluate(name => {
     const card = [...document.querySelectorAll('.card')].find(node => (node.textContent ?? '').includes(name));
-    const mark = card?.querySelector('.jfmod-mark--inFlight');
-    return { found: !!card, inFlight: !!mark, text: mark?.textContent?.trim() ?? null, cards: document.querySelectorAll('.card').length };
+    const fill = card?.querySelector('.jfmod-dlCardBar .jfmod-dlBar-fill');
+    const arrow = card?.querySelector('.jfmod-dlDisc, .countIndicator.jfmod-countArrow');
+    return { found: !!card, inFlight: !!fill && !!arrow, text: fill ? Math.floor(parseFloat(fill.style.width)) + '%' : null,
+        cards: document.querySelectorAll('.card').length };
 }, title);
 const queuePercent = page => page.evaluate(name => {
     const rows = [...document.querySelectorAll('.jfmod-queueRow, .jfmod-queueTableRow')];
@@ -31,7 +35,7 @@ for (const layout of layouts) {
     try {
         await signIn(page);
         if (layout.startsWith('tv')) await setTvLayout(page);
-        // Movies grid: the card shows the in-flight ring with a percentage; sample it across polls and count cards.
+        // Movies grid: the card shows the amber bar and the arrow; sample the bar across polls and count cards.
         await page.evaluate(id => { location.hash = '#/movies?topParentId=' + id; }, libraryId);
         // Wait for the Movies route itself (Home also shows the card in Recently Added).
         await page.waitForFunction(name => location.hash.startsWith('#/movies')
@@ -40,7 +44,7 @@ for (const layout of layouts) {
         const samples = [];
         for (let i = 0; i < 5; i++) { samples.push(await cardPercent(page)); await page.waitForTimeout(3500); }
         const api1 = await api(page, 'GET', `JellyfinMod/Queue?entryId=${entryId}`);
-        record(label, 'The Movies card shows the in-flight ring with a percentage, and the grid never blanks while it polls',
+        record(label, 'The Movies card shows the amber bar and the arrow, and the grid never blanks while it polls',
             samples.every(sample => sample.inFlight && sample.cards > 0), { samples, queue: api1.body?.items?.[0] && { state: api1.body.items[0].state, progress: api1.body.items[0].progress } });
         const cardValue = Number(/(\d+)%/.exec(samples.at(-1).text ?? '')?.[1]);
         // Queue route: the row's progress bar agrees with the card within one poll.
