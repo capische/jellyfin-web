@@ -922,7 +922,7 @@ enforces, not from stored progress.
 
 | Step | Passes when | Refuses |
 | --- | --- | --- |
-| 1 Discovery | TMDB token configured and `Discovery/Test` succeeded for the current revision | Continuing without a passing test |
+| 1 Discovery | TMDB token configured and `Discovery/Test` succeeded for the current revision; or no token and Jellyfin's built-in TMDb connection available (P1.FU13, no test needed) | Continuing without a passing test of a saved token, or with no token and no Jellyfin connection |
 | 2 Download client | Client saved, `Test` verified, destination checks passed, at least one path mapping verified, `TestImportPath` returned `linked` for the target library root. **As built (S7, recorded here 2026-09-24, P7-R3):** `Setup/State` checks the selected client is enabled and verified and every mapping verified; `TestImportPath`'s result is not persisted, so the server cannot require `linked`, and the wizard runs the probe itself | A download directory inside any library root (`destination_inside_library`), on another filesystem (`destination_not_same_filesystem`, `cross_filesystem`), an unverified mapping |
 | 3 Indexers | At least one enabled indexer with verified capabilities, typed by hand or synced | Continuing with none verified |
 | 4 Quality profile | At least one profile and a default selected | An empty profile, a cutoff outside the allowed qualities |
@@ -1296,7 +1296,7 @@ each.
 | `GET /web-mod/` and `GET /web-mod/{bundleId}/{**path}` (anonymous, outside `/JellyfinMod`) | Static serving per §4.5; 404 for unknown ids and paths; no directory listing. |
 | `GET /Health` | Adds `revision`, `lastMigration`, `web` (§4.5); `capabilities` adds `ui`, `ui.web`, `ui.takeover`, `acquisition.prowlarr`, `settings.overview`, `setup`. |
 | `GET /Settings/Overview` | `{ plugin: { version, revision }, web: <Health.web>, areas: [{ id, ready, blockers[], revision, lastRun? }], setup: <summary> }`. |
-| `GET/PATCH /Settings/Discovery`, `POST /Settings/Discovery/Test` | `{ tokenConfigured, revision }`; PATCH takes `{ token: <SecretChangeRequest>, revision }`; Test answers `ConnectionTestDto`. |
+| `GET/PATCH /Settings/Discovery`, `POST /Settings/Discovery/Test` | `{ tokenConfigured, revision, source }` (`source` since P1.FU13: `token`, `jellyfin` or `none`, see [API.md](API.md) *Discovery*); PATCH takes `{ token: <SecretChangeRequest>, revision }`; Test answers `ConnectionTestDto` (with `source`; `?source=jellyfin` is the read-only diagnostic). |
 | `GET/PATCH /Settings/SeedProtection`, `POST /Settings/SeedProtection/Test` | `{ source, rpcUrl?, username?, passwordConfigured, matchesAcquisitionClient, revision }`. |
 | `GET/PATCH /Settings/Retention` | The XML-backed fields with the Dashboard's validation; Selected user without a valid user is refused (T13). |
 | `GET/PATCH /Settings/Interface`, `POST /Settings/Interface/RestoreStock` | `{ takeoverEnabled, state, webRoot, bundleId, retainedBundleIds[], supportedServer, hostVersion, stockSha256, patchedSha256, patchedAt, patchedBy (`automatic` / `setting` / `bundle`; §4.6 says when each applies), blocker, recovery, revision }`; `patchedBy` and `patchedAt` are how an administrator sees that the takeover applied itself (decision 7). RestoreStock performs the restore row of §4.6 without changing the switch. |
