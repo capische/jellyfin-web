@@ -530,6 +530,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   production build pass. Outside a host, the built plugin in a copy of Jellyfin 12's plugin load context against the host
   assemblies of local env alpha read Breaking Bad, Peaky Blinders (60 episodes), 1923, The Simpsons (39 seasons, 888 episodes)
   and The Matrix from real TMDB. Not deployed; live check `tmdb-via-jellyfin.mjs` on 28096 pending; no Codex review yet.
+  **P1.FU14, built (not accepted) 2026-10-12: missing seasons and episodes look like ones that exist** (user 2026-10-12:
+  "For TMDb import - I see no covers, those must be imported too with all descriptions and related information - exact like
+  when episode exists"; [UX.md](UX.md) §7.2.1, [API.md](API.md) *Season overviews and episode ratings*). Owner: Phase 1
+  (episode records and TMDB metadata), the P1.FU11 cards and rows only draw it. Finding: the plugin already stored and
+  returned every episode's still, overview, runtime and air date and every season's poster (all 112 missing episodes of
+  The Wheel of Time, 1923 and Peaky Blinders on 28096 had them, by either TMDB source); the web drew none of it. Built: the
+  season card shows TMDB's season poster (w342), each missing episode row its still (w300, w500 on the TV), "N. Title",
+  the meta line in upstream's items (air date, runtime as upstream formats it, TMDB's rating with upstream's star) and the
+  overview; the mod's season page the season's overview and first air year. Lazy images that fall back to the dashed
+  placeholder when absent or failing. The plugin now keeps each season's overview and TMDB's episode ratings in the series'
+  metadata (no column, no migration); a series loaded before has none, and opening it loads its list once more (the P1.FU9
+  load); the administrator's Refresh does the same. Not built: cast, guest stars and crew for a missing episode (needs a
+  column or table and a page to show them). Plugin `next-release` `f5f5108..410b380`, web `next-release` `6a6d71562b` (code) and
+  `7402853b1c` (runner), and the docs commit after. Mac suites (Phase 0, 1, 2, 3, 10) and Linux suites (Phase 1, 4, 5, 6) pass; typecheck,
+  lint, stylelint and the production build pass. Not deployed; live check `missing-seasons-episodes.mjs` on 28096 pending;
+  no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
