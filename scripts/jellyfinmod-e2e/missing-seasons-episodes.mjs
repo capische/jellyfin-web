@@ -276,14 +276,27 @@ async function run(browser, layout, user, admin) {
         const isAdmin = await page.evaluate(async () => !!(await ApiClient.getCurrentUser()).Policy?.IsAdministrator);
         record(label, admin ? 'signed in as an administrator' : 'signed in as an ordinary user', isAdmin === admin);
         const health = await apiGet(page, 'JellyfinMod/Health');
-        const capabilities = health?.capabilities ?? [];
+        // The Health answer is PascalCase (`Capabilities`), as modApi's getPluginHealth reads it.
+        const capabilities = health?.Capabilities ?? health?.capabilities ?? [];
         const canDownload = admin && capabilities.includes('acquisition.releases');
         const packs = capabilities.includes('acquisition.packs');
 
         // The series page: let it load the list if it never was, then read what the plugin lists.
         const first = await apiGet(page, 'JellyfinMod/Entries/' + entryId);
-        if (!first?.entry.jellyfinItemId) throw new Error('the entry is not a series with a Jellyfin item');
-        const seriesId = first.entry.jellyfinItemId;
+        if (first?.entry.mediaType !== 'series') throw new Error('the entry is not a series');
+        // A series with no file has no `jellyfinItemId` on its entry, yet Jellyfin may hold its series item (and season folders):
+        // that item is found by title and must look up this very entry.
+        const seriesId = first.entry.jellyfinItemId ?? await page.evaluate(async ([title, id]) => {
+            const found = await ApiClient.getItems(ApiClient.getCurrentUserId(), { searchTerm: title, IncludeItemTypes: 'Series', Recursive: true });
+            for (const item of found.Items) {
+                const response = await fetch(ApiClient.getUrl('JellyfinMod/Entries', { jellyfinItemId: item.Id, limit: 1 }),
+                    { headers: { Authorization: `MediaBrowser Token="${ApiClient.accessToken()}"` } });
+                const entries = response.ok ? await response.json() : null;
+                if (entries?.items?.[0]?.id === id) return item.Id;
+            }
+            return null;
+        }, [first.entry.title, entryId]);
+        if (!seriesId) throw new Error('no Jellyfin series item looks up this entry');
         await go(page, `#/details?id=${seriesId}`);
         await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
         await page.waitForTimeout(3000);
@@ -328,6 +341,22 @@ async function run(browser, layout, user, admin) {
                 [`Season ${target.season}`, 'All Seasons']);
         } else if (admin) {
             record(label, 'Download This Season opens the picker', 'NOT VERIFIED', target ? 'no button (no release search or packs, or the season is unaired)' : 'no missing season');
+        }
+        if (target && tv && target.mark?.tag === 'BUTTON') {
+            // The card is one stop and its icon a second: Up on the card reaches the icon, Down returns.
+            const where = () => page.evaluate(() => {
+                const active = document.activeElement;
+                if (active?.classList.contains('jfmod-markButton')) return 'icon';
+                return active?.classList.contains('jfmod-missingCard') ? 'card' : active?.className ?? 'none';
+            });
+            await page.locator(`.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${target.season}"]`).focus();
+            await page.keyboard.press('ArrowUp');
+            await page.waitForTimeout(300);
+            const up = await where();
+            await page.keyboard.press('ArrowDown');
+            await page.waitForTimeout(300);
+            const down = await where();
+            record(label, `Season ${target.season} card on the TV: Up reaches its icon, Down returns to the card`, up === 'icon' && down === 'card', { up, down });
         }
         if (target) {
             const card = page.locator(`.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${target.season}"]`);
