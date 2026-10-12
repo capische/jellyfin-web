@@ -26,7 +26,7 @@ const MIRRORED = [
         file: 'src/index.jsx',
         mirroredBy: 'src/jellyfinmod.jsx',
         what: 'the start-up sequence',
-        sha256: '369eaab48f64982a4ee6cb55508979338ce739f201b61571ebe260b3d9b5c528'
+        sha256: 'd923637359819c6354f962f888d4c761c20b28c5a81fdbff606bcc81b4297982'
     },
     {
         file: 'src/RootApp.tsx',
