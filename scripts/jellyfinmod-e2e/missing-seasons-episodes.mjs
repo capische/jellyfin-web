@@ -18,6 +18,12 @@
 //     still (w300, w500 on the TV), "N. Title", the meta line (air date, upstream's runtime "42m", TMDB's rating) and the
 //     overview. Images come from image.tmdb.org: the img's src and a request to it are checked; one that did not load
 //     (offline, a blocked CDN) is NOT VERIFIED and must fall back to the placeholder.
+//   - P1.FU15: a missing episode's row opens its page (#/details?entryId=…&season=N&episode=M; a click, Enter on the TV, where
+//     the row is a focus stop and Right reaches its icon); the page reads "Series" / "Season N - M. Title", the meta line, TMDB's
+//     still with the mark, the overview, the Director and Writer lines, Cast & Crew (the series' regulars, then the crew) and
+//     Guest Stars as person cards (TMDB portrait w185 requested from image.tmdb.org, else the person icon; name and role; no
+//     links), an administrator's Get a Release for the episode, and Back returns to the season page. The icon on a row still
+//     opens the picker without opening the page.
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
 //   JELLYFINMOD_MSE_ENTRY=<series entry id>       a series whose plugin list holds seasons or episodes Jellyfin does not have
@@ -143,6 +149,8 @@ const episodeList = async (page, numbers) => {
             const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
             return {
                 mod,
+                tag: row.tagName,
+                link: mod ? row.querySelector('a.jfmod-missingRowLink')?.getAttribute('href') ?? null : null,
                 id: mod ? row.dataset.jfmodEpisodeId : null,
                 number: mod ? Number(title.split('.')[0]) : byId[(row.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
                 title,
@@ -216,7 +224,9 @@ function checkCover(label, what, shown, path, size) {
     if (shown.cover) {
         record(label, `${what}: TMDB's image ${size}${path}, lazy, cover, filling the box`, shown.cover.src === src
             && shown.cover.lazy === 'lazy' && shown.cover.fit === 'cover' && shown.cover.fills && shown.dashed !== 'dashed', shown.cover);
-        record(label, `${what}: the image was requested from image.tmdb.org`, imageRequests.has(src), src);
+        // A lazy image below the fold is not asked for yet (real Chrome waits until it nears the viewport): not a failure.
+        const requested = imageRequests.has(src) ? 'PASS' : 'NOT VERIFIED';
+        record(label, `${what}: the image was requested from image.tmdb.org`, shown.cover.loaded ? imageRequests.has(src) : requested, src);
         record(label, `${what}: the image loaded`, shown.cover.loaded ? 'PASS' : 'NOT VERIFIED', shown.cover.loaded ? undefined : 'not loaded yet (lazy below the fold, or slow)');
     } else {
         // An image that failed to load leaves the placeholder, without an error on the page.
@@ -254,7 +264,8 @@ async function pickerFrom(page, label, what, locator, tv, expected) {
     const after = await page.evaluate(() => location.hash);
     const texts = options.map(option => option.text);
     record(label, `${what}: opens the picker on the page, scope ${JSON.stringify(expected)}, the first selected`, opened
-        && after.split('&')[0] === before.split('&')[0] && JSON.stringify(texts) === JSON.stringify(expected) && options[0]?.selected === true,
+        && after.split('&')[0] === before.split('&')[0] && after.includes('episode=') === before.includes('episode=')
+        && JSON.stringify(texts) === JSON.stringify(expected) && options[0]?.selected === true,
     { texts, before, after });
     if (opened) record(label, `${what}: Back closes the picker`, await closePicker(page, tv));
     await page.waitForTimeout(800);
@@ -303,20 +314,161 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, 
             record(label, `${what} E${episode.episodeNumber}: TMDB's overview`, overviewShown, { shown: row.overview, expected: episode.overview });
         }
         await checkMark(page, label, `${what} E${episode.episodeNumber}`, row.mark, expectedMark([episode]), admin && canDownload, 'Download This Episode');
-        const allowed = admin && canDownload && expectedMark([episode]).kind === 'none' ? 1 : 0;
-        record(label, `${what} E${episode.episodeNumber}: ${allowed ? 'the icon is the row\'s only stop' : 'the row has no focus stop'}`,
-            row.focusables.length === allowed && (!allowed || /jfmod-markButton/.test(row.focusables[0])), row.focusables);
+        // P1.FU15: the row opens the episode's page. On the TV the row itself is the stop (a button) and an administrator's icon
+        // a second; elsewhere the title is the row's link and the icon a second stop.
+        const icon = admin && canDownload && expectedMark([episode]).kind === 'none';
+        const href = `#/details?entryId=${encodeURIComponent(detail.entry.id)}`;
+        const own = row.focusables.filter(name => !/jfmod-markButton/.test(name));
+        record(label, `${what} E${episode.episodeNumber}: ${tv ? 'the row is a button stop' : 'the title links to the episode\'s page'}${icon ? ', the icon a second stop' : ''}`,
+            (tv ? row.tag === 'BUTTON' && own.length === 0 : row.link?.startsWith(href) && row.link.endsWith(`&season=${episode.seasonNumber}&episode=${episode.episodeNumber}`)
+                && own.length === 1) && row.focusables.length - own.length === (icon ? 1 : 0), { tag: row.tag, link: row.link, focusables: row.focusables });
         if (layout === 'mobile') record(label, `${what} E${episode.episodeNumber}: no overview on the phone`, !row.overviewShown);
     }
     if (tv) {
         await page.evaluate(() => document.activeElement?.blur());
         await page.locator('.page:not(.hide) .detailPagePrimaryContainer button:visible').first().focus().catch(() => {});
         const trail = await dpadTrail(page, rows.length + 6);
-        const icons = mod.filter(row => row.mark?.tag === 'BUTTON').length;
-        record(label, `${what}: the D-pad never stops on a mod row${icons ? ' and reaches its icons' : ''}`, !trail.includes('modRow')
-            && (!icons || trail.includes('modIcon')), trail);
+        record(label, `${what}: the D-pad stops on the mod rows (P1.FU15)`, trail.includes('modRow'), trail);
+        const withIcon = mod.find(row => row.mark?.tag === 'BUTTON');
+        if (withIcon) {
+            const where = () => page.evaluate(() => {
+                const active = document.activeElement;
+                if (active?.classList.contains('jfmod-markButton')) return 'icon';
+                return active?.classList.contains('jfmod-missingRow') ? 'row' : active?.className ?? 'none';
+            });
+            await page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${withIcon.id}"]`).focus();
+            await page.keyboard.press('ArrowRight');
+            await page.waitForTimeout(300);
+            const right = await where();
+            await page.keyboard.press('ArrowLeft');
+            await page.waitForTimeout(300);
+            const left = await where();
+            record(label, `${what}: Right on a row reaches its icon, Left returns to the row`, right === 'icon' && left === 'row', { right, left });
+        }
     }
     return mod;
+}
+
+/** What the episode's page shows (P1.FU15): header, meta, still, overview, details lines and the two people sections. */
+const episodePageView = async page => {
+    await withCover(page);
+    return page.evaluate(() => {
+        const view = document.querySelector('.page:not(.hide)');
+        const people = selector => {
+            const section = view.querySelector(selector);
+            return {
+                shown: !!section && !section.classList.contains('hide'),
+                cards: [...(section?.querySelectorAll('.itemsContainer .card') ?? [])].map(card => ({
+                    tag: card.tagName,
+                    name: card.querySelector('.cardText-first')?.textContent.trim() ?? null,
+                    role: card.querySelector('.cardText-secondary')?.textContent.trim() ?? null,
+                    portrait: card.querySelector('img.jfmod-missingImage')?.getAttribute('src') ?? null,
+                    icon: !!card.querySelector('.cardImageIcon.person'),
+                    links: card.querySelectorAll('a').length
+                }))
+            };
+        };
+        const still = view.querySelector('.detailImageContainer .jfmod-episodeStill .cardImageContainer');
+        return {
+            series: view.querySelector('.nameContainer .parentName')?.textContent.trim() ?? null,
+            subtitle: view.querySelector('.nameContainer .itemName')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+            meta: [...view.querySelectorAll('.itemMiscInfo-primary .mediaInfoItem')].map(item => item.textContent.trim()),
+            cover: coverOf(still),
+            dashed: still ? getComputedStyle(still).outlineStyle : null,
+            mark: !!view.querySelector('.detailImageContainer .jfmod-mark'),
+            overview: view.querySelector('.detailSectionContent .overview')?.textContent.trim() || null,
+            details: [...view.querySelectorAll('.itemDetailsGroup .detailsGroupItem')].map(item =>
+                [...item.children].map(child => child.textContent.trim()).join(': ')),
+            cast: people('#castCollapsible'),
+            guests: people('#guestCastCollapsible'),
+            getRelease: !!view.querySelector('.mainDetailButtons .jfmod-getRelease')
+        };
+    });
+};
+
+/**
+ * Opens a missing episode's page from its row (a click on the row's still, or Enter on the TV), checks it against the plugin's
+ * data as a downloaded episode's page lays it out, and goes Back to the season page (P1.FU15).
+ */
+async function checkEpisodePage(page, label, detail, episode, { admin, canDownload, tv, what, full }) {
+    const before = await page.evaluate(() => location.hash);
+    const row = page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${episode.id}"]`);
+    if (tv) await press(page, row, true);
+    else await row.locator('.jfmod-missingStill').click();
+    const opened = await page.waitForFunction(([season, number]) => location.hash.includes(`&season=${season}&episode=${number}`),
+        [episode.seasonNumber, episode.episodeNumber], { timeout: 15000 }).then(() => true, () => false);
+    record(label, `${what}: E${episode.episodeNumber}'s row opens its page`, opened, await page.evaluate(() => location.hash));
+    if (!opened) return;
+    await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .nameContainer .parentName'), undefined, { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    if (full) {
+        const shown = await episodePageView(page);
+        record(label, `episode page: "${detail.entry.title}" / "Season ${episode.seasonNumber} - ${episode.episodeNumber}. ${episode.title}"`,
+            shown.series === detail.entry.title && shown.subtitle === `Season ${episode.seasonNumber} - ${episode.episodeNumber}. ${episode.title}`, shown);
+        const rating = detail.entry.metadata?.episodeRatings?.[episode.tmdbId];
+        const tail = [episode.runtimeMinutes ? duration(episode.runtimeMinutes) : null, rating ? rating.toFixed(1) : null].filter(Boolean);
+        record(label, `episode page: the meta line (air date, then ${JSON.stringify(tail)})`,
+            shown.meta.length === tail.length + (episode.airDate ? 1 : 0) && JSON.stringify(shown.meta.slice(shown.meta.length - tail.length)) === JSON.stringify(tail), shown.meta);
+        checkCover(label, 'episode page still', shown, episode.stillPath, tv ? 'w500' : 'w300');
+        record(label, 'episode page: the mark on the still', shown.mark);
+        record(label, 'episode page: TMDB\'s overview', episode.overview ? shown.overview === episode.overview.trim() : !shown.overview, shown.overview?.slice(0, 80));
+        const credits = episode.credits;
+        if (!credits) {
+            record(label, 'episode page: cast and crew', 'NOT VERIFIED', 'the plugin has no credits for this episode (list not reloaded yet)');
+        } else {
+            const names = type => [...new Set(credits.crew.filter(person => person.type === type).map(person => person.name))];
+            const line = (one, many, list) => (list.length ? [`${list.length > 1 ? many : one}: ${list.join(', ')}`] : []);
+            const details = [...line('Director', 'Directors', names('Director')), ...line('Writer', 'Writers', names('Writer'))];
+            record(label, `episode page: the details lines ${JSON.stringify(details)}`, JSON.stringify(shown.details) === JSON.stringify(details), shown.details);
+            const regulars = detail.entry.metadata?.cast ?? [];
+            const crewPeople = new Set(credits.crew.map(person => person.id || person.name)).size;
+            record(label, `episode page: Cast & Crew has ${regulars.length} regulars then ${crewPeople} crew cards`, shown.cast.shown === (regulars.length + crewPeople > 0)
+                && shown.cast.cards.length === regulars.length + crewPeople
+                && regulars.every((person, index) => shown.cast.cards[index]?.name === person.name
+                    && (!person.character || shown.cast.cards[index]?.role === `as ${person.character}`)), shown.cast.cards.slice(0, 4));
+            record(label, `episode page: Guest Stars has ${credits.guestStars.length} cards in TMDB's order`, shown.guests.shown === credits.guestStars.length > 0
+                && JSON.stringify(shown.guests.cards.map(card => card.name)) === JSON.stringify(credits.guestStars.map(person => person.name)), shown.guests.cards.slice(0, 4));
+            const cards = [...shown.cast.cards, ...shown.guests.cards];
+            const people = [...regulars, ...credits.guestStars];
+            record(label, 'episode page: person cards link nowhere' + (tv ? ' and are focus stops (buttons)' : ''),
+                cards.every(card => card.links === 0 && (tv ? card.tag === 'BUTTON' : card.tag === 'DIV')), cards.filter(card => card.links || (tv !== (card.tag === 'BUTTON'))).slice(0, 3));
+            const withPortrait = people.find(person => person.profilePath);
+            const withoutPortrait = cards.find(card => !card.portrait);
+            if (withPortrait) {
+                const src = `https://image.tmdb.org/t/p/w185${withPortrait.profilePath}`;
+                const card = cards.find(candidate => candidate.portrait === src);
+                record(label, `episode page: ${withPortrait.name}'s TMDB portrait (w185) on the card`, !!card, src);
+                record(label, 'episode page: the portrait was requested from image.tmdb.org', imageRequests.has(src) ? 'PASS' : 'NOT VERIFIED',
+                    imageRequests.has(src) ? undefined : 'lazy and not scrolled into view, or image.tmdb.org unreachable');
+            }
+            if (withoutPortrait) record(label, 'episode page: a person without a portrait shows the person icon', withoutPortrait.icon, withoutPortrait);
+        }
+        if (admin && canDownload) {
+            record(label, 'episode page: the administrator\'s Get a Release in the header', shown.getRelease);
+            const code = 'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0');
+            if (shown.getRelease) {
+                await pickerFrom(page, label, 'episode page Get a Release', page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease'), tv,
+                    [`Episode: ${code} · ${episode.title}`, `Season ${episode.seasonNumber}`, 'All Seasons']);
+            }
+        } else {
+            record(label, 'episode page: no Get a Release for this user', !shown.getRelease);
+        }
+        if (tv && shown.cast.cards.length) {
+            // A person card is a stop that only scrolls its row: Enter on it leaves the page where it is.
+            const card = page.locator('.page:not(.hide) #castContent .card').first();
+            await card.focus();
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(800);
+            record(label, 'episode page on the TV: Enter on a person card stays on the page',
+                (await page.evaluate(() => location.hash)).includes(`&episode=${episode.episodeNumber}`));
+        }
+    }
+    if (tv) await page.keyboard.press('Escape');
+    else await page.goBack();
+    const back = await page.waitForFunction(target => location.hash === target, before, { timeout: 15000 }).then(() => true, () => false);
+    record(label, `${what}: Back returns to the season page`, back, { before, now: await page.evaluate(() => location.hash) });
+    await page.waitForSelector('.page:not(.hide) .jfmod-missingRow', { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(800);
 }
 
 async function run(browser, layout, user, admin) {
@@ -459,6 +611,11 @@ async function run(browser, layout, user, admin) {
                         page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${episode.id}"] .jfmod-markButton`), tv,
                         [`Episode: ${code} · ${episode.title}`, `Season ${episode.seasonNumber}`, 'All Seasons']);
                 }
+                // P1.FU15: the episode with the most people opens its page, checked in full.
+                const people = candidate => (candidate.credits?.guestStars.length ?? 0) + (candidate.credits?.crew.length ?? 0);
+                const opening = shown.map(entry => detail.episodes.find(candidate => candidate.id === entry.id)).filter(Boolean)
+                    .sort((a, b) => people(b) - people(a))[0];
+                if (opening) await checkEpisodePage(page, label, detail, opening, { admin, canDownload, tv, what: `mod Season ${target.season} page`, full: true });
             }
         }
         // A native season page with episodes Jellyfin does not have.
@@ -471,7 +628,9 @@ async function run(browser, layout, user, admin) {
             await go(page, `#/details?id=${season.id}`);
             await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible:not(.hide)', { timeout: 20000 }).catch(() => {});
             const numbers = Object.fromEntries(native.map(item => [item.id.replace(/-/g, '').toLowerCase(), item.number]));
-            await checkSeasonRows(page, label, detail, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
+            const shownRows = await checkSeasonRows(page, label, detail, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
+            const opening = shownRows[0] && detail.episodes.find(candidate => candidate.id === shownRows[0].id);
+            if (opening) await checkEpisodePage(page, label, detail, opening, { admin, canDownload, tv, what: `native Season ${season.number} page`, full: false });
             break;
         }
         if (!admin) {
