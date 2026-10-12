@@ -39,7 +39,7 @@ export interface ReleasePickerProps {
     initialEpisodeId?: string;
     /**
      * Opened from an episode's own page: the scope switch offers that episode, its season and All Seasons. Otherwise a series
-     * page's switch offers All Seasons, each season and every episode (season packs, 2026-10-08, user decision 1).
+     * page's switch offers All Seasons and each season, no episodes (user, 2026-10-12).
      */
     episodePage?: boolean;
     /** Opened from this season's own page: the scope switch offers the season, preselected, and All Seasons; no episodes. */
@@ -607,13 +607,15 @@ const LOADING_VALUE = 'loading';
 
 /**
  * The scope switch (user decision 1, 2026-10-08). On an episode's page: that episode, its season and All Seasons. On a season's
- * page: that season and All Seasons (user, 2026-10-12). On a series page: All Seasons, each season with aired episodes other
- * than specials, then every episode. Without packs it is the episode list it always was.
+ * page: that season and All Seasons (user, 2026-10-12). On a series page: All Seasons and each season with aired episodes
+ * other than specials, and no single episodes (user, 2026-10-12). Without packs it is the episode list it always was.
  */
 const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason, loading }: ScopeOptions): { label: string; options: EmbySelectOption[] } => {
-    const episodeOptions = episodes.map(episode => ({ value: episode.id, label: episode.label }));
     const loadingOption = loading ? [{ value: LOADING_VALUE, label: LOADING_SEASONS, disabled: true }] : [];
-    if (!packs) return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...loadingOption, ...episodeOptions] };
+    if (!packs) {
+        return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...loadingOption,
+            ...episodes.map(episode => ({ value: episode.id, label: episode.label }))] };
+    }
     if (pageSeason !== undefined) {
         return { label: 'Search For', options: [
             { value: SEASON_PREFIX + pageSeason, label: 'Season ' + pageSeason },
@@ -634,8 +636,7 @@ const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason, loading }: Sco
         { value: '', label: 'Choose what to search for' },
         ...loadingOption,
         ...(seasons.length > 0 ? [{ value: SERIES_VALUE, label: 'All Seasons' }] : []),
-        ...seasons.map(season => ({ value: SEASON_PREFIX + season, label: 'Season ' + season })),
-        ...episodeOptions
+        ...seasons.map(season => ({ value: SEASON_PREFIX + season, label: 'Season ' + season }))
     ] };
 };
 

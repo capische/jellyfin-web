@@ -6,7 +6,7 @@
 //                                 row whose raw title contains JELLYFINMOD_LIVE_ROW and presses Enter once; waits for
 //                                 the hold and the accepted handoff
 //   JELLYFINMOD_LIVE_STEP=cancel  the same, but presses Enter on Cancel during the hold and waits for `cancelled`
-//   JELLYFINMOD_LIVE_ENTRY        entry id;  JELLYFINMOD_LIVE_EPISODE  optional episode id (series)
+//   JELLYFINMOD_LIVE_ENTRY        entry id;  JELLYFINMOD_LIVE_EPISODE  optional episode id (series), searched from its row
 //   JELLYFINMOD_LIVE_LAYOUT       desktop | mobile | tv1080 | tv720 (TV is driven by keys only)
 import { api, launch, newPage, notVerified, record, saveResults, setTvLayout, signIn, tier, until } from './live-lib.mjs';
 
@@ -28,13 +28,16 @@ try {
     await page.evaluate(() => localStorage.removeItem('jfmod-releaseNames'));
     const detail = await api(page, 'GET', `JellyfinMod/Entries/${entryId}`);
     await page.evaluate(id => { location.hash = '#/details?entryId=' + encodeURIComponent(id); }, entryId);
-    const search = page.locator('button', { hasText: 'Search releases' }).first();
+    // A series picker offers seasons only (user, 2026-10-12): an episode is searched from its own row's Search Releases.
+    const searchSelector = episodeId ? `button[data-episode-id="${episodeId}"][title="Search Releases"]` : null;
+    const search = searchSelector ? page.locator(searchSelector) : page.locator('button', { hasText: 'Search releases' }).first();
     await search.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         // Reach the action by keys only: record what has focus on open, then arrow along until Search releases has it.
         await page.waitForTimeout(1500);
         const onOpen = await page.evaluate(() => document.activeElement === document.body ? 'body' : (document.activeElement?.textContent ?? '').trim().slice(0, 30));
-        const isSearch = () => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && /Search releases/i.test(document.activeElement.textContent ?? ''));
+        const isSearch = () => page.evaluate(selector => document.activeElement?.tagName === 'BUTTON' && (selector ?
+            document.activeElement.matches(selector) : /Search releases/i.test(document.activeElement.textContent ?? '')), searchSelector);
         let reached = await isSearch();
         const path = [];
         for (let i = 0; i < 25 && !reached; i++) {
@@ -50,9 +53,6 @@ try {
         await search.click();
     }
     await page.waitForSelector('.jfmod-releasePicker', { timeout: 15000 });
-    if (episodeId) {
-        await page.locator('#jfmod-releaseEpisode').selectOption(episodeId);
-    }
     await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
     const status = (await page.locator('.jfmod-releaseStatus').innerText()).trim();
     const notice = await page.locator('.jfmod-releaseNotice').allInnerTexts();
