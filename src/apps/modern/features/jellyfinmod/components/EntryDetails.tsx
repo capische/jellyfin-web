@@ -128,7 +128,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const openPicker = useCallback((opener: HTMLElement) => {
         openReleasePicker({
             api, entryId: entry.id, title: entry.title, mediaType: entry.mediaType, episodes,
-            episodeId: opener.dataset.episodeId, episodeListLoaded: listLoaded, onChanged: reload
+            // An episode row's search offers that episode, its season and All Seasons, as an episode's page does.
+            episodeId: opener.dataset.episodeId, episodePage: !!opener.dataset.episodeId, episodeListLoaded: listLoaded,
+            onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, entry.id, entry.mediaType, entry.title, episodes, listLoaded, reload]);
     // Anyone opening a discovered series sees every season and episode, not only its files: the page loads the TMDB list
