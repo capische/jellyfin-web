@@ -1,19 +1,23 @@
-/* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function -- a Node acceptance runner, not shipped code */
+/* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage, location */
 // The full episode list of a discovered series (Phase 1 follow-up, 2026-10-12; docs/jellyfinmod/design/p1-full-episode-list.md).
 // Opens the series page of a series reconciliation discovered in the library, whose entry says `episodeListLoaded: false`,
-// signed in as oleksii with an empty password, opens Get a Release and checks that the picker loads the series' TMDB list
-// once: Loading Seasons while it loads, then every season and episode, labelled as before; reopening asks nothing again.
+// signed in as oleksii with an empty password, and checks that opening the page alone loads the series' TMDB list once
+// through the plugin's EpisodeList (P1.FU9), quietly, and a second visit asks nothing. Then Get a Release: on a fresh page
+// (stub and failure modes) the picker shares the page's one request and shows Loading Seasons while it runs; its scope
+// switch offers All Seasons and each season, no single episodes (user, 2026-10-12); closing and reopening asks nothing again.
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
 //   JELLYFINMOD_FEL_ENTRY=<entry id of a discovered series with episodeListLoaded false>
 //   [JELLYFINMOD_WEB_PATH=/web/]  [JELLYFINMOD_BROWSER=chromium|chrome]  [JELLYFINMOD_LAYOUTS=desktop,mobile,tv1080]
-//   [JELLYFINMOD_FEL_STUB=<file>]  answer the Refresh in the browser with this EntryDetail JSON instead of the plugin, for an
+//   [JELLYFINMOD_FEL_STUB=<file>]  answer EpisodeList in the browser with this EntryDetail JSON instead of the plugin, for an
 //                                 environment without a TMDB token; every result then says it was stubbed
-//   [JELLYFINMOD_FEL_FAIL=503]     answer the Refresh with this status instead: the picker must keep its list and say why
+//   [JELLYFINMOD_FEL_FAIL=503]     answer EpisodeList with this status instead: the page stays quiet, the picker keeps its
+//                                 list and says why
 //
-// Not read-only: without a stub the first opening runs the plugin's Refresh, which adds the series' TMDB episodes as
-// unmonitored rows and one History event. That is the behaviour under test and is not undone.
+// Not read-only: without a stub the first opening runs the plugin's load, which adds the series' TMDB episodes as
+// unmonitored rows and one History event. That is the behaviour under test and is not undone, so a live run checks one
+// layout: a second layout finds the list loaded.
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
@@ -42,7 +46,7 @@ const FAILURES = new Map([
 ]);
 let mode = 'live';
 if (failStatus) mode = `stubbed failure ${failStatus}`;
-else if (stub) mode = 'stubbed Refresh';
+else if (stub) mode = 'stubbed EpisodeList';
 
 const results = [];
 const record = (layout, check, pass, detail) => {
@@ -84,18 +88,15 @@ const getEntry = page => page.evaluate(async id => {
 const scopeOptions = page => page.evaluate(() => [...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
     .map(option => ({ value: option.value, text: option.textContent, disabled: option.disabled })));
 
-/** The scope list the picker should offer for an entry's episodes: All Seasons, each season with aired episodes but specials, every episode. */
+/** The series page's scope list: All Seasons, then each season with aired episodes other than specials; no episodes. */
 const expectedScope = episodes => {
-    const pad = value => (value < 10 ? '0' : '') + value;
     const seasons = [...new Set(episodes.filter(episode => episode.seasonNumber > 0 && episode.availability !== 'unaired')
         .map(episode => episode.seasonNumber))].sort((a, b) => a - b);
-    const label = episode => `S${pad(episode.seasonNumber)}E${pad(episode.episodeNumber)} · ${episode.title}`
-        + (episode.availability === 'onDisk' ? ' (on disk)' : '') + (episode.availability === 'unaired' ? ' (unaired)' : '');
-    return [...(seasons.length ? ['All Seasons'] : []), ...seasons.map(season => 'Season ' + season), ...episodes.map(label)];
+    return [...(seasons.length ? ['All Seasons'] : []), ...seasons.map(season => 'Season ' + season)];
 };
 
 async function openPicker(page, layout) {
-    const button = page.locator('.jfmod-getRelease').first();
+    const button = page.locator('.jfmod-getRelease:visible').first();
     await button.waitFor({ state: 'visible', timeout: 30000 });
     if (LAYOUTS[layout].tv) {
         await button.focus();
@@ -106,11 +107,38 @@ async function openPicker(page, layout) {
     await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 });
 }
 
+/**
+ * Back the way the layout sends it. The picker is an upstream dialog in history: the TV layout maps Escape to Back, but
+ * desktop and mobile ignore Escape (keyboardNavigation leaves it uncaptured), so there Back is the browser's.
+ */
+async function closePicker(page, layout) {
+    if (LAYOUTS[layout].tv) await page.keyboard.press('Escape');
+    else await page.goBack();
+    return page.waitForSelector('.jfmod-releaseDialog', { state: 'detached', timeout: 10000 }).then(() => true, () => false);
+}
+
+/** Waits until every EpisodeList request so far has its answer, then a moment for the page's refetch. */
+async function settle(page, loads, answered, atLeast) {
+    const deadline = Date.now() + 75000;
+    while (Date.now() < deadline && (loads.length < atLeast || answered.length < loads.length)) await page.waitForTimeout(250);
+    await page.waitForTimeout(2000);
+}
+
+/** Lines the page itself (not the picker) shows about the load: there must be none. */
+const pageLoadLines = page => page.evaluate(() => [...document.querySelectorAll('.page:not(.hide)')].flatMap(view =>
+    [...view.querySelectorAll('.jfmod-episodeListFailure')].map(node => node.textContent)
+        .concat(/Loading (Seasons|every season)/.test(view.textContent ?? '') ? ['loading text'] : [])));
+
 async function run(browser, layout) {
     const { tv, ...options } = LAYOUTS[layout];
     const context = await browser.newContext(options);
     const page = await context.newPage();
+    const loads = [];
+    const answered = [];
     const refreshes = [];
+    const isLoad = url => /\/JellyfinMod\/Entries\/[^/]+\/EpisodeList/.test(url);
+    page.on('requestfinished', request => { if (isLoad(request.url())) answered.push(request.url()); });
+    page.on('requestfailed', request => { if (isLoad(request.url())) answered.push(request.url()); });
     try {
         await signIn(page);
         if (tv) {
@@ -122,9 +150,9 @@ async function run(browser, layout) {
         if (!before) throw new Error('the entry could not be read');
         record(layout, 'the entry is a discovered series whose list is not loaded', before.entry.mediaType === 'series' && before.episodeListLoaded === false,
             { episodeListLoaded: before.episodeListLoaded, episodes: before.episodes.length });
-        // A stub answers slowly enough to read the loading state; the plugin's own answer may come before it can be read.
-        await page.route(/\/JellyfinMod\/Entries\/[^/]+\/Refresh/, async route => {
-            refreshes.push(route.request().method());
+        // A stub answers slowly enough to read the picker's loading state; the plugin's own answer may come before it can be read.
+        await page.route(/\/JellyfinMod\/Entries\/[^/]+\/EpisodeList/, async route => {
+            loads.push(route.request().method());
             if (!stub && !failStatus) {
                 await route.continue();
                 return;
@@ -134,8 +162,47 @@ async function run(browser, layout) {
                 route.fulfill({ status: failStatus, contentType: 'application/problem+json', body: JSON.stringify({ status: failStatus, title: 'Stubbed' }) }) :
                 route.fulfill({ status: 200, contentType: 'application/json', body: stub }));
         });
+        // The administrator's Refresh is no longer how a page or the picker loads the list.
+        await page.route(/\/JellyfinMod\/Entries\/[^/]+\/Refresh/, async route => {
+            refreshes.push(route.request().method());
+            await route.continue();
+        });
         const target = before.entry.jellyfinItemId ? `id=${before.entry.jellyfinItemId}` : `entryId=${entryId}`;
-        await page.evaluate(path => { location.hash = '#/details?' + path; }, target);
+        const openSeriesPage = () => page.evaluate(path => { location.hash = '#/details?' + path; }, target);
+
+        // 1. The page alone, no picker: one quiet load.
+        await openSeriesPage();
+        await settle(page, loads, answered, 1);
+        record(layout, 'opening the series page with no picker loads the list once, through EpisodeList', loads.length === 1 && refreshes.length === 0,
+            { loads, refreshes });
+        const quiet = await pageLoadLines(page);
+        record(layout, 'the page shows no loading or error line for the load', quiet.length === 0, quiet);
+        if (!stub && !failStatus) {
+            const loaded = await getEntry(page);
+            record(layout, 'the entry now says its list is loaded, with one episodes_listed event and more episodes than the library holds',
+                loaded?.episodeListLoaded === true && loaded.history.filter(event => event.eventType === 'episodes_listed').length === 1
+                    && loaded.episodes.length > before.episodes.length,
+                { episodeListLoaded: loaded?.episodeListLoaded, before: before.episodes.length, after: loaded?.episodes.length });
+        }
+
+        // 2. A second visit asks nothing.
+        await page.evaluate(() => { location.hash = '#/home'; });
+        await page.waitForTimeout(1500);
+        await openSeriesPage();
+        await page.waitForTimeout(4000);
+        record(layout, 'a second visit to the series page asks for nothing', loads.length === 1, loads);
+
+        if (!await page.locator('.jfmod-getRelease:visible').count()) {
+            record(layout, 'the picker shares the load and offers seasons only', 'NOT VERIFIED', 'no Get a Release on this page (not an administrator, or no release search)');
+            return;
+        }
+        // 3. The picker. On a fresh page (stub and failure modes, where the list is still unloaded) it opens while the
+        // page's load runs and shares it; live, the list is loaded and the picker asks nothing.
+        const loadsBefore = loads.length;
+        if (stub || failStatus) {
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+        }
         await openPicker(page, layout);
         const early = await scopeOptions(page);
         const loadingLine = early.find(option => option.text === 'Loading Seasons…');
@@ -145,43 +212,36 @@ async function run(browser, layout) {
             record(layout, 'no search runs while the list loads; the status says it is loading', /Loading every season from TMDB/.test(status), status);
         } else {
             record(layout, 'the scope switch shows a disabled Loading Seasons line while the list loads', 'NOT VERIFIED',
-                'the list had loaded before the switch could be read');
+                stub || failStatus ? 'the list had loaded before the switch could be read' : 'live: the page had loaded the list already');
         }
         await page.waitForFunction(() => ![...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
             .some(option => option.textContent === 'Loading Seasons…'), undefined, { timeout: 70000 });
-        await page.waitForTimeout(500);
+        await settle(page, loads, answered, loadsBefore);
         const after = await scopeOptions(page);
-        const texts = after.map(option => option.text).filter(text => text !== 'Choose what to search for' && text !== 'Choose an episode');
+        const texts = after.map(option => option.text);
+        record(layout, 'the switch starts at Choose what to search for, which is no choice', texts[0] === 'Choose what to search for', texts.slice(0, 2));
+        const choices = texts.filter(text => text !== 'Choose what to search for');
+        record(layout, 'the picker made no request of its own: the page and the picker share one load per visit',
+            loads.length === loadsBefore + (stub || failStatus ? 1 : 0) && refreshes.length === 0, { loads, refreshes });
         if (failStatus) {
             const line = await page.locator('.jfmod-episodeListFailure').innerText().catch(() => '');
             const reason = FAILURES.get(failStatus) ?? 'TMDB could not be reached.';
-            record(layout, 'a failed load keeps the list and says why in one quiet line',
+            record(layout, 'a failed load keeps the list and says why in one quiet line in the picker',
                 line === `Could not load every season from TMDB. ${reason} Only the episodes in the library are listed.`, line);
-            const ordered = [...before.episodes.filter(e => e.availability === 'missing' || e.availability === 'reclaimed'),
-                ...before.episodes.filter(e => e.availability !== 'missing' && e.availability !== 'reclaimed')];
-            record(layout, 'the scope switch keeps the episodes it had', JSON.stringify(texts) === JSON.stringify(expectedScope(ordered)), texts.slice(0, 8));
+            record(layout, 'the scope switch keeps the seasons it had, no single episodes', JSON.stringify(choices) === JSON.stringify(expectedScope(before.episodes)),
+                choices.slice(0, 8));
         } else {
             const loaded = stub ? JSON.parse(stub) : await getEntry(page);
-            const ordered = [...loaded.episodes.filter(e => e.availability === 'missing' || e.availability === 'reclaimed'),
-                ...loaded.episodes.filter(e => e.availability !== 'missing' && e.availability !== 'reclaimed')];
-            const expected = expectedScope(ordered);
-            record(layout, 'the scope switch offers All Seasons, every season with aired episodes and every episode, labelled as before',
-                JSON.stringify(texts) === JSON.stringify(expected), { shown: texts.length, expected: expected.length, first: texts.slice(0, 6) });
-            record(layout, 'the list grew beyond the episodes in the library', loaded.episodes.length > before.episodes.length,
-                { before: before.episodes.length, after: loaded.episodes.length });
-            if (!stub) {
-                record(layout, 'the entry now says its list is loaded, with one episodes_listed event', loaded.episodeListLoaded === true
-                    && loaded.history.filter(event => event.eventType === 'episodes_listed').length === 1, { episodeListLoaded: loaded.episodeListLoaded });
-            }
+            const expected = expectedScope(loaded.episodes);
+            record(layout, 'the scope switch offers All Seasons and every season with aired episodes, no single episodes',
+                JSON.stringify(choices) === JSON.stringify(expected), { shown: choices, expected });
         }
-        record(layout, 'one Refresh for the opening', refreshes.length === 1, refreshes);
-        await page.keyboard.press('Escape');
-        await page.waitForSelector('.jfmod-releaseDialog', { state: 'detached', timeout: 10000 }).catch(() => {});
+        record(layout, 'Back closes the picker', await closePicker(page, layout));
         await page.waitForTimeout(1000);
         await openPicker(page, layout);
         await page.waitForTimeout(2000);
-        record(layout, 'reopening on the same page asks for nothing again', refreshes.length === 1, refreshes);
-        await page.keyboard.press('Escape');
+        record(layout, 'reopening on the same page asks for nothing again', loads.length === loadsBefore + (stub || failStatus ? 1 : 0), loads);
+        await closePicker(page, layout);
     } catch (error) {
         record(layout, 'the run completed', false, String(error?.message ?? error).split('\n')[0]);
     } finally {
@@ -198,4 +258,4 @@ try {
 const failed = results.filter(result => result.verdict === 'FAIL').length;
 console.log(`${results.length} checks, ${failed} failed (${mode}, ${tier})`);
 process.exitCode = failed ? 1 : 0;
-/* eslint-enable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function */
+/* eslint-enable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity */
