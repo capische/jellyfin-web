@@ -87,6 +87,11 @@ export interface EntryDetail {
     upgrade?: UpgradeStateDto | null;
     /** A movie's running retention window; absent from older plugins (PHASE10 Q8). */
     retentionWarning?: RetentionWarning | null;
+    /**
+     * Whether a series' TMDB season and episode list has been loaded (P1.FU). False for a series discovered in the library
+     * that only holds the episodes of its files; an administrator's Refresh loads the rest. Absent from older plugins.
+     */
+    episodeListLoaded?: boolean;
 }
 
 export interface DiscoveryQuery {

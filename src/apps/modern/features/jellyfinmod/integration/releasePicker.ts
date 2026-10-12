@@ -4,7 +4,7 @@ import dialogHelper from 'components/dialogHelper/dialogHelper';
 import layoutManager from 'components/layoutManager';
 import { renderComponent } from 'utils/reactUtils';
 
-import { getEntry } from '../api/modApi';
+import { type EntryDetail, getEntry, refreshEntry } from '../api/modApi';
 import ReleasePickerDialog, { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
@@ -27,6 +27,8 @@ interface OpenOptions {
     seasonNumber?: number;
     /** `addVersion` for Get another quality (P6.M8); omitted is an ordinary acquire search. */
     intent?: ReleaseIntent;
+    /** The entry's `episodeListLoaded`: false loads the series' full TMDB list when the picker opens (P1.FU). */
+    episodeListLoaded?: boolean;
     onChanged?: () => void;
 }
 
@@ -59,6 +61,23 @@ const applyNames = (dlg: HTMLElement, toggle: HTMLElement, on: boolean) => {
 };
 
 const pad = (value: number) => (value < 10 ? '0' : '') + value;
+
+/** Loads already asked for, by entry and page, so a page visit asks TMDB once per entry, never again after a failure. */
+const listLoads = new Map<string, Promise<EntryDetail>>();
+
+/**
+ * Loads the full TMDB season and episode list of a series discovered in the library (P1.FU), through the administrator's
+ * Refresh, once per entry per page visit: a picker and the page it was opened from share the one request.
+ */
+export const loadEpisodeList = (api: Api, entryId: string): Promise<EntryDetail> => {
+    const key = entryId + ' ' + window.location.href;
+    let load = listLoads.get(key);
+    if (!load) {
+        load = refreshEntry(api, entryId);
+        listLoads.set(key, load);
+    }
+    return load;
+};
 
 /** Episode choices: aired episodes without media first, then the rest in broadcast order. */
 export const pickerEpisodes = (episodes: EntryEpisode[]): ReleasePickerEpisode[] => [
@@ -115,6 +134,8 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         episodePage: options.episodePage,
         seasonPage: options.seasonNumber,
         intent: options.intent,
+        loadEpisodes: options.mediaType === 'series' && options.episodeListLoaded === false ?
+            () => loadEpisodeList(options.api, options.entryId).then(detail => pickerEpisodes(detail.episodes)) : undefined,
         onChanged: options.onChanged
     }, content);
     const release = () => {
@@ -139,6 +160,7 @@ export const openReleasePickerForEntry = async (api: Api, entryId: string, nativ
         episodes: detail.episodes,
         episodeId: pageEpisodeId,
         episodePage: !!pageEpisodeId,
-        intent
+        intent,
+        episodeListLoaded: detail.episodeListLoaded
     });
 };
