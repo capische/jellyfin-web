@@ -1,10 +1,11 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import { useEffect, useRef } from 'react';
 
 import dialogHelper from 'components/dialogHelper/dialogHelper';
 import layoutManager from 'components/layoutManager';
 import { renderComponent } from 'utils/reactUtils';
 
-import { type EntryDetail, getEntry, refreshEntry } from '../api/modApi';
+import { type EntryDetail, getEntry, loadEntryEpisodeList } from '../api/modApi';
 import ReleasePickerDialog, { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
@@ -62,21 +63,43 @@ const applyNames = (dlg: HTMLElement, toggle: HTMLElement, on: boolean) => {
 
 const pad = (value: number) => (value < 10 ? '0' : '') + value;
 
-/** Loads already asked for, by entry and page, so a page visit asks TMDB once per entry, never again after a failure. */
+/** Loads already asked for, by entry and page, so a page visit asks once per entry, never again after a failure. */
 const listLoads = new Map<string, Promise<EntryDetail>>();
 
 /**
- * Loads the full TMDB season and episode list of a series discovered in the library (P1.FU), through the administrator's
- * Refresh, once per entry per page visit: a picker and the page it was opened from share the one request.
+ * Loads the full TMDB season and episode list of a series discovered in the library (P1.FU), through the plugin's
+ * EpisodeList, which any user who may see the series can call (P1.FU9), once per entry per page visit: a picker and the
+ * page it was opened from share the one request.
  */
 export const loadEpisodeList = (api: Api, entryId: string): Promise<EntryDetail> => {
     const key = entryId + ' ' + window.location.href;
     let load = listLoads.get(key);
     if (!load) {
-        load = refreshEntry(api, entryId);
+        load = loadEntryEpisodeList(api, entryId);
         listLoads.set(key, load);
     }
     return load;
+};
+
+/**
+ * Opening a series whose entry says its list is not loaded loads it (P1.FU9), for every user: once per entry per page
+ * visit, quietly, sharing the request with a picker opened meanwhile. `onLoaded` refetches the page's data. A failure, or
+ * an older plugin (no `episodeListLoaded`, or no endpoint), changes nothing.
+ */
+export const useEpisodeListLoad = (api: Api, detail: EntryDetail | null | undefined, onLoaded: () => void) => {
+    const onLoadedRef = useRef(onLoaded);
+    onLoadedRef.current = onLoaded;
+    const entryId = detail?.entry.mediaType === 'series' && detail.episodeListLoaded === false ? detail.entry.id : undefined;
+    useEffect(() => {
+        if (!entryId) return;
+        let live = true;
+        loadEpisodeList(api, entryId).then(() => {
+            if (live) onLoadedRef.current();
+        }, () => undefined);
+        return () => {
+            live = false;
+        };
+    }, [api, entryId]);
 };
 
 /** Episode choices: aired episodes without media first, then the rest in broadcast order. */
