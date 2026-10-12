@@ -1,8 +1,8 @@
 import ScheduleOutlined from '@mui/icons-material/ScheduleOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
-import SyncProblemOutlined from '@mui/icons-material/SyncProblemOutlined';
 import classNames from 'classnames';
-import React, { type FC, type ReactNode, useCallback, useEffect, useRef } from 'react';
+import React, { type FC, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
@@ -38,6 +38,43 @@ interface FileStateMarkProps {
     /** `row`: the action slot at a list row's end; otherwise a card's top-right corner. */
     variant?: 'card' | 'row';
 }
+
+/**
+ * The Not Downloaded glyph (P1.FU17, design A approved 2026-10-12): a download arrow coming out of a small cloud, stroked in
+ * the mark's colour (the stroke width is set in fileStateMark.scss, a little lighter on rows).
+ */
+const NotDownloadedGlyph: FC = () => (
+    <svg className='jfmod-markGlyph' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeLinecap='round'
+        strokeLinejoin='round' aria-hidden='true' focusable='false'>
+        <path d='M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5' />
+        <path d='M12 9v12' />
+        <path d='M8.5 17.5 12 21l3.5-3.5' />
+    </svg>
+);
+
+/**
+ * A mark on an upstream card (UX §3.1): drawn into the card's cover, top right, just before upstream's indicator cluster (the
+ * played tick, the count), so both stay visible; the cluster's width, re-read when its content changes, moves the slot left.
+ * It sits outside the image so the desktop hover overlay does not cover an administrator's button.
+ */
+export const CardMarkSlot: FC<{ cover: Element; children: ReactNode }> = ({ cover, children }) => {
+    const [offset, setOffset] = useState(0);
+    useLayoutEffect(() => {
+        const indicators = cover.querySelector<HTMLElement>('.cardIndicators');
+        if (!indicators) {
+            setOffset(0);
+            return;
+        }
+        const measure = () => setOffset(indicators.offsetWidth);
+        measure();
+        const observer = new MutationObserver(measure);
+        observer.observe(indicators, { childList: true, subtree: true });
+        return () => observer.disconnect();
+    }, [cover]);
+    const side = document.documentElement.getAttribute('dir') === 'rtl' ? 'left' : 'right';
+    return createPortal(
+        <div className='jfmod-markSlot' style={offset ? { [side]: `calc(0.475em + ${offset}px)` } : undefined}>{children}</div>, cover);
+};
 
 /** An entry with no file to play: nothing on disk and nothing in flight, or reclaimed. */
 const entryMark = (entry: Entry): MarkState | null =>
@@ -151,11 +188,11 @@ const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCou
 
     const action = entry ? entryDownload : download;
     if (action) {
-        return <MarkButton className={base + ' jfmod-mark--none'} download={action}><SyncProblemOutlined fontSize='inherit' /></MarkButton>;
+        return <MarkButton className={base + ' jfmod-mark--none'} download={action}><NotDownloadedGlyph /></MarkButton>;
     }
     return (
         <div className={base + ' jfmod-mark--none'} title='Not Downloaded'>
-            <SyncProblemOutlined fontSize='inherit' />
+            <NotDownloadedGlyph />
         </div>
     );
 };

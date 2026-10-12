@@ -69,8 +69,11 @@ interface QueueIndex {
     episodic: boolean;
 }
 
-const indexQueue = (items: QueueRow[], bound: Map<string, string[]>): QueueIndex => {
+const indexQueue = (items: QueueRow[], bound: Map<string, string[]>, seriesEntries: Map<string, string | null>): QueueIndex => {
     const entryByItem = new Map<string, string>();
+    for (const [seriesId, entryId] of seriesEntries) {
+        if (entryId) entryByItem.set(seriesId, entryId);
+    }
     for (const row of items) {
         if (row.entry?.jellyfinItemId) entryByItem.set(normalId(row.entry.jellyfinItemId), row.entry.id);
     }
@@ -268,11 +271,23 @@ const clearAll = () => {
 };
 
 /**
+ * The entry of each series a native season or episode belongs to, by the plugin's own lookup (`GET /Entries?jellyfinItemId=`),
+ * once per series. A season's series is not always the entry's Jellyfin item: a library with two folders for one show (the
+ * acceptance instance's 1923, its read-only folder and the mod's download folder) gets two series items, and the series page
+ * lists the seasons of both, each under its own series (P1.FU17).
+ */
+const lookUpSeries = (api: Api, seriesEntries: Map<string, string | null>, ids: string[]) => Promise.all(ids
+    .filter(id => !seriesEntries.has(id))
+    .map(id => getEntries(api, { jellyfinItemId: id, limit: 1 })
+        .then(found => seriesEntries.set(id, found.items[0]?.id ?? null), () => seriesEntries.set(id, null))));
+
+/**
  * Places native seasons and episodes (their series and numbers), once per item and in one request per pass for those not
- * placed yet. An item that cannot be read is placed nowhere.
+ * placed yet, and finds each series' entry. An item that cannot be read is placed nowhere.
  */
 const usePlacements = (api: Api | undefined, userId: string | undefined, onPlaced: () => void) => {
     const placements = useRef(new Map<string, Placement | null>());
+    const seriesEntries = useRef(new Map<string, string | null>());
     const asking = useRef(false);
     const place = useCallback((ids: string[]) => {
         const wanted = ids.filter(id => !placements.current.has(id));
@@ -287,6 +302,8 @@ const usePlacements = (api: Api | undefined, userId: string | undefined, onPlace
                         { seriesId: item.SeriesId, season: item.IndexNumber ?? null, episode: null } :
                         { seriesId: item.SeriesId, season: item.ParentIndexNumber ?? null, episode: item.IndexNumber ?? null });
                 }
+                const series = new Set((data.Items ?? []).flatMap(item => (item.SeriesId ? [normalId(item.SeriesId)] : [])));
+                return lookUpSeries(api, seriesEntries.current, Array.from(series));
             }, () => {
                 for (const id of wanted.slice(0, 200)) placements.current.set(id, null);
             })
@@ -295,7 +312,7 @@ const usePlacements = (api: Api | undefined, userId: string | undefined, onPlace
                 onPlaced();
             });
     }, [api, userId, onPlaced]);
-    return { placements: placements.current, place };
+    return { placements: placements.current, seriesEntries: seriesEntries.current, place };
 };
 
 /**
@@ -336,7 +353,7 @@ const DownloadMarks: FC = () => {
     const queue = useQueue({ enabled: capability.available, poll: watching ? 'cards' : false });
     const [placed, setPlaced] = useState(0);
     const onPlaced = useCallback(() => setPlaced(value => value + 1), []);
-    const { placements, place } = usePlacements(api, user?.Id, onPlaced);
+    const { placements, seriesEntries, place } = usePlacements(api, user?.Id, onPlaced);
     const { bound, bind } = useBoundItems(api, user?.Id, onPlaced);
     const items = queue.data?.items;
 
@@ -362,7 +379,7 @@ const DownloadMarks: FC = () => {
             return;
         }
         bind(relevant);
-        const index = indexQueue(relevant, bound);
+        const index = indexQueue(relevant, bound, seriesEntries);
         let timer: number | undefined;
         // Cards arrive after the page (lazy rows, a grid's next page, upstream redrawing a list): another pass, at most one
         // per 150 ms; the pass's own changes are dropped from the record so they do not start another.
@@ -393,7 +410,7 @@ const DownloadMarks: FC = () => {
             observer.disconnect();
             if (timer !== undefined) window.clearTimeout(timer);
         };
-    }, [items, readable, placed, placements, place, bound, bind]);
+    }, [items, readable, placed, placements, seriesEntries, place, bound, bind]);
 
     useEffect(() => clearAll, []);
     return null;

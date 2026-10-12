@@ -14,3 +14,10 @@
     background-size: cover;
     background-position: center;
 }
+
+/* A native row's mark, just before upstream's buttons (P1.FU17: the mark first, then the played check). */
+.jfmod-rowMarkHost {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
