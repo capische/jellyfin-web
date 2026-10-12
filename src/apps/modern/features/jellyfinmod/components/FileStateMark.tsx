@@ -6,6 +6,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import classNames from 'classnames';
 import React, { type FC, type ReactNode, useCallback, useEffect, useRef } from 'react';
 
+import focusManager from 'components/focusManager';
+import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import { airDateLong, airDateShort, daysUntilReclaim, FILE_STATE_LABEL, type MarkState, retentionDeadline } from '../constants/fileState';
@@ -98,7 +100,24 @@ const MarkButton: FC<{ className: string; download: MarkDownload; children: Reac
             openRef.current(button);
         };
         button.addEventListener('click', onClick);
-        return () => button.removeEventListener('click', onClick);
+        // On the TV a card is itself a focus stop and the icon sits inside it, where spatial navigation never lands: Up on the
+        // card goes to its icon and Down on the icon back to the card, before the page's own D-pad handling sees the key.
+        const card = layoutManager.tv ? button.closest<HTMLElement>('button.card') : null;
+        const hop = (event: KeyboardEvent, key: string, from: HTMLElement, to: HTMLElement) => {
+            if (event.key !== key || event.target !== from) return;
+            event.preventDefault();
+            event.stopPropagation();
+            focusManager.focus(to);
+        };
+        const up = (event: KeyboardEvent) => card && hop(event, 'ArrowUp', card, button);
+        const down = (event: KeyboardEvent) => card && hop(event, 'ArrowDown', button, card);
+        card?.addEventListener('keydown', up);
+        if (card) button.addEventListener('keydown', down);
+        return () => {
+            button.removeEventListener('click', onClick);
+            card?.removeEventListener('keydown', up);
+            button.removeEventListener('keydown', down);
+        };
     }, []);
     return <button ref={ref} type='button' className={className + ' jfmod-markButton'} title={download.label}
         aria-label={download.label}>{children}</button>;
