@@ -91,7 +91,7 @@ const seasonRow = (page, numbers) => page.evaluate(byId => {
     const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
     return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
         const mod = card.classList.contains('jfmod-missingSlot');
-        const mark = card.querySelector('.jfmod-mark');
+        const mark = card.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
         const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
         const box = mark?.getBoundingClientRect();
         const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
@@ -116,7 +116,7 @@ const episodeList = (page, numbers) => page.evaluate(byId => {
     const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
     return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
         const mod = row.classList.contains('jfmod-missingRow');
-        const mark = row.querySelector('.jfmod-mark');
+        const mark = row.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
         const overview = row.querySelector('.listItem-overview');
         const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
         return {
@@ -405,7 +405,7 @@ async function run(browser, layout, user, admin) {
             const card = page.locator(`.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`).first();
             await card.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
             const mark = await card.evaluate(node => {
-                const found = node.querySelector('.jfmod-mark');
+                const found = node.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
                 return found ? { kind: found.classList.contains('jfmod-mark--none') ? 'none' : 'other', tag: found.tagName, title: found.getAttribute('title') } : null;
             }).catch(() => null);
             await checkMark(page, label, `${movie.entry.title} search card`, mark, { kind: 'none' }, canDownload, 'Download This Movie');
