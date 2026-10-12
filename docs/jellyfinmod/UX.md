@@ -91,11 +91,18 @@ mod's own `nativeEntryDetails.js`, with no upstream file or selector edited:
    button. Both are the first mod content inside a stock container.
 2. **The stock Version select is hidden while the file chooser is mounted** (the §7.3 kind): it stays
    in the DOM and keeps working, hidden by a mod class that exists only while the chooser does.
+3. **The stock header Shuffle is hidden on a show that is not watched in any order** (P1.FU12, user
+   2026-10-12; the §7.3 kind). On a series or season page, `btnShuffle` stays in the header only when
+   the show's Jellyfin genres name comedy (sitcom), animation, reality, talk or game shows,
+   documentaries, kids or news (case-insensitive, matched within the genre's name; a season page reads
+   its series). Elsewhere a page class (`jfmod-shuffleInMore`, from `integration/shuffleMenu.ts`) hides
+   the button, which stays in the DOM, and a *Shuffle* item in the stock More menu clicks it, so
+   playback stays upstream's. Movies and other pages are untouched.
 
-Both need a parity check on every upstream merge: the insert points (`.mainDetailButtons >
+All need a parity check on every upstream merge: the insert points (`.mainDetailButtons >
 .btnUserRating`, `.btnPlaystate .detailButton-content`, `.selectSourceContainer`,
-`.selectVideoContainer`) must still exist with the same meaning; when one does not, the matching
-mod surface is simply absent and the stock page is unchanged.
+`.selectVideoContainer`, `.mainDetailButtons .btnShuffle`) must still exist with the same meaning;
+when one does not, the matching mod surface is simply absent and the stock page is unchanged.
 
 ---
 
@@ -443,6 +450,24 @@ next actions:
   a second tab stop inside a card.
 - **Context menu** keeps every upstream entry and adds three below them: *Search releases*
   (Phase 4), *Keep* (Phase 3) and *Remove entry*.
+- **Get a Release on a card** (P1.FU12, user-approved design 2026-10-12). For administrators, where
+  the plugin serves release search, on movie, series, season and episode cards whose title the plugin
+  has an entry for (series and seasons only with pack search): on the desktop an icon in upstream's
+  hover overlay, after Favorite and before More (Play · Played · Favorite · Get a Release · More), the
+  detail header's `cloud_download` glyph in the overlay's own round button classes, the stock hover,
+  a cyan ring on keyboard focus; its tooltip is *Get a Release*, or *Get Another Quality* for a movie
+  or episode on disk. The card's item menu carries the same item on every layout (the overlay's More,
+  a right-click, the TV's Menu key, a phone card's More where upstream draws one). Choosing it opens
+  the release picker in the card's scope, as the item's own page does (a series as the series page, a
+  season on that season, an episode on that episode, a movie as the movie page), without leaving the
+  page. Upstream's overlay is not edited: a `MutationObserver` inserts the icon into each
+  `.cardOverlayContainer .cardOverlayButton-br` before its `data-action="menu"` button, hidden until
+  the card is first hovered or focused and the plugin has answered for it
+  (`integration/cardGetRelease.tsx`); the menu item comes through `moreMenuItem.ts`'s card items,
+  matched at the action sheet by the card it opens from. Not covered: the phone's library grids and a
+  series page's season cards, where upstream draws only Play and a long press starts multi-select;
+  there the item's own page has the header icon. The mod's file-less cards and missing-season cards
+  have no hover overlay; their Not Downloaded mark is the same button (§7.2.1).
 
 ---
 
@@ -661,10 +686,14 @@ file mark from §3, and season rows gain a monitor toggle.
 
 **More-menu coupling (2026-10-07).** P7.S6 removed the More-menu hook. The design fix brings an
 item back without an upstream edit: the mod's integration wraps `itemContextMenu.show` at runtime
-for the open detail page only, adding its item to the action sheet that call opens. If the wrap finds
-nothing to wrap, the menu is exactly upstream's and the item is simply absent. Parity check on every
-upstream merge: `itemContextMenu`'s default export still has `show`, and `show` still opens the sheet
-through `actionSheet`'s default export.
+for the open detail page only, adding its items to the action sheet that call opens (several at once
+since P1.FU12: a series page's Keep Series and Shuffle). A card's menu does not pass through that
+export (`shortcuts.js` calls the module's named `show`), so card items (P1.FU12, Get a Release) are
+matched at the action sheet instead, by the movie, series, season or episode card it opens from. If the
+wrap finds nothing to wrap, the menu is exactly upstream's and the item is simply absent. Parity check
+on every upstream merge: `itemContextMenu`'s default export still has `show`, `show` still opens the
+sheet through `actionSheet`'s default export, and a card's menu still opens it with `positionTo` inside
+the card.
 
 **Phase 1 scope accepted, 2026-09-06:** file-less shows also expose individually tracked episodes,
 not only season summaries. Show missing versus unaired availability and persist episode monitoring
@@ -746,7 +775,8 @@ TMDB load (P1.FU9); nothing new is asked of the plugin.
   upstream file is edited.
 
 Not in this slice: the downloading states (the two-layer progress bar, the arrow in the count pill,
-the row's percentage and time left), the card hover Get a Release and the Shuffle change.
+the row's percentage and time left; §3.3, P4.FU1), the card hover Get a Release (§5.7) and the
+Shuffle change (§1.1 exception 3), both P1.FU12.
 
 ---
 
