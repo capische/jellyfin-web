@@ -46,6 +46,11 @@ export interface ReleasePickerProps {
     seasonPage?: number;
     /** `addVersion` searches for another version beside the held file (P6.M6, opened by Get another quality). */
     intent?: ReleaseIntent;
+    /**
+     * Loads the series' full season and episode list when its entry has only the episodes in the library (P1.FU); the scope
+     * switch says so while it loads, searches wait for it, and a failure keeps the episodes given.
+     */
+    loadEpisodes?: () => Promise<ReleasePickerEpisode[]>;
     /** Called after a grab reaches a final state, so the opener can refresh history and summaries. */
     onChanged?: () => void;
 }
@@ -592,16 +597,23 @@ interface ScopeOptions {
     packs: boolean;
     pageEpisode: ReleasePickerEpisode | undefined;
     pageSeason: number | undefined;
+    /** The full season and episode list is still loading (P1.FU). */
+    loading: boolean;
 }
+
+/** The scope switch's line while a series' full season and episode list loads (P1.FU); never a choice. */
+const LOADING_SEASONS = 'Loading Seasons…';
+const LOADING_VALUE = 'loading';
 
 /**
  * The scope switch (user decision 1, 2026-10-08). On an episode's page: that episode, its season and All Seasons. On a season's
  * page: that season and All Seasons (user, 2026-10-12). On a series page: All Seasons, each season with aired episodes other
  * than specials, then every episode. Without packs it is the episode list it always was.
  */
-const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason }: ScopeOptions): { label: string; options: EmbySelectOption[] } => {
+const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason, loading }: ScopeOptions): { label: string; options: EmbySelectOption[] } => {
     const episodeOptions = episodes.map(episode => ({ value: episode.id, label: episode.label }));
-    if (!packs) return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...episodeOptions] };
+    const loadingOption = loading ? [{ value: LOADING_VALUE, label: LOADING_SEASONS, disabled: true }] : [];
+    if (!packs) return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...loadingOption, ...episodeOptions] };
     if (pageSeason !== undefined) {
         return { label: 'Search For', options: [
             { value: SEASON_PREFIX + pageSeason, label: 'Season ' + pageSeason },
@@ -620,6 +632,7 @@ const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason }: ScopeOptions
         .map(episode => episode.seasonNumber))).sort((a, b) => a - b);
     return { label: 'Search For', options: [
         { value: '', label: 'Choose what to search for' },
+        ...loadingOption,
         ...(seasons.length > 0 ? [{ value: SERIES_VALUE, label: 'All Seasons' }] : []),
         ...seasons.map(season => ({ value: SEASON_PREFIX + season, label: 'Season ' + season })),
         ...episodeOptions
@@ -652,12 +665,17 @@ const rowPlanFor = (candidate: ReleaseCandidate, search: ReleaseSearch, packs: b
     return PLAIN_ROW;
 };
 
-/** The search a scope choice asks for; nothing while a series has no choice yet. */
-const searchScope = (choice: string, packs: boolean, mediaType: 'movie' | 'series', intent: ReleaseIntent | undefined) => {
+/**
+ * The search a scope choice asks for; nothing while a series has no choice yet, or while its full season and episode list
+ * still loads, since a season search covers the episodes the plugin lists (P1.FU).
+ */
+const searchScope = (choice: string, packs: boolean, mediaType: 'movie' | 'series', intent: ReleaseIntent | undefined,
+    loading: boolean) => {
     const chosen = parseChoice(packs || !choice.includes(':') ? choice : '');
     const isPack = chosen.scope === 'season' || chosen.scope === 'series';
     let waiting = '';
     if (mediaType === 'series' && !chosen.scope) waiting = packs ? 'Choose what to search for.' : 'Choose an episode to search for.';
+    if (mediaType === 'series' && loading) waiting = 'Loading every season from TMDB.';
     // A pack search is an acquire search; its rows choose to fill, add or replace.
     return { chosen, isPack, waiting, searchIntent: isPack ? undefined : intent };
 };
@@ -683,14 +701,57 @@ const noticeText = (choices: boolean, replace: boolean, scope: string | undefine
     return addVersion ? 'The release you grab is added as another version; the ones you have stay.' : null;
 };
 
+/** Why the list could not be loaded, after the plugin's Refresh statuses; the picker keeps the episodes it has. */
+const episodeListFailure = (error: unknown): string => {
+    const status = (error as { response?: { status?: number } } | null)?.response?.status;
+    let reason = 'TMDB could not be reached.';
+    if (status === 404) reason = 'TMDB does not list this series.';
+    else if (status === 503) reason = 'TMDB is not set up, or the library is busy.';
+    else if (status === 504) reason = 'TMDB did not answer in time.';
+    return 'Could not load every season from TMDB. ' + reason + ' Only the episodes in the library are listed.';
+};
+
+/**
+ * The episodes the scope switch offers: those given, then the series' full list once `load` brings it (P1.FU). A failure
+ * keeps the episodes given and says so quietly; the page that opened the picker is told when the list arrived.
+ */
+const useEpisodeList = (given: ReleasePickerEpisode[], load: (() => Promise<ReleasePickerEpisode[]>) | undefined,
+    onChanged: (() => void) | undefined) => {
+    const [loaded, setLoaded] = useState<ReleasePickerEpisode[] | null>(null);
+    const [loading, setLoading] = useState(!!load);
+    const [listError, setListError] = useState('');
+    const loadRef = useRef(load);
+    const onChangedRef = useRef(onChanged);
+    onChangedRef.current = onChanged;
+    useEffect(() => {
+        const start = loadRef.current;
+        if (!start) return;
+        let live = true;
+        start().then(list => {
+            if (!live) return;
+            setLoaded(list);
+            onChangedRef.current?.();
+        }, (error: unknown) => {
+            if (live) setListError(episodeListFailure(error));
+        }).finally(() => {
+            if (live) setLoading(false);
+        });
+        return () => {
+            live = false;
+        };
+    }, []);
+    return { episodes: loaded ?? given, loading, listError };
+};
+
 /**
  * The release picker (UX §9, PHASE4 A7): parsed summary plus the raw title, descending scores, a collapsed
  * rejected group with reasons, and one Enter to grab. The server holds a grab before sending it, so a focusable
  * Cancel follows the grabbed row during the hold (user decision 2). Rows only change on a deliberate search:
  * a new scope or profile. Nothing refetches underneath a focused row.
  */
-const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, episodePage, seasonPage,
-    intent, onChanged }) => {
+const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes: givenEpisodes, initialEpisodeId, episodePage,
+    seasonPage, intent, loadEpisodes, onChanged }) => {
+    const { episodes, loading, listError } = useEpisodeList(givenEpisodes, loadEpisodes, onChanged);
     const [choice, setChoice] = useState(initialEpisodeId ?? (seasonPage === undefined ? '' : SEASON_PREFIX + seasonPage));
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
@@ -699,7 +760,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const grab = useGrab(api, onChanged);
     // Pack scopes only where the plugin serves them; an older plugin keeps the episode list (season packs, 2026-10-08).
     const packs = usePluginCapabilities(api).includes(PACKS_CAPABILITY);
-    const { chosen, isPack, waiting, searchIntent } = searchScope(choice, packs, mediaType, intent);
+    const { chosen, isPack, waiting, searchIntent } = searchScope(choice, packs, mediaType, intent, loading);
 
     const profiles = useQuery({
         queryKey: ['JellyfinMod', api.basePath, 'QualityProfiles'],
@@ -765,9 +826,13 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             });
     }, [busy, data, mediaType, operation, search.isFetching, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
+    // The TV's action sheet may offer the disabled loading line too; choosing it changes nothing.
+    const chooseScope = useCallback((value: string) => {
+        if (value !== LOADING_VALUE) setChoice(value);
+    }, []);
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
-    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage }),
-        [episodes, packs, pageEpisode, seasonPage]);
+    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage, loading }),
+        [episodes, packs, pageEpisode, seasonPage, loading]);
     const defaultProfileLabel = profileLabel(data, !!profileId);
     const profileOptions = useMemo<EmbySelectOption[]>(() => [
         { value: '', label: defaultProfileLabel },
@@ -811,10 +876,11 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>
             {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choice}
-                options={scope.options} onChange={setChoice} />}
+                options={scope.options} onChange={chooseScope} />}
             {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality Profile'
                 value={profileId} options={profileOptions} onChange={setProfileId} />}
         </div>
+        {listError && <p className='jfmod-releaseNotice jfmod-releaseNotice--info jfmod-episodeListFailure'>{listError}</p>}
         {notice && !bare && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}
         <p className={classNames('jfmod-releaseStatus', { 'jfmod-releaseStatus--bare': bare })} role='status' tabIndex={-1}>
             {spoken && <span className='jfmod-releaseStatus-spoken'>{spoken}</span>}

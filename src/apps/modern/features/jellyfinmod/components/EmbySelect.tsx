@@ -5,6 +5,8 @@ import 'elements/emby-select/emby-select';
 export interface EmbySelectOption {
     value: string;
     label: string;
+    /** Shown but not choosable, for example while the choices are still loading. */
+    disabled?: boolean;
 }
 
 interface EmbySelectProps {
@@ -65,6 +67,7 @@ const EmbySelect: FC<EmbySelectProps> = ({ id, label, value, options, onChange }
             const item = document.createElement('option');
             item.value = option.value;
             item.textContent = option.label;
+            item.disabled = !!option.disabled;
             element.appendChild(item);
         }
         element.value = value;
