@@ -844,6 +844,7 @@ export const ClientSection: FC<SectionProps> = props => {
         { key: 'label', label: 'Label added to every grab', type: 'text' },
         { key: 'downloadDirectory', label: 'Download folder as Transmission sees it', type: 'text' },
         { key: 'localDirectory', label: 'The same folder as this server sees it', type: 'text', help: 'Must be on the same filesystem as the libraries, so imports can hardlink.' },
+        { key: 'openUrl', label: 'Web interface link', type: 'text', help: 'Optional. Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' },
         { key: 'enabled', label: 'Send grabs to this client', type: 'bool' }
     ];
     return (
