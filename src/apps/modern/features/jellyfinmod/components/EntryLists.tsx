@@ -51,8 +51,8 @@ export default function EntryLists({ rows, listOptions, serverId, alwaysShowCoun
         </>;
         return layoutManager.tv ? <button key={'entry:' + row.entry.id} type='button' data-index={index}
             className='listItem listItem-border listItem-button listItem-focusscale jfmod-entryList' aria-label={row.entry.title}
-            data-entry-path={path} onClick={openEntry}>{content}</button> :
+            data-entry-path={path} data-jfmod-entry-id={row.entry.id} onClick={openEntry}>{content}</button> :
             <a key={'entry:' + row.entry.id} data-index={index} className='listItem listItem-border emby-button jfmod-entryList'
-                href={'#' + path}>{content}</a>;
+                data-jfmod-entry-id={row.entry.id} href={'#' + path}>{content}</a>;
     })}</>;
 }

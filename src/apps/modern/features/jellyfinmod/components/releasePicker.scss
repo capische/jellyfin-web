@@ -313,38 +313,15 @@
     opacity: 0.75;
 }
 
-// The added row's download (2026-10-12, §1b): a thin bar along the row's bottom edge over a faint track, inset from the rounded
-// corners, and the figure at the right end of the marks line. Amber, the one progress colour of the app (user, 2026-10-12);
-// stalled keeps its own darker amber, a failure is red at the last value, and importing breathes at full width.
+// The added row's download (2026-10-12, §1b): a thin bar along the row's bottom edge, inset from the rounded corners, and the
+// figure at the right end of the marks line. Their colours, the track, the stalled, failed and importing looks and the light
+// scheme's darker figure are the app's one set in downloadProgress.scss (P4.FU1); only the placement is the picker's.
 .jfmod-addedBar {
     position: absolute;
     right: 0.8em;
     bottom: 0;
     left: 0.8em;
     height: 0.16em;
-    overflow: hidden;
-    border-radius: 0.08em;
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.jfmod-addedBar-fill {
-    display: block;
-    height: 100%;
-    border-radius: 0.08em;
-    background: #ffb300;
-}
-
-.jfmod-addedBar--stalled .jfmod-addedBar-fill { background: #e0a030; }
-.jfmod-addedBar--failed .jfmod-addedBar-fill { background: #e53935; }
-
-.jfmod-addedBar--importing .jfmod-addedBar-fill {
-    animation: jfmod-addedBreathe 1.2s ease-in-out infinite;
-}
-
-@keyframes jfmod-addedBreathe {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.45; }
 }
 
 .jfmod-addedFigure {
@@ -352,15 +329,7 @@
     margin-left: auto;
     padding-left: 0.6em;
     font-size: 74%;
-    color: #ffb300;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
 }
-
-.jfmod-addedFigure--queued { color: var(--jfmod-sec, rgba(255, 255, 255, 0.7)); }
-.jfmod-addedFigure--stalled { color: #e0a030; }
-.jfmod-addedFigure--failed { color: #ff7b72; }
-.jfmod-addedFigure--stale { opacity: 0.55; }
 
 // The indexer name as a link (user, 2026-10-12): the copy inside the row's button keeps the column's place, and the link, the
 // item's last child, is laid over it (IndexerLink measures the box), so it looks exactly like the plain name at rest.
@@ -1010,19 +979,6 @@
         --jfmod-btn: #c62828;
     }
 
-    .jfmod-addedBar {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    // The amber reads too faint as text on white; the figure takes a darker amber, the bar keeps the app's.
-    .jfmod-addedFigure {
-        color: #9a6700;
-    }
-
-    .jfmod-addedFigure--queued { color: var(--jfmod-sec, rgba(0, 0, 0, 0.6)); }
-    .jfmod-addedFigure--stalled { color: #8d5a00; }
-    .jfmod-addedFigure--failed { color: #c62828; }
-
     .jfmod-searchIndexer--failed .jfmod-searchIndexer-state,
     .jfmod-searchBlock--error .jfmod-searchGlyph,
     .jfmod-searchBlock--error .jfmod-searchCaption,
@@ -1059,8 +1015,7 @@
     .jfmod-searchIndexer-dot,
     .jfmod-releaseAction--working .jfmod-releaseGlyph-plus,
     .jfmod-releaseAction--working .jfmod-releaseGlyph-swap,
-    .jfmod-releaseAction--done .jfmod-releaseGlyph-tick,
-    .jfmod-addedBar--importing .jfmod-addedBar-fill {
+    .jfmod-releaseAction--done .jfmod-releaseGlyph-tick {
         animation: none;
     }
 
