@@ -12,7 +12,7 @@ import { entryDetailQuery } from '../hooks/useEntries';
 import EntryDetails from '../components/EntryDetails';
 import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
-import { getTmdbImage } from '../utils/entryLinks';
+import { getTmdbImage, preconnectTmdbImages } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
 
 /** Owns the file-less lifecycle before the native detail controller binds native-only actions. */
@@ -47,6 +47,9 @@ export default function initializeEntryDetails(view, params) {
     };
     const show = async () => {
         hide();
+        // The page's TMDB images (backdrop, poster or still, person portraits) need this connection the moment the entry
+        // arrives (P1.FU18).
+        preconnectTmdbImages();
         // Focus ownership starts with the visit, before loading: input while the entry loads ends it (P4.A7).
         focusOwnership = createFocusOwnership();
         const ownership = focusOwnership;
