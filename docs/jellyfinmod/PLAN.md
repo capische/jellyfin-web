@@ -624,6 +624,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   for Peep Show in a second Shows folder, automatic series grouping on, the 1923 shape), all removed afterwards. Not run: a
   live download (the queue answer was intercepted), the TV at 1280×720, a physical TV, a Pi instance (not deployed), the
   library list view's mark-before-check order (no file-less native title in alpha's list), the Unaired clock on an upstream season card (no such season in the data), Codex review.
+  **P1.FU18, built (not accepted) 2026-10-13: a missing episode's person cards show the person icon at once and fade
+  their portraits in** (user, testing 28096 on 1923 S1 E1: "Cast / Crew / Guests have no pictures ... They showed up with a
+  quiet delay. I did not expect that."). Owner: Phase 1 (the P1.FU15 page). Cause: not a late start. The portrait requests
+  already leave with the entry data (about 15 ms after it); the wait is TMDB's image server, which answers Sydney from Los
+  Angeles: a cold connection costs about 0.35 to 0.55 s before the first image can be asked for, and in a profile that does
+  not yet know the server speaks HTTP/2 the browser holds the low-priority portraits back until the still has loaded. Until
+  then each card showed an empty image box, and the portraits popped in. Fix (web only): each person card shows upstream's
+  person icon on its default background until its portrait has loaded, then the portrait fades in over it with upstream's
+  image fade and its Faster Animations setting (no fade under reduced motion; a failed portrait leaves the icon); the
+  entry route opens the connection to `image.tmdb.org` while it reads the entry (a `preconnect` hint; Chrome honours it in a
+  normal profile, not in an incognito one, and Playwright's own Chromium ignores it). Measured on 28096 with the build served
+  in place of the deployed bundle (read-only), ms after navigation, Google Chrome with a fresh normal profile, from Home:
+  cards 365–390 (one run 876, its entry read took 800 ms); the last portrait in view loaded at 1654–1738 before and
+  1294–1389 after (that one run 1777); every portrait request was on the wire by 434–1105 after and 977–1454 before. From the season page (warm connection, the entry already known): cards 32–42, portraits requested
+  at 42–52 and loaded by 325–541, the same before and after. The plugin's `GET Entries/{id}` is about 265–300 ms for 1923
+  and Peep Show alike (not 870 ms; independent of the episodes' credits), so it was left alone. On local environment alpha
+  the entry read takes about 35 ms, too short for the hint to help: the last portrait loads at 1295–1366 ms before and
+  1306–1333 after. The fade is upstream's: 0.1 s with Faster Animations on (upstream's default), 0.5 s with it off. Web
+  `fix/portraits-load` from `068ce9cca4` (`2c2807f3dc`). Typecheck, eslint, stylelint and the production build pass;
+  `missing-seasons-episodes.mjs` passed 888/888 in Chromium on desktop, phone and TV 1080 (administrator and ordinary user
+  nata) against alpha with plugin `next-release` `618efb7`; a read-only check on alpha found every loaded portrait at
+  opacity 1 over the person icon on all three layouts, with upstream's `fadein` and none under reduced motion. Not deployed
+  to a Pi instance; no real-Chrome runner pass; no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
