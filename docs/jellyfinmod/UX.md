@@ -257,7 +257,8 @@ progress colour, for the picker's added row too (one set of colours in `download
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
   and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
-  batch of new items: its series and numbers); the mod's own carry `data-jfmod-entry-id` with
+  batch of new items: its series and numbers; a title the queue names without a Jellyfin item, a file-less series
+  whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`); the mod's own carry `data-jfmod-entry-id` with
   `data-jfmod-season` or `data-jfmod-episode-id`. One component draws them all
   (`integration/downloadMarks.tsx`, mounted once by the mod shell).
 
