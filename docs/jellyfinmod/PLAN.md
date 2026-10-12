@@ -502,7 +502,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   and colours now shared. The in-flight ring and grabbed icon leave `FileStateMark`. Owner: Phase 4 follow-up, with Phase 5's
   queue as the source; no plugin change. Typecheck, lint and the production build pass; a static render of the built CSS was
   checked; not deployed, no live first look yet (runner `card-progress.mjs`, intercepted queue answers), no Codex review yet.
-  Still open from the sheet: the card hover Get a Release and the Shuffle change.
+  Still open from the sheet: the card hover Get a Release and the Shuffle change. First look on 28096 (2026-10-12, Chromium,
+  intercepted queue answers): `card-progress.mjs` 15/17 desktop and 32/34 mobile and TV against the deployed `f7c95ac4b5`;
+  the failures were a file-less series' native card (fixed in `eb73bfdcae`) and the phone row figure (fixed in `67262ac880`),
+  both waiting for a redeploy of the `af3b40f6ea`-or-later build.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
