@@ -1,4 +1,4 @@
-import React, { type FC, Fragment, type ReactNode } from 'react';
+import React, { type FC, Fragment, type MouseEvent, type ReactNode } from 'react';
 
 import layoutManager from 'components/layoutManager';
 
@@ -163,13 +163,30 @@ interface ReleaseLinesProps {
     candidate: ReleaseCandidate;
     /** `Season 2 · 8 episodes` and `3 held` chips of a pack row. */
     coverage: string | null;
+    /** The added row's download figure (`42% · 12 min left`), at the right end of the marks line (2026-10-12). */
+    progress?: ReactNode;
 }
+
+/** The link opens the tracker's page in a new tab; it must not also grab the row it sits in. */
+const stopRow = (event: MouseEvent) => event.stopPropagation();
+
+/**
+ * The indexer name, which is itself the link to the release's page where the indexer gives one (user, 2026-10-12): it looks like
+ * the plain name at rest and shows the link on hover and keyboard focus. Plain text on the TV, where nothing can open a tab.
+ */
+const IndexerName: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => {
+    const name = candidate.indexerName;
+    if (!candidate.detailsUrl || layoutManager.tv) return <span className='jfmod-releaseCol jfmod-releaseCol--indexer'>{name}</span>;
+    return <a className='jfmod-releaseCol jfmod-releaseCol--indexer jfmod-releaseIndexerLink' href={candidate.detailsUrl}
+        target='_blank' rel='noopener noreferrer' title={'Open on ' + name} aria-label={'Open ' + candidate.rawTitle + ' on ' + name
+            + ' in a new tab'} onClick={stopRow}>{name}</a>;
+};
 
 /**
  * What a row's button holds: line 1, the marks line, and the file name (shown on every row while Show Names is on, and in the
  * grab block). A phone gets the three-line form, so nothing wraps unpredictably at 360 px.
  */
-export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage }) => {
+export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progress }) => {
     const parsed = candidate.parsed;
     const held = candidate.coverage?.held ?? 0;
     const heldQuality = !!candidate.heldQuality;
@@ -188,9 +205,9 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage }) => 
     const size = <span className='jfmod-releaseCol jfmod-releaseCol--size'>{formatSize(candidate.size)}</span>;
     const seedsColumn = <span className='jfmod-releaseCol jfmod-releaseCol--seeds'
         aria-label={candidate.seeders === null ? 'Seeders unknown' : seeds + ' seeders'}><SeedsGlyph />{seeds}</span>;
-    const indexer = <span className='jfmod-releaseCol jfmod-releaseCol--indexer'>{candidate.indexerName}</span>;
+    const indexer = <IndexerName candidate={candidate} />;
     const marks = <MediaMarks parsed={parsed} />;
-    const hasMarks = marksOf(parsed).length > 0;
+    const hasMarks = marksOf(parsed).length > 0 || !!progress;
     const title = <span className='jfmod-releaseTitle'>{candidate.rawTitle} · score {candidate.score}</span>;
 
     if (layoutManager.mobile) {
@@ -206,7 +223,7 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage }) => 
                 <span className='jfmod-releaseLeft'>{hasLanguages && languages}</span>
                 <span className='jfmod-releaseRight'>{indexer}</span>
             </span>
-            {hasMarks && <span className='jfmod-releaseLine2'>{marks}</span>}
+            {hasMarks && <span className='jfmod-releaseLine2'>{marks}{progress}</span>}
             {/* In the page for the runners and screen readers' text; a phone never shows it on the row (the grab block and the
                 confirmation carry the name). */}
             {title}
@@ -219,7 +236,7 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage }) => 
             </span>
             <span className='jfmod-releaseRight'>{size}{seedsColumn}{indexer}</span>
         </span>
-        {hasMarks && <span className='jfmod-releaseLine2'>{marks}</span>}
+        {hasMarks && <span className='jfmod-releaseLine2'>{marks}{progress}</span>}
         {title}
     </>;
 };
@@ -232,8 +249,23 @@ const ActionSvg: FC<{ children: ReactNode }> = ({ children }) =>
         <g className='jfmod-releaseGlyph-bang'><path d='M12 5V14' /><circle cx='12' cy='18.6' r='1.4' fill='currentColor' stroke='none' /></g>
     </svg>;
 
-/** The Add action's glyph: a plus that pulses while working, a tick when the client has the torrent, a bang when it failed. */
-export const AddGlyph: FC = () => <ActionSvg><path className='jfmod-releaseGlyph-plus' d='M12 5.5V18.5M5.5 12H18.5' /></ActionSvg>;
+/**
+ * The Add action's glyph: a plus at rest; while the torrent goes to the client a down arrow falls onto a tray (I1 "Drop", user
+ * 2026-10-12); a tick when the client has the torrent, a bang when it failed.
+ */
+export const AddGlyph: FC = () => <ActionSvg>
+    <path className='jfmod-releaseGlyph-plus' d='M12 5.5V18.5M5.5 12H18.5' />
+    <g className='jfmod-releaseGlyph-drop'>
+        <g className='jfmod-releaseGlyph-fall'><path d='M12 4V14' /><path d='M7.5 9.5L12 14L16.5 9.5' /></g>
+        <path className='jfmod-releaseGlyph-tray' d='M5 19.5H19' />
+    </g>
+</ActionSvg>;
+
+/** The added row's X: Cancel during the hold, Remove from Queue afterwards (2026-10-12). */
+export const RemoveGlyph: FC = () => <svg className='jfmod-releaseGlyph' viewBox='0 0 24 24' fill='none' stroke='currentColor'
+    strokeWidth='2.3' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true' focusable='false'>
+    <path d='M6 6L18 18M18 6L6 18' />
+</svg>;
 
 /** The Replace action's glyph: two curved arrows in a circle, the outgoing one faint; the circle turns while working. */
 export const ReplaceGlyph: FC = () => <ActionSvg>

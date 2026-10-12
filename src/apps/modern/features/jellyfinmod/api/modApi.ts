@@ -355,3 +355,25 @@ export const getImport = async (api: Api, id: string, options?: AxiosRequestConf
         { ...options, headers: authorization(api) });
     return response.data;
 };
+
+/** The selected download client's name and credential-free web link (administrators only; others get 403). */
+export interface DownloadClientLink {
+    name: string;
+    openUrl: string;
+}
+
+/**
+ * The link of the download client grabs go to, for the release picker's Open Transmission icon (2026-10-12): the selected
+ * client from the acquisition settings, null when none is selected or it has no web link. Administrator-only reads, so an
+ * ordinary user's request fails and the icon stays hidden.
+ */
+export const getDownloadClientLink = async (api: Api, options?: AxiosRequestConfig): Promise<DownloadClientLink | null> => {
+    const config = { ...options, headers: authorization(api) };
+    const settings = await api.axiosInstance.get<{ downloadClientId: string | null }>(api.basePath + BASE + '/Settings/Acquisition', config);
+    const selected = settings.data.downloadClientId;
+    if (!selected) return null;
+    const clients = await api.axiosInstance.get<Array<{ id: string; name: string; openUrl: string | null }>>(
+        api.basePath + BASE + '/Settings/DownloadClients', config);
+    const client = clients.data.find(value => value.id === selected);
+    return client?.openUrl ? { name: client.name, openUrl: client.openUrl } : null;
+};
