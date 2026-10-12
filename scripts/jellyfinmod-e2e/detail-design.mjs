@@ -26,7 +26,10 @@
 //   [JELLYFINMOD_DD_UPGRADES=1]     with JELLYFINMOD_DD_PACK: search the Season scope again with episode upgrades switched the
 //                                   other way (Add alone when off, Add and Replace when on; user, 2026-10-09), then restore it
 //
-// Read-only unless one of the flags above asks for a change; every change is undone, except the disposable removal.
+// Read-only unless one of the flags above asks for a change; every change is undone, except the disposable removal. One
+// exception since the Phase 1 follow-up (2026-10-12): opening the picker of a series whose entry says
+// `episodeListLoaded: false` (discovered in the library) runs the plugin's Refresh once, which adds the series' TMDB
+// episodes as unmonitored rows; full-episode-list.mjs checks that behaviour.
 import { chromium } from 'playwright';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
