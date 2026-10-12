@@ -136,7 +136,9 @@ const rowStates = page => page.evaluate(() => [...document.querySelectorAll('.pa
         text: figure?.textContent ?? null,
         colour: figure ? getComputedStyle(figure).color : null,
         tabular: figure ? getComputedStyle(figure).fontVariantNumeric : null,
-        figureAtEnd: !!figure && figure.getBoundingClientRect().right > box.left + box.width * 0.5,
+        // At the row's end; on the phone, the last line of the row's text.
+        figureAtEnd: !!figure && (document.documentElement.classList.contains('layout-mobile') ? figure.parentElement?.classList.contains('listItemBody')
+            && figure === figure.parentElement.lastElementChild : figure.getBoundingClientRect().right > box.left + box.width * 0.5),
         bar: bar ? { percent: parseFloat(fill.style.width), colour: getComputedStyle(fill).backgroundColor,
             atBottom: Math.abs(bar.getBoundingClientRect().bottom - box.bottom) < 1.5, animation: getComputedStyle(fill).animationName } : null,
         noneShown: [...row.querySelectorAll('.jfmod-mark--none')].some(node => getComputedStyle(node).display !== 'none')
