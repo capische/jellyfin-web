@@ -16,7 +16,7 @@ import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refres
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
-import { openReleasePicker } from '../integration/releasePicker';
+import { loadEpisodeList, openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { AcquisitionSummary } from '../types/acquisition';
 import { FileState } from '../types/entry';
@@ -85,6 +85,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // An older plugin omits the summary; the page must still render (P1.W14).
     const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
     const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
+    // A series discovered in the library lists only its files until its TMDB list loads (P1.FU); an older plugin omits it.
+    const [listLoaded, setListLoaded] = useState(detail.episodeListLoaded !== false);
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = capabilities.includes(RELEASES_CAPABILITY);
@@ -118,6 +120,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             setHistory(updated.history);
             setRetention(updated.retention);
             setAcquisition(updated.acquisition ?? null);
+            setListLoaded(updated.episodeListLoaded !== false);
         } catch {
             // The picker already showed the outcome; the page keeps its last good state.
         }
@@ -125,9 +128,22 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     const openPicker = useCallback((opener: HTMLElement) => {
         openReleasePicker({
             api, entryId: entry.id, title: entry.title, mediaType: entry.mediaType, episodes,
-            episodeId: opener.dataset.episodeId, onChanged: reload
+            episodeId: opener.dataset.episodeId, episodeListLoaded: listLoaded, onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
-    }, [api, entry.id, entry.mediaType, entry.title, episodes, reload]);
+    }, [api, entry.id, entry.mediaType, entry.title, episodes, listLoaded, reload]);
+    // An administrator opening a discovered series sees every season and episode, not only its files: the page loads the TMDB
+    // list once (P1.FU), sharing the request with a picker opened meanwhile. A failure keeps the list; the picker says why.
+    useEffect(() => {
+        if (!isAdmin || entry.mediaType !== 'series' || listLoaded) return;
+        loadEpisodeList(api, entry.id).then(updated => {
+            if (signal.aborted) return;
+            setEntry(updated.entry);
+            setEpisodes(updated.episodes);
+            setHistory(updated.history);
+            setRetention(updated.retention);
+            setListLoaded(true);
+        }, () => undefined);
+    }, [api, entry.id, entry.mediaType, isAdmin, listLoaded, signal]);
     const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
     // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
     useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a Release',
@@ -204,6 +220,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 setEpisodes(updated.episodes);
                 setHistory(updated.history);
                 setRetention(updated.retention);
+                setListLoaded(true);
                 announce('Metadata refreshed.');
             }
         });
