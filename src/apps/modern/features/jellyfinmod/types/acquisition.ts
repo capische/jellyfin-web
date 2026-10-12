@@ -63,6 +63,11 @@ export interface ReleaseCandidate {
     heldQuality?: boolean;
     /** What a pack row covers; null outside season and series searches, absent from plugins without `acquisition.packs`. */
     coverage?: PackCoverage | null;
+    /**
+     * The release's page on the tracker (Torznab `comments`, else an http guid), never one that carries a credential; null when
+     * the indexer gives none, absent from older plugins (release picker, 2026-10-12).
+     */
+    detailsUrl?: string | null;
 }
 
 /** `episode` searches one episode, `season` packs of one season, `series` complete-series packs (season packs, 2026-10-08). */
