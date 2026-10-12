@@ -237,7 +237,7 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progr
         {candidate.freeleech === true && <span className='jfmod-releaseFlag jfmod-releaseFlag--freeleech' title='Freeleech' aria-label='Freeleech'>FL</span>}
         {(candidate.proper || candidate.repack) && <span className='jfmod-releaseBadge--note'>{candidate.proper ? 'Proper' : 'Repack'}</span>}
         {coverage && <span className='jfmod-releaseChip jfmod-releaseChip--coverage'>{coverage}</span>}
-        {held > 0 && <span className='jfmod-releaseChip jfmod-releaseChip--held'>{held} held</span>}
+        {held > 0 && <span className='jfmod-releaseChip jfmod-releaseChip--held' title={held + ' held'} aria-label={held + ' held'}>{held}<HeldGlyph /></span>}
     </>;
     const languages = <>
         <Languages label='Audio' codes={parsed.languages} />
