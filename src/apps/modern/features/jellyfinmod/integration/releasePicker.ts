@@ -86,7 +86,8 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         + '<button is="paper-icon-button-light" type="button" class="autoSize jfmod-releaseAction jfmod-namesToggle"'
         + ' title="Show Names" aria-label="Show Names" aria-pressed="false">'
         + namesToggleGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</button>'
-        + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseDialogClose" tabindex="-1" title="Close"'
+        + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseAction jfmod-releaseDialogClose" tabindex="-1"'
+        + ' title="Close"'
         + ' aria-label="Close"><svg class="jfmod-releaseGlyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"'
         + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div>'
         + '<div class="formDialogContent smoothScrollY"><div class="jfmod-releaseDialogContent"></div></div>';
