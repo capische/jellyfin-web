@@ -553,7 +553,8 @@ async function checkGrids(page, name, cfg, libs) {
             await openGrid(page, lib);
             const kind = await gridKind(page);
             const g = await gridStats(page);
-            record(name, `${route} grid (${kind}): cards, mod cards and file-state marks`, g.modCards > 0 && g.marks > 0 && g.filterButton, g);
+            // On disk shows no mark (UX §3.1, P1.FU11), so a grid of files may have none: the marks are counted, not required.
+            record(name, `${route} grid (${kind}): cards, mod cards and the filter; file-state marks counted`, g.modCards > 0 && g.filterButton, g);
             if (!cfg.tv) continue;
             if (kind === 'modern') await checkModernGrid(page, name, lib);
             else await checkLegacyGrid(page, name, lib);
