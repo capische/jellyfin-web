@@ -78,16 +78,18 @@ const MarkButton: FC<{ className: string; download: MarkDownload; children: Reac
         };
         button.addEventListener('click', onClick);
         // On the TV a card is itself a focus stop and the icon sits inside it, where spatial navigation never lands: Up on the
-        // card goes to its icon and Down on the icon back to the card, before the page's own D-pad handling sees the key.
-        const card = layoutManager.tv ? button.closest<HTMLElement>('button.card') : null;
+        // card goes to its icon and Down on the icon back to the card, before the page's own D-pad handling sees the key. A
+        // missing episode's row (a stop since P1.FU15) holds its icon at its end: Right goes to it and Left back.
+        const card = layoutManager.tv ? button.closest<HTMLElement>('button.card, button.jfmod-missingRow') : null;
+        const [into, back] = card?.classList.contains('jfmod-missingRow') ? ['ArrowRight', 'ArrowLeft'] : ['ArrowUp', 'ArrowDown'];
         const hop = (event: KeyboardEvent, key: string, from: HTMLElement, to: HTMLElement) => {
             if (event.key !== key || event.target !== from) return;
             event.preventDefault();
             event.stopPropagation();
             focusManager.focus(to);
         };
-        const up = (event: KeyboardEvent) => card && hop(event, 'ArrowUp', card, button);
-        const down = (event: KeyboardEvent) => card && hop(event, 'ArrowDown', button, card);
+        const up = (event: KeyboardEvent) => card && hop(event, into, card, button);
+        const down = (event: KeyboardEvent) => card && hop(event, back, button, card);
         card?.addEventListener('keydown', up);
         if (card) button.addEventListener('keydown', down);
         return () => {

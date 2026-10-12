@@ -7,14 +7,16 @@
 
 /* Upstream's `.cardContent:not(.defaultCardBackground)` clears the background and `.cardContent` the outline, at two classes:
  * three classes keep the placeholder's own. */
-.jfmod-missingCard .cardImageContainer.jfmod-missingPoster {
+.jfmod-missingCard .cardImageContainer.jfmod-missingPoster,
+.jfmod-episodeStill .cardImageContainer.jfmod-missingPoster {
     align-items: center;
     justify-content: center;
     text-decoration: none;
     color: inherit;
 }
 
-.jfmod-missingCard .cardImageContainer.jfmod-missingEmpty {
+.jfmod-missingCard .cardImageContainer.jfmod-missingEmpty,
+.jfmod-episodeStill .cardImageContainer.jfmod-missingEmpty {
     background: #262626;
     outline: 1px dashed rgba(255, 255, 255, 0.14);
     outline-offset: -1px;
@@ -46,9 +48,14 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* A row has nothing to play or open: no pointer, and it is no focus stop (its administrator's icon is). */
+/* A row opens the episode's page (P1.FU15); its title is the link for the keyboard, drawn as the row's own text. */
 .jfmod-missingRow {
-    cursor: default;
+    cursor: pointer;
+}
+
+.jfmod-missingRowLink {
+    color: inherit;
+    text-decoration: none;
 }
 
 .jfmod-missingStill {
@@ -68,4 +75,9 @@
     align-items: center;
     flex: 0 0 auto;
     padding: 0 0.5em;
+}
+
+/* A missing episode's page (P1.FU15): its person cards link nowhere, so they keep the arrow cursor. */
+.jfmod-personCard .cardImageContainer {
+    cursor: default;
 }
