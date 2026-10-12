@@ -20,7 +20,7 @@
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
 //   JELLYFINMOD_CP_SERIES=<series entry id>        a series with a Jellyfin series item and at least one Jellyfin season
-//   [JELLYFINMOD_CP_MOVIE=<entry id>]             a file-less movie entry, found on the search page
+//   [JELLYFINMOD_CP_FILELESS=<entry id>]          a file-less movie or series entry, found on the search page
 //   [JELLYFINMOD_WEB_PATH=/web/]  [JELLYFINMOD_BROWSER=chromium|chrome]  [JELLYFINMOD_LAYOUTS=desktop,mobile,tv1080]
 import { chromium } from 'playwright';
 
@@ -28,7 +28,7 @@ const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Er
 const loopback = ['127.0.0.1', 'localhost'].includes(origin.hostname);
 if (!loopback && !['18096', '28096', '48096'].includes(origin.port)) throw new Error('Runs on the mod instances or a local environment only');
 const seriesEntryId = process.env.JELLYFINMOD_CP_SERIES ?? (() => { throw new Error('JELLYFINMOD_CP_SERIES is required'); })();
-const movieEntryId = process.env.JELLYFINMOD_CP_MOVIE ?? null;
+const filelessEntryId = process.env.JELLYFINMOD_CP_FILELESS ?? process.env.JELLYFINMOD_CP_MOVIE ?? null;
 const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web/';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const layouts = (process.env.JELLYFINMOD_LAYOUTS ?? 'desktop,mobile,tv1080').split(',').filter(Boolean);
@@ -151,6 +151,7 @@ async function run(browser, layout) {
     const context = await browser.newContext(options);
     const page = await context.newPage();
     const errors = [];
+    const shot = name => page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/card-progress-${tier}-${layout}-${name}.png` }).catch(() => {});
     page.on('pageerror', error => errors.push(String(error.message).slice(0, 200)));
     let answer = { items: [], totalRecordCount: 0, generatedAt: now(), clientStatus: { reachable: true, checkedAt: now(), reason: null },
         importEnabled: true, seedReleaseEnabled: true };
@@ -204,8 +205,26 @@ async function run(browser, layout) {
                 mode: 'fill', episodes: packEpisodes.map(episode => ({ episodeId: episode.id, seasonNumber: episode.seasonNumber,
                     episodeNumber: episode.episodeNumber, importId: null, importState: null, reason: null })) } }));
         }
-        const movie = movieEntryId ? (await apiGet(page, 'JellyfinMod/Entries/' + movieEntryId))?.entry : null;
-        if (movie) items.push(queueRow(movie, { state: 'downloading', progress: 0.25, etaSeconds: 300 }));
+        // A file-less title: a movie's own row, or a series' first episode (its card shows the mean of one episode).
+        const filelessDetail = filelessEntryId ? await apiGet(page, 'JellyfinMod/Entries/' + filelessEntryId) : null;
+        const movie = filelessDetail?.entry ?? null;
+        const firstEpisode = movie?.mediaType === 'series' ? [...filelessDetail.episodes].filter(episode => episode.seasonNumber > 0)
+            .sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)[0] : null;
+        // Jellyfin may already hold the file-less title's item (season folders, a reclaimed file): its card is then upstream's,
+        // which the plugin binds to the entry although the entry names no item.
+        const boundItem = movie ? await page.evaluate(async ([title, id, kind]) => {
+            const found = await ApiClient.getItems(ApiClient.getCurrentUserId(), { searchTerm: title, IncludeItemTypes: kind, Recursive: true, Limit: 5 });
+            for (const item of found.Items) {
+                const response = await fetch(ApiClient.getUrl('JellyfinMod/Entries', { jellyfinItemId: item.Id, limit: 1 }),
+                    { headers: { Authorization: `MediaBrowser Token="${ApiClient.accessToken()}"` } });
+                if (response.ok && (await response.json()).items?.[0]?.id === id) return item.Id;
+            }
+            return null;
+        }, [movie.title, movie.id, movie.mediaType === 'movie' ? 'Movie' : 'Series']) : null;
+        if (movie) {
+            items.push(queueRow(movie, { episode: firstEpisode ? episodeRef(firstEpisode) : null, state: 'downloading', progress: 0.25,
+                etaSeconds: 300 }));
+        }
         answer = { ...answer, items, totalRecordCount: items.length };
 
         // The series page: one read when it opens.
@@ -228,6 +247,8 @@ async function run(browser, layout) {
             .filter(card => card.getAttribute('data-id') !== id && !card.classList.contains('jfmod-missingCard'))
             .map(card => !!card.querySelector('.jfmod-dlCardBar, .jfmod-dlDisc, .jfmod-countArrow')), native.id);
         record(label, 'the other season cards show no download', others.every(shown => !shown), others);
+        await page.locator(`.page:not(.hide) #listChildrenCollapsible .card[data-id="${native.id}"]`).scrollIntoViewIfNeeded().catch(() => {});
+        await shot('series-page');
         if (missingSeason !== undefined) {
             const pack = await cardState(page, `.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${missingSeason}"]`);
             record(label, `missing Season ${missingSeason} card with a pack on its way: the disc and a 60% bar, Not Downloaded hidden`,
@@ -255,6 +276,8 @@ async function run(browser, layout) {
             { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(800);
         const rows = await rowStates(page);
+        await page.locator('.page:not(.hide) .jfmod-dlRow').first().scrollIntoViewIfNeeded().catch(() => {});
+        await shot('season-rows');
         const itemOf = new Map((await page.evaluate(async ([seriesItem, seasonItem]) => (await ApiClient.getEpisodes(seriesItem,
             { seasonId: seasonItem, userId: ApiClient.getCurrentUserId() })).Items.map(item => [item.IndexNumber, item.Id.replace(/-/g, '').toLowerCase()]),
         [seriesId, native.id])));
@@ -269,6 +292,7 @@ async function run(browser, layout) {
         // The light scheme's darker figure: the theme attribute set in this page only.
         await page.evaluate(() => { window.jfmodTheme = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'light'); });
         const light = await rowStates(page);
+        await shot('season-rows-light');
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
         const lightDownloading = light.find(row => row.text === '42% · 12 min left');
         const lightStalled = light.find(row => row.text === '30% · stalled');
@@ -281,17 +305,22 @@ async function run(browser, layout) {
         await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) .card[data-id="${id}"] .jfmod-dlCardBar`), seriesId, { timeout: 30000 })
             .catch(() => {});
         const seriesCard = await cardState(page, `.page:not(.hide) .card[data-id="${seriesId}"]`);
+        await shot('search-series');
         record(label, 'search: the series card shows the bar and the arrow (the mean of its episodes on their way)', !!seriesCard?.bar
             && seriesCard.colour === AMBER && (seriesCard.pill?.arrow || !!seriesCard.disc), seriesCard);
         if (movie) {
             await go(page, `#/search?query=${encodeURIComponent(movie.title)}`);
-            await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) .card[data-jfmod-entry-id="${id}"] .jfmod-dlCardBar`), movie.id,
+            const selector = `.page:not(.hide) .card[data-jfmod-entry-id="${movie.id}"]` + (boundItem ? `, .page:not(.hide) .card[data-id="${boundItem}"]` : '');
+            await page.waitForFunction(sel => [...document.querySelectorAll(sel)].some(card => !!card.querySelector('.jfmod-dlCardBar')), selector,
                 { timeout: 30000 }).catch(() => {});
-            const movieCard = await cardState(page, `.page:not(.hide) .card[data-jfmod-entry-id="${movie.id}"]`);
-            record(label, 'search: the file-less movie card shows a 25% bar and the amber arrow in the disc, Not Downloaded hidden', !!movieCard?.bar
-                && Math.abs(movieCard.percent - 25) <= 1 && movieCard.disc?.colour === AMBER && !movieCard.noneShown, movieCard);
+            const movieCard = await cardState(page, selector);
+            await page.locator(selector).first().scrollIntoViewIfNeeded().catch(() => {});
+            await shot('search-fileless');
+            record(label, `search: the file-less ${movie.mediaType} card (${boundItem ? 'upstream\'s, bound to the entry' : 'the mod\'s'}) shows a 25% bar `
+                + 'and the arrow, Not Downloaded hidden', !!movieCard?.bar && Math.abs(movieCard.percent - 25) <= 1
+                && (movieCard.disc?.colour === AMBER || !!movieCard.pill?.arrow) && !movieCard.noneShown, movieCard);
         } else {
-            record(label, 'a file-less movie card', 'NOT VERIFIED', 'JELLYFINMOD_CP_MOVIE not given');
+            record(label, 'a file-less card', 'NOT VERIFIED', 'JELLYFINMOD_CP_FILELESS not given');
         }
 
         // Nothing on its way: the marks go and the queue is read once per page, not polled.
@@ -299,10 +328,12 @@ async function run(browser, layout) {
         await go(page, `#/details?id=${seriesId}`);
         await page.waitForTimeout(2000);
         const quietFrom = reads.length;
-        await page.waitForTimeout(11000);
+        await page.waitForTimeout(16000);
         const left = await page.evaluate(() => document.querySelectorAll('.jfmod-dlCard, .jfmod-dlRow, .jfmod-countArrow, .jfmod-dlDisc').length);
-        record(label, 'nothing on its way: every mark is gone and the queue is not polled', left === 0 && reads.length === quietFrom,
-            { left, readsIn11s: reads.length - quietFrom });
+        // The series page's own queue line (QueueStatusLine) may read the shared queue once on its slow cadence; a 5 s poll
+        // would read three times in 16 s.
+        record(label, 'nothing on its way: every mark is gone and the queue is not polled', left === 0 && reads.length - quietFrom <= 1,
+            { left, readsIn16s: reads.length - quietFrom });
         record(label, 'no page errors', errors.length === 0, errors.slice(0, 3));
     } catch (error) {
         record(label, 'card progress run', 'NOT VERIFIED', String(error.message ?? error).slice(0, 300));
