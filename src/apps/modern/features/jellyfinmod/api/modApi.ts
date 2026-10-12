@@ -372,8 +372,28 @@ export const getDownloadClientLink = async (api: Api, options?: AxiosRequestConf
     const settings = await api.axiosInstance.get<{ downloadClientId: string | null }>(api.basePath + BASE + '/Settings/Acquisition', config);
     const selected = settings.data.downloadClientId;
     if (!selected) return null;
-    const clients = await api.axiosInstance.get<Array<{ id: string; name: string; openUrl: string | null }>>(
+    const clients = await api.axiosInstance.get<Array<{ id: string; name: string; baseUrl: string; openUrl: string | null }>>(
         api.basePath + BASE + '/Settings/DownloadClients', config);
     const client = clients.data.find(value => value.id === selected);
-    return client?.openUrl ? { name: client.name, openUrl: client.openUrl } : null;
+    const openUrl = client?.openUrl || (client ? derivedOpenUrl(client.baseUrl) : null);
+    return client && openUrl ? { name: client.name, openUrl } : null;
+};
+
+/**
+ * The client's web page, worked out from its RPC address when no Open URL is saved (user, 2026-10-12): the RPC path's `rpc`
+ * becomes `web/`. A bare host name such as a container's (`transmission-acceptance`) is not reachable from a browser, so the
+ * page's own host stands in for it with the same port; if the client's published port differs from its RPC port, the Open URL
+ * setting says so and wins.
+ */
+export const derivedOpenUrl = (baseUrl: string): string | null => {
+    try {
+        const rpc = new URL(baseUrl);
+        const internal = !rpc.hostname.includes('.') && !rpc.hostname.includes(':');
+        const host = internal && rpc.hostname !== 'localhost' ? window.location.hostname : rpc.hostname;
+        const port = rpc.port ? ':' + rpc.port : '';
+        const path = rpc.pathname.replace(/rpc\/?$/, 'web/');
+        return rpc.protocol + '//' + host + port + (path.startsWith('/') ? path : '/' + path);
+    } catch {
+        return null;
+    }
 };
