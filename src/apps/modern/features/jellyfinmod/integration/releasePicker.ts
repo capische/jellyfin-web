@@ -23,6 +23,8 @@ interface OpenOptions {
     episodeId?: string;
     /** Opened from `episodeId`'s own page: the scope switch offers that episode, its season and All Seasons. */
     episodePage?: boolean;
+    /** Opened from a season's own page: the scope switch offers that season, preselected, and All Seasons. */
+    seasonNumber?: number;
     /** `addVersion` for Get another quality (P6.M8); omitted is an ordinary acquire search. */
     intent?: ReleaseIntent;
     onChanged?: () => void;
@@ -111,6 +113,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         episodes: pickerEpisodes(options.episodes ?? []),
         initialEpisodeId: options.episodeId,
         episodePage: options.episodePage,
+        seasonPage: options.seasonNumber,
         intent: options.intent,
         onChanged: options.onChanged
     }, content);

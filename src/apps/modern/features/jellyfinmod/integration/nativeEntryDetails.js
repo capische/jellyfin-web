@@ -109,6 +109,10 @@ export default function initializeNativeEntryDetails(view, params) {
             userId: client.getCurrentUserId(),
             serverId: client.serverId(),
             itemId: params.id,
+            // A season page looks its series' entry up and opens the picker for its own season.
+            itemType: item?.Type,
+            seriesId: item?.SeriesId,
+            seasonNumber: item?.IndexNumber,
             isAdmin: !!user?.Policy?.IsAdministrator,
             view
         }, mount);
