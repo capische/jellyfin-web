@@ -235,7 +235,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} /></div>, node, String(index)))}
+            <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} interactive={false} /></div>, node, String(index)))}
         {!isMovie && mount('.mainDetailButtons', <div className='jfmod-entryActions'>
             {entry.jellyfinItemId && <a className={raisedButtonClass('button-submit')}
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>

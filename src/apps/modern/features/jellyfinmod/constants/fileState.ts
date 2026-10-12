@@ -1,4 +1,4 @@
-import { FileState, type RetentionSummary } from '../types/entry';
+import { type EntryEpisode, FileState, type RetentionSummary } from '../types/entry';
 
 /**
  * The one place FileState is interpreted. A state added server-side fails loudly here rather
@@ -23,6 +23,40 @@ export const FILE_STATE_LABEL: Record<FileState, string> = {
     [FileState.OnDisk]: 'On disk',
     [FileState.Reclaimed]: 'Reclaimed — placeholder only'
 };
+
+/**
+ * What a card or row mark says about a title, season or episode without a file (P1.FU11, UX §3.1): `missing` is the amber
+ * Not Downloaded icon (also for a reclaimed one and for an unaired one with no air date), `unaired` the clock with its air
+ * date; on disk shows nothing.
+ */
+export type MarkState = 'missing' | 'unaired';
+
+/** The mark for one episode's availability; null for on disk. */
+export const episodeMark = (episode: Pick<EntryEpisode, 'availability' | 'airDate'>): MarkState | null => {
+    if (episode.availability === 'onDisk') return null;
+    return episode.availability === 'unaired' && episode.airDate ? 'unaired' : 'missing';
+};
+
+/** A whole season's mark: unaired only while every episode is unaired with a date, then the first air date; else missing. */
+export const seasonMark = (episodes: EntryEpisode[]): { state: MarkState; airDate: string | null } => {
+    const unaired = episodes.length > 0 && episodes.every(episode => episodeMark(episode) === 'unaired');
+    const first = unaired ? episodes.map(episode => episode.airDate!).sort((a, b) => a.localeCompare(b))[0] : null;
+    return { state: unaired ? 'unaired' : 'missing', airDate: first };
+};
+
+// Air dates are calendar dates (`2027-03-12`): read and written in UTC, so no time zone moves them a day.
+const UTC = { timeZone: 'UTC' } as const;
+
+/** `10 Aug` in the air date's own year, `Aug ’27` in another (user, 2026-10-12); month names in the viewer's locale. */
+export const airDateShort = (airDate: string, now = new Date()): string => {
+    const date = new Date(airDate);
+    if (date.getUTCFullYear() === now.getFullYear()) return date.toLocaleDateString(undefined, { ...UTC, day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(undefined, { ...UTC, month: 'short' }) + ' \u2019' + ('0' + (date.getUTCFullYear() % 100)).slice(-2);
+};
+
+/** `19 May 2027`: the row's meta line and the Unaired tooltip. */
+export const airDateLong = (airDate: string): string =>
+    new Date(airDate).toLocaleDateString(undefined, { ...UTC, day: 'numeric', month: 'short', year: 'numeric' });
 
 /** Days remaining before reclaim, or null when retention does not apply. */
 export const daysUntilReclaim = (reclaimAt?: string | null): number | null => {
