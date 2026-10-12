@@ -581,6 +581,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   deployed to a Pi instance; no live first look yet; no Codex review yet. Open for the user: a pack episode's own long
   *Failed · reason* figure (P4.FU1's failed row, now reached by pack episodes) squeezes the row's text to a narrow column on
   the TV.
+  **P1.FU16, built (not accepted) 2026-10-12: missing seasons, episodes and Get a Release without waiting** (user, testing
+  28096: "the rest must be immediately"). Owner: Phase 1 (the P1.FU11 cards and rows, the header icon). Cause: the native
+  page read its entry only after its own item read, in two sequential plugin requests (lookup, then detail), then Jellyfin's
+  seasons or episodes, and kept it per page item, so a season page never reused its series' entry and every revisit waited
+  for the item read; a first list load also refetched the entry after the POST that answers it. Fix (web only): the route
+  starts the entry reads at once and the native children as soon as the item type is known; the entry is kept by entry id
+  (shared by the series, its seasons and the mod's season and episode pages, refreshed in the background); a known item is not
+  waited for (a 404 still takes the page over); the list load's answer is drawn directly. Web `fix/instant-missing-children`
+  from `0f174f8f17`. Measured (Chromium, medians of three fresh contexts, ms after navigation, local build over 28096's data):
+  season page after its series 252–290 → 149–151 (rows) and 208–258 → 34–37 (icon), series cards 349 → 260, the mod's season
+  page 74 → 41, revisits 83–114 → 29–35; a first TMDB load draws its cards when the POST ends (alpha 2473 → 1177). Left: a
+  series' first visit still waits for the plugin's own lookup and detail (on the Pi up to about 130 + 260 ms server time for a
+  series with files, Peep Show). `missing-seasons-episodes.mjs` passed on alpha (456 checks, desktop, phone, TV; ordinary user
+  nata 293). Not deployed to a Pi instance; no real-Chrome pass; no Codex review yet. Items 2 and 3 of the same report (the
+  Not Downloaded mark on a watched season with no files, and its glyph) wait for the user's choice on
+  [`design/not-downloaded-mark.html`](design/not-downloaded-mark.html).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
