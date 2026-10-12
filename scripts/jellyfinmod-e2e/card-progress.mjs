@@ -15,6 +15,10 @@
 //     "Failed · …") and the bar along the row's bottom edge in its colour; the light scheme's darker figure (the theme attribute
 //     set in the page only, the user's setting is not changed);
 //   - the series' card and the file-less movie's card in search results: the aggregate bar and the arrow;
+//   - P4.FU5: the pack's episodes on the mod's season page each show their own file (the plugin's `pack.episodes[].progress` and
+//     `sizeBytes`): "42% · 6 min left" (its remaining bytes at the pack's rate), "10%" (no size, so no time left), "Importing…"
+//     for a file finished or being imported, "Queued" with the track alone for one not started, "Failed · …" for a blocked
+//     one, and each bar at that value; the missing season's card keeps one bar for the pack (60%);
 //   - one queue read per page, then every 5 s while something is on its way, and no polling once nothing is;
 //   - no page errors.
 //
@@ -87,13 +91,13 @@ const go = async (page, hash) => {
 const now = () => new Date().toISOString();
 let serial = 0;
 /** One queue row as the plugin answers it. */
-const queueRow = (entry, { episode = null, pack = null, state, progress = null, etaSeconds = null, message = null }) => ({
+const queueRow = (entry, { episode = null, pack = null, state, progress = null, etaSeconds = null, message = null, downloadRateBytes = null }) => ({
     id: `00000000-0000-4000-8000-${String(++serial).padStart(12, '0')}`,
     grabId: `00000000-0000-4000-9000-${String(serial).padStart(12, '0')}`,
     entry: { id: entry.id, mediaType: entry.mediaType, title: entry.title, year: entry.year ?? null, posterPath: null,
         jellyfinItemId: entry.jellyfinItemId ?? null, targetLibraryId: null },
     episode, releaseTitle: 'JellyfinMod card progress fixture', state, importState: state, reason: message ? 'fixture' : null, message,
-    progress, sizeBytes: null, downloadedBytes: null, downloadRateBytes: null, etaSeconds, stalledSince: null, observedAt: now(),
+    progress, sizeBytes: null, downloadedBytes: null, downloadRateBytes, etaSeconds, stalledSince: null, observedAt: now(),
     versionLabel: null, intent: 'acquire', createdAt: now(), updatedAt: now(), client: null, seeding: null, pack
 });
 const episodeRef = episode => ({ id: episode.id, seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber, title: episode.title });
@@ -153,7 +157,8 @@ async function run(browser, layout) {
     const context = await browser.newContext(options);
     const page = await context.newPage();
     const errors = [];
-    const shot = name => page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/card-progress-${tier}-${layout}-${name}.png` }).catch(() => {});
+    const shot = (name, fullPage = false) => page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/card-progress-${tier}-${layout}-${name}.png`,
+        fullPage }).catch(() => {});
     page.on('pageerror', error => errors.push(String(error.message).slice(0, 200)));
     let answer = { items: [], totalRecordCount: 0, generatedAt: now(), clientStatus: { reachable: true, checkedAt: now(), reason: null },
         importEnabled: true, seedReleaseEnabled: true };
@@ -201,11 +206,26 @@ async function run(browser, layout) {
         // The season card's mean: the episodes on their way (downloading 42, stalled 30, queued 0, importing 100; failed is not).
         const counted = inSeason.length >= 5 ? [42, 30, 0, 100] : [42, 30];
         const seasonMean = Math.floor(counted.reduce((sum, value) => sum + value, 0) / counted.length);
+        // The pack's episodes each with their own file (P4.FU5), in episode order: one being imported, one downloading with its
+        // size (1.2 GB at 42%, the pack at 2 MB/s: 696 MB left, 348 s, "6 min left"), one with no size, one finished but not
+        // imported yet, one not started, and the rest not started either (no import yet), except a sixth that is blocked.
+        const PACK_OWN = [
+            { importState: 'scanning', progress: 1, text: 'Importing…', percent: 100 },
+            { importState: 'waiting', progress: 0.42, sizeBytes: 1200000000, text: '42% · 6 min left', percent: 42 },
+            { importState: 'waiting', progress: 0.1, text: '10%', percent: 10 },
+            { importState: 'waiting', progress: 1, text: 'Importing…', percent: 100 },
+            { importState: 'waiting', progress: 0, text: 'Queued', percent: 0 },
+            { importState: 'blocked', reason: 'source_missing', progress: 0.3, text: 'Failed · The downloaded file could not be found.', percent: 30, failed: true }
+        ];
+        const packEpisodes = missingSeason === undefined ? [] : detail.episodes.filter(episode => episode.seasonNumber === missingSeason)
+            .sort((a, b) => a.episodeNumber - b.episodeNumber);
+        const packExpected = packEpisodes.map((episode, index) => ({ episode, ...(PACK_OWN[index] ?? { importState: null, progress: null, text: 'Queued', percent: 0 }) }));
         if (missingSeason !== undefined) {
-            const packEpisodes = detail.episodes.filter(episode => episode.seasonNumber === missingSeason);
-            items.push(queueRow(entry, { state: 'downloading', progress: 0.6, etaSeconds: 3900, pack: { scope: 'season', label: `Season ${missingSeason} pack`,
-                mode: 'fill', episodes: packEpisodes.map(episode => ({ episodeId: episode.id, seasonNumber: episode.seasonNumber,
-                    episodeNumber: episode.episodeNumber, importId: null, importState: null, reason: null })) } }));
+            items.push(queueRow(entry, { state: 'downloading', progress: 0.6, etaSeconds: 3900, downloadRateBytes: 2000000, pack: { scope: 'season',
+                label: `Season ${missingSeason} pack`, mode: 'fill', episodes: packExpected.map(({ episode, importState, reason, progress, sizeBytes }) => ({
+                    episodeId: episode.id, seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber,
+                    importId: importState ? `00000000-0000-4000-a000-${String(episode.episodeNumber).padStart(12, '0')}` : null,
+                    importState: importState ?? null, reason: reason ?? null, progress, sizeBytes: sizeBytes ?? null })) } }));
         }
         // A file-less title: a movie's own row, or a series' first episode (its card shows the mean of one episode).
         const filelessDetail = filelessEntryId ? await apiGet(page, 'JellyfinMod/Entries/' + filelessEntryId) : null;
@@ -258,6 +278,29 @@ async function run(browser, layout) {
         } else {
             record(label, 'a missing season card with a pack on its way', 'NOT VERIFIED', 'the series has no season Jellyfin lacks');
         }
+        // P4.FU5: the pack's episodes on the mod's season page, each with its own file.
+        if (missingSeason !== undefined) {
+            const serverId = await page.evaluate(() => ApiClient.serverId());
+            await go(page, `#/details?entryId=${encodeURIComponent(entry.id)}&serverId=${encodeURIComponent(serverId)}&season=${missingSeason}`);
+            await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-dlRow').length >= count, packExpected.length,
+                { timeout: 30000 }).catch(() => {});
+            await page.waitForTimeout(800);
+            const packRows = await rowStates(page);
+            await shot('pack-season-rows', true);
+            for (const expected of packExpected) {
+                const row = packRows.find(shown => shown.id === expected.episode.id);
+                const colourOk = expected.failed ? row?.bar?.colour === FAILED : expected.text === 'Queued' || row?.colour === AMBER;
+                record(label, `pack Season ${missingSeason} E${expected.episode.episodeNumber}: its own "${expected.text}" and a ${expected.percent}% bar, `
+                    + 'not the pack\'s 60%', !!row && row.text === expected.text && Math.abs((row.bar?.percent ?? -1) - expected.percent) <= 1
+                    && !!row.bar?.atBottom && row.figureAtEnd && colourOk && (expected.failed || !row.noneShown), row);
+            }
+            await go(page, `#/details?id=${seriesId}`);
+            await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+            await page.waitForTimeout(800);
+        } else {
+            record(label, 'a pack\'s episodes with their own progress', 'NOT VERIFIED', 'the series has no season Jellyfin lacks');
+        }
+
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.waitForTimeout(300);
         const still = await cardState(page, `.page:not(.hide) #listChildrenCollapsible .card[data-id="${native.id}"]`);
