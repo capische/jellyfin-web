@@ -229,6 +229,10 @@ GET    /JellyfinMod/Settings/*                 indexers, clients, profiles, rete
 POST   /JellyfinMod/Settings/Indexers/{id}/Test
 ```
 
+A series discovered in the library starts with only the episodes of its files; entry detail says so with
+`episodeListLoaded: false`, and an administrator's Refresh loads its full TMDB season and episode list once, recorded as
+the History event `episodes_listed` (Phase 1 follow-up, 2026-10-12; see [`API.md`](API.md), *Detail and episodes*).
+
 ## 6. Roadmap
 
 Each phase is independently useful and independently deployable. Do not start the next one
