@@ -258,10 +258,21 @@ loads the whole TMDB season and episode list, and the first such load adds one H
 The Refresh adopts a position row only with evidence (the same title, or the same air date within a day; RET-R2), never
 adds a second row at a position a file holds, and adds every other TMDB episode as a row of its own with
 `availability` `missing` or `unaired`. A new row is monitored only when its series is, so a discovered (unmonitored)
-series' list is never searched for by automation. The web runs this Refresh once per entry per page visit, when an
-administrator opens the release picker or the file-less series page of an entry with `episodeListLoaded: false`.
+series' list is never searched for by automation.
 The plugin reads a series' seasons appended to one TMDB request (`append_to_response=season/N`, up to 20 a request),
 so a load takes two TMDB calls: the details, then every season.
+
+**Loading the list on open, for any user (P1.FU9, user 2026-10-12).** `POST /JellyfinMod/Entries/{id}/EpisodeList`, no
+body, answers the same `EntryDetail` as `GET /JellyfinMod/Entries/{id}`, to anyone the GET answers (signed in, and the
+same library, parental-rating and tag rules; others get 404). For a series with `episodeListLoaded: false` it first runs
+the Refresh's own load (same merge, unmonitored new rows, one `episodes_listed` event that names no user). A loaded list,
+a movie or an entry without a library is answered unchanged without asking TMDB; keeping a loaded list current stays the
+administrator's Refresh, which is unchanged. Concurrent calls for one entry share one load. Failures answer as the
+Refresh does and leave `episodeListLoaded: false`: 404 when TMDB no longer lists the series, 502, 503 when TMDB is not
+configured or the library is busy (`type: library_busy`, `Retry-After`), 504 on a timeout; the endpoint never retries by
+itself. The web calls it once per entry per page visit when anyone opens a series or season page (native or file-less)
+of an entry with `episodeListLoaded: false`, quietly, then refetches the entry; the release picker uses the same call and
+shares the page's request. An older plugin (no field, or 404 for the route) changes nothing.
 
 ## Automatic retention
 

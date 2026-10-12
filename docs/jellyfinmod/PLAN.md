@@ -466,6 +466,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `1016350..e355db3` (p1.fu1–4: new rows follow the series' monitoring, `episodes_listed` and `episodeListLoaded`, the
   smoke cases, one TMDB request for a series' seasons) and web p1.fu5–7 (the picker and the file-less series page load the
   list once per page visit). Plugin suites pass; not deployed, no live first look yet, no Codex review yet.
+  **P1.FU9–10, built (not accepted) 2026-10-12** (user: any user loads the list; a series picker offers seasons only):
+  plugin `feat/episode-list-on-open` `e355db3..bf2d471` (`POST /Entries/{id}/EpisodeList` for anyone who may read the
+  entry, one shared load, Phase 1 smoke cases) and web `feat/episode-list-on-open` from `76400aac37` (opening a series or
+  season page loads the list once per visit for every user; the series picker lists All Seasons and each season;
+  full-episode-list.mjs). Mac suites pass; not deployed, no live first look yet, no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

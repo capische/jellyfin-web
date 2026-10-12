@@ -24,6 +24,24 @@ Nothing else changes: no new table or column, no migration, no new TMDB call pat
 loses is that a series nobody opens keeps today's short list. A one-time bulk fill would avoid that, at the cost of
 about 420 TMDB calls and a library-wide change to episode binding at once.
 
+## Change, 2026-10-12: any user loads the list by opening the series (P1.FU9)
+
+The user: "Why admin? I'd let any user to pull the show if it exists." Opening a native Peaky Blinders series page loaded
+nothing, because only the picker and the file-less page asked, and only for administrators. Now:
+
+- **Plugin:** `POST /JellyfinMod/Entries/{id}/EpisodeList` for anyone who may read the entry (the GET's own rule). It runs
+  §3's load only while `episodeListLoaded` is false, answers the entry detail, shares one load between concurrent callers
+  and answers failures as the Refresh does, leaving the list unloaded. The administrator's Refresh is unchanged and stays
+  the way to refresh a loaded list. See [`API.md`](../API.md).
+- **Web:** one hook, `useEpisodeListLoad`, on the native series and season pages and the file-less series page calls it
+  once per entry per page visit, quietly (no loading or error line on the page), then refetches the entry. The picker keeps
+  its *Loading Seasons…* step and shares the page's request.
+- **Picker scope (user, 2026-10-12):** opened from a series page it offers only *All Seasons* and each season, after the
+  non-selectable *Choose what to search for*; an episode is searched from its own page or its row.
+- **Unchanged:** the native pages show no new missing-seasons list; that is a separate design.
+
+Where this document says "an administrator opens", read "anyone opens".
+
 ## 1. How a discovered series is identified at TMDB
 
 - **The entry row always stores the TMDB series id.** `Entry.TmdbId` (`Data/Entry.cs`) is part of the unique key
@@ -158,7 +176,7 @@ What the web reads today:
 - The picker's episode list is `pickerEpisodes(episodes)` (`integration/releasePicker.ts`): missing and reclaimed
   rows first, labels `S01E03 · Title`, with ` (on disk)` or ` (unaired)` appended.
 - Its scope switch is `scopeOptions` (`components/ReleasePickerDialog.tsx`): All Seasons, each season with aired
-  non-special episodes, then every episode.
+  non-special episodes, then every episode (since 2026-10-12 a series page lists no single episodes).
 - The native series page (`NativeEntryDetails`) does not list plugin episodes for any series, discovered or added. It
   shows only in-flight episodes and Episode Retention. A file-less entry page (`EntryDetails`) lists `episodes`.
 
