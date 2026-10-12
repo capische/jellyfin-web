@@ -26,16 +26,32 @@ interface EntryCardProps {
     alwaysShowCountdown?: boolean;
 }
 
-/** Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. */
+/**
+ * Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. Top-right (UX §3.1), just before
+ * upstream's indicator cluster (played tick, count), so it never sits on them: the cluster's width, re-read when its content
+ * changes, moves the mark left. It sits outside the image so the desktop hover overlay does not cover the administrator's
+ * button.
+ */
 const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; alwaysShowCountdown?: boolean }> = ({ entry, retention, alwaysShowCountdown }) => {
     const anchor = useRef<HTMLSpanElement>(null);
     const [cover, setCover] = useState<Element | null>(null);
+    const [offset, setOffset] = useState(0);
     useLayoutEffect(() => {
         const card = anchor.current?.parentElement;
         setCover(card?.querySelector('.cardScalable') ?? null);
+        const indicators = card?.querySelector<HTMLElement>('.cardIndicators');
+        if (!indicators) return;
+        const measure = () => setOffset(indicators.offsetWidth);
+        measure();
+        const observer = new MutationObserver(measure);
+        observer.observe(indicators, { childList: true, subtree: true });
+        return () => observer.disconnect();
     }, []);
+    const side = document.documentElement.getAttribute('dir') === 'rtl' ? 'left' : 'right';
     return <><span ref={anchor} hidden />{cover && createPortal(
-        <FileStateMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />, cover
+        <div className='jfmod-markSlot' style={offset ? { [side]: `calc(0.475em + ${offset}px)` } : undefined}>
+            <FileStateMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
+        </div>, cover
     )}</>;
 };
 

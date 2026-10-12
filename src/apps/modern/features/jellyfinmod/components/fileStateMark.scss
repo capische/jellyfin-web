@@ -4,63 +4,160 @@
  * Sizing is in `em` throughout, because `.layout-tv` sets the root font to 125% and
  * `.layout-mobile` to 90% — a `px` value silently opts out of both.
  *
- * Placement: `.cardIndicators` owns top-right (played tick, unplayed count) and mobile's
- * `CardOverlayButtons` own bottom-right, so this takes top-left. Mirrored under RTL,
- * following the same `[dir]` pattern card.scss uses.
+ * Placement (UX §3.1, changed 2026-10-12 with P1.FU11): every mark sits top-right. On a card that has
+ * upstream's `.cardIndicators`, the mark sits just before that cluster (the played tick or the count), so it
+ * never collides with them; a card without it gets the mark at the same top-right spot on its own. Rows
+ * carry it in their action slot at the end. Mirrored under RTL, following the same `[dir]` pattern card.scss
+ * uses.
  */
 
 .jfmod-mark {
     position: absolute;
-    top: 0.3em;
+    top: 0.225em;
     z-index: 1;
     display: inline-flex;
     align-items: center;
-    height: 1.4em;
-    padding: 0 0.35em;
-    border-radius: 0.9em;
-    background: rgba(8, 8, 8, 0.6);
-    font-size: 0.75em;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 1.6em;
+    min-width: 1.6em;
+    padding: 0 0.3em;
+    border: 0;
+    border-radius: 0.8em;
+    background: rgba(0, 0, 0, 0.65);
+    font: inherit;
+    font-size: 1em;
     line-height: 1;
-    pointer-events: none;
+    color: #fff;
 
     // Margins instead of flex gap for older TV engines (P1.W11).
     > * + * { margin-left: 0.3em; }
 
     [dir="ltr"] & {
-        left: 0.3em;
+        right: 0.225em;
     }
 
     [dir="rtl"] & {
-        right: 0.3em;
+        left: 0.225em;
     }
 }
 
 .jfmod-mark svg {
-    width: 1.1em;
-    height: 1.1em;
+    width: 1em;
+    height: 1em;
     display: block;
 }
 
-/* On disk is the majority case, so it is drawn quiet: present if you look for it, invisible
- * if you are not. Anything louder would be a badge on every card, which is a badge on none. */
-.jfmod-mark--onDisk {
-    background: none;
-    color: rgba(255, 255, 255, 0.4);
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+/* A native card's slot: top right, before upstream's indicator cluster (its width moves the slot left, set inline), and
+ * above the desktop hover overlay so the administrator's button stays clickable. */
+.jfmod-markSlot {
+    position: absolute;
+    top: 0.225em;
+    z-index: 2;
+    display: flex;
+
+    [dir="ltr"] & {
+        right: 0.225em;
+    }
+
+    [dir="rtl"] & {
+        left: 0.225em;
+    }
+
+    > .jfmod-mark {
+        position: static;
+    }
 }
 
-.jfmod-mark--none,
-.jfmod-mark--reclaimed {
-    color: #cfa8dd;
+/* Not Downloaded: amber, the one colour that means "acquisition pending" (design 2026-10-12). */
+.jfmod-mark--none {
+    color: #ffb74d;
+}
+
+.jfmod-mark--unaired {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.jfmod-markDate {
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .jfmod-mark--inFlight {
     color: #f0dbf7;
+    font-size: 0.75em;
 }
 
-/* Dimming is what actually carries at phone sizes, where the icon is at its legibility limit. */
-.jfmod-noFile .cardImageContainer {
-    opacity: 0.6;
+/* The countdown passes clicks to the card under it, as the mark always did. */
+.jfmod-mark--countdown {
+    pointer-events: none;
+    font-size: 0.75em;
+}
+
+/* The administrator's button: a pointer, brighter and a little larger on hover, pressed smaller, a cyan ring for the
+ * keyboard and the TV's white ring (two shadows, so it reads on any poster). */
+.jfmod-markButton {
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        color: #ffd180;
+        transform: scale(1.08);
+    }
+
+    &:active {
+        transform: scale(0.96);
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+
+    .layout-tv &:focus {
+        box-shadow: 0 0 0 0.12em #101010, 0 0 0 0.28em #fff;
+        color: #ffd180;
+        transform: scale(1.08);
+    }
+}
+
+/* Rows: the action slot at the row's end, sized like upstream's row buttons. */
+.jfmod-mark--row {
+    position: static;
+    flex: 0 0 auto;
+    height: 2.5em;
+    min-width: 2.5em;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+
+    svg {
+        width: 1.4em;
+        height: 1.4em;
+    }
+}
+
+.jfmod-mark--row.jfmod-mark--unaired {
+    padding: 0 0.6em;
+    border-radius: 1.25em;
+    // On the row's own background: the text colour, quieter, so it reads in the light theme too.
+    color: inherit;
+    opacity: 0.7;
+
+    svg {
+        width: 1.2em;
+        height: 1.2em;
+    }
+
+    .jfmod-markDate {
+        font-size: 0.8em;
+    }
 }
 
 .jfmod-countdown {
