@@ -103,12 +103,14 @@ export const loadEpisodeList = (api: Api, entryId: string): Promise<EntryDetail>
 /**
  * Opening a series whose entry says its list is not loaded loads it (P1.FU9), for every user: once per entry per page
  * visit, quietly, sharing the request with a picker opened meanwhile. `onLoaded` refetches the page's data. A failure, or
- * an older plugin (no `episodeListLoaded`, or no endpoint), changes nothing.
+ * an older plugin (no `episodeListLoaded`, or no endpoint), changes nothing. A list loaded before the series' metadata kept
+ * episode ratings and season overviews (no `episodeRatings`) is loaded once more the same way (P1.FU14).
  */
 export const useEpisodeListLoad = (api: Api, detail: EntryDetail | null | undefined, onLoaded: () => void) => {
     const onLoadedRef = useRef(onLoaded);
     onLoadedRef.current = onLoaded;
-    const entryId = detail?.entry.mediaType === 'series' && detail.episodeListLoaded === false ? detail.entry.id : undefined;
+    const entryId = detail?.entry.mediaType === 'series' && (detail.episodeListLoaded === false
+        || (detail.episodeListLoaded === true && detail.entry.metadata?.episodeRatings == null)) ? detail.entry.id : undefined;
     useEffect(() => {
         if (!entryId) return;
         let live = true;

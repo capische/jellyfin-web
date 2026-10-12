@@ -80,7 +80,13 @@ export interface TmdbMetadata {
     runtimeMinutes: number | null;
     genres: string[];
     certifications: { country: string; rating: string }[];
-    seasons: { number: number; name: string; episodeCount: number; airDate: string | null; posterPath: string | null }[];
+    /** A season's overview is absent from plugins before P1.FU14, and from a series not refreshed since. */
+    seasons: { number: number; name: string; episodeCount: number; airDate: string | null; posterPath: string | null; overview?: string | null }[];
+    /**
+     * TMDB's rating of each episode by TMDB episode id (P1.FU14); null or absent when the series' metadata predates it, which
+     * makes opening the series load its list once more.
+     */
+    episodeRatings?: Record<string, number> | null;
 }
 
 export interface EntryEpisode {

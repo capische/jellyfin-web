@@ -1,8 +1,8 @@
 /* JellyfinMod — every season and episode on the native pages (P1.FU11, design approved 2026-10-12).
  *
  * The mod's cards and rows sit inside upstream's list and take upstream's own card and list-row classes for their size and
- * footer; these rules draw only what is the mod's: the dashed placeholder with the number, and the row's end slot. Sized in
- * `em` for TV's 125% and mobile's 90% root.
+ * footer; these rules draw only what is the mod's: TMDB's poster or still, the dashed placeholder with the number when there is
+ * none (P1.FU14), the meta line and the row's end slot. Sized in `em` for TV's 125% and mobile's 90% root.
  */
 
 /* Upstream's `.cardContent:not(.defaultCardBackground)` clears the background and `.cardContent` the outline, at two classes:
@@ -10,11 +10,33 @@
 .jfmod-missingCard .cardImageContainer.jfmod-missingPoster {
     align-items: center;
     justify-content: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.jfmod-missingCard .cardImageContainer.jfmod-missingEmpty {
     background: #262626;
     outline: 1px dashed rgba(255, 255, 255, 0.14);
     outline-offset: -1px;
-    text-decoration: none;
-    color: inherit;
+}
+
+/* TMDB's poster or still fills the box as upstream's background image does (cover, centred); the box's own size holds the
+ * space while it loads, so nothing moves. */
+.jfmod-missingImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+/* Upstream's media-info items in a row (`.listItemMediaInfo` is hidden below 50em; the air date stays on the phone). */
+.jfmod-missingMeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .jfmod-missingNumber {
@@ -32,6 +54,9 @@
 .jfmod-missingStill {
     align-items: center;
     justify-content: center;
+}
+
+.jfmod-missingStill.jfmod-missingEmpty {
     border-radius: 0.2em;
     background: #262626;
     outline: 1px dashed rgba(255, 255, 255, 0.14);

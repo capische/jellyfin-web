@@ -79,9 +79,13 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, detail: 
     const tmdbSeason = detail.entry.metadata?.seasons.find(candidate => candidate.number === season);
     const poster = getTmdbImage(tmdbSeason?.posterPath ?? detail.entry.posterPath);
     const count = detail.episodes.filter(episode => episode.seasonNumber === season).length;
+    // The season's first air year, as upstream's season page shows its production year (P1.FU14).
+    const year = /^\d{4}/.exec(tmdbSeason?.airDate ?? '')?.[0];
     return <>
         {mount('.nameContainer', <h1>{detail.entry.title}</h1>)}
-        {mount('.itemMiscInfo-primary', 'Season ' + season + (count ? ' · ' + episodesWord(count) : ''))}
+        {mount('.itemMiscInfo-primary', ['Season ' + season, count ? episodesWord(count) : null, year].filter(Boolean).join(' · '))}
+        {/* TMDB's season overview where upstream's page puts an item's overview; none until the series' list is refreshed. */}
+        {tmdbSeason?.overview && mount('.overview', tmdbSeason.overview)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
             node, String(index)))}

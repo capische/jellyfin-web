@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { resolveCardCssClasses } from 'components/cardbuilder/utils/builder';
 import layoutManager from 'components/layoutManager';
 import browser from 'scripts/browser';
+import datetime from 'scripts/datetime';
 
 import type { EntryDetail } from '../api/modApi';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
@@ -14,7 +15,7 @@ import { airDateLong, episodeMark, seasonMark } from '../constants/fileState';
 import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import type { EntryEpisode } from '../types/entry';
-import { getEntryPath } from '../utils/entryLinks';
+import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark, { type MarkDownload } from './FileStateMark';
 
 import './missingChildren.scss';
@@ -118,23 +119,42 @@ const usePickerFor = (api: Api, detail: EntryDetail, onChanged: () => void) => u
 
 export const episodesWord = (count: number) => count + (count === 1 ? ' episode' : ' episodes');
 
+/**
+ * A TMDB poster or still for a season or episode Jellyfin has no item for (P1.FU14), filling upstream's image box as its own
+ * image does (cover, centred, lazy). Null while there is none, or once it failed to load (offline, a blocked CDN): the
+ * caller then draws the dashed placeholder with the number.
+ */
+const useTmdbCover = (path: string | null | undefined, size: 'w300' | 'w342' | 'w500') => {
+    const src = getTmdbImage(path, size);
+    const [failed, setFailed] = useState<string>();
+    const onError = useCallback(() => setFailed(src), [src]);
+    return src && failed !== src ? <img className='jfmod-missingImage' src={src} alt='' loading='lazy' decoding='async' onError={onError} /> : null;
+};
+
 interface SeasonCardProps {
     season: number;
+    /** TMDB's poster of the season, from the series' metadata. */
+    posterPath?: string | null;
     episodes: EntryEpisode[];
     href: string;
     download: MarkDownload | null;
 }
 
-/** A season with no Jellyfin item: a dashed placeholder with its number, the mark top right, the stock card's footer lines. */
-const MissingSeasonCard: FC<SeasonCardProps> = ({ season, episodes, href, download }) => {
+/**
+ * A season with no Jellyfin item: TMDB's season poster where it has one (else a dashed placeholder with its number), the mark
+ * top right, the stock card's footer lines.
+ */
+const MissingSeasonCard: FC<SeasonCardProps> = ({ season, posterPath, episodes, href, download }) => {
     const mark = seasonMark(episodes);
-    const poster = <span className='jfmod-missingNumber' aria-hidden='true'>{season}</span>;
+    const cover = useTmdbCover(posterPath, 'w342');
+    const poster = cover ?? <span className='jfmod-missingNumber' aria-hidden='true'>{season}</span>;
+    const className = 'cardImageContainer cardContent jfmod-missingPoster' + (cover ? '' : ' jfmod-missingEmpty');
     return <div className='cardBox cardBox-bottompadded'>
         <div className='cardScalable'>
             <div className='cardPadder cardPadder-overflowPortrait' />
             {layoutManager.tv ?
-                <div className='cardImageContainer cardContent jfmod-missingPoster'>{poster}</div> :
-                <a className='cardImageContainer cardContent jfmod-missingPoster' href={href} aria-label={'Season ' + season}>{poster}</a>}
+                <div className={className}>{poster}</div> :
+                <a className={className} href={href} aria-label={'Season ' + season}>{poster}</a>}
             <FileStateMark state={mark.state} airDate={mark.airDate}
                 download={mark.state === 'missing' ? download : null} />
         </div>
@@ -211,28 +231,44 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
         const element = elements.get(String(season));
         if (!element) return null;
         const download = canAcquire && packs ? { label: 'Download This Season', open: pickerFor({ seasonNumber: season }) } : null;
-        return createPortal(<MissingSeasonCard season={season} episodes={episodes} download={download}
+        const posterPath = detail.entry.metadata?.seasons.find(candidate => candidate.number === season)?.posterPath;
+        return createPortal(<MissingSeasonCard season={season} posterPath={posterPath} episodes={episodes} download={download}
             href={'#' + seasonPath(detail.entry.id, season, serverId)} />, element, 'season:' + season);
     })}</>;
 };
 
 interface EpisodeRowProps {
     episode: EntryEpisode;
+    /** TMDB's rating of the episode, from the series' metadata (P1.FU14). */
+    rating?: number;
     download: MarkDownload | null;
 }
 
-/** An episode with no Jellyfin item: a dashed 16:9 placeholder with its number, the title, the air date, the overview, the mark. */
-const MissingEpisodeRow: FC<EpisodeRowProps> = ({ episode, download }) => {
+/**
+ * An episode with no Jellyfin item, drawn as upstream draws an episode row: TMDB's still (else a dashed 16:9 placeholder with
+ * its number), "N. Title", the meta line (air date, runtime, rating), the overview, and the mark at the end.
+ */
+const MissingEpisodeRow: FC<EpisodeRowProps> = ({ episode, rating, download }) => {
     const mark = episodeMark(episode);
+    const cover = useTmdbCover(episode.stillPath, layoutManager.tv ? 'w500' : 'w300');
+    // Upstream's own meta items: its runtime format ("42m", "1h 2m") and its star with one decimal.
+    const meta = [
+        episode.airDate && <div className='mediaInfoItem' key='date'>{airDateLong(episode.airDate)}</div>,
+        !!episode.runtimeMinutes && <div className='mediaInfoItem' key='runtime'>{datetime.getDisplayDuration(episode.runtimeMinutes * 600000000)}</div>,
+        !!rating && <div className='starRatingContainer mediaInfoItem' key='rating'>
+            <span className='material-icons starIcon star' aria-hidden='true' />{rating.toFixed(1)}
+        </div>
+    ].filter(Boolean);
     return <>
-        <div className={'listItemImage listItemImage-large jfmod-missingStill' + (layoutManager.tv ? ' listItemImage-large-tv' : '')}>
-            <span className='jfmod-missingNumber' aria-hidden='true'>{episode.episodeNumber}</span>
+        <div className={'listItemImage listItemImage-large jfmod-missingStill' + (cover ? '' : ' jfmod-missingEmpty')
+            + (layoutManager.tv ? ' listItemImage-large-tv' : '')}>
+            {cover ?? <span className='jfmod-missingNumber' aria-hidden='true'>{episode.episodeNumber}</span>}
         </div>
         <div className='listItemBody'>
             {layoutManager.tv ?
                 <h2 className='listItemBodyText'><bdi>{episode.episodeNumber}. {episode.title}</bdi></h2> :
                 <div className='listItemBodyText'><bdi>{episode.episodeNumber}. {episode.title}</bdi></div>}
-            {episode.airDate && <div className='secondary listItemBodyText'><bdi>{airDateLong(episode.airDate)}</bdi></div>}
+            {meta.length > 0 && <div className='secondary listItemBodyText jfmod-missingMeta'>{meta}</div>}
             {/* Upstream's own rule hides `listItem-overview` below 50em, so the phone shows none (design 2026-10-12). */}
             {episode.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{episode.overview}</bdi></div>}
         </div>
@@ -298,6 +334,7 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         const element = elements.get(episode.id);
         if (!element) return null;
         const download = canAcquire ? { label: 'Download This Episode', open: pickerFor({ episodeId: episode.id }) } : null;
-        return createPortal(<MissingEpisodeRow episode={episode} download={download} />, element, 'episode:' + episode.id);
+        return createPortal(<MissingEpisodeRow episode={episode} rating={detail.entry.metadata?.episodeRatings?.[episode.tmdbId]}
+            download={download} />, element, 'episode:' + episode.id);
     })}</>;
 };
