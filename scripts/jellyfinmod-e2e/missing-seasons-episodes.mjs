@@ -5,7 +5,16 @@
 // against a running mod instance, it checks for one series entry:
 //   - the native series page shows one mod card per plugin season (other than specials) with no Jellyfin season item, in season
 //     order among upstream's cards, with the dashed placeholder, "Season N", "K episodes" and the right mark top right; the
-//     cards come back in place when the list is redrawn; upstream's own season cards carry no mod mark;
+//     cards come back in place when the list is redrawn;
+//   - P1.FU17: upstream's own season cards carry the mark when none of the season's episodes is on disk (Not Downloaded, or the
+//     Unaired clock), whatever the watched state, just left of upstream's tick or count with neither covering the other, and no
+//     mark when one episode is on disk; the mark comes back when upstream redraws a card; an administrator's opens the picker
+//     on that season (on the TV Up on the card reaches it); the Not Downloaded glyph is the arrow out of a small cloud;
+//   - P1.FU17, downloads on upstream's season cards (administrator; INTERCEPTED QUEUE ANSWER, NOT A LIVE DOWNLOAD: the browser's
+//     `GET /JellyfinMod/Queue` is answered with a season pack for an empty native season, preferably one listed under another
+//     Jellyfin series item than the page's, as 1923's on 28096, and one episode of a native season with files): those two
+//     season cards show the bar and the arrow (in the count pill, or the disc), the empty season's Not Downloaded hidden by it;
+//     every other season card shows no download;
 //   - an administrator's Not Downloaded on a season card is a button "Download This Season" that opens the release picker on
 //     that season (Season N and All Seasons only) without leaving the page; an ordinary user's is a plain indicator;
 //   - a missing season card opens the mod's season page (#/details?entryId=…&season=N), which lists that season's episodes as
@@ -119,6 +128,8 @@ const seasonRow = async (page, numbers) => {
             const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
             const box = mark?.getBoundingClientRect();
             const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
+            const indicators = card.querySelector('.cardIndicators');
+            const cluster = indicators && indicators.offsetWidth > 0 ? indicators.getBoundingClientRect() : null;
             return {
                 mod,
                 season: mod ? Number(card.dataset.jfmodSeason) : byId[(card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
@@ -126,9 +137,14 @@ const seasonRow = async (page, numbers) => {
                 line2: texts[1] ?? null,
                 dashed: mod ? getComputedStyle(card.querySelector('.jfmod-missingPoster')).outlineStyle : null,
                 cover: mod ? coverOf(card.querySelector('.jfmod-missingPoster')) : null,
+                played: !!card.querySelector('.cardIndicators .playedIndicator'),
+                cluster: cluster ? { left: Math.round(cluster.left), right: Math.round(cluster.right), top: Math.round(cluster.top), bottom: Math.round(cluster.bottom) } : null,
                 mark: mark ? {
                     kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
                     tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
+                    glyph: !!mark.querySelector('svg.jfmod-markGlyph') && mark.querySelectorAll('svg.jfmod-markGlyph path').length === 3,
+                    visible: !!box && box.width > 0 && getComputedStyle(mark).display !== 'none',
+                    box: box ? { left: Math.round(box.left), right: Math.round(box.right), top: Math.round(box.top), bottom: Math.round(box.bottom) } : null,
                     topRight: !!box && !!cover && box.right > cover.left + cover.width * 0.6 && box.top < cover.top + cover.height * 0.25
                 } : null
             };
@@ -162,7 +178,8 @@ const episodeList = async (page, numbers) => {
                 focusables: mod ? [...row.querySelectorAll('button, a, input, select, [tabindex]')].map(node => node.className) : [],
                 mark: mark ? {
                     kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
-                    tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim()
+                    tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
+                    glyph: !!mark.querySelector('svg.jfmod-markGlyph') && mark.querySelectorAll('svg.jfmod-markGlyph path').length === 3
                 } : null
             };
         });
@@ -187,6 +204,13 @@ const expectedMark = episodes => {
     return unaired ? { kind: 'unaired', airDate: episodes.map(episode => episode.airDate).sort()[0] } : { kind: 'none' };
 };
 
+/** P1.FU17: an upstream season card's mark: none when an episode is on disk or the entry lists none of the season, else the season's. */
+const expectedNativeMark = (season, episodes) => {
+    const own = episodes.filter(episode => episode.seasonNumber === season);
+    if (season <= 0 || !own.length || own.some(episode => episode.availability === 'onDisk')) return null;
+    return expectedMark(own);
+};
+
 async function checkMark(page, label, what, shown, expected, admin, downloadLabel) {
     if (!shown) { record(label, `${what}: has a mark`, false, null); return; }
     if (expected.kind === 'unaired') {
@@ -196,6 +220,7 @@ async function checkMark(page, label, what, shown, expected, admin, downloadLabe
             shown.kind === 'unaired' && shown.text === text && shown.title === title && shown.tag !== 'BUTTON', { shown, text, title });
         return;
     }
+    if (shown.glyph !== undefined) record(label, `${what}: the Not Downloaded glyph is the arrow out of a small cloud`, shown.glyph, shown);
     if (admin && downloadLabel) {
         record(label, `${what}: the amber Not Downloaded is a button "${downloadLabel}"`, shown.kind === 'none' && shown.tag === 'BUTTON'
             && shown.title === downloadLabel, shown);
@@ -471,6 +496,101 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
     await page.waitForTimeout(800);
 }
 
+let serial = 0;
+const now = () => new Date().toISOString();
+/** A queue row as the plugin answers it (types/queue.ts), built from the instance's own entry and episodes. */
+const queueRow = (entry, { episode = null, pack = null, progress }) => ({
+    id: `00000000-0000-4000-8000-${String(++serial).padStart(12, '0')}`,
+    grabId: `00000000-0000-4000-9000-${String(serial).padStart(12, '0')}`,
+    entry: { id: entry.id, mediaType: entry.mediaType, title: entry.title, year: entry.year ?? null, posterPath: null,
+        jellyfinItemId: entry.jellyfinItemId ?? null, targetLibraryId: null },
+    episode, releaseTitle: 'JellyfinMod FU17 fixture', state: 'downloading', importState: 'waiting', reason: null, message: null,
+    progress, sizeBytes: null, downloadedBytes: null, downloadRateBytes: 1000000, etaSeconds: 600, stalledSince: null, observedAt: now(),
+    versionLabel: null, intent: 'acquire', createdAt: now(), updatedAt: now(), client: null, seeding: null, pack
+});
+
+/** What an upstream season card shows of a download: the bar, the arrow (pill or disc) and whether a mark is visible. */
+const seasonDownloadView = (page, itemId) => page.evaluate(id => {
+    const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+        .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
+    if (!card) return null;
+    const frame = card.querySelector('.cardScalable');
+    const bar = frame?.querySelector('.jfmod-dlCardBar');
+    const disc = frame?.querySelector('.jfmod-dlDisc');
+    const pill = frame?.querySelector('.countIndicator.jfmod-countArrow');
+    const none = frame?.querySelector('.jfmod-mark--none');
+    return {
+        bar: !!bar && bar.getBoundingClientRect().height > 0,
+        percent: bar ? parseFloat(bar.querySelector('.jfmod-dlBar-fill')?.style.width ?? '') : null,
+        arrow: (pill && 'pill') || (disc && disc.getBoundingClientRect().width > 0 && 'disc') || null,
+        noneVisible: !!none && getComputedStyle(none).display !== 'none'
+    };
+}, itemId);
+
+/**
+ * P1.FU17: upstream's season cards take their season's download from the queue, like the series' card and the season page's
+ * rows. The queue answer is intercepted (see the header); the page is left again with the route removed.
+ */
+async function checkSeasonDownloads(page, label, detail, seriesId, seasons) {
+    const own = number => detail.episodes.filter(episode => episode.seasonNumber === number);
+    const empty = seasons.filter(season => season.number > 0 && own(season.number).length && own(season.number).every(episode => episode.availability !== 'onDisk'))
+        .sort((a, b) => Number(a.seriesId === seriesId) - Number(b.seriesId === seriesId))[0];
+    const partial = seasons.find(season => season.number > 0 && own(season.number).some(episode => episode.availability === 'onDisk')
+        && own(season.number).some(episode => episode.availability === 'missing'));
+    if (!empty && !partial) {
+        record(label, 'season cards show their download', 'NOT VERIFIED', 'no native season without files and none with a missing episode');
+        return;
+    }
+    const items = [];
+    if (empty) {
+        items.push(queueRow(detail.entry, { progress: 0.4, pack: { scope: 'season', label: `Season ${empty.number} pack`, mode: 'fill',
+            episodes: own(empty.number).map(episode => ({ episodeId: episode.id, seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber,
+                importId: null, importState: 'waiting', reason: null, progress: 0.4, sizeBytes: null })) } }));
+    }
+    const partialEpisode = partial && own(partial.number).find(episode => episode.availability === 'missing');
+    if (partialEpisode) {
+        items.push(queueRow(detail.entry, { progress: 0.6, episode: { id: partialEpisode.id, seasonNumber: partialEpisode.seasonNumber,
+            episodeNumber: partialEpisode.episodeNumber, title: partialEpisode.title } }));
+    }
+    const answer = { items, totalRecordCount: items.length, clientStatus: { reachable: true, checkedAt: now(), reason: null },
+        importEnabled: true, seedReleaseEnabled: true };
+    const handler = route => (route.request().method() === 'GET' ?
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...answer, generatedAt: now() }) }) : route.continue());
+    const matcher = url => /\/JellyfinMod\/Queue$/i.test(url.pathname);
+    await page.route(matcher, handler);
+    try {
+        await go(page, '#/home');
+        await go(page, `#/details?id=${seriesId}`);
+        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+        await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .jfmod-dlCard'), undefined, { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(1500);
+        for (const season of seasons.filter(candidate => candidate.number > 0)) {
+            const view = await seasonDownloadView(page, season.id.replace(/-/g, '').toLowerCase());
+            if (season === empty) {
+                record(label, `upstream Season ${season.number} card (no file${season.seriesId === seriesId ? '' : ', under another Jellyfin series item'}) with a season pack: the bar at 40% and the arrow, Not Downloaded hidden`,
+                    !!view?.bar && view.percent === 40 && !!view.arrow && !view.noneVisible, view);
+            } else if (season === partial && partialEpisode) {
+                record(label, `upstream Season ${season.number} card (files, E${partialEpisode.episodeNumber} downloading): the bar at 60% and the arrow`,
+                    !!view?.bar && view.percent === 60 && !!view.arrow, view);
+            } else {
+                record(label, `upstream Season ${season.number} card: no download`, !!view && !view.bar && !view.arrow, view);
+            }
+        }
+        const modCards = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) .jfmod-missingCard')]
+            .filter(card => card.querySelector('.jfmod-dlCardBar')).map(card => card.dataset.jfmodSeason));
+        record(label, 'the missing season cards show no download (none of theirs is on its way)', modCards.length === 0, modCards);
+        if (!empty) record(label, 'an empty native season with a season pack', 'NOT VERIFIED', 'no native season without files');
+        else if (empty.seriesId === seriesId) record(label, 'a season under another Jellyfin series item (the 1923 case)', 'NOT VERIFIED', 'every season is under the page\'s series item');
+        await page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/mse-${tier}-${label.split(',')[0]}-season-downloads.png` }).catch(() => {});
+    } finally {
+        await page.unroute(matcher, handler);
+        await go(page, '#/home');
+        await go(page, `#/details?id=${seriesId}`);
+        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+        await page.waitForTimeout(1500);
+    }
+}
+
 async function run(browser, layout, user, admin) {
     const label = `${layout}, ${admin ? 'administrator' : 'ordinary user'}`;
     const tv = !!LAYOUTS[layout].tv;
@@ -517,7 +637,7 @@ async function run(browser, layout, user, admin) {
         await page.waitForTimeout(3000);
         const detail = await apiGet(page, 'JellyfinMod/Entries/' + entryId);
         const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId() })).Items
-            .map(item => ({ id: item.Id, number: item.IndexNumber })), seriesId);
+            .map(item => ({ id: item.Id, number: item.IndexNumber, seriesId: item.SeriesId })), seriesId);
         const seasonNumbers = Object.fromEntries(seasons.map(season => [season.id.replace(/-/g, '').toLowerCase(), season.number]));
         const held = new Set(seasons.map(season => season.number));
         const missing = [...new Set(detail.episodes.map(episode => episode.seasonNumber))]
@@ -531,8 +651,54 @@ async function run(browser, layout, user, admin) {
             JSON.stringify(modCards.map(card => card.season)) === JSON.stringify(missing), { shown: modCards.map(card => card.season), missing });
         record(label, 'series page: every card in season order, mod cards among upstream\'s', ascending(row.map(card => card.season ?? -1)),
             row.map(card => `${card.mod ? 'mod' : 'up'}:${card.season}`));
-        record(label, 'series page: upstream\'s own season cards carry no mod mark (on disk shows nothing)',
-            row.filter(card => !card.mod).every(card => !card.mark), row.filter(card => !card.mod && card.mark));
+        // P1.FU17: upstream's own season cards carry the mark when none of their episodes is on disk, whatever the watched state.
+        const upstreamCards = row.filter(card => !card.mod);
+        for (const card of upstreamCards) {
+            const expected = expectedNativeMark(card.season, detail.episodes);
+            const what = `upstream Season ${card.season} card (${card.played ? 'watched' : 'not watched'})`;
+            if (!expected) {
+                record(label, `${what}: an episode on disk (or none listed), so no mark`, !card.mark, card.mark);
+                continue;
+            }
+            await checkMark(page, label, what, card.mark, expected, canDownload && packs, 'Download This Season');
+            if (!card.mark) continue;
+            record(label, `${what}: the mark is visible, top right`, card.mark.visible && card.mark.topRight, card.mark);
+            if (card.cluster) {
+                // Option 1: just left of upstream's tick or count, on the same line, neither covering the other.
+                const rtl = await page.evaluate(() => document.documentElement.getAttribute('dir') === 'rtl');
+                const beside = rtl ? card.mark.box.left >= card.cluster.right - 1 : card.mark.box.right <= card.cluster.left + 1;
+                const sameLine = Math.abs((card.mark.box.top + card.mark.box.bottom) / 2 - (card.cluster.top + card.cluster.bottom) / 2) <= 4;
+                const gap = rtl ? card.mark.box.left - card.cluster.right : card.cluster.left - card.mark.box.right;
+                record(label, `${what}: the mark sits just left of upstream's ${card.played ? 'tick' : 'indicator'}, both visible`,
+                    beside && sameLine && gap <= 12, { mark: card.mark.box, cluster: card.cluster, gap });
+            }
+        }
+        const withFiles = upstreamCards.find(card => card.season > 0 && detail.episodes.some(episode => episode.seasonNumber === card.season && episode.availability === 'onDisk'));
+        record(label, 'series page: a native season with files carries no mark', withFiles ? !withFiles.mark : 'NOT VERIFIED',
+            withFiles ? withFiles.mark : 'no native season with a file on disk');
+        const watchedEmpty = upstreamCards.find(card => card.played && expectedNativeMark(card.season, detail.episodes)?.kind === 'none');
+        record(label, 'series page: a watched native season with no file carries the tick and the Not Downloaded mark',
+            watchedEmpty ? watchedEmpty.mark?.kind === 'none' && watchedEmpty.mark.visible : 'NOT VERIFIED',
+            watchedEmpty ? { season: watchedEmpty.season, mark: watchedEmpty.mark } : 'no watched native season without a file on this entry');
+        // Upstream redraws a card by replacing it: the mark comes back on the new card.
+        const marked = upstreamCards.find(card => card.mark);
+        if (marked) {
+            await page.evaluate(id => {
+                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                    .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
+                // Upstream draws a fresh card from its HTML: a copy without the mod's slot.
+                const fresh = card?.cloneNode(true);
+                fresh?.querySelectorAll('.jfmod-markSlot').forEach(node => { node.remove(); });
+                if (fresh) card.replaceWith(fresh);
+            }, Object.keys(seasonNumbers).find(id => seasonNumbers[id] === marked.season));
+            await page.waitForTimeout(800);
+            const again = (await seasonRow(page, seasonNumbers)).find(card => !card.mod && card.season === marked.season);
+            record(label, `upstream Season ${marked.season} card: the mark comes back when upstream redraws the card`,
+                again?.mark?.kind === marked.mark.kind && again.mark.visible, again?.mark);
+        }
+        const nativeButton = upstreamCards.find(card => card.mark?.tag === 'BUTTON');
+        const nativeCard = season => page.locator('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card:not(.jfmod-missingSlot)')
+            .filter({ has: page.locator('.jfmod-markButton') }).filter({ hasText: `Season ${season}` }).first();
         for (const card of modCards) {
             const episodes = detail.episodes.filter(episode => episode.seasonNumber === card.season);
             const words = episodes.length + (episodes.length === 1 ? ' episode' : ' episodes');
@@ -575,6 +741,29 @@ async function run(browser, layout, user, admin) {
             const down = await where();
             record(label, `Season ${target.season} card on the TV: Up reaches its icon, Down returns to the card`, up === 'icon' && down === 'card', { up, down });
         }
+        if (nativeButton) {
+            await pickerFrom(page, label, `upstream Season ${nativeButton.season}'s Download This Season`,
+                nativeCard(nativeButton.season).locator('.jfmod-markButton'), tv, [`Season ${nativeButton.season}`, 'All Seasons']);
+            if (tv) {
+                const where = () => page.evaluate(() => {
+                    const active = document.activeElement;
+                    if (active?.classList.contains('jfmod-markButton')) return 'icon';
+                    return active?.classList.contains('card') ? 'card' : active?.className ?? 'none';
+                });
+                await nativeCard(nativeButton.season).focus();
+                await page.keyboard.press('ArrowUp');
+                await page.waitForTimeout(300);
+                const up = await where();
+                await page.keyboard.press('ArrowDown');
+                await page.waitForTimeout(300);
+                const down = await where();
+                record(label, `upstream Season ${nativeButton.season} card on the TV: Up reaches its icon, Down returns to the card`,
+                    up === 'icon' && down === 'card', { up, down });
+            }
+        } else if (admin && canDownload && packs && upstreamCards.some(card => card.mark?.kind === 'none')) {
+            record(label, 'upstream season card: Download This Season is a button', false, 'a Not Downloaded mark without a button');
+        }
+        if (admin) await checkSeasonDownloads(page, label, detail, seriesId, seasons);
         if (target) {
             const card = page.locator(`.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${target.season}"]`);
             if (tv) await press(page, card, true);
