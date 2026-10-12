@@ -458,7 +458,8 @@ restores inheritance. Episodes inherit their series profile and reject the field
     "size": 4000000000, "seeders": 50, "peers": null, "publishedAt": "2026-09-18T10:00:00Z",
     "freeleech": null, "proper": false, "repack": false, "infoHash": null, "sameHashReleaseIds": [],
     "score": 522, "contributions": [{"code": "quality_rank", "points": 500}, {"code": "seeders", "points": 22}],
-    "eligible": true, "rejections": [], "seedRatio": 1.0, "seedMinutes": 2880
+    "eligible": true, "rejections": [], "seedRatio": 1.0, "seedMinutes": 2880,
+    "detailsUrl": "https://tracker.example/torrent/100"
   }],
   "eligibleCount": 1, "rejectedCount": 0,
   "indexers": [{"indexerId": "…", "name": "Tracker", "status": "ok", "message": null,
@@ -475,6 +476,11 @@ stable failure code. Rejection codes include `identity_unverified`, `identity_mi
 `quality_unknown`, `quality_forbidden`, `quality_not_allowed`, `size_unknown`, `runtime_unknown`,
 `size_below_minimum`, `size_above_maximum`, `no_download_locator`, `download_host_not_allowed` and
 `unsupported_hash`. Series searches need `episodeId` (400 `episode_required`).
+
+`detailsUrl` (2026-10-12) is the release's page on the tracker, for the picker's indexer link: the Torznab item's
+`comments`, else its `guid` when that is an http(s) address; null when neither qualifies. A URL with user information, a
+credential-like query parameter (`key`, `pass`, `token`, `auth`, `secret`, `sid` or `session` in its name), the indexer's
+own API key anywhere in it, or the download link itself is never returned.
 
 ### Grab, hold and Cancel
 

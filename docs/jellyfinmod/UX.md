@@ -879,6 +879,34 @@ mobile. The rule above stays as written until the user decides (plan-ops#6, medi
 single-source, in
 [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md)).
 
+### 9.1 The added row, its download, the release page link and Open Transmission (2026-10-12)
+
+Approved design: the release picker's added-row sheet (2026-10-12). What the picker does now:
+
+- **The added row.** The row a grab is about keeps its two action slots. While the grab is held (5 s) or being sent, Add
+  shows a down arrow falling onto a tray (reduced motion: the arrow rests on it); once the client has the torrent, a green
+  tick (`#81c784`, light `#2e7d32`). Neither is a focus stop. The Replace slot holds a red X (`#c62828`): during the hold it
+  cancels at once (tooltip *Cancel*); afterwards it is *Remove from Queue* and asks first (*Remove the Torrent*: the
+  download stops and the torrent leaves the client, anything downloaded stays; grey Cancel, red Remove), then removes the
+  queue row torrent-only (`removeFromClient`, no blocklist). Removing is for administrators; anyone else sees the tick
+  alone. On the TV the D-pad goes row, then X, with the white ring. The row's label ends with *, added*. The grab block
+  under the row has no Cancel of its own. Other rows dim while a row is added and come back once it is cancelled, removed
+  or imported. A failed grab shows a red bang for three seconds and the row's actions come back.
+- **Found again on reopening.** The picker follows the search's active operation (`grab.activeOperationId`, then
+  `GET /Grabs/{id}`) and marks the row whose infohash matches it; once the client has it, no block is shown.
+- **Its download.** Once the client has the torrent, the picker reads `GET /Queue` right away and every 5 s while it is
+  open, until the row is imported: a thin amber bar (`#ffb300`, the app's progress colour) along the row's bottom edge and
+  a figure at the right end of the marks line, *Queued*, *42% · 12 min left*, *42% · stalled* (darker amber), *Importing…*
+  (a full bar breathing) or *Failed · reason* (red, at the last value); an unreadable client keeps the last value dimmed.
+  Imported, the row reads as the in-library row (the green check after the quality, no actions).
+- **The release page link.** Where the indexer gives a page (`detailsUrl`: Torznab `comments`, else an http `guid`; a URL
+  carrying a credential is never passed on), the indexer name is a link that looks like the plain name at rest, with a
+  pointer and an underline on hover and a thin cyan ring on keyboard focus, opening the page in a new tab (*Open on
+  <indexer>*). It is one stop after the row's actions; plain text on the TV.
+- **Open Transmission.** A round grey icon (this fork's own transmitting mark) between Show Names and Close opens the
+  selected download client's web page in a new tab (*Open <client>*). Administrators only, read from the acquisition
+  settings; not on the TV.
+
 ---
 
 ## 10. Download queue (Phase 5)
