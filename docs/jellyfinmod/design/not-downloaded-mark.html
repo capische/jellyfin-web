@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not Downloaded Mark</title>
+<!--
+  Static proposal, no app code (P1.FU16 items 2 and 3, 2026-10-12). Values from fileStateMark.scss (amber #ffb74d on a dark 65%
+  disc of 1.6em, the row's 2.5em slot with a 1.4em glyph) and upstream's indicators.scss (the played tick: a 2em primary disc,
+  white check at 80%). Posters are grey placeholders.
+-->
+<style>
+  :root {
+    --amber: #ffb74d;
+    --primary: #00a4dc;
+    --disc: rgba(0, 0, 0, 0.65);
+    --dark-ground: #101010;
+    --dark-paper: #202020;
+    --dark-text: rgba(255, 255, 255, 0.87);
+    --dark-quiet: rgba(255, 255, 255, 0.6);
+    --light-ground: #f2f2f2;
+    --light-paper: #ffffff;
+    --light-text: rgba(0, 0, 0, 0.87);
+    --light-quiet: rgba(0, 0, 0, 0.6);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #181818; color: var(--dark-text); font: 15px/1.45 "Noto Sans", system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 32px 0 6px; }
+  p.note { margin: 0 0 12px; color: var(--dark-quiet); max-width: 860px; }
+  .panels { display: flex; flex-wrap: wrap; gap: 16px; }
+  .panel { flex: 1 1 520px; border-radius: 6px; padding: 16px; }
+  .panel.dark { background: var(--dark-ground); color: var(--dark-text); }
+  .panel.light { background: var(--light-ground); color: var(--light-text); }
+  .panel h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; opacity: .7; }
+
+  /* Cards: upstream's overflowPortrait season card, about 150px wide on a desktop. */
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .card { width: 150px; }
+  .poster { position: relative; aspect-ratio: 2 / 3; border-radius: 0.2em; background: linear-gradient(160deg, #5d6d7e, #2c3e50); overflow: hidden; }
+  .poster.alt { background: linear-gradient(160deg, #7b6d5d, #3e2c22); }
+  .poster.dashed { background: transparent; outline: 2px dashed rgba(255,255,255,.35); outline-offset: -2px; display: flex; align-items: center; justify-content: center; font-size: 42px; color: rgba(255,255,255,.35); }
+  .light .poster.dashed { outline-color: rgba(0,0,0,.3); color: rgba(0,0,0,.3); }
+  .cardText { text-align: center; font-size: 14px; margin-top: 6px; }
+  .cardText.secondary { font-size: 86%; opacity: .7; margin-top: 0; }
+  .corner { position: absolute; top: 0.225em; right: 0.225em; display: flex; align-items: center; font-size: 17.5px; }
+  .corner.stack { flex-direction: column; align-items: flex-end; }
+  .corner.stack > * + * { margin-left: 0; margin-top: 0.25em; }
+  .corner > * + * { margin-left: 0.25em; }
+
+  /* The mod's mark: 1.6em dark disc (28px at the card's 17.5px). */
+  .mark { display: inline-flex; align-items: center; justify-content: center; height: 1.6em; min-width: 1.6em; padding: 0 0.3em; border-radius: 0.8em; background: var(--disc); color: #fff; line-height: 1; }
+  .mark svg { width: 1em; height: 1em; display: block; }
+  .mark.none { color: var(--amber); }
+  .mark.unaired { color: rgba(255,255,255,.8); }
+  .mark.unaired span { font-size: .72em; font-weight: 600; margin-left: .3em; white-space: nowrap; }
+  /* Upstream's played tick: 2em primary disc at 80% of the card's indicator size. */
+  .tick { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; border-radius: 100em; background: var(--primary); color: #fff; box-shadow: 0 2px 2px rgba(0,0,0,.14), 0 1px 5px rgba(0,0,0,.12); }
+  .tick svg { width: 1.05em; height: 1.05em; }
+
+  /* Glyph table */
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 10px 8px; text-align: center; vertical-align: middle; }
+  th { font-size: 12px; font-weight: 600; opacity: .7; }
+  td.label { text-align: left; font-size: 13px; opacity: .75; white-space: nowrap; }
+  .thumb { position: relative; width: 84px; height: 56px; margin: 0 auto; border-radius: 0.2em; background: linear-gradient(160deg, #5d6d7e, #2c3e50); }
+  .thumb .corner { top: 4px; right: 4px; }
+
+  /* Rows: a season page's episode row; the slot at its end is 2.5em with a 1.4em glyph, no disc. */
+  .list { border-radius: 4px; overflow: hidden; }
+  .li { display: flex; align-items: center; gap: 14px; padding: 10px 12px; }
+  .dark .li { background: var(--dark-paper); }
+  .light .li { background: var(--light-paper); }
+  .li + .li { border-top: 1px solid rgba(127,127,127,.18); }
+  .still { width: 112px; aspect-ratio: 16 / 9; border-radius: 0.2em; background: linear-gradient(160deg, #5d6d7e, #2c3e50); flex: none; }
+  .body { flex: 1; min-width: 0; }
+  .body .t { font-size: 15px; }
+  .body .m { font-size: 13px; opacity: .65; }
+  .end { display: flex; align-items: center; font-size: 16px; }
+  .slot { width: 2.5em; height: 2.5em; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .slot svg { width: 1.4em; height: 1.4em; }
+  .slot.none { color: var(--amber); }
+  .light .slot.none.dim { color: var(--amber); }
+  .slot.played { color: var(--primary); }
+  .slot.unplayed { opacity: .45; }
+  .slot.unaired { width: auto; padding: 0 .6em; border-radius: 1.25em; opacity: .8; font-size: 16px; }
+  .slot.unaired span { font-size: .72em; font-weight: 600; margin-left: .3em; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: rgba(127,127,127,.2); margin-left: 6px; vertical-align: 1px; }
+  .rec { background: rgba(0,164,220,.25); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Not Downloaded mark: glyph and placement</h1>
+  <p class="note">Proposal for the user (items 2 and 3, 2026-10-12). Nothing here is built. Section 1 is what Delhi Crime shows
+    today; section 2 the glyph; section 3 where the mark goes when the season is also watched.</p>
+
+  <h2>1. Today: Delhi Crime's Seasons row</h2>
+  <p class="note">Seasons 1 and 2 are Jellyfin's own season items (their folders are still on disk, empty), so they get
+    upstream's card and upstream's tick and the mod draws nothing on them. Season 3 has no Jellyfin item, so it is the mod's card
+    with the amber mark.</p>
+  <div class="panels"><div class="panel dark"><h3>Desktop, today</h3><div class="row">
+    <div class="card"><div class="poster"><div class="corner"><span class="tick"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div><div class="cardText">Season 1</div><div class="cardText secondary">&nbsp;</div></div>
+    <div class="card"><div class="poster"><div class="corner"><span class="tick"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div><div class="cardText">Season 2</div><div class="cardText secondary">&nbsp;</div></div>
+    <div class="card"><div class="poster alt"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12m8 5h2v-2h-2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64zm-10 9h2V7h-2z"/></svg></span></div></div><div class="cardText">Season 3</div><div class="cardText secondary">6 episodes</div></div>
+  </div></div></div>
+
+  <h2>2. The glyph (item 3)</h2>
+  <p class="note">Card: the 28px dark disc, amber. Row: the 40px slot, glyph 22px, no disc. <b>A</b> is the picture the user
+    described: a download arrow coming out of a small cloud. <b>B</b> is Material's <code>cloud_download</code>, the glyph the
+    header's Get a Release button already uses, so the mark and the button would match. The clock is Unaired, unchanged.</p>
+  <div class="panels">
+    <div class="panel dark"><h3>Dark theme</h3>
+      <table>
+        <tr><th></th><th>Current</th><th>A: arrow + small cloud <span class="tag rec">proposed</span></th><th>B: cloud_download</th><th>Unaired</th></tr>
+        <tr><td class="label">Card (28px disc)</td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12m8 5h2v-2h-2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64zm-10 9h2V7h-2z"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M17 13l-5 5-5-5h3V9h4v4z"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark unaired"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><span>10 Aug</span></span></div></div></td></tr>
+        <tr><td class="label">Row (40px slot)</td>
+          <td><div class="end"><span class="slot none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12m8 5h2v-2h-2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64zm-10 9h2V7h-2z"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M17 13l-5 5-5-5h3V9h4v4z"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot unaired"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><span>10 Aug</span></span></div></td></tr>
+      </table>
+    </div>
+    <div class="panel light"><h3>Light theme</h3>
+      <table>
+        <tr><th></th><th>Current</th><th>A: arrow + small cloud <span class="tag rec">proposed</span></th><th>B: cloud_download</th><th>Unaired</th></tr>
+        <tr><td class="label">Card (28px disc)</td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12m8 5h2v-2h-2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64zm-10 9h2V7h-2z"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M17 13l-5 5-5-5h3V9h4v4z"/></svg></span></div></div></td>
+          <td><div class="thumb"><div class="corner"><span class="mark unaired"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><span>10 Aug</span></span></div></div></td></tr>
+        <tr><td class="label">Row (40px slot)</td>
+          <td><div class="end" style="justify-content:center"><span class="slot none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12m8 5h2v-2h-2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64zm-10 9h2V7h-2z"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot none"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M17 13l-5 5-5-5h3V9h4v4z"/></svg></span></div></td>
+          <td><div class="end" style="justify-content:center"><span class="slot unaired"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2M12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><span>10 Aug</span></span></div></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>3. Watched and not downloaded together (item 2)</h2>
+  <p class="note">Rule proposed: a season or an episode with no file on disk shows Not Downloaded whether or not it was
+    watched; the tick says watched, the mark says no file, and both show. Drawn with glyph A. <b>Option 1</b> (recommended):
+    the mark sits just left of upstream's tick, the slot the library grid's cards already use (UX §3.1). <b>Option 2</b>: the
+    tick keeps the corner and the mark goes under it. On a row the mark comes first in the end slot, then the played check,
+    the same left-to-right order as on the card.</p>
+  <div class="panels">
+    <div class="panel dark" style="flex-basis:100%"><h3>Cards</h3><div class="row">
+      <div class="card"><div class="poster"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span><span class="tick"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div><div class="cardText">Season 1</div><div class="cardText secondary">Option 1: side by side <span class="tag rec">recommended</span></div></div>
+      <div class="card"><div class="poster"><div class="corner stack"><span class="tick"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span><span class="mark none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></div><div class="cardText">Season 1</div><div class="cardText secondary">Option 2: stacked</div></div>
+      <div class="card"><div class="poster alt"><div class="corner"><span class="mark none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span></div></div><div class="cardText">Season 3</div><div class="cardText secondary">not watched</div></div>
+      <div class="card"><div class="poster"><div class="corner"><span class="tick"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div><div class="cardText">On disk</div><div class="cardText secondary">watched, no mark</div></div>
+    </div></div>
+    <div class="panel dark"><h3>Rows, dark</h3><div class="list">
+      <div class="li"><div class="still"></div><div class="body"><div class="t">1. Episode title</div><div class="m">22 Mar 2019 · 52m</div></div><div class="end"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span><span class="slot played"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div>
+      <div class="li"><div class="still"></div><div class="body"><div class="t">2. Episode title</div><div class="m">22 Mar 2019 · 49m</div></div><div class="end"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span><span class="slot unplayed"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div>
+    </div></div>
+    <div class="panel light"><h3>Rows, light</h3><div class="list">
+      <div class="li"><div class="still"></div><div class="body"><div class="t">1. Episode title</div><div class="m">22 Mar 2019 · 52m</div></div><div class="end"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span><span class="slot played"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div>
+      <div class="li"><div class="still"></div><div class="body"><div class="t">2. Episode title</div><div class="m">22 Mar 2019 · 49m</div></div><div class="end"><span class="slot none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg></span><span class="slot unplayed"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span></div></div>
+    </div></div>
+  </div>
+</main>
+</body>
+</html>
