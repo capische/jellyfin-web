@@ -8,7 +8,7 @@ import { useApi } from 'hooks/useApi';
 
 import { getEntries } from '../api/modApi';
 import { aggregateProgress, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
-import { currentRowFor, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
+import { currentRowFor, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
 import '../components/fileStateMark.scss';
@@ -80,9 +80,17 @@ const indexQueue = (items: QueueRow[], bound: Map<string, string[]>): QueueIndex
     return { items, entryByItem, episodic: items.some(row => !!row.episode || !!row.pack) };
 };
 
+/** An episode's current row, a pack's only while it holds the episode; `own` is the episode's own file of a pack (P4.FU5). */
+const heldRow = (queue: QueueIndex, entryId: string, episodeId: string, own: boolean) => {
+    const row = currentRowFor(queue.items, entryId, episodeId);
+    if (!row || (row.pack && !packHolds(row, episodeId))) return undefined;
+    return own ? packEpisodeView(row, episodeId) : row;
+};
+
 /**
  * The current row of each episode of an entry (of one season, or one episode number, when given) that a row names, a pack's
- * once for every episode it still holds, so a series' or season's mean weighs a pack by its episodes.
+ * once for every episode it still holds, so a series' or season's mean weighs a pack by its episodes. One episode (a number
+ * given) shows its own file of a pack; a season or series keeps the pack's whole torrent.
  */
 const episodeRows = (queue: QueueIndex, entryId: string, season: number | null, number: number | null = null) => {
     const ids = new Set<string>();
@@ -97,8 +105,8 @@ const episodeRows = (queue: QueueIndex, entryId: string, season: number | null, 
     }
     const rows: QueueRow[] = [];
     for (const id of ids) {
-        const row = currentRowFor(queue.items, entryId, id);
-        if (row && (!row.pack || packHolds(row, id))) rows.push(row);
+        const row = heldRow(queue, entryId, id, number !== null);
+        if (row) rows.push(row);
     }
     return rows;
 };
@@ -122,7 +130,7 @@ const rowsOf = (queue: QueueIndex, target: Target, placements: Map<string, Place
     if ('entryId' in target) {
         if (target.episodeId) {
             const row = currentRowFor(queue.items, target.entryId, target.episodeId);
-            return row ? [row] : [];
+            return row ? [packEpisodeView(row, target.episodeId)] : [];
         }
         return target.season === null ? entryRows(queue, target.entryId) : episodeRows(queue, target.entryId, target.season);
     }

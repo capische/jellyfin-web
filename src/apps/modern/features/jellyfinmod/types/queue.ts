@@ -99,6 +99,13 @@ export interface QueuePackEpisode {
     importId: string | null;
     importState: string | null;
     reason: string | null;
+    /**
+     * The episode's own file, 0..1 (next-up priority, P5.FU3): read from the client while it downloads, 1 once its import left
+     * waiting, null when unknown. Absent from older plugins, which show the pack's figure on every episode.
+     */
+    progress?: number | null;
+    /** The episode's file length while the client lists it (P4.FU5), for its time left at the pack's rate. */
+    sizeBytes?: number | null;
 }
 
 /** A pack's row detail (season packs, 2026-10-08): `Season 1 pack · 4 episodes`, its mode and each claimed episode. */
