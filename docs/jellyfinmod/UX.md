@@ -269,6 +269,16 @@ progress colour, for the picker's added row too (one set of colours in `download
   whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`); the mod's own carry `data-jfmod-entry-id` with
   `data-jfmod-season` or `data-jfmod-episode-id`. One component draws them all
   (`integration/downloadMarks.tsx`, mounted once by the mod shell).
+- **A pack's episodes each show their own file** (P4.FU5, user 2026-10-12: "Is there way to show per episode
+  progress if the whole season or all seasons are downloading?"). An episode's row, card and detail line take its own
+  entry of the queue's `pack.episodes` (`progress`, `sizeBytes`, `importState`) instead of the pack's figure, in the same
+  wording: *42% · 6 min left* (its remaining bytes at the pack's current download rate; only the percent when the client
+  does not list its file's size), *Queued* (track only) while its file has not started, *Importing…* once its file is
+  finished (also before the import starts) or being imported, *Failed · reason* for its own blocked, failed or skipped
+  import, and nothing once it is in the library. A season or series card or row keeps one bar for the pack (the pack's
+  whole torrent, counted once per episode it holds). A plugin without per-episode progress keeps the pack's figure on
+  every episode. The queue page and the release picker's added row keep the pack's figure. One function draws the view
+  (`packEpisodeView` in `hooks/useQueue.ts`).
 
 ---
 

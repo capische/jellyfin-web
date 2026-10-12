@@ -625,6 +625,13 @@ Row `state` is one of `queued` (nothing downloaded yet), `downloading`, `stalled
 `client_unreachable`, `torrent_missing`, `import_disabled`, `cancelled`, `target_missing` and
 `client_missing`. `seeding.waitingFor` lists the unmet goals (`complete`, `ratio`, `time`). One client snapshot, at most 3 s old, serves every queue read and projection.
 
+A season or series pack is one row (`episode` null) whose `pack` block has `scope`, `label`, `mode` and `episodes`: each
+claimed episode with `episodeId`, `seasonNumber`, `episodeNumber`, its newest `importId`, `importState` and `reason`, and
+(next-up priority, P5.FU3 and P4.FU5) `progress`, the episode's own file 0–1 while it downloads (1 once its import left
+`waiting`, null when the file is not known yet), and `sizeBytes`, that file's length while the client lists it (null
+otherwise). The row's own `progress`, `sizeBytes`, `downloadRateBytes` and `etaSeconds` stay the whole torrent's. The web
+estimates an episode's time left as its remaining bytes at the row's `downloadRateBytes`.
+
 `GET /JellyfinMod/Imports/{id}` returns one import operation (concealed 404 without library access).
 `POST /JellyfinMod/Imports/{id}/Retry` (admin) re-inspects a `blocked` or `failed` import from the
 start and answers 409 `import_not_retryable`, `import_open` or `grab_missing`.
