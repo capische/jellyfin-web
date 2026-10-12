@@ -5,7 +5,7 @@ import dialogHelper from 'components/dialogHelper/dialogHelper';
 import layoutManager from 'components/layoutManager';
 import { renderComponent } from 'utils/reactUtils';
 
-import { type EntryDetail, getEntry, loadEntryEpisodeList } from '../api/modApi';
+import { type EntryDetail, getDownloadClientLink, getEntry, loadEntryEpisodeList } from '../api/modApi';
 import ReleasePickerDialog, { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
@@ -13,6 +13,8 @@ import type { EntryEpisode } from '../types/entry';
 // webpack's `?raw` rule (webpack.common.js) hands the drawing over as text; the eslint resolver does not know the query.
 // eslint-disable-next-line import/no-unresolved
 import namesToggleGlyph from '../assets/names-toggle.svg?raw';
+// eslint-disable-next-line import/no-unresolved
+import clientOpenGlyph from '../assets/client-open.svg?raw';
 
 interface OpenOptions {
     api: Api;
@@ -59,6 +61,23 @@ const applyNames = (dlg: HTMLElement, toggle: HTMLElement, on: boolean) => {
     toggle.setAttribute('aria-pressed', String(on));
     toggle.setAttribute('aria-label', label);
     toggle.setAttribute('title', label);
+};
+
+/**
+ * Open Transmission (user, 2026-10-12): a round icon in the title row that opens the download client's web page in a new tab,
+ * named after the client ("Open Transmission"). Administrators only, as the settings it reads are theirs (anyone else gets 403
+ * and the icon stays hidden), and never on the TV, where nothing can open a tab.
+ */
+const showClientLink = (api: Api, link: HTMLAnchorElement) => {
+    if (layoutManager.tv) return;
+    getDownloadClientLink(api).then(client => {
+        if (!client) return;
+        const label = 'Open ' + client.name;
+        link.href = client.openUrl;
+        link.title = label;
+        link.setAttribute('aria-label', label);
+        link.hidden = false;
+    }).catch(() => undefined);
 };
 
 const pad = (value: number) => (value < 10 ? '0' : '') + value;
@@ -130,6 +149,10 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         + '<button is="paper-icon-button-light" type="button" class="autoSize jfmod-releaseAction jfmod-namesToggle"'
         + ' title="Show Names" aria-label="Show Names" aria-pressed="false">'
         + namesToggleGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</button>'
+        // Open Transmission (user, 2026-10-12): after Show Names, before Close; shown only once an administrator's settings read
+        // names the client and its web link.
+        + '<a class="paper-icon-button-light autoSize jfmod-releaseAction jfmod-clientOpen" target="_blank" rel="noopener noreferrer"'
+        + ' hidden>' + clientOpenGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</a>'
         + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseAction jfmod-releaseDialogClose" tabindex="-1"'
         + ' title="Close"'
         + ' aria-label="Close"><svg class="jfmod-releaseGlyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"'
@@ -145,6 +168,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         applyNames(dlg, toggle, on);
         saveNames(on);
     });
+    showClientLink(options.api, dlg.querySelector<HTMLAnchorElement>('.jfmod-clientOpen')!);
     const close = () => dialogHelper.close(dlg);
     dlg.querySelector('.btnCancel')?.addEventListener('click', close);
     const content = dlg.querySelector<HTMLElement>('.jfmod-releaseDialogContent')!;

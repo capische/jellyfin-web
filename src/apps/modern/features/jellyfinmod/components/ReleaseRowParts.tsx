@@ -1,4 +1,4 @@
-import React, { type FC, Fragment, type MouseEvent, type ReactNode } from 'react';
+import React, { type FC, Fragment, type ReactNode, useLayoutEffect, useRef } from 'react';
 
 import layoutManager from 'components/layoutManager';
 
@@ -167,19 +167,60 @@ interface ReleaseLinesProps {
     progress?: ReactNode;
 }
 
-/** The link opens the tracker's page in a new tab; it must not also grab the row it sits in. */
-const stopRow = (event: MouseEvent) => event.stopPropagation();
+/** Whether a row's indexer name is a link: the indexer gave a page, and the layout can open a tab (not the TV). */
+const linked = (candidate: ReleaseCandidate) => !!candidate.detailsUrl && !layoutManager.tv;
 
 /**
- * The indexer name, which is itself the link to the release's page where the indexer gives one (user, 2026-10-12): it looks like
- * the plain name at rest and shows the link on hover and keyboard focus. Plain text on the TV, where nothing can open a tab.
+ * The indexer name inside the row's button. Where the name is a link, the link is drawn over it by `IndexerLink` and this copy
+ * only holds the column's place.
  */
-const IndexerName: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => {
+const IndexerName: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) =>
+    <span className={'jfmod-releaseCol jfmod-releaseCol--indexer' + (linked(candidate) ? ' jfmod-releaseCol--linked' : '')}
+        aria-hidden={linked(candidate) || undefined}>{candidate.indexerName}</span>;
+
+/**
+ * The indexer name as the link to the release's page (user, 2026-10-12): it looks exactly like the plain name at rest, with a
+ * pointer and an underline on hover and a thin ring on keyboard focus, and opens the page in a new tab. A link cannot sit inside
+ * the row's button (invalid, and Firefox never delivers the click), so it is the item's last child, one tab stop after Replace,
+ * laid over the name's own box, measured whenever the item or the name changes size. Plain text on the TV.
+ */
+export const IndexerLink: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => {
+    const link = useRef<HTMLAnchorElement>(null);
+    const url = linked(candidate) ? candidate.detailsUrl : null;
+    useLayoutEffect(() => {
+        const anchor = link.current;
+        const item = anchor?.parentElement;
+        const name = item?.querySelector<HTMLElement>('.jfmod-releaseCol--linked');
+        if (!anchor || !item || !name) return;
+        const place = () => {
+            const box = item.getBoundingClientRect();
+            const at = name.getBoundingClientRect();
+            const scale = box.width ? item.offsetWidth / box.width : 1;
+            anchor.style.left = (at.left - box.left) * scale + 'px';
+            anchor.style.top = (at.top - box.top) * scale + 'px';
+            anchor.style.width = at.width * scale + 'px';
+            anchor.style.height = at.height * scale + 'px';
+            anchor.style.visibility = 'visible';
+        };
+        place();
+        // Older engines without ResizeObserver place it again when the window changes size.
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', place);
+            return () => window.removeEventListener('resize', place);
+        }
+        // Guarded above: an engine without it takes the resize listener.
+        // eslint-disable-next-line compat/compat
+        const observer = new ResizeObserver(place);
+        observer.observe(item);
+        observer.observe(name);
+        return () => observer.disconnect();
+    }, [url]);
+    if (!url) return null;
     const name = candidate.indexerName;
-    if (!candidate.detailsUrl || layoutManager.tv) return <span className='jfmod-releaseCol jfmod-releaseCol--indexer'>{name}</span>;
-    return <a className='jfmod-releaseCol jfmod-releaseCol--indexer jfmod-releaseIndexerLink' href={candidate.detailsUrl}
-        target='_blank' rel='noopener noreferrer' title={'Open on ' + name} aria-label={'Open ' + candidate.rawTitle + ' on ' + name
-            + ' in a new tab'} onClick={stopRow}>{name}</a>;
+    return <a ref={link} className='jfmod-releaseIndexerLink' href={url} target='_blank' rel='noopener noreferrer'
+        title={'Open on ' + name} aria-label={'Open ' + candidate.rawTitle + ' on ' + name + ' in a new tab'}>
+        <span>{name}</span>
+    </a>;
 };
 
 /**
