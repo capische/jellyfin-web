@@ -764,15 +764,26 @@
     opacity: 0.8;
 }
 
-// What a pack covers (season packs, 2026-10-08), in the secondary text colour rather than primary: it describes the row.
+// What a pack covers (season packs, 2026-10-08), in the secondary text colour rather than primary: it describes the row. No
+// border (user, 2026-10-12).
 .jfmod-releaseChip--coverage {
-    border-color: currentColor;
+    padding: 0;
+    border: 0;
+    opacity: 0.86;
 }
 
-// Get another quality (P6.M8): a quality already held is marked and cannot be grabbed. Also a pack's `N held`.
+// Get another quality (P6.M8): a quality already held is marked and cannot be grabbed. Also a pack's `N held`, shown as the
+// number with the in-library tick instead of the word, no border (user, 2026-10-12).
 .jfmod-releaseChip--held {
-    border-color: currentColor;
+    gap: 0.2em;
+    padding: 0;
+    border: 0;
     opacity: 0.86;
+
+    .jfmod-releaseGlyph-small {
+        width: 1.1em;
+        height: 1.1em;
+    }
 }
 
 .jfmod-releaseNotice--info {
