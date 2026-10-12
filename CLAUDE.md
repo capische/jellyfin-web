@@ -25,7 +25,7 @@
 - Preserve base values: ground `#101010`, paper `#202020`, primary `#00a4dc`, error `#c62828`, star `#f2b01e`, Noto Sans, card radius `0.2em`, secondary card text `86%`.
 - Size feature styles in `em`; account for TV's 125% and mobile's 90% root sizing.
 - Use `layoutManager` affordances: TV buttons, mobile `CardOverlayButtons`, desktop `CardHoverMenu`.
-- Reserve top-right for stock `.cardIndicators`, top-left for file state, bottom-right for mobile overlays.
+- File state (Not Downloaded, Unaired, downloading) sits top-right beside stock `.cardIndicators` (user, 2026-10-12; UX §3.1); bottom-right is for mobile overlays.
 - Resolve design conflicts in `UX.md`; do not bypass these rules with `!important`.
 
 ## Testing
