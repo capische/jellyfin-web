@@ -455,6 +455,14 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - Phase 13 — offline episode watches to Trakt: planned, not scheduled (requested 2026-10-07;
   see [`PHASE13.md`](PHASE13.md)). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming
   history observations. Implementation requires connection and single-writer design refinement.
+- Phase 1 follow-up, **planned (user, 2026-10-12): the full season and episode list for a library-discovered series.**
+  Phase 1 (accepted 2026-09-06) tracks every TMDB season and episode, aired or not, but only for a series added through TMDB;
+  a series that reconciliation discovered in the library has no TMDB list (see [`PHASE10.md`](PHASE10.md), *Why episodes are
+  unbound*), so the release picker's scope list and the series page show no seasons or episodes that are not on disk. This was
+  not planned from the start. Phase 1 owns the behaviour (episode records, TMDB season and episode metadata, Refresh); the
+  picker only reads it. Slice: the plugin reads the TMDB season and episode list for any series entry, kept per Phase 10's
+  position-identity rules, and the picker shows every season and episode with downloaded, missing and unaired marked.
+  Needs a design pass; not started.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
