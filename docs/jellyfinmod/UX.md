@@ -253,7 +253,8 @@ progress colour, for the picker's added row too (one set of colours in `download
   the last value, and the Not Downloaded button stays beside it so it can be searched again), a client that
   cannot be read keeps its last value dimmed. The wording is the picker's added row's, from one mapping
   (`downloadProgress` in `constants/queue.ts`).
-- **TV and phone:** the same; nothing waits for a hover, and a focused card shows no extra figure.
+- **TV and phone:** the same; nothing waits for a hover, and a focused card shows no extra figure. On the phone a row's
+  figure is the last line of its text, under the title (beside a native row's buttons it squeezed the title to *1. Leave…*).
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
   and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
