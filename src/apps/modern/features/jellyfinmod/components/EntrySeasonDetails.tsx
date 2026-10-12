@@ -83,7 +83,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, detail: 
         {mount('.nameContainer', <h1>{detail.entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', 'Season ' + season + (count ? ' · ' + episodesWord(count) : ''))}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
+            <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
             node, String(index)))}
         <MissingEpisodeRows api={api} userId={userId} view={view} detail={detail} season={season} canAcquire={canAcquire}
             onChanged={reload} />
