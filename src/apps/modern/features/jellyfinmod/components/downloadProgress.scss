@@ -94,6 +94,15 @@
     font-size: 0.8em;
 }
 
+/* The phone: the last line of the row's text. */
+.listItemBody > .jfmod-dlRowFigure {
+    display: block;
+    padding: 0;
+    margin-top: 0.2em;
+    // A failure's reason wraps instead of running past the row.
+    white-space: normal;
+}
+
 /* A failure keeps the Not Downloaded button beside its figure, so the episode can be searched again. */
 .jfmod-dlRow:not(.jfmod-dlRow--failed) .jfmod-mark--none {
     display: none;
