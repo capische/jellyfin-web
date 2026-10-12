@@ -472,6 +472,16 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   entry, one shared load, Phase 1 smoke cases) and web `feat/episode-list-on-open` from `76400aac37` (opening a series or
   season page loads the list once per visit for every user; the series picker lists All Seasons and each season;
   full-episode-list.mjs). Mac suites pass; not deployed, no live first look yet, no Codex review yet.
+- Release picker, the added row and the release page link (WR, design approved by the user 2026-10-12): **built (not
+  accepted)**. The grabbed row keeps its two action slots (falling arrow, then a green tick; a red X that cancels during the
+  hold and afterwards removes the torrent from the queue after a question, administrators only), shows its download from the
+  queue (an amber bar and `42% · 12 min left`, stalled, Importing…, Failed; imported, it reads as in the library), and comes
+  back when the picker reopens; the grab block has no Cancel. The indexer name links to the release's page on the tracker
+  (plugin `detailsUrl` from Torznab `comments`, else an http `guid`, never one with a credential); Open Transmission sits
+  in the title row. Owner: Phase 4 (picker, candidate contract) with Phase 5's queue as the progress source. Built on
+  `next-release`: plugin `bf2d471..8d468e5` (Phase 4, 5, 6 and 7 Prowlarr suites pass in the Linux container) and web
+  `8b0bafae08..9947e2337e`; described in [UX.md](UX.md) §9.1. Layout checked in Chromium and Chrome against local env
+  bravo with intercepted picker answers (not E2E); not deployed, no live first look yet, no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
