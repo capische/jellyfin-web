@@ -182,7 +182,7 @@ async function collect(pg, side) {
             out[n + '.replace'] = s('.act', '.jfmod-releaseAction', 1);
         });
         add('rejectedToggle', '.rejt .btn', '.jfmod-rejectedToggle');
-        add('grab', '.gs', '.jfmod-grabStatus'); add('grabSentence', '.gs > span', '.jfmod-grabStatus > span'); add('grabButton', '.gs .btn', '.jfmod-grabCancel, .jfmod-grabOpen'); add('grabFile', '.gs .gsraw', '.jfmod-grabStatus-title');
+        add('grab', '.gs', '.jfmod-grabStatus'); add('grabSentence', '.gs > span', '.jfmod-grabStatus > span'); add('grabButton', '.gs .btn', '.jfmod-grabOpen'); // the hold's Cancel moved to the row's X (2026-10-12); this mock still draws it add('grabFile', '.gs .gsraw', '.jfmod-grabStatus-title');
         for (const k of Object.keys(out)) if (out[k] === null) delete out[k];
         return out;
     }, side);
