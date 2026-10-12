@@ -17,7 +17,9 @@ $font: 'jfmod-inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans',
 }
 
 // The mod's pieces on upstream's pages (the detail page's Version dropdown, file list and action row): their own text only.
-[class*='jfmod-']:not([class*='material-'], .jfmod-mono, .jfmod-qname) {
+// A missing season card or episode row (P1.FU11) stands among upstream's own and keeps their text, so only its own marks and
+// placeholder take the mod's font.
+[class*='jfmod-']:not([class*='material-'], .jfmod-mono, .jfmod-qname, .jfmod-missingSlot) {
     font-family: $font;
     -webkit-font-smoothing: auto;
 }
