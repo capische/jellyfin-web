@@ -191,6 +191,8 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
             enableFocusTransform: !browser.slow && !browser.edge, showChildCountIndicator: false, itemType: 'Season', tagName: 'div' })
             + ' jfmod-missingSlot jfmod-missingCard';
         element.dataset.jfmodSeason = key;
+        // The season's download, if one of its episodes is on its way (integration/downloadMarks, P4.FU1).
+        element.dataset.jfmodEntryId = detail.entry.id;
         if (tv) {
             (element as HTMLButtonElement).type = 'button';
             element.setAttribute('aria-label', 'Season ' + key);
@@ -287,8 +289,9 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         const element = document.createElement('div');
         element.className = 'listItem listItem-largeImage jfmod-missingSlot jfmod-missingRow';
         element.dataset.jfmodEpisodeId = key;
+        element.dataset.jfmodEntryId = detail.entry.id;
         return element;
-    }, []);
+    }, [detail.entry.id]);
     const elements = useOrderedSlots(container, slots, natives, make);
     const pickerFor = usePickerFor(api, detail, onChanged);
     return <>{missing.map(episode => {
