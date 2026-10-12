@@ -255,7 +255,7 @@ progress colour, for the picker's added row too (one set of colours in `download
   fully watched series) shows the amber arrow in the dark disc in the top-right corner, before upstream's
   indicators. The bob is 0.2em every 1.4 s, transform only, and rests under reduced motion.
 - **Rows** (the native and the mod's season page, the library list view and search lists): the bar along
-  the row's bottom edge (0.16em over a faint track) and the figure at the row's end, tabular: *Queued* (track
+  the row's bottom edge (0.28em, the row's full width, over a faint track; the row has 0.7em above and below) and the figure at the row's end, tabular: *Queued* (track
   only), *42% · 12 min left*, *42% · stalled*, *Importing…* (a full bar breathing), *Failed · reason* (red, at
   the last value, and the Not Downloaded button stays beside it so it can be searched again), a client that
   cannot be read keeps its last value dimmed. The wording is the picker's added row's, from one mapping

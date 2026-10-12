@@ -73,18 +73,22 @@
     display: none;
 }
 
-/* A season page's or list view's row: the bar along its bottom edge, inset like the row's content, and the figure at its
- * end, where the Not Downloaded icon would be (downloading wins over it). */
+/* A season page's or list view's row: the bar along its bottom edge, the row's full width, and the figure at its end, where
+ * the Not Downloaded icon would be (downloading wins over it). The row gets room above and below so the bar does not touch
+ * the next row's still. */
 .jfmod-dlRow {
     position: relative;
+    margin-bottom: 0.35em;
+    padding-top: 0.7em;
+    padding-bottom: 0.7em;
 }
 
 .jfmod-dlRowBar {
     position: absolute;
-    right: 0.6em;
+    right: 0;
     bottom: 0;
-    left: 0.6em;
-    height: 0.16em;
+    left: 0;
+    height: 0.28em;
 }
 
 .jfmod-dlRowFigure {
