@@ -24,6 +24,7 @@ import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
 import FileChooser, { type PinState, useStockSourceIds } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
 import HistoryToggle from './HistoryToggle';
+import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
 import './entryDetails.scss';
@@ -473,11 +474,21 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         busy, change });
     useKeepSeriesItem(api, view, isAdmin && isSeriesPage ? data : null, itemId, change);
 
-    // A season page shows only the header icon.
-    if (!detail.data || isSeasonPage) return null;
+    if (!detail.data) return null;
+    // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
+    if (isSeasonPage) {
+        return <MissingEpisodeRows api={api} userId={userId} view={view} detail={detail.data} season={seasonOf ?? 0}
+            native={{ seriesItemId: seriesId ?? '', seasonItemId: itemId }} canAcquire={canAcquire} onChanged={refreshAfterPlayed} />;
+    }
     const entry = detail.data.entry;
 
-    if (isSeriesPage) return <SeriesSection detail={detail.data} />;
+    if (isSeriesPage) {
+        return <>
+            <SeriesSection detail={detail.data} />
+            <MissingSeasonCards api={api} userId={userId} serverId={serverId} view={view} seriesItemId={itemId} detail={detail.data}
+                canAcquire={canAcquire} onChanged={refreshAfterPlayed} />
+        </>;
+    }
 
     // The popover lists one file's events, picked by the file's binding; episode-level events are not shown (design step 3).
     const history = detail.data.history;
