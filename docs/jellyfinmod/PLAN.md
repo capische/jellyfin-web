@@ -565,6 +565,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Chromium (456 checks) and Chrome on desktop, phone and TV against local environment alpha with both builds; the Jellyfin
   TMDb path was read against real TMDB outside a host. Not deployed to a Pi instance; no ordinary-user run (no user with an
   empty password); no Codex review yet.
+  **P4.FU5, built (not accepted) 2026-10-12: each pack episode shows its own download** (user 2026-10-12: "Is there way to
+  show per episode progress if the whole season or all seasons are downloading?"; the web part of the next-up priority design,
+  [design/next-up-priority-download.md](design/next-up-priority-download.md) §7; [UX.md](UX.md) §3.3, [API.md](API.md) *Queue*).
+  Owner: Phase 4 follow-up, with Phase 5's queue (P5.FU3) as the source. An episode's row, card and detail line take its own
+  file of a pack from `pack.episodes` (its percent and bar, *Queued* before it starts, *Importing…* once its file is finished or
+  being imported, *Failed · reason* for its own import, its time left as its remaining bytes at the pack's rate); season and
+  series cards keep one bar for the pack; the approved row format is unchanged, so no mockup. Plugin: `sizeBytes` on each pack
+  episode (the file's length) and the fix that `DownloadOrderService` sends `queue-move-top` only when a queued single-episode
+  torrent is not already first (it asked on every 15 s tick; `queuePosition` is now read). Plugin `feat/pack-episode-progress`
+  from `1f716df` (`db24c49` the queue-move-top fix, `618efb7` `sizeBytes`), web `feat/pack-episode-progress` from `9d50a4a81c` (`4e4eece7cb` code, `2b260b64f9` runner,
+  and the docs commit). All 13 plugin suites pass on the merged tree with both commits (Mac: Phase 0 and 1 smoke, 2, 3, 10, Q16 Trakt; Linux container: Phase 3 protection, 4, 5, 6, 7 settings, Prowlarr, takeover), the first run of `1f716df`'s two merged lines together. Typecheck, eslint, stylelint and the production build pass; `card-progress.mjs` (a pack
+  with episodes at different progress, intercepted queue answers, not a live download) passed 66/66 with 3 not verified (no
+  file-less entry) in Chromium and Chrome on desktop, phone and TV 1080 against local environment bravo with both builds. Not
+  deployed to a Pi instance; no live first look yet; no Codex review yet. Open for the user: a pack episode's own long
+  *Failed · reason* figure (P4.FU1's failed row, now reached by pack episodes) squeezes the row's text to a narrow column on
+  the TV.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
