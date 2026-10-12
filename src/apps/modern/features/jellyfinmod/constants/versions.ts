@@ -1,3 +1,4 @@
+import type { ParsedRelease } from '../types/acquisition';
 import type { VersionDto, VersionRetention } from '../types/versions';
 import { formatBytes } from './queue';
 
@@ -59,6 +60,31 @@ export const versionAudio = (version: VersionDto): string | null => {
     let channels: string | null = null;
     if (version.audioChannels) channels = CHANNELS.get(version.audioChannels) ?? version.audioChannels + ' ch';
     return [codec, channels].filter(Boolean).join(' ') || null;
+};
+
+/** The codec names the release marks know (`h265` draws HEVC), and the audio words their Dolby and DTS chips match. */
+const MARK_CODECS = new Map([['hevc', 'h265'], ['h265', 'h265'], ['h264', 'h264'], ['avc', 'h264'], ['av1', 'av1'], ['vc1', 'vc1'],
+    ['mpeg2video', 'mpeg2']]);
+const MARK_AUDIO = new Map([['eac3', 'DD+'], ['ac3', 'DD']]);
+
+/**
+ * A file's streams in the shape the release picker's media marks take (user, 2026-10-12: the Video dropdown shows the same
+ * marks): codec; 10-bit, the range and Dolby Vision; the audio format and its channels.
+ */
+export const versionMarks = (version: VersionDto): Pick<ParsedRelease, 'codec' | 'hdr' | 'audio' | 'audioChannels'> => {
+    const video = version.videoCodec?.toLowerCase() ?? '';
+    const audio = version.audioCodec?.toLowerCase() ?? '';
+    const range = version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? version.videoRange : null;
+    const hdr = [version.bitDepth && version.bitDepth >= 10 ? version.bitDepth + '-bit' : null,
+        range && /dovi|dolby/i.test(range) ? 'DV' : range].filter(Boolean).join(' ');
+    let channels: string | null = null;
+    if (version.audioChannels) channels = CHANNELS.get(version.audioChannels) ?? version.audioChannels + ' ch';
+    return {
+        codec: video ? MARK_CODECS.get(video) ?? VIDEO_CODECS.get(video) ?? video.toUpperCase() : null,
+        hdr: hdr || null,
+        audio: audio ? MARK_AUDIO.get(audio) ?? AUDIO_CODECS.get(audio) ?? audio.toUpperCase() : null,
+        audioChannels: channels
+    };
 };
 
 /**

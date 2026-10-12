@@ -15,6 +15,9 @@
 }
 
 .jfmod-videoChooser {
+    // The media marks knock their words out of a chip in the page's colour.
+    --jfmod-paper: #101010;
+
     display: flex;
     align-items: flex-start;
     flex: 0 0 auto;
@@ -53,9 +56,10 @@
     box-sizing: border-box;
     height: 1.75em;
     padding: 0 0 0 0.4em;
-    border: 0.135em solid rgba(255, 255, 255, 0.09);
+    border: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
     border-radius: 0.2em;
-    background: #202020;
+    // The theme's own select colours, so the value reads in the light theme too (it was a dark box there).
+    background: var(--jf-palette-background-paper, #202020);
     color: inherit;
     font: inherit;
     line-height: normal;
@@ -69,21 +73,46 @@
     }
 }
 
+.jfmod-videoTriggerText {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 .jfmod-videoChevron {
     margin: 0 0 0 auto;
     font-size: 1.4em;
     opacity: 0.7;
 }
 
+// The list slides open on a grid row growing from 0fr to 1fr, so it moves at its own height for the whole 0.18s (a max-height
+// of 40em was over in about 30 ms opening and waited about 140 ms before closing; user, 2026-10-12). An engine that cannot
+// animate the row (older webOS) just opens it. The panel reaches 1.4em left of the Video value, so each row's text starts
+// where the value's text does and Get Another Quality's plus hangs in that margin (user, 2026-10-12).
+$gutter: 1.4em;
+// Where the closed value's text starts: its 0.4em padding inside its 0.135em border.
+$text-inset: 0.535em;
+
 .jfmod-fileList {
-    max-width: 44em;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease;
+    display: grid;
+    grid-template-rows: 0fr;
+    max-width: 44em + $gutter;
+    margin-left: -$gutter;
+    transition: grid-template-rows 0.18s ease-out;
 }
 
 .jfmod-fileList--open {
-    max-height: 40em;
+    grid-template-rows: 1fr;
+}
+
+.jfmod-fileListClip {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.jfmod-fileListBox {
     margin: 0.25em 0 0.6em;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.2em;
@@ -114,10 +143,13 @@
 }
 
 .jfmod-fileChoose {
+    position: relative;
     display: flex;
     align-items: center;
     flex: 1 1 auto;
-    padding: 0.45em 0.8em;
+    min-width: 0;
+    // The list's 1px border is inside the gutter.
+    padding: 0.45em 0.8em 0.45em calc(#{$gutter + $text-inset} - 1px);
     border: 0;
     border-radius: 0.2em;
     background: transparent;
@@ -137,32 +169,46 @@
 }
 
 .jfmod-fileMark {
-    flex: 0 0 auto;
-    width: 1.4em;
+    position: absolute;
+    left: 0;
+    width: calc(#{$gutter + $text-inset} - 1px);
+    text-align: center;
     color: var(--jf-palette-text-primary, #fff);
 }
 
 .jfmod-fileBody {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex: 1 1 auto;
     flex-wrap: wrap;
 
     > * { margin-right: 0.8em; }
 }
 
-// A file row has no mark of its own; its text starts where the Get Another Quality text does, past the plus.
-.jfmod-fileRow:not(.jfmod-fileRow--add) .jfmod-fileBody {
-    padding-left: 1.4em;
-}
-
+// The row and the closed value draw the same pieces: resolution, the release picker's media marks (ReleaseRowParts), size.
 .jfmod-fileResolution {
-    min-width: 3.4em;
+    margin-right: 0.8em;
     font-weight: 600;
 }
 
-.jfmod-fileDetails {
+// The marks are drawn for the picker's second line; beside this line's full-size text they are 30% larger (chips 13px tall in
+// the 26px value at the desktop's 16px; user, 2026-10-12).
+.jfmod-fileMarks {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    // Each mark already ends with its own small margin.
+    margin-right: 0.3em;
+    font-size: 130%;
+}
+
+.jfmod-fileSize {
+    margin-right: 0.8em;
     opacity: 0.86;
+}
+
+.jfmod-videoTriggerText > :last-child {
+    margin-right: 0;
 }
 
 .jfmod-fileExtra {
@@ -172,14 +218,6 @@
 
 .jfmod-fileExtra--dot::before {
     content: '· ';
-}
-
-.jfmod-fileDefault {
-    padding: 0 0.4em;
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    border-radius: 0.2em;
-    font-size: 78%;
-    text-transform: uppercase;
 }
 
 // The row's actions (user rules, 2026-10-08): upstream's round icon buttons, icon only, at least 2.5em across (40px at the
@@ -276,6 +314,10 @@
     margin: 0.3em 0.8em 0.5em;
     font-size: 86%;
     opacity: 0.8;
+}
+
+[data-theme='light'] .jfmod-videoChooser {
+    --jfmod-paper: #fff;
 }
 
 // Added inside stock Delete media's confirmation when the title has several files (V1, analysis C8).

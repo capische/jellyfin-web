@@ -87,11 +87,14 @@ const AUDIO_MARKS: Array<[RegExp, Mark]> = [
     [/\bDTS\b/, chipMark('dts', 'DTS', dtsFamily, 'wave', 'DTS', true)]
 ];
 
+/** What the marks are drawn from: a release's parsed name, or a file's streams (`versionMarks`, the Video dropdown). */
+export type MarkSource = Pick<ParsedRelease, 'codec' | 'hdr' | 'audio' | 'audioChannels'>;
+
 /**
  * Codec, then the HDR marks, then the Dolby group together (Vision, Atmos, the audio format), as the design draws them;
  * `parsed.audio` is the plugin's `TrueHD Atmos` style string.
  */
-const marksOf = (parsed: ParsedRelease): Mark[] => {
+const marksOf = (parsed: MarkSource): Mark[] => {
     const marks: Mark[] = [];
     if (parsed.codec) marks.push({ key: 'codec', className: 'jfmod-releaseMark--codec', text: CODECS.get(parsed.codec) ?? parsed.codec });
     const hdr = (parsed.hdr ?? '').split(' ').filter(Boolean);
@@ -121,7 +124,7 @@ const MarkView: FC<{ mark: Mark }> = ({ mark }) => {
     return <span className={'jfmod-releaseMark ' + mark.className}>{mark.text}</span>;
 };
 
-const MediaMarks: FC<{ parsed: ParsedRelease }> = ({ parsed }) => {
+export const MediaMarks: FC<{ parsed: MarkSource }> = ({ parsed }) => {
     const marks = marksOf(parsed);
     if (marks.length === 0) return null;
     const channels = parsed.audioChannels ? <span className='jfmod-releaseMark jfmod-releaseMark--channels'>{parsed.audioChannels}</span> : null;
