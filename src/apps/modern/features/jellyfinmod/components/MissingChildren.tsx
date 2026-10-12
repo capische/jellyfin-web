@@ -124,7 +124,7 @@ export const episodesWord = (count: number) => count + (count === 1 ? ' episode'
  * image does (cover, centred, lazy). Null while there is none, or once it failed to load (offline, a blocked CDN): the
  * caller then draws the dashed placeholder with the number.
  */
-const useTmdbCover = (path: string | null | undefined, size: 'w300' | 'w342' | 'w500') => {
+export const useTmdbCover = (path: string | null | undefined, size: 'w185' | 'w300' | 'w342' | 'w500') => {
     const src = getTmdbImage(path, size);
     const [failed, setFailed] = useState<string>();
     const onError = useCallback(() => setFailed(src), [src]);
@@ -179,6 +179,10 @@ const missingSeasons = (episodes: EntryEpisode[], held: Set<number>) => {
 
 /** The `#/details?entryId=…&season=N` route: the mod's page for a season Jellyfin does not have (P1.FU11). */
 export const seasonPath = (entryId: string, season: number, serverId: string) => getEntryPath(entryId, serverId) + '&season=' + season;
+
+/** The `#/details?entryId=…&season=N&episode=M` route: the mod's page for an episode Jellyfin does not have (P1.FU15). */
+export const episodePath = (entryId: string, season: number, episode: number, serverId: string) =>
+    seasonPath(entryId, season, serverId) + '&episode=' + episode;
 
 interface SeasonCardsProps {
     api: Api;
@@ -245,20 +249,26 @@ interface EpisodeRowProps {
 }
 
 /**
- * An episode with no Jellyfin item, drawn as upstream draws an episode row: TMDB's still (else a dashed 16:9 placeholder with
- * its number), "N. Title", the meta line (air date, runtime, rating), the overview, and the mark at the end.
+ * Upstream's meta items for an episode Jellyfin has no item for: the air date (in `airDate`'s format), its runtime format
+ * ("42m", "1h 2m") and its star with one decimal (P1.FU14). Shared by the rows and the episode's page (P1.FU15).
  */
-const MissingEpisodeRow: FC<EpisodeRowProps> = ({ episode, rating, download }) => {
+export const episodeMetaItems = (episode: EntryEpisode, rating: number | undefined, airDate: (date: string) => string = airDateLong) => [
+    episode.airDate && <div className='mediaInfoItem' key='date'>{airDate(episode.airDate)}</div>,
+    !!episode.runtimeMinutes && <div className='mediaInfoItem' key='runtime'>{datetime.getDisplayDuration(episode.runtimeMinutes * 600000000)}</div>,
+    !!rating && <div className='starRatingContainer mediaInfoItem' key='rating'>
+        <span className='material-icons starIcon star' aria-hidden='true' />{rating.toFixed(1)}
+    </div>
+].filter(Boolean);
+
+/**
+ * An episode with no Jellyfin item, drawn as upstream draws an episode row: TMDB's still (else a dashed 16:9 placeholder with
+ * its number), "N. Title", the meta line (air date, runtime, rating), the overview, and the mark at the end. The row opens the
+ * episode's page (P1.FU15); its title is the page's link for the keyboard.
+ */
+const MissingEpisodeRow: FC<EpisodeRowProps & { href: string }> = ({ episode, rating, download, href }) => {
     const mark = episodeMark(episode);
     const cover = useTmdbCover(episode.stillPath, layoutManager.tv ? 'w500' : 'w300');
-    // Upstream's own meta items: its runtime format ("42m", "1h 2m") and its star with one decimal.
-    const meta = [
-        episode.airDate && <div className='mediaInfoItem' key='date'>{airDateLong(episode.airDate)}</div>,
-        !!episode.runtimeMinutes && <div className='mediaInfoItem' key='runtime'>{datetime.getDisplayDuration(episode.runtimeMinutes * 600000000)}</div>,
-        !!rating && <div className='starRatingContainer mediaInfoItem' key='rating'>
-            <span className='material-icons starIcon star' aria-hidden='true' />{rating.toFixed(1)}
-        </div>
-    ].filter(Boolean);
+    const meta = episodeMetaItems(episode, rating);
     return <>
         <div className={'listItemImage listItemImage-large jfmod-missingStill' + (cover ? '' : ' jfmod-missingEmpty')
             + (layoutManager.tv ? ' listItemImage-large-tv' : '')}>
@@ -267,7 +277,8 @@ const MissingEpisodeRow: FC<EpisodeRowProps> = ({ episode, rating, download }) =
         <div className='listItemBody'>
             {layoutManager.tv ?
                 <h2 className='listItemBodyText'><bdi>{episode.episodeNumber}. {episode.title}</bdi></h2> :
-                <div className='listItemBodyText'><bdi>{episode.episodeNumber}. {episode.title}</bdi></div>}
+                <div className='listItemBodyText'><bdi><a className='jfmod-missingRowLink' href={href}>
+                    {episode.episodeNumber}. {episode.title}</a></bdi></div>}
             {meta.length > 0 && <div className='secondary listItemBodyText jfmod-missingMeta'>{meta}</div>}
             {/* Upstream's own rule hides `listItem-overview` below 50em, so the phone shows none (design 2026-10-12). */}
             {episode.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{episode.overview}</bdi></div>}
@@ -292,12 +303,13 @@ interface EpisodeRowsProps {
     season: number;
     /** The native season page's series and season items; absent on the mod's own season page, which has no upstream rows. */
     native?: { seriesItemId: string; seasonItemId: string };
+    serverId: string;
     canAcquire: boolean;
     onChanged: () => void;
 }
 
 /** A season page's episode list: one mod row per plugin episode with no Jellyfin episode, in episode order. */
-export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, detail, season, native, canAcquire, onChanged }) => {
+export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, detail, season, native, serverId, canAcquire, onChanged }) => {
     const container = useChildrenContainer(view);
     const jellyfin = useQuery({
         queryKey: ['JellyfinMod', api.basePath, userId, 'NativeEpisodes', native?.seasonItemId],
@@ -321,11 +333,25 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         return missingEpisodes(detail.episodes, season, held, heldIds);
     }, [detail.episodes, jellyfin.data, ready, season]);
     const slots = useMemo(() => missing.map(episode => ({ key: episode.id, order: episode.episodeNumber })), [missing]);
+    // The whole row opens the episode's page (P1.FU15), as upstream's rows open theirs: on the TV the row is a button, a focus
+    // stop like upstream's, and its administrator's icon a second one; elsewhere a click anywhere on it, except on the icon
+    // (which stops its own click) or the title's link (which follows itself).
+    const hrefs = useRef(new Map<string, string>());
+    hrefs.current = new Map(missing.map(episode => [episode.id,
+        '#' + episodePath(detail.entry.id, episode.seasonNumber, episode.episodeNumber, serverId)]));
     const make = useCallback((key: string) => {
-        const element = document.createElement('div');
-        element.className = 'listItem listItem-largeImage jfmod-missingSlot jfmod-missingRow';
+        const tv = layoutManager.tv;
+        const element = document.createElement(tv ? 'button' : 'div');
+        element.className = 'listItem listItem-largeImage jfmod-missingSlot jfmod-missingRow'
+            + (tv ? ' listItem-button listItem-focusscale' : '');
+        if (tv) (element as HTMLButtonElement).type = 'button';
         element.dataset.jfmodEpisodeId = key;
         element.dataset.jfmodEntryId = detail.entry.id;
+        element.addEventListener('click', event => {
+            const href = hrefs.current.get(key);
+            if (!href || (event.target as Element | null)?.closest('a')) return;
+            window.location.hash = href;
+        });
         return element;
     }, [detail.entry.id]);
     const elements = useOrderedSlots(container, slots, natives, make);
@@ -334,7 +360,8 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         const element = elements.get(episode.id);
         if (!element) return null;
         const download = canAcquire ? { label: 'Download This Episode', open: pickerFor({ episodeId: episode.id }) } : null;
+        if (layoutManager.tv) element.setAttribute('aria-label', `${episode.episodeNumber}. ${episode.title}`);
         return createPortal(<MissingEpisodeRow episode={episode} rating={detail.entry.metadata?.episodeRatings?.[episode.tmdbId]}
-            download={download} />, element, 'episode:' + episode.id);
+            download={download} href={hrefs.current.get(episode.id) ?? '#'} />, element, 'episode:' + episode.id);
     })}</>;
 };

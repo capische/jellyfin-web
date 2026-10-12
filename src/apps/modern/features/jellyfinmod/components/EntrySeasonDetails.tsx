@@ -18,6 +18,7 @@ import './entryDetails.scss';
 interface EntrySeasonDetailsProps {
     api: Api;
     userId: string;
+    serverId: string;
     detail: EntryDetail;
     season: number;
     view: HTMLElement;
@@ -31,7 +32,7 @@ interface EntrySeasonDetailsProps {
  * season in upstream's header, and the season's episodes as the same mod rows the native season page shows, in upstream's
  * own episode list. Administrators also get Get a Release for the season in the header, as on a native season page.
  */
-const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, detail: initial, season, view, isAdmin, signal, focusOwnership }) => {
+const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId, detail: initial, season, view, isAdmin, signal, focusOwnership }) => {
     const [detail, setDetail] = useState(initial);
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
@@ -63,10 +64,12 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, detail: 
             list.classList.remove('vertical-list');
         };
     }, [view]);
-    // On the TV the page places focus on its first action while it owns focus, as the file-less page does.
+    // On the TV the page places focus on its first action while it owns focus, as the file-less page does: Get a Release, else
+    // the first episode row (a focus stop since P1.FU15).
     useEffect(() => {
         if (!layoutManager.tv || !focusOwnership) return;
-        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease, .jfmod-missingRow .jfmod-markButton');
+        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease')
+            ?? view.querySelector<HTMLElement>('button.jfmod-missingRow');
         if (first && focusOwnership.mayFocus(first)) {
             focusManager.focus(first);
             focusOwnership.placed(first);
@@ -89,7 +92,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, detail: 
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
             node, String(index)))}
-        <MissingEpisodeRows api={api} userId={userId} view={view} detail={detail} season={season} canAcquire={canAcquire}
+        <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail} season={season} canAcquire={canAcquire}
             onChanged={reload} />
     </>;
 };
