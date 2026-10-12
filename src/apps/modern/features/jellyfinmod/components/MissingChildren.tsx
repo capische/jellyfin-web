@@ -139,7 +139,9 @@ const MissingSeasonCard: FC<SeasonCardProps> = ({ season, episodes, href, downlo
                 download={mark.state === 'missing' ? download : null} />
         </div>
         <div className='cardFooter'>
-            <div className='cardText cardTextCentered cardText-first'><bdi>Season {season}</bdi></div>
+            {/* The title is a link as on upstream's own season cards (plain text on the TV, where the card is the button). */}
+            <div className='cardText cardTextCentered cardText-first'><bdi>{layoutManager.tv ? 'Season ' + season :
+                <a className='textActionButton' href={href} title={'Season ' + season}>Season {season}</a>}</bdi></div>
             <div className='cardText cardTextCentered cardText-secondary'><bdi>{episodesWord(episodes.length)}</bdi></div>
         </div>
     </div>;
