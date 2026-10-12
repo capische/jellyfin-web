@@ -517,6 +517,19 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   passed 55/55 in Chromium on desktop, phone and TV against 28096 with the local build served in place of the instance's (not
   acceptance); not deployed, no live first look yet, no Codex review yet. Not verified: an ordinary user (no user with an empty
   password on 28096); the phone's card menu (upstream draws no More on the phone's grids and season cards).
+  **P1.FU13, built (not accepted) 2026-10-12: the TMDB token is optional** (user 2026-10-12: "build it ... and update TMDb
+  settings page with note - optional"). Owner: Phase 1 (discovery), with the settings copy from P7.S7. With no token saved,
+  discovery, Add, Refresh and the episode-list load go through Jellyfin's own `TmdbClientManager` (bound by name to Jellyfin
+  12.0.0's signatures; TMDbLib 3.0.0 compiled against, the host's copy used); a saved token still wins; 503 only with neither.
+  Settings name the source ("Using Jellyfin's TMDb connection" / "Using your token"), the note reads "Optional. Leave empty to
+  use Jellyfin's built-in TMDb connection.", the setup's Discovery step is done without a token, and
+  `Discovery/Test?source=jellyfin` is a read-only diagnostic ([API.md](API.md) *Discovery*). Limits: one search page, no TMDB
+  status on failures (a missing title is 404), one request per season, the manager's hour cache. Plugin `next-release`
+  `8d468e5..f5f5108`, web `521a391b1b..1079219ff0` (code and runner) and the docs commit after. Mac suites (Phase 0, 1, 2, 3,
+  10, Q16) and Linux suites (Phase 3 protection, 4, 5, 6, 7 settings, Prowlarr, takeover) pass; typecheck, lint and the
+  production build pass. Outside a host, the built plugin in a copy of Jellyfin 12's plugin load context against the host
+  assemblies of local env alpha read Breaking Bad, Peaky Blinders (60 episodes), 1923, The Simpsons (39 seasons, 888 episodes)
+  and The Matrix from real TMDB. Not deployed; live check `tmdb-via-jellyfin.mjs` on 28096 pending; no Codex review yet.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

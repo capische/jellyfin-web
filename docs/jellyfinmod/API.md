@@ -260,7 +260,8 @@ adds a second row at a position a file holds, and adds every other TMDB episode 
 `availability` `missing` or `unaired`. A new row is monitored only when its series is, so a discovered (unmonitored)
 series' list is never searched for by automation.
 The plugin reads a series' seasons appended to one TMDB request (`append_to_response=season/N`, up to 20 a request),
-so a load takes two TMDB calls: the details, then every season.
+so a load takes two TMDB calls: the details, then every season. Through Jellyfin's TMDb connection (no token saved,
+P1.FU13) each season is one request.
 
 **Loading the list on open, for any user (P1.FU9, user 2026-10-12).** `POST /JellyfinMod/Entries/{id}/EpisodeList`, no
 body, answers the same `EntryDetail` as `GET /JellyfinMod/Entries/{id}`, to anyone the GET answers (signed in, and the
@@ -398,6 +399,27 @@ also apply. Items use the Entry's `metadata` shape above.
 An entirely excluded remote page can return `{"items":[],"nextPage":2}`. Follow `nextPage`
 until it is null; an empty page alone is not the end. No unfiltered TMDB count is exposed as a
 remaining-result total. Provider failures must leave no partially created catalog entry.
+
+**Where TMDB calls go (P1.FU13, user 2026-10-12).** The TMDB token is optional. With a token (or the legacy v3 key)
+saved, every call uses it, as before. With none saved, discovery, Add, Refresh and the episode-list load go through
+Jellyfin's built-in TMDb connection (the server's `TmdbClientManager`, with the key Jellyfin's own metadata provider
+uses); only when that is unavailable too do they answer 503 as not configured. Through Jellyfin's connection:
+
+- a search has one page only (`nextPage` is null), and the adult filter is the Jellyfin TMDb plugin's *Include adult*;
+- a failure carries no TMDB status, since the manager reports every failure as nothing: details answer 404 "Title not
+  found on TMDB." (the log says the manager returned nothing), a search or season 502, a dropped connection 502, 15 s 504;
+- each season is its own request (four at a time), and the manager caches answers for an hour;
+- the plugin's TMDB stand-in cannot redirect it, so only a live instance tests it.
+
+`GET /JellyfinMod/Settings/Discovery` adds `source`: `token`, `jellyfin` or `none`. The setup's Discovery step is done
+when the source is `jellyfin` (no test needed); `discovery_token_missing` now means no token and no Jellyfin connection.
+`POST /JellyfinMod/Settings/Discovery/Test` with no token saved checks Jellyfin's connection with one read of a well-known
+series and records a pass as before; its answer adds `source`. `POST /JellyfinMod/Settings/Discovery/Test?source=jellyfin`
+(administrators) is a read-only diagnostic: it reads Breaking Bad and its first season through Jellyfin's connection
+whatever token is saved, records nothing, and answers
+`{"ok":true,"code":"ok","message":"Jellyfin's TMDb connection answered: 5 seasons, 7 episodes in season 1.","source":"jellyfin",…}`,
+or `not_available` when the server has no usable connection. Any other `source` is 400 `invalid_source`. Each call through
+Jellyfin's connection logs `TMDB request <path> through Jellyfin's TMDb connection`.
 
 ## Acquisition (Phase 4)
 
