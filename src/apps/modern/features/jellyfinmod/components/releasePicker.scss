@@ -54,7 +54,7 @@
     width: 100%;
     box-sizing: border-box;
     margin: 0 0 0.1em;
-    padding: calc(0.3em + 2px) 0.8em;
+    padding: calc(0.3em + 4px) 0.8em;
     border: 0;
     border-radius: 0.2em;
     background: transparent;
@@ -131,7 +131,8 @@
     height: 2.5em;
     margin: 0 0.1em;
     padding: 0;
-    color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
+    // Each button's own colour (grey; Replace red; done green, failed red), kept in every state by the dialog rule at the end.
+    color: var(--jfmod-btn, var(--jfmod-sec, rgba(255, 255, 255, 0.7)));
     transition: transform 0.14s ease-out;
 
     &[aria-disabled='true'] {
@@ -155,17 +156,8 @@
 }
 
 // Every round button, a row's Add and Replace included, grows a touch and takes a veil of its own colour on a mouse hover (user,
-// 2026-10-11); the glyph keeps its colour against upstream's blue hover, and a dimmed button takes nothing.
+// 2026-10-11); a dimmed button takes nothing. The glyph keeps its colour through the dialog rule at the end.
 @media (hover: hover) {
-    .jfmod-releaseAction.paper-icon-button-light:hover {
-        background: transparent;
-        color: var(--jfmod-sec, rgba(255, 255, 255, 0.7));
-    }
-
-    .jfmod-releaseAction--danger.paper-icon-button-light:hover {
-        color: var(--jf-palette-error-main, #c62828);
-    }
-
     .jfmod-releaseAction.paper-icon-button-light:hover:not([aria-disabled='true']) {
         transform: scale(1.08);
 
@@ -176,7 +168,7 @@
 }
 
 .jfmod-releaseAction--danger {
-    color: var(--jf-palette-error-main, #c62828);
+    --jfmod-btn: var(--jf-palette-error-main, #c62828);
 }
 
 .jfmod-releaseAction:focus {
@@ -234,8 +226,8 @@
 }
 
 // Done: a green tick, one pop; it stays while the picker is open.
-.jfmod-releaseAction.jfmod-releaseAction--done.paper-icon-button-light {
-    color: #81c784;
+.jfmod-releaseAction--done {
+    --jfmod-btn: #81c784;
 }
 
 .jfmod-releaseAction--done .jfmod-releaseGlyph-plus,
@@ -257,8 +249,8 @@
 }
 
 // Failed: a red bang for three seconds (a timer in the grab hook), then idle again.
-.jfmod-releaseAction.jfmod-releaseAction--failed.paper-icon-button-light {
-    color: #ff7b72;
+.jfmod-releaseAction--failed {
+    --jfmod-btn: #ff7b72;
 }
 
 .jfmod-releaseAction--failed .jfmod-releaseGlyph-bang {
@@ -653,13 +645,16 @@
     }
 }
 
-// The search block (docs/jellyfinmod/design/release-picker-searching.md): the G2 torrent ring and one line per indexer.
+// The search block (docs/jellyfinmod/design/release-picker-searching.md): the G2 torrent ring and one line per indexer. The ring
+// sits at a fixed distance from the top, not centred, so the indexer lines that arrive under it never move it (user, 2026-10-12).
 .jfmod-searchBlock {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
     min-height: 14em;
+    padding-top: 2.5em;
     text-align: center;
 }
 
@@ -832,12 +827,18 @@
 [data-theme='light'] {
     .jfmod-releaseFlag--freeleech,
     .jfmod-releaseFlag--held,
-    .jfmod-releaseAction.jfmod-releaseAction--done.paper-icon-button-light,
     .jfmod-searchIndexer--ok .jfmod-searchIndexer-state {
         color: #2e7d32;
     }
 
-    .jfmod-releaseAction.jfmod-releaseAction--failed.paper-icon-button-light,
+    .jfmod-releaseAction--done {
+        --jfmod-btn: #2e7d32;
+    }
+
+    .jfmod-releaseAction--failed {
+        --jfmod-btn: #c62828;
+    }
+
     .jfmod-searchIndexer--failed .jfmod-searchIndexer-state,
     .jfmod-searchBlock--error .jfmod-searchGlyph,
     .jfmod-searchBlock--error .jfmod-searchCaption,
@@ -961,14 +962,11 @@
         margin: 0 0.1em;
         padding: 0;
         line-height: 1.35;
-        color: var(--jfmod-sec);
     }
 
     // Show Names, left of Close (user, 2026-10-11): off a title line over a short line, on the same two lines and a third below them, so nothing moves. The state is
     // `aria-pressed`; on, the glyph is the primary blue (the light scheme's own blue), so it reads from across a room.
     .jfmod-namesToggle {
-        --jfmod-names-color: var(--jfmod-sec);
-
         margin-left: auto;
 
         .jfmod-namesGlyph-on {
@@ -976,14 +974,7 @@
         }
 
         &[aria-pressed='true'] {
-            --jfmod-names-color: var(--jfmod-on);
-
-            color: var(--jfmod-names-color);
-
-            // The row actions' hover turns a glyph grey; this one keeps its blue.
-            &:hover {
-                color: var(--jfmod-names-color);
-            }
+            --jfmod-btn: var(--jfmod-on);
 
             .jfmod-namesGlyph-on {
                 display: inline;
@@ -1141,6 +1132,27 @@
         text-transform: none;
         color: var(--jfmod-sec);
     }
+
+    // The round buttons keep their own colour in every state: hover, the focus a click leaves, pressed and dimmed (user,
+    // 2026-10-12). The blue came from the theme, not from this file: Jellyfin adds the theme's stylesheet (`theme.css`) after the
+    // bundle's, so its `.paper-icon-button-light:hover:not(:disabled)` (primary glyph on a primary disc), `:active` and the TV's
+    // `.show-focus:focus` won every tie with the rules above. Scoped by the dialog, these outrank them. The faint disc of the
+    // button's own colour is the `::before` veil above.
+    .paper-icon-button-light {
+        &,
+        &:hover,
+        &:active,
+        &:focus {
+            background: transparent;
+            color: var(--jfmod-btn, var(--jfmod-sec));
+        }
+    }
+
+    // Cancel is a raised button: the theme paints a focused one primary blue, which a click left behind. Outside the TV (where that
+    // blue is the focus mark) it keeps the raised grey.
+    .jfmod-grabCancel:not(.show-focus):focus {
+        background: var(--jf-palette-Button-inheritContainedBg, #292929);
+    }
 }
 
 .layout-desktop .formDialog.jfmod-releaseDialog {
@@ -1155,8 +1167,6 @@
     // no scaling). Upstream's round buttons carry `outline: none !important`, so the ring is a pair of shadows.
     .jfmod-namesToggle:focus {
         box-shadow: 0 0 0 0.12em var(--jfmod-paper), 0 0 0 0.28em var(--jfmod-focus, #fff);
-        background: transparent;
-        color: var(--jfmod-names-color);
         transform: none;
     }
 }
