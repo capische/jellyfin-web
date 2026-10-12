@@ -1,5 +1,5 @@
 /* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
-/* global window, document, ApiClient, localStorage, location, getComputedStyle */
+/* global window, document, ApiClient, localStorage, location, getComputedStyle, coverOf */
 // Every season and every episode on the native pages (P1.FU11, design approved 2026-10-12; UX §3.1 and §7.4).
 // Signed in as oleksii with an empty password (and, when given, an ordinary user with an empty password), in a real browser
 // against a running mod instance, it checks for one series entry:
@@ -12,7 +12,12 @@
 //     mod rows in episode order with their marks; an episode's Download This Episode opens the picker for that episode;
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
 //   - TV: the D-pad reaches the administrator's icons and never stops on a mod row itself; phone: no overview on the rows;
-//   - optionally a file-less movie's search card: the amber Not Downloaded "Download This Movie" opens the picker.
+//   - optionally a file-less movie's search card: the amber Not Downloaded "Download This Movie" opens the picker;
+//   - P1.FU14: a missing season's card shows TMDB's season poster (w342) in upstream's image box, the dashed placeholder only
+//     without one; the mod's season page the season's overview and "Season N · K episodes · YYYY"; every mod episode row the
+//     still (w300, w500 on the TV), "N. Title", the meta line (air date, upstream's runtime "42m", TMDB's rating) and the
+//     overview. Images come from image.tmdb.org: the img's src and a request to it are checked; one that did not load
+//     (offline, a blocked CDN) is NOT VERIFIED and must fall back to the placeholder.
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
 //   JELLYFINMOD_MSE_ENTRY=<series entry id>       a series whose plugin list holds seasons or episodes Jellyfin does not have
@@ -85,55 +90,76 @@ const go = async (page, hash) => {
     await page.waitForTimeout(500);
 };
 
+/** A mod image box's TMDB image: its src, whether it loaded, whether it fills the box; null when the placeholder shows. */
+const COVER_OF = `box => {
+    const img = box?.querySelector('img.jfmod-missingImage');
+    if (!img) return null;
+    const own = box.getBoundingClientRect();
+    const drawn = img.getBoundingClientRect();
+    return { src: img.getAttribute('src'), loaded: img.complete && img.naturalWidth > 0, fit: getComputedStyle(img).objectFit,
+        fills: Math.abs(own.width - drawn.width) < 2 && Math.abs(own.height - drawn.height) < 2, lazy: img.getAttribute('loading') };
+}`;
+const withCover = page => page.evaluate(`window.coverOf = ${COVER_OF}`);
+
 /** What the series page's Seasons row shows, in DOM order. Upstream's cards are numbered by their Jellyfin season. */
-const seasonRow = (page, numbers) => page.evaluate(byId => {
-    const view = document.querySelector('.page:not(.hide)');
-    const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
-    return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
-        const mod = card.classList.contains('jfmod-missingSlot');
-        const mark = card.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
-        const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
-        const box = mark?.getBoundingClientRect();
-        const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
-        return {
-            mod,
-            season: mod ? Number(card.dataset.jfmodSeason) : byId[(card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
-            title: texts[0] ?? null,
-            line2: texts[1] ?? null,
-            dashed: mod ? getComputedStyle(card.querySelector('.jfmod-missingPoster')).outlineStyle : null,
-            mark: mark ? {
-                kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
-                tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
-                topRight: !!box && !!cover && box.right > cover.left + cover.width * 0.6 && box.top < cover.top + cover.height * 0.25
-            } : null
-        };
-    });
-}, numbers);
+const seasonRow = async (page, numbers) => {
+    await withCover(page);
+    return page.evaluate(byId => {
+        const view = document.querySelector('.page:not(.hide)');
+        const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
+        return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
+            const mod = card.classList.contains('jfmod-missingSlot');
+            const mark = card.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
+            const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
+            const box = mark?.getBoundingClientRect();
+            const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
+            return {
+                mod,
+                season: mod ? Number(card.dataset.jfmodSeason) : byId[(card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
+                title: texts[0] ?? null,
+                line2: texts[1] ?? null,
+                dashed: mod ? getComputedStyle(card.querySelector('.jfmod-missingPoster')).outlineStyle : null,
+                cover: mod ? coverOf(card.querySelector('.jfmod-missingPoster')) : null,
+                mark: mark ? {
+                    kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
+                    tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
+                    topRight: !!box && !!cover && box.right > cover.left + cover.width * 0.6 && box.top < cover.top + cover.height * 0.25
+                } : null
+            };
+        });
+    }, numbers);
+};
 
 /** The season page's episode list, in DOM order: mod rows by their episode, upstream's by their Jellyfin episode. */
-const episodeList = (page, numbers) => page.evaluate(byId => {
-    const view = document.querySelector('.page:not(.hide)');
-    const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
-    return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
-        const mod = row.classList.contains('jfmod-missingRow');
-        const mark = row.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
-        const overview = row.querySelector('.listItem-overview');
-        const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
-        return {
-            mod,
-            id: mod ? row.dataset.jfmodEpisodeId : null,
-            number: mod ? Number(title.split('.')[0]) : byId[(row.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
-            title,
-            meta: mod ? row.querySelectorAll('.listItemBodyText')[1]?.textContent.trim() ?? null : null,
-            overviewShown: !!overview && getComputedStyle(overview).display !== 'none',
-            focusables: mod ? [...row.querySelectorAll('button, a, input, select, [tabindex]')].map(node => node.className) : [],
-            mark: mark ? {
-                kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
-                tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim()
-            } : null
-        };
-    });
-}, numbers);
+const episodeList = async (page, numbers) => {
+    await withCover(page);
+    return page.evaluate(byId => {
+        const view = document.querySelector('.page:not(.hide)');
+        const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
+        return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
+            const mod = row.classList.contains('jfmod-missingRow');
+            const mark = row.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
+            const overview = row.querySelector('.listItem-overview');
+            const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
+            return {
+                mod,
+                id: mod ? row.dataset.jfmodEpisodeId : null,
+                number: mod ? Number(title.split('.')[0]) : byId[(row.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
+                title,
+                meta: mod ? [...row.querySelectorAll('.jfmod-missingMeta .mediaInfoItem')].map(item => item.textContent.trim()) : null,
+                cover: mod ? coverOf(row.querySelector('.jfmod-missingStill')) : null,
+                dashed: mod ? getComputedStyle(row.querySelector('.jfmod-missingStill')).outlineStyle : null,
+                overview: mod ? row.querySelector('.listItem-overview')?.textContent.trim() ?? null : null,
+                overviewShown: !!overview && getComputedStyle(overview).display !== 'none',
+                focusables: mod ? [...row.querySelectorAll('button, a, input, select, [tabindex]')].map(node => node.className) : [],
+                mark: mark ? {
+                    kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
+                    tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim()
+                } : null
+            };
+        });
+    }, numbers);
+};
 
 const ascending = values => values.every((value, index) => index === 0 || values[index - 1] <= value);
 
@@ -168,6 +194,34 @@ async function checkMark(page, label, what, shown, expected, admin, downloadLabe
     } else {
         record(label, `${what}: the amber Not Downloaded is a plain indicator "Not Downloaded"`, shown.kind === 'none' && shown.tag !== 'BUTTON'
             && shown.title === 'Not Downloaded', shown);
+    }
+}
+
+/** Upstream's runtime format (scripts/datetime getDisplayDuration): "42m", "1h 2m". */
+const duration = minutes => (Math.floor(minutes / 60) > 0 ? `${Math.floor(minutes / 60)}h ` : '') + `${minutes % 60}m`;
+
+/** Requests the page made to TMDB's image CDN (P1.FU14). */
+const imageRequests = new Set();
+
+/**
+ * A TMDB poster or still in a mod image box: the img with the expected src, a request made for it, filling the box; when it did
+ * not load (offline, a blocked CDN) the placeholder must show and the load is NOT VERIFIED. Without a path, the placeholder.
+ */
+function checkCover(label, what, shown, path, size) {
+    if (!path) {
+        record(label, `${what}: no TMDB image, the dashed placeholder`, !shown.cover && shown.dashed === 'dashed', shown.cover);
+        return;
+    }
+    const src = `https://image.tmdb.org/t/p/${size}${path}`;
+    if (shown.cover) {
+        record(label, `${what}: TMDB's image ${size}${path}, lazy, cover, filling the box`, shown.cover.src === src
+            && shown.cover.lazy === 'lazy' && shown.cover.fit === 'cover' && shown.cover.fills && shown.dashed !== 'dashed', shown.cover);
+        record(label, `${what}: the image was requested from image.tmdb.org`, imageRequests.has(src), src);
+        record(label, `${what}: the image loaded`, shown.cover.loaded ? 'PASS' : 'NOT VERIFIED', shown.cover.loaded ? undefined : 'not loaded yet (lazy below the fold, or slow)');
+    } else {
+        // An image that failed to load leaves the placeholder, without an error on the page.
+        record(label, `${what}: the image did not load; the placeholder shows instead`, shown.dashed === 'dashed', { src, requested: imageRequests.has(src) });
+        record(label, `${what}: TMDB's image ${size}${path}`, 'NOT VERIFIED', 'image.tmdb.org unreachable from the browser');
     }
 }
 
@@ -223,7 +277,7 @@ async function dpadTrail(page, steps) {
     return trail;
 }
 
-async function checkSeasonRows(page, label, episodes, numbers, { admin, canDownload, layout, what }) {
+async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, canDownload, layout, what }) {
     const tv = !!LAYOUTS[layout].tv;
     const expected = episodes.filter(episode => episode.availability !== 'onDisk').sort((a, b) => a.episodeNumber - b.episodeNumber);
     await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-missingRow').length >= count,
@@ -238,8 +292,16 @@ async function checkSeasonRows(page, label, episodes, numbers, { admin, canDownl
     for (const [index, row] of mod.entries()) {
         const episode = expected.find(candidate => candidate.id === row.id);
         if (!episode) { record(label, `${what}: row ${index} is a plugin episode`, false, row); continue; }
-        record(label, `${what} E${episode.episodeNumber}: "N. Title" and the air date in the meta line`, row.title === `${episode.episodeNumber}. ${episode.title}`
-            && (episode.airDate ? row.meta === await longDate(page, episode.airDate) : row.meta === null), row);
+        const rating = detail.entry.metadata?.episodeRatings?.[episode.tmdbId];
+        const meta = [episode.airDate ? await longDate(page, episode.airDate) : null, episode.runtimeMinutes ? duration(episode.runtimeMinutes) : null,
+            rating ? rating.toFixed(1) : null].filter(Boolean);
+        record(label, `${what} E${episode.episodeNumber}: "N. Title"; the meta line ${JSON.stringify(meta)} (air date, runtime, rating)`,
+            row.title === `${episode.episodeNumber}. ${episode.title}` && JSON.stringify(row.meta) === JSON.stringify(meta), row);
+        checkCover(label, `${what} E${episode.episodeNumber} still`, row, episode.stillPath, tv ? 'w500' : 'w300');
+        if (layout !== 'mobile') {
+            const overviewShown = episode.overview ? row.overview === episode.overview.trim() && row.overviewShown : row.overview === null;
+            record(label, `${what} E${episode.episodeNumber}: TMDB's overview`, overviewShown, { shown: row.overview, expected: episode.overview });
+        }
         await checkMark(page, label, `${what} E${episode.episodeNumber}`, row.mark, expectedMark([episode]), admin && canDownload, 'Download This Episode');
         const allowed = admin && canDownload && expectedMark([episode]).kind === 'none' ? 1 : 0;
         record(label, `${what} E${episode.episodeNumber}: ${allowed ? 'the icon is the row\'s only stop' : 'the row has no focus stop'}`,
@@ -266,6 +328,7 @@ async function run(browser, layout, user, admin) {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(String(error.message).slice(0, 200)));
+    page.on('request', request => { if (request.url().startsWith('https://image.tmdb.org/')) imageRequests.add(request.url()); });
     try {
         await signIn(page, user);
         if (tv) {
@@ -321,9 +384,11 @@ async function run(browser, layout, user, admin) {
         for (const card of modCards) {
             const episodes = detail.episodes.filter(episode => episode.seasonNumber === card.season);
             const words = episodes.length + (episodes.length === 1 ? ' episode' : ' episodes');
-            record(label, `Season ${card.season} card: "Season ${card.season}", "${words}", the dashed placeholder, the mark top right`,
-                card.title === `Season ${card.season}` && card.line2 === words && card.dashed === 'dashed' && !!card.mark?.topRight, card);
+            record(label, `Season ${card.season} card: "Season ${card.season}", "${words}", a poster or the dashed placeholder, the mark top right`,
+                card.title === `Season ${card.season}` && card.line2 === words && (card.cover ? true : card.dashed === 'dashed') && !!card.mark?.topRight, card);
             await checkMark(page, label, `Season ${card.season} card`, card.mark, expectedMark(episodes), canDownload && packs, 'Download This Season');
+            const tmdbSeason = detail.entry.metadata?.seasons.find(candidate => candidate.number === card.season);
+            checkCover(label, `Season ${card.season} card poster`, card, tmdbSeason?.posterPath, 'w342');
         }
         // Upstream redraws its list by replacing its children: the mod's cards come back, in place.
         if (modCards.length) {
@@ -368,8 +433,23 @@ async function run(browser, layout, user, admin) {
             if (opened) {
                 await page.waitForSelector('.page:not(.hide) .jfmod-missingRow', { timeout: 20000 }).catch(() => {});
                 const heading = await page.evaluate(() => document.querySelector('.page:not(.hide) .itemMiscInfo-primary')?.textContent.trim());
-                record(label, 'the mod\'s season page names the season', (heading ?? '').startsWith(`Season ${target.season}`), heading);
-                const shown = await checkSeasonRows(page, label, detail.episodes.filter(episode => episode.seasonNumber === target.season), {},
+                const tmdbSeason = detail.entry.metadata?.seasons.find(candidate => candidate.number === target.season);
+                const count = detail.episodes.filter(episode => episode.seasonNumber === target.season).length;
+                const expectedHeading = [`Season ${target.season}`, `${count} episode${count === 1 ? '' : 's'}`, /^\d{4}/.exec(tmdbSeason?.airDate ?? '')?.[0]]
+                    .filter(Boolean).join(' · ');
+                record(label, `the mod's season page reads "${expectedHeading}"`, heading === expectedHeading, heading);
+                const overview = await page.evaluate(() => {
+                    const node = document.querySelector('.page:not(.hide) .detailSectionContent .overview');
+                    return node && node.offsetParent !== null ? node.textContent.trim() : null;
+                });
+                if (tmdbSeason?.overview) {
+                    record(label, 'the mod\'s season page shows TMDB\'s season overview', overview === tmdbSeason.overview.trim(), overview?.slice(0, 80));
+                } else {
+                    record(label, 'the mod\'s season page shows TMDB\'s season overview', 'NOT VERIFIED', 'the season has no overview in the entry (refresh pending, or TMDB has none)');
+                }
+                const pagePoster = await page.evaluate(() => document.querySelector('.page:not(.hide) .detailImageContainer .jfmod-entryPoster img')?.getAttribute('src') ?? null);
+                record(label, 'the mod\'s season page shows the season\'s poster', pagePoster === `https://image.tmdb.org/t/p/w500${tmdbSeason?.posterPath ?? detail.entry.posterPath}`, pagePoster);
+                const shown = await checkSeasonRows(page, label, detail, detail.episodes.filter(episode => episode.seasonNumber === target.season), {},
                     { admin, canDownload, layout, what: `mod Season ${target.season} page` });
                 const button = shown.find(entry => entry.mark?.tag === 'BUTTON');
                 if (button) {
@@ -391,7 +471,7 @@ async function run(browser, layout, user, admin) {
             await go(page, `#/details?id=${season.id}`);
             await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible:not(.hide)', { timeout: 20000 }).catch(() => {});
             const numbers = Object.fromEntries(native.map(item => [item.id.replace(/-/g, '').toLowerCase(), item.number]));
-            await checkSeasonRows(page, label, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
+            await checkSeasonRows(page, label, detail, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
             break;
         }
         if (!admin) {
