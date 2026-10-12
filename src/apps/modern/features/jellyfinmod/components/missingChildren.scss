@@ -5,7 +5,9 @@
  * `em` for TV's 125% and mobile's 90% root.
  */
 
-.jfmod-missingPoster {
+/* Upstream's `.cardContent:not(.defaultCardBackground)` clears the background and `.cardContent` the outline, at two classes:
+ * three classes keep the placeholder's own. */
+.jfmod-missingCard .cardImageContainer.jfmod-missingPoster {
     align-items: center;
     justify-content: center;
     background: #262626;
