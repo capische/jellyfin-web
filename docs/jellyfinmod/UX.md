@@ -221,6 +221,19 @@ the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss
 The quiet on-disk mark and the 60 % dimming rule above are retired with this change; the file-less cards
 keep their own dimmed artwork.
 
+**Changed 2026-10-12 (P1.FU17, user-approved design A and option 1,
+[`design/not-downloaded-mark.html`](design/not-downloaded-mark.html)): the glyph, and Not Downloaded beside the watched
+tick.** The Not Downloaded glyph is a download arrow coming out of a small cloud (stroked in the amber, on the same disc, at
+the same sizes, with the same button, focus ring and tooltips; the header's Get a Release keeps its own icon). A season or an
+episode with no file on disk shows Not Downloaded whatever its watched state: the tick says watched, the mark says no file,
+and both show. Upstream's own season cards (a Jellyfin season item, for example one kept for an empty folder, which Jellyfin
+reports as played) now carry the mark too: Not Downloaded when none of the season's episodes in the entry's list is on disk,
+the Unaired clock when all of them are unaired with a date, nothing when one is on disk or the entry lists no episode of that
+season (specials are not marked). The mark sits just left of upstream's tick or count (option 1, the slot the library grid's
+cards use), clickable for administrators (the picker on that season, where packs are served) and a plain indicator for
+everyone else, one more D-pad stop on the TV (Up on the card reaches it). On a list row the mark comes first in the end slot,
+then upstream's played check.
+
 **Changed 2026-10-12 (P4.FU1): a download replaces the in-flight marks.** The grabbed arrow and the
 downloading ring with its percentage are gone from `FileStateMark`; a title, season or episode on its way
 shows the download of §3.3 instead, and in the corner that download wins over Not Downloaded and Unaired
@@ -266,7 +279,9 @@ progress colour, for the picker's added row too (one set of colours in `download
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
   and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
   batch of new items: its series and numbers; a title the queue names without a Jellyfin item, a file-less series
-  whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`); the mod's own carry `data-jfmod-entry-id` with
+  whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`; a
+  native season's or episode's own series item is looked up the same way once, because with a library's automatic series
+  grouping one show kept in two folders has two series items and the series page lists seasons of both, P1.FU17); the mod's own carry `data-jfmod-entry-id` with
   `data-jfmod-season` or `data-jfmod-episode-id`. One component draws them all
   (`integration/downloadMarks.tsx`, mounted once by the mod shell).
 - **A pack's episodes each show their own file** (P4.FU5, user 2026-10-12: "Is there way to show per episode
@@ -771,7 +786,8 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   rounded as upstream's (else a dark placeholder with a 1px dashed edge and the season number), the
   mark top-right (§3.1), *Season N* and *8 episodes* (*1 episode*) as the footer.
   Clicking it (Enter on the TV, where the card is a focus stop and an administrator's icon a second)
-  opens the mod's season page. Upstream's own season cards are untouched: no mark, no footer rewrite.
+  opens the mod's season page. Upstream's own season cards keep everything upstream draws (no footer rewrite); since P1.FU17
+  they carry the mark when none of their episodes is on disk (§3.1).
 - **Season page.** For each plugin episode with no Jellyfin episode at its number (a multi-episode
   file holds every number it spans) and not on disk, a mod row among upstream's `listView` rows in
   episode order: TMDB's still (w300, w500 on the TV) in upstream's row image box (else a dashed 16:9

@@ -597,6 +597,33 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   nata 293). Not deployed to a Pi instance; no real-Chrome pass; no Codex review yet. Items 2 and 3 of the same report (the
   Not Downloaded mark on a watched season with no files, and its glyph) wait for the user's choice on
   [`design/not-downloaded-mark.html`](design/not-downloaded-mark.html).
+  **P1.FU17, built (not accepted) 2026-10-12: the Not Downloaded mark's cloud glyph, on watched seasons with no file, and
+  downloads on upstream's season cards** (user 2026-10-12: "A, option 1" on
+  [`design/not-downloaded-mark.html`](design/not-downloaded-mark.html); then, testing 28096: "I expect if you see downloading
+  and drill down you see what and where it downloads"; [UX.md](UX.md) §3.1, §3.3, §7.2.1). Owner: Phase 1 (the marks, P1.FU11);
+  the download part is P4.FU1's `downloadMarks`. Web only, the plugin API is unchanged. (1) The glyph: a download arrow out of a
+  small cloud, everywhere `FileStateMark` draws Not Downloaded (cards, rows, the mod's pages); colours, disc, sizes, focus ring
+  and tooltips unchanged; the header's Get a Release keeps its icon. (2) The rule: a season or episode with no file shows Not
+  Downloaded whatever its watched state. Upstream's own season cards (Jellyfin season items; Delhi Crime's Seasons 1 and 2 are
+  empty folders that Jellyfin reports as played) now carry the mark: Not Downloaded when none of the season's episodes in the
+  entry's list is on disk, Unaired when all are unaired with a date, nothing when one is on disk or the entry lists none of the
+  season; administrators get the picker on that season, ordinary users an indicator; drawn from the cached entry (P1.FU16), no
+  new waits. (3) Option 1: on a card the mark sits just left of the tick or count (`CardMarkSlot`, shared with the library
+  grid's native cards); on a native list row it comes before upstream's played check. (4) Downloads: a native season or episode
+  was placed by its own series item, which is not always the entry's: with the library's automatic series grouping one show in
+  two folders has two series items (1923 on 28096: the read-only folder holds the seasons, the download folder is the entry's
+  item), so its season cards showed no download while the series card did. Each placed series now finds its entry once through
+  `GET /Entries?jellyfinItemId=`; the season cards draw the bar and the arrow (in the count pill for a season with files, else
+  the disc, which hides Not Downloaded). Web `feat/cloud-mark` from `068ce9cca4`: `936d5e8f2f` (code), the runner commit and
+  this docs commit. Checks: typecheck, eslint, stylelint and the production build (with `JELLYFINMOD_PATCH_BASE=843ccd8f52`)
+  pass; `missing-seasons-episodes.mjs`, extended (upstream season cards by the new rule, the mark beside the tick, a redrawn card,
+  the picker and the TV hop from an upstream card, the glyph, and season downloads from an intercepted queue answer: a season
+  pack on an empty season under another series item and one episode of a season with files), passed in Chromium (desktop 336,
+  phone and TV 1080 682 checks, 0 failed) and real Chrome (desktop, phone, TV 1080: 1018 checks, 0 failed) on local environment
+  alpha, as oleksii and the ordinary user nata, with plugin `next-release` `618efb7` and a fixture (an empty `Season 02` folder
+  for Peep Show in a second Shows folder, automatic series grouping on, the 1923 shape), all removed afterwards. Not run: a
+  live download (the queue answer was intercepted), the TV at 1280×720, a physical TV, a Pi instance (not deployed), the
+  library list view's mark-before-check order (no file-less native title in alpha's list), the Unaired clock on an upstream season card (no such season in the data), Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
