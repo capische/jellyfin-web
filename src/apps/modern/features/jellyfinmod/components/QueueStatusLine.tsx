@@ -1,7 +1,7 @@
 import React, { type FC, useEffect, useState } from 'react';
 
 import { packProblem, progressPercent, QUEUE_ROUTE, QUEUE_STATE_LABEL, reasonMessage } from '../constants/queue';
-import { packHolds, useQueueRowFor, useQueueVisible } from '../hooks/useQueue';
+import { packEpisodeView, packHolds, useQueueRowFor, useQueueVisible } from '../hooks/useQueue';
 import { FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
 
@@ -19,8 +19,9 @@ interface QueueStatusLineProps {
 
 const withPercent = (text: string, percent: number | null) => percent === null ? text : text + ' · ' + percent + ' %';
 
-/** The live row in words: state, progress, a pack's label, and why it needs attention. */
-const rowText = (row: QueueRow, episodeId: string | null | undefined) => {
+/** The live row in words: state, progress, a pack's label, and why it needs attention. An episode of a pack shows its own file. */
+const rowText = (packRow: QueueRow, episodeId: string | null | undefined) => {
+    const row = episodeId ? packEpisodeView(packRow, episodeId) : packRow;
     let text = withPercent(QUEUE_STATE_LABEL[row.state] ?? row.state, progressPercent(row.progress));
     // Unknown keeps the last value; it is labelled as such rather than shown as live (UX §14).
     if (row.state === 'unknown' && row.progress !== null) text += ' (last known)';

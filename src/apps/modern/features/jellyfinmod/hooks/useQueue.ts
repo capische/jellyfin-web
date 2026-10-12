@@ -3,8 +3,8 @@ import { type Query, useQuery } from '@tanstack/react-query';
 import { useApi } from 'hooks/useApi';
 
 import { getQueue } from '../api/modApi';
-import { QUEUE_CAPABILITY, QUEUE_POLL_MS } from '../constants/queue';
-import type { QueueList, QueueRow } from '../types/queue';
+import { packProblem, QUEUE_CAPABILITY, QUEUE_POLL_MS, reasonMessage } from '../constants/queue';
+import type { QueueList, QueueRow, QueueState } from '../types/queue';
 import { usePluginHealth } from './useEntries';
 
 /** 403 `queue_admin_only`: the administrator keeps the queue private. Not an error to retry or spin on. */
@@ -77,6 +77,39 @@ const ownEpisode = (row: QueueRow, episodeId: string | null | undefined) => row.
 export const packHolds = (row: QueueRow, episodeId: string | null | undefined) => {
     const own = ownEpisode(row, episodeId);
     return !!own && !IMPORT_FINISHED.has(row.state) && (own.importState === null || !EPISODE_IMPORT_OVER.has(own.importState));
+};
+
+/** A pack episode's import past `waiting`, as the queue words a row in that state. */
+const EPISODE_IMPORTING: Record<string, QueueState> = { identifying: 'identifying', linking: 'linking', linked: 'linking', scanning: 'scanning' };
+
+/**
+ * One episode's view of a pack's row (P4.FU5): the row with the episode's own file instead of the whole torrent. Not started
+ * reads as queued, a finished file not imported yet (or one being imported) as importing, a blocked, failed or skipped episode
+ * as failed with its own reason, and its time left is its remaining bytes at the pack's current rate. An episode whose import is
+ * over reads as seeding, which shows no download. A client that cannot be read keeps the pack's last value, and a plugin that
+ * does not send each episode's progress keeps the pack's row.
+ */
+export const packEpisodeView = (row: QueueRow, episodeId: string | null | undefined): QueueRow => {
+    const own = ownEpisode(row, episodeId);
+    if (!own || own.progress === undefined || row.state === 'unknown') return row;
+    const sizeBytes = own.sizeBytes ?? null;
+    const view = (state: QueueState, progress: number | null, etaSeconds: number | null = null): QueueRow => ({
+        ...row, state, progress, etaSeconds, sizeBytes,
+        downloadedBytes: sizeBytes !== null && progress !== null ? Math.round(sizeBytes * progress) : null
+    });
+    if (packProblem(own.importState, own.reason)) {
+        // A failure shows at its last value; a skipped episode has none of its own, so at the pack's.
+        return { ...view(own.importState === 'blocked' ? 'blocked' : 'failed', own.progress ?? row.progress), reason: own.reason,
+            message: reasonMessage(own.reason) };
+    }
+    if (own.importState && EPISODE_IMPORT_OVER.has(own.importState)) return view('seeding', 1);
+    if (own.importState && EPISODE_IMPORTING[own.importState]) return view(EPISODE_IMPORTING[own.importState], 1);
+    const progress = own.progress;
+    if (progress === null || progress <= 0) return view('queued', progress);
+    if (progress >= 1) return view('identifying', 1);
+    if (row.state === 'stalled') return view('stalled', progress);
+    const rate = row.downloadRateBytes ?? 0;
+    return view('downloading', progress, sizeBytes !== null && rate > 0 ? Math.ceil(sizeBytes * (1 - progress) / rate) : null);
 };
 
 /** The pack row is moving this episode along: it holds it and the episode's import is not blocked. */
