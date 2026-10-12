@@ -8,6 +8,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntry } from '../api/modApi';
 import EntryDetails from '../components/EntryDetails';
+import EntrySeasonDetails from '../components/EntrySeasonDetails';
 import { getTmdbImage } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
 
@@ -68,7 +69,10 @@ export default function initializeEntryDetails(view, params) {
         try {
             const [detail, user] = await Promise.all([getEntry(api, params.entryId, { signal: abort.signal }), client.getCurrentUser()]);
             if (currentGeneration !== generation) return;
-            if (detail.entry.jellyfinItemId) {
+            // `season=N` is the mod's page for a season Jellyfin has no item for (P1.FU11): it stays, file or no file.
+            const season = Number(params.season);
+            const isSeason = detail.entry.mediaType === 'series' && params.season !== undefined && Number.isInteger(season) && season >= 0;
+            if (detail.entry.jellyfinItemId && !isSeason) {
                 window.location.replace('#/details?id=' + encodeURIComponent(detail.entry.jellyfinItemId)
                     + '&serverId=' + encodeURIComponent(client.serverId()));
                 return;
@@ -80,8 +84,11 @@ export default function initializeEntryDetails(view, params) {
             if (backdrop && image && userSettings.detailsBanner()) backdrop.style.backgroundImage = `url("${image}")`;
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
-            unmount = renderComponent(EntryDetails, { api, detail, view, isAdmin: !!user.Policy?.IsAdministrator,
-                serverId: client.serverId(), signal: abort.signal, focusOwnership: ownership }, renderMount);
+            unmount = isSeason ?
+                renderComponent(EntrySeasonDetails, { api, userId: client.getCurrentUserId(), detail, season, view,
+                    isAdmin: !!user.Policy?.IsAdministrator, signal: abort.signal, focusOwnership: ownership }, renderMount) :
+                renderComponent(EntryDetails, { api, detail, view, isAdmin: !!user.Policy?.IsAdministrator,
+                    serverId: client.serverId(), signal: abort.signal, focusOwnership: ownership }, renderMount);
         } catch (error) {
             if (currentGeneration !== generation || error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
             mount.textContent = 'This entry is unavailable. Check that JellyfinMod is enabled, or return to your library.';
