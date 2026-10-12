@@ -1,9 +1,11 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 
+import { getEntries } from '../api/modApi';
 import { aggregateProgress, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
 import { currentRowFor, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
@@ -66,10 +68,13 @@ interface QueueIndex {
     episodic: boolean;
 }
 
-const indexQueue = (items: QueueRow[]): QueueIndex => {
+const indexQueue = (items: QueueRow[], bound: Map<string, string[]>): QueueIndex => {
     const entryByItem = new Map<string, string>();
     for (const row of items) {
         if (row.entry?.jellyfinItemId) entryByItem.set(normalId(row.entry.jellyfinItemId), row.entry.id);
+    }
+    for (const [entryId, itemIds] of bound) {
+        for (const itemId of itemIds) entryByItem.set(itemId, entryId);
     }
     return { items, entryByItem, episodic: items.some(row => !!row.episode || !!row.pack) };
 };
@@ -278,6 +283,37 @@ const usePlacements = (api: Api | undefined, userId: string | undefined, onPlace
     return { placements: placements.current, place };
 };
 
+/**
+ * The Jellyfin items of a title the queue names without one (`entry.jellyfinItemId` is null): a series or movie with no file
+ * yet whose Jellyfin item already exists (season folders, a reclaimed title) still has a native card, which the plugin binds to
+ * the entry. Found once per entry: Jellyfin's items with the title's name, each confirmed by the plugin's own lookup
+ * (`GET /Entries?jellyfinItemId=`), one entry at a time.
+ */
+/** The item's id when the plugin finds this very entry for it, else null. */
+const boundTo = (api: Api, entryId: string, itemId: string) => getEntries(api, { jellyfinItemId: itemId, limit: 1 })
+    .then(found => (found.items[0]?.id === entryId ? normalId(itemId) : null), () => null);
+
+const useBoundItems = (api: Api | undefined, userId: string | undefined, onBound: () => void) => {
+    const bound = useRef(new Map<string, string[]>());
+    const asking = useRef(false);
+    const bind = useCallback((rows: QueueRow[]) => {
+        const entry = rows.map(row => row.entry).find(candidate => candidate && !candidate.jellyfinItemId && !bound.current.has(candidate.id));
+        if (!api || !userId || asking.current || !entry) return;
+        asking.current = true;
+        const kind = entry.mediaType === 'movie' ? BaseItemKind.Movie : BaseItemKind.Series;
+        getLibraryApi(api).getItems({ userId, searchTerm: entry.title, includeItemTypes: [kind], recursive: true, limit: 5,
+            enableImages: false, enableUserData: false })
+            .then(({ data }) => Promise.all((data.Items ?? []).flatMap(item => (item.Id ? [boundTo(api, entry.id, item.Id)] : []))))
+            .then(ids => bound.current.set(entry.id, ids.filter((id): id is string => !!id)),
+                () => bound.current.set(entry.id, []))
+            .finally(() => {
+                asking.current = false;
+                onBound();
+            });
+    }, [api, userId, onBound]);
+    return { bound: bound.current, bind };
+};
+
 const DownloadMarks: FC = () => {
     const { api, user } = useApi();
     const capability = useQueueCapability();
@@ -286,6 +322,7 @@ const DownloadMarks: FC = () => {
     const [placed, setPlaced] = useState(0);
     const onPlaced = useCallback(() => setPlaced(value => value + 1), []);
     const { placements, place } = usePlacements(api, user?.Id, onPlaced);
+    const { bound, bind } = useBoundItems(api, user?.Id, onPlaced);
     const items = queue.data?.items;
 
     // One read when a page opens (the app's first page too: the query cache is kept across reloads), joining a read already
@@ -309,7 +346,8 @@ const DownloadMarks: FC = () => {
             setWatching(false);
             return;
         }
-        const index = indexQueue(relevant);
+        bind(relevant);
+        const index = indexQueue(relevant, bound);
         let timer: number | undefined;
         // Cards arrive after the page (lazy rows, a grid's next page, upstream redrawing a list): another pass, at most one
         // per 150 ms; the pass's own changes are dropped from the record so they do not start another.
@@ -340,7 +378,7 @@ const DownloadMarks: FC = () => {
             observer.disconnect();
             if (timer !== undefined) window.clearTimeout(timer);
         };
-    }, [items, readable, placed, placements, place]);
+    }, [items, readable, placed, placements, place, bound, bind]);
 
     useEffect(() => clearAll, []);
     return null;
