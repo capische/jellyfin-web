@@ -81,3 +81,11 @@
 .jfmod-personCard .cardImageContainer {
     cursor: default;
 }
+
+/* A portrait fades in over the person icon with upstream's image fade (P1.FU18), at once where reduced motion is asked for. */
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-personCard .lazy-image-fadein,
+    .jfmod-personCard .lazy-image-fadein-fast {
+        animation: none;
+    }
+}

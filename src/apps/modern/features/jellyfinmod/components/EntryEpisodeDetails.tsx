@@ -13,6 +13,7 @@ import LinkButton from 'elements/emby-button/LinkButton';
 import globalize from 'lib/globalize';
 import browser from 'scripts/browser';
 import datetime from 'scripts/datetime';
+import * as userSettings from 'scripts/settings/userSettings';
 
 import { type EntryDetail, getEntry } from '../api/modApi';
 import { episodeMark } from '../constants/fileState';
@@ -20,7 +21,7 @@ import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisit
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { TmdbCrewCredit } from '../types/entry';
-import { getEntryPath } from '../utils/entryLinks';
+import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import { episodeMetaItems, seasonPath, useTmdbCover } from './MissingChildren';
@@ -81,17 +82,26 @@ const crewCards = (crew: TmdbCrewCredit[]): Person[] => {
  * A person card as upstream's people list draws one (overflow portrait, centred name and role, the person icon on the default
  * background without a portrait), with TMDB's portrait (w185). Jellyfin has no person item for these people, so the card links
  * nowhere: on the TV it is a focus stop that only scrolls the row, as upstream's cards are.
+ * The card shows the person icon at once and TMDB's portrait fades in over it when it arrives, with upstream's own image fade
+ * and its Faster Animations setting (P1.FU18); a portrait that fails leaves the icon.
  */
 const PersonCard: FC<{ person: Person }> = ({ person }) => {
-    const cover = useTmdbCover(person.profilePath, 'w185');
+    const src = getTmdbImage(person.profilePath, 'w185');
+    const [loaded, setLoaded] = useState<string>();
+    const [failed, setFailed] = useState<string>();
+    const onLoad = useCallback(() => setLoaded(src), [src]);
+    const onError = useCallback(() => setFailed(src), [src]);
+    const fade = userSettings.enableFastFadein() ? 'lazy-image-fadein-fast' : 'lazy-image-fadein';
     const tv = layoutManager.tv;
     const className = resolveCardCssClasses({ shape: 'overflowPortrait', cardCssClass: 'personCard', isTV: tv, isDesktop: false,
         enableFocusTransform: !browser.slow && !browser.edge, showChildCountIndicator: false, itemType: 'Person', tagName: 'div' }) + ' jfmod-personCard';
     const body = <div className='cardBox cardBox-bottompadded'>
         <div className='cardScalable'>
             <div className='cardPadder cardPadder-overflowPortrait' />
-            <div className={'cardImageContainer coveredImage cardContent' + (cover ? '' : ' ' + getDefaultBackgroundClass(person.name))}>
-                {cover ?? <span className='cardImageIcon material-icons person' aria-hidden='true' />}
+            <div className={'cardImageContainer coveredImage cardContent ' + getDefaultBackgroundClass(person.name)}>
+                <span className='cardImageIcon material-icons person' aria-hidden='true' />
+                {src && failed !== src && <img className={'jfmod-missingImage ' + (loaded === src ? fade : 'lazy-hidden')} src={src} alt=''
+                    loading='lazy' decoding='async' onLoad={onLoad} onError={onError} />}
             </div>
         </div>
         <div className='cardFooter'>
