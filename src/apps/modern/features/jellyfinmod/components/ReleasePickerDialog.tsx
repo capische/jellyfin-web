@@ -416,8 +416,8 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
             aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
             <AddGlyph />
         </button>
-        {showReplace ? <button type='button' className={actionClass('jfmod-releaseAction--danger', replaceState)}
-            title={actionTitle('Replace', replaceState)}
+        {showReplace ? <button type='button' className={actionClass('jfmod-releaseAction--replace', replaceState)}
+            title={actionTitle(plan.held > 1 ? `Replace ${plan.held} Files` : 'Replace File', replaceState)}
             aria-label={'Replace the files held with ' + (rejected ? 'the rejected release ' : '') + candidate.rawTitle} aria-disabled={off}
             data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
             <ReplaceGlyph />
@@ -494,7 +494,8 @@ const confirmationFor = (candidate: ReleaseCandidate, mode: GrabMode | undefined
             primary: replacing ? 'delete' as const : undefined
         };
     }
-    return { title: plan.held > 1 ? 'Replace the Files' : 'Replace the File', text: replaceText(plan, mediaType), confirmText: 'Replace',
+    const label = plan.held > 1 ? `Replace ${plan.held} Files` : 'Replace File';
+    return { title: label, text: replaceText(plan, mediaType) + ' ' + escapeHtml(candidate.rawTitle), confirmText: label,
         primary: 'delete' as const };
 };
 

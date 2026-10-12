@@ -691,7 +691,7 @@ async function chooseScope(page, value) {
 const failedIndexer = outcome => outcome.status !== 'ok' && outcome.status !== 'no_results';
 
 /** Add and Replace on one row: Title Case tooltips, names that say which release, icons add and swap_horiz, ≥2.5em, Replace red. */
-const actionsShaped = (row, root) => !!row.add && !!row.replace && row.add.title === 'Add' && row.replace.title === 'Replace'
+const actionsShaped = (row, root) => !!row.add && !!row.replace && row.add.title === 'Add' && /^Replace (File|\d+ Files)$/.test(row.replace.title)
     && row.add.label.includes(row.title) && row.replace.label.includes(row.title)
     && /\badd\b/.test(row.add.icon) && /\bswap_horiz\b/.test(row.replace.icon)
     && [row.add, row.replace].every(button => button.size[0] >= 2.5 * root - 1 && button.size[1] >= 2.5 * root - 1
