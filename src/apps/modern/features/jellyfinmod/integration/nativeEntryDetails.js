@@ -6,6 +6,7 @@ import { getEntries } from '../api/modApi';
 import NativeEntryDetails from '../components/NativeEntryDetails';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
+import { moveShuffle } from './shuffleMenu';
 
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
@@ -48,6 +49,7 @@ export default function initializeNativeEntryDetails(view, params) {
     let traktMount;
     let unmount;
     let unmountTrakt;
+    let undoShuffle;
     let generation = 0;
     const hide = () => {
         generation++;
@@ -55,6 +57,8 @@ export default function initializeNativeEntryDetails(view, params) {
         unmount = undefined;
         unmountTrakt?.();
         unmountTrakt = undefined;
+        undoShuffle?.();
+        undoShuffle = undefined;
         traktMount?.remove();
         traktMount = undefined;
         mount?.remove();
@@ -85,6 +89,8 @@ export default function initializeNativeEntryDetails(view, params) {
             return;
         }
         if (currentGeneration !== generation) return;
+        // Shuffle stays in the header only for shows watched in any order; elsewhere it moves into More (P1.FU12).
+        undoShuffle = moveShuffle(view, item, client);
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
         target.appendChild(mount);

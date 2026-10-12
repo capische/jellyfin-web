@@ -1,0 +1,5 @@
+// Shuffle moves into the More menu on a series or season page whose show is not one that is watched in any order (P1.FU12;
+// UX §1.1 exception 3). Upstream's button stays in the DOM, and the More item clicks it; only this page-level class hides it.
+.jfmod-shuffleInMore .mainDetailButtons .btnShuffle {
+    display: none;
+}
