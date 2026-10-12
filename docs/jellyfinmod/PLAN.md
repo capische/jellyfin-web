@@ -490,7 +490,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   administrator's button opening the picker in its scope (season, episode, movie, series) and an indicator for others, and
   Unaired is the clock with the short air date. Runner `missing-seasons-episodes.mjs`; `tv-shell.mjs` no longer requires a
   mark on a grid. Typecheck, lint and the production build pass; not deployed, no live first look yet, no Codex review yet.
-  The downloading states, the card hover Get a Release and the Shuffle change are the next slice.
+  The downloading states (P4.FU1), the card hover Get a Release and the Shuffle change (P1.FU12) followed.
   **P4.FU1, built (not accepted) 2026-10-12: downloads on cards and rows** (the downloading part of the same approved sheet,
   version 9 with the card corrections; [UX.md](UX.md) §3.1 and §3.3): web `next-release` `fc404fdf44..4d018f3689` (code and
   runners; docs in the commit after). Every card (library grids, Home rows, search, Continue Watching and Next Up, season cards,
@@ -502,10 +502,21 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   and colours now shared. The in-flight ring and grabbed icon leave `FileStateMark`. Owner: Phase 4 follow-up, with Phase 5's
   queue as the source; no plugin change. Typecheck, lint and the production build pass; a static render of the built CSS was
   checked; not deployed, no live first look yet (runner `card-progress.mjs`, intercepted queue answers), no Codex review yet.
-  Still open from the sheet: the card hover Get a Release and the Shuffle change. First look on 28096 (2026-10-12, Chromium,
+  The card hover Get a Release and the Shuffle change are P1.FU12 below. First look on 28096 (2026-10-12, Chromium,
   intercepted queue answers): `card-progress.mjs` 15/17 desktop and 32/34 mobile and TV against the deployed `f7c95ac4b5`;
   the failures were a file-less series' native card (fixed in `eb73bfdcae`) and the phone row figure (fixed in `67262ac880`),
   both waiting for a redeploy of the `af3b40f6ea`-or-later build.
+  **P1.FU12, built (not accepted) 2026-10-12: Get a Release on cards and Shuffle only where it makes sense** (the last two
+  parts of the same approved sheet, section 2 unchanged; [UX.md](UX.md) §5.7 and §1.1 exception 3): web `next-release` from
+  `5558d99092`. Administrators get the cloud icon in a card's hover overlay after Favorite (movie, series, season, episode;
+  series and seasons with pack search; only titles the plugin has an entry for), *Get Another Quality* on a movie or episode on
+  disk, and the same item in the card's menu (overlay More, right-click, TV Menu key); it opens the picker in the card's scope.
+  The header Shuffle stays only on shows whose genres are comedy, animation, reality, talk, game, documentary, kids or news;
+  elsewhere it is hidden and offered in the More menu, which presses the hidden button. `moreMenuItem.ts` now holds several page
+  items and card items. Runner `card-get-shuffle.mjs`. Typecheck, lint, stylelint and the production build pass; the runner
+  passed 55/55 in Chromium on desktop, phone and TV against 28096 with the local build served in place of the instance's (not
+  acceptance); not deployed, no live first look yet, no Codex review yet. Not verified: an ordinary user (no user with an empty
+  password on 28096); the phone's card menu (upstream draws no More on the phone's grids and season cards).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
