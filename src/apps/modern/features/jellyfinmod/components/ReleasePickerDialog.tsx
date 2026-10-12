@@ -42,6 +42,8 @@ export interface ReleasePickerProps {
      * page's switch offers All Seasons, each season and every episode (season packs, 2026-10-08, user decision 1).
      */
     episodePage?: boolean;
+    /** Opened from this season's own page: the scope switch offers the season, preselected, and All Seasons; no episodes. */
+    seasonPage?: number;
     /** `addVersion` searches for another version beside the held file (P6.M6, opened by Get another quality). */
     intent?: ReleaseIntent;
     /** Called after a grab reaches a final state, so the opener can refresh history and summaries. */
@@ -589,16 +591,23 @@ interface ScopeOptions {
     episodes: ReleasePickerEpisode[];
     packs: boolean;
     pageEpisode: ReleasePickerEpisode | undefined;
+    pageSeason: number | undefined;
 }
 
 /**
- * The scope switch (user decision 1, 2026-10-08). On an episode's page: that episode, its season and All Seasons. On a series
- * page: All Seasons, each season with aired episodes other than specials, then every episode. Without packs it is the episode
- * list it always was.
+ * The scope switch (user decision 1, 2026-10-08). On an episode's page: that episode, its season and All Seasons. On a season's
+ * page: that season and All Seasons (user, 2026-10-12). On a series page: All Seasons, each season with aired episodes other
+ * than specials, then every episode. Without packs it is the episode list it always was.
  */
-const scopeOptions = ({ episodes, packs, pageEpisode }: ScopeOptions): { label: string; options: EmbySelectOption[] } => {
+const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason }: ScopeOptions): { label: string; options: EmbySelectOption[] } => {
     const episodeOptions = episodes.map(episode => ({ value: episode.id, label: episode.label }));
     if (!packs) return { label: 'Episode', options: [{ value: '', label: 'Choose an episode' }, ...episodeOptions] };
+    if (pageSeason !== undefined) {
+        return { label: 'Search For', options: [
+            { value: SEASON_PREFIX + pageSeason, label: 'Season ' + pageSeason },
+            { value: SERIES_VALUE, label: 'All Seasons' }
+        ] };
+    }
     if (pageEpisode) {
         return { label: 'Search For', options: [
             { value: pageEpisode.id, label: 'Episode: ' + episodeCode(pageEpisode) + ' · ' + pageEpisode.title },
@@ -680,9 +689,9 @@ const noticeText = (choices: boolean, replace: boolean, scope: string | undefine
  * Cancel follows the grabbed row during the hold (user decision 2). Rows only change on a deliberate search:
  * a new scope or profile. Nothing refetches underneath a focused row.
  */
-const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, episodePage, intent,
-    onChanged }) => {
-    const [choice, setChoice] = useState(initialEpisodeId ?? '');
+const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes, initialEpisodeId, episodePage, seasonPage,
+    intent, onChanged }) => {
+    const [choice, setChoice] = useState(initialEpisodeId ?? (seasonPage === undefined ? '' : SEASON_PREFIX + seasonPage));
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
     const [progressKey, setProgressKey] = useState<string | null>(null);
@@ -757,7 +766,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [busy, data, mediaType, operation, search.isFetching, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
-    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode }), [episodes, packs, pageEpisode]);
+    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage }),
+        [episodes, packs, pageEpisode, seasonPage]);
     const defaultProfileLabel = profileLabel(data, !!profileId);
     const profileOptions = useMemo<EmbySelectOption[]>(() => [
         { value: '', label: defaultProfileLabel },

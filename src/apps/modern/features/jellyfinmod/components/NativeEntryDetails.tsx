@@ -2,17 +2,16 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
 import { type EntryDetail, getEntries, getEntry, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
     unkeepEpisode } from '../api/modApi';
 import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
-import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, keepButtonLabel, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
+import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
 import { type DevicePreference, deleteWarningText, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
     VERSIONS_V1_CAPABILITY } from '../constants/versions';
-import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
+import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { useVersionRemoval } from '../hooks/useVersionRemoval';
 import { registerMoreMenuItem } from '../integration/moreMenuItem';
@@ -28,7 +27,6 @@ import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
 import './entryDetails.scss';
-import { raisedButtonClass } from '../utils/flatButton';
 
 interface NativeEntryDetailsProps {
     api: Api;
@@ -36,6 +34,11 @@ interface NativeEntryDetailsProps {
     /** The server the page belongs to, for the detail routes the page moves on to after a removal. */
     serverId: string;
     itemId: string;
+    /** The native item's type: a `Season` page looks up its series' entry by `seriesId`. */
+    itemType?: string;
+    seriesId?: string;
+    /** A season page's season number (the item's `IndexNumber`). */
+    seasonNumber?: number;
     isAdmin: boolean;
     /** The native detail view: its header row, Played button and track selections carry the mod's inserts. */
     view: HTMLElement;
@@ -55,11 +58,6 @@ const keptMessage = (keepsEpisode: boolean, detail: EntryDetail): string => {
     return 'This title will be kept.';
 };
 
-const keepLabel = (keepsSeries: boolean, busy: boolean, kept: boolean): string => {
-    if (!keepsSeries || busy) return keepButtonLabel(busy, kept);
-    return kept ? 'Series Kept' : 'Keep Series';
-};
-
 /**
  * The tracked episode this native page shows. Any file of the episode opens its page, not only the one the plugin selected
  * (P10.E3). A multi-episode file is also pointed at by the rows of the episodes it covers; its page is the row that holds
@@ -69,6 +67,18 @@ const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
     data?.episodes.find(candidate => (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)
         || sameItemId(version.mediaSourceId, itemId)))
         ?? data?.episodes.find(candidate => sameItemId(candidate.jellyfinItemId, itemId));
+
+/** A season page has no entry of its own: it is its series' entry, searched by its own season (user, 2026-10-12). */
+const pageLookup = (itemId: string, itemType: string | undefined, seriesId: string | undefined, seasonNumber: number | undefined) =>
+    (itemType === 'Season' && seriesId ? { lookupId: seriesId, seasonOf: seasonNumber ?? 0 } : { lookupId: itemId, seasonOf: undefined });
+
+/** What the page shows: a season (only the header icon), a series (its section), or a movie or episode with its files. */
+const pageKind = (data: EntryDetail | null | undefined, itemId: string, seasonOf: number | undefined) => {
+    const isSeasonPage = seasonOf !== undefined && data?.entry.mediaType === 'series';
+    const episode = isSeasonPage ? undefined : pageEpisode(data, itemId);
+    const isSeriesPage = !!data && !episode && !isSeasonPage && data.entry.mediaType === 'series';
+    return { episode, isSeasonPage, isSeriesPage, isFilePage: !!data && !isSeriesPage && !isSeasonPage };
+};
 
 /**
  * Stock Delete media on a title with several files deletes more than one version (V1, analysis C8): its confirmation on
@@ -180,20 +190,29 @@ const pageKept = (detail: EntryDetail, episode: EntryEpisode | undefined, versio
     detail.entry.retentionPolicy === 'never' || episode?.retentionPolicy === 'never' || (episode ?? detail).retention?.reason === 'kept'
     || versions.some(version => version.kept);
 
+interface PageMenuItem {
+    enabled: boolean;
+    /** The page's own item and its files' items: the menus the item belongs to. */
+    itemIds: string[];
+    name: string;
+    icon: string;
+    run: () => void;
+}
+
 /**
- * "Remove after watching…" in the stock More menu (user, 2026-10-07): an administrator's episode window, on an episode page
- * where the plugin has the episode controls and the episode is not kept by itself. Registered while the page shows.
+ * A mod item in the page's stock More menu, registered while the page shows: "Remove after watching…" on an episode page
+ * (user, 2026-10-07), "Keep Series" on a series page (user, 2026-10-12).
  */
-const useWindowMenuItem = (view: HTMLElement, enabled: boolean, itemIds: string[], open: () => void) => {
-    const openRef = useRef(open);
-    openRef.current = open;
+const usePageMenuItem = (view: HTMLElement, { enabled, itemIds, name, icon, run }: PageMenuItem) => {
+    const runRef = useRef(run);
+    runRef.current = run;
     const ids = itemIds.join(',');
     useEffect(() => {
         if (!enabled) return;
         const own = ids.split(',');
         return registerMoreMenuItem({
-            name: 'Remove After Watching…',
-            icon: 'auto_delete',
+            name,
+            icon,
             // Only this page's own header More button, for this page's own item (or one of its files): a card's menu
             // elsewhere on the page (Next Up, More Like This) is another item's menu and gets nothing.
             matches: options => {
@@ -202,9 +221,9 @@ const useWindowMenuItem = (view: HTMLElement, enabled: boolean, itemIds: string[
                 return !!button && !!header && document.body.contains(view) && button.classList.contains('btnMoreCommands')
                     && header.contains(button) && own.some(id => sameItemId(id, options.item?.Id));
             },
-            run: () => openRef.current()
+            run: () => runRef.current()
         }) ?? undefined;
-    }, [view, enabled, ids]);
+    }, [view, enabled, ids, name, icon]);
 };
 
 interface EpisodeWindowOptions {
@@ -228,7 +247,8 @@ const useEpisodeWindow = ({ api, view, entryId, episode, itemIds, busy, change }
     const enabled = !!entryId && !!episode && episode.retentionPolicy !== 'never';
     const show = useCallback(() => setOpen(true), []);
     const close = useCallback(() => setOpen(false), []);
-    useWindowMenuItem(view, enabled, itemIds, show);
+    // An administrator's episode window, where the plugin has the episode controls and the episode is not kept by itself.
+    usePageMenuItem(view, { enabled, itemIds, name: 'Remove After Watching…', icon: 'auto_delete', run: show });
     const value = episode?.retentionPolicy === 'days' && episode.reclaimAfterDays ? String(episode.reclaimAfterDays) : 'inherit';
     const choose = useCallback((next: string) => {
         if (!entryId || !episode) return;
@@ -239,37 +259,15 @@ const useEpisodeWindow = ({ api, view, entryId, episode, itemIds, busy, change }
     return enabled ? <EpisodeWindowDialog open={open} value={value} busy={busy} onChange={choose} onClose={close} /> : null;
 };
 
-interface SeriesSectionProps {
-    api: Api;
-    detail: EntryDetail;
-    isAdmin: boolean;
-    canAcquire: boolean;
-    busy: boolean;
-    change: (action: () => Promise<unknown>, done: string) => Promise<boolean>;
-    openPicker: (opener: HTMLElement) => void;
-}
-
-/** The native series page's section, unchanged by the 2026-10-07 design fix: retention list, Search releases, series Keep. */
-const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquire, busy, change, openPicker }) => {
-    const section = useRef<HTMLElement>(null);
-    // A Keep can remove the very button that made it; focus then falls to the page body, which strands a remote, so it goes
-    // to the page's Keep button instead (UX §13).
-    useEffect(() => {
-        if (busy) return;
-        const active = document.activeElement;
-        if (active && active !== document.body && active.isConnected) return;
-        const target = section.current?.querySelector<HTMLElement>('.jfmod-nativeActions button[aria-pressed]');
-        if (target) focusManager.focus(target);
-    }, [busy, detail]);
-    const searchReleases = useCallback((event: React.MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
-    const keepSeries = useCallback(() => {
-        change(() => keepEntry(api, detail.entry.id), keptMessage(false, detail)).catch(() => undefined);
-    }, [api, change, detail]);
+/**
+ * The native series page's section: the retention status, the episodes on their way and the episode retention list. Get a
+ * Release is the header icon and Keep Series a More-menu item (user, 2026-10-12); History stays as it was.
+ */
+const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => {
     // Episodes of this series that are grabbed or downloading; the series entry itself is never projected (P5.I3).
     const inFlightEpisodes = detail.episodes.filter(candidate =>
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading);
-    const kept = detail.retention.reason === 'kept';
-    return <section ref={section} aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
+    return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
         <RetentionStatus retention={detail.retention} />
         {inFlightEpisodes.map(candidate => <div className='jfmod-episodeRow' key={'queue:' + candidate.id}>
             <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
@@ -281,21 +279,26 @@ const SeriesSection: FC<SeriesSectionProps> = ({ api, detail, isAdmin, canAcquir
                 <RetentionStatus retention={candidate.retention} compact />
             </div>)}
         </HistoryToggle>}
-        <div className='jfmod-nativeActions'>
-            {canAcquire && <button className={raisedButtonClass('button-submit')} type='button' onClick={searchReleases}>
-                Search Releases
-            </button>}
-            {isAdmin && <button className={raisedButtonClass()} type='button' aria-busy={busy}
-                aria-disabled={busy} aria-pressed={kept} onClick={keepSeries} title='Keep the whole series indefinitely'>
-                {keepLabel(true, busy, kept)}
-            </button>}
-        </div>
         <HistoryToggle label={<>History{detail.history[0] ? ' · ' + detail.history[0].summary : ''}</>}>
             <ol>{detail.history.map(event => <li key={event.id}>
                 <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
             </li>)}</ol>
         </HistoryToggle>
     </section>;
+};
+
+/**
+ * Keep Series in the series page's stock More menu, for administrators (user, 2026-10-12: the page's button moved there). Once
+ * kept it reads "Series Kept" and choosing it changes nothing, as the read-only kept button did.
+ */
+const useKeepSeriesItem = (api: Api, view: HTMLElement, detail: EntryDetail | null | undefined, itemId: string, change: (action: () => Promise<unknown>, done: string) => Promise<boolean>) => {
+    const kept = detail?.retention.reason === 'kept';
+    const run = useCallback(() => {
+        if (!detail || kept) return;
+        change(() => keepEntry(api, detail.entry.id), keptMessage(false, detail)).catch(() => undefined);
+    }, [api, change, detail, kept]);
+    usePageMenuItem(view, { enabled: !!detail, itemIds: [itemId], name: kept ? 'Series Kept' : 'Keep Series',
+        icon: kept ? 'check' : 'push_pin', run });
 };
 
 /**
@@ -368,28 +371,28 @@ const usePageRetention = (view: HTMLElement, data: EntryDetail | null | undefine
 };
 
 /** Add catalog controls to upstream's own detail page without replacing native playback, seasons or track controls. */
-const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, isAdmin, view }) => {
+const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, itemType, seriesId, seasonNumber, isAdmin,
+    view }) => {
     const [busy, setBusy] = useState(false);
     const [historyFor, setHistoryFor] = useState<{ anchor: HTMLElement; version: VersionDto } | null>(null);
     // Every viewer reads the file rows and the badge, so capabilities are read for ordinary users too.
     const capabilities = usePluginCapabilities(api);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
+    const { lookupId, seasonOf } = pageLookup(itemId, itemType, seriesId, seasonNumber);
     const queryClient = useQueryClient();
     const detailKey = ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId];
     const detail = useQuery({
         queryKey: detailKey,
         queryFn: async ({ signal }) => {
             // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14).
-            const entries = await getEntries(api, { jellyfinItemId: itemId, limit: 1 }, { signal });
+            const entries = await getEntries(api, { jellyfinItemId: lookupId, limit: 1 }, { signal });
             const entry = entries.items[0];
             return entry ? getEntry(api, entry.id, { signal }) : null;
         },
         retry: false
     });
     const { data, refetch } = detail;
-    const episode = pageEpisode(data, itemId);
-    const isSeriesPage = !!data && !episode && data.entry.mediaType === 'series';
-    const isFilePage = !!data && !isSeriesPage;
+    const { episode, isSeasonPage, isSeriesPage, isFilePage } = pageKind(data, itemId, seasonOf);
     const stockIds = useStockSourceIds(view);
     // Only files Jellyfin still lists for this item: a binding left on an item Jellyfin re-created is not a file here.
     const versions = useMemo(() => {
@@ -423,15 +426,18 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         };
         openReleasePicker({
             api, entryId: data.entry.id, title: data.entry.title, mediaType: data.entry.mediaType, episodes: data.episodes,
-            episodeId: episode?.id, episodePage: !!episode?.id, intent, onChanged: reload
+            episodeId: episode?.id, episodePage: !!episode?.id, seasonNumber: isSeasonPage ? seasonOf : undefined, intent,
+            onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
-    }, [api, data, episode?.id, refetch]);
+    }, [api, data, episode?.id, isSeasonPage, refetch, seasonOf]);
     const addVersion = useCallback((opener: HTMLElement) => openPicker(opener, 'addVersion'), [openPicker]);
-    // Design step 1: the stock-styled header icon; with a file on the page it gets another quality.
+    // Design step 1: the stock-styled header icon; with a file on the page it gets another quality. A series page and a season
+    // page have it too (user, 2026-10-12); a season is searched as a pack, so its page needs the plugin's pack search.
     const getRelease = useCallback((button: HTMLElement) => openPicker(button, versions.length > 0 ? 'addVersion' : undefined),
         [openPicker, versions.length]);
+    const seasonSearch = isSeasonPage && capabilities.includes(PACKS_CAPABILITY) && !!seasonOf;
     useStockHeaderButton(view, {
-        enabled: canAcquire && isFilePage,
+        enabled: canAcquire && (isFilePage || isSeriesPage || seasonSearch),
         icon: 'cloud_download',
         title: 'Get a Release',
         className: 'jfmod-getRelease',
@@ -461,14 +467,13 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         episode: isAdmin && capabilities.includes(EPISODE_CONTROLS_CAPABILITY) ? episode : undefined,
         itemIds: [itemId, ...versions.map(version => version.jellyfinItemId), ...versions.map(version => version.mediaSourceId)],
         busy, change });
+    useKeepSeriesItem(api, view, isAdmin && isSeriesPage ? data : null, itemId, change);
 
-    if (!detail.data) return null;
+    // A season page shows only the header icon.
+    if (!detail.data || isSeasonPage) return null;
     const entry = detail.data.entry;
 
-    if (isSeriesPage) {
-        return <SeriesSection api={api} detail={detail.data} isAdmin={isAdmin} canAcquire={canAcquire} busy={busy}
-            change={change} openPicker={openPicker} />;
-    }
+    if (isSeriesPage) return <SeriesSection detail={detail.data} />;
 
     // The popover lists one file's events, picked by the file's binding; episode-level events are not shown (design step 3).
     const history = detail.data.history;
