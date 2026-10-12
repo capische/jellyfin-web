@@ -111,7 +111,7 @@ export const BLOCKER_SENTENCES = new Map<string, string>([
     ['download_client_unverified', 'The download client changed since its last successful test.'],
     ['download_client_driver_missing', 'This plugin build has no driver for that download client kind.'],
     ['no_default_profile', 'No default quality profile is selected.'],
-    ['discovery_token_missing', 'No TMDB Read Access Token is saved.'],
+    ['discovery_token_missing', 'No TMDB token is saved, and Jellyfin\'s built-in TMDb connection is unavailable.'],
     ['discovery_unverified', 'The TMDB token has not passed a test since it changed.'],
     ['path_mapping_unverified', 'A path mapping has not been verified.'],
     ['acquisition_disabled', 'Grabbing is turned off.'],

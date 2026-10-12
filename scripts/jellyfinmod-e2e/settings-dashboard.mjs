@@ -74,7 +74,7 @@ try {
 
     await page.locator('.jfmod-step[data-section="discovery"]').click();
     const discoveryState = await page.locator('[data-secstate="discovery"]').innerText();
-    record('Discovery shows the moved token as configured', /Read access token configured/.test(discoveryState), discoveryState);
+    record('Discovery shows the moved token as the source in use', /Using your token/.test(discoveryState), discoveryState);
     await page.locator('#TestDiscovery').click();
     const discoveryNotice = await noticeText('discovery-test');
     record('Discovery Test reports a code and a sentence', /\((ok|unauthorized|timeout|unreachable|not_configured)\)$/.test(discoveryNotice), discoveryNotice);
