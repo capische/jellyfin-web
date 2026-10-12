@@ -16,7 +16,7 @@ import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { useVersionRemoval } from '../hooks/useVersionRemoval';
 import { registerMoreMenuItem } from '../integration/moreMenuItem';
 import { usePlayedBadge, usePlayedRefresh } from '../integration/playedBadge';
-import { openReleasePicker } from '../integration/releasePicker';
+import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
@@ -393,6 +393,10 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     });
     const { data, refetch } = detail;
     const { episode, isSeasonPage, isSeriesPage, isFilePage } = pageKind(data, itemId, seasonOf);
+    // Anyone opening a series or season page of a series whose TMDB list was never loaded loads it (P1.FU9), quietly.
+    useEpisodeListLoad(api, isSeriesPage || isSeasonPage ? data : null, () => {
+        refetch().catch(() => undefined);
+    });
     const stockIds = useStockSourceIds(view);
     // Only files Jellyfin still lists for this item: a binding left on an item Jellyfin re-created is not a file here.
     const versions = useMemo(() => {

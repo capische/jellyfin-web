@@ -16,7 +16,7 @@ import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refres
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
-import { loadEpisodeList, openReleasePicker } from '../integration/releasePicker';
+import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { AcquisitionSummary } from '../types/acquisition';
 import { FileState } from '../types/entry';
@@ -131,19 +131,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
             episodeId: opener.dataset.episodeId, episodeListLoaded: listLoaded, onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, entry.id, entry.mediaType, entry.title, episodes, listLoaded, reload]);
-    // An administrator opening a discovered series sees every season and episode, not only its files: the page loads the TMDB
-    // list once (P1.FU), sharing the request with a picker opened meanwhile. A failure keeps the list; the picker says why.
-    useEffect(() => {
-        if (!isAdmin || entry.mediaType !== 'series' || listLoaded) return;
-        loadEpisodeList(api, entry.id).then(updated => {
-            if (signal.aborted) return;
-            setEntry(updated.entry);
-            setEpisodes(updated.episodes);
-            setHistory(updated.history);
-            setRetention(updated.retention);
-            setListLoaded(true);
-        }, () => undefined);
-    }, [api, entry.id, entry.mediaType, isAdmin, listLoaded, signal]);
+    // Anyone opening a discovered series sees every season and episode, not only its files: the page loads the TMDB list
+    // once (P1.FU9), sharing the request with a picker opened meanwhile, then refetches. A failure keeps the list.
+    useEpisodeListLoad(api, { ...detail, entry, episodeListLoaded: listLoaded }, reload);
     const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
     // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
     useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a Release',

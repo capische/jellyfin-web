@@ -154,6 +154,17 @@ export const refreshEntry = async (api: Api, id: string, options?: AxiosRequestC
     return response.data;
 };
 
+/**
+ * Loads a series' full TMDB season and episode list if it is not loaded yet, for anyone who may read the entry (P1.FU9), and
+ * answers the entry detail. A loaded list or a movie is answered unchanged.
+ */
+export const loadEntryEpisodeList = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<EntryDetail> => {
+    const response = await api.axiosInstance.post<EntryDetail>(
+        api.basePath + BASE + '/Entries/' + encodeURIComponent(id) + '/EpisodeList', undefined,
+        { ...options, headers: authorization(api) });
+    return response.data;
+};
+
 export const patchEntry = async (api: Api, id: string, monitored: boolean, options?: AxiosRequestConfig): Promise<Entry> => {
     const response = await api.axiosInstance.patch<Entry>(api.basePath + BASE + '/Entries/' + encodeURIComponent(id), { monitored },
         { ...options, headers: authorization(api) });
