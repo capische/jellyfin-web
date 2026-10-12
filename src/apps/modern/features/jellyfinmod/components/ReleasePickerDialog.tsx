@@ -390,8 +390,8 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
     const off = disabled || !!candidate.heldQuality;
     const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        onGrab(candidate, rejected && !plan.choices ? plan.first : 'add', plan);
-    }, [candidate, onGrab, plan, rejected]);
+        onGrab(candidate, plan.choices ? 'add' : plan.first, plan);
+    }, [candidate, onGrab, plan]);
     const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
         onGrab(candidate, 'replace', plan);
@@ -402,10 +402,12 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
     const addState = actionState(candidate.releaseId, 'add');
     const replaceState = actionState(candidate.releaseId, 'replace');
     const showReplace = plan.choices && plan.replace;
-    if (!rejected && !plan.choices) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
+    let addLabel = 'Add ' + candidate.rawTitle;
+    if (rejected) addLabel = 'Add the rejected release ' + candidate.rawTitle;
+    else if (plan.choices) addLabel += ' beside the files held';
     return <span className={classNames('jfmod-releaseActions', { 'jfmod-releaseActions--pressed': addState !== 'idle' || replaceState !== 'idle' })}>
         <button type='button' className={actionClass('jfmod-releaseAction--add', addState)} title={actionTitle('Add', addState)}
-            aria-label={(rejected ? 'Add the rejected release ' + candidate.rawTitle : 'Add ' + candidate.rawTitle + ' beside the files held')}
+            aria-label={addLabel}
             aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
             <AddGlyph />
         </button>
