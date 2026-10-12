@@ -244,6 +244,25 @@ until task P7 in [PHASE1.md](PHASE1.md) carries it forward.
 **Proposed (review 2026-09-18, not user-approved):** add `reclaimed` to `availability` on the
 server and in the web type and label (task T14 in [PHASE3.md](PHASE3.md)).
 
+**Full episode list of a discovered series (Phase 1 follow-up, 2026-10-12;
+[`design/p1-full-episode-list.md`](design/p1-full-episode-list.md)).** Entry detail and the Refresh answer carry
+`episodeListLoaded` (boolean). It is `true` for a movie, and for a series that holds a TMDB episode (`tmdbId > 0`) or
+whose History has an `episodes_listed` event. A series that reconciliation discovered in a TVDB-scraped library starts
+with `false`: it lists only the episodes of its files, as position rows with `tmdbId: 0`. An administrator's Refresh
+loads the whole TMDB season and episode list, and the first such load adds one History event:
+
+```json
+{"eventType":"episodes_listed","summary":"Loaded 3 seasons and 5 episodes from TMDB"}
+```
+
+The Refresh adopts a position row only with evidence (the same title, or the same air date within a day; RET-R2), never
+adds a second row at a position a file holds, and adds every other TMDB episode as a row of its own with
+`availability` `missing` or `unaired`. A new row is monitored only when its series is, so a discovered (unmonitored)
+series' list is never searched for by automation. The web runs this Refresh once per entry per page visit, when an
+administrator opens the release picker or the file-less series page of an entry with `episodeListLoaded: false`.
+The plugin reads a series' seasons appended to one TMDB request (`append_to_response=season/N`, up to 20 a request),
+so a load takes two TMDB calls: the details, then every season.
+
 ## Automatic retention
 
 Entry and episode detail uses a privacy-safe retention summary:
