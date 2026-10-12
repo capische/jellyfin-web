@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <!-- Original drawing of this fork for the release picker's Open Transmission button: a dot on a stem with two arcs above it,
+         a "transmitting" mark. Not any client's logo. -->
+    <circle cx="12" cy="13" r="2" fill="currentColor" stroke="none"/>
+    <path d="M12 15V21"/>
+    <path d="M7.8 8.8A6 6 0 0 1 16.2 8.8"/>
+    <path d="M5 6A10 10 0 0 1 19 6"/>
+</svg>

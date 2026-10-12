@@ -2,21 +2,23 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
 import escapeHtml from 'escape-html';
-import React, { type FC, Fragment, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type FC, Fragment, type MouseEvent, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
+import { useApi } from 'hooks/useApi';
 
-import { cancelGrab, getGrab, getQualityProfiles, getReleaseProgress, grabRelease, searchReleases } from '../api/modApi';
+import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, grabRelease, removeQueueRow, searchReleases } from '../api/modApi';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
+import type { QueueRow } from '../types/queue';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
-import { AddGlyph, qualityText, ReleaseLines, ReplaceGlyph } from './ReleaseRowParts';
+import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
 import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
-import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
+import { flatButtonClass } from '../utils/flatButton';
 
 import './interFont.scss';
 import './releasePicker.scss';
@@ -287,8 +289,45 @@ const coverageText = (candidate: ReleaseCandidate, search: ReleaseSearch | undef
     return 'Seasons ' + seasons[0] + '–' + seasons[seasons.length - 1] + ' · ' + episodes;
 };
 
-const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined }> = ({ candidate, search }) =>
-    <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)} />;
+/** What the added row's download looks like (2026-10-12, §1b): a bar along the row's bottom and a figure on its marks line. */
+interface AddedProgress {
+    kind: 'queued' | 'downloading' | 'stalled' | 'importing' | 'failed';
+    /** 0..100; null draws the track only. */
+    percent: number | null;
+    text: string;
+    /** The client could not be read: the last value, dimmed. */
+    stale: boolean;
+}
+
+/**
+ * The added row (user, 2026-10-12, §1): the tick takes the Add slot and the X the Replace slot. While the grab is held or being
+ * sent, Add shows the falling arrow and the X cancels at once; once the client has the torrent, Add is a green tick and the X
+ * removes it from the download queue after a question, for administrators only.
+ */
+interface AddedRow {
+    accepted: boolean;
+    x: 'cancel' | 'remove' | null;
+    /** A cancel or removal is under way, or the queue row is not read yet. */
+    xOff: boolean;
+    onX: () => void;
+    progress: AddedProgress | null;
+}
+
+const ProgressFigure: FC<{ progress: AddedProgress }> = ({ progress }) =>
+    <span className={classNames('jfmod-addedFigure', 'jfmod-addedFigure--' + progress.kind, { 'jfmod-addedFigure--stale': progress.stale })}
+        aria-live='off'>{progress.text}</span>;
+
+const ProgressBar: FC<{ progress: AddedProgress }> = ({ progress }) =>
+    <span className={classNames('jfmod-addedBar', 'jfmod-addedBar--' + progress.kind)} aria-hidden='true'>
+        <span className='jfmod-addedBar-fill' style={{ width: (progress.percent ?? 0) + '%' }} />
+    </span>;
+
+const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null }> = ({ candidate, search, added }) =>
+    <>
+        <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)}
+            progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />
+        {added?.progress && <ProgressBar progress={added.progress} />}
+    </>;
 
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
@@ -326,10 +365,35 @@ interface ReleaseRowProps {
     plan: RowPlan;
     onGrab: (candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => void;
     actionState: (releaseId: string, mode: 'add' | 'replace') => ActionState;
+    /** Set on the row whose grab is held, being sent or in the client. */
+    added?: AddedRow | null;
 }
 
+/** The added row's two slots: the decorative arrow or tick (no stop), then the X where there is one. */
+const AddedActions: FC<{ candidate: ReleaseCandidate; added: AddedRow }> = ({ candidate, added }) => {
+    const { x, onX } = added;
+    const press = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onX();
+    }, [onX]);
+    // The Add slot stays the same button element, so the D-pad does not lose its place; it is no stop now (the X takes focus).
+    return <span className='jfmod-releaseActions jfmod-releaseActions--pressed'>
+        <button type='button' className={actionClass('jfmod-releaseAction--add', added.accepted ? 'done' : 'working')}
+            title={added.accepted ? 'In the Download Queue' : 'Adding…'} aria-hidden='true' tabIndex={-1}
+            data-jfmod-release-add={candidate.releaseId}>
+            <AddGlyph />
+        </button>
+        {x && <button type='button' className={actionClass('jfmod-releaseAction--danger jfmod-releaseAction--x')}
+            title={x === 'cancel' ? 'Cancel' : 'Remove from Queue'}
+            aria-label={x === 'cancel' ? 'Cancel adding ' + candidate.rawTitle : 'Remove ' + candidate.rawTitle + ' from the download queue'}
+            aria-disabled={added.xOff} data-jfmod-release-x={candidate.releaseId} onClick={press}>
+            <RemoveGlyph />
+        </button>}
+    </span>;
+};
+
 /** Add, and Replace where the row offers it: each its own D-pad stop. A rejected row's actions ask first, so they say so. */
-const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, disabled, plan, onGrab, actionState, rejected }) => {
+const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, disabled, plan, onGrab, actionState, rejected, added }) => {
     const off = disabled || !!candidate.heldQuality;
     const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
@@ -339,6 +403,7 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
         event.stopPropagation();
         onGrab(candidate, 'replace', plan);
     }, [candidate, onGrab, plan]);
+    if (added) return <AddedActions candidate={candidate} added={added} />;
     // A held quality has no actions, but keeps their room so the columns do not drift.
     if (candidate.heldQuality) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
     const addState = actionState(candidate.releaseId, 'add');
@@ -346,7 +411,7 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
     const showReplace = plan.choices && plan.replace;
     if (!rejected && !plan.choices) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
     return <span className={classNames('jfmod-releaseActions', { 'jfmod-releaseActions--pressed': addState !== 'idle' || replaceState !== 'idle' })}>
-        <button type='button' className={actionClass(undefined, addState)} title={actionTitle('Add', addState)}
+        <button type='button' className={actionClass('jfmod-releaseAction--add', addState)} title={actionTitle('Add', addState)}
             aria-label={(rejected ? 'Add the rejected release ' + candidate.rawTitle : 'Add ' + candidate.rawTitle + ' beside the files held')}
             aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
             <AddGlyph />
@@ -360,7 +425,13 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
     </span>;
 };
 
-const rowLabel = (candidate: ReleaseCandidate) => qualityText(candidate.parsed) + (candidate.heldQuality ? ', in library' : '')
+const addedLabel = (added: AddedRow | null | undefined) => {
+    if (!added) return '';
+    return ', added' + (added.progress ? ', ' + added.progress.text : '');
+};
+
+const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => qualityText(candidate.parsed)
+    + (candidate.heldQuality ? ', in library' : '') + addedLabel(added)
     + (candidate.eligible ? '' : ', rejected: ' + candidate.rejections.map(rejection => rejection.message).join(' '));
 
 /**
@@ -369,14 +440,17 @@ const rowLabel = (candidate: ReleaseCandidate) => qualityText(candidate.parsed) 
  * focusable for reading, but cannot be grabbed: the server would answer 409 `held_quality` (P6.M6).
  */
 const ReleaseRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search, disabled, plan, onGrab } = props;
-    const off = disabled || !!candidate.heldQuality;
+    const { candidate, search, disabled, plan, onGrab, added } = props;
+    // The added row is never dimmed: it is the one the grab is about.
+    const off = !added && (disabled || !!candidate.heldQuality);
     const activate = useCallback(() => onGrab(candidate, plan.first, plan), [candidate, onGrab, plan]);
-    return <div className='jfmod-releaseItem'>
-        <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate)} onClick={activate}>
-            <RowLines candidate={candidate} search={search} />
+    return <div className={classNames('jfmod-releaseItem', { 'jfmod-releaseItem--added': !!added })}>
+        <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate, added)}
+            data-jfmod-release-row={candidate.releaseId} onClick={activate}>
+            <RowLines candidate={candidate} search={search} added={added} />
         </button>
         <RowActions {...props} rejected={false} />
+        <IndexerLink candidate={candidate} />
     </div>;
 };
 
@@ -386,13 +460,15 @@ const ReleaseRow: FC<ReleaseRowProps> = props => {
  * what the profile rejected it for. Automation never grabs a rejected release.
  */
 const RejectedRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search } = props;
-    return <div className='jfmod-releaseItem jfmod-releaseItem--rejected'>
-        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true' aria-label={rowLabel(candidate)}>
-            <RowLines candidate={candidate} search={search} />
+    const { candidate, search, added } = props;
+    return <div className={classNames('jfmod-releaseItem jfmod-releaseItem--rejected', { 'jfmod-releaseItem--added': !!added })}>
+        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'
+            aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}>
+            <RowLines candidate={candidate} search={search} added={added} />
             <span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>
         </button>
         <RowActions {...props} rejected />
+        <IndexerLink candidate={candidate} />
     </div>;
 };
 
@@ -422,21 +498,20 @@ const confirmationFor = (candidate: ReleaseCandidate, mode: GrabMode | undefined
         primary: 'delete' as const };
 };
 
-const GrabStatus: FC<{ operation: GrabOperation; now: number; cancelling: boolean; onCancel: () => void }> =
-    ({ operation, now, cancelling, onCancel }) => {
+/**
+ * The block under the grabbed row: what is happening and the file name. It has no Cancel of its own; the row's X cancels
+ * (2026-10-12). A grab found again on reopening shows none once the client has it: the tick carries that.
+ */
+const GrabStatus: FC<{ operation: GrabOperation; now: number; adopted: boolean }> =
+    ({ operation, now, adopted }) => {
         // A cancelled grab leaves nothing behind: the block goes and every action is idle again.
-        if (operation.state === 'cancelled') return null;
+        if (operation.state === 'cancelled' || (adopted && operation.state === 'accepted')) return null;
         const seconds = Math.max(0, Math.ceil((Date.parse(operation.holdUntil) - now) / 1000));
         const accepted = operation.state === 'accepted';
         const refused = !accepted && isFinal(operation);
         return <div className={classNames('jfmod-grabStatus', { 'jfmod-grabStatus--ok': accepted, 'jfmod-grabStatus--error': refused })}
             role='status' aria-live='polite'>
-            {operation.state === 'pending' && <>
-                <span>Sending to the download client in {seconds} s.</span>
-                <button type='button' className={raisedButtonClass('jfmod-grabCancel')} aria-disabled={cancelling} onClick={onCancel}>
-                    Cancel
-                </button>
-            </>}
+            {operation.state === 'pending' && <span>Sending to the download client in {seconds} s.</span>}
             {operation.state === 'submitting' && <span>Sending to the download client…</span>}
             {accepted && <span>The download client accepted the torrent.</span>}
             {accepted && operation.openUrl && <a className={flatButtonClass() + ' jfmod-grabOpen'} href={operation.openUrl}
@@ -461,6 +536,9 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     const [now, setNow] = useState(() => Date.now());
     const activating = useRef(false);
     const mounted = useRef(true);
+    // A grab found again from the search's active operation (reopened picker): not started here, so no block once accepted.
+    const [adopted, setAdopted] = useState(false);
+    const adoptedId = useRef<string | null>(null);
     // The operation this picker follows. A response about another operation, or one that would take a finished
     // operation back to an earlier state, is stale and dropped (whole-review chunk 4a, P2 5).
     const current = useRef<GrabOperation | null>(null);
@@ -495,6 +573,8 @@ const useGrab = (api: Api, onChanged?: () => void) => {
     useEffect(() => {
         if (!finalKey) return;
         activating.current = false;
+        // Finding an accepted grab again on reopening changed nothing.
+        if (finalKey === adoptedId.current + ':accepted') return;
         if (finalKey.endsWith(':failed') || finalKey.endsWith(':unknown')) flashFailed();
         onChanged?.();
     }, [finalKey, flashFailed, onChanged]);
@@ -530,6 +610,8 @@ const useGrab = (api: Api, onChanged?: () => void) => {
         activating.current = true;
         const mine = ++attempt.current;
         const isLatest = () => mounted.current && attempt.current === mine;
+        adoptedId.current = null;
+        setAdopted(false);
         setReleaseId(candidate.releaseId);
         setPressed(mode);
         setStarting(true);
@@ -569,7 +651,36 @@ const useGrab = (api: Api, onChanged?: () => void) => {
             });
     }, [api, cancelling, operation, update]);
 
-    return { operation, releaseId, pressed, starting, flash, cancelling, error, now, start, cancel, busy: !!operation && !isFinal(operation) };
+    /**
+     * Follows the search's active operation when this picker follows none (2026-10-12): a grab started earlier, so the row it is
+     * about shows as added after the picker is closed and opened again. A finished one changes nothing.
+     */
+    const adopt = useCallback((id: string) => {
+        if (current.current || activating.current) return;
+        getGrab(api, id).then(found => {
+            if (!mounted.current || current.current || activating.current) return;
+            if (found.state !== 'pending' && found.state !== 'submitting' && found.state !== 'accepted') return;
+            adoptedId.current = found.id;
+            setAdopted(true);
+            setReleaseId(null);
+            setNow(Date.now());
+            follow(found);
+        }).catch(() => undefined);
+    }, [api, follow]);
+
+    /** Lets go of the followed operation once it is removed from the queue or imported: every row is idle again. */
+    const clear = useCallback(() => {
+        current.current = null;
+        activating.current = false;
+        adoptedId.current = null;
+        setOperation(null);
+        setReleaseId(null);
+        setPressed(undefined);
+        setAdopted(false);
+    }, []);
+
+    return { operation, releaseId, pressed, starting, flash, cancelling, error, now, start, cancel, adopt, clear, adopted,
+        busy: !!operation && !isFinal(operation) };
 };
 
 /** What the scope switch chose: an episode id, `season:<n>` or `series`; empty while nothing is chosen. */
@@ -744,6 +855,235 @@ const useEpisodeList = (given: ReleasePickerEpisode[], load: (() => Promise<Rele
     return { episodes: loaded ?? given, loading, listError };
 };
 
+/** `12 min left`, `1 h 5 min left`. */
+const etaText = (seconds: number) => {
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    if (minutes < 60) return minutes + ' min left';
+    const rest = minutes % 60;
+    return Math.floor(minutes / 60) + ' h' + (rest ? ' ' + rest + ' min' : '') + ' left';
+};
+
+const IMPORTING = new Set(['identifying', 'linking', 'scanning']);
+
+/**
+ * The added row's bar and figure from its queue row (§1b): queued, downloading, stalled, importing, failed or blocked. A client
+ * that cannot be read (`unknown`) keeps the last value, dimmed.
+ */
+const progressOf = (row: QueueRow | null, last: QueueRow | null): AddedProgress => {
+    const stale = row?.state === 'unknown';
+    const shown = stale ? last : row;
+    const percent = shown?.progress === null || shown?.progress === undefined ? null : Math.floor(shown.progress * 100);
+    if (!shown || shown.state === 'queued' || percent === null) {
+        return { kind: 'queued', percent: null, text: 'Queued', stale };
+    }
+    if (IMPORTING.has(shown.state)) return { kind: 'importing', percent: 100, text: 'Importing…', stale };
+    if (shown.state === 'stalled') return { kind: 'stalled', percent, text: percent + '% · stalled', stale };
+    if (shown.state === 'failed' || shown.state === 'blocked') {
+        return { kind: 'failed', percent, text: 'Failed · ' + (shown.message ?? shown.reason ?? 'see the download queue'), stale };
+    }
+    return { kind: 'downloading', percent, text: percent + '%' + (shown.etaSeconds ? ' · ' + etaText(shown.etaSeconds) : ''), stale };
+};
+
+interface QueueRead {
+    grabId: string;
+    row: QueueRow | null;
+    /** The last row the client could be read for. */
+    last: QueueRow | null;
+    /** The queue is not open to this user (403): the tick alone, no figure. */
+    denied: boolean;
+}
+
+const findRow = (items: QueueRow[], grabId: string) => items.find(item => item.grabId === grabId) ?? null;
+
+/** A new read of the queue: a row the client could not be read for keeps the last one it could. */
+const nextRead = (previous: QueueRead | null, grabId: string, row: QueueRow | null): QueueRead => {
+    const before = previous?.grabId === grabId ? previous : null;
+    const last = row && row.state !== 'unknown' ? row : null;
+    return { grabId, row: row ?? before?.row ?? null, denied: false, last: last ?? before?.last ?? null };
+};
+
+/**
+ * Reads the added row's download from the queue (§1b): the row whose grab is the one the picker follows, read right after the
+ * client accepted it and every 5 s while the picker is open, until it is imported. One read at a time; no AbortController
+ * (older webOS engines lack it).
+ */
+const useQueueRead = (api: Api, entryId: string, grabId: string | null): QueueRead | null => {
+    const [read, setRead] = useState<QueueRead | null>(null);
+    const current = read && read.grabId === grabId ? read : null;
+    const done = !!current && (current.denied || current.row?.state === 'seeding');
+    useEffect(() => {
+        if (!grabId || done) return;
+        let reading = false;
+        let stopped = false;
+        const apply = (row: QueueRow | null) => setRead(previous => nextRead(previous, grabId, row));
+        const once = () => {
+            if (reading) return;
+            reading = true;
+            getQueue(api, { entryId }).then(list => {
+                if (!stopped) apply(findRow(list.items, grabId));
+            }).catch((error: unknown) => {
+                const status = (error as { response?: { status?: number } } | null)?.response?.status;
+                if (!stopped && status === 403) setRead({ grabId, row: null, last: null, denied: true });
+            }).finally(() => {
+                reading = false;
+            });
+        };
+        once();
+        const timer = window.setInterval(once, 5000);
+        return () => {
+            stopped = true;
+            window.clearInterval(timer);
+        };
+    }, [api, entryId, grabId, done]);
+    return current;
+};
+
+type Grab = ReturnType<typeof useGrab>;
+
+const REMOVE_TEXT = 'Remove this torrent from the download queue? The download stops and the torrent leaves the client. Anything '
+    + 'already downloaded is not deleted.';
+
+/** A grab the added row shows: held, being sent, or in the client. */
+const isLive = (operation: GrabOperation | null): operation is GrabOperation =>
+    !!operation && (operation.state === 'pending' || operation.state === 'submitting' || operation.state === 'accepted');
+
+/** The row a followed grab is about: the one pressed here, else the one with the grab's infohash (found again on reopening). */
+const addedRowId = (operation: GrabOperation, pressedId: string | null, candidates: ReleaseCandidate[]) => {
+    if (pressedId && candidates.some(candidate => candidate.releaseId === pressedId)) return pressedId;
+    const hash = operation.infoHash;
+    return (hash && candidates.find(candidate => candidate.infoHash === hash)?.releaseId) || null;
+};
+
+/**
+ * Pressing Add hands focus to the X, since the Add slot is no stop while added; when the added row goes back to Add (or reads as
+ * in the library) with nothing focused, its row takes focus, so the D-pad never falls to the top of the page.
+ */
+const useAddedFocus = (container: RefObject<HTMLDivElement | null>, addedId: string | null, added: AddedRow | null) => {
+    let phase: string | null = null;
+    if (added) phase = addedId + (added.accepted ? ':accepted' : ':held') + (added.x ?? '');
+    const lastAdded = useRef<string | null>(null);
+    useEffect(() => {
+        const root = container.current;
+        const previous = lastAdded.current;
+        lastAdded.current = addedId;
+        if (!root) return;
+        const active = document.activeElement;
+        const lost = !active || active === document.body;
+        const rowOf = (id: string) => root.querySelector<HTMLElement>('[data-jfmod-release-row="' + id + '"]');
+        if (addedId) {
+            if (active?.getAttribute('data-jfmod-release-add') === addedId || (lost && previous === addedId)) {
+                const target = root.querySelector<HTMLElement>('[data-jfmod-release-x="' + addedId + '"]') ?? rowOf(addedId);
+                if (target) focusManager.focus(target);
+            }
+            return;
+        }
+        const row = previous && lost ? rowOf(previous) : null;
+        if (row) focusManager.focus(row);
+    }, [phase, addedId, container]);
+};
+
+interface AddedViewInput {
+    accepted: boolean;
+    isAdmin: boolean;
+    queue: QueueRead | null;
+    removing: boolean;
+    cancelling: boolean;
+    cancel: () => void;
+    remove: () => void;
+}
+
+/** The added row's slots and download: X cancels during the hold, removes (administrators) once the client has it. */
+const addedView = ({ accepted, isAdmin, queue, removing, cancelling, cancel, remove }: AddedViewInput): AddedRow => {
+    if (!accepted) return { accepted, x: 'cancel', xOff: cancelling, onX: cancel, progress: null };
+    return {
+        accepted,
+        x: isAdmin ? 'remove' : null,
+        xOff: !queue?.row || removing,
+        onX: remove,
+        progress: queue?.denied ? null : progressOf(queue?.row ?? null, queue?.last ?? null)
+    };
+};
+
+interface AddedRowInput {
+    api: Api;
+    entryId: string;
+    data: ReleaseSearch | undefined;
+    grab: Grab;
+    onChanged?: () => void;
+    container: RefObject<HTMLDivElement | null>;
+    /** The one-at-a-time guard the dialog's confirmations share. */
+    confirming: { current: boolean };
+}
+
+/**
+ * The added row (2026-10-12, §1 and §1b): which row the followed grab is about, its tick and X, its download, and what follows
+ * when it is cancelled, removed from the queue or imported (the other rows are free again; an imported row reads as in the
+ * library). The search's active operation is followed again when the picker reopens.
+ */
+const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirming }: AddedRowInput) => {
+    const { operation, adopt, clear, cancel, cancelling } = grab;
+    const isAdmin = !!useApi().user?.Policy?.IsAdministrator;
+    const activeId = data?.grab.activeOperationId ?? null;
+    useEffect(() => {
+        if (activeId) adopt(activeId);
+    }, [activeId, adopt]);
+
+    const live = isLive(operation) ? operation : null;
+    const accepted = live?.state === 'accepted';
+    const addedId = live ? addedRowId(live, grab.releaseId, data?.candidates ?? []) : null;
+    const queue = useQueueRead(api, entryId, accepted && live ? live.id : null);
+    const [released, setReleased] = useState<string[]>([]);
+    const [imported, setImported] = useState<string[]>([]);
+    const [removing, setRemoving] = useState(false);
+    const [removeError, setRemoveError] = useState('');
+    const release = useCallback((id: string) => setReleased(list => (list.includes(id) ? list : [...list, id])), []);
+
+    const cancelledId = operation?.state === 'cancelled' ? operation.id : null;
+    useEffect(() => {
+        if (cancelledId) release(cancelledId);
+    }, [cancelledId, release]);
+
+    // Imported: the row becomes the in-library row, the other rows are free again and the polling stops.
+    const importedNow = queue?.row?.state === 'seeding';
+    useEffect(() => {
+        if (!importedNow || !live) return;
+        if (addedId) setImported(list => [...list, addedId]);
+        release(live.id);
+        clear();
+        onChanged?.();
+    }, [importedNow, live, addedId, release, clear, onChanged]);
+
+    const queueRowId = queue?.row?.id ?? null;
+    const removeFromQueue = useCallback(() => {
+        if (!live || !queueRowId || removing || confirming.current) return;
+        confirming.current = true;
+        const id = live.id;
+        confirm({ title: 'Remove the Torrent', text: REMOVE_TEXT + '<span class="jfmod-confirmName">' + escapeHtml(live.releaseTitle) + '</span>',
+            confirmText: 'Remove', primary: 'delete' }).then(() => {
+            setRemoving(true);
+            setRemoveError('');
+            // The queue page's torrent-only removal: the client forgets the torrent, its files stay on disk, nothing is blocklisted.
+            return removeQueueRow(api, queueRowId, { removeFromClient: true, blocklist: false }).then(() => {
+                release(id);
+                clear();
+                onChanged?.();
+            }, (failure: unknown) => setRemoveError(problemOf(failure, 'It could not be removed. Please try again.').title))
+                .finally(() => setRemoving(false));
+        }, () => undefined).finally(() => {
+            confirming.current = false;
+        });
+    }, [api, clear, confirming, live, onChanged, queueRowId, release, removing]);
+
+    const added = live && addedId ? addedView({ accepted, isAdmin, queue, removing, cancelling, cancel, remove: removeFromQueue }) : null;
+
+    useAddedFocus(container, addedId, added);
+
+    // The search answered "this title already has an active grab" for a grab that has since ended here: rows are free again.
+    const freed = !!data && !data.grab.available && data.grab.reason === 'grab_active' && !!activeId && released.includes(activeId);
+    const view = freed && data ? { ...data, grab: { ...data.grab, available: true, reason: null } } : data;
+    return { added, addedId, imported, removeError, view };
+};
+
 /**
  * The release picker (UX §9, PHASE4 A7): parsed summary plus the raw title, descending scores, a collapsed
  * rejected group with reasons, and one Enter to grab. The server holds a grab before sending it, so a focusable
@@ -808,10 +1148,12 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         });
     }, [resultKey]);
 
-    const data = search.data;
     const { busy, operation, start } = grab;
-    // One Replace confirmation at a time; a second activation while it is open does nothing.
+    // One confirmation at a time (Replace, a rejected release, Remove the Torrent); a second activation while one is open does
+    // nothing.
     const confirming = useRef(false);
+    const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: search.data, grab, onChanged,
+        container, confirming });
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
         if (!data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
@@ -848,14 +1190,18 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || search.isFetching;
     const failedIndexers = data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
-    const status = [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), grab.error]
+    const status = [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), grab.error,
+        removeError]
         .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
     const replaceChoices = Array.from(plans.values()).some(plan => plan.choices && plan.replace);
-    const grabStatus = operation
-        && <GrabStatus operation={operation} now={grab.now} cancelling={grab.cancelling} onCancel={grab.cancel} />;
+    const grabStatus = operation && <GrabStatus operation={operation} now={grab.now} adopted={grab.adopted} />;
+    // The block sits under the row the grab is about: the added row, or the one pressed when the grab failed.
+    const blockRowId = addedId ?? grab.releaseId;
+    // An imported row reads as the in-library row: a green check after the quality and no actions.
+    const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ? { ...candidate, heldQuality: true } : candidate);
 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
@@ -872,7 +1218,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         return operationState === 'accepted' ? 'done' : 'idle';
     }, [flash, grabbedId, operationState, pressed, starting]);
 
-    return <div className='jfmod-releasePicker' ref={container}>
+    return <div className={classNames('jfmod-releasePicker', { 'jfmod-releasePicker--holding': !!added })} ref={container}>
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>
@@ -891,14 +1237,15 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             {unavailable ? '' : 'Partial results: '}
             {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}
         </p>}
-        {/* The grab's status and Cancel stay in view for its whole hold, also when a changed search no longer lists the
-            release it grabbed (whole-review chunk 4a, P2 4). */}
-        {(!grab.releaseId || !eligible.some(candidate => candidate.releaseId === grab.releaseId)) && grabStatus}
+        {/* The grab's status stays in view for its whole hold, also when a changed search no longer lists the release it grabbed
+            (whole-review chunk 4a, P2 4). */}
+        {(!blockRowId || !eligible.some(candidate => candidate.releaseId === blockRowId)) && grabStatus}
         <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
             {eligible.map(candidate => <Fragment key={candidate.releaseId}>
-                <ReleaseRow candidate={candidate} search={data} disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW}
-                    onGrab={onGrab} actionState={actionState} />
-                {grab.releaseId === candidate.releaseId && grabStatus}
+                <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
+                    plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
+                    added={candidate.releaseId === addedId ? added : null} />
+                {blockRowId === candidate.releaseId && grabStatus}
             </Fragment>)}
             {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
         </div>
@@ -906,8 +1253,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
                 {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
             </button>
-            {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={candidate} search={data} disabled={grabDisabled}
-                plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState} />)}
+            {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={shownCandidate(candidate)} search={data}
+                disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
+                added={candidate.releaseId === addedId ? added : null} />)}
         </div>}
     </div>;
 };
