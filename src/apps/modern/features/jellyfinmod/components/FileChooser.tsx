@@ -5,15 +5,18 @@ import { createPortal } from 'react-dom';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
-import { describeVersion, sameItemId } from '../constants/versions';
+import { describeVersion, sameItemId, versionMarks } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
+import { MediaMarks } from './ReleaseRowParts';
 
 import './fileChooser.scss';
+// The media marks' own styles.
+import './releasePicker.scss';
 
 const SOURCE_SELECTOR = '.selectSource';
 const VIDEO_SELECTOR = '.trackSelections .selectVideoContainer';
 /** How long the list takes to slide back before its rows leave the page; matches the stylesheet. */
-const SLIDE_MS = 200;
+const SLIDE_MS = 180;
 
 /** The pin on a file's row: per-file Keep, or the episode's or title's Keep where that is what the plugin offers. */
 export interface PinState {
@@ -153,19 +156,17 @@ interface VideoHost {
     host: HTMLElement | null;
     /** True when the chooser sits inside upstream's Video row; false when that row lists several video streams. */
     inline: boolean;
-    /** Upstream's text for the selected video stream, as its disabled select shows it. */
-    videoText: string;
 }
 
 /**
  * Where the chooser lives (design step 2): inside upstream's Video row, after its select. With one video stream, the row's
- * disabled select is hidden by a mod class on the row while the chooser's trigger shows the same text, so the row reads as
- * one value with a chevron. A file with several video streams keeps upstream's select visible
+ * disabled select is hidden by a mod class on the row and the chooser's trigger takes its place, so the row reads as one
+ * value with a chevron. A file with several video streams keeps upstream's select visible
  * and the chooser takes a row of its own directly above it. Upstream's Version select is hidden only while the chooser is
  * mounted (UX §1.1 exception 2). Nothing here edits upstream's markup beyond these mod classes and the mount.
  */
 const useVideoHost = (view: HTMLElement): VideoHost => {
-    const [state, setState] = useState<VideoHost>({ host: null, inline: true, videoText: '' });
+    const [state, setState] = useState<VideoHost>({ host: null, inline: true });
     useEffect(() => {
         const container = view.querySelector<HTMLElement>(VIDEO_SELECTOR);
         const select = container?.querySelector<HTMLSelectElement>('select');
@@ -181,9 +182,7 @@ const useVideoHost = (view: HTMLElement): VideoHost => {
             else host.classList.add('jfmod-videoChooser--row');
             if (inline) container.classList.add('jfmod-videoHost');
             else container.classList.remove('jfmod-videoHost');
-            const videoText = select.options[select.selectedIndex]?.text ?? '';
-            setState(current => (current.host === host && current.inline === inline && current.videoText === videoText ?
-                current : { host, inline, videoText }));
+            setState(current => (current.host === host && current.inline === inline ? current : { host, inline }));
         };
         place();
         form.classList.add('jfmod-chooserMounted');
@@ -194,7 +193,7 @@ const useVideoHost = (view: HTMLElement): VideoHost => {
             host.remove();
             container.classList.remove('jfmod-videoHost');
             form.classList.remove('jfmod-chooserMounted');
-            setState({ host: null, inline: true, videoText: '' });
+            setState({ host: null, inline: true });
         };
     }, [view]);
     return state;
@@ -268,21 +267,37 @@ interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
     removeDate: string | null;
 }
 
+/**
+ * What a file is, the same on its row and on the closed dropdown (user, 2026-10-12): the mod's resolution word, the release
+ * picker's media marks for its streams, and its size.
+ */
+const FileSummary: FC<{ version: VersionDto }> = ({ version }) => {
+    const text = describeVersion(version);
+    return <>
+        <span className='jfmod-fileResolution'>{text.resolution}</span>
+        <span className='jfmod-fileMarks'><MediaMarks parsed={versionMarks(version)} /></span>
+        {text.size && <span className='jfmod-fileSize'>{text.size}</span>}
+    </>;
+};
+
+/** The file in words, for screen readers: `2160p HEVC E-AC3 2.0 10.3 GB`. */
+const summaryLabel = (version: VersionDto) => {
+    const text = describeVersion(version);
+    return [text.resolution, text.video, text.audio, text.size].filter(Boolean).join(' ');
+};
+
 const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
     const text = describeVersion(version);
-    const details = [text.video, text.audio, text.size].filter(Boolean).join(' · ');
     return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
         <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
             <span className='jfmod-fileBody'>
-                <span className='jfmod-fileResolution'>{text.resolution}</span>
-                {details && <span className='jfmod-fileDetails'>{details}</span>}
+                <FileSummary version={version} />
                 {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
                 {version.tracked === false && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>not tracked yet</span>}
                 {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
                 {!removeDate && text.retention && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{text.retention}</span>}
-                {version.isDefault && <span className='jfmod-fileDefault'>Default</span>}
             </span>
         </button>
         <FileIcons version={version} {...icons} />
@@ -319,7 +334,7 @@ const useSlide = () => {
 const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onAddVersion, onHistory, pin, onPin, canRemove,
     onRemove, removeDate, note }) => {
     const multi = versions.length > 1;
-    const { host, inline, videoText } = useVideoHost(view);
+    const { host, inline } = useVideoHost(view);
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
@@ -348,19 +363,20 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         removable: canRemove(version)
     });
 
-    const triggerText = (inline && videoText) || [describeVersion(selected).resolution, describeVersion(selected).video]
-        .filter(Boolean).join(' ');
     const listId = 'jfmod-fileList-' + (selected?.mediaSourceId ?? 'files');
     return createPortal(<>
         {!inline && <span className='jfmod-chooserLabel'>Version</span>}
         <div className='jfmod-chooserValue'>
             <button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
-                aria-label={`Video: ${triggerText}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`} onClick={toggle}>
-                <span className='jfmod-videoTriggerText'>{triggerText}</span>
+                aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
+                onClick={toggle}>
+                <span className='jfmod-videoTriggerText'><FileSummary version={selected} /></span>
                 <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
             </button>
+            {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
+                was over in two frames opening and waited 140 ms closing). */}
             <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}>
-                {slide.rendered && <>
+                <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
                     {versions.map(version => <FileRow key={version.mediaSourceId} version={version}
                         selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
                         {...iconProps(version)} />)}
@@ -371,7 +387,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                         </button>
                     </div>}
                     {note && <p className='jfmod-fileNote'>{note}</p>}
-                </>}
+                </div>}</div>
             </div>
         </div>
     </>, host);
