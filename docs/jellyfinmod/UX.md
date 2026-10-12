@@ -211,9 +211,15 @@ the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss
 | No file (not downloaded, reclaimed, or unaired with no air date) | amber `#ffb74d` icon (the existing glyph) on a dark 65% disc | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
 | Unaired, with an air date | clock + the short air date: `10 Aug` this year, `Aug ’27` in another (month in the viewer's locale) | not clickable; tooltip *Airs 10 Aug 2026* | the same |
 
-In flight (searching, grabbed, downloading) and the retention countdown keep their marks in the same
-corner until the downloading states are redrawn (next slice). The quiet on-disk mark and the 60 %
-dimming rule above are retired with this change; the file-less cards keep their own dimmed artwork.
+The quiet on-disk mark and the 60 % dimming rule above are retired with this change; the file-less cards
+keep their own dimmed artwork.
+
+**Changed 2026-10-12 (P4.FU1): a download replaces the in-flight marks.** The grabbed arrow and the
+downloading ring with its percentage are gone from `FileStateMark`; a title, season or episode on its way
+shows the download of §3.3 instead, and in the corner that download wins over Not Downloaded and Unaired
+(precedence downloading > Not Downloaded). The magnifier while a title is searched for (no download exists
+yet) and the retention countdown (a file on disk) keep their marks. A user who may not read the queue (403,
+the queue kept to administrators) sees no download on cards or rows.
 
 ### 3.2 Colour
 
@@ -221,6 +227,39 @@ State reads from shape and opacity first, colour second, because the TV is viewe
 metres and the app has a dark theme with a user-set accent. Use the MUI theme's semantic slots,
 never literal hex: `text.secondary` for wanted, `primary` for in flight, `text.disabled` outline
 for archived. Nothing in the catalog introduces a new palette.
+
+### 3.3 Downloads on cards and rows (P4.FU1, user-approved design 2026-10-12)
+
+The sheet *Every Season and Episode*, version 9 with the card corrections: amber `#ffb300` is the app's one
+progress colour, for the picker's added row too (one set of colours in `downloadProgress.scss`: the bar
+`#ffb300`, stalled `#e0a030`, failed `#e53935`; the figure in the light scheme `#9a6700`, stalled `#8d5a00`).
+
+- **Cards, everywhere cards are shown** (library grids, Home rows, search, Continue Watching and Next Up,
+  season cards on the series page, the mod's file-less and missing-season cards): a 0.24em bar along the
+  poster's bottom edge over a dark track, the download in amber beneath and the watched part in the primary
+  on top; no figure. While the card downloads the mod draws both layers, reading the watched value from
+  upstream's own bar, which hides meanwhile (its opaque track would cover the amber); upstream's markup is
+  not changed. A series or season card shows the mean of its episodes on their way (a pack counts once per
+  episode it holds). Queued draws the track alone; importing a full bar. A failed or finished download is
+  not drawn on a card.
+- **The arrow:** while anything in the item is on its way, a white down-arrow bobs inside upstream's count
+  pill, before the number (a class on the stock `.countIndicator`, the arrow drawn by its `::before`, so
+  upstream rewriting the number keeps it); a card with no count (a film, an episode, a missing season, a
+  fully watched series) shows the amber arrow in the dark disc in the top-right corner, before upstream's
+  indicators. The bob is 0.2em every 1.4 s, transform only, and rests under reduced motion.
+- **Rows** (the native and the mod's season page, the library list view and search lists): the bar along
+  the row's bottom edge (0.16em over a faint track) and the figure at the row's end, tabular: *Queued* (track
+  only), *42% · 12 min left*, *42% · stalled*, *Importing…* (a full bar breathing), *Failed · reason* (red, at
+  the last value, and the Not Downloaded button stays beside it so it can be searched again), a client that
+  cannot be read keeps its last value dimmed. The wording is the picker's added row's, from one mapping
+  (`downloadProgress` in `constants/queue.ts`).
+- **TV and phone:** the same; nothing waits for a hover, and a focused card shows no extra figure.
+- **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
+  page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
+  and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
+  batch of new items: its series and numbers); the mod's own carry `data-jfmod-entry-id` with
+  `data-jfmod-season` or `data-jfmod-episode-id`. One component draws them all
+  (`integration/downloadMarks.tsx`, mounted once by the mod shell).
 
 ---
 
