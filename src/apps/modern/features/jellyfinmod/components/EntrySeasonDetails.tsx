@@ -25,6 +25,8 @@ interface EntrySeasonDetailsProps {
     isAdmin: boolean;
     signal: AbortSignal;
     focusOwnership?: FocusOwnership;
+    /** The fresh read of the entry, when the page was drawn from what was known of it (P1.FU16). */
+    update?: Promise<EntryDetail>;
 }
 
 /**
@@ -32,8 +34,13 @@ interface EntrySeasonDetailsProps {
  * season in upstream's header, and the season's episodes as the same mod rows the native season page shows, in upstream's
  * own episode list. Administrators also get Get a Release for the season in the header, as on a native season page.
  */
-const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId, detail: initial, season, view, isAdmin, signal, focusOwnership }) => {
+const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId, detail: initial, season, view, isAdmin, signal, focusOwnership, update }) => {
     const [detail, setDetail] = useState(initial);
+    useEffect(() => {
+        update?.then(fresh => {
+            if (!signal.aborted) setDetail(fresh);
+        }, () => undefined);
+    }, [signal, update]);
     const capabilities = usePluginCapabilities(api, isAdmin);
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
     const reload = useCallback(() => {

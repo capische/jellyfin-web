@@ -4,7 +4,7 @@ import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import layoutManager from 'components/layoutManager';
 
-import { type EntryDetail, getEntries, getEntry, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
+import { type EntryDetail, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
     unkeepEpisode } from '../api/modApi';
 import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
@@ -12,6 +12,7 @@ import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, VERSION_KEEP
 import { type DevicePreference, deleteWarningText, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
     VERSIONS_V1_CAPABILITY } from '../constants/versions';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
+import { entryDetailQuery, entryIdQuery } from '../hooks/useEntries';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { useVersionRemoval } from '../hooks/useVersionRemoval';
 import { registerMoreMenuItem } from '../integration/moreMenuItem';
@@ -381,22 +382,20 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const canAcquire = isAdmin && capabilities.includes(RELEASES_CAPABILITY);
     const { lookupId, seasonOf } = pageLookup(itemId, itemType, seriesId, seasonNumber);
     const queryClient = useQueryClient();
-    const detailKey = ['JellyfinMod', api.basePath, userId, 'NativeDetail', itemId];
-    const detail = useQuery({
-        queryKey: detailKey,
-        queryFn: async ({ signal }) => {
-            // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14).
-            const entries = await getEntries(api, { jellyfinItemId: lookupId, limit: 1 }, { signal });
-            const entry = entries.items[0];
-            return entry ? getEntry(api, entry.id, { signal }) : null;
-        },
-        retry: false
-    });
-    const { data, refetch } = detail;
+    // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14). The entry is kept by its id, so
+    // a season page after its series' page (or any page seen before) draws at once while it refreshes (P1.FU16); the route
+    // started both reads before this mounted (integration/nativeEntryDetails).
+    const entryId = useQuery(entryIdQuery(api, userId, lookupId)).data ?? undefined;
+    const detailOptions = entryDetailQuery(api, userId, entryId ?? '');
+    const detailKey = detailOptions.queryKey;
+    const detail = useQuery({ ...detailOptions, enabled: !!entryId });
+    const { data } = detail;
+    const refetch = detail.refetch;
     const { episode, isSeasonPage, isSeriesPage, isFilePage } = pageKind(data, itemId, seasonOf);
-    // Anyone opening a series or season page of a series whose TMDB list was never loaded loads it (P1.FU9), quietly.
-    useEpisodeListLoad(api, isSeriesPage || isSeasonPage ? data : null, () => {
-        refetch().catch(() => undefined);
+    // Anyone opening a series or season page of a series whose TMDB list was never loaded loads it (P1.FU9), quietly; its
+    // answer is the entry's new detail, drawn straight away.
+    useEpisodeListLoad(api, isSeriesPage || isSeasonPage ? data : null, loaded => {
+        queryClient.setQueryData(detailKey, loaded);
     });
     const stockIds = useStockSourceIds(view);
     // Only files Jellyfin still lists for this item: a binding left on an item Jellyfin re-created is not a file here.
@@ -452,18 +451,18 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const preferred = usePreferredVersion(api, userId, itemId, versions, capabilities);
     const afterRemove = useCallback((removed: VersionDto) => {
         // The page's data was refetched by the removal; the page moves on from what the plugin now lists.
-        leaveAfterRemove(serverId, itemId, queryClient.getQueryData<EntryDetail | null>(detailKey), episode, removed);
+        leaveAfterRemove(serverId, itemId, queryClient.getQueryData<EntryDetail>(detailKey), episode, removed);
     // detailKey is rebuilt from these values on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [api.basePath, episode, itemId, queryClient, serverId, userId]);
+    }, [api.basePath, entryId, episode, itemId, queryClient, serverId, userId]);
     const remove = useVersionRemoval({ api, entryId: data?.entry.id, mediaType: data?.entry.mediaType, busy, change,
         onRemoved: afterRemove });
     const canRemove = useCallback((version: VersionDto) => isAdmin && capabilities.includes(VERSIONS_REMOVE_CAPABILITY)
         && !!version.removable && version.tracked !== false, [capabilities, isAdmin]);
     const { pin, onPin } = usePins({ api, data, episode, capabilities, isAdmin, change });
     const refreshAfterPlayed = useCallback(() => {
-        refetch().catch(() => undefined);
-    }, [refetch]);
+        if (entryId) refetch().catch(() => undefined);
+    }, [entryId, refetch]);
     usePlayedRefresh(view, refreshAfterPlayed);
     const { retention, removeDate } = usePageRetention(view, isFilePage ? data : null, episode, versions);
     const showHistory = useCallback((version: VersionDto, anchor: HTMLElement) => setHistoryFor({ anchor, version }), []);

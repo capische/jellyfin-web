@@ -4,9 +4,11 @@ import loading from 'components/loading/loading';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
+import { queryClient } from 'utils/query/queryClient';
 import { renderComponent } from 'utils/reactUtils';
 
 import { getEntry } from '../api/modApi';
+import { entryDetailQuery } from '../hooks/useEntries';
 import EntryDetails from '../components/EntryDetails';
 import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
@@ -68,7 +70,16 @@ export default function initializeEntryDetails(view, params) {
         abort = new RequestAbortController();
         loading.show();
         try {
-            const [detail, user] = await Promise.all([getEntry(api, params.entryId, { signal: abort.signal }), client.getCurrentUser()]);
+            const detailKey = entryDetailQuery(api, client.getCurrentUserId(), params.entryId).queryKey;
+            const read = getEntry(api, params.entryId, { signal: abort.signal }).then(fresh => {
+                queryClient.setQueryData(detailKey, fresh);
+                return fresh;
+            });
+            // The mod's season and episode pages open from their series' cards and rows, whose entry was just read: they draw
+            // from it at once and take the fresh read when it lands (P1.FU16). Every other page waits for the read.
+            const known = params.season !== undefined ? queryClient.getQueryData(detailKey) : undefined;
+            if (known) read.catch(() => undefined);
+            const [detail, user] = await Promise.all([known ?? read, client.getCurrentUser()]);
             if (currentGeneration !== generation) return;
             // `season=N` is the mod's page for a season Jellyfin has no item for (P1.FU11): it stays, file or no file.
             const season = Number(params.season);
@@ -77,12 +88,21 @@ export default function initializeEntryDetails(view, params) {
             // episode, its own page opens instead.
             const episodeNumber = Number(params.episode);
             const isEpisode = isSeason && params.episode !== undefined && Number.isInteger(episodeNumber) && episodeNumber >= 0;
-            const held = isEpisode ? detail.episodes.find(episode => episode.seasonNumber === season
-                && episode.episodeNumber === episodeNumber && episode.availability === 'onDisk' && episode.jellyfinItemId) : undefined;
+            const heldIn = current => (isEpisode ? current.episodes.find(episode => episode.seasonNumber === season
+                && episode.episodeNumber === episodeNumber && episode.availability === 'onDisk' && episode.jellyfinItemId) : undefined);
+            const openHeld = held => window.location.replace('#/details?id=' + encodeURIComponent(held.jellyfinItemId)
+                + '&serverId=' + encodeURIComponent(client.serverId()));
+            const held = heldIn(detail);
             if (held) {
-                window.location.replace('#/details?id=' + encodeURIComponent(held.jellyfinItemId)
-                    + '&serverId=' + encodeURIComponent(client.serverId()));
+                openHeld(held);
                 return;
+            }
+            // Drawn from what was known: an episode Jellyfin has had since then opens its own page all the same.
+            if (known && isEpisode) {
+                read.then(fresh => {
+                    const now = heldIn(fresh);
+                    if (now && currentGeneration === generation) openHeld(now);
+                }, () => undefined);
             }
             if (detail.entry.jellyfinItemId && !isSeason) {
                 window.location.replace('#/details?id=' + encodeURIComponent(detail.entry.jellyfinItemId)
@@ -97,7 +117,7 @@ export default function initializeEntryDetails(view, params) {
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
             const seasonProps = { api, userId: client.getCurrentUserId(), serverId: client.serverId(), detail, season, view,
-                isAdmin: !!user.Policy?.IsAdministrator, signal: abort.signal, focusOwnership: ownership };
+                isAdmin: !!user.Policy?.IsAdministrator, signal: abort.signal, focusOwnership: ownership, update: known ? read : undefined };
             const render = () => {
                 if (isEpisode) return renderComponent(EntryEpisodeDetails, { ...seasonProps, episodeNumber }, renderMount);
                 if (isSeason) return renderComponent(EntrySeasonDetails, seasonProps, renderMount);
