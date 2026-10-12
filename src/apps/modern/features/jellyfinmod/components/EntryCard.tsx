@@ -1,5 +1,4 @@
 import React, { type FC, type MouseEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import CardBox from 'components/cardbuilder/Card/CardBox';
 import useCard from 'components/cardbuilder/Card/useCard';
@@ -13,7 +12,7 @@ import { useQueueVisible } from '../hooks/useQueue';
 import { openInFlightCardMenu } from '../integration/queueActions';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
-import FileStateMark from './FileStateMark';
+import FileStateMark, { CardMarkSlot } from './FileStateMark';
 
 import 'components/cardbuilder/card.scss';
 import './entryCard.scss';
@@ -26,33 +25,16 @@ interface EntryCardProps {
     alwaysShowCountdown?: boolean;
 }
 
-/**
- * Anchor within the actual cover so footer lengths and image shapes cannot shift the mark. Top-right (UX §3.1), just before
- * upstream's indicator cluster (played tick, count), so it never sits on them: the cluster's width, re-read when its content
- * changes, moves the mark left. It sits outside the image so the desktop hover overlay does not cover the administrator's
- * button.
- */
+/** Anchored in the actual cover, so footer lengths and image shapes cannot shift the mark; placed by `CardMarkSlot` (UX §3.1). */
 const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; alwaysShowCountdown?: boolean }> = ({ entry, retention, alwaysShowCountdown }) => {
     const anchor = useRef<HTMLSpanElement>(null);
     const [cover, setCover] = useState<Element | null>(null);
-    const [offset, setOffset] = useState(0);
     useLayoutEffect(() => {
-        const card = anchor.current?.parentElement;
-        setCover(card?.querySelector('.cardScalable') ?? null);
-        const indicators = card?.querySelector<HTMLElement>('.cardIndicators');
-        if (!indicators) return;
-        const measure = () => setOffset(indicators.offsetWidth);
-        measure();
-        const observer = new MutationObserver(measure);
-        observer.observe(indicators, { childList: true, subtree: true });
-        return () => observer.disconnect();
+        setCover(anchor.current?.parentElement?.querySelector('.cardScalable') ?? null);
     }, []);
-    const side = document.documentElement.getAttribute('dir') === 'rtl' ? 'left' : 'right';
-    return <><span ref={anchor} hidden />{cover && createPortal(
-        <div className='jfmod-markSlot' style={offset ? { [side]: `calc(0.475em + ${offset}px)` } : undefined}>
-            <FileStateMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
-        </div>, cover
-    )}</>;
+    return <><span ref={anchor} hidden />{cover && <CardMarkSlot cover={cover}>
+        <FileStateMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
+    </CardMarkSlot>}</>;
 };
 
 const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, nativeItem, cardOptions, retention, alwaysShowCountdown }) => {

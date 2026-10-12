@@ -18,9 +18,20 @@ interface Props {
 function NativeEntryList({ row, index, listOptions, alwaysShowCountdown }: Readonly<{ row: Extract<BrowseRow, { kind: 'native' }>; index: number; listOptions: ListOptions; alwaysShowCountdown?: boolean }>) {
     const anchor = useRef<HTMLDivElement>(null);
     const [cover, setCover] = useState<Element | null>(null);
-    // The mark sits at the row's end (UX §3.1, P1.FU11): the last item of the row's flex line.
+    // The mark sits at the row's end (UX §3.1, P1.FU11): the last item of the row's flex line, or just before upstream's buttons
+    // when the row has them, so it comes first and the played check after it (P1.FU17).
     useLayoutEffect(() => {
-        setCover(anchor.current?.querySelector('.listItem-content') ?? anchor.current?.querySelector('.listItem') ?? null);
+        const content = anchor.current?.querySelector('.listItem-content') ?? anchor.current?.querySelector('.listItem') ?? null;
+        const buttons = content?.querySelector(':scope > .listViewUserDataButtons');
+        if (!content || !buttons) {
+            setCover(content);
+            return;
+        }
+        const host = document.createElement('div');
+        host.className = 'jfmod-rowMarkHost';
+        content.insertBefore(host, buttons);
+        setCover(host);
+        return () => host.remove();
     }, [listOptions.image]);
     return <div ref={anchor}>
         <List index={index} item={row.nativeItem} listOptions={listOptions} />

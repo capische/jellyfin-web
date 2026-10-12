@@ -74,6 +74,15 @@
     color: #ffb74d;
 }
 
+/* Its glyph, a download arrow out of a small cloud (P1.FU17, design A), is stroked: a little lighter on a row's larger glyph. */
+.jfmod-markGlyph {
+    stroke-width: 2.3;
+}
+
+.jfmod-mark--row .jfmod-markGlyph {
+    stroke-width: 2.1;
+}
+
 .jfmod-mark--unaired {
     color: rgba(255, 255, 255, 0.8);
 }

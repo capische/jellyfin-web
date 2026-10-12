@@ -16,7 +16,7 @@ import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import type { EntryEpisode } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
-import FileStateMark, { type MarkDownload } from './FileStateMark';
+import FileStateMark, { CardMarkSlot, type MarkDownload } from './FileStateMark';
 
 import './missingChildren.scss';
 
@@ -177,6 +177,52 @@ const missingSeasons = (episodes: EntryEpisode[], held: Set<number>) => {
     return Array.from(bySeason).sort(([a], [b]) => a - b);
 };
 
+type SeasonCover = [number, Element];
+
+const sameCovers = (a: SeasonCover[], b: SeasonCover[]) =>
+    a.length === b.length && a.every(([season, cover], index) => season === b[index][0] && cover === b[index][1]);
+
+/**
+ * The covers of upstream's own season cards in the list, by season number, found again whenever upstream redraws the list (it
+ * replaces its cards, so a mark drawn into an old cover would be gone).
+ */
+const useNativeSeasonCovers = (container: Element | null, natives: NativeOrder) => {
+    const [covers, setCovers] = useState<SeasonCover[]>([]);
+    const latest = useRef(natives);
+    latest.current = natives;
+    const nativeKey = Array.from(natives).join(',');
+    useLayoutEffect(() => {
+        if (!container) return;
+        const read = () => {
+            const found: SeasonCover[] = [];
+            for (const card of Array.from(container.children)) {
+                if (card.classList.contains('jfmod-missingSlot')) continue;
+                const season = latest.current.get(normalId(card.getAttribute('data-id') ?? ''));
+                const cover = card.querySelector('.cardScalable');
+                if (season !== undefined && cover) found.push([season, cover]);
+            }
+            setCovers(old => (sameCovers(old, found) ? old : found));
+        };
+        read();
+        const observer = new MutationObserver(read);
+        observer.observe(container, { childList: true });
+        return () => observer.disconnect();
+    }, [container, nativeKey]);
+    return covers;
+};
+
+/**
+ * The mark on one of upstream's own season cards (P1.FU17, user-approved 2026-10-12): Not Downloaded when none of the season's
+ * episodes is on disk, whatever its watched state (Jellyfin keeps a season item for an empty folder and calls it played), the
+ * Unaired clock when every episode is unaired with a date; nothing when one is on disk, or when the entry lists no episode of
+ * that season. Specials are not offered, as for the missing seasons.
+ */
+const nativeSeasonMark = (season: number, episodes: EntryEpisode[]) => {
+    const own = episodes.filter(episode => episode.seasonNumber === season);
+    if (season <= 0 || !own.length || own.some(episode => episode.availability === 'onDisk')) return null;
+    return seasonMark(own);
+};
+
 /** The `#/details?entryId=…&season=N` route: the mod's page for a season Jellyfin does not have (P1.FU11). */
 export const seasonPath = (entryId: string, season: number, serverId: string) => getEntryPath(entryId, serverId) + '&season=' + season;
 
@@ -195,7 +241,10 @@ interface SeasonCardsProps {
     onChanged: () => void;
 }
 
-/** The native series page's Seasons row: one mod card per plugin season with no Jellyfin season item. */
+/**
+ * The native series page's Seasons row: one mod card per plugin season with no Jellyfin season item, and the mark on upstream's
+ * own season cards whose season has no file (P1.FU17).
+ */
 export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId, view, seriesItemId, detail, canAcquire, onChanged }) => {
     const container = useChildrenContainer(view);
     // Started by the route with the page's entry (P1.FU16).
@@ -225,16 +274,23 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
         return element;
     }, [detail.entry.id, serverId]);
     const elements = useOrderedSlots(container, slots, natives, make);
+    const covers = useNativeSeasonCovers(container, natives);
     const pickerFor = usePickerFor(api, detail, onChanged);
     // A season is searched as a pack, as on its own page: only where the plugin serves packs.
     const packs = usePluginCapabilities(api, canAcquire).includes(PACKS_CAPABILITY);
+    const downloadFor = (season: number) => (canAcquire && packs ?
+        { label: 'Download This Season', open: pickerFor({ seasonNumber: season }) } : null);
     return <>{missing.map(([season, episodes]) => {
         const element = elements.get(String(season));
         if (!element) return null;
-        const download = canAcquire && packs ? { label: 'Download This Season', open: pickerFor({ seasonNumber: season }) } : null;
         const posterPath = detail.entry.metadata?.seasons.find(candidate => candidate.number === season)?.posterPath;
-        return createPortal(<MissingSeasonCard season={season} posterPath={posterPath} episodes={episodes} download={download}
+        return createPortal(<MissingSeasonCard season={season} posterPath={posterPath} episodes={episodes} download={downloadFor(season)}
             href={'#' + seasonPath(detail.entry.id, season, serverId)} />, element, 'season:' + season);
+    })}{covers.map(([season, cover]) => {
+        const mark = nativeSeasonMark(season, detail.episodes);
+        return mark && <CardMarkSlot key={'native:' + season} cover={cover}>
+            <FileStateMark state={mark.state} airDate={mark.airDate} download={mark.state === 'missing' ? downloadFor(season) : null} />
+        </CardMarkSlot>;
     })}</>;
 };
 
