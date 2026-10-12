@@ -1,0 +1,44 @@
+/* JellyfinMod — every season and episode on the native pages (P1.FU11, design approved 2026-10-12).
+ *
+ * The mod's cards and rows sit inside upstream's list and take upstream's own card and list-row classes for their size and
+ * footer; these rules draw only what is the mod's: the dashed placeholder with the number, and the row's end slot. Sized in
+ * `em` for TV's 125% and mobile's 90% root.
+ */
+
+.jfmod-missingPoster {
+    align-items: center;
+    justify-content: center;
+    background: #262626;
+    outline: 1px dashed rgba(255, 255, 255, 0.14);
+    outline-offset: -1px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.jfmod-missingNumber {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.14);
+    font-variant-numeric: tabular-nums;
+}
+
+/* A row has nothing to play or open: no pointer, and it is no focus stop (its administrator's icon is). */
+.jfmod-missingRow {
+    cursor: default;
+}
+
+.jfmod-missingStill {
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.2em;
+    background: #262626;
+    outline: 1px dashed rgba(255, 255, 255, 0.14);
+    outline-offset: -1px;
+}
+
+.jfmod-missingRowEnd {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 0 0.5em;
+}
