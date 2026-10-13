@@ -124,7 +124,7 @@ const seasonRow = async (page, numbers) => {
         const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
         return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
             const mod = card.classList.contains('jfmod-missingSlot');
-            const mark = card.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
+            const mark = card.querySelector('.jfmod-mark');
             const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
             const box = mark?.getBoundingClientRect();
             const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
@@ -160,7 +160,7 @@ const episodeList = async (page, numbers) => {
         const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
         return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
             const mod = row.classList.contains('jfmod-missingRow');
-            const mark = row.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
+            const mark = row.querySelector('.jfmod-mark');
             const overview = row.querySelector('.listItem-overview');
             const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
             return {
@@ -509,20 +509,27 @@ const queueRow = (entry, { episode = null, pack = null, progress }) => ({
     versionLabel: null, intent: 'acquire', createdAt: now(), updatedAt: now(), client: null, seeding: null, pack
 });
 
-/** What an upstream season card shows of a download: the bar, the arrow (pill or disc) and whether a mark is visible. */
+/**
+ * What an upstream season card shows of a download: the bar, the download disc (P4.FU6: the arrow and the arc, left of upstream's
+ * plain count pill, which carries no arrow) and whether a mark is visible.
+ */
 const seasonDownloadView = (page, itemId) => page.evaluate(id => {
     const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
         .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
     if (!card) return null;
     const frame = card.querySelector('.cardScalable');
     const bar = frame?.querySelector('.jfmod-dlCardBar');
-    const disc = frame?.querySelector('.jfmod-dlDisc');
-    const pill = frame?.querySelector('.countIndicator.jfmod-countArrow');
+    const disc = frame?.querySelector('.jfmod-dlmark');
+    const pill = frame?.querySelector('.countIndicator');
     const none = frame?.querySelector('.jfmod-mark--none');
+    const pillBox = pill?.getBoundingClientRect();
+    const discBox = disc?.getBoundingClientRect();
     return {
         bar: !!bar && bar.getBoundingClientRect().height > 0,
         percent: bar ? parseFloat(bar.querySelector('.jfmod-dlBar-fill')?.style.width ?? '') : null,
-        arrow: (pill && 'pill') || (disc && disc.getBoundingClientRect().width > 0 && 'disc') || null,
+        arrow: disc && discBox.width > 0 && disc.classList.contains('jfmod-dlmark--downloading') ? 'disc' : null,
+        // Two icons: the disc left of the count pill, never inside it.
+        twoIcons: !pill || (!!discBox && discBox.right <= pillBox.left + 1 && !pill.querySelector('.jfmod-dlmark')),
         noneVisible: !!none && getComputedStyle(none).display !== 'none'
     };
 }, itemId);
@@ -567,11 +574,11 @@ async function checkSeasonDownloads(page, label, detail, seriesId, seasons) {
         for (const season of seasons.filter(candidate => candidate.number > 0)) {
             const view = await seasonDownloadView(page, season.id.replace(/-/g, '').toLowerCase());
             if (season === empty) {
-                record(label, `upstream Season ${season.number} card (no file${season.seriesId === seriesId ? '' : ', under another Jellyfin series item'}) with a season pack: the bar at 40% and the arrow, Not Downloaded hidden`,
-                    !!view?.bar && view.percent === 40 && !!view.arrow && !view.noneVisible, view);
+                record(label, `upstream Season ${season.number} card (no file${season.seriesId === seriesId ? '' : ', under another Jellyfin series item'}) with a season pack: the bar at 40% and the disc, Not Downloaded hidden`,
+                    !!view?.bar && view.percent === 40 && !!view.arrow && view.twoIcons && !view.noneVisible, view);
             } else if (season === partial && partialEpisode) {
-                record(label, `upstream Season ${season.number} card (files, E${partialEpisode.episodeNumber} downloading): the bar at 60% and the arrow`,
-                    !!view?.bar && view.percent === 60 && !!view.arrow, view);
+                record(label, `upstream Season ${season.number} card (files, E${partialEpisode.episodeNumber} downloading): the bar at 60% and the disc left of the plain count pill`,
+                    !!view?.bar && view.percent === 60 && !!view.arrow && view.twoIcons, view);
             } else {
                 record(label, `upstream Season ${season.number} card: no download`, !!view && !view.bar && !view.arrow, view);
             }
@@ -833,7 +840,7 @@ async function run(browser, layout, user, admin) {
             const card = page.locator(`.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`).first();
             await card.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
             const mark = await card.evaluate(node => {
-                const found = node.querySelector('.jfmod-mark:not(.jfmod-dlDisc)');
+                const found = node.querySelector('.jfmod-mark');
                 return found ? { kind: found.classList.contains('jfmod-mark--none') ? 'none' : 'other', tag: found.tagName, title: found.getAttribute('title') } : null;
             }).catch(() => null);
             await checkMark(page, label, `${movie.entry.title} search card`, mark, { kind: 'none' }, canDownload, 'Download This Movie');
