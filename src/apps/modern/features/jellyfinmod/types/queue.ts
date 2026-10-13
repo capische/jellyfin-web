@@ -1,3 +1,4 @@
+import type { ParsedRelease } from './acquisition';
 import type { AutomationSummary } from './versions';
 
 /**
@@ -89,6 +90,10 @@ export interface QueueRow {
     admin?: QueueAdminDetail;
     /** A season or series pack's one row; `episode` is then null. Absent from plugins without `acquisition.packs`. */
     pack?: QueuePack | null;
+    /** The release as the picker parsed it when it was grabbed (P1.FU20); absent from older plugins, null when none was kept. */
+    parsed?: ParsedRelease | null;
+    /** The indexer the release came from (P1.FU20); absent from older plugins. */
+    indexerName?: string | null;
 }
 
 /** One claimed episode of a pack and its newest import, if one has started. */

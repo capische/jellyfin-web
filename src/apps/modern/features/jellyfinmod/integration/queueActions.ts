@@ -1,6 +1,8 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import escapeHtml from 'escape-html';
 
 import actionsheet from 'components/actionSheet/actionSheet';
+import confirm from 'components/confirm/confirm';
 import dialogHelper from 'components/dialogHelper/dialogHelper';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
@@ -56,6 +58,17 @@ export const confirmQueueRemoval = (row: QueueRow): Promise<RemoveQueueRequest |
     });
     return dialogHelper.open(dlg).then(() => result, () => result);
 };
+
+const REMOVE_TEXT = 'Remove this torrent from the download queue? The download stops and the torrent leaves the client. Anything '
+    + 'already downloaded is not deleted.';
+
+/**
+ * The torrent-only removal's confirmation (2026-10-12): the release picker's added-row X and a missing episode's Cancel Download
+ * (P1.FU20) ask the same question. Resolves when confirmed, rejects when declined.
+ */
+export const confirmTorrentRemoval = (releaseTitle: string): Promise<void> =>
+    confirm({ title: 'Remove the Torrent', text: REMOVE_TEXT + '<span class="jfmod-confirmName">' + escapeHtml(releaseTitle) + '</span>',
+        confirmText: 'Remove', primary: 'delete' });
 
 interface RowMenuOptions {
     api: Api;
