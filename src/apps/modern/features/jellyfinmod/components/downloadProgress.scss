@@ -90,8 +90,8 @@
 
 .jfmod-dlMeta--stale { opacity: 0.55; }
 
-/* A failure takes the Not Downloaded mark's place on a row (an indicator since P1.FU19; a button that searches again while
- * MARK_CLICKABLE is on): a red bang instead of the cloud, never both, at the row glyph's size. */
+/* A failure takes the Not Downloaded mark's place on a row, an indicator (since P1.FU22 an administrator's button there is
+ * disabled meanwhile): a red bang instead of the cloud, never both, at the row glyph's size. */
 .jfmod-dlRow--failed .jfmod-mark--none {
     color: #ff5a4f;
 

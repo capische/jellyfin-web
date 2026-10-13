@@ -16,7 +16,10 @@ import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 
 import './fileStateMark.scss';
 
-/** What the Not Downloaded mark opens for an administrator: its tooltip (Title Case) and the picker in that scope. */
+/**
+ * What the Not Downloaded mark opens for an administrator: its name (Title Case; on a row the button's accessible name, the
+ * tooltip staying *Not Downloaded*) and the picker in that scope.
+ */
 export interface MarkDownload {
     label: string;
     open: (button: HTMLElement) => void;
@@ -99,9 +102,11 @@ export const useEntryDownload = (entry: Entry | undefined, wanted: boolean): Mar
 
 /**
  * The administrator's round button. Its click is taken natively on the button and goes no further, so neither the card's
- * link, the card's own click, nor upstream's item container (which acts on the card around it) sees it.
+ * link, the card's own click, nor upstream's item container (which acts on the card around it) sees it. `tooltip` replaces the
+ * name as its tooltip (a row's reads *Not Downloaded*, its name *Get a Release for …*).
  */
-const MarkButton: FC<{ className: string; download: MarkDownload; children: ReactNode }> = ({ className, download, children }) => {
+const MarkButton: FC<{ className: string; download: MarkDownload; tooltip?: string; children: ReactNode }> = ({ className, download,
+    tooltip, children }) => {
     const ref = useRef<HTMLButtonElement>(null);
     const openRef = useRef(download.open);
     openRef.current = download.open;
@@ -115,12 +120,14 @@ const MarkButton: FC<{ className: string; download: MarkDownload; children: Reac
         };
         button.addEventListener('click', onClick);
         // On the TV a card is itself a focus stop and the icon sits inside it, where spatial navigation never lands: Up on the
-        // card goes to its icon and Down on the icon back to the card, before the page's own D-pad handling sees the key. A
-        // missing episode's row (a stop since P1.FU15) holds its icon at its end: Right goes to it and Left back.
-        const card = layoutManager.tv ? button.closest<HTMLElement>('button.card, button.jfmod-missingRow') : null;
-        const [into, back] = card?.classList.contains('jfmod-missingRow') ? ['ArrowRight', 'ArrowLeft'] : ['ArrowUp', 'ArrowDown'];
+        // card goes to its icon and Down on the icon back to the card, before the page's own D-pad handling sees the key. A row
+        // (a missing episode's, a stop since P1.FU15, or a library list row) holds its icon at its end: Right goes to it and Left
+        // back. Not into an icon that is hidden (a download on its way) or disabled (a failure, an indicator).
+        const card = layoutManager.tv ? button.closest<HTMLElement>('button.card, button.listItem') : null;
+        const [into, back] = card?.classList.contains('listItem') ? ['ArrowRight', 'ArrowLeft'] : ['ArrowUp', 'ArrowDown'];
         const hop = (event: KeyboardEvent, key: string, from: HTMLElement, to: HTMLElement) => {
             if (event.key !== key || event.target !== from) return;
+            if (to === button && (button.disabled || !button.getClientRects().length)) return;
             event.preventDefault();
             event.stopPropagation();
             focusManager.focus(to);
@@ -135,7 +142,7 @@ const MarkButton: FC<{ className: string; download: MarkDownload; children: Reac
             button.removeEventListener('keydown', down);
         };
     }, []);
-    return <button ref={ref} type='button' className={className + ' jfmod-markButton'} title={download.label}
+    return <button ref={ref} type='button' className={className + ' jfmod-markButton'} title={tooltip ?? download.label}
         aria-label={download.label}>{children}</button>;
 };
 
@@ -161,6 +168,12 @@ const busyMark = (entry: Entry | undefined, countdown: number | null, base: stri
     return null;
 };
 
+/** The button's download: an entry's own (named for the title), else the one given; null for an indicator. */
+const markAction = (entry: Entry | undefined, entryDownload: MarkDownload | null, download: MarkDownload | null | undefined) => {
+    if (entry) return entryDownload && { ...entryDownload, label: 'Get a Release for ' + entry.title };
+    return download ?? null;
+};
+
 /**
  * The one set of marks on cards and rows (UX §3.1, P1.FU11): nothing for on disk; the amber Not Downloaded icon, a button
  * for administrators that opens the release picker in its scope and a plain indicator for everyone else; the clock with the
@@ -170,7 +183,8 @@ const busyMark = (entry: Entry | undefined, countdown: number | null, base: stri
 const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCountdown = false, state, airDate, download,
     interactive = true, variant = 'card' }) => {
     const mark = entry ? entryMark(entry) : state ?? null;
-    const entryDownload = useEntryDownload(entry, MARK_CLICKABLE && interactive && mark === 'missing');
+    const clickable = MARK_CLICKABLE[variant];
+    const entryDownload = useEntryDownload(entry, clickable && interactive && mark === 'missing');
     const days = entry ? daysUntilReclaim(retentionDeadline(retention)) : null;
     const base = classNames('jfmod-mark', { 'jfmod-mark--row': variant === 'row' });
     const busy = busyMark(entry, days !== null && (alwaysShowCountdown || days <= 3) ? days : null, base);
@@ -186,11 +200,12 @@ const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCou
     }
     if (!mark) return null;
 
-    // A plain indicator for everyone while MARK_CLICKABLE is off (P1.FU19).
-    let action: MarkDownload | null | undefined = null;
-    if (MARK_CLICKABLE) action = entry ? entryDownload : download;
+    // A plain indicator for everyone on cards (P1.FU19); on rows the administrator's button (P1.FU22), named for what it gets and
+    // keeping the indicator's tooltip.
+    const action = clickable ? markAction(entry, entryDownload, download) : null;
     if (action) {
-        return <MarkButton className={base + ' jfmod-mark--none'} download={action}><NotDownloadedGlyph /></MarkButton>;
+        return <MarkButton className={base + ' jfmod-mark--none'} download={action}
+            tooltip={variant === 'row' ? 'Not Downloaded' : undefined}><NotDownloadedGlyph /></MarkButton>;
     }
     return (
         <div className={base + ' jfmod-mark--none'} title='Not Downloaded'>
