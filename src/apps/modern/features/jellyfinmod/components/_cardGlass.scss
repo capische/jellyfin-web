@@ -1,0 +1,54 @@
+/* The card marks' glass (P4.FU7, user-approved 2026-10-13: "switch from yellow to white card glyph, and use top bar's exact
+ * recipe"). One recipe for every mark on a poster (the download state disc, Not Downloaded, Unaired), with the top bar's values
+ * from homeChrome.scss: the theme's bar colour at 12 % over a 12px blur, saturate 180 %, contrast 0.7, brightness 0.85; the
+ * light scheme 20 % with saturate 170 % and brightness 1.1; Apple TV's lightened bar colour at 30 % with brightness 1.15. The
+ * bar's colour is the theme's `--jf-palette-AppBar-defaultBg` (MUI's own `--AppBar-background` exists only on the bar itself).
+ * The glyph and the arc take the bar's text colour: white, the light schemes' dark text on theirs; a failure stays red.
+ *
+ * The solid disc (black 66 %, white glyph) stays for an engine without backdrop-filter or color-mix() and for the TV layout,
+ * where the bar itself stays blur-free (full-width blur cost the D-pad scrolling on webOS; a disc each in a grid is no better
+ * known). Autoprefixer adds the -webkit- forms, as for the bar. Three custom properties carry the glyph's colours, so a rule
+ * for a state or a mark kind reads them and the themes change them in one place.
+ */
+
+// The solid disc's glyph colours; the base of every card mark.
+@mixin card-ink {
+    --jfmod-card-ink: #fff;
+    --jfmod-card-track: rgba(255, 255, 255, 0.3);
+    --jfmod-card-fail: #ff5a4f;
+}
+
+// The glass on top of it, for the element(s) the mixin is included on.
+@mixin card-glass {
+    @supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+        & {
+            background: color-mix(in srgb, var(--jf-palette-AppBar-defaultBg, #202020) 12%, transparent);
+            backdrop-filter: blur(12px) saturate(180%) contrast(0.7) brightness(0.85);
+        }
+
+        [data-theme='light'] & {
+            --jfmod-card-ink: var(--jf-palette-text-primary, #000);
+            --jfmod-card-track: rgba(0, 0, 0, 0.25);
+            --jfmod-card-fail: #c62828;
+            background: color-mix(in srgb, var(--jf-palette-AppBar-defaultBg, #e8e8e8) 20%, transparent);
+            backdrop-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.1);
+        }
+
+        [data-theme='appletv'] & {
+            --jfmod-card-ink: var(--jf-palette-text-primary, rgba(0, 0, 0, 0.87));
+            --jfmod-card-track: rgba(0, 0, 0, 0.25);
+            --jfmod-card-fail: #c62828;
+            background: color-mix(in srgb, color-mix(in srgb, var(--jf-palette-AppBar-defaultBg, #bcbcbc) 70%, #fff) 30%, transparent);
+            backdrop-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.15);
+        }
+
+        // After the themes, at their specificity: the TV layout is the solid disc whatever the theme.
+        .layout-tv & {
+            --jfmod-card-ink: #fff;
+            --jfmod-card-track: rgba(255, 255, 255, 0.3);
+            --jfmod-card-fail: #ff5a4f;
+            background: rgba(0, 0, 0, 0.66);
+            backdrop-filter: none;
+        }
+    }
+}
