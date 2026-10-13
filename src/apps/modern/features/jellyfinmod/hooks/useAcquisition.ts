@@ -2,6 +2,7 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import { useQuery } from '@tanstack/react-query';
 
 import { getPluginHealth } from '../api/modApi';
+import { lastKnown } from '../utils/lastKnown';
 
 /** The capability a plugin build advertises when it serves release search and held grabs (P4.A7). */
 export const RELEASES_CAPABILITY = 'acquisition.releases';
@@ -17,13 +18,34 @@ const NO_CAPABILITIES: string[] = [];
  */
 export const usePluginCapabilities = (api: Api | undefined, enabled = true): string[] => {
     const health = usePluginHealthSummary(api, enabled);
-    return enabled && health.data ? health.data.capabilities : NO_CAPABILITIES;
+    // A kept answer that this start's read could not confirm is not used (`dataUpdatedAt` is 0 until a read answers).
+    const unconfirmed = health.isError && health.dataUpdatedAt === 0;
+    return enabled && health.data && !unconfirmed ? health.data.capabilities : NO_CAPABILITIES;
 };
 
-/** The whole Health answer behind {@link usePluginCapabilities}, one shared read per server (P7.Q16 reads `traktInstalled`). */
+type Health = Awaited<ReturnType<typeof getPluginHealth>>;
+
+const keptHealth = (api: Api | undefined) => lastKnown<Health>('jfmod-health:' + (api?.basePath ?? ''));
+
+/**
+ * The whole Health answer behind {@link usePluginCapabilities}, one shared read per server (P7.Q16 reads `traktInstalled`).
+ * The last answer this browser had is drawn from at once and read again at the start (P1.FU23): every Get a Release waits
+ * on it, and without it a page drawn before the read answered had no cloud. A failed read forgets it.
+ */
 export const usePluginHealthSummary = (api: Api | undefined, enabled = true) => useQuery({
     queryKey: ['JellyfinMod', api?.basePath, 'HealthCapabilities'],
-    queryFn: ({ signal }) => getPluginHealth(api!, { signal }),
+    queryFn: async ({ signal }) => {
+        try {
+            const health = await getPluginHealth(api!, { signal });
+            keptHealth(api).save(health);
+            return health;
+        } catch (error) {
+            if (!signal.aborted) keptHealth(api).save(undefined);
+            throw error;
+        }
+    },
+    initialData: () => (api ? keptHealth(api).read() : undefined),
+    initialDataUpdatedAt: 0,
     enabled: !!api && enabled,
     retry: false,
     staleTime: 5 * 60 * 1000

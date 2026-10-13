@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import layoutManager from 'components/layoutManager';
+import loading from 'components/loading/loading';
 
 import { type EntryDetail, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
     unkeepEpisode } from '../api/modApi';
@@ -73,6 +74,15 @@ const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
 /** A season page has no entry of its own: it is its series' entry, searched by its own season (user, 2026-10-12). */
 const pageLookup = (itemId: string, itemType: string | undefined, seriesId: string | undefined, seasonNumber: number | undefined) =>
     (itemType === 'Season' && seriesId ? { lookupId: seriesId, seasonOf: seasonNumber ?? 0 } : { lookupId: itemId, seasonOf: undefined });
+
+/**
+ * Whether a page of this type has Get a Release while its entry is not read yet (P1.FU23): a season needs a number and pack
+ * search. Once the lookup has answered the page's own rule applies; a title the plugin has no entry for then loses the icon,
+ * which on 28096 was 1 title of 164 (2026-10-13).
+ */
+const expectsRelease = (answered: boolean, itemType: string | undefined, capabilities: string[], seasonOf: number | undefined) =>
+    !answered && (itemType === 'Movie' || itemType === 'Episode' || itemType === 'Series'
+        || (itemType === 'Season' && capabilities.includes(PACKS_CAPABILITY) && !!seasonOf));
 
 /** What the page shows: a season (only the header icon), a series (its section), or a movie or episode with its files. */
 const pageKind = (data: EntryDetail | null | undefined, itemId: string, seasonOf: number | undefined) => {
@@ -372,6 +382,36 @@ const usePageRetention = (view: HTMLElement, data: EntryDetail | null | undefine
     return { retention, removeDate };
 };
 
+/** The lookup answers null for a title the plugin has no entry for; a failed read has none to show either. */
+const hasNoEntry = (lookup: { isSuccess: boolean; isError: boolean; data?: string | null }, detail: { isError: boolean }) =>
+    (lookup.isSuccess && !lookup.data) || lookup.isError || detail.isError;
+
+/**
+ * The header icon is drawn before the page's entry is read (P1.FU23): a press before then shows upstream's spinner and opens the
+ * picker once the entry is in; when there is none, the spinner goes and the icon with it.
+ */
+const useOpenWhenRead = (ready: boolean, gone: boolean, open: (button: HTMLElement) => void) => {
+    const waiting = useRef<HTMLElement | null>(null);
+    useEffect(() => {
+        const button = waiting.current;
+        if (!button || (!ready && !gone)) return;
+        waiting.current = null;
+        loading.hide();
+        if (ready) open(button);
+    }, [gone, open, ready]);
+    useEffect(() => () => {
+        if (waiting.current) loading.hide();
+    }, []);
+    return useCallback((button: HTMLElement) => {
+        if (ready) {
+            open(button);
+            return;
+        }
+        waiting.current = button;
+        loading.show();
+    }, [open, ready]);
+};
+
 /** Add catalog controls to upstream's own detail page without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, itemType, seriesId, seasonNumber, isAdmin,
     view }) => {
@@ -385,7 +425,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     // The server matches any bound copy, and a native episode to its series (P1.P11, P3.T14). The entry is kept by its id, so
     // a season page after its series' page (or any page seen before) draws at once while it refreshes (P1.FU16); the route
     // started both reads before this mounted (integration/nativeEntryDetails).
-    const entryId = useQuery(entryIdQuery(api, userId, lookupId)).data ?? undefined;
+    const entryLookup = useQuery(entryIdQuery(api, userId, lookupId));
+    const entryId = entryLookup.data ?? undefined;
     const detailOptions = entryDetailQuery(api, userId, entryId ?? '');
     const detailKey = detailOptions.queryKey;
     const detail = useQuery({ ...detailOptions, enabled: !!entryId });
@@ -437,11 +478,14 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const addVersion = useCallback((opener: HTMLElement) => openPicker(opener, 'addVersion'), [openPicker]);
     // Design step 1: the stock-styled header icon; with a file on the page it gets another quality. A series page and a season
     // page have it too (user, 2026-10-12); a season is searched as a pack, so its page needs the plugin's pack search.
-    const getRelease = useCallback((button: HTMLElement) => openPicker(button, versions.length > 0 ? 'addVersion' : undefined),
+    const openRelease = useCallback((button: HTMLElement) => openPicker(button, versions.length > 0 ? 'addVersion' : undefined),
         [openPicker, versions.length]);
+    // Drawn with the header from the page's own type, before the entry is read (P1.FU23).
+    const noEntry = hasNoEntry(entryLookup, detail);
+    const getRelease = useOpenWhenRead(!!data, noEntry, openRelease);
     const seasonSearch = isSeasonPage && capabilities.includes(PACKS_CAPABILITY) && !!seasonOf;
     useStockHeaderButton(view, {
-        enabled: canAcquire && (isFilePage || isSeriesPage || seasonSearch),
+        enabled: canAcquire && (isFilePage || isSeriesPage || seasonSearch || expectsRelease(!!data || noEntry, itemType, capabilities, seasonOf)),
         icon: 'cloud_download',
         title: 'Get a Release',
         className: 'jfmod-getRelease',
