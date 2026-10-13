@@ -236,8 +236,9 @@ then upstream's played check.
 
 **Changed 2026-10-12 (P4.FU1): a download replaces the in-flight marks.** The grabbed arrow and the
 downloading ring with its percentage are gone from `FileStateMark`; a title, season or episode on its way
-shows the download of §3.3 instead, and in the corner that download wins over Not Downloaded and Unaired
-(precedence downloading > Not Downloaded). The magnifier while a title is searched for (no download exists
+shows the download of §3.3 instead (since 2026-10-13 the ring family's disc, P4.FU6), and in the corner that download wins
+over Not Downloaded and Unaired (precedence downloading > Not Downloaded; on a row a failure takes the Not Downloaded button as
+a red bang, never both). The magnifier while a title is searched for (no download exists
 yet) and the retention countdown (a file on disk) keep their marks. A user who may not read the queue (403,
 the queue kept to administrators) sees no download on cards or rows.
 
@@ -248,33 +249,58 @@ metres and the app has a dark theme with a user-set accent. Use the MUI theme's 
 never literal hex: `text.secondary` for wanted, `primary` for in flight, `text.disabled` outline
 for archived. Nothing in the catalog introduces a new palette.
 
-### 3.3 Downloads on cards and rows (P4.FU1, user-approved design 2026-10-12)
+### 3.3 Downloads on cards and rows (P4.FU1, 2026-10-12; the ring family P4.FU6, user-approved 2026-10-13)
 
-The sheet *Every Season and Episode*, version 9 with the card corrections: amber `#ffb300` is the app's one
-progress colour, for the picker's added row too (one set of colours in `downloadProgress.scss`: the bar
-`#ffb300`, stalled `#e0a030`, failed `#e53935`; the figure in the light scheme `#9a6700`, stalled `#8d5a00`).
+**The ring family** ([`design/download-state-ring-family.html`](design/download-state-ring-family.html), version 3 of the
+artifact, its defaults; decisions in [`design/download-state-ring-family.md`](design/download-state-ring-family.md)) replaced
+P4.FU1's white arrow in the count pill, the rows' bottom bar and the text figure at a row's end (user, 2026-10-13: "ring only,
+arrow, time left: meta line + tooltip ... Redo all cards and details and rows with new approved design ... remove arrow from
+the design but have two icons if the download in progress"). One disc, one arc, a glyph per state, drawn by one painter
+(`components/DownloadStateMark.tsx`, `paintDownloadMark`; styles `downloadStateMark.scss`, `jfmod-dlmark-*`) everywhere:
 
-- **Cards, everywhere cards are shown** (library grids, Home rows, search, Continue Watching and Next Up,
-  season cards on the series page, the mod's file-less and missing-season cards): a 0.24em bar along the
-  poster's bottom edge over a dark track, the download in amber beneath and the watched part in the primary
-  on top; no figure. While the card downloads the mod draws both layers, reading the watched value from
-  upstream's own bar, which hides meanwhile (its opaque track would cover the amber); upstream's markup is
-  not changed. A series or season card shows the mean of its episodes on their way (a pack counts once per
-  episode it holds). Queued draws the track alone; importing a full bar. A failed or finished download is
-  not drawn on a card.
-- **The arrow:** while anything in the item is on its way, a white down-arrow bobs inside upstream's count
-  pill, before the number (a class on the stock `.countIndicator`, the arrow drawn by its `::before`, so
-  upstream rewriting the number keeps it); a card with no count (a film, an episode, a missing season, a
-  fully watched series) shows the amber arrow in the dark disc in the top-right corner, before upstream's
-  indicators. The bob is 0.2em every 1.4 s, transform only, and rests under reduced motion.
-- **Rows** (the native and the mod's season page, the library list view and search lists): the bar along
-  the row's bottom edge (0.28em, the row's full width, over a faint track) and the figure at the row's end, tabular: *Queued* (track
-  only), *42% · 12 min left*, *42% · stalled*, *Importing…* (a full bar breathing), *Failed · reason* (red, at
-  the last value, and the Not Downloaded button stays beside it so it can be searched again), a client that
-  cannot be read keeps its last value dimmed. The wording is the picker's added row's, from one mapping
-  (`downloadProgress` in `constants/queue.ts`).
-- **TV and phone:** the same; nothing waits for a hover, and a focused card shows no extra figure. On the phone a row's
-  figure is the last line of its text, under the title (beside a native row's buttons it squeezed the title to *1. Leave…*).
+| State | Glyph | Arc | Colour |
+| --- | --- | --- | --- |
+| Downloading | arrow, bobbing 0.2em every 1.4 s | the percent, from the top (`stroke-dashoffset = 100 − percent`), easing 0.35 s | amber `#ffb300` |
+| Queued | clock | none | amber |
+| Importing | spinner arrow | a 28 % segment turning every 1.2 s | amber |
+| Stalled | pause | the percent at 55 % opacity | amber |
+| Failed | bang | none | red `#ff5a4f` (light scheme rows `#c62828`) |
+
+The figure is never inside the ring (the percent-inside and the caption and tooltip-only time placements stay in the artifact
+for later, not built). It is on the **meta line** after the date, in upstream's own items: `42% · 12 min left` (`1 h 05 min
+left` from an hour), `42% · stalled`, `queued`, `importing…`, `Failed · reason` (cut with an ellipsis); and in **every disc's
+tooltip**, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s` (the rate from the queue's
+`downloadRateBytes`, the sum of the torrents downloading for a series or season), `Queued`, `Importing…`, `Stalled at 42%`,
+`Failed · reason`. The queue has no position in the client's queue, so queued never says how many are ahead. One mapping words
+both (`downloadProgress`, `aggregateProgress` and `describeDownload` in `constants/queue.ts`). A client that cannot be read keeps
+its last value, the disc and figure dimmed.
+
+- **Cards, everywhere cards are shown** (library grids, Home rows, search, Continue Watching and Next Up, season cards on the
+  series page, upstream's season cards placed by P1.FU17, the mod's file-less and missing-season cards): a 1.6em dark disc
+  (black 66 %, a 1em glyph, the arc over a white 18 % track) top right, the first of upstream's indicators, so it sits **left of
+  upstream's played tick or count pill: two icons**, the pill untouched (no arrow in it); a card with no indicator cluster has
+  it alone in the corner. The two-layer bar stays: 0.24em along the poster's bottom edge over a dark track, the download in
+  amber beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
+  season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
+  queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
+  The disc wins over Not Downloaded and Unaired in the corner (never both).
+- **Rows** (the native and the mod's season page, the library list view and search lists): ring only, no bar. The disc is
+  2.5em, transparent like upstream's round icons (1.4em glyph, the arc over the theme's track), the **first round icon of the
+  end slot**, before the Not Downloaded mark's place and upstream's own buttons; upstream's row padding, nothing added; nothing
+  textual left of the icons. The figure goes into the row's meta line (upstream's `listItemMediaInfo` or the mod's), or, where
+  the layout hides that line (upstream does below 50em, so the phone), as the last line of the row's text. A failure on a row
+  that has the Not Downloaded button takes that button: the same button and D-pad stop, the cloud replaced by a red bang, its
+  tooltip `Failed · reason — search again`, and it opens the picker (never the cloud and the bang both); an ordinary user's is
+  the plain indicator. A failure on a row without one (a file on disk) is the red bang disc.
+- **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page): the row-size disc, then `In the
+  download queue · 42% · 12 min left`, then View queue where the queue may be opened.
+- **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
+  copy keeps its word; the progress bar column stays.
+- **The release picker's added row:** the disc takes the Add slot while the torrent downloads (the green tick when the queue
+  cannot be read; the in-library row once imported); the X stays; the figure stays at the right end of the marks line; no bar.
+- **TV and phone:** sizes in `em`, so TV 125 % and phone 90 %; no flex gap, `min()` or `max()`; nothing waits for a hover; the
+  discs are not focus stops except an administrator's failure button, which keeps the white TV ring. Reduced motion stops the
+  bob, the turning arc and the arc's easing.
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
   and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
@@ -287,13 +313,17 @@ progress colour, for the picker's added row too (one set of colours in `download
 - **A pack's episodes each show their own file** (P4.FU5, user 2026-10-12: "Is there way to show per episode
   progress if the whole season or all seasons are downloading?"). An episode's row, card and detail line take its own
   entry of the queue's `pack.episodes` (`progress`, `sizeBytes`, `importState`) instead of the pack's figure, in the same
-  wording: *42% · 6 min left* (its remaining bytes at the pack's current download rate; only the percent when the client
-  does not list its file's size), *Queued* (track only) while its file has not started, *Importing…* once its file is
-  finished (also before the import starts) or being imported, *Failed · reason* for its own blocked, failed or skipped
-  import, and nothing once it is in the library. A season or series card or row keeps one bar for the pack (the pack's
+  wording: `42% · 6 min left` (its remaining bytes at the pack's current download rate; only the percent when the client
+  does not list its file's size), `queued` while its file has not started, `importing…` once its file is
+  finished (also before the import starts) or being imported, `Failed · reason` for its own blocked, failed or skipped
+  import, and nothing once it is in the library. A season or series card keeps one bar and disc for the pack (the pack's
   whole torrent, counted once per episode it holds). A plugin without per-episode progress keeps the pack's figure on
   every episode. The queue page and the release picker's added row keep the pack's figure. One function draws the view
   (`packEpisodeView` in `hooks/useQueue.ts`).
+
+*Superseded 2026-10-13 (P4.FU6):* P4.FU1's white arrow inside upstream's count pill (`jfmod-countArrow`), the amber arrow disc
+(`jfmod-dlDisc`), the rows' 0.28em bottom bar (`jfmod-dlRowBar`), the figure at a row's end (`jfmod-dlRowFigure`) and the
+picker's added-row bar (`jfmod-addedBar`) are gone.
 
 ---
 
@@ -836,7 +866,7 @@ nullable `Episodes.CreditsJson` column, the series' regulars as `cast` in its me
 loads its list once more the same way. Not shown for a missing episode: upstream's *Ends at* (nothing to play).
 
 Not in this slice: the downloading states (the two-layer progress bar, the arrow in the count pill,
-the row's percentage and time left; §3.3, P4.FU1), the card hover Get a Release (§5.7) and the
+the row's percentage and time left; §3.3, P4.FU1, since replaced by the ring family, P4.FU6), the card hover Get a Release (§5.7) and the
 Shuffle change (§1.1 exception 3), both P1.FU12.
 
 ---
@@ -1077,9 +1107,9 @@ Approved design: the release picker's added-row sheet (2026-10-12). What the pic
 - **Found again on reopening.** The picker follows the search's active operation (`grab.activeOperationId`, then
   `GET /Grabs/{id}`) and marks the row whose infohash matches it; once the client has it, no block is shown.
 - **Its download.** Once the client has the torrent, the picker reads `GET /Queue` right away and every 5 s while it is
-  open, until the row is imported: a thin amber bar (`#ffb300`, the app's progress colour) along the row's bottom edge and
-  a figure at the right end of the marks line, *Queued*, *42% · 12 min left*, *42% · stalled* (darker amber), *Importing…*
-  (a full bar breathing) or *Failed · reason* (red, at the last value); an unreadable client keeps the last value dimmed.
+  open, until the row is imported: the ring family's disc in the Add slot (§3.3, P4.FU6; the figure in its tooltip) and the
+  figure at the right end of the marks line, `queued`, `42% · 12 min left`, `42% · stalled` (darker amber), `importing…` or
+  `Failed · reason` (red, at the last value); an unreadable client keeps the last value dimmed. No bar since P4.FU6.
   Imported, the row reads as the in-library row (the green check after the quality, no actions).
 - **The release page link.** Where the indexer gives a page (`detailsUrl`: Torznab `comments`, else an http `guid`; a URL
   carrying a credential is never passed on), the indexer name is a link that looks like the plain name at rest, with a

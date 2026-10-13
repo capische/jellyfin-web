@@ -497,7 +497,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   the mod's file-less and missing-season cards) shows a title, season or episode on its way: a 0.24em amber bar at the poster's
   bottom with the watched part in the primary on top, the white arrow inside upstream's count pill or the amber arrow in the dark
   disc, the mean of a series' or season's episodes; every season-page and list row the bar along its bottom edge and the figure
-  at its end (Queued, `42% · 12 min left`, stalled, Importing…, Failed). One queue read per page, every 5 s only while something
+  at its end (Queued, `42% · 12 min left`, stalled, Importing…, Failed; the arrows, the row bar and the row figure are superseded
+  by P4.FU6's ring family, 2026-10-13). One queue read per page, every 5 s only while something
   on the page downloads; one component (`integration/downloadMarks.tsx`) draws them all, with the picker's added-row mapping
   and colours now shared. The in-flight ring and grabbed icon leave `FileStateMark`. Owner: Phase 4 follow-up, with Phase 5's
   queue as the source; no plugin change. Typecheck, lint and the production build pass; a static render of the built CSS was
@@ -647,6 +648,36 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   nata) against alpha with plugin `next-release` `618efb7`; a read-only check on alpha found every loaded portrait at
   opacity 1 over the person icon on all three layouts, with upstream's `fadein` and none under reduced motion. Not deployed
   to a Pi instance; no real-Chrome runner pass; no Codex review yet.
+  **P4.FU6, built (not accepted) 2026-10-13: the download state ring family on every card, row and line** (user-approved
+  design, version 3 of the artifact and its defaults, [`design/download-state-ring-family.html`](design/download-state-ring-family.html)
+  and [`.md`](design/download-state-ring-family.md); user 2026-10-13: "ring only, arrow, time left: meta line + tooltip ...
+  Redo all cards and details and rows with new approved design ... remove arrow from the design but have two icons if the
+  download in progress"; [UX.md](UX.md) §3.1, §3.3, §9.1). Owner: Phase 4 follow-up (P4.FU1's `downloadMarks`), with Phase 5's
+  queue as the source; web only, no plugin change. One painter, `DownloadStateMark` (`paintDownloadMark`,
+  `downloadStateMark.scss`): a disc, an amber arc at the percent, a glyph per state (arrow bobbing, clock, importing spinner
+  with a turning arc, pause with the arc at 55 %, red bang). Cards: a 1.6em dark disc, the first of upstream's indicators, so
+  left of the plain count pill or tick (two icons; P4.FU1's white arrow in the pill is gone), the two-layer bar kept, the
+  figure in the tooltip (`Downloading · 42% · 12 min left · 3 MB/s`). Rows: ring only (the bar and the figure at a row's end
+  are gone), the 2.5em transparent disc first in the end slot, the figure on the meta line after the date (`42% · 12 min
+  left`, `1 h 05 min left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason` cut with an ellipsis), or the row's last
+  text line where upstream hides its meta line (the phone); a failure takes the Not Downloaded button as a red bang
+  (`… — search again`, it opens the picker; never both), a row without one gets the red bang disc. The detail line reads
+  `In the download queue · 42% · 12 min left · View queue` after the disc; the Queue page shows the disc in place of the state
+  word (the progress bar kept); the release picker's added row puts the disc in the Add slot (the X and the marks line figure
+  kept, the bar gone). Pack episodes keep their own figure (P4.FU5). Gaps against the artifact: no `queued · 2 ahead` (the queue
+  answer has no position in the client's queue: the plugin reads Transmission's `queuePosition` only for its own torrents, and
+  counting the waiting torrents ahead would need a read of every torrent in the client, so not added as a small change); the
+  rate is the queue page's `formatRate` (`3 MB/s`, whole megabytes, not `3.1 MB/s`); the picker's added row keeps its figure on
+  the marks line (its meta line) where the artifact's row shows none. Web `feat/download-state-ring` from `dd1a02c373`:
+  `fb4b674fe2` (code), `439a4903a5` (runners) and the docs commit. Typecheck, eslint (feature folder), stylelint, the patch
+  surface check (22 upstream files, against `master`) and the production build pass. `card-progress.mjs`, rewritten for the
+  family (intercepted queue, release search and grab answers, not a live download), passed 115/115 in Chromium and 115/115 in
+  real Chrome on desktop, phone and TV 1080; `missing-seasons-episodes.mjs` (season card downloads now read the disc beside
+  the plain pill) passed 336 (desktop) and 681 (phone and TV 1080) in each of Chromium and Chrome, as oleksii and the ordinary
+  user nata; both against local environment alpha (lease 10:39–11:09 Sydney) with plugin `next-release` `618efb7` and this
+  build, alpha reset to its baseline afterwards. Not run: a live download, the TV at 1280×720, a physical TV, a Pi instance
+  (not deployed), the Unaired clock beside a download, the light scheme on cards (dark discs on posters, unchanged), Codex
+  review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
