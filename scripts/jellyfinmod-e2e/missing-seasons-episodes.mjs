@@ -22,7 +22,7 @@
 //     cloud in the bottom row, the keyboard's Tab reaches it and never a Play; it opens the release picker on that season
 //     (Season N and All Seasons only) without leaving the page; an ordinary user's hover shows neither; a season with files
 //     keeps upstream's Play; on the TV the card holds no second stop; a missing episode's page shows the episode's download on
-//     its still (the disc, never the cloud) and the download line (INTERCEPTED QUEUE ANSWER); a row's mark and disc are the
+//     its still (since P1.FU20 its download block, below); a row's mark and disc are the
 //     size of upstream's round row buttons (box and glyph, measured against the row's heart or More button);
 //   - a missing season card opens the mod's season page (#/details?entryId=…&season=N), which lists that season's episodes as
 //     mod rows in episode order with their marks; an episode's Download This Episode opens the picker for that episode;
@@ -40,6 +40,15 @@
 //     Guest Stars as person cards (TMDB portrait w185 requested from image.tmdb.org, else the person icon; name and role; no
 //     links), an administrator's Get a Release for the episode, and Back returns to the season page. The icon on a row still
 //     opens the picker without opening the page.
+//
+//   - P1.FU20 (user-approved design 2026-10-13): the missing episode's page has a plain still (no mark, no disc), the series'
+//     certification on the misc line and its genres line, and the download block where the track selectors sit, in every state
+//     (downloading as a season pack's file with the percent in the 4em ring, the figures, the release, its marks, the pack line
+//     and its dots, the bar; stalled; queued; importing; failed with Search Again; not downloaded with Get a Release; unaired
+//     with the date and countdown), who gets which action (administrator, ordinary user), Cancel Download's confirmation and
+//     its DELETE, the picker from Search Again and Get a Release, the TV's D-pad path, reduced motion, and the imported
+//     transition to Jellyfin's own page (INTERCEPTED QUEUE AND ENTRY ANSWERS, NOT A LIVE DOWNLOAD); screenshots of each state,
+//     dark and (administrator) light.
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
 //   JELLYFINMOD_MSE_ENTRY=<series entry id>       a series whose plugin list holds seasons or episodes Jellyfin does not have
@@ -462,10 +471,12 @@ const episodePageView = async page => {
         return {
             series: view.querySelector('.nameContainer .parentName')?.textContent.trim() ?? null,
             subtitle: view.querySelector('.nameContainer .itemName')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
-            meta: [...view.querySelectorAll('.itemMiscInfo-primary .mediaInfoItem')].map(item => item.textContent.trim()),
+            meta: [...view.querySelectorAll('.itemMiscInfo-primary .mediaInfoItem:not(.mediaInfoOfficialRating)')].map(item => item.textContent.trim()),
+            certification: view.querySelector('.itemMiscInfo-primary .mediaInfoOfficialRating')?.textContent.trim() ?? null,
+            genres: view.querySelector('.detailSectionContent .itemGenres')?.textContent.trim() || null,
             cover: coverOf(still),
             dashed: still ? getComputedStyle(still).outlineStyle : null,
-            mark: !!view.querySelector('.detailImageContainer .jfmod-mark'),
+            mark: view.querySelectorAll('.detailImageContainer .jfmod-mark, .detailImageContainer .jfmod-dlmark').length,
             overview: view.querySelector('.detailSectionContent .overview')?.textContent.trim() || null,
             details: [...view.querySelectorAll('.itemDetailsGroup .detailsGroupItem')].map(item =>
                 [...item.children].map(child => child.textContent.trim()).join(': ')),
@@ -500,7 +511,14 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
         record(label, `episode page: the meta line (air date, then ${JSON.stringify(tail)})`,
             shown.meta.length === tail.length + (episode.airDate ? 1 : 0) && JSON.stringify(shown.meta.slice(shown.meta.length - tail.length)) === JSON.stringify(tail), shown.meta);
         checkCover(label, 'episode page still', shown, episode.stillPath, tv ? 'w500' : 'w300');
-        record(label, 'episode page: the mark on the still', shown.mark);
+        // P1.FU20 (user 2026-10-13: "I see no sense in download cloud over the episode card in episode page"): a plain still.
+        record(label, 'episode page: no mark and no disc on the still', shown.mark === 0, shown.mark);
+        // P1.FU20: the series' certification on the misc line (the US one, else the first) and its genres line.
+        const certs = detail.entry.metadata?.certifications ?? [];
+        const cert = (certs.find(item => item.country === 'US') ?? certs[0])?.rating ?? null;
+        record(label, `episode page: the certification ${JSON.stringify(cert)} on the misc line`, shown.certification === cert, shown.certification);
+        const genres = (detail.entry.metadata?.genres ?? []).join(', ') || null;
+        record(label, `episode page: the genres line ${JSON.stringify(genres)}`, shown.genres === genres, shown.genres);
         record(label, 'episode page: TMDB\'s overview', episode.overview ? shown.overview === episode.overview.trim() : !shown.overview, shown.overview?.slice(0, 80));
         const credits = episode.credits;
         if (!credits) {
@@ -827,59 +845,309 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
     }
 }
 
+/** What the download block of a missing episode's page shows (P1.FU20), and what is on the still and the old detail line. */
+const blockView = page => page.evaluate(() => {
+    const view = document.querySelector('.page:not(.hide)');
+    const block = view?.querySelector('.jfmod-dlblockSlot .jfmod-dlblock');
+    const stills = [...(view?.querySelectorAll('.jfmod-episodeStill') ?? [])];
+    const common = {
+        stillMarks: stills.reduce((count, still) => count + still.querySelectorAll('.jfmod-mark, .jfmod-dlmark').length, 0),
+        statusLine: !!view?.querySelector('.jfmod-queueStatusLine')
+    };
+    if (!block) return { ...common, block: false };
+    const ring = block.querySelector('.jfmod-dlblock-ring > *');
+    const figure = block.querySelector('.jfmod-dlblock-figure');
+    const fill = block.querySelector('.jfmod-dlblock-barFill');
+    const shown = node => !!node && node.getBoundingClientRect().width > 0;
+    let ringKind = ring?.getAttribute('data-jfmod-kind') ?? null;
+    if (!ringKind && ring?.classList.contains('jfmod-dlblock-none')) ringKind = 'none';
+    if (!ringKind && ring?.classList.contains('jfmod-dlblock-unaired')) ringKind = 'unaired';
+    const font = ring ? parseFloat(getComputedStyle(ring).fontSize) : 0;
+    return {
+        ...common,
+        block: true,
+        state: block.getAttribute('data-jfmod-state'),
+        ringKind,
+        number: ring?.querySelector('.jfmod-dlmark-numValue')?.textContent ?? null,
+        glyph: !!ring?.querySelector('.jfmod-dlmark-glyph, .jfmod-markGlyph'),
+        ringEm: ring && font ? Math.round(ring.getBoundingClientRect().width / font * 100) / 100 : null,
+        word: block.querySelector('.jfmod-dlblock-word')?.textContent ?? null,
+        figure: figure?.textContent ?? null,
+        tone: [...(figure?.classList ?? [])].find(name => name.startsWith('jfmod-dlblock-figure--'))?.slice(22) ?? null,
+        release: block.querySelector('.jfmod-dlblock-release')?.textContent ?? null,
+        marks: [...(block.querySelector('.jfmod-dlblock-marks')?.children ?? [])].map(node => node.textContent.trim()).filter(Boolean).join(' ') || null,
+        mediaMarks: [...block.querySelectorAll('.jfmod-dlblock-marks .jfmod-releaseMark')].map(mark => mark.getAttribute('aria-label') || mark.textContent.trim()),
+        client: block.querySelector('.jfmod-dlblock-client')?.getAttribute('href') ?? null,
+        clientLabel: block.querySelector('.jfmod-dlblock-client')?.getAttribute('aria-label') ?? null,
+        pack: block.querySelector('.jfmod-dlblock-pack > span')?.textContent ?? null,
+        dots: [...block.querySelectorAll('.jfmod-dlblock-dot')].map(dot => dot.getAttribute('data-jfmod-dot')
+            + (dot.classList.contains('jfmod-dlblock-dot--current') ? '*' : '')),
+        bar: fill ? { width: fill.style.width, kind: [...fill.classList].find(name => name.startsWith('jfmod-dlblock-barFill--'))?.slice(23) ?? null,
+            animation: getComputedStyle(fill).animationName, height: Math.round(fill.parentElement.getBoundingClientRect().height / font * 100) / 100 } : null,
+        arcAnimation: ring?.querySelector('.jfmod-dlmark-arc') ? getComputedStyle(ring.querySelector('.jfmod-dlmark-arc')).animationName : null,
+        actions: [...block.querySelectorAll('.jfmod-dlblock-actions > *')].filter(shown).map(node => node.textContent.trim()),
+        // Everything in the block a keyboard or the D-pad can stop on.
+        stops: [...block.querySelectorAll('a[href], button, [tabindex]')].filter(shown).map(node => node.textContent.trim() || node.getAttribute('aria-label')),
+        beforeTracks: block.parentElement.nextElementSibling?.classList.contains('trackSelections') ?? false,
+        panel: getComputedStyle(block).backgroundColor
+    };
+});
+
+const PARSED = { title: 'Fixture', year: null, seasonNumber: 1, episodeNumbers: [1], seasonPack: false, absoluteNumbering: false,
+    dailyNumbering: false, resolution: '1080p', source: 'webdl', codec: 'h264', audio: 'DD+', hdr: null, group: 'GRP', proper: false,
+    repack: false, quality: 'webdl-1080p', languages: ['EN'], subtitles: [], audioChannels: '5.1' };
+const CLIENT = { id: '00000000-0000-4000-8000-00000000c11e', name: 'Transmission', openUrl: 'http://127.0.0.1:9/transmission/web/' };
+
 /**
- * A missing episode's page while the episode downloads (P1.FU19, user 2026-10-13: "Why it has this icon when download is going
- * in progress on episode page?"). INTERCEPTED QUEUE ANSWER: a season pack holding the episode, its own file at 42 %. The still
- * shows the download disc in its corner and not the Not Downloaded cloud (never both), and the page shows the download line
- * `In the download queue · 42% …` with its disc. The page is opened again without the route afterwards.
+ * The download block of a missing episode's page, every state (P1.FU20, user-approved design 2026-10-13). INTERCEPTED QUEUE
+ * ANSWERS (and, for Unaired and the imported transition, an intercepted entry answer), NOT A LIVE DOWNLOAD. Checks the ring (the
+ * percent inside while it downloads or stalls), the state line, the release name, its marks, the pack line and its strip, the
+ * bar, the actions and who gets them, Cancel Download's confirmation and request, Search Again and Get a Release opening the
+ * picker, the still without a mark, reduced motion, and the imported transition to Jellyfin's own page.
  */
-async function checkEpisodeDownload(page, label, detail, episode, hash) {
-    const items = [queueRow(detail.entry, { progress: 0.3, pack: { scope: 'season', label: `Season ${episode.seasonNumber} pack`, mode: 'fill',
-        episodes: [{ episodeId: episode.id, seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber, importId: null,
-            importState: 'waiting', reason: null, progress: 0.42, sizeBytes: null }] } })];
-    const answer = { items, totalRecordCount: items.length, clientStatus: { reachable: true, checkedAt: now(), reason: null },
-        importEnabled: true, seedReleaseEnabled: true };
-    const handler = route => (route.request().method() === 'GET' ?
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...answer, generatedAt: now() }) }) : route.continue());
-    const matcher = url => /\/JellyfinMod\/Queue$/i.test(url.pathname);
-    await page.route(matcher, handler);
+async function checkDownloadBlock(page, label, detail, episode, hash, { admin, canDownload, tv, layout }) {
+    const shots = process.env.JELLYFINMOD_SHOTS ?? '.';
+    const who = admin ? 'admin' : 'user';
+    const season = detail.episodes.filter(item => item.seasonNumber === episode.seasonNumber).sort((a, b) => a.episodeNumber - b.episodeNumber);
+    const index = season.findIndex(item => item.id === episode.id);
+    const native = detail.episodes.find(item => item.availability === 'onDisk' && item.jellyfinItemId);
+    const ref = { id: episode.id, seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber, title: episode.title };
+    const release = `Fixture.S${String(episode.seasonNumber).padStart(2, '0')}E${String(episode.episodeNumber).padStart(2, '0')}.1080p.WEB-DL.DDP5.1.H.264-GRP`;
+    const single = over => ({ ...queueRow(detail.entry, { episode: ref, progress: 0.42 }), releaseTitle: release, sizeBytes: 4.6e9,
+        downloadedBytes: 1.932e9, downloadRateBytes: 3.1e6, etaSeconds: 720, parsed: PARSED, indexerName: 'Fixture Indexer',
+        client: admin ? CLIENT : null, ...over });
+    // A season pack: the episodes before this one imported and finished, this one at 42 % of its own 4.6 GB file, the rest waiting.
+    // The other episodes: the first imported, the second's file finished and importing, the rest waiting.
+    const others = season.filter(item => item.id !== episode.id).map(item => item.id);
+    const dotOf = item => {
+        if (item.id === episode.id) return 'part';
+        if (item.id === others[0]) return 'done';
+        return item.id === others[1] ? 'finished' : 'waiting';
+    };
+    const OWN = { part: { importState: 'waiting', progress: 0.42 }, done: { importState: 'completed', progress: 1 },
+        finished: { importState: 'identifying', progress: 1 }, waiting: { importState: 'waiting', progress: 0 } };
+    const packEpisodes = season.map(item => ({ episodeId: item.id, seasonNumber: item.seasonNumber, episodeNumber: item.episodeNumber,
+        importId: null, reason: null, sizeBytes: 4.6e9, ...OWN[dotOf(item)] }));
+    const packRow = { ...queueRow(detail.entry, { progress: 0.5, pack: { scope: 'season', label: `Season ${episode.seasonNumber} pack · ${season.length} episodes`,
+        mode: 'fill', episodes: packEpisodes } }), releaseTitle: release.replace(/E\d+\./, '.'), sizeBytes: 38.2e9, downloadedBytes: 19e9,
+    downloadRateBytes: 3.1e6, etaSeconds: 6000, parsed: { ...PARSED, seasonPack: true, episodeNumbers: [] }, indexerName: 'Fixture Indexer',
+    client: admin ? CLIENT : null };
+    const eta = Math.max(1, Math.round(Math.ceil(4.6e9 * 0.58 / 3.1e6) / 60));
+    const queue = { items: [] };
+    const removals = [];
+    let entryPatch = null;
+    const queueHandler = route => {
+        const request = route.request();
+        if (request.method() === 'GET') {
+            return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: queue.items, totalRecordCount: queue.items.length,
+                generatedAt: now(), clientStatus: { reachable: true, checkedAt: now(), reason: null }, importEnabled: true, seedReleaseEnabled: true }) });
+        }
+        if (request.method() === 'DELETE') {
+            removals.push({ url: request.url(), body: request.postDataJSON() });
+            return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+        }
+        return route.continue();
+    };
+    const queueMatcher = url => /\/JellyfinMod\/Queue(\/[^/]+)?$/i.test(url.pathname);
+    const entryHandler = async route => {
+        if (route.request().method() !== 'GET' || !entryPatch) return route.continue();
+        const response = await route.fetch();
+        const body = await response.json();
+        body.episodes = body.episodes.map(item => (item.id === episode.id ? { ...item, ...entryPatch } : item));
+        return route.fulfill({ response, body: JSON.stringify(body) });
+    };
+    const entryMatcher = url => url.pathname.toLowerCase().endsWith('/jellyfinmod/entries/' + detail.entry.id.toLowerCase());
+    await page.route(queueMatcher, queueHandler);
+    await page.route(entryMatcher, entryHandler);
+    const open = async (items, state, patch = null) => {
+        queue.items = items;
+        entryPatch = patch;
+        await go(page, '#/home');
+        await go(page, hash);
+        const ok = await page.waitForSelector(`.page:not(.hide) .jfmod-dlblock[data-jfmod-state="${state}"]`, { timeout: 20000 }).then(() => true, () => false);
+        await page.waitForTimeout(700);
+        return ok;
+    };
+    const shoot = async name => {
+        const slot = page.locator('.page:not(.hide) .jfmod-dlblockSlot').first();
+        await slot.scrollIntoViewIfNeeded().catch(() => {});
+        await page.waitForTimeout(200);
+        await page.screenshot({ path: `${shots}/dlblock-${tier}-${layout}-${who}-${name}-dark.png` }).catch(() => {});
+        if (admin) {
+            await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+            await page.waitForTimeout(300);
+            await page.screenshot({ path: `${shots}/dlblock-${tier}-${layout}-${who}-${name}-light.png` }).catch(() => {});
+            await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+        }
+    };
+    const actions = (...names) => JSON.stringify(names);
     try {
-        await go(page, '#/home');
-        await go(page, hash);
-        await page.waitForSelector('.page:not(.hide) .jfmod-episodeStill .jfmod-dlmark', { timeout: 20000 }).catch(() => {});
-        await page.waitForSelector('.page:not(.hide) .jfmod-queueStatusLine', { timeout: 10000 }).catch(() => {});
-        await page.waitForTimeout(800);
-        const shown = await page.evaluate(() => {
-            // Upstream draws the detail image twice and shows one per layout (the phone hides it): the shown one, else the first.
-            const stills = [...document.querySelectorAll('.page:not(.hide) .jfmod-episodeStill')];
-            const still = stills.find(node => node.getBoundingClientRect().width > 0) ?? stills[0];
-            const disc = still?.querySelector('.jfmod-dlmark');
-            const cloud = still?.querySelector('.jfmod-mark--none');
-            const line = document.querySelector('.page:not(.hide) .jfmod-queueStatusLine');
-            return {
-                stillShown: !!still && still.getBoundingClientRect().width > 0,
-                disc: disc?.getAttribute('data-jfmod-kind') ?? null, discTitle: disc?.title ?? null,
-                discVisible: !!disc && (disc.getBoundingClientRect().width > 0 || !still.getBoundingClientRect().width),
-                cloudVisible: !!cloud && getComputedStyle(cloud).display !== 'none',
-                line: line?.textContent.replace(/\s+/g, ' ').trim() ?? null, lineDisc: line?.querySelector('.jfmod-dlmark')?.getAttribute('data-jfmod-kind') ?? null
-            };
-        });
-        // Where the layout hides the still (the phone), the disc is still the one in its corner and the cloud hidden by it.
-        record(label, `E${episode.episodeNumber}'s page while it downloads: the still shows the download disc (42 %), not the Not Downloaded cloud${shown.stillShown ? '' : ' (the layout hides the still)'}`,
-            shown.disc === 'downloading' && shown.discVisible && !shown.cloudVisible && /^Downloading · 42%/.test(shown.discTitle ?? ''), shown);
-        record(label, `E${episode.episodeNumber}'s page while it downloads: the download line "In the download queue · 42% …" with its disc`,
-            /^In the download queue · 42%/.test(shown.line ?? '') && shown.lineDisc === 'downloading', shown.line);
-        await page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/mse-${tier}-${label.split(',')[0]}-episode-downloading.png` }).catch(() => {});
+        // ---- Downloading, a season pack: the ring with 42 inside, the figures, the release, its marks, the pack line, the bar.
+        let ok = await open([packRow], 'downloading');
+        let shown = await blockView(page);
+        const strip = season.map(item => dotOf(item) + (item.id === episode.id ? '*' : ''));
+        record(label, 'download block, downloading: in the track selectors\' place, the 4em ring (3.2em on the phone) with "42" inside and no glyph',
+            ok && shown.beforeTracks && shown.ringKind === 'downloading' && shown.number === '42' && !shown.glyph && Math.abs(shown.ringEm - (layout === 'mobile' ? 3.2 : 4)) < 0.05, shown);
+        record(label, `download block, downloading: "Downloading 42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" in amber`,
+            shown.word === 'Downloading' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'amber', shown.figure);
+        record(label, 'download block: the release name and its marks (1080p WEB-DL, the codec and audio marks, EN, the pack\'s 38.2 GB, the indexer)',
+            shown.release === packRow.releaseTitle && /^1080p WEB-DL\b/.test(shown.marks ?? '') && shown.mediaMarks.includes('AVC')
+            && shown.mediaMarks.includes('Dolby Digital Plus') && /\bEN\b/.test(shown.marks) && shown.marks.includes('38.2 GB')
+            && shown.marks.includes('Fixture Indexer'), { marks: shown.marks, mediaMarks: shown.mediaMarks });
+        const clientShown = admin && !tv;
+        const noClient = tv ? 'no Open Transmission (TV)' : 'no Open Transmission (ordinary user)';
+        record(label, `download block: ${clientShown ? 'Open Transmission for the administrator' : noClient}`,
+            clientShown ? shown.client === CLIENT.openUrl && shown.clientLabel === 'Open Transmission' : shown.client === null, shown.client);
+        record(label, `download block: "Season ${episode.seasonNumber} pack · this episode is file ${index + 1} of ${season.length}" and one dot per episode (imported, importing, this one downloading, waiting)`,
+            shown.pack === `Season ${episode.seasonNumber} pack · this episode is file ${index + 1} of ${season.length}` && JSON.stringify(shown.dots) === JSON.stringify(strip),
+            { pack: shown.pack, dots: shown.dots });
+        record(label, 'download block: the 0.28em bar at 42 %', shown.bar?.width === '42%' && shown.bar.kind === 'downloading' && Math.abs(shown.bar.height - 0.28) < 0.02, shown.bar);
+        record(label, `download block, downloading: ${admin ? 'View Queue and Cancel Download' : 'View Queue only'}`,
+            JSON.stringify(shown.actions) === (admin ? actions('View Queue', 'Cancel Download') : actions('View Queue')), shown.actions);
+        record(label, 'download block: the ring, the marks and the strip are no stops; the links and buttons are',
+            JSON.stringify(shown.stops) === JSON.stringify([...(clientShown ? ['Open Transmission'] : []), ...shown.actions]), shown.stops);
+        record(label, 'the still carries no mark or disc while the episode downloads, and the old detail line is gone', shown.stillMarks === 0 && !shown.statusLine,
+            { stillMarks: shown.stillMarks, statusLine: shown.statusLine });
+        await shoot('downloading');
+        if (tv && admin) {
+            // The D-pad: from the header's Get a Release down into the block's links and buttons, then on to Cast & Crew.
+            const get = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease');
+            if (await get.count()) {
+                await get.focus();
+                const trail = [];
+                for (const key of ['ArrowDown', 'ArrowRight', 'ArrowDown']) {
+                    await page.keyboard.press(key);
+                    await page.waitForTimeout(300);
+                    trail.push(await page.evaluate(() => {
+                        const active = document.activeElement;
+                        if (active?.closest('.jfmod-dlblock')) return active.textContent.trim();
+                        if (active?.closest('#castContent, #guestCastContent')) return 'person card';
+                        return active?.className?.toString().slice(0, 40) ?? 'none';
+                    }));
+                }
+                record(label, 'TV: Down from Get a Release reaches View Queue, Right Cancel Download, Down a person card',
+                    JSON.stringify(trail) === JSON.stringify(['View Queue', 'Cancel Download', 'person card']), trail);
+            }
+        }
+
+        // ---- Stalled, one episode's own torrent.
+        ok = await open([single({ state: 'stalled', stalledSince: new Date(Date.now() - 20 * 60000).toISOString() })], 'stalled');
+        shown = await blockView(page);
+        record(label, 'download block, stalled: "42" in the dimmed ring, "Stalled 42% · no progress for 20 min", the bar dimmed, no pack line',
+            ok && shown.ringKind === 'stalled' && shown.number === '42' && shown.word === 'Stalled' && shown.figure === '42% · no progress for 20 min'
+            && shown.bar?.kind === 'stalled' && shown.pack === null && shown.marks.includes('4.6 GB'), shown);
+        await shoot('stalled');
+
+        // ---- Queued.
+        ok = await open([single({ state: 'queued', progress: null, downloadedBytes: null, etaSeconds: null })], 'queued');
+        shown = await blockView(page);
+        record(label, `download block, queued: the clock, "Queued waiting to start", no bar, ${admin ? 'View Queue and Cancel Download' : 'View Queue'}`,
+            ok && shown.ringKind === 'queued' && shown.glyph && shown.number === null && shown.word === 'Queued' && shown.figure === 'waiting to start'
+            && shown.tone === 'muted' && !shown.bar && JSON.stringify(shown.actions) === (admin ? actions('View Queue', 'Cancel Download') : actions('View Queue')), shown);
+        await shoot('queued');
+
+        // ---- Importing: the spinner, the step, a full bar breathing, no Cancel.
+        ok = await open([single({ state: 'linking', importState: 'linking', progress: 1 })], 'importing');
+        shown = await blockView(page);
+        record(label, 'download block, importing: the spinner, "Importing linking into the library…", the full bar breathing, View Queue only',
+            ok && shown.ringKind === 'importing' && shown.word === 'Importing' && shown.figure === 'linking into the library…'
+            && shown.bar?.width === '100%' && shown.bar.animation !== 'none' && JSON.stringify(shown.actions) === actions('View Queue'), shown);
+        await shoot('importing');
+        if (layout === 'desktop' && admin) {
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+            await page.waitForTimeout(300);
+            const still = await blockView(page);
+            record(label, 'download block under reduced motion: the bar does not breathe and the ring does not turn',
+                shown.arcAnimation !== 'none' && still.bar?.animation === 'none' && still.arcAnimation === 'none',
+                { before: shown.arcAnimation, bar: still.bar?.animation, arc: still.arcAnimation });
+            await page.emulateMedia({ reducedMotion: 'no-preference' });
+        }
+
+        // ---- Failed: the red bang, the reason in red, Search Again (administrators) and View Queue.
+        ok = await open([single({ state: 'failed', importState: 'failed', reason: 'destination_not_writable', message: null })], 'failed');
+        shown = await blockView(page);
+        const searchAgain = admin && canDownload;
+        record(label, `download block, failed: the red bang, "Failed The library folder cannot be written." in red, ${searchAgain ? 'Search Again and View Queue' : 'View Queue only'}`,
+            ok && shown.ringKind === 'failed' && shown.word === 'Failed' && shown.figure === 'The library folder cannot be written.' && shown.tone === 'error'
+            && !shown.bar && JSON.stringify(shown.actions) === (searchAgain ? actions('Search Again', 'View Queue') : actions('View Queue')), shown);
+        await shoot('failed');
+        if (searchAgain) {
+            await pickerFrom(page, label, 'download block Search Again', page.locator('.page:not(.hide) .jfmod-dlblock-search'), tv,
+                [`Episode: ${'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0')} · ${episode.title}`,
+                    `Season ${episode.seasonNumber}`, 'All Seasons']);
+        }
+
+        // ---- Not downloaded: the cloud, Get a Release for administrators, "no release chosen yet" for everyone else.
+        ok = await open([], 'none');
+        shown = await blockView(page);
+        record(label, `download block, not downloaded: the cloud, "Not Downloaded"${admin && canDownload ? ' and Get a Release' : ', "no release chosen yet" and no button'}`,
+            ok && shown.ringKind === 'none' && shown.word === 'Not Downloaded' && !shown.release && !shown.bar
+            && (admin && canDownload ? shown.figure === null && JSON.stringify(shown.actions) === actions('Get a Release') :
+                shown.figure === 'no release chosen yet' && shown.actions.length === 0), shown);
+        await shoot('not-downloaded');
+        if (admin && canDownload) {
+            await pickerFrom(page, label, 'download block Get a Release', page.locator('.page:not(.hide) .jfmod-dlblock-get'), tv,
+                [`Episode: ${'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0')} · ${episode.title}`,
+                    `Season ${episode.seasonNumber}`, 'All Seasons']);
+        }
+
+        // ---- Unaired (an intercepted entry answer): the clock, the date and the countdown, nothing to press.
+        // The plugin's own form of an air date: midnight UTC.
+        const airs = new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10) + 'T00:00:00.0000000Z';
+        ok = await open([], 'unaired', { availability: 'unaired', airDate: airs });
+        shown = await blockView(page);
+        const long = await longDate(page, airs);
+        record(label, `download block, unaired: the clock, "Unaired airs ${long} · in 7 months", no actions`,
+            ok && shown.ringKind === 'unaired' && shown.word === 'Unaired' && shown.figure === `airs ${long} · in 7 months` && shown.actions.length === 0, shown);
+        await shoot('unaired');
+
+        // ---- Cancel Download (administrators): the confirmation names the release; Remove sends the torrent-only removal.
+        if (admin) {
+            const cancelled = single({});
+            ok = await open([cancelled], 'downloading');
+            await press(page, page.locator('.page:not(.hide) .jfmod-dlblock-cancel'), tv);
+            const dialog = await page.waitForSelector('.dialog:not(.hide) .confirmationDialog, .dialogContainer .dialog', { timeout: 10000 }).then(() => true, () => false);
+            const text = await page.evaluate(() => document.querySelector('.dialogContainer .dialog')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
+            record(label, 'Cancel Download asks "Remove the Torrent" and names the release', ok && dialog && text?.includes('Remove the Torrent') && text.includes(release), text);
+            queue.items = [];
+            await page.locator('.dialogContainer .dialog button').filter({ hasText: 'Remove' }).last().click();
+            await page.waitForTimeout(1500);
+            const sent = removals.at(-1);
+            record(label, 'Remove sends DELETE /JellyfinMod/Queue/{id} with removeFromClient and no blocklist, and the block reads Not Downloaded',
+                !!sent && sent.url.endsWith('/JellyfinMod/Queue/' + cancelled.id) && sent.body?.removeFromClient === true && sent.body?.blocklist === false
+                && await page.waitForSelector('.page:not(.hide) .jfmod-dlblock[data-jfmod-state="none"]', { timeout: 10000 }).then(() => true, () => false), sent);
+        } else {
+            ok = await open([single({})], 'downloading');
+            shown = await blockView(page);
+            record(label, 'an ordinary user gets no Cancel Download and no Open Transmission', ok && !shown.actions.includes('Cancel Download') && !shown.client, shown.actions);
+        }
+
+        // ---- Imported: the queue's row finishes and the entry holds the file; the page becomes Jellyfin's own episode page.
+        if (native) {
+            ok = await open([single({ progress: 0.97, downloadedBytes: 4.46e9, etaSeconds: 30 })], 'downloading');
+            queue.items = [single({ state: 'seeding', importState: 'completed', progress: 1, downloadedBytes: 4.6e9, etaSeconds: null,
+                seeding: { id: '00000000-0000-4000-8000-0000000005ee', state: 'waiting', reason: null, ratio: 0.1, goalRatio: 1, seedingSeconds: 60,
+                    goalSeconds: null, waitingFor: ['ratio'], goalMetAt: null, libraryLinkPresent: true, releaseEnabled: true } })];
+            entryPatch = { availability: 'onDisk', state: 'onDisk', jellyfinItemId: native.jellyfinItemId };
+            const moved = await page.waitForFunction(id => location.hash.includes('id=' + id), native.jellyfinItemId, { timeout: 20000 }).then(() => true, () => false);
+            const upstream = moved && await page.waitForSelector('.page:not(.hide) .trackSelections:not(.hide)', { timeout: 20000 }).then(() => true, () => false);
+            await page.waitForTimeout(800);
+            const after = await page.evaluate(() => {
+                const view = document.querySelector('.page:not(.hide)');
+                const play = view?.querySelector('.mainDetailButtons .btnPlay');
+                return { hash: location.hash, block: !!view?.querySelector('.jfmod-dlblock'), play: !!play && !play.classList.contains('hide'),
+                    selects: [...(view?.querySelectorAll('.trackSelections .selectContainer:not(.hide)') ?? [])].length };
+            });
+            record(label, 'imported: the page becomes Jellyfin\'s own episode page, its Video / Audio / Subtitle selectors and Play in place of the block',
+                ok && moved && upstream && !after.block && after.play && after.selects > 0, after);
+            await page.screenshot({ path: `${shots}/dlblock-${tier}-${layout}-${who}-imported.png` }).catch(() => {});
+        } else {
+            record(label, 'imported transition', 'NOT VERIFIED', 'the entry has no episode on disk with a Jellyfin item');
+        }
     } finally {
-        await page.unroute(matcher, handler);
+        await page.unroute(queueMatcher, queueHandler);
+        await page.unroute(entryMatcher, entryHandler);
         await go(page, '#/home');
-        await go(page, hash);
-        await page.waitForTimeout(1500);
-        const cloud = await page.evaluate(() => {
-            const still = document.querySelector('.page:not(.hide) .jfmod-episodeStill');
-            return { disc: !!still?.querySelector('.jfmod-dlmark'), cloud: !!still?.querySelector('.jfmod-mark--none') };
-        });
-        record(label, `E${episode.episodeNumber}'s page with nothing downloading: the Not Downloaded cloud, no disc`, cloud.cloud && !cloud.disc, cloud);
     }
 }
 
@@ -1042,7 +1310,7 @@ async function run(browser, layout, user, admin) {
                 const opening = shown.map(entry => detail.episodes.find(candidate => candidate.id === entry.id)).filter(Boolean)
                     .sort((a, b) => people(b) - people(a))[0];
                 const pageHash = opening && await checkEpisodePage(page, label, detail, opening, { admin, canDownload, tv, what: `mod Season ${target.season} page`, full: true });
-                if (pageHash && admin) await checkEpisodeDownload(page, label, detail, opening, pageHash);
+                if (pageHash) await checkDownloadBlock(page, label, detail, opening, pageHash, { admin, canDownload, tv, layout });
             }
         }
         // A native season page with episodes Jellyfin does not have.
