@@ -764,6 +764,30 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   TV 30 % `brightness(1.15)` with `rgba(0, 0, 0, 0.87)`; the TV layout `backdrop-filter: none` over black 66 % with the white
   glyph in every theme.
   Not run: the GPU cost of a blur per disc on a real phone or a TV, a physical TV, a Pi instance deployment, Codex review.
+  **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
+  episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
+  season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
+  (`1 episode`), in the same `div.cardText.cardTextCentered.cardText-secondary` with a `bdi`, drawn into upstream's card after
+  its title by `MissingSeasonCards` (DOM augmentation like P1.FU17's marks, no upstream file touched, back with the card when
+  upstream redraws it). N is the season item's `ChildCount` (the mod's own season read, `nativeSeasonsQuery`, now asks for
+  that field: same request, no new wait); a season Jellyfin keeps with no episode counts the entry's list, as the mod's cards
+  do; no line when neither has one. A partly downloaded season shows Jellyfin's count alone, since the mod's cards have no "on
+  disk of total" form. The line is marked by a `data-jfmod-count` attribute, not a `jfmod-` class, because `modFont.scss` gives
+  every `jfmod-` class the mod's Inter font (found by the typography check; the mod cards' line keeps Noto Sans). Web
+  `feat/season-episode-count` from `next-release` `303f6722d5`: `e3b18c8fa0` (code), `465d85fa23` (runner) and this docs commit.
+  Checks: typecheck, eslint, stylelint and the production build pass. `missing-seasons-episodes.mjs` extended (on every upstream
+  season card the line equals Jellyfin's count, once, right under the title, with the mod line's computed look and an unchanged
+  cover; it returns once after a redraw; a native season page has none; the mod cards' check unchanged). Live, read-only on 28096
+  (nothing written: the build served in place of `/web/` by Playwright route interception, signed in as oleksii; the only
+  non-GET requests were sign-in and the Home's own `POST /JellyfinMod/Browse` read): a probe with the runner's new checks on Ted
+  Lasso (mod Seasons 1–3, native Season 4 with 10 files reads "10 episodes"), Delhi Crime (empty native Seasons 1 and 2 read the
+  list's 7 and 5; mod Season 3) and 1923 (empty native Season 1 reads 8, Season 2 Jellyfin's 7) passed in Chromium (100 checks)
+  and real Chrome (101 checks), 0 failed, on desktop, phone and TV 1080. Not verified: the look comparison on 1923 (no mod card
+  in its row) and one Chrome TV screenshot (timed out; the Chromium one exists). **Not run:** the full runner (its picker and
+  queue steps are not read-only on 28096; the local environments' plugins lack the TMDB list load and deploying `next-release`
+  there was not permitted), the ordinary user (28096 has no non-administrator with an empty password), the TV at 1280×720, a
+  physical TV, a deployment, Codex review. Noticed, older than this change and left alone: an upstream season card's title sits
+  0.3em above the mod cards' titles (the mod cards wrap their lines in a `.cardFooter` with its padding; upstream's have none).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

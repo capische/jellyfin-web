@@ -257,6 +257,17 @@ a red bang, never both). The magnifier while a title is searched for (no downloa
 yet) and the retention countdown (a file on disk) keep their marks. A user who may not read the queue (403,
 the queue kept to administrators) sees no download on cards or rows.
 
+**Changed 2026-10-13 (P1.FU21, user: "it should be 10 episodes, screenshot showed nothing"): every season card says how
+many episodes it has.** On a series page's Seasons row, upstream's own season cards (a Jellyfin season item, with or without
+files) carry the same second line as the mod's missing season cards: `N episodes` (`1 episode`) under `Season N`, in the mod
+cards' element and classes (`div.cardText.cardTextCentered.cardText-secondary` holding a `bdi`, 86 %), so both read alike. N is
+the episodes Jellyfin has in that season (the season item's `ChildCount`, read with the page's own season list, no new wait);
+for a season Jellyfin keeps with no episode (an empty folder) it is the entry's list for that season, as the mod's cards count.
+No line when neither knows of an episode. A partly downloaded season shows Jellyfin's count alone: the mod's cards show no
+"on disk of total" form, so neither does this line. The line is drawn into upstream's card (after its title; upstream's season
+cards have no `.cardFooter`), so it goes and comes back with the card when upstream redraws it; nothing else on the card moves.
+Only the native series page's Seasons row has it: season pages and library grids are unchanged.
+
 ### 3.2 Colour
 
 State reads from shape and opacity first, colour second, because the TV is viewed at three
