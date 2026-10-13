@@ -16,17 +16,16 @@ import datetime from 'scripts/datetime';
 import * as userSettings from 'scripts/settings/userSettings';
 
 import { type EntryDetail, getEntry } from '../api/modApi';
-import { episodeMark } from '../constants/fileState';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { TmdbCrewCredit } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
-import FileStateMark from './FileStateMark';
+import DownloadBlock from './DownloadBlock';
 import { episodeMetaItems, seasonPath, useTmdbCover } from './MissingChildren';
-import QueueStatusLine from './QueueStatusLine';
 
+import './downloadBlock.scss';
 import './entryDetails.scss';
 import './missingChildren.scss';
 
@@ -140,9 +139,11 @@ const DetailsLine: FC<{ label: string; names: string[] }> = ({ label, names }) =
 
 /**
  * The mod's page for an episode Jellyfin has no item for (`#/details?entryId=…&season=N&episode=M`, P1.FU15), laid out as
- * upstream's page for a downloaded episode: the series and "Season N - M. Title" as the header, the meta line, TMDB's still as
- * the image with the mark, the overview, the director and writer lines, Cast & Crew (the series' regulars, then the crew) and
- * Guest Stars. Administrators get Get a Release for the episode in the header.
+ * upstream's page for a downloaded episode: the series and "Season N - M. Title" as the header, the meta line with the series'
+ * certification, TMDB's still as the image (plain, as a downloaded episode's), the download block where the track selectors sit
+ * (P1.FU20), the series' genres, the overview, the director and writer lines, Cast & Crew (the series' regulars, then the crew)
+ * and Guest Stars. Administrators get Get a Release for the episode in the header. Once the episode is in the library the page
+ * becomes Jellyfin's own.
  */
 const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, serverId, detail: initial, season, episodeNumber, view,
     isAdmin, signal, focusOwnership, update }) => {
@@ -213,7 +214,19 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
     ];
     const guests: Person[] = (credits?.guestStars ?? []).map(person => ({ key: 'guest:' + person.id + ':' + person.order,
         name: person.name, role: roleLabel('GuestStar', person.character), profilePath: person.profilePath }));
-    const mark = episode ? episodeMark(episode) : null;
+    // Once the episode's file is in the library (its import ended and the entry was read again), Jellyfin's own page takes over:
+    // its Video / Audio / Subtitle selectors and Play replace the download block (P1.FU20).
+    const heldItem = episode?.availability === 'onDisk' ? episode.jellyfinItemId : null;
+    useEffect(() => {
+        if (heldItem && !signal.aborted) {
+            window.location.replace('#/details?id=' + encodeURIComponent(heldItem) + '&serverId=' + encodeURIComponent(serverId));
+        }
+    }, [heldItem, serverId, signal]);
+    const metadata = entry.metadata;
+    // The series' certification as upstream's misc line shows an official rating: the US one, else the first TMDB lists.
+    const certifications = metadata?.certifications ?? [];
+    const certification = (certifications.find(item => item.country === 'US') ?? certifications[0])?.rating;
+    const genres = metadata?.genres ?? [];
     // Upstream's episode date: the date alone, in the locale's short form (mediainfo's `toLocaleDateString`).
     const shortDate = (date: string) => datetime.toLocaleDateString(datetime.parseISO8601Date(date, false));
     return <>
@@ -226,25 +239,25 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
                 {' - '}{episodeNumber}. {episode?.title ?? ''}
             </bdi></h3>
         </>)}
-        {episode && mount('.itemMiscInfo-primary', <>{episodeMetaItems(episode,
-            entry.metadata?.episodeRatings?.[episode.tmdbId], shortDate)}</>)}
+        {episode && mount('.itemMiscInfo-primary', <>
+            {episodeMetaItems(episode, entry.metadata?.episodeRatings?.[episode.tmdbId], shortDate)}
+            {certification && <div className='mediaInfoItem mediaInfoText mediaInfoOfficialRating'>{certification}</div>}
+        </>)}
         {episode && Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            // The episode's download takes the still's corner from Not Downloaded, as on its row (integration/downloadMarks).
-            <div className='card backdropCard jfmod-episodeStill' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode.id}>
+            // A plain still, as a downloaded episode's: the download block below says the state (user, 2026-10-13).
+            <div className='card backdropCard jfmod-episodeStill'>
                 <div className='cardBox'>
                     <div className='cardScalable'>
                         <div className='cardPadder cardPadder-backdrop' />
                         <div className={'cardImageContainer coveredImage cardContent' + (cover ? '' : ' jfmod-missingPoster jfmod-missingEmpty')}>
                             {cover ?? <span className='jfmod-missingNumber' aria-hidden='true'>{episodeNumber}</span>}
                         </div>
-                        {mark && <FileStateMark state={mark} airDate={episode.airDate} />}
                     </div>
                 </div>
             </div>, node, String(index)))}
-        {/* The download line, where a downloaded episode's page shows it (the end of upstream's content section): its disc and
-            `In the download queue · 42% · …` (P1.FU19). */}
-        {episode && mount('.detailSectionContent',
-            <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />)}
+        {episode && <DownloadBlock anchor={view.querySelector('.trackSelections')} entryId={entry.id} episode={episode} isAdmin={isAdmin}
+            canAcquire={canAcquire} onGetRelease={openPicker} onChanged={reload} />}
+        {genres.length > 0 && mount('.itemGenres', <span className='jfmod-episodeGenres'>{genres.join(', ')}</span>)}
         {episode?.overview && mount('.overview', episode.overview)}
         {mount('.itemDetailsGroup', <>
             <DetailsLine label={globalize.translate(directors.length > 1 ? 'Directors' : 'Director')} names={directors} />

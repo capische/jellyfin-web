@@ -43,7 +43,7 @@ interface FileStateMarkProps {
  * The Not Downloaded glyph (P1.FU17, design A approved 2026-10-12): a download arrow coming out of a small cloud, stroked in
  * the mark's colour (the stroke width is set in fileStateMark.scss, a little lighter on rows).
  */
-const NotDownloadedGlyph: FC = () => (
+export const NotDownloadedGlyph: FC = () => (
     <svg className='jfmod-markGlyph' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeLinecap='round'
         strokeLinejoin='round' aria-hidden='true' focusable='false'>
         <path d='M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5' />
