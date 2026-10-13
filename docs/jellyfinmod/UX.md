@@ -215,7 +215,7 @@ the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss
 | What | Mark | Administrators | Everyone else |
 | --- | --- | --- | --- |
 | On disk | none | — | — |
-| No file (not downloaded, reclaimed, or unaired with no air date) | white icon (the existing glyph, a dark one on the light schemes) on the top bar's glass disc (§3.3, P4.FU7); a row keeps its amber `#ffb74d` | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
+| No file (not downloaded, reclaimed, or unaired with no air date) | white icon (the existing glyph, a dark one on the light schemes) on the top bar's glass disc (§3.3, P4.FU7); a row's is the colour of upstream's round row icons since P1.FU22 (it was amber `#ffb74d`) | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
 | Unaired, with an air date | clock + the short air date: `10 Aug` this year, `Aug ’27` in another (month in the viewer's locale) | not clickable; tooltip *Airs 10 Aug 2026* | the same |
 
 The quiet on-disk mark and the 60 % dimming rule above are retired with this change; the file-less cards
@@ -248,6 +248,22 @@ icon] the same size as info and fav and heart icons"). Upstream's `.paper-icon-b
 0.556em of padding each side: a 2.7816em box (41.4px on the desktop, 40.1px on the phone, measured on a season page). Not
 Downloaded, the Unaired clock (its height and glyph) and a row's failed bang take that box and glyph size, centred on the row
 as the heart is; so does the download disc on a list row (§3.3). Cards keep the 1.6em disc.
+
+**Changed 2026-10-13 (P1.FU22, user: "Replace yellow with white and add hover effect + click which open the picker for the
+episode"): a row's Not Downloaded is white, and an administrator's button again.** On rows only (a missing episode's row on
+the native and the mod's season pages, a library list row; the 2.7816em mark in the end slot): the glyph takes the colour of
+upstream's round row icons beside it (their `color: inherit`, the row's text colour: white 70 % on the dark schemes, the dark
+text on the light ones), for everyone. For administrators it is the button again (`MARK_CLICKABLE.row`; cards keep
+`MARK_CLICKABLE.card` off): upstream's round-icon hover (`.paper-icon-button-light` in the base theme: the theme's primary
+glyph over its veil, primary at the action-selected opacity, 0.2 s, no scale), the same pressed, a pointer, the cyan keyboard
+ring; Enter and Space; named *Get a Release for Episode 1, 1923* (a library row: *Get a Release for* the title), its tooltip
+still *Not Downloaded* (the mark's meaning, as before; the name says what the click does). It opens the release picker in the
+row's scope: the episode (Episode, its season, All Seasons, as the episode page's Get a Release), or the title. On the TV the
+row is the D-pad stop and the mark its second: Right on the row reaches it (focused: the primary glyph over its veil and the
+white ring), Enter opens the picker, Left returns to the row; Down never lands on it. Everyone else's stays a plain indicator
+(white, no hover, no pointer, no stop). Unchanged: the Unaired clock, the download disc in its states and a failure's red bang
+stay indicators in their colours; a failure on an administrator's row disables the button meanwhile (no pointer, no stop,
+nothing under the mouse) and gives it back when the failure clears. Cards are unchanged.
 
 **Changed 2026-10-12 (P4.FU1): a download replaces the in-flight marks.** The grabbed arrow and the
 downloading ring with its percentage are gone from `FileStateMark`; a title, season or episode on its way
@@ -328,8 +344,8 @@ its last value, the disc and figure dimmed.
   textual left of the icons. The figure goes into the row's meta line (upstream's `listItemMediaInfo` or the mod's), or, where
   the layout hides that line (upstream does below 50em, so the phone), as the last line of the row's text. A failure on a row
   that has the Not Downloaded mark takes that mark: the cloud replaced by a red bang, its tooltip `Failed · reason` (never the
-  cloud and the bang both). Since P1.FU19 it is an indicator for everyone (no button, no D-pad stop, no "search again"; with
-  `MARK_CLICKABLE` on it would be the administrator's button that opens the picker). A failure on a row without one (a file on disk) is the red bang disc.
+  cloud and the bang both). Since P1.FU19 it is an indicator for everyone (no button, no D-pad stop, no "search again"); since
+  P1.FU22 an administrator's row button there is disabled while the failure holds it. A failure on a row without one (a file on disk) is the red bang disc.
 - **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page): the 2.5em disc, then `In the
   download queue · 42% · 12 min left`, then View queue where the queue may be opened. The mod's page for a missing episode
   showed it from P1.FU19 until P1.FU20 replaced it with the download block (§7.2.1).
@@ -339,7 +355,8 @@ its last value, the disc and figure dimmed.
   cannot be read; the in-library row once imported); the X stays; the figure stays at the right end of the marks line; no bar.
   The Add slot is no control there: no pointer, no veil, no growth under the mouse (P1.FU19); the X keeps its hover.
 - **TV and phone:** sizes in `em`, so TV 125 % and phone 90 %; no flex gap, `min()` or `max()`; nothing waits for a hover; the
-  discs are not focus stops (since P1.FU19 not even a failure on a row). Reduced motion stops the
+  discs are not focus stops (since P1.FU19 not even a failure on a row; an administrator's row Not Downloaded, P1.FU22, is the
+  row's second stop only while no download holds it). Reduced motion stops the
   bob, the turning arc and the arc's easing.
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards

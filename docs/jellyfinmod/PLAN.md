@@ -788,6 +788,38 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   there was not permitted), the ordinary user (28096 has no non-administrator with an empty password), the TV at 1280×720, a
   physical TV, a deployment, Codex review. Noticed, older than this change and left alone: an upstream season card's title sits
   0.3em above the mod cards' titles (the mod cards wrap their lines in a `.cardFooter` with its padding; upstream's have none).
+  **P1.FU22, built (not accepted) 2026-10-13: a row's Not Downloaded is white, and an administrator's button that opens the
+  picker** (user, with a screenshot of 1923 S1E1's row on 28096: "Replace yellow with white and add hover effect + click which
+  open the picker for the episode"; [UX.md](UX.md) §3.1, §3.3). Owner: Phase 1 (the P1.FU11/P1.FU17 marks, P1.FU19's switch);
+  web only, no plugin change. Rows only (a missing episode's row on the native and the mod's season pages, a library list row):
+  the glyph takes the colour of upstream's round row icons (`color: inherit`, the row's text colour: white 70 % dark, the dark
+  text light) for everyone; for administrators it is a button again, `MARK_CLICKABLE` now per kind (`{ card: false, row: true }`):
+  upstream's round-icon hover (the theme's primary glyph over its veil, 0.2 s, no scale) under the mouse and pressed, a pointer,
+  the cyan keyboard ring, Enter and Space, named *Get a Release for Episode 1, 1923* (a library row: *Get a Release for* the
+  title), the tooltip kept *Not Downloaded* (chosen: the tooltip says what the mark means, as before, and the name what the
+  click does; no collision found). It opens the picker in the row's scope (an episode: Episode, its season, All Seasons, as the
+  episode page's Get a Release; a title: the title's picker). TV: the row is the stop, Right reaches the mark (focused: the
+  primary glyph over its veil and the white ring), Enter opens the picker, Left returns; Down never lands on it, and Right does
+  not go into a hidden (downloading) or disabled mark. Ordinary users: a plain indicator, as before. Cards unchanged; the
+  Unaired clock and every download disc unchanged; a failure on an administrator's row disables the button while it holds it
+  (the red bang stays an indicator, its tooltip and name the failure's; both given back after). Web `feat/row-mark-click` from
+  `next-release` `71ba91d893`: `c1d7a0a31f` (code), `f63940280b` (runners) and this docs commit. Checks: typecheck, eslint (the
+  changed files: no errors), stylelint and the production build pass. Values found live on 28096 (candidate CSS injected on the
+  deployed page, read-only): upstream's heart and info hover `rgb(0, 164, 220)` over `rgba(0, 164, 220, 0.2)`, the row icons
+  `rgba(255, 255, 255, 0.7)` dark and `rgba(0, 0, 0, 0.87)` light. Runs, all read-only against 28096 with this build served in
+  place of `/web/` by Playwright route interception (`JELLYFINMOD_LOCAL_DIST`, new in both runners; a look before a deploy, not
+  acceptance), signed in as oleksii, 1923 (entry `8f9dcb37…`, native Season 1 with 8 missing episodes):
+  `missing-seasons-episodes.mjs` passed in Chromium on desktop (102 pass, 0 failed), phone (93, 0) and TV 1080 (98, 0; a first
+  TV run failed only on the runner expecting a pointer where the TV layout hides it, fixed) and in real Chrome 287 pass, 0
+  failed on the three layouts; `card-progress.mjs` (intercepted queue, search and grab answers) passed in Chromium (desktop and
+  phone 0 failed, TV 20/20 after the same runner fix) and in Chrome 63 pass, 0 failed, 21 not verified (no movie entry given,
+  no series list row in its run). A probe (not committed) checked a library list row in Chromium and Chrome: Adolescence in
+  the Shows list filtered to Not Downloaded carries the button, white at rest, the hover look, a click opens the picker, on
+  the TV Right, Enter and Left as above. The picker steps ran real release searches on 28096 (`GET /JellyfinMod/Releases`,
+  database reads and indexer queries; nothing grabbed). **Not run:** a local environment (deploying the plugin and the build to
+  alpha was not permitted by the permission system, so nothing ran there), the ordinary user (28096 has no non-administrator
+  with an empty password), the Right hop on a failed or downloading row on the TV, the button coming back after a failure
+  clears, the TV at 1280×720, a physical TV, a Pi deployment, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
