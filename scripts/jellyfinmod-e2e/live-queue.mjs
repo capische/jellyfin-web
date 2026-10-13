@@ -13,12 +13,12 @@ const title = process.env.JELLYFINMOD_LIVE_TITLE;
 const layouts = (process.env.JELLYFINMOD_LIVE_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
 const browser = await launch();
 
-// A downloading card (P4.FU1): the amber bar at the poster's bottom, whose length is the percentage (cards show no figure), and
-// the arrow, in the count pill or in the dark disc.
+// A downloading card (P4.FU1, P4.FU6): the amber bar at the poster's bottom, whose length is the percentage (the figure is the
+// disc's tooltip), and the download disc top right.
 const cardPercent = page => page.evaluate(name => {
     const card = [...document.querySelectorAll('.card')].find(node => (node.textContent ?? '').includes(name));
     const fill = card?.querySelector('.jfmod-dlCardBar .jfmod-dlBar-fill');
-    const arrow = card?.querySelector('.jfmod-dlDisc, .countIndicator.jfmod-countArrow');
+    const arrow = card?.querySelector('.jfmod-dlmark');
     return { found: !!card, inFlight: !!fill && !!arrow, text: fill ? Math.floor(parseFloat(fill.style.width)) + '%' : null,
         cards: document.querySelectorAll('.card').length };
 }, title);
