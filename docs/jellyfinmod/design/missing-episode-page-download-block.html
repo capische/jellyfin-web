@@ -1,0 +1,185 @@
+<title>Missing Episode Page</title>
+<style>
+:root{--bg:#f3f4f6;--fg:#1d1f22;--panel:#ffffff;--ground:#e9ebee;--paper:#ffffff;--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--hov:rgba(0,164,220,.14);
+ --prim:#00a4dc;--amber:#ffb300;--amberText:#8a5a00;--err:#c62828;--ok:#2e7d32;--disc:rgba(0,0,0,.66);--track:rgba(0,0,0,.14);--btn:rgba(0,0,0,.08);--btnfg:#1d1f22;--sel:rgba(0,0,0,.06);color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hov:rgba(0,164,220,.2);--amberText:#ffb300;--err:#ff7b72;--ok:#81c784;--track:rgba(255,255,255,.12);--btn:rgba(255,255,255,.14);--btnfg:#fff;--sel:rgba(255,255,255,.08);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hov:rgba(0,164,220,.2);--amberText:#ffb300;--err:#ff7b72;--ok:#81c784;--track:rgba(255,255,255,.12);--btn:rgba(255,255,255,.14);--btnfg:#fff;--sel:rgba(255,255,255,.08);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,"Noto Sans",system-ui,sans-serif;padding-block:0}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+.panel{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;background:var(--panel);padding:16px;border-right:1px solid var(--line)}
+.panel h1{font-size:16px;margin:0 0 4px}.panel p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.4}
+.ctl{margin:0 0 12px}.ctl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}.seg button{font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--prim);border-color:var(--prim);color:#fff}
+.ctl input[type=range]{width:100%}.sw{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.4}
+.main{padding:16px;min-width:0}
+h2{font-size:14px;margin:18px 0 6px}h2:first-child{margin-top:0}
+.note{font-size:12px;color:var(--muted);margin:0 0 8px;max-width:78ch;line-height:1.45}
+/* the device frame */
+.frame{background:var(--ground);color:var(--fg);border-radius:8px;font-size:16px;overflow:hidden;max-width:100%}
+.frame.phone{font-size:14.4px;width:360px}.frame.tv{font-size:20px}
+/* ---- upstream's detail page, sketched ---- */
+.page{padding:2em 2.5em 1em}.frame.phone .page{padding:1em 1em}
+.hdr{display:flex;align-items:flex-start}.frame.phone .hdr{flex-direction:column}
+.still{position:relative;width:18em;flex:0 0 auto;border-radius:.2em;overflow:hidden;background:#202020;aspect-ratio:16/9;margin-right:2em}.frame.phone .still{width:100%;margin:0 0 .8em}
+.still .art{position:absolute;inset:0;background:linear-gradient(160deg,#5a6d80,#2b3a4a 60%,#1a2230)}
+.still .mk{position:absolute;top:.3em;right:.3em}
+.names{flex:1 1 auto;min-width:0}
+.names h1{font-size:1.6em;font-weight:500;margin:0 0 .15em}.names h3{font-size:1.1em;font-weight:400;margin:0 0 .4em;color:var(--muted)}
+.misc{display:flex;flex-wrap:wrap;align-items:center;font-size:.9em;color:var(--muted)}.misc span{margin-right:1.2em;white-space:nowrap}
+.misc .star{color:#f2b01e;margin-right:.25em}.misc .cert{border:1px solid var(--line);border-radius:.2em;padding:0 .35em;font-size:.85em;margin-right:0}
+.btns{display:flex;align-items:center;margin:1em 0 0}
+.rb{display:inline-flex;align-items:center;justify-content:center;width:2.5em;height:2.5em;border-radius:50%;background:var(--btn);color:var(--btnfg);margin-right:.5em}.rb svg{width:1.4em;height:1.4em}
+.rb.play{width:auto;padding:0 1.4em;border-radius:1.25em;background:var(--prim);color:#fff;font-weight:600}.rb.play svg{margin-right:.4em}
+.frame.tv .focus{box-shadow:0 0 0 .12em var(--ground),0 0 0 .28em #fff}
+.primary{margin-top:1.6em;max-width:60em}
+.overview{font-size:.95em;line-height:1.5;margin:1.2em 0}
+.gen{font-size:.9em;color:var(--muted);margin:.8em 0}
+.dgroup .row{display:flex;font-size:.9em;margin:.35em 0}.dgroup .lbl{width:9em;flex:0 0 auto;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;margin:.6em 0}.tags span{font-size:.8em;padding:.15em .6em;border-radius:1em;background:var(--sel);margin:0 .4em .4em 0}
+.sec{margin-top:1.6em}.sec h4{font-size:1.1em;font-weight:500;margin:0 0 .6em}
+.people{display:flex;overflow:hidden}.pc{width:6.4em;margin-right:.8em;flex:0 0 auto;text-align:center;font-size:.8em}.pc i{display:block;aspect-ratio:2/3;border-radius:.25em;background:var(--sel)}.pc b{display:block;font-weight:600;margin-top:.4em}.pc small{color:var(--muted)}
+/* track selects (after import) */
+.tracks{display:flex;flex-wrap:wrap}.sel{min-width:14em;margin:0 1em .8em 0}.sel label{display:block;font-size:.72em;color:var(--muted);text-transform:none;margin-bottom:.2em}.sel div{border-bottom:1px solid var(--line);padding:.3em 0;font-size:.95em;display:flex;justify-content:space-between}.sel div:after{content:"▾";color:var(--muted)}
+/* ---- the download block ---- */
+.dlp{display:flex;align-items:flex-start;padding:1em 1.1em;border-radius:.3em;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.dlp .big{margin-right:1.1em}.dlp .body{flex:1 1 0;min-width:0}
+.frame.phone .dlp{padding:.8em .8em}.frame.phone .dlp .big{margin-right:.8em}
+.frame.phone .dl.big{width:3.2em;height:3.2em}.frame.phone .dl.big .num{font-size:.95em}.frame.phone .dl.big svg.g{width:1.6em;height:1.6em}
+.dlp .st{font-weight:600;font-size:1.05em}.dlp .st .fig{font-weight:400;color:var(--amberText);margin-left:.5em}.dlp .st .fig.err{color:var(--err)}.dlp .st .fig.mut{color:var(--muted)}
+.dlp .rel{font-size:.8em;color:var(--muted);margin-top:.35em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.dlp .mks{display:flex;flex-wrap:wrap;align-items:center;font-size:.8em;margin-top:.4em;color:var(--fg)}.dlp .mks span{margin-right:.8em;white-space:nowrap}.dlp .mks .mk{text-transform:uppercase;font-size:.85em;letter-spacing:.03em;opacity:.85}.dlp .mks .lnk{color:var(--prim);cursor:pointer}
+.dlp .mks .tr{display:inline-flex;width:1.6em;height:1.6em;border-radius:50%;align-items:center;justify-content:center;color:var(--muted);margin-right:0}.dlp .mks .tr svg{width:1.1em;height:1.1em}
+.dlp .pack{display:flex;align-items:center;flex-wrap:wrap;font-size:.8em;color:var(--muted);margin-top:.5em}.dlp .pack .strip{display:inline-flex;margin-left:.6em}
+.dlp .pack .strip i{width:.9em;height:.9em;border-radius:50%;margin-right:.25em;background:var(--track);position:relative}.dlp .pack .strip i.d{background:var(--amber)}.dlp .pack .strip i.p{background:linear-gradient(90deg,var(--amber) 50%,var(--track) 50%)}.dlp .pack .strip i.k{background:var(--ok)}
+.dlp .pack .strip i.cur{box-shadow:0 0 0 .15em var(--paper),0 0 0 .25em var(--amber)}
+.dlp .acts{display:flex;align-items:center;flex-wrap:wrap;margin-top:.8em}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:2.4em;padding:0 1.3em;border-radius:1.2em;font-size:.9em;font-weight:600;margin:0 .6em .3em 0;background:var(--btn);color:var(--btnfg);cursor:pointer;white-space:nowrap}
+.btn.blue{background:var(--prim);color:#fff}.btn.red{background:#c62828;color:#fff}.btn svg{width:1.2em;height:1.2em;margin-right:.45em}
+.lnkb{font-size:.9em;color:var(--prim);cursor:pointer;margin-right:1em}
+.ebar{height:.28em;background:var(--track);border-radius:.14em;overflow:hidden;margin-top:.7em}.ebar i{display:block;height:100%;background:var(--amber);transition:width .35s}.ebar i.stalled{opacity:.55}.ebar i.failed{background:#e53935}.ebar i.importing{width:100%!important;animation:breathe 1.2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.45}}
+/* ---- the disc family (approved) ---- */
+.dl{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--disc);color:var(--amber);flex:0 0 auto;vertical-align:middle}
+.dl svg.g{width:1em;height:1em;position:relative;z-index:1}
+.dl svg.arc{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.dl .arc circle{fill:none;stroke-width:2.6}.dl .arc .t{stroke:rgba(255,255,255,.18)}.dl .arc .p{stroke:var(--amber);stroke-linecap:round;stroke-dasharray:100;transition:stroke-dashoffset .35s ease-out}
+.dl[data-state=queued] .arc,.dl[data-state=notdl] .arc,.dl[data-state=failed] .arc,.dl[data-state=unaired] .arc{display:none}
+.dl[data-state=importing] .arc .p{stroke-dasharray:28 72;animation:spin 1.2s linear infinite;transform-origin:center}
+.dl[data-state=stalled] .arc .p{opacity:.55}
+.dl[data-state=failed]{color:#ff5a4f}
+.dl[data-state=downloading] svg.g{animation:bob 1.4s ease-in-out infinite}
+.dl[data-state=unaired]{width:auto;padding:0 .45em 0 .3em;border-radius:.8em;color:rgba(255,255,255,.85)}.dl[data-state=unaired] b{font-size:.68em;font-weight:600;margin-left:.3em;white-space:nowrap}
+/* the page's big disc: 4em, transparent like a row's, the number inside when there is one */
+.dl.big{width:4em;height:4em;background:transparent}.dl.big svg.g{width:2em;height:2em}.dl.big .arc circle{stroke-width:2.4}.dl.big .arc .t{stroke:var(--track)}
+.dl.big .num{position:relative;z-index:1;font-weight:700;font-size:1.15em;letter-spacing:-.02em;color:var(--amber);font-variant-numeric:tabular-nums;display:flex;align-items:baseline}.dl.big .num i{font-style:normal;font-weight:600;font-size:.6em;margin-left:.05em;opacity:.85}
+.dl.big[data-state=stalled] .num{opacity:.6}.dl.big[data-state=unaired]{width:4em;padding:0;border-radius:50%;color:var(--muted)}.dl.big[data-state=unaired] b{display:none}
+.dl.big[data-state=notdl]{color:var(--amber)}.dl.big[data-state=failed] svg.g{color:#ff5a4f}
+.dl.big.done{color:var(--ok)}
+@keyframes bob{0%,100%{transform:translateY(-.08em)}50%{transform:translateY(.12em)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reduced .dl svg.g,.reduced .dl .arc .p,.reduced .ebar i{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){.dl svg.g,.dl .arc .p{animation:none!important}}
+.src{font-size:12px;border-collapse:collapse;margin:6px 0 12px;max-width:78ch}.src td,.src th{text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}.src th{color:var(--muted);font-weight:500}
+</style>
+
+<div class="app">
+<aside class="panel">
+  <h1>Missing episode page</h1>
+  <p>The mod's page for an episode Jellyfin has no item for, with a download block where a downloaded episode has its Video / Audio / Subtitle selectors, and the metadata the page can show without a file.</p>
+  <div class="ctl"><label>Episode state</label><div class="seg" id="state"><button aria-pressed="true" data-v="downloading">downloading</button><button aria-pressed="false" data-v="notdl">not downloaded</button><button aria-pressed="false" data-v="unaired">unaired</button><button aria-pressed="false" data-v="queued">queued</button><button aria-pressed="false" data-v="stalled">stalled</button><button aria-pressed="false" data-v="importing">importing</button><button aria-pressed="false" data-v="failed">failed</button><button aria-pressed="false" data-v="done">imported (after)</button></div></div>
+  <div class="ctl"><label>Release</label><div class="seg" id="pack"><button aria-pressed="false" data-v="single">Single episode</button><button aria-pressed="true" data-v="pack">Season pack</button></div></div>
+  <div class="ctl"><label>Viewer</label><div class="seg" id="admin"><button aria-pressed="true" data-v="1">Administrator</button><button aria-pressed="false" data-v="0">Ordinary user</button></div></div>
+  <div class="ctl"><label>Theme</label><div class="seg" id="theme"><button aria-pressed="true" data-v="dark">Dark</button><button aria-pressed="false" data-v="light">Light</button></div></div>
+  <div class="ctl"><label>Device</label><div class="seg" id="device"><button aria-pressed="false" data-v="phone">Phone 360</button><button aria-pressed="true" data-v="desktop">Desktop</button><button aria-pressed="false" data-v="tv">TV 125 %</button></div></div>
+  <div class="ctl"><label>Progress: <span id="pctv">42</span> %</label><input id="pct" type="range" min="0" max="100" value="42"></div>
+  <div class="ctl"><label>Motion</label><div class="sw"><input type="checkbox" id="rm"> simulate reduced motion</div></div>
+</aside>
+
+<main class="main">
+  <h2>The page</h2>
+  <p class="note">Upstream's episode page, with the mod's additions in the two places upstream leaves empty for an episode without a file: the track-selector slot holds the <b>download block</b>, and the header's button row holds <i>Get a Release</i> and More (as built). Everything else is upstream's layout: the still (no disc on it — the block says it; user, 2026-10-13), the name, the misc line, overview, details lines, Cast & Crew, Guest Stars.</p>
+  <div class="frame" id="frame"><div class="page" id="page"></div></div>
+
+  <h2>Where each field comes from</h2>
+  <p class="note">What a missing episode can show, by source. The common case needs nothing new from the plugin; the three rows marked "plugin" are small additions, listed so the user can say yes or no.</p>
+  <table class="src">
+  <tr><th>On the page</th><th>Source</th><th>State</th></tr>
+  <tr><td>Series, "Season 1 – 1. Pilot", still, overview</td><td>entry + episode (TMDB, stored)</td><td>built</td></tr>
+  <tr><td>Air date, runtime, ★ rating</td><td>episode.airDate, runtimeMinutes, metadata.episodeRatings</td><td>built</td></tr>
+  <tr><td>Certification (TV-MA) on the misc line</td><td>metadata.certifications (series, stored)</td><td>proposed, no plugin change</td></tr>
+  <tr><td>Genres line (Comedy, Drama)</td><td>metadata.genres (series, stored)</td><td>proposed, no plugin change</td></tr>
+  <tr><td>Director, Writer lines; Cast & Crew; Guest Stars</td><td>episode.credits, metadata.cast</td><td>built</td></tr>
+  <tr><td>Download block: state, %, time left, rate, size</td><td>QueueRow (progress, etaSeconds, downloadRateBytes, sizeBytes, message)</td><td>proposed, no plugin change</td></tr>
+  <tr><td>Release name</td><td>QueueRow.releaseTitle / AcquisitionSummary.releaseTitle</td><td>proposed, no plugin change</td></tr>
+  <tr><td>Marks 1080p · WEB-DL · H.264 · DD+ 5.1 · EN</td><td>ReleaseParser on the release name</td><td>plugin: add `parsed` to QueueRow (the picker already has the parser)</td></tr>
+  <tr><td>Indexer name, link to the release page</td><td>GrabOperation.indexerName; detailsUrl is not kept after the grab</td><td>plugin: keep indexerName + detailsUrl on the grab (admins)</td></tr>
+  <tr><td>Open Transmission icon</td><td>QueueClient.openUrl (admins)</td><td>proposed, no plugin change</td></tr>
+  <tr><td>Season pack: file N of M, per-episode strip</td><td>QueueRow per episode of the same grabId; per-file progress</td><td>plugin: per-file progress on the pack's rows (Phase 5 reports one figure per torrent today)</td></tr>
+  <tr><td>Seeders at grab time, tags/keywords, networks, production code</td><td>not stored (TMDB has keywords, networks, production_code)</td><td><b>not proposed</b>: rarely read, each a plugin field and a refresh</td></tr>
+  <tr><td>Media info, chapters, Video/Audio/Subtitle</td><td>need a file</td><td>absent until imported; no empty-state row (upstream hides them too)</td></tr>
+  </table>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+const G={arrow:'<path d="M12 4V17"/><path d="M6.5 11.5L12 17L17.5 11.5"/>',clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12L15 14"/>',pause:'<path d="M9 6V18M15 6V18" stroke-width="2.8"/>',bang:'<path d="M12 5V14"/><circle cx="12" cy="18.6" r="1.4" fill="currentColor" stroke="none"/>',cloud:'<path d="M7 18.5A4.5 4.5 0 0 1 6.4 9.6A6 6 0 0 1 18 8.5A4 4 0 0 1 18 16.5"/><path d="M12 11V21"/><path d="M8.5 17.5L12 21L15.5 17.5"/>',spin:'<path d="M4 12A8 8 0 0 1 17.5 6.3"/><path d="M17.5 2.5V6.5H13.5"/>',tick:'<path d="M5 12.5L9.8 17.3L19 8"/>',heart:'<path d="M12 20.5L4.6 13.2A4.4 4.4 0 0 1 10.8 7L12 8.2L13.2 7A4.4 4.4 0 0 1 19.4 13.2Z" fill="currentColor" stroke="none"/>',play:'<path d="M8 5.5V18.5L19 12Z" fill="currentColor" stroke="none"/>',more:'<circle cx="12" cy="6" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.7" fill="currentColor" stroke="none"/>',trans:'<circle cx="12" cy="12" r="8.5"/><path d="M12 8V15"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/><path d="M8 10.5A5 5 0 0 1 16 10.5"/>',search:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15L20 20"/>'};
+const svg=(k,sw)=>`<svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw||2.4}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+const GLYPH={downloading:'arrow',queued:'clock',importing:'spin',stalled:'pause',failed:'bang',notdl:'cloud',unaired:'clock',done:'tick'};
+const ARC=`<svg class="arc" viewBox="0 0 36 36" aria-hidden="true"><circle class="t" cx="18" cy="18" r="15.9"/><circle class="p" cx="18" cy="18" r="15.9" pathLength="100"/></svg>`;
+const S={state:'downloading',pack:'pack',admin:true,theme:'dark',device:'desktop',pct:42,rm:false};
+const eta=p=>{const m=Math.max(1,Math.round((100-p)/100*21));return m>=60?`${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')} min left`:`${m} min left`;};
+const disc=(st,big,p)=>{const num=big&&(st==='downloading'||st==='stalled');return `<span class="dl${big?' big':''}${st==='done'?' done':''}" data-state="${st==='done'?'none':st}" title="${tip(st,p)}">${ARC}${num?`<b class="num">${p}<i>%</i></b>`:svg(GLYPH[st],st==='failed'?2.8:2.4)}${st==='unaired'&&!big?'<b>May ’27</b>':''}</span>`;};
+const tip=(st,p)=>({downloading:`Downloading · ${p}% · ${eta(p)} · 3.1 MB/s`,queued:'Queued · 2 ahead',importing:'Importing…',stalled:`Stalled at ${p}%`,failed:'Failed · no space left on the download disk',notdl:'Not Downloaded',unaired:'Airs 19 May 2027',done:''})[st];
+const REL='Ted.Lasso.S01.1080p.WEB-DL.DDP5.1.H.264-NTb', RELE='Ted.Lasso.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb';
+function marks(){ const tr=S.admin?`<span class="tr" title="Open Transmission">${svg('trans',2)}</span>`:''; return `<div class="mks"><span class="mk">1080p</span><span class="mk">WEB-DL</span><span class="mk">H.264</span><span class="mk">DD+ 5.1</span><span class="mk">EN</span><span>${S.pack==='pack'?'38.2 GB':'4.6 GB'}</span><span class="${S.admin?'lnk':''}" title="${S.admin?'Open the release page on the tracker':''}">TorrentGalaxy</span>${tr}</div>`; }
+function pack(p){ if(S.pack!=='pack') return ''; const n=10, k=Math.min(n,Math.max(1,Math.round(p/100*n*1.4))); let s=''; for(let i=0;i<n;i++){ const c=i<k-1?'k':i===k-1?'p':''; s+=`<i class="${c}${i===k-1?' cur':''}" title="Episode ${i+1}${i<k-1?' · imported':i===k-1?' · downloading':' · waiting'}"></i>`; } return `<div class="pack">Season 1 pack · this episode is file ${k} of 10<span class="strip">${s}</span></div>`; }
+function block(){
+ const st=S.state,p=S.pct,a=S.admin, rel=S.pack==='pack'?REL:RELE;
+ const line=(t,f,c)=>`<div class="st">${t}${f?`<span class="fig ${c||''}">${f}</span>`:''}</div>`;
+ const queue=`<span class="lnkb">View Queue</span>`;
+ const bar=['downloading','stalled','importing','failed'].includes(st)?`<div class="ebar"><i class="${st}" style="width:${st==='importing'?100:p}%"></i></div>`:'';
+ let body='';
+ if(st==='downloading') body=line('Downloading',`${p}% · ${eta(p)} · 3.1 MB/s · 1.9 of 4.6 GB`)+`<div class="rel">${rel}</div>${marks()}${pack(p)}${bar}<div class="acts">${queue}${a?`<span class="btn">Cancel Download</span>`:''}</div>`;
+ else if(st==='stalled') body=line('Stalled',`${p}% · no seeders for 20 min`)+`<div class="rel">${rel}</div>${marks()}${pack(p)}${bar}<div class="acts">${queue}${a?`<span class="btn">Cancel Download</span>`:''}</div>`;
+ else if(st==='queued') body=line('Queued',`2 ahead in Transmission`,'mut')+`<div class="rel">${rel}</div>${marks()}${pack(0)}<div class="acts">${queue}${a?`<span class="btn">Cancel Download</span>`:''}</div>`;
+ else if(st==='importing') body=line('Importing',`linking into the library…`,'mut')+`<div class="rel">${rel}</div>${marks()}${bar}<div class="acts">${queue}</div>`;
+ else if(st==='failed') body=line('Failed',`no space left on the download disk`,'err')+`<div class="rel">${rel}</div>${marks()}<div class="acts">${a?`<span class="btn red">${svg('search')}Search Again</span>`:''}${queue}</div>`;
+ else if(st==='notdl') body=line('Not Downloaded',a?'':'no release chosen yet','mut')+`<div class="acts">${a?`<span class="btn blue">${svg('cloud')}Get a Release</span>`:''}</div>`;
+ else if(st==='unaired') body=line('Unaired',`airs 19 May 2027 · in 7 months`,'mut');
+ if(st==='done') return `<div class="tracks"><div class="sel"><label>Video</label><div>1080p H.264 · 4.6 GB</div></div><div class="sel"><label>Audio</label><div>English · DD+ 5.1</div></div><div class="sel"><label>Subtitle</label><div>English (SDH)</div></div></div>`;
+ return `<div class="dlp">${disc(st,true,p)}<div class="body">${body}</div></div>`;
+}
+function render(){
+ document.documentElement.setAttribute('data-theme',S.theme); document.body.classList.toggle('reduced',S.rm);
+ const f=document.getElementById('frame'); f.classList.remove('phone','tv'); if(S.device!=='desktop') f.classList.add(S.device);
+ document.getElementById('pctv').textContent=S.pct;
+ const st=S.state, tv=S.device==='tv';
+ const hdrBtns=st==='done'?`<span class="rb play${tv?' focus':''}">${svg('play')}Play</span><span class="rb">${svg('tick',3)}</span><span class="rb">${svg('heart')}</span>${S.admin?`<span class="rb" title="Get Another Quality">${svg('cloud')}</span>`:''}<span class="rb">${svg('more')}</span>`
+  :`${S.admin?`<span class="rb${tv?' focus':''}" title="Get a Release">${svg('cloud')}</span>`:''}<span class="rb${tv&&!S.admin?' focus':''}">${svg('more')}</span>`;
+ document.getElementById('page').innerHTML=`
+ <div class="hdr"><div class="still"><span class="art"></span></div>
+  <div class="names"><h1>Ted Lasso</h1><h3>Season 1 – 1. Pilot</h3>
+   <div class="misc"><span>14 Aug 2020</span><span>30 min</span><span><b class="star">★</b>8.1</span><span class="cert">TV-MA</span></div>
+   <div class="btns">${hdrBtns}</div></div></div>
+ <div class="primary">${block()}
+  <p class="gen">Comedy, Drama, Sport</p>
+  <p class="overview">American football coach Ted Lasso is hired by a wealthy divorcée to coach the English Premier League soccer team AFC Richmond — despite having no experience of the game. What his new boss doesn't expect is that Ted's folksy optimism will win over the dressing room.</p>
+  <div class="dgroup"><div class="row"><span class="lbl">Director</span><span>Tom Marshall</span></div><div class="row"><span class="lbl">Writers</span><span>Jason Sudeikis, Bill Lawrence, Brendan Hunt, Joe Kelly</span></div></div>
+  <div class="sec"><h4>Cast & Crew</h4><div class="people">${['Jason Sudeikis|as Ted Lasso','Hannah Waddingham|as Rebecca Welton','Brett Goldstein|as Roy Kent','Brendan Hunt|as Coach Beard','Juno Temple|as Keeley Jones','Tom Marshall|Director'].map(x=>{const [n,r]=x.split('|');return `<div class="pc"><i></i><b>${n}</b><small>${r}</small></div>`;}).join('')}</div></div>
+  <div class="sec"><h4>Guest Stars</h4><div class="people">${['Anthony Head|as Rupert Mannion','Jimmy Lambert|as Baz'].map(x=>{const [n,r]=x.split('|');return `<div class="pc"><i></i><b>${n}</b><small>${r}</small></div>`;}).join('')}</div></div>
+ </div>`;
+ document.querySelectorAll('.dl .arc .p').forEach(el=>{const d=el.closest('.dl'); if(d.dataset.state==='importing') return; el.style.strokeDashoffset=100-S.pct;});
+}
+function seg(id,key,fn){const el=document.getElementById(id); el.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; S[key]=fn?fn(b.dataset.v):b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render();});}
+seg('state','state'); seg('pack','pack'); seg('admin','admin',v=>v==='1'); seg('theme','theme'); seg('device','device');
+document.getElementById('pct').addEventListener('input',e=>{S.pct=+e.target.value; render();});
+document.getElementById('rm').addEventListener('change',e=>{S.rm=e.target.checked; render();});
+try{ if(matchMedia('(prefers-color-scheme: light)').matches){ S.theme='light'; document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v==='light')); } }catch(err){}
+render();
+})();
+</script>
