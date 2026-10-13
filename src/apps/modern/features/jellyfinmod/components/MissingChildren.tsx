@@ -12,6 +12,7 @@ import type { EntryDetail } from '../api/modApi';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { nativeEpisodesQuery, nativeSeasonsQuery } from '../hooks/useEntries';
 import { airDateLong, episodeMark, seasonMark } from '../constants/fileState';
+import { CardHoverGet, NoFileCard } from '../integration/cardGetRelease';
 import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import type { EntryEpisode } from '../types/entry';
@@ -155,6 +156,8 @@ const MissingSeasonCard: FC<SeasonCardProps> = ({ season, posterPath, episodes, 
             {layoutManager.tv ?
                 <div className={className}>{poster}</div> :
                 <a className={className} href={href} aria-label={'Season ' + season}>{poster}</a>}
+            {/* Nothing on disk: an administrator's Get a Release in the centre on hover, where Play would be (P1.FU19). */}
+            {download && <CardHoverGet open={download.open} />}
             <FileStateMark state={mark.state} airDate={mark.airDate}
                 download={mark.state === 'missing' ? download : null} />
         </div>
@@ -288,9 +291,13 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
             href={'#' + seasonPath(detail.entry.id, season, serverId)} />, element, 'season:' + season);
     })}{covers.map(([season, cover]) => {
         const mark = nativeSeasonMark(season, detail.episodes);
-        return mark && <CardMarkSlot key={'native:' + season} cover={cover}>
-            <FileStateMark state={mark.state} airDate={mark.airDate} download={mark.state === 'missing' ? downloadFor(season) : null} />
-        </CardMarkSlot>;
+        // No episode on disk: no Play on its hover, Get a Release in the centre for an administrator (P1.FU19).
+        return mark && <React.Fragment key={'native:' + season}>
+            <NoFileCard cover={cover} />
+            <CardMarkSlot cover={cover}>
+                <FileStateMark state={mark.state} airDate={mark.airDate} download={mark.state === 'missing' ? downloadFor(season) : null} />
+            </CardMarkSlot>
+        </React.Fragment>;
     })}</>;
 };
 

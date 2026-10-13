@@ -25,6 +25,14 @@ export const FILE_STATE_LABEL: Record<FileState, string> = {
 };
 
 /**
+ * Whether the Not Downloaded mark is an administrator's button (P1.FU11) or, for everyone, a plain indicator. Off since P1.FU19
+ * (user 2026-10-13: "As for the clickable state icon, let's remove it for now"): the mark only tells, with its tooltip; the
+ * picker opens from a card's hover cloud, the card's menu, the row's menu and the page header's Get a Release. Set it back to
+ * true to restore the button (the click, the focus stop, the TV hop and the failed row's "search again" all follow it).
+ */
+export const MARK_CLICKABLE: boolean = false;
+
+/**
  * What a card or row mark says about a title, season or episode without a file (P1.FU11, UX §3.1): `missing` is the amber
  * Not Downloaded icon (also for a reclaimed one and for an unaired one with no air date), `unaired` the clock with its air
  * date; on disk shows nothing.

@@ -8,7 +8,7 @@ import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
-import { airDateLong, airDateShort, daysUntilReclaim, FILE_STATE_LABEL, type MarkState, retentionDeadline } from '../constants/fileState';
+import { airDateLong, airDateShort, daysUntilReclaim, FILE_STATE_LABEL, MARK_CLICKABLE, type MarkState, retentionDeadline } from '../constants/fileState';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePickerForEntry } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
@@ -84,7 +84,7 @@ const entryMark = (entry: Entry): MarkState | null =>
  * An administrator's Not Downloaded on an entry's card opens the picker as the title's own page does: a movie's, or a
  * series' seasons. Only where the plugin serves release search; never for a card still being added.
  */
-const useEntryDownload = (entry: Entry | undefined, wanted: boolean): MarkDownload | null => {
+export const useEntryDownload = (entry: Entry | undefined, wanted: boolean): MarkDownload | null => {
     const { api, user } = useApi();
     const isAdmin = !!user?.Policy?.IsAdministrator;
     const canAcquire = usePluginCapabilities(api, wanted && isAdmin).includes(RELEASES_CAPABILITY);
@@ -170,7 +170,7 @@ const busyMark = (entry: Entry | undefined, countdown: number | null, base: stri
 const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCountdown = false, state, airDate, download,
     interactive = true, variant = 'card' }) => {
     const mark = entry ? entryMark(entry) : state ?? null;
-    const entryDownload = useEntryDownload(entry, interactive && mark === 'missing');
+    const entryDownload = useEntryDownload(entry, MARK_CLICKABLE && interactive && mark === 'missing');
     const days = entry ? daysUntilReclaim(retentionDeadline(retention)) : null;
     const base = classNames('jfmod-mark', { 'jfmod-mark--row': variant === 'row' });
     const busy = busyMark(entry, days !== null && (alwaysShowCountdown || days <= 3) ? days : null, base);
@@ -186,7 +186,9 @@ const FileStateMark: FC<FileStateMarkProps> = ({ entry, retention, alwaysShowCou
     }
     if (!mark) return null;
 
-    const action = entry ? entryDownload : download;
+    // A plain indicator for everyone while MARK_CLICKABLE is off (P1.FU19).
+    let action: MarkDownload | null | undefined = null;
+    if (MARK_CLICKABLE) action = entry ? entryDownload : download;
     if (action) {
         return <MarkButton className={base + ' jfmod-mark--none'} download={action}><NotDownloadedGlyph /></MarkButton>;
     }
