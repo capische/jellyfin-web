@@ -9,10 +9,11 @@ import type { CardOptions } from 'types/cardOptions';
 import inputManager from 'scripts/inputManager';
 
 import { useQueueVisible } from '../hooks/useQueue';
+import { CardHoverGet } from '../integration/cardGetRelease';
 import { openInFlightCardMenu } from '../integration/queueActions';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
-import FileStateMark, { CardMarkSlot } from './FileStateMark';
+import FileStateMark, { CardMarkSlot, useEntryDownload } from './FileStateMark';
 
 import 'components/cardbuilder/card.scss';
 import './entryCard.scss';
@@ -41,13 +42,15 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
     const { getCardWrapperProps, getCardBoxProps } = useCard({ item: nativeItem, cardOptions });
     const { className, dataAttributes } = getCardWrapperProps();
     const entryClassName = className + ' jfmod-entryCard';
+    // Nothing on disk (a reclaimed title's kept item): no Play on its hover, Get a Release in the centre (P1.FU19).
+    const noFile = entry.state === FileState.None || entry.state === FileState.Reclaimed ? { 'data-jfmod-nofile': '' } : undefined;
     const content = <>
         <CardBox {...getCardBoxProps()} />
         <NativeCardMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
     </>;
     return layoutManager.tv ?
-        <button className={entryClassName} type='button' aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes}>{content}</button> :
-        <div className={entryClassName} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes}>{content}</div>;
+        <button className={entryClassName} type='button' aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes} {...noFile}>{content}</button> :
+        <div className={entryClassName} aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes} {...noFile}>{content}</div>;
 };
 
 /**
@@ -93,6 +96,8 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
         if (!pending) window.location.hash = '#' + path;
     }, [path, pending]);
     const menu = useInFlightMenu(entry, pending);
+    // Nothing on disk: an administrator's Get a Release in the centre on hover, as on upstream's cards (P1.FU19).
+    const get = useEntryDownload(entry, !pending);
     const content = (
         <div className={'cardBox ' + (cardOptions.cardLayout ? 'visualCardBox' : 'cardBox-bottompadded')}>
             <div className='cardScalable'>
@@ -103,6 +108,7 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
                     </div>
                 </div>
                 {cardOptions.overlayText && <div className='jfmod-entryOverlayTitle'>{entry.title}</div>}
+                {get && <CardHoverGet open={get.open} />}
                 <FileStateMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
             </div>
             {!cardOptions.overlayText && <div className='cardFooter'>
@@ -111,7 +117,7 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
             </div>}
         </div>
     );
-    const className = 'card ' + shape + 'Card jfmod-entryCard';
+    const className = 'card ' + shape + 'Card jfmod-entryCard' + (layoutManager.desktop ? ' card-hoverable' : '');
     // The title's download, drawn for every card of the page at once (integration/downloadMarks, P4.FU1).
     const download = pending ? undefined : entry.id;
     if (layoutManager.tv) {

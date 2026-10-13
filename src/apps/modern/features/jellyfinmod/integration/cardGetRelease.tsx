@@ -1,6 +1,8 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
-import { type FC, useEffect } from 'react';
+import React, { type FC, useEffect, useLayoutEffect, useRef } from 'react';
+
+import layoutManager from 'components/layoutManager';
 
 import { useApi } from 'hooks/useApi';
 
@@ -28,12 +30,21 @@ import './cardGetRelease.scss';
  *
  * Choosing it opens the release picker in the card's scope, as the item's own page does: a movie as the movie page, a series
  * as the series page, a season on that season, an episode on that episode; "Get Another Quality" when the movie or episode is
- * on disk. Series and seasons are searched as packs, so they need the plugin's pack search. The mod's own file-less cards
- * have no hover overlay; their Not Downloaded mark is already this button (P1.FU11).
+ * on disk. Series and seasons are searched as packs, so they need the plugin's pack search.
+ *
+ * **A card with nothing on disk** (P1.FU19, user 2026-10-13: "We don't need Play. Instead of Play there should be the Cloud to
+ * download the season"): whoever knows the card has no file marks it `data-jfmod-nofile` (the series page's season cards with
+ * no episode on disk, P1.FU17's rule, a download in progress included; a library entry's native card with nothing on disk).
+ * Upstream's centre Play is hidden on it for everyone, and an administrator's icon takes the centre in Play's own round
+ * classes instead of the bottom row; it is asked about at once, so the centre is not empty on the first hover. The mod's own
+ * file-less and missing-season cards have no upstream overlay: `CardHoverGet` draws the same centre icon on them.
  */
 
 const CARD_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
 const BUTTON_CLASS = 'jfmod-cardGet';
+/** On a card with nothing on disk: Play is hidden and the icon takes the centre (P1.FU19). */
+export const NO_FILE_ATTRIBUTE = 'data-jfmod-nofile';
+const CENTRE_CLASS = 'cardOverlayFab-primary';
 /** A card's answer is asked again after this long, so a title that gained a file reads "Get Another Quality". */
 const KEEP_MS = 60_000;
 
@@ -116,17 +127,70 @@ const makeButton = () => {
     return button;
 };
 
-/** After Favorite, before More: upstream's More is the group's `data-action="menu"` button. */
-const insertInto = (overlay: Element) => {
+/**
+ * Puts the card's icon in its place: after Favorite, before More (upstream's More is the group's `data-action="menu"` button);
+ * or, on a card with nothing on disk, in the centre where upstream's Play was. Returns the icon when it sits in the centre.
+ */
+const placeIn = (overlay: Element) => {
+    const found = cardOf(overlay);
     const group = overlay.querySelector(':scope > .cardOverlayButton-br');
-    if (!group || group.querySelector(':scope > .' + BUTTON_CLASS) || !cardOf(overlay)) return;
-    const more = group.querySelector(':scope > [data-action="menu"]');
-    group.insertBefore(makeButton(), more);
+    if (!found || !group) return null;
+    const button = overlay.querySelector<HTMLButtonElement>('.' + BUTTON_CLASS) ?? makeButton();
+    const centre = found.card.hasAttribute(NO_FILE_ATTRIBUTE);
+    button.classList.toggle(CENTRE_CLASS, centre);
+    if (centre) {
+        if (button.parentNode !== overlay) overlay.insertBefore(button, group);
+    } else if (button.parentNode !== group) {
+        group.insertBefore(button, group.querySelector(':scope > [data-action="menu"]'));
+    }
+    return centre ? button : null;
 };
 
-const insertAll = (root: ParentNode) => {
-    if (root instanceof Element && root.matches('.cardOverlayContainer')) insertInto(root);
-    root.querySelectorAll('.cardOverlayContainer').forEach(insertInto);
+/** The overlays in `root` (or `root` itself), each with its icon placed; the centred icons are returned. */
+const placeAll = (root: ParentNode) => {
+    const overlays = Array.from(root.querySelectorAll('.cardOverlayContainer'));
+    if (root instanceof Element && root.matches('.cardOverlayContainer')) overlays.push(root);
+    return overlays.map(placeIn).filter((button): button is HTMLButtonElement => !!button);
+};
+
+/** Marks the upstream card around `cover` as having nothing on disk while this is drawn (P1.FU19). */
+export const NoFileCard: FC<{ cover: Element }> = ({ cover }) => {
+    useLayoutEffect(() => {
+        const card = cover.closest('.card');
+        card?.setAttribute(NO_FILE_ATTRIBUTE, '');
+        return () => card?.removeAttribute(NO_FILE_ATTRIBUTE);
+    }, [cover]);
+    return null;
+};
+
+/**
+ * The centre icon on the mod's own cards with nothing on disk (P1.FU19): a file-less title's card and a missing season's card,
+ * which have no upstream overlay. Desktop only, as upstream's hover overlay; drawn in that overlay's own classes, so it shows on
+ * the card's hover or focus like Play on upstream's cards. Given only where an administrator may get a release. Its click is
+ * taken natively on the button and goes no further, so the card's link does not follow it.
+ */
+export const CardHoverGet: FC<{ open: (button: HTMLElement) => void }> = ({ open }) => {
+    const ref = useRef<HTMLButtonElement>(null);
+    const openRef = useRef(open);
+    openRef.current = open;
+    useEffect(() => {
+        const button = ref.current;
+        if (!button) return;
+        const onClick = (event: Event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openRef.current(button);
+        };
+        button.addEventListener('click', onClick);
+        return () => button.removeEventListener('click', onClick);
+    }, []);
+    if (!layoutManager.desktop) return null;
+    return <div className='cardOverlayContainer jfmod-hoverGet'>
+        <button ref={ref} type='button' title='Get a Release' aria-label='Get a Release'
+            className={`paper-icon-button-light cardOverlayButton cardOverlayButton-hover ${CENTRE_CLASS} jfmod-cardGetCentre`}>
+            <span className='material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover cloud_download' aria-hidden='true' />
+        </button>
+    </div>;
 };
 
 const CardGetRelease: FC = () => {
@@ -153,11 +217,10 @@ const CardGetRelease: FC = () => {
             };
         });
 
-        // A hidden button is asked about when its card is first hovered or focused.
-        const reveal = (event: Event) => {
-            const found = cardOf(event.target as Element | null);
-            const button = found?.card.querySelector<HTMLButtonElement>(`.${BUTTON_CLASS}[hidden]:not([data-jfmod-asked])`);
-            if (!found || !button) return;
+        // A hidden button is asked about once, and shown when its card's answer says it belongs.
+        const ask = (button: HTMLButtonElement) => {
+            const found = cardOf(button);
+            if (!found || !button.hidden || button.hasAttribute('data-jfmod-asked')) return;
             button.setAttribute('data-jfmod-asked', '');
             lookup(found.itemId, found.type).then(target => {
                 if (!target) return;
@@ -166,6 +229,12 @@ const CardGetRelease: FC = () => {
                 button.hidden = false;
             }).catch(() => undefined);
         };
+        // When its card is first hovered or focused; a centred icon (nothing on disk) at once, as Play would be there.
+        const reveal = (event: Event) => {
+            const button = cardOf(event.target as Element | null)?.card.querySelector<HTMLButtonElement>('.' + BUTTON_CLASS);
+            if (button) ask(button);
+        };
+        const place = (root: ParentNode) => placeAll(root).forEach(ask);
         // Taken on the button itself and no further, so neither the overlay's link nor upstream's item container acts on it.
         const onClick = (event: MouseEvent) => {
             const button = (event.target as Element | null)?.closest<HTMLButtonElement>('.' + BUTTON_CLASS);
@@ -178,15 +247,20 @@ const CardGetRelease: FC = () => {
             }).catch(() => undefined);
         };
 
-        insertAll(document.body);
+        place(document.body);
+        // New overlays, and cards marked (or no longer marked) as having nothing on disk after their overlay was drawn.
         const observer = new MutationObserver(records => {
             for (const record of records) {
+                if (record.type === 'attributes') {
+                    if (record.target instanceof Element) place(record.target);
+                    continue;
+                }
                 record.addedNodes.forEach(node => {
-                    if (node instanceof Element) insertAll(node);
+                    if (node instanceof Element) place(node);
                 });
             }
         });
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: [NO_FILE_ATTRIBUTE] });
         document.addEventListener('pointerover', reveal, true);
         document.addEventListener('focusin', reveal, true);
         // Capture at the document, so the click is stopped before any card or container listener sees it.

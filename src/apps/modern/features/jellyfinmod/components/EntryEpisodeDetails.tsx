@@ -25,6 +25,7 @@ import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import { episodeMetaItems, seasonPath, useTmdbCover } from './MissingChildren';
+import QueueStatusLine from './QueueStatusLine';
 
 import './entryDetails.scss';
 import './missingChildren.scss';
@@ -228,7 +229,8 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
         {episode && mount('.itemMiscInfo-primary', <>{episodeMetaItems(episode,
             entry.metadata?.episodeRatings?.[episode.tmdbId], shortDate)}</>)}
         {episode && Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='card backdropCard jfmod-episodeStill'>
+            // The episode's download takes the still's corner from Not Downloaded, as on its row (integration/downloadMarks).
+            <div className='card backdropCard jfmod-episodeStill' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode.id}>
                 <div className='cardBox'>
                     <div className='cardScalable'>
                         <div className='cardPadder cardPadder-backdrop' />
@@ -239,6 +241,10 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
                     </div>
                 </div>
             </div>, node, String(index)))}
+        {/* The download line, where a downloaded episode's page shows it (the end of upstream's content section): its disc and
+            `In the download queue · 42% · …` (P1.FU19). */}
+        {episode && mount('.detailSectionContent',
+            <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />)}
         {episode?.overview && mount('.overview', episode.overview)}
         {mount('.itemDetailsGroup', <>
             <DetailsLine label={globalize.translate(directors.length > 1 ? 'Directors' : 'Director')} names={directors} />

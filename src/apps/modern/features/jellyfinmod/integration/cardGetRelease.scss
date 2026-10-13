@@ -4,11 +4,21 @@
     display: none;
 }
 
-.jfmod-cardGet:focus {
+.jfmod-cardGet:focus,
+.jfmod-cardGetCentre:focus {
     outline: none;
 }
 
-.jfmod-cardGet:focus-visible {
+.jfmod-cardGet:focus-visible,
+.jfmod-cardGetCentre:focus-visible {
     border-radius: 50%;
     box-shadow: 0 0 0 0.15em #00a4dc;
+}
+
+// A card with nothing on disk (P1.FU19): no Play, for everyone; an administrator's Get a Release takes the centre instead. Play is
+// upstream's centre button on the desktop hover overlay and the phone's overlay Play
+// (no `:is()`, for older TV engines).
+.card[data-jfmod-nofile] .cardOverlayButton[data-action='play'],
+.card[data-jfmod-nofile] .cardOverlayButton[data-action='resume'] {
+    display: none;
 }

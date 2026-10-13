@@ -29,6 +29,8 @@
     font-size: 1em;
     line-height: 1;
     color: #fff;
+    // An indicator, not a control (P1.FU19): no pointer over it, whatever the card around it shows; the tooltip stays.
+    cursor: default;
 
     // Margins instead of flex gap for older TV engines (P1.W11).
     > * + * { margin-left: 0.3em; }
@@ -136,32 +138,35 @@
     }
 }
 
-/* Rows: the action slot at the row's end, sized like upstream's row buttons. */
+/* Rows: the action slot at the row's end, the size of upstream's round row buttons beside it (user 2026-10-13: "make the
+ * episode [state icon] the same size as info and fav and heart icons"): upstream's `.paper-icon-button-light` is its glyph
+ * (`1.66956521739130434em`, emby-button.scss) plus 0.556em of padding on each side, so a 2.7816em box with a 1.6696em glyph,
+ * centred the same way. Measured on a season page: 41.38px and 24.84px on the desktop, 40.05px and 24.05px on the phone. */
 .jfmod-mark--row {
     position: static;
     flex: 0 0 auto;
-    height: 2.5em;
-    min-width: 2.5em;
+    height: 2.7816em;
+    min-width: 2.7816em;
     padding: 0;
     border-radius: 50%;
     background: transparent;
 
     svg {
-        width: 1.4em;
-        height: 1.4em;
+        width: 1.6696em;
+        height: 1.6696em;
     }
 }
 
 .jfmod-mark--row.jfmod-mark--unaired {
     padding: 0 0.6em;
-    border-radius: 1.25em;
+    border-radius: 1.3908em;
     // On the row's own background: the text colour, quieter, so it reads in the light theme too.
     color: inherit;
     opacity: 0.7;
 
     svg {
-        width: 1.2em;
-        height: 1.2em;
+        width: 1.6696em;
+        height: 1.6696em;
     }
 
     .jfmod-markDate {

@@ -424,7 +424,9 @@ const DownloadMarks: FC = () => {
                 const rows = target ? rowsOf(index, target, placements) : [];
                 if (rows === undefined && target && 'itemId' in target) unplaced.push(target.itemId);
                 const isRow = element.classList.contains('listItem');
-                const progress = rows ? progressOf(rows, isRow) : null;
+                // A card that stands for one episode of the mod's (the missing episode page's still) shows its download as a row
+                // does, a failure included.
+                const progress = rows ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id')) : null;
                 if (isRow) drawRow(element, progress);
                 else drawCard(element, progress);
                 if (progress && progress.kind !== 'failed' && !element.closest('.hide')) shown++;
