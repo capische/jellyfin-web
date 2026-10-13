@@ -743,6 +743,27 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `card-progress.mjs` (the painter's new size touches every disc) 119/119 in Chromium; the same 1170/1170 and 119/119 in real Chrome. Both against local
   environment alpha (lease 15:16–16:10 Sydney) with plugin `b52a64a` and this build, alpha reset to its baseline afterwards.
   Not run: a live download and import, the TV at 1280×720, a physical TV, a Pi instance deployment, Codex review.
+  **P4.FU7, built (not accepted) 2026-10-13: the card disc is the top bar's glass, with a white glyph** (user-approved design,
+  version 11 of the artifact and [`design/download-state-ring-family.md`](design/download-state-ring-family.md) *Revision 3*;
+  user 2026-10-13: "switch from yellow to white card glyph, and use top bar's exact recipe"; [UX.md](UX.md) §3.1, §3.3). Owner:
+  Phase 4 follow-up (P4.FU6's ring family); web only, style only, no plugin change. The 1.6em card disc, and the card's Not
+  Downloaded and Unaired marks (so every mark on a poster looks alike), take the scrolled top bar's recipe from `homeChrome.scss`
+  value for value under the same `@supports` gate: the theme's bar colour (`--jf-palette-AppBar-defaultBg`; MUI's own
+  `--AppBar-background` exists only on the bar) at 12 % over `blur(12px) saturate(180%) contrast(0.7) brightness(0.85)`, the
+  light scheme 20 % with `saturate(170%)` and `brightness(1.1)`, Apple TV's lightened colour at 30 % with `brightness(1.15)`;
+  the glyph and the arc take the bar's text colour (white, the light schemes' dark text, a failure red); the solid black 66 %
+  disc with the white glyph stays on the TV layout and without `backdrop-filter` or `color-mix()`. Rows, bars, the picker, the
+  Queue page, the detail line and the episode-page block stay amber and unchanged. Web `feat/glass-disc` from `303f6722d5`:
+  `30a52fa29f` (style, new `_cardGlass.scss` shared by the two stylesheets), the runner commit and the docs commit.
+  Typecheck, stylelint and the production build pass; the built CSS carries the `-webkit-` forms. `card-progress.mjs` (the card
+  disc asserts: white glyph and arc, the glass on the computer and the phone, solid on the TV) passed 122/122 in Chromium and
+  122/122 in real Chrome on desktop, phone and TV 1080, against local environment charlie (lease 17:03–17:42 Sydney) with plugin
+  `b52a64a` and this build, charlie reset to its baseline afterwards. Computed on the page in both browsers: `backdrop-filter:
+  blur(12px) saturate(1.8) contrast(0.7) brightness(0.85)` over `color-mix(#202020 12%)`, a white glyph, arc and 30 % track on
+  the dark theme; the light theme 20 % `saturate(1.7) brightness(1.1)` with a black glyph, 25 % track, failed `#c62828`; Apple
+  TV 30 % `brightness(1.15)` with `rgba(0, 0, 0, 0.87)`; the TV layout `backdrop-filter: none` over black 66 % with the white
+  glyph in every theme.
+  Not run: the GPU cost of a blur per disc on a real phone or a TV, a physical TV, a Pi instance deployment, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
