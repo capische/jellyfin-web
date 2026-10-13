@@ -1,0 +1,268 @@
+/* JellyfinMod — a missing episode's download block (P1.FU20, user-approved design 2026-10-13; UX §7.2.1).
+ *
+ * One panel in the theme's paper where a downloaded episode's page has its Video / Audio / Subtitle selectors: the 4em ring on
+ * the left, the state word and its figures, the release name in a small monospace line, its marks, a pack's line with one dot
+ * per episode, a 0.28em bar and the actions. Amber `#ffb300` (the ring family's), its text a darker `#8a5a00` on the light
+ * scheme; failed red. Sizes in `em` (TV 125 %, phone 90 %); no flex gap, min() or max() for older TV engines; motion only as
+ * transform and opacity, none under reduced motion.
+ */
+
+.jfmod-dlblockSlot {
+    max-width: 60em;
+    margin: 0 0 1.2em;
+}
+
+.jfmod-dlblock {
+    --jfmod-dlblock-track: rgba(255, 255, 255, 0.12);
+    --jfmod-dlblock-amber: #ffb300;
+    --jfmod-dlblock-error: #ff7b72;
+    --jfmod-dlblock-ok: #81c784;
+    // The picker's format chips knock their word out in the panel's colour.
+    --jfmod-paper: var(--jf-palette-background-paper, #202020);
+
+    display: flex;
+    align-items: flex-start;
+    padding: 1em 1.1em;
+    border-radius: 0.3em;
+    background: var(--jf-palette-background-paper, #202020);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='light'] .jfmod-dlblock {
+    --jfmod-dlblock-track: rgba(0, 0, 0, 0.14);
+    --jfmod-dlblock-amber: #8a5a00;
+    --jfmod-dlblock-error: #c62828;
+    --jfmod-dlblock-ok: #2e7d32;
+}
+
+.jfmod-dlblock-ring {
+    flex: 0 0 auto;
+
+    [dir="ltr"] & { margin-right: 1.1em; }
+    [dir="rtl"] & { margin-left: 1.1em; }
+}
+
+/* Not Downloaded and Unaired: the glyph alone in the ring's box. */
+.jfmod-dlblock-none {
+    color: #ffb300;
+
+    .jfmod-markGlyph {
+        display: block;
+        width: 2em;
+        height: 2em;
+        stroke-width: 2;
+    }
+}
+
+.jfmod-dlblock-unaired {
+    color: inherit;
+    opacity: 0.7;
+}
+
+.jfmod-dlblock-body {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.jfmod-dlblock-state {
+    font-size: 1.05em;
+    line-height: 1.4;
+}
+
+.jfmod-dlblock-word {
+    font-weight: 600;
+
+    [dir="ltr"] & { margin-right: 0.5em; }
+    [dir="rtl"] & { margin-left: 0.5em; }
+}
+
+.jfmod-dlblock-figure--amber { color: var(--jfmod-dlblock-amber); }
+.jfmod-dlblock-figure--error { color: var(--jfmod-dlblock-error); }
+.jfmod-dlblock-figure--muted { opacity: 0.7; }
+
+.jfmod-dlblock-release {
+    margin-top: 0.35em;
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8em;
+    opacity: 0.7;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jfmod-dlblock-marks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.4em;
+    font-size: 0.9em;
+
+    > .jfmod-releaseQuality {
+        margin-right: 0.8em;
+        font-size: 0.85em;
+        white-space: nowrap;
+    }
+}
+
+.jfmod-dlblock-lang,
+.jfmod-dlblock-size,
+.jfmod-dlblock-indexer {
+    margin-right: 0.8em;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+.jfmod-dlblock-lang {
+    font-size: 0.74em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.82;
+}
+
+.jfmod-dlblock-indexer {
+    opacity: 0.8;
+}
+
+.jfmod-dlblock-client {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9em;
+    height: 1.9em;
+    padding: 0;
+    border-radius: 50%;
+    color: inherit;
+    opacity: 0.75;
+}
+
+.jfmod-dlblock-clientGlyph {
+    display: block;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+.jfmod-dlblock-pack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.5em;
+    font-size: 0.8em;
+    opacity: 0.85;
+}
+
+.jfmod-dlblock-strip {
+    display: inline-flex;
+    flex-wrap: wrap;
+
+    [dir="ltr"] & { margin-left: 0.6em; }
+    [dir="rtl"] & { margin-right: 0.6em; }
+}
+
+.jfmod-dlblock-dot {
+    width: 0.9em;
+    height: 0.9em;
+    margin: 0.1em 0.25em 0.1em 0;
+    border-radius: 50%;
+    background: var(--jfmod-dlblock-track);
+}
+
+.jfmod-dlblock-dot--done { background: var(--jfmod-dlblock-ok); }
+.jfmod-dlblock-dot--finished { background: #ffb300; }
+.jfmod-dlblock-dot--failed { background: #e53935; }
+
+.jfmod-dlblock-dot--current {
+    box-shadow: 0 0 0 0.15em var(--jf-palette-background-paper, #202020), 0 0 0 0.25em #ffb300;
+}
+
+.jfmod-dlblock-bar {
+    height: 0.28em;
+    margin-top: 0.7em;
+    overflow: hidden;
+    border-radius: 0.14em;
+    background: var(--jfmod-dlblock-track);
+}
+
+.jfmod-dlblock-barFill {
+    display: block;
+    height: 100%;
+    background: #ffb300;
+    transition: width 0.35s ease-out;
+}
+
+.jfmod-dlblock-barFill--stalled { opacity: 0.55; }
+
+.jfmod-dlblock-barFill--importing {
+    animation: jfmod-dlblockBreathe 1.2s ease-in-out infinite;
+}
+
+.jfmod-dlblock--stale .jfmod-dlblock-barFill { opacity: 0.55; }
+
+.jfmod-dlblock-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.8em;
+
+    > .emby-button {
+        margin: 0 0.6em 0.3em 0;
+    }
+
+    > .jfmod-dlblock-queue {
+        margin: 0 1em 0.3em 0;
+    }
+
+    .material-icons {
+        font-size: 1.2em;
+
+        [dir="ltr"] & { margin-right: 0.35em; }
+        [dir="rtl"] & { margin-left: 0.35em; }
+    }
+}
+
+/* The block's actions keep upstream's raised buttons; this lines up the icon and the words. */
+.jfmod-dlblock-search,
+.jfmod-dlblock-get {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Upstream's genres line on a missing episode's page: the series' genres, quiet (P1.FU20). */
+.jfmod-episodeGenres {
+    opacity: 0.7;
+}
+
+/* The phone: a smaller ring beside the state line, everything else stacked under it. */
+.layout-mobile .jfmod-dlblock {
+    padding: 0.8em;
+
+    .jfmod-dlblock-ring {
+        [dir="ltr"] & { margin-right: 0.8em; }
+        [dir="rtl"] & { margin-left: 0.8em; }
+    }
+
+    .jfmod-dlmark--page {
+        width: 3.2em;
+        height: 3.2em;
+
+        .jfmod-dlmark-glyph,
+        .jfmod-markGlyph {
+            width: 1.6em;
+            height: 1.6em;
+        }
+
+        .jfmod-dlmark-num {
+            font-size: 0.95em;
+        }
+    }
+}
+
+@keyframes jfmod-dlblockBreathe {
+    50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-dlblock .jfmod-dlblock-barFill {
+        animation: none;
+        transition: none;
+    }
+}

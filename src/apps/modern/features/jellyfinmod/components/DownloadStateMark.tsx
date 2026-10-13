@@ -8,15 +8,17 @@ import './downloadStateMark.scss';
  * The download state ring family (P4.FU6, user-approved design 2026-10-13, `design/download-state-ring-family.html`): one disc,
  * one arc, a glyph per state. Downloading is the arrow with the amber arc at its percent, stalled the pause glyph with the arc
  * dimmed, queued a clock, importing a spinning arc, failed a red bang. The figure is never inside the ring: it is the meta
- * line's (`DownloadProgress.text`) and every disc's tooltip (`DownloadProgress.tooltip`). Two sizes: `card`, a 1.6em dark disc
- * in a card's top-right corner, and `row`, the 2.5em first round icon of a row's end slot, transparent like upstream's.
+ * line's (`DownloadProgress.text`) and every disc's tooltip (`DownloadProgress.tooltip`). Three sizes: `card`, a 1.6em dark disc
+ * in a card's top-right corner, `row`, the 2.5em first round icon of a row's end slot, transparent like upstream's, and `page`,
+ * the 4em ring of a missing episode's download block, the one place the percent is inside the ring (P1.FU20, user-approved
+ * 2026-10-13) while it downloads or stalls.
  *
  * One painter for every place: `paintDownloadMark` draws into an element, so the cards and rows that `downloadMarks` finds on
  * upstream's pages and the mod's own React views (`DownloadStateMark`) share the same markup. The arc is a 36-unit circle of
  * radius 15.9 (a circumference of 100), drawn from the top by `stroke-dashoffset = 100 − percent`.
  */
 
-export type DownloadMarkSize = 'card' | 'row';
+export type DownloadMarkSize = 'card' | 'row' | 'page';
 
 const GLYPHS: Record<DownloadProgress['kind'], string> = {
     downloading: '<path d="M12 4V17"/><path d="M6.5 11.5L12 17L17.5 11.5"/>',
@@ -37,6 +39,13 @@ const inner = (kind: DownloadProgress['kind']) => (hasArc(kind) ? ARC : '')
     + '<svg class="jfmod-dlmark-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'
     + (kind === 'failed' ? '2.8' : '2.4') + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
     + GLYPHS[kind] + '</svg>';
+
+/** The page ring's figure in place of the glyph: `42` and a small `%`. */
+const NUMBER = '<b class="jfmod-dlmark-num" aria-hidden="true"><span class="jfmod-dlmark-numValue"></span><i>%</i></b>';
+
+/** Whether the ring holds its percent instead of the glyph: the page size while a figure moves. */
+const numbered = (kind: DownloadProgress['kind'], size: DownloadMarkSize) =>
+    size === 'page' && (kind === 'downloading' || kind === 'stalled');
 
 const setAttribute = (element: Element, name: string, value: string) => {
     if (element.getAttribute(name) !== value) element.setAttribute(name, value);
@@ -61,10 +70,15 @@ export const paintDownloadMark = (element: HTMLElement, progress: DownloadProgre
     const className = ['jfmod-dlmark', 'jfmod-dlmark--' + size, 'jfmod-dlmark--' + progress.kind,
         progress.stale ? 'jfmod-dlmark--stale' : '', extra].filter(Boolean).join(' ');
     if (element.className !== className) element.className = className;
-    if (element.getAttribute('data-jfmod-kind') !== progress.kind) {
+    const withNumber = numbered(progress.kind, size);
+    const drawn = progress.kind + (withNumber ? ' number' : '');
+    if (element.getAttribute('data-jfmod-kind') !== progress.kind || element.getAttribute('data-jfmod-drawn') !== drawn) {
         element.setAttribute('data-jfmod-kind', progress.kind);
-        element.innerHTML = inner(progress.kind);
+        element.setAttribute('data-jfmod-drawn', drawn);
+        element.innerHTML = withNumber ? ARC + NUMBER : inner(progress.kind);
     }
+    const value = element.querySelector('.jfmod-dlmark-numValue');
+    if (value && value.textContent !== String(progress.percent ?? 0)) value.textContent = String(progress.percent ?? 0);
     paintArc(element, progress);
     if (element.title !== title) element.title = title;
     setAttribute(element, 'role', 'img');
@@ -78,7 +92,8 @@ interface DownloadStateMarkProps {
     title?: string;
 }
 
-/** The disc in the mod's own views: the episode detail line, the Queue page's rows and the release picker's added row. */
+/** The disc in the mod's own views: the episode detail line, the Queue page's rows, the release picker's added row and a missing
+ * episode's download block. */
 const DownloadStateMark: FC<DownloadStateMarkProps> = ({ progress, size, title }) => {
     const ref = useRef<HTMLSpanElement>(null);
     useLayoutEffect(() => {

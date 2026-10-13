@@ -116,6 +116,50 @@
     }
 }
 
+/* A missing episode's download block (P1.FU20, user-approved 2026-10-13): a 4em transparent ring over the theme's track, a 2em
+ * glyph, and while it downloads or stalls the percent inside in place of the glyph (cards and rows keep the arrow). */
+.jfmod-dlmark--page {
+    width: 4em;
+    height: 4em;
+    background: transparent;
+
+    .jfmod-dlmark-glyph {
+        width: 2em;
+        height: 2em;
+    }
+
+    .jfmod-dlmark-arc circle {
+        stroke-width: 2.4;
+    }
+
+    .jfmod-dlmark-track {
+        stroke: rgba(255, 255, 255, 0.12);
+    }
+}
+
+.jfmod-dlmark-num {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    font-size: 1.15em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+
+    i {
+        margin-left: 0.05em;
+        font-size: 0.6em;
+        font-style: normal;
+        font-weight: 600;
+        opacity: 0.85;
+    }
+}
+
+.jfmod-dlmark--stalled .jfmod-dlmark-num {
+    opacity: 0.6;
+}
+
 /* On a list row (a season page's, the library list view's, search lists) the box and glyph of upstream's round row buttons
  * beside it: a 2.7816em box with a 1.6696em glyph, as `.jfmod-mark--row` (user 2026-10-13: "make the episode [state icon] the
  * same size as info and fav and heart icons"). The arc fills the box. The detail line, the Queue page and the picker's added
@@ -128,6 +172,11 @@
         width: 1.6696em;
         height: 1.6696em;
     }
+}
+
+[data-theme='light'] .jfmod-dlmark--page {
+    .jfmod-dlmark-track { stroke: rgba(0, 0, 0, 0.14); }
+    &.jfmod-dlmark--failed { color: #c62828; }
 }
 
 [data-theme='light'] .jfmod-dlmark--row {

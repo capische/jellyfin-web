@@ -13,6 +13,7 @@ import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, 
 import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
+import { confirmTorrentRemoval } from '../integration/queueActions';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 import type { QueueRow } from '../types/queue';
 
@@ -906,9 +907,6 @@ const useQueueRead = (api: Api, entryId: string, grabId: string | null): QueueRe
 
 type Grab = ReturnType<typeof useGrab>;
 
-const REMOVE_TEXT = 'Remove this torrent from the download queue? The download stops and the torrent leaves the client. Anything '
-    + 'already downloaded is not deleted.';
-
 /** A grab the added row shows: held, being sent, or in the client. */
 const isLive = (operation: GrabOperation | null): operation is GrabOperation =>
     !!operation && (operation.state === 'pending' || operation.state === 'submitting' || operation.state === 'accepted');
@@ -1024,8 +1022,7 @@ const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirmin
         if (!live || !queueRowId || removing || confirming.current) return;
         confirming.current = true;
         const id = live.id;
-        confirm({ title: 'Remove the Torrent', text: REMOVE_TEXT + '<span class="jfmod-confirmName">' + escapeHtml(live.releaseTitle) + '</span>',
-            confirmText: 'Remove', primary: 'delete' }).then(() => {
+        confirmTorrentRemoval(live.releaseTitle).then(() => {
             setRemoving(true);
             setRemoveError('');
             // The queue page's torrent-only removal: the client forgets the torrent, its files stay on disk, nothing is blocklisted.
