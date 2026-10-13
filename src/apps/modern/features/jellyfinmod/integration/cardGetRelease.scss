@@ -1,5 +1,5 @@
-// Get a Release in a card's hover overlay (P1.FU12): upstream's overlay button classes give it its look; these rules only keep
-// it hidden until its card's answer arrives and draw the keyboard focus ring.
+// Get a Release in a card's hover overlay (P1.FU12): upstream's overlay button classes give it its look; these rules only hide
+// it on the rare card whose answer says the title has no release search (P1.FU23) and draw the keyboard focus ring.
 .jfmod-cardGet[hidden] {
     display: none;
 }
@@ -15,10 +15,12 @@
     box-shadow: 0 0 0 0.15em #00a4dc;
 }
 
-// A card with nothing on disk (P1.FU19): no Play, for everyone; an administrator's Get a Release takes the centre instead. Play is
-// upstream's centre button on the desktop hover overlay and the phone's overlay Play
-// (no `:is()`, for older TV engines).
+// A card with nothing on disk (P1.FU19), or a series or season Jellyfin holds no episode of (P1.FU23): no Play, for everyone; an
+// administrator's Get a Release takes the centre instead. Play is upstream's centre button on the desktop hover overlay and the
+// phone's overlay Play (no `:is()`, for older TV engines).
 .card[data-jfmod-nofile] .cardOverlayButton[data-action='play'],
-.card[data-jfmod-nofile] .cardOverlayButton[data-action='resume'] {
+.card[data-jfmod-nofile] .cardOverlayButton[data-action='resume'],
+.card[data-jfmod-empty] .cardOverlayButton[data-action='play'],
+.card[data-jfmod-empty] .cardOverlayButton[data-action='resume'] {
     display: none;
 }

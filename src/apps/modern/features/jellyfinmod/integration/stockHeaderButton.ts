@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 import focusManager from 'components/focusManager';
 
@@ -53,7 +53,8 @@ export const useStockHeaderButton = (view: HTMLElement, { enabled, icon, title, 
     const order = (before ?? []).join(' ');
     const onClickRef = useRef(onClick);
     onClickRef.current = onClick;
-    useEffect(() => {
+    // A layout effect: the button is in the row in the same frame as what enabled it (P1.FU23).
+    useLayoutEffect(() => {
         if (!enabled) return;
         const row = view.querySelector('.mainDetailButtons');
         if (!row) return;
