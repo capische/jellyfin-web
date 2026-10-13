@@ -9,7 +9,7 @@
 // file, queued, importing, stalled, failed; a season pack on a season Jellyfin does not have; the movie in its states). The
 // release picker's search, grab and grab state are answered too. Nothing is grabbed and nothing on the server changes, except
 // the browser's own list-view setting of the two libraries (localStorage in this runner's context). What it checks:
-//   - cards: the disc (1.6em, dark, the arrow with the amber arc at the percent, bobbing) top right as the first of upstream's
+//   - cards: the disc (1.6em, the top bar's glass and a white glyph, solid black on the TV, the arrow with the white arc at the percent, bobbing) top right as the first of upstream's
 //     indicators, LEFT OF upstream's plain count pill (two icons: no arrow in the pill), or alone in the corner; its tooltip is
 //     the figure (`Downloading · 44% · 1 h 05 min left · 5 MB/s`); the two-layer bar at the poster's bottom stays; the other
 //     season cards carry none; the missing season card's Not Downloaded hidden by the disc; the film card's queued (clock),
@@ -54,6 +54,7 @@ const LAYOUTS = {
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true }
 };
 const AMBER = 'rgb(255, 179, 0)';
+const WHITE = 'rgb(255, 255, 255)';
 const RED_DARK = 'rgb(255, 90, 79)';
 const RED_LIGHT = 'rgb(198, 40, 40)';
 const META_DARK = AMBER;
@@ -144,7 +145,8 @@ const cardState = (page, selector) => page.evaluate(sel => {
         atBottom: bar ? Math.abs(bar.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
         disc: disc ? {
             kind: disc.getAttribute('data-jfmod-kind'), card: disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
-            colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor,
+            colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor, backdrop: getComputedStyle(disc).backdropFilter,
+            arcColour: arc ? getComputedStyle(arc).stroke : null,
             sizeEm: Math.round(discBox.width / fontSize * 100) / 100, visible: discBox.width > 0,
             glyphAnimation: getComputedStyle(disc.querySelector('.jfmod-dlmark-glyph')).animationName,
             arcAnimation: disc.querySelector('.jfmod-dlmark-arc') ? getComputedStyle(disc.querySelector('.jfmod-dlmark-arc')).animationName : null,
@@ -347,10 +349,20 @@ async function run(browser, layout) {
         record(label, `Season ${native.number} card: the amber bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.24em`,
             !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === AMBER
             && Math.abs(season.heightEm - 0.24) < 0.03 && season.upstreamBarHidden, season);
-        record(label, `Season ${native.number} card: the 1.6em dark disc top right, the arrow bobbing, the amber arc at ${seasonMean}%`,
+        record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow bobbing, the white arc at ${seasonMean}%`,
             season?.disc?.card && season.disc.kind === 'downloading' && Math.abs(season.disc.sizeEm - 1.6) < 0.05 && season.disc.topRight
-            && season.disc.colour === AMBER && season.disc.background === 'rgba(0, 0, 0, 0.66)' && season.disc.glyphAnimation === 'jfmod-dlmarkBob'
+            && season.disc.colour === WHITE && season.disc.arcColour === WHITE && season.disc.glyphAnimation === 'jfmod-dlmarkBob'
             && Math.abs((season.disc.arc?.offset ?? -1) - (100 - seasonMean)) <= 1, season?.disc);
+        // P4.FU7: the top bar's glass (a tinted ground over a blur) on the computer and the phone, the solid black 66 % on the TV.
+        const filter = season?.disc?.backdrop ?? '';
+        if (layout === 'tv1080') {
+            record(label, `Season ${native.number} card: the TV's disc is solid black 66 %, no blur`,
+                season?.disc?.background === 'rgba(0, 0, 0, 0.66)' && filter === 'none', season?.disc);
+        } else {
+            record(label, `Season ${native.number} card: the disc is the top bar's glass (12 % tint, blur 12px)`,
+                /blur\(12px\)/.test(filter) && /saturate\(1\.8\)/.test(filter) && /contrast\(0\.7\)/.test(filter)
+                && /brightness\(0\.85\)/.test(filter) && /[,/] 0\.12\)$/.test(season?.disc?.background ?? ''), season?.disc);
+        }
         record(label, `Season ${native.number} card: the tooltip is the figure ("${seasonTooltip}")`, season?.disc?.title === seasonTooltip, season?.disc?.title);
         if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} .jfmod-dlmark`));
         if (season?.pill) {
