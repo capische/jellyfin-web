@@ -226,6 +226,28 @@ const nativeSeasonMark = (season: number, episodes: EntryEpisode[]) => {
     return seasonMark(own);
 };
 
+/**
+ * The "N episodes" line on one of upstream's own season cards (P1.FU21), as the mod's missing season cards carry it: the episodes
+ * Jellyfin has in the season (its `ChildCount`); for a season Jellyfin keeps with no episode (an empty folder), the entry's list,
+ * as on the mod's cards. Nothing when neither knows of one.
+ */
+const nativeSeasonCount = (season: number, childCount: number | undefined, episodes: EntryEpisode[]) =>
+    childCount || episodes.filter(episode => episode.seasonNumber === season).length;
+
+/**
+ * A second text line on an upstream card, after its title, in the mod's missing cards' own element and classes, so both read
+ * the same. Upstream's season cards put their title straight in the card box after the cover (no `.cardFooter`); the line goes
+ * last there, or in the footer where a card has one. It lives inside the card, so it goes with the card when upstream redraws it.
+ */
+const CardTextLine: FC<{ cover: Element; text: string }> = ({ cover, text }) => {
+    const box = cover.parentElement;
+    const footer = box && Array.from(box.children).find(child => child.classList.contains('cardFooter'));
+    const parent = footer ?? box;
+    // Marked by an attribute, not a `jfmod-` class: modFont.scss gives every `jfmod-` class the mod's font, and this line keeps
+    // upstream's, as the mod cards' own line does.
+    return parent ? createPortal(<div className='cardText cardTextCentered cardText-secondary' data-jfmod-count=''><bdi>{text}</bdi></div>, parent) : null;
+};
+
 /** The `#/details?entryId=…&season=N` route: the mod's page for a season Jellyfin does not have (P1.FU11). */
 export const seasonPath = (entryId: string, season: number, serverId: string) => getEntryPath(entryId, serverId) + '&season=' + season;
 
@@ -245,8 +267,8 @@ interface SeasonCardsProps {
 }
 
 /**
- * The native series page's Seasons row: one mod card per plugin season with no Jellyfin season item, and the mark on upstream's
- * own season cards whose season has no file (P1.FU17).
+ * The native series page's Seasons row: one mod card per plugin season with no Jellyfin season item, the mark on upstream's
+ * own season cards whose season has no file (P1.FU17), and their "N episodes" line (P1.FU21).
  */
 export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId, view, seriesItemId, detail, canAcquire, onChanged }) => {
     const container = useChildrenContainer(view);
@@ -254,6 +276,8 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
     const seasons = useQuery(nativeSeasonsQuery(api, userId, seriesItemId));
     const natives = useMemo<NativeOrder>(() => new Map((seasons.data ?? []).filter(item => item.Id && typeof item.IndexNumber === 'number')
         .map(item => [normalId(item.Id!), item.IndexNumber!])), [seasons.data]);
+    const childCounts = useMemo(() => new Map((seasons.data ?? []).filter(item => typeof item.IndexNumber === 'number')
+        .map(item => [item.IndexNumber!, item.ChildCount ?? 0])), [seasons.data]);
     const missing = useMemo(() => (seasons.data ? missingSeasons(detail.episodes, new Set(natives.values())) : []),
         [detail.episodes, natives, seasons.data]);
     const slots = useMemo(() => missing.map(([season]) => ({ key: String(season), order: season })), [missing]);
@@ -291,12 +315,16 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
             href={'#' + seasonPath(detail.entry.id, season, serverId)} />, element, 'season:' + season);
     })}{covers.map(([season, cover]) => {
         const mark = nativeSeasonMark(season, detail.episodes);
-        // No episode on disk: no Play on its hover, Get a Release in the centre for an administrator (P1.FU19).
-        return mark && <React.Fragment key={'native:' + season}>
-            <NoFileCard cover={cover} />
-            <CardMarkSlot cover={cover}>
-                <FileStateMark state={mark.state} airDate={mark.airDate} download={mark.state === 'missing' ? downloadFor(season) : null} />
-            </CardMarkSlot>
+        const count = nativeSeasonCount(season, childCounts.get(season), detail.episodes);
+        return <React.Fragment key={'native:' + season}>
+            {count > 0 && <CardTextLine cover={cover} text={episodesWord(count)} />}
+            {/* No episode on disk: no Play on its hover, Get a Release in the centre for an administrator (P1.FU19). */}
+            {mark && <>
+                <NoFileCard cover={cover} />
+                <CardMarkSlot cover={cover}>
+                    <FileStateMark state={mark.state} airDate={mark.airDate} download={mark.state === 'missing' ? downloadFor(season) : null} />
+                </CardMarkSlot>
+            </>}
         </React.Fragment>;
     })}</>;
 };
