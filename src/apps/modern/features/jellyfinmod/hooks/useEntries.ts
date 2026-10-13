@@ -1,5 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import type { Api } from '@jellyfin/sdk/lib/api';
+import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
 import { getShowApi } from '@jellyfin/sdk/lib/utils/api/show-api';
 
 import { useApi } from 'hooks/useApi';
@@ -87,11 +88,14 @@ const keepItemFacts = (api: Api, userId: string, items: NativeItem[]) => {
     }
 };
 
-/** A series' Jellyfin seasons; each is kept as a known item, so opening one from here needs no item read. */
+/**
+ * A series' Jellyfin seasons; each is kept as a known item, so opening one from here needs no item read. Each carries its
+ * `ChildCount`, the episodes Jellyfin has, for the season cards' "N episodes" line (P1.FU21).
+ */
 export const nativeSeasonsQuery = (api: Api, userId: string, seriesId: string) => queryOptions({
     queryKey: ['JellyfinMod', api.basePath, userId, 'NativeSeasons', seriesId],
     queryFn: async ({ signal }) => {
-        const items = (await getShowApi(api).getSeasons({ seriesId, userId }, { signal })).data.Items ?? [];
+        const items = (await getShowApi(api).getSeasons({ seriesId, userId, fields: [ItemFields.ChildCount] }, { signal })).data.Items ?? [];
         keepItemFacts(api, userId, items);
         return items;
     },
