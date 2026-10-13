@@ -168,6 +168,22 @@
     }
 }
 
+// The added row's Add slot is no control: its arrow, tick or download disc only tells, so a hover changes nothing on it (no pointer,
+// no veil, no growth); its tooltip stays (user, 2026-10-13: "I don't think we need highlight / hover over non clickable icon").
+.jfmod-releaseActions--pressed > .jfmod-releaseAction--add {
+    cursor: default;
+}
+
+@media (hover: hover) {
+    .jfmod-releaseActions--pressed > .jfmod-releaseAction--add.paper-icon-button-light:hover:not([aria-disabled='true']) {
+        transform: none;
+
+        &::before {
+            opacity: 0;
+        }
+    }
+}
+
 // The red X (cancel, remove from queue) is the one red on a row: Replace is grey like Add, and its red is only the confirmation's
 // commit button (user, 2026-10-12). The lighter red keeps 4.7:1 on the dark dialog, 5.6:1 for #c62828 on white.
 .jfmod-releaseAction--danger {
