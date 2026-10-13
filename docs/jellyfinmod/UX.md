@@ -215,7 +215,7 @@ the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss
 | What | Mark | Administrators | Everyone else |
 | --- | --- | --- | --- |
 | On disk | none | — | — |
-| No file (not downloaded, reclaimed, or unaired with no air date) | amber `#ffb74d` icon (the existing glyph) on a dark 65% disc | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
+| No file (not downloaded, reclaimed, or unaired with no air date) | white icon (the existing glyph, a dark one on the light schemes) on the top bar's glass disc (§3.3, P4.FU7); a row keeps its amber `#ffb74d` | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
 | Unaired, with an air date | clock + the short air date: `10 Aug` this year, `Aug ’27` in another (month in the viewer's locale) | not clickable; tooltip *Airs 10 Aug 2026* | the same |
 
 The quiet on-disk mark and the 60 % dimming rule above are retired with this change; the file-less cards
@@ -291,14 +291,25 @@ both (`downloadProgress`, `aggregateProgress` and `describeDownload` in `constan
 its last value, the disc and figure dimmed.
 
 - **Cards, everywhere cards are shown** (library grids, Home rows, search, Continue Watching and Next Up, season cards on the
-  series page, upstream's season cards placed by P1.FU17, the mod's file-less and missing-season cards): a 1.6em dark disc
-  (black 66 %, a 1em glyph, the arc over a white 18 % track) top right, the first of upstream's indicators, so it sits **left of
+  series page, upstream's season cards placed by P1.FU17, the mod's file-less and missing-season cards): a 1.6em **glass** disc
+  (P4.FU7, user 2026-10-13: "switch from yellow to white card glyph, and use top bar's exact recipe"; a 1em white glyph, the arc over a
+  white 30 % track) top right, the first of upstream's indicators, so it sits **left of
   upstream's played tick or count pill: two icons**, the pill untouched (no arrow in it); a card with no indicator cluster has
   it alone in the corner. The two-layer bar stays: 0.24em along the poster's bottom edge over a dark track, the download in
   amber beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
   season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
   queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
   The disc wins over Not Downloaded and Unaired in the corner (never both).
+
+  **The card disc's glass (P4.FU7)** is the scrolled top bar's recipe, value for value (`homeChrome.scss`; `cardGlass.scss`
+  shares it with the card's Not Downloaded and Unaired marks): the theme's bar colour (`--jf-palette-AppBar-defaultBg`) at 12 %
+  over `blur(12px) saturate(180%) contrast(0.7) brightness(0.85)`; the light scheme 20 % with `saturate(170%)` and
+  `brightness(1.1)`; Apple TV's lightened bar colour at 30 % with `brightness(1.15)`. The glyph and the arc take the bar's text
+  colour: white on the dark schemes, the theme's dark text on the light schemes (track black 25 %); failed stays red (`#ff5a4f`,
+  `#c62828` on the light schemes). Without `backdrop-filter` or `color-mix()`, and on the TV layout (where the bar itself stays
+  blur-free), the disc is the solid black 66 % with the white glyph. Rows, bars, the picker, the Queue page, the detail line
+  and the episode-page block stay amber and unchanged; so do the count pill and the played tick. Not measured: the GPU cost of
+  a blur per disc on a real phone or TV.
 - **Rows** (the native and the mod's season page, the library list view and search lists): ring only, no bar. The disc is
   2.7816em with a 1.6696em glyph since P1.FU19, the box and glyph of upstream's round row buttons beside it (it was 2.5em and
   1.4em), transparent like upstream's round icons (the arc over the theme's track, filling the box), the **first round icon of the
