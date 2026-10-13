@@ -24,6 +24,10 @@
 //     keeps upstream's Play; on the TV the card holds no second stop; a missing episode's page shows the episode's download on
 //     its still (since P1.FU20 its download block, below); a row's mark and disc are the
 //     size of upstream's round row buttons (box and glyph, measured against the row's heart or More button);
+//   - P1.FU21: every upstream season card carries the mod cards' "N episodes" line under "Season N": Jellyfin's own count of the
+//     season's episodes (ChildCount; for a season Jellyfin keeps with no episode, the entry's list, as the mod's cards count),
+//     once, in the mod cards' element and classes with the same computed look, right under the title, the cover unchanged; it
+//     comes back once when upstream redraws the card; a native season page carries none;
 //   - a missing season card opens the mod's season page (#/details?entryId=…&season=N), which lists that season's episodes as
 //     mod rows in episode order with their marks; an episode's Download This Episode opens the picker for that episode;
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
@@ -141,7 +145,18 @@ const seasonRow = async (page, numbers) => {
         return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
             const mod = card.classList.contains('jfmod-missingSlot');
             const mark = card.querySelector('.jfmod-mark');
-            const texts = [...card.querySelectorAll('.cardFooter .cardText')].map(node => node.textContent.trim());
+            // Upstream's season cards hold their text lines straight in the card box; the mod's cards in a footer.
+            const lines = [...card.querySelectorAll('.cardBox > .cardText, .cardFooter > .cardText')];
+            const texts = lines.map(node => node.textContent.trim());
+            const look = node => {
+                if (!node) return null;
+                const style = getComputedStyle(node);
+                const rect = node.getBoundingClientRect();
+                return { tag: node.tagName, classes: node.className.replace(/(^|\s)jfmod-\S+/g, ' ').trim().split(/\s+/).sort().join(' '),
+                    child: node.firstElementChild?.tagName ?? null, fontSize: style.fontSize, lineHeight: style.lineHeight,
+                    fontWeight: style.fontWeight, fontFamily: style.fontFamily, color: style.color, textAlign: style.textAlign,
+                    padding: style.padding, top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height) };
+            };
             const box = mark?.getBoundingClientRect();
             const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
             const indicators = card.querySelector('.cardIndicators');
@@ -151,6 +166,11 @@ const seasonRow = async (page, numbers) => {
                 season: mod ? Number(card.dataset.jfmodSeason) : byId[(card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
                 title: texts[0] ?? null,
                 line2: texts[1] ?? null,
+                lineCount: texts.length,
+                countLines: card.querySelectorAll('[data-jfmod-count]').length,
+                titleLook: look(lines[0]),
+                line2Look: look(lines[1]),
+                coverHeight: cover ? Math.round(cover.height) : null,
                 dashed: mod ? getComputedStyle(card.querySelector('.jfmod-missingPoster')).outlineStyle : null,
                 cover: mod ? coverOf(card.querySelector('.jfmod-missingPoster')) : null,
                 played: !!card.querySelector('.cardIndicators .playedIndicator'),
@@ -1196,8 +1216,8 @@ async function run(browser, layout, user, admin) {
         await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
         await page.waitForTimeout(3000);
         const detail = await apiGet(page, 'JellyfinMod/Entries/' + entryId);
-        const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId() })).Items
-            .map(item => ({ id: item.Id, number: item.IndexNumber, seriesId: item.SeriesId })), seriesId);
+        const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId(), Fields: 'ChildCount' })).Items
+            .map(item => ({ id: item.Id, number: item.IndexNumber, seriesId: item.SeriesId, childCount: item.ChildCount ?? 0 })), seriesId);
         const seasonNumbers = Object.fromEntries(seasons.map(season => [season.id.replace(/-/g, '').toLowerCase(), season.number]));
         const held = new Set(seasons.map(season => season.number));
         const missing = [...new Set(detail.episodes.map(episode => episode.seasonNumber))]
@@ -1233,6 +1253,52 @@ async function run(browser, layout, user, admin) {
                     beside && sameLine && gap <= 12, { mark: card.mark.box, cluster: card.cluster, gap });
             }
         }
+        // P1.FU21: every upstream season card carries the mod cards' "N episodes" line: Jellyfin's own count (ChildCount), or, for a
+        // season Jellyfin keeps with no episode, the entry's list; in the mod cards' element and classes, with the same look.
+        const modLook = row.find(card => card.mod)?.line2Look ?? null;
+        for (const card of upstreamCards) {
+            const childCount = seasons.find(season => season.number === card.season)?.childCount ?? 0;
+            const count = childCount || detail.episodes.filter(episode => episode.seasonNumber === card.season).length;
+            const unit = count === 1 ? ' episode' : ' episodes';
+            const words = count ? count + unit : null;
+            const listed = detail.episodes.filter(episode => episode.seasonNumber === card.season).length;
+            const what = `upstream Season ${card.season} card (Jellyfin ${childCount}, list ${listed})`;
+            const expectation = words ? '"' + words + '" under "Season ' + card.season + '", once' : 'no count line';
+            record(label, `${what}: ${expectation}`,
+                words ? card.line2 === words && card.countLines === 1 && card.lineCount === 2 : card.countLines === 0,
+                { title: card.title, line2: card.line2, lines: card.lineCount, countLines: card.countLines });
+            if (!words || !card.line2Look) continue;
+            const line = card.line2Look;
+            record(label, `${what}: the line is a DIV.cardText.cardText-secondary.cardTextCentered holding a BDI, right under the title`,
+                line.tag === 'DIV' && line.classes === 'cardText cardText-secondary cardTextCentered' && line.child === 'BDI'
+                    && Math.abs(line.top - card.titleLook.bottom) <= 2, { line, title: card.titleLook });
+            if (modLook) {
+                const keys = ['tag', 'classes', 'child', 'fontSize', 'lineHeight', 'fontWeight', 'fontFamily', 'color', 'textAlign', 'padding', 'height'];
+                const differs = keys.filter(key => line[key] !== modLook[key]);
+                record(label, `${what}: the line looks exactly like the mod cards' "N episodes" line`, differs.length === 0,
+                    differs.length ? Object.fromEntries(differs.map(key => [key, [line[key], modLook[key]]])) : line.fontSize);
+                const modCover = row.find(other => other.mod)?.coverHeight;
+                record(label, `${what}: the cover keeps its size (the line adds only itself)`, Math.abs(card.coverHeight - modCover) <= 1,
+                    { cover: card.coverHeight, modCover });
+            } else {
+                record(label, `${what}: the line looks exactly like the mod cards' line`, 'NOT VERIFIED', 'no mod card on this page to compare with');
+            }
+        }
+        const withCount = upstreamCards.find(card => card.countLines === 1);
+        if (withCount) {
+            // Upstream redraws a card by replacing it with fresh HTML: the line comes back, once.
+            await page.evaluate(id => {
+                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                    .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
+                const fresh = card?.cloneNode(true);
+                fresh?.querySelectorAll('.jfmod-markSlot, [data-jfmod-count]').forEach(node => { node.remove(); });
+                if (fresh) card.replaceWith(fresh);
+            }, Object.keys(seasonNumbers).find(id => seasonNumbers[id] === withCount.season));
+            await page.waitForTimeout(800);
+            const again = (await seasonRow(page, seasonNumbers)).find(card => !card.mod && card.season === withCount.season);
+            record(label, `upstream Season ${withCount.season} card: the count line comes back once when upstream redraws the card`,
+                again?.line2 === withCount.line2 && again.countLines === 1, again && { line2: again.line2, countLines: again.countLines });
+        }
         const withFiles = upstreamCards.find(card => card.season > 0 && detail.episodes.some(episode => episode.seasonNumber === card.season && episode.availability === 'onDisk'));
         record(label, 'series page: a native season with files carries no mark', withFiles ? !withFiles.mark : 'NOT VERIFIED',
             withFiles ? withFiles.mark : 'no native season with a file on disk');
@@ -1248,7 +1314,7 @@ async function run(browser, layout, user, admin) {
                     .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
                 // Upstream draws a fresh card from its HTML: a copy without the mod's slot.
                 const fresh = card?.cloneNode(true);
-                fresh?.querySelectorAll('.jfmod-markSlot').forEach(node => { node.remove(); });
+                fresh?.querySelectorAll('.jfmod-markSlot, [data-jfmod-count]').forEach(node => { node.remove(); });
                 if (fresh) card.replaceWith(fresh);
             }, Object.keys(seasonNumbers).find(id => seasonNumbers[id] === marked.season));
             await page.waitForTimeout(800);
@@ -1324,6 +1390,8 @@ async function run(browser, layout, user, admin) {
             await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible:not(.hide)', { timeout: 20000 }).catch(() => {});
             const numbers = Object.fromEntries(native.map(item => [item.id.replace(/-/g, '').toLowerCase(), item.number]));
             const shownRows = await checkSeasonRows(page, label, detail, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
+            const stray = await page.evaluate(() => document.querySelectorAll('.page:not(.hide) [data-jfmod-count]').length);
+            record(label, `native Season ${season.number} page: no season count line (P1.FU21 is the series page's only)`, stray === 0, stray);
             const opening = shownRows[0] && detail.episodes.find(candidate => candidate.id === shownRows[0].id);
             if (opening) await checkEpisodePage(page, label, detail, opening, { admin, canDownload, tv, what: `native Season ${season.number} page`, full: false });
             break;
