@@ -182,7 +182,7 @@ const IndexerName: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) =>
  * The indexer name as the link to the release's page (user, 2026-10-12): it looks exactly like the plain name at rest, with a
  * pointer and an underline on hover and a thin ring on keyboard focus, and opens the page in a new tab. A link cannot sit inside
  * the row's button (invalid, and Firefox never delivers the click), so it is the item's last child, one tab stop after Replace,
- * laid over the name's own box, measured whenever the item or the name changes size. Plain text on the TV.
+ * laid over the name's own box, measured whenever the item, the row's button or the name changes size. Plain text on the TV.
  */
 export const IndexerLink: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) => {
     const link = useRef<HTMLAnchorElement>(null);
@@ -213,6 +213,10 @@ export const IndexerLink: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) 
         const observer = new ResizeObserver(place);
         observer.observe(item);
         observer.observe(name);
+        // The row's button too: when the row is added its actions take two slots instead of one, so the button narrows and the
+        // name moves left while neither the item nor the name changes size (2026-10-13, the added row's link was left behind).
+        const row = name.closest('.jfmod-releaseRow');
+        if (row) observer.observe(row);
         return () => observer.disconnect();
     }, [url]);
     if (!url) return null;
