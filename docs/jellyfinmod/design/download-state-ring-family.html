@@ -1,0 +1,287 @@
+<title>Download Ring Family</title>
+<style>
+/* layout: a sticky control panel on the left, the surfaces on the right, stacking on a phone */
+:root{--bg:#f3f4f6;--fg:#1d1f22;--panel:#ffffff;--ground:#e9ebee;--paper:#ffffff;--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--hov:rgba(0,164,220,.14);
+ --prim:#00a4dc;--amber:#ffb300;--amberText:#8a5a00;--err:#c62828;--ok:#2e7d32;--disc:rgba(0,0,0,.66);--track:rgba(0,0,0,.18);--poster1:#5a6d80;--poster2:#2b3a4a;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hov:rgba(0,164,220,.2);--amberText:#ffb300;--err:#ff7b72;--ok:#81c784;--disc:rgba(0,0,0,.66);--track:rgba(255,255,255,.12);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hov:rgba(0,164,220,.2);--amberText:#ffb300;--err:#ff7b72;--ok:#81c784;--disc:rgba(0,0,0,.66);--track:rgba(255,255,255,.12);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,"Noto Sans",system-ui,sans-serif;padding-block:0;padding-inline:0}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+.panel{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;background:var(--panel);padding:16px;border-right:1px solid var(--line)}
+.panel h1{font-size:16px;margin:0 0 4px}.panel p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.4}
+.ctl{margin:0 0 12px}.ctl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}.seg button{font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--prim);border-color:var(--prim);color:#fff}
+.ctl input[type=range]{width:100%}.ctl select{font:inherit;font-size:12px;width:100%;padding:5px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.ctl .row2{display:flex;align-items:center;gap:8px;font-size:12px}
+.kbd{font:11px ui-monospace,monospace;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.main{padding:16px;min-width:0}
+h2{font-size:14px;margin:18px 0 6px}h2:first-child{margin-top:0}
+.note{font-size:12px;color:var(--muted);margin:0 0 8px;max-width:72ch;line-height:1.45}
+/* the device frame: everything inside is in Jellyfin em units; the frame sets the root size */
+.frame{background:var(--ground);color:var(--fg);border-radius:8px;padding:1em;font-size:16px;overflow:auto;max-width:100%}
+.frame.phone{font-size:14.4px;width:360px}.frame.tv{font-size:20px}
+.frame .paper{background:var(--paper);border-radius:.2em}
+/* ---------- the family: one disc, one arc, seven glyphs ---------- */
+.dl{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--disc);color:var(--amber);flex:0 0 auto;vertical-align:middle}
+.dl svg.g{width:1em;height:1em;position:relative;z-index:1}
+.dl svg.arc{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.dl .arc circle{fill:none;stroke-width:2.6}.dl .arc .t{stroke:rgba(255,255,255,.18)}.dl .arc .p{stroke:var(--amber);stroke-linecap:round;stroke-dasharray:100;transition:stroke-dashoffset .35s ease-out}
+.dl[data-state=queued] .arc,.dl[data-state=notdl] .arc,.dl[data-state=failed] .arc,.dl[data-state=unaired] .arc,.dl[data-state=none] .arc{display:none}
+.dl[data-state=importing] .arc .p{stroke-dasharray:28 72;stroke-dashoffset:0;animation:spin 1.2s linear infinite;transform-origin:center}
+.dl[data-state=importing] .arc{animation:none}
+.dl[data-state=stalled]{color:var(--amber)}.dl[data-state=stalled] .arc .p{opacity:.55}
+.dl[data-state=failed]{color:#ff5a4f}.dl[data-state=failed] svg.g{color:#ff5a4f}
+.dl[data-state=unaired]{width:auto;padding:0 .45em 0 .3em;border-radius:.8em;color:rgba(255,255,255,.85);font-size:1em}.dl[data-state=unaired] b{font-size:.68em;font-weight:600;margin-left:.3em;white-space:nowrap}
+.dl[data-state=downloading] svg.g{animation:bob 1.4s ease-in-out infinite}
+.dl.act{cursor:pointer}.dl.act:hover{transform:scale(1.08)}.dl.act:hover svg.g{color:#ffd180}.dl.act:focus-visible{outline:none;box-shadow:0 0 0 .15em var(--prim)}
+.frame.tv .dl.act:focus-visible,.frame.tv .dl.tvfocus{box-shadow:0 0 0 .12em var(--ground),0 0 0 .28em #fff}
+.dl[data-state=none]{display:none}
+/* percent inside the ring: digits replace the glyph; the arc says the same number */
+.dl .num{position:relative;z-index:1;font-weight:700;font-size:.62em;line-height:1;color:var(--amber);font-variant-numeric:tabular-nums;letter-spacing:-.02em;display:flex;align-items:baseline}
+.dl .num i{font-style:normal;font-weight:600;font-size:.62em;margin-left:.05em;opacity:.85}
+.rowdl .dl .num{font-size:.8em}
+.dl[data-state=stalled] .num{opacity:.6}
+.dl.big{width:2em;height:2em}.dl.big .num{font-size:.72em}
+/* caption under the ring (time placement b) */
+.dlcol{display:inline-flex;flex-direction:column;align-items:center;flex:0 0 auto}
+.dlcol .cap{font-size:.62em;line-height:1;margin-top:-.1em;color:var(--amberText);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dlcol .cap.failed{color:var(--err)}.dlcol .cap.muted{color:var(--muted)}
+.sizes{display:flex;flex-direction:column;gap:12px;align-items:flex-start}.sizes .frame{width:100%}.sizes .frame.phone{width:360px}
+.sizes .lbl{font:12px Inter,system-ui,sans-serif;color:var(--muted);margin:0 0 6px}
+/* row size: the first round icon of the end slot */
+.rowdl .dl{width:2.5em;height:2.5em;background:transparent;color:var(--amber)}.rowdl .dl svg.g{width:1.4em;height:1.4em}
+.rowdl .dl .arc circle{stroke-width:2.2}.rowdl .dl .arc .t{stroke:var(--track)}
+.rowdl .dl[data-state=unaired]{width:auto;padding:0 .7em;background:transparent;color:var(--muted)}.rowdl .dl[data-state=unaired] b{font-size:.8em}
+.rowdl .dl[data-state=notdl],.rowdl .dl[data-state=failed]{background:transparent}
+@keyframes bob{0%,100%{transform:translateY(-.08em)}50%{transform:translateY(.12em)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reduced .dl svg.g,.reduced .dl .arc .p,.reduced .bar i{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){.dl svg.g,.dl .arc .p{animation:none!important}}
+/* count pill (upstream's), with the white arrow before the number while downloading */
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:1.5em;height:1.5em;padding:0 .4em;border-radius:.75em;background:var(--prim);color:#fff;font-size:.8em;font-weight:600;margin-left:.25em;font-variant-numeric:tabular-nums;vertical-align:middle}
+.cnt .g{width:1.05em;height:1.05em;margin-right:.1em;animation:bob 1.4s ease-in-out infinite}.cnt.idle .g{display:none}
+.tick{display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--prim);color:#fff;margin-left:.25em;vertical-align:middle}.tick svg{width:1em;height:1em}
+/* two-layer bar */
+.bar{position:absolute;left:0;right:0;bottom:0;height:.28em;background:var(--track);overflow:hidden}
+.bar i{position:absolute;left:0;top:0;height:100%;display:block}.bar i.d{background:var(--amber);transition:width .35s ease-out}.bar i.w{background:var(--prim)}
+.bar i.d.stalled{opacity:.55}.bar i.d.failed{background:#e53935}.bar i.d.importing{width:100%!important;animation:breathe 1.2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.45}}
+.hidebar .bar{display:none}
+/* cards */
+.cards{display:flex;flex-wrap:wrap;gap:1em;align-items:flex-start}
+.card{width:9.4em;font-size:1em}.card.land{width:15em}
+.img{position:relative;border-radius:.2em;overflow:hidden;background:var(--paper);aspect-ratio:2/3}.land .img{aspect-ratio:16/9}
+.img .art{position:absolute;inset:0;background:linear-gradient(160deg,var(--poster1),var(--poster2) 60%,#1a2230)}
+.img.ph .art{background:#262626;outline:1px dashed rgba(255,255,255,.14);outline-offset:-1px}
+.img .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.2em;font-weight:700;color:rgba(255,255,255,.14)}
+.tr{position:absolute;top:.3em;right:.3em;display:flex;align-items:center}
+.ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85),rgba(0,0,0,.3) 45%,rgba(0,0,0,.1));opacity:0;transition:opacity .14s}
+.card:hover .ov,.card.hov .ov{opacity:1}
+.ob{display:inline-flex;align-items:center;justify-content:center;width:2.1em;height:2.1em;border-radius:50%;background:rgba(0,0,0,.4);color:#fff;margin-left:.15em}.ob svg{width:1.25em;height:1.25em}
+.ob.play{position:absolute;left:50%;top:50%;width:3em;height:3em;margin:-1.5em 0 0 -1.5em;background:var(--prim)}
+.br{position:absolute;right:.25em;bottom:.45em;display:flex}
+.ct{padding:.4em .1em 0}.t{font-size:.9em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.s{font-size:.78em;color:var(--muted);margin-top:.1em}
+.card.focus .img{outline:.16em solid #fff;outline-offset:.12em}
+/* rows: upstream's listItem padding, nothing added */
+.list{padding:.4em .6em}
+.rowi{position:relative;display:flex;align-items:center;padding:.25em .25em .25em .5em;border-radius:.2em;margin-bottom:.1em}
+.rowi:hover{background:var(--hov)}.rowi.focus{background:var(--hov);outline:.16em solid #fff;outline-offset:-.16em}
+.still{position:relative;width:7.2em;aspect-ratio:16/9;border-radius:.2em;overflow:hidden;background:#202020;flex:0 0 auto}
+.still .art{position:absolute;inset:0;background:linear-gradient(160deg,#5a4a3a,#30241a 60%,#1f1812)}
+.still.ph{background:#262626;outline:1px dashed rgba(255,255,255,.14);outline-offset:-1px}.still .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.8em;font-weight:700;color:rgba(255,255,255,.14)}
+.still .plays{position:absolute;left:50%;top:50%;width:1.9em;height:1.9em;margin:-.95em 0 0 -.95em;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#fff}.plays svg{width:1.1em;height:1.1em}
+.body{flex:1 1 auto;min-width:0;padding:0 .75em}
+.l1{font-weight:600;font-size:.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l2{font-size:.82em;color:var(--muted);margin-top:.15em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l2 .dlt{color:var(--amberText)}.l2 .dlt.failed{color:var(--err)}
+.ends{display:flex;align-items:center;flex:0 0 auto}
+.ri{display:inline-flex;align-items:center;justify-content:center;width:2.5em;height:2.5em;border-radius:50%;color:var(--muted)}.ri svg{width:1.4em;height:1.4em}
+.ri.on{color:var(--prim)}.ri.fav.on{color:#e53935}
+.frame.phone .still{width:5.2em}.frame.phone .l2{white-space:normal}
+.frame.phone .rowi .ri:not(.more){display:none} /* upstream's phone rows show only More; Played and Favourite live in the overlay */
+/* queue page row, detail line, picker row */
+.qrow{position:relative;display:flex;align-items:center;padding:.5em .6em;border-radius:.2em}.qrow .body{padding:0 .8em}
+.pick{position:relative;display:flex;align-items:center;padding:.3em .6em;border-radius:.2em}.pick .q{font-weight:600}.pick .meta{font-size:.74em;color:var(--muted);margin-left:auto;padding-left:.6em;white-space:nowrap}
+.pick .acts{display:flex;align-items:center;margin-left:.4em}.pick .ri.x{color:#c62828}
+.detail{display:flex;align-items:center;font-size:.95em;padding:.5em .6em}.detail .dl{margin-right:.6em}
+.sw{font-size:11px;color:var(--muted);margin:4px 0 0}
+</style>
+
+<div class="app">
+<aside class="panel">
+  <h1>Download ring family</h1>
+  <p>One disc, one arc, seven glyphs, used the same way on cards, rows, the picker, the queue and the detail page. Hover the cards and rows; Tab or the arrow keys move focus (TV ring in the TV frame).</p>
+  <div class="ctl"><label>Theme</label><div class="seg" id="theme"><button aria-pressed="true" data-v="dark">Dark</button><button aria-pressed="false" data-v="light">Light</button></div></div>
+  <div class="ctl"><label>Device</label><div class="seg" id="device"><button aria-pressed="false" data-v="phone">Phone 360</button><button aria-pressed="true" data-v="desktop">Desktop</button><button aria-pressed="false" data-v="tv">TV 125 %</button></div></div>
+  <div class="ctl"><label>Rows: ring only, or ring + bottom bar</label><div class="seg" id="rowbar"><button aria-pressed="true" data-v="ring">Ring only (approved)</button><button aria-pressed="false" data-v="both">Ring + bar</button></div><div class="sw">Approved 2026-10-13: rows ring only; cards keep the bar.</div></div>
+  <div class="ctl"><label>Rows: what is inside the ring</label><div class="seg" id="rowin"><button aria-pressed="true" data-v="glyph">Arrow (approved)</button><button aria-pressed="false" data-v="pct">Percent</button></div><div class="sw">Approved 2026-10-13: arrow. The percent variant stays here for later.</div></div>
+  <div class="ctl"><label>Cards: what is inside the disc</label><div class="seg" id="cardin"><button aria-pressed="true" data-v="glyph">Arrow (1.6em)</button><button aria-pressed="false" data-v="pct">Percent (2em disc)</button></div><div class="sw">Recommendation: arrow. The number needs a 2em disc to be readable and the cards already carry the bar.</div></div>
+  <div class="ctl"><label>Time left: where</label><div class="seg" id="time"><button aria-pressed="true" data-v="meta">a · Meta line (approved)</button><button aria-pressed="false" data-v="caption">b · Under the ring</button><button aria-pressed="false" data-v="tooltip">c · Tooltip + context</button></div><div class="sw">Approved 2026-10-13: meta line, and the tooltip on every disc (cards have no meta line). b and c stay here for later.</div></div>
+  <div class="ctl"><label>Progress of the downloading items: <span id="pctv">42</span> %</label><input id="pct" type="range" min="0" max="100" value="42"></div>
+  <div class="ctl"><label>Native episode row 3 state</label><select id="s3"><option value="downloading" selected>downloading</option><option value="queued">queued</option><option value="importing">importing</option><option value="stalled">stalled</option><option value="failed">failed</option><option value="notdl">not downloaded</option><option value="unaired">unaired</option><option value="none">on disk (nothing)</option></select></div>
+  <div class="ctl"><label>Film card state</label><select id="sc"><option value="downloading" selected>downloading</option><option value="queued">queued</option><option value="importing">importing</option><option value="stalled">stalled</option><option value="failed">failed</option><option value="notdl">not downloaded</option><option value="unaired">unaired</option><option value="none">on disk (nothing)</option></select></div>
+  <div class="ctl"><label>Motion</label><div class="row2"><input type="checkbox" id="rm"><span>Simulate reduced motion (arcs and arrows still; the page also honours the OS setting)</span></div></div>
+  <div class="ctl"><label>Keys</label><div class="sw"><span class="kbd">Tab</span> or <span class="kbd">←</span><span class="kbd">→</span> move between focusable items; <span class="kbd">Enter</span> on a cloud or ! opens the picker in the app.</div></div>
+</aside>
+
+<main class="main" id="main">
+  <h2>The family</h2>
+  <p class="note">A dark disc (black 66 %) with an amber glyph; a thin amber arc round it only when there is a number to show (downloading, stalled). Approved 2026-10-13: the arrow inside the ring on rows and cards, the percent and time on the meta line and in every disc's tooltip. The percent-inside variant (digits 0.8em of the row: 12.8 px desktop, 11.5 px phone, 16 px TV; a 2em disc on cards) stays behind the "Percent" toggles for later. Failed is red and is the search-again button; it replaces the cloud, never both. On rows the disc is 2.5em in upstream's round-icon slot and sits first; on cards 1.6em in the top-right cluster, left of upstream's tick and count.</p>
+  <div class="frame" id="famframe"><div class="cards" style="gap:1.6em;align-items:center" id="family"></div></div>
+
+  <h2>Season cards, library series card, Next Up</h2>
+  <p class="note">The count pill is upstream's, untouched: no arrow in it. When something is downloading, the disc (arrow + arc) sits left of the pill — two icons, each saying one thing — and the bottom bar carries the aggregate (user, 2026-10-13). Cards have no meta line, so the tooltip carries the figure: "Downloading · 42% · 12 min left".</p>
+  <div class="frame"><div class="cards" id="cards"></div></div>
+
+  <h2>Season page: native episode rows and missing rows</h2>
+  <p class="note">Upstream's list padding, nothing added. The disc is the first round icon of the end slot; upstream's Played tick and Favourite follow. Approved: the arrow inside the ring and "42% · 12 min left" on the meta line after the date (also in the tooltip). The "Time left" toggle keeps the alternatives: (b) as a small caption under the ring; (c) tooltip only, with the pack context on the meta line, "Season 2 pack · 12 min left". Nothing textual sits beside the icons, which is what looked odd. Failed shows its reason on the meta line, truncated with an ellipsis, full in the tooltip.</p>
+  <div class="frame"><div class="paper list rowdl" id="rows"></div></div>
+
+  <h2>Library list row · Queue page row · the picker's added row · episode detail line</h2>
+  <p class="note">Same disc, same size, same meta text. In the picker the disc takes the Add slot while the torrent downloads (the green tick appears when the file is in the library); the X stays. The queue row already has these figures; it gains the disc in place of its text state.</p>
+  <div class="frame"><div class="paper rowdl" id="others"></div></div>
+
+  <h2>Rows at three sizes: desktop · phone 360 · TV 125 %</h2>
+  <p class="note">The same rows at the three root sizes, whatever the device toggle says, so the digits can be judged where they are smallest. Digits are 0.8em of the row's 1em: 12.8 px on desktop, 11.5 px on the phone, 16 px on TV — all above the 11 px floor. Times: "12 min left", "1 h 05 min left"; stalled has no time; queued says how many are ahead; a pack episode's time comes from the pack's rate and that file's remaining bytes.</p>
+  <div class="sizes" id="sizes"></div>
+
+  <h2>Pack: episodes each with their own progress</h2>
+  <p class="note">A season pack downloads as one torrent, but the client reports per-file progress, so each episode row shows its own arc and figure; the season card above shows the aggregate.</p>
+  <div class="frame"><div class="paper list rowdl" id="pack"></div></div>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+const G={
+ arrow:'<path d="M12 4V17"/><path d="M6.5 11.5L12 17L17.5 11.5"/>',
+ clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12L15 14"/>',
+ pause:'<path d="M9 6V18M15 6V18" stroke-width="2.8"/>',
+ bang:'<path d="M12 5V14"/><circle cx="12" cy="18.6" r="1.4" fill="currentColor" stroke="none"/>',
+ cloud:'<path d="M7 18.5A4.5 4.5 0 0 1 6.4 9.6A6 6 0 0 1 18 8.5A4 4 0 0 1 18 16.5"/><path d="M12 11V21"/><path d="M8.5 17.5L12 21L15.5 17.5"/>',
+ spin:'<path d="M4 12A8 8 0 0 1 17.5 6.3"/><path d="M17.5 2.5V6.5H13.5"/>',
+ tick:'<path d="M5 12.5L9.8 17.3L19 8"/>', heart:'<path d="M12 20.5L4.6 13.2A4.4 4.4 0 0 1 10.8 7L12 8.2L13.2 7A4.4 4.4 0 0 1 19.4 13.2Z" fill="currentColor" stroke="none"/>',
+ play:'<path d="M8 5.5V18.5L19 12Z" fill="currentColor" stroke="none"/>', more:'<circle cx="12" cy="6" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.7" fill="currentColor" stroke="none"/>',
+ x:'<path d="M6 6L18 18M18 6L6 18"/>', swap:'<path d="M15.38 4.75A8 8 0 0 1 14.07 19.73"/><path d="M15.84 16.67L14.07 19.73L17.13 21.5"/><g opacity=".5"><path d="M8.62 19.25A8 8 0 0 1 9.93 4.27"/><path d="M8.16 7.33L9.93 4.27L6.87 2.5"/></g>'
+};
+const svg=(k,sw)=>`<svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw||2.4}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+const GLYPH={downloading:'arrow',queued:'clock',importing:'spin',stalled:'pause',failed:'bang',notdl:'cloud',unaired:'clock',none:'arrow'};
+const TIP={downloading:p=>`Downloading · ${p}% · ${eta(p)}`,queued:()=>'Queued',importing:()=>'Importing…',stalled:p=>`Stalled at ${p}%`,failed:()=>'Failed · no space left on the download disk — search again',notdl:(p,a)=>a?'Download This Episode':'Not Downloaded',unaired:()=>'Airs 19 May 2027',none:()=>''};
+const fmtMin=m=>m>=60?`${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')} min left`:`${m} min left`;
+const eta=(p,total)=>p>=100?'importing':fmtMin(Math.max(1,Math.round((100-p)/100*(total||21))));
+/* the time (or the word) for a state; pack rows get their own time from the pack rate and the file's remaining bytes */
+const timeText=(state,p,o={})=>({downloading:eta(p,o.total),queued:o.ahead!=null?`queued · ${o.ahead} ahead`:'queued',importing:'importing…',stalled:'stalled',failed:'Failed · no space left on the download disk',notdl:'',unaired:'',none:''})[state];
+const ARC=`<svg class="arc" viewBox="0 0 36 36" aria-hidden="true"><circle class="t" cx="18" cy="18" r="15.9"/><circle class="p" cx="18" cy="18" r="15.9" pathLength="100"/></svg>`;
+function disc(state,opts={}){
+ const admin=opts.admin!==false; const act=(state==='notdl'||state==='failed')&&admin;
+ const date=opts.date||'May ’27';
+ const p=opts.pct??42;
+ const numeric=(state==='downloading'||state==='stalled');
+ const inside=numeric&&(opts.row?S.rowin==='pct':S.cardin==='pct');
+ const body=inside?`<b class="num">${p}<i>%</i></b>`:svg(GLYPH[state],state==='failed'?2.8:2.4);
+ const tip=state==='downloading'?`Downloading · ${p}% · ${timeText(state,p,opts)} · 3.1 MB/s`:TIP[state](p,admin);
+ return `<span class="dl${act?' act':''}${opts.tv?' tvfocus':''}${inside&&!opts.row?' big':''}" data-state="${state}" ${act?'tabindex="0" role="button"':''} title="${tip}">${ARC}${body}${state==='unaired'?`<b>${date}</b>`:''}</span>`;
+}
+/* the meta-line text depends on where the time goes (S.time) and whether the percent is already inside the ring */
+function metaText(state,p,o={}){
+ if(!['downloading','queued','importing','stalled','failed'].includes(state)) return '';
+ const t=timeText(state,p,o); const pctIn=S.rowin==='pct';
+ const pct=(state==='downloading'||state==='stalled')&&!pctIn?`${p}% · `:'';
+ if(S.time==='caption') return state==='failed'?t:(pctIn?'':`${p}%`);
+ if(S.time==='tooltip') return (o.ctx?`${o.ctx} · `:'')+pct+t;
+ return pct+t;
+}
+/* row end-slot: the disc, with the time caption under it in placement b */
+function discCol(state,o){
+ const d=disc(state,o); if(S.time!=='caption'||!['downloading','queued','importing','stalled'].includes(state)) return d;
+ const t=state==='downloading'?timeText(state,o.pct,o).replace(' left',''):timeText(state,o.pct,{}).replace('queued · ','');
+ return `<span class="dlcol">${d}<span class="cap ${state==='downloading'?'':'muted'}">${t}</span></span>`;
+}
+const barHtml=(state,p,w)=>{ if(!['downloading','stalled','importing','failed'].includes(state)&&w==null) return ''; const d=['downloading','stalled','importing','failed'].includes(state)?`<i class="d ${state}" style="width:${p}%"></i>`:''; const wt=w!=null?`<i class="w" style="width:${w}%"></i>`:''; return `<span class="bar">${d}${wt}</span>`; };
+
+/* ---------- renderers ---------- */
+function card(o){
+ const st=o.state||'none', p=S.pct;
+ const img=o.missing?`<div class="img ph"><span class="art"></span><span class="num">${o.num??''}</span>`:`<div class="img"><span class="art"></span>`;
+ let tr='';
+ if(o.count!=null){ tr=`${o.inprog?disc('downloading',{pct:o.aggregate??p}):''}<span class="cnt idle" title="${o.count} unplayed">${o.count}</span>`; if(o.played) tr=`<span class="tick">${svg('tick',3)}</span>`+tr; }
+ else { tr=disc(st,{pct:p,date:o.date,admin:o.admin}); if(o.played) tr+=`<span class="tick">${svg('tick',3)}</span>`; }
+ const bar=barHtml(o.count!=null?(o.inprog?'downloading':'none'):st,o.aggregate??p,o.watched);
+ const ov=`<div class="ov">${o.playable?`<span class="ob play">${svg('play')}</span>`:''}<div class="br">${o.playable?`<span class="ob">${svg('tick')}</span>`:''}<span class="ob">${svg('heart')}</span><span class="ob" title="Get a Release">${svg('cloud')}</span><span class="ob">${svg('more')}</span></div></div>`;
+ return `<div class="card${o.land?' land':''}${o.focus?' focus':''}">${img}<span class="tr">${tr}</span>${ov}${bar}</div><div class="ct"><div class="t">${o.title}</div><div class="s">${o.sub}</div></div></div>`;
+}
+function row(o){
+ const st=o.state||'none', p=o.pct??S.pct;
+ const still=o.missing?`<div class="still ph"><span class="num">${o.num}</span></div>`:`<div class="still"><span class="art"></span><span class="plays">${svg('play')}</span></div>`;
+ const ro={pct:p,date:o.short,admin:o.admin,tv:o.tv,row:true,total:o.total,ahead:o.ahead,ctx:o.ctx};
+ const m=metaText(st,p,ro); const meta=`${o.date}${o.runtime?' · '+o.runtime:''}${m?` · <span class="dlt ${st}">${m}</span>`:''}`;
+ const ends=`<span class="ends">${discCol(st,ro)}${o.native?`<span class="ri ${o.played?'on':''}" title="Played">${svg('tick')}</span><span class="ri fav ${o.fav?'on':''}" title="Favourite">${svg('heart')}</span><span class="ri more">${svg('more')}</span>`:''}</span>`;
+ const bar=(S.rowbar==='both')?barHtml(st,p,o.watched):'';
+ return `<div class="rowi${o.focus?' focus':''}">${still}<div class="body"><div class="l1">${o.num}. ${o.title}</div><div class="l2">${meta}</div></div>${ends}${bar}</div>`;
+}
+function others(){
+ const p=S.pct, ro={pct:p,row:true}, m=metaText('downloading',p,ro);
+ return `
+ <div class="rowi" style="padding:.4em .6em"><div class="still" style="width:3.2em;aspect-ratio:2/3"><span class="art"></span></div><div class="body"><div class="l1">Dune: Part Two</div><div class="l2">2024 · 2 h 46 min${m?` · <span class="dlt">${m}</span>`:''}</div></div><span class="ends">${discCol('downloading',ro)}<span class="ri">${svg('more')}</span></span>${S.rowbar==='both'?barHtml('downloading',p,30):''}</div>
+ <div class="qrow"><div class="body" style="padding-left:0"><div class="l1">The.Series.S02E04.PROPER.1080p.BluRay.x264.DTS-HD.MA.7.1-FraMeSToR</div><div class="l2">Queue · Transmission · 4.6 GB · 3.1 MB/s${m?` · <span class="dlt">${m}</span>`:''}</div></div><span class="ends">${discCol('downloading',ro)}<span class="ri x" title="Remove from Queue">${svg('x')}</span></span>${barHtml('downloading',p)}</div>
+ <div class="pick"><span class="q">1080p BluRay</span><span class="meta">4.6 GB · ↑12 · TorrentGalaxy</span><span class="acts">${discCol('downloading',ro)}<span class="ri x" title="Remove from Queue">${svg('x')}</span></span>${barHtml('downloading',p)}</div>
+ <div class="detail">${discCol('downloading',ro)}<span>In the download queue${m?` · <span class="dlt" style="color:var(--amberText)">${m}</span>`:''}</span></div>`;
+}
+/* ---------- state + render ---------- */
+const S={theme:'dark',device:'desktop',rowbar:'ring',rowin:'glyph',cardin:'glyph',time:'meta',pct:42,s3:'downloading',sc:'downloading',rm:false};
+function render(){
+ document.documentElement.setAttribute('data-theme',S.theme);
+ document.body.classList.toggle('reduced',S.rm);
+ document.querySelectorAll('.frame:not(.fixed)').forEach(f=>{f.classList.remove('phone','tv'); if(S.device!=='desktop') f.classList.add(S.device);});
+ document.getElementById('pctv').textContent=S.pct;
+ const fam=[['downloading','downloading'],['queued','queued'],['importing','importing'],['stalled','stalled'],['failed','failed (search again)'],['notdl','not downloaded'],['unaired','unaired']];
+ document.getElementById('family').innerHTML=fam.map(([s,l])=>`<div style="text-align:center"><div class="rowdl" style="margin-bottom:.4em">${disc(s,{pct:S.pct,date:'10 Aug',row:true})}</div>${disc(s,{pct:S.pct,date:'Aug ’27'})}<div class="s" style="margin-top:.5em">${l}</div></div>`).join('')
+  +`<div style="text-align:center"><div style="margin-bottom:.4em">${disc('downloading',{pct:S.pct})}<span class="cnt idle">3</span><span style="display:inline-block;width:.8em"></span><span class="cnt idle">8</span></div><div class="s">count pill: with a download · idle</div></div>`;
+ document.getElementById('cards').innerHTML=[
+  card({title:'Season 1',sub:'8 episodes',count:8,playable:true}),
+  card({title:'Season 2',sub:'8 episodes',count:3,inprog:true,aggregate:S.pct,playable:true}),
+  card({title:'Season 3',sub:'8 episodes',missing:true,num:3,state:'downloading'}),
+  card({title:'Season 4',sub:'8 episodes',missing:true,num:4,state:'notdl'}),
+  card({title:'Season 5',sub:'10 episodes',missing:true,num:5,state:'unaired',date:'Mar ’27'}),
+  card({title:'The Series',sub:'2026',count:12,inprog:true,aggregate:Math.round(S.pct*.7),playable:true,played:false}),
+  card({title:'Dune: Part Three',sub:'2026',missing:true,num:'',state:S.sc}),
+  card({title:'Dune: Part Two',sub:'2024',state:'downloading',watched:30,playable:true}),
+  card({title:'S02E04 · The Last of the Starks',sub:'The Series',land:true,missing:true,num:'',state:'downloading'}),
+  card({title:'S02E03 · The Long Night',sub:'The Series',land:true,state:'none',watched:30,playable:true,played:true}),
+ ].join('');
+ document.getElementById('rows').innerHTML=[
+  row({num:1,title:'Winterfell',date:'14 Apr 2026',runtime:'52 min',native:true,played:true,watched:null}),
+  row({num:2,title:'A Knight of the Seven Kingdoms',date:'21 Apr 2026',runtime:'52 min',native:true,fav:true,state:'downloading',watched:30}),
+  row({num:3,title:'The Long Night',date:'28 Apr 2026',missing:true,state:S.s3,short:'May ’27',admin:true,focus:S.device==='tv',tv:S.device==='tv'}),
+  row({num:4,title:'The Last of the Starks',date:'5 May 2026',missing:true,state:'queued'}),
+  row({num:5,title:'The Bells',date:'12 May 2026',missing:true,state:'failed',admin:true}),
+  row({num:6,title:'The Iron Throne',date:'19 May 2027',missing:true,state:'unaired',short:'May ’27'}),
+ ].join('');
+ document.getElementById('others').innerHTML=others();
+ const sizeRows=()=>[
+  row({num:2,title:'A Knight of the Seven Kingdoms',date:'21 Apr 2026',runtime:'52 min',native:true,fav:true,state:'downloading',watched:30}),
+  row({num:3,title:'The Long Night',date:'28 Apr 2026',missing:true,state:'downloading',total:95,ctx:'Season 2 pack'}),
+  row({num:4,title:'The Last of the Starks',date:'5 May 2026',missing:true,state:'stalled'}),
+  row({num:5,title:'The Bells',date:'12 May 2026',missing:true,state:'queued',ahead:2}),
+ ].join('');
+ document.getElementById('sizes').innerHTML=[['','Desktop (16 px root)'],['phone','Phone 360 (14.4 px root)'],['tv','TV 125 % (20 px root)']].map(([c,l])=>`<div class="frame fixed ${c}"><div class="lbl">${l}</div><div class="paper list rowdl">${sizeRows()}</div></div>`).join('');
+ document.getElementById('pack').innerHTML=[1,2,3,4].map(i=>row({num:i,title:['Winterfell','A Knight of the Seven Kingdoms','The Long Night','The Last of the Starks'][i-1],date:['14 Apr','21 Apr','28 Apr','5 May'][i-1]+' 2026',missing:true,state:i===4?'queued':'downloading',ahead:i===4?3:undefined,ctx:'Season 1 pack',total:[40,95,120,0][i-1],pct:Math.min(100,Math.max(0,S.pct+[30,10,-10,0][i-1]))})).join('');
+ document.querySelectorAll('.dl .arc .p').forEach(el=>{ const st=el.closest('.dl').dataset.state; if(st==='importing') return; const d=el.closest('.dl'); const pct=parseInt((d.title.match(/(\d+)%/)||[0,S.pct])[1]); el.style.strokeDashoffset=100-pct; });
+ document.querySelectorAll('.rowdl').forEach(el=>el.classList.toggle('hidebar',S.rowbar==='ring'));
+}
+function seg(id,key){ const el=document.getElementById(id); el.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; S[key]=b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(); }); }
+seg('theme','theme'); seg('device','device'); seg('rowbar','rowbar'); seg('rowin','rowin'); seg('cardin','cardin'); seg('time','time');
+document.getElementById('pct').addEventListener('input',e=>{S.pct=+e.target.value; render();});
+document.getElementById('s3').addEventListener('change',e=>{S.s3=e.target.value; render();});
+document.getElementById('sc').addEventListener('change',e=>{S.sc=e.target.value; render();});
+document.getElementById('rm').addEventListener('change',e=>{S.rm=e.target.checked; render();});
+/* arrow keys move focus between the focusable discs (TV D-pad stand-in) */
+document.addEventListener('keydown',e=>{ if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft'&&e.key!=='ArrowDown'&&e.key!=='ArrowUp') return; const items=[...document.querySelectorAll('#main [tabindex="0"]')]; if(!items.length) return; let i=items.indexOf(document.activeElement); i=(e.key==='ArrowRight'||e.key==='ArrowDown')?(i+1)%items.length:(i-1+items.length)%items.length; items[i].focus(); e.preventDefault(); });
+try{ if(matchMedia('(prefers-color-scheme: light)').matches){ S.theme='light'; document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v==='light')); } }catch(err){}
+render();
+})();
+</script>
