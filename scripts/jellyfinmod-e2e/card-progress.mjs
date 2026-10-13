@@ -17,12 +17,14 @@
 //   - rows (native and mod season page rows, the pack's episodes each with their own figure, the library list rows): the disc
 //     (2.5em, transparent) as the first round icon of the end slot, NO bar, no figure left of the icons, the figure on the meta
 //     line after the date (`42% · 12 min left`, `42% · 6 min left`, `queued`, `importing…`, `30% · stalled`, `Failed · …`) and
-//     in the disc's tooltip; a failure on a row with Not Downloaded takes that button (a red bang, `… — search again`, it opens
-//     the picker), never both; a failure without one is the red bang disc; the light scheme's colours;
+//     in the disc's tooltip; a failure on a row with Not Downloaded takes that mark (a red bang, an indicator since P1.FU19: no
+//     button, no focus stop, no "search again"), never both; a failure without one is the red bang disc; the light scheme's
+//     colours; P1.FU19: the row disc has the box and glyph of upstream's round row buttons beside it (the heart, More), and no
+//     disc changes under the mouse (cards, rows, the picker's added row; the added row's X keeps its hover);
 //   - the episode detail line: the disc and `In the download queue · 42% · 6 min left · View queue`;
 //   - the Queue page: the disc in each row's state cell, its progress bar kept;
 //   - the release picker's added row: the disc in the Add slot, the X kept, the figure on the marks line, no bar;
-//   - reduced motion: the arrow and the importing arc rest; TV: the failed button's white focus ring;
+//   - reduced motion: the arrow and the importing arc rest;
 //   - one queue read per page, then every 5 s while something is on its way, and no polling once nothing is; no page errors.
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<port>/   a mod instance (18096, 28096, 48096) or a local environment on 127.0.0.1
@@ -191,7 +193,8 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
         bars: row.querySelectorAll('.jfmod-dlBar, .jfmod-dlRowBar').length,
         oldFigure: row.querySelectorAll('.jfmod-dlRowFigure, .jfmod-dlFigure').length,
         failedButton: cloud && row.classList.contains('jfmod-dlRow--failed') ? {
-            shown: getComputedStyle(cloud).display !== 'none', button: cloud.tagName === 'BUTTON', title: cloud.title,
+            shown: getComputedStyle(cloud).display !== 'none', button: cloud.tagName === 'BUTTON', title: cloud.title, tabIndex: cloud.tabIndex,
+            cursor: getComputedStyle(cloud).cursor,
             glyphHidden: getComputedStyle(cloud.querySelector('.jfmod-markGlyph')).display === 'none',
             bang: /svg/.test(before.backgroundImage) && before.width !== '0px', bangColour: /%23ff5a4f/.test(before.backgroundImage) ? 'dark' : /%23c62828/.test(before.backgroundImage) ? 'light' : null
         } : null,
@@ -200,6 +203,36 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
 }), END_SLOT);
 
 const findRow = (rows, ...ids) => rows.find(row => ids.some(id => id && (row.id ?? '').replace(/-/g, '').toLowerCase() === id.replace(/-/g, '').toLowerCase()));
+
+const INERT_PROPS = ['backgroundColor', 'boxShadow', 'outlineStyle', 'transform', 'opacity', 'color', 'filter'];
+
+/**
+ * A disc or mark that is no control (P1.FU19, user 2026-10-13): its computed look (background, shadow, outline, transform,
+ * opacity, colour, its ::before veil) is the same under the mouse as without it, the pointer is the default arrow, it is no focus
+ * stop (a decorative button may hold it: `holder`), and its tooltip stays. Desktop only.
+ */
+async function checkInert(page, label, what, locator, holder = false) {
+    if (!await locator.count()) { record(label, `${what}: present`, 'NOT VERIFIED', 'not on the page'); return; }
+    const read = () => locator.first().evaluate((node, props) => {
+        const own = getComputedStyle(node);
+        const veil = getComputedStyle(node, '::before');
+        const titled = node.getAttribute('title') ?? node.querySelector('[title]')?.getAttribute('title');
+        return { styles: props.map(prop => own[prop]).join(' | '), veil: `${veil.content} ${veil.opacity} ${veil.backgroundColor}`,
+            cursor: own.cursor, title: titled, tag: node.tagName, tabIndex: node.tabIndex };
+    }, INERT_PROPS);
+    await locator.first().scrollIntoViewIfNeeded().catch(() => {});
+    await page.mouse.move(1, 1);
+    await page.waitForTimeout(400);
+    const before = await read();
+    const box = await locator.first().boundingBox();
+    if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(450);
+    const after = await read();
+    await page.mouse.move(1, 1);
+    record(label, `${what}: no hover look (nothing changes under the mouse), no pointer, no focus stop, the tooltip kept`, !!box
+        && after.styles === before.styles && after.veil === before.veil && before.cursor === 'default' && after.cursor === 'default'
+        && !!before.title && before.tabIndex < 0 && (holder || before.tag !== 'BUTTON'), { before, after });
+}
 
 async function run(browser, layout) {
     const label = `${layout}, ${tier}`;
@@ -319,6 +352,7 @@ async function run(browser, layout) {
             && season.disc.colour === AMBER && season.disc.background === 'rgba(0, 0, 0, 0.66)' && season.disc.glyphAnimation === 'jfmod-dlmarkBob'
             && Math.abs((season.disc.arc?.offset ?? -1) - (100 - seasonMean)) <= 1, season?.disc);
         record(label, `Season ${native.number} card: the tooltip is the figure ("${seasonTooltip}")`, season?.disc?.title === seasonTooltip, season?.disc?.title);
+        if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} .jfmod-dlmark`));
         if (season?.pill) {
             record(label, `Season ${native.number} card: two icons, the disc first of upstream's indicators and left of the plain count pill (no arrow in it)`,
                 season.disc?.firstIndicator === true && season.pill.discLeft && !season.pill.arrow && /^\d+$/.test(season.pill.text), season.pill);
@@ -399,14 +433,15 @@ async function run(browser, layout) {
             let discOk;
             if (expected.kind === 'failed' && row?.failedButton) {
                 discOk = !row.disc && row.failedButton.shown && row.failedButton.bang && row.failedButton.bangColour === 'dark'
-                    && row.failedButton.title.startsWith(expected.tooltip) && (!row.failedButton.button || row.failedButton.title.endsWith(' — search again'));
+                    && row.failedButton.title === expected.tooltip && !row.failedButton.button && row.failedButton.tabIndex < 0
+                    && row.failedButton.cursor === 'default';
             } else {
-                discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.5) < 0.05 && row.disc.firstOfEnd
+                discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.78) < 0.05 && row.disc.firstOfEnd
                     && row.disc.atEnd && row.disc.title === expected.tooltip && row.disc.background === 'rgba(0, 0, 0, 0)' && !row.noneShown
                     && row.disc.colour === (expected.kind === 'failed' ? RED_DARK : AMBER)
                     && (expected.percent === undefined || Math.abs(row.disc.arcOffset - (100 - expected.percent)) <= 1);
             }
-            record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded' : 'the ' + expected.kind + ' disc first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
+            record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded, an indicator' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
                 !!row && !!discOk && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.meta.visible && row.bars === 0
                 && row.oldFigure === 0 && /tabular-nums/.test(row.meta.tabular ?? '')
                 && (expected.kind === 'queued' || expected.kind === 'failed' || row.meta.colour === (expected.kind === 'stalled' ? META_STALLED_DARK : META_DARK))
@@ -430,26 +465,31 @@ async function run(browser, layout) {
             && (!lightFailed?.disc || lightFailed.disc.colour === RED_LIGHT), { lightDownloading, lightStalled, lightFailed });
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
 
-        // TV: the failure's button is a D-pad stop with the white ring.
-        const failedRow = failedNative >= 0 ? findRow(rows, itemOf.get(inSeason[failedNative].episodeNumber), inSeason[failedNative].id) : null;
-        if (tv && failedRow?.failedButton?.button) {
-            const button = page.locator(`.page:not(.hide) .jfmod-dlRow--failed .jfmod-mark--none`).first();
-            await button.scrollIntoViewIfNeeded().catch(() => {});
-            await button.focus();
-            await page.waitForTimeout(300);
-            const ring = await button.evaluate(node => getComputedStyle(node).boxShadow);
-            record(label, 'TV: the failure\'s button takes focus with the white ring', /255, 255, 255/.test(ring), ring);
-            await shotOf(page.locator('.page:not(.hide) .jfmod-dlRow--failed'), 'row-failed-tv-focus');
+        // P1.FU19: the row disc is upstream's round row button's size (user 2026-10-13: "make the episode [state icon] the same
+        // size as info and fav and heart icons"); no disc or failure mark changes under the mouse, and the failure is no stop.
+        const size = await page.evaluate(() => {
+            const box = node => { const rect = node.getBoundingClientRect(); return { w: rect.width, h: rect.height, cy: rect.top + rect.height / 2 }; };
+            const row = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow')].find(candidate => candidate.querySelector('.jfmod-dlmark'));
+            const disc = row?.querySelector('.jfmod-dlmark');
+            const heart = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem button.listItemButton')].find(button => button.getBoundingClientRect().width > 0);
+            const font = disc ? parseFloat(getComputedStyle(disc).fontSize) : 0;
+            return disc ? { disc: box(disc), glyph: box(disc.querySelector('.jfmod-dlmark-glyph')), font,
+                heart: heart ? { box: box(heart), glyph: box(heart.querySelector('.material-icons, svg')), cy: box(heart).cy } : null } : null;
+        });
+        if (size) {
+            const near = (a, b) => Math.abs(a - b) <= 0.6;
+            const expectedBox = size.heart ? size.heart.box.w : size.font * (1.6695652173913 + 1.112);
+            const expectedGlyph = size.heart ? size.heart.glyph.w : size.font * 1.6695652173913;
+            record(label, `season page row disc: the box and glyph of upstream's round row buttons${size.heart ? ' (measured on the row\'s heart, More or info), centred on the same line' : ' (upstream\'s formula; upstream draws no round buttons on TV rows)'}`,
+                near(size.disc.w, expectedBox) && near(size.disc.h, expectedBox) && near(size.glyph.w, expectedGlyph) && near(size.glyph.h, expectedGlyph)
+                && (!size.heart || Math.abs(size.disc.cy - size.heart.cy) <= 1.5), { ...size, expectedBox, expectedGlyph });
+            await shotOf(page.locator('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow').first(), 'row-disc-size');
+        } else {
+            record(label, 'season page row disc size', 'NOT VERIFIED', 'no row with a disc');
         }
-        // The failure's button searches again: it opens the release picker (administrators).
-        if (failedRow?.failedButton?.button) {
-            await page.route(/\/JellyfinMod\/Releases\?/, route => route.fulfill({ json: { ...pickerSearch(inSeason[failedNative].id), candidates: [], eligibleCount: 0, rejectedCount: 0 } }));
-            await page.locator('.page:not(.hide) .jfmod-dlRow--failed .jfmod-mark--none').first().click();
-            const opened2 = await page.waitForSelector('.jfmod-releaseDialog .jfmod-releasePicker', { timeout: 10000 }).then(() => true, () => false);
-            record(label, 'the failure\'s red bang searches again: it opens the release picker', opened2);
-            await page.keyboard.press('Escape');
-            await page.waitForTimeout(600);
-            await page.unroute(/\/JellyfinMod\/Releases\?/);
+        if (layout === 'desktop') {
+            await checkInert(page, label, 'a season page row\'s download disc', page.locator('.page:not(.hide) .listItem .jfmod-dlmark'));
+            await checkInert(page, label, 'a failed row\'s red bang', page.locator('.page:not(.hide) .jfmod-dlRow--failed .jfmod-mark--none'));
         }
 
         // ---- The episode detail line: E[1]'s own file of the pack.
@@ -506,6 +546,23 @@ async function run(browser, layout) {
             record(label, 'release picker\'s added row: the disc in the Add slot, the X kept, "42% · 12 min left" on the marks line, no bar',
                 added?.disc === 'downloading' && added.x && added.figure === '42% · 12 min left' && added.bars === 0
                 && added.title === 'Downloading · 42% · 12 min left · 3 MB/s', added);
+            if (layout === 'desktop') {
+                // P1.FU19 (user 2026-10-13: "I don't think we need highlight / hover over non clickable icon"): the Add slot that holds
+                // the disc changes nothing under the mouse; the X, a control, keeps its veil.
+                await checkInert(page, label, 'release picker\'s added row: the Add slot holding the disc', page.locator('.jfmod-releaseDialog .jfmod-releaseItem--added [data-jfmod-release-add]'), true);
+                const x = page.locator('.jfmod-releaseDialog .jfmod-releaseItem--added [data-jfmod-release-x]');
+                if (await x.count()) {
+                    const veil = () => x.first().evaluate(node => getComputedStyle(node, '::before').opacity);
+                    await page.mouse.move(1, 1);
+                    await page.waitForTimeout(300);
+                    const atRest = await veil();
+                    await x.first().hover();
+                    await page.waitForTimeout(400);
+                    const hovered = await veil();
+                    record(label, 'release picker\'s added row: the X keeps its hover veil', atRest === '0' && Number(hovered) > 0, { atRest, hovered });
+                    await page.mouse.move(1, 1);
+                }
+            }
             await shotOf(page.locator('.jfmod-releaseDialog .jfmod-releaseItem--added'), 'picker-added-row');
             await shot('picker');
             await page.keyboard.press('Escape');

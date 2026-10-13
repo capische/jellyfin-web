@@ -10,6 +10,8 @@
 //   - phone and TV (no hover overlay): no icon in any card; the card's item menu (its More button or a long press on the
 //     phone, the Menu key on the TV) carries Get a Release, which opens the picker without leaving the page;
 //   - an ordinary user sees no icon and no menu item;
+//   - P1.FU19: a card with a file keeps upstream's Play in the centre of its overlay and the icon in the bottom row (a card with
+//     nothing on disk, Get a Release in the centre instead, is checked by missing-seasons-episodes.mjs);
 //   - Shuffle: a drama's series and season pages hide upstream's header Shuffle and offer Shuffle in the More menu; choosing it
 //     clicks upstream's own Shuffle button (the click is caught before upstream's handler, so nothing plays); a comedy's series
 //     page keeps the header Shuffle and has no extra item.
@@ -196,6 +198,12 @@ async function checkOverlay(page, label, what, cardSelector, expectedTitle) {
         record(label, `${what}: hovering shows Get a Release in the overlay`, false, facts);
         return false;
     }
+    const play = await page.evaluate(selector => {
+        const button = document.querySelector(`${selector} .cardOverlayContainer > .cardOverlayFab-primary:not(.jfmod-cardGet)`);
+        return !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0;
+    }, cardSelector);
+    record(label, `${what}: upstream's Play kept in the centre (the card has a file), the icon not there (P1.FU19)`, play
+        && !await page.locator(`${cardSelector} .cardOverlayContainer > .jfmod-cardGet`).count(), play);
     const iconIndex = facts.order.indexOf('get');
     const upstream = facts.buttons.filter(button => button.kind !== 'get').map(button => button.width);
     const icon = facts.buttons[iconIndex];
