@@ -240,26 +240,54 @@ export const seedingSummary = (seeding: QueueSeeding): string => {
 };
 
 /**
- * A download's look wherever it shows (P4.FU1, 2026-10-12): the picker's added row, the season page's and list views' rows
- * and the cards' bottom bar. `kind` picks the bar's and the figure's colour, `percent` (0..100) the bar's length, null the
- * track alone; `text` is the row's figure; `stale` is a client that could not be read, kept at its last value and dimmed.
+ * A download's look wherever it shows (P4.FU1, 2026-10-12; the ring family P4.FU6, user-approved 2026-10-13): the disc's glyph
+ * and arc (`kind`, `percent` 0..100, null for none), the meta line's words (`text`) and the disc's tooltip (`tooltip`); `stale`
+ * is a client that could not be read, kept at its last value and dimmed.
  */
 export interface DownloadProgress {
     kind: 'queued' | 'downloading' | 'stalled' | 'importing' | 'failed';
     percent: number | null;
+    /** The meta line: `42% · 12 min left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason`. */
     text: string;
+    /** Every disc's tooltip, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s`. */
+    tooltip: string;
     stale: boolean;
 }
 
-/** `12 min left`, `1 h 5 min left`. */
+/** `12 min left`, `1 h 05 min left`. */
 export const etaText = (seconds: number) => {
     const minutes = Math.max(1, Math.round(seconds / 60));
     if (minutes < 60) return minutes + ' min left';
-    const rest = minutes % 60;
-    return Math.floor(minutes / 60) + ' h' + (rest ? ' ' + rest + ' min' : '') + ' left';
+    return Math.floor(minutes / 60) + ' h ' + String(minutes % 60).padStart(2, '0') + ' min left';
 };
 
 const IMPORTING_STATES = new Set<QueueState>(['identifying', 'linking', 'scanning']);
+
+/** The words of one download, for the meta line and the tooltip. `rate` (bytes per second) only while it downloads. */
+export const describeDownload = (kind: DownloadProgress['kind'], percent: number | null, stale: boolean,
+    detail: { eta?: number | null; rate?: number | null; reason?: string } = {}): DownloadProgress => {
+    const eta = detail.eta ? etaText(detail.eta) : null;
+    let text: string;
+    let tooltip: string;
+    if (kind === 'downloading') {
+        text = [percent + '%', eta].filter(Boolean).join(' · ');
+        tooltip = ['Downloading', percent + '%', eta, detail.rate ? formatRate(detail.rate) : null].filter(Boolean).join(' · ');
+    } else if (kind === 'stalled') {
+        text = percent + '% · stalled';
+        tooltip = 'Stalled at ' + percent + '%';
+    } else if (kind === 'importing') {
+        text = 'importing…';
+        tooltip = 'Importing…';
+    } else if (kind === 'failed') {
+        text = 'Failed · ' + (detail.reason ?? 'see the download queue');
+        tooltip = text;
+    } else {
+        // The client's own queue position is not in the queue answer, so no "2 ahead" (P4.FU6).
+        text = 'queued';
+        tooltip = 'Queued';
+    }
+    return { kind, percent: kind === 'queued' ? null : percent, text, tooltip: tooltip + (stale ? ' · last known' : ''), stale };
+};
 
 /**
  * One queue row as a download: queued, downloading, stalled, importing, failed or blocked. A client that cannot be read
@@ -269,23 +297,22 @@ export const downloadProgress = (row: QueueRow | null, last: QueueRow | null = n
     const stale = row?.state === 'unknown';
     const shown = stale ? last ?? row : row;
     const percent = progressPercent(shown?.progress);
-    if (!shown || shown.state === 'queued' || percent === null) {
-        return { kind: 'queued', percent: null, text: 'Queued', stale };
-    }
-    if (IMPORTING_STATES.has(shown.state)) return { kind: 'importing', percent: 100, text: 'Importing…', stale };
-    if (shown.state === 'stalled') return { kind: 'stalled', percent, text: percent + '% · stalled', stale };
+    if (!shown || shown.state === 'queued' || percent === null) return describeDownload('queued', null, stale);
+    if (IMPORTING_STATES.has(shown.state)) return describeDownload('importing', 100, stale);
+    if (shown.state === 'stalled') return describeDownload('stalled', percent, stale);
     if (shown.state === 'failed' || shown.state === 'blocked') {
-        return { kind: 'failed', percent, text: 'Failed · ' + (shown.message ?? shown.reason ?? 'see the download queue'), stale };
+        return describeDownload('failed', percent, stale, { reason: shown.message ?? shown.reason ?? undefined });
     }
-    return { kind: 'downloading', percent, text: percent + '%' + (shown.etaSeconds ? ' · ' + etaText(shown.etaSeconds) : ''), stale };
+    return describeDownload('downloading', percent, stale, { eta: shown.etaSeconds, rate: stale ? null : shown.downloadRateBytes });
 };
 
-/** Something is on its way for the title: a card shows its bar and arrow. Failed, blocked and seeding rows are not. */
+/** Something is on its way for the title: a card shows its bar and disc. Failed, blocked and seeding rows are not. */
 export const isUnderWay = (row: QueueRow) => row.state !== 'failed' && row.state !== 'blocked' && row.state !== 'seeding';
 
 /**
  * Several downloads as one (a series or a season with episodes on their way): the mean of their percentages, the longest
- * time left, and the liveliest kind (downloading, then importing, stalled, queued).
+ * time left, the rate of the torrents downloading (a pack once), and the liveliest kind (downloading, then importing, stalled,
+ * queued).
  */
 export const aggregateProgress = (rows: QueueRow[]): DownloadProgress | null => {
     if (rows.length === 0) return null;
@@ -293,10 +320,9 @@ export const aggregateProgress = (rows: QueueRow[]): DownloadProgress | null => 
     const parts = rows.map(row => downloadProgress(row));
     const percent = Math.floor(parts.reduce((sum, part) => sum + (part.percent ?? 0), 0) / parts.length);
     const kind = (['downloading', 'importing', 'stalled', 'queued'] as const).find(name => parts.some(part => part.kind === name)) ?? 'queued';
-    const eta = Math.max(0, ...rows.filter(row => row.state === 'downloading').map(row => row.etaSeconds ?? 0));
-    let text = percent + '%' + (eta ? ' · ' + etaText(eta) : '');
-    if (kind === 'stalled') text = percent + '% · stalled';
-    else if (kind === 'queued') text = 'Queued';
-    else if (kind === 'importing') text = 'Importing…';
-    return { kind, percent: kind === 'queued' ? null : percent, text, stale: parts.every(part => part.stale) };
+    const downloading = rows.filter(row => row.state === 'downloading');
+    const eta = Math.max(0, ...downloading.map(row => row.etaSeconds ?? 0));
+    const rates = new Map(downloading.map(row => [row.id, row.downloadRateBytes ?? 0]));
+    const rate = Array.from(rates.values()).reduce((sum, value) => sum + value, 0);
+    return describeDownload(kind, percent, parts.every(part => part.stale), { eta, rate });
 };

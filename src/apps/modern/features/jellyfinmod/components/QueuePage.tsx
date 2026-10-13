@@ -14,10 +14,11 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    automationPausedText, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent, QUEUE_STATE_LABEL,
+    automationPausedText, downloadProgress, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent, QUEUE_STATE_LABEL,
     queueRowTitle, reasonMessage, seedingSummary, sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
+import DownloadStateMark from './DownloadStateMark';
 import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
 import type { QueueList, QueueRow } from '../types/queue';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
@@ -114,10 +115,20 @@ const TitleLines: FC<{ row: QueueRow; text: RowText; href?: string }> = ({ row, 
     <span className='jfmod-queueRelease'>{row.releaseTitle}</span>
 </>;
 
-const StateLines: FC<{ text: RowText }> = ({ text }) => <>
-    <span className={classNames('jfmod-queueState', { 'jfmod-queueState--problem': text.problem })}>{text.state}</span>
-    {text.detail && <span className='jfmod-queueDetail'>{text.detail}</span>}
-</>;
+/**
+ * The state: the download disc in place of the word while the row is a download (P4.FU6), its tooltip the state and figure;
+ * a seeding copy keeps its word. The reason or the seeding goals follow.
+ */
+const StateLines: FC<{ row: QueueRow; text: RowText }> = ({ row, text }) => {
+    const progress = row.state === 'seeding' ? null : downloadProgress(row);
+    // The import's own step (Linking into the library) and Blocked say more than the family's words; the reason follows.
+    const title = progress?.kind === 'importing' || row.state === 'blocked' ? text.state : progress?.tooltip;
+    return <>
+        {progress ? <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={title} /></span> :
+            <span className={classNames('jfmod-queueState', { 'jfmod-queueState--problem': text.problem })}>{text.state}</span>}
+        {text.detail && <span className='jfmod-queueDetail'>{text.detail}</span>}
+    </>;
+};
 
 const metaLine = (text: RowText) => [text.size, text.speed, text.eta ? text.eta + ' left' : null].filter(Boolean).join(' · ');
 
@@ -153,7 +164,7 @@ const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, href, sta
     <td className='jfmod-queueCellNumber'>{text.size ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.speed ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.eta ?? '—'}</td>
-    <td className='jfmod-queueCellState'><StateLines text={text} /></td>
+    <td className='jfmod-queueCellState'><StateLines row={row} text={text} /></td>
     {showClient && <td>{row.client?.name ?? '—'}</td>}
     {isAdmin && <td className='jfmod-queueCellMenu'>
         {queueRowActions(row, isAdmin).length > 0 && <MenuButton row={row} title={text.title} onMenu={onMenu} />}
@@ -166,7 +177,7 @@ const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu'>> = ({ api, row, text, sho
         <TitleLines row={row} text={text} href={href} />
         <ProgressBar text={text} stale={stale} />
         {metaLine(text) && <span className='jfmod-queueMuted'>{metaLine(text)}</span>}
-        <StateLines text={text} />
+        <StateLines row={row} text={text} />
         {showClient && row.client && <span className='jfmod-queueMuted'>{row.client.name}</span>}
     </span>
 </>;

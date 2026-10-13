@@ -17,6 +17,7 @@ import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseC
 import type { QueueRow } from '../types/queue';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
+import DownloadStateMark from './DownloadStateMark';
 import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
 import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
 import { flatButtonClass } from '../utils/flatButton';
@@ -305,22 +306,15 @@ interface AddedRow {
     progress: DownloadProgress | null;
 }
 
-// The figure and the bar share their colours with the season page's rows and the cards (downloadProgress.scss, P4.FU1).
+// The figure shares its words and colours with the rows' meta lines (downloadProgress.scss, P4.FU1/P4.FU6); no bar (rows are
+// ring only, the disc takes the Add slot).
 const ProgressFigure: FC<{ progress: DownloadProgress }> = ({ progress }) =>
-    <span className={classNames('jfmod-addedFigure jfmod-dlFigure', 'jfmod-dlFigure--' + progress.kind, { 'jfmod-dlFigure--stale': progress.stale })}
-        aria-live='off'>{progress.text}</span>;
-
-const ProgressBar: FC<{ progress: DownloadProgress }> = ({ progress }) =>
-    <span className={classNames('jfmod-addedBar jfmod-dlBar', 'jfmod-dlBar--' + progress.kind)} aria-hidden='true'>
-        <span className='jfmod-dlBar-fill' style={{ width: (progress.percent ?? 0) + '%' }} />
-    </span>;
+    <span className={classNames('jfmod-addedFigure jfmod-dlMeta', 'jfmod-dlMeta--' + progress.kind, { 'jfmod-dlMeta--stale': progress.stale })}
+        title={progress.tooltip} aria-live='off'>{progress.text}</span>;
 
 const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null }> = ({ candidate, search, added }) =>
-    <>
-        <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)}
-            progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />
-        {added?.progress && <ProgressBar progress={added.progress} />}
-    </>;
+    <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)}
+        progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />;
 
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
@@ -370,11 +364,16 @@ const AddedActions: FC<{ candidate: ReleaseCandidate; added: AddedRow }> = ({ ca
         onX();
     }, [onX]);
     // The Add slot stays the same button element, so the D-pad does not lose its place; it is no stop now (the X takes focus).
+    // While the torrent downloads it holds the download disc (P4.FU6); the green tick once the queue cannot be read.
+    const progress = added.accepted ? added.progress : null;
+    let state: ActionState = added.accepted ? 'done' : 'working';
+    if (progress) state = 'idle';
+    let title = added.accepted ? 'In the Download Queue' : 'Adding…';
+    if (progress) title = progress.tooltip;
     return <span className='jfmod-releaseActions jfmod-releaseActions--pressed'>
-        <button type='button' className={actionClass('jfmod-releaseAction--add', added.accepted ? 'done' : 'working')}
-            title={added.accepted ? 'In the Download Queue' : 'Adding…'} aria-hidden='true' tabIndex={-1}
-            data-jfmod-release-add={candidate.releaseId}>
-            <AddGlyph />
+        <button type='button' className={actionClass(classNames('jfmod-releaseAction--add', { 'jfmod-releaseAction--dl': !!progress }), state)}
+            title={title} aria-hidden='true' tabIndex={-1} data-jfmod-release-add={candidate.releaseId}>
+            {progress ? <DownloadStateMark progress={progress} size='row' /> : <AddGlyph />}
         </button>
         {x && <button type='button' className={actionClass('jfmod-releaseAction--danger jfmod-releaseAction--x')}
             title={x === 'cancel' ? 'Cancel' : 'Remove from Queue'}
