@@ -632,6 +632,13 @@ claimed episode with `episodeId`, `seasonNumber`, `episodeNumber`, its newest `i
 otherwise). The row's own `progress`, `sizeBytes`, `downloadRateBytes` and `etaSeconds` stay the whole torrent's. The web
 estimates an episode's time left as its remaining bytes at the row's `downloadRateBytes`.
 
+Every row also carries (P1.FU20, additive; absent from older plugins) `parsed`, the release name as the picker parsed it when
+it was grabbed (the grab's stored copy, the same shape as a release candidate's `parsed`: `resolution`, `source`, `codec`,
+`audio`, `audioChannels`, `hdr`, `languages` and the rest; null when the grab kept none), and `indexerName`, the indexer the
+release came from (null when the grab is gone). Both are shown to everyone who may read the row; a missing episode's
+download block draws its marks from them. The release's page on the tracker (`detailsUrl`) is not kept after a grab, so the
+queue has no link to it.
+
 `GET /JellyfinMod/Imports/{id}` returns one import operation (concealed 404 without library access).
 `POST /JellyfinMod/Imports/{id}/Retry` (admin) re-inspects a `blocked` or `failed` import from the
 start and answers 409 `import_not_retryable`, `import_open` or `grab_missing`.
