@@ -678,6 +678,42 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   build, alpha reset to its baseline afterwards. Not run: a live download, the TV at 1280×720, a physical TV, a Pi instance
   (not deployed), the Unaired clock beside a download, the light scheme on cards (dark discs on posters, unchanged), Codex
   review.
+  **P1.FU19, built (not accepted) 2026-10-13: Get a Release in place of Play on a card with nothing on disk, every mark an
+  indicator, row marks at upstream's button size, a missing episode's page shows its download** (user, testing Ted Lasso's
+  Seasons row on 28096: "We don't need Play. Instead of Play there should be the Cloud to download the season. As for the
+  clickable state icon, let's remove it for now."; then "I don't think we need highlight / hover over non clickable icon",
+  "Why it has this icon when download is going in progress on episode page?" and "make the episode [state icon] the same size
+  as info and fav and heart icons"; [UX.md](UX.md) §3.1, §3.3, §5.7, §7.2.1). Owner: Phase 1 (the P1.FU11/P1.FU17 marks and
+  the P1.FU12 card Get a Release), with P4.FU6's discs for the hover and size parts; web only, no plugin change. (1) A card with
+  nothing on disk (upstream's season cards with no episode on disk by P1.FU17's rule, a download in progress included, and a
+  library entry's native card with nothing on disk) is marked `data-jfmod-nofile`: upstream's centre Play (and the phone's
+  overlay Play) is hidden for everyone, and an administrator's Get a Release takes the centre in Play's own classes, with no
+  second cloud in the bottom row; the mod's own file-less and missing-season cards get the same centre icon on the desktop
+  hover (`CardHoverGet`); ordinary users get neither; a season with a file keeps Play. (2) Every mark is an indicator (no
+  button, no focus stop or TV hop, no pointer, no "search again" on a failed row), behind `MARK_CLICKABLE = false` in
+  `constants/fileState.ts`, the button code kept. (3) No hover look on anything that is not a control: the marks and discs get
+  the default pointer, and the release picker's added-row Add slot (holding the disc) no longer grows or takes the veil; the X
+  keeps its hover. (4) A row's Not Downloaded, Unaired clock, failed bang and (on list rows) download disc take the box and
+  glyph of upstream's round row buttons: 2.7816em and 1.6696em (41.4/24.8px desktop, 40.1/24.0px phone, 55.6/33.4px TV;
+  before 37.2/20.8, 36.0/20.2 and 50/28px); the detail line, the Queue page and the picker keep 2.5em; cards keep 1.6em. (5)
+  The mod's page for a missing episode: the still carries the episode's ids, so `downloadMarks` draws its download (the disc
+  takes the corner from Not Downloaded, a failure included) and the page shows `QueueStatusLine` at the end of upstream's
+  content section, as a downloaded episode's page does. Web `feat/hover-cloud` from `next-release` `d17d1457e9` (code, runners
+  and docs commits). Checks: typecheck, eslint (feature folder: no errors), stylelint and the production build pass.
+  `missing-seasons-episodes.mjs` (the hover centre, Tab order, the picker from the centre icon on upstream's and the mod's
+  cards, the inert marks, the row size, the TV's absent stops, the episode page's download from an intercepted queue answer)
+  passed 1049 checks in real Chrome (0 failed, 24 not verified: lazy posters below the fold) and in Chromium 1049 with one
+  phone failure that was the runner reading upstream's hidden copy of the still (fixed, the phone re-run 339/0); as oleksii and
+  the ordinary user nata, desktop, phone and TV 1080. `card-progress.mjs` (failed rows as indicators, the row disc's size
+  against the row's heart, no hover look on card, row and failure discs and on the picker's Add slot, the X's veil kept)
+  passed 119/119 in Chromium and in Chrome on the three layouts. Both against local environment alpha (lease 14:22–14:52
+  Sydney) with plugin `next-release` `618efb7`, this build and a fixture (an empty `Peep Show (2003)/Season 02` folder in a
+  second Shows folder, automatic series grouping on), alpha reset to its baseline afterwards. `card-get-shuffle.mjs` (Play
+  kept on a card with a file) ran in Chromium against 18096 with this build served in place (read-only, lease 14:45–14:49):
+  74 passed, 3 failed, 2 not verified; the three failures are the season and series card clouds, absent because 18096's
+  plugin has no `acquisition.packs` (not a P1.FU19 behaviour). Not run: a live download (queue answers intercepted), the TV at
+  1280×720, a physical TV, a Pi instance deployment, a file-less movie's search card (alpha has none), `card-get-shuffle.mjs`
+  in Chrome, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
