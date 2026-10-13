@@ -443,7 +443,9 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
     return <>{missing.map(episode => {
         const element = elements.get(episode.id);
         if (!element) return null;
-        const download = canAcquire ? { label: 'Download This Episode', open: pickerFor({ episodeId: episode.id }) } : null;
+        // The row's mark is the administrator's button (P1.FU22), named for its episode; its tooltip stays *Not Downloaded*.
+        const download = canAcquire ? { label: `Get a Release for Episode ${episode.episodeNumber}, ${episode.title}`,
+            open: pickerFor({ episodeId: episode.id }) } : null;
         if (layoutManager.tv) element.setAttribute('aria-label', `${episode.episodeNumber}. ${episode.title}`);
         return createPortal(<MissingEpisodeRow episode={episode} rating={detail.entry.metadata?.episodeRatings?.[episode.tmdbId]}
             download={download} href={hrefs.current.get(episode.id) ?? '#'} />, element, 'episode:' + episode.id);

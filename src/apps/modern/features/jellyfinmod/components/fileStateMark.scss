@@ -73,9 +73,15 @@
     }
 }
 
-/* Not Downloaded: amber, the one colour that means "acquisition pending" (design 2026-10-12). */
+/* Not Downloaded: amber, the one colour that means "acquisition pending" (design 2026-10-12); on a card the glass's ink below, on
+ * a row the colour of upstream's round row icons beside it (their `color: inherit`: white on the dark schemes, the dark text on
+ * the light ones; P1.FU22). */
 .jfmod-mark--none {
     color: #ffb74d;
+}
+
+.jfmod-mark--row.jfmod-mark--none {
+    color: inherit;
 }
 
 /* Its glyph, a download arrow out of a small cloud (P1.FU17, design A), is stroked: a little lighter on a row's larger glyph. */
@@ -91,7 +97,7 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* On a card (a row keeps its amber and its transparent ground) these two take the download disc's glass and white glyph
+/* On a card (a row keeps its transparent ground) these two take the download disc's glass and white glyph
  * (P4.FU7, user 2026-10-13), so every mark on a poster looks alike. After their own colours above, before the button's hover. */
 .jfmod-mark--none:not(.jfmod-mark--row),
 .jfmod-mark--unaired:not(.jfmod-mark--row) {
@@ -119,10 +125,22 @@
     font-size: 0.75em;
 }
 
-/* The administrator's button: a pointer, brighter and a little larger on hover, pressed smaller, a cyan ring for the
- * keyboard and the TV's white ring (two shadows, so it reads on any poster). */
+/* The administrator's button: a pointer, the cyan ring for the keyboard. */
 .jfmod-markButton {
     cursor: pointer;
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+}
+
+/* On a card (kept behind MARK_CLICKABLE.card, off since P1.FU19): brighter and a little larger on hover, pressed smaller, and
+ * the TV's white ring (two shadows, so it reads on any poster). */
+.jfmod-markButton:not(.jfmod-mark--row) {
     transition: transform 0.15s ease, color 0.15s ease;
 
     &:hover {
@@ -134,18 +152,41 @@
         transform: scale(0.96);
     }
 
-    &:focus {
-        outline: none;
-    }
-
-    &:focus-visible {
-        box-shadow: 0 0 0 0.15em #00a4dc;
-    }
-
     .layout-tv &:focus {
         box-shadow: 0 0 0 0.12em #101010, 0 0 0 0.28em #fff;
         color: #ffd180;
         transform: scale(1.08);
+    }
+}
+
+/* On a row (P1.FU22, user 2026-10-13: "Replace yellow with white and add hover effect + click which open the picker for the
+ * episode"): upstream's round row icons' look (`.paper-icon-button-light`, emby-button.scss and the base theme): the theme's
+ * primary glyph over its veil under the mouse and pressed, a 0.2 s transition; the TV's focus the same with the white ring. A
+ * failure disables it (integration/downloadMarks): no pointer, nothing under the mouse. */
+.jfmod-mark--row.jfmod-markButton {
+    transition: color 0.2s, background-color 0.2s;
+
+    &:disabled {
+        cursor: default;
+    }
+
+    &:active:not(:disabled),
+    .layout-tv &:focus {
+        color: var(--jf-palette-primary-main, #00a4dc);
+        background-color: rgba(0, 164, 220, 0.2);
+        background-color: rgba(var(--jf-palette-primary-mainChannel) / var(--jf-palette-action-selectedOpacity));
+    }
+
+    .layout-tv &:focus {
+        box-shadow: 0 0 0 0.12em #101010, 0 0 0 0.28em #fff;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .jfmod-mark--row.jfmod-markButton:hover:not(:disabled) {
+        color: var(--jf-palette-primary-main, #00a4dc);
+        background-color: rgba(0, 164, 220, 0.2);
+        background-color: rgba(var(--jf-palette-primary-mainChannel) / var(--jf-palette-action-selectedOpacity));
     }
 }
 
