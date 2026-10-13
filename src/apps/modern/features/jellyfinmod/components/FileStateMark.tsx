@@ -141,7 +141,7 @@ const MarkButton: FC<{ className: string; download: MarkDownload; children: Reac
 
 /**
  * The countdown, or the searching icon, when one of them takes the slot; null otherwise. A download (grabbed, downloading,
- * importing) is not drawn here: the bar along the card's bottom and the arrow in its corner are drawn from the queue for
+ * importing) is not drawn here: the bar along the card's bottom and the download disc in its corner are drawn from the queue for
  * every card on the page at once (integration/downloadMarks, P4.FU1).
  */
 const busyMark = (entry: Entry | undefined, countdown: number | null, base: string) => {
