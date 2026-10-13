@@ -11,6 +11,8 @@
  * uses.
  */
 
+@use './cardGlass' as glass;
+
 .jfmod-mark {
     position: absolute;
     top: 0.225em;
@@ -87,6 +89,15 @@
 
 .jfmod-mark--unaired {
     color: rgba(255, 255, 255, 0.8);
+}
+
+/* On a card (a row keeps its amber and its transparent ground) these two take the download disc's glass and white glyph
+ * (P4.FU7, user 2026-10-13), so every mark on a poster looks alike. After their own colours above, before the button's hover. */
+.jfmod-mark--none:not(.jfmod-mark--row),
+.jfmod-mark--unaired:not(.jfmod-mark--row) {
+    @include glass.card-ink;
+    @include glass.card-glass;
+    color: var(--jfmod-card-ink);
 }
 
 .jfmod-markDate {
