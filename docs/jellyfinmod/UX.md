@@ -234,6 +234,21 @@ cards use), clickable for administrators (the picker on that season, where packs
 everyone else, one more D-pad stop on the TV (Up on the card reaches it). On a list row the mark comes first in the end slot,
 then upstream's played check.
 
+**Changed 2026-10-13 (P1.FU19, user: "As for the clickable state icon, let's remove it for now"): every mark is an
+indicator.** Not Downloaded (on cards, rows, the mod's pages), the Unaired clock, a row's failed red bang and every download disc
+are plain indicators for everyone: not a button, no focus stop (no TV second stop, no Up/Right hop), no pointer, nothing
+changes under the mouse (no brighten, no scale, no veil; user: "I don't think we need highlight / hover over non clickable
+icon"); the tooltip stays (*Not Downloaded*, *Airs …*, the download figure, *Failed · reason* without "search again"). The
+administrator's button of the table above and of option 1 is kept in the code behind one switch, `MARK_CLICKABLE` in
+`constants/fileState.ts` (false), so it can come back. The picker opens from the card's hover Get a Release (§5.7, in the
+centre of a card with nothing on disk), the card's and row's item menus and the page header's Get a Release.
+
+**Changed 2026-10-13 (P1.FU19): a row's mark is the size of upstream's round row buttons** (user: "make the episode [state
+icon] the same size as info and fav and heart icons"). Upstream's `.paper-icon-button-light` is its glyph (1.6696em) plus
+0.556em of padding each side: a 2.7816em box (41.4px on the desktop, 40.1px on the phone, measured on a season page). Not
+Downloaded, the Unaired clock (its height and glyph) and a row's failed bang take that box and glyph size, centred on the row
+as the heart is; so does the download disc on a list row (§3.3). Cards keep the 1.6em disc.
+
 **Changed 2026-10-12 (P4.FU1): a download replaces the in-flight marks.** The grabbed arrow and the
 downloading ring with its percentage are gone from `FileStateMark`; a title, season or episode on its way
 shows the download of §3.3 instead (since 2026-10-13 the ring family's disc, P4.FU6), and in the corner that download wins
@@ -285,21 +300,24 @@ its last value, the disc and figure dimmed.
   queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
   The disc wins over Not Downloaded and Unaired in the corner (never both).
 - **Rows** (the native and the mod's season page, the library list view and search lists): ring only, no bar. The disc is
-  2.5em, transparent like upstream's round icons (1.4em glyph, the arc over the theme's track), the **first round icon of the
+  2.7816em with a 1.6696em glyph since P1.FU19, the box and glyph of upstream's round row buttons beside it (it was 2.5em and
+  1.4em), transparent like upstream's round icons (the arc over the theme's track, filling the box), the **first round icon of the
   end slot**, before the Not Downloaded mark's place and upstream's own buttons; upstream's row padding, nothing added; nothing
   textual left of the icons. The figure goes into the row's meta line (upstream's `listItemMediaInfo` or the mod's), or, where
   the layout hides that line (upstream does below 50em, so the phone), as the last line of the row's text. A failure on a row
-  that has the Not Downloaded button takes that button: the same button and D-pad stop, the cloud replaced by a red bang, its
-  tooltip `Failed · reason — search again`, and it opens the picker (never the cloud and the bang both); an ordinary user's is
-  the plain indicator. A failure on a row without one (a file on disk) is the red bang disc.
-- **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page): the row-size disc, then `In the
+  that has the Not Downloaded mark takes that mark: the cloud replaced by a red bang, its tooltip `Failed · reason` (never the
+  cloud and the bang both). Since P1.FU19 it is an indicator for everyone (no button, no D-pad stop, no "search again"; with
+  `MARK_CLICKABLE` on it would be the administrator's button that opens the picker). A failure on a row without one (a file on disk) is the red bang disc.
+- **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page, and since P1.FU19 on the mod's page
+  for a missing episode, at the end of upstream's content section as on a downloaded episode's page): the 2.5em disc, then `In the
   download queue · 42% · 12 min left`, then View queue where the queue may be opened.
 - **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
   copy keeps its word; the progress bar column stays.
 - **The release picker's added row:** the disc takes the Add slot while the torrent downloads (the green tick when the queue
   cannot be read; the in-library row once imported); the X stays; the figure stays at the right end of the marks line; no bar.
+  The Add slot is no control there: no pointer, no veil, no growth under the mouse (P1.FU19); the X keeps its hover.
 - **TV and phone:** sizes in `em`, so TV 125 % and phone 90 %; no flex gap, `min()` or `max()`; nothing waits for a hover; the
-  discs are not focus stops except an administrator's failure button, which keeps the white TV ring. Reduced motion stops the
+  discs are not focus stops (since P1.FU19 not even a failure on a row). Reduced motion stops the
   bob, the turning arc and the arc's easing.
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
   page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
@@ -308,7 +326,9 @@ its last value, the disc and figure dimmed.
   whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`; a
   native season's or episode's own series item is looked up the same way once, because with a library's automatic series
   grouping one show kept in two folders has two series items and the series page lists seasons of both, P1.FU17); the mod's own carry `data-jfmod-entry-id` with
-  `data-jfmod-season` or `data-jfmod-episode-id`. One component draws them all
+  `data-jfmod-season` or `data-jfmod-episode-id`. The still on the mod's page for a missing episode carries them too (P1.FU19,
+  user: "Why it has this icon when download is going in progress on episode page?"): it shows the episode's download as a row
+  does, a failure included, and the disc takes the corner from Not Downloaded. One component draws them all
   (`integration/downloadMarks.tsx`, mounted once by the mod shell).
 - **A pack's episodes each show their own file** (P4.FU5, user 2026-10-12: "Is there way to show per episode
   progress if the whole season or all seasons are downloading?"). An episode's row, card and detail line take its own
@@ -521,8 +541,18 @@ next actions:
   (`integration/cardGetRelease.tsx`); the menu item comes through `moreMenuItem.ts`'s card items,
   matched at the action sheet by the card it opens from. Not covered: the phone's library grids and a
   series page's season cards, where upstream draws only Play and a long press starts multi-select;
-  there the item's own page has the header icon. The mod's file-less cards and missing-season cards
-  have no hover overlay; their Not Downloaded mark is the same button (§7.2.1).
+  there the item's own page has the header icon.
+- **A card with nothing on disk has no Play** (P1.FU19, user 2026-10-13: "We don't need Play. Instead of Play there should be
+  the Cloud to download the season"). Upstream's season cards on a series page with no episode on disk (P1.FU17's rule, a
+  download in progress included) and a library entry's native card with nothing on disk carry `data-jfmod-nofile`: upstream's
+  centre Play (and the phone's overlay Play) is hidden on them for everyone, and an administrator's Get a Release takes the
+  centre in Play's own round classes (`cardOverlayFab-primary`, the same size, hover and place), with no second cloud in the
+  bottom row; Played, Favorite and More stay where upstream puts them. It is asked for as soon as the card is drawn, so the
+  centre is not empty on the first hover. The mod's own file-less title cards and missing-season cards get the same centre icon
+  on the desktop hover, drawn in upstream's overlay classes (`CardHoverGet`; they have no other hover items). An ordinary user's
+  centre stays empty; the card stays clickable as before. A season with a file keeps upstream's Play. Keyboard: Tab from the
+  card reaches the centre icon, never a Play. TV and phone have no hover overlay: the card's menu item is the way there, and the
+  mark is no second stop (§3.1).
 
 ---
 
@@ -815,8 +845,8 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   upstream's cards, same size and card classes: TMDB's season poster (w342) in the card's image box,
   rounded as upstream's (else a dark placeholder with a 1px dashed edge and the season number), the
   mark top-right (§3.1), *Season N* and *8 episodes* (*1 episode*) as the footer.
-  Clicking it (Enter on the TV, where the card is a focus stop and an administrator's icon a second)
-  opens the mod's season page. Upstream's own season cards keep everything upstream draws (no footer rewrite); since P1.FU17
+  Clicking it (Enter on the TV, where the card is a focus stop) opens the mod's season page; on the desktop an
+  administrator's hover shows Get a Release in its centre (§5.7, P1.FU19). Upstream's own season cards keep everything upstream draws (no footer rewrite); since P1.FU17
   they carry the mark when none of their episodes is on disk (§3.1).
 - **Season page.** For each plugin episode with no Jellyfin episode at its number (a multi-episode
   file holds every number it spans) and not on disk, a mod row among upstream's `listView` rows in
@@ -826,10 +856,9 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   (*★ 7.6*, only when TMDB rates it); unlike upstream's `listItemMediaInfo` it stays on the phone, so the
   air date does. The overview when the plugin has one (none on the phone, by upstream's own rule), no
   play overlay, and the mark at the row's end. Since P1.FU15 (user, 2026-10-12) the whole row opens the
-  episode's page (below): a click anywhere on it, its title being the link for the keyboard; the
-  administrator's icon keeps its own click and opens the picker, as on the season cards. On the TV the row
-  is a focus stop like upstream's rows (Enter opens the page) and the icon a second stop inside it: Right
-  on the row reaches the icon, Left returns. This replaces "rows are not stops".
+  episode's page (below): a click anywhere on it, its title being the link for the keyboard. On the TV the row
+  is a focus stop like upstream's rows (Enter opens the page). This replaces "rows are not stops". (Until P1.FU19 the
+  administrator's icon was a second stop with its own click; the mark is an indicator now, §3.1.)
 - **The mod's season page**, `#/details?entryId=<entry>&season=N`, for a season Jellyfin has no item
   for: upstream's detail template with the series' name, *Season N · 8 episodes · 2023* (the season's
   first air year), the TMDB season poster, TMDB's season overview where upstream puts an item's
@@ -851,9 +880,9 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   info or chapters (no file); the regulars are the series' current regulars from TMDB's series credits, not
   the episode's own cast list (one more request per episode otherwise); the series backdrop, not one of the
   episode's own; names are plain text, not links to person pages.
-- **Pickers from the marks**: a season card opens the picker on that season (*Season N*, *All
-  Seasons*), an episode row on that episode (its page's scope list), a movie card as the movie page,
-  a series card as the series page.
+- **Pickers**: the scopes the marks opened until P1.FU19 (a season on that season, *Season N*, *All Seasons*; an episode on
+  that episode; a movie card as the movie page; a series card as the series page) are now opened by the cards' centre Get a
+  Release (§5.7), the item menus and the pages' header icon; the marks are indicators (§3.1).
 - **How it is mounted**: DOM inserts into upstream's list, placed again by a `MutationObserver` when
   upstream redraws the list, drawn by React through portals (`components/MissingChildren.tsx`). No
   upstream file is edited.
