@@ -29,7 +29,7 @@
 //     once, in the mod cards' element and classes with the same computed look, right under the title, the cover unchanged; it
 //     comes back once when upstream redraws the card; a native season page carries none;
 //   - a missing season card opens the mod's season page (#/details?entryId=…&season=N), which lists that season's episodes as
-//     mod rows in episode order with their marks; an episode's Download This Episode opens the picker for that episode;
+//     mod rows in episode order with their marks; an administrator's Not Downloaded on an episode's row opens the picker for that episode (P1.FU22);
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
 //   - TV: the D-pad stops on the mod rows and on no mark; phone: no overview on the rows;
 //   - optionally a file-less movie's search card: the amber Not Downloaded indicator, and the centre Get a Release on hover;
@@ -45,6 +45,14 @@
 //     links), an administrator's Get a Release for the episode, and Back returns to the season page. The icon on a row still
 //     opens the picker without opening the page.
 //
+//   - P1.FU22 (user 2026-10-13: "Replace yellow with white and add hover effect + click which open the picker for the episode"):
+//     a missing episode row's Not Downloaded is the colour of upstream's round row icons (the row's own text colour, not the
+//     amber) for everyone; for an administrator it is a button named "Get a Release for Episode N, Title" with the tooltip
+//     "Not Downloaded", a focus stop, upstream's round-icon hover (the theme's primary glyph over its veil, a pointer) on the
+//     desktop, and a click, Enter (desktop) or a tap (phone) opens the picker on that episode without leaving the page; on the TV
+//     Right on the row reaches it, Enter opens the picker, Left returns to the row; an ordinary user's stays a plain indicator.
+//     Screenshots of the row at rest and hovered (dark and light), the phone and the TV focus.
+//
 //   - P1.FU20 (user-approved design 2026-10-13): the missing episode's page has a plain still (no mark, no disc), the series'
 //     certification on the misc line and its genres line, and the download block where the track selectors sit, in every state
 //     (downloading as a season pack's file with the percent in the 4em ring, the figures, the release, its marks, the pack line
@@ -58,10 +66,15 @@
 //   JELLYFINMOD_MSE_ENTRY=<series entry id>       a series whose plugin list holds seasons or episodes Jellyfin does not have
 //   [JELLYFINMOD_MSE_USER=<ordinary user name>]  also check as this ordinary user (empty password); absent: NOT VERIFIED
 //   [JELLYFINMOD_MSE_MOVIE=<entry id>]           a file-less movie entry, checked on the search page
+//   [JELLYFINMOD_LOCAL_DIST=<dist folder>]       serve this local build in place of the instance's (a look before a deploy,
+//                                                never acceptance evidence)
 //   [JELLYFINMOD_WEB_PATH=/web/]  [JELLYFINMOD_BROWSER=chromium|chrome]  [JELLYFINMOD_LAYOUTS=desktop,mobile,tv1080]
+//   [JELLYFINMOD_SHOTS=<folder for screenshots>]
 //
 // Reads only, with two exceptions that are the page's own behaviour: opening a series page whose TMDB list was never loaded
 // loads it (P1.FU9), and opening the picker runs a release search. Nothing is grabbed; every picker is closed.
+import { readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { chromium } from 'playwright';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
@@ -71,6 +84,8 @@ if (!loopback && !['18096', '28096', '48096'].includes(origin.port)) throw new E
 const entryId = process.env.JELLYFINMOD_MSE_ENTRY ?? (() => { throw new Error('JELLYFINMOD_MSE_ENTRY is required'); })();
 const ordinaryUser = process.env.JELLYFINMOD_MSE_USER ?? null;
 const movieEntryId = process.env.JELLYFINMOD_MSE_MOVIE ?? null;
+const localDist = process.env.JELLYFINMOD_LOCAL_DIST ?? null;
+const SHOTS = process.env.JELLYFINMOD_SHOTS ?? '.';
 const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web/';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const layouts = (process.env.JELLYFINMOD_LAYOUTS ?? 'desktop').split(',').filter(Boolean);
@@ -90,6 +105,25 @@ const record = (label, check, pass, detail) => {
     results.push({ label, check, verdict, detail });
     console.log(`${verdict} [${label}] ${check}${detail === undefined ? '' : ' · ' + JSON.stringify(detail).slice(0, 500)}`);
 };
+
+/** A local build served in place of the instance's: its mod page (jellyfinmod.html) under the web path, its files under one asset root. */
+async function serveLocal(page) {
+    if (!localDist) return;
+    const root = '/web-mod/jfmod-local/';
+    const types = { '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.html': 'text/html', '.svg': 'image/svg+xml',
+        '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.txt': 'text/plain' };
+    const index = (await readFile(join(localDist, 'jellyfinmod.html'), 'utf8'))
+        .replace(/(src|href)="(?!https?:|\/|#|data:)([^"]+)"/g, `$1="${root}$2"`)
+        .replace('<head>', `<head><script>window.__jfmodAssetRoot="${root}";</script>`);
+    await page.route(url => url.pathname === WEB_PATH || url.pathname === WEB_PATH + 'index.html',
+        route => route.fulfill({ status: 200, contentType: 'text/html', body: index }));
+    await page.route(url => url.pathname.startsWith(root), async route => {
+        const file = decodeURIComponent(new URL(route.request().url()).pathname.slice(root.length));
+        try {
+            route.fulfill({ status: 200, contentType: types[extname(file)] ?? 'application/octet-stream', body: await readFile(join(localDist, file)) });
+        } catch { route.fulfill({ status: 404, body: '' }); }
+    });
+}
 
 const signedIn = page => page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } });
 
@@ -216,7 +250,9 @@ const episodeList = async (page, numbers) => {
                 mark: mark ? {
                     kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
                     tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
-                    cursor: getComputedStyle(mark).cursor, tabIndex: mark.tabIndex,
+                    cursor: getComputedStyle(mark).cursor, tabIndex: mark.tabIndex, name: mark.getAttribute('aria-label'),
+                    // P1.FU22: the colour of upstream's round row icons, which take the row's own (`color: inherit`).
+                    colour: getComputedStyle(mark).color, rowColour: getComputedStyle(row).color,
                     glyph: !!mark.querySelector('svg.jfmod-markGlyph') && mark.querySelectorAll('svg.jfmod-markGlyph path').length === 3
                 } : null
             };
@@ -410,8 +446,113 @@ async function dpadTrail(page, steps) {
     return trail;
 }
 
-async function checkSeasonRows(page, label, detail, episodes, numbers, { layout, what }) {
+const AMBER_MARK = 'rgb(255, 183, 77)';
+const PRIMARY = 'rgb(0, 164, 220)';
+const VEIL = 'rgba(0, 164, 220, 0.2)';
+
+/** The release picker's scope for one episode, as the episode's own page offers it. */
+const episodeScope = episode => [`Episode: S${String(episode.seasonNumber).padStart(2, '0')}E${String(episode.episodeNumber).padStart(2, '0')} · ${episode.title}`,
+    `Season ${episode.seasonNumber}`, 'All Seasons'];
+
+/** A row mark's look for the hover check: its colour, background, cursor, transform. */
+const markLook = locator => locator.evaluate(node => {
+    const style = getComputedStyle(node);
+    return { colour: style.color, background: style.backgroundColor, cursor: style.cursor, transform: style.transform };
+});
+
+/**
+ * P1.FU22: an administrator's Not Downloaded on a missing episode row is a button for that episode: upstream's round-icon hover on
+ * the desktop (the primary glyph over its veil, a pointer), a click (a tap on the phone) and, on the desktop, Enter open the picker
+ * on the episode without leaving the page; on the TV Right on the row reaches it, Enter opens the picker, Left returns to the row.
+ * Screenshots of the row at rest and hovered, dark and light, and of the TV's focus.
+ */
+async function checkRowButton(page, label, what, episode, layout) {
     const tv = !!LAYOUTS[layout].tv;
+    const row = page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${episode.id}"]`);
+    const mark = row.locator('.jfmod-markButton');
+    const where = `${what} E${episode.episodeNumber}'s Not Downloaded`;
+    if (!await mark.count()) { record(label, `${where}: an administrator's button`, false); return; }
+    await row.scrollIntoViewIfNeeded().catch(() => {});
+    await page.mouse.move(1, 1);
+    await page.waitForTimeout(400);
+    if (layout === 'desktop') {
+        const rest = await markLook(mark);
+        await row.screenshot({ path: `${SHOTS}/mse-${tier}-desktop-row-mark-rest-dark.png` }).catch(() => {});
+        await mark.hover();
+        await page.waitForTimeout(450);
+        const hover = await markLook(mark);
+        await row.screenshot({ path: `${SHOTS}/mse-${tier}-desktop-row-mark-hover-dark.png` }).catch(() => {});
+        record(label, `${where}: upstream's round-icon hover (the primary glyph over its veil, a pointer), nothing at rest`,
+            rest.background === 'rgba(0, 0, 0, 0)' && rest.colour !== PRIMARY && rest.cursor === 'pointer'
+            && hover.colour === PRIMARY && hover.background === VEIL && hover.cursor === 'pointer' && hover.transform === 'none', { rest, hover });
+        // The light scheme (the theme attribute set in this page only): the dark text at rest, the same hover.
+        await page.evaluate(() => { window.jfmodTheme = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'light'); });
+        await page.mouse.move(1, 1);
+        await page.waitForTimeout(450);
+        const lightRest = await markLook(mark);
+        const rowColour = await row.evaluate(node => getComputedStyle(node).color);
+        await row.screenshot({ path: `${SHOTS}/mse-${tier}-desktop-row-mark-rest-light.png` }).catch(() => {});
+        await mark.hover();
+        await page.waitForTimeout(450);
+        const lightHover = await markLook(mark);
+        await row.screenshot({ path: `${SHOTS}/mse-${tier}-desktop-row-mark-hover-light.png` }).catch(() => {});
+        record(label, `${where} (light scheme): the row's dark text colour at rest, the primary glyph over its veil on hover`,
+            lightRest.colour === rowColour && lightRest.colour !== AMBER_MARK && lightHover.colour === PRIMARY && lightHover.background === VEIL,
+            { lightRest, rowColour, lightHover });
+        await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
+        await page.mouse.move(1, 1);
+        await page.waitForTimeout(300);
+    }
+    if (layout === 'mobile') await row.screenshot({ path: `${SHOTS}/mse-${tier}-mobile-row-mark.png` }).catch(() => {});
+    if (tv) {
+        await row.focus();
+        await page.keyboard.press('ArrowRight');
+        await page.waitForTimeout(300);
+        const onMark = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-markButton') ?? false);
+        const look = onMark ? await markLook(mark) : null;
+        const ring = onMark ? await mark.evaluate(node => getComputedStyle(node).boxShadow) : null;
+        if (onMark) await row.screenshot({ path: `${SHOTS}/mse-${tier}-tv-row-mark-focus.png` }).catch(() => {});
+        record(label, `${where}: Right on the row reaches it, focused with the primary glyph over its veil and the white ring`,
+            onMark && look?.colour === PRIMARY && look.background === VEIL && /255, 255, 255/.test(ring ?? ''), { onMark, look, ring });
+        if (onMark) {
+            const before = await page.evaluate(() => location.hash);
+            await page.keyboard.press('Enter');
+            const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
+            await page.waitForTimeout(1000);
+            const texts = opened ? (await scopeOptions(page)).map(option => option.text) : [];
+            record(label, `${where}: Enter on it opens the picker on the episode, the page kept`, opened
+                && JSON.stringify(texts) === JSON.stringify(episodeScope(episode)) && await page.evaluate(() => location.hash) === before, texts);
+            if (opened) record(label, `${where}: Back closes the picker`, await closePicker(page, true));
+            await page.waitForTimeout(800);
+            await mark.focus();
+            await page.keyboard.press('ArrowLeft');
+            await page.waitForTimeout(300);
+            const back = await page.evaluate(id => document.activeElement?.getAttribute('data-jfmod-episode-id') === id, episode.id);
+            record(label, `${where}: Left on it returns to the row`, back);
+        }
+        return;
+    }
+    await pickerFrom(page, label, `${where} (${layout === 'mobile' ? 'a tap' : 'a click'})`, mark, false, episodeScope(episode));
+    if (layout === 'desktop') {
+        // The keyboard: a focus stop, Enter opens the picker.
+        const before = await page.evaluate(() => location.hash);
+        await mark.focus();
+        const focused = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-markButton') ?? false);
+        await page.keyboard.press('Enter');
+        const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
+        await page.waitForTimeout(1000);
+        const texts = opened ? (await scopeOptions(page)).map(option => option.text) : [];
+        record(label, `${where}: a focus stop, Enter opens the picker on the episode, the page kept`, focused && opened
+            && JSON.stringify(texts) === JSON.stringify(episodeScope(episode)) && await page.evaluate(() => location.hash) === before, { focused, texts });
+        if (opened) await closePicker(page, false);
+        await page.waitForTimeout(800);
+    }
+}
+
+async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, canDownload, layout, what }) {
+    const tv = !!LAYOUTS[layout].tv;
+    // P1.FU22: an administrator's Not Downloaded on a row is a button; everyone else's an indicator.
+    const button = admin && canDownload;
     const expected = episodes.filter(episode => episode.availability !== 'onDisk').sort((a, b) => a.episodeNumber - b.episodeNumber);
     await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-missingRow').length >= count,
         expected.length, { timeout: 20000 }).catch(() => {});
@@ -435,29 +576,47 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { layout,
             const overviewShown = episode.overview ? row.overview === episode.overview.trim() && row.overviewShown : row.overview === null;
             record(label, `${what} E${episode.episodeNumber}: TMDB's overview`, overviewShown, { shown: row.overview, expected: episode.overview });
         }
-        await checkAnyMark(page, label, `${what} E${episode.episodeNumber}`, row.mark, expectedMark([episode]));
+        const expectedRowMark = expectedMark([episode]);
+        const rowButton = button && expectedRowMark.kind === 'none';
+        if (rowButton) {
+            const shown = row.mark;
+            record(label, `${what} E${episode.episodeNumber}: an administrator's Not Downloaded is a button "Get a Release for Episode ${episode.episodeNumber}, ${episode.title}", tooltip "Not Downloaded", the cloud glyph`,
+                // The TV layout hides the pointer everywhere (`cursor: none`).
+                shown?.kind === 'none' && shown.tag === 'BUTTON' && shown.tabIndex === 0 && shown.cursor === (tv ? 'none' : 'pointer') && shown.glyph
+                && shown.title === 'Not Downloaded' && shown.name === `Get a Release for Episode ${episode.episodeNumber}, ${episode.title}`, shown);
+        } else {
+            await checkAnyMark(page, label, `${what} E${episode.episodeNumber}`, row.mark, expectedRowMark);
+        }
+        // P1.FU22: the Not Downloaded glyph takes the colour of upstream's round row icons (the row's own), not the amber.
+        if (expectedRowMark.kind === 'none') {
+            record(label, `${what} E${episode.episodeNumber}: the Not Downloaded glyph in the row icons' colour, not amber`,
+                !!row.mark && row.mark.colour === row.mark.rowColour && row.mark.colour !== AMBER_MARK, row.mark && { colour: row.mark.colour, row: row.mark.rowColour });
+        }
         // P1.FU15: the row opens the episode's page. On the TV the row itself is the stop (a button); elsewhere the title is the
-        // row's link. The mark is no second stop (P1.FU19).
+        // row's link. The mark is no second stop (P1.FU19) except an administrator's Not Downloaded button (P1.FU22).
         const href = `#/details?entryId=${encodeURIComponent(detail.entry.id)}`;
-        record(label, `${what} E${episode.episodeNumber}: ${tv ? 'the row is a button stop' : 'the title links to the episode\'s page'}, the mark no second stop`,
-            tv ? row.tag === 'BUTTON' && row.focusables.length === 0 : row.link?.startsWith(href) && row.link.endsWith(`&season=${episode.seasonNumber}&episode=${episode.episodeNumber}`)
-                && row.focusables.length === 1, { tag: row.tag, link: row.link, focusables: row.focusables });
+        const stops = rowButton ? 1 : 0;
+        record(label, `${what} E${episode.episodeNumber}: ${tv ? 'the row is a button stop' : 'the title links to the episode\'s page'}, ${rowButton ? 'the mark a second stop' : 'the mark no second stop'}`,
+            tv ? row.tag === 'BUTTON' && row.focusables.length === stops : row.link?.startsWith(href) && row.link.endsWith(`&season=${episode.seasonNumber}&episode=${episode.episodeNumber}`)
+                && row.focusables.length === 1 + stops, { tag: row.tag, link: row.link, focusables: row.focusables });
         if (layout === 'mobile') record(label, `${what} E${episode.episodeNumber}: no overview on the phone`, !row.overviewShown);
     }
     if (tv) {
         await page.evaluate(() => document.activeElement?.blur());
         await page.locator('.page:not(.hide) .detailPagePrimaryContainer button:visible').first().focus().catch(() => {});
         const trail = await dpadTrail(page, rows.length + 6);
-        record(label, `${what}: the D-pad stops on the mod rows (P1.FU15) and on no mark (P1.FU19)`, trail.includes('modRow') && !trail.includes('modIcon'), trail);
-        const first = mod[0] && page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${mod[0].id}"]`);
+        record(label, `${what}: Down stops on the mod rows (P1.FU15), never on a mark`, trail.includes('modRow') && !trail.includes('modIcon'), trail);
+        // An ordinary user's mark (and an unaired one) is no stop: Right on its row stays off it (P1.FU19).
+        const plain = mod.find(row => row.mark && !(button && row.mark.kind === 'none'));
+        const first = plain && page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${plain.id}"]`);
         if (first) {
             await first.focus();
             await page.keyboard.press('ArrowRight');
             await page.waitForTimeout(300);
             const right = await page.evaluate(() => (document.activeElement?.closest('.jfmod-mark') ? 'mark' : 'elsewhere'));
-            record(label, `${what}: Right on a row reaches no mark`, right !== 'mark', right);
+            record(label, `${what}: Right on a row with ${button ? 'the Unaired clock' : 'an indicator'} reaches no mark`, right !== 'mark', right);
         }
-    } else {
+    } else if (!button) {
         const inert = mod.find(row => row.mark?.kind === 'none');
         if (inert && layout === 'desktop') {
             await checkInert(page, label, `${what} E${inert.number}'s Not Downloaded`,
@@ -465,6 +624,10 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { layout,
         }
     }
     await checkRowSize(page, label, `${what}: a missing episode row's Not Downloaded`, '.page:not(.hide) .jfmod-missingRow', '.jfmod-mark--none');
+    const pressable = button && mod.find(row => row.mark?.kind === 'none');
+    const target = pressable && expected.find(candidate => candidate.id === pressable.id);
+    if (target) await checkRowButton(page, label, what, target, layout);
+    else if (button) record(label, `${what}: an administrator's Not Downloaded button`, 'NOT VERIFIED', 'no missing episode with Not Downloaded on this page');
     return mod;
 }
 
@@ -1182,6 +1345,7 @@ async function run(browser, layout, user, admin) {
     page.on('pageerror', error => errors.push(String(error.message).slice(0, 200)));
     page.on('request', request => { if (request.url().startsWith('https://image.tmdb.org/')) imageRequests.add(request.url()); });
     try {
+        await serveLocal(page);
         await signIn(page, user);
         if (tv) {
             await page.evaluate(() => localStorage.setItem('layout', 'tv'));
@@ -1430,7 +1594,8 @@ async function run(browser, layout, user, admin) {
     }
 }
 
-const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
+const args = localDist ? ['--disable-features=PrivateNetworkAccessChecks,BlockInsecurePrivateNetworkRequests,LocalNetworkAccessChecks'] : [];
+const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome', args } : { headless: true, args });
 try {
     for (const layout of layouts) {
         await run(browser, layout, 'oleksii', true);
@@ -1441,6 +1606,6 @@ try {
     await browser.close();
 }
 const failed = results.filter(result => result.verdict === 'FAIL').length;
-console.log(`${results.length} checks, ${failed} failed (${tier})`);
+console.log(`${results.length} checks, ${failed} failed (${tier}${localDist ? ', LOCAL BUILD, not acceptance' : ''})`);
 process.exitCode = failed ? 1 : 0;
 /* eslint-enable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity */

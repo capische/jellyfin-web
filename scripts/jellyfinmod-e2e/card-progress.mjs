@@ -18,7 +18,7 @@
 //     (2.5em, transparent) as the first round icon of the end slot, NO bar, no figure left of the icons, the figure on the meta
 //     line after the date (`42% · 12 min left`, `42% · 6 min left`, `queued`, `importing…`, `30% · stalled`, `Failed · …`) and
 //     in the disc's tooltip; a failure on a row with Not Downloaded takes that mark (a red bang, an indicator since P1.FU19: no
-//     button, no focus stop, no "search again"), never both; a failure without one is the red bang disc; the light scheme's
+//     button or, since P1.FU22, the administrator's button disabled; no focus stop, no "search again"), never both; a failure without one is the red bang disc; the light scheme's
 //     colours; P1.FU19: the row disc has the box and glyph of upstream's round row buttons beside it (the heart, More), and no
 //     disc changes under the mouse (cards, rows, the picker's added row; the added row's X keeps its hover);
 //   - the episode detail line: the disc and `In the download queue · 42% · 6 min left · View queue`;
@@ -32,6 +32,10 @@
 //   [JELLYFINMOD_CP_MOVIE=<entry id>]             a movie entry with a Jellyfin item (its card, list row and states)
 //   [JELLYFINMOD_WEB_PATH=/web/]  [JELLYFINMOD_BROWSER=chromium|chrome]  [JELLYFINMOD_LAYOUTS=desktop,mobile,tv1080]
 //   [JELLYFINMOD_SHOTS=<folder>]
+//   [JELLYFINMOD_LOCAL_DIST=<dist folder>]        serve this local build in place of the instance's (a look before a deploy,
+//                                                never acceptance evidence)
+import { readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { chromium } from 'playwright';
 
 import { search as pickerSearch } from './picker-compare-fixture.mjs';
@@ -41,6 +45,7 @@ const loopback = ['127.0.0.1', 'localhost'].includes(origin.hostname);
 if (!loopback && !['18096', '28096', '48096'].includes(origin.port)) throw new Error('Runs on the mod instances or a local environment only');
 const seriesEntryId = process.env.JELLYFINMOD_CP_SERIES ?? (() => { throw new Error('JELLYFINMOD_CP_SERIES is required'); })();
 const movieEntryId = process.env.JELLYFINMOD_CP_MOVIE ?? null;
+const localDist = process.env.JELLYFINMOD_LOCAL_DIST ?? null;
 const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web/';
 const SHOTS = process.env.JELLYFINMOD_SHOTS ?? '.';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
@@ -71,6 +76,25 @@ const record = (label, check, pass, detail) => {
     results.push({ label, check, verdict, detail });
     console.log(`${verdict} [${label}] ${check}${detail === undefined ? '' : ' · ' + JSON.stringify(detail).slice(0, 600)}`);
 };
+
+/** A local build served in place of the instance's: its mod page (jellyfinmod.html) under the web path, its files under one asset root. */
+async function serveLocal(page) {
+    if (!localDist) return;
+    const root = '/web-mod/jfmod-local/';
+    const types = { '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.html': 'text/html', '.svg': 'image/svg+xml',
+        '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.txt': 'text/plain' };
+    const index = (await readFile(join(localDist, 'jellyfinmod.html'), 'utf8'))
+        .replace(/(src|href)="(?!https?:|\/|#|data:)([^"]+)"/g, `$1="${root}$2"`)
+        .replace('<head>', `<head><script>window.__jfmodAssetRoot="${root}";</script>`);
+    await page.route(url => url.pathname === WEB_PATH || url.pathname === WEB_PATH + 'index.html',
+        route => route.fulfill({ status: 200, contentType: 'text/html', body: index }));
+    await page.route(url => url.pathname.startsWith(root), async route => {
+        const file = decodeURIComponent(new URL(route.request().url()).pathname.slice(root.length));
+        try {
+            route.fulfill({ status: 200, contentType: types[extname(file)] ?? 'application/octet-stream', body: await readFile(join(localDist, file)) });
+        } catch { route.fulfill({ status: 404, body: '' }); }
+    });
+}
 
 async function signIn(page) {
     await page.goto(new URL(WEB_PATH, origin).href, { waitUntil: 'domcontentloaded' });
@@ -195,7 +219,7 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
         bars: row.querySelectorAll('.jfmod-dlBar, .jfmod-dlRowBar').length,
         oldFigure: row.querySelectorAll('.jfmod-dlRowFigure, .jfmod-dlFigure').length,
         failedButton: cloud && row.classList.contains('jfmod-dlRow--failed') ? {
-            shown: getComputedStyle(cloud).display !== 'none', button: cloud.tagName === 'BUTTON', title: cloud.title, tabIndex: cloud.tabIndex,
+            shown: getComputedStyle(cloud).display !== 'none', button: cloud.tagName === 'BUTTON', disabled: cloud.disabled === true, title: cloud.title, tabIndex: cloud.tabIndex,
             cursor: getComputedStyle(cloud).cursor,
             glyphHidden: getComputedStyle(cloud.querySelector('.jfmod-markGlyph')).display === 'none',
             bang: /svg/.test(before.backgroundImage) && before.width !== '0px', bangColour: /%23ff5a4f/.test(before.backgroundImage) ? 'dark' : /%23c62828/.test(before.backgroundImage) ? 'light' : null
@@ -211,7 +235,8 @@ const INERT_PROPS = ['backgroundColor', 'boxShadow', 'outlineStyle', 'transform'
 /**
  * A disc or mark that is no control (P1.FU19, user 2026-10-13): its computed look (background, shadow, outline, transform,
  * opacity, colour, its ::before veil) is the same under the mouse as without it, the pointer is the default arrow, it is no focus
- * stop (a decorative button may hold it: `holder`), and its tooltip stays. Desktop only.
+ * stop (a decorative button may hold it: `holder`; an administrator's row button is disabled while a failure takes it, P1.FU22),
+ * and its tooltip stays. Desktop only.
  */
 async function checkInert(page, label, what, locator, holder = false) {
     if (!await locator.count()) { record(label, `${what}: present`, 'NOT VERIFIED', 'not on the page'); return; }
@@ -220,7 +245,7 @@ async function checkInert(page, label, what, locator, holder = false) {
         const veil = getComputedStyle(node, '::before');
         const titled = node.getAttribute('title') ?? node.querySelector('[title]')?.getAttribute('title');
         return { styles: props.map(prop => own[prop]).join(' | '), veil: `${veil.content} ${veil.opacity} ${veil.backgroundColor}`,
-            cursor: own.cursor, title: titled, tag: node.tagName, tabIndex: node.tabIndex };
+            cursor: own.cursor, title: titled, tag: node.tagName, tabIndex: node.tabIndex, disabled: node.disabled === true };
     }, INERT_PROPS);
     await locator.first().scrollIntoViewIfNeeded().catch(() => {});
     await page.mouse.move(1, 1);
@@ -233,7 +258,7 @@ async function checkInert(page, label, what, locator, holder = false) {
     await page.mouse.move(1, 1);
     record(label, `${what}: no hover look (nothing changes under the mouse), no pointer, no focus stop, the tooltip kept`, !!box
         && after.styles === before.styles && after.veil === before.veil && before.cursor === 'default' && after.cursor === 'default'
-        && !!before.title && before.tabIndex < 0 && (holder || before.tag !== 'BUTTON'), { before, after });
+        && !!before.title && (before.tabIndex < 0 || before.disabled) && (holder || before.tag !== 'BUTTON' || before.disabled), { before, after });
 }
 
 async function run(browser, layout) {
@@ -257,6 +282,7 @@ async function run(browser, layout) {
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...answer, generatedAt: now() }) });
     });
     try {
+        await serveLocal(page);
         await signIn(page);
         if (tv) {
             await page.evaluate(() => localStorage.setItem('layout', 'tv'));
@@ -445,8 +471,9 @@ async function run(browser, layout) {
             let discOk;
             if (expected.kind === 'failed' && row?.failedButton) {
                 discOk = !row.disc && row.failedButton.shown && row.failedButton.bang && row.failedButton.bangColour === 'dark'
-                    && row.failedButton.title === expected.tooltip && !row.failedButton.button && row.failedButton.tabIndex < 0
-                    && row.failedButton.cursor === 'default';
+                    && row.failedButton.title === expected.tooltip && (!row.failedButton.button || row.failedButton.disabled)
+                    // The TV layout hides the pointer on its buttons (`cursor: none`).
+                    && (row.failedButton.tabIndex < 0 || row.failedButton.disabled) && (row.failedButton.cursor === 'default' || (tv && row.failedButton.cursor === 'none'));
             } else {
                 discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.78) < 0.05 && row.disc.firstOfEnd
                     && row.disc.atEnd && row.disc.title === expected.tooltip && row.disc.background === 'rgba(0, 0, 0, 0)' && !row.noneShown
@@ -738,10 +765,11 @@ async function run(browser, layout) {
     }
 }
 
-const browser = await chromium.launch(tier === 'chrome' ? { channel: 'chrome' } : {});
+const args = localDist ? ['--disable-features=PrivateNetworkAccessChecks,BlockInsecurePrivateNetworkRequests,LocalNetworkAccessChecks'] : [];
+const browser = await chromium.launch(tier === 'chrome' ? { channel: 'chrome', args } : { args });
 for (const layout of layouts) await run(browser, layout);
 await browser.close();
 const failed = results.filter(result => result.verdict === 'FAIL').length;
 console.log(`\n${results.length} checks: ${results.filter(result => result.verdict === 'PASS').length} pass, ${failed} fail, `
-    + `${results.filter(result => result.verdict === 'NOT VERIFIED').length} not verified (intercepted queue answers, not a live download)`);
+    + `${results.filter(result => result.verdict === 'NOT VERIFIED').length} not verified (intercepted queue answers, not a live download${localDist ? '; LOCAL BUILD, not acceptance' : ''})`);
 process.exit(failed ? 1 : 0);
