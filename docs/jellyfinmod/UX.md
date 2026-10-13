@@ -326,7 +326,8 @@ its last value, the disc and figure dimmed.
   amber beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
   season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
   queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
-  The disc wins over Not Downloaded and Unaired in the corner (never both).
+  The disc wins over Not Downloaded and Unaired in the corner (never both). A series or season card with nothing on disk and a download on its way
+  keeps no Play: the administrator's cloud stays in its hover centre (§5.7, P1.FU19 and P1.FU23).
 
   **The card disc's glass (P4.FU7)** is the scrolled top bar's recipe, value for value (`homeChrome.scss`; `cardGlass.scss`
   shares it with the card's Not Downloaded and Unaired marks): the theme's bar colour (`--jf-palette-AppBar-defaultBg`) at 12 %
@@ -576,23 +577,45 @@ next actions:
   the release picker in the card's scope, as the item's own page does (a series as the series page, a
   season on that season, an episode on that episode, a movie as the movie page), without leaving the
   page. Upstream's overlay is not edited: a `MutationObserver` inserts the icon into each
-  `.cardOverlayContainer .cardOverlayButton-br` before its `data-action="menu"` button, hidden until
-  the card is first hovered or focused and the plugin has answered for it
+  `.cardOverlayContainer .cardOverlayButton-br` before its `data-action="menu"` button
   (`integration/cardGetRelease.tsx`); the menu item comes through `moreMenuItem.ts`'s card items,
   matched at the action sheet by the card it opens from. Not covered: the phone's library grids and a
   series page's season cards, where upstream draws only Play and a long press starts multi-select;
   there the item's own page has the header icon.
+- **Get a Release is there when its card, menu or header is** (P1.FU23, user 2026-10-13: the season card's cloud "was not there
+  and appeared after about 1 second ... Fix it everywhere"). Every cloud is drawn from what is known when its card, menu or
+  header is drawn, never after a request: the administrator flag, the plugin's capabilities (the last Health answer is kept in
+  this browser, so a start or a deploy does not wait for it; a failed read forgets it) and the card's or page's own type. The
+  card icon is inserted by the observer in the same task that drew the card (and again after any redraw), so it is in the card's
+  first frame; whether the title has an entry is asked when the card is first hovered or focused, and the rare card whose answer
+  is no (no entry, a special) loses the icon then (on 28096 one title of 164, no season or episode). The card menu's item is in
+  the sheet when it opens (it no longer waits for that answer: before, the TV's menu on a season card opened after about
+  0.8 s); an answer already in gives its label or no item. A native page's header icon follows the page's item type until its
+  entry is read, and is inserted in a layout effect, in the same frame; a press before the entry is in shows upstream's spinner
+  and opens the picker when it is. Choosing a card's icon or item before its answer waits for it and opens the picker; a title
+  without release search says "Get a Release is not available for this title." and the icon goes.
 - **A card with nothing on disk has no Play** (P1.FU19, user 2026-10-13: "We don't need Play. Instead of Play there should be
   the Cloud to download the season"). Upstream's season cards on a series page with no episode on disk (P1.FU17's rule, a
   download in progress included) and a library entry's native card with nothing on disk carry `data-jfmod-nofile`: upstream's
   centre Play (and the phone's overlay Play) is hidden on them for everyone, and an administrator's Get a Release takes the
   centre in Play's own round classes (`cardOverlayFab-primary`, the same size, hover and place), with no second cloud in the
-  bottom row; Played, Favorite and More stay where upstream puts them. It is asked for as soon as the card is drawn, so the
-  centre is not empty on the first hover. The mod's own file-less title cards and missing-season cards get the same centre icon
+  bottom row; Played, Favorite and More stay where upstream puts them. The mod's own file-less title cards and missing-season cards get the same centre icon
   on the desktop hover, drawn in upstream's overlay classes (`CardHoverGet`; they have no other hover items). An ordinary user's
   centre stays empty; the card stays clickable as before. A season with a file keeps upstream's Play. Keyboard: Tab from the
   card reaches the centre icon, never a Play. TV and phone have no hover overlay: the card's menu item is the way there, and the
   mark is no second stop (§3.1).
+- **Any series or season Jellyfin holds no episode of has no Play either** (P1.FU23, user 2026-10-13 on Kleo's library card:
+  "Supposed to be Cloud download instead of Play button as nothing available to play"). P1.FU19 marked only the cards whose owner
+  knew they had no file (a series page's season cards, the mod's entry cards); upstream's own cards elsewhere (library grids,
+  search, Home rows) carried no mark, so Kleo, a series item with no season and no episode (its entry `none`), kept Play. Now one
+  read per user lists every series whose recursive episode count is 0 and every season whose child count is 0 (two Jellyfin
+  item reads, series with user data because that count is only filled with it; a season's own count, because with automatic
+  series grouping a season's series id can name another series item of the same show), kept in this browser and read again
+  when the catalog refreshes on a library change. Their cards carry `data-jfmod-empty` from their first frame, with the same
+  effect as `data-jfmod-nofile`: no Play for anyone, an administrator's cloud in the centre. A series with any episode keeps Play
+  (it has a file: Jellyfin has no virtual episodes here); movies and episodes always have a file in Jellyfin, and a reclaimed
+  title's kept card keeps P1.FU19's rule. A download on its way does not change this (the card shows its download and the
+  centre cloud).
 
 ---
 
