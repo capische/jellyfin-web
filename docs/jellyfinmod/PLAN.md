@@ -940,6 +940,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   order, eyebrows and Next links checked in Chromium and Chrome. Not run: `setup-wizard.mjs` (needs a completed setup),
   `s11-fresh.mjs` (the Pi's disposable image container; its order expectations were updated, not run), the other plugin
   suites, a real Prowlarr, a physical TV, Codex review.
+- Phase 1 follow-up, **planned (missed requirement, user 2026-10-13): missing media behaves exactly like available media,
+  only without Play, in the mod's web and in stock apps.** The user: "Media availability should not affect watched, fav,
+  info and other actions. EVERYWHERE.", "That should be expected in TMDb phase.", on the first plan's plugin table: "Why do
+  I need a table if Jellyfin should have it?", "I'd expect everything will behave EXACTLY as when the file exists ...
+  visible everywhere where with media it appears", and on native apps: Next Up "matters as iOS clients may use jellyfin
+  server". Requirement: every missing movie, series, season and episode the plugin knows from TMDB (and every reclaimed one)
+  is a real Jellyfin item with Jellyfin's own cards, pages, ✓ ♥ ⓘ ⋯, Favourites, filters, counts and search, per user;
+  marking a season or series watched marks its missing episodes; a missing item marked watched or favourite arrives that
+  way when its file comes, keeping the date; nothing offers it as playable, in any client. Owner: Phase 1 (the TMDb
+  catalog). Touches Phase 5 (the import replaces the placeholder), Phase 3/10 (retention ignores placeholders and writes one
+  back after a reclaim), Phase 4 (Get a Release and download states on placeholder items) and Phase 6/7 (Play hidden,
+  marks, TV). Research on Jellyfin 12.0.0 (source `v12.0`, experiments on local environment delta, 2026-10-13): virtual
+  items fail the bar in five places; a separate library duplicates series; user data needs an item; empty folders are always
+  ✓. **Jellyfin's own media stubs** (0-byte `.disc` files) meet it: real items with full TMDB metadata and `IsPlaceHolder:
+  true` for every client, never probed, refused for play by upstream web, carry-over of played, favourite and date when the
+  real file replaces them. For stock apps a plugin MVC filter (proven live with a throwaway plugin) removes stubs from
+  `/Shows/NextUp`, answers `PlaybackInfo` with `NotAllowed` and refuses downloads; no server change is needed.
+  Plan: [`design/missing-media-user-actions.md`](design/missing-media-user-actions.md). Slices: **P1.FU24** stubs for
+  missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
+  **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** (optional)
+  play queues skip stubs. No migration planned. Waiting for the user's approval of stubs in the library roots and of the
+  response filter (it reverses the 2026-09-04 and PHASE3 "no placeholder files" decisions) and the plan's questions. Commits
+  carry `p1.fu24`–`p1.fu28` ids so the Phase 1 history reorganisation stays mechanical (the plan's section 8). Nothing built.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
