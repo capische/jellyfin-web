@@ -698,7 +698,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   before 37.2/20.8, 36.0/20.2 and 50/28px); the detail line, the Queue page and the picker keep 2.5em; cards keep 1.6em. (5)
   The mod's page for a missing episode: the still carries the episode's ids, so `downloadMarks` draws its download (the disc
   takes the corner from Not Downloaded, a failure included) and the page shows `QueueStatusLine` at the end of upstream's
-  content section, as a downloaded episode's page does. Web `feat/hover-cloud` from `next-release` `d17d1457e9` (code, runners
+  content section, as a downloaded episode's page does (both superseded by P1.FU20's download block and plain still). Web `feat/hover-cloud` from `next-release` `d17d1457e9` (code, runners
   and docs commits). Checks: typecheck, eslint (feature folder: no errors), stylelint and the production build pass.
   `missing-seasons-episodes.mjs` (the hover centre, Tab order, the picker from the centre icon on upstream's and the mod's
   cards, the inert marks, the row size, the TV's absent stops, the episode page's download from an intercepted queue answer)
@@ -714,6 +714,35 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   plugin has no `acquisition.packs` (not a P1.FU19 behaviour). Not run: a live download (queue answers intercepted), the TV at
   1280×720, a physical TV, a Pi instance deployment, a file-less movie's search card (alpha has none), `card-get-shuffle.mjs`
   in Chrome, Codex review.
+  **P1.FU20, built (not accepted) 2026-10-13: a missing episode's page shows its download in a block** (user-approved design,
+  version 2 of the artifact, [`design/missing-episode-page-download-block.html`](design/missing-episode-page-download-block.html)
+  and [`.md`](design/missing-episode-page-download-block.md); user 2026-10-13: "Looks good besides I see no sense in download
+  cloud over the episode card in episode page, too much information"; [UX.md](UX.md) §7.2.1 and §3.3, [API.md](API.md)
+  *Queue*). Owner: Phase 1 (the P1.FU15 page), with P4.FU6's ring family and Phase 5's queue as the source. Where a downloaded
+  episode's page has its Video / Audio / Subtitle selectors, one panel (`DownloadBlock`): the ring at a new `page` size (4em,
+  3.2em on the phone, the percent inside while it downloads or stalls), the state and its figures (`Downloading 42% · 14 min
+  left · 3.1 MB/s · 1.9 of 4.6 GB`, a pack episode's own file), the release name, the picker's marks from the queue row's
+  `parsed`, the size and the indexer's name, Open in the client for administrators (not on the TV), a pack's line (`Season 2
+  pack · this episode is file 2 of 6`) with one dot per pack episode, a 0.28em bar, and View Queue, Cancel Download (the
+  picker's torrent-only removal, administrators), Search Again (failed) and Get a Release (not downloaded) for administrators
+  who may search; stalled, queued, importing, failed, not downloaded and unaired (`airs … · in 7 months`) as drawn. The still
+  carries no mark or disc any more (P1.FU19's disc and the Not Downloaded and Unaired marks on it are gone; cards and rows keep
+  theirs), and P1.FU19's detail line on this page is replaced by the block. When the queue's row finishes, the page reads its
+  entry again and opens Jellyfin's own episode page (its selectors and Play). The misc line gains the series' certification (US,
+  else the first) and the page its genres line, from the stored TMDB metadata (no plugin change). Plugin: each queue row carries
+  the grab's stored `parsed` release and `indexerName` (additive). Not built (not cheap): the indexer's release page link (the
+  grab keeps no `detailsUrl`; a column and migration), so the name is plain text. Gaps against the artifact: no `2 ahead in
+  Transmission` (no client queue position, as P4.FU6), queued reads `waiting to start`; stalled reads `no progress for 20 min`
+  (the queue does not know the seeders); Open Transmission is hidden on the TV, as in the picker; the page has no More button
+  (P1.FU15); Cancel Download is upstream's grey raised button, not the drawn pill. Plugin `feat/queue-parsed-marks` from
+  `618efb7` (`b52a64a`): Phase 4 and 5 (Linux container), Phase 0 and 1 smoke (Mac) pass, with new Phase 5 checks of `parsed`
+  and `indexerName` on a movie row and a pack row. Web `feat/download-block` from `01b85914a7`: `36b64b840c` (code),
+  `5be9df694b` (runner) and the docs commit. Typecheck, eslint (feature folder: no errors), stylelint and the production build
+  pass. `missing-seasons-episodes.mjs`, extended with every state of the block from intercepted queue and entry answers (not a
+  live download), passed 1170/1170 in Chromium on desktop, phone and TV 1080 as oleksii and the ordinary user nata;
+  `card-progress.mjs` (the painter's new size touches every disc) 119/119 in Chromium; the same 1170/1170 and 119/119 in real Chrome. Both against local
+  environment alpha (lease 15:16–16:10 Sydney) with plugin `b52a64a` and this build, alpha reset to its baseline afterwards.
+  Not run: a live download and import, the TV at 1280×720, a physical TV, a Pi instance deployment, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

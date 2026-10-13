@@ -308,9 +308,9 @@ its last value, the disc and figure dimmed.
   that has the Not Downloaded mark takes that mark: the cloud replaced by a red bang, its tooltip `Failed · reason` (never the
   cloud and the bang both). Since P1.FU19 it is an indicator for everyone (no button, no D-pad stop, no "search again"; with
   `MARK_CLICKABLE` on it would be the administrator's button that opens the picker). A failure on a row without one (a file on disk) is the red bang disc.
-- **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page, and since P1.FU19 on the mod's page
-  for a missing episode, at the end of upstream's content section as on a downloaded episode's page): the 2.5em disc, then `In the
-  download queue · 42% · 12 min left`, then View queue where the queue may be opened.
+- **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page): the 2.5em disc, then `In the
+  download queue · 42% · 12 min left`, then View queue where the queue may be opened. The mod's page for a missing episode
+  showed it from P1.FU19 until P1.FU20 replaced it with the download block (§7.2.1).
 - **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
   copy keeps its word; the progress bar column stays.
 - **The release picker's added row:** the disc takes the Add slot while the torrent downloads (the green tick when the queue
@@ -326,9 +326,10 @@ its last value, the disc and figure dimmed.
   whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`; a
   native season's or episode's own series item is looked up the same way once, because with a library's automatic series
   grouping one show kept in two folders has two series items and the series page lists seasons of both, P1.FU17); the mod's own carry `data-jfmod-entry-id` with
-  `data-jfmod-season` or `data-jfmod-episode-id`. The still on the mod's page for a missing episode carries them too (P1.FU19,
-  user: "Why it has this icon when download is going in progress on episode page?"): it shows the episode's download as a row
-  does, a failure included, and the disc takes the corner from Not Downloaded. One component draws them all
+  `data-jfmod-season` or `data-jfmod-episode-id`. The still on the mod's page for a missing episode carried them from P1.FU19
+  (user: "Why it has this icon when download is going in progress on episode page?") until P1.FU20: since then the still is
+  plain, as a downloaded episode's (user 2026-10-13: "I see no sense in download cloud over the episode card in episode page,
+  too much information"), and the page's download block says the state (§7.2.1). One component draws them all
   (`integration/downloadMarks.tsx`, mounted once by the mod shell).
 - **A pack's episodes each show their own file** (P4.FU5, user 2026-10-12: "Is there way to show per episode
   progress if the whole season or all seasons are downloading?"). An episode's row, card and detail line take its own
@@ -868,8 +869,9 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   should be identical to what downloaded have"), for an episode Jellyfin has no item for, laid out as
   upstream's page for a downloaded episode: the series' name over *Season N - M. Title* (both links, to
   Jellyfin's series and season pages where it has them, else to the mod's), the meta line (the air date in
-  upstream's short form, the runtime, TMDB's rating), TMDB's still (w300, w500 on the TV) as the detail
-  image with the mark on it (else the dashed placeholder), the overview, the *Director* and *Writers* lines,
+  upstream's short form, the runtime, TMDB's rating, and since P1.FU20 the series' certification as upstream's rating box),
+  TMDB's still (w300, w500 on the TV) as the detail image, plain since P1.FU20 (else the dashed placeholder), the download block
+  (below), the series' genres in upstream's genres line, the overview, the *Director* and *Writers* lines,
   **Cast & Crew** (the series' regular cast with "as Character", then the directors, writers and producers,
   one card per person with their roles joined by " / ", as upstream merges them) and **Guest Stars** (TMDB's
   order). Person cards are upstream's people cards: TMDB's portrait (w185) or the person icon on the default
@@ -880,6 +882,43 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   info or chapters (no file); the regulars are the series' current regulars from TMDB's series credits, not
   the episode's own cast list (one more request per episode otherwise); the series backdrop, not one of the
   episode's own; names are plain text, not links to person pages.
+- **The download block** (P1.FU20, user-approved design 2026-10-13,
+  [`design/missing-episode-page-download-block.html`](design/missing-episode-page-download-block.html) and
+  [`.md`](design/missing-episode-page-download-block.md), version 2 of the artifact; user: "Looks good besides I see no sense in
+  download cloud over the episode card in episode page, too much information"). One panel in the theme's paper where a
+  downloaded episode's page has its Video / Audio / Subtitle selectors (before upstream's hidden `.trackSelections`, at most
+  60em wide), drawn by `components/DownloadBlock.tsx` (`downloadBlock.scss`). On the left the ring family's disc at the `page`
+  size: 4em, transparent, the percent inside (`42%`) while it downloads or stalls, else the state's glyph (cards and rows keep
+  the arrow; 3.2em on the phone). On the right, by state:
+
+  | State | Ring | State line | Lines below | Actions |
+  | --- | --- | --- | --- | --- |
+  | Downloading | `42%` inside, amber arc | **Downloading** `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (amber) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
+  | Stalled | `42%` dimmed, arc dimmed | **Stalled** `42% · no progress for 20 min` | release, marks, pack line, bar dimmed | the same |
+  | Queued | clock | **Queued** `waiting to start` | release, marks, pack line | the same |
+  | Importing | turning arc | **Importing** `identifying the file…` / `linking into the library…` / `waiting for the library scan…` | release, marks, full bar breathing | View Queue |
+  | Failed | red bang | **Failed** the reason in red | release, marks | Search Again (red, administrators who may search) · View Queue |
+  | Not downloaded | amber cloud | **Not Downloaded** (`no release chosen yet` for everyone else) | — | Get a Release (blue, administrators who may search) |
+  | Unaired (with an air date) | clock | **Unaired** `airs 19 May 2027 · in 7 months` (`in N days` under 30 days) | — | — |
+
+  The release is the queue row's name in a small monospace line. Its marks are the picker's: quality and source
+  (`1080p WEB-DL`), the codec and audio marks (`MediaMarks`), the languages, the release's size (a pack's whole torrent) and the
+  indexer's name as plain text (the plugin keeps no release page link after a grab), then the client's Open icon for
+  administrators (`Open Transmission`, not on the TV, as the picker). A pack's line reads `Season 1 pack · this episode is file
+  6 of 10`, then one dot per pack episode: green imported, amber its file finished (importing), amber filled to its percent
+  while it downloads, grey waiting, red failed; this episode's dot ringed. The bar is 0.28em. The figures are the episode's
+  own file for a pack (P4.FU5, `packEpisodeView`); the rate has one decimal (`3.1 MB/s`). View Queue is a link for everyone who
+  may read the queue; Cancel Download is upstream's grey raised button and asks the picker's *Remove the Torrent*
+  (`DELETE /Queue/{id}` with `removeFromClient`, no blocklist; for a pack the whole torrent); Search Again and Get a Release
+  open the picker on this episode. The ring, the marks and the strip are no stops; on the TV the D-pad goes from the header's
+  Get a Release down to View Queue, right to Cancel Download, down to the person cards. Reduced motion stops the arc and the
+  bar's breathing. Data: the shared queue read (every 3 s once a download was seen on the page, else once a minute and on each
+  page open); while the queue cannot be read the entry's projected state shows the figures alone. **Imported:** when the queue's
+  row reaches `seeding` the page reads its entry again; once the episode is on disk with its Jellyfin item, the page is replaced
+  by Jellyfin's own episode page (its Video / Audio / Subtitle selectors and Play). A finished row for an episode that has no
+  file now is history and not shown. **Metadata:** the series' certification (the US one, else the first TMDB lists) on the
+  misc line, and its genres (`Comedy, Drama`) in upstream's genres line, from the entry's stored TMDB metadata; keywords,
+  networks and production code are not shown.
 - **Pickers**: the scopes the marks opened until P1.FU19 (a season on that season, *Season N*, *All Seasons*; an episode on
   that episode; a movie card as the movie page; a series card as the series page) are now opened by the cards' centre Get a
   Release (§5.7), the item menus and the pages' header icon; the marks are indicators (§3.1).
