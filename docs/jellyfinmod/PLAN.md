@@ -820,6 +820,47 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   alpha was not permitted by the permission system, so nothing ran there), the ordinary user (28096 has no non-administrator
   with an empty password), the Right hop on a failed or downloading row on the TV, the button coming back after a failure
   clears, the TV at 1280×720, a physical TV, a Pi deployment, Codex review.
+  **P1.FU23, built (not accepted) 2026-10-13: Get a Release without delay everywhere, and no Play where nothing can play**
+  (user, testing Fleabag on 28096: the season card's hover cloud "was not there and appeared after about 1 second ... Fix it
+  everywhere, on each page cloud button exists"; then, on Kleo's library card: "Supposed to be Cloud download instead of Play
+  button as nothing available to play"; [UX.md](UX.md) §5.7 and §3.3). Owner: Phase 1 (the P1.FU12 card cloud, the P1.FU19
+  centre, the header icon). Web only, no plugin change. Causes, measured read-only on 28096 (Chromium, web `71ba91d893`
+  deployed): (1) the card cloud (series page season cards, library grids, Home, search) was inserted hidden and shown only after
+  the card was hovered and two plugin reads answered (a season: Jellyfin's item, then the entry lookup): 446 ms after the card
+  was drawn and 356 ms after the hover on Fleabag's season card, 464 ms after the hover on a Home episode card, 158 ms on a
+  library series card; a card seen within the minute showed it from cache but still 4 to 72 frames after the card; (2) the TV's
+  and phone's card menu waited for the same lookup before opening (404 ms to the sheet on a season card, 50 ms once known);
+  (3) a native page's header icon waited for the entry lookup and detail (440 ms after the header on a first visit of a series
+  page on the phone, 116 to 131 ms on a movie page) and was inserted in a passive effect; (4) every cloud waited for the Health
+  read, kept only in the query cache that is restored from IndexedDB after the first cards and dropped on every deploy; (5)
+  Kleo is a series item with no season and no episode (`RecursiveItemCount` 0, entry state `none`), but P1.FU19 marked only
+  the cards whose owner knew they had no file (a series page's season cards, the mod's entry cards), so upstream's own cards
+  in grids, search and Home kept Play. Fix: the icon is inserted visible by the observer in the task that draws (or redraws)
+  the card, from the administrator flag, the capabilities and the card's type; the lookup on first hover or focus only sets
+  its label or removes it on a title without release search (on 28096 one title of 164, no season or episode: shown
+  optimistically, hidden on the answer); the card menu's item is in the sheet when it opens; the header icon follows the
+  item's type until the entry is read, is inserted in a layout effect, and a press before the entry is in shows upstream's
+  spinner and opens the picker when it is; the last Health answer is kept in local storage (`utils/lastKnown.ts`; a failed
+  read forgets it). One read per user lists the series whose recursive episode count is 0 and the seasons whose child count
+  is 0 (two Jellyfin item reads; a season's own count because with automatic series grouping a season's series id can name
+  another series item), kept in local storage and refreshed with the catalog on library changes; their cards carry
+  `data-jfmod-empty` from their first frame: no Play for anyone, the administrator's cloud in the centre. After (local build
+  served in place of the deployed one, same runner): every card place 0 frames after the card is drawn (0 to 4 ms), already
+  there when pointed at; the TV's season card menu 98 ms to the sheet on a first visit (upstream's own commands) and 49 ms
+  after; headers 0 frames, except a page not seen before, where the mod's and upstream's parallel item reads land up to 3
+  frames apart (10 to 45 ms); Kleo with no Play and the centre cloud in grid and search, also with a download on its way.
+  Web `fix/cloud-no-delay` from `next-release` `71ba91d893`: `06c58688d3` (code), `77c52fd088` (runner) and this docs commit.
+  Checks: typecheck, eslint (feature folder: no errors), stylelint and the production build pass. New runner
+  `cloud-no-delay.mjs` (a MutationObserver installed before the app stamps cards, header rows and card sheets; first, warm and
+  full-load passes): against the deployed `71ba91d893` 111 passed and 39 failed (the causes above); with this build 150 passed,
+  0 failed in Chromium and 149 passed, 1 failed in real Chrome (a movie header 3 frames after the row on a first TV visit, the
+  item-read race; the runner now allows 3 frames there and the Chrome TV re-run passed 24/24), on desktop, phone and TV 1080,
+  as oleksii, read-only on 28096 (lease held by the next-release session for the user's testing; nothing deployed or changed,
+  the queue answer for the download case intercepted in the browser). Not verified: an ordinary user (28096 has no
+  non-administrator with an empty password), the phone's card menu (upstream draws no More on the phone's grids and season
+  cards). Not run: `card-get-shuffle.mjs` and `missing-seasons-episodes.mjs` (their picker steps run release searches, not
+  read-only on 28096), the TV at 1280×720, a physical TV, a deployment, Codex review. The row Not Downloaded mark is left to
+  `feat/row-mark-click`.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
