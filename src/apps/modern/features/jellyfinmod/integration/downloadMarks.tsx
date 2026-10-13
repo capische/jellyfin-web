@@ -218,19 +218,33 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
 /** A row's end slot: the first of these is where the disc goes before (the mark's host, upstream's buttons). */
 const END_SLOT = '.jfmod-rowMarkHost, .jfmod-missingRowEnd, .jfmod-mark--row, .listViewUserDataButtons, .listItemButton';
 
-/** The Not Downloaded button's own tooltip, kept while a failure borrows it. */
+/**
+ * A failure borrows the Not Downloaded mark: its tooltip (and a button's name) become the failure's, and the administrator's
+ * button (P1.FU22) is disabled, so the red bang stays an indicator as on every other row; both are given back after.
+ */
 const borrowTitle = (mark: HTMLElement, title: string | null) => {
     const own = mark.getAttribute('data-jfmod-title');
+    const button = mark instanceof HTMLButtonElement ? mark : null;
     if (title === null) {
         if (own === null) return;
         mark.title = own;
-        if (mark.hasAttribute('aria-label')) mark.setAttribute('aria-label', own);
+        if (button) {
+            button.setAttribute('aria-label', mark.getAttribute('data-jfmod-label') ?? own);
+            button.disabled = false;
+        }
         mark.removeAttribute('data-jfmod-title');
+        mark.removeAttribute('data-jfmod-label');
         return;
     }
-    if (own === null) mark.setAttribute('data-jfmod-title', mark.title);
+    if (own === null) {
+        mark.setAttribute('data-jfmod-title', mark.title);
+        if (button) mark.setAttribute('data-jfmod-label', button.getAttribute('aria-label') ?? mark.title);
+    }
     if (mark.title !== title) mark.title = title;
-    if (mark.hasAttribute('aria-label') && mark.getAttribute('aria-label') !== title) mark.setAttribute('aria-label', title);
+    if (button) {
+        if (button.getAttribute('aria-label') !== title) button.setAttribute('aria-label', title);
+        button.disabled = true;
+    }
 };
 
 const clearRow = (row: HTMLElement) => {
@@ -249,8 +263,8 @@ const metaHost = (row: HTMLElement) => Array.from(row.querySelectorAll<HTMLEleme
 /**
  * A row (P4.FU6, ring only, no bar): the disc as the first round icon of its end slot, and the figure on its meta line after the
  * date (`42% · 12 min left`), or as the last line of its text where the layout shows no meta line. A failure takes the Not
- * Downloaded button's place where the row has one: the same button, a red bang, so it is searched again (never both); a row
- * without it (a file on disk) gets the red bang as a plain disc.
+ * Downloaded mark's place where the row has one: a red bang, an indicator (an administrator's button disabled meanwhile; never
+ * both); a row without it (a file on disk) gets the red bang as a plain disc.
  */
 const drawRow = (row: HTMLElement, progress: DownloadProgress | null) => {
     if (!progress) {
@@ -271,7 +285,7 @@ const drawRowDisc = (row: HTMLElement, progress: DownloadProgress) => {
     const existing = row.querySelector<HTMLElement>('.jfmod-dlmark');
     if (progress.kind === 'failed' && mark) {
         existing?.remove();
-        borrowTitle(mark, progress.tooltip + (mark.tagName === 'BUTTON' ? ' — search again' : ''));
+        borrowTitle(mark, progress.tooltip);
         return;
     }
     if (mark) borrowTitle(mark, null);
