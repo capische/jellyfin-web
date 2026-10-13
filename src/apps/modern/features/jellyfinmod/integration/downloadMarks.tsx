@@ -3,7 +3,6 @@ import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-ite
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
-import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import { getEntries } from '../api/modApi';
@@ -11,29 +10,32 @@ import { aggregateProgress, downloadProgress, type DownloadProgress, isUnderWay 
 import { currentRowFor, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
+import { paintDownloadMark } from '../components/DownloadStateMark';
+
 import '../components/fileStateMark.scss';
 import '../components/downloadProgress.scss';
 
 /**
- * Downloads on every card and row of the page (P4.FU1, user-approved design 2026-10-12; UX §3.3).
+ * Downloads on every card and row of the page (P4.FU1, user-approved design 2026-10-12; the ring family P4.FU6, approved
+ * 2026-10-13; UX §3.3).
  *
  * Wherever a title, season or episode is on its way, its card gets a thin amber bar along the poster's bottom edge (the watched
- * part in the primary on top) and an arrow: a white one inside upstream's count pill, or an amber one in a dark disc on a card
- * with no count; a season page's or list view's row gets the bar along its bottom edge and its figure (`42% · 12 min left`,
- * Queued, stalled, Importing…, Failed) at its end. A series or season shows the mean of its episodes on their way.
+ * part in the primary on top) and the download disc (`DownloadStateMark`: the arrow and the amber arc, a clock, the importing
+ * spinner, the pause) top right, left of upstream's tick or count pill, with the figure in its tooltip; a season page's or list
+ * view's row gets the disc as the first round icon of its end slot (no bar) and the figure on its meta line (`42% · 12 min
+ * left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason`). A series or season shows the mean of its episodes on
+ * their way.
  *
  * One component for the whole app, so every card and row of a page costs one `GET /JellyfinMod/Queue` (the shared queue query):
  * read when a page opens, then every 5 s only while something on the page is on its way. Upstream's cards and rows are not
- * edited: the mod adds its elements beside upstream's, a class on the card's frame and one on the count pill, and takes them
- * away again when the download is over. Upstream cards are found by `data-id` and `data-type`; the mod's own (a file-less
- * title, a missing season or episode) carry `data-jfmod-entry-id`, with `data-jfmod-season` or `data-jfmod-episode-id`.
- * A user who may not read the queue (403) sees none of it.
+ * edited: the mod adds its elements beside upstream's and a class on the card's frame, and takes them away again when the
+ * download is over. Upstream cards are found by `data-id` and `data-type`; the mod's own (a file-less title, a missing season
+ * or episode) carry `data-jfmod-entry-id`, with `data-jfmod-season` or `data-jfmod-episode-id`. A user who may not read the
+ * queue (403) sees none of it.
  */
 
 const TARGETS = '.card[data-id], .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
 const MEDIA_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
-const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" '
-    + 'stroke-linejoin="round" aria-hidden="true"><path d="M12 4V17"/><path d="M6.5 11.5L12 17L17.5 11.5"/></svg>';
 
 const normalId = (id: string | null | undefined) => (id ?? '').replace(/-/g, '').toLowerCase();
 
@@ -177,11 +179,13 @@ const clearCard = (frame: Element) => {
     if (!frame.classList.contains('jfmod-dlCard')) return;
     frame.classList.remove('jfmod-dlCard');
     ownChild(frame, 'jfmod-dlCardBar')?.remove();
-    frame.querySelector('.jfmod-dlDisc')?.remove();
-    frame.querySelector('.jfmod-countArrow')?.classList.remove('jfmod-countArrow');
+    frame.querySelector('.jfmod-dlmark')?.remove();
 };
 
-/** The bar at the poster's bottom (download beneath, watched on top) and the arrow in the count pill or the corner. */
+/**
+ * The bar at the poster's bottom (download beneath, watched on top) and the disc top right: the first of upstream's indicators,
+ * left of the played tick or the plain count pill (two icons, user 2026-10-13), or alone in the corner.
+ */
 const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
     const frame = card.querySelector('.cardScalable') ?? card;
     if (!progress) {
@@ -201,21 +205,9 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
     setWidth(fill, progress.percent);
     setWidth(watched, watchedPercent(frame));
 
-    const count = frame.querySelector('.countIndicator');
-    let disc = frame.querySelector<HTMLElement>('.jfmod-dlDisc');
-    if (count) {
-        count.classList.add('jfmod-countArrow');
-        disc?.remove();
-        return;
-    }
-    if (!disc) {
-        disc = document.createElement('div');
-        disc.className = 'jfmod-mark jfmod-mark--downloading jfmod-dlDisc';
-        disc.title = 'Downloading';
-        disc.innerHTML = ARROW;
-    }
-    // Before upstream's indicators (the played tick), or alone in the corner on a card without them.
+    const disc = frame.querySelector<HTMLElement>('.jfmod-dlmark') ?? document.createElement('span');
     const indicators = frame.querySelector('.cardIndicators');
+    paintDownloadMark(disc, progress, 'card', indicators ? '' : 'jfmod-dlmark--corner');
     if (indicators) {
         if (indicators.firstElementChild !== disc) indicators.insertBefore(disc, indicators.firstChild);
     } else if (disc.parentNode !== frame) {
@@ -223,45 +215,82 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
     }
 };
 
+/** A row's end slot: the first of these is where the disc goes before (the mark's host, upstream's buttons). */
+const END_SLOT = '.jfmod-rowMarkHost, .jfmod-missingRowEnd, .jfmod-mark--row, .listViewUserDataButtons, .listItemButton';
+
+/** The Not Downloaded button's own tooltip, kept while a failure borrows it. */
+const borrowTitle = (mark: HTMLElement, title: string | null) => {
+    const own = mark.getAttribute('data-jfmod-title');
+    if (title === null) {
+        if (own === null) return;
+        mark.title = own;
+        if (mark.hasAttribute('aria-label')) mark.setAttribute('aria-label', own);
+        mark.removeAttribute('data-jfmod-title');
+        return;
+    }
+    if (own === null) mark.setAttribute('data-jfmod-title', mark.title);
+    if (mark.title !== title) mark.title = title;
+    if (mark.hasAttribute('aria-label') && mark.getAttribute('aria-label') !== title) mark.setAttribute('aria-label', title);
+};
+
 const clearRow = (row: HTMLElement) => {
     if (!row.classList.contains('jfmod-dlRow')) return;
     row.classList.remove('jfmod-dlRow', 'jfmod-dlRow--failed');
-    ownChild(row, 'jfmod-dlRowBar')?.remove();
-    row.querySelector('.jfmod-dlRowFigure')?.remove();
+    row.querySelector('.jfmod-dlmark')?.remove();
+    row.querySelector('.jfmod-dlMeta')?.remove();
+    const mark = row.querySelector<HTMLElement>('.jfmod-mark--none');
+    if (mark) borrowTitle(mark, null);
 };
 
-/** The bar along the row's bottom edge and the figure at its end, after the row's text. */
+/** Where a row's meta line is shown: upstream's media info or the mod's, unless the layout hides it (upstream does below 50em). */
+const metaHost = (row: HTMLElement) => Array.from(row.querySelectorAll<HTMLElement>('.listItemMediaInfo, .jfmod-missingMeta'))
+    .find(host => getComputedStyle(host).display !== 'none') ?? null;
+
+/**
+ * A row (P4.FU6, ring only, no bar): the disc as the first round icon of its end slot, and the figure on its meta line after the
+ * date (`42% · 12 min left`), or as the last line of its text where the layout shows no meta line. A failure takes the Not
+ * Downloaded button's place where the row has one: the same button, a red bang, so it is searched again (never both); a row
+ * without it (a file on disk) gets the red bang as a plain disc.
+ */
 const drawRow = (row: HTMLElement, progress: DownloadProgress | null) => {
     if (!progress) {
         clearRow(row);
         return;
     }
     row.classList.add('jfmod-dlRow');
-    // A failure keeps the Not Downloaded button beside its figure, so it can be searched again.
     row.classList.toggle('jfmod-dlRow--failed', progress.kind === 'failed');
-    let bar = ownChild(row, 'jfmod-dlRowBar');
-    if (!bar) {
-        bar = document.createElement('span');
-        bar.setAttribute('aria-hidden', 'true');
-        bar.innerHTML = '<span class="jfmod-dlBar-fill"></span>';
-        row.appendChild(bar);
-    }
-    setClass(bar, 'jfmod-dlBar jfmod-dlRowBar jfmod-dlBar--' + progress.kind);
-    setWidth(bar.firstElementChild as HTMLElement, progress.percent);
+    drawRowDisc(row, progress);
+    drawRowMeta(row, progress);
+};
+
+/** The disc first in the end slot, or the failure on the Not Downloaded button. */
+const drawRowDisc = (row: HTMLElement, progress: DownloadProgress) => {
     // Upstream's React list rows wrap their content once (`.listItem-content`); the legacy rows and the mod's do not.
-    const line = ownChild(row, 'listItem-content') ?? row;
-    let figure = row.querySelector<HTMLElement>('.jfmod-dlRowFigure') ?? undefined;
-    if (!figure) figure = document.createElement('span');
-    setClass(figure, 'jfmod-dlFigure jfmod-dlRowFigure jfmod-dlFigure--' + progress.kind + (progress.stale ? ' jfmod-dlFigure--stale' : ''));
-    if (figure.textContent !== progress.text) figure.textContent = progress.text;
-    const body = ownChild(line, 'listItemBody');
-    // On the phone the row's end has no room beside its buttons (the title shrank to "1. Leave…" on 28096): the figure is the
-    // last line of the row's text instead.
-    if (layoutManager.mobile && body) {
-        if (body.lastElementChild !== figure) body.appendChild(figure);
+    const line: HTMLElement = ownChild(row, 'listItem-content') ?? row;
+    const mark = row.querySelector<HTMLElement>('.jfmod-mark--none');
+    const existing = row.querySelector<HTMLElement>('.jfmod-dlmark');
+    if (progress.kind === 'failed' && mark) {
+        existing?.remove();
+        borrowTitle(mark, progress.tooltip + (mark.tagName === 'BUTTON' ? ' — search again' : ''));
         return;
     }
-    if (body ? body.nextElementSibling !== figure : figure.parentElement !== line) line.insertBefore(figure, body ? body.nextSibling : null);
+    if (mark) borrowTitle(mark, null);
+    const disc = existing ?? document.createElement('span');
+    paintDownloadMark(disc, progress, 'row');
+    const anchor = Array.from(line.children).find(child => !child.classList.contains('jfmod-dlmark') && child.matches(END_SLOT)) ?? null;
+    if (anchor ? disc.nextElementSibling !== anchor : disc.parentElement !== line) line.insertBefore(disc, anchor);
+};
+
+/** The figure on the meta line after the date, or the last line of the row's text where no meta line shows. */
+const drawRowMeta = (row: HTMLElement, progress: DownloadProgress) => {
+    const host = metaHost(row);
+    const parent = host ?? row.querySelector('.listItemBody') ?? ownChild(row, 'listItem-content') ?? row;
+    const meta = row.querySelector<HTMLElement>('.jfmod-dlMeta') ?? document.createElement('div');
+    setClass(meta, (host ? 'mediaInfoItem' : 'secondary listItemBodyText') + ' jfmod-dlMeta jfmod-dlMeta--' + progress.kind
+        + (progress.stale ? ' jfmod-dlMeta--stale' : ''));
+    if (meta.textContent !== progress.text) meta.textContent = progress.text;
+    if (meta.title !== progress.tooltip) meta.title = progress.tooltip;
+    if (parent.lastElementChild !== meta) parent.appendChild(meta);
 };
 
 /** Removes every mark this pass did not draw, once nothing on the page is on its way. */

@@ -1,0 +1,143 @@
+/* JellyfinMod — the download state ring family (P4.FU6, user-approved design 2026-10-13; UX §3.3).
+ *
+ * One disc, one arc, a glyph per state, at two sizes: `--card`, a 1.6em dark disc (black 66 %) with a 1em glyph and a 2.6-unit
+ * arc over a white 18 % track; `--row`, the 2.5em first round icon of a row's end slot, transparent like upstream's round icons,
+ * with a 1.4em glyph and a 2.2-unit arc over the theme's track. Amber `#ffb300` everywhere; failed red `#ff5a4f` (the light
+ * scheme's rows `#c62828`); stalled dims its arc to 55 %. Motion is transform and opacity only (the arrow bobs, importing's arc
+ * turns) and stops under reduced motion. Additive only: every class is `jfmod-`, sizes in `em` (TV 125 %, phone 90 %), no
+ * flex gap, min() or max() for older TV engines.
+ */
+
+.jfmod-dlmark {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 1.6em;
+    height: 1.6em;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.66);
+    color: #ffb300;
+    font-size: 1em;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.jfmod-dlmark-glyph {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 1em;
+    height: 1em;
+}
+
+.jfmod-dlmark-arc {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+
+    circle {
+        fill: none;
+        stroke-width: 2.6;
+    }
+}
+
+.jfmod-dlmark-track {
+    stroke: rgba(255, 255, 255, 0.18);
+}
+
+.jfmod-dlmark-fill {
+    stroke: #ffb300;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.35s ease-out;
+}
+
+.jfmod-dlmark--stalled .jfmod-dlmark-fill {
+    opacity: 0.55;
+}
+
+.jfmod-dlmark--downloading .jfmod-dlmark-glyph {
+    animation: jfmod-dlmarkBob 1.4s ease-in-out infinite;
+}
+
+.jfmod-dlmark--importing .jfmod-dlmark-arc {
+    animation: jfmod-dlmarkSpin 1.2s linear infinite;
+}
+
+.jfmod-dlmark--failed {
+    color: #ff5a4f;
+}
+
+/* A client that cannot be read: the last value, dimmed. */
+.jfmod-dlmark--stale {
+    opacity: 0.55;
+}
+
+/* A card with no indicator cluster: the disc alone in the top-right corner. Inside the cluster it comes first, before
+ * upstream's tick or count pill (two icons, user 2026-10-13). */
+.jfmod-dlmark--corner {
+    position: absolute;
+    top: 0.225em;
+    z-index: 1;
+
+    [dir="ltr"] & { right: 0.225em; }
+    [dir="rtl"] & { left: 0.225em; }
+}
+
+.cardIndicators > .jfmod-dlmark {
+    [dir="ltr"] & { margin-right: 0.25em; }
+    [dir="rtl"] & { margin-left: 0.25em; }
+}
+
+/* A row: the first round icon of its end slot, upstream's padding, nothing added. */
+.jfmod-dlmark--row {
+    width: 2.5em;
+    height: 2.5em;
+    background: transparent;
+
+    .jfmod-dlmark-glyph {
+        width: 1.4em;
+        height: 1.4em;
+    }
+
+    .jfmod-dlmark-arc circle {
+        stroke-width: 2.2;
+    }
+
+    .jfmod-dlmark-track {
+        stroke: rgba(255, 255, 255, 0.12);
+    }
+}
+
+[data-theme='light'] .jfmod-dlmark--row {
+    .jfmod-dlmark-track { stroke: rgba(0, 0, 0, 0.18); }
+    &.jfmod-dlmark--failed { color: #c62828; }
+}
+
+@keyframes jfmod-dlmarkBob {
+    0%,
+    100% { transform: translateY(-0.08em); }
+    50% { transform: translateY(0.12em); }
+}
+
+@keyframes jfmod-dlmarkSpin {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // Two classes, as the rules that start them.
+    .jfmod-dlmark .jfmod-dlmark-glyph,
+    .jfmod-dlmark .jfmod-dlmark-arc {
+        animation: none;
+    }
+
+    .jfmod-dlmark .jfmod-dlmark-fill {
+        transition: none;
+    }
+}

@@ -94,11 +94,6 @@
     }
 }
 
-// The added row's bar sits along the row button's bottom edge (2026-10-12).
-.jfmod-releaseItem--added > .jfmod-releaseRow {
-    position: relative;
-}
-
 // The mouse hover covers the whole row, its Add and Replace buttons too (user, 2026-10-11).
 @media (hover: hover) {
     .jfmod-releaseItem:hover {
@@ -313,17 +308,9 @@
     opacity: 0.75;
 }
 
-// The added row's download (2026-10-12, §1b): a thin bar along the row's bottom edge, inset from the rounded corners, and the
-// figure at the right end of the marks line. Their colours, the track, the stalled, failed and importing looks and the light
-// scheme's darker figure are the app's one set in downloadProgress.scss (P4.FU1); only the placement is the picker's.
-.jfmod-addedBar {
-    position: absolute;
-    right: 0.8em;
-    bottom: 0;
-    left: 0.8em;
-    height: 0.16em;
-}
-
+// The added row's download (2026-10-12, §1b; P4.FU6): the figure at the right end of the marks line, and the download disc in
+// the Add slot. Their words and colours are the app's one set (downloadProgress.scss, downloadStateMark.scss); only the
+// placement is the picker's.
 .jfmod-addedFigure {
     align-self: center;
     margin-left: auto;
@@ -677,11 +664,6 @@
     .jfmod-releaseLine--sub {
         margin-top: 0.05em;
         align-items: center;
-    }
-
-    .jfmod-addedBar {
-        right: 0.5em;
-        left: 0.5em;
     }
 }
 
