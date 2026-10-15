@@ -637,6 +637,11 @@ play count, on every client, with no plugin involvement at playback time.
 | `imported`, `watched` | Real media file (as today) | Everywhere |
 | `reclaimed` | `.strm` placeholder left in place | Everywhere |
 
+*Built differently (P1.FU25, 2026-10-15, not accepted): a reclaimed episode gets the plugin's marked `.disc` media stub
+(P1.FU24's placeholder), not a `.strm`, in the file's folder, where its library shows missing episodes; Jellyfin keeps it as an
+item with `IsPlaceHolder` and re-attaches its played flag, favourite and dates by key. A reclaimed movie still leaves no file
+(file-less movies are P1.FU26).*
+
 This matches the actual requirement. "See what I have watched even after the file is
 removed" must reach every client — and does. A wishlist of things never downloaded does not
 need to appear in Kodi, and putting it there would make every client show thousands of

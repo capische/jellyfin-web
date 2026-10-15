@@ -328,7 +328,11 @@ without adding another `retention_kept` history event.
 `GET /JellyfinMod/Retention/Preview` is administrator-only and returns `generatedAt`, summary
 counts (`inspected`, `due`, `blocked`, `scheduled`, `waiting`, `disabled`) and per-representation
 diagnostics under `items`. Physical paths, hardlink counts and torrent evidence never appear in
-ordinary-user detail responses.
+ordinary-user detail responses. P1.FU25: each item has `leavesPlaceholder` (true for a due or scheduled episode file whose
+reclaim leaves a placeholder: the episode's only file, in a TV library that shows missing episodes, in a folder the plugin can
+write) and the summary `placeholders` counts them. A file that is one of the plugin's placeholders is never due: it is blocked
+with reason `placeholder`, and the executor refuses it with the same reason (reconciliation never binds one). A reclaim that
+leaves placeholders appends `; a placeholder keeps the episode in Jellyfin` to its `reclaimed` history summary.
 
 `POST /JellyfinMod/Retention/Run` invokes the same 25-physical-action batch as the native daily
 task. A concurrent invocation returns 409. `GET /JellyfinMod/Retention/Runs/Latest` returns the
@@ -913,8 +917,11 @@ An unknown or non-TV library is 404. A plan:
 Remove Placeholders. `skipped[].reason`: `read_only` (the series or season folder cannot be written: nothing is written there,
 the mod's own cards and rows stay), `no_series_folder` (Jellyfin holds no file of the series; file-less series are P1.FU26),
 `outside_library` (a season folder that is a link out of the series folder), `file_present` (a file, a user's own `.disc`
-included, already reads as that episode), `name_taken`, `unreadable`, `library_root_missing`. Which episodes: aired (air date
-today or earlier), not specials, not on disk; unaired episodes keep the mod's own card with their date.
+included, already reads as that episode), `importing` (the episode is being grabbed, downloaded or imported: an open import;
+its file takes the placeholder's place, P1.FU25), `name_taken`, `unreadable`, `library_root_missing`. Which episodes: aired (air
+date today or earlier; a reclaimed episode counts as aired), not specials, not on disk; unaired episodes keep the mod's own card
+with their date. A stub counts for its episode wherever it is in the series' folder or its season folders (a reclaim leaves
+it where the file was), and a file anywhere there that reads as the episode makes its stub stale (`file_present`).
 
 **What a placeholder is.** A regular `.disc` file under 4 KB whose first line is `<!-- JellyfinMod placeholder v1 -->`,
 followed by Kodi's stub message (`<discstub><title>…</title><message>Not downloaded yet. Open JellyfinMod to get it.</message>
@@ -926,8 +933,18 @@ and the series folder the entry's files are in. When Jellyfin creates or saves a
 **Elsewhere in the plugin's API.** An episode in `GET /JellyfinMod/Entries/{id}` gains `placeholderItemId` (omitted when null):
 the Jellyfin placeholder that stands for it while it has no file; its `state`, `availability` and `jellyfinItemId` stay those
 of an episode without a file (reconciliation reads placeholder episodes as not on disk). `GET /JellyfinMod/Entries?jellyfinItemId=`
-with a placeholder's id finds the series' entry. The import removes the episode's placeholder before the scan that finds its
-file, so Jellyfin swaps the items and keeps the users' played, favourite and date marks.
+with a placeholder's id finds the series' entry.
+
+**The swap (P1.FU25).** The import removes the episode's placeholders only after its file is linked, verified and recorded, and
+before it asks Jellyfin to scan: from the series folder and every season folder in it, so a stub in another folder than the
+file's goes too (that folder is reported to Jellyfin as well). Jellyfin swaps the items in the refresh and keeps the users'
+played, favourite and date marks (by the item's user-data key). An import that stops before its link leaves the stub as it was;
+a stub the import cannot remove (a permission) leaves the import complete, is logged once, and goes with the next sync
+(`file_present`). After retention reclaims an episode's last file (a multi-episode file: every episode it held), the plugin
+writes the episode's placeholder in the same folder, under the import's name, when the library shows missing episodes and the
+folder can be written, and asks Jellyfin to look at the folder: the episode stays a Jellyfin item, with its marks. Only ever
+written after the unlink is recorded, and nothing is deleted. A series whose every file was reclaimed keeps its folder for the
+import and the sync (the entry's own series item).
 
 **Stock endpoints, for every client** (an MVC filter registered by the plugin; it acts on the plugin's placeholders only,
 whatever the switch says, and lets an answer through unchanged if it fails):
