@@ -13,7 +13,8 @@
 //   3 the simple path: Add Profile starts from the 4K preset with its name, a rename and Save write the preset's record;
 //   4 the simple controls: best quality, the fall-back switch and its floor, the size buttons write the order and the limit
 //     the summary sentence says;
-//   5 Advanced: a matrix tick changes the order and marks the profile Custom (no simple button pressed);
+//   5 Advanced: a matrix tick changes the order and marks the profile Custom (no simple button pressed); the order list and its
+//     sentence stay hidden until Change the Order Tried is opened, then Move Up / Move Down change the order that is saved;
 //   6 the live rules: no name, or a cutoff the profile does not allow, refuse Save with the rule shown;
 // and in the release picker (a missing Peep Show episode, a Torznab server of the runner's own over real HTTP, answering
 // 2160p, 1080p and 720p WEB-DL rows and a 2160p row too large for the 4K profile):
@@ -141,7 +142,8 @@ const presetButton = page => page.locator('.jfmod-check-section[data-section="pr
 const dialog = page => page.locator('.jfmod-qp');
 const dialogState = page => page.evaluate(() => {
     const root = document.querySelector('.jfmod-qp');
-    const order = root.querySelector('[data-qp="order"]')?.textContent.replace(/^Order tried:\s*/, '').split(', ').map(item => item.replace(/^\d+\s+/, '')) ?? [];
+    // The ids from the list's title attributes; what people read is the pretty name (constants/quality).
+    const order = [...root.querySelectorAll('.jfmod-qrow')].map(row => row.getAttribute('title'));
     return {
         name: root.querySelector('[data-qp="name"]')?.value, preset: root.querySelector('input[name="jfmod-qp-preset"]:checked')?.getAttribute('data-qp-preset') ?? null,
         best: [...root.querySelectorAll('[data-qp^="best-"][aria-pressed="true"]')].map(node => node.getAttribute('data-qp')),
@@ -149,7 +151,10 @@ const dialogState = page => page.evaluate(() => {
         fallback: root.querySelector('[data-qp="fallback"]')?.checked, floor: root.querySelector('[data-qp="floor"]')?.value,
         summary: root.querySelector('[data-qp="summary"]')?.textContent.trim(), custom: root.querySelector('[data-qp="custom"]')?.textContent.trim(),
         problems: [...root.querySelectorAll('.jfmod-qp-problem')].map(node => node.textContent.trim()),
-        saveDisabled: !!document.querySelector('[data-qp="save"]')?.disabled, order
+        saveDisabled: !!document.querySelector('[data-qp="save"]')?.disabled, order,
+        cutoffShown: [...root.querySelectorAll('.MuiFormControl-root')].find(control => /Upgrade until/.test(control.querySelector('label')?.textContent ?? ''))
+            ?.querySelector('.MuiSelect-select')?.textContent.trim() ?? null,
+        upgradeHint: root.querySelector('.jfmod-qp-hint')?.textContent.trim() ?? ''
     };
 });
 const shot = async (page, name, locator) => {
@@ -208,6 +213,12 @@ async function settingsChecks(page, layout) {
             && opened.summary === '4K picks 4K (2160p) first, then down to 720p, files up to 20 GB per hour, and does not upgrade later.'
             && opened.order.join() === FOUR_K.join() && !opened.saveDisabled, opened);
     console.log('  shot', await shot(page, `${layout}-dialog-simple`, page.locator('.jfmod-qp .MuiDialog-paper')));
+    await page.locator('[data-qp="upgrade"]').check();
+    const upgrading = await dialogState(page);
+    record(layout, '3 qualities read as people say them: ticking Upgrade says "until it holds 4K Remux" and "until it reaches 4K Remux"',
+        /upgrades later until it holds 4K Remux \(replacing the file\)/.test(upgrading.summary) && /until it reaches 4K Remux\./.test(upgrading.upgradeHint)
+            && !/remux-2160p/.test(upgrading.summary + upgrading.upgradeHint), { summary: upgrading.summary, hint: upgrading.upgradeHint });
+    await page.locator('[data-qp="upgrade"]').uncheck();
     await page.locator('[data-qp="name"]').fill(name);
     await page.locator('[data-qp="save"]').click();
     await dialog(page).waitFor({ state: 'detached', timeout: 15000 }).catch(() => undefined);
@@ -248,6 +259,38 @@ async function settingsChecks(page, layout) {
         !state.order.includes('hdtv-1080p') && state.custom === 'custom values' && !state.best.length && !state.size.length && !state.problems.length, state);
     console.log('  shot', await shot(page, `${layout}-dialog-advanced`, page.locator('.jfmod-qp .MuiDialog-paper')));
 
+    // 5b the order editor and its sentence are hidden until Change the Order Tried is opened (user, 2026-10-15).
+    const orderShown = () => page.evaluate(() => ({
+        open: !!document.querySelector('.jfmod-qp [data-qp="order-toggle"]')?.open,
+        // A closed <details> keeps its content laid out under content-visibility: hidden, so ask whether it is rendered.
+        list: [...document.querySelectorAll('.jfmod-qp .jfmod-qrow')].some(row => row.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true })),
+        sentence: !!document.querySelector('.jfmod-qp [data-qp="order"]')?.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true }),
+        text: document.querySelector('.jfmod-qp [data-qp="order"]')?.textContent.trim() ?? ''
+    }));
+    const closed = await orderShown();
+    record(layout, '5b Advanced shows no order list and no order sentence until Change the Order Tried is opened',
+        !closed.open && !closed.list && !closed.sentence, closed);
+    await page.locator('.jfmod-qp [data-qp="order-toggle"] > summary').click();
+    await page.waitForTimeout(300);
+    const orderOpen = await orderShown();
+    const rowsActions = await page.evaluate(() => [...document.querySelectorAll('.jfmod-qp .jfmod-qrow')].map(row => [...row.querySelectorAll('[data-row-action]')]
+        .map(button => button.dataset.rowAction).join('/')));
+    record(layout, '5b opening it shows the list with Move Up, Move Down and Remove, and the same order sentence',
+        orderOpen.open && orderOpen.list && orderOpen.sentence && orderOpen.text === closed.text && rowsActions.every(actions => actions === 'up/down/remove'), { orderOpen, rowsActions: rowsActions.length });
+    const named = await page.evaluate(() => {
+        const first = document.querySelector('.jfmod-qp .jfmod-qrow');
+        return { name: first?.querySelector('.jfmod-qname')?.textContent, title: first?.getAttribute('title'),
+            down: first?.querySelector('[data-row-action="down"]')?.getAttribute('aria-label') };
+    });
+    record(layout, '5b the list and the sentence name qualities as people say them; the id stays in the title; the cutoff select shows the name',
+        named.name === '1080p Remux' && named.title === 'remux-1080p' && named.down === 'Move 1080p Remux Down'
+            && orderOpen.text.startsWith('Order tried: 1 1080p Remux, 2 1080p Blu-ray, 3 1080p WEB-DL, 4 1080p WEBRip, 5 720p Blu-ray') && !/-\d{3,4}p/.test(orderOpen.text)
+            && state.cutoffShown === '1080p Remux', { named, text: orderOpen.text.slice(0, 120), cutoff: state.cutoffShown });
+    console.log('  shot', await shot(page, `${layout}-dialog-order`, page.locator('.jfmod-qp .MuiDialog-paper')));
+    await page.locator('.jfmod-qp [data-row-action="down"][data-quality="remux-1080p"]').click();
+    state = await dialogState(page);
+    record(layout, '5b Move Down changes the order and its sentence', state.order[0] === 'bluray-1080p' && state.order[1] === 'remux-1080p', state.order.slice(0, 3));
+
     // 6 the live rules refuse Save.
     await page.locator('.jfmod-qp [data-row-action="remove"][data-quality="remux-1080p"]').click();
     state = await dialogState(page);
@@ -260,11 +303,16 @@ async function settingsChecks(page, layout) {
     await page.locator('[data-qp="name"]').fill(custom);
     state = await dialogState(page);
     record(layout, '6 With a name again, Save is offered', !state.saveDisabled && !state.problems.length, state);
+    record(layout, '6 the simple choice set the matrix\'s usual order again', state.order[0] === 'remux-1080p' && state.order[1] === 'bluray-1080p', state.order.slice(0, 3));
+    // An exception to the usual order is kept: WEB-DL before Blu-ray.
+    await page.locator('.jfmod-qp [data-row-action="up"][data-quality="webdl-1080p"]').click();
+    state = await dialogState(page);
+    record(layout, '6 Move Up puts WEB-DL 1080p before Blu-ray 1080p', state.order.slice(0, 3).join() === 'remux-1080p,webdl-1080p,bluray-1080p', state.order.slice(0, 3));
     await page.locator('[data-qp="save"]').click();
     await dialog(page).waitFor({ state: 'detached', timeout: 15000 }).catch(() => undefined);
     const second = (await profilesByName(page))[custom];
-    record(layout, '6 the saved record is what the dialog showed (1080p down to 480p, Large, cutoff the first quality)',
-        !!second && second.qualities[0] === 'remux-1080p' && second.qualities.at(-1) === 'dvd-480p' && second.maximumBytesPerHour === null
+    record(layout, '6 the saved record is what the dialog showed (1080p down to 480p with WEB-DL before Blu-ray, Large, cutoff the first quality)',
+        !!second && second.qualities.slice(0, 3).join() === 'remux-1080p,webdl-1080p,bluray-1080p' && second.qualities.at(-1) === 'dvd-480p' && second.maximumBytesPerHour === null
             && second.cutoff === 'remux-1080p', second);
     await openSection(page);
     const customRow = (await rows(page)).find(row => row.name === custom);
@@ -303,6 +351,8 @@ async function pickerChecks(page, layout) {
         options: [...(document.querySelector('#jfmod-releaseProfile')?.options ?? [])].map(option => option.textContent)
     }));
     const first = await listed();
+    const firstQuality = await page.locator('.jfmod-releaseDialog .jfmod-releaseItem .jfmod-releaseQuality').first().textContent();
+    record(layout, '7 the picker names the quality as everywhere: 4K WEB-DL', firstQuality?.trim() === '4K WEB-DL', firstQuality);
     const at = (list, token) => list.rows.findIndex(text => text.includes(token));
     record(layout, '7 the picker searches with "Default (4K)" and lists 4K, then 1080p, then 720p; the oversized 4K is in the collapsed Rejected group',
         first.profile === 'Default (4K)' && at(first, 'H.265-QP') === 0 && at(first, '1080p.WEB-DL') === 1 && at(first, '720p.WEB-DL') === 2
