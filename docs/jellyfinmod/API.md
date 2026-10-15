@@ -881,7 +881,7 @@ continuation becomes bounded. A user who can never read file-less metadata (Allo
 single failed detail call is skipped and counted in the response instead of failing the page
 (task P8 in [PHASE1.md](PHASE1.md); the web auto-follow cap is task W13).
 
-## Placeholders for missing episodes (P1.FU24)
+## Placeholders for missing episodes and titles (P1.FU24, P1.FU26)
 
 Administrators only (`Policies.RequiresElevation`); capability `placeholders` in Health. Missing aired episodes of a series
 Jellyfin already holds can be shown as Jellyfin items: the plugin writes a media stub where the import puts the episode's file
@@ -893,14 +893,14 @@ answers `pending`, the placeholders left for the next run; the sync task runs ev
 
 | Request | Answer |
 | --- | --- |
-| `GET /JellyfinMod/Placeholders` | `[{ libraryId, name, enabled, stubs, writable }]`, every TV library; `stubs` counts the plugin's placeholder items Jellyfin holds; `writable` is false when no folder of the library can be written (nothing is written there) |
+| `GET /JellyfinMod/Placeholders` | `[{ libraryId, name, enabled, stubs, writable, mediaType }]`, every movie library (`mediaType: "movie"`, P1.FU26) and TV library (`"series"`); `stubs` counts the plugin's placeholder items Jellyfin holds; `writable` is false when no folder of the library can be written (nothing is written there) |
 | `GET /JellyfinMod/Placeholders/{libraryId}/Plan` | The dry run (below): what a sync would write and remove, and what it leaves without a placeholder. Changes nothing |
 | `PUT /JellyfinMod/Placeholders/{libraryId}` `{ "enabled": false }` | Turns the library off (it is on by default) and answers the dry run; existing placeholders stay until Remove. `true` turns it back on and syncs at once (the run's plan) |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Sync` | Syncs now: writes (only with the switch on), removes stale placeholders, stamps placeholder items |
 | `GET /JellyfinMod/Placeholders/{libraryId}/Removal` | The dry run of Remove Placeholders: every placeholder of the plugin's in the library |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Remove` | Deletes them (each re-checked for the marker just before, unlinked by inode) and the season folders that left empty; the switch is not changed |
 
-An unknown or non-TV library is 404. A plan:
+An unknown library, or one that is neither a movie nor a TV library, is 404. A plan:
 
 ```json
 { "libraryId": "…", "libraryName": "Shows", "enabled": false, "dryRun": true, "existing": 0,
@@ -923,6 +923,22 @@ date today or earlier; a reclaimed episode counts as aired), not specials, not o
 with their date. A stub counts for its episode wherever it is in the series' folder or its season folders (a reclaim leaves
 it where the file was), and a file anywhere there that reads as the episode makes its stub stale (`file_present`).
 
+**Movies and series with no file (P1.FU26).** In a movie library a plan writes, for each released movie of the catalog with
+no file (release date today or earlier, or reclaimed; an unreleased one gets none and keeps the mod's own card), one placeholder
+where its import puts the file: `<Title (Year) [tmdbid-N]>/<Title (Year) [tmdbid-N]>.disc` in the first library folder that can
+be written, or in the folder of its TMDB id already there (`writes[].kind: "movie"`, season and episode 0). Its removals:
+`on_disk` (the movie has a file), `not_released`, `not_listed` (no entry of its TMDB id in the library any more). In a TV
+library a series with nothing on disk (no bound episode) gets its own folder, `<Series (Year) [tmdbid-N]>/Season NN/…`, in the
+first writable library folder, with a placeholder per aired episode (`no_series_folder` now only for a series with files the
+plugin cannot place). Adding a title (`POST /JellyfinMod/Entries`), loading a series' episode list and Refresh sync that one
+entry at once; Jellyfin makes the items at its next look at the folder (its library monitor delay, a minute by default). The
+movie's placeholder item is never bound: the entry stays not on disk and finds it by TMDB id. A series' placeholders make a
+series item that reconciliation binds as the entry's series (not on disk); no entry is backfilled from a series of
+placeholders alone. The import swaps a movie's placeholder for the file as for an episode (PHASE5); a reclaim of a movie's last
+file in a folder of its own leaves the movie's placeholder there, named after the folder (Retention preview
+`leavesPlaceholder`). `DELETE /JellyfinMod/Entries/{id}` of a title never imported removes its placeholders and the folders
+that left empty (a series bound only to its placeholders' series item can be removed; its binding goes too).
+
 **What a placeholder is.** A regular `.disc` file under 4 KB whose first line is `<!-- JellyfinMod placeholder v1 -->`,
 followed by Kodi's stub message (`<discstub><title>…</title><message>Not downloaded yet. Open JellyfinMod to get it.</message>
 </discstub>`). Only such files are ever treated as, or removed as, the plugin's; any other `.disc` is a user's and is left
@@ -933,7 +949,19 @@ and the series folder the entry's files are in. When Jellyfin creates or saves a
 **Elsewhere in the plugin's API.** An episode in `GET /JellyfinMod/Entries/{id}` gains `placeholderItemId` (omitted when null):
 the Jellyfin placeholder that stands for it while it has no file; its `state`, `availability` and `jellyfinItemId` stay those
 of an episode without a file (reconciliation reads placeholder episodes as not on disk). `GET /JellyfinMod/Entries?jellyfinItemId=`
-with a placeholder's id finds the series' entry.
+with a placeholder's id finds the series' entry. Since P1.FU26 the entry itself gains `placeholderItemId` on `GET
+/JellyfinMod/Entries/{id}` and on Browse rows: the placeholder movie, or the series item of a series with no file;
+`Entries?jellyfinItemId=` with a placeholder movie's id finds the movie's entry. `POST /JellyfinMod/Browse` answers such a title
+as one `native` row (the placeholder item) carrying the entry with its state and `placeholderItemId`; no separate `entry` row is
+drawn for it, and the state filter reads the entry's state (not `onDisk`) for it.
+
+**Jellyfin's cached user data (P1.FU25 follow-up).** Jellyfin 12 keeps each user's data per item in memory and fills it from
+list reads; a new item read before its first metadata refresh is cached as unplayed, and Jellyfin re-attaches the old item's
+marks only at that refresh without updating the cache, so list answers (`/Items`, `/Shows/{id}/Episodes`) showed a swapped item
+unplayed until a restart. After a new movie or episode's first refresh, when it then holds stored user data (only re-attached
+data can be there), the plugin saves each such user's data again unchanged through `IUserDataManager`
+(`UserDataSaveReason.UpdateUserData`), which replaces the cache entry. The plugin's retention listener ignores that save (no
+completion is recorded); the Trakt plugin acts only on `TogglePlayed`.
 
 **The swap (P1.FU25).** The import removes the episode's placeholders only after its file is linked, verified and recorded, and
 before it asks Jellyfin to scan: from the series folder and every season folder in it, so a stub in another folder than the
