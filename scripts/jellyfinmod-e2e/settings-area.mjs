@@ -32,10 +32,11 @@ const LAYOUTS = {
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
     tv720: { viewport: { width: 1280, height: 720 }, tv: true }
 };
-const SECTION_IDS = ['overview', 'discovery', 'indexers', 'client', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
+const SECTION_IDS = ['overview', 'discovery', 'indexers', 'client', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'placeholders',
+    'interface', 'diagnostics'];
 // The headings the page shows for those sections, in order (SettingsPage.tsx, SECTIONS; Title Case since 2026-10-08).
 const SECTION_TITLES = ['Overview', 'Discovery', 'Indexers', 'Download Client', 'Quality Profiles', 'Grabbing', 'Import and Seeding', 'Retention',
-    'Automation', 'Interface', 'Diagnostics'];
+    'Automation', 'Missing Episodes', 'Interface', 'Diagnostics'];
 const sameList = (seen, wanted) => seen.length === wanted.length && seen.every((title, index) => title === wanted[index]);
 // What Retention says when seed protection was saved and retention was refused for a stale revision (settingsSections.tsx,
 // RetentionSection's save; settingsApi.ts, CONFLICT_MESSAGE). It is an error with a Reload, and it outranks the draft's
@@ -84,6 +85,20 @@ async function assertServer(page, when) {
 }
 
 /** The server's retention settings, read as the signed-in administrator. */
+/**
+ * What Missing Episodes should say in the rail and its own head, from the plugin's library list (P1.FU24, P1.FU26;
+ * settingsSections.tsx, summarisePlaceholders), with its state kind.
+ */
+const placeholderWords = libraries => {
+    if (!libraries.length) return ['off', 'No TV or movie library'];
+    const on = libraries.filter(library => library.enabled);
+    const total = libraries.reduce((sum, library) => sum + library.stubs, 0);
+    const stubs = `${total} placeholder${total === 1 ? '' : 's'}`;
+    if (!on.length) return ['off', 'Off · turned off by you'];
+    if (on.every(library => library.writable === false)) return ['warn', 'Read-only · nothing is written'];
+    return ['ok', on.length === libraries.length ? `On · ${stubs}` : `On for ${on.length} of ${libraries.length} libraries · ${stubs}`];
+};
+const placeholdersNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Placeholders'), dataType: 'json' }));
 const retentionNow = page => page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Retention'), dataType: 'json' }));
 /** Loads the app again from the instance under test and waits for its signed-in ApiClient, as a clean-up retry needs. */
 async function reloadApp(page) {
@@ -277,6 +292,17 @@ for (const name of only) {
                 titles.push(await heading(page));
             }
             record(name, 'Every section opens', sameList(titles, SECTION_TITLES), titles);
+            // Missing Episodes has a status line and state like every other section, in the rail and in its own head.
+            const [kind, words] = placeholderWords(await placeholdersNow(page));
+            await openSettings(page, 'placeholders');
+            await page.waitForTimeout(800);
+            const rail = await page.evaluate(() => {
+                const step = document.querySelector('.jfmod-step[data-section="placeholders"]');
+                return step ? { words: step.querySelector('.jfmod-s')?.textContent?.trim(), kind: [...step.classList].find(value => value.startsWith('k-')) } : null;
+            });
+            const pill = (await page.locator('.jfmod-check-section[data-section="placeholders"] .jfmod-check-sechead').innerText().catch(() => '')).trim();
+            record(name, `Missing Episodes reads "${words}" (${kind}) in the rail${name === 'mobile' ? ' (hidden on the phone)' : ''} and in its own head`,
+                (name === 'mobile' || rail?.words === words && rail?.kind === `k-${kind}`) && pill.includes(words), { rail, pill, expected: words });
             if (name === 'mobile') {
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
                 record(name, 'Mobile: no horizontal scroll', overflow <= 1, { overflow });
