@@ -764,6 +764,28 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   TV 30 % `brightness(1.15)` with `rgba(0, 0, 0, 0.87)`; the TV layout `backdrop-filter: none` over black 66 % with the white
   glyph in every theme.
   Not run: the GPU cost of a blur per disc on a real phone or a TV, a physical TV, a Pi instance deployment, Codex review.
+  **P4.FU8, built (not accepted) 2026-10-15: the icon colour replaces amber in the whole download design** (user 2026-10-15:
+  "replace yellow in this design to the color of icons, light for dark theme and dark for light. Keeping it simple."; design:
+  ring family artifact v12 and the episode page v3, [`design/download-state-ring-family.md`](design/download-state-ring-family.md)
+  *Revision 4*; [UX.md](UX.md) §3.3). Owner: Phase 4 follow-up (P4.FU6's ring family) with P1.FU20's block; web only, style
+  only, no plugin change. **Supersedes every "amber" in P4.FU1, P4.FU5, P4.FU6, P4.FU7, P1.FU11, P1.FU17, P1.FU20, P1.FU22 and
+  the picker's added row above and in UX.md.** A card's disc is white (the light schemes' dark text); the card's bar the same
+  at 85 %; a row's disc and a not-downloaded row mark the colour of upstream's round row icons beside them; the meta line's
+  figures, the picker's added-row figure and the detail line are the line's ordinary secondary text; the episode-page block's
+  ring, `42 %`, bar and pack dots (not the green imported ones) the page's text colour; stalled is the same colour at 55 %
+  opacity; the card disc's hover is scale 1.08 only (the clickable card mark, off since P1.FU19); failed red unchanged; the
+  amber tokens (`--jfmod-dl-stalled`, `--jfmod-dl-text`, `--jfmod-dl-text-stalled`, `--jfmod-dlblock-amber`) are gone. A row's
+  Not Downloaded keeps P1.FU22's upstream round-icon hover (primary glyph over its veil), which the design's "scale only"
+  hover does not mention. Accepted trade, recorded by the design session: a downloading row no longer stands out by colour alone.
+  Web `style/download-icon-colour` from `2173444a36`: `24678a4a97` (style), the runner commit and the docs commit. Typecheck, stylelint, eslint and the production build pass;
+  `card-progress.mjs` (amber asserts replaced by the upstream neighbours' computed colours, a light-scheme card check added) passed
+  104/104 with 6 not verified (a missing season with a pack: the local series has none) in Chromium and in real Chrome on desktop, phone and
+  TV 1080, against local environment bravo (lease 18:00-18:27 Sydney; reset to its baseline and stopped afterwards) with this build served
+  in place of its web. `missing-seasons-episodes.mjs` (the download block's ring, figure, arc and bar equal the block's text colour)
+  passed 507/507 in Chromium and in real Chrome on desktop, phone and TV 1080 against 28096 READ-ONLY (Peep Show's entry, this build
+  served by route interception, queue answers intercepted; no deploy, restart or setting). Upstream's round row icons read live on 28096:
+  `rgba(255, 255, 255, 0.7)` dark, `rgba(0, 0, 0, 0.87)` light, equal to the row text and the meta line's text, as inherited. Not run:
+  a live download, a physical TV, a deployment, Codex review (the user decides when).
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
