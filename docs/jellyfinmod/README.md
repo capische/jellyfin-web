@@ -508,7 +508,9 @@ All fixable without changing a language.
   plugin rows, but a missing episode is also a Jellyfin item, made by Jellyfin from a placeholder file the plugin writes.*
 - **2026-10-15** — **Missing media is shown as Jellyfin items through media-stub placeholders** (P1.FU24, user: "Go and
   implement isPlaceHolder", then "go with your recommendations"; the requirement, 2026-10-13: "Media availability should not
-  affect watched, fav, info and other actions. EVERYWHERE."). Per TV library and off by default, the plugin writes a marked
+  affect watched, fav, info and other actions. EVERYWHERE."). On by default for every TV library ("Show missing episodes - should be enabled by default.
+  That's the point.", after the first look), turned off per library by an administrator, the plugin writes, a few series at a
+  time, a marked
   `.disc` media stub where the import would put a missing aired episode's file; Jellyfin 12 makes it an episode with
   `IsPlaceHolder`, full metadata, ✓ and ♥ for every client, and a plugin MVC filter keeps stock apps from offering or playing
   it (Next Up, Latest, PlaybackInfo, Download, streams, playback reports). It reverses this log's 2026-09-04 "not Jellyfin

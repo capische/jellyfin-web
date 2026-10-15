@@ -284,8 +284,10 @@ No line when neither knows of an episode. A partly downloaded season shows Jelly
 cards have no `.cardFooter`), so it goes and comes back with the card when upstream redraws it; nothing else on the card moves.
 Only the native series page's Seasons row has it: season pages and library grids are unchanged.
 
-**Placeholder episodes (P1.FU24, 2026-10-15, built, not accepted).** Where an administrator turns on *Show missing episodes as
-Jellyfin items* for a TV library (Settings, *Missing Episodes*), a missing aired episode is a real Jellyfin episode with
+**Placeholder episodes (P1.FU24, 2026-10-15, built, not accepted).** In every TV library unless an administrator turns off *Show
+missing episodes as Jellyfin items* for it (Settings, *Missing Episodes*: per library its state, On, Off (turned off by you) or
+Read-only, the placeholder count, the switch, Preview and Remove Placeholders; turning it off asks whether to remove the
+existing placeholders now; user, 2026-10-15: "should be enabled by default. That's the point."), a missing aired episode is a real Jellyfin episode with
 `IsPlaceHolder` (a media stub). It is drawn by upstream as any episode (its still, metadata, ✓ ♥ ⓘ ⋯, Favourites, filters,
 counts) and the mod adds only what says it has no file: its row on a season page gets the row Not Downloaded mark at its end
 before upstream's buttons (white; an administrator's Get a Release button, P1.FU22), and no Play on its image and no "Ends at";
