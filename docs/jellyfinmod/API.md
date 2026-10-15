@@ -511,6 +511,85 @@ is in 10/8, 172.16/12 or 192.168/16, else `null`. A Prowlarr that fails answers 
 `PATCH /JellyfinMod/Entries/{id}` also accepts `{"qualityProfileId": "<id>"}`. An explicit `null`
 restores inheritance. Episodes inherit their series profile and reject the field.
 
+#### Quality vocabulary and presets (P4.FU9, 2026-10-15)
+
+A quality id is `<source>-<resolution>`. Sources, best first: `remux` (an untouched disc copy), `bluray` (a Blu-ray
+encode), `webdl` (a streaming service's file), `webrip` (a capture of a stream), `hdtv` (broadcast), `dvd`. The
+vocabulary (`GET /JellyfinMod/Settings/Acquisition`, `qualities`) is every combination below; `cam` and screener copies
+are never acquired.
+
+| Resolution | remux | bluray | webdl | webrip | hdtv | dvd |
+| --- | --- | --- | --- | --- | --- | --- |
+| `2160p` (4K) | yes | yes | yes | yes | yes | |
+| `1440p` (2K, new in P4.FU9) | | yes | yes | yes | | |
+| `1080p` | yes | yes | yes | yes | yes | |
+| `720p` | | yes | yes | yes | yes | |
+| `576p` (SD) | | yes | yes | yes | yes | yes |
+| `480p` (SD) | | yes | yes | yes | yes | yes |
+
+The parser reads `1440p` from a release title (before P4.FU9 such a release had no resolution and was rejected as
+`quality_unknown`). A held 1440p file ranks with the 1080p tier in retention and import, as Jellyfin's own size
+classes put a 2560x1440 picture.
+
+A profile lists its qualities best first and scores each allowed one `(count - index) * 100`; proper or repack,
+freeleech and seeders add at most 45 points, so they never lift a release above a better allowed quality. The picker
+lists eligible releases by score and automation takes the first eligible one, so a profile that lists 4K, then 2K, then
+1080p, then 720p takes 4K when an acceptable 4K copy is offered and **falls back** down its list when none is (none
+offered, or each one rejected, for example `size_above_maximum`). No other mechanism is involved.
+
+Profiles add `presetId`: the preset a profile was created from (its id is the preset's), else null.
+
+`GET /JellyfinMod/Settings/QualityProfiles/Presets` lists the presets shipped with the plugin (data in the plugin's
+`Assets/quality-presets.json`), in the order the dialog's *Start from* list shows them:
+
+```json
+[{"id":"8fc450faec3d4d42962ea7835ed239e7","name":"4K",
+  "description":"Best picture, big files. Falls back to lower quality if 4K is not available.",
+  "isDefaultPreset":true,"qualities":["remux-2160p","bluray-2160p","webdl-2160p","webrip-2160p","hdtv-2160p","bluray-1440p",
+  "webdl-1440p","webrip-1440p","remux-1080p","bluray-1080p","webdl-1080p","webrip-1080p","hdtv-1080p","bluray-720p","webdl-720p",
+  "webrip-720p","hdtv-720p"],"minimumBytesPerHour":null,"maximumBytesPerHour":20000000000,"cutoff":"remux-2160p",
+  "upgradeAllowed":false,"upgradeMode":"replace","minimumSeeders":2,"added":true}]
+```
+
+`added` is true when a profile with the preset's id exists (it may have been renamed or edited since). A preset becomes
+an ordinary profile whose id is the preset's id: it can be edited and deleted like any other, and the default one can be
+deleted only after another profile is made the default (`409 profile_is_default`). Every preset tries its resolutions
+best first, each in the source order remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD; sets minimum seeders 2 (automation
+only), no minimum size and no minimum score; and leaves upgrades off with the first quality as the cutoff, so turning
+upgrades on needs nothing else:
+
+| Preset | Description | Qualities | Size cap per runtime hour |
+| --- | --- | --- | --- |
+| **4K** (default) | Best picture, big files. Falls back to lower quality if 4K is not available. | 2160p, 1440p, 1080p, 720p (17) | 20 GB (Balanced) |
+| 2K | 1440p, a step below 4K at about half the size. Falls back to lower quality. | 1440p, 1080p, 720p (12) | 10 GB (Balanced) |
+| 1080p | Full HD, the sensible middle. Falls back to 720p. | 1080p, 720p (9) | 6 GB (Balanced) |
+| 720p | Small files for small screens or slow links. | 720p (4) | 1 GB (Small) |
+| Any Quality | Best available of anything. Good for hard-to-find titles. | the whole vocabulary (27) | none (Large) |
+| SD | 480p / 576p only. DVD rips and old TV. | 576p, 480p (10) | 0.5 GB (Small) |
+
+The size figures are the redesign's tiers for the best resolution (GB per hour: Small 4K 8, 2K 4, 1080p 2, 720p 1,
+SD 0.5; Balanced 20, 10, 6, 3, 1.5; Large no limit). The 4K cap lets a 4K WEB-DL or encode through (a two-hour film up
+to 40 GB) and refuses a typical 4K remux (50-90 GB); a cap is one limit for the whole profile, so it never refuses a
+smaller lower-resolution copy.
+
+`POST /JellyfinMod/Settings/QualityProfiles/Presets` (administrators, no body) adds every preset that is not a profile
+yet and never changes, renames or deletes an existing profile. A preset whose name another profile already has is left
+out. With no default profile set, the default preset becomes the default. It answers 200:
+
+```json
+{"added":[{"id":"…","name":"2K","added":true,"…":"…"}],
+ "skipped":[{"id":"698e6ea90b644c1f824a2dad08e315e8","name":"720p","reason":"name_in_use"}],
+ "defaultQualityProfileId":null,"message":"Added 5 preset profiles. 1 left out because another profile has the same name."}
+```
+
+`reason` is `already_added` or `name_in_use`; `defaultQualityProfileId` is the default it set, else null.
+
+**Fresh install.** At start, a database with no quality profile whose acquisition settings were never saved (no
+settings row, or revision 1 with no default) gets every preset, and the 4K preset becomes the default profile (settings
+revision + 1); grabbing and automation stay off. Any other database is left exactly as it is, so an install that
+already has profiles keeps them, names, order, limits and default included; its administrator adds the presets with
+`POST …/Presets` (*Add Preset Profiles* in the Quality Profiles section). No migration: presets are ordinary profile rows.
+
 ### Search
 
 `GET /JellyfinMod/Releases?entryId=&episodeId=&profileId=` never submits anything:

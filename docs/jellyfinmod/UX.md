@@ -1388,6 +1388,27 @@ Split by audience, and the split keeps the fork small:
 Quality profile editing deserves a real UI and still belongs on the plugin's config page. It is
 a once-a-quarter admin task, not a browsing surface.
 
+**Quality Profiles in the settings area (P4.FU9, approved redesign, user 2026-10-15: "Love new design. Go ahead and
+implement it.").** The section keeps its card, its blue *Add Profile* and its row icons (Make Default, Edit, Remove).
+Each row says in one line what the profile does ("4K first, then down to 720p · up to 20 GB per hour · no upgrades"),
+a profile made from a preset carries a grey *Preset* chip and the default the blue *Default* chip; a grey *Add Preset
+Profiles* appears beside *Add Profile* only while a preset is missing (and the empty state names it); a footer line says
+a title uses the default unless it has its own, chosen in the release picker ("Title default"). The dialog is simple by
+default: *Start from* (the six presets as a radio list, each with its one-line description), *Name* (prefilled with the
+preset's), *Best quality I want* (4K, 2K, 1080p, 720p, SD), *Fall back to lower quality … down to [floor]* (on),
+*File size* Small / Balanced / Large with the tier's GB per hour and "a 2-hour film at Balanced is about …", *Upgrade
+later when something better appears* (off, "Needs Automation on") and a live sentence of what the profile will do.
+*Advanced* (collapsed) holds the whole record: a source × resolution checkbox matrix, the order tried with Move Up /
+Move Down / Remove and an "Order tried: 1 …" line, the cutoff, the upgrade mode, minimum score and seeders, and the size
+limits in GB per hour. The simple controls write the record (best tier and every lower tier to the floor, each in the
+source order Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD; the size as a maximum; cutoff the first quality); an Advanced
+edit marks it *custom values* and no simple button stays pressed until a simple choice is made again. The server's
+rules are checked live (a name, at least one quality, an allowed cutoff, a cutoff for upgrades, smallest below largest)
+and Save waits until they pass. **Differences from the mock, decided in the build:** a size choice sets only a maximum
+(Balanced reads "up to 20 GB/h", not "8–20 GB/h"), because one minimum for the whole profile would refuse every smaller
+lower-resolution copy it falls back to; and the size and best-quality buttons say nothing pressed while the profile is
+custom. The Dashboard plugin page keeps its own profile editor unchanged.
+
 ### 12.1 Words and buttons in the settings area and on the Dashboard page (user, 2026-10-07/08)
 
 - **Title Case** for button labels; page, section, group, card and dialog titles; rail item titles; menu items (the
