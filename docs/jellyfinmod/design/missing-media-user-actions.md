@@ -1,8 +1,9 @@
 # Missing media behaves like available media (P1.FU24–28, planned)
 
-**Status:** P1.FU24, P1.FU25 and P1.FU26 built (not accepted), 2026-10-15; P1.FU27–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
+**Status:** P1.FU24, P1.FU25, P1.FU26 and P1.FU28 built (not accepted), 2026-10-15; P1.FU27 planned. Missed Phase 1 requirement (user, 2026-10-13).
 Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
-recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24 built in section 12.
+recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24, FU25, FU26 and FU28 built in
+sections 12 to 15.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
 replaces a placeholder with the real file), Phase 3/10 (retention never reclaims a placeholder and writes one back after a
 reclaim), Phase 4 (Get a Release and the download states on placeholder items) and Phase 6/7 (Play hidden, the marks, the
@@ -187,9 +188,9 @@ the slot needs a second internal Next Up call, which the slice does only if ques
 | Next Up | offers the stub (X1) | **filter** (X2). No item property excludes an item from Next Up alone: only virtual (breaks counts, Favourites, visibility), parental rating or blocked tags (hide it everywhere for that user), or alternate version (hides it everywhere) | yes |
 | Continue Watching / Resume | only items with a resume position; a stub never gets one when playback is blocked | acceptable | code |
 | Latest | lists stubs (T6) | **item property** `DateCreated` = air date (T9); arrivals are new items | yes |
-| Auto-play of the next episode after a real one | the app queues the stub; upstream web refuses it (`IsPlaceHolder`); other apps call PlaybackInfo and get `NotAllowed`, playback stops with an error | **filter** (stops cleanly); skipping to the following real episode would need the app's queue to drop stubs: a filter on `/Shows/{id}/Episodes` when the app asks `IsMissing=false` (how upstream web builds play queues) is possible, not run, client-dependent | partly |
-| Play All / Shuffle / Instant Mix / queue a season | same as auto-play: stops at the stub with an error | same | no |
-| Series **Play** button (web asks `/Shows/NextUp?seriesId=` for where to start) | starts at the stub (refused) | with the filter Next Up is empty and the web starts at episode 1: needs the "next real episode" choice of question 2 to start sensibly | code |
+| Auto-play of the next episode after a real one | the app queues the stub; upstream web refuses it (`IsPlaceHolder`); other apps call PlaybackInfo and get `NotAllowed`, playback stops with an error | **FU28:** the mod's web drops stubs from every queue it builds; the filter drops them from `/Shows/{id}/Episodes` queues asked with `startItemId` (upstream web, Android TV); other native queues stop at the stub (section 15) | yes (web, HTTP) |
+| Play All / Shuffle / Instant Mix / queue a season | same as auto-play: stops at the stub with an error | **FU28:** fixed in the mod's web; Instant Mix is audio only in Jellyfin 12 (no stub can be in it); native apps' season and library queues not reachable (section 15) | yes (web) |
+| Series **Play** button (web asks `/Shows/NextUp?seriesId=` for where to start) | starts at the stub (refused) | **FU28:** Next Up answers the next real episode, so the web (and Findroid, Android TV, which ask Next Up too) start there | yes |
 | Offline download / sync (iOS, Findroid) | downloads the 0-byte stub | **filter** (404, `CanDownload` false) | Download yes, DTO no |
 | Played by playing to the end | a stop with no position or on an item with no runtime marks it played (code) | **item property** runtime + **filter** on playback reports + PlaybackInfo blocked | code |
 | Media info, file size, versions | a `disc` source with no streams, size 0 | acceptable (shows as a placeholder) | yes |
@@ -246,7 +247,7 @@ migration) can be revived for that case only.
 | **P1.FU25** Import and retention | Import swaps stub → file in one step; retention ignores stubs and writes one back after a reclaim; suites prove carry-over and that the carried date is not a fresh completion | plugin M | M | none (behaviour); live: a missing episode marked watched, then downloaded |
 | **P1.FU26** File-less titles | Series folders and movie stubs in the writable root; Browse stops merging those entries as file-less rows; the mod's file-less title page sends to Jellyfin's page | plugin M, web S | M | a file-less movie and series in the Movies and Shows grids, mod web and a stock client |
 | **P1.FU27** Backfill and the fallback surfaces | One batched run that writes stubs for every existing entry (measured on 28096's 105 shows); P1.FU11/14/15 surfaces become fallback-only | plugin S, web S | M | the whole catalogue on 28096 |
-| **P1.FU28** Play queues skip stubs (only if question 2 asks for it) | Filter on `/Shows/{id}/Episodes` play-queue requests (`IsMissing=false`) and the series Play start point, so auto-play and Play All skip to the next real episode | plugin S | S | auto-play across a missing episode in stock `/web` and the iOS app |
+| **P1.FU28** Next Up's next real episode; play queues skip stubs | Next Up replaces a stub with the series' next real episode; Resume and `startItemId` episode queues leave stubs out; the mod's web leaves them out of every queue it builds (section 15) | plugin S, web S | S | none (the user verifies in bulk): Next Up and the series Play across a missing episode, Play All on a season and a movie library |
 
 Order: FU24 → FU25 → FU26 → FU27 (→ FU28). FU25 ships with FU24 so nothing marked is lost once stubs exist. The filter
 belongs to FU24 because stock apps see stubs from the first one written. **Migration:** none planned.
@@ -294,7 +295,7 @@ belongs to FU24 because stock apps see stubs from the first one written. **Migra
 | FU25 | `feat(import,p1.fu25)`: `Services/Import/ImportService.cs`, `ImportPlanning.cs`; `feat(retention,p1.fu25)`: `Services/RetentionExecutor.cs`; tests in Phase 5 and Phase 10 suites | `docs(plan,p1.fu25)` |
 | FU26 | `feat(placeholders,p1.fu26)`: the writer for titles, `Api/BrowseController.cs` | `feat(browse,p1.fu26)`: `components/EntryDetails.tsx`, `routes/LibraryGridPage.tsx`; test; docs |
 | FU27 | `feat(placeholders,p1.fu27)`: backfill task | `refactor(details,p1.fu27)`: `components/MissingChildren.tsx`; docs |
-| FU28 | `feat(placeholders,p1.fu28)`: queue filtering in `Api/Filters/PlaceholderFilter.cs` | — |
+| FU28 | `feat(queue,p1.fu28)`: Next Up, Resume and episode-queue shaping in `Api/Filters/PlaceholderFilter.cs` | `feat(queue,p1.fu28)`: `integration/playQueue.ts`, `components/playback/playbackmanager.js`; `test(queue,p1.fu28)`: `placeholder-queues.mjs`; `docs(plan,p1.fu28)` |
 
 Phase-crossing hooks: `ReconciliationService.cs` (Phase 2/10), `ImportService.cs`/`ImportPlanning.cs` (Phase 5),
 `RetentionExecutor.cs` (Phase 3/10), `cardGetRelease.tsx`/`downloadMarks.tsx` (Phase 4 web). No migration to order.
@@ -439,3 +440,54 @@ without ambiguity: live, *The Matrix* and *The Matrix Reloaded* matched with ful
 bound to the entry by reconciliation as for an empty series folder, while a placeholder movie is never bound and is found by TMDB
 id; the mod's file-less page is kept for titles with no placeholder yet (the minute until Jellyfin scans it, unreleased movies, a
 read-only library) and otherwise opens the Jellyfin page; Settings *Missing Episodes* keeps its name and lists movie libraries.
+
+## 15. What P1.FU28 built (2026-10-15, built, not accepted)
+
+Plugin (`feat/placeholder-queues` from `feat/placeholder-titles` `1ee91ea`): `Api/Filters/PlaceholderFilter.cs` only. Web
+(`feat/placeholder-queues` from `9a9e876b08`): `integration/playQueue.ts` and a two-line hook in upstream's
+`playbackmanager.js` (the patch-surface table in [PHASE7.md](../PHASE7.md)).
+
+**Next Up** (`ShapeNextUp`, as section 11, in process, no second HTTP call): each stub in the page is replaced in its own slot by
+the first episode of the same series (by series presentation key, as Next Up itself) after it that is neither a placeholder nor
+virtual and has the stub's played state (unplayed; played for a rewatching slot), season 0 left out; the DTO is the stock one
+(`IDtoService.GetBaseItemDto`) with the request's own fields, image and user-data options. Dropped instead (total lowered by one)
+when no such episode follows, when it is already in the page, or when it has a position and the request said
+`enableResumable=false`. The series filter, parent library and date cutoff chose the series; the replacement comes from it.
+**Difference from section 11:** a user-scoped `InternalItemsQuery(user)` by series key applies parental rating and tags but
+**not library access**, so the replacement is also kept only when `IsVisibleStandalone(user)` (library access included). Found
+live: Jellyfin 12's own `/Shows/NextUp?seriesId=` answers the next episode of a series in a library the user cannot open (a
+stock behaviour for real episodes, not the filter's; left as it is, out of this slice's scope). Specials interleaved by
+*Display specials within seasons* are not considered for the replacement (rare; the slot then shows the next numbered episode).
+
+**Play queues.** Studied how clients build queues (sources on GitHub, 2026-10-15):
+
+| Client | Season / series list (browse) | Play queue |
+| --- | --- | --- |
+| upstream web (this fork) | `/Shows/{id}/Episodes?seasonId=…` | `/Shows/{id}/Episodes?isMissing=false&startItemId=…` (episode, series), `…&seasonId=…` (season), `/Items?ParentId=…&Filters=IsNotFolder&MediaTypes=Audio,Video` (library), `/Items?Ids=…` (Play from here), Next Up for the series start |
+| Swiftfin | `/Shows/{id}/Episodes?isMissing=false` when *show missing episodes* is off (`EpisodeLibrary.swift`) | next episode by `/Shows/{id}/Episodes?adjacentTo=…&limit=3` (`EpisodeMediaPlayerQueue.swift`) |
+| Findroid | `/Shows/{id}/Episodes?seasonId=…` | the same request, then its own `!missing` filter (`PlaylistManager.kt`); Next Up for the series start |
+| Jellyfin for Android TV | — | `/Shows/{id}/Episodes?isMissing=false&startItemId=…` (episode), `isMissing=false` (series, season, folder) (`SdkPlaybackHelper.kt`); Next Up for the series start |
+| Jellyfin for Kodi | synced library | Kodi's own playlist from its database; a stub plays as Kodi's media-stub message |
+
+So `isMissing=false` and plain season requests are browse requests too (Swiftfin, Findroid), and filtering them would hide
+placeholders from season lists; `adjacentTo` also drives Android TV's Previous button. Only **`startItemId`** is sent by queue
+builders alone. What is fixed where:
+
+| Surface | Fixed | How |
+| --- | --- | --- |
+| Next Up (Home row, the Next Up page, apps' Next Up) and the series **Play** start in upstream web, Findroid and Android TV | **server** | Next Up's next real episode |
+| Continue Watching / Resume | **server** | a stub with a position (carried over from its file) left out |
+| Episode Play and "play next" after it in upstream web and Android TV | **server** and web | `/Shows/{id}/Episodes?startItemId=` leaves out the stubs after the start item (the start item stays: a client that asks to start on a stub still gets `NotAllowed`) |
+| The mod's web: Play All, Shuffle, Play from here (a real or a placeholder row), a season's or series' Play and Shuffle, a library's Play All and Shuffle (placeholder movies, FU26), Instant Mix, Add to queue and Play next | **web** | `skipPlaceholders` in upstream's one queue step; the start moves to the first playable item at or after the one asked for; a queue with nothing playable is handed back unchanged so upstream shows its placeholder message. The Jellyfin iOS and Android apps show this same web |
+| Instant Mix | nothing to fix | audio only in Jellyfin 12 (`MusicManager`): no stub can be in one |
+| Native apps' season, series and library queues and their auto-play (Swiftfin, Findroid, Android TV's season and series play, Infuse, Kodi's own playlists), and server-driven play-next for remote control and casting | **not fixed** | the request cannot be told from a browse request (or is not HTTP); the app reaches the stub, PlaybackInfo answers `NotAllowed` and playback stops there with the app's error; nothing is downloaded, streamed or marked played |
+
+Checks: plugin build; Phase 1 smoke and Phase 2 on macOS pass (the registrator builds the filter with its new services). Web
+typecheck, eslint on the changed files, the patch-surface check and the production build. Live on local environment charlie
+(Jellyfin 12.0.0, lease held by the implementing session, reset to the baseline afterwards; Shows pointed at a writable copy of
+Peep Show with small `.webm` files for S01E01, S01E02, S01E05 and S02E02 and the plugin's placeholders for the rest, Fawlty
+Towers added from TMDb as a file-less series with S01E04 swapped for a `.webm`, The Matrix Reloaded as a placeholder movie and a
+`.webm` Big Buck Bunny in a writable Movies folder): new runner `placeholder-queues.mjs` (plain HTTP as a native app, then the
+browser observing the web's own `PlaybackInfo` requests and the start report's `NowPlayingQueue`; nothing intercepted); results
+in [PLAN.md](../PLAN.md) P1.FU28.
+

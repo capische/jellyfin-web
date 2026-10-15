@@ -979,7 +979,9 @@ whatever the switch says, and lets an answer through unchanged if it fails):
 
 | Stock endpoint | For a placeholder |
 | --- | --- |
-| `GET /Shows/NextUp` | left out, `TotalRecordCount` lowered by as many (a series whose next episode is a placeholder drops out; P1.FU28 plans the next real episode instead) |
+| `GET /Shows/NextUp` | its slot holds the series' next real episode after the gap (P1.FU28): the first episode after the placeholder that is neither a placeholder nor virtual, with the placeholder's played state, specials left out, built as the stock answer with the request's `fields`, `enableImages`, `imageTypeLimit`, `enableImageTypes` and `enableUserData`, and only when the user may open it (library access, parental rating, tags); `enableResumable=false` leaves out a replacement with a position. With no such episode, or one already in the page, the slot is left out and `TotalRecordCount` lowered by one |
+| `GET /UserItems/Resume` (and `/Users/{userId}/Items/Resume`) | left out, `TotalRecordCount` lowered by as many (a placeholder can carry the position of the file it stands in for) |
+| `GET /Shows/{id}/Episodes` with `startItemId` | the placeholders after the start item are left out and `TotalRecordCount` lowered (P1.FU28): `startItemId` is what play-queue builders send (upstream web, Jellyfin for Android TV); the start item itself stays. Without `startItemId` (every season and series listing, `isMissing=false` included, which Swiftfin's season list sends) nothing changes |
 | `GET /Items/Latest` (`UserLibrary.GetLatestMedia`) | left out |
 | `GET/POST /Items/{id}/PlaybackInfo` | `200` with `ErrorCode: NotAllowed` and no media source |
 | `GET /Items/{id}/Download`, `/Videos/{id}/stream*`, the HLS master, variant and segment routes | `404` |
