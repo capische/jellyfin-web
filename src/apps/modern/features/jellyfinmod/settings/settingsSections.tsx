@@ -1,6 +1,4 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import BuildIcon from '@mui/icons-material/Build';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -11,7 +9,6 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -21,8 +18,9 @@ import {
     blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, partialSave, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
 } from './settingsApi';
+import { profileSummary, QualityProfileDialog, usePresets } from './qualityProfiles';
 import {
-    type Draft, FieldForm, type FieldSpec, FOCUSABLE_SELECT, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
+    type Draft, FieldForm, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
     ScrollList, type TestState, TestIcon, useConfirm, WhenLine
 } from './settingsWidgets';
 
@@ -1182,139 +1180,7 @@ export const IndexersSection: FC<SectionProps> = props => {
     );
 };
 
-// ---- Quality profiles, edited in a dialog ----
-
-const PROFILE_KEYS = ['name', 'minimumBytesPerHour', 'maximumBytesPerHour', 'cutoff', 'upgradeAllowed', 'upgradeMode', 'minimumAutoScore', 'minimumSeeders'];
-
-/**
- * One allowed quality in a profile's ranked list, with Move Up, Move Down and Remove as icons (user, 2026-10-08). A move
- * that has nowhere to go is refused, not disabled, and the moved quality's button keeps the focus, so a remote can press it
- * again: the row is re-rendered in its new place and the browser would otherwise drop the focus with the moved element.
- */
-const QualityRow: FC<{ id: string; index: number; chosen: string[]; set: (key: string, value: unknown) => void; toggle: (id: string) => void }> = ({
-    id, index, chosen, set, toggle
-}) => {
-    const move = useCallback((offset: number, action: string) => {
-        const target = index + offset;
-        if (target < 0 || target >= chosen.length) return;
-        const next = chosen.slice();
-        next.splice(index, 1);
-        next.splice(target, 0, id);
-        set('qualities', next);
-        window.setTimeout(() => {
-            const button = [...document.querySelectorAll<HTMLElement>(`.jfmod-qrow [data-row-action="${action}"]`)].find(el => el.dataset.quality === id);
-            if (button && document.activeElement !== button) button.focus();
-        }, 0);
-    }, [set, chosen, index, id]);
-    const moveUp = useCallback(() => move(-1, 'up'), [move]);
-    const moveDown = useCallback(() => move(1, 'down'), [move]);
-    const remove = useCallback(() => toggle(id), [toggle, id]);
-    return (
-        <li className='jfmod-qrow'>
-            <span className='jfmod-qrank'>{index + 1}</span><span className='jfmod-qname'>{id}</span>
-            <span className='jfmod-rowactions'>
-                <IconAction label={`Move ${id} Up`} refused={index === 0} onClick={moveUp} data={{ 'row-action': 'up', quality: id }}><ArrowUpwardIcon /></IconAction>
-                <IconAction label={`Move ${id} Down`} refused={index === chosen.length - 1} onClick={moveDown} data={{ 'row-action': 'down', quality: id }}>
-                    <ArrowDownwardIcon />
-                </IconAction>
-                <IconAction label={`Remove ${id}`} red onClick={remove} data={{ 'row-action': 'remove', quality: id }}><DeleteIcon /></IconAction>
-            </span>
-        </li>
-    );
-};
-
-const ProfileDialog: FC<{ api: Api; profile: any | null; qualities: { id: string }[]; onClose: (saved: boolean, close?: boolean) => void }> = ({ api, profile: initial, qualities, onClose }) => {
-    const [profile, setProfile] = useState(initial);
-    // Whether this editor is still open: a save that completes after it was dismissed only refreshes the list, and never
-    // closes an editor opened since, with that editor's typing (Pi review 5, P2 2).
-    const open = useRef(true);
-    useEffect(() => {
-        open.current = true;
-        return () => {
-            open.current = false;
-        };
-    }, []);
-    const [draft, set, replace] = useDraft(profile, { qualities: [], upgradeMode: 'replace', upgradeAllowed: false });
-    const [notice, setNotice] = useState<NoticeState | null>(null);
-    // What is on screen now, to tell after a save whether anything was edited while it was under way.
-    const shown = useRef(draft);
-    shown.current = draft;
-    const reloadRecord = useCallback(() => {
-        request<any[]>(api, 'GET', 'Settings/QualityProfiles').then(list => {
-            const fresh = list.find(item => item.id === profile?.id);
-            if (!fresh) return;
-            setProfile(fresh);
-            replace(fresh);
-            setNotice(null);
-        }).catch(error => setNotice({ kind: 'err', text: problemText(error) }));
-    }, [api, profile, replace]);
-    const chosen = useMemo(() => (draft.qualities as string[] | undefined) ?? [], [draft.qualities]);
-    const toggle = useCallback((id: string) => set('qualities', chosen.includes(id) ? chosen.filter(value => value !== id) : [...chosen, id]), [set, chosen]);
-    // One save at a time: a second press while one is under way does nothing (final web review).
-    const saving = useRef(false);
-    const [busy, setBusy] = useState(false);
-    const save = useCallback(async () => {
-        if (saving.current) return;
-        saving.current = true;
-        setBusy(true);
-        try {
-            const body = { ...pick(draft, PROFILE_KEYS), qualities: chosen };
-            const saved = profile ?
-                await request<any>(api, 'PATCH', `Settings/QualityProfiles/${profile.id}`, { ...body, revision: draft.revision ?? profile.revision }) :
-                await request<any>(api, 'POST', 'Settings/QualityProfiles', body);
-            if (!open.current) {
-                onClose(true, false);
-                return;
-            }
-            // Edited while it was saving: the editor stays open on the saved record with those edits (final web review 2, P2 7).
-            if (shown.current !== draft) {
-                setProfile(saved);
-                set('revision', saved?.revision);
-                setNotice({ kind: 'warn', text: 'Saved. What you changed while it was saving is not saved yet: save again to keep it.' });
-                return;
-            }
-            onClose(true);
-        } catch (error) {
-            setNotice(conflictNotice(error, reloadRecord));
-        } finally {
-            saving.current = false;
-            setBusy(false);
-        }
-    }, [api, profile, draft, chosen, onClose, reloadRecord, set]);
-    const cancel = useCallback(() => onClose(false), [onClose]);
-    const addQuality = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => toggle(event.target.value), [toggle]);
-    return (
-        <Dialog open onClose={cancel} fullWidth maxWidth='sm' className='jfmod-settingsDialog'>
-            <DialogTitle>{profile ? `Edit ${profile.name}` : 'Add Quality Profile'}</DialogTitle>
-            <DialogContent>
-                <Notice notice={notice} />
-                <FieldForm fields={[{ key: 'name', label: 'Name', type: 'text' }]} draft={draft} onChange={set} />
-                <h3 className='jfmod-grouptitle'>Allowed Qualities, Best First</h3>
-                <ol className='jfmod-qlist'>
-                    {chosen.map((id, index) => (
-                        <QualityRow key={id} id={id} index={index} chosen={chosen} set={set} toggle={toggle} />
-                    ))}
-                </ol>
-                <TextField select fullWidth margin='dense' label='Add a quality' value='' onChange={addQuality} slotProps={FOCUSABLE_SELECT}>
-                    {qualities.filter(quality => !chosen.includes(quality.id)).map(quality => <MenuItem key={quality.id} value={quality.id}>{quality.id}</MenuItem>)}
-                </TextField>
-                <FieldForm fields={[
-                    { key: 'minimumBytesPerHour', label: 'Minimum bytes per runtime hour', type: 'int', optional: true },
-                    { key: 'maximumBytesPerHour', label: 'Maximum bytes per runtime hour', type: 'int', optional: true },
-                    { key: 'cutoff', label: 'Upgrade until', type: 'select', options: chosen.map(id => ({ value: id, label: id })), optional: true },
-                    { key: 'upgradeAllowed', label: 'Upgrade automatically until the cutoff', type: 'bool' },
-                    { key: 'upgradeMode', label: 'An upgrade', type: 'select', options: [{ value: 'replace', label: 'replaces the held copy' }, { value: 'add', label: 'is added as another version' }] },
-                    { key: 'minimumAutoScore', label: 'Minimum score for automatic grabs', type: 'int', optional: true },
-                    { key: 'minimumSeeders', label: 'Minimum seeders', type: 'int', optional: true }
-                ]} draft={draft} onChange={set} />
-            </DialogContent>
-            <DialogActions>
-                <Button variant='contained' color='inherit' onClick={cancel}>Cancel</Button>
-                <Button variant='contained' disabled={busy} onClick={save}>Save</Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
+// ---- Quality profiles, edited in a dialog (qualityProfiles.tsx, P4.FU9) ----
 
 interface ProfileRowProps {
     api: Api;
@@ -1342,9 +1208,12 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
         <div className='jfmod-brow' data-profile={profile.id}>
             <div className='jfmod-brow-main'>
                 <strong>{profile.name}</strong>
-                <span className='jfmod-sub'>{(profile.qualities as string[]).join(', ')}</span>
+                <span className='jfmod-sub' data-qp='row-summary'>{profileSummary(profile)}</span>
             </div>
-            {profile.isDefault ? <span className='jfmod-chip jfmod-chip-primary'>Default</span> : <span />}
+            <span>
+                {profile.isDefault && <span className='jfmod-chip jfmod-chip-primary'>Default</span>}
+                {profile.presetId && <span className='jfmod-chip' data-qp='preset-chip'>Preset</span>}
+            </span>
             <span className='jfmod-rowactions'>
                 {!profile.isDefault && (
                     <IconAction label={`Make ${profile.name} Default`} disabled={busy} refused={!canMakeDefault} onClick={makeDefault} data={{ 'row-action': 'default' }}>
@@ -1363,12 +1232,19 @@ export const ProfilesSection: FC<SectionProps> = props => {
     const section = useSectionState(reload);
     const [confirmDialog, ask] = useConfirm();
     const [editing, setEditing] = useState<any | null | undefined>(undefined);
+    const presets = usePresets(api, data.profiles);
+    const presetMissing = presets.some(preset => !preset.added);
     const { run } = section;
     const makeDefault = useCallback((id: string) => run(() => request(api, 'PATCH', 'Settings/Acquisition', {
         enabled: data.acquisition.enabled, downloadClientId: data.acquisition.downloadClientId ?? null, defaultQualityProfileId: id,
         revision: data.acquisition.revision
     }), 'Default changed.'), [run, api, data.acquisition]);
     const add = useCallback(() => setEditing(null), []);
+    // The shipped presets (P4.FU9): adds only the ones that are not profiles yet and never changes an existing profile.
+    const addPresets = useCallback(() => run(async () => {
+        const result = await request<{ message: string }>(api, 'POST', 'Settings/QualityProfiles/Presets');
+        return { jfmodNotice: { kind: 'ok', text: result.message } };
+    }), [run, api]);
     const closeDialog = useCallback((saved: boolean, close = true) => {
         if (close) setEditing(undefined);
         if (saved) void reload();
@@ -1376,17 +1252,28 @@ export const ProfilesSection: FC<SectionProps> = props => {
     return (
         <SectionFrame id='profiles' eyebrow={props.eyebrow} title='Quality Profiles' state={summarise('profiles', data)} notice={section.notice}
             next={props.next} onGo={props.onGo}
-            actions={<Button variant='contained' onClick={add}>Add Profile</Button>}
+            actions={<>
+                <Button variant='contained' onClick={add}>Add Profile</Button>
+                {presetMissing && (
+                    <Button variant='contained' color='inherit' disabled={section.busy} onClick={addPresets} data-test='add-presets'>Add Preset Profiles</Button>
+                )}
+            </>}
         >
             <div className='jfmod-blist'>
-                {data.profiles.length === 0 && <div className='jfmod-empty'>No profile yet.</div>}
+                {data.profiles.length === 0 && (
+                    <div className='jfmod-empty'>
+                        No profile yet. <b>Add Preset Profiles</b> gives you {presets.map(preset => preset.name).join(', ') || 'ready-made profiles'}, ready to use
+                        and editable; <b>Add Profile</b> starts one from scratch. The first profile becomes the default.
+                    </div>
+                )}
                 {data.profiles.map(profile => (
                     <ProfileRow key={profile.id} api={api} profile={profile} busy={section.busy} canMakeDefault={!!data.acquisition} run={run} ask={ask}
                         onMakeDefault={makeDefault} onEdit={setEditing} />
                 ))}
             </div>
+            <p className='jfmod-sub jfmod-qp-foot'>A title uses the default profile unless it has its own, chosen in the release picker (&ldquo;Title default&rdquo;).</p>
             {editing !== undefined && (
-                <ProfileDialog api={api} profile={editing} qualities={data.acquisition?.qualities ?? []}
+                <QualityProfileDialog api={api} profile={editing} qualities={data.acquisition?.qualities ?? []} presets={presets}
                     onClose={closeDialog} />
             )}
             {confirmDialog}
