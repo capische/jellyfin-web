@@ -152,7 +152,9 @@ Return native DTOs for native items plus plugin metadata; file-less entries rema
 discriminated representation. Never insert synthetic `BaseItem`s into the server database or
 pass plugin IDs into stock library APIs. *(2026-10-15, P1.FU24: a missing episode may now also be a Jellyfin item that Jellyfin
 itself makes from a placeholder file the plugin writes, on by default and turned off per library; nothing is inserted into Jellyfin's
-database. User: "Go and implement isPlaceHolder". See [design/missing-media-user-actions.md](design/missing-media-user-actions.md).)* Keep CRUD list and unified browse semantics distinct.
+database. User: "Go and implement isPlaceHolder". P1.FU26 (built 2026-10-15, not accepted) does the same for a movie or series with
+no file: a placeholder movie, or a series folder of placeholder episodes, so the title's Jellyfin item is its one card and Browse
+attaches the entry to it instead of drawing a separate file-less row. See [design/missing-media-user-actions.md](design/missing-media-user-actions.md).)* Keep CRUD list and unified browse semantics distinct.
 
 For the first correctness spike, operate over complete candidate identities and required sort
 metadata on the server, hydrating only the resulting page. Measure latency and memory on the Pi
