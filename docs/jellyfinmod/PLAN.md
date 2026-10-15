@@ -959,8 +959,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `/Shows/NextUp`, answers `PlaybackInfo` with `NotAllowed` and refuses downloads; no server change is needed.
   Plan: [`design/missing-media-user-actions.md`](design/missing-media-user-actions.md). Slices: **P1.FU24** stubs for
   missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
-  **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** (optional)
-  play queues skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** Next Up's
+  next real episode and play queues that skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
   episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
@@ -1101,6 +1101,42 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   import through Transmission on a live instance (the Phase 5 suite covers it), the TV at 1280×720, a real native app, stock
   `/web`, 28096 and the Pi, Codex review. Known: an empty library folder Jellyfin has never scanned has no folder item, so the
   first placeholders written into it wait for the next library scan (the local test setup scans once after adding the folder).
+  **P1.FU28, built (not accepted) 2026-10-15: Next Up shows the next real episode after a gap, and play queues skip
+  placeholders.** Owner: Phase 1; touches Phase 6/7 (playback in the web). Plugin `feat/placeholder-queues` from
+  `feat/placeholder-titles` `1ee91ea`: `c3a9f94`; web `feat/placeholder-queues` from `9a9e876b08`: `370716cab7` (code),
+  `998b8b3c83` (runner) and this docs commit. Design and what is fixed where: [design §11 and §15](design/missing-media-user-actions.md).
+  Plugin (the response filter only, in process, no second HTTP call): Next Up puts in a placeholder's slot the first episode of
+  the series after it that is neither a placeholder nor virtual (the placeholder's played state, specials left out), as the
+  stock answer with the request's own fields, image and user-data options, and only when the user may open it (a user-scoped
+  query applies parental rating and tags; library access is checked on the item, because a query by series key does not apply
+  it); the slot is dropped, total lowered, when no real episode follows, it is already in the page, or it is resumable and the
+  request said `enableResumable=false`. Resume leaves placeholders out; `/Shows/{id}/Episodes` with `startItemId` (sent only by
+  queue builders: upstream web, Android TV) leaves out the placeholders after the start item. Listings are unchanged
+  (`isMissing=false` is also Swiftfin's season-list request). Web: upstream's one queue step (`translateItemsForPlayback`) hands
+  every queue to `integration/playQueue.ts`, which leaves placeholders out and starts at the first playable item at or after the
+  one asked for (patch surface: `playbackmanager.js`, one import and one call, [PHASE7.md](PHASE7.md) §3.2). **Server-side:** Next
+  Up (Home row, apps, the series Play start of upstream web, Findroid and Android TV), Resume, episode queues from a start item.
+  **Web only:** Play All, Shuffle, Play from here, season and series Play and Shuffle, a library's Play All and Shuffle with
+  placeholder movies, Add to queue and Play next (the Jellyfin iOS and Android apps show this web). **Not fixable without a
+  server change:** native apps' season, series and library queues (Swiftfin, Findroid, Infuse, Kodi playlists, Android TV's season
+  play) and server-driven play-next: they reach the placeholder and stop with `NotAllowed`. Instant Mix is audio only in Jellyfin
+  12. **Found:** Jellyfin 12's own `/Shows/NextUp?seriesId=` answers for a series in a library the user cannot open (stock
+  behaviour, not the filter's; not changed). Checks: plugin build; Phase 1 smoke and Phase 2 on macOS pass; web typecheck, eslint
+  on the changed files and the runner, patch-surface check, production build. Live on local environment charlie (Jellyfin
+  12.0.0, lease held by this session 21:05 to the end of the run, reset to the baseline afterwards; Shows pointed at a writable
+  copy of Peep Show with small `.webm` files for S01E01, S01E02, S01E05 and S02E02, the plugin's placeholders for the other 50;
+  Fawlty Towers added from TMDb as a file-less series with S01E04 swapped for a `.webm`; The Matrix Reloaded as a placeholder
+  movie and a `.webm` movie in Movies' writable folder): new runner `placeholder-queues.mjs` 49 checks, 0 failed in Chromium and
+  49, 0 failed in real Chrome on desktop, phone and TV 1080 (22 HTTP checks as a native app: Next Up untouched, in a season,
+  across a season, at the end, two series with limit/startIndex and totals, `enableTotalRecordCount=false`, rewatching,
+  `parentId` and `nextUpDateCutoff`, resumable, a blocked tag on the real episode (nata gets the next one she may see), no library
+  access (nothing), the replacement's DTO options; Resume and its legacy route; listings keep placeholders, `startItemId` queues
+  do not; Instant Mix; PlaybackInfo; and per layout Home's continue row, the series' Play (starts at S01E05), the season's Play,
+  Shuffle, an episode's Play (queue E02, E05, S02E02), Play All From Here on a real and on a placeholder row (TV rows have no ⋯:
+  not verified there) and the movie library's Play All and Shuffle, read from the web's own start report). The P1.FU24 runner
+  `missing-as-media.mjs` on the same instance: 29 checks, 0 failed (Next Up now answers S01E05). Not run: a real native app
+  (Swiftfin, the Jellyfin iOS app, Infuse, Kodi, Android TV), Phase 5 in the Linux container (the filter is not in its host),
+  the TV at 1280×720, 28096 and the Pi, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
