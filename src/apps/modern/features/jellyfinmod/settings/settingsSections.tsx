@@ -630,8 +630,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
         return discovery.verified ? { kind: 'ok', checkedAt: discovery.verifiedAt } : { kind: 'idle' };
     }, [testing, shownResult, discovery.verified, discovery.verifiedAt]);
     const tokenTest = useMemo(() => ({
-        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult?.notice ?? null, state: testState,
-        help: 'Asks TMDB whether it accepts the saved token. Save a new token first.'
+        id: 'discovery', label: 'Test Token', run: testToken, disabled: section.busy, result: shownResult?.notice ?? null, state: testState
     }), [testToken, section.busy, shownResult, testState]);
     const tokenSave = useMemo(() => ({ label: 'Save TMDB Token', run: saveToken, busy: section.busy }), [saveToken, section.busy]);
     return (
@@ -639,10 +638,10 @@ export const DiscoverySection: FC<SectionProps> = props => {
             onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
             <div className='jfmod-group'>
-                <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
+                <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token (Optional)' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
                     test={tokenTest} save={tokenSave} />
                 <div className='fieldDescription jfmod-lead'>
-                    Optional. Leave empty to use Jellyfin&apos;s built-in TMDb connection. A saved token is used instead, for JellyfinMod discovery only.
+                    Leave empty to use Jellyfin&apos;s built-in TMDb connection. A saved token is used instead, for JellyfinMod discovery only.
                 </div>
             </div>
         </SectionFrame>
@@ -844,7 +843,7 @@ export const ClientSection: FC<SectionProps> = props => {
         { key: 'label', label: 'Label added to every grab', type: 'text' },
         { key: 'downloadDirectory', label: 'Download folder as Transmission sees it', type: 'text' },
         { key: 'localDirectory', label: 'The same folder as this server sees it', type: 'text', help: 'Must be on the same filesystem as the libraries, so imports can hardlink.' },
-        { key: 'openUrl', label: 'Web interface link', type: 'text', help: 'Optional. Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' },
+        { key: 'openUrl', label: 'Web interface link (Optional)', type: 'text', help: 'Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' },
         { key: 'enabled', label: 'Send grabs to this client', type: 'bool' }
     ];
     return (

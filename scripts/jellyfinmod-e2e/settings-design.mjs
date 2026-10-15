@@ -293,7 +293,8 @@ const checkButtons = (layout, where, buttons) => {
     record(layout, `${where}: every button is filled, of its kind (red, blue or grey), readable and the size of Save (${buttons.length} buttons)`,
         wrong.length === 0, wrong.length ? wrong : undefined);
     const blues = {};
-    for (const button of buttons) if (button.tint === 'blue') blues[button.view] = [...(blues[button.view] ?? []), button.text];
+    // The wizard's Continue (user, 2026-10-15) sits in the step card's footer, opposite Save, in the same blue: it is the way on, not a second commit.
+    for (const button of buttons) if (button.tint === 'blue' && button.text !== 'Continue') blues[button.view] = [...(blues[button.view] ?? []), button.text];
     const crowded = Object.entries(blues).filter(([, list]) => list.length > 1);
     record(layout, `${where}: at most one blue button per view`, crowded.length === 0, crowded.length ? Object.fromEntries(crowded) : blues);
     // Every action of a list row is a round icon (user, 2026-10-08), named after the row it acts on ("Remove Prowlarr 1337x").
@@ -595,8 +596,8 @@ for (const name of only) {
         });
         record(name, 'discovery: the token box holds Test Token, Replace and Clear as icons, in that order',
             JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test Token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
-        record(name, 'discovery: no standalone Test button; the test is described under the box', box.standaloneTest === 0 &&
-            /Asks TMDB whether it accepts the saved token/.test(box.help ?? ''), box);
+        record(name, 'discovery: no standalone Test button; nothing is written under the box to describe the test (user, 2026-10-15)', box.standaloneTest === 0 &&
+            box.help === null, box);
         if (layout.tv) {
             // Arrow keys walk the box left to right: Test, Replace, Clear, each with a visible ring.
             await page.locator('[data-secret-action="test"]').focus();

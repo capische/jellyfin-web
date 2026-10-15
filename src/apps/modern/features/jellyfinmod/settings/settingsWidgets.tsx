@@ -13,7 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
-import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, type FC, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SecretChange } from './settingsApi';
 
@@ -60,6 +60,12 @@ interface SectionFrameProps {
     onGo: (id: string) => void;
 }
 
+/**
+ * The setup wizard's Continue (user, 2026-10-15): the wizard provides it, and the step's section card shows it at the end of its
+ * footer, in Save's style, opposite Save. The settings page provides nothing, so its cards have no Continue.
+ */
+export const WizardContinueContext = createContext<{ disabled: boolean; run: () => void } | null>(null);
+
 const NextButton: FC<{ next: { id: string; title: string }; onGo: (id: string) => void }> = ({ next, onGo }) => {
     const goNext = useCallback(() => onGo(next.id), [next.id, onGo]);
     return (
@@ -72,33 +78,44 @@ const NextButton: FC<{ next: { id: string; title: string }; onGo: (id: string) =
 /** One section of the checklist: eyebrow, heading, state, body, and the footer with Save and "Next". */
 export const SectionFrame: FC<SectionFrameProps> = ({
     id, eyebrow, title, state, actions, notice, children, onSave, saving, saveMeta, next, onGo
-}) => (
-    <section className='jfmod-check-section' data-section={id} aria-labelledby={`jfmod-h-${id}`}>
-        <header className='jfmod-check-sechead'>
-            <div>
-                <div className='jfmod-eyebrow'>{eyebrow}</div>
-                <h2 id={`jfmod-h-${id}`} tabIndex={-1}>{title}</h2>
-                {state && <StatePill kind={state.kind}>{state.words}</StatePill>}
+}) => {
+    const wizardContinue = useContext(WizardContinueContext);
+    // With a Continue, the footer is a focuscontainer-right: on the TV, Right from Save lands on Continue, not on the token box's Test
+    // icon, which sits up and to the right and was nearer. Left is left alone, so Save still reaches the rail (a focuscontainer-x
+    // footer trapped it).
+    return (
+        <section className='jfmod-check-section' data-section={id} aria-labelledby={`jfmod-h-${id}`}>
+            <header className='jfmod-check-sechead'>
+                <div>
+                    <div className='jfmod-eyebrow'>{eyebrow}</div>
+                    <h2 id={`jfmod-h-${id}`} tabIndex={-1}>{title}</h2>
+                    {state && <StatePill kind={state.kind}>{state.words}</StatePill>}
+                </div>
+                {actions && <div className='jfmod-sec-actions'>{actions}</div>}
+            </header>
+            <div className='jfmod-check-secbody'>
+                <Notice notice={notice} />
+                {children}
             </div>
-            {actions && <div className='jfmod-sec-actions'>{actions}</div>}
-        </header>
-        <div className='jfmod-check-secbody'>
-            <Notice notice={notice} />
-            {children}
-        </div>
-        {(onSave || next) && (
-            <footer className='jfmod-check-secfoot'>
-                {onSave && (
-                    <Button variant='contained' onClick={onSave} disabled={saving} data-submit={id}>
-                        {saving ? 'Saving…' : 'Save'}
-                    </Button>
-                )}
-                {saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
-                {next && <NextButton next={next} onGo={onGo} />}
-            </footer>
-        )}
-    </section>
-);
+            {(onSave || next || wizardContinue) && (
+                <footer className={wizardContinue ? 'jfmod-check-secfoot focuscontainer-right' : 'jfmod-check-secfoot'}>
+                    {onSave && (
+                        <Button variant='contained' onClick={onSave} disabled={saving} data-submit={id}>
+                            {saving ? 'Saving…' : 'Save'}
+                        </Button>
+                    )}
+                    {saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
+                    {next && <NextButton next={next} onGo={onGo} />}
+                    {wizardContinue && (
+                        <Button variant='contained' className='jfmod-continue' disabled={wizardContinue.disabled} data-wizard='continue' onClick={wizardContinue.run}>
+                            Continue
+                        </Button>
+                    )}
+                </footer>
+            )}
+        </section>
+    );
+};
 
 interface SecretFieldProps {
     id: string;
@@ -107,7 +124,7 @@ interface SecretFieldProps {
     change: SecretChange;
     onChange: (change: SecretChange) => void;
     /** A test of the saved secret, offered as the first icon in its box; its words and result sit under the box. */
-    test?: { id: string; label: string; run: () => void; disabled?: boolean; help: ReactNode; result: NoticeState | null; state: TestState };
+    test?: { id: string; label: string; run: () => void; disabled?: boolean; help?: ReactNode; result: NoticeState | null; state: TestState };
     /** A Save at the end of the input (user, 2026-10-09): it saves just this secret, and the caller then starts the field's test. */
     save?: { label: string; run: () => void; busy?: boolean };
 }
@@ -226,7 +243,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
     // Undo, which takes back a pending clear, is an ordinary grey button the size of Save.
     const below = test && (
         <div className='jfmod-secret-below'>
-            <div className='fieldDescription'>{test.help}</div>
+            {test.help && <div className='fieldDescription'>{test.help}</div>}
             {test.result && <div data-secret-test-result=''><Notice notice={test.result} /></div>}
         </div>
     );
