@@ -71,13 +71,17 @@ export interface NativeItemFacts {
     SeriesId?: string;
     IndexNumber?: number;
     Genres?: string[];
+    /** A Jellyfin placeholder (a media stub; P1.FU24): an item with no file to play. */
+    IsPlaceHolder?: boolean;
 }
 
-type NativeItem = { Id?: string; Type?: string; SeriesId?: string | null; IndexNumber?: number | null; Genres?: string[] | null };
+type NativeItem = { Id?: string; Type?: string; SeriesId?: string | null; IndexNumber?: number | null; Genres?: string[] | null;
+    IsPlaceHolder?: boolean | null };
 
 /** The facts kept of a native item read from Jellyfin. */
 export const nativeItemFacts = (item: NativeItem | null | undefined): NativeItemFacts => ({ Id: item?.Id, Type: item?.Type,
-    SeriesId: item?.SeriesId ?? undefined, IndexNumber: item?.IndexNumber ?? undefined, Genres: item?.Genres ?? undefined });
+    SeriesId: item?.SeriesId ?? undefined, IndexNumber: item?.IndexNumber ?? undefined, Genres: item?.Genres ?? undefined,
+    IsPlaceHolder: item?.IsPlaceHolder ?? undefined });
 
 /** A native item's facts; they never change, so a page seen before (or a season listed on its series' page) needs no read. */
 export const nativeItemKey = (api: Api, userId: string, itemId: string) => ['JellyfinMod', api.basePath, userId, 'NativeItem', normalId(itemId)];

@@ -35,6 +35,10 @@ const QUIET_RANGES = new Set(['sdr', 'unknown', '']);
 export const sameItemId = (a: string | null | undefined, b: string | null | undefined) =>
     !!a && !!b && a.replace(/-/g, '').toLowerCase() === b.replace(/-/g, '').toLowerCase();
 
+/** Whether a Jellyfin item is this episode: its file's item, or the placeholder that stands for it while it has none (P1.FU24). */
+export const isEpisodeItem = (episode: { jellyfinItemId: string | null; placeholderItemId?: string | null }, itemId: string | null | undefined) =>
+    sameItemId(episode.jellyfinItemId, itemId) || sameItemId(episode.placeholderItemId, itemId);
+
 /**
  * `2160p`, else a height the host reported, else the plugin's label. The plugin files every standard-definition size
  * under `480p`, so a standard-definition file shows its real height (a 576-line file reads `576p`, as the stock row says).

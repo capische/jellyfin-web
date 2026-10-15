@@ -1,0 +1,10 @@
+// A Jellyfin placeholder (a media stub the plugin writes for a missing episode, P1.FU24) is a real item with nothing to play:
+// upstream still draws Play on its page and rows and an "Ends at" time from its runtime, and refuses only when pressed. The mod
+// hides them where it knows the item is a placeholder (the page's own item, a season page's rows); Get a Release stays.
+[data-jfmod-placeholder] .mainDetailButtons .btnPlay,
+[data-jfmod-placeholder] .mainDetailButtons .btnReplay,
+[data-jfmod-placeholder] .itemMiscInfo .endsAt,
+.listItem[data-jfmod-placeholder] .listItemImageButton,
+.listItem[data-jfmod-placeholder] .endsAt {
+    display: none;
+}

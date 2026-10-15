@@ -16,6 +16,7 @@ import {
     AutomationSection, ClientSection, DiagnosticsSection, DiscoverySection, GrabbingSection, ImportSection, IndexersSection, InterfaceSection,
     OverviewSection, ProfilesSection, RetentionSection, type SectionProps, type SettingsData, summarise
 } from './settingsSections';
+import { PlaceholdersSection } from './PlaceholdersSection';
 
 import './settings.scss';
 
@@ -35,6 +36,7 @@ const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
     { id: 'import', title: 'Import and Seeding', Component: ImportSection },
     { id: 'retention', title: 'Retention', Component: RetentionSection },
     { id: 'automation', title: 'Automation', Component: AutomationSection },
+    { id: 'placeholders', title: 'Missing Episodes', Component: PlaceholdersSection },
     { id: 'interface', title: 'Interface', Component: InterfaceSection },
     { id: 'diagnostics', title: 'Diagnostics', Component: DiagnosticsSection }
 ];

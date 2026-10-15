@@ -10,6 +10,11 @@ import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 import { moveShuffle } from './shuffleMenu';
 
+import './placeholderPage.scss';
+
+/** On a placeholder's page (a media stub, P1.FU24) upstream's Play, Replay and "Ends at" are hidden: nothing can play. */
+const PLACEHOLDER_ATTRIBUTE = 'data-jfmod-placeholder';
+
 /**
  * A native item that no longer exists (for example after reclaim) opens its catalog entry instead of an
  * endless spinner, or says plainly that it is unavailable (P3.T14). `isCurrent` says whether this page visit is still
@@ -65,6 +70,7 @@ export default function initializeNativeEntryDetails(view, params) {
         traktMount = undefined;
         mount?.remove();
         mount = undefined;
+        view.removeAttribute(PLACEHOLDER_ATTRIBUTE);
     };
     const show = async () => {
         hide();
@@ -107,6 +113,7 @@ export default function initializeNativeEntryDetails(view, params) {
             return;
         }
         if (currentGeneration !== generation) return;
+        view.toggleAttribute(PLACEHOLDER_ATTRIBUTE, !!item?.IsPlaceHolder);
         if (item?.Type === 'Season' && item.SeriesId) prefetchNativeEntry(api, userId, item.SeriesId);
         prefetchNativeChildren(api, userId, params.id, item ?? {});
         // Shuffle stays in the header only for shows watched in any order; elsewhere it moves into More (P1.FU12).
