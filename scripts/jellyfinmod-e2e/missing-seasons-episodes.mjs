@@ -32,7 +32,7 @@
 //     mod rows in episode order with their marks; an administrator's Not Downloaded on an episode's row opens the picker for that episode (P1.FU22);
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
 //   - TV: the D-pad stops on the mod rows and on no mark; phone: no overview on the rows;
-//   - optionally a file-less movie's search card: the amber Not Downloaded indicator, and the centre Get a Release on hover;
+//   - optionally a file-less movie's search card: the Not Downloaded indicator, and the centre Get a Release on hover;
 //   - P1.FU14: a missing season's card shows TMDB's season poster (w342) in upstream's image box, the dashed placeholder only
 //     without one; the mod's season page the season's overview and "Season N · K episodes · YYYY"; every mod episode row the
 //     still (w300, w500 on the TV), "N. Title", the meta line (air date, upstream's runtime "42m", TMDB's rating) and the
@@ -290,7 +290,7 @@ async function checkMark(page, label, what, shown) {
     if (!shown) { record(label, `${what}: has a mark`, false, null); return; }
     const plain = shown.tag !== 'BUTTON' && shown.tabIndex < 0 && shown.cursor === 'default';
     if (shown.glyph !== undefined) record(label, `${what}: the Not Downloaded glyph is the arrow out of a small cloud`, shown.glyph, shown);
-    record(label, `${what}: the amber Not Downloaded is a plain indicator "Not Downloaded" (no button, no focus stop, no pointer)`,
+    record(label, `${what}: the Not Downloaded mark is a plain indicator "Not Downloaded" (no button, no focus stop, no pointer)`,
         shown.kind === 'none' && plain && shown.title === 'Not Downloaded', shown);
 }
 
@@ -1056,6 +1056,10 @@ const blockView = page => page.evaluate(() => {
         ringEm: ring && font ? Math.round(ring.getBoundingClientRect().width / font * 100) / 100 : null,
         word: block.querySelector('.jfmod-dlblock-word')?.textContent ?? null,
         figure: figure?.textContent ?? null,
+        // P4.FU8: the ring (its glyph, number and arc), the figure, the bar and the not-finished dots are the block's own text colour.
+        colours: { block: getComputedStyle(block).color, ring: ring ? getComputedStyle(ring).color : null,
+            arc: ring?.querySelector('.jfmod-dlmark-fill') ? getComputedStyle(ring.querySelector('.jfmod-dlmark-fill')).stroke : null,
+            figure: figure ? getComputedStyle(figure).color : null, bar: fill ? getComputedStyle(fill).backgroundColor : null },
         tone: [...(figure?.classList ?? [])].find(name => name.startsWith('jfmod-dlblock-figure--'))?.slice(22) ?? null,
         release: block.querySelector('.jfmod-dlblock-release')?.textContent ?? null,
         marks: [...(block.querySelector('.jfmod-dlblock-marks')?.children ?? [])].map(node => node.textContent.trim()).filter(Boolean).join(' ') || null,
@@ -1171,8 +1175,10 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         const strip = season.map(item => dotOf(item) + (item.id === episode.id ? '*' : ''));
         record(label, 'download block, downloading: in the track selectors\' place, the 4em ring (3.2em on the phone) with "42" inside and no glyph',
             ok && shown.beforeTracks && shown.ringKind === 'downloading' && shown.number === '42' && !shown.glyph && Math.abs(shown.ringEm - (layout === 'mobile' ? 3.2 : 4)) < 0.05, shown);
-        record(label, `download block, downloading: "Downloading 42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" in amber`,
-            shown.word === 'Downloading' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'amber', shown.figure);
+        record(label, `download block, downloading: "Downloading 42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" in the page's text colour, no amber`,
+            shown.word === 'Downloading' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'plain'
+            && shown.colours.figure === shown.colours.block && shown.colours.ring === shown.colours.block && shown.colours.arc === shown.colours.block
+            && shown.colours.bar === shown.colours.block, { figure: shown.figure, colours: shown.colours });
         record(label, 'download block: the release name and its marks (1080p WEB-DL, the codec and audio marks, EN, the pack\'s 38.2 GB, the indexer)',
             shown.release === packRow.releaseTitle && /^1080p WEB-DL\b/.test(shown.marks ?? '') && shown.mediaMarks.includes('AVC')
             && shown.mediaMarks.includes('Dolby Digital Plus') && /\bEN\b/.test(shown.marks) && shown.marks.includes('38.2 GB')

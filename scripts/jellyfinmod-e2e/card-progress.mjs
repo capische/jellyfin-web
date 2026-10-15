@@ -58,14 +58,12 @@ const LAYOUTS = {
     },
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true }
 };
-const AMBER = 'rgb(255, 179, 0)';
+// P4.FU8: no amber. A card's bar is white at 85 %; a row's disc and meta figure read as the upstream neighbours beside them
+// (`refColour` in rowStates), so no literal is asserted for them.
+const BAR_DARK = 'rgba(255, 255, 255, 0.85)';
 const WHITE = 'rgb(255, 255, 255)';
 const RED_DARK = 'rgb(255, 90, 79)';
 const RED_LIGHT = 'rgb(198, 40, 40)';
-const META_DARK = AMBER;
-const META_STALLED_DARK = 'rgb(224, 160, 48)';
-const META_LIGHT = 'rgb(154, 103, 0)';
-const META_STALLED_LIGHT = 'rgb(141, 90, 0)';
 const META_FAILED_DARK = 'rgb(255, 123, 114)';
 const END_SLOT = '.jfmod-rowMarkHost, .jfmod-missingRowEnd, .jfmod-mark--row, .listViewUserDataButtons, .listItemButton';
 
@@ -199,7 +197,14 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
     const siblings = disc ? [...disc.parentElement.children] : [];
     const at = siblings.indexOf(disc);
     const before = cloud ? getComputedStyle(cloud, '::before') : null;
+    // The colours the mod's pieces must equal: upstream's round row icon beside the disc (else the end slot's own colour), and
+    // the line's own secondary text beside the figure (else its parent's).
+    const neighbour = disc ? [...disc.parentElement.children].find(node => node !== disc && node.matches('.paper-icon-button-light, .listItemButton')) : null;
+    const text = meta ? [...meta.parentElement.children].find(node => node !== meta && !node.classList.contains('jfmod-dlMeta')
+        && node.textContent.trim() && (node.className === meta.className.replace(/ ?jfmod-dlMeta\S*/g, '') || node.matches('.mediaInfoItem'))) : null;
     return {
+        refIcon: disc ? getComputedStyle(neighbour ?? disc.parentElement).color : null,
+        refText: meta ? getComputedStyle(text ?? meta.parentElement).color : null,
         id: row.getAttribute('data-id') ?? row.getAttribute('data-jfmod-episode-id'),
         disc: disc ? {
             kind: disc.getAttribute('data-jfmod-kind'), row: disc.classList.contains('jfmod-dlmark--row'), title: disc.title,
@@ -372,8 +377,8 @@ async function run(browser, layout) {
         const opened = reads.length;
         const nativeCard = `.page:not(.hide) #listChildrenCollapsible .card[data-id="${native.id}"]`;
         const season = await cardState(page, nativeCard);
-        record(label, `Season ${native.number} card: the amber bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.24em`,
-            !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === AMBER
+        record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.24em`,
+            !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === BAR_DARK
             && Math.abs(season.heightEm - 0.24) < 0.03 && season.upstreamBarHidden, season);
         record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow bobbing, the white arc at ${seasonMean}%`,
             season?.disc?.card && season.disc.kind === 'downloading' && Math.abs(season.disc.sizeEm - 1.6) < 0.05 && season.disc.topRight
@@ -477,13 +482,13 @@ async function run(browser, layout) {
             } else {
                 discOk = row?.disc?.row && row.disc.kind === expected.kind && Math.abs(row.disc.sizeEm - 2.78) < 0.05 && row.disc.firstOfEnd
                     && row.disc.atEnd && row.disc.title === expected.tooltip && row.disc.background === 'rgba(0, 0, 0, 0)' && !row.noneShown
-                    && row.disc.colour === (expected.kind === 'failed' ? RED_DARK : AMBER)
+                    && row.disc.colour === (expected.kind === 'failed' ? RED_DARK : row.refIcon)
                     && (expected.percent === undefined || Math.abs(row.disc.arcOffset - (100 - expected.percent)) <= 1);
             }
             record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded, an indicator' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
                 !!row && !!discOk && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.meta.visible && row.bars === 0
                 && row.oldFigure === 0 && /tabular-nums/.test(row.meta.tabular ?? '')
-                && (expected.kind === 'queued' || expected.kind === 'failed' || row.meta.colour === (expected.kind === 'stalled' ? META_STALLED_DARK : META_DARK))
+                && (expected.kind === 'failed' || row.meta.colour === row.refText)
                 && (expected.kind !== 'failed' || row.meta.colour === META_FAILED_DARK), row);
         }
         const failedNative = SEASON.findIndex(fixture => fixture.kind === 'failed');
@@ -497,9 +502,10 @@ async function run(browser, layout) {
         const lightDownloading = light.find(row => row.meta?.text === '42% · 12 min left');
         const lightStalled = light.find(row => row.meta?.text === '30% · stalled');
         const lightFailed = light.find(row => row.meta?.text?.startsWith('Failed · '));
-        record(label, 'light scheme: the figure is the darker amber (#9a6700, stalled #8d5a00), the disc keeps #ffb300, a failure #c62828',
-            lightDownloading?.meta?.colour === META_LIGHT && lightDownloading.disc?.colour === AMBER
-            && (!lightStalled || lightStalled.meta.colour === META_STALLED_LIGHT)
+        record(label, 'light scheme: the figure is the line\'s own text colour and the disc the upstream row icons\' (neither amber), a failure #c62828',
+            lightDownloading?.meta?.colour === lightDownloading?.refText && lightDownloading?.disc?.colour === lightDownloading?.refIcon
+            && !/255, 179/.test(lightDownloading?.disc?.colour ?? '') && lightDownloading?.meta?.colour !== 'rgb(154, 103, 0)'
+            && (!lightStalled || lightStalled.meta.colour === lightStalled.refText)
             && (!lightFailed || lightFailed.meta.colour === RED_LIGHT) && (!lightFailed?.failedButton || lightFailed.failedButton.bangColour === 'light')
             && (!lightFailed?.disc || lightFailed.disc.colour === RED_LIGHT), { lightDownloading, lightStalled, lightFailed });
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
@@ -654,6 +660,17 @@ async function run(browser, layout) {
                     && (!state.dim || card.disc.arc?.opacity === '0.55') && (state.kind !== 'queued' || !card.disc.arc), card?.disc);
                 await page.locator(movieCard).scrollIntoViewIfNeeded().catch(() => {});
                 await shotOf(page.locator(movieCard), `card-film-${state.kind}`);
+                if (state.kind === 'downloading') {
+                    // P4.FU8: the light scheme's card, the bar the dark text colour at 85 % and (not on the TV's solid disc) the disc and arc the dark text.
+                    await page.evaluate(() => { window.jfmodTheme = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'light'); });
+                    await page.waitForTimeout(300);
+                    const lightCard = await cardState(page, movieCard);
+                    await shotOf(page.locator(movieCard), 'card-film-downloading-light');
+                    await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
+                    record(label, 'film card, light scheme: the bar is the dark text at 85 %, the disc and arc the dark text (the TV\'s solid disc stays white), no amber',
+                        lightCard?.colour === 'rgba(0, 0, 0, 0.85)' && (tv ? lightCard.disc?.colour === WHITE : lightCard.disc?.colour === 'rgb(0, 0, 0)' && lightCard.disc.arcColour === 'rgb(0, 0, 0)'),
+                        { bar: lightCard?.colour, disc: lightCard?.disc?.colour, arc: lightCard?.disc?.arcColour });
+                }
                 if (state.kind === 'importing') {
                     await page.emulateMedia({ reducedMotion: 'reduce' });
                     await page.waitForTimeout(300);
@@ -724,7 +741,7 @@ async function run(browser, layout) {
         const seriesCard = await cardState(page, `.page:not(.hide) .card[data-id="${seriesId}"]`);
         await shotOf(page.locator(`.page:not(.hide) .card[data-id="${seriesId}"]`), 'card-series-search');
         record(label, 'search: the series card shows the bar and the downloading disc (two icons beside a count pill), the figure in its tooltip',
-            !!seriesCard?.bar && seriesCard.colour === AMBER && seriesCard.disc?.kind === 'downloading' && seriesCard.disc.title.startsWith('Downloading · ')
+            !!seriesCard?.bar && seriesCard.colour === BAR_DARK && seriesCard.disc?.kind === 'downloading' && seriesCard.disc.title.startsWith('Downloading · ')
             && (!seriesCard.pill || (seriesCard.pill.discLeft && !seriesCard.pill.arrow)), seriesCard);
         // The series page's own Next Up first, then Home's rows.
         const episodeIds = [...itemOf.values()];
