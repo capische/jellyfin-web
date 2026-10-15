@@ -339,10 +339,15 @@ Phase-crossing hooks: `ReconciliationService.cs` (Phase 2/10), `ImportService.cs
    user's own `.disc` file (a disc-collection stub, a Blu-ray marker) is never touched. Verified on local environment alpha
    (Jellyfin 12.0.0): a `.disc` with this body still resolves to an episode with `IsPlaceHolder: true`, is not probed (no
    ffprobe error), and gets full TMDB metadata (overview, 9 to 16 people).
-5. **Rollout and series grouping:** **off by default, per TV library**, with a dry run that lists exactly the paths a sync would
-   write and remove before the switch is turned on. Where the series folder is read-only the plugin writes nothing and the dry
-   run says why (the mod's own cards and rows stay the surface); the second-folder-with-automatic-grouping variant of section
-   2.1 is not built.
+5. **Rollout and series grouping:** ~~off by default, per TV library, turned on after a dry run~~ **on by default for every TV
+   library** (user, after the first look on alpha, 2026-10-15: "Show missing episodes - should be enabled by default. That's
+   the point."). An administrator can turn it off per library (`PluginConfiguration.PlaceholderDisabledLibraryIds`, an opt-out
+   list; a new library is on); turning it off offers to remove the placeholders already written. The dry run (Preview) and
+   Remove Placeholders stay. A sync writes at most 10 series per library and run with a 3-second pause between series, and the
+   sync task runs every 15 minutes, its first run one interval after the plugin starts: a large library is filled in batches
+   over a few hours instead of writing thousands of files, and setting off as many scans, at start. Where the series folder is
+   read-only the plugin writes nothing and the dry run and Settings say why (the mod's own cards and rows stay the surface); the
+   second-folder-with-automatic-grouping variant of section 2.1 is not built.
 
 ## 11. P1.FU28 design: Next Up shows the next real episode, play queues skip stubs
 
@@ -385,7 +390,8 @@ as two users with different parental ratings.
 
 Plugin (`feat/placeholder-stubs` from `next-release` `b52a64a`): `Services/Placeholders/` (the writer and remover
 `PlaceholderService`, the marker `PlaceholderStub`, the per-library switch `PlaceholderSettings` in
-`PluginConfiguration.PlaceholderLibraryIds`, the item stamp listener and the six-hourly sync task), `Api/Filters/PlaceholderFilter.cs`
+`PluginConfiguration.PlaceholderDisabledLibraryIds`, on by default, the item stamp listener and the 15-minute batched sync
+task), `Api/Filters/PlaceholderFilter.cs`
 registered from `PluginServiceRegistrator`, `Api/PlaceholdersController.cs` (`/JellyfinMod/Placeholders`, administrators
 only; [API.md](../API.md) *Placeholders*), `Services/Import/SeriesFolders.cs` (the import's own folder rules, shared),
 reconciliation reading placeholder episodes as not on disk (`JellyfinNativeTitleSource`), the entry detail naming each missing

@@ -961,8 +961,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
   **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** (optional)
   play queues skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
-  questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, off by default per library
-  after a dry run, nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
+  questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
+  library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
+  episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
   whose design is the plan's section 11). It reverses the 2026-09-04 and PHASE3 "no placeholder files" decisions (recorded in
   README and PHASE1). Commits carry `p1.fu24`–`p1.fu28` ids so the Phase 1 history reorganisation stays mechanical (the plan's
   section 8).
@@ -970,7 +971,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   native-client filter.** Owner: Phase 1 (the TMDb catalog); first part of the user-visible gate (first look pending). Plugin
   `feat/placeholder-stubs` from `next-release` `b52a64a`: `ca872f0` (code), `693bdbf` (Phase 5 suite check); web
   `feat/placeholder-stubs` from `next-release` `2173444a36`: the plan commit, `8cf2ad1b88` (code), `6f3c23b234` (runner) and this
-  docs commit. Plugin: per TV library switch (`PluginConfiguration.PlaceholderLibraryIds`, off), a dry run listing every path,
+  docs commit. Plugin: per TV library switch, on by default (`PluginConfiguration.PlaceholderDisabledLibraryIds`, an opt-out
+  list, since the follow-up below), a dry run listing every path,
   the sync writing `Season NN/<Series (Year)> SNNENN.disc` where the import puts the file (shared `SeriesFolders`), only inside a
   library root and the bound series folder, never over a file, never beside a file that already is the episode, never through a
   link out of the series folder, nothing in a read-only folder (said in the dry run); stubs marked (first line
@@ -999,6 +1001,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   through Transmission (the Phase 5 suite covers it), 28096 and the Pi, Codex review. Open: FU28 (Next Up's next real
   episode, play queues) after the first look; where upstream's series and season header Play start when the next episode is a
   placeholder was not checked (FU28's play-queue part).
+  **Follow-up, built 2026-10-15 after the first look** (user: "Show missing episodes - should be enabled by default. That's the
+  point."): the switch is on for every TV library, a new one included, and off only where an administrator turns it off
+  (`PlaceholderDisabledLibraryIds`; the earlier opt-in element in an old XML is skipped by the reader, checked live); a sync
+  writes at most 10 series per library and run with a 3-second pause between series and answers `pending`, and the task runs
+  every 15 minutes, first one interval after start, so a large library fills in batches; `GET /Placeholders` says whether a
+  library can be written at all. Settings *Missing Episodes* shows each library's state (On, Off (turned off by you),
+  Read-only: nothing written) and count, turns it back on without asking, and on turning it off asks *Remove existing
+  placeholders now?*. All guards unchanged. Checks: Phase 1 smoke (new: every TV library on by default, administrators only, a
+  library with no writable folder writes nothing, a movie library has no switch) and Phase 2 pass on macOS; web typecheck,
+  eslint, the production build. Live on local environment charlie (lease held by this session, reset afterwards; alpha was the
+  user's first look): with the old opt-in element in the XML the plugin loads and the library is on; the read-only library
+  (the real `:ro` mount) writes nothing and its dry run says `read_only` for every season (runner, 3 checks, 0 failed); on the
+  writable copy `missing-as-media.mjs` (no longer turning the switch on itself, with the opt-out check: turned off, a sync
+  writes nothing; turned back on, 44 written, 0 pending) 51 checks, 0 failed in Chromium on desktop, phone and TV 1080 as
+  oleksii and nata with Remove Placeholders, and 29, 0 failed on desktop on the final build. Not verified: batching across
+  more than one series (the local media set has one series); Phase 5 not re-run (the import is unchanged by the follow-up).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

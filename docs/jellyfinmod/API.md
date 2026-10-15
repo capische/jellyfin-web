@@ -882,14 +882,16 @@ single failed detail call is skipped and counted in the response instead of fail
 Administrators only (`Policies.RequiresElevation`); capability `placeholders` in Health. Missing aired episodes of a series
 Jellyfin already holds can be shown as Jellyfin items: the plugin writes a media stub where the import puts the episode's file
 (`<series folder>/Season NN/<Series (Year)> SNNENN.disc`), Jellyfin makes it an episode with `IsPlaceHolder: true`, and the
-response filter below keeps every client from offering or playing it. Off by default for every TV library
-(`PluginConfiguration.PlaceholderLibraryIds`). Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+response filter below keeps every client from offering or playing it. On by default for every TV library, a new one
+included (user, 2026-10-15: "That's the point."); an administrator turns it off per library
+(`PluginConfiguration.PlaceholderDisabledLibraryIds`). A sync writes at most 10 series per library and run, 3 seconds apart, and
+answers `pending`, the placeholders left for the next run; the sync task runs every 15 minutes. Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
 
 | Request | Answer |
 | --- | --- |
-| `GET /JellyfinMod/Placeholders` | `[{ libraryId, name, enabled, stubs }]`, every TV library; `stubs` counts the plugin's placeholder items Jellyfin holds |
+| `GET /JellyfinMod/Placeholders` | `[{ libraryId, name, enabled, stubs, writable }]`, every TV library; `stubs` counts the plugin's placeholder items Jellyfin holds; `writable` is false when no folder of the library can be written (nothing is written there) |
 | `GET /JellyfinMod/Placeholders/{libraryId}/Plan` | The dry run (below): what a sync would write and remove, and what it leaves without a placeholder. Changes nothing |
-| `PUT /JellyfinMod/Placeholders/{libraryId}` `{ "enabled": true }` | Turns the switch on and syncs at once (the run's plan); `false` turns it off and answers the dry run (existing placeholders stay) |
+| `PUT /JellyfinMod/Placeholders/{libraryId}` `{ "enabled": false }` | Turns the library off (it is on by default) and answers the dry run; existing placeholders stay until Remove. `true` turns it back on and syncs at once (the run's plan) |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Sync` | Syncs now: writes (only with the switch on), removes stale placeholders, stamps placeholder items |
 | `GET /JellyfinMod/Placeholders/{libraryId}/Removal` | The dry run of Remove Placeholders: every placeholder of the plugin's in the library |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Remove` | Deletes them (each re-checked for the marker just before, unlinked by inode) and the season folders that left empty; the switch is not changed |
