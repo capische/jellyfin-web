@@ -1455,7 +1455,8 @@ export const RetentionSection: FC<SectionProps> = props => {
             next={props.next} onGo={props.onGo}
         >
             <FieldForm fields={[
-                { key: 'enabled', label: 'Delete media files after they are watched', type: 'bool', help: 'The entry, its artwork and its history stay; only the media file goes.' },
+                { key: 'enabled', label: 'Delete media files after they are watched', type: 'bool',
+                    help: 'The entry, its artwork and its history stay; only the media file goes. In a library that shows missing episodes, a reclaimed episode stays in Jellyfin as a placeholder with its watched mark.' },
                 { key: 'reclaimAfterDays', label: 'Days to keep a file after it is finished', type: 'int' },
                 { key: 'watchedUserMode', label: 'Start the window when', type: 'select', options: [
                     { value: 'allUsers', label: 'All users with library access have watched it' },
@@ -1469,6 +1470,7 @@ export const RetentionSection: FC<SectionProps> = props => {
             <p className='jfmod-lead fieldDescription'>
                 {preview ? `${preview.inspected} file(s) inspected · ${preview.due} due now · ${preview.scheduled} scheduled · ${preview.blocked} protected · ${preview.waiting} waiting` :
                     'The preview is unavailable.'}
+                {preview?.placeholders ? ` · ${preview.placeholders} will leave a placeholder` : ''}
                 {data.lastRun ? ` · last run ${when(data.lastRun.completedAt ?? data.lastRun.startedAt)} (${data.lastRun.status})` : ' · no run recorded yet'}
             </p>
             <div className='jfmod-group'>
