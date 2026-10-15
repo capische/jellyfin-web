@@ -1,0 +1,196 @@
+/* The quality profile dialog (P4.FU9, the approved Quality Profiles redesign, 2026-10-15). Sized in em; colours from the theme. */
+
+.jfmod-qp-field {
+    display: block;
+    margin: 0 0 1.1em;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.jfmod-qp-label {
+    display: block;
+    padding: 0;
+    margin-bottom: 0.35em;
+    font-size: 0.88em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-qp-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6em;
+    padding: 0.45em 0.6em;
+    border: 0.07em solid transparent;
+    border-radius: 0.2em;
+    cursor: pointer;
+    font-size: 0.92em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+
+    input {
+        margin: 0.25em 0 0;
+        flex: none;
+    }
+}
+
+.jfmod-qp-radio-on {
+    border-color: var(--jf-palette-primary-main, #00a4dc);
+    background: rgba(0, 164, 220, 0.12);
+}
+
+.jfmod-qp-radioname {
+    font-weight: 600;
+    font-size: 1.08em;
+    color: var(--jf-palette-text-primary, #fff);
+}
+
+.jfmod-qp-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5em 0.6em;
+    font: inherit;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.06);
+    border: 0;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    border-radius: 0.2em 0.2em 0 0;
+}
+
+.jfmod-qp-input:focus {
+    outline: none;
+    border-bottom-color: var(--jf-palette-primary-main, #00a4dc);
+}
+
+.jfmod-qp-seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+}
+
+.jfmod-qp-segbtn {
+    font: inherit;
+    font-size: 0.92em;
+    padding: 0.45em 0.9em;
+    color: inherit;
+    background: transparent;
+    border: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.18));
+    border-radius: 0.2em;
+    cursor: pointer;
+    text-align: left;
+
+    small {
+        opacity: 0.75;
+        font-size: 0.82em;
+    }
+}
+
+.jfmod-qp-segbtn[aria-pressed='true'] {
+    background: var(--jf-palette-primary-main, #00a4dc);
+    border-color: var(--jf-palette-primary-main, #00a4dc);
+    color: #fff;
+}
+
+.jfmod-qp-segbtn:focus-visible {
+    outline: 0.12em solid var(--jf-palette-primary-main, #00a4dc);
+    outline-offset: 0.1em;
+}
+
+.jfmod-qp-size .jfmod-qp-segbtn {
+    flex: 1 1 0;
+    min-width: 6em;
+
+    small { display: block; }
+}
+
+.jfmod-qp-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6em;
+    cursor: pointer;
+
+    > input {
+        margin: 0.25em 0 0;
+        flex: none;
+    }
+}
+
+.jfmod-qp-floor {
+    font: inherit;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.06);
+    border: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.18));
+    border-radius: 0.2em;
+    padding: 0.1em 0.3em;
+
+    option { color: #000; }
+}
+
+.jfmod-qp-hint { display: block; }
+
+.jfmod-qp-sum {
+    margin: 0 0 1em;
+    padding: 0.75em 0.9em;
+    border-left: 0.2em solid var(--jf-palette-primary-main, #00a4dc);
+    background: rgba(0, 164, 220, 0.12);
+    border-radius: 0.2em;
+    line-height: 1.45;
+}
+
+.jfmod-qp-problem {
+    margin: 0 0 1em;
+    padding: 0.75em 0.9em;
+    border-left: 0.2em solid var(--jf-palette-error-main, #c62828);
+    background: rgba(198, 40, 40, 0.1);
+    border-radius: 0.2em;
+}
+
+.jfmod-qp-adv {
+    border-top: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    padding-top: 0.8em;
+
+    > summary {
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 1.05em;
+        margin-bottom: 0.8em;
+    }
+}
+
+.jfmod-qp-advstate {
+    margin-left: 0.7em;
+    font-weight: 400;
+    font-size: 0.78em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-qp-matrix {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9em;
+
+    th,
+    td {
+        padding: 0.3em 0.2em;
+        text-align: center;
+        border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    }
+
+    th[scope='row'] {
+        text-align: left;
+        font-weight: 600;
+    }
+
+    thead th {
+        font-weight: 400;
+        color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    }
+}
+
+.jfmod-qp-na { opacity: 0.35; }
+
+.jfmod-qp-cut {
+    font-size: 0.82em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-qp-foot { margin: 0 0 0.6em; }
