@@ -190,6 +190,16 @@ const INDEXERS = [
         capabilities: { categories: [{ id: 2000, name: 'Movies', subCategories: [{ id: 2040, name: 'Movies/HD' }] }, { id: 5000, name: 'TV', subCategories: [{ id: 5040, name: 'TV/HD' }] }] }
     }
 ];
+// Prowlarr's own download clients (P6.FU1), set through the control port's /prowlarr-clients; none by default, as in many
+// installs. Answered in Prowlarr's DownloadClientResource shape, the password masked as its SchemaBuilder masks it.
+let prowlarrClients = [];
+const field = (name, value) => ({ order: 0, name, label: name, value, type: name === 'password' ? 'password' : 'textbox', advanced: false, privacy: name === 'password' ? 'password' : 'normal' });
+const downloadClientResource = (client, index) => ({
+    id: index + 1, name: client.name, implementation: client.implementation, implementationName: client.implementation,
+    configContract: `${client.implementation}Settings`, enable: client.enable !== false, protocol: 'torrent', priority: 1, categories: [], supportsCategories: true, tags: [],
+    fields: [field('host', client.host), field('port', client.port), field('useSsl', !!client.useSsl), field('urlBase', client.urlBase ?? '/transmission/'),
+        field('username', client.username ?? ''), field('password', '********'), field('category', 'prowlarr')]
+});
 const releasesFile = join(stateDir, 'releases.json');
 const releases = () => existsSync(releasesFile) ? JSON.parse(readFileSync(releasesFile, 'utf8')) : [];
 const CAPS = `<?xml version="1.0" encoding="UTF-8"?>
@@ -238,6 +248,7 @@ const prowlarr = createServer(async (request, response) => {
         if (url.pathname === '/api/v1/health') { json(response, 200, []); return; }
         if (url.pathname === '/api/v1/indexer') { json(response, 200, INDEXERS); return; }
         if (url.pathname === '/api/v1/indexerstatus') { json(response, 200, []); return; }
+        if (url.pathname === '/api/v1/downloadclient') { count('prowlarr.downloadclient'); json(response, 200, prowlarrClients.map(downloadClientResource)); return; }
         json(response, 404, { message: 'Not found' });
         return;
     }
@@ -430,6 +441,11 @@ const control = createServer(async (request, response) => {
     try {
         if (url.pathname === '/state') {
             json(response, 200, { faults, counters, torrents: [...torrents.values()].map((torrent, at) => describe(torrent, at + 1)), releases: releases() });
+            return;
+        }
+        if (url.pathname === '/prowlarr-clients') {
+            prowlarrClients = JSON.parse((await readBody(request)).toString('utf8'));
+            json(response, 200, { clients: prowlarrClients.length });
             return;
         }
         if (url.pathname === '/fault') { faults[url.searchParams.get('service')] = url.searchParams.get('mode'); json(response, 200, faults); return; }
