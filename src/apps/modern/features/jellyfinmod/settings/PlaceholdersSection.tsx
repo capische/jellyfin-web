@@ -13,6 +13,8 @@ interface PlaceholderLibrary {
     name: string;
     enabled: boolean;
     stubs: number;
+    /** Whether any folder of the library can be written; a read-only library gets nothing. */
+    writable?: boolean;
 }
 
 /** A dry run or a run (`/Placeholders/{id}/Plan`, `/Sync`, `/Removal`, `/Remove`). */
@@ -26,6 +28,8 @@ interface PlaceholderPlan {
     removals: { path: string; reason: string }[];
     skipped: { title: string; seasonNumber: number | null; episodes: number; reason: string; detail: string }[];
     failures?: { path: string; reason: string }[];
+    /** Placeholders a run left for the next one (a run writes a few series at a time). */
+    pending?: number;
 }
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -71,6 +75,12 @@ interface LibraryRowProps {
     onRemove: (library: PlaceholderLibrary) => Promise<void>;
 }
 
+/** The library's state in words: on, off because an administrator turned it off, or on but nothing can be written. */
+const statusOf = (library: PlaceholderLibrary) => {
+    if (!library.enabled) return 'Off (turned off by you)';
+    return library.writable === false ? 'Read-only: its folders cannot be written, so nothing is written' : 'On';
+};
+
 /** One TV library: its switch, Preview (the dry run) and Remove Placeholders, and the last plan read for it. */
 const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPreview, onRemove }) => {
     const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,12 +96,12 @@ const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPrev
         <div className='jfmod-brow' data-jfmod-placeholders={library.libraryId}>
             <div className='jfmod-brow-main'>
                 <strong>{library.name}</strong>
-                <span className='jfmod-sub'>{plural(library.stubs, 'placeholder')} in Jellyfin</span>
+                <span className='jfmod-sub' data-jfmod-placeholder-status=''>{statusOf(library)} · {plural(library.stubs, 'placeholder')} in Jellyfin</span>
                 <FormControlLabel control={<Switch checked={library.enabled} disabled={busy} onChange={toggle} />}
                     label='Show missing episodes as Jellyfin items' />
                 <div className='jfmod-inlineactions'>
                     <Button variant='contained' color='inherit' disabled={busy} onClick={preview}>Preview</Button>
-                    <Button variant='contained' color='error' disabled={busy || library.stubs === 0} onClick={remove}>
+                    <Button variant='contained' color='error' disabled={busy} onClick={remove}>
                         Remove Placeholders
                     </Button>
                 </div>
@@ -150,34 +160,7 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         () => request<PlaceholderPlan>(api, 'GET', `Placeholders/${library.libraryId}/Plan`),
         plan => `Dry run for ${plan.libraryName}: ${summaryOf(plan)}. Nothing was changed.`), [api, run]);
 
-    const toggle = useCallback(async (library: PlaceholderLibrary, enabled: boolean) => {
-        if (!enabled) {
-            await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: false }),
-                plan => `Off for ${plan.libraryName}. ${plural(library.stubs, 'placeholder')} stay until you remove them.`);
-            return;
-        }
-        // The dry run first, so the question names exactly what turning it on writes.
-        let plan: PlaceholderPlan;
-        try {
-            plan = await request<PlaceholderPlan>(api, 'GET', `Placeholders/${library.libraryId}/Plan`);
-        } catch (error) {
-            setNotice({ kind: 'err', text: problemText(error) });
-            return;
-        }
-        setPlans(current => ({ ...current, [plan.libraryId]: plan }));
-        ask({
-            title: `Show missing episodes in ${library.name}?`,
-            text: `This writes ${plural(plan.writes.length, 'placeholder file')} into ${library.name}'s folders (listed below), and more as `
-                + 'episodes air. Each is a small file Jellyfin shows as an episode that cannot play; downloading the episode replaces it.',
-            action: 'Turn On',
-            onConfirm: () => {
-                void run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: true }),
-                    done => `On for ${done.libraryName}: wrote ${plural(done.writes.length, 'placeholder')}. Jellyfin adds them as it scans.`);
-            }
-        });
-    }, [api, ask, run]);
-
-    const remove = useCallback(async (library: PlaceholderLibrary) => {
+    const remove = useCallback(async (library: PlaceholderLibrary, afterOff = false) => {
         let plan: PlaceholderPlan;
         try {
             plan = await request<PlaceholderPlan>(api, 'GET', `Placeholders/${library.libraryId}/Removal`);
@@ -186,11 +169,13 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
             return;
         }
         setPlans(current => ({ ...current, [plan.libraryId]: plan }));
+        if (afterOff && plan.removals.length === 0) return;
         ask({
-            title: `Remove placeholders from ${library.name}?`,
+            title: afterOff ? 'Remove existing placeholders now?' : `Remove placeholders from ${library.name}?`,
             text: `This deletes ${plural(plan.removals.length, 'placeholder file')} (listed below) and the season folders that leaves empty. `
                 + 'Nothing else is touched; watched and favourite marks are kept by Jellyfin for when the episode arrives.'
-                + (library.enabled ? ' The switch is still on, so the next sync writes them again: turn it off first.' : ''),
+                + (afterOff ? ' Cancel keeps them; nothing more is written while the switch is off.' : '')
+                + (!afterOff && library.enabled ? ' The switch is still on, so the next sync writes them again: turn it off first.' : ''),
             action: 'Remove',
             onConfirm: () => {
                 void run(() => request<PlaceholderPlan>(api, 'POST', `Placeholders/${library.libraryId}/Remove`),
@@ -199,12 +184,27 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         });
     }, [api, ask, run]);
 
+    // On is the default (user, 2026-10-15: "That's the point"): turning it back on just syncs; turning it off offers to remove
+    // the placeholders already written.
+    const toggle = useCallback(async (library: PlaceholderLibrary, enabled: boolean) => {
+        if (enabled) {
+            await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: true }),
+                done => `On for ${done.libraryName}: wrote ${plural(done.writes.length, 'placeholder')}`
+                    + (done.pending ? `, ${done.pending} more over the next runs` : '') + '. Jellyfin adds them as it scans.');
+            return;
+        }
+        await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: false }),
+            plan => `Off for ${plan.libraryName}: nothing more is written.`);
+        await remove(library, true);
+    }, [api, remove, run]);
+
     return (
         <SectionFrame id='placeholders' eyebrow={props.eyebrow} title='Missing Episodes' notice={null} next={props.next} onGo={props.onGo}>
             <p className='fieldDescription jfmod-lead'>
                 Shows every aired episode you do not have yet, of a series Jellyfin already holds, as a Jellyfin episode: a small
                 placeholder file where its download will go. Every app then lists it with watched, favourite and its details, and
-                none can play it. Off for each library until you turn it on; a folder Jellyfin cannot write to gets nothing.
+                none can play it. On for every TV library unless you turn it off here; a folder that cannot be written gets nothing.
+                Large libraries fill in a few series at a time.
             </p>
             {notice && <Notice notice={notice} />}
             <div className='jfmod-blist'>
