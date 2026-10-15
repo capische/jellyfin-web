@@ -194,3 +194,10 @@
 }
 
 .jfmod-qp-foot { margin: 0 0 0.6em; }
+
+/* A quality name and a source never break inside themselves on a phone. */
+.jfmod-qp .jfmod-qname,
+.jfmod-qp-matrix th[scope='row'] { white-space: nowrap; }
+
+/* On a narrow dialog the cutoff mark may push a row's icons onto a line of their own, never out of the dialog. */
+.jfmod-qp .jfmod-qrow { flex-wrap: wrap; }
