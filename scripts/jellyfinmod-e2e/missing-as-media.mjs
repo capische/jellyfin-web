@@ -4,8 +4,10 @@
 // Against a running mod instance or local environment, nothing intercepted, signed in as oleksii with an empty password:
 //
 //   Plugin and stock API, as a native app calls it (plain HTTP with a user token):
-//   - the dry run (GET /JellyfinMod/Placeholders/{library}/Plan) lists the files a sync would write and changes nothing;
-//     turning the library's switch on writes them, a second dry run then writes nothing more;
+//   - the switch is on by default (user, 2026-10-15: "That's the point"); a library whose folders are all read-only writes
+//     nothing (then the run stops there); the dry run (GET /JellyfinMod/Placeholders/{library}/Plan) lists the files a sync
+//     would write and changes nothing; turned off, a sync writes none; turned back on, it writes them a few series per run;
+//     a second dry run then writes nothing more;
 //   - Jellyfin holds each stub as an episode with IsPlaceHolder, its TMDB overview, DateCreated on its air date, a runtime,
 //     CanDownload false; the plugin keeps the episode missing (not onDisk) and names the stub as its placeholderItemId;
 //   - Next Up leaves the stub out (the series drops out when its next episode is a stub), Latest lists no stub;
@@ -27,8 +29,8 @@
 //   [JELLYFINMOD_MAM_USER=<ordinary user>]  [JELLYFINMOD_MAM_REMOVE=1]  [JELLYFINMOD_BROWSER=chromium|chrome]
 //   [JELLYFINMOD_LAYOUTS=desktop,mobile,tv1080]  [JELLYFINMOD_SHOTS=<folder>]  [JELLYFINMOD_WEB_PATH=/web/]
 //
-// It writes placeholder files into that library (the switch), and removes them only with JELLYFINMOD_MAM_REMOVE=1; every
-// played and favourite mark it sets is undone.
+// It writes placeholder files into that library (the switch is on by default), and removes them only with
+// JELLYFINMOD_MAM_REMOVE=1; every played and favourite mark it sets is undone and the switch is left as it was found.
 import { chromium } from 'playwright';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
@@ -96,9 +98,19 @@ async function apiChecks(admin, ordinary) {
     const label = 'api';
     const { call, userId } = admin;
     const library = (await call('GET', '/JellyfinMod/Placeholders')).json?.find(item => norm(item.libraryId) === norm(libraryId));
-    record(label, 'the library is listed with its switch', !!library, library);
+    record(label, 'the library is listed with its switch, on by default', !!library && library.enabled, library);
     if (!library) return null;
     const wasEnabled = library.enabled;
+    if (!library.writable) {
+        // A library whose every folder is read-only (a production media mount) gets nothing, and the dry run says why.
+        const plan = (await call('GET', `/JellyfinMod/Placeholders/${libraryId}/Plan`)).json;
+        const run = (await call('POST', `/JellyfinMod/Placeholders/${libraryId}/Sync`)).json;
+        record(label, 'a read-only library: the dry run and a sync write nothing, and say read_only',
+            !!plan && !!run && plan.writes.length === 0 && run.writes.length === 0 && plan.skipped.length > 0
+                && plan.skipped.every(skip => skip.reason === 'read_only'),
+            { writes: [plan?.writes.length, run?.writes.length], skipped: plan?.skipped.map(skip => skip.reason) });
+        return null;
+    }
     const detail = (await call('GET', `/JellyfinMod/Entries/${entryId}`)).json;
     const seriesId = detail?.entry?.jellyfinItemId;
     record(label, 'the series entry has its Jellyfin series', !!seriesId, detail?.entry?.state);
@@ -110,10 +122,22 @@ async function apiChecks(admin, ordinary) {
         !!plan?.dryRun && plan.writes.every(write => /\/Season \d+\/[^/]+ S\d\dE\d\d\.disc$/.test(write.path))
             && (await episodesOf(call, userId, seriesId)).filter(item => item.IsPlaceHolder).length === stubsBefore,
         { writes: plan?.writes.length, removals: plan?.removals.length, skipped: plan?.skipped.length, existing: plan?.existing, sample: plan?.writes[0]?.path });
-    if (!wasEnabled) {
-        const done = (await call('PUT', `/JellyfinMod/Placeholders/${libraryId}`, { enabled: true })).json;
-        record(label, 'turning the switch on writes what the dry run listed', !!done && !done.dryRun && done.enabled
-            && done.writes.length === plan.writes.length && !(done.failures ?? []).length, { written: done?.writes.length, failures: done?.failures });
+    // Turned off by an administrator, a library gets nothing: a sync writes none of what the dry run lists.
+    if (plan?.writes.length) {
+        await call('PUT', `/JellyfinMod/Placeholders/${libraryId}`, { enabled: false });
+        const off = (await call('POST', `/JellyfinMod/Placeholders/${libraryId}/Sync`)).json;
+        record(label, 'a library turned off gets nothing', !!off && !off.enabled && off.writes.length === 0, { writes: off?.writes.length });
+        await call('PUT', `/JellyfinMod/Placeholders/${libraryId}`, { enabled: true }).then(answer => {
+            record(label, 'turning it back on syncs at once, a few series per run', !!answer.json && answer.json.enabled
+                && answer.json.writes.length + (answer.json.pending ?? 0) === plan.writes.length && !(answer.json.failures ?? []).length,
+            { written: answer.json?.writes.length, pending: answer.json?.pending });
+        });
+    }
+    // On by default, a library is filled by the plugin's own runs; the runner asks for them rather than waiting 15 minutes.
+    for (let round = 0; round < 50; round++) {
+        const next = (await call('GET', `/JellyfinMod/Placeholders/${libraryId}/Plan`)).json;
+        if (!next?.writes.length) break;
+        await call('POST', `/JellyfinMod/Placeholders/${libraryId}/Sync`);
     }
     // Jellyfin adds them as it scans the folders the plugin reported.
     const wanted = detail.episodes.filter(episode => episode.availability === 'missing' && episode.seasonNumber > 0).length;
