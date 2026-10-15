@@ -21,8 +21,9 @@ export const SETUP_CAPABILITY = 'setup';
 /** Each step shows settings-area sections; `id` names the section and keys it in the step. */
 const STEPS: { id: string; title: string; sections: { id: string; Section: FC<SectionProps> }[] }[] = [
     { id: 'discovery', title: 'Discovery', sections: [{ id: 'discovery', Section: DiscoverySection }] },
-    { id: 'downloadClient', title: 'Download Client', sections: [{ id: 'client', Section: ClientSection }] },
+    // Indexers before the download client (P6.FU1, user 2026-10-15): the Prowlarr saved there offers its clients next.
     { id: 'indexers', title: 'Indexers', sections: [{ id: 'indexers', Section: IndexersSection }] },
+    { id: 'downloadClient', title: 'Download Client', sections: [{ id: 'client', Section: ClientSection }] },
     { id: 'qualityProfile', title: 'Quality Profile', sections: [{ id: 'profiles', Section: ProfilesSection }] },
     { id: 'enable', title: 'Turn Grabbing On', sections: [{ id: 'grabbing', Section: GrabbingSection }] },
     { id: 'optional', title: 'Optional', sections: [

@@ -27,8 +27,9 @@ export const SETTINGS_ROUTE = '/catalog/settings';
 const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
     { id: 'overview', title: 'Overview', Component: OverviewSection },
     { id: 'discovery', title: 'Discovery', Component: DiscoverySection },
-    { id: 'client', title: 'Download Client', Component: ClientSection },
+    // The wizard's order (P6.FU1): indexers, with Prowlarr, before the download client it can offer.
     { id: 'indexers', title: 'Indexers', Component: IndexersSection },
+    { id: 'client', title: 'Download Client', Component: ClientSection },
     { id: 'profiles', title: 'Quality Profiles', Component: ProfilesSection },
     { id: 'grabbing', title: 'Grabbing', Component: GrabbingSection },
     { id: 'import', title: 'Import and Seeding', Component: ImportSection },
