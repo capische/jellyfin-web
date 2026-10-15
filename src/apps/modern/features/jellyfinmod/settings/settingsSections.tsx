@@ -52,6 +52,20 @@ export interface SettingsData {
     lastRun?: any;
     /** Prowlarr sources; undefined when the plugin build has no Prowlarr support (P7.S9). */
     prowlarr?: any[];
+    /** Each TV and movie library's placeholder switch (`GET /JellyfinMod/Placeholders`, P1.FU24, P1.FU26). */
+    placeholders?: PlaceholderLibrary[];
+}
+
+/** A TV or movie library and its placeholder switch (`GET /JellyfinMod/Placeholders`). */
+export interface PlaceholderLibrary {
+    libraryId: string;
+    name: string;
+    enabled: boolean;
+    stubs: number;
+    /** Whether any folder of the library can be written; a read-only library gets nothing. */
+    writable?: boolean;
+    /** `movie` or `series` (P1.FU26); a build before it lists TV libraries only. */
+    mediaType?: string;
 }
 
 export interface SectionProps {
@@ -456,6 +470,23 @@ const summariseAutomation = (data: SettingsData): Summary => {
     return paused.length ? { kind: 'warn', words: `On · paused: ${paused.join(', ')}` } : { kind: 'ok', words: 'On' };
 };
 
+const placeholderCount = (count: number) => `${count} placeholder${count === 1 ? '' : 's'}`;
+
+/**
+ * Missing Episodes in a line, for the rail and the section's own head (P1.FU24): on in every library, on in some, off, or on
+ * where nothing can be written, with the placeholders Jellyfin holds.
+ */
+export const summarisePlaceholders = (libraries: PlaceholderLibrary[] | undefined): Summary => {
+    if (!libraries) return { kind: 'off', words: 'Not loaded' };
+    if (!libraries.length) return { kind: 'off', words: 'No TV or movie library' };
+    const on = libraries.filter(library => library.enabled);
+    const stubs = placeholderCount(libraries.reduce((sum, library) => sum + library.stubs, 0));
+    if (!on.length) return { kind: 'off', words: 'Off · turned off by you' };
+    if (on.every(library => library.writable === false)) return { kind: 'warn', words: 'Read-only · nothing is written' };
+    return on.length === libraries.length ? { kind: 'ok', words: `On · ${stubs}` } :
+        { kind: 'ok', words: `On for ${on.length} of ${libraries.length} libraries · ${stubs}` };
+};
+
 const summariseInterface = (data: SettingsData): Summary => {
     const face = data.iface;
     if (!face) return { kind: 'off', words: 'Not loaded' };
@@ -481,6 +512,7 @@ export const summarise = (id: string, data: SettingsData): Summary => {
         case 'import': return summariseImport(data);
         case 'retention': return summariseRetention(data);
         case 'automation': return summariseAutomation(data);
+        case 'placeholders': return summarisePlaceholders(data.placeholders);
         case 'interface': return summariseInterface(data);
         case 'diagnostics': return summariseDiagnostics(data);
         default:

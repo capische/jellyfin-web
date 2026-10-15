@@ -3,19 +3,9 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import React, { type FC, useCallback, useEffect, useState } from 'react';
 
-import type { SectionProps } from './settingsSections';
+import { type PlaceholderLibrary, type SectionProps, summarisePlaceholders } from './settingsSections';
 import { problemText, request } from './settingsApi';
 import { Notice, type NoticeState, ScrollList, SectionFrame, useConfirm } from './settingsWidgets';
-
-/** A TV library and its placeholder switch (`GET /JellyfinMod/Placeholders`). */
-interface PlaceholderLibrary {
-    libraryId: string;
-    name: string;
-    enabled: boolean;
-    stubs: number;
-    /** Whether any folder of the library can be written; a read-only library gets nothing. */
-    writable?: boolean;
-}
 
 /** A dry run or a run (`/Placeholders/{id}/Plan`, `/Sync`, `/Removal`, `/Remove`). */
 interface PlaceholderPlan {
@@ -81,7 +71,7 @@ const statusOf = (library: PlaceholderLibrary) => {
     return library.writable === false ? 'Read-only: its folders cannot be written, so nothing is written' : 'On';
 };
 
-/** One TV library: its switch, Preview (the dry run) and Remove Placeholders, and the last plan read for it. */
+/** One TV or movie library: its switch, Preview (the dry run) and Remove Placeholders, and the last plan read for it. */
 const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPreview, onRemove }) => {
     const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         void onToggle(library, event.target.checked);
@@ -98,7 +88,7 @@ const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPrev
                 <strong>{library.name}</strong>
                 <span className='jfmod-sub' data-jfmod-placeholder-status=''>{statusOf(library)} · {plural(library.stubs, 'placeholder')} in Jellyfin</span>
                 <FormControlLabel control={<Switch checked={library.enabled} disabled={busy} onChange={toggle} />}
-                    label='Show missing episodes as Jellyfin items' />
+                    label={library.mediaType === 'movie' ? 'Show missing movies as Jellyfin items' : 'Show missing episodes as Jellyfin items'} />
                 <div className='jfmod-inlineactions'>
                     <Button variant='contained' color='inherit' disabled={busy} onClick={preview}>Preview</Button>
                     <Button variant='contained' color='error' disabled={busy} onClick={remove}>
@@ -118,12 +108,13 @@ const summaryOf = (plan: PlaceholderPlan) => {
 };
 
 /**
- * Missing Episodes (P1.FU24): per TV library, the switch "Show missing episodes as Jellyfin items" (off by default), a dry run
+ * Missing Episodes (P1.FU24, P1.FU26): per TV and movie library, the switch "Show missing episodes (movies) as Jellyfin items" (on
+ * by default), with the section's state (`summarisePlaceholders`, as the rail shows it), a dry run
  * that lists the exact files a sync would write and remove, and Remove Placeholders. Turning a switch on asks first, naming how
  * many files it writes.
  */
 export const PlaceholdersSection: FC<SectionProps> = props => {
-    const { api } = props;
+    const { api, reload } = props;
     const [libraries, setLibraries] = useState<PlaceholderLibrary[] | null>(null);
     const [plans, setPlans] = useState<Record<string, PlaceholderPlan>>({});
     const [notice, setNotice] = useState<NoticeState | null>(null);
@@ -149,12 +140,14 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
             const failed = plan.failures?.length ? ` ${plural(plan.failures.length, 'file')} could not be changed.` : '';
             setNotice({ kind: plan.failures?.length ? 'warn' : 'ok', text: success(plan) + failed });
             await load();
+            // The rail's line for this section reads the same libraries.
+            await reload().catch(() => undefined);
         } catch (error) {
             setNotice({ kind: 'err', text: problemText(error) });
         } finally {
             setBusy(false);
         }
-    }, [load]);
+    }, [load, reload]);
 
     const preview = useCallback((library: PlaceholderLibrary) => run(
         () => request<PlaceholderPlan>(api, 'GET', `Placeholders/${library.libraryId}/Plan`),
@@ -199,16 +192,17 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
     }, [api, remove, run]);
 
     return (
-        <SectionFrame id='placeholders' eyebrow={props.eyebrow} title='Missing Episodes' notice={null} next={props.next} onGo={props.onGo}>
+        <SectionFrame id='placeholders' eyebrow={props.eyebrow} title='Missing Episodes' state={summarisePlaceholders(libraries ?? undefined)}
+            notice={null} next={props.next} onGo={props.onGo}>
             <p className='fieldDescription jfmod-lead'>
-                Shows every aired episode you do not have yet, of a series Jellyfin already holds, as a Jellyfin episode: a small
-                placeholder file where its download will go. Every app then lists it with watched, favourite and its details, and
-                none can play it. On for every TV library unless you turn it off here; a folder that cannot be written gets nothing.
-                Large libraries fill in a few series at a time.
+                Shows every aired episode you do not have yet, and every released movie or series in your catalog with no file, as a
+                Jellyfin item: a small placeholder file where its download will go. Every app then lists it with watched, favourite and
+                its details, and none can play it. On for every library unless you turn it off here; a folder that cannot be written
+                gets nothing. Large libraries fill in a few titles at a time.
             </p>
             {notice && <Notice notice={notice} />}
             <div className='jfmod-blist'>
-                {libraries?.length === 0 && <div className='jfmod-empty'>No TV library.</div>}
+                {libraries?.length === 0 && <div className='jfmod-empty'>No TV or movie library.</div>}
                 {libraries?.map(library => (
                     <LibraryRow key={library.libraryId} library={library} busy={busy} plan={plans[library.libraryId]}
                         onToggle={toggle} onPreview={preview} onRemove={remove} />
