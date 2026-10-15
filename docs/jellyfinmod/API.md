@@ -877,6 +877,69 @@ continuation becomes bounded. A user who can never read file-less metadata (Allo
 single failed detail call is skipped and counted in the response instead of failing the page
 (task P8 in [PHASE1.md](PHASE1.md); the web auto-follow cap is task W13).
 
+## Placeholders for missing episodes (P1.FU24)
+
+Administrators only (`Policies.RequiresElevation`); capability `placeholders` in Health. Missing aired episodes of a series
+Jellyfin already holds can be shown as Jellyfin items: the plugin writes a media stub where the import puts the episode's file
+(`<series folder>/Season NN/<Series (Year)> SNNENN.disc`), Jellyfin makes it an episode with `IsPlaceHolder: true`, and the
+response filter below keeps every client from offering or playing it. Off by default for every TV library
+(`PluginConfiguration.PlaceholderLibraryIds`). Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+
+| Request | Answer |
+| --- | --- |
+| `GET /JellyfinMod/Placeholders` | `[{ libraryId, name, enabled, stubs }]`, every TV library; `stubs` counts the plugin's placeholder items Jellyfin holds |
+| `GET /JellyfinMod/Placeholders/{libraryId}/Plan` | The dry run (below): what a sync would write and remove, and what it leaves without a placeholder. Changes nothing |
+| `PUT /JellyfinMod/Placeholders/{libraryId}` `{ "enabled": true }` | Turns the switch on and syncs at once (the run's plan); `false` turns it off and answers the dry run (existing placeholders stay) |
+| `POST /JellyfinMod/Placeholders/{libraryId}/Sync` | Syncs now: writes (only with the switch on), removes stale placeholders, stamps placeholder items |
+| `GET /JellyfinMod/Placeholders/{libraryId}/Removal` | The dry run of Remove Placeholders: every placeholder of the plugin's in the library |
+| `POST /JellyfinMod/Placeholders/{libraryId}/Remove` | Deletes them (each re-checked for the marker just before, unlinked by inode) and the season folders that left empty; the switch is not changed |
+
+An unknown or non-TV library is 404. A plan:
+
+```json
+{ "libraryId": "…", "libraryName": "Shows", "enabled": false, "dryRun": true, "existing": 0,
+  "writes": [{ "entryId": "…", "title": "Peep Show", "seasonNumber": 2, "episodeNumber": 1,
+               "path": "/tv/Peep Show (2003)/Season 02/Peep Show (2003) S02E01.disc", "newFolder": true }],
+  "removals": [{ "path": "…/Season 01/Peep Show (2003) S01E03.disc", "reason": "file_present" }],
+  "skipped": [{ "entryId": "…", "title": "Peep Show", "seasonNumber": 8, "episodes": 6, "reason": "outside_library",
+                "detail": "Season 08 leads outside the series folder." }],
+  "failures": [] }
+```
+
+`removals[].reason`: `file_present` (a file for the episode is beside the stub), `on_disk` (the episode has a file elsewhere),
+`not_listed` (TMDB no longer lists it), `not_aired` (its air date moved into the future), `unnumbered`, and `remove_all` for
+Remove Placeholders. `skipped[].reason`: `read_only` (the series or season folder cannot be written: nothing is written there,
+the mod's own cards and rows stay), `no_series_folder` (Jellyfin holds no file of the series; file-less series are P1.FU26),
+`outside_library` (a season folder that is a link out of the series folder), `file_present` (a file, a user's own `.disc`
+included, already reads as that episode), `name_taken`, `unreadable`, `library_root_missing`. Which episodes: aired (air date
+today or earlier), not specials, not on disk; unaired episodes keep the mod's own card with their date.
+
+**What a placeholder is.** A regular `.disc` file under 4 KB whose first line is `<!-- JellyfinMod placeholder v1 -->`,
+followed by Kodi's stub message (`<discstub><title>…</title><message>Not downloaded yet. Open JellyfinMod to get it.</message>
+</discstub>`). Only such files are ever treated as, or removed as, the plugin's; any other `.disc` is a user's and is left
+alone. Each is written whole (a hidden temporary file, then `link(2)`, which never replaces a file), only inside a library root
+and the series folder the entry's files are in. When Jellyfin creates or saves a placeholder item the plugin sets its
+`DateCreated` to the air date and its runtime to TMDB's.
+
+**Elsewhere in the plugin's API.** An episode in `GET /JellyfinMod/Entries/{id}` gains `placeholderItemId` (omitted when null):
+the Jellyfin placeholder that stands for it while it has no file; its `state`, `availability` and `jellyfinItemId` stay those
+of an episode without a file (reconciliation reads placeholder episodes as not on disk). `GET /JellyfinMod/Entries?jellyfinItemId=`
+with a placeholder's id finds the series' entry. The import removes the episode's placeholder before the scan that finds its
+file, so Jellyfin swaps the items and keeps the users' played, favourite and date marks.
+
+**Stock endpoints, for every client** (an MVC filter registered by the plugin; it acts on the plugin's placeholders only,
+whatever the switch says, and lets an answer through unchanged if it fails):
+
+| Stock endpoint | For a placeholder |
+| --- | --- |
+| `GET /Shows/NextUp` | left out, `TotalRecordCount` lowered by as many (a series whose next episode is a placeholder drops out; P1.FU28 plans the next real episode instead) |
+| `GET /Items/Latest` (`UserLibrary.GetLatestMedia`) | left out |
+| `GET/POST /Items/{id}/PlaybackInfo` | `200` with `ErrorCode: NotAllowed` and no media source |
+| `GET /Items/{id}/Download`, `/Videos/{id}/stream*`, the HLS master, variant and segment routes | `404` |
+| `POST /Sessions/Playing`, `/Progress`, `/Stopped`; `POST/DELETE /PlayingItems/{id}` (and the legacy `Users/{userId}/…` forms) | `204`, dropped: no report marks it played |
+| any item answer (`BaseItemDto`) | `CanDownload: false` |
+| `POST/DELETE /UserPlayedItems/{id}`, `/UserFavoriteItems/{id}` | unchanged: marking it played or favourite by hand works |
+
 ## Trakt indicator (Phase 7 Q16)
 
 Health `Capabilities` adds `trakt.history`, and Health gains a `Trakt` block read from the host's own plugin list

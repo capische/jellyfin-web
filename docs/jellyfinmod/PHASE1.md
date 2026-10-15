@@ -150,7 +150,9 @@ Lists. Concatenating that page with a plugin page cannot produce correct combine
 movies/series and file-less entries, applies a common filter/sort contract, then paginates once.
 Return native DTOs for native items plus plugin metadata; file-less entries remain a separate
 discriminated representation. Never insert synthetic `BaseItem`s into the server database or
-pass plugin IDs into stock library APIs. Keep CRUD list and unified browse semantics distinct.
+pass plugin IDs into stock library APIs. *(2026-10-15, P1.FU24: a missing episode may now also be a Jellyfin item that Jellyfin
+itself makes from a placeholder file the plugin writes, per library and off by default; nothing is inserted into Jellyfin's
+database. User: "Go and implement isPlaceHolder". See [design/missing-media-user-actions.md](design/missing-media-user-actions.md).)* Keep CRUD list and unified browse semantics distinct.
 
 For the first correctness spike, operate over complete candidate identities and required sort
 metadata on the server, hydrating only the resulting page. Measure latency and memory on the Pi

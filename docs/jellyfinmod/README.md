@@ -504,7 +504,17 @@ All fixable without changing a language.
   direct entry lookups. Retention's choice of watched user remains undecided.
 
 - **2026-09-04** — Catalog entries are plugin-owned rows, not Jellyfin `BaseItem`s. This is
-  what makes a plugin sufficient and a server fork unnecessary.
+  what makes a plugin sufficient and a server fork unnecessary. *Partly reversed 2026-10-15 (P1.FU24, below): entries stay
+  plugin rows, but a missing episode is also a Jellyfin item, made by Jellyfin from a placeholder file the plugin writes.*
+- **2026-10-15** — **Missing media is shown as Jellyfin items through media-stub placeholders** (P1.FU24, user: "Go and
+  implement isPlaceHolder", then "go with your recommendations"; the requirement, 2026-10-13: "Media availability should not
+  affect watched, fav, info and other actions. EVERYWHERE."). Per TV library and off by default, the plugin writes a marked
+  `.disc` media stub where the import would put a missing aired episode's file; Jellyfin 12 makes it an episode with
+  `IsPlaceHolder`, full metadata, ✓ and ♥ for every client, and a plugin MVC filter keeps stock apps from offering or playing
+  it (Next Up, Latest, PlaybackInfo, Download, streams, playback reports). It reverses this log's 2026-09-04 "not Jellyfin
+  `BaseItem`s" for missing items, PHASE1 §4's "never insert synthetic `BaseItem`s" (Jellyfin creates these items from files;
+  nothing is inserted into its database) and PHASE3's "plugin-only file-less representation, without STRM placeholders". No
+  server change, no migration. Plan and answers: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
 - **2026-09-04** — Torznab + direct download-client APIs, not a hard dependency on
   Prowlarr/Jackett (which still work, since they speak Torznab).
 - **2026-09-04** — ~~Catalog gets its own web section~~ ~~Superseded same day (§9): the catalog
