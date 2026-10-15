@@ -883,6 +883,34 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   cards). Not run: `card-get-shuffle.mjs` and `missing-seasons-episodes.mjs` (their picker steps run release searches, not
   read-only on 28096), the TV at 1280×720, a physical TV, a deployment, Codex review. The row Not Downloaded mark is left to
   `feat/row-mark-click`.
+  **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
+  Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of
+  [design/service-discovery.md](design/service-discovery.md); [PHASE7.md](PHASE7.md) §7, [UX.md](UX.md) §12.2,
+  [API.md](API.md) *Settings*). Owner: Phase 7 S10 (the wizard), with S9's Prowlarr source. (1) Order: Discovery, Indexers,
+  Download Client, Quality Profile, Turn Grabbing On, Optional, in `Setup/State`, the wizard, the settings area and the
+  Dashboard page (its step numbers and Next links); step ids and deep links unchanged. (2) Plugin: `GET
+  /JellyfinMod/Settings/Prowlarr/{id}/DownloadClients` (administrators only) reads Prowlarr's `api/v1/downloadclient` with
+  the saved key server-side (no redirects, 20 s, 256 KiB cap), returns implementation, name, enabled, host, port, useSsl,
+  urlBase, username and, for Transmission, the RPC address; never a password; plus the private default gateway from
+  `/proc/net/route`. (3) Web: *Found in Prowlarr* in the Download Client section, one button per Transmission client that
+  fills name, address and username and saves nothing; other kinds named as not supported yet; after a failed
+  (unreachable) Test of a client taken from Prowlarr, one *Try <gateway>:<port>* suggestion that only fills the address;
+  nothing shown without Prowlarr, without clients in it, on a failing Prowlarr, or once the client is verified. Plugin
+  `feat/prowlarr-clients` from `next-release` `b52a64a`: `ae68ce4` (order), `2cdaea5` (endpoint). Web
+  `feat/wizard-prowlarr-first`, rebased on `style/wizard-continue` (`13d274bd96`, P7.FU1): the research note, `90be6089ae`
+  (order), `9eb75a57a0` (Found in Prowlarr), `9060b20000` (runner `prowlarr-first.mjs` and the Prowlarr stand-in's
+  `api/v1/downloadclient`), `1543b611ab` (runner orders) and this docs commit. Evidence, local environment delta (Mac, under
+  its lease): `PhaseSevenProwlarrIntegration` (download-client read: fields mapped, RPC address built, no password masked or
+  not, no other field, key sent once server-side, 403 for an ordinary user, 401 anonymous, size cap, refused key, 404) and
+  `PhaseSevenSettingsIntegration` (step order) pass in the Linux SDK container; `prowlarr-first.mjs` 75/75 in Chromium and
+  75/75 in real Chrome on desktop, phone, TV 1080 and TV 720 (fresh setup resumes at Indexers, Prowlarr added and synced in
+  step 2, Found in Prowlarr, Use fills without saving, the Test of Prowlarr's `localhost` fails with its normal message, the
+  gateway `192.168.147.1` offered once and its Test passes, no key or password in any response, fixtures removed);
+  `settings-area.mjs` 39/39 Chromium and Chrome; `settings-design.mjs` 852/852 Chrome, 844/846 Chromium (the two TV failures
+  were the fixture: a synced indexer has no key to Clear; 348/348 on TV after adding a manual indexer); the Dashboard page's
+  order, eyebrows and Next links checked in Chromium and Chrome. Not run: `setup-wizard.mjs` (needs a completed setup),
+  `s11-fresh.mjs` (the Pi's disposable image container; its order expectations were updated, not run), the other plugin
+  suites, a real Prowlarr, a physical TV, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

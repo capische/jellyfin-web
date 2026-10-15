@@ -6,6 +6,10 @@ names vary? Research only; nothing here is built. Context: the wizard is
 [PHASE7 §7 / S10](../PHASE7.md), native Prowlarr support is [PHASE7 §6 / S9](../PHASE7.md) and is
 already built (`ProwlarrSync` calls `api/v1/system/status`, `health`, `indexer`, `indexerstatus`).
 
+**Decision, 2026-10-15:** the user approved option 1 and asked for the Indexers (Prowlarr) step before the Download
+Client step ("Then you should reorder and put Prowlarr before Download Client"). Built as P6.FU1 ([PLAN.md](../PLAN.md),
+[UX.md](../UX.md) §12.2, [API.md](../API.md) *Settings*); option 2 is not approved.
+
 ## Recommendation
 
 1. **Pre-fill the download client from Prowlarr (effort S).** The admin already types one Prowlarr

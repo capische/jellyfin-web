@@ -487,6 +487,27 @@ The client Test reads `session-get` only and never adds a torrent.
 `webdl-1080p`). `PATCH` with `enabled: true` answers 409 `acquisition_not_ready` with the blockers
 until a verified indexer, a verified enabled client and a default profile exist.
 
+`GET /JellyfinMod/Settings/Prowlarr/{id}/DownloadClients` (P6.FU1, administrator-only like every Prowlarr route)
+reads Prowlarr's `api/v1/downloadclient` with the source's saved key, on the server: the key never reaches the browser.
+It uses the acquisition HTTP client (no redirects, 20 s timeout) and refuses a body over 256 KiB (`response_too_large`).
+Only `host`, `port`, `useSsl`, `urlBase` and `username` are read from each client's `fields`; the password (Prowlarr
+masks it as `********`) and every other field are never read or returned. It changes nothing:
+
+```json
+{"code":"ok","gateway":"192.168.147.1","clients":[
+ {"implementation":"Transmission","name":"Seedbox","enabled":true,"host":"localhost","port":9091,"useSsl":false,
+  "urlBase":"/transmission/","username":"jfmod","kind":"transmission","baseUrl":"http://localhost:9091/transmission/rpc"},
+ {"implementation":"QBittorrent","name":"Q","enabled":true,"host":"qbit","port":8080,"useSsl":false,"urlBase":null,
+  "username":null,"kind":null,"baseUrl":null}]}
+```
+
+`kind` and `baseUrl` are set only for a client the plugin can drive (Transmission): the RPC address as Prowlarr builds
+it, scheme, host and port, then the URL base (default `/transmission/`) and `rpc`; a host that would not make a
+credential-free http(s) address gives none. `gateway` is the server's IPv4 default gateway from `/proc/net/route` when it
+is in 10/8, 172.16/12 or 192.168/16, else `null`. A Prowlarr that fails answers 200 with its code (`unauthorized`,
+`unreachable`, `timeout`, `prowlarr_schema`, `response_too_large`, …) and no client; an unknown source is 404.
+`GET /JellyfinMod/Setup/State` lists `indexers` before `downloadClient` (P6.FU1).
+
 `PATCH /JellyfinMod/Entries/{id}` also accepts `{"qualityProfileId": "<id>"}`. An explicit `null`
 restores inheritance. Episodes inherit their series profile and reject the field.
 
