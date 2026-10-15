@@ -1417,10 +1417,15 @@ a once-a-quarter admin task, not a browsing surface.
     <date and time in the viewer's locale>" or why it failed. The date is no longer a line of the row ("verified
     10/9/2026, 10:06:58 PM" is now "verified").
   - **The TMDB token is optional (P1.FU13, user 2026-10-12).** Its note, in the settings area and on the Dashboard page,
-    reads "Optional. Leave empty to use Jellyfin's built-in TMDb connection. A saved token is used instead, for JellyfinMod
-    discovery only." Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
+    reads "Leave empty to use Jellyfin's built-in TMDb connection. A saved token is used instead, for JellyfinMod
+    discovery only." (user, 2026-10-15: "Optional" moved into the settings area's label, "TMDB API Read Access Token (Optional)",
+    as for every optional field there; the Test Token icon has no description under the box). Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
     "Using your token · tested …" / "Using your token · not tested since it changed". With no token there is no Test icon
     (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
+  - **The wizard's Continue (user, 2026-10-15).** A done step shows no banner ("This step is done." is gone; a step not done keeps its
+    "not done yet" notice with what blocks it). Continue is Save's blue button at the bottom right of the step's card footer, Save at
+    the left (focus order Save, then Continue; on the TV Right from Save lands on Continue); it is refused until the step is done, and the last step has none. On a phone the
+    footer wraps and Continue stays at the right.
   - **A secret is one field.** Configured, it is the box with its icons (Test, Replace, Clear); Replace turns the box into
     the input, with its buttons inside it at the right: a round Save (only a secret that has a test of its own, the TMDB
     token, has one: it writes just that secret, then starts the Test; refused while the input is empty; Enter does the same)

@@ -522,8 +522,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   settings page with note - optional"). Owner: Phase 1 (discovery), with the settings copy from P7.S7. With no token saved,
   discovery, Add, Refresh and the episode-list load go through Jellyfin's own `TmdbClientManager` (bound by name to Jellyfin
   12.0.0's signatures; TMDbLib 3.0.0 compiled against, the host's copy used); a saved token still wins; 503 only with neither.
-  Settings name the source ("Using Jellyfin's TMDb connection" / "Using your token"), the note reads "Optional. Leave empty to
-  use Jellyfin's built-in TMDb connection.", the setup's Discovery step is done without a token, and
+  Settings name the source ("Using Jellyfin's TMDb connection" / "Using your token"), the note reads "Leave empty to
+  use Jellyfin's built-in TMDb connection." (the field label carries "(Optional)"), the setup's Discovery step is done without a token, and
   `Discovery/Test?source=jellyfin` is a read-only diagnostic ([API.md](API.md) *Discovery*). Limits: one search page, no TMDB
   status on failures (a missing title is 404), one request per season, the manager's hour cache. Plugin `next-release`
   `8d468e5..f5f5108`, web `521a391b1b..1079219ff0` (code and runner) and the docs commit after. Mac suites (Phase 0, 1, 2, 3,
