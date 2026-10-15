@@ -890,6 +890,12 @@
     padding: 0.4em 0;
 }
 
+/* The setup wizard's Continue: Save's blue button, at the right end of the footer; narrow, it wraps onto its own line, still at the right. */
+.jfmod-check-secfoot > .jfmod-continue {
+    margin-left: auto;
+    margin-right: 0;
+}
+
 /* Narrow: Next wraps under Save onto its own line, with room between the two. */
 @media (max-width: 48em) {
     .jfmod-next {

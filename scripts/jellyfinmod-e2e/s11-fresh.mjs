@@ -262,7 +262,7 @@ async function clientStep(page) {
         const unverified = await client.locator('.jfmod-maprow .jfmod-state').first().innerText();
         const blocked = await stepStatus(page, 'downloadClient');
         record('wizard', 'An unverified mapping keeps the step open and Continue refused', blocked.status !== 'done' && await cont(page).isDisabled(),
-            { pill: unverified, status: blocked.status, reasons: blocked.reasons, shown: (await page.locator('[data-wizard-state]').innerText()).replace(/\s+/g, ' ') });
+            { pill: unverified, status: blocked.status, reasons: blocked.reasons, shown: (await page.locator('[data-wizard-notice]').innerText()).replace(/\s+/g, ' ') });
         await fill(client.locator('.jfmod-maprow').last(), 'Local path', '/data/downloads');
         await client.getByRole('button', { name: 'Save mappings' }).click();
         await waitNotice(page, 'client', /Mappings saved/);

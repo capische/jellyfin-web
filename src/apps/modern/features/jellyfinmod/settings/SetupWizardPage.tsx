@@ -1,5 +1,4 @@
-import Button from '@mui/material/Button';
-import React, { type FC, useCallback, useEffect, useRef } from 'react';
+import React, { type FC, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Page from 'components/Page';
@@ -12,7 +11,7 @@ import {
     type SectionProps
 } from './settingsSections';
 import { useSettingsData } from './SettingsPage';
-import { Notice } from './settingsWidgets';
+import { Notice, WizardContinueContext } from './settingsWidgets';
 
 import './settings.scss';
 
@@ -80,29 +79,20 @@ const WizardRail: FC<{
     </nav>
 );
 
-/** Whether the current step is done, what still blocks it, and Continue while a later step exists. */
-const StepNotice: FC<{ state?: SetupStep; hasNext: boolean; onContinue: () => void }> = ({ state, hasNext, onContinue }) => {
-    const done = state?.status === 'done';
-    return (
-        // The notice's own dot and edge carry the state, with the words beside them: a state pill inside it drew a second dot.
-        <div className={`jfmod-notice jfmod-notice-${done ? 'ok' : 'warn'}`} role='status' data-wizard-state={state?.status}>
-            <i aria-hidden='true' />
-            <span className='jfmod-notice-text'>
-                {done ? 'This step is done.' : 'This step is not done yet.'}
-                {!done && state?.reasons.length ? ' ' + state.reasons.map(blockerSentence).join(' ') : ''}
-            </span>
-            {hasNext && (
-                <span className='jfmod-notice-action'>
-                    <Button variant='contained' disabled={!done} data-wizard='continue'
-                        onClick={onContinue}
-                    >
-                        Continue
-                    </Button>
-                </span>
-            )}
-        </div>
-    );
-};
+/**
+ * What still blocks the current step. A step that is done says nothing: its Continue sits at the end of its card's footer
+ * (user, 2026-10-15), enabled once the server calls the step done. `data-wizard-notice` marks it for the runners.
+ */
+const StepNotice: FC<{ state?: SetupStep }> = ({ state }) => (
+    // The notice's own dot and edge carry the state, with the words beside them: a state pill inside it drew a second dot.
+    <div className='jfmod-notice jfmod-notice-warn' role='status' data-wizard-notice=''>
+        <i aria-hidden='true' />
+        <span className='jfmod-notice-text'>
+            This step is not done yet.
+            {state?.reasons.length ? ' ' + state.reasons.map(blockerSentence).join(' ') : ''}
+        </span>
+    </div>
+);
 
 /**
  * `/catalog/settings/setup` — the first-run wizard (P7.S10, PHASE7 §7).
@@ -145,6 +135,8 @@ const SetupWizardPage: FC = () => {
     const openStep = useCallback((event: React.MouseEvent<HTMLButtonElement>) => go(event.currentTarget.dataset.step!), [go]);
     // Continue is only rendered while there is a next step.
     const continueToNext = useCallback(() => go(next.id), [go, next]);
+    const stepDone = status(current)?.status === 'done';
+    const wizardContinue = useMemo(() => (next ? { disabled: !stepDone, run: continueToNext } : null), [next, stepDone, continueToNext]);
     const dismiss = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
         event.preventDefault();
         void request(api!, 'POST', 'Setup/Dismiss').then(() => settings.refetch());
@@ -174,20 +166,22 @@ const SetupWizardPage: FC = () => {
                 <WizardRail setup={setup} current={current} onStep={openStep} onDismiss={dismiss} />
                 {/* focuscontainer-y: on the TV, Up and Down stay in the section instead of falling back into the rail
                     beside it (REVIEW-2026-09-24 S8-R2); Left and Right still cross between the two. */}
-                <div className='jfmod-check-main focuscontainer-y'>
+                <div className='jfmod-check-main focuscontainer-y' data-wizard-state={status(current)?.status}>
                     {/* A section whose read failed is not an empty one: say so, with a Retry, as the settings page does
                         (whole-review fixes review, P2 4). */}
                     {!!settings.data.failures?.length && <div data-jfmod-settings-failures=''><Notice notice={{
                         kind: 'err', text: `Some settings could not be read (${settings.data.failures.join(', ')}); what they show may be incomplete.`,
                         action: { label: 'Retry', run: retry }
                     }} /></div>}
-                    <StepNotice state={status(current)} hasNext={!!next} onContinue={continueToNext} />
-                    {step.sections.map(({ id, Section }) => (
-                        <div key={id} className='jfmod-wizardSection'>
-                            <Section api={api} data={settings.data!} reload={settings.refetch} onGo={stayOnStep}
-                                eyebrow={`Step ${index + 1} of ${STEPS.length}`} />
-                        </div>
-                    ))}
+                    {!stepDone && <StepNotice state={status(current)} />}
+                    <WizardContinueContext.Provider value={wizardContinue}>
+                        {step.sections.map(({ id, Section }) => (
+                            <div key={id} className='jfmod-wizardSection'>
+                                <Section api={api} data={settings.data!} reload={settings.refetch} onGo={stayOnStep}
+                                    eyebrow={`Step ${index + 1} of ${STEPS.length}`} />
+                            </div>
+                        ))}
+                    </WizardContinueContext.Provider>
                 </div>
             </div>
         );
