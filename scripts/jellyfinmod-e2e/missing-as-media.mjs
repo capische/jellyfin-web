@@ -10,7 +10,8 @@
 //     a second dry run then writes nothing more;
 //   - Jellyfin holds each stub as an episode with IsPlaceHolder, its TMDB overview, DateCreated on its air date, a runtime,
 //     CanDownload false; the plugin keeps the episode missing (not onDisk) and names the stub as its placeholderItemId;
-//   - Next Up leaves the stub out (the series drops out when its next episode is a stub), Latest lists no stub;
+//   - Next Up leaves the stub out (P1.FU28 puts the series' next real episode in its slot, placeholder-queues.mjs checks
+//     which), Latest lists no stub;
 //     PlaybackInfo answers NotAllowed with no media source, Download, stream and HLS answer 404, a real episode is untouched;
 //     playback reports on the stub (start, progress, stopped, legacy) are dropped and leave it unplayed; marking it played and
 //     favourite by hand works (and is undone).
