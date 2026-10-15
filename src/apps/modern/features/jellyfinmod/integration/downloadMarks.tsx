@@ -19,8 +19,8 @@ import '../components/downloadProgress.scss';
  * Downloads on every card and row of the page (P4.FU1, user-approved design 2026-10-12; the ring family P4.FU6, approved
  * 2026-10-13; UX §3.3).
  *
- * Wherever a title, season or episode is on its way, its card gets a thin amber bar along the poster's bottom edge (the watched
- * part in the primary on top) and the download disc (`DownloadStateMark`: the arrow and the amber arc, a clock, the importing
+ * Wherever a title, season or episode is on its way, its card gets a thin icon-colour bar along the poster's bottom edge (the watched
+ * part in the primary on top) and the download disc (`DownloadStateMark`: the arrow and the icon-colour arc, a clock, the importing
  * spinner, the pause) top right, left of upstream's tick or count pill, with the figure in its tooltip; a season page's or list
  * view's row gets the disc as the first round icon of its end slot (no bar) and the figure on its meta line (`42% · 12 min
  * left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason`). A series or season shows the mean of its episodes on
