@@ -1,6 +1,6 @@
 # Missing media behaves like available media (P1.FU24–28, planned)
 
-**Status:** P1.FU24 built (not accepted), 2026-10-15; P1.FU25–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
+**Status:** P1.FU24 and P1.FU25 built (not accepted), 2026-10-15; P1.FU26–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
 Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
 recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24 built in section 12.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
@@ -404,3 +404,20 @@ date; stamping happens when Jellyfin creates **or saves** the item (its first me
 the stamp, which undid a stamp made only on creation) and on every sync; specials get no stubs (as the mod's own surfaces
 offer none); the filter acts on the plugin's marked stubs only, whatever the switch says, and leaves a user's own `.disc` as
 Jellyfin answers it.
+
+## 13. What P1.FU25 built (2026-10-15, built, not accepted)
+
+Plugin (`feat/placeholder-swap` from `feat/placeholder-stubs`): `PlaceholderService.SwapForImport` (the import's half: the
+episode's marked stubs leave its series folder and every season folder, after the link is verified and recorded and before the
+scan, under the library lock; called from `ImportService` for a new link, a recovered one and a `linked` operation found at
+start), `PlaceholderService.LeaveAfterReclaim` and `ReclaimStubPath` (the retention half, called by `RetentionExecutor` after a
+plain reclaim of an episode's last file is committed), the sync's `importing` guard and series-wide stub and file lookups, a
+reclaimed episode counted as aired, the reclaimed series' folder kept by its series item (`SeriesFolders`), and the preview's
+`placeholder` block and `leavesPlaceholder`/`placeholders`. Web: the placeholder page follows the swap to the file's page.
+
+Differences from sections 2 and 5: the import removes the stub just **after** the link (not before it), so the episode is never
+left with neither; the reclaim's stub goes in the reclaimed file's own folder (not a recomputed import path), so the sync and the
+removal look in the series folder as well as its season folders; movies get no stub after a reclaim until P1.FU26. Jellyfin 12
+re-attaches played, favourite and dates by key in both directions (checked live on local environment charlie), with one caveat
+recorded in [PLAN.md](../PLAN.md) P1.FU25: a list endpoint can show a just-swapped item unplayed until a restart if a client read
+it before its first metadata refresh.
