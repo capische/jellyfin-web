@@ -225,10 +225,10 @@ const emptyFoldersQuery = (api: Api | undefined, userId: string | undefined) => 
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Series], fields: [ItemFields.RecursiveItemCount] }, { signal }),
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Season], fields: [ItemFields.ChildCount], enableUserData: false },
                     { signal }),
-                // Placeholder episodes (media stubs, P1.FU24) are items with no file: a season or series holding only them has
-                // nothing to play either, and their own cards none.
-                items.getItems({ ...common, includeItemTypes: [BaseItemKind.Episode], isPlaceHolder: true, enableUserData: false },
-                    { signal })
+                // Placeholder episodes and movies (media stubs, P1.FU24, P1.FU26) are items with no file: a season or series
+                // holding only them has nothing to play either, and their own cards none.
+                items.getItems({ ...common, includeItemTypes: [BaseItemKind.Episode, BaseItemKind.Movie], isPlaceHolder: true,
+                    enableUserData: false }, { signal })
             ]);
             const normal = (id: string | null | undefined) => (id ?? '').replace(/-/g, '').toLowerCase();
             const stubs = placeholders.data.Items ?? [];
@@ -257,17 +257,18 @@ const emptyFoldersQuery = (api: Api | undefined, userId: string | undefined) => 
 
 /**
  * Marks every series or season card in `root` (or `root` itself) that Jellyfin holds no episode file of, and every placeholder
- * episode's card (P1.FU24), and unmarks the rest.
+ * episode's (P1.FU24) and movie's (P1.FU26) card, and unmarks the rest. Placeholder movies and episodes, and series with nothing
+ * but placeholders, carry the Not Downloaded mark too.
  */
 const markEmpty = (root: ParentNode, empty: Set<string>) => {
     const cards = Array.from(root.querySelectorAll('.card[data-id]'));
     if (root instanceof Element && root.matches('.card[data-id]')) cards.push(root);
     for (const card of cards) {
         const type = card.getAttribute('data-type') ?? '';
-        const isEmpty = (PACK_TYPES.has(type) || type === 'Episode')
+        const isEmpty = (PACK_TYPES.has(type) || type === 'Episode' || type === 'Movie')
             && empty.has((card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase());
         if (isEmpty !== card.hasAttribute(EMPTY_ATTRIBUTE)) card.toggleAttribute(EMPTY_ATTRIBUTE, isEmpty);
-        if (type === 'Episode') placeholderMark(card, isEmpty);
+        if (type === 'Episode' || type === 'Movie' || type === 'Series') placeholderMark(card, isEmpty);
     }
 };
 
@@ -284,7 +285,8 @@ const GLYPH = '<svg class="jfmod-markGlyph" viewBox="0 0 24 24" fill="none" stro
 const placeholderMark = (card: Element, on: boolean) => {
     const cover = card.querySelector('.cardScalable');
     const existing = cover?.querySelector(':scope > [data-jfmod-stubmark]');
-    if (!cover || !on) {
+    // A card the mod draws itself (a catalog title's) already carries its own state mark: one mark, never two.
+    if (!cover || !on || cover.querySelector(':scope > .jfmod-markSlot:not([data-jfmod-stubmark])')) {
         existing?.remove();
         return;
     }
@@ -310,7 +312,13 @@ const useEmptyMarks = (api: Api | undefined, userId: string | undefined) => {
         const observer = new MutationObserver(records => {
             for (const record of records) {
                 record.addedNodes.forEach(node => {
-                    if (node instanceof Element) markEmpty(node, empty);
+                    if (!(node instanceof Element)) return;
+                    // The mod's own mark arrived on a card that got the injected one first: keep the mod's only.
+                    if (node.matches('.jfmod-markSlot:not([data-jfmod-stubmark])')) {
+                        node.parentElement?.querySelector(':scope > [data-jfmod-stubmark]')?.remove();
+                        return;
+                    }
+                    markEmpty(node, empty);
                 });
             }
         });

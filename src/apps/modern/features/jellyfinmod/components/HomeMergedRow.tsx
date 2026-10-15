@@ -81,6 +81,10 @@ const ContinueRow: FC<ContinueProps> = ({ includeResume, includeNextUp }) => {
     return <RowShell title='Continue Watching'>{items.map(item => <Card key={item.Id} item={item} cardOptions={{ ...rowOptions, serverId: __legacyApiClient__?.serverId() }} />)}</RowShell>;
 };
 
+/** A Browse row that is a title's placeholder item standing for its entry (P1.FU26). */
+const isPlaceholderRow = (row: BrowseRow) => row.kind === 'native' && !!row.entry?.placeholderItemId
+    && row.entry.placeholderItemId.replace(/-/g, '').toLowerCase() === row.nativeItem.Id?.replace(/-/g, '').toLowerCase();
+
 const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
     const { api, user, __legacyApiClient__ } = useApi();
     const health = usePluginHealth();
@@ -112,9 +116,11 @@ const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
         // Native rows already come from each allowed Latest feed. Only append file-less
         // catalog rows here or the same native item appears twice in Recently Added.
         // A reclaimed title was watched and removed; it is not something recently added (P3.T14).
+        // A title with no file that Jellyfin shows through its placeholder (P1.FU26) comes as that item, carrying its entry; it
+        // was added when the entry was, and Latest leaves placeholders out.
         const entryRows = catalog.flatMap(result => result.data?.items ?? [])
-            .filter((row): row is Extract<BrowseRow, { kind: 'entry' }> => row.kind === 'entry')
-            .filter(row => row.entry.state !== FileState.Reclaimed);
+            .filter(row => row.kind === 'entry' || isPlaceholderRow(row))
+            .filter(row => row.entry?.state !== FileState.Reclaimed);
         const seen = new Set<string>();
         const uniqueRows = [...nativeRows, ...entryRows].filter(row => {
             const item = row.kind === 'native' ? row.nativeItem : undefined;
@@ -130,8 +136,8 @@ const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
             return !duplicate;
         });
         uniqueRows.sort((left, right) => {
-            const leftDate = left.kind === 'native' ? left.nativeItem.DateCreated : left.entry.addedAt;
-            const rightDate = right.kind === 'native' ? right.nativeItem.DateCreated : right.entry.addedAt;
+            const leftDate = left.kind === 'native' && !isPlaceholderRow(left) ? left.nativeItem.DateCreated : left.entry?.addedAt;
+            const rightDate = right.kind === 'native' && !isPlaceholderRow(right) ? right.nativeItem.DateCreated : right.entry?.addedAt;
             return String(rightDate ?? '').localeCompare(String(leftDate ?? ''));
         });
         return uniqueRows.slice(0, 24);
