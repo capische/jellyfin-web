@@ -9,6 +9,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { qualityName } from '../constants/quality';
 import { CONFLICT_MESSAGE, problemText, request } from './settingsApi';
 import { type Draft, FieldForm, IconAction, Notice, type NoticeState, pick } from './settingsWidgets';
 
@@ -109,7 +110,7 @@ export const profileSummary = (profile: Draft) => {
     const best = resolutionOf(qualities[0]);
     const lowest = resolutionOf(qualities[qualities.length - 1]);
     const reach = best === lowest ? `${tierName(best)} only` : `${tierName(best)} first, then down to ${lowest}`;
-    const upgrades = profile.upgradeAllowed ? 'upgrades until ' + String(profile.cutoff) : 'no upgrades';
+    const upgrades = profile.upgradeAllowed ? 'upgrades until ' + qualityName(profile.cutoff as string) : 'no upgrades';
     return `${reach} · ${sizeWords(profile, true)} · ${upgrades}`;
 };
 
@@ -121,7 +122,7 @@ const Sentence: FC<{ record: Draft }> = ({ record }) => {
     const lowest = resolutionOf(qualities[qualities.length - 1]);
     const reach = best === lowest ? `only ${tierName(best)} (${best})` : `${tierName(best)} (${best}) first, then down to ${lowest}`;
     const upgrade = record.upgradeAllowed ?
-        <><b>upgrades</b> later until it holds <code>{String(record.cutoff)}</code> ({record.upgradeMode === 'add' ? 'keeping both' : 'replacing the file'})</> :
+        <><b>upgrades</b> later until it holds {qualityName(record.cutoff as string)} ({record.upgradeMode === 'add' ? 'keeping both' : 'replacing the file'})</> :
         <>does not upgrade later</>;
     return qualities.length ?
         <><b>{name}</b> picks {reach}, {sizeWords(record, false)}, and {upgrade}.</> :
@@ -167,16 +168,17 @@ const QualityRow: FC<{ id: string; index: number; chosen: string[]; cutoff: unkn
     const moveUp = useCallback(() => move(-1, 'up'), [move]);
     const moveDown = useCallback(() => move(1, 'down'), [move]);
     const remove = useCallback(() => toggle(id), [toggle, id]);
+    const name = qualityName(id);
     return (
-        <li className='jfmod-qrow'>
-            <span className='jfmod-qrank'>{index + 1}</span><span className='jfmod-qname'>{id}</span>
+        <li className='jfmod-qrow' title={id}>
+            <span className='jfmod-qrank'>{index + 1}</span><span className='jfmod-qname'>{name}</span>
             {cutoff === id && <span className='jfmod-qp-cut'>cutoff</span>}
             <span className='jfmod-rowactions'>
-                <IconAction label={`Move ${id} Up`} refused={index === 0} onClick={moveUp} data={{ 'row-action': 'up', quality: id }}><ArrowUpwardIcon /></IconAction>
-                <IconAction label={`Move ${id} Down`} refused={index === chosen.length - 1} onClick={moveDown} data={{ 'row-action': 'down', quality: id }}>
+                <IconAction label={`Move ${name} Up`} refused={index === 0} onClick={moveUp} data={{ 'row-action': 'up', quality: id }}><ArrowUpwardIcon /></IconAction>
+                <IconAction label={`Move ${name} Down`} refused={index === chosen.length - 1} onClick={moveDown} data={{ 'row-action': 'down', quality: id }}>
                     <ArrowDownwardIcon />
                 </IconAction>
-                <IconAction label={`Remove ${id}`} red onClick={remove} data={{ 'row-action': 'remove', quality: id }}><DeleteIcon /></IconAction>
+                <IconAction label={`Remove ${name}`} red onClick={remove} data={{ 'row-action': 'remove', quality: id }}><DeleteIcon /></IconAction>
             </span>
         </li>
     );
@@ -407,7 +409,7 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
                         <input type='checkbox' checked={!!draft.upgradeAllowed} onChange={setUpgrade} data-qp='upgrade' />
                         <span>Upgrade later when something better appears
                             <span className='fieldDescription jfmod-qp-hint'>
-                                Needs Automation on. {draft.upgradeMode === 'add' ? 'Adds a version' : 'Replaces the file'} until it reaches {String(draft.cutoff ?? chosen[0] ?? 'the best allowed quality')}.
+                                Needs Automation on. {draft.upgradeMode === 'add' ? 'Adds a version' : 'Replaces the file'} until it reaches {qualityName((draft.cutoff ?? chosen[0]) as string | undefined) || 'the best allowed quality'}.
                             </span>
                         </span>
                     </label>
@@ -426,27 +428,18 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
                                         <th scope='row'>{label}</th>
                                         {RESOLUTIONS.map(resolution => (
                                             <MatrixCell key={resolution} id={`${source}-${resolution}`} known={known.has(`${source}-${resolution}`)}
-                                                checked={chosen.includes(`${source}-${resolution}`)} label={`${label} ${resolution}`} toggle={toggle} />
+                                                checked={chosen.includes(`${source}-${resolution}`)} label={qualityName(`${source}-${resolution}`)} toggle={toggle} />
                                         ))}
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                        <div className='fieldDescription'>Tick what the profile may take. The order below is what it tries first; the simple choices fill both.</div>
-                    </div>
-                    <div className='jfmod-qp-field'>
-                        <span className='jfmod-qp-label'>Order tried, best first</span>
-                        <ol className='jfmod-qlist'>
-                            {chosen.map((id, index) => (
-                                <QualityRow key={id} id={id} index={index} chosen={chosen} cutoff={draft.cutoff} set={edit} toggle={toggle} />
-                            ))}
-                        </ol>
-                        <div className='fieldDescription' data-qp='order'>
-                            Order tried: {chosen.length ? chosen.map((id, index) => `${index + 1} ${id}`).join(', ') : 'nothing'}
+                        <div className='fieldDescription'>
+                            Tick what the profile may take. It tries the higher resolution first and, within one, Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD.
                         </div>
                     </div>
                     <FieldForm fields={[
-                        { key: 'cutoff', label: 'Upgrade until (cutoff)', type: 'select', options: chosen.map(id => ({ value: id, label: id })), optional: true,
+                        { key: 'cutoff', label: 'Upgrade until (cutoff)', type: 'select', options: chosen.map(id => ({ value: id, label: qualityName(id) })), optional: true,
                             help: 'Upgrading stops once this quality is held.' },
                         { key: 'upgradeMode', label: 'An upgrade', type: 'select', options: [{ value: 'replace', label: 'replaces the held copy' }, { value: 'add', label: 'is added as another version' }] },
                         { key: 'minimumAutoScore', label: 'Minimum score for automatic grabs', type: 'int', optional: true },
@@ -455,6 +448,23 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
                         { key: 'maximumGb', label: 'Largest file, GB per hour of runtime', type: 'number', optional: true,
                             help: 'Stored as bytes per hour; 1 GB/h is about 2.4 GB for a 2 h 25 min film.' }
                     ]} draft={gbDraft} onChange={editAdvanced} />
+                    {/* The order editor is for exceptions only (user, 2026-10-15: "I would assume order, and it's too advanced"); the matrix sets the
+                        usual order and the record keeps whatever order this list has. */}
+                    <details className='jfmod-qp-ordertried' data-qp='order-toggle'>
+                        <summary>Change the order tried</summary>
+                        <div className='fieldDescription'>
+                            The matrix already sets the usual order: higher resolution first, then Remux, Blu-ray, WEB-DL, WEBRip, HDTV. Change it here only for an
+                            exception, such as WEB-DL before Blu-ray.
+                        </div>
+                        <ol className='jfmod-qlist'>
+                            {chosen.map((id, index) => (
+                                <QualityRow key={id} id={id} index={index} chosen={chosen} cutoff={draft.cutoff} set={edit} toggle={toggle} />
+                            ))}
+                        </ol>
+                        <div className='fieldDescription' data-qp='order'>
+                            Order tried: {chosen.length ? chosen.map((id, index) => `${index + 1} ${qualityName(id)}`).join(', ') : 'nothing'}
+                        </div>
+                    </details>
                 </details>
             </DialogContent>
             <DialogActions>
