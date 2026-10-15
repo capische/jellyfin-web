@@ -42,6 +42,11 @@ export interface Entry {
     monitored: boolean;
     /** Set from OnDisk onward. */
     jellyfinItemId?: string | null;
+    /**
+     * The Jellyfin item that stands for the title while it has no file (P1.FU26): the plugin's placeholder movie, or the series
+     * item its placeholder episodes make. Set on entry detail and Browse answers only.
+     */
+    placeholderItemId?: string | null;
     targetLibraryId?: string | null;
     /** 0-100, while downloading. */
     progress?: number | null;

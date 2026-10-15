@@ -108,8 +108,10 @@ export default function initializeEntryDetails(view, params) {
                     if (now && currentGeneration === generation) openHeld(now);
                 }, () => undefined);
             }
-            if (detail.entry.jellyfinItemId && !isSeason) {
-                window.location.replace('#/details?id=' + encodeURIComponent(detail.entry.jellyfinItemId)
+            // The title's Jellyfin page: its file's, or the placeholder Jellyfin holds while it has none (P1.FU26).
+            const titleItem = detail.entry.jellyfinItemId || detail.entry.placeholderItemId;
+            if (titleItem && !isSeason) {
+                window.location.replace('#/details?id=' + encodeURIComponent(titleItem)
                     + '&serverId=' + encodeURIComponent(client.serverId()));
                 return;
             }

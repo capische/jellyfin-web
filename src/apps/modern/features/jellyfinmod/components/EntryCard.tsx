@@ -42,8 +42,10 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
     const { getCardWrapperProps, getCardBoxProps } = useCard({ item: nativeItem, cardOptions });
     const { className, dataAttributes } = getCardWrapperProps();
     const entryClassName = className + ' jfmod-entryCard';
-    // Nothing on disk (a reclaimed title's kept item): no Play on its hover, Get a Release in the centre (P1.FU19).
-    const noFile = entry.state === FileState.None || entry.state === FileState.Reclaimed ? { 'data-jfmod-nofile': '' } : undefined;
+    // Nothing on disk (a reclaimed title's kept item, or the title's placeholder item, P1.FU26, downloading or not): no Play on
+    // its hover, Get a Release in the centre (P1.FU19).
+    const isPlaceholder = !!entry.placeholderItemId && entry.placeholderItemId.replace(/-/g, '').toLowerCase() === nativeItem.Id?.replace(/-/g, '').toLowerCase();
+    const noFile = isPlaceholder || entry.state === FileState.None || entry.state === FileState.Reclaimed ? { 'data-jfmod-nofile': '' } : undefined;
     const content = <>
         <CardBox {...getCardBoxProps()} />
         <NativeCardMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
