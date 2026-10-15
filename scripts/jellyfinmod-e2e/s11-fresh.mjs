@@ -193,7 +193,11 @@ async function wizard() {
         await cont(page).click();
         await page.waitForTimeout(800);
 
-        record('wizard', 'Continue moves to Download client', await current(page) === 'downloadClient');
+        // P6.FU1: Indexers comes before the Download Client; the client is set up first here, through the rail, and the
+        // resume step then finds Indexers as the first incomplete step.
+        record('wizard', 'Continue moves to Indexers', await current(page) === 'indexers');
+        await page.locator('.jfmod-step[data-step="downloadClient"]').click();
+        await page.waitForTimeout(800);
         await clientStep(page);
     } catch (error) {
         notVerified('wizard', 'steps 1-2', error);
@@ -285,7 +289,7 @@ async function clientStep(page) {
         record('wizard', 'Download client step done; Continue unlocks', !await cont(page).isDisabled());
         await cont(page).click();
         await page.waitForTimeout(800);
-        record('wizard', 'Continue moves to Indexers with Continue refused', await current(page) === 'indexers' && await cont(page).isDisabled());
+        record('wizard', 'Continue moves to Quality profile with Continue refused', await current(page) === 'qualityProfile' && await cont(page).isDisabled());
     }
 }
 
@@ -341,6 +345,10 @@ async function resume() {
         record('resume', 'Indexers step done: one synced, enabled, verified indexer holding no key of its own',
             indexers.length === 1 && indexers[0].managedBy === 'prowlarr' && indexers[0].verified && !indexers[0].apiKeyConfigured,
             indexers.map(indexer => ({ name: indexer.name, managedBy: indexer.managedBy, verified: indexer.verified, apiKeyConfigured: indexer.apiKeyConfigured })));
+        await cont(page).click();
+        await page.waitForTimeout(800);
+        // P6.FU1: the Download Client step follows Indexers; it is already done here, so Continue goes on.
+        record('resume', 'Continue moves to the Download client, already done', await current(page) === 'downloadClient' && !await cont(page).isDisabled());
         await cont(page).click();
         await page.waitForTimeout(800);
 
