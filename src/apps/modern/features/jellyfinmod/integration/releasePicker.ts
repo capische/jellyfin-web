@@ -210,7 +210,7 @@ export const openReleasePickerForEntry = async (api: Api, entryId: string, { nat
     const sameId = (value?: string | null) => !!value && !!nativeItemId
         && value.replace(/-/g, '').toLowerCase() === nativeItemId.replace(/-/g, '').toLowerCase();
     // An episode page names its episode, since the More menu's item may be another version of it.
-    const pageEpisodeId = nativeItemId ? detail.episodes.find(episode => sameId(episode.jellyfinItemId)
+    const pageEpisodeId = nativeItemId ? detail.episodes.find(episode => sameId(episode.jellyfinItemId) || sameId(episode.placeholderItemId)
         || (episode.versions ?? []).some(version => sameId(version.jellyfinItemId)))?.id : undefined;
     await openReleasePicker({
         api,

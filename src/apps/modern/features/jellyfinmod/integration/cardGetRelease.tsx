@@ -10,7 +10,7 @@ import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
 import { getEntries, getEntry } from '../api/modApi';
-import { sameItemId } from '../constants/versions';
+import { isEpisodeItem, sameItemId } from '../constants/versions';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { FileState } from '../types/entry';
 import { lastKnown } from '../utils/lastKnown';
@@ -19,6 +19,7 @@ import { registerCardMenuItem } from './moreMenuItem';
 import { openReleasePickerForEntry } from './releasePicker';
 import { restoreFocusTo } from './stockHeaderButton';
 
+import '../components/fileStateMark.scss';
 import './cardGetRelease.scss';
 
 /**
@@ -48,11 +49,13 @@ import './cardGetRelease.scss';
  * classes instead of the bottom row. The mod's own file-less and missing-season cards have no upstream overlay: `CardHoverGet`
  * draws the same centre icon on them.
  *
- * **Any series or season Jellyfin holds no episode of** (P1.FU23, user 2026-10-13 on Kleo's library card: "Supposed to be
+ * **Any series or season Jellyfin holds no episode file of** (P1.FU23, user 2026-10-13 on Kleo's library card: "Supposed to be
  * Cloud download instead of Play button as nothing available to play") is marked `data-jfmod-empty` wherever its card is
  * drawn (library grids, search, Home rows), with the same effect. One read per user lists them (a series' recursive episode
  * count, a season's child count), kept in this browser and refreshed with the catalog, so the mark is on the card from its
- * first frame. A title with any episode keeps Play; movies and episodes always have a file in Jellyfin.
+ * first frame. A title with any episode file keeps Play. Since P1.FU24 a placeholder episode (a media stub Jellyfin calls
+ * `IsPlaceHolder`) counts as no file: a season or series holding only placeholders is marked, and so is each placeholder's own
+ * card (a third read lists them).
  */
 
 const CARD_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
@@ -95,7 +98,7 @@ const labelFor = (intent: 'addVersion' | undefined) => (intent ? 'Get Another Qu
 /** An episode card: only an episode the plugin tracks, so the picker can preselect it. */
 const episodeTarget = async (api: Api, entryId: string, itemId: string): Promise<CardTarget | null> => {
     const detail = await getEntry(api, entryId);
-    const episode = detail.episodes.find(candidate => sameItemId(candidate.jellyfinItemId, itemId)
+    const episode = detail.episodes.find(candidate => isEpisodeItem(candidate, itemId)
         || (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)));
     if (!episode) return null;
     const intent = episode.state === FileState.OnDisk ? 'addVersion' : undefined;
@@ -218,15 +221,29 @@ const emptyFoldersQuery = (api: Api | undefined, userId: string | undefined) => 
         queryFn: async ({ signal }) => {
             const items = getLibraryApi(api!);
             const common = { userId, recursive: true, enableImages: false, enableTotalRecordCount: false };
-            const [series, seasons] = await Promise.all([
+            const [series, seasons, placeholders] = await Promise.all([
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Series], fields: [ItemFields.RecursiveItemCount] }, { signal }),
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Season], fields: [ItemFields.ChildCount], enableUserData: false },
+                    { signal }),
+                // Placeholder episodes (media stubs, P1.FU24) are items with no file: a season or series holding only them has
+                // nothing to play either, and their own cards none.
+                items.getItems({ ...common, includeItemTypes: [BaseItemKind.Episode], isPlaceHolder: true, enableUserData: false },
                     { signal })
             ]);
+            const normal = (id: string | null | undefined) => (id ?? '').replace(/-/g, '').toLowerCase();
+            const stubs = placeholders.data.Items ?? [];
+            const stubsIn = new Map<string, number>();
+            for (const stub of stubs) {
+                for (const parent of [stub.SeasonId, stub.SeriesId]) {
+                    if (parent) stubsIn.set(normal(parent), (stubsIn.get(normal(parent)) ?? 0) + 1);
+                }
+            }
+            const onlyStubs = (id: string | null | undefined, count: number | null | undefined) => (count ?? 0) === (stubsIn.get(normal(id)) ?? 0);
             const ids = [
-                ...(series.data.Items ?? []).filter(item => item.RecursiveItemCount === 0),
-                ...(seasons.data.Items ?? []).filter(item => item.ChildCount === 0)
-            ].map(item => (item.Id ?? '').replace(/-/g, '').toLowerCase()).filter(Boolean);
+                ...(series.data.Items ?? []).filter(item => onlyStubs(item.Id, item.RecursiveItemCount)),
+                ...(seasons.data.Items ?? []).filter(item => onlyStubs(item.Id, item.ChildCount)),
+                ...stubs
+            ].map(item => normal(item.Id)).filter(Boolean);
             kept.save(ids);
             return ids;
         },
@@ -238,15 +255,49 @@ const emptyFoldersQuery = (api: Api | undefined, userId: string | undefined) => 
     });
 };
 
-/** Marks every series or season card in `root` (or `root` itself) that Jellyfin holds no episode of, and unmarks the rest. */
+/**
+ * Marks every series or season card in `root` (or `root` itself) that Jellyfin holds no episode file of, and every placeholder
+ * episode's card (P1.FU24), and unmarks the rest.
+ */
 const markEmpty = (root: ParentNode, empty: Set<string>) => {
     const cards = Array.from(root.querySelectorAll('.card[data-id]'));
     if (root instanceof Element && root.matches('.card[data-id]')) cards.push(root);
     for (const card of cards) {
         const type = card.getAttribute('data-type') ?? '';
-        const isEmpty = PACK_TYPES.has(type) && empty.has((card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase());
+        const isEmpty = (PACK_TYPES.has(type) || type === 'Episode')
+            && empty.has((card.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase());
         if (isEmpty !== card.hasAttribute(EMPTY_ATTRIBUTE)) card.toggleAttribute(EMPTY_ATTRIBUTE, isEmpty);
+        if (type === 'Episode') placeholderMark(card, isEmpty);
     }
+};
+
+/** The Not Downloaded glyph's markup (`NotDownloadedGlyph`), for a mark drawn outside React. */
+const GLYPH = '<svg class="jfmod-markGlyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" '
+    + 'stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 13.5H6.6a3.6 3.6 0 0 1-.5-7.17A5 5 0 0 1 15.7 5.4a3.9 '
+    + '3.9 0 0 1 2 7.6 3.9 3.9 0 0 1-.7.5"/><path d="M12 9v12"/><path d="M8.5 17.5 12 21l3.5-3.5"/></svg>';
+
+/**
+ * A placeholder episode's card (P1.FU24) carries the Not Downloaded indicator top right, as the mod's own cards do (UX §3.1),
+ * left of upstream's played tick: a plain indicator for everyone (P1.FU19), drawn into the card, so it goes with the card when
+ * upstream redraws it.
+ */
+const placeholderMark = (card: Element, on: boolean) => {
+    const cover = card.querySelector('.cardScalable');
+    const existing = cover?.querySelector(':scope > [data-jfmod-stubmark]');
+    if (!cover || !on) {
+        existing?.remove();
+        return;
+    }
+    if (existing) return;
+    const slot = document.createElement('div');
+    slot.className = 'jfmod-markSlot';
+    slot.setAttribute('data-jfmod-stubmark', '');
+    slot.innerHTML = `<div class="jfmod-mark jfmod-mark--none" title="Not Downloaded">${GLYPH}</div>`;
+    const indicators = cover.querySelector<HTMLElement>('.cardIndicators');
+    if (indicators?.offsetWidth) {
+        slot.style.setProperty(document.documentElement.getAttribute('dir') === 'rtl' ? 'left' : 'right', `calc(0.475em + ${indicators.offsetWidth}px)`);
+    }
+    cover.appendChild(slot);
 };
 
 /** Keeps `data-jfmod-empty` on the cards of every user, from the first frame each card is drawn in. */
@@ -268,6 +319,9 @@ const useEmptyMarks = (api: Api | undefined, userId: string | undefined) => {
             observer.disconnect();
             document.querySelectorAll(`[${EMPTY_ATTRIBUTE}]`).forEach(card => {
                 card.removeAttribute(EMPTY_ATTRIBUTE);
+            });
+            document.querySelectorAll('[data-jfmod-stubmark]').forEach(mark => {
+                mark.remove();
             });
         };
     }, [ids]);
