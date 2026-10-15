@@ -960,9 +960,45 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Plan: [`design/missing-media-user-actions.md`](design/missing-media-user-actions.md). Slices: **P1.FU24** stubs for
   missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
   **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** (optional)
-  play queues skip stubs. No migration planned. Waiting for the user's approval of stubs in the library roots and of the
-  response filter (it reverses the 2026-09-04 and PHASE3 "no placeholder files" decisions) and the plan's questions. Commits
-  carry `p1.fu24`–`p1.fu28` ids so the Phase 1 history reorganisation stays mechanical (the plan's section 8). Nothing built.
+  play queues skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, off by default per library
+  after a dry run, nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
+  whose design is the plan's section 11). It reverses the 2026-09-04 and PHASE3 "no placeholder files" decisions (recorded in
+  README and PHASE1). Commits carry `p1.fu24`–`p1.fu28` ids so the Phase 1 history reorganisation stays mechanical (the plan's
+  section 8).
+  **P1.FU24, built (not accepted) 2026-10-15: missing episodes of held series as Jellyfin placeholder items, and the
+  native-client filter.** Owner: Phase 1 (the TMDb catalog); first part of the user-visible gate (first look pending). Plugin
+  `feat/placeholder-stubs` from `next-release` `b52a64a`: `ca872f0` (code), `693bdbf` (Phase 5 suite check); web
+  `feat/placeholder-stubs` from `next-release` `2173444a36`: the plan commit, `8cf2ad1b88` (code), `6f3c23b234` (runner) and this
+  docs commit. Plugin: per TV library switch (`PluginConfiguration.PlaceholderLibraryIds`, off), a dry run listing every path,
+  the sync writing `Season NN/<Series (Year)> SNNENN.disc` where the import puts the file (shared `SeriesFolders`), only inside a
+  library root and the bound series folder, never over a file, never beside a file that already is the episode, never through a
+  link out of the series folder, nothing in a read-only folder (said in the dry run); stubs marked (first line
+  `<!-- JellyfinMod placeholder v1 -->`, Kodi's `<discstub>` message) and only marked files ever removed or treated as the
+  plugin's; `DateCreated` = air date and TMDB's runtime when Jellyfin creates or saves the item; reconciliation reads placeholder
+  episodes as not on disk; the entry detail's `placeholderItemId`; a sync and the import remove an episode's stub when its file
+  arrives; *Remove placeholders* with its own dry run; a six-hourly sync task; the MVC filter (Next Up and Latest without stubs,
+  PlaybackInfo `NotAllowed`, Download, stream and HLS 404, playback reports dropped, `CanDownload` false; plugin stubs only,
+  whatever the switch, fail-safe). No migration, version 0.1.0.0. API: [API.md](API.md) *Placeholders for missing episodes*.
+  Web: upstream's placeholder rows on a season page get the row Not Downloaded mark (an administrator's Get a Release button),
+  no Play on the image and no "Ends at"; a placeholder's page has no Play, Replay or "Ends at"; a placeholder's card anywhere
+  carries the Not Downloaded indicator and no Play; a season or series with only placeholders reads as having no file;
+  Settings *Missing Episodes* (switch, Preview, Remove Placeholders, each asking first); [UX.md](UX.md) §3.1. The mod's own
+  missing cards and rows stay as the fallback where there is no placeholder. Checks: plugin build; Phase 1 smoke and Phase 2 on
+  macOS pass, Phase 5 in the Linux container passes (with the new import-swap check); web typecheck, eslint (changed files and
+  the runner: no errors), stylelint and the production build pass. Live on local environment alpha (Jellyfin 12.0.0, lease
+  held by this session, the Shows library pointed at a writable copy of Peep Show, reset to the baseline afterwards): the
+  read-only library's dry run writes nothing and says why; the writable one's lists 52 then (with a user's `.disc`, a 0-byte
+  `.disc` and a `Season 08` link out of the folder added) 44 stubs; turning it on wrote 44 (52 seconds until Jellyfin held them
+  all); a real file arriving for a played and favourite stub replaced it with played, favourite and date kept. New runner
+  `missing-as-media.mjs` (real HTTP as a native app, then the browser; nothing intercepted): 49 checks, 0 failed in Chromium on
+  desktop, phone and TV 1080 as oleksii and nata, with Remove Placeholders (only marked `.disc` files went, the user's two
+  `.disc` files stayed) and the switch put back; a second run after the stubs were written again (stamping by the save
+  listener alone): 24 checks, 0 failed. Not run: real Chrome, the TV at 1280×720, a real native app (the user's first look),
+  stock `/web` (upstream's own bundle; the native-client HTTP checks stand in for stock clients), the import swap live
+  through Transmission (the Phase 5 suite covers it), 28096 and the Pi, Codex review. Open: FU28 (Next Up's next real
+  episode, play queues) after the first look; where upstream's series and season header Play start when the next episode is a
+  placeholder was not checked (FU28's play-queue part).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

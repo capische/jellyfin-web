@@ -1,6 +1,8 @@
 # Missing media behaves like available media (P1.FU24–28, planned)
 
-**Status:** planned. Missed Phase 1 requirement (user, 2026-10-13). Design and plan only; nothing is built.
+**Status:** P1.FU24 built (not accepted), 2026-10-15; P1.FU25–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
+Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
+recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24 built in section 12.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
 replaces a placeholder with the real file), Phase 3/10 (retention never reclaims a placeholder and writes one back after a
 reclaim), Phase 4 (Get a Release and the download states on placeholder items) and Phase 6/7 (Play hidden, the marks, the
@@ -130,7 +132,7 @@ web refuses to play it natively. What B leaves open for stock apps is section 3.
 ### 2.1 Placeholders
 
 For every missing item it knows from TMDB, the plugin keeps the folder and file **the import would create**, as a
-**0-byte `.disc` media stub**:
+**`.disc` media stub** (0 bytes in the experiments; the built writer puts a marker line and Kodi's stub message in it, section 10):
 
 | Missing | What the plugin writes | What Jellyfin makes of it |
 | --- | --- | --- |
@@ -312,3 +314,87 @@ Phase-crossing hooks: `ReconciliationService.cs` (Phase 2/10), `ImportService.cs
 5. **Series grouping and rollout:** is automatic series grouping on in your production TV libraries (needed for read-only
    series folders), and should the feature start off with a dry-run list of what it would write, then be turned on per
    library?
+
+---
+
+## 10. Answers (user, 2026-10-15: "go with your recommendations")
+
+1. **Placeholders and the filter:** approved.
+2. **Next Up:** the recommendation is **show the next real episode after the gap**, and **play queues skip missing episodes**.
+   FU24 ships the filter that removes stubs from Next Up (a series whose next episode is missing drops out); the "next real
+   episode" and the play-queue skipping are FU28 (section 11), built after FU24's first look, with the slice order approved
+   again at that gate.
+3. **Unaired episodes:** stubs for **aired episodes only**; an unaired one keeps the mod's own card or row with its date.
+4. **Stub message:** **a short message**, not an empty file. Every stub the plugin writes is
+   ```
+   <!-- JellyfinMod placeholder v1 -->
+   <discstub>
+     <title>Peep Show S02E01 - Dance Class</title>
+     <message>Not downloaded yet. Open JellyfinMod to get it.</message>
+   </discstub>
+   ```
+   The first line is the plugin's **marker**: a file is the plugin's stub only when its extension is `.disc`, it is a regular
+   file (not a link) under 4 KB, and its first line is the marker. Everything that removes or treats a file as the plugin's
+   stub (the sync, *Remove placeholders*, the import's swap, the response filter, reconciliation's lookup by id) checks it, so a
+   user's own `.disc` file (a disc-collection stub, a Blu-ray marker) is never touched. Verified on local environment alpha
+   (Jellyfin 12.0.0): a `.disc` with this body still resolves to an episode with `IsPlaceHolder: true`, is not probed (no
+   ffprobe error), and gets full TMDB metadata (overview, 9 to 16 people).
+5. **Rollout and series grouping:** **off by default, per TV library**, with a dry run that lists exactly the paths a sync would
+   write and remove before the switch is turned on. Where the series folder is read-only the plugin writes nothing and the dry
+   run says why (the mod's own cards and rows stay the surface); the second-folder-with-automatic-grouping variant of section
+   2.1 is not built.
+
+## 11. P1.FU28 design: Next Up shows the next real episode, play queues skip stubs
+
+**Next Up.** `PlaceholderFilter.ShapeNextUp` (plugin `Api/Filters/PlaceholderFilter.cs`) is the one place to change. Today it
+drops every stub `BaseItemDto` from `TvShows.GetNextUp`'s `QueryResult<BaseItemDto>` and lowers the total. FU28 replaces the
+drop: for each stub in the page (pre-filtered by the DTO's own `IsPlaceHolder`, so pages without stubs cost nothing), it asks
+the library **in process**, with no second HTTP call:
+
+```csharp
+var user = userManager.GetUserById(userId);           // the request's userId, else the authenticated user (claims)
+var next = library.GetItemList(new InternalItemsQuery(user)   // user-scoped: library access, parental rating, blocked tags
+{
+    AncestorIds = [stub.SeriesId],
+    IncludeItemTypes = [BaseItemKind.Episode],
+    IsPlaceHolder = false, IsVirtualItem = false, IsPlayed = false,
+    MinParentAndIndexNumber = (stub.ParentIndexNumber, stub.IndexNumber + 1),
+    OrderBy = [(ItemSortBy.ParentIndexNumber, Ascending), (ItemSortBy.IndexNumber, Ascending)],
+    Limit = 1
+}).FirstOrDefault();
+```
+
+and, when there is one, puts `dtoService.GetBaseItemDto(next, dtoOptions, user)` in the stub's slot (the DTO options rebuilt
+from the request's `fields`, `enableImages`, `imageTypeLimit`, `enableImageTypes` and `enableUserData`, as `TvShowsController`
+does), else drops the slot as today. Specials (season 0) are skipped as upstream's Next Up skips them. Paging: the slot is
+replaced one for one, so `TotalRecordCount` and the page size stay right; a series whose next real episode is already in the
+page (two copies of one series) is not added twice. Access: `InternalItemsQuery(user)` applies the same library, parental
+rating and tag rules as Next Up itself, so a user never gets an episode they could not open. The series **Play** button of
+upstream web (`/Shows/NextUp?seriesId=`) then starts at the next real episode.
+
+**Play queues.** Upstream web and most apps build a season's or series' queue (Play All, Shuffle, auto-play of the next
+episode) from `GET /Shows/{seriesId}/Episodes` (upstream web passes `IsMissing=false`) or `GET /Items?parentId=...`. FU28
+adds `TvShows.GetEpisodes` to the filter's result phase: when the request asks for playable items (`isMissing=false`, or a
+`startItemId`, the queue builders' shape) stub episodes are left out of the answer, so the queue jumps the gap; a plain listing
+(the season page) keeps them, because they must show there. Server-driven play-next (`SessionManager`, remote control and
+casting) is not reachable from a filter and keeps stopping at the stub with PlaybackInfo's `NotAllowed`. Checks: auto-play
+across a stub in stock `/web` and the iOS app; Next Up and the series Play button for a series whose next episode is a stub,
+as two users with different parental ratings.
+
+## 12. What P1.FU24 built (2026-10-15, built, not accepted)
+
+Plugin (`feat/placeholder-stubs` from `next-release` `b52a64a`): `Services/Placeholders/` (the writer and remover
+`PlaceholderService`, the marker `PlaceholderStub`, the per-library switch `PlaceholderSettings` in
+`PluginConfiguration.PlaceholderLibraryIds`, the item stamp listener and the six-hourly sync task), `Api/Filters/PlaceholderFilter.cs`
+registered from `PluginServiceRegistrator`, `Api/PlaceholdersController.cs` (`/JellyfinMod/Placeholders`, administrators
+only; [API.md](../API.md) *Placeholders*), `Services/Import/SeriesFolders.cs` (the import's own folder rules, shared),
+reconciliation reading placeholder episodes as not on disk (`JellyfinNativeTitleSource`), the entry detail naming each missing
+episode's `placeholderItemId`, an entry lookup by a placeholder's id finding its series, and the import removing the
+episode's stub before its scan. No migration. Web: see [PLAN.md](../PLAN.md) P1.FU24.
+
+Differences from sections 2 and 3: stubs carry the marker body (section 10); the filter also drops stubs from **Latest**
+(`UserLibrary.GetLatestMedia`) besides stamping `DateCreated`, because a currently airing show's newest stub has a recent air
+date; stamping happens when Jellyfin creates **or saves** the item (its first metadata refresh saves the item it loaded before
+the stamp, which undid a stamp made only on creation) and on every sync; specials get no stubs (as the mod's own surfaces
+offer none); the filter acts on the plugin's marked stubs only, whatever the switch says, and leaves a user's own `.disc` as
+Jellyfin answers it.
