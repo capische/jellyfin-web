@@ -403,11 +403,17 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     );
 };
 
+/** An optional field says so in its label (user, 2026-10-15). */
 export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: FieldChange }> = ({
     fields, draft, onChange
 }) => (
     <div className='jfmod-group'>
-        {fields.map(field => <FieldControl key={field.key} field={field} value={draft[field.key]} onChange={onChange} />)}
+        {fields.map(field => (
+            <FieldControl
+                key={field.key} value={draft[field.key]} onChange={onChange}
+                field={field.optional ? { ...field, label: `${field.label} (Optional)` } : field}
+            />
+        ))}
     </div>
 );
 
