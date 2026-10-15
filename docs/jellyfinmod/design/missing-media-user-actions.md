@@ -1,6 +1,6 @@
 # Missing media behaves like available media (P1.FU24–28, planned)
 
-**Status:** P1.FU24 and P1.FU25 built (not accepted), 2026-10-15; P1.FU26–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
+**Status:** P1.FU24, P1.FU25 and P1.FU26 built (not accepted), 2026-10-15; P1.FU27–28 planned. Missed Phase 1 requirement (user, 2026-10-13).
 Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
 recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24 built in section 12.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
@@ -420,4 +420,22 @@ left with neither; the reclaim's stub goes in the reclaimed file's own folder (n
 removal look in the series folder as well as its season folders; movies get no stub after a reclaim until P1.FU26. Jellyfin 12
 re-attaches played, favourite and dates by key in both directions (checked live on local environment charlie), with one caveat
 recorded in [PLAN.md](../PLAN.md) P1.FU25: a list endpoint can show a just-swapped item unplayed until a restart if a client read
-it before its first metadata refresh.
+it before its first metadata refresh. *Fixed 2026-10-15 (PLAN.md P1.FU25 follow-up): Jellyfin's per-user data cache is refreshed by
+re-saving the re-attached data once after the new item's first refresh.*
+
+## 14. What P1.FU26 built (2026-10-15, built, not accepted)
+
+Plugin (`feat/placeholder-titles` from `feat/placeholder-swap`): `PlaceholderService` plans movie libraries
+(`ComputeMoviesAsync`: one stub per released movie with no file, `Title (Year) [tmdbid-N]/Title (Year) [tmdbid-N].disc`) and
+file-less series (their own `[tmdbid-N]` folder in the first writable library folder); `SyncEntryAsync` with
+`PlaceholderSyncQueue` (Add, episode-list load, Refresh); `SwapMovieForImport`, `LeaveAfterMovieReclaim` and
+`MovieReclaimStubPath`, `RemoveForEntryAsync`, `TitleItemIdAsync`; `SeriesFolders.TitleFolderByTmdbId` and the series binding
+fallback; reconciliation ignoring placeholder movies and never backfilling from placeholders alone; `EntryDto.PlaceholderItemId`;
+Browse attaching the entry to the placeholder item; `EntriesController` lookup, detail and removal. Web: see [PLAN.md](../PLAN.md)
+P1.FU26.
+
+Differences from sections 2 and 5: the title folder is the import's own (`[tmdbid-N]` kept, so Jellyfin matches the TMDB title
+without ambiguity: live, *The Matrix* and *The Matrix Reloaded* matched with full metadata, cast and artwork); the series' item is
+bound to the entry by reconciliation as for an empty series folder, while a placeholder movie is never bound and is found by TMDB
+id; the mod's file-less page is kept for titles with no placeholder yet (the minute until Jellyfin scans it, unreleased movies, a
+read-only library) and otherwise opens the Jellyfin page; Settings *Missing Episodes* keeps its name and lists movie libraries.

@@ -295,7 +295,24 @@ its own page has no Play, Replay or "Ends at" in the header, and keeps the heade
 search, *More from Season*) gets the card Not Downloaded indicator and no Play, the administrator's cloud in the centre on
 hover; a season or series whose episodes are all placeholders reads as having no file (P1.FU17/P1.FU23 rules: no Play, the
 centre cloud) and Jellyfin's own episode count. The mod's own missing cards and rows remain only where there is no
-placeholder (the switch off, a read-only folder, specials, unaired episodes, file-less series).
+placeholder (the switch off, a read-only folder, specials, unaired episodes).
+
+**Placeholder movies and series (P1.FU26, 2026-10-15, built, not accepted).** A released movie or a series with no file in the
+catalog (added from TMDb search, or wanted) is a Jellyfin item too, once Jellyfin has scanned its placeholder (about a minute
+after Add): its card in the library grids, the mod's search, Recently Added, Favourites and every app is Jellyfin's own, the one
+card of the title (the mod's file-less card is drawn only until then, or where no placeholder can be written); it carries the
+card Not Downloaded mark top right (the mod's own mark on the mod's cards, the injected one on stock cards; never both), no
+Play, and the administrator's cloud in the centre on hover; a downloading one shows the download state as other cards do. The
+movie's page and a series' page whose episodes are all placeholders have no Play or Replay and keep ✓ ♥ ⋯ and the header's Get a
+Release; the mod's own file-less page (`?entryId=`) opens the title's Jellyfin page instead, and a placeholder movie's page
+opens the file's page once its import lands. Unreleased movies keep the mod's file-less card with their date. Settings,
+*Missing Episodes*, lists movie libraries too (*Show missing movies as Jellyfin items*).
+
+**Missing Episodes in the settings rail (2026-10-15, user: the entry "does not have on off and status similarly to for example
+Retention").** Like every other section, its rail row has a status line and state colour, and the section's head the same pill:
+*On · N placeholders* (every library on), *On for X of Y libraries · N placeholders*, *Off · turned off by you* (every library
+off), *Read-only · nothing is written* (every library that is on has no folder that can be written), *No TV or movie library*;
+N is what Jellyfin holds across the libraries. The per-library switches stay in the section; changing one updates the rail.
 
 ### 3.2 Colour
 

@@ -517,6 +517,10 @@ All fixable without changing a language.
   `BaseItem`s" for missing items, PHASE1 §4's "never insert synthetic `BaseItem`s" (Jellyfin creates these items from files;
   nothing is inserted into its database) and PHASE3's "plugin-only file-less representation, without STRM placeholders". No
   server change, no migration. Plan and answers: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+  Extended by P1.FU26 (2026-10-15, built, not accepted) to titles with no file: a released movie gets a placeholder movie and a
+  series with nothing on disk its own folder of placeholder episodes, in the library folder the import would use; the title's
+  Jellyfin item is then its one card everywhere (Browse attaches the entry to it), reconciliation never binds a placeholder movie
+  or backfills an entry from placeholders alone, and removing a never-imported title from the catalog removes its placeholders.
 - **2026-09-04** — Torznab + direct download-client APIs, not a hard dependency on
   Prowlarr/Jackett (which still work, since they speak Torznab).
 - **2026-09-04** — ~~Catalog gets its own web section~~ ~~Superseded same day (§9): the catalog
@@ -639,8 +643,8 @@ play count, on every client, with no plugin involvement at playback time.
 
 *Built differently (P1.FU25, 2026-10-15, not accepted): a reclaimed episode gets the plugin's marked `.disc` media stub
 (P1.FU24's placeholder), not a `.strm`, in the file's folder, where its library shows missing episodes; Jellyfin keeps it as an
-item with `IsPlaceHolder` and re-attaches its played flag, favourite and dates by key. A reclaimed movie still leaves no file
-(file-less movies are P1.FU26).*
+item with `IsPlaceHolder` and re-attaches its played flag, favourite and dates by key. Since P1.FU26 (built, not accepted) a
+reclaimed movie in a folder of its own leaves its placeholder the same way.*
 
 This matches the actual requirement. "See what I have watched even after the file is
 removed" must reach every client — and does. A wishlist of things never downloaded does not

@@ -1051,6 +1051,56 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   played and favourite filters are right throughout, and an item not read in that window lists right. Not run: an import
   through Transmission on a live instance (the suite covers the plugin side; the physical swap was checked live), real Chrome,
   phone and TV layouts, 28096 and the Pi, Codex review.
+  **Follow-up, fixed 2026-10-15 (plugin `abfcdec`):** the cause is Jellyfin 12's `UserDataManager`: list answers read user data
+  through `GetUserDataBatch`, which caches each user's data per item id and caches "unplayed" for an item with no stored rows;
+  the old item's rows are re-attached to the new id only at its first metadata refresh (`ReattachUserDataAsync`), which never
+  touches that cache. After a new movie or episode's first refresh, when it then holds stored user data, the plugin saves each
+  such user's data once more, unchanged, through `IUserDataManager` (`UpdateUserData`), which replaces the cache entry; the
+  retention listener skips that save (no completion), the Trakt plugin acts only on `TogglePlayed`, the plugin's Trakt indicator
+  only on `Import`. Live on local environment charlie (no restart): a list read caught a swapped-in episode as unplayed right
+  after it appeared and it read played and favourite 1 to 2 s later, in every run; checked by `placeholder-titles.mjs`.
+  **P1.FU26, built (not accepted) 2026-10-15: movies and series with no file as Jellyfin placeholder items.** Owner: Phase 1;
+  touches Phase 5 (the movie import swap), Phase 3/10 (a movie reclaim leaves a placeholder) and Phase 7 (Settings). Plugin
+  `feat/placeholder-titles` from `feat/placeholder-swap` `636293c`: `af75778` (code), `1ee91ea` (suites); web
+  `feat/placeholder-titles` from `b65cf75ff5`: `b737557361` (cards and pages), `58d35e9f9c` (Settings status), `777ba50bd8`
+  (runners) and this docs commit. A released movie with no file (added from TMDb, wanted, or reclaimed) gets a marked placeholder
+  where its import puts the file (`Title (Year) [tmdbid-N]/Title (Year) [tmdbid-N].disc`, first writable library folder, or its
+  `[tmdbid-N]` folder already there); an unreleased one gets none. A series with nothing on disk gets its own `Series (Year)
+  [tmdbid-N]` folder with a placeholder per aired episode. Same guards as P1.FU24 (marker, only marked files removed, never over a
+  file, path checks, nothing in a read-only folder, per-library switch, now listed for movie libraries too, batched sync, dry run
+  and Remove Placeholders); Add, the first episode-list load and Refresh sync that entry at once. Jellyfin makes the items at its
+  next look at the folder (its library monitor delay, about a minute). Reconciliation never binds a placeholder movie and
+  backfills nothing from placeholders alone; the entry stays not on disk, finds its item (`placeholderItemId` on the entry
+  detail and Browse rows; `Entries?jellyfinItemId=` with the placeholder movie's id) and Browse answers the placeholder item as
+  the title's one row carrying the entry (its state for the state filter). The import puts the movie's file into the
+  placeholder's folder and removes the placeholder in one step; a file-less series' first episode lands in its placeholder
+  folder. A reclaim of a movie's last file in a folder of its own leaves the movie's placeholder (preview `leavesPlaceholder`,
+  history note). Removing a never-imported title from the catalog removes its placeholders and the folders left empty (a series
+  bound only to its placeholders' series item can now be removed). Stub episodes of a file-less series get TMDB's runtime and
+  their air date (found by the series' binding or TMDB id). The response filter already covered placeholder movies (Video).
+  Web: the mod's file-less card gives way to the placeholder's card (mark, no Play, administrator's centre cloud; the injected
+  Not Downloaded mark on stock cards for placeholder movies and all-placeholder series, never two marks), the mod's
+  `?entryId=` page opens the placeholder's page, an all-placeholder series page has no Play, a placeholder movie's page follows
+  its import to the file, Recently Added keeps placeholder titles by their added date; Settings *Missing Episodes* has a status
+  line and state in the rail and its head like every other section (coordinator, from the user: it "does not have on off and
+  status similarly to for example Retention"). API: [API.md](API.md) *Placeholders for missing episodes and titles*; UX: [UX.md](UX.md)
+  §3.1. Checks: plugin build; Phase 1 smoke, 2, 3 and 10 on macOS pass; Phase 3 protection (new: a movie reclaim leaves its
+  stub, history note, preview) and Phase 5 (new: a placeholder movie written, never bound, found by its id, imported into its
+  folder with the placeholder gone; a file-less series' folder for aired episodes only, removed with its entry) pass in the Linux
+  container; web typecheck, eslint on the changed files, production build. Live on local environment charlie (Jellyfin 12.0.0,
+  lease held by this session, the Movies and Shows libraries given an extra writable folder, no TMDB token: Jellyfin's TMDb
+  connection; reset to the baseline afterwards): new runner `placeholder-titles.mjs` (TMDb search and Add of a movie, a series
+  and an unreleased movie as the mod does, then real HTTP as a native app and the browser; nothing intercepted) 76 checks, 0
+  failed in Chromium on desktop, phone and TV 1080 as oleksii and nata (before the series-stamp fix), and on the final code 77
+  checks, 0 failed in real Chrome on the same layouts and users (with the stamp check).
+  `settings-area.mjs` (now with Missing Episodes): every section opens and the status reads the same in the rail and the head on
+  desktop and phone, TV reaches every section; its desktop run then stops at the Discovery test button (a click timeout in the
+  Discovery section, which this slice does not touch; not diagnosed; Chromium and Chrome alike; one Chrome TV run also logged a
+  `selectedIndex` page error that two reruns in both browsers did not repeat). `missing-as-media.mjs` (P1.FU24) on the swapped
+  series: 28 of 29 before the stamp fix (the missing runtimes of a file-less series' stubs), 29 of 29 on the final code. Not run: an
+  import through Transmission on a live instance (the Phase 5 suite covers it), the TV at 1280×720, a real native app, stock
+  `/web`, 28096 and the Pi, Codex review. Known: an empty library folder Jellyfin has never scanned has no folder item, so the
+  first placeholders written into it wait for the next library scan (the local test setup scans once after adding the folder).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

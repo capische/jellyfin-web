@@ -396,6 +396,16 @@ once and goes with the next placeholder sync. The placeholder sync writes no new
 (`importing`). A series whose every file was reclaimed keeps its folder for the import (the entry's own series item). Checks:
 the Phase 5 suite's `PlaceholderSwapScenarios` (a season pack swapping three stubs, one in the series folder; a sync while an
 episode downloads; a blocked import; a read-only folder). Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+**Movies and file-less series (P1.FU26, built 2026-10-15, not accepted).** A movie's placeholder lives where its import puts the
+file (`Title (Year) [tmdbid-N]/Title (Year) [tmdbid-N].disc`, in the first library folder that can be written, or the title
+folder of its TMDB id already there). When the movie has no bound file, the import uses that existing `[tmdbid-N]` folder on the
+download's mount (else the new folder as before), and after step 4 removes the movie's placeholders from the file's folder and
+from any `[tmdbid-N]` folder of the movie in the library's folders (only marked stubs; such a folder left empty goes too), so
+Jellyfin swaps the items in one refresh. A series with nothing on disk has its own placeholder folder (`Series (Year)
+[tmdbid-N]/Season NN/…`); the import's series folder is that folder (the entry's series item, when it can be written, or its
+`[tmdbid-N]` folder), so the first file lands beside the placeholders. Checks: `PlaceholderSwapScenarios` (a placeholder movie
+written, never bound, found by its id, then imported into its folder with the placeholder gone in the same step; a file-less
+series' folder written for aired episodes only and removed with its entry).
 
 ### I5 — scan only the new folder and let Phase 2 bind it
 
