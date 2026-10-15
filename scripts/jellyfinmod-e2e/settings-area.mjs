@@ -32,9 +32,9 @@ const LAYOUTS = {
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
     tv720: { viewport: { width: 1280, height: 720 }, tv: true }
 };
-const SECTION_IDS = ['overview', 'discovery', 'client', 'indexers', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
+const SECTION_IDS = ['overview', 'discovery', 'indexers', 'client', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
 // The headings the page shows for those sections, in order (SettingsPage.tsx, SECTIONS; Title Case since 2026-10-08).
-const SECTION_TITLES = ['Overview', 'Discovery', 'Download Client', 'Indexers', 'Quality Profiles', 'Grabbing', 'Import and Seeding', 'Retention',
+const SECTION_TITLES = ['Overview', 'Discovery', 'Indexers', 'Download Client', 'Quality Profiles', 'Grabbing', 'Import and Seeding', 'Retention',
     'Automation', 'Interface', 'Diagnostics'];
 const sameList = (seen, wanted) => seen.length === wanted.length && seen.every((title, index) => title === wanted[index]);
 // What Retention says when seed protection was saved and retention was refused for a stale revision (settingsSections.tsx,

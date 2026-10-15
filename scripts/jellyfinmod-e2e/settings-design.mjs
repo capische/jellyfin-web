@@ -41,8 +41,8 @@ const LAYOUTS = {
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
     tv720: { viewport: { width: 1280, height: 720 }, tv: true }
 };
-const SECTION_IDS = ['overview', 'discovery', 'client', 'indexers', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
-const WIZARD_STEPS = ['discovery', 'downloadClient', 'indexers', 'qualityProfile', 'enable', 'optional'];
+const SECTION_IDS = ['overview', 'discovery', 'indexers', 'client', 'profiles', 'grabbing', 'import', 'retention', 'automation', 'interface', 'diagnostics'];
+const WIZARD_STEPS = ['discovery', 'indexers', 'downloadClient', 'qualityProfile', 'enable', 'optional'];
 
 const results = [];
 const record = (layout, check, ok, detail) => {
