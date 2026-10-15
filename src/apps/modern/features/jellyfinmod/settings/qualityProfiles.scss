@@ -201,3 +201,10 @@
 
 /* On a narrow dialog the cutoff mark may push a row's icons onto a line of their own, never out of the dialog. */
 .jfmod-qp .jfmod-qrow { flex-wrap: wrap; }
+
+.jfmod-qp-ordertried > summary {
+    cursor: pointer;
+    margin: 0.4em 0 0.8em;
+    font-size: 0.95em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}

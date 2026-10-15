@@ -11,6 +11,7 @@ import dolbyDdPlus from '../assets/media-marks/dolby-ddplus.svg?raw';
 import dolbyHalf from '../assets/media-marks/dolby-half.svg?raw';
 // eslint-disable-next-line import/no-unresolved
 import dtsFamily from '../assets/media-marks/dts-family.svg?raw';
+import { qualityLabel } from '../constants/quality';
 import type { ParsedRelease, ReleaseCandidate } from '../types/acquisition';
 
 /**
@@ -19,9 +20,6 @@ import type { ParsedRelease, ReleaseCandidate } from '../types/acquisition';
  * they follow the text colour in both schemes and need no icon font.
  */
 
-const SOURCES = new Map([
-    ['remux', 'Remux'], ['bluray', 'BluRay'], ['webdl', 'WEB-DL'], ['webrip', 'WEBRip'], ['hdtv', 'HDTV'], ['dvd', 'DVD'], ['cam', 'CAM']
-]);
 const CODECS = new Map([['h264', 'AVC'], ['h265', 'HEVC'], ['av1', 'AV1'], ['xvid', 'XVID'], ['vc1', 'VC-1'], ['mpeg2', 'MPEG-2']]);
 const LANGUAGE_NAMES = new Map([
     ['EN', 'English'], ['FR', 'French'], ['DE', 'German'], ['ES', 'Spanish'], ['IT', 'Italian'], ['PT', 'Portuguese'],
@@ -37,11 +35,8 @@ export const formatSize = (bytes: number | null) => {
     return Math.max(1, Math.round(bytes / 1e6)) + ' MB';
 };
 
-/** `2160p WEB-DL`: the resolution and source only; everything else becomes a mark or a line of its own. */
-export const qualityText = (parsed: ParsedRelease) => {
-    const source = parsed.source ? SOURCES.get(parsed.source) ?? parsed.source : null;
-    return [parsed.resolution, source].filter(Boolean).join(' ') || 'Unknown quality';
-};
+/** `4K WEB-DL`: the resolution and source only, named as everywhere (constants/quality); everything else becomes a mark or a line. */
+export const qualityText = (parsed: ParsedRelease) => qualityLabel(parsed.resolution, parsed.source) || 'Unknown quality';
 
 const names = (codes: string[]) => codes.map(code => LANGUAGE_NAMES.get(code) ?? code).join(', ');
 
