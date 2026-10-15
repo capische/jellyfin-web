@@ -16,6 +16,7 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { FoundInProwlarr, type ProwlarrClient } from './FoundInProwlarr';
 import {
     blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, partialSave, PAUSE_SENTENCES, pathSentence, problemText, request,
     type SecretChange, when
@@ -834,6 +835,13 @@ export const ClientSection: FC<SectionProps> = props => {
         return { jfmodNotice: { kind: result.ok ? 'ok' : 'err', text: `${pathSentence(result.code)} (${result.code})` } };
     }), [run, api, client, probePath]);
     const testClient = useCallback(() => test(`Settings/DownloadClients/${client.id}/Test`, api), [test, api, client]);
+    // A client found in Prowlarr fills the form and saves nothing; the password is typed, then Save and Test (P6.FU1).
+    const fillFromProwlarr = useCallback((found: ProwlarrClient) => {
+        set('name', found.name);
+        set('baseUrl', found.baseUrl);
+        set('username', found.username ?? '');
+        setNotice({ kind: 'ok', text: `Filled from Prowlarr: ${found.baseUrl}. Type the password if it has one, then Save and Test.` });
+    }, [set, setNotice]);
     const addMapping = useCallback(() => setMappings(rows => [...rows, { clientPathPrefix: '', localPathPrefix: '' }]), [setMappings]);
     const editProbePath = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setProbePath(event.target.value), []);
     const fields: FieldSpec[] = [
@@ -851,6 +859,7 @@ export const ClientSection: FC<SectionProps> = props => {
             onSave={save} saving={section.busy} saveMeta={client ? undefined : 'Not saved yet.'} next={props.next} onGo={props.onGo}
             actions={client && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testClient} data-test='client'>Test</Button>}
         >
+            <FoundInProwlarr api={api} source={data.prowlarr?.[0]} client={client} onFill={fillFromProwlarr} />
             <FieldForm fields={fields} draft={draft} onChange={set} />
             <SecretField key={client?.revision ?? 'new'} id='jfmodClientPassword' label='Password' configured={!!client?.passwordConfigured} change={password} onChange={setPassword} />
             {client && (
