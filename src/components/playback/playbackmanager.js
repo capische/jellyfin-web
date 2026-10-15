@@ -36,6 +36,7 @@ import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import { MediaError } from 'types/mediaError';
 import { getMediaError } from 'utils/mediaError';
 import { bindSkipSegment } from './skipsegment.ts';
+import { skipPlaceholders } from 'apps/modern/features/jellyfinmod/integration/playQueue';
 import * as bitrateTest from 'utils/bitrateTest';
 
 const UNLIMITED_ITEMS = -1;
@@ -1841,9 +1842,9 @@ export class PlaybackManager {
 
             if (promise) {
                 const result = await promise;
-                return result ? result.Items : items;
+                return skipPlaceholders(result ? result.Items : items, options);
             } else {
-                return items;
+                return skipPlaceholders(items, options);
             }
         }
 
