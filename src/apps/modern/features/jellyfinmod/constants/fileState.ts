@@ -35,7 +35,7 @@ export const FILE_STATE_LABEL: Record<FileState, string> = {
 export const MARK_CLICKABLE: Readonly<Record<'card' | 'row', boolean>> = { card: false, row: true };
 
 /**
- * What a card or row mark says about a title, season or episode without a file (P1.FU11, UX §3.1): `missing` is the amber
+ * What a card or row mark says about a title, season or episode without a file (P1.FU11, UX §3.1): `missing` is the
  * Not Downloaded icon (also for a reclaimed one and for an unaired one with no air date), `unaired` the clock with its air
  * date; on disk shows nothing.
  */
