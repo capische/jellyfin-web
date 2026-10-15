@@ -10,7 +10,7 @@ import { type EntryDetail, getVideoRangeTypes, keepEntry, keepEpisode, setEpisod
 import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
 import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
-import { type DevicePreference, deleteWarningText, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
+import { type DevicePreference, deleteWarningText, isEpisodeItem, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
     VERSIONS_V1_CAPABILITY } from '../constants/versions';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { entryDetailQuery, entryIdQuery } from '../hooks/useEntries';
@@ -69,7 +69,7 @@ const keptMessage = (keepsEpisode: boolean, detail: EntryDetail): string => {
 const pageEpisode = (data: EntryDetail | null | undefined, itemId: string) =>
     data?.episodes.find(candidate => (candidate.versions ?? []).some(version => sameItemId(version.jellyfinItemId, itemId)
         || sameItemId(version.mediaSourceId, itemId)))
-        ?? data?.episodes.find(candidate => sameItemId(candidate.jellyfinItemId, itemId));
+        ?? data?.episodes.find(candidate => isEpisodeItem(candidate, itemId));
 
 /** A season page has no entry of its own: it is its series' entry, searched by its own season (user, 2026-10-12). */
 const pageLookup = (itemId: string, itemType: string | undefined, seriesId: string | undefined, seasonNumber: number | undefined) =>

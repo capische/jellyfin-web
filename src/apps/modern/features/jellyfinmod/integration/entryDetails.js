@@ -88,12 +88,13 @@ export default function initializeEntryDetails(view, params) {
             const season = Number(params.season);
             const isSeason = detail.entry.mediaType === 'series' && params.season !== undefined && Number.isInteger(season) && season >= 0;
             // `&episode=M` on it is the mod's page for an episode Jellyfin has no item for (P1.FU15); once Jellyfin has the
-            // episode, its own page opens instead.
+            // episode, its own page opens instead: its file's, or the placeholder Jellyfin holds while it has none (P1.FU24).
             const episodeNumber = Number(params.episode);
             const isEpisode = isSeason && params.episode !== undefined && Number.isInteger(episodeNumber) && episodeNumber >= 0;
+            const itemOf = episode => (episode.availability === 'onDisk' ? episode.jellyfinItemId : episode.placeholderItemId);
             const heldIn = current => (isEpisode ? current.episodes.find(episode => episode.seasonNumber === season
-                && episode.episodeNumber === episodeNumber && episode.availability === 'onDisk' && episode.jellyfinItemId) : undefined);
-            const openHeld = held => window.location.replace('#/details?id=' + encodeURIComponent(held.jellyfinItemId)
+                && episode.episodeNumber === episodeNumber && itemOf(episode)) : undefined);
+            const openHeld = held => window.location.replace('#/details?id=' + encodeURIComponent(itemOf(held))
                 + '&serverId=' + encodeURIComponent(client.serverId()));
             const held = heldIn(detail);
             if (held) {

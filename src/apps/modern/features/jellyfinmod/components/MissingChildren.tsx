@@ -12,6 +12,7 @@ import type { EntryDetail } from '../api/modApi';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { nativeEpisodesQuery, nativeSeasonsQuery } from '../hooks/useEntries';
 import { airDateLong, episodeMark, seasonMark } from '../constants/fileState';
+import { sameItemId } from '../constants/versions';
 import { CardHoverGet, NoFileCard } from '../integration/cardGetRelease';
 import { openReleasePicker } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
@@ -19,6 +20,7 @@ import type { EntryEpisode } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark, { CardMarkSlot, type MarkDownload } from './FileStateMark';
 
+import './entryList.scss';
 import './missingChildren.scss';
 
 /**
@@ -383,6 +385,52 @@ const missingEpisodes = (episodes: EntryEpisode[], season: number, held: Set<num
         && !(episode.jellyfinItemId && heldIds.has(normalId(episode.jellyfinItemId))))
     .sort((a, b) => a.episodeNumber - b.episodeNumber);
 
+/** One of upstream's rows that stands for a placeholder (P1.FU24), and the host for its mark before upstream's buttons. */
+type PlaceholderRow = [itemId: string, host: HTMLElement];
+
+const samePlaceholderRows = (a: PlaceholderRow[], b: PlaceholderRow[]) =>
+    a.length === b.length && a.every(([id, host], index) => id === b[index][0] && host === b[index][1]);
+
+/**
+ * Upstream's rows of placeholder episodes (a media stub Jellyfin calls `IsPlaceHolder`, P1.FU24): each is marked
+ * `data-jfmod-placeholder` (its Play and "Ends at" hidden, placeholderPage.scss) and gets a host for the mark at its end, just
+ * before upstream's buttons, as a library list row's (P1.FU11). Found again whenever upstream redraws its list.
+ */
+const usePlaceholderRows = (container: Element | null, placeholders: Set<string>) => {
+    const [rows, setRows] = useState<PlaceholderRow[]>([]);
+    const key = Array.from(placeholders).join(',');
+    useLayoutEffect(() => {
+        if (!container || !placeholders.size) {
+            setRows(old => (old.length ? [] : old));
+            return;
+        }
+        const read = () => {
+            const found: PlaceholderRow[] = [];
+            for (const row of Array.from(container.children)) {
+                const id = normalId(row.getAttribute('data-id') ?? '');
+                if (row.classList.contains('jfmod-missingSlot') || !placeholders.has(id)) continue;
+                if (!row.hasAttribute('data-jfmod-placeholder')) row.setAttribute('data-jfmod-placeholder', '');
+                const content = row.querySelector(':scope > .listItem-content') ?? row;
+                let host = content.querySelector<HTMLElement>(':scope > .jfmod-rowMarkHost');
+                if (!host) {
+                    host = document.createElement('div');
+                    host.className = 'jfmod-rowMarkHost';
+                    content.insertBefore(host, content.querySelector(':scope > .listViewUserDataButtons'));
+                }
+                found.push([id, host]);
+            }
+            setRows(old => (samePlaceholderRows(old, found) ? old : found));
+        };
+        read();
+        const observer = new MutationObserver(read);
+        observer.observe(container, { childList: true });
+        return () => observer.disconnect();
+    // `placeholders` is read through its key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [container, key]);
+    return rows;
+};
+
 interface EpisodeRowsProps {
     api: Api;
     userId: string;
@@ -417,6 +465,18 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         return missingEpisodes(detail.episodes, season, held, heldIds);
     }, [detail.episodes, jellyfin.data, ready, season]);
     const slots = useMemo(() => missing.map(episode => ({ key: episode.id, order: episode.episodeNumber })), [missing]);
+    // Upstream's placeholder rows (P1.FU24): the plugin's episode each stands for, by its placeholder id, else by its number.
+    const placeholderEpisodes = useMemo(() => {
+        const byId = new Map<string, EntryEpisode>();
+        for (const item of jellyfin.data ?? []) {
+            if (!item.Id || !item.IsPlaceHolder) continue;
+            const episode = detail.episodes.find(candidate => sameItemId(candidate.placeholderItemId, item.Id))
+                ?? detail.episodes.find(candidate => candidate.seasonNumber === season && candidate.episodeNumber === item.IndexNumber);
+            if (episode && episode.availability !== 'onDisk') byId.set(normalId(item.Id), episode);
+        }
+        return byId;
+    }, [detail.episodes, jellyfin.data, season]);
+    const placeholderRows = usePlaceholderRows(container, useMemo(() => new Set(placeholderEpisodes.keys()), [placeholderEpisodes]));
     // The whole row opens the episode's page (P1.FU15), as upstream's rows open theirs: on the TV the row is a button, a focus
     // stop like upstream's, and its administrator's icon a second one; elsewhere a click anywhere on it, except on the icon
     // (which stops its own click) or the title's link (which follows itself).
@@ -440,7 +500,15 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
     }, [detail.entry.id]);
     const elements = useOrderedSlots(container, slots, natives, make);
     const pickerFor = usePickerFor(api, detail, onChanged);
-    return <>{missing.map(episode => {
+    return <>{placeholderRows.map(([itemId, host]) => {
+        const episode = placeholderEpisodes.get(itemId);
+        const mark = episode && episodeMark(episode);
+        if (!episode || !mark) return null;
+        const download = canAcquire && mark === 'missing' ? { label: `Get a Release for Episode ${episode.episodeNumber}, ${episode.title}`,
+            open: pickerFor({ episodeId: episode.id }) } : null;
+        return createPortal(<FileStateMark state={mark} airDate={episode.airDate} variant='row' download={download} />, host,
+            'placeholder:' + itemId);
+    })}{missing.map(episode => {
         const element = elements.get(episode.id);
         if (!element) return null;
         // The row's mark is the administrator's button (P1.FU22), named for its episode; its tooltip stays *Not Downloaded*.
