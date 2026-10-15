@@ -10,6 +10,9 @@
 // JELLYFINMOD_DESIGN_LAYOUTS=desktop,mobile,tv1080,tv720   JELLYFINMOD_DESIGN_REPORT_ONLY=1 (record, never fail)
 // Signs in as oleksii with an empty password. Read-only apart from one Discovery save with nothing changed (the
 // revision round-trips) and the read-only TMDB Test; it changes no setting.
+// Needs at least one indexer and one quality profile (their editors are audited); the local environments' baseline has
+// them (envs/bin/seed-fixtures.sh). Without a saved TMDB token the token's checks, and on the TV without a saved indexer API
+// key the editor's red-action check, print SKIP and count as neither.
 // Expects the default Dark theme: the role colours and MUI's disabled colours it checks are that theme's values.
 // Since 2026-10-08 it also checks that every list row's actions are round icons named after their row (both pages), that
 // the arrows walk a row's icons in order on the TV, and that titles, buttons and rail items are in Title Case (UX §12.1).
@@ -48,6 +51,13 @@ const results = [];
 const record = (layout, check, ok, detail) => {
     results.push({ layout, check, ok });
     console.log(`${ok ? 'PASS' : 'FAIL'} [${tier}/${layout}] ${check}${detail === undefined ? '' : ' :: ' + JSON.stringify(detail).slice(0, 900)}`);
+};
+// A check that needs a saved TMDB token is skipped, and said so, on an instance without one: there discovery uses Jellyfin's
+// own TMDb connection (P1.FU13) and the token's field is an empty input, with no Test, Replace or Clear to check.
+const skipped = [];
+const skip = (layout, check, why = 'no TMDB token is saved on this instance') => {
+    skipped.push({ layout, check });
+    console.log(`SKIP [${tier}/${layout}] ${check} :: ${why}`);
 };
 
 const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
@@ -531,6 +541,7 @@ for (const name of only) {
             await page.waitForFunction(() => document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
             await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
         }
+        const tokenSaved = await page.evaluate(async () => (await ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Discovery'), dataType: 'json' })).tokenConfigured);
         // Save's height in this layout, the size every labelled button must have.
         await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
         await page.locator('button[data-submit="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
@@ -594,11 +605,16 @@ for (const name of only) {
                 help: section.querySelector('.jfmod-secret-below .fieldDescription')?.textContent ?? null
             };
         });
-        record(name, 'discovery: the token box holds Test Token, Replace and Clear as icons, in that order',
-            JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test Token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
+        if (tokenSaved) {
+            record(name, 'discovery: the token box holds Test Token, Replace and Clear as icons, in that order',
+                JSON.stringify(box.actions?.map(a => [a.action, a.label])) === JSON.stringify([['test', 'Test Token'], ['replace', 'Replace'], ['clear', 'Clear']]), box.actions);
+        } else {
+            skip(name, 'discovery: the token box holds Test Token, Replace and Clear as icons, in that order');
+        }
         record(name, 'discovery: no standalone Test button; nothing is written under the box to describe the test (user, 2026-10-15)', box.standaloneTest === 0 &&
             box.help === null, box);
-        if (layout.tv) {
+        if (layout.tv && !tokenSaved) skip(name, 'discovery: the arrows walk Test, Replace, Clear, and Test by Enter keeps the focus on Test');
+        if (layout.tv && tokenSaved) {
             // Arrow keys walk the box left to right: Test, Replace, Clear, each with a visible ring.
             await page.locator('[data-secret-action="test"]').focus();
             const walked = [];
@@ -704,10 +720,14 @@ for (const name of only) {
             await page.evaluate(() => { location.hash = '#/catalog/settings?section=discovery'; });
             await page.locator('.jfmod-check-section[data-section="discovery"]').waitFor({ state: 'visible', timeout: 30000 });
             await page.waitForTimeout(500);
-            await page.locator('[data-secret-action="clear"]').hover();
-            const tip = page.locator('[role="tooltip"]', { hasText: 'Clear' });
-            record(name, 'discovery: the icon buttons show their names as tooltips', await tip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false));
-            await page.mouse.move(1, layout.viewport.height - 1);
+            if (tokenSaved) {
+                await page.locator('[data-secret-action="clear"]').hover();
+                const tip = page.locator('[role="tooltip"]', { hasText: 'Clear' });
+                record(name, 'discovery: the icon buttons show their names as tooltips', await tip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false));
+                await page.mouse.move(1, layout.viewport.height - 1);
+            } else {
+                skip(name, 'discovery: the icon buttons show their names as tooltips');
+            }
         }
         if (await page.locator('.jfmod-secret-row [data-secret-action="replace"]').count()) {
             await page.locator('.jfmod-secret-row [data-secret-action="replace"]').click();
@@ -729,7 +749,8 @@ for (const name of only) {
             await page.waitForTimeout(300);
             record(name, 'discovery: Undo returns the secret to Configured', await page.locator('.jfmod-secret-row', { hasText: 'Configured' }).count() === 1);
         }
-        if (name === 'desktop') {
+        if (name === 'desktop' && !tokenSaved) skip(name, 'discovery: the token\'s Test says "TMDB accepted the token. (ok)", and a save with nothing changed round-trips the revision');
+        if (name === 'desktop' && tokenSaved) {
             // The read-only TMDB test still answers, and a save with nothing changed round-trips the revision.
             const revisionNow = () => page.evaluate(async () => (await ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Discovery'), dataType: 'json' })).revision);
             const before = await revisionNow();
@@ -820,7 +841,11 @@ for (const name of only) {
             record(name, `${section} dialog: no controls overlap`, result.overlaps.length === 0, result.overlaps.length ? result.overlaps : undefined);
             record(name, `${section} dialog: no buttons or texts touch`, result.tight.length === 0, result.tight.length ? result.tight : undefined);
             if (name === 'desktop') await checkHover(page, layout, name, `${section} dialog`, '.MuiDialog-paper');
-            if (layout.tv) {
+            // The indexer editor's only red action is its API key's Clear, there only when a key is saved (none is in the local
+            // environments' baseline: save-baseline.sh strips every secret).
+            const redActions = await page.locator('.MuiDialog-paper .MuiButton-containedError, .MuiDialog-paper .jfmod-iconbtn-red').count();
+            if (layout.tv && !redActions) skip(name, `${section} dialog: a red action is reachable by the arrows and readable when focused`, 'the editor holds no red action (no saved secret)');
+            if (layout.tv && redActions) {
                 let reached = false;
                 for (let press = 0; press < 60 && !reached; press++) {
                     // Down through the editor; Right along a row that holds a red action (the secret's Replace | Clear).
@@ -957,7 +982,8 @@ for (const name of only) {
                             .map(r => Math.round(r.left - title.right));
                     });
                     record(name, `dashboard page ${id}: the section's actions keep clear of its heading`, crowding.length === 0, crowding.length ? crowding : undefined);
-                    if (id === 'discovery') {
+                    if (id === 'discovery' && !tokenSaved) skip(name, 'dashboard page: the token box holds Test Token, Replace and Clear, and its Test passes');
+                    if (id === 'discovery' && tokenSaved) {
                         console.log('  shot', await shot(page, `${name}-dashboard-discovery`));
                         const actions = await page.evaluate(() => [...document.querySelectorAll('[data-secret-slot="TmdbReadAccessToken"] .jfmod-secret-row button')]
                             .map(el => [el.dataset.secretAction ?? null, el.getAttribute('aria-label')]));
@@ -1017,5 +1043,6 @@ for (const name of only) {
 
 await browser.close();
 const failed = results.filter(result => !result.ok);
-console.log(`\n${results.length - failed.length} of ${results.length} passed on ${tier}`);
+const skipNote = skipped.length ? `; ${skipped.length} skipped (SKIP lines say why)` : '';
+console.log(`\n${results.length - failed.length} of ${results.length} passed on ${tier}${skipNote}`);
 process.exit(failed.length && !process.env.JELLYFINMOD_DESIGN_REPORT_ONLY ? 1 : 0);
