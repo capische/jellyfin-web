@@ -365,14 +365,14 @@ async function resume() {
         const other = options.find(name => /720p/.test(name) && name !== hd) ?? options.find(name => name !== hd);
         await choose(page, dialog, 'Add a quality', hd);
         await choose(page, dialog, 'Add a quality', other);
-        await choose(page, dialog, 'Upgrade until', other);
+        await choose(page, dialog, 'Upgrade until (Optional)', other);
         // Remove the cutoff's quality from the allowed list: the cutoff now names a quality the profile does not allow.
         await dialog.locator('.jfmod-qrow', { hasText: other }).getByRole('button', { name: 'Remove' }).click();
         await dialog.getByRole('button', { name: 'Save' }).click();
         await page.waitForTimeout(1500);
         const cutoff = (await dialog.locator('.jfmod-notice').innerText()).replace(/\s+/g, ' ');
         record('resume', 'A cutoff outside the allowed qualities is refused', /cutoff/i.test(cutoff) && await dialog.isVisible(), { cutoff, allowed: hd, cutoffQuality: other });
-        await choose(page, dialog, 'Upgrade until', hd);
+        await choose(page, dialog, 'Upgrade until (Optional)', hd);
         await dialog.getByRole('button', { name: 'Save' }).click();
         await dialog.waitFor({ state: 'hidden', timeout: 15000 });
         await page.waitForTimeout(1500);
@@ -940,7 +940,7 @@ async function automation() {
             dialog = page.locator('.jfmod-settingsDialog').last();
             await dialog.waitFor({ state: 'visible', timeout: 10000 });
             await choose(page, dialog, 'Add a quality', 'webdl-720p');
-            await choose(page, dialog, 'Upgrade until', 'webdl-1080p');
+            await choose(page, dialog, 'Upgrade until (Optional)', 'webdl-1080p');
             await setSwitch(dialog, 'Upgrade automatically until the cutoff', true);
             await saveDialog(page, dialog);
             }
@@ -949,8 +949,8 @@ async function automation() {
             await section(page, 'indexers').locator('.jfmod-brow', { hasText: 'JellyfinMod Standin Indexer' }).getByRole('button', { name: 'Edit' }).click();
             dialog = page.locator('.jfmod-settingsDialog').last();
             await dialog.waitFor({ state: 'visible', timeout: 10000 });
-            await fill(dialog, 'Seconds between searches', '2');
-            await fill(dialog, 'Searches per day', '60');
+            await fill(dialog, 'Seconds between searches (Optional)', '2');
+            await fill(dialog, 'Searches per day (Optional)', '60');
             await saveDialog(page, dialog);
             const indexer = (await api(page, 'GET', 'JellyfinMod/Settings/Indexers')).body[0];
             // The test host's disk is over 90 % full, so the default floor (10 %, at least 25 GB) is above its free space and
