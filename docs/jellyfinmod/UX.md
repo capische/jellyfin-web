@@ -1444,6 +1444,23 @@ a once-a-quarter admin task, not a browsing surface.
     and carries a small dim time on every entry, newest first: *Detected* for a conflict, *Added* for an entry (the plugin
     records when it was catalogued, not when its library was removed), *Found* for a run's reason.
 
+### 12.2 Indexers before the download client, and Found in Prowlarr (P6.FU1, user 2026-10-15)
+
+- **Order.** The setup wizard is Discovery, Indexers, Download Client, Quality Profile, Turn Grabbing On, Optional
+  ("Step 2 of 6" is Indexers); the settings area's rail and the Dashboard page follow the same order. Deep links keep
+  their ids (`#/catalog/settings/setup?step=indexers`, `?step=downloadClient`, `#/catalog/settings?section=client`).
+- **Found in Prowlarr.** In the Download Client section, once a Prowlarr source with a saved key exists and the client is
+  not yet verified, a group *Found in Prowlarr* lists the Transmission clients that Prowlarr knows, one grey button each:
+  *Use <name> from Prowlarr (<host>:<port>)*. It fills Name, the RPC address and Username, and saves nothing; the
+  password field stays empty for the admin to type, and the section's Save and Test decide. Clients the plugin cannot
+  drive are named on one line, *Not supported yet: <name> (<implementation>)*. No Prowlarr, no client in it, a Prowlarr
+  that fails, or a verified client: the group is not drawn, with no error.
+- **The gateway, once.** When the saved client is one Prowlarr gave and its Test failed as unreachable or timed out, the
+  group says the address did not answer from this server and offers *Try <gateway>:<port>*, the same port on the
+  server's private default gateway; the button only fills the address. Once the address is the gateway, it is not
+  offered again. Never automatic.
+- These are buttons outside rows, so they stay labelled (§12.1).
+
 ---
 
 ## 13. TV and D-pad rules
