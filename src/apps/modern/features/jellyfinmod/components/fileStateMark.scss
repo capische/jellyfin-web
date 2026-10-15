@@ -73,13 +73,9 @@
     }
 }
 
-/* Not Downloaded: amber, the one colour that means "acquisition pending" (design 2026-10-12); on a card the glass's ink below, on
- * a row the colour of upstream's round row icons beside it (their `color: inherit`: white on the dark schemes, the dark text on
- * the light ones; P1.FU22). */
-.jfmod-mark--none {
-    color: #ffb74d;
-}
-
+/* Not Downloaded: the icon colour (P4.FU8, user 2026-10-15, replacing amber); on a card the glass's ink below, on a row the
+ * colour of upstream's round row icons beside it (their `color: inherit`: white on the dark schemes, the dark text on the light
+ * ones; P1.FU22). */
 .jfmod-mark--row.jfmod-mark--none {
     color: inherit;
 }
@@ -138,13 +134,12 @@
     }
 }
 
-/* On a card (kept behind MARK_CLICKABLE.card, off since P1.FU19): brighter and a little larger on hover, pressed smaller, and
- * the TV's white ring (two shadows, so it reads on any poster). */
+/* On a card (kept behind MARK_CLICKABLE.card, off since P1.FU19): a little larger on hover, pressed smaller, and the TV's white
+ * ring (two shadows, so it reads on any poster); no colour change (P4.FU8). */
 .jfmod-markButton:not(.jfmod-mark--row) {
-    transition: transform 0.15s ease, color 0.15s ease;
+    transition: transform 0.15s ease;
 
     &:hover {
-        color: #ffd180;
         transform: scale(1.08);
     }
 
@@ -154,7 +149,6 @@
 
     .layout-tv &:focus {
         box-shadow: 0 0 0 0.12em #101010, 0 0 0 0.28em #fff;
-        color: #ffd180;
         transform: scale(1.08);
     }
 }

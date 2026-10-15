@@ -2,8 +2,8 @@
  *
  * One panel in the theme's paper where a downloaded episode's page has its Video / Audio / Subtitle selectors: the 4em ring on
  * the left, the state word and its figures, the release name in a small monospace line, its marks, a pack's line with one dot
- * per episode, a 0.28em bar and the actions. Amber `#ffb300` (the ring family's), its text a darker `#8a5a00` on the light
- * scheme; failed red. Sizes in `em` (TV 125 %, phone 90 %); no flex gap, min() or max() for older TV engines; motion only as
+ * per episode, a 0.28em bar and the actions. The page's own text colour for the ring, the bar and the figures (P4.FU8, user
+ * 2026-10-15, replacing amber); imported dots green; failed red. Sizes in `em` (TV 125 %, phone 90 %); no flex gap, min() or max() for older TV engines; motion only as
  * transform and opacity, none under reduced motion.
  */
 
@@ -14,7 +14,6 @@
 
 .jfmod-dlblock {
     --jfmod-dlblock-track: rgba(255, 255, 255, 0.12);
-    --jfmod-dlblock-amber: #ffb300;
     --jfmod-dlblock-error: #ff7b72;
     --jfmod-dlblock-ok: #81c784;
     // The picker's format chips knock their word out in the panel's colour.
@@ -30,7 +29,6 @@
 
 [data-theme='light'] .jfmod-dlblock {
     --jfmod-dlblock-track: rgba(0, 0, 0, 0.14);
-    --jfmod-dlblock-amber: #8a5a00;
     --jfmod-dlblock-error: #c62828;
     --jfmod-dlblock-ok: #2e7d32;
 }
@@ -44,7 +42,7 @@
 
 /* Not Downloaded and Unaired: the glyph alone in the ring's box. */
 .jfmod-dlblock-none {
-    color: #ffb300;
+    color: inherit;
 
     .jfmod-markGlyph {
         display: block;
@@ -76,7 +74,6 @@
     [dir="rtl"] & { margin-left: 0.5em; }
 }
 
-.jfmod-dlblock-figure--amber { color: var(--jfmod-dlblock-amber); }
 .jfmod-dlblock-figure--error { color: var(--jfmod-dlblock-error); }
 .jfmod-dlblock-figure--muted { opacity: 0.7; }
 
@@ -167,11 +164,11 @@
 }
 
 .jfmod-dlblock-dot--done { background: var(--jfmod-dlblock-ok); }
-.jfmod-dlblock-dot--finished { background: #ffb300; }
+.jfmod-dlblock-dot--finished { background: currentcolor; }
 .jfmod-dlblock-dot--failed { background: #e53935; }
 
 .jfmod-dlblock-dot--current {
-    box-shadow: 0 0 0 0.15em var(--jf-palette-background-paper, #202020), 0 0 0 0.25em #ffb300;
+    box-shadow: 0 0 0 0.15em var(--jf-palette-background-paper, #202020), 0 0 0 0.25em currentcolor;
 }
 
 .jfmod-dlblock-bar {
@@ -185,7 +182,7 @@
 .jfmod-dlblock-barFill {
     display: block;
     height: 100%;
-    background: #ffb300;
+    background: currentcolor;
     transition: width 0.35s ease-out;
 }
 

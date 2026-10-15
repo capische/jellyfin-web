@@ -76,7 +76,7 @@ const countdown = (airDate: string) => {
     return 'in ' + months + (months === 1 ? ' month' : ' months');
 };
 
-type Figure = { text: string; tone: 'amber' | 'muted' | 'error' } | null;
+type Figure = { text: string; tone: 'plain' | 'muted' | 'error' } | null;
 
 const IMPORT_STEPS = new Set(['identifying', 'linking', 'scanning']);
 
@@ -101,8 +101,8 @@ const stalledText = (view: QueueRow | undefined) => {
 const downloadFigure = (view: QueueRow | undefined, progress: DownloadProgress): Figure => {
     const stale = progress.stale ? ' · last known' : '';
     switch (progress.kind) {
-        case 'downloading': return { tone: 'amber', text: downloadingText(view, progress) + stale };
-        case 'stalled': return { tone: 'amber', text: progress.percent + '% · ' + stalledText(view) + stale };
+        case 'downloading': return { tone: 'plain', text: downloadingText(view, progress) + stale };
+        case 'stalled': return { tone: 'plain', text: progress.percent + '% · ' + stalledText(view) + stale };
         case 'importing': return { tone: 'muted', text: importingText(view) };
         case 'failed': return { tone: 'error', text: (view ? reasonMessage(view.reason, view.message) : null) ?? 'see the download queue' };
         default: return { tone: 'muted', text: 'waiting to start' + stale };
@@ -144,7 +144,7 @@ const PackStrip: FC<{ row: QueueRow; episodeId: string }> = ({ row, episodeId })
                 kind = 'part';
                 words = 'downloading · ' + percent + '%';
             }
-            const style = kind === 'part' ? { background: `linear-gradient(90deg, #ffb300 ${percent}%, var(--jfmod-dlblock-track) ${percent}%)` } : undefined;
+            const style = kind === 'part' ? { background: `linear-gradient(90deg, currentcolor ${percent}%, var(--jfmod-dlblock-track) ${percent}%)` } : undefined;
             return <i key={item.episodeId} className={'jfmod-dlblock-dot jfmod-dlblock-dot--' + kind
                 + (item.episodeId === episodeId ? ' jfmod-dlblock-dot--current' : '')} style={style}
             title={'Episode ' + item.episodeNumber + ' · ' + words} data-jfmod-dot={kind} />;

@@ -6,7 +6,7 @@ import './downloadStateMark.scss';
 
 /**
  * The download state ring family (P4.FU6, user-approved design 2026-10-13, `design/download-state-ring-family.html`): one disc,
- * one arc, a glyph per state. Downloading is the arrow with the amber arc at its percent, stalled the pause glyph with the arc
+ * one arc, a glyph per state. Downloading is the arrow with the icon-colour arc at its percent, stalled the pause glyph with the arc
  * dimmed, queued a clock, importing a spinning arc, failed a red bang. The figure is never inside the ring: it is the meta
  * line's (`DownloadProgress.text`) and every disc's tooltip (`DownloadProgress.tooltip`). Three sizes: `card`, a 1.6em dark disc
  * in a card's top-right corner, `row`, the 2.5em first round icon of a row's end slot, transparent like upstream's, and `page`,

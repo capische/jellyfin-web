@@ -175,7 +175,7 @@ const markAction = (entry: Entry | undefined, entryDownload: MarkDownload | null
 };
 
 /**
- * The one set of marks on cards and rows (UX §3.1, P1.FU11): nothing for on disk; the amber Not Downloaded icon, a button
+ * The one set of marks on cards and rows (UX §3.1, P1.FU11): nothing for on disk; the Not Downloaded icon, a button
  * for administrators that opens the release picker in its scope and a plain indicator for everyone else; the clock with the
  * short air date for something not aired yet; the magnifier while it is searched for; a close retention deadline takes the
  * slot as a countdown. Cards put it top right, rows at their end. A download takes the slot from Not Downloaded (P4.FU1).

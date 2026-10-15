@@ -1,30 +1,31 @@
 /* JellyfinMod — a download's colours, the cards' bar and the rows' figure (P4.FU1, 2026-10-12; the ring family P4.FU6,
- * user-approved 2026-10-13; UX §3.3).
+ * user-approved 2026-10-13; UX §3.3; the icon colour P4.FU8, user-approved 2026-10-15, replacing amber).
  *
- * The disc itself is `downloadStateMark.scss`. Here: amber `#ffb300` is the app's one progress colour (also the light scheme's
- * bar: 4.6:1 on white), stalled a darker amber, a failure red at its last value, importing a full bar that breathes; the meta
- * line's figure on white takes a darker amber. Cards keep the two-layer bar; rows have no bar (ring only). Additive only: every
- * class is `jfmod-`, sizes are in `em` (TV 125 %, mobile 90 %), and no flex gap, min() or max() for older TV engines.
+ * The disc itself is `downloadStateMark.scss`. Here: a card's bar is the icon colour at 85 % (white, the light schemes' dark
+ * text), stalled the same at 55 % opacity, a failure red at its last value, importing a full bar that breathes; the meta line's
+ * figure is ordinary secondary text, only a failure is red. Cards keep the two-layer bar; rows have no bar (ring only).
+ * Additive only: every class is `jfmod-`, sizes are in `em` (TV 125 %, mobile 90 %), and no flex gap, min() or max() for
+ * older TV engines.
  */
 
 :root {
-    --jfmod-dl: #ffb300;
-    --jfmod-dl-stalled: #e0a030;
+    --jfmod-dl: rgba(255, 255, 255, 0.85);
     --jfmod-dl-failed: #e53935;
-    --jfmod-dl-text: #ffb300;
-    --jfmod-dl-text-stalled: #e0a030;
     --jfmod-dl-text-failed: #ff7b72;
     --jfmod-dl-track: rgba(255, 255, 255, 0.1);
 }
 
+[data-theme='light'],
+[data-theme='appletv'] {
+    --jfmod-dl: rgba(0, 0, 0, 0.85);
+}
+
 [data-theme='light'] {
-    --jfmod-dl-text: #9a6700;
-    --jfmod-dl-text-stalled: #8d5a00;
     --jfmod-dl-text-failed: #c62828;
     --jfmod-dl-track: rgba(0, 0, 0, 0.1);
 }
 
-/* The bar: a track and the amber fill; a card's bar is the only one (rows are ring only). */
+/* The bar: a track and the icon-colour fill; a card's bar is the only one (rows are ring only). */
 .jfmod-dlBar {
     display: block;
     overflow: hidden;
@@ -40,7 +41,7 @@
     background: var(--jfmod-dl);
 }
 
-.jfmod-dlBar--stalled .jfmod-dlBar-fill { background: var(--jfmod-dl-stalled); }
+.jfmod-dlBar--stalled .jfmod-dlBar-fill { opacity: 0.55; }
 .jfmod-dlBar--failed .jfmod-dlBar-fill { background: var(--jfmod-dl-failed); }
 
 .jfmod-dlBar--importing .jfmod-dlBar-fill {
@@ -58,7 +59,6 @@
 .jfmod-dlMeta {
     overflow: hidden;
     max-width: 100%;
-    color: var(--jfmod-dl-text);
     white-space: nowrap;
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
@@ -70,19 +70,8 @@
     max-width: 22em;
 }
 
-.jfmod-dlMeta--queued { color: inherit; }
-
-/* Its colours win over upstream's `.listItem .secondary` grey on a row's own text line (the phone). */
-.listItem .jfmod-dlMeta.jfmod-dlMeta--downloading,
-.listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
-    color: var(--jfmod-dl-text);
-}
-
-.jfmod-dlMeta--stalled,
-.listItem .jfmod-dlMeta.jfmod-dlMeta--stalled {
-    color: var(--jfmod-dl-text-stalled);
-}
-
+/* Only a failure has a colour; every other state reads in the line's own secondary text. It wins over upstream's
+ * `.listItem .secondary` grey on a row's own text line (the phone). */
 .jfmod-dlMeta--failed,
 .listItem .jfmod-dlMeta.jfmod-dlMeta--failed {
     color: var(--jfmod-dl-text-failed);
@@ -120,8 +109,8 @@
 }
 
 /* A card: the bar along the poster's bottom edge over a dark track. While the card downloads the mod draws both layers, the
- * download in amber and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile: its
- * opaque track would cover the amber). */
+ * download in the icon colour and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile: its
+ * opaque track would cover the download). */
 .jfmod-dlCardBar {
     position: absolute;
     right: 0;
