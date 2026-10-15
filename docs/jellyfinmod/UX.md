@@ -215,7 +215,7 @@ the row's end. The marks, one shared `FileStateMark` and one `fileStateMark.scss
 | What | Mark | Administrators | Everyone else |
 | --- | --- | --- | --- |
 | On disk | none | — | — |
-| No file (not downloaded, reclaimed, or unaired with no air date) | white icon (the existing glyph, a dark one on the light schemes) on the top bar's glass disc (§3.3, P4.FU7); a row's is the colour of upstream's round row icons since P1.FU22 (it was amber `#ffb74d`) | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover `#ffd180` and scale 1.08, pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
+| No file (not downloaded, reclaimed, or unaired with no air date) | white icon (the existing glyph, a dark one on the light schemes) on the top bar's glass disc (§3.3, P4.FU7); a row's is the colour of upstream's round row icons since P1.FU22 (it was amber `#ffb74d`; amber is gone from the download design, P4.FU8) | a round button, tooltip *Download This Movie* / *Download This Series* / *Download This Season* / *Download This Episode*, that opens the release picker in that scope and stops the card's own click; hover scale 1.08 with no colour change (it was `#ffd180`), pressed 0.96, cyan keyboard ring, white TV ring | a plain indicator, tooltip *Not Downloaded*, no pointer, not a focus stop |
 | Unaired, with an air date | clock + the short air date: `10 Aug` this year, `Aug ’27` in another (month in the viewer's locale) | not clickable; tooltip *Airs 10 Aug 2026* | the same |
 
 The quiet on-disk mark and the 60 % dimming rule above are retired with this change; the file-less cards
@@ -223,7 +223,7 @@ keep their own dimmed artwork.
 
 **Changed 2026-10-12 (P1.FU17, user-approved design A and option 1,
 [`design/not-downloaded-mark.html`](design/not-downloaded-mark.html)): the glyph, and Not Downloaded beside the watched
-tick.** The Not Downloaded glyph is a download arrow coming out of a small cloud (stroked in the amber, on the same disc, at
+tick.** The Not Downloaded glyph is a download arrow coming out of a small cloud (stroked in the icon colour, since P4.FU8 (amber before), on the same disc, at
 the same sizes, with the same button, focus ring and tooltips; the header's Get a Release keeps its own icon). A season or an
 episode with no file on disk shows Not Downloaded whatever its watched state: the tick says watched, the mark says no file,
 and both show. Upstream's own season cards (a Jellyfin season item, for example one kept for an empty folder, which Jellyfin
@@ -302,11 +302,23 @@ the design but have two icons if the download in progress"). One disc, one arc, 
 
 | State | Glyph | Arc | Colour |
 | --- | --- | --- | --- |
-| Downloading | arrow, bobbing 0.2em every 1.4 s | the percent, from the top (`stroke-dashoffset = 100 − percent`), easing 0.35 s | amber `#ffb300` |
-| Queued | clock | none | amber |
-| Importing | spinner arrow | a 28 % segment turning every 1.2 s | amber |
-| Stalled | pause | the percent at 55 % opacity | amber |
+| Downloading | arrow, bobbing 0.2em every 1.4 s | the percent, from the top (`stroke-dashoffset = 100 − percent`), easing 0.35 s | the icon colour (P4.FU8) |
+| Queued | clock | none | the icon colour |
+| Importing | spinner arrow | a 28 % segment turning every 1.2 s | the icon colour |
+| Stalled | pause | the percent at 55 % opacity | the icon colour at 55 % opacity |
 | Failed | bang | none | red `#ff5a4f` (light scheme rows `#c62828`) |
+
+**The icon colour (P4.FU8, user 2026-10-15: "replace yellow in this design to the color of icons, light for dark theme and dark
+for light. Keeping it simple."; design: ring family artifact v12, *Revision 4* of
+[`design/download-state-ring-family.md`](design/download-state-ring-family.md)).** Amber (`#ffb300`, `#ffb74d`, `#8a5a00`, `#ffd180`)
+is gone from the whole download design; this supersedes every "amber" below and in §7.2.1 and §9.1. "The icon colour" is: on a
+card the disc's glass ink (white; the light schemes' dark text); on a row the colour of upstream's round row icons beside it
+(inherited, as the row's Not Downloaded mark since P1.FU22); on the episode page the page's text colour. The card's bar is that
+colour at 85 %. Stalled is the same colour at 55 % opacity (arc, bar, number). The meta line's figures, the picker's added-row
+figure and the detail line are the line's ordinary secondary text, with no colour of their own. Failed stays red. Accepted trade
+(the design session's): a downloading row no longer stands out of a long list by colour alone; the full-opacity glyph beside
+muted neighbours and the bobbing arrow carry it. The hover of a card disc is scale 1.08 only; a row's Not Downloaded keeps
+P1.FU22's upstream round-icon hover (the primary glyph over its veil).
 
 The figure is never inside the ring (the percent-inside and the caption and tooltip-only time placements stay in the artifact
 for later, not built). It is on the **meta line** after the date, in upstream's own items: `42% · 12 min left` (`1 h 05 min
@@ -323,7 +335,7 @@ its last value, the disc and figure dimmed.
   white 30 % track) top right, the first of upstream's indicators, so it sits **left of
   upstream's played tick or count pill: two icons**, the pill untouched (no arrow in it); a card with no indicator cluster has
   it alone in the corner. The two-layer bar stays: 0.24em along the poster's bottom edge over a dark track, the download in
-  amber beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
+  the icon colour at 85 % beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
   season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
   queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
   The disc wins over Not Downloaded and Unaired in the corner (never both). A series or season card with nothing on disk and a download on its way
@@ -336,7 +348,7 @@ its last value, the disc and figure dimmed.
   colour: white on the dark schemes, the theme's dark text on the light schemes (track black 25 %); failed stays red (`#ff5a4f`,
   `#c62828` on the light schemes). Without `backdrop-filter` or `color-mix()`, and on the TV layout (where the bar itself stays
   blur-free), the disc is the solid black 66 % with the white glyph. Rows, bars, the picker, the Queue page, the detail line
-  and the episode-page block stay amber and unchanged; so do the count pill and the played tick. Not measured: the GPU cost of
+  and the episode-page block took the icon colour in P4.FU8 (they were amber); the count pill and the played tick are unchanged. Not measured: the GPU cost of
   a blur per disc on a real phone or TV.
 - **Rows** (the native and the mod's season page, the library list view and search lists): ring only, no bar. The disc is
   2.7816em with a 1.6696em glyph since P1.FU19, the box and glyph of upstream's round row buttons beside it (it was 2.5em and
@@ -955,19 +967,19 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
 
   | State | Ring | State line | Lines below | Actions |
   | --- | --- | --- | --- | --- |
-  | Downloading | `42%` inside, amber arc | **Downloading** `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (amber) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
+  | Downloading | `42%` inside, the arc in the page's text colour | **Downloading** `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (the text colour) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
   | Stalled | `42%` dimmed, arc dimmed | **Stalled** `42% · no progress for 20 min` | release, marks, pack line, bar dimmed | the same |
   | Queued | clock | **Queued** `waiting to start` | release, marks, pack line | the same |
   | Importing | turning arc | **Importing** `identifying the file…` / `linking into the library…` / `waiting for the library scan…` | release, marks, full bar breathing | View Queue |
   | Failed | red bang | **Failed** the reason in red | release, marks | Search Again (red, administrators who may search) · View Queue |
-  | Not downloaded | amber cloud | **Not Downloaded** (`no release chosen yet` for everyone else) | — | Get a Release (blue, administrators who may search) |
+  | Not downloaded | cloud in the text colour | **Not Downloaded** (`no release chosen yet` for everyone else) | — | Get a Release (blue, administrators who may search) |
   | Unaired (with an air date) | clock | **Unaired** `airs 19 May 2027 · in 7 months` (`in N days` under 30 days) | — | — |
 
   The release is the queue row's name in a small monospace line. Its marks are the picker's: quality and source
   (`1080p WEB-DL`), the codec and audio marks (`MediaMarks`), the languages, the release's size (a pack's whole torrent) and the
   indexer's name as plain text (the plugin keeps no release page link after a grab), then the client's Open icon for
   administrators (`Open Transmission`, not on the TV, as the picker). A pack's line reads `Season 1 pack · this episode is file
-  6 of 10`, then one dot per pack episode: green imported, amber its file finished (importing), amber filled to its percent
+  6 of 10`, then one dot per pack episode: green imported, the text colour its file finished (importing), the text colour filled to its percent
   while it downloads, grey waiting, red failed; this episode's dot ringed. The bar is 0.28em. The figures are the episode's
   own file for a pack (P4.FU5, `packEpisodeView`); the rate has one decimal (`3.1 MB/s`). View Queue is a link for everyone who
   may read the queue; Cancel Download is upstream's grey raised button and asks the picker's *Remove the Torrent*
@@ -1238,7 +1250,7 @@ Approved design: the release picker's added-row sheet (2026-10-12). What the pic
   `GET /Grabs/{id}`) and marks the row whose infohash matches it; once the client has it, no block is shown.
 - **Its download.** Once the client has the torrent, the picker reads `GET /Queue` right away and every 5 s while it is
   open, until the row is imported: the ring family's disc in the Add slot (§3.3, P4.FU6; the figure in its tooltip) and the
-  figure at the right end of the marks line, `queued`, `42% · 12 min left`, `42% · stalled` (darker amber), `importing…` or
+  figure at the right end of the marks line, `queued`, `42% · 12 min left`, `42% · stalled` (plain secondary text), `importing…` or
   `Failed · reason` (red, at the last value); an unreadable client keeps the last value dimmed. No bar since P4.FU6.
   Imported, the row reads as the in-library row (the green check after the quality, no actions).
 - **The release page link.** Where the indexer gives a page (`detailsUrl`: Torznab `comments`, else an http `guid`; a URL
