@@ -786,6 +786,28 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   served by route interception, queue answers intercepted; no deploy, restart or setting). Upstream's round row icons read live on 28096:
   `rgba(255, 255, 255, 0.7)` dark, `rgba(0, 0, 0, 0.87)` light, equal to the row text and the meta line's text, as inherited. Not run:
   a live download, a physical TV, a deployment, Codex review (the user decides when).
+  **P4.FU9, built (not accepted) 2026-10-15: quality profile presets, 4K with fallback as the default, and the simple
+  profile dialog** (user 2026-10-15: "Can you predefine 4K, 2K, 1080p and other quality profiles? And set up by default 4K
+  downloaded with fallback to lower quality profiles?"; then, on the redesign: "Love new design. Go ahead and implement it.";
+  [API.md](API.md) *Quality vocabulary and presets*, [UX.md](UX.md) §12 *Quality Profiles in the settings area*). Owner:
+  Phase 4 (profiles and scoring). **Default (user's words above): the 4K preset, falling back to 2K, 1080p and 720p.**
+  Plugin: six presets as data (`Assets/quality-presets.json`: 4K, 2K, 1080p, 720p, Any Quality, SD, each with a one-line
+  description; Balanced or Small size caps per the design's tiers, no minimum size, minimum seeders 2, upgrades off with the
+  first quality as cutoff); a fresh install (no profile, acquisition settings never saved) gets them at start with 4K as
+  its default, any other install is untouched; `GET/POST Settings/QualityProfiles/Presets` lists them and adds only the
+  missing ones by stable id (a name another profile has is skipped); profiles gain `presetId`; 1440p joins the vocabulary
+  (Blu-ray, WEB-DL, WEBRip) and the parser. Fallback needs no new mechanism: a profile is ordered best first and its rank
+  (100 points a step) outweighs every other score part, so the picker and automation take the best allowed release on offer
+  and the next one down when it is missing or rejected (proved through the hosted API with a Torznab stand-in: 4K chosen
+  when present, 2K or 1080p when the 4K copies are absent or too large, 720p when only 720p is acceptable). No migration.
+  Web: the Quality Profiles section and dialog of the approved redesign (simple form, Advanced matrix and order, live rules,
+  row summaries, Preset chip, Add Preset Profiles while a preset is missing); one difference from the mock: a size choice
+  sets only a maximum, since a profile-wide minimum would refuse the smaller copies it falls back to. Plugin
+  `feat/quality-presets` from `next-release` `b52a64a`; web `feat/quality-presets` rebased onto `jellyfin-web-prowlarrfirst`
+  (P7.FU1 and P6.FU1 below it). All 13 plugin suites pass (Phase 4 in the Linux container with the new preset scenarios);
+  `quality-profiles.mjs` passes on local environment echo in Chromium (desktop, phone, a TV smoke) and real Chrome (desktop,
+  phone). Not run: the Pi, the Dashboard page's own profile editor (unchanged), `s11-fresh.mjs` (Pi image rig; it still
+  drives the old dialog and expects an empty profile step, so it needs updating), Codex review.
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
