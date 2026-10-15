@@ -412,6 +412,29 @@ const useOpenWhenRead = (ready: boolean, gone: boolean, open: (button: HTMLEleme
     }, [open, ready]);
 };
 
+/**
+ * On a placeholder's page (P1.FU24) its entry and episode are remembered; once its import swaps the placeholder for the file
+ * (P1.FU25) and the entry is read again, Jellyfin's page for the file opens, as the mod's own episode page does (P1.FU20). The
+ * placeholder's item is gone by then, so the page can no longer find its entry or episode by it: the entry is read by its id.
+ */
+const usePlaceholderSwap = (api: Api, userId: string, data: EntryDetail | null | undefined, episode: EntryEpisode | undefined,
+    itemId: string, serverId: string) => {
+    const [remembered, setRemembered] = useState<{ entryId: string; episodeId: string } | null>(null);
+    const isPlaceholder = !!data && !!episode && episode.availability !== 'onDisk' && sameItemId(episode.placeholderItemId, itemId);
+    const entryId = isPlaceholder ? data.entry.id : null;
+    const episodeId = isPlaceholder ? episode.id : null;
+    useEffect(() => {
+        if (entryId && episodeId) setRemembered({ entryId, episodeId });
+    }, [entryId, episodeId]);
+    const latest = useQuery({ ...entryDetailQuery(api, userId, remembered?.entryId ?? ''), enabled: !!remembered });
+    const swapped = remembered ? latest.data?.episodes.find(candidate => candidate.id === remembered.episodeId) : undefined;
+    const fileItem = swapped?.availability === 'onDisk' && swapped.jellyfinItemId && !sameItemId(swapped.jellyfinItemId, itemId) ?
+        swapped.jellyfinItemId : null;
+    useEffect(() => {
+        if (fileItem) window.location.replace('#/details?id=' + encodeURIComponent(fileItem) + '&serverId=' + encodeURIComponent(serverId));
+    }, [fileItem, serverId]);
+};
+
 /** Add catalog controls to upstream's own detail page without replacing native playback, seasons or track controls. */
 const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId, itemId, itemType, seriesId, seasonNumber, isAdmin,
     view }) => {
@@ -433,6 +456,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const { data } = detail;
     const refetch = detail.refetch;
     const { episode, isSeasonPage, isSeriesPage, isFilePage } = pageKind(data, itemId, seasonOf);
+    usePlaceholderSwap(api, userId, data, episode, itemId, serverId);
     // Anyone opening a series or season page of a series whose TMDB list was never loaded loads it (P1.FU9), quietly; its
     // answer is the entry's new detail, drawn straight away.
     useEpisodeListLoad(api, isSeriesPage || isSeasonPage ? data : null, loaded => {
