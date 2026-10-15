@@ -1017,6 +1017,40 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   writes nothing; turned back on, 44 written, 0 pending) 51 checks, 0 failed in Chromium on desktop, phone and TV 1080 as
   oleksii and nata with Remove Placeholders, and 29, 0 failed on desktop on the final build. Not verified: batching across
   more than one series (the local media set has one series); Phase 5 not re-run (the import is unchanged by the follow-up).
+  **P1.FU25, built (not accepted) 2026-10-15: the import swaps a placeholder for the file in one step, and retention ignores
+  placeholders and writes one back after a reclaim.** Owner: Phase 1; touches Phase 5 (the import) and Phase 3/10 (retention,
+  PHASE10 S20). Plugin `feat/placeholder-swap` from `feat/placeholder-stubs` `709349f`; web `feat/placeholder-swap` from
+  `477fc88874`. Import: once the file is linked, verified and recorded, and before the scan, the episode's marked stubs leave its
+  series folder and every season folder in it (another folder that held one is reported too), so Jellyfin swaps the items in one
+  refresh; the recovery of a `linked` import repeats it; an import blocked before its link changes nothing; a stub it cannot
+  remove leaves the import complete, logged once, for the sync (`file_present`, now across the series' folders). The sync writes
+  no stub for an episode with an open import (`importing`), counts a stub anywhere in the series, and treats a reclaimed episode
+  as aired. Retention: a placeholder is never a candidate (preview `placeholder`, executor refusal, besides reconciliation never
+  binding one); after a plain reclaim of an episode's last file (a multi-episode file: every episode it held) the plugin writes the
+  episode's stub in the same folder under the import's name (TV library with placeholders on, writable folder inside the library,
+  never a library folder), only after the unlink is recorded and never deleting anything, reports the folder, and appends
+  "; a placeholder keeps the episode in Jellyfin" to the `reclaimed` history; the preview marks such rows `leavesPlaceholder` and
+  counts `placeholders` (Settings' Retention line says how many). A series whose every file was reclaimed keeps its folder for the
+  import and the sync (the entry's series item). Web: a placeholder's page opens the file's page by itself once the swap lands
+  (its entry is read by id, since the placeholder's item is gone); Retention help and preview line. Movies keep no stub after a
+  reclaim (file-less movies are P1.FU26). API: [API.md](API.md) *Placeholders* (the swap) and *Retention* (preview fields).
+  Checks: plugin build; Phase 5 (new `PlaceholderSwapScenarios`: a season pack swapping three stubs, one in the series folder;
+  a dry run and a sync while an episode downloads write none for it; a blocked import leaves its stub byte for byte; a read-only
+  folder: the import completes, one warning, the next sync removes the stub, only it) and Phase 3 protection (new: a bound stub
+  blocked and refused; a reclaim and a multi-episode reclaim leave exactly their stubs; history; a movie gets none) pass in the
+  Linux container, as do Phase 4, 6 and 7 settings (unchanged); Phase 1 smoke, 2, 3 and 10 on macOS pass; web typecheck and eslint on the changed files. Live on local
+  environment charlie (Jellyfin 12.0.0, lease held by this session, Shows pointed at a writable copy of Peep Show, reset to the
+  baseline afterwards; seed protection pointed at an empty Transmission stand-in): S01E02 watched and favourite by oleksii,
+  retention (1-minute test window) reclaimed it, left `Peep Show (2003) S01E02.disc`, and Jellyfin's new item for it carried
+  played, play count 1, favourite and the original date by key (new item id, the old one 404); the plugin recorded no new
+  completion and the history says a placeholder was left; the stub never appeared in the preview. A file swapped in for a
+  played and favourite stub carried the marks the same way (and its retention waits for a new watch). In Chromium the stub's
+  page (no Play, Get a Release) turned into the file's page with Play 105 s after the swap, without a reload. **Found:** Jellyfin
+  12's list endpoints (`/Shows/{id}/Episodes`, `/Items`) can show a just-swapped item as unplayed until a restart when a client
+  read it in the second or two before its first metadata refresh (its user-data key is then its id); `/Items/{id}` and the
+  played and favourite filters are right throughout, and an item not read in that window lists right. Not run: an import
+  through Transmission on a live instance (the suite covers the plugin side; the physical swap was checked live), real Chrome,
+  phone and TV layouts, 28096 and the Pi, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

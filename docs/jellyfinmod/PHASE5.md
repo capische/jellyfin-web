@@ -386,6 +386,17 @@ timeout is retried once, then `blocked/scan_timeout`. Nothing in recovery delete
 - A colliding sibling name produces `destination_collision` and leaves the existing file
   untouched.
 
+**Placeholder swap (P1.FU25, built 2026-10-15, not accepted).** Where the episode has a placeholder (a marked `.disc` media
+stub, P1.FU24), step 4 is followed, still under the library lock and before I5's scan request, by removing the episode's
+placeholders from its series folder and every season folder in it (only marked stubs, each by its inode); a folder other than
+the file's that held one is reported to Jellyfin too. Jellyfin then sees the stub go and the file arrive in one refresh and
+carries the users' played, favourite and date marks over by key. Recovery of a `linked` operation repeats the swap. An import
+that stops before its link changes nothing; a stub that cannot be removed (a permission) leaves the import complete, is logged
+once and goes with the next placeholder sync. The placeholder sync writes no new stub for an episode with an open import
+(`importing`). A series whose every file was reclaimed keeps its folder for the import (the entry's own series item). Checks:
+the Phase 5 suite's `PlaceholderSwapScenarios` (a season pack swapping three stubs, one in the series folder; a sync while an
+episode downloads; a blocked import; a read-only folder). Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+
 ### I5 — scan only the new folder and let Phase 2 bind it
 
 After `linked`, request the targeted refresh chosen in I1 for the destination folder (or the new
