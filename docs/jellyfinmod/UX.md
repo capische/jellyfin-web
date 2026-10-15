@@ -1422,6 +1422,8 @@ a once-a-quarter admin task, not a browsing surface.
     as for every optional field there; the Test Token icon has no description under the box). Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
     "Using your token · tested …" / "Using your token · not tested since it changed". With no token there is no Test icon
     (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
+  - **Optional fields say so (user, 2026-10-15).** The settings area's `FieldForm` appends " (Optional)" to the label of every field
+    declared `optional`; the secret fields are labelled by hand. The Dashboard page is unchanged.
   - **The wizard's Continue (user, 2026-10-15).** A done step shows no banner ("This step is done." is gone; a step not done keeps its
     "not done yet" notice with what blocks it). Continue is Save's blue button at the bottom right of the step's card footer, Save at
     the left (focus order Save, then Continue; on the TV Right from Save lands on Continue); it is refused until the step is done, and the last step has none. On a phone the
