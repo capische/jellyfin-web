@@ -7,10 +7,20 @@
 // JELLYFINMOD_SETTINGS_LAYOUTS=desktop,mobile,tv1080,tv720
 // Signs in as oleksii with an empty password. Saves the TMDB token unchanged, which advances the discovery revision
 // and makes step 1 incomplete again without touching any value; the wizard's own Test then completes it.
+// Needs a saved TMDB token (without one discovery uses Jellyfin's own TMDb connection and step 1 is always done, P1.FU13)
+// and every other required step done; it checks both first and stops, NOT RUN, when one is missing.
+// JELLYFINMOD_ALLOW_LOCAL=1 also accepts a local environment of this Mac (alpha..echo on 127.0.0.1, envs/pool.list),
+// once it answers as one: 8096 on this Mac may be a tunnel to production.
 import { chromium } from 'playwright';
 
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
-if (!['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
+const localEnvironment = process.env.JELLYFINMOD_ALLOW_LOCAL === '1' && ['127.0.0.1', 'localhost'].includes(testUrl.hostname)
+    && ['8096', '9096', '10096', '11096', '12096'].includes(testUrl.port);
+if (localEnvironment) {
+    const publicInfo = await fetch(new URL('/System/Info/Public', testUrl)).then(response => response.json()).catch(() => ({}));
+    if (!/^jellyfinmod-(alpha|bravo|charlie|delta|echo)$/.test(publicInfo.ServerName ?? '')) throw new Error(`${testUrl.host} answers as "${publicInfo.ServerName}", not as a JellyfinMod local environment`);
+}
+if (!localEnvironment && !['18096', '28096', '58096'].includes(testUrl.port)) throw new Error('Runs on the isolated instances only');
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const base = new URL('/web/', testUrl).href;
 const only = (process.env.JELLYFINMOD_SETTINGS_LAYOUTS ?? 'desktop,mobile,tv1080').split(',');
@@ -103,6 +113,12 @@ for (const name of only) {
         }
         const initial = await setupState(page);
         if (initial.dismissedAt) throw new Error('setup was dismissed on this instance; the banner cannot be shown');
+        const discovery = await page.evaluate(() => ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('JellyfinMod/Settings/Discovery'), dataType: 'json' }));
+        const open = initial.steps.filter(item => !item.optional && item.id !== 'discovery' && item.status !== 'done').map(item => item.id);
+        const missing = [];
+        if (!discovery.tokenConfigured) missing.push('no TMDB token is saved, so step 1 cannot be made incomplete');
+        if (open.length) missing.push('required steps not done: ' + open.join(', '));
+        if (missing.length) throw new Error('precondition: ' + missing.join('; '));
         await unverify(page);
         await page.evaluate(() => { location.hash = '#/home'; });
         await page.reload({ waitUntil: 'domcontentloaded' });

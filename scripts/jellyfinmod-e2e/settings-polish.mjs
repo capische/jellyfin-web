@@ -57,6 +57,14 @@ const record = (layout, check, ok, detail) => {
     results.push({ layout, check, ok });
     console.log(`${ok ? 'PASS' : 'FAIL'} [${tier}/${layout}] ${check}${detail === undefined ? '' : ' :: ' + JSON.stringify(detail).slice(0, 700)}`);
 };
+// Without a saved TMDB token (discovery then uses Jellyfin's own TMDb connection, P1.FU13) the token's field starts as an empty
+// input: the checks of a saved token (its Test passing, Replace and Keep) print SKIP and count as neither; the Save and the
+// made-up token's failing Test are still checked, and JELLYFINMOD_TMDB_RESTORE ("configure-tmdb.sh <env> --clear") removes it.
+const skipped = [];
+const skip = (layout, check) => {
+    skipped.push({ layout, check });
+    console.log(`SKIP [${tier}/${layout}] ${check} :: no TMDB token is saved on this instance`);
+};
 
 // ---- a Torznab server of the runner's own: a real HTTP boundary the plugin's Test calls ----
 const CAPS = `<?xml version="1.0" encoding="UTF-8"?>
@@ -326,8 +334,10 @@ async function tokenFlow(page, surfaceKey) {
     await surface.open(page, 'discovery', true);
     const slot = surfaceKey === 'dashboard' ? page.locator('[data-secret-slot="TmdbReadAccessToken"]') : page.locator('.jfmod-check-section[data-section="discovery"] .jfmod-secret').first();
     const testIcon = slot.locator('[data-secret-action="test"]');
+    const tokenSaved = (await api(page, 'GET', 'Settings/Discovery')).tokenConfigured === true;
     // the real token's test passes (when the environment has one)
-    {
+    if (!tokenSaved) skip('desktop', `${tag} the token's Test icon spins, then shows a green tick for the real token; Replace and Keep`);
+    if (tokenSaved) {
         const before = await testState(testIcon);
         await testIcon.click();
         await page.waitForTimeout(150);
@@ -337,19 +347,21 @@ async function tokenFlow(page, surfaceKey) {
         record('desktop', `${tag} the token's Test icon spins, then shows a green tick for the real token`, during === 'testing' && after === 'ok', { before, during, after });
         console.log('  shot', await shot(page, `${surfaceKey}-token-passed`));
     }
-    // Replace → type → Save
-    await slot.locator('[data-secret-action="replace"]').click();
+    // Replace → type → Save (with no token saved the input is already there)
     const input = surface.tokenInput(page);
-    await input.waitFor({ state: 'visible', timeout: 10000 });
-    // One field: Replace swaps the Configured box for the input (Save and Keep at its end); Keep swaps it back.
-    const visibleBox = () => slot.evaluate(node => { const row = node.querySelector('.jfmod-secret-row'); return !!row && row.getBoundingClientRect().width > 0; });
-    const editing = { box: await visibleBox(), save: await slot.locator('[data-secret-action="save"]').isVisible(), keep: await slot.locator('[data-secret-action="keep"]').isVisible() };
-    await slot.locator('[data-secret-action="keep"]').click();
-    await page.waitForTimeout(300);
-    const kept = { box: await visibleBox(), input: await input.isVisible().catch(() => false) };
-    record('desktop', `${tag} the token is one field: Replace turns the box into the input with Save and Keep at its end; Keep turns it back`,
-        !editing.box && editing.save && editing.keep && kept.box && !kept.input, { editing, kept });
-    await slot.locator('[data-secret-action="replace"]').click();
+    if (tokenSaved) {
+        await slot.locator('[data-secret-action="replace"]').click();
+        await input.waitFor({ state: 'visible', timeout: 10000 });
+        // One field: Replace swaps the Configured box for the input (Save and Keep at its end); Keep swaps it back.
+        const visibleBox = () => slot.evaluate(node => { const row = node.querySelector('.jfmod-secret-row'); return !!row && row.getBoundingClientRect().width > 0; });
+        const editing = { box: await visibleBox(), save: await slot.locator('[data-secret-action="save"]').isVisible(), keep: await slot.locator('[data-secret-action="keep"]').isVisible() };
+        await slot.locator('[data-secret-action="keep"]').click();
+        await page.waitForTimeout(300);
+        const kept = { box: await visibleBox(), input: await input.isVisible().catch(() => false) };
+        record('desktop', `${tag} the token is one field: Replace turns the box into the input with Save and Keep at its end; Keep turns it back`,
+            !editing.box && editing.save && editing.keep && kept.box && !kept.input, { editing, kept });
+        await slot.locator('[data-secret-action="replace"]').click();
+    }
     await input.waitFor({ state: 'visible', timeout: 10000 });
     const save = slot.locator('[data-secret-action="save"]');
     await save.waitFor({ state: 'visible', timeout: 10000 });
@@ -589,5 +601,6 @@ try {
     await browser.close();
 }
 const failed = results.filter(result => !result.ok).length;
-console.log(`${results.length - failed} of ${results.length} checks pass`);
+const skipNote = skipped.length ? `; ${skipped.length} skipped for want of a saved TMDB token` : '';
+console.log(`${results.length - failed} of ${results.length} checks pass${skipNote}`);
 process.exit(failed ? 1 : 0);
