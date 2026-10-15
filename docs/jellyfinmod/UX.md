@@ -1398,9 +1398,20 @@ default: *Start from* (the six presets as a radio list, each with its one-line d
 preset's), *Best quality I want* (4K, 2K, 1080p, 720p, SD), *Fall back to lower quality … down to [floor]* (on),
 *File size* Small / Balanced / Large with the tier's GB per hour and "a 2-hour film at Balanced is about …", *Upgrade
 later when something better appears* (off, "Needs Automation on") and a live sentence of what the profile will do.
-*Advanced* (collapsed) holds the whole record: a source × resolution checkbox matrix, the order tried with Move Up /
-Move Down / Remove and an "Order tried: 1 …" line, the cutoff, the upgrade mode, minimum score and seeders, and the size
-limits in GB per hour. The simple controls write the record (best tier and every lower tier to the floor, each in the
+*Advanced* (collapsed) holds the whole record: a source × resolution checkbox matrix (its help states the order rule:
+higher resolution first, then Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD), the cutoff, the upgrade mode, minimum score
+and seeders, and the size limits in GB per hour. The order editor is collapsed too, behind *Change the order tried*
+(user 2026-10-15: "it makes sense to hide it and show only on click … I'd treat it as debug"; "I would assume order, and
+it's too advanced"): a note that the matrix already sets the usual order and the list is only for an exception such as
+WEB-DL before Blu-ray, the ranked list with Move Up / Move Down / Remove, and the "Order tried: 1 …" sentence. The order
+is stored and sent as before; profile rows never show it. **Qualities are written as people say them** (user
+2026-10-15: "can these to be pretty printed? even for Order tried?"): the resolution's name, then the source's, as in
+*4K Remux*, *2K WEB-DL*, *1080p Blu-ray*, *720p WEBRip*, *576p DVD* (2160p is 4K, 1440p is 2K, other resolutions as they
+are; sources Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD). That holds in the cutoff select, the order list and its
+sentence, the live sentence, the Upgrade help line, the row summaries, the order icons' names and the release picker's
+quality ("4K WEB-DL", which read "2160p WEB-DL" and "BluRay" before). The plugin's ids (`remux-2160p`) stay in the data
+and the API, and as an order row's title. The names live in one hard-coded place, `constants/quality.ts`, which a later
+configuration can replace. The simple controls write the record (best tier and every lower tier to the floor, each in the
 source order Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD; the size as a maximum; cutoff the first quality); an Advanced
 edit marks it *custom values* and no simple button stays pressed until a simple choice is made again. The server's
 rules are checked live (a name, at least one quality, an allowed cutoff, a cutoff for upgrades, smallest below largest)
