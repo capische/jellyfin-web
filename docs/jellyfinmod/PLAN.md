@@ -905,6 +905,13 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   cards). Not run: `card-get-shuffle.mjs` and `missing-seasons-episodes.mjs` (their picker steps run release searches, not
   read-only on 28096), the TV at 1280×720, a physical TV, a deployment, Codex review. The row Not Downloaded mark is left to
   `feat/row-mark-click`.
+  **P7.FU4, built (not accepted) 2026-10-15: what blocks a setup step is said beside Continue** (user 2026-10-15, option A of the design
+  session's `wizard-step-blockers`: "A, tell parent to implement it"; [UX.md](UX.md) §12.2). The top notice ("This step is not done yet. …")
+  is gone; the step card's footer shows one muted line with a lock, "To continue, <instruction>.", built from the step's blocker codes, and
+  Continue is refused with `aria-disabled` (still focusable) at about 45 % with the tooltip "Not yet: …". Web `feat/wizard-blockers` from
+  `next-release` `542d096889`: `SetupWizardPage.tsx`, `settingsWidgets.tsx`, `settings.scss`; runners `setup-wizard.mjs`, `s11-fresh.mjs`,
+  `settings-design.mjs` read the new element. Not accepted: runs on the local environment bravo only, whose plugin predates next-release.
+
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
   Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of
   [design/service-discovery.md](design/service-discovery.md); [PHASE7.md](PHASE7.md) §7, [UX.md](UX.md) §12.2,
