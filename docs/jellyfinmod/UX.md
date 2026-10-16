@@ -1462,10 +1462,18 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
     (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
   - **Optional fields say so (user, 2026-10-15).** The settings area's `FieldForm` appends " (Optional)" to the label of every field
     declared `optional`; the secret fields are labelled by hand. The Dashboard page is unchanged.
-  - **The wizard's Continue (user, 2026-10-15).** A done step shows no banner ("This step is done." is gone; a step not done keeps its
-    "not done yet" notice with what blocks it). Continue is Save's blue button at the bottom right of the step's card footer, Save at
-    the left (focus order Save, then Continue; on the TV Right from Save lands on Continue); it is refused until the step is done, and the last step has none. On a phone the
-    footer wraps and Continue stays at the right.
+  - **The wizard's Continue (user, 2026-10-15).** A done step shows no banner ("This step is done." is gone) and no top notice: what
+    blocks a step is one muted line with a small lock in the card footer, left of the buttons (P7.FU4, user 2026-10-15, option A of the
+    design session's `wizard-step-blockers`): **"To continue,** test Prowlarr after saving it and add at least one indexer and turn it
+    on." It is built from the step's blocker codes, the list the rail's state comes from, two joined with "and", three with commas and
+    "and"; the instructions are sentence case ("add at least one indexer and turn it on", "save a download client and test it",
+    "verify the mapping so hard links work", "add a profile (Add Predefined Profiles gives you 4K, 2K and 1080p) and choose a default
+    with the star on its row", "turn grabbing on"). Discovery has none while Jellyfin's TMDb connection is used (the token is optional).
+    Continue is Save's blue button at the right of the footer, Save beside it (focus order Save, then Continue; on the TV Right from Save
+    lands on Continue). While the line shows, Continue is refused with `aria-disabled` (never `disabled`, so it stays a focus stop), at
+    about 45 % opacity, with the tooltip "Not yet: <the same sentence>"; pressing it, or Enter on the TV, does nothing. When the step is
+    done the line is gone and Continue is live. The last step has no Continue. On a phone the line takes the whole footer width above the
+    buttons, which stay at the right. The line carries `data-wizard-blockers` for the runners.
   - **A secret is one field.** Configured, it is the box with its icons (Test, Replace, Clear); Replace turns the box into
     the input, with its buttons inside it at the right: a round Save (only a secret that has a test of its own, the TMDB
     token, has one: it writes just that secret, then starts the Test; refused while the input is empty; Enter does the same)
