@@ -588,7 +588,7 @@ out. With no default profile set, the default preset becomes the default. It ans
 settings row, or revision 1 with no default) gets every preset, and the 4K preset becomes the default profile (settings
 revision + 1); grabbing and automation stay off. Any other database is left exactly as it is, so an install that
 already has profiles keeps them, names, order, limits and default included; its administrator adds the presets with
-`POST …/Presets` (*Add Preset Profiles* in the Quality Profiles section). No migration: presets are ordinary profile rows.
+`POST …/Presets` (*Add Predefined Profiles* in the Quality Profiles section). No migration: presets are ordinary profile rows.
 
 ### Search
 

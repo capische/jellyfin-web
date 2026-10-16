@@ -1391,13 +1391,19 @@ a once-a-quarter admin task, not a browsing surface.
 **Quality Profiles in the settings area (P4.FU9, approved redesign, user 2026-10-15: "Love new design. Go ahead and
 implement it.").** The section keeps its card, its blue *Add Profile* and its row icons (Make Default, Edit, Remove).
 Each row says in one line what the profile does ("4K first, then down to 720p · up to 20 GB per hour · no upgrades"),
-a profile made from a preset carries a grey *Preset* chip and the default the blue *Default* chip; a grey *Add Preset
-Profiles* appears beside *Add Profile* only while a preset is missing (and the empty state names it); a footer line says
+a profile made from a predefined profile carries a grey *Predefined* chip and the default the blue *Default* chip; a grey
+*Add Predefined Profiles* appears beside *Add Profile* only while one is missing (and the empty state names it); a footer line says
 a title uses the default unless it has its own, chosen in the release picker ("Title default"). The dialog is simple by
-default: *Start from* (the six presets as a radio list, each with its one-line description), *Name* (prefilled with the
-preset's), *Best quality I want* (4K, 2K, 1080p, 720p, SD), *Fall back to lower quality … down to [floor]* (on),
+default, in this order: the **Predefined** dropdown (user 2026-10-15: "use custom dropdown (we already got one on details
+page) so you can keep the font weight size difference inside dropdown"), a field-like trigger showing the chosen entry's
+name in weight 600 over its one-line description in the smaller muted size, with a chevron, opening a paper list of the six
+(4K, 2K, 1080p, 720p, Any Quality, SD) drawn the same way, the current one marked by the blue left bar, a listbox to the
+keyboard (arrows, Enter, Escape back to the trigger); choosing one refills the fields below. Then *Name* (the predefined
+profile's own, "4K"), *Best quality I want* (4K, 2K, 1080p, 720p, SD), *Fall back to lower quality … down to [floor]* (on),
 *File size* Small / Balanced / Large with the tier's GB per hour and "a 2-hour film at Balanced is about …", *Upgrade
-later when something better appears* (off, "Needs Automation on") and a live sentence of what the profile will do.
+later when something better appears* (off, "Needs Automation on") and a live sentence of what the profile will do. There is
+no Custom heading, no "Filled from …" line, no Reset and no chip on the sentence (user: "Remove Custom and Filled from the
+predefined 4K… — useless"). User-visible words say *Predefined* (no hyphen); code and API names keep `preset`.
 *Advanced* (collapsed) holds the whole record: a source × resolution checkbox matrix (its help states the order rule:
 higher resolution first, then Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD), the cutoff, the upgrade mode, minimum score
 and seeders, and the size limits in GB per hour. The order editor is collapsed too, behind *Change the order tried*

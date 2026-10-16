@@ -801,7 +801,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   and the next one down when it is missing or rejected (proved through the hosted API with a Torznab stand-in: 4K chosen
   when present, 2K or 1080p when the 4K copies are absent or too large, 720p when only 720p is acceptable). No migration.
   Web: the Quality Profiles section and dialog of the approved redesign (simple form, Advanced matrix and order, live rules,
-  row summaries, Preset chip, Add Preset Profiles while a preset is missing); one difference from the mock: a size choice
+  row summaries, Predefined chip, Add Predefined Profiles while one is missing); one difference from the mock: a size choice
   sets only a maximum, since a profile-wide minimum would refuse the smaller copies it falls back to. Plugin
   `feat/quality-presets` from `next-release` `b52a64a`; web `feat/quality-presets` rebased onto `jellyfin-web-prowlarrfirst`
   (P7.FU1 and P6.FU1 below it). All 13 plugin suites pass (Phase 4 in the Linux container with the new preset scenarios);
