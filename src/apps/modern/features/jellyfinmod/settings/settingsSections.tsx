@@ -1212,7 +1212,7 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
             </div>
             <span>
                 {profile.isDefault && <span className='jfmod-chip jfmod-chip-primary'>Default</span>}
-                {profile.presetId && <span className='jfmod-chip' data-qp='preset-chip'>Preset</span>}
+                {profile.presetId && <span className='jfmod-chip' data-qp='preset-chip'>Predefined</span>}
             </span>
             <span className='jfmod-rowactions'>
                 {!profile.isDefault && (
@@ -1241,9 +1241,15 @@ export const ProfilesSection: FC<SectionProps> = props => {
     }), 'Default changed.'), [run, api, data.acquisition]);
     const add = useCallback(() => setEditing(null), []);
     // The shipped presets (P4.FU9): adds only the ones that are not profiles yet and never changes an existing profile.
+    // The notice is worded here, in the interface's words ("predefined"), from what the server says it added.
     const addPresets = useCallback(() => run(async () => {
-        const result = await request<{ message: string }>(api, 'POST', 'Settings/QualityProfiles/Presets');
-        return { jfmodNotice: { kind: 'ok', text: result.message } };
+        const result = await request<{ added: unknown[]; skipped: { reason: string }[] }>(api, 'POST', 'Settings/QualityProfiles/Presets');
+        const added = result.added?.length ?? 0;
+        const named = result.skipped?.filter(item => item.reason === 'name_in_use').length ?? 0;
+        const noun = added === 1 ? 'profile' : 'profiles';
+        let text = added ? `Added ${added} predefined ${noun}.` : 'Every predefined profile is already here; nothing was changed.';
+        if (named) text += ` ${named} left out because another profile has the same name.`;
+        return { jfmodNotice: { kind: 'ok', text } };
     }), [run, api]);
     const closeDialog = useCallback((saved: boolean, close = true) => {
         if (close) setEditing(undefined);
@@ -1255,14 +1261,14 @@ export const ProfilesSection: FC<SectionProps> = props => {
             actions={<>
                 <Button variant='contained' onClick={add}>Add Profile</Button>
                 {presetMissing && (
-                    <Button variant='contained' color='inherit' disabled={section.busy} onClick={addPresets} data-test='add-presets'>Add Preset Profiles</Button>
+                    <Button variant='contained' color='inherit' disabled={section.busy} onClick={addPresets} data-test='add-presets'>Add Predefined Profiles</Button>
                 )}
             </>}
         >
             <div className='jfmod-blist'>
                 {data.profiles.length === 0 && (
                     <div className='jfmod-empty'>
-                        No profile yet. <b>Add Preset Profiles</b> gives you {presets.map(preset => preset.name).join(', ') || 'ready-made profiles'}, ready to use
+                        No profile yet. <b>Add Predefined Profiles</b> gives you {presets.map(preset => preset.name).join(', ') || 'ready-made profiles'}, ready to use
                         and editable; <b>Add Profile</b> starts one from scratch. The first profile becomes the default.
                     </div>
                 )}

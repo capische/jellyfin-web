@@ -7,6 +7,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { qualityName } from '../constants/quality';
@@ -228,7 +230,9 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
     const known = useMemo(() => new Set(qualities.map(quality => quality.id)), [qualities]);
     const [profile, setProfile] = useState(initial);
     const firstPreset = presets.find(preset => preset.isDefaultPreset) ?? presets[0];
-    const [presetId, setPresetId] = useState<string | null>(() => (initial ? initial.presetId ?? null : firstPreset?.id ?? null));
+    // The predefined profile the values were filled from; it stays chosen while the values are changed (user, 2026-10-15:
+    // "considering you are going to change 4K values the whole section is custom").
+    const [templateId, setTemplateId] = useState<string | null>(() => (initial ? initial.presetId ?? null : firstPreset?.id ?? null));
     const [draft, setDraft] = useState<Draft>(() => {
         if (initial) return { ...initial };
         if (firstPreset) return { name: firstPreset.name, ...fromPreset(firstPreset) };
@@ -252,21 +256,20 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
     /** A simple choice: the record follows it, and the profile is no longer Custom. */
     const choose = useCallback((next: Choice) => {
         setShape({ choice: next, custom: false });
-        setPresetId(null);
         setDraft(current => ({ ...current, ...recordFor(next, known) }));
     }, [known]);
     /** An Advanced edit: the record changes as asked and the profile is Custom. */
     const edit = useCallback((key: string, value: unknown) => {
         setShape(current => ({ ...current, custom: true }));
-        setPresetId(null);
         setDraft(current => ({ ...current, [key]: value }));
     }, []);
     const startFrom = useCallback((preset: QualityPreset) => {
         const next = { ...draftNow.current, ...fromPreset(preset), name: initial ? draftNow.current.name : preset.name };
-        setPresetId(preset.id);
+        setTemplateId(preset.id);
         setDraft(next);
         setShape(choiceOf(next, known));
     }, [initial, known]);
+    const template = presets.find(preset => preset.id === templateId) ?? null;
 
     const chosen = useMemo(() => (draft.qualities as string[] | undefined) ?? [], [draft.qualities]);
     const toggle = useCallback((id: string) => {
@@ -364,12 +367,10 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
             <DialogContent>
                 <Notice notice={notice} />
                 {!!presets.length && (
-                    <fieldset className='jfmod-qp-field jfmod-qp-presets'>
-                        <legend className='jfmod-qp-label'>Start from</legend>
-                        {presets.map(preset => (
-                            <PresetOption key={preset.id} preset={preset} checked={presetId === preset.id} onPick={startFrom} />
-                        ))}
-                    </fieldset>
+                    <div className='jfmod-qp-field'>
+                        <h3 className='jfmod-grouptitle' id='jfmod-qp-predefined' data-qp='group-predefined'>Predefined</h3>
+                        <PresetPicker presets={presets} chosen={template} onPick={startFrom} />
+                    </div>
                 )}
                 <label className='jfmod-qp-field'>
                     <span className='jfmod-qp-label'>Name</span>
@@ -475,13 +476,56 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
     );
 };
 
-const PresetOption: FC<{ preset: QualityPreset; checked: boolean; onPick: (preset: QualityPreset) => void }> = ({ preset, checked, onPick }) => {
+/** A predefined profile as the picker draws it: its name, then its one-line description in the smaller muted size. */
+const PresetText: FC<{ preset: QualityPreset | null }> = ({ preset }) => (
+    <span className='jfmod-qp-pickText'>
+        <span className='jfmod-qp-pickName'>{preset?.name ?? 'None'}</span>
+        <span className='jfmod-qp-pickDesc'>{preset?.description ?? 'Not made from a predefined profile.'}</span>
+    </span>
+);
+
+const PresetPickItem: FC<{ preset: QualityPreset; selected: boolean; onPick: (preset: QualityPreset) => void }> = ({ preset, selected, onPick }) => {
     const pickIt = useCallback(() => onPick(preset), [onPick, preset]);
     return (
-        <label className={`jfmod-qp-radio${checked ? ' jfmod-qp-radio-on' : ''}`}>
-            <input type='radio' name='jfmod-qp-preset' checked={checked} onChange={pickIt} data-qp-preset={preset.name} />
-            <span><span className='jfmod-qp-radioname'>{preset.name}</span> — {preset.description}</span>
-        </label>
+        // The chosen entry takes the focus as the list opens, so the arrows and Enter work at once (inside a dialog the menu
+        // otherwise leaves the focus on its paper).
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- a listbox opened by the user focuses its current option
+        <MenuItem role='option' aria-selected={selected} selected={selected} autoFocus={selected} onClick={pickIt}
+            className={'jfmod-qp-pickItem' + (selected ? ' jfmod-qp-pickItem--on' : '')} data-qp-preset={preset.name}
+        >
+            <PresetText preset={preset} />
+        </MenuItem>
+    );
+};
+
+/**
+ * The predefined profiles as a custom dropdown (user, 2026-10-15: "use custom dropdown (we already got one on details page) so
+ * you can keep the font weight size difference inside dropdown"): a field-like trigger with the chosen one's name and
+ * description and a chevron, opening a paper list of the six drawn the same way, the chosen one marked by a blue left bar.
+ * MUI's menu gives it the listbox keys (arrows, Enter, Escape back to the trigger) and the TV's modal handling.
+ */
+const PresetPicker: FC<{ presets: QualityPreset[]; chosen: QualityPreset | null; onPick: (preset: QualityPreset) => void }> = ({ presets, chosen, onPick }) => {
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+    const openList = useCallback((event: React.MouseEvent<HTMLElement>) => setAnchor(event.currentTarget), []);
+    const close = useCallback(() => setAnchor(null), []);
+    const pickIt = useCallback((preset: QualityPreset) => {
+        setAnchor(null);
+        onPick(preset);
+    }, [onPick]);
+    return (
+        <>
+            <button type='button' className='jfmod-qp-pick focusable' aria-haspopup='listbox' aria-expanded={!!anchor}
+                aria-labelledby='jfmod-qp-predefined jfmod-qp-pickValue' onClick={openList} data-qp='predefined'
+            >
+                <span id='jfmod-qp-pickValue'><PresetText preset={chosen} /></span>
+                <span className={'material-icons jfmod-qp-pickChevron ' + (anchor ? 'expand_less' : 'expand_more')} aria-hidden='true' />
+            </button>
+            <Menu anchorEl={anchor} open={!!anchor} onClose={close} className='jfmod-qp-pickMenu'
+                slotProps={{ list: { role: 'listbox', 'aria-labelledby': 'jfmod-qp-predefined' }, paper: { style: { width: anchor?.offsetWidth } } }}
+            >
+                {presets.map(preset => <PresetPickItem key={preset.id} preset={preset} selected={preset.id === chosen?.id} onPick={pickIt} />)}
+            </Menu>
+        </>
     );
 };
 
