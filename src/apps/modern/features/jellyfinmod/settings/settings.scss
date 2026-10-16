@@ -896,11 +896,48 @@
     margin-right: 0;
 }
 
+/* What blocks the step (P7.FU4): one muted line with a lock, left of the buttons. It takes the room the buttons leave, so Save and
+   Continue sit together at the right whether or not it shows; narrow, the buttons wrap under it, still at the right. */
+.jfmod-wizardfoot > [data-submit] { margin-left: auto; }
+
+.jfmod-wizardfoot > [data-submit] ~ .jfmod-continue { margin-left: 0; }
+
+.jfmod-blockers {
+    flex: 1 1 12em;
+    display: flex;
+    align-items: flex-start;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.jfmod-blockers b {
+    color: var(--jf-palette-text-primary, #fff);
+    font-weight: 600;
+}
+
+.jfmod-blockers svg {
+    flex: none;
+    width: 1.15em;
+    height: 1.15em;
+    margin: 0.1em 0.5em 0 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 /* Narrow: Next wraps under Save onto its own line, with room between the two. */
 @media (max-width: 48em) {
     .jfmod-next {
         margin-left: 0;
         margin-top: 0.6em;
+    }
+
+    .jfmod-blockers {
+        flex-basis: 100%;
+        margin-bottom: 0.6em;
     }
 }
 

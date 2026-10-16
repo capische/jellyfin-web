@@ -130,7 +130,20 @@ for (const name of only) {
         await page.locator('.jfmod-check').waitFor({ state: 'visible', timeout: 30000 });
         const step = await page.locator('.jfmod-step[aria-current="true"]').getAttribute('data-step');
         const cont = page.locator('[data-wizard="continue"]');
-        record(name, 'The wizard opens at the first incomplete step with Continue refused', step === 'discovery' && await cont.isDisabled(), { step });
+        // Continue is refused with aria-disabled, never `disabled`, so it stays focusable (P7.FU4).
+        const refused = async () => await cont.getAttribute('aria-disabled') === 'true' && await cont.getAttribute('disabled') === null;
+        const line = page.locator('[data-wizard-blockers]');
+        const lineText = (await line.innerText().catch(() => '')).replace(/\s+/g, ' ');
+        record(name, 'The wizard opens at the first incomplete step with Continue refused', step === 'discovery' && await refused(), { step });
+        record(name, 'A blocked step says what blocks it in one line beside Continue and its tooltip repeats it',
+            /^To continue, .+\.$/.test(lineText) && await cont.getAttribute('title') === 'Not yet: ' + lineText.replace(/^To continue, /, '').replace(/\.$/, '')
+            && await page.locator('[data-wizard-notice]').count() === 0, { lineText });
+        await cont.focus();
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(400);
+        record(name, 'A refused Continue keeps the focus and does nothing when pressed',
+            await page.evaluate(() => document.activeElement?.getAttribute('data-wizard') === 'continue') &&
+            await page.locator('.jfmod-step[aria-current="true"]').getAttribute('data-step') === 'discovery');
         if (layout.tv) {
             await page.locator('[data-test="discovery"]').focus();
             await page.keyboard.press('Enter');
@@ -138,7 +151,8 @@ for (const name of only) {
             await page.locator('[data-test="discovery"]').click();
         }
         await page.waitForFunction(() => document.querySelector('[data-wizard-state]')?.getAttribute('data-wizard-state') === 'done', undefined, { timeout: 60000 });
-        record(name, 'A passing Test completes the step and unlocks Continue', !await cont.isDisabled());
+        record(name, 'A passing Test completes the step, removes the line and unlocks Continue',
+            !await refused() && await cont.getAttribute('aria-disabled') === null && await line.count() === 0);
         if (layout.tv) {
             await cont.focus();
             await page.keyboard.press('Enter');

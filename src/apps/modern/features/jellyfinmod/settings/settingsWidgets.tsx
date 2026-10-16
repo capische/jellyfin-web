@@ -62,9 +62,11 @@ interface SectionFrameProps {
 
 /**
  * The setup wizard's Continue (user, 2026-10-15): the wizard provides it, and the step's section card shows it at the end of its
- * footer, in Save's style, opposite Save. The settings page provides nothing, so its cards have no Continue.
+ * footer, in Save's style, beside Save. `blockers` is the one sentence saying what still blocks the step ("test Prowlarr after
+ * saving it"), empty once the step is done: the footer shows it left of the buttons and Continue is refused while it is set (P7.FU4).
+ * The settings page provides nothing, so its cards have no Continue.
  */
-export const WizardContinueContext = createContext<{ disabled: boolean; run: () => void } | null>(null);
+export const WizardContinueContext = createContext<{ blockers: string; run: () => void } | null>(null);
 
 const NextButton: FC<{ next: { id: string; title: string }; onGo: (id: string) => void }> = ({ next, onGo }) => {
     const goNext = useCallback(() => onGo(next.id), [next.id, onGo]);
@@ -98,7 +100,16 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                 {children}
             </div>
             {(onSave || next || wizardContinue) && (
-                <footer className={wizardContinue ? 'jfmod-check-secfoot focuscontainer-right' : 'jfmod-check-secfoot'}>
+                <footer className={wizardContinue ? 'jfmod-check-secfoot jfmod-wizardfoot focuscontainer-right' : 'jfmod-check-secfoot'}>
+                    {wizardContinue?.blockers && (
+                        <span className='jfmod-blockers' id='jfmod-blockers' data-wizard-blockers=''>
+                            <svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'>
+                                <rect x='5' y='11' width='14' height='10' rx='1.5' />
+                                <path d='M8 11V7.5A4 4 0 0 1 16 7.5V11' />
+                            </svg>
+                            <span><b>To continue,</b> {wizardContinue.blockers}.</span>
+                        </span>
+                    )}
                     {onSave && (
                         <Button variant='contained' onClick={onSave} disabled={saving} data-submit={id}>
                             {saving ? 'Saving…' : 'Save'}
@@ -107,7 +118,11 @@ export const SectionFrame: FC<SectionFrameProps> = ({
                     {saveMeta && <span className='jfmod-savemeta' data-savemeta={id}>{saveMeta}</span>}
                     {next && <NextButton next={next} onGo={onGo} />}
                     {wizardContinue && (
-                        <Button variant='contained' className='jfmod-continue' disabled={wizardContinue.disabled} data-wizard='continue' onClick={wizardContinue.run}>
+                        // Refused with aria-disabled, never `disabled`, so a remote keeps its focus on it; pressing it does nothing.
+                        <Button variant='contained' className='jfmod-continue' data-wizard='continue' onClick={wizardContinue.blockers ? undefined : wizardContinue.run}
+                            aria-disabled={wizardContinue.blockers ? true : undefined} aria-describedby={wizardContinue.blockers ? 'jfmod-blockers' : undefined}
+                            title={wizardContinue.blockers ? `Not yet: ${wizardContinue.blockers}` : undefined}
+                        >
                             Continue
                         </Button>
                     )}
