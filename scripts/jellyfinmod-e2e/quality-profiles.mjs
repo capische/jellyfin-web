@@ -1,5 +1,5 @@
 /* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity, sonarjs/no-clear-text-protocols -- a Node acceptance runner, not shipped code */
-/* global window, document, ApiClient, location, localStorage */
+/* global window, document, ApiClient, location, localStorage, getComputedStyle */
 // Quality profiles (P4.FU9, the approved Quality Profiles redesign, 2026-10-15) in a real browser against a local environment
 // running the plugin with the presets, signed in as oleksii with an empty password:
 //
@@ -8,8 +8,9 @@
 //
 // Checks, on the settings area's Quality Profiles section:
 //   1 the presets a fresh install gets: six rows, each with its one-line summary and the Preset chip, the 4K one the Default;
-//     Add Preset Profiles hidden while no preset is missing, the footer line;
-//   2 Add Preset Profiles appears once a preset profile is removed, adds only that one back (same id), then hides again;
+//     Add Predefined Profiles hidden while none is missing, the footer line;
+//   2 Add Predefined Profiles appears once a predefined profile is removed, adds only that one back (same id), then hides again;
+//   3 the Predefined dropdown (a listbox drawn as name over description; arrows and Enter, or the pointer) refills the fields;
 //   3 the simple path: Add Profile starts from the 4K preset with its name, a rename and Save write the preset's record;
 //   4 the simple controls: best quality, the fall-back switch and its floor, the size buttons write the order and the limit
 //     the summary sentence says;
@@ -136,7 +137,7 @@ const openSection = async page => {
 const rows = page => page.evaluate(() => [...document.querySelectorAll('.jfmod-check-section[data-section="profiles"] .jfmod-brow[data-profile]')].map(row => ({
     id: row.getAttribute('data-profile'), name: row.querySelector('strong')?.textContent.trim(), summary: row.querySelector('[data-qp="row-summary"]')?.textContent.trim(),
     isDefault: [...row.querySelectorAll('.jfmod-chip')].some(chip => chip.textContent.trim() === 'Default'),
-    preset: !!row.querySelector('[data-qp="preset-chip"]'), icons: row.querySelectorAll('.jfmod-rowactions button').length
+    preset: row.querySelector('[data-qp="preset-chip"]')?.textContent.trim() === 'Predefined', icons: row.querySelectorAll('.jfmod-rowactions button').length
 })));
 const presetButton = page => page.locator('.jfmod-check-section[data-section="profiles"] [data-test="add-presets"]');
 const dialog = page => page.locator('.jfmod-qp');
@@ -145,7 +146,10 @@ const dialogState = page => page.evaluate(() => {
     // The ids from the list's title attributes; what people read is the pretty name (constants/quality).
     const order = [...root.querySelectorAll('.jfmod-qrow')].map(row => row.getAttribute('title'));
     return {
-        name: root.querySelector('[data-qp="name"]')?.value, preset: root.querySelector('input[name="jfmod-qp-preset"]:checked')?.getAttribute('data-qp-preset') ?? null,
+        name: root.querySelector('[data-qp="name"]')?.value, preset: root.querySelector('.jfmod-qp-pick .jfmod-qp-pickName')?.textContent ?? null,
+        presetDescription: root.querySelector('.jfmod-qp-pick .jfmod-qp-pickDesc')?.textContent ?? null,
+        heading: root.querySelector('[data-qp="group-predefined"]')?.textContent ?? null,
+        provenance: !!root.querySelector('[data-qp="origin"], [data-qp="summary-chip"], [data-qp="group-custom"], [data-qp="reset"]'),
         best: [...root.querySelectorAll('[data-qp^="best-"][aria-pressed="true"]')].map(node => node.getAttribute('data-qp')),
         size: [...root.querySelectorAll('[data-qp^="size-"][aria-pressed="true"]')].map(node => node.getAttribute('data-qp')),
         fallback: root.querySelector('[data-qp="fallback"]')?.checked, floor: root.querySelector('[data-qp="floor"]')?.value,
@@ -176,24 +180,25 @@ async function settingsChecks(page, layout) {
     await openSection(page);
     const listed = await rows(page);
     const byName = Object.fromEntries(listed.map(row => [row.name, row]));
-    record(layout, '1 six preset profiles, each with its one-line summary and the Preset chip; 4K is the Default; Make Default, Edit and Remove icons',
+    record(layout, '1 six predefined profiles, each with its one-line summary and the Predefined chip; 4K is the Default; Make Default, Edit and Remove icons',
         PRESETS.every(name => byName[name]?.summary === SUMMARIES[name] && byName[name].preset) && byName['4K'].isDefault
             && listed.filter(row => row.isDefault).length === 1 && byName['2K'].icons === 3 && byName['4K'].icons === 2, listed);
-    record(layout, '1 Add Preset Profiles is hidden while every preset is a profile; the footer says how a title takes its profile',
+    record(layout, '1 Add Predefined Profiles is hidden while every predefined profile exists; the footer says how a title takes its profile',
         await presetButton(page).count() === 0 && /Title default/.test(await page.locator('.jfmod-qp-foot').textContent()), await presetButton(page).count());
     console.log('  shot', await shot(page, `${layout}-section`, page.locator('.jfmod-check-section[data-section="profiles"]')));
 
-    // 2 a removed preset comes back through Add Preset Profiles, with its own id.
+    // 2 a removed predefined profile comes back through Add Predefined Profiles, with its own id.
     const sd = (await profilesByName(page)).SD;
     await api(page, 'DELETE', `Settings/QualityProfiles/${sd.id}`);
     await page.evaluate(() => { location.hash = '#/home'; });
     await page.waitForTimeout(500);
     await openSection(page);
     const shown = await presetButton(page).isVisible().catch(() => false);
-    record(layout, '2 Add Preset Profiles appears once a preset is missing', shown);
+    record(layout, '2 Add Predefined Profiles appears once a predefined profile is missing', shown
+        && (await presetButton(page).textContent())?.trim() === 'Add Predefined Profiles', await presetButton(page).textContent().catch(() => null));
     if (shown) {
         await presetButton(page).click();
-        await page.waitForFunction(() => /Added 1 preset profile\./.test(document.querySelector('.jfmod-check-section[data-section="profiles"] .jfmod-notice')?.textContent ?? ''),
+        await page.waitForFunction(() => /Added 1 predefined profile\./.test(document.querySelector('.jfmod-check-section[data-section="profiles"] .jfmod-notice')?.textContent ?? ''),
             undefined, { timeout: 15000 }).catch(() => undefined);
         await page.waitForTimeout(800);
         const back = (await profilesByName(page)).SD;
@@ -212,7 +217,43 @@ async function settingsChecks(page, layout) {
         opened.preset === '4K' && opened.name === '4K' && opened.best.join() === 'best-2160p' && opened.size.join() === 'size-balanced' && opened.fallback && opened.floor === '720p'
             && opened.summary === '4K picks 4K (2160p) first, then down to 720p, files up to 20 GB per hour, and does not upgrade later.'
             && opened.order.join() === FOUR_K.join() && !opened.saveDisabled, opened);
+    record(layout, '3 the Predefined dropdown shows 4K with its description; no Custom heading, provenance line, Reset or chip',
+        opened.heading === 'Predefined' && opened.preset === '4K' && opened.presetDescription === 'Best picture, big files. Falls back to lower quality if 4K is not available.'
+            && !opened.provenance, opened);
     console.log('  shot', await shot(page, `${layout}-dialog-simple`, page.locator('.jfmod-qp .MuiDialog-paper')));
+    // The dropdown: a listbox of the six, each a name in weight 600 over a smaller description; 4K marked.
+    await page.locator('[data-qp="predefined"]').click();
+    await page.locator('.jfmod-qp-pickMenu [role="listbox"]').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(400);
+    const list = await page.evaluate(() => {
+        const box = document.querySelector('.jfmod-qp-pickMenu [role="listbox"]');
+        return { names: [...box.querySelectorAll('[role="option"]')].map(option => option.querySelector('.jfmod-qp-pickName')?.textContent),
+            selected: [...box.querySelectorAll('[role="option"][aria-selected="true"]')].map(option => option.querySelector('.jfmod-qp-pickName')?.textContent),
+            bar: getComputedStyle(box.querySelector('.jfmod-qp-pickItem--on')).borderLeftColor,
+            weight: getComputedStyle(box.querySelector('.jfmod-qp-pickName')).fontWeight,
+            nameSize: parseFloat(getComputedStyle(box.querySelector('.jfmod-qp-pickName')).fontSize),
+            descSize: parseFloat(getComputedStyle(box.querySelector('.jfmod-qp-pickDesc')).fontSize),
+            expanded: document.querySelector('[data-qp="predefined"]').getAttribute('aria-expanded'),
+            focused: document.activeElement?.querySelector?.('.jfmod-qp-pickName')?.textContent ?? null };
+    });
+    record(layout, '3 the open dropdown is a listbox of the six in order, 4K selected with the blue bar, names bolder and larger than descriptions',
+        list.names.join() === PRESETS.join() && list.selected.join() === '4K' && list.bar === 'rgb(0, 164, 220)' && list.weight === '600'
+            && list.descSize < list.nameSize && list.expanded === 'true', list);
+    console.log('  shot', await shot(page, `${layout}-dialog-dropdown`));
+    // Keyboard: Down then Enter takes the next one (2K) and refills the fields; Escape-free close returns to the trigger.
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    const twoK = await dialogState(page);
+    const back = await page.evaluate(() => document.activeElement?.getAttribute('data-qp'));
+    record(layout, '3 Down and Enter choose 2K: the name, best quality, description and order follow, and the focus returns to the dropdown',
+        twoK.preset === '2K' && twoK.name === '2K' && twoK.best.join() === 'best-1440p' && twoK.order[0] === 'bluray-1440p'
+            && /1440p, a step below 4K/.test(twoK.presetDescription) && back === 'predefined', { twoK, back });
+    await page.locator('[data-qp="predefined"]').click();
+    await page.locator('.jfmod-qp-pickMenu [role="option"][data-qp-preset="4K"]').click();
+    await page.waitForTimeout(300);
+    const again = await dialogState(page);
+    record(layout, '3 choosing 4K again with the pointer refills the 4K values', again.preset === '4K' && again.name === '4K' && again.order.join() === FOUR_K.join(), again.preset);
     await page.locator('[data-qp="upgrade"]').check();
     const upgrading = await dialogState(page);
     record(layout, '3 qualities read as people say them: ticking Upgrade says "until it holds 4K Remux" and "until it reaches 4K Remux"',
@@ -236,7 +277,7 @@ async function settingsChecks(page, layout) {
     let state = await dialogState(page);
     record(layout, '4 Best 1080p: 1080p by source, then 720p; Balanced is up to 6 GB per hour',
         state.order.join() === 'remux-1080p,bluray-1080p,webdl-1080p,webrip-1080p,hdtv-1080p,bluray-720p,webdl-720p,webrip-720p,hdtv-720p'
-            && /1080p \(1080p\) first, then down to 720p, files up to 6 GB per hour/.test(state.summary) && state.preset === null, state);
+            && /1080p \(1080p\) first, then down to 720p, files up to 6 GB per hour/.test(state.summary) && state.preset === '4K', state);
     await page.locator('[data-qp="fallback"]').uncheck();
     state = await dialogState(page);
     record(layout, '4 Fall back off: 1080p only', state.order.join() === 'remux-1080p,bluray-1080p,webdl-1080p,webrip-1080p,hdtv-1080p' && /picks only 1080p/.test(state.summary), state);
