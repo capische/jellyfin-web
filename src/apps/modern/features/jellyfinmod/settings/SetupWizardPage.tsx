@@ -5,10 +5,10 @@ import Page from 'components/Page';
 import { useApi } from 'hooks/useApi';
 
 import { usePluginHealth } from '../hooks/useEntries';
-import { blockerSentence, request, type SetupState, type SetupStep } from './settingsApi';
+import { blockerSentence, request, type SetupState } from './settingsApi';
 import {
     AutomationSection, ClientSection, DiscoverySection, GrabbingSection, IndexersSection, InterfaceSection, ProfilesSection, RetentionSection,
-    type SectionProps
+    type SectionProps, type SettingsData
 } from './settingsSections';
 import { useSettingsData } from './SettingsPage';
 import { Notice, WizardContinueContext } from './settingsWidgets';
@@ -81,19 +81,35 @@ const WizardRail: FC<{
 );
 
 /**
- * What still blocks the current step. A step that is done says nothing: its Continue sits at the end of its card's footer
- * (user, 2026-10-15), enabled once the server calls the step done. `data-wizard-notice` marks it for the runners.
+ * What still blocks a step, as the one instruction shown beside Continue ("test Prowlarr after saving it and add at least one
+ * indexer and turn it on", P7.FU4). It comes from the step's blocker codes, the same list the rail's state comes from, so the
+ * two cannot disagree; the Prowlarr and profile codes say a little more when the data shows what is missing. Empty when the step is done.
  */
-const StepNotice: FC<{ state?: SetupStep }> = ({ state }) => (
-    // The notice's own dot and edge carry the state, with the words beside them: a state pill inside it drew a second dot.
-    <div className='jfmod-notice jfmod-notice-warn' role='status' data-wizard-notice=''>
-        <i aria-hidden='true' />
-        <span className='jfmod-notice-text'>
-            This step is not done yet.
-            {state?.reasons.length ? ' ' + state.reasons.map(blockerSentence).join(' ') : ''}
-        </span>
-    </div>
-);
+const INSTRUCTIONS = new Map([
+    ['discovery_token_missing', 'save a TMDB token and test it'],
+    ['discovery_unverified', 'test the TMDB token'],
+    ['no_download_client', 'save a download client and test it'],
+    ['download_client_unverified', 'test the download client'],
+    ['download_client_disabled', 'turn the download client on'],
+    ['path_mapping_unverified', 'verify the mapping so hard links work'],
+    ['acquisition_disabled', 'turn grabbing on'],
+    ['acquisition_not_ready', 'finish the steps before this one']
+]);
+
+const blockerInstructions = (reasons: string[], data: SettingsData): string => {
+    const lines = reasons.flatMap(code => {
+        // A saved Prowlarr with no indexers has not synced yet: its test brings them in.
+        if (code === 'no_verified_indexer') return [data.prowlarr?.[0] && !data.indexers.length ? 'test Prowlarr after saving it' : 'add at least one indexer and turn it on'];
+        if (code === 'no_default_profile') {
+            const choose = 'choose a default with the star on its row';
+            return data.profiles.length ? [choose] : ['add a profile (Add Predefined Profiles gives you 4K, 2K and 1080p)', choose];
+        }
+        return [INSTRUCTIONS.get(code) ?? blockerSentence(code).replace(/\.$/, '')];
+    }).filter((line, at, all) => all.indexOf(line) === at);
+    const last = lines.pop();
+    if (!last) return '';
+    return lines.length ? `${lines.join(', ')} and ${last}` : last;
+};
 
 /**
  * `/catalog/settings/setup` — the first-run wizard (P7.S10, PHASE7 §7).
@@ -137,7 +153,9 @@ const SetupWizardPage: FC = () => {
     // Continue is only rendered while there is a next step.
     const continueToNext = useCallback(() => go(next.id), [go, next]);
     const stepDone = status(current)?.status === 'done';
-    const wizardContinue = useMemo(() => (next ? { disabled: !stepDone, run: continueToNext } : null), [next, stepDone, continueToNext]);
+    // A step the server calls pending without a reason still refuses Continue.
+    const blockers = stepDone || !settings.data ? '' : blockerInstructions(status(current)?.reasons ?? [], settings.data) || 'finish this step';
+    const wizardContinue = useMemo(() => (next ? { blockers, run: continueToNext } : null), [next, blockers, continueToNext]);
     const dismiss = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
         event.preventDefault();
         void request(api!, 'POST', 'Setup/Dismiss').then(() => settings.refetch());
@@ -174,7 +192,6 @@ const SetupWizardPage: FC = () => {
                         kind: 'err', text: `Some settings could not be read (${settings.data.failures.join(', ')}); what they show may be incomplete.`,
                         action: { label: 'Retry', run: retry }
                     }} /></div>}
-                    {!stepDone && <StepNotice state={status(current)} />}
                     <WizardContinueContext.Provider value={wizardContinue}>
                         {step.sections.map(({ id, Section }) => (
                             <div key={id} className='jfmod-wizardSection'>

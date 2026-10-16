@@ -145,7 +145,7 @@ const audit = (page, rootSelector = '.jfmod-check-main') => page.evaluate(select
         const box = el.closest('.jfmod-secret-row');
         const rect = el.getBoundingClientRect();
         const boxRect = box?.getBoundingClientRect();
-        // The view a button belongs to: a dialog, a notice (the wizard's step notice, the Home banner), or a section card.
+        // The view a button belongs to: a dialog, a notice (the Home banner), or a section card.
         const dialog = el.closest('.MuiDialog-paper');
         const notice = el.closest('.jfmod-notice');
         const section = el.closest('.jfmod-check-section');
@@ -284,6 +284,11 @@ const looksWrong = (button, layoutName) => {
     } else if (button.refused && button.icon && (button.inListRow || button.fieldSave)) {
         // A refused row icon (Move Up on the first row, or the Save of an empty secret input) has no fill of its own: only its glyph's contrast is checked.
         if (ratio < 4.5) reasons.push(`refused contrast ${ratio.toFixed(2)}`);
+    } else if (button.refused && !button.icon) {
+        // A refused labelled button (the wizard's Continue while a step is open, P7.FU4) keeps its kind's colours and is dimmed to about
+        // 45 % by the settings area's refused-control rule; a disabled control is exempt from the contrast floor.
+        const [bg, fg] = PAINT[want];
+        if (button.bg !== bg || button.color !== fg) reasons.push(`refused colours ${button.bg} / ${button.color}`);
     } else if (button.disabled) {
         if (button.color !== DISABLED || button.bg !== DISABLED_FILL) reasons.push('not MUI disabled grey');
     } else {
@@ -303,7 +308,7 @@ const checkButtons = (layout, where, buttons) => {
     record(layout, `${where}: every button is filled, of its kind (red, blue or grey), readable and the size of Save (${buttons.length} buttons)`,
         wrong.length === 0, wrong.length ? wrong : undefined);
     const blues = {};
-    // The wizard's Continue (user, 2026-10-15) sits in the step card's footer, opposite Save, in the same blue: it is the way on, not a second commit.
+    // The wizard's Continue (user, 2026-10-15) sits in the step card's footer, beside Save, in the same blue: it is the way on, not a second commit.
     for (const button of buttons) if (button.tint === 'blue' && button.text !== 'Continue') blues[button.view] = [...(blues[button.view] ?? []), button.text];
     const crowded = Object.entries(blues).filter(([, list]) => list.length > 1);
     record(layout, `${where}: at most one blue button per view`, crowded.length === 0, crowded.length ? Object.fromEntries(crowded) : blues);
@@ -361,7 +366,12 @@ const checkStates = async (page, layout, name, where, state, rootSelector = '.jf
     for (let i = 0; i < count; i++) {
         const target = page.locator(rootSelector).last().locator(ENABLED).nth(i);
         if (!await target.isVisible().catch(() => false)) continue;
-        if (state === 'hover') await target.hover();
+        if (state === 'hover') {
+            // Park the pointer first: the previous button's tooltip would otherwise cover this one (three Fix icons side by side on the overview).
+            await page.mouse.move(1, layout.viewport.height - 1);
+            await page.waitForTimeout(400);
+            await target.hover();
+        }
         else await target.focus();
         await page.waitForTimeout(state === 'hover' ? 350 : 600);
         const ok = await target.evaluate((el, which) => {
@@ -914,11 +924,27 @@ for (const name of only) {
                 const sections = [...document.querySelectorAll('.jfmod-check-main .jfmod-check-section')].map(el => el.getBoundingClientRect());
                 const gaps = [];
                 for (let i = 1; i < sections.length; i++) gaps.push(Math.round(sections[i].top - sections[i - 1].bottom));
-                const notice = document.querySelector('.jfmod-check-main > .jfmod-notice')?.getBoundingClientRect();
-                return { gaps, noticeGap: notice && sections[0] ? Math.round(sections[0].top - notice.bottom) : null };
+                return { gaps };
             });
-            record(name, `wizard ${step}: stacked sections and the step notice are spaced apart`,
-                stacked.gaps.every(gap => gap >= 8) && (stacked.noticeGap === null || stacked.noticeGap >= 8), stacked);
+            record(name, `wizard ${step}: stacked sections are spaced apart`, stacked.gaps.every(gap => gap >= 8), stacked);
+            // What blocks the step (P7.FU4): one muted line with a lock, left of (or, narrow, above) the footer's buttons; Continue is
+            // refused with aria-disabled exactly while it shows, and there is no top notice any more.
+            const blockers = await page.evaluate(() => {
+                const line = document.querySelector('[data-wizard-blockers]');
+                const next = document.querySelector('[data-wizard="continue"]');
+                const buttons = [...(next?.parentElement?.querySelectorAll('button') ?? [])].map(el => el.getBoundingClientRect());
+                const at = line?.getBoundingClientRect();
+                const first = buttons.sort((a, b) => a.top - b.top || a.left - b.left)[0];
+                return {
+                    shown: !!line, refused: next?.getAttribute('aria-disabled') === 'true', plainDisabled: next?.hasAttribute('disabled') ?? false,
+                    text: line?.textContent.replace(/\s+/g, ' ').trim() ?? '', lock: !!line?.querySelector('svg'), notice: !!document.querySelector('[data-wizard-notice]'),
+                    placed: !line || !first ? null : (at.right <= first.left + 1 || at.bottom <= first.top + 1),
+                    muted: line ? getComputedStyle(line).color : null
+                };
+            });
+            record(name, `wizard ${step}: the blocker line shows exactly while Continue is refused, with a lock and no top notice`,
+                blockers.shown === blockers.refused && !blockers.plainDisabled && !blockers.notice && (!blockers.shown || (/^To continue, .+\.$/.test(blockers.text) && blockers.lock)), blockers);
+            record(name, `wizard ${step}: the blocker line sits left of or above the buttons`, blockers.placed !== false, blockers);
         }
         if (name === 'desktop' || name === 'mobile') {
             // The Dashboard page, the visual reference, opened from the dashboard drawer's own JellyfinMod entry.

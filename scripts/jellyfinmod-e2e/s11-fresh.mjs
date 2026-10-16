@@ -32,6 +32,8 @@ const openWizard = async (page, stepId) => {
 };
 const current = page => page.locator('.jfmod-step[aria-current="true"]').getAttribute('data-step');
 const cont = page => page.locator('[data-wizard="continue"]');
+// Continue is refused with aria-disabled, never `disabled`, so it stays focusable (P7.FU4).
+const refused = async locator => await locator.getAttribute('aria-disabled') === 'true' && await locator.getAttribute('disabled') === null;
 const field = (scope, label) => scope.getByLabel(label, { exact: true });
 const fill = async (scope, label, value) => { const input = field(scope, label); await input.fill(''); await input.fill(value); };
 const setSwitch = async (scope, label, on) => {
@@ -150,7 +152,7 @@ async function wizard() {
             await openWizard(page);
         }
         await page.waitForTimeout(1000);
-        record('wizard', 'The wizard opens at Discovery with Continue refused', await current(page) === 'discovery' && await cont(page).isDisabled(), { step: await current(page) });
+        record('wizard', 'The wizard opens at Discovery with Continue refused', await current(page) === 'discovery' && await refused(cont(page)), { step: await current(page) });
 
         // Step 5 tried first: the server refuses with 409 acquisition_not_ready and the page shows its blockers verbatim.
         await page.locator('.jfmod-step[data-step="enable"]').click();
@@ -169,7 +171,7 @@ async function wizard() {
         await waitNotice(page, 'discovery', /Saved/);
         await page.locator('[data-test="discovery"]').click();
         const bad = await waitNotice(page, 'discovery', /\((?!ok\))[a-z_]+\)/);
-        record('wizard', 'Discovery: a wrong token fails the Test (unauthorized) and Continue stays refused', /unauthorized/.test(bad) && await cont(page).isDisabled(), bad);
+        record('wizard', 'Discovery: a wrong token fails the Test (unauthorized) and Continue stays refused', /unauthorized/.test(bad) && await refused(cont(page)), bad);
         await discovery.getByRole('button', { name: 'Replace' }).click();
         const replacing = await page.locator('#jfmodTmdbToken').isVisible();
         await discovery.getByRole('button', { name: 'Keep the saved one' }).click();
@@ -186,7 +188,7 @@ async function wizard() {
         await page.locator('[data-test="discovery"]').click();
         const good = await waitNotice(page, 'discovery', /\(ok\)/);
         await page.waitForFunction(() => document.querySelector('[data-wizard-state]')?.getAttribute('data-wizard-state') === 'done', undefined, { timeout: 30000 });
-        record('wizard', 'Discovery: the stand-in TMDB over HTTPS accepts the token; the step is done and Continue unlocks', !await cont(page).isDisabled(), good);
+        record('wizard', 'Discovery: the stand-in TMDB over HTTPS accepts the token; the step is done and Continue unlocks', !await refused(cont(page)), good);
         const discoveryDto = await api(page, 'GET', 'JellyfinMod/Settings/Discovery');
         record('wizard', 'Discovery DTO says configured and carries no token value', discoveryDto.body.tokenConfigured === true && !carriesSecret(discoveryDto.text),
             { tokenConfigured: discoveryDto.body.tokenConfigured, verified: discoveryDto.body.verified });
@@ -265,8 +267,8 @@ async function clientStep(page) {
         await page.waitForTimeout(1500);
         const unverified = await client.locator('.jfmod-maprow .jfmod-state').first().innerText();
         const blocked = await stepStatus(page, 'downloadClient');
-        record('wizard', 'An unverified mapping keeps the step open and Continue refused', blocked.status !== 'done' && await cont(page).isDisabled(),
-            { pill: unverified, status: blocked.status, reasons: blocked.reasons, shown: (await page.locator('[data-wizard-notice]').innerText()).replace(/\s+/g, ' ') });
+        record('wizard', 'An unverified mapping keeps the step open and Continue refused', blocked.status !== 'done' && await refused(cont(page)),
+            { pill: unverified, status: blocked.status, reasons: blocked.reasons, shown: (await page.locator('[data-wizard-blockers]').innerText()).replace(/\s+/g, ' ') });
         await fill(client.locator('.jfmod-maprow').last(), 'Local path', '/data/downloads');
         await client.getByRole('button', { name: 'Save mappings' }).click();
         await waitNotice(page, 'client', /Mappings saved/);
@@ -286,10 +288,10 @@ async function clientStep(page) {
         await page.locator('[data-test="client"]').click();
         await waitNotice(page, 'client', /\(ok\)/);
         await page.waitForFunction(() => document.querySelector('[data-wizard-state]')?.getAttribute('data-wizard-state') === 'done', undefined, { timeout: 30000 });
-        record('wizard', 'Download client step done; Continue unlocks', !await cont(page).isDisabled());
+        record('wizard', 'Download client step done; Continue unlocks', !await refused(cont(page)));
         await cont(page).click();
         await page.waitForTimeout(800);
-        record('wizard', 'Continue moves to Quality profile with Continue refused', await current(page) === 'qualityProfile' && await cont(page).isDisabled());
+        record('wizard', 'Continue moves to Quality profile with Continue refused', await current(page) === 'qualityProfile' && await refused(cont(page)));
     }
 }
 
@@ -348,7 +350,7 @@ async function resume() {
         await cont(page).click();
         await page.waitForTimeout(800);
         // P6.FU1: the Download Client step follows Indexers; it is already done here, so Continue goes on.
-        record('resume', 'Continue moves to the Download client, already done', await current(page) === 'downloadClient' && !await cont(page).isDisabled());
+        record('resume', 'Continue moves to the Download client, already done', await current(page) === 'downloadClient' && !await refused(cont(page)));
         await cont(page).click();
         await page.waitForTimeout(800);
 
@@ -387,7 +389,7 @@ async function resume() {
         await profiles.locator('[data-row-action="default"]').first().click();
         await waitNotice(page, 'profiles', /Default changed/);
         await page.waitForFunction(() => document.querySelector('[data-wizard-state]')?.getAttribute('data-wizard-state') === 'done', undefined, { timeout: 30000 });
-        record('resume', 'A valid profile made default completes the step', !await cont(page).isDisabled(), { quality: hd });
+        record('resume', 'A valid profile made default completes the step', !await refused(cont(page)), { quality: hd });
         await cont(page).click();
         await page.waitForTimeout(800);
 
