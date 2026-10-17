@@ -103,6 +103,7 @@ const ACTION_ERRORS = new Map([
     ['import_open', 'An import for this download is already running.'],
     ['import_not_retryable', 'Only a blocked or failed import can be retried.'],
     ['grab_missing', 'The original grab no longer exists.'],
+    ['grab_not_cancellable', 'It was already sent to the download client.'],
     ['queue_admin_only', 'Only an administrator can change the queue.']
 ]);
 

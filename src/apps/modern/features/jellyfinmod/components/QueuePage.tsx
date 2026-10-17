@@ -42,6 +42,9 @@ const freshnessOf = (row: QueueRow, generatedAt: string) => {
 
 /** The reason sentence for a blocked or failed import, or the seeding goals in words. */
 const detailOf = (row: QueueRow) => {
+    // A grab before the client has it (P4.FU10).
+    if (row.importState === 'held') return 'Waiting to be sent to the download client.';
+    if (row.importState === 'submitting') return 'Being sent to the download client.';
     if (row.state === 'blocked' || row.state === 'failed') return reasonMessage(row.reason, row.message);
     // A pack's own episodes that were skipped or need attention, while its torrent reads otherwise.
     const episodes = packEpisodeProblems(row);
