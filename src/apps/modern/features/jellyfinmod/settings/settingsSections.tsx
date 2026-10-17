@@ -1193,12 +1193,15 @@ export const IndexersSection: FC<SectionProps> = props => {
     return (
         <SectionFrame id='indexers' eyebrow={props.eyebrow} title='Indexers' state={summarise('indexers', data)} notice={section.notice}
             next={props.next} onGo={props.onGo}
-            actions={<Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>}
         >
             {/* Prowlarr first: one address and a key is all most people give; the indexers it syncs, and the ones added by
                 hand, are the advanced part and follow it (user, 2026-10-10). */}
             <ProwlarrCard {...props} />
-            {data.prowlarr && <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>}
+            {/* Add Indexer sits with the list it adds to (user, 2026-10-17), not in the step header. */}
+            <div className='jfmod-grouphead'>
+                {data.prowlarr && <h3 className='jfmod-grouptitle' data-indexers='title'>Indexers</h3>}
+                <Button variant='contained' color={prowlarrSource ? 'inherit' : 'primary'} onClick={add}>Add Indexer</Button>
+            </div>
             <div className='jfmod-blist'>
                 {data.indexers.length === 0 && <div className='jfmod-empty'>No indexer yet.</div>}
                 {data.indexers.map(indexer => (
