@@ -16,6 +16,7 @@ import datetime from 'scripts/datetime';
 import * as userSettings from 'scripts/settings/userSettings';
 
 import { type EntryDetail, getEntry } from '../api/modApi';
+import { openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -216,11 +217,13 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
         name: person.name, role: roleLabel('GuestStar', person.character), profilePath: person.profilePath }));
     // Once the episode's file is in the library (its import ended and the entry was read again), Jellyfin's own page takes over:
     // its Video / Audio / Subtitle selectors and Play replace the download block (P1.FU20).
-    const heldItem = episode?.availability === 'onDisk' ? episode.jellyfinItemId : null;
+    // So does the placeholder Jellyfin adds for it while the page is open (the backfill, P1.FU27), read by the catalog's refresh.
+    const live = useLiveEntryDetail(api, initial);
+    const liveEpisode = live.episodes.find(candidate => candidate.seasonNumber === season && candidate.episodeNumber === episodeNumber);
+    const heldItem = (episode?.availability === 'onDisk' ? episode.jellyfinItemId : null)
+        ?? (liveEpisode?.availability === 'onDisk' ? liveEpisode.jellyfinItemId : liveEpisode?.placeholderItemId) ?? null;
     useEffect(() => {
-        if (heldItem && !signal.aborted) {
-            window.location.replace('#/details?id=' + encodeURIComponent(heldItem) + '&serverId=' + encodeURIComponent(serverId));
-        }
+        if (heldItem && !signal.aborted) openNativePage(heldItem, serverId);
     }, [heldItem, serverId, signal]);
     const metadata = entry.metadata;
     // The series' certification as upstream's misc line shows an official rating: the US one, else the first TMDB lists.
