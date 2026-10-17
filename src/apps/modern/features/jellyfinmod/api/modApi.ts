@@ -1,4 +1,6 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import type { CultureDto } from '@jellyfin/sdk/lib/generated-client/models/culture-dto';
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import type { AxiosRequestConfig } from 'axios';
 
 import type { AcquisitionSummary, GrabMode, GrabOperation, QualityProfile, ReleaseIntent, ReleaseProgress, ReleaseScope, ReleaseSearch } from '../types/acquisition';
@@ -210,20 +212,31 @@ export const setVersionKept = async (api: Api, entryId: string, bindingId: strin
 };
 
 /**
- * Jellyfin's `VideoRangeType` of each copy of an item, keyed by media source id in "N" form (V1 decision 4: Dolby Vision
- * before HDR on the TV). Read from the native item's own media sources; a copy without a video stream is left out.
+ * The media sources of a native item, each with its streams: Jellyfin's `VideoRangeType` of each copy (V1 decision 4: Dolby
+ * Vision before HDR on the TV) and the audio and subtitle streams the track dropdowns draw (P7.FU6). The same read upstream's
+ * detail page makes for its selects.
  */
-export const getVideoRangeTypes = async (api: Api, userId: string, itemId: string,
-    options?: AxiosRequestConfig): Promise<Record<string, string>> => {
-    type Source = { Id?: string | null; MediaStreams?: { Type?: string | null; VideoRangeType?: string | null }[] | null };
-    const response = await api.axiosInstance.get<{ MediaSources?: Source[] | null }>(api.basePath + '/Items/'
+export const getMediaSources = async (api: Api, userId: string, itemId: string,
+    options?: AxiosRequestConfig): Promise<MediaSourceInfo[]> => {
+    const response = await api.axiosInstance.get<{ MediaSources?: MediaSourceInfo[] | null }>(api.basePath + '/Items/'
         + encodeURIComponent(itemId) + '?userId=' + encodeURIComponent(userId), { ...options, headers: authorization(api) });
-    const types: Record<string, string> = {};
-    for (const source of response.data.MediaSources ?? []) {
-        const video = (source.MediaStreams ?? []).find(stream => stream.Type === 'Video');
-        if (source.Id && video?.VideoRangeType) types[source.Id.replace(/-/g, '').toLowerCase()] = video.VideoRangeType;
+    return response.data.MediaSources ?? [];
+};
+
+/**
+ * Language names by ISO 639 code (`ger` and `deu` both German), from the server's own culture list, so a stream's `Language`
+ * reads as upstream's track names do. The list's long forms are cut at their first qualifier (`Spanish; Castilian` is Spanish).
+ */
+export const getLanguageNames = async (api: Api, options?: AxiosRequestConfig): Promise<Record<string, string>> => {
+    const response = await api.axiosInstance.get<CultureDto[]>(api.basePath + '/Localization/Cultures',
+        { ...options, headers: authorization(api) });
+    const names: Record<string, string> = {};
+    for (const culture of response.data ?? []) {
+        const name = culture.DisplayName?.split(/[;,(]/)[0].trim();
+        const codes = [...(culture.ThreeLetterISOLanguageNames ?? []), culture.ThreeLetterISOLanguageName, culture.TwoLetterISOLanguageName];
+        for (const code of codes) if (name && code && !names[code.toLowerCase()]) names[code.toLowerCase()] = name;
     }
-    return types;
+    return names;
 };
 
 /**

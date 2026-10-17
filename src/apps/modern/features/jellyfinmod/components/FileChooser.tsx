@@ -1,3 +1,4 @@
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import classNames from 'classnames';
 import React, { type FC, type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -5,7 +6,7 @@ import { createPortal } from 'react-dom';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
-import { describeVersion, sameItemId, versionMarks } from '../constants/versions';
+import { describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import type { VersionDto } from '../types/versions';
 import { MediaMarks } from './ReleaseRowParts';
 
@@ -47,6 +48,8 @@ export interface FileChooserProps {
     removeDate: (version: VersionDto) => string | null;
     /** A line under the rows for administrators, such as what stock Delete removes (V1). */
     note?: string | null;
+    /** The page item's media sources, once read: each file's marks come from its streams (P7.FU6). */
+    sources?: MediaSourceInfo[];
 }
 
 const findSelect = (view: HTMLElement) => view.querySelector<HTMLSelectElement>(SOURCE_SELECTOR);
@@ -265,40 +268,52 @@ interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
     pin: PinState | null;
     removable: boolean;
     removeDate: string | null;
+    source: MediaSourceInfo | null;
 }
 
 /**
- * What a file is, the same on its row and on the closed dropdown (user, 2026-10-12): the mod's resolution word, the release
- * picker's media marks for its streams, and its size.
+ * What a file's video is, the same on its row and on the closed dropdown (user, 2026-10-12; P7.FU6): the mod's resolution word
+ * and the release picker's media marks for its video stream. Its audio is the Audio row's, and on the open list's rows.
  */
-const FileSummary: FC<{ version: VersionDto }> = ({ version }) => {
-    const text = describeVersion(version);
-    return <>
-        <span className='jfmod-fileResolution'>{text.resolution}</span>
-        <span className='jfmod-fileMarks'><MediaMarks parsed={versionMarks(version)} /></span>
-        {text.size && <span className='jfmod-fileSize'>{text.size}</span>}
-    </>;
+const VideoSummary: FC<{ version: VersionDto; source: MediaSourceInfo | null }> = ({ version, source }) => <>
+    <span className='jfmod-fileResolution'>{describeVersion(version).resolution}</span>
+    <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).video} /></span>
+</>;
+
+/** The file's size, in the secondary colour at the right end of the value and of each row (P7.FU6). */
+const FileSize: FC<{ version: VersionDto }> = ({ version }) => {
+    const size = describeVersion(version).size;
+    return size ? <span className='jfmod-fileSize'>{size}</span> : null;
 };
 
-/** The file in words, for screen readers: `2160p HEVC E-AC3 2.0 10.3 GB`. */
+/** The file in words, for screen readers: `2160p HEVC 10-bit HDR 10.3 GB`. */
 const summaryLabel = (version: VersionDto) => {
     const text = describeVersion(version);
-    return [text.resolution, text.video, text.audio, text.size].filter(Boolean).join(' ');
+    return [text.resolution, text.video, text.size].filter(Boolean).join(' ');
 };
 
-const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, ...icons }) => {
+/**
+ * A file's row (P7.FU6): resolution and video marks, a hairline, its default audio track's marks and the extras (episode range,
+ * removal date), then the size right-aligned, then its icons. On a phone the audio and extras take a second line.
+ */
+const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
     const text = describeVersion(version);
     return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
         <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
             <span className='jfmod-fileBody'>
-                <FileSummary version={version} />
-                {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
-                {version.tracked === false && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>not tracked yet</span>}
-                {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
-                {!removeDate && text.retention && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{text.retention}</span>}
+                <span className='jfmod-fileLine'><VideoSummary version={version} source={source} /></span>
+                <span className='jfmod-fileDivider' aria-hidden='true' />
+                <span className='jfmod-fileLine jfmod-fileLine--audio'>
+                    <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).audio} /></span>
+                    {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
+                    {version.tracked === false && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>not tracked yet</span>}
+                    {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
+                    {!removeDate && text.retention && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{text.retention}</span>}
+                </span>
             </span>
+            <FileSize version={version} />
         </button>
         <FileIcons version={version} {...icons} />
     </div>;
@@ -332,7 +347,7 @@ const useSlide = () => {
  * device preference still applies. If upstream's Video row is not there, nothing is mounted and the stock Version select stays visible.
  */
 const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onAddVersion, onHistory, pin, onPin, canRemove,
-    onRemove, removeDate, note }) => {
+    onRemove, removeDate, note, sources }) => {
     const multi = versions.length > 1;
     const { host, inline } = useVideoHost(view);
     const current = useSelectedSource(view);
@@ -370,7 +385,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
             <button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
                 aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
                 onClick={toggle}>
-                <span className='jfmod-videoTriggerText'><FileSummary version={selected} /></span>
+                <span className='jfmod-videoTriggerText'><VideoSummary version={selected} source={findSource(sources, selected.mediaSourceId)} /></span>
+                <FileSize version={selected} />
                 <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
             </button>
             {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
@@ -379,6 +395,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                 <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
                     {versions.map(version => <FileRow key={version.mediaSourceId} version={version}
                         selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
+                        source={findSource(sources, version.mediaSourceId)}
                         {...iconProps(version)} />)}
                     {onAddVersion && <div className='jfmod-fileRow jfmod-fileRow--add'>
                         <button type='button' className='jfmod-fileChoose' data-jfmod-add-version='' onClick={addVersion}>
