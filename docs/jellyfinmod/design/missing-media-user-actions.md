@@ -1,9 +1,9 @@
 # Missing media behaves like available media (P1.FU24–28, planned)
 
-**Status:** P1.FU24, P1.FU25, P1.FU26 and P1.FU28 built (not accepted), 2026-10-15; P1.FU27 planned. Missed Phase 1 requirement (user, 2026-10-13).
+**Status:** P1.FU24, P1.FU25, P1.FU26 and P1.FU28 built (not accepted), 2026-10-15; P1.FU27 built (not accepted), 2026-10-17. Missed Phase 1 requirement (user, 2026-10-13).
 Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
 recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24, FU25, FU26 and FU28 built in
-sections 12 to 15.
+sections 12 to 16.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
 replaces a placeholder with the real file), Phase 3/10 (retention never reclaims a placeholder and writes one back after a
 reclaim), Phase 4 (Get a Release and the download states on placeholder items) and Phase 6/7 (Play hidden, the marks, the
@@ -491,3 +491,55 @@ Towers added from TMDb as a file-less series with S01E04 swapped for a `.webm`, 
 browser observing the web's own `PlaybackInfo` requests and the start report's `NowPlayingQueue`; nothing intercepted); results
 in [PLAN.md](../PLAN.md) P1.FU28.
 
+
+## 16. What P1.FU27 built (2026-10-17, built, not accepted)
+
+Plugin (`feat/placeholder-backfill` from `feat/placeholder-queues` `c3a9f94`): `Services/Placeholders/PlaceholderTasks.cs` (the
+backfill `PlaceholderBackfill`, the adaptive sync task, the first-run starter), `PlaceholderService.cs` (title counters, the batch
+that gives way to scans, one report per run, the library-scan fallback, `StubEpisodesOf`), `PlaceholderWatchedRestore.cs` (new),
+`PlaceholderUserData.SaveQuietly`, `Api/PlaceholdersController.cs` (`Progress`, `SyncNow`, `RestoreWatched`). Web
+(`feat/placeholder-backfill` from `0707607aef`): `components/NativeEntryDetails.tsx` and `DownloadBlock.tsx` (the block on a
+placeholder's page), `components/MissingChildren.tsx` and `integration/upstreamChildren.js` (fallback-only surfaces and the
+mid-visit swap), `EntryEpisodeDetails.tsx`, `EntrySeasonDetails.tsx`, `EntryDetails.tsx` and `hooks/useEntries.ts` (the mod's
+pages follow a placeholder that appears), `settings/PlaceholdersSection.tsx`. No migration, version 0.1.0.0.
+
+**Backfill, automatic.** The sync task's trigger fires every 5 minutes. A run writes a batch while the last one left placeholders
+pending (or gave way to a scan, or none ran since start), else only once 15 minutes have passed since the last; the per-run bound
+is unchanged (10 titles per library, 3 seconds apart). Jellyfin re-arms an interval trigger at `max(last end, last start, now + 1
+min) + interval`, so the busy pace is about every 6 minutes. A batch never runs beside another (one gate; *Sync Now* answers 409
+`sync_running`), skips writing while `ILibraryManager.IsScanRunning` (the next trigger tries again), and stops after the title in
+hand when a scan starts during it. Every folder a run changed is reported to Jellyfin's file monitor once, at its end (the
+outermost folder only). **Found live (Jellyfin 12.0.0):** an interval task that never completed starts one hour after Jellyfin
+starts (`IntervalTrigger`: `lastResult is null` gives `now + 1 h`), and a queued run does not re-arm triggers. So a starter queues
+the task 5 minutes after start where it has never completed and then calls `IScheduledTaskWorker.ReloadTriggerEvents()`.
+**Also found:** a library folder that was empty at Jellyfin's last scan has no folder item, and a report of it refreshes nothing
+(neither did validating the library's own folder). A run that wrote into such a folder asks for one library scan
+(`QueueLibraryScan`); after it the folder has its item.
+
+**Needs the administrator only for:** turning a library off, *Sync Now* (optional), Remove Placeholders, and the watched restore.
+Settings *Missing Episodes* reads `Placeholders: N of M titles done · P placeholders pending` and the next step (a batch now,
+waiting for a scan, the next batch in about N minutes, or all done), re-read every 30 s while some are pending.
+
+**Reclaimed titles.** A reclaimed episode counts as aired and a reclaimed movie as released, so the backfill writes their
+placeholders like any other. Jellyfin then re-attaches the parked user data by key (played, favourite, dates). *Restore Watched
+State From Retention History* is for a title whose Jellyfin data is gone. It is built, not left out: the plugin's own completion
+record is the only source, the mark goes only where Jellyfin holds no row of that user for the placeholder, never before
+Jellyfin's first refresh of it, quietly, with a dry run first; a second run finds its own rows. See [API.md](../API.md) and
+[PHASE10.md](../PHASE10.md) S21.
+
+**Fallback-only mod surfaces.** The mod's missing season cards and episode rows were already drawn only where Jellyfin has no item
+for that season or episode, so a placeholder takes their place. What changed is the moment of the swap: a Jellyfin item counts as
+held only when the first read knew it or upstream's list draws it, so an item that appears mid-visit keeps the mod's row until
+upstream shows its own, never a gap. Upstream's list is drawn again (a mirror of `renderChildren`'s Series and Season branches,
+upstream's file unpatched) when Jellyfin's items and the drawn ones differ (added, or removed by Remove Placeholders). The season
+card's "N episodes" line adds the mod's own rows (unaired, no placeholder yet) to Jellyfin's count. The mod's own episode, season
+and title pages open Jellyfin's page once the catalog's refresh after a library change reads a placeholder. The surfaces stay for
+a library turned off, a read-only folder, unaired episodes, specials and titles whose batch has not been written; no code was
+removed (none is unreachable).
+
+**Download state on the placeholder's own page.** A placeholder episode's or movie's Jellyfin page shows P1.FU20's download block
+(ring, figure, release, pack line and dots, Get a Release, View Queue, Cancel Download for administrators, Search Again) where a
+file's page has its track selectors. The block reads the queue by entry and episode, as the mod's own page does. A placeholder
+season or series page gets nothing new: its cards and rows carry the rings (P4.FU6) and the series section lists the episodes on
+their way. Cards and rows of placeholders map to the queue by the series' entry and the episode numbers (a pack's episodes
+included), and placeholder movies through the plugin's lookup by item id.
