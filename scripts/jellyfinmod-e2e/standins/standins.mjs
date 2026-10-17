@@ -497,16 +497,25 @@ const control = createServer(async (request, response) => {
             json(response, 200, { releases: list.length });
             return;
         }
-        if (url.pathname === '/complete') {
-            // Finishes a download: copies the staged file into the torrent's download folder, then reports it complete.
+        if (url.pathname === '/complete' || url.pathname === '/progress') {
+            // /complete finishes a download: copies every staged file into the torrent's download folder, then reports it
+            // complete. /progress?fraction=<0..1>[&file=<index>] sets one file's (or every file's) downloaded part, and copies a
+            // file in once it reaches 1, as a client finishing one file of a pack does (queued state, P4.FU10).
             const torrent = torrents.get(url.searchParams.get('hash'));
             const release = releases().find(item => item.infoHash === url.searchParams.get('hash'));
             if (!torrent || !release) { json(response, 404, { error: 'unknown torrent' }); return; }
-            const target = localPath(torrent.downloadDir + '/' + torrent.files[0].name);
-            mkdirSync(dirname(target), { recursive: true });
-            copyFileSync(release.file, target);
-            torrent.files[0].completed = torrent.files[0].length;
-            torrent.doneDate = Math.floor(Date.now() / 1000);
+            const fraction = url.pathname === '/complete' ? 1 : Math.min(1, Math.max(0, Number(url.searchParams.get('fraction') ?? 0)));
+            const only = url.searchParams.has('file') ? Number(url.searchParams.get('file')) : null;
+            torrent.files.forEach((file, index) => {
+                if (only !== null && index !== only) return;
+                const wasDone = file.completed === file.length;
+                file.completed = Math.floor(file.length * fraction);
+                if (fraction < 1 || wasDone) return;
+                const target = localPath(torrent.downloadDir + '/' + file.name);
+                mkdirSync(dirname(target), { recursive: true });
+                copyFileSync(release.parts?.[index]?.file ?? release.file, target);
+            });
+            if (torrent.files.every(file => file.completed === file.length)) torrent.doneDate = Math.floor(Date.now() / 1000);
             json(response, 200, describe(torrent, 1));
             return;
         }
