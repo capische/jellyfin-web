@@ -15,6 +15,7 @@ import { airDateLong, episodeMark, seasonMark } from '../constants/fileState';
 import { sameItemId } from '../constants/versions';
 import { CardHoverGet, NoFileCard } from '../integration/cardGetRelease';
 import { openReleasePicker } from '../integration/releasePicker';
+import { redrawUpstreamChildren } from '../integration/upstreamChildren';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import type { EntryEpisode } from '../types/entry';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
@@ -78,9 +79,18 @@ const useOrderedSlots = (container: Element | null, slots: Slot[], natives: Nati
             const order = latest.current.natives;
             const upstream = Array.from(container.children).filter(child => !child.classList.contains('jfmod-missingSlot'));
             const numberOf = (child: Element) => order.get(normalId(child.getAttribute('data-id') ?? ''));
+            // A number upstream's own list now draws (a placeholder that appeared and was drawn before React caught up, P1.FU27)
+            // takes no mod element back: React removes that slot at its next render, and two rows never show meanwhile.
+            const drawn = new Set(upstream.map(numberOf).filter((number): number is number => number !== undefined));
             for (const slot of [...latest.current.slots].sort((a, b) => a.order - b.order)) {
                 const element = own.get(slot.key);
                 if (!element) continue;
+                if (drawn.has(slot.order)) {
+                    // Dropped from the map too: an element left out of the list would keep the observer placing the rest.
+                    element.remove();
+                    own.delete(slot.key);
+                    continue;
+                }
                 const next = upstream.find(child => (numberOf(child) ?? -Infinity) > slot.order);
                 container.insertBefore(element, next ?? null);
             }
@@ -99,6 +109,56 @@ const useOrderedSlots = (container: Element | null, slots: Slot[], natives: Nati
         elements.current.clear();
     }, []);
     return elements.current;
+};
+
+const upstreamIdsIn = (container: Element) => new Set(Array.from(container.children)
+    .filter(child => !child.classList.contains('jfmod-missingSlot'))
+    .map(child => normalId(child.getAttribute('data-id') ?? '')).filter(Boolean));
+
+const sameIds = (a: Set<string>, b: Set<string>) => a.size === b.size && Array.from(b).every(id => a.has(id));
+
+/** The ids of upstream's own children in its list, read again whenever the list changes. */
+const useUpstreamIds = (container: Element | null) => {
+    const [ids, setIds] = useState<Set<string>>(() => new Set());
+    useLayoutEffect(() => {
+        if (!container) return;
+        const read = () => {
+            const found = upstreamIdsIn(container);
+            setIds(old => (sameIds(old, found) ? old : found));
+        };
+        read();
+        const observer = new MutationObserver(read);
+        observer.observe(container, { childList: true });
+        return () => observer.disconnect();
+    }, [container]);
+    return ids;
+};
+
+/**
+ * The native items that count as held on this page (P1.FU27): those Jellyfin had at the first read, and any added since only once
+ * upstream's own list draws it. A placeholder Jellyfin adds while the page is open (the backfill, an import swap) therefore keeps
+ * the mod's card or row until upstream shows its own, never a gap; and upstream's list is drawn again when Jellyfin's items and the
+ * drawn ones differ (added, or removed by Remove Placeholders), so the swap happens without reloading the page and never shows
+ * both for longer than that redraw.
+ */
+const useHeldNatives = (items: { Id?: string | null }[] | undefined, container: Element | null, redraw: () => Promise<void>) => {
+    const initial = useRef<Set<string> | null>(null);
+    const ids = useMemo(() => (items ?? []).flatMap(item => (item.Id ? [normalId(item.Id)] : [])), [items]);
+    if (items && !initial.current) initial.current = new Set(ids);
+    const drawn = useUpstreamIds(container);
+    const asked = useRef('');
+    const known = initial.current;
+    useEffect(() => {
+        if (!items || !known || !container) return;
+        const listed = new Set(ids);
+        const added = ids.filter(id => !known.has(id) && !drawn.has(id));
+        const removed = Array.from(drawn).filter(id => !listed.has(id));
+        const key = added.join(',') + '|' + removed.join(',');
+        if ((!added.length && !removed.length) || asked.current === key) return;
+        asked.current = key;
+        redraw().catch(error => console.warn('[JellyfinMod] Could not draw the list again', error));
+    }, [container, drawn, ids, items, known, redraw]);
+    return useMemo(() => new Set(ids.filter(id => known?.has(id) || drawn.has(id))), [drawn, ids, known]);
 };
 
 /** Upstream's list on the page, once its template has it. */
@@ -233,8 +293,13 @@ const nativeSeasonMark = (season: number, episodes: EntryEpisode[]) => {
  * Jellyfin has in the season (its `ChildCount`); for a season Jellyfin keeps with no episode (an empty folder), the entry's list,
  * as on the mod's cards. Nothing when neither knows of one.
  */
-const nativeSeasonCount = (season: number, childCount: number | undefined, episodes: EntryEpisode[]) =>
-    childCount || episodes.filter(episode => episode.seasonNumber === season).length;
+const nativeSeasonCount = (season: number, childCount: number | undefined, episodes: EntryEpisode[]) => {
+    const own = episodes.filter(episode => episode.seasonNumber === season);
+    if (!childCount) return own.length;
+    // Jellyfin's count holds files and placeholders; the season page adds the mod's own rows (unaired episodes, ones with no
+    // placeholder yet), so the line counts them too and reads as the page does (P1.FU27).
+    return childCount + own.filter(episode => episode.availability !== 'onDisk' && !episode.placeholderItemId && !episode.jellyfinItemId).length;
+};
 
 /**
  * A second text line on an upstream card, after its title, in the mod's missing cards' own element and classes, so both read
@@ -280,8 +345,13 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
         .map(item => [normalId(item.Id!), item.IndexNumber!])), [seasons.data]);
     const childCounts = useMemo(() => new Map((seasons.data ?? []).filter(item => typeof item.IndexNumber === 'number')
         .map(item => [item.IndexNumber!, item.ChildCount ?? 0])), [seasons.data]);
-    const missing = useMemo(() => (seasons.data ? missingSeasons(detail.episodes, new Set(natives.values())) : []),
-        [detail.episodes, natives, seasons.data]);
+    const redraw = useCallback(() => (container ?
+        redrawUpstreamChildren(container, { type: 'Series', itemId: seriesItemId, serverId }) : Promise.resolve()),
+    [container, seriesItemId, serverId]);
+    const heldIds = useHeldNatives(seasons.data, container, redraw);
+    const missing = useMemo(() => (seasons.data ? missingSeasons(detail.episodes,
+        new Set(Array.from(natives).filter(([id]) => heldIds.has(id)).map(([, season]) => season))) : []),
+    [detail.episodes, heldIds, natives, seasons.data]);
     const slots = useMemo(() => missing.map(([season]) => ({ key: String(season), order: season })), [missing]);
     const make = useCallback((key: string) => {
         const tv = layoutManager.tv;
@@ -453,17 +523,22 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
     const ready = !native || !!jellyfin.data;
     const natives = useMemo<NativeOrder>(() => new Map((jellyfin.data ?? []).filter(item => item.Id && typeof item.IndexNumber === 'number')
         .map(item => [normalId(item.Id!), item.IndexNumber!])), [jellyfin.data]);
+    const seasonItemId = native?.seasonItemId;
+    const seriesItemId = native?.seriesItemId;
+    const redraw = useCallback(() => (container && seasonItemId ? redrawUpstreamChildren(container,
+        { type: 'Season', itemId: seasonItemId, seriesId: seriesItemId, serverId }) : Promise.resolve()),
+    [container, seasonItemId, seriesItemId, serverId]);
+    const counted = useHeldNatives(native ? jellyfin.data : undefined, container, redraw);
     const missing = useMemo(() => {
         if (!ready) return [];
         const held = new Set<number>();
         for (const item of jellyfin.data ?? []) {
-            if (typeof item.IndexNumber !== 'number') continue;
+            if (typeof item.IndexNumber !== 'number' || !item.Id || !counted.has(normalId(item.Id))) continue;
             // A file with several episodes holds every number it spans.
             for (let number = item.IndexNumber; number <= (item.IndexNumberEnd ?? item.IndexNumber); number++) held.add(number);
         }
-        const heldIds = new Set((jellyfin.data ?? []).flatMap(item => (item.Id ? [normalId(item.Id)] : [])));
-        return missingEpisodes(detail.episodes, season, held, heldIds);
-    }, [detail.episodes, jellyfin.data, ready, season]);
+        return missingEpisodes(detail.episodes, season, held, counted);
+    }, [counted, detail.episodes, jellyfin.data, ready, season]);
     const slots = useMemo(() => missing.map(episode => ({ key: episode.id, order: episode.episodeNumber })), [missing]);
     // Upstream's placeholder rows (P1.FU24): the plugin's episode each stands for, by its placeholder id, else by its number.
     const placeholderEpisodes = useMemo(() => {

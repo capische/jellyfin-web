@@ -13,6 +13,7 @@ import layoutManager from 'components/layoutManager';
 
 import { announce } from '../integration/announce';
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
+import { openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
@@ -80,6 +81,13 @@ const rowIconClass = () => 'paper-icon-button-light jfmod-fileIcon' + (layoutMan
 /** Reuses the existing detail template's slots without constructing a synthetic native item. */
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
     const [entry, setEntry] = useState(detail.entry);
+    // A title with no file opens Jellyfin's page once Jellyfin holds an item for it: its placeholder, written while the page is
+    // open (the backfill, P1.FU27), or its file. The route opens it when the page is opened later.
+    const live = useLiveEntryDetail(api, detail);
+    const titleItem = live.entry.jellyfinItemId || live.entry.placeholderItemId;
+    useEffect(() => {
+        if (titleItem && !signal.aborted) openNativePage(titleItem, serverId);
+    }, [titleItem, serverId, signal]);
     const [episodes, setEpisodes] = useState(detail.episodes);
     const [history, setHistory] = useState(detail.history);
     // An older plugin omits the summary; the page must still render (P1.W14).

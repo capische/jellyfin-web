@@ -37,9 +37,15 @@ import './releasePicker.scss';
 
 type BlockKind = DownloadProgress['kind'] | 'none' | 'unaired';
 
+/**
+ * What the block is about: an episode, or a placeholder movie's entry (P1.FU27), whose `id` is null (the queue's movie rows
+ * carry no episode).
+ */
+export type DownloadTarget = Pick<EntryEpisode, 'state' | 'progress' | 'availability' | 'airDate'> & { id: string | null };
+
 interface DownloadBlockProps {
     entryId: string;
-    episode: EntryEpisode;
+    episode: DownloadTarget;
     isAdmin: boolean;
     /** An administrator on a plugin that searches releases: Get a Release and Search Again open the picker. */
     canAcquire: boolean;
@@ -110,7 +116,7 @@ const downloadFigure = (view: QueueRow | undefined, progress: DownloadProgress):
 };
 
 /** The figures of an episode with nothing on its way: unaired with its date and countdown, or not downloaded. */
-const restingFigure = (kind: BlockKind, episode: EntryEpisode, quietNone: boolean): Figure => {
+const restingFigure = (kind: BlockKind, episode: DownloadTarget, quietNone: boolean): Figure => {
     if (kind === 'unaired' && episode.airDate) {
         return { tone: 'muted', text: ['airs ' + airDateLong(episode.airDate), countdown(episode.airDate)].filter(Boolean).join(' · ') };
     }
@@ -123,7 +129,7 @@ const WORD: Record<BlockKind, string> = {
 };
 
 /** One dot of a pack's strip: imported, its file finished, downloading (filled to its percent), waiting or failed. */
-const PackStrip: FC<{ row: QueueRow; episodeId: string }> = ({ row, episodeId }) => {
+const PackStrip: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episodeId }) => {
     const episodes = row.pack?.episodes ?? [];
     return <span className='jfmod-dlblock-strip' aria-hidden='true'>
         {episodes.map(item => {
@@ -170,7 +176,7 @@ const Marks: FC<{ row: QueueRow; isAdmin: boolean }> = ({ row, isAdmin }) => {
 };
 
 /** The pack's line: `Season 1 pack · this episode is file 6 of 10` and the strip. */
-const PackLine: FC<{ row: QueueRow; episodeId: string }> = ({ row, episodeId }) => {
+const PackLine: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episodeId }) => {
     const episodes = row.pack?.episodes ?? [];
     const index = episodes.findIndex(item => item.episodeId === episodeId);
     if (!row.pack || index < 0) return null;
@@ -212,7 +218,7 @@ interface BlockState {
  * visit (the page then becomes Jellyfin's); an old finished row for an episode with no file now is history.
  */
 const blockState = (row: QueueRow | undefined, view: QueueRow | undefined, last: QueueRow | null, live: boolean,
-    episode: EntryEpisode): BlockState => {
+    episode: DownloadTarget): BlockState => {
     const finished = view?.state === 'seeding';
     if (row && view && !finished) {
         const progress = downloadProgress(view, last);
@@ -273,7 +279,7 @@ const Actions: FC<ActionsProps> = ({ state, isAdmin, canAcquire, removing, onCan
 };
 
 /** The release's lines under the state: its name, its marks and, for a pack still downloading, the pack's line. */
-const ReleaseLines: FC<{ state: BlockState; episodeId: string; isAdmin: boolean }> = ({ state, episodeId, isAdmin }) => {
+const ReleaseLines: FC<{ state: BlockState; episodeId: string | null; isAdmin: boolean }> = ({ state, episodeId, isAdmin }) => {
     const { row, kind } = state;
     if (!row) return null;
     return <>
