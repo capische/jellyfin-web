@@ -5,7 +5,7 @@ import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 
-import { getEntries } from '../api/modApi';
+import { getEntries, GRAB_EVENT } from '../api/modApi';
 import { aggregateProgress, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
 import { currentRowFor, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
@@ -205,14 +205,22 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
     setWidth(fill, progress.percent);
     setWidth(watched, watchedPercent(frame));
 
-    const disc = frame.querySelector<HTMLElement>('.jfmod-dlmark') ?? document.createElement('span');
-    const indicators = frame.querySelector('.cardIndicators');
-    paintDownloadMark(disc, progress, 'card', indicators ? '' : 'jfmod-dlmark--corner');
-    if (indicators) {
-        if (indicators.firstElementChild !== disc) indicators.insertBefore(disc, indicators.firstChild);
-    } else if (disc.parentNode !== frame) {
-        frame.appendChild(disc);
+    // The disc lives on the card's frame, not in upstream's indicator cluster: the cluster sits in the image container, whose
+    // `contain: strict` puts it under the hover veil (white at half, user 2026-10-17). It is placed just left of the cluster.
+    let disc = frame.querySelector<HTMLElement>('.jfmod-dlmark');
+    if (!disc) {
+        disc = document.createElement('span');
+        // A click on it is a click on the card, as it was under the veil.
+        disc.addEventListener('click', () => frame.querySelector<HTMLElement>('.cardOverlayContainer')?.click());
     }
+    paintDownloadMark(disc, progress, 'card', 'jfmod-dlmark--corner');
+    if (disc.parentNode !== frame) frame.appendChild(disc);
+    const indicators = frame.querySelector('.cardIndicators');
+    const size = parseFloat(getComputedStyle(disc).fontSize) || 16;
+    const cluster = indicators ? indicators.getBoundingClientRect().width / size : 0;
+    const side = getComputedStyle(frame).direction === 'rtl' ? 'left' : 'right';
+    const offset = (0.225 + (cluster > 0 ? cluster + 0.25 : 0)).toFixed(3) + 'em';
+    if (disc.style[side] !== offset) disc.style[side] = offset;
 };
 
 /** A row's end slot: the first of these is where the disc goes before (the mark's host, upstream's buttons). */
@@ -393,7 +401,9 @@ const DownloadMarks: FC = () => {
     const { api, user } = useApi();
     const capability = useQueueCapability();
     const [watching, setWatching] = useState(false);
-    const queue = useQueue({ enabled: capability.available, poll: watching ? 'cards' : false });
+    // A grab was just made: the queue is read every 5 s for three minutes, as a held grab is in it only after its hold.
+    const [grabbed, setGrabbed] = useState(false);
+    const queue = useQueue({ enabled: capability.available, poll: watching || grabbed ? 'cards' : false });
     const [placed, setPlaced] = useState(0);
     const onPlaced = useCallback(() => setPlaced(value => value + 1), []);
     const { placements, seriesEntries, place } = usePlacements(api, user?.Id, onPlaced);
@@ -413,6 +423,20 @@ const DownloadMarks: FC = () => {
         window.addEventListener('hashchange', onPage);
         return () => window.removeEventListener('hashchange', onPage);
     }, [readable, refetch]);
+
+    useEffect(() => {
+        let timer: number | undefined;
+        const onGrab = () => {
+            setGrabbed(true);
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => setGrabbed(false), 3 * 60 * 1000);
+        };
+        window.addEventListener(GRAB_EVENT, onGrab);
+        return () => {
+            window.removeEventListener(GRAB_EVENT, onGrab);
+            window.clearTimeout(timer);
+        };
+    }, []);
 
     useEffect(() => {
         const relevant = (items ?? []).filter(row => row.state !== 'seeding');
