@@ -140,6 +140,20 @@ export const currentRowFor = (items: QueueRow[], entryId: string, episodeId: str
     return [...rows].sort((a, b) => rank(b, episodeId) - rank(a, episodeId) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
 };
 
+const IMPORT_DONE = new Set(['completed', 'done']);
+
+/**
+ * One movie's (`episodeId` null) or one episode's newest row when it says the file is in the library: a finished import, or a
+ * pack whose own import of the episode is done (P4.FU10); undefined otherwise. A newer failure or download wins, as in
+ * `currentRowFor`.
+ */
+export const finishedRow = (items: QueueRow[], entryId: string, episodeId: string | null): QueueRow | undefined => {
+    const row = currentRowFor(items, entryId, episodeId);
+    if (!row) return undefined;
+    const done = row.pack ? IMPORT_DONE.has(ownEpisode(row, episodeId)?.importState ?? '') : row.state === 'seeding';
+    return done ? row : undefined;
+};
+
 /**
  * The live row for one movie entry or one episode, for marks and detail lines that show `grabbed` or `downloading`. Reading
  * the queue keeps the detail line and the queue row on the same value within one poll (P5.I3). `poll` `'slow'` reads the

@@ -69,6 +69,10 @@ export interface QueueRow {
     episode: QueueEpisodeRef | null;
     releaseTitle: string;
     state: QueueState;
+    /**
+     * The import's own step; for a grab the client has not accepted yet (P4.FU10) `held` while it can be cancelled and
+     * `submitting` after, with the grab's id as the row's `id` (the row turns into the import's once the client has it).
+     */
     importState: string;
     reason: string | null;
     /** The server's sentence for `reason`. */
