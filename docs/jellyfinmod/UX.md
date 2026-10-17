@@ -90,7 +90,9 @@ mod's own `nativeEntryDetails.js`, with no upstream file or selector edited:
    detailButton` classes; the Played countdown badge is one `span` inside the stock `btnPlaystate`
    button. Both are the first mod content inside a stock container.
 2. **The stock Version select is hidden while the file chooser is mounted** (the §7.3 kind): it stays
-   in the DOM and keeps working, hidden by a mod class that exists only while the chooser does.
+   in the DOM and keeps working, hidden by a mod class that exists only while the chooser does. The
+   Audio and Subtitles selects follow the same rule while their dropdowns are mounted (P7.FU6, §11.2):
+   hidden, in the DOM, still the value Play reads.
 3. **The stock header Shuffle is hidden on a show that is not watched in any order** (P1.FU12, user
    2026-10-12; the §7.3 kind). On a series or season page, `btnShuffle` stays in the header only when
    the show's Jellyfin genres name comedy (sitcom), animation, reality, talk or game shows,
@@ -101,7 +103,7 @@ mod's own `nativeEntryDetails.js`, with no upstream file or selector edited:
 
 All need a parity check on every upstream merge: the insert points (`.mainDetailButtons >
 .btnUserRating`, `.btnPlaystate .detailButton-content`, `.selectSourceContainer`,
-`.selectVideoContainer`, `.mainDetailButtons .btnShuffle`) must still exist with the same meaning;
+`.selectVideoContainer`, `.selectAudioContainer`, `.selectSubtitlesContainer`, `.mainDetailButtons .btnShuffle`) must still exist with the same meaning;
 when one does not, the matching mod surface is simply absent and the stock page is unchanged.
 
 ---
@@ -1402,6 +1404,37 @@ The version rows below the track block are replaced by a chooser in the **Video*
   end.
 - A plugin without `versions`, `versions.v1`, `retention.versionKeep`, `versions.remove` or
   `history.files` hides the matching part, never the page.
+
+**The track block as three dropdowns (P7.FU6, user-approved design v5, 2026-10-17: "Logos, A for size").**
+
+```
+  Video      1080p  HEVC 10-BIT [DV]                                   24.6 GB  ˅
+             ▌2160p HEVC 10-BIT [DV] │ [DTS-HD|MA|7.1] · removes 3 Nov  24.6 GB  ⟲ 📌 ✕
+  Audio      English  [DTS-HD|MA|7.1]  · Default                                ˅
+  Subtitles  Off                                                                ˅
+```
+
+- **Video, closed:** the resolution word (600) and the video marks (codec at 70 %, 10-BIT, HDR10 or the Dolby Vision chip),
+  then the file size, muted, at the right end just before the chevron; the marks are cut first, never the size. No audio here.
+- **Video, open:** each file's row is resolution and video marks, a hairline, its default audio track's marks and the extras
+  (episode range, `removes <date>`), then the size right-aligned at the row's end and the row's icons. On a phone the audio and
+  extras take a second line and the size stays on the first.
+- **Audio and Subtitles** are the same field with a chevron, opening a paper list as wide as the field (at most 20em tall, so
+  it opens under it), one entry per upstream option in upstream's order, the current one with a blue left bar. An entry is the
+  language (600, the server's own language name), the marks and the flags, muted: `· Default`, `· Forced`, `· SDH`, then the
+  stream's own title when it adds a word (`· Commentary`, `· Latin American`). Subtitles start with *Off* and show the format
+  mark (SRT, PGS, ASS, VOBSUB). The entry's tooltip is upstream's option text.
+- **One audio track** (upstream disables its select): the same field without a chevron, not clickable, not a focus stop.
+- **Marks** are the release picker's `MediaMarks` with this fork's SVGs, fed from Jellyfin's media streams (codec, profile for
+  HE-AAC, DTS-HD MA, DTS:X, TrueHD and Atmos, channels or layout, `VideoRangeType`), never from a file name; a format without a
+  mark is a word chip (AAC, FLAC).
+- **Upstream stays the source of truth:** the entries are the hidden select's options; choosing one sets its value and
+  dispatches the non-bubbling `change` emby-select dispatches, so Play sends exactly the audio and subtitle stream index the
+  stock select would. A version change rewrites the options and the dropdowns follow.
+- Keys: the list opens on the current entry; arrows move, Enter picks, Escape closes; the focus returns to the field. On the
+  TV `shell/dpadModals` drives the list and Back closes it.
+- The dropdowns mount with the file chooser and only once the page item's media sources and the language names are read; until
+  then, or on a page without the chooser, upstream's selects show.
 
 ---
 

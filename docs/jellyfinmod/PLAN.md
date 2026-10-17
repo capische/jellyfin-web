@@ -911,6 +911,27 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Continue is refused with `aria-disabled` (still focusable) at about 45 % with the tooltip "Not yet: …". Web `feat/wizard-blockers` from
   `next-release` `542d096889`: `SetupWizardPage.tsx`, `settingsWidgets.tsx`, `settings.scss`; runners `setup-wizard.mjs`, `s11-fresh.mjs`,
   `settings-design.mjs` read the new element. Not accepted: runs on the local environment bravo only, whose plugin predates next-release.
+  **P7.FU6, built (not accepted) 2026-10-17: the track block as three dropdowns** (user-approved design v5 of
+  `video-row-file-size`: "Logos, A for size"; [UX.md](UX.md) §11.2). Owner: Phase 7 follow-up on the Phase 6 file chooser;
+  web only, no plugin or API change, no upstream file (the Audio and Subtitles selects are hidden like the Version select,
+  §1.1 exception 2). The Video value shows the resolution and video marks with the file size muted at its right end before
+  the chevron, and no audio; each row of the open list reads video, a hairline, its default audio track's marks and the
+  extras, then the size right-aligned (on a phone the audio and extras take a second line). Audio and Subtitles are one
+  shared `TrackDropdown` (an MUI listbox drawn like the Video field, the current entry with a blue left bar): language (the
+  server's culture names), the release picker's `MediaMarks` from the stream (`streamMarks` in `constants/versions.ts`:
+  codec, profile for HE-AAC, DTS-HD MA, DTS:X, TrueHD and Atmos, channels, `VideoRangeType`), and muted Default, Forced, SDH
+  and the stream's title (Commentary); Subtitles start with Off and show the format. Entries are the hidden select's options;
+  a choice sets it and dispatches emby-select's own `change`, so Play sends the same stream index. One audio track is a
+  static field. The item's media sources are read once (`getMediaSources`, which also replaces the TV's range-type read).
+  Web `feat/detail-track-dropdowns` from `next-release` `f1efa4fd1c`: `5186604f4b` (code), `3207dce599` (runner) and this
+  docs commit. Checks: typecheck, eslint (changed files; the runner keeps one older nested-ternary error at its pack
+  checks), stylelint, the patch-surface check and the production build pass. `detail-design.mjs` with
+  `JELLYFINMOD_DD_TRACKS` (the movie with two E-AC3 5.1 tracks and 36 SRT subtitles, an episode with AAC 2.0 and a
+  Commentary track, an episode with one track) plus the one-file and movie scenarios, on the local environment delta under
+  its lease: 636 passed, 4 failed in Chromium and the same in real Chrome on desktop, phone, TV 1080 and TV 720; every
+  track-dropdown check passed in both, and the 4 failures are the baseline plugin's missing `history.files` (no History icon
+  on the one-file row), not this change. Not verified: a file with DTS-HD MA, TrueHD or Atmos (none in the local media), a
+  file with two versions, Dolby Vision or HDR10 marks, an ordinary user, a physical TV, the next-release plugin, Codex review.
 
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
   Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of
