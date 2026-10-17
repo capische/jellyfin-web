@@ -792,7 +792,10 @@ export class HtmlVideoPlayer {
         } else if (options.playMethod !== 'Transcode' && options.mediaSource.Container?.toUpperCase() === 'FLV') {
             return this.setSrcWithFlvJs(elem, options, val);
         } else {
-            elem.autoplay = true;
+            // On webOS a chosen non-default track is switched while paused, before any sound.
+            const switchBeforePlay = browser.web0s && this.#audioTrackIndexToSetOnPlaying != null
+                && this.getSupportedAudioStreams().length >= 2;
+            elem.autoplay = !switchBeforePlay;
 
             const includeCorsCredentials = await getIncludeCorsCredentials();
             if (includeCorsCredentials) {
@@ -800,8 +803,11 @@ export class HtmlVideoPlayer {
                 elem.crossOrigin = 'use-credentials';
             }
 
-            return applySrc(elem, val, options).then(() => {
+            return applySrc(elem, val, options).then(async () => {
                 this.#currentSrc = val;
+                if (switchBeforePlay) {
+                    await this.switchAudioTrackBeforePlay(elem);
+                }
                 this.armInitialAudioTrack();
 
                 return playWithPromise(elem, this.onError);
@@ -1207,6 +1213,67 @@ export class HtmlVideoPlayer {
         saveVolume(elem.volume);
         Events.trigger(this, 'volumechange');
     };
+
+    /**
+     * Switches to the chosen audio track while the element is still paused. An LG C1 starts
+     * on the file's default track and only switches a second or two into playback when told
+     * after `playing`, but accepts a switch while paused and confirms it with the track list's
+     * `change` event about 140 ms later. So the element loads without autoplay, the track is
+     * switched once the full list is known, and playback starts on the confirmation, under the
+     * loading spinner that stays up until `playing`. Resolves at the latest after 3 s, so
+     * playback starts whatever the TV does.
+     * @private
+     * @param elem {HTMLMediaElement} The video element
+     * @returns {Promise<void>}
+     */
+    switchAudioTrackBeforePlay(elem) {
+        const index = this.#audioTrackIndexToSetOnPlaying;
+
+        return new Promise((resolve) => {
+            let switched = false;
+            let timer = null;
+            const events = ['loadedmetadata', 'loadeddata', 'canplay'];
+
+            const finish = () => {
+                clearTimeout(timer);
+                events.forEach((ev) => {
+                    elem.removeEventListener(ev, trySwitch);
+                });
+                elem.audioTracks?.removeEventListener?.('addtrack', trySwitch);
+                elem.audioTracks?.removeEventListener?.('change', onChange);
+                resolve();
+            };
+            const onChange = () => {
+                if (switched) finish();
+            };
+            const trySwitch = () => {
+                if (switched) return;
+                const streams = this.getSupportedAudioStreams();
+                const position = streams.findIndex((stream) => stream.Index === index);
+                const tracks = Array.from(elem.audioTracks || []);
+                if (position === -1) {
+                    finish();
+                    return;
+                }
+                if (tracks.length < streams.length) return;
+                if (tracks.every((track, i) => track.enabled === (i === position))) {
+                    finish();
+                    return;
+                }
+
+                switched = true;
+                this.setAudioStreamIndex(index);
+            };
+
+            events.forEach((ev) => {
+                elem.addEventListener(ev, trySwitch);
+            });
+            elem.audioTracks?.addEventListener?.('addtrack', trySwitch);
+            elem.audioTracks?.addEventListener?.('change', onChange);
+            timer = setTimeout(finish, 3000);
+            trySwitch();
+        });
+    }
 
     /**
      * Arms the initial audio selection once the new source is attached to the element. Media
