@@ -121,9 +121,10 @@
     margin-left: 0.4em;
 }
 
-// A row without actions (a quality already in the library) keeps their room, so the columns do not drift.
+// A row without actions (a quality already in the library) keeps their room, so the columns do not drift: two round buttons
+// of 2.5em with upstream's 0.29em side margins each (paper-icon-button-light overrides the 0.1em set below).
 .jfmod-releaseActions--empty {
-    width: 5.4em;
+    width: 6.18em;
 }
 
 .jfmod-releaseAction {
