@@ -23,6 +23,10 @@
 //   [JELLYFINMOD_DD_ADDED=<item id of an episode that gained a lower-resolution version through Add after 2026-10-09>]
 //                                   its default copy must stay the higher resolution; groups made before the fix keep
 //                                   Jellyfin's order and are only checked for the desktop starting on their default
+//   [JELLYFINMOD_DD_TRACKS=<item id>[,<item id>...]]   the track block's dropdowns (P7.FU6): the Video value without audio and
+//                                   with its size at the right end, the list's rows, the Audio and Subtitles dropdowns against
+//                                   the item's streams, keys, a one-track field, the light theme and what Play sends; changes
+//                                   only the page's own selection (and, on desktop, starts and leaves playback once)
 //   [JELLYFINMOD_DD_UPGRADES=1]     with JELLYFINMOD_DD_PACK: search the Season scope again with episode upgrades switched the
 //                                   other way (Add alone when off, Add and Replace when on; user, 2026-10-09), then restore it
 //
@@ -35,8 +39,9 @@ import { chromium } from 'playwright';
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 // The mod instances only: each Pi instance under its lease (18096 test, 28096 acceptance, 48096 live) and the Mac's local
 // copy of the test instance (envs/local, 127.0.0.1:58096); never production on 8096.
-if (!['18096', '28096', '48096', '58096'].includes(origin.port)) {
-    throw new Error('Runs on the isolated instances 18096, 28096, 48096 or the local 58096 only');
+// The local pool (envs/pool.list) adds bravo to echo on 9096–12096; alpha's 8096 stays refused, as production's number.
+if (!['18096', '28096', '48096', '58096', '9096', '10096', '11096', '12096'].includes(origin.port)) {
+    throw new Error('Runs on the isolated instances 18096, 28096, 48096, the local 58096 or the local pool 9096–12096 only');
 }
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const env = name => process.env[name] || null;
@@ -589,6 +594,329 @@ async function checkDefaultVersion(page, layout, itemId, postFix) {
 }
 
 /** The file-less movie page: header icon and More, the raised Get a release, the queue line during a grab. */
+/**
+ * P7.FU6, the track block's dropdowns (user-approved design 2026-10-17, UX §11.2). What each entry must show is worked out here
+ * from Jellyfin's own streams (`Items/{id}` media sources), not from the page.
+ */
+const CHANNEL_WORDS = { 1: 'mono', 2: '2.0', 3: '2.1', 6: '5.1', 7: '6.1', 8: '7.1' };
+const DOLBY_CHIPS = { eac3: 'Dolby Digital Plus', ac3: 'Dolby Digital', truehd: 'Dolby TrueHD' };
+const WORD_CHIPS = { aac: 'AAC', mp3: 'MP3', flac: 'FLAC', opus: 'OPUS', vorbis: 'VORBIS' };
+const SUBTITLE_WORDS = { subrip: 'SRT', srt: 'SRT', ass: 'ASS', ssa: 'SSA', pgssub: 'PGS', webvtt: 'VTT', dvdsub: 'VOBSUB', dvd_subtitle: 'VOBSUB', mov_text: 'TX3G' };
+
+const dtsLabel = profile => {
+    if (/DTS:X/i.test(profile)) return 'DTS:X';
+    return /\bMA\b/.test(profile) ? 'DTS-HD Master Audio' : 'DTS';
+};
+
+/** The chips' names, in order (Atmos before its format), and the channel tag; null labels when the format has no fixed word. */
+function expectedAudio(stream) {
+    const codec = (stream.Codec ?? '').toLowerCase();
+    const profile = stream.Profile ?? '';
+    const labels = /atmos/i.test(profile) ? ['Dolby Atmos'] : [];
+    if (DOLBY_CHIPS[codec]) labels.push(DOLBY_CHIPS[codec]);
+    else if (codec === 'dts' || codec === 'dca') labels.push(dtsLabel(profile));
+    else if (codec === 'aac' && /^HE/i.test(profile)) labels.push('HE-AAC');
+    else if (WORD_CHIPS[codec]) labels.push(WORD_CHIPS[codec]);
+    else return { labels: null, channels: CHANNEL_WORDS[stream.Channels] ?? null };
+    return { labels, channels: CHANNEL_WORDS[stream.Channels] ?? (stream.Channels ? `${stream.Channels} ch` : null) };
+}
+
+/** Default, Forced, SDH, then the stream's own title when it adds a word (design: Default / Forced / Commentary muted). */
+function expectedFlags(stream, language) {
+    const flags = [];
+    if (stream.IsDefault) flags.push('Default');
+    if (stream.IsForced) flags.push('Forced');
+    if (stream.IsHearingImpaired) flags.push('SDH');
+    const title = (stream.Title ?? '').trim();
+    if (title && ![...flags, language].some(flag => flag.toLowerCase() === title.toLowerCase())) flags.push(title);
+    return flags;
+}
+
+const plainWord = text => (text ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[\s(]/)[0];
+
+/** Installs `window.jfmodTrack(el)`: what one field or list entry draws. */
+const installTrackReader = page => page.evaluate(() => {
+    window.jfmodTrack = el => ({
+        language: el.querySelector('.jfmod-trackLanguage')?.textContent.trim() ?? null,
+        labels: [...el.querySelectorAll('.jfmod-releaseTag[aria-label]')].map(node => node.getAttribute('aria-label')).filter(label => label !== 'Dolby Vision'),
+        channels: el.querySelector('.jfmod-releaseMark--channels')?.textContent.trim() ?? null,
+        words: [...el.querySelectorAll('.jfmod-fileMarks > .jfmod-releaseMark')].map(node => node.textContent.trim()),
+        flags: [...el.querySelectorAll('.jfmod-fileExtra')].map(node => node.textContent.replace(/^·\s*/, '').trim())
+    });
+});
+
+/** Compares one drawn entry with its stream; returns the differences, empty when it matches. */
+function trackDifferences(drawn, stream, optionText) {
+    const problems = [];
+    if (!drawn.language || !plainWord(optionText).length || !optionText.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(plainWord(drawn.language))) {
+        problems.push(`language "${drawn.language}" not in upstream's "${optionText}"`);
+    }
+    if (stream.Type === 'Audio') {
+        const want = expectedAudio(stream);
+        if (want.labels && JSON.stringify(drawn.labels) !== JSON.stringify(want.labels)) problems.push(`marks ${drawn.labels} want ${want.labels}`);
+        if (want.channels && drawn.channels !== want.channels) problems.push(`channels ${drawn.channels} want ${want.channels}`);
+    } else {
+        const codec = (stream.Codec ?? '').toLowerCase();
+        const want = SUBTITLE_WORDS[codec] ?? codec.toUpperCase();
+        if (JSON.stringify(drawn.words) !== JSON.stringify([want])) problems.push(`format ${drawn.words} want ${want}`);
+    }
+    const flags = expectedFlags(stream, drawn.language ?? '');
+    if (JSON.stringify(drawn.flags) !== JSON.stringify(flags)) problems.push(`flags ${drawn.flags} want ${flags}`);
+    return problems;
+}
+
+/** A track field's facts: tag, chevron, focusability, its hidden select's value and options, and what it draws. */
+const trackField = (page, name) => page.evaluate(([sel, fieldName]) => {
+    const el = document.querySelector(`${sel} [data-jfmod-track-field="${fieldName}"]`);
+    if (!el) return null;
+    const select = el.closest('.selectContainer')?.querySelector('select');
+    const video = document.querySelector(`${sel} .selectVideoContainer .jfmod-videoTrigger`);
+    // Whether the field takes the focus; the focus then goes back where it was.
+    const previous = document.activeElement;
+    el.focus?.();
+    const focusable = document.activeElement === el;
+    if (previous instanceof HTMLElement && previous !== document.body) previous.focus();
+    else el.blur?.();
+    return { tag: el.tagName, chevron: !!el.querySelector('.jfmod-videoChevron'), focusable, title: el.title,
+        height: Math.round(el.getBoundingClientRect().height), videoHeight: Math.round(video?.getBoundingClientRect().height ?? 0),
+        selectInDom: !!select, selectHidden: !!select && getComputedStyle(select).display === 'none', value: select?.value ?? null,
+        options: [...select?.options ?? []].map(option => ({ value: option.value, text: option.textContent })), drawn: window.jfmodTrack(el),
+        background: getComputedStyle(el).backgroundColor };
+}, [PAGE, name]);
+
+const LISTBOX = '.jfmod-trackMenu [role="listbox"]';
+
+/** The open list's entries: value, selected, its bar, what it draws; and which entry has the focus. */
+const trackList = page => page.evaluate(box => {
+    const list = document.querySelector(box);
+    if (!list) return null;
+    const entries = [...list.querySelectorAll('[role="option"]')].map(node => ({ value: node.getAttribute('data-jfmod-track'),
+        selected: node.getAttribute('aria-selected') === 'true', bar: getComputedStyle(node).borderLeftColor,
+        barWidth: parseFloat(getComputedStyle(node).borderLeftWidth), text: node.title, drawn: window.jfmodTrack(node) }));
+    const paper = list.closest('.MuiPaper-root');
+    return { entries, focused: document.activeElement?.getAttribute('data-jfmod-track') ?? null,
+        paper: paper ? getComputedStyle(paper).backgroundColor : null };
+}, LISTBOX);
+
+/** Moves the list's focus to `value` with the arrow keys (TV and desktop) or taps it (phone), then picks it. */
+async function pickTrack(page, layout, value) {
+    if (isMobile(layout)) {
+        await page.locator(`${LISTBOX} [data-jfmod-track="${value}"]`).tap({ timeout: 5000 });
+        return true;
+    }
+    const order = (await trackList(page))?.entries.map(entry => entry.value) ?? [];
+    for (let presses = 0; presses < order.length + 2; presses++) {
+        const focused = (await trackList(page))?.focused;
+        if (focused === value) break;
+        await page.keyboard.press(order.indexOf(value) > order.indexOf(focused) ? 'ArrowDown' : 'ArrowUp');
+        await page.waitForTimeout(isTv(layout) ? 220 : 60);
+    }
+    if ((await trackList(page))?.focused !== value) return false;
+    await page.keyboard.press('Enter');
+    return true;
+}
+
+const relativeLuminance = rgb => {
+    const [r, g, b] = (rgb.match(/\d+(\.\d+)?/g) ?? ['0', '0', '0']).slice(0, 3).map(Number);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+};
+
+/** Opens a track field's list, checks it against the streams, picks `target` and checks the hidden select took it. */
+async function checkTrackList(page, layout, name, streams, target) {
+    const selector = `[data-jfmod-track-field="${name}"]`;
+    if (!await activate(page, layout, selector, `${name} dropdown`)) { record(layout, `${name}: the dropdown opens`, false, 'not reached'); return null; }
+    const opened = await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
+    record(layout, `${name}: the dropdown opens a list`, opened);
+    if (!opened) return null;
+    await page.waitForTimeout(400);
+    const before = await trackField(page, name);
+    const list = await trackList(page);
+    record(layout, `${name}: one entry per upstream option, in its order`, JSON.stringify(list.entries.map(entry => entry.value))
+        === JSON.stringify(before.options.map(option => option.value)), `${list.entries.length} entries, ${before.options.length} options`);
+    const current = list.entries.filter(entry => entry.selected);
+    record(layout, `${name}: the current entry has the blue left bar, the others none`, current.length === 1 && current[0].value === before.value
+        && current[0].bar === 'rgb(0, 164, 220)' && current[0].barWidth > 0 && list.entries.filter(entry => !entry.selected).every(entry => entry.bar === 'rgba(0, 0, 0, 0)'),
+    JSON.stringify(current.map(entry => [entry.value, entry.bar, entry.barWidth])));
+    if (!isMobile(layout)) record(layout, `${name}: the list opens on the current entry`, list.focused === before.value, `focused ${list.focused}`);
+    const problems = [];
+    for (const entry of list.entries) {
+        if (entry.value === '-1') {
+            if (entry.drawn.language !== 'Off') problems.push(`-1 reads ${entry.drawn.language}`);
+            continue;
+        }
+        const stream = streams.find(candidate => String(candidate.Index) === entry.value);
+        if (!stream) { problems.push(`no stream ${entry.value}`); continue; }
+        problems.push(...trackDifferences(entry.drawn, stream, entry.text).map(problem => `#${entry.value}: ${problem}`));
+    }
+    record(layout, `${name}: every entry is language, the marks read from its stream, and its flags`, problems.length === 0, problems.slice(0, 6).join('; '));
+    if (!await pickTrack(page, layout, target)) { record(layout, `${name}: an entry is chosen by ${isMobile(layout) ? 'a tap' : 'arrows and Enter'}`, false); return null; }
+    await page.waitForTimeout(600);
+    const after = await trackField(page, name);
+    const closed = await page.locator(LISTBOX).count() === 0;
+    record(layout, `${name}: choosing an entry sets upstream's hidden select to that stream index and closes the list`,
+        after.value === target && closed && after.selectHidden && after.selectInDom, `${before.value} → ${after.value}, closed ${closed}`);
+    record(layout, `${name}: the field then reads the chosen entry`, after.title === before.options.find(option => option.value === target)?.text, after.title);
+    if (!isMobile(layout)) record(layout, `${name}: focus returns to the field`, await activeMatches(page, selector), await activeName(page));
+    return { before, after };
+}
+
+async function checkTracks(page, layout, itemId) {
+    await openDetail(page, `id=${itemId}`, `${PAGE} .jfmod-trackChooser`);
+    await page.mouse.move(0, 0);
+    await installTrackReader(page);
+    const item = await page.evaluate(id => ApiClient.getItem(ApiClient.getCurrentUserId(), id), itemId);
+    const sourceId = await page.evaluate(sel => document.querySelector(`${sel} .selectSource`)?.value ?? null, PAGE);
+    const source = item.MediaSources.find(candidate => norm(candidate.Id) === norm(sourceId)) ?? item.MediaSources[0];
+    const streams = source.MediaStreams ?? [];
+    const audioStreams = streams.filter(stream => stream.Type === 'Audio');
+    const subtitleStreams = streams.filter(stream => stream.Type === 'Subtitle');
+    const tag = `tracks ${item.Name}`;
+
+    // The Video value: video only, the size at its right end before the chevron, in the secondary colour.
+    const video = await page.evaluate(sel => {
+        const trigger = document.querySelector(`${sel} .selectVideoContainer .jfmod-videoTrigger`);
+        if (!trigger) return null;
+        const box = el => el?.getBoundingClientRect();
+        const size = trigger.querySelector(':scope > .jfmod-fileSize');
+        const chevron = trigger.querySelector(':scope > .jfmod-videoChevron');
+        const text = trigger.querySelector(':scope > .jfmod-videoTriggerText');
+        return { audio: window.jfmodTrack(trigger), size: size?.textContent ?? null, sizeBeforeChevron: !!size && size.nextElementSibling === chevron,
+            gap: Math.round((box(chevron)?.left ?? 0) - (box(size)?.right ?? 0)), clear: Math.round((box(size)?.left ?? 0) - (box(text)?.right ?? 0)),
+            em: parseFloat(getComputedStyle(trigger).fontSize), sizeColour: size ? `${getComputedStyle(size).color} × ${getComputedStyle(size).opacity}` : null,
+            colour: `${getComputedStyle(text).color} × ${getComputedStyle(text).opacity}` };
+    }, PAGE);
+    record(layout, `${tag}: the Video value shows no audio marks`, !!video && video.audio.labels.length === 0 && !video.audio.channels, JSON.stringify(video?.audio));
+    record(layout, `${tag}: the file size sits at the Video value's right end, just before the chevron, in the secondary colour`,
+        !!video?.size && video.sizeBeforeChevron && video.gap >= 0 && video.gap <= video.em && video.clear >= 0 && video.sizeColour !== video.colour,
+        JSON.stringify(video));
+
+    // The open Video list: video │ audio and extras … size at each row's end, the selected row's size the value's.
+    if (await openFileList(page, layout)) {
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(400);
+        const rows = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--add)`)].map(row => {
+            const button = row.querySelector('.jfmod-fileChoose');
+            const size = button.querySelector(':scope > .jfmod-fileSize');
+            const videoLine = row.querySelector('.jfmod-fileLine:not(.jfmod-fileLine--audio)');
+            const audioLine = row.querySelector('.jfmod-fileLine--audio');
+            const box = el => el?.getBoundingClientRect() ?? { top: 0, bottom: 0, right: 0 };
+            return { selected: row.classList.contains('jfmod-fileRow--selected'), id: button.getAttribute('data-jfmod-media-source-id'),
+                size: size?.textContent ?? null, sizeRight: Math.round(box(size).right),
+                end: Math.round(box(button).right - parseFloat(getComputedStyle(button).paddingRight)),
+                video: window.jfmodTrack(videoLine), audio: window.jfmodTrack(audioLine),
+                divider: getComputedStyle(row.querySelector('.jfmod-fileDivider')).display !== 'none',
+                videoTop: Math.round(box(videoLine).top), videoBottom: Math.round(box(videoLine).bottom), audioTop: Math.round(box(audioLine).top), audioBottom: Math.round(box(audioLine).bottom),
+                sizeTop: Math.round(box(size).top) };
+        }), PAGE);
+        const selected = rows.find(row => row.selected) ?? rows[0];
+        record(layout, `${tag}: each file's size is right-aligned at its row's end, one column for every row`, rows.length > 0
+            && rows.every(row => row.size && Math.abs(row.sizeRight - row.end) <= 1 && Math.abs(row.sizeRight - rows[0].sizeRight) <= 1),
+        JSON.stringify(rows.map(row => [row.size, row.sizeRight, row.end])));
+        record(layout, `${tag}: the selected row's size is the closed value's`, selected?.size === video?.size, `${selected?.size} / ${video?.size}`);
+        const defaultAudio = audioStreams.find(stream => stream.Index === source.DefaultAudioStreamIndex) ?? audioStreams[0];
+        const want = defaultAudio ? expectedAudio(defaultAudio) : null;
+        record(layout, `${tag}: a row's video part has no audio; its audio part is its default track's marks`, !!selected && selected.video.labels.length === 0
+            && !selected.video.channels && (!want?.labels || JSON.stringify(selected.audio.labels) === JSON.stringify(want.labels))
+            && (!want?.channels || selected.audio.channels === want.channels), JSON.stringify({ video: selected?.video, audio: selected?.audio, want }));
+        if (isMobile(layout)) {
+            record(layout, `${tag}: on a phone the audio and extras take a second line, the size stays on the first`, !!selected && !selected.divider
+                && selected.audioTop >= selected.videoBottom - 1 && selected.sizeTop < selected.audioTop, JSON.stringify(selected));
+        } else {
+            record(layout, `${tag}: video, a hairline, then audio on one line`, !!selected && selected.divider
+                && Math.abs(selected.audioTop + selected.audioBottom - selected.videoTop - selected.videoBottom) <= 4,
+            JSON.stringify(selected && [selected.videoTop, selected.videoBottom, selected.audioTop, selected.audioBottom]));
+        }
+        await activate(page, layout, '.selectVideoContainer .jfmod-videoTrigger', 'Video dropdown (close)');
+        await page.waitForTimeout(500);
+    } else {
+        record(layout, `${tag}: the Video dropdown opens`, false);
+    }
+
+    // Audio.
+    const audio = await trackField(page, 'Audio');
+    record(layout, `${tag}: Audio is drawn as a field the Video value's height, upstream's select hidden but in the page`,
+        !!audio && audio.selectInDom && audio.selectHidden && Math.abs(audio.height - audio.videoHeight) <= 1, JSON.stringify(audio && { ...audio, options: audio.options.length }));
+    if (audio && audioStreams.length > 1) {
+        const currentStream = audioStreams.find(stream => String(stream.Index) === audio.value);
+        record(layout, `${tag}: the Audio field reads its current track's language, marks and flags`, !!currentStream
+            && trackDifferences(audio.drawn, currentStream, audio.title).length === 0, currentStream ? trackDifferences(audio.drawn, currentStream, audio.title).join('; ') : 'no stream');
+        record(layout, `${tag}: with several tracks Audio is a focusable dropdown with a chevron`, audio.tag === 'BUTTON' && audio.chevron && audio.focusable);
+        const target = audio.options.find(option => option.value !== audio.value)?.value;
+        const chosen = await checkTrackList(page, layout, 'Audio', audioStreams, target);
+        if (chosen && !isMobile(layout)) {
+            // Escape closes the list without a change and gives the focus back to the field.
+            await page.keyboard.press('Enter');
+            await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+            await back(page, layout, true);
+            const after = await trackField(page, 'Audio');
+            record(layout, `${tag}: Escape closes the Audio list unchanged and focus returns to the field`, await page.locator(LISTBOX).count() === 0
+                && after.value === target && await activeMatches(page, '[data-jfmod-track-field="Audio"]'), `${after.value} ${await activeName(page)}`);
+        }
+        page.jfmodChosenAudio = chosen ? target : null;
+    } else if (audio) {
+        record(layout, `${tag}: one audio track is the same field without a chevron, not clickable and not a focus stop`,
+            audio.tag !== 'BUTTON' && !audio.chevron && !audio.focusable, JSON.stringify({ tag: audio.tag, chevron: audio.chevron, focusable: audio.focusable }));
+        const one = audioStreams[0];
+        record(layout, `${tag}: the one track's field reads its language, marks and flags`, !!one && trackDifferences(audio.drawn, one, audio.title).length === 0,
+            one ? trackDifferences(audio.drawn, one, audio.title).join('; ') : 'no stream');
+    }
+
+    // Subtitles: Off first; an entry, then Off again.
+    const subtitles = await trackField(page, 'Subtitles');
+    if (subtitles && subtitleStreams.length > 0) {
+        record(layout, `${tag}: Subtitles lists Off first`, subtitles.options[0]?.value === '-1', JSON.stringify(subtitles.options[0]));
+        const target = subtitles.options.find(option => option.value !== subtitles.value && option.value !== '-1')?.value;
+        const chosen = await checkTrackList(page, layout, 'Subtitles', subtitleStreams, target);
+        if (chosen) {
+            page.jfmodChosenSubtitle = target;
+            const off = await checkTrackList(page, layout, 'Subtitles', subtitleStreams, '-1');
+            record(layout, `${tag}: Off can be chosen again`, off?.after.value === '-1');
+            if (off) await checkTrackList(page, layout, 'Subtitles', subtitleStreams, target);
+        }
+    } else {
+        notVerified(layout, `${tag}: Subtitles dropdown`, 'this file has no subtitle streams');
+    }
+
+    // The light theme: the fields and the list on the theme's paper.
+    await page.evaluate(() => { window.jfmodTheme = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'light'); });
+    await page.waitForTimeout(400);
+    let light = null;
+    let lightPaper = null;
+    try {
+        light = await trackField(page, 'Subtitles') ?? await trackField(page, 'Audio');
+        if (light?.tag === 'BUTTON') {
+            await page.locator(`${PAGE} [data-jfmod-track-field="${light.options[0]?.value === '-1' ? 'Subtitles' : 'Audio'}"]`).click({ timeout: 5000 });
+            await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+            lightPaper = (await trackList(page))?.paper ?? null;
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(400);
+        }
+    } finally {
+        await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
+    }
+    record(layout, `${tag}: light theme: the field and its list are light`, !!light && relativeLuminance(light.background) > 0.6
+        && (!lightPaper || relativeLuminance(lightPaper) > 0.6), `${light?.background} / ${lightPaper}`);
+
+    // Play sends the chosen audio and subtitle stream, as upstream's selects do (desktop: the player is left at once).
+    if (layoutOf(layout) === 'desktop' && (page.jfmodChosenAudio || page.jfmodChosenSubtitle)) {
+        const values = await page.evaluate(sel => ({ audio: document.querySelector(`${sel} .selectAudio`)?.value, subtitles: document.querySelector(`${sel} .selectSubtitles`)?.value }), PAGE);
+        const request = page.waitForRequest(req => /PlaybackInfo/.test(req.url()) && req.method() === 'POST', { timeout: 15000 }).catch(() => null);
+        await page.locator(`${PAGE} .btnPlay:not(.hide)`).first().click({ timeout: 5000 }).catch(() => {});
+        const sent = await request;
+        const text = sent ? `${sent.url()} ${sent.postData() ?? ''}` : '';
+        const has = (key, value) => new RegExp(`${key}"?[=:]\\s*"?${value}\\b`, 'i').test(text);
+        record(layout, `${tag}: Play asks for the chosen audio and subtitle stream indexes`, !!sent && (!values.audio || has('AudioStreamIndex', values.audio))
+            && (!values.subtitles || has('SubtitleStreamIndex', values.subtitles)), `${JSON.stringify(values)} :: ${text.slice(0, 300)}`);
+        await page.evaluate(() => document.querySelector('video')?.pause());
+        await page.goto(base() + '#/home', { waitUntil: 'domcontentloaded' });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+        await page.waitForTimeout(2500);
+    }
+    page.jfmodChosenAudio = null;
+    page.jfmodChosenSubtitle = null;
+}
+
 async function checkFileless(page, layout, admin) {
     await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} .jfmod-getReleaseRaised` : null);
     await checkHeaderIcon(page, layout, 'file-less movie', admin);
@@ -1034,6 +1362,8 @@ async function checkLayout(browser, layout, user, admin) {
         } else if (admin && !only) {
             for (const check of PACK_CHECKS) notVerified(label, check, 'JELLYFINMOD_DD_PACK not set');
         }
+        for (const trackItem of (env('JELLYFINMOD_DD_TRACKS') ?? '').split(',').filter(Boolean)) await run('tracks', () => checkTracks(page, label, trackItem));
+        if (!env('JELLYFINMOD_DD_TRACKS') && wanted('tracks')) notVerified(label, 'track dropdowns', 'JELLYFINMOD_DD_TRACKS not set');
         if (ids.fileless) await run('file-less movie', () => checkFileless(page, label, admin)); else if (!only) notVerified(label, 'file-less movie', 'JELLYFINMOD_DD_FILELESS not set');
         for (const badge of badges) await run(`badge ${badge.text}`, () => checkBadge(page, label, badge));
         if (badges.length === 0 && wanted('badge')) notVerified(label, 'Played badge', 'JELLYFINMOD_DD_BADGE not set');
