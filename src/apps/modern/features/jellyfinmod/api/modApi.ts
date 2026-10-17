@@ -295,6 +295,9 @@ export const getReleaseProgress = async (api: Api, key: string, options?: AxiosR
     return response.status === 200 ? response.data : null;
 };
 
+/** Sent on `window` when a grab was accepted for holding. */
+export const GRAB_EVENT = 'jfmod-grab';
+
 /**
  * Grabs one eligible release; the server holds it before sending it to the client (user decision 2). `mode` (fill, add or
  * replace) is sent only to plugins with `acquisition.packs`.
@@ -304,6 +307,9 @@ export const grabRelease = async (api: Api,
     options?: AxiosRequestConfig): Promise<GrabOperation> => {
     const response = await api.axiosInstance.post<GrabOperation>(api.basePath + BASE + '/Releases/Grab', request,
         { ...options, headers: authorization(api) });
+    // The cards and rows of the page behind the picker start watching the queue (downloadMarks.tsx): the grab is held for a few
+    // seconds before it is in the queue, and nothing else on the page would look again.
+    window.dispatchEvent(new Event(GRAB_EVENT));
     return response.data;
 };
 
