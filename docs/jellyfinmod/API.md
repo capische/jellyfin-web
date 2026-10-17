@@ -889,7 +889,10 @@ Jellyfin already holds can be shown as Jellyfin items: the plugin writes a media
 response filter below keeps every client from offering or playing it. On by default for every TV library, a new one
 included (user, 2026-10-15: "That's the point."); an administrator turns it off per library
 (`PluginConfiguration.PlaceholderDisabledLibraryIds`). A sync writes at most 10 series per library and run, 3 seconds apart, and
-answers `pending`, the placeholders left for the next run; the sync task runs every 15 minutes. Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md).
+answers `pending`, the placeholders left for the next run. The sync task's trigger fires every 5 minutes; it writes a batch while
+placeholders are pending (a first backfill of an existing catalogue) and every 15 minutes once none are, never two batches at once,
+and gives way to a running Jellyfin library scan; its first run comes 5 minutes after the plugin starts on a server where it has
+never completed (P1.FU27). Plan: [design/missing-media-user-actions.md](design/missing-media-user-actions.md) §16.
 
 | Request | Answer |
 | --- | --- |
@@ -897,6 +900,10 @@ answers `pending`, the placeholders left for the next run; the sync task runs ev
 | `GET /JellyfinMod/Placeholders/{libraryId}/Plan` | The dry run (below): what a sync would write and remove, and what it leaves without a placeholder. Changes nothing |
 | `PUT /JellyfinMod/Placeholders/{libraryId}` `{ "enabled": false }` | Turns the library off (it is on by default) and answers the dry run; existing placeholders stay until Remove. `true` turns it back on and syncs at once (the run's plan) |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Sync` | Syncs now: writes (only with the switch on), removes stale placeholders, stamps placeholder items |
+| `GET /JellyfinMod/Placeholders/Progress` | The backfill's progress (P1.FU27): `{ titles, titlesDone, pending, running, scanRunning, lastRunAt, deferred, nextRunMinutes, libraries: [{ libraryId, name, mediaType, enabled, writable, titles, titlesDone, pending }] }`. `titles` counts the series and movies that have placeholders or still need some; `titlesDone` those with all written; `pending` the placeholders still to write. A library that is off or cannot be written counts 0 (its titles keep the mod's own cards and rows). Read now, as a dry run of each library; changes nothing |
+| `POST /JellyfinMod/Placeholders/SyncNow` | Sync Now (P1.FU27): runs the scheduled sync's next batch at once over every library (the same 10-titles-per-library bound, pause and library-scan guard) and answers the progress after it. `409 { "error": "sync_running" }` while a batch runs |
+| `GET /JellyfinMod/Placeholders/RestoreWatched` | The dry run of Restore Watched State From Retention History (P1.FU27): `{ dryRun: true, items: [{ entryId, title, seasonNumber, episodeNumber, userId, userName, itemId, playedAt }], kept, waiting, failures: [] }` (below). Changes nothing |
+| `POST /JellyfinMod/Placeholders/RestoreWatched` | Puts back the marks the dry run lists, each checked again just before; answers the same shape with `dryRun: false` and the marks restored. A second call restores nothing |
 | `GET /JellyfinMod/Placeholders/{libraryId}/Removal` | The dry run of Remove Placeholders: every placeholder of the plugin's in the library |
 | `POST /JellyfinMod/Placeholders/{libraryId}/Remove` | Deletes them (each re-checked for the marker just before, unlinked by inode) and the season folders that left empty; the switch is not changed |
 
@@ -962,6 +969,15 @@ unplayed until a restart. After a new movie or episode's first refresh, when it 
 data can be there), the plugin saves each such user's data again unchanged through `IUserDataManager`
 (`UserDataSaveReason.UpdateUserData`), which replaces the cache entry. The plugin's retention listener ignores that save (no
 completion is recorded); the Trakt plugin acts only on `TogglePlayed`.
+
+**Restore Watched State From Retention History (P1.FU27).** For a movie or episode retention reclaimed (state `reclaimed`) whose
+placeholder Jellyfin holds, each user the plugin's own completion record shows as having finished it (played, a completion date,
+not revoked by an unwatched state) gets the placeholder marked played with the record's date (Jellyfin's last played date, else
+when the completion began), through `IUserDataManager` with reason `UpdateUserData` under the plugin's quiet-save flag (no
+retention completion, nothing sent by the Trakt plugin). Never automatic. Only where Jellyfin holds **no** user data row of that
+user for the placeholder: data Jellyfin re-attached by key, or a mark or unmark the user made since, is left alone (`kept`); a
+placeholder Jellyfin has not refreshed yet, or a reclaimed title with no placeholder item yet, is `waiting`. The completion record
+is the only source; nothing is inferred. Each title restored gets a `watched_restored` history line.
 
 **The swap (P1.FU25).** The import removes the episode's placeholders only after its file is linked, verified and recorded, and
 before it asks Jellyfin to scan: from the series folder and every season folder in it, so a stub in another folder than the

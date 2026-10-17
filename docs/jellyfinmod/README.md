@@ -521,6 +521,11 @@ All fixable without changing a language.
   series with nothing on disk its own folder of placeholder episodes, in the library folder the import would use; the title's
   Jellyfin item is then its one card everywhere (Browse attaches the entry to it), reconciliation never binds a placeholder movie
   or backfills an entry from placeholders alone, and removing a never-imported title from the catalog removes its placeholders.
+  Rollout (P1.FU27, 2026-10-16, built, not accepted): on by default; an existing catalogue is backfilled in batches (up to 10
+  titles per library every 5 minutes while some are pending, then every 15; never during a Jellyfin library scan; the first batch
+  5 minutes after the plugin starts), with the progress and Sync Now in Settings; the mod's own missing cards, rows and pages are
+  the fallback wherever no placeholder exists (library off, read-only folder, unaired episode, special, batch not written yet).
+  An administrator can restore watched marks lost with a reclaimed title's Jellyfin data from the plugin's retention records.
 - **2026-09-04** — Torznab + direct download-client APIs, not a hard dependency on
   Prowlarr/Jackett (which still work, since they speak Torznab).
 - **2026-09-04** — ~~Catalog gets its own web section~~ ~~Superseded same day (§9): the catalog
