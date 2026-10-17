@@ -959,7 +959,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `/Shows/NextUp`, answers `PlaybackInfo` with `NotAllowed` and refuses downloads; no server change is needed.
   Plan: [`design/missing-media-user-actions.md`](design/missing-media-user-actions.md). Slices: **P1.FU24** stubs for
   missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
-  **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only; **P1.FU28** Next Up's
+  **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only (built, not accepted
+  2026-10-17); **P1.FU28** Next Up's
   next real episode and play queues that skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
@@ -1137,6 +1138,66 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `missing-as-media.mjs` on the same instance: 29 checks, 0 failed (Next Up now answers S01E05). Not run: a real native app
   (Swiftfin, the Jellyfin iOS app, Infuse, Kodi, Android TV), Phase 5 in the Linux container (the filter is not in its host),
   the TV at 1280×720, 28096 and the Pi, Codex review.
+  **P1.FU27, built (not accepted) 2026-10-17: the existing catalogue is backfilled with placeholders, with progress, Sync Now
+  and a watched restore; the mod's own missing surfaces become the fallback.** Owner: Phase 1; touches Phase 3/10 (the restore,
+  [PHASE10.md](PHASE10.md) S21) and Phase 4 (the download block). Plugin `feat/placeholder-backfill` from `feat/placeholder-queues`
+  `c3a9f94`: `25ae18d` (code), `0549abb` (suites); web `feat/placeholder-backfill` from `0707607aef`: the code, runner and docs
+  commits. Design and what is where: [design §16](design/missing-media-user-actions.md). **Automatic:** the sync task's trigger
+  fires every 5 minutes; while placeholders are pending each run writes a batch (10 titles per library, 3 s apart; unchanged),
+  else every 15 minutes; never two batches at once (Sync Now answers 409), never during a Jellyfin library scan (the batch waits,
+  or ends after the title in hand), one report of the changed folders per run. **Found on Jellyfin 12.0.0 and fixed:** an interval
+  task that has never completed first runs one hour after start and a queued run does not re-arm it (a starter queues the first
+  batch 5 minutes after start and re-arms the triggers); Jellyfin re-arms at `max(last end, last start, now + 1 min) + interval`,
+  so the busy pace is one batch every 6 minutes; a library folder that was empty at its last scan has no item and a report of it
+  refreshes nothing (a run that wrote into one asks for a library scan once). **Needs the administrator only for:** turning a
+  library off, Sync Now (optional), Remove Placeholders, Restore Watched State From Retention History (dry run, then a
+  confirmation). Settings *Missing Episodes* shows `Placeholders: N of M titles done · P placeholders pending` and the pace. API:
+  [API.md](API.md) `Placeholders/Progress`, `SyncNow`, `RestoreWatched`. **Web:** a placeholder episode's or movie's Jellyfin page
+  shows the download block (P1.FU20) where a file's page has its track selectors; the mod's missing season cards and episode rows
+  show only where Jellyfin has no item, and an item that appears mid-visit replaces them when upstream's own list (drawn again by
+  the mod, upstream's file unpatched) shows it, without a reload and never two rows for one episode; the season card's count adds
+  the mod's own rows; the mod's own episode, season and title pages open Jellyfin's page once a placeholder appears. No code
+  removed (no fallback is unreachable).
+  **Checks:** plugin build; Phase 1 smoke (new: Progress, Sync Now and the restore administrators only, their shapes), Phase 2 and
+  Phase 10 on macOS pass; Phase 5 in the Linux container passes with the new `BackfillScenarios` (25 pre-placeholder series and a
+  reclaimed one converge in three Sync Now batches of at most 10 with the counters following, a running scan defers a batch with
+  nothing written, each batch reports once at the library folder, a second Sync Now during a batch is 409, one stub per episode;
+  the restore waits before Jellyfin's first refresh, lists only the user with no data with the recorded date, ignores a revoked
+  record and an unreclaimed episode, saves exactly that mark, a second run none, one history line) and Phase 3 protection passes;
+  web typecheck, eslint on the changed files and the runner, production build. **Live on local environment charlie** (Jellyfin
+  12.0.0, no TMDB token: Jellyfin's TMDb connection; lease held by this session; reset to the baseline afterwards): a synthetic
+  catalogue seeded into the plugin database with the container stopped, of 191 real TMDB titles found through the plugin's
+  discovery: 130 file-less series (3 aired episodes each), 10 held series with a file in the writable Shows folder (3 also an
+  S01E02), 6 reclaimed series and 5 reclaimed movies with completion records, 40 file-less movies. **Convergence:** 480
+  placeholders pending at start, 191 of 191 titles done in 15 batches (12 scheduled, 3 Sync Now from the runners): the first 5 min after start, then one
+  every 6 min; 54 s per batch while both libraries had work, 27 s once only TV had; at the busy pace a catalogue this size takes
+  about 5 + 14 × 6 = 89 minutes (the Mac slept through part of the run, so the wall clock is not the measure). 487 placeholders
+  (TMDB list loads added some) all Jellyfin items, no duplicate file or item at any of 140 samples. **Scan load:** no full library
+  scan except the one asked for the empty Movies folder; Jellyfin refreshes each new placeholder, its season and its series once
+  through its own file monitor (470 refresh lines for 487 placeholders, peak 124 in a minute) plus one metadata-named pass later;
+  container memory rose with the item count from 253 to a median of 630 MiB (max 745), CPU median 0.3 %. **Reclaimed titles:**
+  every one got its placeholder. Three S01E02 files marked watched by oleksii (genuine `TogglePlayed` completion records), deleted
+  and marked reclaimed: parked within 90 days (The Night Shift), the placeholder came back played, play count 1, original date, by
+  key; parked rows aged past 90 days and Jellyfin's *Clean up user data* run (Sunday Night Theatre), or the rows deleted (The Night
+  Of), it came back unplayed. Jellyfin's cleanup deletes detached rows older than 90 days only when run: it has no default trigger
+  in 12.0. Restore dry run: 13 marks (those two and the 11 seeded reclaimed titles) with their recorded dates, 1 kept (The Night
+  Shift), 0 waiting; applied: all 13 played with their dates; a second run restores nothing (14 kept). **Found and fixed:**
+  Jellyfin's `SaveUserData` refreshes only the item instance it is given, so a save through a freshly loaded copy left two
+  placeholders that had just been read answering unplayed until a restart; the restore now saves through the cached instance
+  (rechecked: a cached placeholder read played at once on its page and in its season list). Runner `placeholder-backfill.mjs`
+  (queue answers intercepted for the block, everything else real): 93 checks per browser on desktop, phone and TV 1080 as oleksii and nata (the block's Not Downloaded, Downloading, a season
+  pack's own file with its line and dots, Importing, Failed, the actions per role, no Play; a placeholder movie's page; the ring on
+  the placeholder's own season row; one row per episode and one card per season with the right count; search once; Peep Show's
+  read-only fallback rows; Settings' progress line, Sync Now and Restore Watched State's dry run): Chromium 92 of 93 and Chrome 92
+  of 93, the one failure in each the intermittent page error below. Mid-visit swap (desktop): a placeholder removed
+  inside the container, the season page showed the mod's row, Sync Now wrote it again and Jellyfin's row replaced the mod's with no
+  reload and never both at once (sampled every 500 ms), 4 checks, 0 failed. **Found, not fixed (outside this slice):** on TV an intermittent
+  `selectedIndex` page error, `maintabsmanager.selectedIndex` called by the mod's Home page (`routes/HomePage.tsx`, unchanged here)
+  resuming its tabs after the runner had already left Home; seen in Chrome and once in Chromium (P1.FU26 saw it too).
+  **Not run:** the Pi and 28096 (a measurement of 28096's 105 shows), a real TV and real native apps, the TV at 1280×720, Codex
+  review; the switch-off-then-Remove path in the browser (Remove Placeholders itself is P1.FU24's, unchanged). Fixture artifacts
+  that are not product behaviour: the seed gave episodes made-up TMDB ids, so opening a series page (P1.FU9's list load) added a
+  second plugin row per position; a file deleted from the macOS side stayed visible to `stat` inside OrbStack's VM.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
