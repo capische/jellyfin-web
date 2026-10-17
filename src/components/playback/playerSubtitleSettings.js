@@ -1,3 +1,4 @@
+import escapeHtml from 'escape-html';
 import { attachSliderValue } from 'components/subtitlesettings/sliderValue';
 import { DEFAULT_SUBTITLE_POSITION } from 'components/subtitlesettings/subtitlePlacement';
 import layoutManager from 'components/layoutManager';
@@ -17,6 +18,22 @@ import '../../elements/emby-slider/emby-slider';
 import './playerSubtitleSettings.scss';
 import template from './playerSubtitleSettings.template.html';
 
+// The TV colour list, as in Settings > Subtitles on TV.
+const SUBTITLE_TEXT_COLOURS = [
+    ['#ffffff', 'SubtitleWhite'],
+    ['#ebebeb', 'SubtitleOffWhite'],
+    ['#d3d3d3', 'SubtitleLightGray'],
+    ['#808080', 'SubtitleGray'],
+    ['#505050', 'SubtitleDarkGray'],
+    ['#ffff00', 'SubtitleYellow'],
+    ['#008000', 'SubtitleGreen'],
+    ['#00ffff', 'SubtitleCyan'],
+    ['#0000ff', 'SubtitleBlue'],
+    ['#ff00ff', 'SubtitleMagenta'],
+    ['#ff0000', 'SubtitleRed'],
+    ['#000000', 'SubtitleBlack']
+];
+
 const PROFILE_KEYS = {
     primary: undefined,
     secondary: SECONDARY_SUBTITLE_APPEARANCE_KEY
@@ -31,6 +48,9 @@ export default class PlayerSubtitleSettings {
         // and the video behind it stay visible while picking a value.
         this.element.classList.add('playerSubtitleSettings', 'boxedSelectMenus');
         this.element.innerHTML = globalize.translateHtml(template, 'core');
+        if (layoutManager.tv) {
+            this.useColourList();
+        }
 
         this.onClick = this.onClick.bind(this);
         this.onFieldChange = this.onFieldChange.bind(this);
@@ -96,12 +116,35 @@ export default class PlayerSubtitleSettings {
         return PROFILE_KEYS[this.activeProfile];
     }
 
+    /**
+     * A TV has no colour picker to open, so the colour input does nothing there. Swaps it for
+     * the list Settings > Subtitles offers on TV, each colour with its dot, and a dot in the
+     * closed field showing the current one.
+     */
+    useColourList() {
+        const input = this.element.querySelector('[data-setting="textColor"]');
+        const container = input.closest('.selectContainer');
+        const options = SUBTITLE_TEXT_COLOURS
+            .map(([value, key]) => `<option value="${value}" data-swatch="${value}">${escapeHtml(globalize.translate(key))}</option>`)
+            .join('');
+        container.classList.add('playerSubtitleSettings-colour');
+        container.innerHTML = `<select is="emby-select" class="playerSubtitleSettings-field" data-setting="textColor" label="${escapeHtml(globalize.translate('LabelTextColor'))}">${options}</select>`
+            + '<span class="playerSubtitleSettings-colourDot" aria-hidden="true"></span>';
+    }
+
+    updateColourDot() {
+        const dot = this.element.querySelector('.playerSubtitleSettings-colourDot');
+        if (dot) {
+            dot.style.backgroundColor = this.element.querySelector('[data-setting="textColor"]').value || 'transparent';
+        }
+    }
+
     loadProfile() {
         const settings = userSettings.getSubtitleAppearanceSettings(this.appearanceKey);
         const fields = this.element.querySelectorAll('.playerSubtitleSettings-field');
         fields.forEach((field) => {
             const value = settings[field.dataset.setting];
-            if (field.type === 'color') {
+            if (field.dataset.setting === 'textColor') {
                 field.value = value || '#ffffff';
             } else if (field.dataset.setting === 'verticalPosition') {
                 field.value = value ?? 0;
@@ -115,6 +158,7 @@ export default class PlayerSubtitleSettings {
         });
 
         this.sliderValue?.update();
+        this.updateColourDot();
     }
 
     selectProfile(profile) {
@@ -142,6 +186,9 @@ export default class PlayerSubtitleSettings {
         const settings = userSettings.getSubtitleAppearanceSettings(this.appearanceKey);
         settings[field.dataset.setting] = field.value;
         userSettings.setSubtitleAppearanceSettings(settings, this.appearanceKey);
+        if (field.dataset.setting === 'textColor') {
+            this.updateColourDot();
+        }
         this.options.player?.updateSubtitleAppearance?.();
     }
 

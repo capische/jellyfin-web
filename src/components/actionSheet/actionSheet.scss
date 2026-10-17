@@ -106,6 +106,18 @@
     justify-content: flex-start;
 }
 
+/* A colour choice's dot, e.g. subtitle text colours. The ring keeps white and
+   black dots visible on any background. */
+.actionSheetItemSwatch {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.7em;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
 .actionSheetItemAsideText {
     opacity: 0.7;
     font-size: 90%;

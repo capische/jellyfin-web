@@ -20,8 +20,11 @@ interface OptionItem {
     name?: string;
     secondaryText?: string;
     selected?: boolean;
+    /** A CSS hex colour shown as a dot before the name; an <option> sets it as data-swatch. */
+    swatch?: string;
     textContent?: string;
     value?: string;
+    dataset?: DOMStringMap;
 }
 
 interface TitleButton {
@@ -324,6 +327,10 @@ export function show(options: Options) {
         html += '<div class="listItemBody actionsheetListItemBody">';
 
         html += '<div class="listItemBodyText actionSheetItemText">';
+        const swatch = item.swatch || item.dataset?.swatch;
+        if (swatch && /^#[0-9a-f]{3,8}$/i.test(swatch)) {
+            html += `<span class="actionSheetItemSwatch" style="background-color:${swatch}" aria-hidden="true"></span>`;
+        }
         html += escapeHtml(item.name || item.textContent || item.innerText);
         html += '</div>';
 

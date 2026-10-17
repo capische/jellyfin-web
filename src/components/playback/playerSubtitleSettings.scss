@@ -267,3 +267,24 @@ $panel-background: rgba(12, 12, 12, 0.86);
         margin-top: 0.75em;
     }
 }
+
+/* TV colour list (see useColourList): a dot before the chosen colour's name. */
+.playerSubtitleSettings-colour {
+    position: relative;
+}
+
+/* Out-ranks emby-select's own [dir] padding rule. */
+.playerSubtitleSettings .playerSubtitleSettings-colour .emby-select {
+    padding-left: 2.6em;
+}
+
+.playerSubtitleSettings-colourDot {
+    position: absolute;
+    left: 0.75em;
+    bottom: 0.62em;
+    width: 1.15em;
+    height: 1.15em;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 0 0 3px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
