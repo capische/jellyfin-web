@@ -249,9 +249,10 @@ const sameCovers = (a: SeasonCover[], b: SeasonCover[]) =>
 
 /**
  * The covers of upstream's own season cards in the list, by season number, found again whenever upstream redraws the list (it
- * replaces its cards, so a mark drawn into an old cover would be gone).
+ * replaces its cards, so a mark drawn into an old cover would be gone). Each card of a numbered season is stamped with the entry
+ * and its number, so its download is drawn with its first frame, before Jellyfin is asked where the season sits (P4.FU10).
  */
-const useNativeSeasonCovers = (container: Element | null, natives: NativeOrder) => {
+const useNativeSeasonCovers = (container: Element | null, natives: NativeOrder, entryId: string) => {
     const [covers, setCovers] = useState<SeasonCover[]>([]);
     const latest = useRef(natives);
     latest.current = natives;
@@ -265,6 +266,10 @@ const useNativeSeasonCovers = (container: Element | null, natives: NativeOrder) 
                 const season = latest.current.get(normalId(card.getAttribute('data-id') ?? ''));
                 const cover = card.querySelector('.cardScalable');
                 if (season !== undefined && cover) found.push([season, cover]);
+                if (season !== undefined && season > 0 && card.getAttribute('data-jfmod-entry-id') !== entryId) {
+                    card.setAttribute('data-jfmod-entry-id', entryId);
+                    card.setAttribute('data-jfmod-season', String(season));
+                }
             }
             setCovers(old => (sameCovers(old, found) ? old : found));
         };
@@ -272,7 +277,7 @@ const useNativeSeasonCovers = (container: Element | null, natives: NativeOrder) 
         const observer = new MutationObserver(read);
         observer.observe(container, { childList: true });
         return () => observer.disconnect();
-    }, [container, nativeKey]);
+    }, [container, nativeKey, entryId]);
     return covers;
 };
 
@@ -373,7 +378,7 @@ export const MissingSeasonCards: FC<SeasonCardsProps> = ({ api, userId, serverId
         return element;
     }, [detail.entry.id, serverId]);
     const elements = useOrderedSlots(container, slots, natives, make);
-    const covers = useNativeSeasonCovers(container, natives);
+    const covers = useNativeSeasonCovers(container, natives, detail.entry.id);
     const pickerFor = usePickerFor(api, detail, onChanged);
     // A season is searched as a pack, as on its own page: only where the plugin serves packs.
     const packs = usePluginCapabilities(api, canAcquire).includes(PACKS_CAPABILITY);
@@ -464,11 +469,12 @@ const samePlaceholderRows = (a: PlaceholderRow[], b: PlaceholderRow[]) =>
 /**
  * Upstream's rows of placeholder episodes (a media stub Jellyfin calls `IsPlaceHolder`, P1.FU24): each is marked
  * `data-jfmod-placeholder` (its Play and "Ends at" hidden, placeholderPage.scss) and gets a host for the mark at its end, just
- * before upstream's buttons, as a library list row's (P1.FU11). Found again whenever upstream redraws its list.
+ * before upstream's buttons, as a library list row's (P1.FU11). Found again whenever upstream redraws its list. Each is stamped
+ * with its entry and episode, so its download is drawn with its first frame (P4.FU10).
  */
-const usePlaceholderRows = (container: Element | null, placeholders: Set<string>) => {
+const usePlaceholderRows = (container: Element | null, placeholders: Map<string, EntryEpisode>) => {
     const [rows, setRows] = useState<PlaceholderRow[]>([]);
-    const key = Array.from(placeholders).join(',');
+    const key = Array.from(placeholders, ([id, episode]) => id + ':' + episode.id).join(',');
     useLayoutEffect(() => {
         if (!container || !placeholders.size) {
             setRows(old => (old.length ? [] : old));
@@ -480,6 +486,11 @@ const usePlaceholderRows = (container: Element | null, placeholders: Set<string>
                 const id = normalId(row.getAttribute('data-id') ?? '');
                 if (row.classList.contains('jfmod-missingSlot') || !placeholders.has(id)) continue;
                 if (!row.hasAttribute('data-jfmod-placeholder')) row.setAttribute('data-jfmod-placeholder', '');
+                const episode = placeholders.get(id)!;
+                if (row.getAttribute('data-jfmod-episode-id') !== episode.id) {
+                    row.setAttribute('data-jfmod-entry-id', episode.entryId);
+                    row.setAttribute('data-jfmod-episode-id', episode.id);
+                }
                 const content = row.querySelector(':scope > .listItem-content') ?? row;
                 let host = content.querySelector<HTMLElement>(':scope > .jfmod-rowMarkHost');
                 if (!host) {
@@ -551,7 +562,7 @@ export const MissingEpisodeRows: FC<EpisodeRowsProps> = ({ api, userId, view, de
         }
         return byId;
     }, [detail.episodes, jellyfin.data, season]);
-    const placeholderRows = usePlaceholderRows(container, useMemo(() => new Set(placeholderEpisodes.keys()), [placeholderEpisodes]));
+    const placeholderRows = usePlaceholderRows(container, placeholderEpisodes);
     // The whole row opens the episode's page (P1.FU15), as upstream's rows open theirs: on the TV the row is a button, a focus
     // stop like upstream's, and its administrator's icon a second one; elsewhere a click anywhere on it, except on the icon
     // (which stops its own click) or the title's link (which follows itself).

@@ -9,7 +9,7 @@ import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
 import shell from 'scripts/shell';
 
-import { removeQueueRow, retryImport } from '../api/modApi';
+import { cancelGrab, removeQueueRow, retryImport } from '../api/modApi';
 import { actionErrorMessage, isRetryable, QUEUE_ROUTE, queueRowTitle } from '../constants/queue';
 import type { QueueRow, RemoveQueueRequest } from '../types/queue';
 
@@ -79,9 +79,22 @@ interface RowMenuOptions {
     onChanged: (row: QueueRow, action: 'remove' | 'retry') => void;
 }
 
+/** A grab the client has not accepted yet (P4.FU10): queued, with nothing in the client to remove. */
+export const isHeldRow = (row: QueueRow) => row.importState === 'held' || row.importState === 'submitting';
+
+/**
+ * Cancels a held grab or removes a download from the queue (the client forgets the torrent, nothing is deleted): what the
+ * missing episode page's Cancel Download does.
+ */
+export const cancelDownload = (api: Api, row: QueueRow) => (isHeldRow(row) ?
+    cancelGrab(api, row.grabId).then(() => undefined) :
+    removeQueueRow(api, row.id, { removeFromClient: true, blocklist: false }).then(() => undefined));
+
 /** Actions a row offers the caller. Ordinary users get none (PHASE5 I7: the writes are admin-only). */
 export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {
     if (!isAdmin) return [];
+    // A held grab is cancelled; one being sent can be neither cancelled nor removed until the client answers.
+    if (isHeldRow(row)) return row.importState === 'held' ? [{ id: 'cancel', name: 'Cancel', icon: 'close' }] : [];
     const items = [{ id: 'remove', name: 'Remove', icon: 'delete' }];
     if (isRetryable(row.state)) items.push({ id: 'retry', name: 'Retry', icon: 'refresh' });
     if (row.client?.openUrl) items.push({ id: 'open', name: 'Open in Client', icon: 'open_in_new' });
@@ -100,6 +113,16 @@ export const openQueueRowMenu = async ({ api, row, isAdmin, positionTo, onChange
     }
     if (id === 'open' && row.client?.openUrl) {
         shell.openUrl(row.client.openUrl, '_blank');
+        return;
+    }
+    if (id === 'cancel') {
+        try {
+            await cancelGrab(api, row.grabId);
+            toast('Cancelled.');
+            onChanged(row, 'remove');
+        } catch (error) {
+            toast(actionErrorMessage(error, 'It could not be cancelled. Please try again.'));
+        }
         return;
     }
     if (id === 'retry') {

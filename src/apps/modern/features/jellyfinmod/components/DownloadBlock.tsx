@@ -7,12 +7,11 @@ import LinkButton from 'elements/emby-button/LinkButton';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
 
-import { removeQueueRow } from '../api/modApi';
 import { airDateLong, episodeMark } from '../constants/fileState';
 import { actionErrorMessage, describeDownload, downloadProgress, type DownloadProgress, etaText, formatDuration, QUEUE_ROUTE,
     QUEUE_STATE_LABEL, reasonMessage } from '../constants/queue';
 import { packEpisodeView, useQueueRowFor, useQueueVisible } from '../hooks/useQueue';
-import { confirmTorrentRemoval } from '../integration/queueActions';
+import { cancelDownload, confirmTorrentRemoval, isHeldRow } from '../integration/queueActions';
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
 import { raisedButtonClass } from '../utils/flatButton';
@@ -261,7 +260,8 @@ const Actions: FC<ActionsProps> = ({ state, isAdmin, canAcquire, removing, onCan
     const queueVisible = useQueueVisible();
     const queue = queueVisible && (isWorking(kind) || kind === 'failed');
     const search = kind === 'failed' && canAcquire;
-    const cancel = isAdmin && !!state.row && isCancellable(kind);
+    // A grab being sent to the client can be neither cancelled nor removed until it answers (P4.FU10).
+    const cancel = isAdmin && !!state.row && isCancellable(kind) && state.row.importState !== 'submitting';
     const get = kind === 'none' && canAcquire;
     if (!queue && !search && !cancel && !get) return null;
     return <div className='jfmod-dlblock-actions'>
@@ -322,9 +322,10 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
             void queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === 'JellyfinMod' && query.queryKey[3] === 'Queue' });
             changed.current();
         };
-        confirmTorrentRemoval(row.releaseTitle).then(() => {
+        // A held grab has no torrent yet: it is cancelled without the torrent's question (P4.FU10).
+        (isHeldRow(row) ? Promise.resolve() : confirmTorrentRemoval(row.releaseTitle)).then(() => {
             setRemoving(true);
-            return removeQueueRow(api, row.id, { removeFromClient: true, blocklist: false })
+            return cancelDownload(api, row)
                 .then(removed, (error: unknown) => toast(actionErrorMessage(error, 'It could not be removed. Please try again.')))
                 .finally(() => setRemoving(false));
         }, () => undefined).finally(() => {

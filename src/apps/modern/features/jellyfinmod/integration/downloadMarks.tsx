@@ -6,8 +6,8 @@ import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useApi } from 'hooks/useApi';
 
 import { getEntries, GRAB_EVENT } from '../api/modApi';
-import { aggregateProgress, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
-import { currentRowFor, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
+import { aggregateProgress, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
+import { currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
 import { paintDownloadMark } from '../components/DownloadStateMark';
@@ -37,6 +37,14 @@ import '../components/downloadProgress.scss';
 const TARGETS = '.card[data-id], .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
 const MEDIA_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
 
+/** What a card or row is drawn on at once for: itself, a mark in it (Not Downloaded, Unaired), or its entry's stamp. */
+const URGENT = TARGETS + ', .jfmod-mark';
+const STAMPS = ['data-jfmod-entry-id', 'data-jfmod-episode-id', 'data-jfmod-season'];
+
+/** A mutation that adds a card, a row or a mark, or stamps a card or row with its entry. */
+const isUrgent = (record: MutationRecord) => (record.type === 'attributes' ? true : Array.from(record.addedNodes)
+    .some(node => node instanceof Element && (node.matches(URGENT) || !!node.querySelector(URGENT))));
+
 const normalId = (id: string | null | undefined) => (id ?? '').replace(/-/g, '').toLowerCase();
 
 /** Where a native season or episode sits, read from Jellyfin once per item: its series and its numbers. */
@@ -64,25 +72,28 @@ const targetOf = (element: HTMLElement): Target | null => {
 
 /** The queue's rows, read for the lookups every card and row of one pass needs. */
 interface QueueIndex {
+    /** The rows on their way (no seeding copy). */
     items: QueueRow[];
+    /** Every row, finished imports included: whether a download a card or row showed ended with its file. */
+    all: QueueRow[];
     /** An entry's Jellyfin item (a movie or a series) to the entry. */
     entryByItem: Map<string, string>;
     /** Whether any row is about an episode, so native seasons and episodes are worth placing. */
     episodic: boolean;
 }
 
-const indexQueue = (items: QueueRow[], bound: Map<string, string[]>, seriesEntries: Map<string, string | null>): QueueIndex => {
+const indexQueue = (items: QueueRow[], all: QueueRow[], bound: Map<string, string[]>, seriesEntries: Map<string, string | null>): QueueIndex => {
     const entryByItem = new Map<string, string>();
     for (const [seriesId, entryId] of seriesEntries) {
         if (entryId) entryByItem.set(seriesId, entryId);
     }
-    for (const row of items) {
+    for (const row of all) {
         if (row.entry?.jellyfinItemId) entryByItem.set(normalId(row.entry.jellyfinItemId), row.entry.id);
     }
     for (const [entryId, itemIds] of bound) {
         for (const itemId of itemIds) entryByItem.set(itemId, entryId);
     }
-    return { items, entryByItem, episodic: items.some(row => !!row.episode || !!row.pack) };
+    return { items, all, entryByItem, episodic: all.some(row => !!row.episode || !!row.pack) };
 };
 
 /** An episode's current row, a pack's only while it holds the episode; `own` is the episode's own file of a pack (P4.FU5). */
@@ -92,59 +103,99 @@ const heldRow = (queue: QueueIndex, entryId: string, episodeId: string, own: boo
     return own ? packEpisodeView(row, episodeId) : row;
 };
 
-/**
- * The current row of each episode of an entry (of one season, or one episode number, when given) that a row names, a pack's
- * once for every episode it still holds, so a series' or season's mean weighs a pack by its episodes. One episode (a number
- * given) shows its own file of a pack; a season or series keeps the pack's whole torrent.
- */
-const episodeRows = (queue: QueueIndex, entryId: string, season: number | null, number: number | null = null) => {
+/** The episodes of an entry (of one season, or one episode number, when given) that the rows name. */
+const namedEpisodes = (items: QueueRow[], entryId: string, season: number | null, number: number | null) => {
     const ids = new Set<string>();
     const wanted = (seasonNumber: number, episodeNumber: number) =>
         (season === null || seasonNumber === season) && (number === null || episodeNumber === number);
-    for (const row of queue.items) {
+    for (const row of items) {
         if (row.entry?.id !== entryId) continue;
         if (row.episode && wanted(row.episode.seasonNumber, row.episode.episodeNumber)) ids.add(row.episode.id);
         for (const episode of row.pack?.episodes ?? []) {
             if (wanted(episode.seasonNumber, episode.episodeNumber)) ids.add(episode.episodeId);
         }
     }
+    return ids;
+};
+
+/**
+ * The current row of each episode of an entry (of one season, or one episode number, when given) that a row names, a pack's
+ * once for every episode it still holds, so a series' or season's mean weighs a pack by its episodes. One episode (a number
+ * given) shows its own file of a pack; a season or series keeps the pack's whole torrent.
+ */
+const episodeRows = (queue: QueueIndex, entryId: string, season: number | null, number: number | null = null) => {
     const rows: QueueRow[] = [];
-    for (const id of ids) {
+    for (const id of namedEpisodes(queue.items, entryId, season, number)) {
         const row = heldRow(queue, entryId, id, number !== null);
         if (row) rows.push(row);
     }
     return rows;
 };
 
-/** A file-less title: its own row (a movie) or its episodes' (a series). */
-const entryRows = (queue: QueueIndex, entryId: string) => {
-    const own = currentRowFor(queue.items, entryId, null);
-    return own ? [own] : episodeRows(queue, entryId, null);
-};
+/**
+ * What one card or row stands for in the queue's terms: an entry, and within it a season, an episode number or an episode;
+ * all null for a whole title. Null when the queue names nothing of it, undefined while a native season or episode is not
+ * placed yet.
+ */
+interface Scope {
+    entryId: string;
+    season: number | null;
+    number: number | null;
+    episodeId: string | null;
+}
 
-/** A native season's or episode's rows, by its series and numbers; undefined while it is not placed yet. */
-const placedRows = (queue: QueueIndex, type: string, placement: Placement | null | undefined): QueueRow[] | undefined => {
-    if (placement === undefined) return undefined;
-    const entryId = placement ? queue.entryByItem.get(normalId(placement.seriesId)) : undefined;
-    if (!placement || !entryId || placement.season === null) return [];
-    return episodeRows(queue, entryId, placement.season, type === 'Episode' ? placement.episode : null);
-};
-
-/** The rows one card or row stands for; undefined while a native season or episode is not placed yet. */
-const rowsOf = (queue: QueueIndex, target: Target, placements: Map<string, Placement | null>): QueueRow[] | undefined => {
-    if ('entryId' in target) {
-        if (target.episodeId) {
-            const row = currentRowFor(queue.items, target.entryId, target.episodeId);
-            return row ? [packEpisodeView(row, target.episodeId)] : [];
-        }
-        return target.season === null ? entryRows(queue, target.entryId) : episodeRows(queue, target.entryId, target.season);
-    }
+const scopeOf = (queue: QueueIndex, target: Target, placements: Map<string, Placement | null>): Scope | null | undefined => {
+    if ('entryId' in target) return { entryId: target.entryId, season: target.episodeId ? null : target.season, number: null, episodeId: target.episodeId };
     if (target.type === 'Movie' || target.type === 'Series') {
         const entryId = queue.entryByItem.get(target.itemId);
-        return entryId ? entryRows(queue, entryId) : [];
+        return entryId ? { entryId, season: null, number: null, episodeId: null } : null;
     }
-    return queue.episodic ? placedRows(queue, target.type, placements.get(target.itemId)) : [];
+    if (!queue.episodic) return null;
+    const placement = placements.get(target.itemId);
+    if (placement === undefined) return undefined;
+    const entryId = placement ? queue.entryByItem.get(normalId(placement.seriesId)) : undefined;
+    if (!placement || !entryId || placement.season === null) return null;
+    return { entryId, season: placement.season, number: target.type === 'Episode' ? placement.episode : null, episodeId: null };
 };
+
+/** The rows of a scope: one episode's own (its file of a pack), a title's own row (a movie), or the episodes' of a season or series. */
+const rowsIn = (queue: QueueIndex, scope: Scope): QueueRow[] => {
+    if (scope.episodeId) {
+        const row = currentRowFor(queue.items, scope.entryId, scope.episodeId);
+        return row ? [packEpisodeView(row, scope.episodeId)] : [];
+    }
+    const own = scope.season === null && scope.number === null ? currentRowFor(queue.items, scope.entryId, null) : undefined;
+    return own ? [own] : episodeRows(queue, scope.entryId, scope.season, scope.number);
+};
+
+/**
+ * Whether the downloads a card or row showed (by their grabs) ended with their files: everything of the scope that the rows name
+ * is in the library now, by one of those grabs. A cancelled or failed download, or an older import, is not.
+ */
+const scopeDone = (queue: QueueIndex, scope: Scope, grabs: Set<string>) => {
+    const by = (row: QueueRow | undefined) => !!row && grabs.has(row.grabId);
+    if (scope.episodeId) return by(finishedRow(queue.all, scope.entryId, scope.episodeId));
+    if (scope.season === null && scope.number === null && currentRowFor(queue.all, scope.entryId, null)) {
+        return by(finishedRow(queue.all, scope.entryId, null));
+    }
+    const ids = Array.from(namedEpisodes(queue.all, scope.entryId, scope.season, scope.number));
+    const rows = ids.map(id => finishedRow(queue.all, scope.entryId, id));
+    return rows.length > 0 && rows.every(row => !!row) && rows.some(by);
+};
+
+/**
+ * A download that ended with its file, on a card or row that still shows the title without one (P4.FU10): Jellyfin has not
+ * drawn the new item yet, so the page still holds its Not Downloaded mark. It keeps reading as importing until the page does,
+ * at most this long, so the cloud never comes back between the import and the file.
+ */
+const IMPORTED_CARRY_MS = 3 * 60 * 1000;
+
+/** While a page's first queue read is under way, its Not Downloaded marks wait hidden (downloadProgress.scss), this long at most. */
+const READING_CLASS = 'jfmod-dlReading';
+const READING_MS = 1500;
+const endReading = () => document.documentElement.classList.remove(READING_CLASS);
+const IMPORTED = describeDownload('importing', 100, false);
+const showsNoFile = (element: HTMLElement) => !!element.querySelector('.jfmod-mark--none, .jfmod-mark--unaired');
 
 /**
  * A card's download: the mean of what is on its way (a failed, blocked or finished download is not). A row's: one episode's or
@@ -397,36 +448,120 @@ const useBoundItems = (api: Api | undefined, userId: string | undefined, onBound
     return { bound: bound.current, bind };
 };
 
+/**
+ * What showed a download on this visit, by what it stands for (an entry and its season, episode number or episode), so a card or
+ * row upstream draws again keeps it: the grabs it was, and when it was seen to end with its file (0 while it runs).
+ */
+type Carried = Map<string, { grabs: Set<string>; ended: number }>;
+const keyOf = (scope: Scope) => [scope.entryId, scope.season, scope.number, scope.episodeId].join('|');
+
+interface PassContext {
+    index: QueueIndex;
+    placements: Map<string, Placement | null>;
+    carried: Carried;
+    now: number;
+    /** Only finished imports are left: what showed a download is looked at again, and nothing is placed. */
+    idle: boolean;
+    /** Native seasons and episodes to place, filled by the pass. */
+    unplaced: string[];
+}
+
+/**
+ * What a card or row shows once its download is no longer on its way: the import while its downloads ended with their files and
+ * the page still shows the title without one, else nothing (a cancelled or failed download, or the page caught up).
+ */
+const afterwards = (element: HTMLElement, scope: Scope, { index, carried, now }: PassContext) => {
+    const key = keyOf(scope);
+    const memory = carried.get(key);
+    if (!memory) return null;
+    const ended = memory.ended || now;
+    if (!scopeDone(index, scope, memory.grabs) || now - ended >= IMPORTED_CARRY_MS) {
+        carried.delete(key);
+        return null;
+    }
+    carried.set(key, { grabs: memory.grabs, ended });
+    // A card or row drawn again shows its mark a moment after it is added: the memory stays for it.
+    return showsNoFile(element) ? IMPORTED : null;
+};
+
+/** One card's or row's download, drawn for this pass; true when it shows one on its way. */
+const markElement = (element: HTMLElement, context: PassContext): boolean => {
+    const { index, placements, carried, idle, unplaced } = context;
+    const isRow = element.classList.contains('listItem');
+    const target = targetOf(element);
+    const scope = target ? scopeOf(index, target, placements) : null;
+    if (scope === undefined && !idle && target && 'itemId' in target) unplaced.push(target.itemId);
+    const live = idle ? null : scope;
+    const rows = live ? rowsIn(index, live) : [];
+    // A card that stands for one episode of the mod's (the missing episode page's still) shows its download as a row does, a
+    // failure included.
+    let progress = live ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id')) : null;
+    const onItsWay = !!live && !!progress && progress.kind !== 'failed';
+    if (onItsWay) {
+        const key = keyOf(live);
+        const grabs = carried.get(key)?.grabs ?? new Set<string>();
+        for (const row of rows) grabs.add(row.grabId);
+        carried.set(key, { grabs, ended: 0 });
+    } else if (!progress && scope) {
+        progress = afterwards(element, scope, context);
+    }
+    if (isRow) drawRow(element, progress);
+    else drawCard(element, progress);
+    return onItsWay;
+};
+
 const DownloadMarks: FC = () => {
     const { api, user } = useApi();
     const capability = useQueueCapability();
     const [watching, setWatching] = useState(false);
-    // A grab was just made: the queue is read every 5 s for three minutes, as a held grab is in it only after its hold.
+    // A grab was just made here: the queue is read at once and then every 5 s for three minutes (a plugin that lists held grabs
+    // shows it at once anyway; an older one only once the client has it).
     const [grabbed, setGrabbed] = useState(false);
-    const queue = useQueue({ enabled: capability.available, poll: watching || grabbed ? 'cards' : false });
+    // Nothing on its way on the page: still read once a minute, so a grab made on another device shows without a navigation
+    // (P4.FU10). Opening a page, a reload and coming back to the tab read at once.
+    const queue = useQueue({ enabled: capability.available, poll: watching || grabbed ? 'cards' : 'slow' });
     const [placed, setPlaced] = useState(0);
     const onPlaced = useCallback(() => setPlaced(value => value + 1), []);
     const { placements, seriesEntries, place } = usePlacements(api, user?.Id, onPlaced);
     const { bound, bind } = useBoundItems(api, user?.Id, onPlaced);
+    const carried = useRef<Carried>(new Map());
     const items = queue.data?.items;
 
     // One read when a page opens (the app's first page too: the query cache is kept across reloads), joining a read already
-    // under way; a queue kept private (403) is not asked again.
-    const { refetch } = queue;
+    // under way, and when the tab is shown again; a queue kept private (403) is not asked again. Until a page's read has been
+    // drawn (at most READING_MS), its Not Downloaded marks wait hidden: the cached answer may predate a grab made elsewhere, and
+    // "queued" a moment later beats a wrong Not Downloaded now (P4.FU10).
+    const { refetch, dataUpdatedAt } = queue;
     const readable = capability.available && !queue.adminOnly;
+    const readingSince = useRef(0);
     useEffect(() => {
         if (!readable) return;
+        let cap: number | undefined;
         const onPage = () => {
+            readingSince.current = Date.now();
+            document.documentElement.classList.add(READING_CLASS);
+            window.clearTimeout(cap);
+            cap = window.setTimeout(endReading, READING_MS);
             refetch({ cancelRefetch: false }).catch(() => undefined);
+        };
+        const onShown = () => {
+            if (document.visibilityState === 'visible') onPage();
         };
         onPage();
         window.addEventListener('hashchange', onPage);
-        return () => window.removeEventListener('hashchange', onPage);
+        document.addEventListener('visibilitychange', onShown);
+        return () => {
+            window.removeEventListener('hashchange', onPage);
+            document.removeEventListener('visibilitychange', onShown);
+            window.clearTimeout(cap);
+            endReading();
+        };
     }, [readable, refetch]);
 
     useEffect(() => {
         let timer: number | undefined;
         const onGrab = () => {
+            refetch({ cancelRefetch: false }).catch(() => undefined);
             setGrabbed(true);
             window.clearTimeout(timer);
             timer = window.setTimeout(() => setGrabbed(false), 3 * 60 * 1000);
@@ -436,50 +571,53 @@ const DownloadMarks: FC = () => {
             window.removeEventListener(GRAB_EVENT, onGrab);
             window.clearTimeout(timer);
         };
-    }, []);
+    }, [refetch]);
 
     useEffect(() => {
-        const relevant = (items ?? []).filter(row => row.state !== 'seeding');
-        if (!readable || relevant.length === 0) {
+        const all = items ?? [];
+        const relevant = all.filter(row => row.state !== 'seeding');
+        const read = dataUpdatedAt >= readingSince.current;
+        if (!readable || all.length === 0) {
             clearAll();
+            carried.current.clear();
             setWatching(false);
+            if (read) endReading();
             return;
         }
         bind(relevant);
-        const index = indexQueue(relevant, bound, seriesEntries);
+        const index = indexQueue(relevant, all, bound, seriesEntries);
         let timer: number | undefined;
-        // Cards arrive after the page (lazy rows, a grid's next page, upstream redrawing a list): another pass, at most one
-        // per 150 ms; the pass's own changes are dropped from the record so they do not start another.
-        const observer = new MutationObserver(() => {
-            if (timer === undefined) timer = window.setTimeout(pass, 150);
+        // Cards arrive after the page (lazy rows, a grid's next page, upstream redrawing a list): another pass, at most one per
+        // 150 ms, except that a new card, row or mark is drawn on at once, before it is painted, so its first frame never shows
+        // Not Downloaded for something on its way (P4.FU10). The pass's own changes are dropped from the record.
+        const observer = new MutationObserver(records => {
+            if (records.some(isUrgent)) {
+                window.clearTimeout(timer);
+                pass();
+            } else if (timer === undefined) {
+                timer = window.setTimeout(pass, 150);
+            }
         });
         function pass() {
             timer = undefined;
             let shown = 0;
             const unplaced: string[] = [];
+            const context: PassContext = { index, placements, carried: carried.current, now: Date.now(), idle: relevant.length === 0, unplaced };
             document.querySelectorAll<HTMLElement>(TARGETS).forEach(element => {
-                const target = targetOf(element);
-                const rows = target ? rowsOf(index, target, placements) : [];
-                if (rows === undefined && target && 'itemId' in target) unplaced.push(target.itemId);
-                const isRow = element.classList.contains('listItem');
-                // A card that stands for one episode of the mod's (the missing episode page's still) shows its download as a row
-                // does, a failure included.
-                const progress = rows ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id')) : null;
-                if (isRow) drawRow(element, progress);
-                else drawCard(element, progress);
-                if (progress && progress.kind !== 'failed' && !element.closest('.hide')) shown++;
+                if (markElement(element, context) && !element.closest('.hide')) shown++;
             });
             observer.takeRecords();
             setWatching(shown > 0);
             place(unplaced);
+            if (read) endReading();
         }
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: STAMPS });
         pass();
         return () => {
             observer.disconnect();
             if (timer !== undefined) window.clearTimeout(timer);
         };
-    }, [items, readable, placed, placements, seriesEntries, place, bound, bind]);
+    }, [items, dataUpdatedAt, readable, placed, placements, seriesEntries, place, bound, bind]);
 
     useEffect(() => clearAll, []);
     return null;
