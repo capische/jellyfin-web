@@ -1,3 +1,6 @@
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
+import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/media-stream';
+
 import type { ParsedRelease } from '../types/acquisition';
 import type { VersionDto, VersionRetention } from '../types/versions';
 import { formatBytes } from './queue';
@@ -75,7 +78,7 @@ const MARK_AUDIO = new Map([['eac3', 'DD+'], ['ac3', 'DD']]);
  * A file's streams in the shape the release picker's media marks take (user, 2026-10-12: the Video dropdown shows the same
  * marks): codec; 10-bit, the range and Dolby Vision; the audio format and its channels.
  */
-export const versionMarks = (version: VersionDto): Pick<ParsedRelease, 'codec' | 'hdr' | 'audio' | 'audioChannels'> => {
+export const versionMarks = (version: VersionDto): MarkSource => {
     const video = version.videoCodec?.toLowerCase() ?? '';
     const audio = version.audioCodec?.toLowerCase() ?? '';
     const range = version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? version.videoRange : null;
@@ -89,6 +92,97 @@ export const versionMarks = (version: VersionDto): Pick<ParsedRelease, 'codec' |
         audio: audio ? MARK_AUDIO.get(audio) ?? AUDIO_CODECS.get(audio) ?? audio.toUpperCase() : null,
         audioChannels: channels
     };
+};
+
+type MarkSource = Pick<ParsedRelease, 'codec' | 'hdr' | 'audio' | 'audioChannels'>;
+
+/** `5.1` from the channel count, else from the layout Jellyfin read (`5.1(side)`). */
+const streamChannels = (stream: MediaStream): string | null => {
+    if (stream.Channels) return CHANNELS.get(stream.Channels) ?? stream.Channels + ' ch';
+    return /^\d\.\d/.exec(stream.ChannelLayout ?? '')?.[0] ?? null;
+};
+
+/**
+ * The audio words the media marks match, from a stream's codec and profile: `TrueHD Atmos`, `DD+`, `DTS-HD MA`, `HE-AAC`; any
+ * other format is its plain name (`AAC`, `FLAC`), drawn as a word chip.
+ */
+const streamAudio = (stream: MediaStream): string | null => {
+    const codec = stream.Codec?.toLowerCase() ?? '';
+    const profile = stream.Profile ?? '';
+    const atmos = /atmos/i.test(profile) ? ' Atmos' : '';
+    if (codec === 'truehd') return 'TrueHD' + atmos;
+    if (codec === 'eac3') return 'DD+' + atmos;
+    if (codec === 'ac3') return 'DD';
+    if (codec === 'dts' || codec === 'dca') {
+        if (/DTS:X/i.test(profile)) return 'DTS:X';
+        return /\bMA\b/.test(profile) ? 'DTS-HD MA' : 'DTS';
+    }
+    if (codec === 'aac' && /^HE/i.test(profile)) return 'HE-AAC';
+    return codec ? AUDIO_CODECS.get(codec) ?? codec.toUpperCase() : null;
+};
+
+/** 10-bit and the range a video stream reports: Dolby Vision draws its chip, HDR10, HDR10+ and HLG their words. */
+const streamHdr = (stream: MediaStream): string | null => {
+    const type = stream.VideoRangeType ?? '';
+    let range: string | null = null;
+    if (DOLBY_VISION.test(type)) range = 'DV';
+    else if (/^hdr10plus$/i.test(type)) range = 'HDR10+';
+    else if (/^(hdr10|hlg)$/i.test(type)) range = type.toUpperCase();
+    else if (stream.VideoRange && !QUIET_RANGES.has(stream.VideoRange.toLowerCase())) range = stream.VideoRange;
+    const depth = stream.BitDepth && stream.BitDepth >= 10 ? stream.BitDepth + '-bit' : null;
+    return [depth, range].filter(Boolean).join(' ') || null;
+};
+
+/**
+ * One media stream in the shape the release picker's media marks take (P7.FU6): a video stream's codec and range, an audio
+ * stream's format and channels. Read from Jellyfin's own stream fields, never from a file name.
+ */
+export const streamMarks = (stream: MediaStream): MarkSource => {
+    if (stream.Type === 'Video') {
+        const video = stream.Codec?.toLowerCase() ?? '';
+        return { codec: video ? MARK_CODECS.get(video) ?? VIDEO_CODECS.get(video) ?? video.toUpperCase() : null, hdr: streamHdr(stream),
+            audio: null, audioChannels: null };
+    }
+    return { codec: null, hdr: null, audio: streamAudio(stream), audioChannels: streamChannels(stream) };
+};
+
+/**
+ * A file's video marks and its default audio track's marks, apart (P7.FU6: the Video value shows no audio): from the file's
+ * streams once the page has read them, else from the plugin's row.
+ */
+export const fileMarks = (version: VersionDto, source?: MediaSourceInfo | null): { video: MarkSource; audio: MarkSource } => {
+    const row = versionMarks(version);
+    const streams = source?.MediaStreams ?? [];
+    const video = streams.find(stream => stream.Type === 'Video');
+    const audio = streams.find(stream => stream.Type === 'Audio' && stream.Index === source?.DefaultAudioStreamIndex)
+        ?? streams.find(stream => stream.Type === 'Audio');
+    return {
+        video: video ? streamMarks(video) : { codec: row.codec, hdr: row.hdr, audio: null, audioChannels: null },
+        audio: audio ? streamMarks(audio) : { codec: null, hdr: null, audio: row.audio, audioChannels: row.audioChannels }
+    };
+};
+
+const SUBTITLE_FORMATS = new Map([['subrip', 'SRT'], ['srt', 'SRT'], ['ass', 'ASS'], ['ssa', 'SSA'], ['pgssub', 'PGS'], ['pgs', 'PGS'],
+    ['webvtt', 'VTT'], ['vtt', 'VTT'], ['dvdsub', 'VOBSUB'], ['dvd_subtitle', 'VOBSUB'], ['mov_text', 'TX3G'], ['dvbsub', 'DVB']]);
+
+/** A subtitle stream's format mark: `SRT`, `PGS`, `ASS`. */
+export const subtitleFormat = (stream: MediaStream): string | null => {
+    const codec = stream.Codec?.toLowerCase() ?? '';
+    return codec ? SUBTITLE_FORMATS.get(codec) ?? codec.toUpperCase() : null;
+};
+
+/** The media source a stock `.selectSource` value names. */
+export const findSource = (sources: MediaSourceInfo[] | null | undefined, id: string | null | undefined) =>
+    sources?.find(source => sameItemId(source.Id, id)) ?? null;
+
+/** Jellyfin's `VideoRangeType` of each copy, from the item's media sources (V1 decision 4). */
+export const videoRangeTypes = (sources: MediaSourceInfo[]): VideoRangeTypes => {
+    const types: VideoRangeTypes = {};
+    for (const source of sources) {
+        const video = (source.MediaStreams ?? []).find(stream => stream.Type === 'Video');
+        if (source.Id && video?.VideoRangeType) types[mediaSourceKey(source.Id)] = video.VideoRangeType;
+    }
+    return types;
 };
 
 /**

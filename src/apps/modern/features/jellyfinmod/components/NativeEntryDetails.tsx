@@ -1,17 +1,18 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import layoutManager from 'components/layoutManager';
 import loading from 'components/loading/loading';
 
-import { type EntryDetail, getVideoRangeTypes, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
+import { type EntryDetail, getMediaSources, keepEntry, keepEpisode, setEpisodeRetention, setVersionKept,
     unkeepEpisode } from '../api/modApi';
 import { announce } from '../integration/announce';
 import { HISTORY_FILES_CAPABILITY, playedBadge, shortDate, showsRetentionStatus } from '../constants/detailPage';
 import { EPISODE_CONTROLS_CAPABILITY, EPISODE_RETENTION_CAPABILITY, VERSION_KEEP_CAPABILITY } from '../constants/fileState';
 import { type DevicePreference, deleteWarningText, isEpisodeItem, preferredVersion, sameItemId, VERSIONS_CAPABILITY, VERSIONS_REMOVE_CAPABILITY,
-    VERSIONS_V1_CAPABILITY } from '../constants/versions';
+    VERSIONS_V1_CAPABILITY, videoRangeTypes } from '../constants/versions';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { entryDetailQuery, entryIdQuery } from '../hooks/useEntries';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
@@ -30,6 +31,7 @@ import HistoryToggle from './HistoryToggle';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
+import TrackDropdowns from './TrackDropdown';
 import './entryDetails.scss';
 
 interface NativeEntryDetailsProps {
@@ -111,22 +113,25 @@ const devicePreference = (): DevicePreference => {
     return layoutManager.mobile ? 'mobile' : 'desktop';
 };
 
+/** The page item's media sources with their streams: the Video, Audio and Subtitles rows draw their marks from them (P7.FU6). */
+const useMediaSources = (api: Api, userId: string, itemId: string, enabled: boolean) => useQuery({
+    queryKey: ['JellyfinMod', api.basePath, userId, 'MediaSources', itemId],
+    queryFn: ({ signal }) => getMediaSources(api, userId, itemId, { signal }),
+    enabled,
+    retry: false
+});
+
 /**
  * The copy this device starts with, or null for Jellyfin's default (V1 decision 4). Only with `versions.v1`: an older
  * plugin's rows do not say which copy the viewer is part-way through, so a preselect could replace a resumable copy. The TV
- * waits for Jellyfin's range types so that Dolby Vision is told apart from HDR before anything is selected.
+ * waits for Jellyfin's range types (from the media sources) so that Dolby Vision is told apart from HDR before anything is
+ * selected.
  */
-const usePreferredVersion = (api: Api, userId: string, itemId: string, versions: VersionDto[], capabilities: string[]) => {
+const usePreferredVersion = (versions: VersionDto[], capabilities: string[], sources: { isPending: boolean; data?: MediaSourceInfo[] }) => {
     const device = devicePreference();
     const active = capabilities.includes(VERSIONS_V1_CAPABILITY) && device !== 'desktop' && versions.length > 1;
-    const ranges = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, userId, 'VideoRangeTypes', itemId],
-        queryFn: ({ signal }) => getVideoRangeTypes(api, userId, itemId, { signal }),
-        enabled: active && device === 'tv',
-        retry: false
-    });
-    if (!active || (device === 'tv' && ranges.isPending)) return null;
-    return preferredVersion(versions, device, ranges.data);
+    if (!active || (device === 'tv' && sources.isPending)) return null;
+    return preferredVersion(versions, device, sources.data ? videoRangeTypes(sources.data) : null);
 };
 
 /** The copies of the page's movie or episode that the plugin lists after a removal. */
@@ -572,7 +577,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         onClick: getRelease
     });
     const deleteWarning = usePageDeleteWarning(view, data, versions, capabilities);
-    const preferred = usePreferredVersion(api, userId, itemId, versions, capabilities);
+    const sources = useMediaSources(api, userId, itemId, versions.length > 0);
+    const preferred = usePreferredVersion(versions, capabilities, sources);
     const afterRemove = useCallback((removed: VersionDto) => {
         // The page's data was refetched by the removal; the page moves on from what the plugin now lists.
         leaveAfterRemove(serverId, itemId, queryClient.getQueryData<EntryDetail>(detailKey), episode, removed);
@@ -625,7 +631,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
             onAddVersion={canAcquire ? addVersion : undefined}
             onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
             pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}
-            note={isAdmin ? deleteWarning : null} />}
+            note={isAdmin ? deleteWarning : null} sources={sources.data} />}
+        {versions.length > 0 && <TrackDropdowns api={api} view={view} sources={sources.data} />}
         <FileHistoryPopover anchor={historyFor?.anchor ?? null} version={historyFor?.version ?? null} history={history}
             onClose={closeHistory} />
         {windowDialog}

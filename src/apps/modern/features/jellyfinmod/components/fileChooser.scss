@@ -8,13 +8,17 @@
     display: none;
 }
 
-// With one video stream the chooser's trigger shows upstream's text, so the row's disabled select and its arrow step aside.
+// With one video stream the chooser's trigger shows upstream's text, so the row's disabled select and its arrow step aside; the
+// Audio and Subtitles rows' selects likewise while their dropdowns are mounted (P7.FU6). Each stays in the DOM and keeps its value.
 .jfmod-videoHost > .emby-select,
-.jfmod-videoHost > .selectArrowContainer {
+.jfmod-videoHost > .selectArrowContainer,
+.jfmod-trackHost > .emby-select,
+.jfmod-trackHost > .selectArrowContainer {
     display: none;
 }
 
-.jfmod-videoChooser {
+.jfmod-videoChooser,
+.jfmod-trackChooser {
     // The media marks knock their words out of a chip in the page's colour.
     --jfmod-paper: #101010;
 
@@ -23,8 +27,10 @@
     flex: 0 0 auto;
 }
 
-.jfmod-videoHost > .jfmod-videoChooser {
+.jfmod-videoHost > .jfmod-videoChooser,
+.jfmod-trackChooser {
     flex: 1 1 auto;
+    min-width: 0;
 }
 
 // A file with several video streams: the chooser has its own row above upstream's Video select, laid out like a track row.
@@ -47,7 +53,8 @@
     flex: 1 1 auto;
 }
 
-.jfmod-videoTrigger {
+.jfmod-videoTrigger,
+.jfmod-trackTrigger {
     // The closed Video value is a dropdown like the Audio and Subtitles selects beside it (user, 2026-10-10), measured against
     // them: the same width, the 1.75em height, the 2px border, the paper background and the chevron at the right end.
     display: flex;
@@ -85,6 +92,47 @@
     margin: 0 0 0 auto;
     font-size: 1.4em;
     opacity: 0.7;
+}
+
+// A track row upstream does not let you change (one audio track): the same field, no chevron, not a focus stop.
+.jfmod-trackTrigger.jfmod-trackStatic {
+    padding-right: 0.4em;
+    cursor: default;
+
+    &:hover {
+        border-color: var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+    }
+}
+
+// The Audio and Subtitles list: a paper popover as wide as the field, drawn like the Video list (the paper colour, a hairline
+// border, rows of the same height), at most 20em tall so it opens under its field; the current entry has a blue left bar (the
+// settings area's predefined picker's bar).
+.jfmod-trackMenuPaper.MuiPaper-root {
+    --jfmod-paper: var(--jf-palette-background-paper, #202020);
+
+    max-height: 20em;
+    margin-top: 0.25em;
+    border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    border-radius: 0.2em;
+    background-color: var(--jf-palette-background-paper, #202020);
+    background-image: none;
+
+    .MuiList-root {
+        padding: 0;
+    }
+}
+
+.jfmod-trackMenu .jfmod-trackItem {
+    min-height: 0;
+    // The text starts where the field's does (its 0.535em inset), the bar inside it.
+    padding: 0.45em 0.8em 0.45em calc(0.535em - 1px - 0.2em);
+    border-left: 0.2em solid transparent;
+    font: inherit;
+    white-space: nowrap;
+}
+
+.jfmod-trackMenu .jfmod-trackItem--on {
+    border-left-color: #00a4dc;
 }
 
 // The list slides open on a grid row growing from 0fr to 1fr, so it moves at its own height for the whole 0.18s (a max-height
@@ -181,10 +229,50 @@ $text-inset: 0.535em;
     > * { margin-right: 0.8em; }
 }
 
-// The row and the closed value draw the same pieces: resolution, the release picker's media marks (ReleaseRowParts), size.
-.jfmod-fileResolution {
+// The row and the closed value draw the same pieces: resolution, the release picker's media marks (ReleaseRowParts), size; a
+// track's language takes the resolution's place.
+.jfmod-fileResolution,
+.jfmod-trackLanguage {
     margin-right: 0.8em;
     font-weight: 600;
+}
+
+// A file's row (P7.FU6): its video, a hairline, its audio and extras; the size right-aligned before its icons.
+.jfmod-fileLine {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.jfmod-fileDivider {
+    align-self: center;
+    width: 0;
+    height: 1.1em;
+    border-left: 1px solid currentColor;
+    opacity: 0.35;
+}
+
+// A phone stacks the audio and extras under the video; the size stays on the first line.
+.layout-mobile {
+    .jfmod-fileChoose {
+        align-items: flex-start;
+    }
+
+    .jfmod-fileBody {
+        display: block;
+    }
+
+    .jfmod-fileLine {
+        display: flex;
+    }
+
+    .jfmod-fileLine--audio {
+        margin-top: 0.15em;
+    }
+
+    .jfmod-fileDivider {
+        display: none;
+    }
 }
 
 // The marks are drawn for the picker's second line; beside this line's full-size text they are 30% larger (chips 13px tall in
@@ -198,9 +286,29 @@ $text-inset: 0.535em;
     font-size: 130%;
 }
 
+// Muted against the value's own text, which is already the theme's secondary colour on the detail page (as the extras are).
 .jfmod-fileSize {
-    margin-right: 0.8em;
-    opacity: 0.86;
+    font-size: 92%;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+// One line in the closed value: the marks are cut at the field's end, before the size (P7.FU6).
+.jfmod-videoTriggerText .jfmod-fileMarks {
+    flex-wrap: nowrap;
+}
+
+// The size at the value's right end, just before the chevron (P7.FU6, option A), and at each row's end before its icons.
+.jfmod-videoTrigger > .jfmod-fileSize,
+.jfmod-fileChoose > .jfmod-fileSize {
+    flex: 0 0 auto;
+    margin: 0 0 0 auto;
+    padding-left: 0.8em;
+}
+
+.jfmod-videoTrigger > .jfmod-fileSize + .jfmod-videoChevron {
+    margin-left: 0.2em;
 }
 
 .jfmod-videoTriggerText > :last-child {
@@ -208,8 +316,10 @@ $text-inset: 0.535em;
 }
 
 .jfmod-fileExtra {
+    margin-right: 0.6em;
     font-size: 86%;
     opacity: 0.7;
+    white-space: nowrap;
 }
 
 .jfmod-fileExtra--dot::before {
@@ -312,7 +422,8 @@ $text-inset: 0.535em;
     opacity: 0.8;
 }
 
-[data-theme='light'] .jfmod-videoChooser {
+[data-theme='light'] .jfmod-videoChooser,
+[data-theme='light'] .jfmod-trackChooser {
     --jfmod-paper: #fff;
 }
 
