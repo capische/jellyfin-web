@@ -145,7 +145,11 @@ const Home = () => {
     }, [ loadTab, tabControllers ]);
 
     const onSetTabs = useCallback(async () => {
-        (await mainTabsManager).setTabs(element.current, initialTabIndex, getTabs, getTabContainers, null, onTabChange, false);
+        const manager = await mainTabsManager;
+        // Home may be left while the tab manager is still loading (the first visit of a session); upstream's manager has
+        // no tabs element yet then, and a Resume that selects a tab on it throws.
+        if (disposed.current) return;
+        manager.setTabs(element.current, initialTabIndex, getTabs, getTabContainers, null, onTabChange, false);
     }, [ initialTabIndex, mainTabsManager, onTabChange ]);
 
     const onResume = useCallback(async () => {
@@ -155,7 +159,9 @@ const Home = () => {
         const currentTabController = tabController.current;
 
         if (!currentTabController) {
-            (await mainTabsManager).selectedTabIndex(initialTabIndex);
+            const manager = await mainTabsManager;
+            if (disposed.current) return;
+            manager.selectedTabIndex(initialTabIndex);
         } else if (currentTabController?.onResume) {
             currentTabController.onResume({});
         }
