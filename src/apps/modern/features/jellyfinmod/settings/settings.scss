@@ -162,6 +162,18 @@
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
     font-weight: 600;
 }
+
+/* A group's title with its add button at the right edge. */
+.jfmod-grouphead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+    margin: 1.6em 0 0.9em;
+
+    .jfmod-grouptitle { margin: 0; }
+    .MuiButton-root { margin-left: auto; }
+}
 .jfmod-group:first-child .jfmod-grouptitle { margin-top: 0; }
 .jfmod-lead { margin: 0 0 1em; }
 
