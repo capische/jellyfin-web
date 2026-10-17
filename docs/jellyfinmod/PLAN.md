@@ -808,6 +808,46 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `quality-profiles.mjs` passes on local environment echo in Chromium (desktop, phone, a TV smoke) and real Chrome (desktop,
   phone). Not run: the Pi, the Dashboard page's own profile editor (unchanged), `s11-fresh.mjs` (Pi image rig; it still
   drives the old dialog and expects an empty profile step, so it needs updating), Codex review.
+  **P4.FU10, built (not accepted) 2026-10-17: a grab is queued from the moment it is made, on every page and device** (user,
+  testing 28096 after adding a season pack and opening the season: its rows showed Not Downloaded; "it is better to show queued
+  state than a wrong one"; [UX.md](UX.md) §3.3 and §9.1, [API.md](API.md) *Queue*). Owner: Phase 4 follow-up (P4.FU6's
+  `downloadMarks`), with Phase 5's queue as the source. Causes, measured live on local environment bravo against the
+  unchanged `next-release` builds (web `8a2599fb4c`, plugin `2d7a79f`) with `queued-state.mjs`: a grab is held 5 s before it is
+  sent and the queue listed it only once the client accepted it, so a page opened, reloaded or opened on another device during
+  the hold read no row and drew Not Downloaded, and with nothing on its way nothing read the queue again (no poll at all) until
+  the next navigation: E03–E06 stayed Not Downloaded for the whole hold and after it on a reloaded page and a second browser;
+  even the tab that grabbed (with `8a2599fb4c`'s event) showed the cloud from Add until the first 5 s poll after the client
+  had it (10.4 s, never queued); another version of an episode or the movie showed nothing. After the queue fix, three
+  smaller gaps: native placeholder rows waited for a Jellyfin lookup (about 25 ms locally, longer on the Pi) with the cloud
+  showing; a page's first draw used a cached queue answer from before the grab; a finished import showed Not Downloaded until
+  the page drew the new item (38 s on bravo). Plugin (additive, no migration): `GET /Queue` lists a grab the client has not
+  accepted yet (held, being sent, unconfirmed) as a `queued` row with the grab's id, `importState` `held` or `submitting` and a
+  pack's claimed episodes; held grabs are read before the imports, so the accept never leaves a read with neither. Web: the
+  marks read those rows; a page's Not Downloaded waits hidden until its own queue read is drawn (at most 1.5 s); new cards,
+  rows and marks are drawn on before they are painted; placeholder rows and upstream season cards carry their entry and
+  episode or season (`MissingChildren.tsx`); with nothing on its way the queue is read once a minute and when the tab is shown;
+  a finished import keeps `importing…` on a card or row while the page still shows the title without its file (at most
+  3 min, kept across upstream redraws); the Queue page's held row has *Cancel* and *Waiting to be sent to the download
+  client.*; the download block cancels a held grab without the torrent question. The `jfmod-grab` event stays as the
+  same-tab speed-up (an immediate read). Checked by reading the code: a pack never claims unaired episodes or specials
+  (`ReleaseTargets.Covered`), so their marks are unchanged; a season card of season 0 is not stamped and keeps the lookup.
+  *"The text is not popping"*: the row disc is the topmost element under the pointer, its tooltip (`Downloading · 50% · …`,
+  `Importing…`) and the meta line (`50% · 1 min left`, `importing…`) are set and update with each read (checked in the runner,
+  hover screenshots), so nothing is broken there; if the user means that `importing…` does not stand out (plain secondary
+  text since P4.FU8), that is a design change for a mockup, not built. Plugin `fix/queued-state` from `next-release` `2d7a79f` (`ab55fb0`);
+  web `fix/queued-state` from `next-release` `8a2599fb4c`: `64eceef0f2` (code), `868384a09f` (runner, stand-in per-file
+  progress) and this docs commit. Typecheck, eslint (feature files), stylelint and the production build pass; plugin suites
+  Phase 4 and 5 pass (Linux container, with the change). `queued-state.mjs` (live: real grabs through the stand-ins' Torznab and
+  Transmission, a real import into a writable copy of Peep Show with placeholders, states sampled every animation frame and
+  100 ms) passed 61/61 in Chromium and 61/61 in real Chrome on local environment bravo (desktop; the hold scenarios also on
+  the phone and TV 1080; reset to its baseline before each run and after): one episode from its row (queued 0.2–0.3 s after
+  Add), another version of E01 and of the movie, a pack inside its hold with a reload, a second browser and Cancel on the
+  Queue page, a handoff that fails (client down: queued, then Not Downloaded), and a Season 2 pack from the picker to all six
+  files (each row queued, its own download, importing and its file; the series page's season card, the E04 page and the
+  Queue page the same; no Not Downloaded and no step back anywhere). Not run: a Pi instance, a series pack and a replace grab
+  (the same held-grab path), an ordinary user with the queue open to users, the TV at 1280×720, Codex review. Measured, for
+  the other session's import-to-Play work: a finished file to the entry on disk about 67 s, then 38 s more until the season
+  page drew the file (covered by `importing…`).
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`

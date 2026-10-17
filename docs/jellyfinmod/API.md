@@ -743,6 +743,15 @@ release came from (null when the grab is gone). Both are shown to everyone who m
 download block draws its marks from them. The release's page on the tracker (`detailsUrl`) is not kept after a grab, so the
 queue has no link to it.
 
+**Held grabs are queued rows (P4.FU10, 2026-10-17, additive).** A grab the client has not accepted yet (held for its 5 s
+cancel window, being sent, or sent and not confirmed) is a row too, from the moment `POST /Releases/Grab` answers: `id` and
+`grabId` are the grab's, `state` is `queued`, `importState` is `held` while `POST /Grabs/{id}/Cancel` can still stop it and
+`submitting` after, `progress` and the transfer figures are null, `sizeBytes` is the release's size, and a pack's `pack.episodes`
+list every claimed episode with a null `importId`, `importState` and `progress`. The visibility is the row it becomes (the title,
+the episode, and for a pack every claimed episode). When the client accepts the grab, its import row (created in the same
+commit) takes its place; held grabs are read before the imports, so a read never misses both. A cancelled or failed grab
+leaves the queue. `DELETE /Queue/{id}` does not take a held row's id (404); the web cancels it through the grab.
+
 `GET /JellyfinMod/Imports/{id}` returns one import operation (concealed 404 without library access).
 `POST /JellyfinMod/Imports/{id}/Retry` (admin) re-inspects a `blocked` or `failed` import from the
 start and answers 409 `import_not_retryable`, `import_open` or `grab_missing`.

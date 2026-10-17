@@ -404,7 +404,7 @@ its last value, the disc and figure dimmed.
   row's second stop only while no download holds it). Reduced motion stops the
   bob, the turning arc and the arc's easing.
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
-  page costs one request), then every 5 s only while something on the page is on its way. Upstream cards
+  page costs one request), then every 5 s while something on the page is on its way, else once a minute (P4.FU10). Upstream cards
   and rows are found by `data-id`/`data-type` (a native season or episode is placed by one `/Items` read per
   batch of new items: its series and numbers; a title the queue names without a Jellyfin item, a file-less series
   whose series item Jellyfin already holds, is matched once by its name and confirmed with `GET /Entries?jellyfinItemId=`; a
@@ -425,6 +425,28 @@ its last value, the disc and figure dimmed.
   whole torrent, counted once per episode it holds). A plugin without per-episode progress keeps the pack's figure on
   every episode. The queue page and the release picker's added row keep the pack's figure. One function draws the view
   (`packEpisodeView` in `hooks/useQueue.ts`).
+
+- **Queued from the moment of the grab (P4.FU10, 2026-10-17; user: "it is better to show queued state than a wrong one").**
+  A grab is queued (the clock) wherever its title, season or episode shows, on every page, tab and device, from the moment
+  the picker's Add (or an automatic grab) is answered: the plugin lists a grab still held for its 5 s cancel window, or being
+  sent, as a queued row (API.md *Queue*), so a page opened, reloaded or opened on another device inside the hold reads it
+  like any download; then queued (0 %), the download, importing and the file follow with no gap. A cancel during the hold, or
+  a handoff that fails, takes the row away again and Not Downloaded comes back. The Queue page lists the held row with *Waiting
+  to be sent to the download client.* under its disc and *Cancel* as its only action (administrators); a missing episode's
+  Cancel Download cancels it without the torrent question. Every rule that keeps a wrong Not Downloaded off the screen:
+  - the page that made the grab reads the queue at once (the grab's `jfmod-grab` event), so its cards and rows are queued
+    within one request;
+  - when a page opens, Not Downloaded marks wait hidden (their room kept) until that page's own queue read has been drawn, at
+    most 1.5 s: the cached answer may predate a grab made elsewhere. Unaired, the on-disk look and every other mark are
+    unchanged;
+  - a card, row or mark that appears is drawn on before it is painted (not on the 150 ms pass), and upstream's placeholder
+    rows and season cards are stamped with their entry and episode or season, so no Jellyfin lookup stands between them and
+    their state;
+  - a page with nothing on its way still reads the queue once a minute, and when its tab is shown again, so a grab made on
+    another device shows on a page left open there within a minute;
+  - an import that is done while the page still shows the title without its file (Jellyfin has not drawn the new item yet)
+    keeps reading `importing…` on that card or row until the page draws the file, at most 3 minutes; a card or row upstream
+    draws again keeps it too.
 
 *Superseded 2026-10-13 (P4.FU6):* P4.FU1's white arrow inside upstream's count pill (`jfmod-countArrow`), the amber arrow disc
 (`jfmod-dlDisc`), the rows' 0.28em bottom bar (`jfmod-dlRowBar`), the figure at a row's end (`jfmod-dlRowFigure`) and the
@@ -1270,7 +1292,8 @@ single-source, in
 Approved design: the release picker's added-row sheet (2026-10-12). What the picker does now:
 
 - **The added row.** The row a grab is about keeps its two action slots. While the grab is held (5 s) or being sent, Add
-  shows a down arrow falling onto a tray (reduced motion: the arrow rests on it); once the client has the torrent, a green
+  shows a down arrow falling onto a tray (reduced motion: the arrow rests on it), and the page behind the picker shows the
+  title, season or episode as queued already (§3.3, P4.FU10); once the client has the torrent, a green
   tick (`#81c784`, light `#2e7d32`). Neither is a focus stop. The Replace slot holds a red X (`#c62828`): during the hold it
   cancels at once (tooltip *Cancel*); afterwards it is *Remove from Queue* and asks first (*Remove the Torrent*: the
   download stops and the torrent leaves the client, anything downloaded stays; grey Cancel, red Remove), then removes the
