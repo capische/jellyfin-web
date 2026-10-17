@@ -106,16 +106,22 @@
     justify-content: flex-start;
 }
 
-/* A colour choice's dot, e.g. subtitle text colours. The ring keeps white and
-   black dots visible on any background. */
+/* A colour choice's dot, e.g. subtitle text colours. The ring is drawn inside the dot, never outside it: the text box
+   around it clips (overflow hidden), which cut the circles and left half a ring. A neutral grey keeps white and black
+   dots visible on any background without tinting the others. */
+.actionSheetItemText--swatch {
+    display: flex;
+    align-items: center;
+    overflow: visible;
+}
+
 .actionSheetItemSwatch {
-    flex-shrink: 0;
-    align-self: center;
+    flex: 0 0 auto;
     width: 1em;
     height: 1em;
     margin-right: 0.7em;
     border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 0 0 3px rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.7);
 }
 
 .actionSheetItemAsideText {

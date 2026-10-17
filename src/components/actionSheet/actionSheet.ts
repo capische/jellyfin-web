@@ -326,9 +326,10 @@ export function show(options: Options) {
 
         html += '<div class="listItemBody actionsheetListItemBody">';
 
-        html += '<div class="listItemBodyText actionSheetItemText">';
         const swatch = item.swatch || item.dataset?.swatch;
-        if (swatch && /^#[0-9a-f]{3,8}$/i.test(swatch)) {
+        const hasSwatch = !!swatch && /^#[0-9a-f]{3,8}$/i.test(swatch);
+        html += '<div class="listItemBodyText actionSheetItemText' + (hasSwatch ? ' actionSheetItemText--swatch' : '') + '">';
+        if (hasSwatch) {
             html += `<span class="actionSheetItemSwatch" style="background-color:${swatch}" aria-hidden="true"></span>`;
         }
         html += escapeHtml(item.name || item.textContent || item.innerText);
