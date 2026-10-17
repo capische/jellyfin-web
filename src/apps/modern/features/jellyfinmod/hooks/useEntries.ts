@@ -6,7 +6,7 @@ import { getShowApi } from '@jellyfin/sdk/lib/utils/api/show-api';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
 
-import { type EntryQuery, getEntries, getEntry, getPluginHealth } from '../api/modApi';
+import { type EntryDetail, type EntryQuery, getEntries, getEntry, getPluginHealth } from '../api/modApi';
 
 /**
  * Entries for the current scope.
@@ -63,6 +63,22 @@ export const entryDetailQuery = (api: Api, userId: string, entryId: string) => q
     queryFn: ({ signal }) => getEntry(api, entryId, { signal }),
     retry: false
 });
+
+/**
+ * The entry a mod page drew from, kept current (P1.FU27): the catalog's refresh after a library change (the mod's query event
+ * handler) reads it again, so a page open while Jellyfin adds the title's placeholder or file can move to Jellyfin's page.
+ * Nothing is read on mount: the page's own read already is the value.
+ */
+export const useLiveEntryDetail = (api: Api, initial: EntryDetail) => {
+    const { user } = useApi();
+    const live = useQuery({ ...entryDetailQuery(api, user?.Id ?? '', initial.entry.id), enabled: !!user?.Id, staleTime: Infinity,
+        initialData: initial });
+    return live.data ?? initial;
+};
+
+/** Opens Jellyfin's page for an item in place of the mod's page. */
+export const openNativePage = (itemId: string, serverId: string) =>
+    window.location.replace('#/details?id=' + encodeURIComponent(itemId) + '&serverId=' + encodeURIComponent(serverId));
 
 /** What a native page needs to know of its item before it draws: its type, a season's series and number, a series' genres. */
 export interface NativeItemFacts {

@@ -22,6 +22,7 @@ import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePic
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
+import DownloadBlock, { type DownloadTarget } from './DownloadBlock';
 import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
 import FileChooser, { type PinState, useStockSourceIds } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
@@ -440,6 +441,45 @@ const usePlaceholderSwap = (api: Api, userId: string, data: EntryDetail | null |
     }, [fileItem, serverId]);
 };
 
+/**
+ * The download block's target on a placeholder's own page (P1.FU27): the episode the placeholder stands for, or the placeholder
+ * movie's entry; null on any other page. Jellyfin's page for a placeholder then shows the block where a file's page has its
+ * Video, Audio and Subtitle selectors, as the mod's own missing-episode page does (P1.FU20).
+ */
+const placeholderTarget = (data: EntryDetail | null | undefined, episode: EntryEpisode | undefined, itemId: string): DownloadTarget | null => {
+    if (!data) return null;
+    if (episode) return episode.availability !== 'onDisk' && sameItemId(episode.placeholderItemId, itemId) ? episode : null;
+    const entry = data.entry;
+    if (entry.mediaType !== 'movie' || entry.state === FileState.OnDisk || !sameItemId(entry.placeholderItemId, itemId)) return null;
+    return { id: null, state: entry.state, progress: entry.progress, availability: 'missing', airDate: null };
+};
+
+interface PlaceholderSectionProps {
+    view: HTMLElement;
+    entryId: string;
+    episodeId?: string;
+    target: DownloadTarget;
+    isAdmin: boolean;
+    canAcquire: boolean;
+    onGetRelease: (opener: HTMLElement) => void;
+    onChanged: () => void;
+}
+
+/** A placeholder's page: the download block in the track selectors' place (P1.FU27); it has no file to list. */
+const PlaceholderSection: FC<PlaceholderSectionProps> = ({ view, entryId, episodeId, target, isAdmin, canAcquire, onGetRelease, onChanged }) =>
+    <section aria-label='JellyfinMod' data-jfmod-entry-id={entryId} data-jfmod-episode-id={episodeId}>
+        <DownloadBlock anchor={view.querySelector('.trackSelections')} entryId={entryId} episode={target} isAdmin={isAdmin}
+            canAcquire={canAcquire} onGetRelease={onGetRelease} onChanged={onChanged} />
+    </section>;
+
+/** The value when the condition holds, else null. */
+const onlyWhen = <T,>(condition: boolean, value: T) => (condition ? value : null);
+
+/** The line about the page's movie or episode download, while one is on its way. */
+const DownloadLine: FC<{ entry: EntryDetail['entry']; episode: EntryEpisode | undefined }> = ({ entry, episode }) => (episode ?
+    <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} /> :
+    <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />);
+
 /** A series with nothing but placeholders has nothing to play: its page loses Play as a placeholder's does (P1.FU26). */
 const usePlaceholderSeries = (view: HTMLElement, data: EntryDetail | null | undefined, isSeriesPage: boolean, itemId: string) => {
     const placeholderSeries = isSeriesPage && !!data && sameItemId(data.entry.placeholderItemId, itemId);
@@ -555,7 +595,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         episode: isAdmin && capabilities.includes(EPISODE_CONTROLS_CAPABILITY) ? episode : undefined,
         itemIds: [itemId, ...versions.map(version => version.jellyfinItemId), ...versions.map(version => version.mediaSourceId)],
         busy, change });
-    useKeepSeriesItem(api, view, isAdmin && isSeriesPage ? data : null, itemId, change);
+    useKeepSeriesItem(api, view, onlyWhen(isAdmin && isSeriesPage, data), itemId, change);
 
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
@@ -575,6 +615,11 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
 
     // The popover lists one file's events, picked by the file's binding; episode-level events are not shown (design step 3).
     const history = detail.data.history;
+    const placeholder = placeholderTarget(detail.data, episode, itemId);
+    if (placeholder) {
+        return <PlaceholderSection view={view} entryId={entry.id} episodeId={episode?.id} target={placeholder} isAdmin={isAdmin}
+            canAcquire={canAcquire} onGetRelease={openPicker} onChanged={refreshAfterPlayed} />;
+    }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
         {versions.length > 0 && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
             onAddVersion={canAcquire ? addVersion : undefined}
@@ -585,8 +630,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
             onClose={closeHistory} />
         {windowDialog}
         {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
-        {episode && <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />}
-        {!episode && <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />}
+        <DownloadLine entry={entry} episode={episode} />
     </section>;
 };
 

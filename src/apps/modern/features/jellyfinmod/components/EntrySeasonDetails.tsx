@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import React, { type FC, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -6,6 +7,7 @@ import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
 import { type EntryDetail, getEntry } from '../api/modApi';
+import { nativeSeasonsQuery, openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -58,6 +60,15 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
     }, [api, detail, reload, season]);
     useStockHeaderButton(view, { enabled: canAcquire && capabilities.includes(PACKS_CAPABILITY), icon: 'cloud_download',
         title: 'Get a Release', className: 'jfmod-getRelease', onClick: openPicker });
+    // Once Jellyfin holds the season (its placeholders written while the page is open, P1.FU27), Jellyfin's season page opens,
+    // as the route opens it for a season Jellyfin had already: its series is the entry's item, or its placeholders' series.
+    const live = useLiveEntryDetail(api, initial);
+    const seriesItemId = live.entry.jellyfinItemId ?? live.entry.placeholderItemId ?? '';
+    const nativeSeasons = useQuery({ ...nativeSeasonsQuery(api, userId, seriesItemId), enabled: !!seriesItemId });
+    const nativeSeason = nativeSeasons.data?.find(item => item.IndexNumber === season && item.Id)?.Id;
+    useEffect(() => {
+        if (nativeSeason && !signal.aborted) openNativePage(nativeSeason, serverId);
+    }, [nativeSeason, serverId, signal]);
     // Upstream's episode list is hidden until a page fills it; this page fills it with its own rows.
     useLayoutEffect(() => {
         const section = view.querySelector('#listChildrenCollapsible');
