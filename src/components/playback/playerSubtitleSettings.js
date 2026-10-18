@@ -21,7 +21,6 @@ import template from './playerSubtitleSettings.template.html';
 // The TV colour list, as in Settings > Subtitles on TV.
 const SUBTITLE_TEXT_COLOURS = [
     ['#ffffff', 'SubtitleWhite'],
-    ['#ebebeb', 'SubtitleOffWhite'],
     ['#d3d3d3', 'SubtitleLightGray'],
     ['#808080', 'SubtitleGray'],
     ['#505050', 'SubtitleDarkGray'],
