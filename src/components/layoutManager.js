@@ -30,15 +30,19 @@ class LayoutManager {
         const normalizedLayout = layoutValue.split('-')[0];
 
         if (!layoutValue) {
+            // Picks a layout and sets `modern` for it. Overwriting that below with the value
+            // for '' (which is not a legacy mode) switched the app to the modern routes on
+            // saving Display settings with the layout on Auto, and a TV then lost its top bar
+            // until the app restarted.
             this.autoLayout();
         } else {
             setLayout(this, LayoutMode.Mobile, normalizedLayout);
             setLayout(this, LayoutMode.Tv, normalizedLayout);
             setLayout(this, LayoutMode.Desktop, normalizedLayout);
+            this.modern = !isLegacyLayout;
         }
 
         console.debug('[LayoutManager] using layout mode', normalizedLayout);
-        this.modern = !isLegacyLayout;
         if (layoutValue === LayoutMode.Modern) {
             const legacyLayoutMode = browser.mobile ? LayoutMode.Mobile : LayoutMode.Desktop;
             console.debug('[LayoutManager] using legacy layout mode', legacyLayoutMode);
