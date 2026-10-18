@@ -77,6 +77,11 @@ when someone drives the TV.
 played tick and unplayed count; mobile's `CardOverlayButtons` sit bottom-right. That is why the file
 mark is top-left — not preference, availability.
 
+The reusable pieces (the download state mark, the card glass, the media marks, the track dropdown, the buttons and row
+actions, and the rest) each have a one-screen guide in [`design/guides/`](design/guides/README.md): the current approved
+values, states and class names. Read the guides of the components a change touches before designing or building it, and
+change a component's guide in the same commit as the component (user, 2026-10-18).
+
 When a design cannot be built under these rules, the design changes. The one deliberate exception is
 recorded in §7.3: the top bar's presentation. It is a restyle, it is called out as such, and it is
 the only one.
