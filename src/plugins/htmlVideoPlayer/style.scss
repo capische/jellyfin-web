@@ -149,3 +149,17 @@ video[controls]::-webkit-media-controls {
         opacity: initial;
     }
 }
+
+/* Set by the player while HDR video plays on webOS 6 and newer, which lift web graphics to
+   HDR peak brightness there: white text beside the video glares far above the same white
+   on any other page. Everything drawn over the video is dimmed back towards that. */
+.hdrPlayback {
+    .videoSubtitles,
+    .videoOsdBottom,
+    .osdHeader,
+    .upNextDialog,
+    .actionSheet,
+    .playerSubtitleSettings {
+        filter: brightness(0.7);
+    }
+}

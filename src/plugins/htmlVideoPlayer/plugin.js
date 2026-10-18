@@ -656,6 +656,10 @@ export class HtmlVideoPlayer {
         // Read by playerOverlayFrost. Cleared, unlike the poster, when the item has no
         // artwork, so a frosted menu never shows the previous item's backdrop.
         elem.dataset.backdropUrl = options.backdropUrl || '';
+        // webOS 6 and newer lift web graphics to HDR peak brightness while HDR video plays,
+        // so white overlays glare; style.scss dims them while this class is set.
+        document.documentElement.classList.toggle('hdrPlayback', browser.web0sVersion >= 6
+            && options.mediaSource.MediaStreams?.some((s) => s.Type === 'Video' && s.VideoRange === 'HDR'));
 
         await this.updateVideoUrl(options);
         return this.setCurrentSrc(elem, options);
@@ -1093,6 +1097,8 @@ export class HtmlVideoPlayer {
         const elem = this.#mediaElement;
         const src = this.#currentSrc;
 
+        document.documentElement.classList.remove('hdrPlayback');
+
         if (elem) {
             if (src) {
                 elem.pause();
@@ -1118,6 +1124,7 @@ export class HtmlVideoPlayer {
 
         setBackdropTransparency(TRANSPARENCY_LEVEL.None);
         document.body.classList.remove('hide-scroll');
+        document.documentElement.classList.remove('hdrPlayback');
 
         const videoElement = this.#mediaElement;
 
