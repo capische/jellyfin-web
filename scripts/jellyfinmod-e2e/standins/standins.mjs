@@ -440,7 +440,7 @@ const control = createServer(async (request, response) => {
     const url = new URL(request.url, 'http://control');
     try {
         if (url.pathname === '/state') {
-            json(response, 200, { faults, counters, torrents: [...torrents.values()].map((torrent, at) => describe(torrent, at + 1)), releases: releases() });
+            json(response, 200, { pid: process.pid, faults, counters, torrents: [...torrents.values()].map((torrent, at) => describe(torrent, at + 1)), releases: releases() });
             return;
         }
         if (url.pathname === '/prowlarr-clients') {

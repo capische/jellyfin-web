@@ -28,7 +28,9 @@
 //                                                  ps-s01e01-v2.mkv, hyh-v2.mkv (each its own encode, a few hundred kB)
 //   [JELLYFINMOD_QS_CONTROL=http://127.0.0.1:38119] the stand-ins' control port
 //   [JELLYFINMOD_QS_SERIES=Peep Show] [JELLYFINMOD_QS_TVDB=71656] [JELLYFINMOD_QS_MOVIE=Hack Your Health]
-//   [JELLYFINMOD_BROWSER=chromium|chrome] [JELLYFINMOD_QS_LAYOUTS=mobile,tv1080] [JELLYFINMOD_QS_STEPS=A1,A2,A3,A4,B,A5]
+//   B8 (opt-in, not in the default steps): the stand-in Transmission's request count while an import waits for its download,
+//      with and without a page polling the queue, and with nothing waiting.
+//   [JELLYFINMOD_BROWSER=chromium|chrome] [JELLYFINMOD_QS_LAYOUTS=mobile,tv1080] [JELLYFINMOD_QS_STEPS=A1,A2,A3,A4,B,A5,B8]
 //   [JELLYFINMOD_SHOTS=<folder>]
 //
 // Preconditions (envs/README.md): the series' folder is a writable copy under /test-media (its season has two episodes on disk
@@ -742,6 +744,38 @@ async function stepA5() {
     for (const target of [page, seriesPage, queuePage, episodePage]) await target.context().close();
 }
 
+// ---- B8 (opt-in): how often the plugin reads the client (P4.FU12 B8) ----
+// The stand-in Transmission's request count over a window: an import waiting for its download with no page open (the monitor's
+// 2 s pace), the same with a season page polling the queue (one shared client read per freshness window, not one per reader),
+// and with nothing waiting (no client read at all).
+async function stepB8() {
+    const WINDOW = 30000;
+    const txCount = async () => (await control('/state')).counters.tx ?? 0;
+    const over = async () => {
+        const before = await txCount();
+        await new Promise(resolve => setTimeout(resolve, WINDOW));
+        return (await txCount()) - before;
+    };
+    const grab = await apiGrab({ entryId: ids.series, episodeId: ids.episodes[3].id }, EP3);
+    await until(async () => (await grabState(grab.id)) === 'accepted', { timeout: 30000, label: 'the client accepting E03' });
+    const torrent = await torrentOf(EP3);
+    await control(`/progress?hash=${torrent.hashString}&fraction=0.5`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const waiting = await over();
+    const page = await newSampledPage();
+    await go(page, seasonHash());
+    await waitRows(page, [1, 2, 3, 4, 5, 6]);
+    const withPage = await over();
+    await page.context().close();
+    await removeGrab(grab.id);
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    const idle = await over();
+    const perTwo = WINDOW / 2000;
+    record('B8', 'an import waiting for its download: the client is read about every 2 s (requests in 30 s)', waiting >= perTwo * 0.6 && waiting <= perTwo * 1.6, waiting);
+    record('B8', 'the same with a season page polling the queue: still about one client read per 2 s, shared', withPage <= perTwo * 1.6, withPage);
+    record('B8', 'nothing waiting: the client is not read (requests in 30 s)', idle <= 1, idle);
+}
+
 /** A row disc's tooltip and meta line, read where the pointer would rest: nothing may cover the disc (P4.FU10, "the text is not popping"). */
 async function checkTooltips(page, what, title, meta) {
     const seen = await page.evaluate(() => {
@@ -779,6 +813,7 @@ try {
         for (const layout of otherLayouts) await stepHeldPack('B', layout).catch(error => record('B', `${layout} runs`, false, String(error.message).split('\n')[0]));
     }
     if (steps.has('A5')) await stepA5().catch(error => record('A5', 'runs', false, String(error.message).split('\n')[0]));
+    if (steps.has('B8')) await stepB8().catch(error => record('B8', 'runs', false, String(error.message).split('\n')[0]));
     record('all', 'no page errors', errors.length === 0, errors.slice(0, 5));
 } finally {
     await browser.close();
