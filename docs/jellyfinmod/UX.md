@@ -449,9 +449,32 @@ its last value, the disc and figure dimmed.
     their state;
   - a page with nothing on its way still reads the queue once a minute, and when its tab is shown again, so a grab made on
     another device shows on a page left open there within a minute;
-  - an import that is done while the page still shows the title without its file (Jellyfin has not drawn the new item yet)
-    keeps reading `importing…` on that card or row until the page draws the file, at most 3 minutes; a card or row upstream
-    draws again keeps it too.
+  - an import that is done while the page has not drawn the file's own item keeps reading `importing…` on that card or row
+    until it has (P4.FU12): the plugin's entry detail names the item that plays the file (`playableItemId`, read from Jellyfin,
+    bound, not a placeholder, refreshed and probed). The plugin pushes the change (an early `LibraryChanged`, see below) and the
+    page reads that detail on it; only when the push cannot be relied on does the one fallback poll (below) read it, once a
+    second. From 30 s after the import ended the ring's tooltip adds *taking longer than usual*. The ring goes at once when a card
+    or row of the episode or movie is the file's own item (its id is the playable item's, or it is no longer the title's
+    placeholder: a placeholder drawn again keeps its id), and for a season's or series' card when the plugin names every
+    playable item and the card shows no missing-file mark for two passes running. A mark that is absent for a frame while
+    upstream redraws a list changes nothing; a cancelled or failed download ends it at once; a safety stop at 10 minutes (it
+    was 3);
+  - on the plugin's push the page reads the queue first and only then its items, so a list redrawn with the new file never
+    meets the last answer's `queued` or downloading (P4.FU12);
+  - a pack's row (the Queue page, a season's or series' card) reads downloading while any of its files is still on its way,
+    importing only once every file is in, then its files: a pack episode imports the moment its own file is in, but the row
+    never goes from importing back to downloading (P4.FU12).
+
+**How the page learns of a change: push first (P4.FU12).** The plugin sends Jellyfin's own `LibraryChanged` message to each user's
+sessions at once, only with the items that user may see, after every change that alters what the web should show: an import or
+replacement completing, a delete repaired, placeholders written or removed (Sync Now, Add, Remove Placeholders, Remove Entry), a
+reclaim or version removal. The web reads the catalog again on it (`queryClientEventHandler`), and after the person's own Remove
+Entry, Sync Now and Remove Placeholders. **The one fallback** is `hooks/useEntryFallbackPoll.ts`: it reads an open title's detail
+once a second (every 5 s after 30 s), only while the title waits for a download or for the item that plays its file and the
+socket is down, or the file shows on disk without that item and no `LibraryChanged` came within 5 s; it does nothing while the tab
+is hidden or nothing waits, and nothing else on the web polls for it. The download client has no push: the plugin reads it every
+2 s while an import awaits its download, once per freshness window whoever asks, and a queue read that finds a waiting download
+complete starts its import at once.
 
 *Superseded 2026-10-13 (P4.FU6):* P4.FU1's white arrow inside upstream's count pill (`jfmod-countArrow`), the amber arrow disc
 (`jfmod-dlDisc`), the rows' 0.28em bottom bar (`jfmod-dlRowBar`), the figure at a row's end (`jfmod-dlRowFigure`) and the
