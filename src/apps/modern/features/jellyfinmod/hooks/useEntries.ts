@@ -119,6 +119,9 @@ export const nativeSeasonsQuery = (api: Api, userId: string, seriesId: string) =
         keepItemFacts(api, userId, items);
         return items;
     },
+    // Read again whenever a page draws it (P4.FU12), unless just read (the route's prefetch): a copy kept across a reload is
+    // never taken for fresh while Jellyfin has changed the series (a placeholder's row and the mod's missing row both showing).
+    staleTime: 2000,
     retry: false
 });
 
@@ -126,6 +129,8 @@ export const nativeSeasonsQuery = (api: Api, userId: string, seriesId: string) =
 export const nativeEpisodesQuery = (api: Api, userId: string, seriesId: string, seasonId: string) => queryOptions({
     queryKey: ['JellyfinMod', api.basePath, userId, 'NativeEpisodes', seasonId],
     queryFn: async ({ signal }) => (await getShowApi(api).getEpisodes({ seriesId, seasonId, userId }, { signal })).data.Items ?? [],
+    // As the seasons above (P4.FU12).
+    staleTime: 2000,
     retry: false
 });
 

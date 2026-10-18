@@ -3,6 +3,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import React, { type FC, useCallback, useEffect, useState } from 'react';
 
+import { invalidateCatalog } from '../integration/invalidateCatalog';
 import { type PlaceholderLibrary, type SectionProps, summarisePlaceholders } from './settingsSections';
 import { problemText, request } from './settingsApi';
 import { Notice, type NoticeState, ScrollList, SectionFrame, useConfirm } from './settingsWidgets';
@@ -132,7 +133,8 @@ const Backfill: FC<BackfillProps> = ({ api, busy, setBusy, setNotice, ask, versi
         try {
             const after = await request<PlaceholderProgress>(api, 'POST', 'Placeholders/SyncNow');
             setProgress(after);
-            setNotice({ kind: 'ok', text: `Synced: ${progressLine(after)}. Jellyfin adds the new placeholders as it scans.` });
+            invalidateCatalog(api);
+            setNotice({ kind: 'ok', text: `Synced: ${progressLine(after)}. Jellyfin adds the new placeholders within seconds.` });
             await onSynced();
         } catch (error) {
             setNotice(isConflict(error) ? { kind: 'warn', text: 'A sync is running already; the line updates when it ends.' } :
@@ -314,6 +316,7 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         try {
             const plan = await work();
             setPlans(current => ({ ...current, [plan.libraryId]: plan }));
+            if (!plan.dryRun) invalidateCatalog(api);
             const failed = plan.failures?.length ? ` ${plural(plan.failures.length, 'file')} could not be changed.` : '';
             setNotice({ kind: plan.failures?.length ? 'warn' : 'ok', text: success(plan) + failed });
             setVersion(value => value + 1);
@@ -325,7 +328,7 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         } finally {
             setBusy(false);
         }
-    }, [load, reload]);
+    }, [api, load, reload]);
 
     const preview = useCallback((library: PlaceholderLibrary) => run(
         () => request<PlaceholderPlan>(api, 'GET', `Placeholders/${library.libraryId}/Plan`),
@@ -367,7 +370,7 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         if (enabled) {
             await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: true }),
                 done => `On for ${done.libraryName}: wrote ${plural(done.writes.length, 'placeholder')}`
-                    + (done.pending ? `, ${done.pending} more over the next runs` : '') + '. Jellyfin adds them as it scans.');
+                    + (done.pending ? `, ${done.pending} more over the next runs` : '') + '. Jellyfin adds them within seconds.');
             return;
         }
         await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: false }),

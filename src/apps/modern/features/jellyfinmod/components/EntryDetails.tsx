@@ -12,6 +12,7 @@ import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 
 import { announce } from '../integration/announce';
+import { invalidateCatalog } from '../integration/invalidateCatalog';
 import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refreshEntry, removeEntry } from '../api/modApi';
 import { openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { showsRetentionStatus } from '../constants/detailPage';
@@ -185,6 +186,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         }
         return mutate(async () => {
             await removeEntry(api, entry.id, { signal });
+            invalidateCatalog(api);
             if (!signal.aborted) window.location.hash = '#/home';
         });
     }, [api, busy, entry.id, entry.title, mutate, signal]);
