@@ -848,6 +848,79 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (the same held-grab path), an ordinary user with the queue open to users, the TV at 1280×720, Codex review. Measured, for
   the other session's import-to-Play work: a finished file to the entry on disk about 67 s, then 38 s more until the season
   page drew the file (covered by `importing…`).
+  **P4.FU11, built (not accepted) 2026-10-17: a finished download is playable in seconds, with no cloud between** (user
+  2026-10-17: shorten the delay between a download finishing and the file showing as playable, and keep the importing ring until
+  it really is; 2026-10-18: "make the delays go away"). Owner: Phase 5's import (P5.I5) with P4.FU6's ring family; carried on and
+  finished by P4.FU12 below, which owns the behaviour now. Cause, measured on local environment charlie (Chromium, the page sampled
+  every 100 ms, seconds after the download finished): the import reported the new file to Jellyfin's library monitor, which acts only
+  after its quiet delay (60 s), so Jellyfin had the playable file at 73 s; the import completed at the monitor's next poll (88 s); the
+  marks dropped the ring at the queue's `seeding` while the page still held the placeholder, and the page read its items again only
+  10 s after Jellyfin's batched `LibraryChanged` (113 s): 22 s of the Not Downloaded cloud between. A pack's reports refreshed nothing
+  until the escalated library scan (Play at 105 s); a movie waited the same 60 s. This slice: the import makes Jellyfin look at the
+  destination at once (first `ChangedExternally()` on the nearest folder, replaced in P4.FU12 by `FolderRefresh`), a changed binding
+  wakes the import monitor, a queue read that finds a waiting download complete wakes it too, the web reads its items again when the
+  queue shows an import finished, and the mod's `LibraryChanged` refresh waits 250 ms instead of 10 s (a 1.5 s queue read while a
+  file finished was dropped again by P4.FU12's push). Codex's first draft's guard (complete only when the bound item is a
+  non-placeholder video at the destination path) was dropped: a further media source's binding names its owner item, so it could
+  block a version's import. On the queued-state base (2026-10-18, before P4.FU12): episode Play 4.5–4.9 s, pack of 4 4.5–4.8 s,
+  movie 3.1 s, no cloud. Runner: `import-delay.mjs`, `import-delay-fixture.py`, `import-delay-report.mjs` (charlie only).
+  **P4.FU12, built (not accepted) 2026-10-18: no delay between what happens and what the pages show** (user 2026-10-18: "Go with
+  what Codex proposed", then "fine, finish no delay work"; design [`design/no-delay-codex-design.md`](design/no-delay-codex-design.md),
+  research [`design/no-delay-jellyfin-research.md`](design/no-delay-jellyfin-research.md), audit
+  [`design/no-delay-import-audit.md`](design/no-delay-import-audit.md) B1 and B3–B8, B2 left out; what changed:
+  [`design/missing-media-user-actions.md`](design/missing-media-user-actions.md) §18; [UX.md](UX.md) §3.3, §9). Owner: Phase 5's
+  import and Phase 1's placeholders (P1.FU24–29), with P4.FU6's marks and P4.FU10's queued state. No migration, version 0.1.0.0; the
+  only API change is the response-only `playableItemId` on an entry and an episode. **Push, not poll:** the plugin sends Jellyfin's
+  own `LibraryChanged` to each user's sessions at once (`LibraryNotifications`, only the ids that user may see) after an import
+  completes, a delete is repaired, placeholders are written or removed, and a native item is removed after a reclaim or a version
+  removal; the web reads its queue and then its catalog on it, and after the person's own Remove Entry, Sync Now and Remove
+  Placeholders. **The one fallback poll** is `hooks/useEntryFallbackPoll.ts` (an open title's detail once a second, every 5 s after
+  30 s, only while it waits and the socket is down or no push came within 5 s); the download client has no push, so the plugin reads
+  it every 2 s while an import or a replacement awaits its download, once per freshness window whoever asks, and not at all when
+  nothing waits. Plugin: deletes made in Jellyfin repaired per title from Jellyfin's removals (`DeleteRepair`, scoped absence proof,
+  no library-wide pass); `FolderRefresh` makes Jellyfin hold written files by validating the nearest folder (never a library
+  folder's refresh); an import completes when Jellyfin can play the file; the plugin deletes the Jellyfin items of its own removed
+  placeholders at once, marked by item id (B1); a real file beside a placeholder syncs the title at once (B3); a removal after a
+  reclaim or replacement is pushed (B5); replacements are looked at every second (B8). Web: the importing ring stays until the page
+  has drawn the file's own item; the marks' queue is refreshed before the catalog on a push. Finisher's fixes (2026-10-18): a pack
+  row's state comes from an import still waiting for its download before one importing (it stepped back from importing to
+  downloading once pack episodes imported in seconds); the queue is read before the catalog on a push (a redraw drew a stale queued
+  on the playable file); a card or row that is the file's own item ends the ring at once (none, then importing again, for a frame);
+  Remove Placeholders and Remove Entry wait, under the library lock, for discoveries asked for before them (a discovery still
+  running could make items after the removal looked, later read as a user's deletes); the native season and episode lists are read
+  again when a page draws them unless read within 2 s (a copy restored from the persisted cache after a reload showed a
+  placeholder's row and the mod's missing row for the same episode); the Transmission transport keeps the last session id per
+  endpoint (each client read was a 409 and a retry).
+
+  | Before → after (local bravo, 100 ms DOM samples; after = Sonnet's runs, then the finisher's final build in Chromium / Chrome) | Before | After |
+  | --- | --- | --- |
+  | Import, episode: download done to Play | 110–134 s | 2.9–3.0 s; final 2.3 s / 4.0 s, no cloud |
+  | Import, pack of 4 | 111 s | 2.7 s; final 2.8–2.9 s / 2.4–2.5 s |
+  | Import, movie | 91 s | 1.9 s; final 3.9 s / 3.9 s |
+  | Import, ordinary user, socket up | 110 s | 2.9 s; final 2.5 s, one read (the push's), no poll |
+  | Import, socket blocked (the fallback) | — | 2.0 s; final 3.2 s (four reads, one a second) |
+  | Remove Placeholders | 60.3 s | 0.03–0.12 s; final 0.05–0.23 s |
+  | Sync Now, both libraries | 62.2 s | 1.7 s; final 2.2 s |
+  | Remove Entry | 60.1 s | 0.07 s; final 0.14 s |
+  | A real file beside a placeholder: the stub gone after the binding | next sync | 0.2–1.1 s; final 0.15 s (Jellyfin itself takes 63 s to see a copied file) |
+  | Jellyfin's Delete media: season / episode / movie | 60 s and more | 1.6 / 1.6 / 0.5 s; final 1.7 / 1.1 / 0.5 s |
+  | Jellyfin's Delete media: whole series | 60 s and more | 4.8 s alone, 12–14.5 s right after other steps (Jellyfin's own TMDb refresh of the new series item) |
+
+  Tests (final build, plugin `5f2199e`, web this commit's line, local bravo, no TMDB token): all 13 plugin suites pass (Phase 4, 5,
+  6, 7 settings/Prowlarr/takeover and 3 protection in the Linux container); `queued-state.mjs` 61/61 in Chromium and in Chrome
+  (54/61 before the finisher's fixes; 58/61 on next-release, its 3 failures real flicker of the same kind), its opt-in B8 step 6/6
+  (15 client requests in 30 s while an import waits, the same with a page polling the queue, none when nothing waits; 30 before
+  the session id was kept); `import-delay.mjs` with no cloud sample on any surface in either browser; `placeholder-redelete.mjs`
+  34/34 (Chromium) and its browser and series steps 9/9 (Chrome); `placeholder-flows.mjs` with Remove Placeholders right after Sync
+  Now leaving nothing behind after 75 s; `card-progress.mjs` 125/125 in both browsers (its disc and importing-colour checks brought
+  up to the card frame disc of `8a2599fb4c` and the importing word of `e8b835537c`; next-release fails the same 6 checks with the
+  old runner); `picker-added-row.mjs` desktop, phone and TV pass in both browsers; `missing-seasons-episodes.mjs` 1244/1254 in both
+  browsers, the 10 failures identical on unchanged next-release (a Season 1 card says "6 episodes" where the runner expects 2, and
+  the TV administrator's Not Downloaded button check), so not this slice's; a one-off browser check that Remove Placeholders and
+  Remove Entry show on the next page without a reload, in both browsers. Not run: the Pi, 28096, a physical TV, the TV at
+  1280×720, Codex review. Seen, not fixed: a page loaded in the second or two while Jellyfin has made placeholder items but not
+  yet given them their numbers drew them nameless at the top beside the mod's missing rows (a page already open converges at
+  once).
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
@@ -1022,7 +1095,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   missing episodes and seasons of held series plus the native-client filter; **P1.FU25** import swap and retention;
   **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only (built, not accepted
   2026-10-17); **P1.FU28** Next Up's
-  next real episode and play queues that skip stubs. No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  next real episode and play queues that skip stubs; **P1.FU29** placeholders come back after a delete in Jellyfin (built,
+  not accepted 2026-10-17). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
   episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,

@@ -734,7 +734,10 @@ claimed episode with `episodeId`, `seasonNumber`, `episodeNumber`, its newest `i
 (next-up priority, P5.FU3 and P4.FU5) `progress`, the episode's own file 0–1 while it downloads (1 once its import left
 `waiting`, null when the file is not known yet), and `sizeBytes`, that file's length while the client lists it (null
 otherwise). The row's own `progress`, `sizeBytes`, `downloadRateBytes` and `etaSeconds` stay the whole torrent's. The web
-estimates an episode's time left as its remaining bytes at the row's `downloadRateBytes`.
+estimates an episode's time left as its remaining bytes at the row's `downloadRateBytes`. The row's `state` is the pack's as a
+whole (P4.FU12): `queued`, `downloading` or `stalled` while any claimed episode still waits for its file, the import states
+once none does, then a failed episode's, then `seeding`; so it never goes from an import state back to `downloading`, even
+though each episode imports as soon as its own file is in.
 
 Every row also carries (P1.FU20, additive; absent from older plugins) `parsed`, the release name as the picker parsed it when
 it was grabbed (the grab's stored copy, the same shape as a release candidate's `parsed`: `resolution`, `source`, `codec`,
@@ -970,6 +973,19 @@ with a placeholder's id finds the series' entry. Since P1.FU26 the entry itself 
 `Entries?jellyfinItemId=` with a placeholder movie's id finds the movie's entry. `POST /JellyfinMod/Browse` answers such a title
 as one `native` row (the placeholder item) carrying the entry with its state and `placeholderItemId`; no separate `entry` row is
 drawn for it, and the state filter reads the entry's state (not `onDisk`) for it.
+
+**`playableItemId` (P4.FU12).** An episode in `GET /JellyfinMod/Entries/{id}`, and the movie entry itself, gain `playableItemId`
+(omitted when null): the Jellyfin item that plays the file once Jellyfin can play it, read from Jellyfin when the answer is built
+(not from the stored availability). It is set when the bound item is no placeholder, has been refreshed, shows a video stream (or
+none a probe grace after its refresh) and its owner, for a further version, is a real item; a further version is named by its owner
+(the item a user opens). A listed but not yet refreshed file, a stale binding or a placeholder names none. Response-only: no
+column, no migration. The web keeps an import's ring until the page has drawn this item (UX §3.3).
+
+**Early library notification (P4.FU12).** When the plugin changes what a library holds (a delete repaired, placeholders written, an
+import completed) it sends Jellyfin's own `LibraryChanged` WebSocket message straight to the users who have a session, within
+250 ms of the first change of a batch, instead of leaving it to Jellyfin's 30 s batch, which still follows and is harmless. Each
+user is sent only ids they may see: the library must be one of theirs, an added item must be visible to them, and a removed item
+must pass their rating and tag rules by the rating and tags it had. It carries item ids only: no path, no torrent, no user data.
 
 **Jellyfin's cached user data (P1.FU25 follow-up).** Jellyfin 12 keeps each user's data per item in memory and fills it from
 list reads; a new item read before its first metadata refresh is cached as unplayed, and Jellyfin re-attaches the old item's
