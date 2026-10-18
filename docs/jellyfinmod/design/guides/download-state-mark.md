@@ -62,6 +62,8 @@ easing. Motion is transform and opacity only.
 
 ## Text
 
+The `importing…` meta word steps up from the muted meta colour to the full text colour at 600 and breathes (`opacity 1 → .45`, 1.2 s ease-in-out, `jfmod-dlBreathe`, the same keyframe as the bar; `.jfmod-dlMeta--importing`; none under reduced motion, where colour and weight alone set it apart) (user 2026-10-18).
+
 Meta line: `42% · 12 min left` (`1 h 05 min left` from an hour), `42% · stalled`, `queued`, `importing…`,
 `Failed · reason` (cut with an ellipsis). Tooltip, on every disc: `Downloading · 42% · 12 min left · 3 MB/s`, `Queued`,
 `Importing…`, `Stalled at 42%`, `Failed · reason`. One mapping words both (`describeDownload`). Queued never says how
