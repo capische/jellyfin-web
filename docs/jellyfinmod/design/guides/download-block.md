@@ -31,7 +31,7 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 - Pack line: "Season 1 pack · this episode is file 6 of 10" with one dot per episode: imported in `--jfmod-dlblock-ok`
   (`#81c784`; light `#2e7d32`), downloading as a small ring, waiting in the track colour.
 - Bar: 0.28em over `--jfmod-dlblock-track` (white 12 %; light black 14 %), the fill in the page's text colour; stalled dims
-  it to 55 %; importing shows a full bar breathing (`opacity 1 → .45`, 1.2 s).
+  it to 55 %; importing shows a full bar breathing (`opacity 1 → .45`, 1.2 s) and its state word "Importing" breathes with it (`jfmod-dlblockBreathe`; none under reduced motion).
 - Actions: *View Queue* (link, everyone), *Cancel Download* (grey, administrators), *Search Again* (red, administrators,
   failed), *Get a Release* (blue, administrators, not downloaded); Title Case, sized like Save
   ([buttons-and-row-actions.md](buttons-and-row-actions.md)).
