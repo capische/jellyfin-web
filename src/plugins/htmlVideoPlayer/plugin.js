@@ -26,6 +26,7 @@ import { MediaError } from 'types/mediaError';
 
 import browser from '../../scripts/browser';
 import appSettings from '../../scripts/settings/appSettings';
+import { applyHdrOverlayDim } from '../../components/playback/hdrOverlayDim';
 import { appHost } from '../../components/apphost';
 import loading from '../../components/loading/loading';
 import dom from '../../utils/dom';
@@ -655,8 +656,10 @@ export class HtmlVideoPlayer {
         this.#applyAspectRatio(options.aspectRatio || this.getAspectRatio());
         // webOS 6 and newer lift web graphics to HDR peak brightness while HDR video plays,
         // so white overlays glare; style.scss dims them while this class is set.
-        document.documentElement.classList.toggle('hdrPlayback', browser.web0sVersion >= 6
-            && options.mediaSource.MediaStreams?.some((s) => s.Type === 'Video' && s.VideoRange === 'HDR'));
+        const hdrVideo = browser.web0sVersion >= 6
+            && options.mediaSource.MediaStreams?.some((s) => s.Type === 'Video' && s.VideoRange === 'HDR');
+        applyHdrOverlayDim();
+        document.documentElement.classList.toggle('hdrPlayback', !!hdrVideo);
 
         await this.updateVideoUrl(options);
         return this.setCurrentSrc(elem, options);

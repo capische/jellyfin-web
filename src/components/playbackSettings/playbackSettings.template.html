@@ -139,6 +139,22 @@
             <div class="fieldDescription checkboxFieldDescription">${EnableNextVideoInfoOverlayHelp}</div>
         </div>
 
+        <div class="hdrOverlayDimSection hide">
+            <div class="checkboxContainer checkboxContainer-withDescription">
+                <label>
+                    <input type="checkbox" is="emby-checkbox" class="chkHdrOverlayDim" />
+                    <span>${LabelHdrOverlayDim}</span>
+                </label>
+                <div class="fieldDescription checkboxFieldDescription">${LabelHdrOverlayDimHelp}</div>
+            </div>
+
+            <div class="sliderContainer-settings">
+                <div class="sliderContainer">
+                    <input is="emby-slider" class="sliderHdrOverlayBrightness" label="${LabelHdrOverlayBrightness}" type="range" min="30" max="100" step="5" />
+                </div>
+            </div>
+        </div>
+
         <div class="checkboxContainer fldExternalPlayer checkboxContainer-withDescription hide">
             <label>
                 <input type="checkbox" is="emby-checkbox" class="chkExternalVideoPlayer" />

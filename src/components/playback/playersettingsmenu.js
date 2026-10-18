@@ -3,6 +3,10 @@ import { playbackManager } from '../playback/playbackmanager';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import qualityoptions from '../qualityOptions';
+import browser from '../../scripts/browser';
+import appSettings from '../../scripts/settings/appSettings';
+import toast from '../toast/toast';
+import { applyHdrOverlayDim } from './hdrOverlayDim';
 
 function showQualityMenu(player, btn, boxed) {
     const videoStream = playbackManager.currentMediaSource(player).MediaStreams.filter(function (stream) {
@@ -244,6 +248,15 @@ function showWithUser(options, player, user) {
         });
     }
 
+    // A quick switch for the HDR overlay dim (Settings > Playback sets its level).
+    if (browser.web0sVersion >= 6) {
+        menuItems.push({
+            name: globalize.translate('LabelHdrOverlayDim'),
+            id: 'hdroverlaydim',
+            asideText: globalize.translate(appSettings.hdrOverlayDim() ? 'On' : 'Off')
+        });
+    }
+
     if (options.stats) {
         menuItems.push({
             name: globalize.translate('PlaybackData'),
@@ -295,6 +308,13 @@ function handleSelectedOption(id, options, player) {
                 options.onOption('suboffset');
             }
             return Promise.resolve();
+        case 'hdroverlaydim': {
+            const dim = !appSettings.hdrOverlayDim();
+            appSettings.hdrOverlayDim(dim);
+            applyHdrOverlayDim();
+            toast(`${globalize.translate('LabelHdrOverlayDim')}: ${globalize.translate(dim ? 'On' : 'Off')}`);
+            return Promise.resolve();
+        }
         case 'subtitleappearance':
             if (options.onOption) {
                 options.onOption('subtitleappearance');
