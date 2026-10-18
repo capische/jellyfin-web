@@ -1,0 +1,239 @@
+<title>Quality Profiles Redesign</title>
+<style>
+:root{--bg:#f3f4f6;--fg:#1d1f22;--panel:#fff;--ground:#e9ebee;--paper:#fff;--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--prim:#00a4dc;--primfg:#fff;--btn:rgba(0,0,0,.08);--btnfg:#1d1f22;--err:#c62828;--warn:#b26a00;--ok:#2e7d32;--sel:rgba(0,164,220,.12);--chip:rgba(0,0,0,.06);--field:rgba(0,0,0,.04);color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--primfg:rgba(0,0,0,.87);--btn:rgba(255,255,255,.14);--btnfg:#fff;--err:#ff7b72;--warn:#f2b01e;--ok:#81c784;--sel:rgba(0,164,220,.18);--chip:rgba(255,255,255,.08);--field:rgba(255,255,255,.06);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--primfg:rgba(0,0,0,.87);--btn:rgba(255,255,255,.14);--btnfg:#fff;--err:#ff7b72;--warn:#f2b01e;--ok:#81c784;--sel:rgba(0,164,220,.18);--chip:rgba(255,255,255,.08);--field:rgba(255,255,255,.06);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,"Noto Sans",system-ui,sans-serif;padding-block:0}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+.panel{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;background:var(--panel);padding:16px;border-right:1px solid var(--line)}
+.panel h1{font-size:16px;margin:0 0 4px}.panel p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.4}
+.ctl{margin:0 0 12px}.ctl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}.seg button{font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--prim);border-color:var(--prim);color:#fff}
+.sw{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.4}
+.main{padding:16px;min-width:0}h2{font-size:14px;margin:18px 0 6px}h2:first-child{margin-top:0}
+.note{font-size:12px;color:var(--muted);margin:0 0 8px;max-width:78ch;line-height:1.45}
+.frame{background:var(--ground);color:var(--fg);border-radius:8px;padding:1.2em;font-size:16px;overflow:auto;max-width:100%}
+.frame.phone{font-size:14.4px;width:360px;padding:.8em}
+/* ---- settings vocabulary (settings.scss) ---- */
+.sec{background:var(--paper);border-radius:.2em;max-width:60em}
+.sechead{padding:1.1em 1.5em 1em;border-bottom:.07em solid var(--line);display:flex;align-items:flex-start;flex-wrap:wrap}
+.sechead .t{flex:1 1 auto;min-width:0}.eyebrow{font-size:.78em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.15em}
+.sechead h3{margin:0;font-size:1.25em;font-weight:500}.sechead .st{font-size:.85em;color:var(--muted);margin-top:.25em}
+.secbody{padding:1.2em 1.5em .6em}.secfoot{display:flex;align-items:center;flex-wrap:wrap;padding:.9em 1.5em;border-top:.07em solid var(--line)}
+.frame.phone .sechead,.frame.phone .secbody,.frame.phone .secfoot{padding-left:1em;padding-right:1em}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:2.5em;padding:0 1.4em;border-radius:.2em;font-size:.9em;font-weight:600;letter-spacing:.02em;background:var(--btn);color:var(--btnfg);cursor:pointer;margin-right:.6em;white-space:nowrap;border:0;font-family:inherit}
+.btn.blue{background:var(--prim);color:#fff}.btn.red{background:#c62828;color:#fff}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.chip{display:inline-block;padding:.05em .55em;border-radius:.2em;background:var(--chip);font-size:.82em;color:var(--muted);white-space:nowrap;vertical-align:middle;margin-right:.4em}
+.chip.prim{background:var(--prim);color:var(--primfg)}
+.brow{display:grid;grid-template-columns:1fr auto auto;align-items:center;column-gap:1em;padding:.7em 0;border-bottom:.07em solid var(--line)}
+.brow:last-child{border-bottom:0}.brow .m{min-width:0}.brow strong{display:block;font-weight:600}.brow .sub{display:block;font-size:.86em;color:var(--muted);margin-top:.15em;line-height:1.35}
+.frame.phone .brow{grid-template-columns:1fr auto;row-gap:.3em}.frame.phone .brow .chips{grid-column:1;grid-row:2}.frame.phone .brow .acts{grid-column:2;grid-row:1/3}
+.acts{display:inline-flex;align-items:center;white-space:nowrap}
+.ri{display:inline-flex;align-items:center;justify-content:center;width:2.5em;height:2.5em;border-radius:50%;color:var(--muted);cursor:pointer;background:transparent;border:0}.ri svg{width:1.4em;height:1.4em}.ri:hover{background:var(--btn)}.ri.red{color:#e53935}.ri[aria-disabled=true]{opacity:.35;cursor:default}
+.empty{padding:1.4em 0 .6em;color:var(--muted);font-size:.95em;line-height:1.5}
+/* starting profiles side by side */
+.cards3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:1em;row-gap:1em;max-width:60em}.frame.phone .cards3{grid-template-columns:1fr}
+.pcard{background:var(--paper);border-radius:.2em;padding:1em 1.2em;position:relative}.pcard h4{margin:0 0 .2em;font-size:1.1em;font-weight:600}.pcard .d{font-size:.88em;color:var(--muted);line-height:1.45}
+.pcard .kv{font-size:.85em;margin-top:.7em;line-height:1.55}.pcard .kv b{font-weight:600;color:var(--muted);display:inline-block;width:6.5em}.pcard .ord{font-size:.8em;color:var(--muted);margin-top:.5em;line-height:1.45}
+
+/* dialog */
+.dlg{background:var(--paper);border-radius:.3em;max-width:38em;box-shadow:0 8px 32px rgba(0,0,0,.35);overflow:hidden}
+.dlg .hd{padding:1.1em 1.5em .6em;font-size:1.25em;font-weight:500}.dlg .bd{padding:0 1.5em .5em}.dlg .ft{display:flex;justify-content:flex-end;padding:.8em 1.5em 1em}.dlg .ft .btn{margin:0 0 0 .6em}
+.frame.phone .dlg .hd,.frame.phone .dlg .bd,.frame.phone .dlg .ft{padding-left:1em;padding-right:1em}
+.f{margin:0 0 1em}.f label.l{display:block;font-size:.8em;color:var(--muted);margin-bottom:.3em}
+.inp{display:block;width:100%;font:inherit;font-size:1em;padding:.5em .6em;border:0;border-bottom:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:.2em .2em 0 0}
+.help{font-size:.8em;color:var(--muted);margin-top:.3em;line-height:1.4}
+
+/* the custom dropdown, as the detail page's file chooser: a field-like trigger with a chevron, a paper list of rows,
+   each row the name in weight 600 and the description smaller and muted */
+.dd{position:relative}.ddt{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--fg);background:var(--field);border:0;border-bottom:1px solid var(--line);border-radius:.2em .2em 0 0;padding:.5em 2.2em .5em .6em;cursor:pointer;position:relative}
+.ddn{font-weight:600;font-size:1em}.ddd{font-size:.82em;color:var(--muted);line-height:1.35;margin-top:.1em}
+.ddc{position:absolute;right:.9em;top:50%;width:.5em;height:.5em;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg)}.dd.open .ddc{transform:translateY(-20%) rotate(225deg)}
+.ddl{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--paper);border-radius:.2em;box-shadow:0 6px 24px rgba(0,0,0,.45);padding:.3em 0;margin-top:.2em;max-height:22em;overflow:auto}
+.ddo{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--fg);background:transparent;border:0;padding:.5em .8em;cursor:pointer;border-left:.25em solid transparent}.ddo:hover{background:var(--btn)}.ddo.on{border-left-color:var(--prim);background:var(--sel)}
+.gt{font-size:.78em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:.4em 0 .5em}
+.prov{font-size:.82em;color:var(--muted);margin-top:.5em;line-height:1.45;padding:.45em .7em;border-radius:.2em;background:var(--field)}.prov.ch{border-left:.25em solid var(--prim)}.prov .lnk{color:var(--prim);cursor:pointer;white-space:nowrap}
+.radios{display:flex;flex-direction:column}.radios .r{display:flex;align-items:flex-start;padding:.45em .5em;border-radius:.2em;cursor:pointer;border:1px solid transparent}.radios .r:hover{background:var(--btn)}.radios .r.on{background:var(--sel);border-color:var(--prim)}
+.radios .r input{margin:.3em .6em 0 0}.radios .r .n{font-weight:600}.radios .r .d{font-size:.84em;color:var(--muted);line-height:1.4}
+.segf{display:flex;flex-wrap:wrap}.segf button{font:inherit;font-size:.9em;padding:.45em .9em;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;margin:0 -1px 0 0}.segf button:first-child{border-radius:.2em 0 0 .2em}.segf button:last-child{border-radius:0 .2em .2em 0}.segf button[aria-pressed=true]{background:var(--prim);border-color:var(--prim);color:#fff;position:relative;z-index:1}
+.segf.sz button{flex:1 1 0;text-align:left;padding:.5em .7em}.segf.sz small{display:block;font-size:.78em;opacity:.8;font-weight:400}
+.chk{display:flex;align-items:flex-start;font-size:.95em;margin:.2em 0}.chk input{margin:.25em .6em 0 0}.chk .help{margin-top:.15em}
+.chk select,.inline select{font:inherit;font-size:.9em;background:var(--field);color:var(--fg);border:0;border-bottom:1px solid var(--line);padding:.15em .3em;margin:0 .3em}
+.sum{background:var(--sel);border-left:.25em solid var(--prim);padding:.6em .8em;border-radius:.2em;font-size:.9em;line-height:1.45;margin:1em 0}.sum b{font-weight:600}
+.warnbox{border-left:.25em solid var(--warn);background:var(--field);padding:.6em .8em;border-radius:.2em;font-size:.88em;line-height:1.45;margin:.8em 0}.warnbox.err{border-left-color:#c62828}
+details.adv{margin:1em 0 .4em;border-top:.07em solid var(--line);padding-top:.6em}details.adv summary{cursor:pointer;font-weight:600;font-size:.95em;list-style:none;display:flex;align-items:center}details.adv summary::-webkit-details-marker{display:none}
+details.adv summary:before{content:"";display:inline-block;width:.5em;height:.5em;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);margin:0 .7em 0 .2em;transition:transform .15s}details.adv[open] summary:before{transform:rotate(45deg)}
+details.adv summary .sw{margin:0 0 0 .8em}
+.mx{width:100%;border-collapse:collapse;font-size:.85em;margin:.6em 0}.mx th,.mx td{text-align:center;padding:.35em .2em;border-bottom:.07em solid var(--line)}.mx th:first-child,.mx td:first-child{text-align:left;font-weight:500;width:5.5em}.mx th{font-weight:500;color:var(--muted)}.mx td.na{color:var(--line)}
+.mx input{width:1.1em;height:1.1em;cursor:pointer}.mx th.new{color:var(--warn)}
+.ol{list-style:none;padding:0;margin:.4em 0}.ol li{display:flex;align-items:center;padding:.2em 0;border-bottom:.07em solid var(--line);font-size:.9em}.ol .rk{width:1.6em;text-align:right;color:var(--muted);margin-right:.7em;font-size:.9em}.ol .q{flex:1 1 auto}.ol .q.cut{font-weight:700}.ol .q.cut:after{content:" · cutoff";font-family:Inter,system-ui,sans-serif;font-weight:400;color:var(--muted)}
+.ordline{font-size:.82em;color:var(--muted);line-height:1.5;margin:.3em 0 .8em}
+.ordd{margin:.3em 0 .8em}.ordd summary{font-size:.82em;color:var(--prim);cursor:pointer;list-style:none;display:inline-block}.ordd summary::-webkit-details-marker{display:none}.ordd summary:after{content:' ▸'}.ordd[open] summary:after{content:' ▾'}.ordd .ord{margin-top:.3em}.ordd.big{margin:.2em 0 1em}.ordd.big summary{font-size:.9em;font-weight:600;color:var(--fg)}
+.two{display:grid;grid-template-columns:1fr 1fr;column-gap:1.25em}.frame.phone .two{grid-template-columns:1fr}
+.minisum{font-size:.8em;color:var(--muted);margin:.5em 0 0;line-height:1.45}
+</style>
+
+<div class="app">
+<aside class="panel">
+  <h1>Quality profiles</h1>
+  <p>The settings section and its Add / Edit dialog, redesigned so that the usual path is: pick a starting point, give it a name, Save. Everything the 24-name list did lives under Advanced.</p>
+  <div class="ctl"><label>View</label><div class="seg" id="view"><button aria-pressed="true" data-v="page">Section with profiles</button><button aria-pressed="false" data-v="empty">Section, empty</button><button aria-pressed="false" data-v="dialog">Add dialog</button></div></div>
+  <div class="ctl"><label>Dialog: start from</label><div class="seg" id="preset"><button aria-pressed="true" data-v="4k">4K</button><button aria-pressed="false" data-v="2k">2K</button><button aria-pressed="false" data-v="1080">1080p</button><button aria-pressed="false" data-v="720">720p</button><button aria-pressed="false" data-v="any">Any</button><button aria-pressed="false" data-v="sd">SD</button></div><div class="sw">The same choice is inside the dialog; this just jumps there.</div></div>
+  <div class="ctl"><label>Dialog: Advanced</label><div class="seg" id="adv"><button aria-pressed="false" data-v="0">Collapsed</button><button aria-pressed="true" data-v="1">Open</button></div></div>
+  <div class="ctl"><label>Validation demo</label><div class="seg" id="demo"><button aria-pressed="true" data-v="none">None</button><button aria-pressed="false" data-v="nocut">Cutoff not allowed</button><button aria-pressed="false" data-v="noq">No quality allowed</button></div><div class="sw">Untick qualities in the matrix to get the same messages live.</div></div>
+  <div class="ctl"><label>Theme</label><div class="seg" id="theme"><button aria-pressed="true" data-v="dark">Dark</button><button aria-pressed="false" data-v="light">Light</button></div></div>
+  <div class="ctl"><label>Width</label><div class="seg" id="device"><button aria-pressed="false" data-v="phone">Phone 360</button><button aria-pressed="true" data-v="desktop">Desktop</button></div><div class="sw">Settings are admin-only and not used on a TV; the phone width shows nothing breaks.</div></div>
+</aside>
+
+<main class="main">
+  <h2 id="h-sec">The Quality Profiles section</h2>
+  <p class="note">The section card as it is today, with two changes: each row says in one plain line what the profile does (instead of its 24-name list), and preset profiles carry a <i>Preset</i> chip. <i>Add Profile</i> is the section's blue action; <i>Add Predefined Profiles</i> is grey and appears only while a preset is missing. The default is chosen with the star icon on a row (as today) and shown as the blue <i>Default</i> chip; the Grabbing section's "Default quality profile" select stays as the second place to set it.</p>
+  <div class="frame"><div id="section"></div></div>
+
+  <h2>Three starting profiles side by side</h2>
+  <p class="note">What the presets are, in the words the dialog uses. The 4K one is the default on a fresh install. Nothing on this page is more than a data row; the build cost is in the dialog.</p>
+  <div class="frame"><div class="cards3" id="cards3"></div></div>
+
+  <h2 id="h-dlg">Add / Edit dialog</h2>
+  <p class="note">Simple by default: a starting point, a name, the best quality wanted, whether to fall back, a three-way file size, whether to upgrade later — and a live sentence saying what the profile will pick. <b>Advanced</b> holds the whole model: a source × resolution matrix instead of the 24-line list, the order tried with Move Up / Move Down icons, the cutoff, the upgrade mode, the minimum score and seeders, and the size limits as numbers. Changing a simple control rebuilds the advanced values; editing the advanced values marks the profile <i>Custom</i>. The server's two rules are checked live: at least one quality, and a cutoff that is one of them.</p>
+  <div class="frame"><div id="dialog"></div></div>
+
+  <h2>What the simple controls do to the model</h2>
+  <table class="mx" style="max-width:60em;font-size:.82em">
+  <tr><th style="text-align:left">Simple control</th><th style="text-align:left">Model (PHASE4 profile)</th></tr>
+  <tr><td style="text-align:left">Start from</td><td style="text-align:left">copies a preset's whole record; the name is prefilled</td></tr>
+  <tr><td style="text-align:left">Best quality I want</td><td style="text-align:left">the top resolution of the order; its sources in the fixed order Remux › Blu-ray › WEB-DL › WEBRip › HDTV (DVD for SD)</td></tr>
+  <tr><td style="text-align:left">Fall back, down to</td><td style="text-align:left">appends every lower resolution down to the floor, same source order; off = only the best resolution's qualities</td></tr>
+  <tr><td style="text-align:left">File size</td><td style="text-align:left">min/max bytes per hour per best tier: Small = up to the tier's low figure, Balanced = between, Large = no maximum</td></tr>
+  <tr><td style="text-align:left">Upgrade later</td><td style="text-align:left">upgradeAllowed; cutoff = the first quality of the order; upgradeMode stays replace (Advanced changes it)</td></tr>
+  <tr><td style="text-align:left">Advanced edits</td><td style="text-align:left">written straight to the record; the summary line reads the record, so it stays true</td></tr>
+  </table>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+const G={star:'<path d="M12 3.5L14.6 9L20.5 9.7L16.1 13.8L17.3 19.7L12 16.8L6.7 19.7L7.9 13.8L3.5 9.7L9.4 9Z"/>',edit:'<path d="M4 20H8L18.5 9.5L14.5 5.5L4 16V20Z"/><path d="M12.5 7.5L16.5 11.5"/>',bin:'<path d="M5 7H19M9 7V4H15V7M8 7L9 20H15L16 7"/>',up:'<path d="M12 19V5M6 11L12 5L18 11"/>',down:'<path d="M12 5V19M6 13L12 19L18 13"/>',plus:'<path d="M12 5V19M5 12H19"/>'};
+const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+const RES=['2160p','1440p','1080p','720p','576p','480p']; const SRC=[['remux','Remux'],['bluray','Blu-ray'],['webdl','WEB-DL'],['webrip','WEBRip'],['hdtv','HDTV'],['dvd','DVD']];
+const exists=(s,r)=>{ if(s==='remux') return r==='2160p'||r==='1080p'; if(s==='dvd') return r==='576p'||r==='480p'; return r!=='1440p'||s==='webdl'||s==='webrip'||s==='bluray'; }; // 1440p: only if the plugin adds it (decision)
+const SRCNAME=Object.fromEntries(SRC); const RESNAME={'2160p':'4K','1440p':'2K','1080p':'1080p','720p':'720p','576p':'576p','480p':'480p'};
+const pretty=q=>{ if(!q) return ''; const [src,res]=q.split('-'); return `${RESNAME[res]||res} ${SRCNAME[src]||src}`; };
+const TIER={'4k':'2160p','2k':'1440p','1080':'1080p','720':'720p','sd':'576p'};
+const LABEL={'2160p':'4K','1440p':'2K','1080p':'1080p','720p':'720p','576p':'SD','480p':'SD'};
+// GB per hour per best tier: [small max, balanced max]
+const GBH={'2160p':[8,20],'1440p':[4,10],'1080p':[2,6],'720p':[1,3],'576p':[.5,1.5],'480p':[.5,1.5]};
+const PRESETS={
+ '4k':{name:'4K',desc:'Best picture, big files. Falls back to lower quality if 4K is not available.',best:'2160p',fallback:true,floor:'720p',size:'balanced',upgrade:false},
+ '2k':{name:'2K',desc:'1440p, a step below 4K at about half the size. Falls back to lower quality.',best:'1440p',fallback:true,floor:'720p',size:'balanced',upgrade:false},
+ '1080':{name:'1080p',desc:'Full HD, the sensible middle. Falls back to 720p.',best:'1080p',fallback:true,floor:'720p',size:'balanced',upgrade:false},
+ '720':{name:'720p',desc:'Small files for small screens or slow links.',best:'720p',fallback:false,floor:'720p',size:'small',upgrade:false},
+ 'any':{name:'Any Quality',desc:'Best available of anything. Good for hard-to-find titles.',best:'2160p',fallback:true,floor:'480p',size:'large',upgrade:false},
+ 'sd':{name:'SD',desc:'480p / 576p only. DVD rips and old TV.',best:'576p',fallback:true,floor:'480p',size:'small',upgrade:false}
+};
+const S={view:'page',preset:'4k',adv:true,demo:'none',theme:'dark',device:'desktop',name:'4K',nameTouched:false,custom:false,ddOpen:false};
+const EXISTING=['4K','2K','1080p','720p','Any Quality','SD','Kids tablet · 720p small']; // profiles already in the list (the presets are profiles too)
+const autoName=()=>`Custom ${LABEL[D.best]}`;
+let D=null; // the dialog draft: {best,fallback,floor,size,upgrade,order[],cutoff,mode,minScore,minSeeders,minGB,maxGB}
+function orderFor(best,fallback,floor){ const out=[]; const bi=RES.indexOf(best), fi=fallback?RES.indexOf(floor):bi; for(let i=bi;i<=fi;i++){ for(const [s] of SRC){ if(exists(s,RES[i])) out.push(`${s}-${RES[i]}`); } } return out; }
+function fromSimple(p){ const o=orderFor(p.best,p.fallback,p.floor); const g=GBH[p.best]; return {...p,order:o,cutoff:o[0]||null,mode:'replace',minScore:null,minSeeders:2,minGB:p.size==='balanced'?g[0]:null,maxGB:p.size==='small'?g[0]:p.size==='balanced'?g[1]:null}; }
+let BASE=null; // the preset's values the form was filled from, to say what the user changed
+function applyPreset(k){ const p=PRESETS[k]; S.custom=false; D=fromSimple({best:p.best,fallback:p.fallback,floor:p.floor,size:p.size,upgrade:p.upgrade}); BASE={k,name:p.name,best:p.best,fallback:p.fallback,floor:p.floor,size:p.size,upgrade:p.upgrade}; if(!S.nameTouched) S.name=p.name; }
+const FIELDNAME={best:'best quality',fallback:'fall back',floor:'fall back to',size:'file size',upgrade:'upgrade later'};
+function changed(){ if(!BASE) return []; const out=[]; for(const f of ['best','fallback','floor','size','upgrade']){ if(f==='floor'&&!D.fallback) continue; if(D[f]!==BASE[f]) out.push(FIELDNAME[f]); } if(S.custom) out.push('advanced values'); return out; }
+applyPreset('4k');
+const gb=v=>v==null?'no limit':`${v} GB/h`;
+function summary(d,name){ const first=d.order[0]; if(!d.order.length) return `<b>${name||'This profile'}</b> allows no quality, so it will never pick anything.`;
+ const bestRes=first.split('-')[1], last=d.order[d.order.length-1].split('-')[1];
+ const fb=bestRes===last?`only ${LABEL[bestRes]} (${bestRes})`:`${LABEL[bestRes]} (${bestRes}) first, then down to ${last}`;
+ const size=d.maxGB==null&&d.minGB==null?'any file size':d.minGB!=null&&d.maxGB!=null?`files of ${d.minGB}–${d.maxGB} GB per hour`:d.maxGB!=null?`files up to ${d.maxGB} GB per hour`:`files of at least ${d.minGB} GB per hour`;
+ const up=d.upgrade?`<b>upgrades</b> later until it holds <b>${pretty(d.cutoff)}</b> (${d.mode==='replace'?'replacing the file':'keeping both'})`:'does not upgrade later';
+ return `<b>${name||'This profile'}</b> picks ${fb}, ${size}, and ${up}.`; }
+function problems(d){ const p=[]; if(!S.name.trim()) p.push({k:'err',t:'Give the profile a name.'}); if(!d.order.length) p.push({k:'err',t:'Allow at least one quality.'}); if(d.upgrade&&!d.cutoff) p.push({k:'err',t:'Upgrades need a cutoff: the quality at which upgrading stops.'}); if(d.cutoff&&!d.order.includes(d.cutoff)) p.push({k:'err',t:'The cutoff must be one of the profile’s allowed qualities, and upgrades need a cutoff.'}); if(d.minGB!=null&&d.maxGB!=null&&d.minGB>d.maxGB) p.push({k:'err',t:'The minimum size is above the maximum.'}); return p; }
+const rowSummary=(d)=>{ if(!d.order.length) return 'Allows no quality'; const b=d.order[0].split('-')[1], l=d.order[d.order.length-1].split('-')[1]; const fb=b===l?`${LABEL[b]} only`:`${LABEL[b]} first, then down to ${l}`; const size=d.maxGB==null&&d.minGB==null?'any size':d.minGB!=null&&d.maxGB!=null?`${d.minGB}–${d.maxGB} GB per hour`:d.maxGB!=null?`up to ${d.maxGB} GB per hour`:`at least ${d.minGB} GB per hour`; return `${fb} · ${size} · ${d.upgrade?'upgrades until '+pretty(d.cutoff):'no upgrades'}`; };
+/* ---------- section ---------- */
+function section(empty){
+ const profiles=empty?[]:[['4K',PRESETS['4k'],true,true],['2K',PRESETS['2k'],true,false],['1080p',PRESETS['1080'],true,false],['Kids tablet · 720p small',{...PRESETS['720'],best:'720p'},false,false]];
+ const rows=profiles.map(([n,p,preset,def])=>{ const d=fromSimple({best:p.best,fallback:p.fallback,floor:p.floor,size:p.size,upgrade:p.upgrade}); return `<div class="brow"><div class="m"><strong>${n}</strong><span class="sub">${rowSummary(d)}</span></div><span class="chips">${def?'<span class="chip prim">Default</span>':''}${preset?'<span class="chip">Predefined</span>':''}</span><span class="acts">${def?'':`<button class="ri" title="Make ${n} Default">${svg('star')}</button>`}<button class="ri" title="Edit ${n}">${svg('edit')}</button><button class="ri red" title="Remove ${n}">${svg('bin')}</button></span></div>`; }).join('');
+ const missing=empty||profiles.length<6;
+ return `<div class="sec"><div class="sechead"><div class="t"><div class="eyebrow">Acquisition · 3 of 6</div><h3>Quality Profiles</h3><div class="st">${empty?'No profile yet':`${profiles.length} profiles · 4K is the default`}</div></div><div><button class="btn blue">Add Profile</button>${missing?'<button class="btn">Add Predefined Profiles</button>':''}</div></div>
+ <div class="secbody">${empty?`<div class="empty">No profile yet. <b>Add Predefined Profiles</b> gives you 4K, 2K, 1080p, 720p, Any Quality and SD, ready to use and editable; <b>Add Profile</b> starts one from scratch. The first profile becomes the default.</div>`:rows}</div>
+ <div class="secfoot"><span class="minisum" style="margin:0">A title uses the default profile unless it has its own, chosen in the release picker (“Title default”).</span></div></div>`;
+}
+function cards3(){ return [['4k',true],['2k',false],['1080',false]].map(([k,def])=>{ const p=PRESETS[k]; const d=fromSimple({best:p.best,fallback:p.fallback,floor:p.floor,size:p.size,upgrade:p.upgrade}); return `<div class="pcard"><h4>${p.name} ${def?'<span class="chip prim">Default</span>':''}<span class="chip">Predefined</span></h4><div class="d">${p.desc}</div><div class="kv"><b>Best quality</b>${LABEL[p.best]} (${p.best})<br><b>Falls back</b>${p.fallback?`yes, down to ${p.floor}`:'no'}<br><b>File size</b>${p.size[0].toUpperCase()+p.size.slice(1)} · ${d.minGB!=null?d.minGB+'–':'up to '}${d.maxGB} GB per hour<br><b>Upgrades</b>${p.upgrade?'yes':'no'}<br><b>Seeders</b>at least ${d.minSeeders}</div><details class="ordd"><summary>Order tried</summary><div class="ord">${d.order.map((q,i)=>`${i+1} ${pretty(q)}`).join(' · ')}</div></details></div>`; }).join(''); }
+/* ---------- dialog ---------- */
+function dialog(){
+ const d=D, probs=problems(d); const demo=S.demo;
+ const presetList=['4k','2k','1080','720','any','sd'].map(k=>[k,PRESETS[k]]).map(([k,p])=>`<label class="r ${S.preset===k&&!changed().length?'on':''}"><input type="radio" name="preset" value="${k}" ${S.preset===k?'checked':''}><span><span class="n">${p.name}</span><span class="d"> — ${p.desc}</span></span></label>`).join('');
+ const bestSeg=['2160p','1440p','1080p','720p','576p'].map(r=>`<button data-best="${r}" aria-pressed="${d.best===r}">${LABEL[r]}${r==='576p'?'':` <small style="opacity:.75">${r}</small>`}</button>`).join('');
+ const g=GBH[d.best];
+ const sizeSeg=[['small','Small',`up to ${g[0]} GB/h`],['balanced','Balanced',`${g[0]}–${g[1]} GB/h`],['large','Large',`${g[1]}+ GB/h, no limit`]].map(([k,l,h])=>`<button data-size="${k}" aria-pressed="${d.size===k}">${l}<small>${h}</small></button>`).join('');
+ const floors=RES.slice(RES.indexOf(d.best)+1).map(r=>`<option ${d.floor===r?'selected':''}>${r}</option>`).join('');
+ // advanced
+ const mx=`<table class="mx"><tr><th></th>${RES.map(r=>`<th class="${r==='1440p'?'new':''}" title="${r==='1440p'?'1440p is not in the plugin’s quality list today — see decisions':''}">${r}${r==='1440p'?' *':''}</th>`).join('')}</tr>${SRC.map(([s,l])=>`<tr><td>${l}</td>${RES.map(r=>exists(s,r)?`<td><input type="checkbox" title="${pretty(`${s}-${r}`)}" data-q="${s}-${r}" ${d.order.includes(`${s}-${r}`)?'checked':''}></td>`:'<td class="na">·</td>').join('')}</tr>`).join('')}</table>`;
+ const ol=`<ol class="ol">${d.order.map((q,i)=>`<li><span class="rk">${i+1}</span><span class="q ${q===d.cutoff?'cut':''}" title="${q}">${pretty(q)}</span><span class="acts"><button class="ri" data-mv="-1" data-i="${i}" title="Move ${pretty(q)} Up" ${i===0?'aria-disabled="true"':''}>${svg('up')}</button><button class="ri" data-mv="1" data-i="${i}" title="Move ${pretty(q)} Down" ${i===d.order.length-1?'aria-disabled="true"':''}>${svg('down')}</button><button class="ri red" data-rm="${q}" title="Remove ${pretty(q)}">${svg('bin')}</button></span></li>`).join('')}</ol>`;
+ const cutOpts=`<option value="">— none —</option>`+d.order.map(q=>`<option value="${q}" ${d.cutoff===q?'selected':''}>${pretty(q)}</option>`).join('')+(d.cutoff&&!d.order.includes(d.cutoff)?`<option value="${d.cutoff}" selected>${pretty(d.cutoff)} (not allowed)</option>`:'');
+ const adv=`<details class="adv" ${S.adv?'open':''}><summary>Advanced<span class="sw">${S.custom?'custom values':'set by the simple choices above'}</span></summary>
+  <div class="f" style="margin-top:.8em"><label class="l">Allowed qualities — source × resolution</label>${mx}<div class="help">Tick what the profile may take. It tries higher resolutions first, and within one, Remux › Blu-ray › WEB-DL › WEBRip › HDTV; the simple choices fill this.</div></div>
+  <details class="ordd big"><summary>Change the order tried</summary><div class="help" style="margin:.2em 0 .4em">Best first. The matrix above sets the usual order — higher resolution first, then Remux › Blu-ray › WEB-DL › WEBRip › HDTV; change it here only if you want, say, WEB-DL before Blu-ray.</div>${ol}</details>
+  <div class="two"><div class="f"><label class="l">Upgrade until (cutoff)</label><select class="inp" data-cut>${cutOpts}</select><div class="help">Upgrading stops once this quality is held.</div></div>
+  <div class="f"><label class="l">An upgrade</label><select class="inp" data-mode><option value="replace" ${d.mode==='replace'?'selected':''}>replaces the held copy</option><option value="add" ${d.mode==='add'?'selected':''}>is added as another version</option></select></div></div>
+  <div class="two"><div class="f"><label class="l">Minimum score for automatic grabs</label><input class="inp" type="number" value="${d.minScore??''}" placeholder="none" data-minscore></div><div class="f"><label class="l">Minimum seeders</label><input class="inp" type="number" value="${d.minSeeders??''}" placeholder="none" data-minseed></div></div>
+  <div class="two"><div class="f"><label class="l">Smallest file, GB per hour of runtime</label><input class="inp" type="number" step="0.5" value="${d.minGB??''}" placeholder="none" data-mingb></div><div class="f"><label class="l">Largest file, GB per hour of runtime</label><input class="inp" type="number" step="0.5" value="${d.maxGB??''}" placeholder="none" data-maxgb></div></div>
+  <div class="help" style="margin:-.4em 0 .8em">Stored as bytes per hour; 1 GB/h ≈ 2.4 GB for a 2 h 25 min film.</div></details>`;
+ const pb=probs.map(p=>`<div class="warnbox ${p.k}">${p.t}</div>`).join('');
+ return `<div class="dlg"><div class="hd">Add Quality Profile</div><div class="bd">
+  <h3 class="gt">Predefined</h3><div class="f"><div class="dd ${S.ddOpen?'open':''}"><button class="ddt" data-ddt><span class="ddn">${PRESETS[S.preset].name}</span><span class="ddd">${PRESETS[S.preset].desc}</span><span class="ddc"></span></button><div class="ddl" ${S.ddOpen?'':'hidden'}>${['4k','2k','1080','720','any','sd'].map(k=>`<button class="ddo ${S.preset===k?'on':''}" data-ddo="${k}"><span class="ddn">${PRESETS[k].name}</span><span class="ddd">${PRESETS[k].desc}</span></button>`).join('')}</div></div></div><div class="f"><label class="l">Name</label><input class="inp" value="${S.name}" data-name></div>
+  <div class="f"><label class="l">Best quality I want</label><div class="segf">${bestSeg}</div></div>
+  <div class="f"><label class="chk"><input type="checkbox" data-fb ${d.fallback?'checked':''}><span>Fall back to lower quality if it is not available, down to <select data-floor ${d.fallback?'':'disabled'}>${floors}</select></span></label></div>
+  <div class="f"><label class="l">File size</label><div class="segf sz">${sizeSeg}</div><div class="help">Approximate size per hour of runtime at ${LABEL[d.best]}. A 2-hour film at Balanced is about ${(g[0]*2)}–${g[1]*2} GB.</div></div>
+  <div class="f"><label class="chk"><input type="checkbox" data-up ${d.upgrade?'checked':''}><span>Upgrade later when something better appears<div class="help">Needs Automation on. Replaces the file until it reaches ${d.cutoff?pretty(d.cutoff):'the best allowed quality'}.</div></span></label></div>
+  <div class="sum">${summary(d,S.name)}</div>${pb}${adv}</div>
+  <div class="ft"><button class="btn">Cancel</button><button class="btn blue" ${probs.length?'aria-disabled="true" style="opacity:.5"':''}>Save</button></div></div>`;
+}
+/* ---------- render + events ---------- */
+function render(){
+ document.documentElement.setAttribute('data-theme',S.theme);
+ document.querySelectorAll('.frame').forEach(f=>{f.classList.toggle('phone',S.device==='phone');});
+ document.getElementById('section').innerHTML=section(S.view==='empty');
+ document.getElementById('cards3').innerHTML=cards3();
+ document.getElementById('dialog').innerHTML=dialog();
+}
+function seg(id,key,fn){const el=document.getElementById(id); el.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; S[key]=fn?fn(b.dataset.v):b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(key==='preset'){applyPreset(b.dataset.v); S.demo='none'; document.querySelectorAll('#demo button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='none'));} if(key==='demo') demoSet(b.dataset.v); if(key==='view'){ document.getElementById(b.dataset.v==='dialog'?'h-dlg':'h-sec').scrollIntoView({block:'start'}); } render();});}
+function demoSet(v){ applyPreset(S.preset); if(v==='nocut'){ D.upgrade=true; D.cutoff='remux-2160p'; D.order=D.order.filter(q=>q!=='remux-2160p'); S.custom=true; S.adv=true; } if(v==='noq'){ D.order=[]; S.custom=true; S.adv=true; } document.querySelectorAll('#adv button').forEach(x=>x.setAttribute('aria-pressed',String(S.adv)===x.dataset.v)); }
+seg('view','view'); seg('preset','preset'); seg('adv','adv',v=>v==='1'); seg('demo','demo'); seg('theme','theme'); seg('device','device');
+const dlg=document.getElementById('dialog');
+const resimple=()=>{ const keep={best:D.best,fallback:D.fallback,floor:D.floor,size:D.size,upgrade:D.upgrade}; const was=D; D=fromSimple(keep); D.mode=was.mode; D.minScore=was.minScore; D.minSeeders=was.minSeeders; if(!D.upgrade) D.cutoff=D.order[0]||null; S.custom=false; };
+dlg.addEventListener('change',e=>{ const t=e.target;
+ if(t.dataset.name!=null){ S.name=t.value; S.nameTouched=t.value.trim()!==''; }
+ else if(t.dataset.predef!=null){ S.nameTouched=false; applyPreset(t.value); S.preset=t.value; document.querySelectorAll('#preset button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===t.value)); }
+ else if(t.dataset.fb!=null){ D.fallback=t.checked; resimple(); }
+ else if(t.dataset.floor!=null){ D.floor=t.value; resimple(); }
+ else if(t.dataset.up!=null){ D.upgrade=t.checked; if(D.upgrade&&!D.cutoff) D.cutoff=D.order[0]||null; }
+ else if(t.dataset.q){ const q=t.dataset.q; D.order=t.checked?[...D.order,q]:D.order.filter(x=>x!==q); S.custom=true; }
+ else if(t.dataset.cut!=null){ D.cutoff=t.value||null; S.custom=true; }
+ else if(t.dataset.mode!=null){ D.mode=t.value; S.custom=true; }
+ else if(t.dataset.minscore!=null){ D.minScore=t.value===''?null:+t.value; S.custom=true; }
+ else if(t.dataset.minseed!=null){ D.minSeeders=t.value===''?null:+t.value; S.custom=true; }
+ else if(t.dataset.mingb!=null){ D.minGB=t.value===''?null:+t.value; S.custom=true; }
+ else if(t.dataset.maxgb!=null){ D.maxGB=t.value===''?null:+t.value; S.custom=true; }
+ else return; render(); });
+dlg.addEventListener('input',e=>{ if(e.target.dataset.name!=null){ S.name=e.target.value; S.nameTouched=e.target.value.trim()!==''; const s=dlg.querySelector('.sum'); if(s) s.innerHTML=summary(D,S.name); } });
+dlg.addEventListener('click',e=>{ if(e.target.dataset.reset!=null){ applyPreset(S.preset); render(); return; } const b=e.target.closest('button'); if(!b){ if(S.ddOpen){S.ddOpen=false; render();} return; }
+ if(b.dataset.ddt!=null){ S.ddOpen=!S.ddOpen; render(); return; }
+ if(b.dataset.ddo){ S.ddOpen=false; S.nameTouched=false; applyPreset(b.dataset.ddo); S.preset=b.dataset.ddo; document.querySelectorAll('#preset button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.ddo)); render(); return; }
+ if(b.dataset.best){ D.best=b.dataset.best; if(RES.indexOf(D.floor)<=RES.indexOf(D.best)) D.floor=RES[Math.min(RES.length-1,RES.indexOf(D.best)+1)]; resimple(); }
+ else if(b.dataset.size){ D.size=b.dataset.size; resimple(); }
+ else if(b.dataset.mv){ if(b.getAttribute('aria-disabled')==='true') return; const i=+b.dataset.i, j=i+ +b.dataset.mv; const o=D.order.slice(); [o[i],o[j]]=[o[j],o[i]]; D.order=o; S.custom=true; }
+ else if(b.dataset.rm){ D.order=D.order.filter(q=>q!==b.dataset.rm); S.custom=true; }
+ else if(b.closest('summary')){ return; }
+ else return; render(); });
+dlg.addEventListener('toggle',e=>{ if(e.target.classList.contains('adv')){ S.adv=e.target.open; document.querySelectorAll('#adv button').forEach(x=>x.setAttribute('aria-pressed',String(S.adv)===x.dataset.v)); } },true);
+try{ if(matchMedia('(prefers-color-scheme: light)').matches){ S.theme='light'; document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v==='light')); } }catch(err){}
+render();
+})();
+</script>

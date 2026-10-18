@@ -1,0 +1,117 @@
+<title>Wizard Step Blockers</title>
+<style>
+:root{--bg:#f3f4f6;--fg:#1d1f22;--panel:#fff;--ground:#e9ebee;--paper:#fff;--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--prim:#00a4dc;--btn:rgba(0,0,0,.08);--btnfg:#1d1f22;--err:#c62828;--warn:#b26a00;--ok:#2e7d32;--field:rgba(0,0,0,.04);--notice:rgba(0,0,0,.04);color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--btn:rgba(255,255,255,.14);--btnfg:#fff;--err:#ff7b72;--warn:#f2b01e;--ok:#81c784;--field:rgba(255,255,255,.06);--notice:rgba(255,255,255,.05);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--btn:rgba(255,255,255,.14);--btnfg:#fff;--err:#ff7b72;--warn:#f2b01e;--ok:#81c784;--field:rgba(255,255,255,.06);--notice:rgba(255,255,255,.05);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,"Noto Sans",system-ui,sans-serif;padding-block:0}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+.panel{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;background:var(--panel);padding:16px;border-right:1px solid var(--line)}
+.panel h1{font-size:16px;margin:0 0 4px}.panel p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.4}
+.ctl{margin:0 0 12px}.ctl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}.seg button{font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--prim);border-color:var(--prim);color:#fff}
+.sw{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.4}
+.main{padding:16px;min-width:0}h2{font-size:14px;margin:18px 0 6px}h2:first-child{margin-top:0}
+.note{font-size:12px;color:var(--muted);margin:0 0 8px;max-width:78ch;line-height:1.45}
+.frame{background:var(--ground);color:var(--fg);border-radius:8px;padding:1.2em;font-size:16px;overflow:auto;max-width:100%}
+.frame.phone{font-size:14.4px;width:360px;padding:.8em}.frame.tv{font-size:20px}
+/* ---- wizard: rail + card (settings.scss) ---- */
+.wiz{display:flex;align-items:flex-start;max-width:72em}.frame.phone .wiz{flex-direction:column}
+.rail{flex:none;width:21em;background:var(--paper);border-radius:.2em;padding:1em 0 .6em;margin-right:1.5em}.frame.phone .rail{width:100%;margin:0 0 .8em}
+.rail .hd{padding:0 1.1em .8em;border-bottom:.07em solid var(--line)}.rail .hd b{display:block;font-weight:500;font-size:1.05em}.rail .hd span{font-size:.85em;color:var(--muted)}
+.step{display:flex;align-items:center;width:100%;text-align:left;padding:.55em 1.1em .55em .9em;border:0;background:transparent;color:inherit;cursor:pointer;border-left:.25em solid transparent;font:inherit}
+.step.cur{border-left-color:var(--prim);background:var(--field)}
+.step .n{flex:none;width:1.7em;height:1.7em;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8em;font-weight:600;margin-right:.85em;border:.12em solid var(--muted);color:var(--muted)}
+.step .n.ok{border-color:var(--ok);color:var(--ok)}.step .n.err{border-color:var(--err);color:var(--err)}
+.step .t{display:flex;flex-direction:column;min-width:0}.step .t b{font-weight:500}.step .t span{font-size:.82em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.step .t span.err{color:var(--err)}.step .t span.ok{color:var(--ok)}
+.card{flex:1 1 auto;min-width:0;background:var(--paper);border-radius:.2em}
+.chead{padding:1.1em 1.5em 1em;border-bottom:.07em solid var(--line)}.eyebrow{font-size:.78em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.15em}.chead h3{margin:0;font-size:1.25em;font-weight:500}.chead .st{font-size:.85em;color:var(--muted);margin-top:.25em}
+.cbody{padding:1.3em 1.5em .5em}.cfoot{display:flex;align-items:center;flex-wrap:wrap;padding:.9em 1.5em;border-top:.07em solid var(--line)}
+.frame.phone .chead,.frame.phone .cbody,.frame.phone .cfoot{padding-left:1em;padding-right:1em}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:2.5em;padding:0 1.4em;border-radius:.2em;font-size:.9em;font-weight:600;letter-spacing:.02em;background:var(--btn);color:var(--btnfg);cursor:pointer;margin-left:.6em;white-space:nowrap;border:0;font-family:inherit}
+.btn.blue{background:var(--prim);color:#fff}.btn[aria-disabled=true]{opacity:.45;cursor:default}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.frame.tv .btn.tvfocus{box-shadow:0 0 0 .12em var(--paper),0 0 0 .28em #fff}
+.f{margin:0 0 1em}.f label{display:block;font-size:.8em;color:var(--muted);margin-bottom:.3em}.inp{display:block;width:100%;font:inherit;padding:.5em .6em;border:0;border-bottom:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:.2em .2em 0 0}
+.help{font-size:.8em;color:var(--muted);margin-top:.3em;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;column-gap:1.25em}.frame.phone .two{grid-template-columns:1fr}
+.row{display:grid;grid-template-columns:1fr auto auto;align-items:center;column-gap:1em;padding:.6em 0;border-bottom:.07em solid var(--line)}.row strong{display:block;font-weight:600}.row .sub{font-size:.86em;color:var(--muted)}.row .sub.err{color:var(--err)}
+.ri{display:inline-flex;align-items:center;justify-content:center;width:2.5em;height:2.5em;border-radius:50%;color:var(--muted);border:0;background:transparent;cursor:pointer}.ri svg{width:1.4em;height:1.4em}.ri.red{color:#e53935}
+.chip{display:inline-block;padding:.05em .55em;border-radius:.2em;background:var(--field);font-size:.82em;color:var(--muted);white-space:nowrap}
+/* ---- the three placements ---- */
+.notice{display:flex;align-items:flex-start;padding:.75em .9em;border-radius:.2em;margin:0 0 1.2em;background:var(--notice);border-left:.25em solid var(--prim);font-size:.95em;line-height:1.45}
+.foothelp{flex:1 1 12em;min-width:0;font-size:.9em;color:var(--muted);line-height:1.4;margin-right:1em;display:flex;align-items:flex-start}.foothelp svg{width:1.15em;height:1.15em;flex:none;margin:.1em .5em 0 0}.foothelp b{font-weight:600;color:var(--fg)}
+.frame.phone .foothelp{flex-basis:100%;margin:0 0 .8em}
+.footbtns{margin-left:auto;display:flex;align-items:center}.frame.phone .footbtns{margin-left:auto}
+.check{margin:0 0 1.2em;padding:.2em 0 .4em;border-bottom:.07em solid var(--line)}.check h4{margin:0 0 .4em;font-size:.8em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.check ul{list-style:none;margin:0;padding:0}.check li{display:flex;align-items:flex-start;font-size:.92em;padding:.2em 0;line-height:1.4}.check li svg{width:1.1em;height:1.1em;flex:none;margin:.15em .55em 0 0}.check li.ok{color:var(--muted)}.check li.ok svg{color:var(--ok)}.check li.todo svg{color:var(--muted)}
+</style>
+<div class="app">
+<aside class="panel">
+  <h1>Where "what blocks this step" lives</h1>
+  <p>The setup wizard's step card with its rail. The blue top banner is today's placement; A and B are the proposal and its one alternative.</p>
+  <div class="ctl"><label>Placement</label><div class="seg" id="place"><button aria-pressed="true" data-v="foot">A · Beside Continue (recommended)</button><button aria-pressed="false" data-v="check">B · Checklist under the title</button><button aria-pressed="false" data-v="top">Today · Notice at the top</button></div></div>
+  <div class="ctl"><label>Step</label><div class="seg" id="step"><button aria-pressed="false" data-v="disc">1 Discovery</button><button aria-pressed="true" data-v="prow">2 Prowlarr</button><button aria-pressed="false" data-v="client">3 Download Client</button><button aria-pressed="false" data-v="prof">4 Quality Profiles</button><button aria-pressed="false" data-v="paths">5 Import Paths</button></div></div>
+  <div class="ctl"><label>Blockers</label><div class="seg" id="blk"><button aria-pressed="false" data-v="0">Done</button><button aria-pressed="false" data-v="1">One</button><button aria-pressed="true" data-v="2">Two</button></div><div class="sw">Discovery has no blocker: Jellyfin's own TMDb connection is used when no token is saved.</div></div>
+  <div class="ctl"><label>Theme</label><div class="seg" id="theme"><button aria-pressed="true" data-v="dark">Dark</button><button aria-pressed="false" data-v="light">Light</button></div></div>
+  <div class="ctl"><label>Width</label><div class="seg" id="device"><button aria-pressed="false" data-v="phone">Phone 360</button><button aria-pressed="true" data-v="desktop">Desktop</button><button aria-pressed="false" data-v="tv">TV 125 %</button></div></div>
+</aside>
+<main class="main">
+  <h2>The step card</h2>
+  <p class="note" id="why"></p>
+  <div class="frame" id="frame"><div class="wiz" id="wiz"></div></div>
+  <h2>Copy for the common blockers</h2>
+  <p class="note">Sentence case, one verb each, the thing to click named in Title Case where it is a button. The same words appear in the rail's status line (short form) and beside Continue (the instruction).</p>
+  <table style="font-size:12px;border-collapse:collapse;max-width:78ch" id="copy"></table>
+</main>
+</div>
+<script>
+(function(){
+'use strict';
+const G={lock:'<rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7.5A4 4 0 0 1 16 7.5V11"/>',tick:'<path d="M5 12.5L9.8 17.3L19 8"/>',circle:'<circle cx="12" cy="12" r="7.5"/>',edit:'<path d="M4 20H8L18.5 9.5L14.5 5.5L4 16V20Z"/><path d="M12.5 7.5L16.5 11.5"/>',wifi:'<path d="M2.5 9A14 14 0 0 1 21.5 9M5.5 12.5A10 10 0 0 1 18.5 12.5M8.5 16A5.5 5.5 0 0 1 15.5 16"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor" stroke="none"/>',bin:'<path d="M5 7H19M9 7V4H15V7M8 7L9 20H15L16 7"/>'};
+const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+const STEPS=[
+ {k:'disc',n:1,title:'Discovery',eyebrow:'Step 1 of 6',rail:{ok:"Using Jellyfin's TMDb connection"},blk:[],
+  body:`<div class="f"><label>TMDB read access token</label><input class="inp" placeholder="Optional"><div class="help">Optional. Leave empty to use Jellyfin's built-in TMDb connection. A saved token is used instead.</div></div>`},
+ {k:'prow',n:2,title:'Prowlarr and Indexers',eyebrow:'Step 2 of 6',rail:{err:['No indexer configured','1 indexer · Prowlarr not tested'],ok:'2 of 2 enabled and verified'},
+  blk:[{s:'Test Prowlarr',i:'test Prowlarr after saving it',done:'Prowlarr saved and tested'},{s:'Add an indexer',i:'add at least one indexer and turn it on',done:'An indexer is enabled and verified'}],
+  body:`<div class="two"><div class="f"><label>Prowlarr URL</label><input class="inp" value="http://pi:9696"></div><div class="f"><label>API key</label><input class="inp" value="••••••••••••••••"></div></div><div class="row"><div><strong>Prowlarr</strong><span class="sub __PCLS__">__PSTAT__</span></div><span class="chip">Enabled</span><span><button class="ri" title="Test Prowlarr">${svg('wifi')}</button><button class="ri" title="Edit Prowlarr">${svg('edit')}</button><button class="ri red" title="Remove Prowlarr">${svg('bin')}</button></span></div>`},
+ {k:'client',n:3,title:'Download Client',eyebrow:'Step 3 of 6',rail:{err:['No download client configured','Transmission · not tested since it changed'],ok:'Transmission · verified'},
+  blk:[{s:'Save a download client',i:'save a download client',done:'A download client is saved'},{s:'Test it',i:'test it',done:'Tested'}],
+  body:`<div class="two"><div class="f"><label>Client</label><input class="inp" value="Transmission"></div><div class="f"><label>RPC URL</label><input class="inp" value="http://pi:9091/transmission/rpc"></div></div><div class="f"><label>Download folder as the client sees it</label><input class="inp" value="/downloads"><div class="help">Mapped to the folder Jellyfin sees in Import Paths.</div></div>`},
+ {k:'prof',n:4,title:'Quality Profiles',eyebrow:'Step 4 of 6',rail:{err:['No quality profile','No default profile'],ok:'Default: 4K'},
+  blk:[{s:'Add a profile',i:'add a profile (Add Preset Profiles gives you 4K, 2K and 1080p)',done:'3 profiles'},{s:'Choose a default',i:'choose a default profile with the star on its row',done:'Default: 4K'}],
+  body:`<div class="row"><div><strong>4K</strong><span class="sub">4K first, then down to 720p · 8–20 GB per hour · no upgrades</span></div><span class="chip">Preset</span><span><button class="ri" title="Make 4K Default">★</button><button class="ri" title="Edit 4K">${svg('edit')}</button><button class="ri red" title="Remove 4K">${svg('bin')}</button></span></div><div class="row"><div><strong>1080p</strong><span class="sub">1080p first, then down to 720p · 2–6 GB per hour · no upgrades</span></div><span class="chip">Preset</span><span><button class="ri" title="Make 1080p Default">★</button><button class="ri" title="Edit 1080p">${svg('edit')}</button><button class="ri red" title="Remove 1080p">${svg('bin')}</button></span></div>`},
+ {k:'paths',n:5,title:'Import Paths',eyebrow:'Step 5 of 6',rail:{err:['No library folder mapped','1 unverified mapping'],ok:'2 mappings · verified'},
+  blk:[{s:'Map a library folder',i:'point the import at a library folder Jellyfin can see',done:'Library folder mapped'},{s:'Verify the mapping',i:'verify the mapping so hard links work',done:'Mapping verified'}],
+  body:`<div class="two"><div class="f"><label>Client sees</label><input class="inp" value="/downloads"></div><div class="f"><label>Jellyfin sees</label><input class="inp" value="/mnt/4tb/downloads"></div></div>`},
+ {k:'grab',n:6,title:'Turn Grabbing On',eyebrow:'Step 6 of 6',rail:{off:'Off · ready to turn on'},blk:[],body:''}
+];
+const S={place:'foot',step:'prow',blk:2,theme:'dark',device:'desktop'};
+const WHY={foot:'<b>A · beside Continue (recommended).</b> The reason sits where the user looks when they try to move on: the footer, left of a refused Continue, as one sentence — "To continue, test Prowlarr after saving it and add an indexer." The rail\'s status line already names the problem in short form, so the step is explained twice at most, in the two places that matter, and the card\'s first line is the form, not a banner. Nothing to dismiss, nothing that repeats on every visit, works on the phone (wraps above the buttons) and on TV (Continue stays a focus stop, refused with aria-disabled).',
+ check:'<b>B · checklist under the title (alternative).</b> A short "This step needs" list with ticks at the top of the body: each blocker is a line that turns green as it is met. More structure, better when a step has three or more requirements, but it takes the first screen line on every visit, done or not, and it duplicates the rail. Worth it only if steps gain more blockers than the two they have today.',
+ top:'<b>Today · notice at the top.</b> A blue-bar notice "This step is not done yet. Save a download client and test it." above the form. It is the first thing on the card whether or not the user came to fix it, it reads like an error for a page that is simply in progress, and the fix instruction is far from the button it unlocks.'};
+function blockers(step){ return step.blk.slice(0,S.blk); }
+function sentence(list){ const parts=list.map(b=>b.i); return parts.length===1?parts[0]:parts.length===2?`${parts[0]} and ${parts[1]}`:parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]; }
+function render(){
+ document.documentElement.setAttribute('data-theme',S.theme);
+ const f=document.getElementById('frame'); f.classList.remove('phone','tv'); if(S.device!=='desktop') f.classList.add(S.device);
+ document.getElementById('why').innerHTML=WHY[S.place];
+ const cur=STEPS.find(s=>s.k===S.step); const open=blockers(cur); const done=open.length===0; const tv=S.device==='tv';
+ const rail=`<div class="rail"><div class="hd"><b>Set Up JellyfinMod</b><span>${STEPS.filter(s=>s.blk.length).length-(done?0:1)} of 6 steps done</span></div>${STEPS.map(s=>{ const isCur=s.k===S.step; const d=isCur?done:(s.n<cur.n); const words=isCur?(done?(s.rail.ok||s.rail.off):s.rail.err[Math.min(S.blk,2)-1]):(d?(s.rail.ok||s.rail.off||''):(s.rail.err?s.rail.err[0]:s.rail.off||'')); const kind=isCur?(done?'ok':'err'):(d?'ok':(s.rail.err?'err':'')); return `<button class="step ${isCur?'cur':''}"><span class="n ${kind}">${d||(isCur&&done)?svg('tick'):s.n}</span><span class="t"><b>${s.title}</b><span class="${kind}">${words}</span></span></button>`; }).join('')}</div>`;
+ const top=S.place==='top'&&!done?`<div class="notice">This step is not done yet. ${sentence(open).charAt(0).toUpperCase()+sentence(open).slice(1)}.</div>`:'';
+ const check=S.place==='check'?`<div class="check"><h4>This step needs</h4><ul>${cur.blk.map((b,i)=>{ const ok=i>=open.length; return `<li class="${ok?'ok':'todo'}">${svg(ok?'tick':'circle')}<span>${ok?b.done:b.s.charAt(0).toUpperCase()+b.s.slice(1)+' — '+b.i}</span></li>`; }).join('')}${cur.blk.length?'':'<li class="ok">'+svg('tick')+'<span>Nothing — this step is optional.</span></li>'}</ul></div>`:'';
+ const foot=S.place==='foot'&&!done?`<div class="foothelp">${svg('lock')}<span><b>To continue,</b> ${sentence(open)}.</span></div>`:'';
+ const next=STEPS[cur.n]?.title||'Finish';
+ const card=`<div class="card"><div class="chead"><div class="eyebrow">${cur.eyebrow}</div><h3>${cur.title}</h3><div class="st">${done?(cur.rail.ok||cur.rail.off):cur.rail.err[Math.min(S.blk,2)-1]}</div></div><div class="cbody">${top}${check}${(cur.body||'<div class="help">Turns grabbing on once the steps above are done.</div>').replace('__PSTAT__',done?'Verified':'Not tested since it changed').replace('__PCLS__',done?'ok':'err')}</div>
+  <div class="cfoot">${foot}<div class="footbtns"><button class="btn blue${tv?' tvfocus':''}">Save</button><button class="btn" ${done?'':'aria-disabled="true"'} title="${done?`Continue to ${next}`:'Not yet: '+sentence(open)}">Continue</button></div></div></div>`;
+ document.getElementById('wiz').innerHTML=rail+card;
+ document.getElementById('copy').innerHTML=`<tr><th style="text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid var(--line)">Step</th><th style="text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid var(--line)">Rail status (short)</th><th style="text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid var(--line)">Beside Continue (instruction)</th><th style="text-align:left;padding:4px 0;border-bottom:1px solid var(--line)">When met</th></tr>`+STEPS.filter(s=>s.blk.length).flatMap(s=>s.blk.map((b,i)=>`<tr><td style="padding:4px 10px 4px 0;border-bottom:1px solid var(--line);vertical-align:top">${i===0?s.title:''}</td><td style="padding:4px 10px 4px 0;border-bottom:1px solid var(--line);vertical-align:top">${s.rail.err[i]||''}</td><td style="padding:4px 10px 4px 0;border-bottom:1px solid var(--line);vertical-align:top">To continue, ${b.i}.</td><td style="padding:4px 0;border-bottom:1px solid var(--line);vertical-align:top">${b.done}</td></tr>`)).join('')+`<tr><td style="padding:4px 10px 4px 0;vertical-align:top">Discovery</td><td style="padding:4px 10px 4px 0">Using Jellyfin's TMDb connection</td><td style="padding:4px 10px 4px 0">— (no blocker; a token is optional)</td><td style="padding:4px 0">—</td></tr>`;
+}
+function seg(id,key,fn){const el=document.getElementById(id); el.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; S[key]=fn?fn(b.dataset.v):b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); if(key==='step'&&(b.dataset.v==='disc')){S.blk=0; document.querySelectorAll('#blk button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='0'));} render();});}
+seg('place','place'); seg('step','step'); seg('blk','blk',v=>+v); seg('theme','theme'); seg('device','device');
+try{ if(matchMedia('(prefers-color-scheme: light)').matches){ S.theme='light'; document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v==='light')); } }catch(err){}
+render();
+})();
+</script>

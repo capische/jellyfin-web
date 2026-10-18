@@ -1,0 +1,129 @@
+<title>Video Row File Size</title>
+<style>
+:root{--bg:#f3f4f6;--fg:#1d1f22;--panel:#fff;--ground:#e9ebee;--paper:#fff;--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--border:rgba(0,0,0,.12);--prim:#00a4dc;--chip:rgba(0,0,0,.08);--sel:rgba(0,164,220,.14);color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--border:rgba(255,255,255,.09);--chip:rgba(255,255,255,.14);--sel:rgba(0,164,220,.2);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#2a2a2a;--fg:#e4e4e4;--panel:#1a1a1a;--ground:#101010;--paper:#202020;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--border:rgba(255,255,255,.09);--chip:rgba(255,255,255,.14);--sel:rgba(0,164,220,.2);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,"Noto Sans",system-ui,sans-serif;padding-block:0}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:100vh}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+.panel{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;background:var(--panel);padding:16px;border-right:1px solid var(--line)}
+.panel h1{font-size:16px;margin:0 0 4px}.panel p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.4}
+.ctl{margin:0 0 12px}.ctl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}.seg button{font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--prim);border-color:var(--prim);color:#fff}
+.sw{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.4}
+.main{padding:16px;min-width:0}h2{font-size:14px;margin:18px 0 6px}h2:first-child{margin-top:0}
+.note{font-size:12px;color:var(--muted);margin:0 0 8px;max-width:78ch;line-height:1.45}
+.frame{background:var(--ground);color:var(--fg);border-radius:8px;padding:1.5em;font-size:16px;overflow:auto;max-width:100%}
+.frame.phone{font-size:14.4px;width:360px;padding:1em}.frame.tv{font-size:20px}
+/* ---- upstream's track selection block ---- */
+.tracks{max-width:62em}
+.trow{display:grid;grid-template-columns:7em minmax(0,1fr);align-items:center;margin-bottom:.9em}.frame.phone .trow{grid-template-columns:1fr;row-gap:.3em}
+.tl{font-size:1.15em;color:var(--muted)}.frame.phone .tl{font-size:.9em}
+.sel,.trig{display:flex;align-items:center;height:1.75em;padding:0 .4em;border:.135em solid var(--border);border-radius:.2em;background:var(--paper);font-size:1.15em;color:inherit;width:100%;text-align:left;font-family:inherit;cursor:pointer;position:relative}
+.trig.open,.trig:hover,.sel:hover{border-color:var(--prim)}
+.chev{margin-left:auto;width:.75em;height:.75em;flex:none;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-.15em,-.15em);margin-right:.35em}.open .chev{transform:rotate(225deg) translate(.05em,.05em)}
+.trig.static{cursor:default;border-color:var(--border)}.trig.static:hover{border-color:var(--border)}
+
+.rm{display:inline-flex;align-items:center;height:1.2em;margin-right:.6em;font-size:60%;font-weight:700;letter-spacing:.05em;opacity:.82;text-transform:uppercase;white-space:nowrap}
+.rm--codec{opacity:.7}
+.rt{height:1.3em;padding:.1em .4em 0;border-radius:.3em;background:currentColor;box-sizing:border-box;font-size:52%;opacity:1}.rt>*{color:var(--paper)}
+.rti{display:block;height:.75em;margin:-.1em .3em 0 0}.rti>svg{display:block;width:100%;height:100%}
+.rt--half .rti{width:.54em;height:.75em}.rt--wave .rti{width:1.125em}.rt--dd .rti,.rt--ddplus .rti{height:.865em;margin-right:0}.rt--dd .rti{width:1.3em}.rt--ddplus .rti{width:2.04em}
+.rtag{height:1.3em;margin-left:-.3em;padding:.1em .4em 0;border:.1em solid currentColor;border-radius:.3em;box-sizing:border-box;font-size:52%;opacity:.82}
+.rj{display:inline-flex;margin-right:.6em}.rj>.rt{margin-right:0;border-radius:.3em 0 0 .3em}.rj>.rtag{margin:0;border-left-width:0;border-radius:0 .3em .3em 0}.rj>.rtag:not(:last-child){border-right-width:0;border-radius:0}.rj>.rtag+.rtag{border-left-width:.1em}
+.tt .rm,.fbody .rm{font-size:78%}.tt .rj,.fbody .rj{font-size:100%}.tt .rt,.fbody .rt,.tt .rtag,.fbody .rtag,.rj .rt,.rj .rtag{font-size:67.6%}.rj .rm{font-size:67.6%}
+.fbody .sep{width:0;height:1.1em;border-left:1px solid currentColor;opacity:.35;margin:0 .7em 0 .1em;background:none}
+.flag{font-size:.78em;color:var(--muted);margin-right:.6em;white-space:nowrap}.flag:before{content:'· ';opacity:.6}
+.res{font-weight:600;margin-right:.8em}
+.mk{display:inline-flex;align-items:center;font-size:.72em;text-transform:uppercase;letter-spacing:.03em;font-weight:700;opacity:.8;margin-right:.6em}
+.mk.brand{display:inline-flex;align-items:center;text-transform:none;letter-spacing:0}.mk.brand .bg{height:1.05em;width:auto;margin-right:.3em}.mk.brand .bg.dts{height:.95em}.mk.brand span{font-size:.95em;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.mk.box{opacity:1;background:var(--chip);border-radius:.25em;padding:0 .35em;font-weight:800}.mk.box b{font-weight:800;background:var(--fg);color:var(--paper);border-radius:.2em;padding:0 .3em;margin-left:.25em}
+.amk{display:inline-flex;align-items:center;font-size:.72em;text-transform:uppercase;letter-spacing:.03em;font-weight:600;color:var(--muted);margin-right:.6em}
+.size{margin-left:auto;color:var(--muted);font-size:.92em;white-space:nowrap;margin-right:.6em;font-variant-numeric:tabular-nums}
+.sizeunder{font-size:.85em;color:var(--muted);margin:.25em 0 0 .5em}
+.tt{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap;flex:1 1 auto}
+/* the open list */
+.list{margin:.25em 0 .6em;border:1px solid var(--line);border-radius:.2em;background:var(--paper)}
+.frow{display:flex;align-items:stretch;border-radius:.2em}.frow.on{background:var(--sel)}
+.fch{display:flex;align-items:center;flex:1 1 auto;min-width:0;padding:.45em .8em .45em 1.1em;background:transparent;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;font-size:1.05em}
+.fbody{display:flex;align-items:center;flex:1 1 auto;flex-wrap:wrap;min-width:0}.fbody .sep{width:1px;height:1em;background:var(--line);margin:0 .8em 0 .2em}
+.fbody .extra{font-size:.86em;opacity:.7;margin-right:.8em}
+.mk,.amk,.res{white-space:nowrap}
+.frame.phone .fch{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;padding-right:.4em}.frame.phone .fbody{display:block;min-width:0}.frame.phone .fbody .sep{display:none}.frame.phone .fbody .l1,.frame.phone .fbody .l2{display:flex;align-items:center;flex-wrap:wrap}.frame.phone .fbody .l2{margin-top:.15em}.frame.phone .fch .size{margin:0 0 0 .6em;align-self:start}
+.frame.phone .icons .ic{width:2.2em;height:2.2em}
+.icons{display:flex;align-items:center;flex:none;padding-right:.3em}.ic{width:2.5em;height:2.5em;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}.ic svg{width:1.3em;height:1.3em}.ic.red{color:#e53935}
+.fadd{color:var(--prim);font-weight:600}
+.focus{outline:.16em solid #fff;outline-offset:.1em}
+</style>
+<div class="app">
+<aside class="panel">
+  <h1>Video row and file size</h1>
+  <p>Upstream's track block on a detail page with the mod's file chooser in the Video row. The Video value shows only video facts; the audio facts live in the Audio row; the size goes where the toggle says.</p>
+  <div class="ctl"><label>File size</label><div class="seg" id="place"><button aria-pressed="true" data-v="right">A · Right end, before the chevron (recommended)</button><button aria-pressed="false" data-v="under">B · Muted line under the Video row</button><button aria-pressed="false" data-v="list">List only</button></div></div>
+  <div class="ctl"><label>Audio tracks</label><div class="seg" id="audio"><button aria-pressed="true" data-v="1">One track</button><button aria-pressed="false" data-v="3">Several</button></div></div>
+  <div class="ctl"><label>Audio list</label><div class="seg" id="aopen"><button aria-pressed="true" data-v="0">Closed</button><button aria-pressed="false" data-v="1">Open</button></div><div class="sw">Needs several tracks; one track is a non-opening field.</div></div>
+  <div class="ctl"><label>Subtitles list</label><div class="seg" id="sopen"><button aria-pressed="true" data-v="0">Closed</button><button aria-pressed="false" data-v="1">Open</button></div></div>
+  <div class="ctl"><label>Video list</label><div class="seg" id="open"><button aria-pressed="false" data-v="0">Closed</button><button aria-pressed="true" data-v="1">Open</button></div></div>
+  <div class="ctl"><label>Files</label><div class="seg" id="files"><button aria-pressed="true" data-v="1">One file</button><button aria-pressed="false" data-v="2">Two files</button></div></div>
+  <div class="ctl"><label>Theme</label><div class="seg" id="theme"><button aria-pressed="true" data-v="dark">Dark</button><button aria-pressed="false" data-v="light">Light</button></div></div>
+  <div class="ctl"><label>Width</label><div class="seg" id="device"><button aria-pressed="false" data-v="phone">Phone 360</button><button aria-pressed="true" data-v="desktop">Desktop</button><button aria-pressed="false" data-v="tv">TV 125 %</button></div></div>
+</aside>
+<main class="main">
+  <h2>The track block</h2>
+  <p class="note" id="why"></p>
+  <div class="frame" id="frame"><div class="tracks" id="tracks"></div></div>
+  <h2>Rules</h2>
+  <p class="note"><b>Video row, closed:</b> resolution word (600) · video marks (codec, bit depth, HDR) · size at the right end in the secondary colour, just before the chevron. No audio there.<br><b>Audio row:</b> a dropdown drawn like the Video one. Closed: language (600) · audio marks (DTS-HD MA, Atmos, TrueHD, DD+, AAC; the channel layout 7.1 / 5.1 / 2.0) · Default / Forced / Commentary as muted text. Open: one row per track, drawn the same way, the current one with the blue bar. A file with ONE track shows the same field without a chevron, not clickable, so the block keeps its shape and the track's facts stay readable.<br><b>Subtitles row:</b> the same dropdown: "Off", then each subtitle as language (600) · format mark (SRT, PGS, ASS) · Default / Forced muted. The three rows then share one trigger, one list and one mark style.<br><b>Open Video list:</b> each file is one row: resolution · video marks │ audio marks (muted, smaller, because they tell two files apart) · extras (episode range, "removes 3 Nov") … size right-aligned at the row's end, then the row's icons. The selected row and the closed trigger therefore read the same left to right, with the size in the same place.<br><b>Phone:</b> the row's audio and size drop to a second line; the trigger keeps the size at its right end (it truncates the marks first, never the size).<br><b>TV:</b> same at 125 %; the trigger and each row are focus stops; nothing changes.</p>
+</main>
+</div>
+<script>
+(function(){
+'use strict';
+const G={hist:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12L15 14"/>',pin:'<path d="M9 4H15L14.5 10L17 13H7L9.5 10Z"/><path d="M12 13V20"/>',x:'<path d="M6 6L18 18M18 6L6 18"/>'};
+const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+const FILES=[{res:'1080p',v:['HEVC','10-bit'],a:[['AAC','5.1']],size:'783 MB',extra:'',tracks:[{lang:'English',m:['HE-AAC','5.1'],flags:['Default']}],tracks3:[{lang:'English',m:['DTS-HD MA','7.1'],flags:['Default']},{lang:'English',m:['Atmos','TrueHD','7.1'],flags:[]},{lang:'English',m:['AAC','2.0'],flags:['Commentary']}]},{res:'2160p',v:['HEVC','10-bit','Dolby Vision'],a:[['DTS-HD MA','7.1']],size:'24.6 GB',extra:'removes 3 Nov',tracks:[{lang:'English',m:['DTS-HD MA','7.1'],flags:['Default']}],tracks3:[{lang:'English',m:['DTS-HD MA','7.1'],flags:['Default']},{lang:'Ukrainian',m:['DD+','5.1'],flags:[]},{lang:'English',m:['AAC','2.0'],flags:['Commentary']}]}];
+const SUBS=[{lang:'Off',m:[],flags:[]},{lang:'English',m:['SRT'],flags:['Default']},{lang:'English (SDH)',m:['SRT'],flags:[]},{lang:'Ukrainian',m:['PGS'],flags:['Forced']}];
+const S={place:'right',audio:1,open:true,files:1,theme:'dark',device:'desktop',sel:0,aopen:false,sopen:false,asel:0,ssel:1};
+const WHY={right:'<b>A · right end of the Video value (recommended).</b> The size is a fact about the file, and the Video value is the file; the Audio and Subtitles rows are about streams inside it. Putting it at the right end keeps the left side for what you compare between files (resolution, codec) and gives the number its own column, so the closed trigger and the open list rows line up: the selected row reads exactly like the trigger above it. No extra line, no new element, works at every width because the marks truncate before the size does.',
+ under:'<b>B · a muted line under the Video row.</b> Keeps the trigger shorter, but adds a line to a block that is already three rows, and the size then sits nowhere near the file\'s row in the open list, so closed and open stop matching. Worth it only if the Video value gets so long that the size would be cut.',
+ list:'<b>List only.</b> Closed rows show no size at all; it appears on each file\'s row when the chooser is open. Cleanest closed state, but the one number people glance at before pressing Play (will this stream over my link?) is now a click away, and a single-file title would never show it.'};
+
+
+/* The release picker's marks, verbatim: this fork's own SVGs (assets/media-marks), the filled chip (.rt), the outlined channel/tier
+   tag joined to the last audio chip (.rj), the divider between video and audio marks. */
+const SVG={dd:'<svg viewBox="0 0 21 14" fill="currentColor"><path d="M0 .5H3.5A6.5 6.5 0 0 1 3.5 13.5H0Z"/><path d="M11 .5H14.5A6.5 6.5 0 0 1 14.5 13.5H11Z"/></svg>',
+ ddplus:'<svg viewBox="0 0 33 14" fill="currentColor"><path d="M0 .5H3.5A6.5 6.5 0 0 1 3.5 13.5H0Z"/><path d="M11 .5H14.5A6.5 6.5 0 0 1 14.5 13.5H11Z"/><path d="M23.2 7H31.8M27.5 2.7V11.3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+ half:'<svg viewBox="0 0 10 14" fill="currentColor"><path d="M0 .5H3.5A6.5 6.5 0 0 1 3.5 13.5H0Z"/></svg>',
+ wave:'<svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4V12M21.5 4V12"/><path d="M6 8C7.6 3.6 9.4 3.6 12 8S16.4 12.4 18 8"/></svg>'};
+const CHIP={'DD':['dd','',''],'DD+':['ddplus','',''],'AC3':['dd','',''],'TrueHD':['half','TrueHD',''],'Atmos':['half','Atmos',''],'Dolby Vision':['half','Vision',''],'DTS-HD MA':['wave','DTS-HD','MA'],'DTS:X':['wave','DTS:X',''],'DTS':['wave','DTS','']};
+const chip=(name)=>{ const c=CHIP[name]; if(c) return `<span class="rm rt rt--${c[0]}" title="${name}"><span class="rti">${SVG[c[0]]}</span>${c[1]?`<span>${c[1]}</span>`:''}</span>`; return `<span class="rm rt rt--word" title="${name}"><span>${name}</span></span>`; };
+const vmark=(m)=>m==='Dolby Vision'?chip(m):`<span class="rm ${m==='HEVC'||m==='AVC'||m==='AV1'?'rm--codec':''}">${m}</span>`;
+const marks=(f)=>`<span class="res">${f.res}</span>${f.v.map(vmark).join('')}`;
+/* an audio track: [Atmos chip] + the format chip joined with its tier and channel tag */
+const audioMarks=(t)=>{ const fmts=t.m.filter(x=>!/^\d\.\d$/.test(x)); const ch=t.m.find(x=>/^\d\.\d$/.test(x)); const extras=fmts.filter(x=>x==='Atmos'); const main=fmts.find(x=>x!=='Atmos')||fmts[0]; const tier=CHIP[main]?.[2]; return extras.map(chip).join('')+`<span class="rj">${chip(main)}${tier?`<span class="rm rtag">${tier}</span>`:''}${ch?`<span class="rm rtag">${ch}</span>`:''}</span>`; };
+const amarks=(f)=>audioMarks({m:f.a.flat()});
+const track=(t)=>`<span class="res">${t.lang}</span>${t.m.length?(t.m.some(x=>CHIP[x]||/^\d\.\d$/.test(x)||/AAC|MP3|FLAC|Opus/.test(x))?audioMarks(t):t.m.map(m=>`<span class="rm">${m}</span>`).join('')):''}${t.flags.map(f=>`<span class="flag">${f}</span>`).join('')}`;
+
+const picker=(items,sel,open,kind)=>`<div class="list">${items.map((t,i)=>`<div class="frow ${i===sel?'on':''}"><button class="fch" data-${kind}="${i}"><span class="fbody"><span class="l1">${track(t)}</span></span></button></div>`).join('')}</div>`;
+function render(){
+ document.documentElement.setAttribute('data-theme',S.theme);
+ const fr=document.getElementById('frame'); fr.classList.remove('phone','tv'); if(S.device!=='desktop') fr.classList.add(S.device);
+ document.getElementById('why').innerHTML=WHY[S.place];
+ const files=FILES.slice(0,S.files); const cur=files[Math.min(S.sel,files.length-1)]; const tv=S.device==='tv';
+ const trig=`<button class="trig ${S.open?'open':''}${tv?' focus':''}"><span class="tt">${marks(cur)}</span>${S.place==='right'?`<span class="size">${cur.size}</span>`:''}<span class="chev"></span></button>${S.place==='under'?`<div class="sizeunder">${cur.size}${files.length>1?' · 1 of 2 files':''}</div>`:''}`;
+ const rows=files.map((f,i)=>`<div class="frow ${i===S.sel?'on':''}"><button class="fch" data-i="${i}"><span class="fbody"><span class="l1">${marks(f)}</span><span class="sep"></span><span class="l2">${audioMarks((S.audio===1?f.tracks:f.tracks3)[0])}${f.extra?`<span class="extra">${f.extra}</span>`:''}</span></span>${S.place==='list'||true?`<span class="size">${f.size}</span>`:''}</button><span class="icons"><span class="ic" title="History">${svg('hist')}</span><span class="ic" title="Keep">${svg('pin')}</span><span class="ic red" title="Remove This Version">${svg('x')}</span></span></div>`).join('');
+ const list=S.open?`<div class="list">${rows}<div class="frow"><button class="fch"><span class="fadd">+&nbsp; Get Another Quality</span></button></div></div>`:'';
+ const tracks=S.audio===1?cur.tracks:cur.tracks3; const at=tracks[Math.min(S.asel,tracks.length-1)];
+ const audio=tracks.length===1?`<div class="trig static"><span class="tt">${track(at)}</span></div>`:`<button class="trig ${S.aopen?'open':''}" data-atrig><span class="tt">${track(at)}</span><span class="chev"></span></button>${S.aopen?picker(tracks,Math.min(S.asel,tracks.length-1),true,'a'):''}`;
+ const st=SUBS[S.ssel]; const subs=`<button class="trig ${S.sopen?'open':''}" data-strig><span class="tt">${track(st)}</span><span class="chev"></span></button>${S.sopen?picker(SUBS,S.ssel,true,'s'):''}`;
+ document.getElementById('tracks').innerHTML=`<div class="trow"><span class="tl">Video</span><div>${trig}${list}</div></div><div class="trow"><span class="tl">Audio</span><div>${audio}</div></div><div class="trow"><span class="tl">Subtitles</span><div>${subs}</div></div>`;
+}
+function seg(id,key,fn){const el=document.getElementById(id); el.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; S[key]=fn?fn(b.dataset.v):b.dataset.v; el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render();});}
+seg('place','place'); seg('audio','audio',v=>+v); seg('open','open',v=>v==='1'); seg('aopen','aopen',v=>v==='1'); seg('sopen','sopen',v=>v==='1'); seg('files','files',v=>+v); seg('theme','theme'); seg('device','device');
+document.getElementById('tracks').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.atrig!=null){ S.aopen=!S.aopen; S.sopen=false; render(); return; } if(b.dataset.strig!=null){ S.sopen=!S.sopen; S.aopen=false; render(); return; } if(b.dataset.a!=null){ S.asel=+b.dataset.a; S.aopen=false; render(); return; } if(b.dataset.s!=null){ S.ssel=+b.dataset.s; S.sopen=false; render(); return; } if(b.dataset.i!=null){ S.sel=+b.dataset.i; render(); } else if(b.classList.contains('trig')){ S.open=!S.open; document.querySelectorAll('#open button').forEach(x=>x.setAttribute('aria-pressed',String(S.open)===(x.dataset.v==='1'?'true':'false'))); render(); } });
+try{ if(matchMedia('(prefers-color-scheme: light)').matches){ S.theme='light'; document.querySelectorAll('#theme button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v==='light')); } }catch(err){}
+render();
+})();
+</script>
