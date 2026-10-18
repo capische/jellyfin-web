@@ -98,8 +98,26 @@ try {
         await api('POST', '/Library/VirtualFolders/LibraryOptions', { Id: library.ItemId, LibraryOptions: options });
     }
     await api('POST', '/Library/Refresh');
-    await until(async () => (await api('GET', '/Items?recursive=true&includeItemTypes=Movie,Episode&fields=Path,ProviderIds')).Items
-        .filter(x => x.Path?.includes('JellyfinMod Import Delay') && x.IsPlaceHolder).length === 6, 'six placeholders not indexed');
+    // IMPORT_DELAY_ITEMS=1 (P1.FU30): the build makes its placeholders as Jellyfin items with no file (a jellyfinmod:// path),
+    // and the fixture writes no stubs.
+    const itemsMode = process.env.IMPORT_DELAY_ITEMS === '1';
+    // An item of the plugin's is the fixture's by its series' name, or for a movie by its TMDB id (Jellyfin's own TMDb connection may
+    // rename it before the fetchers above are off).
+    const ofFixture = (x, title, tmdb) => x.Path?.includes(title) || (itemsMode && x.Path?.startsWith('jellyfinmod://')
+        && ((x.SeriesName ?? x.Name)?.includes(title) || x.Type === 'Movie' && (String(tmdb) === x.ProviderIds?.Tmdb)));
+    let synced = 0;
+    await until(async () => {
+        // Items are made by the placeholder sync, which waits while the scan above runs: Sync Now again every 5 s until they are.
+        if (itemsMode && Date.now() - synced > 5000) { synced = Date.now(); await api('POST', '/JellyfinMod/Placeholders/SyncNow').catch(() => null); }
+        // Each fixture's own count: a series' placeholders under its file-less item and under the real one that replaces it
+        // can briefly add up to the same total.
+        // In items mode the fixture's folders (NFOs, no video) also become real series, which take over from the plugin's
+        // file-less series once Jellyfin has refreshed them: the run starts once none of the plugin's series is left.
+        const all = (await api('GET', '/Items?recursive=true&includeItemTypes=Series,Season,Movie,Episode&fields=Path,ProviderIds')).Items;
+        return fixtures.every(fx => all.filter(x => ofFixture(x, fx.title, fx.episodes.length ? 0 : fx.tmdb) && x.IsPlaceHolder
+            && ['Episode', 'Movie'].includes(x.Type)).length === (fx.episodes.length || 1))
+            && !all.some(x => x.Type === 'Series' && x.Path?.startsWith('jellyfinmod://') && x.Name?.includes('JellyfinMod Import Delay'));
+    }, 'six placeholders not indexed');
     browser = await chromium.launch({ headless: true, args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'], ...(tier === 'chrome' ? { channel: 'chrome' } : {}) });
     const signIn = async (page, name = 'oleksii') => {
         await page.goto(base + '/web/');
@@ -118,7 +136,7 @@ try {
         results.cases.push(result);
         const event = (kind, data) => { result.events.push({ at: Date.now(), kind, data }); writeFileSync(join(output, `${label}-${tier}.json`), JSON.stringify(results, null, 2)); if (kind === 'queue') console.log(fx.case, data.map(r => r.state).join(',')); };
         const items = (await api('GET', '/Items?recursive=true&includeItemTypes=Series,Season,Movie,Episode&fields=Path,MediaSources,ProviderIds')).Items;
-        const selected = items.filter(x => x.Path?.includes(fx.title));
+        const selected = items.filter(x => ofFixture(x, fx.title, fx.episodes.length ? 0 : fx.tmdb));
         const stubs = selected.filter(x => x.IsPlaceHolder && ['Episode', 'Movie'].includes(x.Type));
         if (stubs.length !== (fx.episodes.length || 1)) throw Error(`${fx.case}: placeholder count ${stubs.length}`);
         const series = selected.find(x => x.Type === 'Series');

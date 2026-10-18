@@ -14,6 +14,7 @@ import uuid
 workspace = pathlib.Path(__file__).resolve().parents[3]
 import os
 env = os.environ.get("JFMOD_ENV", "charlie")
+items = os.environ.get("IMPORT_DELAY_ITEMS") == "1"  # P1.FU30: no stubs; the plugin makes the placeholders as items
 assert env.isalpha() and env != "alpha", "bad environment"
 state = workspace / "envs/pool" / env
 running = subprocess.run(["docker", "inspect", "-f", "{{.State.Running}}", f"jellyfinmod-{env}"], capture_output=True, text=True)
@@ -52,13 +53,13 @@ for case, tmdb, count in [("episode", 987601, 1), ("pack", 987602, 4), ("movie",
             base.with_suffix(".nfo").write_text(f"<episodedetails><title>Part {number}</title><season>1</season><episode>{number}</episode><aired>2025-01-01</aired><uniqueid type=\"tmdb\" default=\"true\">{epid}</uniqueid></episodedetails>")
             (season / f"{title} (2025) S01E{number:02}.nfo").write_text(base.with_suffix(".nfo").read_text())
             stub = base.with_suffix(".disc")
-            stub.write_text("<!-- JellyfinMod placeholder v1 -->\n<discstub><message>Not downloaded yet.</message></discstub>\n")
-            stubs.append(str(stub))
+            items or stub.write_text("<!-- JellyfinMod placeholder v1 -->\n<discstub><message>Not downloaded yet.</message></discstub>\n")
+            items or stubs.append(str(stub))
             episodes.append(ep)
     else:
         stub = folder / (folder.name + ".disc")
-        stub.write_text("<!-- JellyfinMod placeholder v1 -->\n<discstub><message>Not downloaded yet.</message></discstub>\n")
-        stubs.append(str(stub))
+        items or stub.write_text("<!-- JellyfinMod placeholder v1 -->\n<discstub><message>Not downloaded yet.</message></discstub>\n")
+        items or stubs.append(str(stub))
     fixtures.append(dict(case=case, title=title, tmdb=tmdb, entry=eid, episodes=episodes, folder=str(folder), stubs=stubs, library=libraries[media]))
 db.execute("update AcquisitionSettings set ImportPollSeconds=15,Enabled=0,SeedReleaseEnabled=0,FreeSpaceFloorBytes=0,FreeSpaceFloorPercent=0")
 db.commit()
