@@ -1200,7 +1200,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   **P1.FU26** file-less series and movies; **P1.FU27** backfill, mod surfaces become fallback-only (built, not accepted
   2026-10-17); **P1.FU28** Next Up's
   next real episode and play queues that skip stubs; **P1.FU29** placeholders come back after a delete in Jellyfin (built,
-  not accepted 2026-10-17). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  not accepted 2026-10-17); **P1.FU30** placeholders as Jellyfin items with no file instead of stubs, on Jellyfin 12.2 (built,
+  not accepted 2026-10-18, below). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
   episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
@@ -1437,6 +1438,42 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   review; the switch-off-then-Remove path in the browser (Remove Placeholders itself is P1.FU24's, unchanged). Fixture artifacts
   that are not product behaviour: the seed gave episodes made-up TMDB ids, so opening a series page (P1.FU9's list load) added a
   second plugin row per position; a file deleted from the macOS side stayed visible to `stat` inside OrbStack's VM.
+  **P0.FU1, built (not accepted) 2026-10-18: the plugin retargeted to Jellyfin 12.2.0** (user 2026-10-18: stay a plugin and
+  retarget to 12.2). Owner: Phase 0 (the build and the image). `Jellyfin.Controller`/`Jellyfin.Model` `12.2.0`, `targetAbi`
+  `12.2.0.0`, the Dockerfile on the 12.2 image by digest; EF Core 10.0.11 and TMDbLib 3.0.0 stay (the 12.2 image ships the same);
+  the web bundle names 12.2.0 as its minimum and tested server. A 12.0 plugin build is refused by 12.2 and this one by 12.0. The
+  local environments take `JFMOD_SERVER=12.2` (uncommitted in the workspace's envs/, which carries another session's pool work).
+  Checks: build with no warnings; all 13 suites (Phase 0, 1, 2, 3, Trakt and 10 on macOS; 3 protection, 4, 5, 6, 7 settings,
+  Prowlarr and takeover in the Linux container) pass on 12.2; the baseline's database migrates from 12.0 to 12.2 in about 2 s.
+  Found on 12.2: a library scan request is dropped while another scan runs; user data is read from an item instance's loaded rows;
+  a new episode has an empty `SeriesId` until its first refresh. **Not done:** the Pi instances 18096, 28096 and 48096 stay on
+  12.0.0 (deploying there needs the 12.2 image first); Codex review.
+  **P1.FU30, built (not accepted) 2026-10-18: placeholders as Jellyfin items with no file, with no stub code** (user 2026-10-18:
+  "try virtual non-file placeholder items"; then "beta (12.2) must run virtual items only with no stub code"). Owner: Phase 1's
+  placeholders (P1.FU24–29), with Phase 5's import swap and Phase 3/10's reclaim. Design and what is where:
+  [design §19](design/missing-media-user-actions.md). Two branches in each repository: **`feat/virtual-items-only`** (plugin on
+  next-release `5f2199e`: `30e8780` retarget, `fb6105d` items; web on `2ac29996ae`: `34bec17fbb`, `1e231d393a`, `63e8a1afc1`
+  runners), deployed to the comparison environment beta; and **`feat/virtual-items`** (plugin `25bfc44`, web `dbeb243444`, on
+  the older next-release `ab55fb0`/`b939526738`, not rebased), which keeps the stubs too behind a `PlaceholderMode` setting with a
+  dry-run migration ("N stubs would be replaced by M items", items made first, then the stubs removed; reversible), the fallback
+  for a server that already has stubs. No migration of the plugin's database, version 0.1.0.0. API: [API.md](API.md)
+  *Placeholders* (`items` replaces `stubs` and `writable`; `GET`/`POST Placeholders/Items[/Remove]`). **Code** (plugin product
+  code, not counting migrations): 38,476 lines on next-release, 38,349 on items-only; the placeholder files themselves 3,355 and
+  3,246; against next-release 1,760 lines removed and 1,633 added (the stub writer, remover, stamp and swap out, the item store
+  and its repair in), tests 941 removed (the stub scenarios) and 25 added; web 54 removed and 794 added, 659 of them the two live
+  runners. **Measured** on beta (seeded like alpha, `compare-diff.sh` with only the expected differences): Delete media of an
+  episode, a season, a series and a movie brings the placeholders back in 0.43, 0.45, 0.50 and 0.38 s (stubs with P4.FU12: 1.1,
+  1.7, 4.8–14.5 and 0.5 s); the open series page shows a deleted season again in 1.2 s. On delta: imports Play in 3.3 s (episode)
+  and 2.1 s (pack), the movie playable in 2.2 s, no cloud; a reclaim leaves the episode as a placeholder in 0.7 s and the movie in
+  3.6 s with the marks kept; a library removed and added again has its placeholders back in 10 s. **Checks:** all 13 suites pass
+  on the items-only build (Phase 5 failed twice under load, once on a pre-existing SQLite race in the 20 parallel queue polls,
+  once a replacement scenario's timing, then passed on its own); `placeholder-items.mjs` (39 checks: backfill, the four deletes,
+  a file copied in, the open series page, a file-less series becoming real, restart and scan, an ordinary user, the opt-out,
+  Remove Entry, the library removed and added again, Remove All Virtual Items leaving no row) passes but one, below;
+  `placeholder-reclaim.mjs` 6 of 6; `import-delay.mjs` with `IMPORT_DELAY_ITEMS=1`, no cloud sample. **Open:** after a
+  file-less series becomes real, the real series' favourite shows on lists but on its own page only after a restart (Jellyfin's
+  single-item answer comes from a stale cached instance); about a second without a season card on the open series page while
+  a deleted season is replaced. **Not run:** the Pi, real Chrome, the TV and phone layouts, a 100-episode series, Codex review.
 - Phase 1 follow-up **P1.FU32, built (not accepted) 2026-10-19: when it was watched, in the played tick's tooltip** (user,
   2026-10-19: "hover over watched check should show a hint when it was watched"). Web only, on `feat/watched-hint` from
   `main-stubs`; no upstream file touched (mounted in the mod's `ModApp.tsx`), so the patch surface is unchanged. Hovering

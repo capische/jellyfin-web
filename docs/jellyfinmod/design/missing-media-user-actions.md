@@ -644,3 +644,75 @@ missing row; the Transmission transport sends the last session id per endpoint, 
 
 **Not changed:** the 60 s Jellyfin waits for files written by something other than the plugin (a copy, a file removed with a file
 manager); the retention delete path (only a notification was added after its native removal); version 0.1.0.0, no migration.
+
+## 19. P1.FU30: placeholders as Jellyfin items with no file, on Jellyfin 12.2 (2026-10-18, built, not accepted)
+
+User decisions 2026-10-18: stay a plugin and retarget to Jellyfin 12.2 (P0.FU1); try placeholders as Jellyfin items with no
+file instead of `.disc` stubs; then "beta (12.2) must run virtual items only with no stub code", so the comparison with alpha
+(12.0 and stubs) also shows how much code each approach needs. This section describes the items-only build
+(`feat/virtual-items-only`, rebased on next-release with P4.FU12). It reverses §1's "virtual items fail the bar": the five failures
+there were Jellyfin's *virtual* items (`IsVirtualItem`, `LocationType: Virtual`), which this is not.
+
+**The item.** A Jellyfin `Series`, `Season`, `Episode` or `Movie` the plugin makes with `Folder.AddChild`, whose path is
+`jellyfinmod://series/{libraryId}/{tmdb}`, `…/movie/{libraryId}/{tmdb}`, `…/season/{seriesId}/{n}` or
+`…/episode/{seriesId}/{s}/{e}` (`PlaceholderItems`). `IsPlaceHolder: true`, `IsVirtualItem: false`, so Jellyfin lists it and
+counts it like any episode or movie; `LocationType` comes out `Remote`, and since the path is no file path Jellyfin never reaps
+it in a scan and `CanDelete` is false. Its id is Jellyfin's own id of that path, so a placeholder made again has the same id and
+its user data comes back by key (`ReattachUserDataAsync` after it is made; a removed real series' or movie's provider ids are
+kept an hour and given to the item made in its place, so the series' TVDB key matches too). Metadata comes through Jellyfin's own
+refresh queue, one item at a time (`QueueRefresh`, low priority). A file-less series or movie is made under the library's first
+physical folder (`CollectionFolder.PhysicalFolderIds`); an episode under a real season of its number when there is one, else
+the plugin's own season.
+
+**The sync** compares the catalog with what Jellyfin holds, not with the catalog's file state: an aired episode or released movie
+is missing while Jellyfin has no real item for it. A real item that Jellyfin has refreshed at least once takes a placeholder's
+place: the placeholder's marks are merged into it per user (played, the latest date, the highest play count, favourite,
+position, rating), saved through Jellyfin's cached instance, and the placeholder goes. A real season that arrives takes the
+plugin's episodes of its number; a real series takes over a file-less one only once it and all its episodes are refreshed, so
+nothing vanishes in between. A library Jellyfin holds no real title of while the catalog has some on disk (just added again,
+not scanned yet) gets no file-less titles (`library_not_scanned`).
+
+**What starts it.** The scheduled backfill and Sync Now (P1.FU27, unchanged); Add and an episode list load (P1.FU26); a delete
+in Jellyfin (the P4.FU12 `DeleteRepair`: its removal capture and scoped absence proof stay, and it makes the title's items under
+the library lease instead of writing stubs); a real item added, or saved by its first refresh while a placeholder still stands
+for it (`PlaceholderItemRepair`, one second after the last change, never during a library scan); a reclaim (P1.FU25, at the point
+where the stub was written; the reclaim itself unchanged); the import's swap (P1.FU25, the placeholder items go before the file's
+folder is refreshed). Every sync tells the clients through `LibraryNotifications` (P4.FU12) with the ids it made and removed.
+
+**Removed with the stubs:** `PlaceholderStub` and its marker, the stub writer and remover with their folder listings and
+season and title folders, the stamp, the stub swap, the reclaim's stub, the scan requests the stubs needed, the folder discovery
+of written stubs and the wait for it before a removal (nothing is written, so there is nothing to discover or wait for;
+`FolderRefresh` stays for the import and the start-up repair), the "file beside a stub became a version" handling, the
+retention guards against reclaiming a stub (this build writes none; a server moving from a stubs build must use the
+`feat/virtual-items` migration first, which removes every stub), and the Phase 5 stub scenarios (the fixture library there cannot
+make items; `placeholder-items.mjs` and `placeholder-reclaim.mjs` prove them on a real Jellyfin).
+
+**Clean-up.** Remove Placeholders and Remove Entry remove exactly the plugin's items; Remove All Virtual Items turns every library
+off and removes every item of the plugin's (the clean-up before an uninstall, since no user can delete them); `OnUninstalling`
+does the same. A library removed in Jellyfin takes its items with it.
+
+**Found on Jellyfin 12.2 and handled:** it drops a library's scan request while another scan runs (a library added again right
+after its removal is not scanned: the `library_not_scanned` guard); a new episode has an empty `SeriesId` until its first refresh
+(episodes are grouped by their season's parent, and only refreshed items take a placeholder's place); user data is read from the
+item instance's loaded rows (rows are re-attached before a read, and saved through the cached instance); Jellyfin's memory cache
+keeps an item that went with its library, so an existence check reads the database (`PlaceholderItems.Stored`); while Jellyfin
+makes the library's folder item again in a scan the listing misses a file-less series for a while, so it is also found by its id.
+
+**Measured** (local delta and beta, Jellyfin 12.2, no TMDB token; alpha-like numbers from the P4.FU12 table in PLAN):
+
+| | Items only (12.2) | Stubs with P4.FU12 (12.0) |
+| --- | --- | --- |
+| Delete episode / season / series / movie, placeholder back | 0.43 / 0.45 / 0.50 / 0.38 s (beta) | 1.1 / 1.7 / 4.8–14.5 / 0.5 s |
+| A season deleted, shown again on the open series page | 1.2 s | — |
+| Import: episode / pack / movie, Play on the page | 3.3 / 2.1 s / (movie: playable 2.2 s), no cloud | 2.3 / 2.8 / 3.9 s |
+| Reclaim: episode / movie standing as a placeholder | 0.7 / 3.6 s, marks kept | not measured |
+| A file copied in by hand replaces its placeholder | 61.6 s (Jellyfin's library monitor) | 63 s |
+| A library removed and added again, placeholders back | 10 s | — |
+
+**Risks and open points.** The plugin CLAUDE.md rule "never synthetic `BaseItem`s" and its 12.0 target line are superseded by this
+decision only once it is accepted; a disabled (not uninstalled) plugin leaves its items visible and unplayable until Remove All
+Virtual Items or re-enabling; native clients that read `Path` see a `jellyfinmod://` path and `LocationType: Remote`; a real
+series' favourite set before a whole-series swap shows on lists at once but on the series' own page only after a restart
+(Jellyfin's single-item answer comes from a stale cached instance); the open series page shows no season card for about a
+second while a deleted season is replaced. NFO and artwork: the baseline libraries save no metadata to folders, so nothing is
+written; the plugin's item's internal metadata folder goes with it, and the real item downloads its own images.
