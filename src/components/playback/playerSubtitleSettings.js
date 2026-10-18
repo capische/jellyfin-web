@@ -2,7 +2,6 @@ import escapeHtml from 'escape-html';
 import { attachSliderValue } from 'components/subtitlesettings/sliderValue';
 import { DEFAULT_SUBTITLE_POSITION } from 'components/subtitlesettings/subtitlePlacement';
 import layoutManager from 'components/layoutManager';
-import { applyPlayerOverlayFrost } from 'components/playback/playerOverlayFrost';
 import globalize from 'lib/globalize';
 import keyboardnavigation from 'scripts/keyboardNavigation';
 import {
@@ -67,7 +66,6 @@ export default class PlayerSubtitleSettings {
             field.addEventListener('input', this.onFieldChange);
         });
         document.documentElement.classList.add('playerSubtitleSettings-open');
-        applyPlayerOverlayFrost(this.element);
         options.container.appendChild(this.element);
         window.addEventListener('resize', this.updateSubtitleLayout);
 

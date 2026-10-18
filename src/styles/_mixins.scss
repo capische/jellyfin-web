@@ -25,3 +25,9 @@ $player-overlay-blur: blur(1.2rem) saturate(1.4) !default;
     background-color: $player-overlay-background;
     backdrop-filter: $player-overlay-blur;
 }
+
+// The stand-in where the blur cannot see the video (webOS 6 and newer): the plain
+// translucent fill, without the blur behind it.
+@mixin player-overlay-clear-fill {
+    background-color: $player-overlay-background;
+}

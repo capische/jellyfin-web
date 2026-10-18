@@ -42,21 +42,18 @@
 }
 
 /* Set on webOS 6 and newer, which render the blur over video as a solid box.
-   They keep the translucent fill alone. */
+   They keep a darker translucent fill instead (see the player-overlay-clear-fill
+   mixin). */
 .layout-tv.noPlayerOverlayBlur .actionSheet.actionSheet-boxed {
     backdrop-filter: none;
+
+    @include player-overlay-clear-fill;
 }
 
 /* Set on the dim behind the boxed TV player menus so the video keeps its
    brightness; the box is translucent precisely so the picture stays visible. */
 .dialogBackdrop.dialogBackdrop-clear {
     opacity: 0;
-}
-
-/* With a frost attached the frost owns the fill, so the box itself goes clear
-   and a failed image leaves the plain fill rather than a doubled one. */
-.layout-tv .actionSheet.actionSheet-boxed.playerOverlayFrost-host {
-    background-color: transparent;
 }
 
 .actionSheetContent-centered {
