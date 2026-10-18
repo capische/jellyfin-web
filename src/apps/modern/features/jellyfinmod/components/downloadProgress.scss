@@ -79,6 +79,15 @@
 
 .jfmod-dlMeta--stale { opacity: 0.55; }
 
+/* Importing (user 2026-10-18, design A): the word steps up from the line's muted colour to the full text colour at 600 and
+ * breathes in step with the ring's turn and the block's bar. It wins over upstream's `.listItem .secondary` grey. */
+.jfmod-dlMeta--importing,
+.listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
+    color: var(--jf-palette-text-primary, #fff);
+    font-weight: 600;
+    animation: jfmod-dlBreathe 1.2s ease-in-out infinite;
+}
+
 /* A failure takes the Not Downloaded mark's place on a row, an indicator (since P1.FU22 an administrator's button there is
  * disabled meanwhile): a red bang instead of the cloud, never both, at the row glyph's size. */
 .jfmod-dlRow--failed .jfmod-mark--none {
@@ -150,7 +159,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .jfmod-dlBar--importing .jfmod-dlBar-fill {
+    .jfmod-dlBar--importing .jfmod-dlBar-fill,
+    .jfmod-dlMeta--importing,
+    .listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
         animation: none;
     }
 }
