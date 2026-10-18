@@ -248,6 +248,33 @@ class AppSettings {
     }
 
     /**
+     * Get or set 'Dim overlays during HDR playback' state (on by default).
+     * @param {boolean|undefined} val - Flag to enable the dimming or undefined.
+     * @return {boolean} 'Dim overlays during HDR playback' state.
+     */
+    hdrOverlayDim(val) {
+        if (val !== undefined) {
+            return this.set('hdrOverlayDim', val.toString());
+        }
+
+        return toBoolean(this.get('hdrOverlayDim'), true);
+    }
+
+    /**
+     * Get or set how bright the overlays stay during HDR playback, as a percentage.
+     * @param {number|undefined} val - The percentage or undefined.
+     * @return {number} The saved percentage, 65 by default.
+     */
+    hdrOverlayBrightness(val) {
+        if (val !== undefined) {
+            return this.set('hdrOverlayBrightness', val);
+        }
+
+        const saved = parseInt(this.get('hdrOverlayBrightness'), 10);
+        return Number.isNaN(saved) ? 65 : Math.min(100, Math.max(30, saved));
+    }
+
+    /**
      * Get or set the preferred video aspect ratio.
      * @param {string|undefined} val - The aspect ratio or undefined.
      * @returns {string} The saved aspect ratio state.

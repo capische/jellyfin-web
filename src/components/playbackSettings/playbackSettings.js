@@ -23,6 +23,7 @@ import template from './playbackSettings.template.html';
 
 import '../../elements/emby-select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
+import '../../elements/emby-slider/emby-slider';
 
 function fillSkipLengths(select) {
     const options = [5, 10, 15, 20, 25, 30];
@@ -203,6 +204,28 @@ function showHideQualityFields(context, user, apiClient) {
     });
 }
 
+// Only LG webOS 6 and newer lift web graphics to HDR brightness, so only they get the setting.
+function loadHdrOverlayDim(context) {
+    context.querySelector('.hdrOverlayDimSection').classList.toggle('hide', !browser.web0sVersion || browser.web0sVersion < 6);
+    context.querySelector('.chkHdrOverlayDim').checked = appSettings.hdrOverlayDim();
+
+    const slider = context.querySelector('.sliderHdrOverlayBrightness');
+    const label = context.querySelector('.hdrOverlayDimSection .sliderLabel');
+    const showValue = () => {
+        label.textContent = `${globalize.translate('LabelHdrOverlayBrightness')}: ${slider.value}%`;
+    };
+    slider.value = appSettings.hdrOverlayBrightness();
+    showValue();
+    slider.addEventListener('input', showValue);
+    // The custom element is only upgraded once the page is in the document, so its methods
+    // are not there yet on this tick. Range inputs are skipped by remote navigation unless
+    // marked focusable.
+    setTimeout(() => {
+        slider.classList.add('focusable');
+        slider.enableKeyboardDragging?.();
+    }, 0);
+}
+
 function loadForm(context, user, userSettings, systemInfo, apiClient) {
     const loggedInUserId = apiClient.getCurrentUserId();
     const userId = user.Id;
@@ -261,6 +284,7 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
     context.querySelector('#selectAudioNormalization').value = userSettings.selectAudioNormalization();
     context.querySelector('.fldAudioNormalization').classList.toggle('hide', browser.iOS);
     context.querySelector('.chkEnableNextVideoOverlay').checked = userSettings.enableNextVideoInfoOverlay();
+    loadHdrOverlayDim(context);
     context.querySelector('.chkRememberAudioSelections').checked = user.Configuration.RememberAudioSelections || false;
     context.querySelector('.chkRememberSubtitleSelections').checked = user.Configuration.RememberSubtitleSelections || false;
     context.querySelector('.chkExternalVideoPlayer').checked = appSettings.enableSystemExternalPlayers();
@@ -304,6 +328,8 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
 
 function saveUser(context, user, userSettingsInstance, apiClient) {
     appSettings.enableSystemExternalPlayers(context.querySelector('.chkExternalVideoPlayer').checked);
+    appSettings.hdrOverlayDim(context.querySelector('.chkHdrOverlayDim').checked);
+    appSettings.hdrOverlayBrightness(parseInt(context.querySelector('.sliderHdrOverlayBrightness').value, 10));
 
     appSettings.maxChromecastBitrate(context.querySelector('.selectChromecastVideoQuality').value);
     appSettings.maxVideoWidth(context.querySelector('.selectMaxVideoWidth').value);
