@@ -149,7 +149,7 @@ export interface EntryEpisode {
     availability: 'onDisk' | 'missing' | 'unaired' | 'reclaimed';
     jellyfinItemId: string | null;
     /**
-     * The Jellyfin placeholder item (a media stub, `IsPlaceHolder`) that stands for this missing episode (P1.FU24); absent when
+     * The Jellyfin placeholder item (an item with no file, `IsPlaceHolder`) that stands for this missing episode (P1.FU24); absent when
      * the episode has a file, no placeholder, or the plugin is older.
      */
     placeholderItemId?: string | null;

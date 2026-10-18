@@ -53,8 +53,8 @@ import './cardGetRelease.scss';
  * Cloud download instead of Play button as nothing available to play") is marked `data-jfmod-empty` wherever its card is
  * drawn (library grids, search, Home rows), with the same effect. One read per user lists them (a series' recursive episode
  * count, a season's child count), kept in this browser and refreshed with the catalog, so the mark is on the card from its
- * first frame. A title with any episode file keeps Play. Since P1.FU24 a placeholder episode (a media stub Jellyfin calls
- * `IsPlaceHolder`) counts as no file: a season or series holding only placeholders is marked, and so is each placeholder's own
+ * first frame. A title with any episode file keeps Play. Since P1.FU24 a placeholder episode (an item with no file Jellyfin
+ * calls `IsPlaceHolder`) counts as no file: a season or series holding only placeholders is marked, and so is each placeholder's own
  * card (a third read lists them).
  */
 
@@ -225,7 +225,7 @@ const emptyFoldersQuery = (api: Api | undefined, userId: string | undefined) => 
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Series], fields: [ItemFields.RecursiveItemCount] }, { signal }),
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Season], fields: [ItemFields.ChildCount], enableUserData: false },
                     { signal }),
-                // Placeholder episodes and movies (media stubs, P1.FU24, P1.FU26) are items with no file: a season or series
+                // Placeholder episodes and movies (P1.FU24, P1.FU26, P1.FU30) are items with no file: a season or series
                 // holding only them has nothing to play either, and their own cards none.
                 items.getItems({ ...common, includeItemTypes: [BaseItemKind.Episode, BaseItemKind.Movie], isPlaceHolder: true,
                     enableUserData: false }, { signal })

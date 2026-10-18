@@ -61,9 +61,8 @@ export interface PlaceholderLibrary {
     libraryId: string;
     name: string;
     enabled: boolean;
-    stubs: number;
-    /** Whether any folder of the library can be written; a read-only library gets nothing. */
-    writable?: boolean;
+    /** How many placeholder items with no file Jellyfin holds in it (P1.FU30). */
+    items: number;
     /** `movie` or `series` (P1.FU26); a build before it lists TV libraries only. */
     mediaType?: string;
 }
@@ -473,18 +472,17 @@ const summariseAutomation = (data: SettingsData): Summary => {
 const placeholderCount = (count: number) => `${count} placeholder${count === 1 ? '' : 's'}`;
 
 /**
- * Missing Episodes in a line, for the rail and the section's own head (P1.FU24): on in every library, on in some, off, or on
- * where nothing can be written, with the placeholders Jellyfin holds.
+ * Missing Episodes in a line, for the rail and the section's own head (P1.FU24): on in every library, on in some, or off, with
+ * the placeholders Jellyfin holds.
  */
 export const summarisePlaceholders = (libraries: PlaceholderLibrary[] | undefined): Summary => {
     if (!libraries) return { kind: 'off', words: 'Not loaded' };
     if (!libraries.length) return { kind: 'off', words: 'No TV or movie library' };
     const on = libraries.filter(library => library.enabled);
-    const stubs = placeholderCount(libraries.reduce((sum, library) => sum + library.stubs, 0));
+    const count = placeholderCount(libraries.reduce((sum, library) => sum + library.items, 0));
     if (!on.length) return { kind: 'off', words: 'Off · turned off by you' };
-    if (on.every(library => library.writable === false)) return { kind: 'warn', words: 'Read-only · nothing is written' };
-    return on.length === libraries.length ? { kind: 'ok', words: `On · ${stubs}` } :
-        { kind: 'ok', words: `On for ${on.length} of ${libraries.length} libraries · ${stubs}` };
+    return on.length === libraries.length ? { kind: 'ok', words: `On · ${count}` } :
+        { kind: 'ok', words: `On for ${on.length} of ${libraries.length} libraries · ${count}` };
 };
 
 const summariseInterface = (data: SettingsData): Summary => {

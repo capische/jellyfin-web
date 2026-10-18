@@ -3,7 +3,7 @@
  *
  * Upstream's playback manager builds every local queue (Play, Play All, Shuffle, Play from here, Instant Mix, a season's or a
  * series' Play, Add to queue and Play next) through one step, `translateItemsForPlayback`, which also sets the queue's start
- * index. A placeholder (`IsPlaceHolder`: a missing episode or movie the plugin holds as a Jellyfin media stub) is a real item
+ * index. A placeholder (`IsPlaceHolder`: a missing episode or movie the plugin holds as a Jellyfin item with no file) is a real item
  * that is never playable, so it is left out of the queue there: playback, and the next episode after the one that ends, jump
  * the gap. The start moves to the first playable item at or after the one asked for.
  *

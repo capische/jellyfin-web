@@ -471,7 +471,7 @@ const samePlaceholderRows = (a: PlaceholderRow[], b: PlaceholderRow[]) =>
     a.length === b.length && a.every(([id, host], index) => id === b[index][0] && host === b[index][1]);
 
 /**
- * Upstream's rows of placeholder episodes (a media stub Jellyfin calls `IsPlaceHolder`, P1.FU24): each is marked
+ * Upstream's rows of placeholder episodes (an item with no file Jellyfin calls `IsPlaceHolder`, P1.FU24, P1.FU30): each is marked
  * `data-jfmod-placeholder` (its Play and "Ends at" hidden, placeholderPage.scss) and gets a host for the mark at its end, just
  * before upstream's buttons, as a library list row's (P1.FU11). Found again whenever upstream redraws its list. Each is stamped
  * with its entry and episode, so its download is drawn with its first frame (P4.FU10).

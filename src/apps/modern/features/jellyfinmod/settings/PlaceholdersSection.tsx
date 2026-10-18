@@ -19,7 +19,7 @@ interface PlaceholderPlan {
     removals: { path: string; reason: string }[];
     skipped: { title: string; seasonNumber: number | null; episodes: number; reason: string; detail: string }[];
     failures?: { path: string; reason: string }[];
-    /** Placeholders a run left for the next one (a run writes a few series at a time). */
+    /** Placeholders a run left for the next one (a run makes a few titles at a time). */
     pending?: number;
 }
 
@@ -67,7 +67,7 @@ export const progressLine = (progress: PlaceholderProgress) =>
 
 /** What the scheduled sync does next, in words. */
 const paceLine = (progress: PlaceholderProgress) => {
-    if (progress.running) return 'A batch is being written now.';
+    if (progress.running) return 'A batch is being made now.';
     if (progress.scanRunning || progress.deferred === 'library_scan') return 'Waiting for Jellyfin\'s library scan to finish; the next batch follows it.';
     if (progress.pending > 0) return `The next batch of up to 10 titles per library comes in about ${progress.nextRunMinutes} min.`;
     return 'Every title has its placeholders; checked again every 15 minutes.';
@@ -134,7 +134,7 @@ const Backfill: FC<BackfillProps> = ({ api, busy, setBusy, setNotice, ask, versi
             const after = await request<PlaceholderProgress>(api, 'POST', 'Placeholders/SyncNow');
             setProgress(after);
             invalidateCatalog(api);
-            setNotice({ kind: 'ok', text: `Synced: ${progressLine(after)}. Jellyfin adds the new placeholders within seconds.` });
+            setNotice({ kind: 'ok', text: `Synced: ${progressLine(after)}. Jellyfin shows the new placeholders at once.` });
             await onSynced();
         } catch (error) {
             setNotice(isConflict(error) ? { kind: 'warn', text: 'A sync is running already; the line updates when it ends.' } :
@@ -202,15 +202,81 @@ const Backfill: FC<BackfillProps> = ({ api, busy, setBusy, setNotice, ask, versi
     );
 };
 
-/** One line per file a run would write or remove and per episode it leaves without one, in the order the plugin gives them. */
+/** How many placeholder items the plugin has, and what Remove All Virtual Items did (`/Placeholders/Items`, P1.FU30). */
+interface VirtualItemsState {
+    items: number;
+    removed: number;
+}
+
+/** Remove All Virtual Items (P1.FU30): the clean-up before an uninstall, since nothing else removes the plugin's items. */
+const VirtualItems: FC<Omit<BackfillProps, 'version'>> = ({ api, busy, setBusy, setNotice, ask, onSynced }) => {
+    const [state, setState] = useState<VirtualItemsState | null>(null);
+    const read = useCallback(async () => {
+        try {
+            setState(await request<VirtualItemsState>(api, 'GET', 'Placeholders/Items'));
+        } catch {
+            setState(null);
+        }
+    }, [api]);
+    useEffect(() => {
+        void read();
+    }, [read]);
+
+    const removeAll = useCallback(async () => {
+        let dry: VirtualItemsState;
+        try {
+            dry = await request<VirtualItemsState>(api, 'GET', 'Placeholders/Items');
+        } catch (error) {
+            setNotice({ kind: 'err', text: problemText(error) });
+            return;
+        }
+        ask({
+            title: 'Remove all virtual items?',
+            text: `This removes ${plural(dry.items, 'Jellyfin item')} with no file that JellyfinMod made, in every library, and turns placeholders `
+                + 'off everywhere so none are made again. Do this before you uninstall JellyfinMod: nothing else removes these items. '
+                + 'Real files and their items are not touched.',
+            action: 'Remove',
+            onConfirm: () => {
+                void (async () => {
+                    setBusy(true);
+                    try {
+                        const done = await request<VirtualItemsState>(api, 'POST', 'Placeholders/Items/Remove');
+                        setNotice({ kind: done.items ? 'warn' : 'ok', text: `Removed ${plural(done.removed, 'item')}; placeholders are off in every library.`
+                            + (done.items ? ` ${plural(done.items, 'item')} could not be removed.` : '') });
+                        await read();
+                        await onSynced();
+                    } catch (error) {
+                        setNotice({ kind: 'err', text: problemText(error) });
+                    } finally {
+                        setBusy(false);
+                    }
+                })();
+            }
+        });
+    }, [api, ask, onSynced, read, setBusy, setNotice]);
+
+    return (
+        <div className='jfmod-brow' data-jfmod-placeholder-kind='items'>
+            <div className='jfmod-brow-main'>
+                <strong>Virtual items</strong>
+                <span className='jfmod-sub'>{state ? `${plural(state.items, 'Jellyfin item')} with no file` : 'reading…'}</span>
+                <div className='jfmod-inlineactions'>
+                    <Button variant='contained' color='error' disabled={busy || !state?.items} onClick={removeAll}>Remove All Virtual Items</Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/** One line per item a run would make or remove and per episode it leaves without one, in the order the plugin gives them. */
 const PlanList: FC<{ plan: PlaceholderPlan }> = ({ plan }) => (
     <ScrollList label={`What a sync of ${plan.libraryName} does`}>
         {plan.writes.length + plan.removals.length + plan.skipped.length === 0
-            && <div className='jfmod-empty'>Nothing to write or remove.</div>}
+            && <div className='jfmod-empty'>Nothing to make or remove.</div>}
         {plan.writes.map(write => (
             <div className='jfmod-brow' key={'w' + write.path}>
                 <div className='jfmod-brow-main'>
-                    <strong>Write</strong>
+                    <strong>Make</strong>
                     <span className='jfmod-sub jfmod-mono'>{write.path}</span>
                 </div>
             </div>
@@ -243,11 +309,8 @@ interface LibraryRowProps {
     onRemove: (library: PlaceholderLibrary) => Promise<void>;
 }
 
-/** The library's state in words: on, off because an administrator turned it off, or on but nothing can be written. */
-const statusOf = (library: PlaceholderLibrary) => {
-    if (!library.enabled) return 'Off (turned off by you)';
-    return library.writable === false ? 'Read-only: its folders cannot be written, so nothing is written' : 'On';
-};
+/** The library's state in words: on, or off because an administrator turned it off. */
+const statusOf = (library: PlaceholderLibrary) => (library.enabled ? 'On' : 'Off (turned off by you)');
 
 /** One TV or movie library: its switch, Preview (the dry run) and Remove Placeholders, and the last plan read for it. */
 const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPreview, onRemove }) => {
@@ -264,7 +327,7 @@ const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPrev
         <div className='jfmod-brow' data-jfmod-placeholders={library.libraryId}>
             <div className='jfmod-brow-main'>
                 <strong>{library.name}</strong>
-                <span className='jfmod-sub' data-jfmod-placeholder-status=''>{statusOf(library)} · {plural(library.stubs, 'placeholder')} in Jellyfin</span>
+                <span className='jfmod-sub' data-jfmod-placeholder-status=''>{statusOf(library)} · {plural(library.items, 'placeholder')} in Jellyfin</span>
                 <FormControlLabel control={<Switch checked={library.enabled} disabled={busy} onChange={toggle} />}
                     label={library.mediaType === 'movie' ? 'Show missing movies as Jellyfin items' : 'Show missing episodes as Jellyfin items'} />
                 <div className='jfmod-inlineactions'>
@@ -280,7 +343,7 @@ const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPrev
 };
 
 const summaryOf = (plan: PlaceholderPlan) => {
-    const parts = [`${plural(plan.writes.length, 'placeholder')} to write`, `${plan.removals.length} to remove`];
+    const parts = [`${plural(plan.writes.length, 'placeholder')} to make`, `${plan.removals.length} to remove`];
     if (plan.skipped.length) parts.push(`${plural(plan.skipped.reduce((sum, skip) => sum + skip.episodes, 0), 'episode')} left without one`);
     return parts.join(', ');
 };
@@ -288,8 +351,7 @@ const summaryOf = (plan: PlaceholderPlan) => {
 /**
  * Missing Episodes (P1.FU24, P1.FU26): per TV and movie library, the switch "Show missing episodes (movies) as Jellyfin items" (on
  * by default), with the section's state (`summarisePlaceholders`, as the rail shows it), a dry run
- * that lists the exact files a sync would write and remove, and Remove Placeholders. Turning a switch on asks first, naming how
- * many files it writes.
+ * that lists the exact items a sync would make and remove, Remove Placeholders and Remove All Virtual Items.
  */
 export const PlaceholdersSection: FC<SectionProps> = props => {
     const { api, reload } = props;
@@ -317,7 +379,7 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
             const plan = await work();
             setPlans(current => ({ ...current, [plan.libraryId]: plan }));
             if (!plan.dryRun) invalidateCatalog(api);
-            const failed = plan.failures?.length ? ` ${plural(plan.failures.length, 'file')} could not be changed.` : '';
+            const failed = plan.failures?.length ? ` ${plural(plan.failures.length, 'item')} could not be changed.` : '';
             setNotice({ kind: plan.failures?.length ? 'warn' : 'ok', text: success(plan) + failed });
             setVersion(value => value + 1);
             await load();
@@ -352,10 +414,10 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
         if (afterOff && plan.removals.length === 0) return;
         ask({
             title: afterOff ? 'Remove existing placeholders now?' : `Remove placeholders from ${library.name}?`,
-            text: `This deletes ${plural(plan.removals.length, 'placeholder file')} (listed below) and the season folders that leaves empty. `
+            text: `This removes ${plural(plan.removals.length, 'placeholder')} (listed below). `
                 + 'Nothing else is touched; watched and favourite marks are kept by Jellyfin for when the episode arrives.'
-                + (afterOff ? ' Cancel keeps them; nothing more is written while the switch is off.' : '')
-                + (!afterOff && library.enabled ? ' The switch is still on, so the next sync writes them again: turn it off first.' : ''),
+                + (afterOff ? ' Cancel keeps them; nothing more is made while the switch is off.' : '')
+                + (!afterOff && library.enabled ? ' The switch is still on, so the next sync makes them again: turn it off first.' : ''),
             action: 'Remove',
             onConfirm: () => {
                 void run(() => request<PlaceholderPlan>(api, 'POST', `Placeholders/${library.libraryId}/Remove`),
@@ -365,16 +427,16 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
     }, [api, ask, run]);
 
     // On is the default (user, 2026-10-15: "That's the point"): turning it back on just syncs; turning it off offers to remove
-    // the placeholders already written.
+    // the placeholders already made.
     const toggle = useCallback(async (library: PlaceholderLibrary, enabled: boolean) => {
         if (enabled) {
             await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: true }),
-                done => `On for ${done.libraryName}: wrote ${plural(done.writes.length, 'placeholder')}`
-                    + (done.pending ? `, ${done.pending} more over the next runs` : '') + '. Jellyfin adds them within seconds.');
+                done => `On for ${done.libraryName}: made ${plural(done.writes.length, 'placeholder')}`
+                    + (done.pending ? `, ${done.pending} more over the next runs` : '') + '.');
             return;
         }
         await run(() => request<PlaceholderPlan>(api, 'PUT', `Placeholders/${library.libraryId}`, { enabled: false }),
-            plan => `Off for ${plan.libraryName}: nothing more is written.`);
+            plan => `Off for ${plan.libraryName}: nothing more is made.`);
         await remove(library, true);
     }, [api, remove, run]);
 
@@ -383,13 +445,14 @@ export const PlaceholdersSection: FC<SectionProps> = props => {
             notice={null} next={props.next} onGo={props.onGo}>
             <p className='fieldDescription jfmod-lead'>
                 Shows every aired episode you do not have yet, and every released movie or series in your catalog with no file, as a
-                Jellyfin item: a small placeholder file where its download will go. Every app then lists it with watched, favourite and
-                its details, and none can play it. On for every library unless you turn it off here. Titles already in your catalog
-                get theirs in batches of up to 10 per library, every 5 minutes until all are done and every 15 minutes after that, and
-                never while Jellyfin scans a library; Sync Now writes the next batch at once. Where a library is off or its folder
-                cannot be written, and for unaired episodes, JellyfinMod shows its own cards and rows instead.
+                Jellyfin item with no file. Every app then lists it with watched, favourite and its details, and none can play it. On
+                for every library unless you turn it off here. Titles already in your catalog get theirs in batches of up to 10 per
+                library, every 5 minutes until all are done and every 15 minutes after that, and never while Jellyfin scans a library;
+                Sync Now makes the next batch at once. Where a library is off, and for unaired episodes, JellyfinMod shows its own cards
+                and rows instead.
             </p>
             {notice && <Notice notice={notice} />}
+            <VirtualItems api={api} busy={busy} setBusy={setBusy} setNotice={setNotice} ask={ask} onSynced={synced} />
             <Backfill api={api} busy={busy} setBusy={setBusy} setNotice={setNotice} ask={ask} version={version} onSynced={synced} />
             <div className='jfmod-blist'>
                 {libraries?.length === 0 && <div className='jfmod-empty'>No TV or movie library.</div>}

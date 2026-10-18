@@ -12,7 +12,7 @@ import { moveShuffle } from './shuffleMenu';
 
 import './placeholderPage.scss';
 
-/** On a placeholder's page (a media stub, P1.FU24) upstream's Play, Replay and "Ends at" are hidden: nothing can play. */
+/** On a placeholder's page (an item with no file, P1.FU24, P1.FU30) upstream's Play, Replay and "Ends at" are hidden: nothing can play. */
 const PLACEHOLDER_ATTRIBUTE = 'data-jfmod-placeholder';
 
 /**

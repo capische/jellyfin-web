@@ -87,7 +87,7 @@ export interface NativeItemFacts {
     SeriesId?: string;
     IndexNumber?: number;
     Genres?: string[];
-    /** A Jellyfin placeholder (a media stub; P1.FU24): an item with no file to play. */
+    /** A Jellyfin placeholder (P1.FU24, P1.FU30): an item with no file to play. */
     IsPlaceHolder?: boolean;
 }
 
