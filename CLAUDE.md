@@ -3,7 +3,7 @@
 ## Scope and planning
 
 - Treat `master` as the production fork of upstream Jellyfin Web. Keep JellyfinMod phase work on separate branches/worktrees.
-- Read workspace rules, `docs/jellyfinmod/PLAN.md`, the current `PHASE*.md`, and `README.md` before mod work; read `UX.md` before UI changes.
+- Read workspace rules, `docs/jellyfinmod/PLAN.md`, the current `PHASE*.md`, and `README.md` before mod work; read `UX.md` and the component design guides in `docs/jellyfinmod/design/guides/` before UI changes (user, 2026-10-18), and update a component's guide in the same commit that changes the component.
 - Follow accepted decisions and task dependencies. Preserve unrelated edits and other agents' work.
 - Scope JellyfinMod to movies and TV, with library-scoped entries that may lack files.
 - Extend existing browse routes; do not add a separate catalog section or redirect Movies/TV.
@@ -26,7 +26,7 @@
 - Size feature styles in `em`; account for TV's 125% and mobile's 90% root sizing.
 - Use `layoutManager` affordances: TV buttons, mobile `CardOverlayButtons`, desktop `CardHoverMenu`.
 - File state (Not Downloaded, Unaired, downloading) sits top-right beside stock `.cardIndicators` (user, 2026-10-12; UX §3.1); bottom-right is for mobile overlays.
-- Resolve design conflicts in `UX.md`; do not bypass these rules with `!important`.
+- Resolve design conflicts in `UX.md`; reuse a component as its guide in `docs/jellyfinmod/design/guides/` describes it, and depart from a guide only with the user's approval; do not bypass these rules with `!important`.
 
 ## Testing
 
