@@ -47,6 +47,12 @@ export interface Entry {
      * item its placeholder episodes make. Set on entry detail and Browse answers only.
      */
     placeholderItemId?: string | null;
+    /**
+     * The Jellyfin item that plays this movie's file once Jellyfin can play it (P4.FU12): bound, not a placeholder, refreshed and
+     * probed. Read from Jellyfin by the plugin on entry detail answers; null while the file is only listed or absent, absent
+     * from older plugins. An import's ring is kept until the page has drawn this item.
+     */
+    playableItemId?: string | null;
     targetLibraryId?: string | null;
     /** 0-100, while downloading. */
     progress?: number | null;
@@ -147,6 +153,8 @@ export interface EntryEpisode {
      * the episode has a file, no placeholder, or the plugin is older.
      */
     placeholderItemId?: string | null;
+    /** The Jellyfin item that plays this episode's file once Jellyfin can play it (P4.FU12); see the entry's `playableItemId`. */
+    playableItemId?: string | null;
     /** 0-100 while `state` is projected as `downloading`; `availability` stays the file truth (P5.I3). */
     progress?: number | null;
     retention: RetentionSummary | null;
