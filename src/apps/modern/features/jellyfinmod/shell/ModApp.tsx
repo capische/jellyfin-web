@@ -1,6 +1,6 @@
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import React, { useEffect } from 'react';
+import React from 'react';
 
 import QueryClientEventHandler from 'components/QueryClientEventHandler';
 import layoutManager from 'components/layoutManager';
@@ -11,8 +11,6 @@ import browser from 'scripts/browser';
 import { persister, queryClient } from 'utils/query/queryClient';
 
 import ModAppRouter from './ModAppRouter';
-import '../components/interFont.scss';
-import './modFont.scss';
 import { installDpadModals } from './dpadModals';
 import CardGetRelease from '../integration/cardGetRelease';
 import DownloadMarks from '../integration/downloadMarks';
@@ -34,15 +32,7 @@ const supportsReactQueryDevtools = window.Proxy && !browser.tv;
 // Back closes an open MUI pop-up instead of leaving the page, and on the TV the remote can move inside one.
 installDpadModals();
 
-/** Marks the page as the mod interface, so `modFont.scss` types it in Inter and nothing else is touched. */
-const useModTypeface = () => {
-    useEffect(() => {
-        document.documentElement.classList.add('jfmod-ui');
-        return () => document.documentElement.classList.remove('jfmod-ui');
-    }, []);
-};
-
-const ModAppProviders = () => (
+const ModApp = () => (
     <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{
@@ -66,10 +56,5 @@ const ModAppProviders = () => (
         )}
     </PersistQueryClientProvider>
 );
-
-const ModApp = () => {
-    useModTypeface();
-    return <ModAppProviders />;
-};
 
 export default ModApp;
