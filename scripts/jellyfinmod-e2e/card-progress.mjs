@@ -174,7 +174,13 @@ const cardState = (page, selector) => page.evaluate(sel => {
             arcAnimation: disc.querySelector('.jfmod-dlmark-arc') ? getComputedStyle(disc.querySelector('.jfmod-dlmark-arc')).animationName : null,
             arc: arc ? { offset: parseFloat(getComputedStyle(arc).strokeDashoffset), dash: arc.getAttribute('stroke-dasharray'),
                 opacity: getComputedStyle(arc).opacity } : null,
-            firstIndicator: indicators ? indicators.firstElementChild === disc : null,
+            // On the card's frame since 8a2599fb4c (above the hover veil), drawn just left of upstream's cluster: the first of the
+            // indicators as one sees them, at the same height, within half an em.
+            firstIndicator: indicators && indicators.getBoundingClientRect().width > 0 ? (() => {
+                const cluster = indicators.getBoundingClientRect();
+                return discBox.right <= cluster.left + 1 && cluster.left - discBox.right <= fontSize * 0.5
+                    && discBox.bottom > cluster.top && discBox.top < cluster.bottom;
+            })() : null,
             corner: disc.classList.contains('jfmod-dlmark--corner'),
             topRight: discBox.right > frame.getBoundingClientRect().left + frame.getBoundingClientRect().width * 0.6
                 && discBox.top < frame.getBoundingClientRect().top + frame.getBoundingClientRect().height * 0.3
@@ -488,7 +494,8 @@ async function run(browser, layout) {
             record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded, an indicator' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
                 !!row && !!discOk && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.meta.visible && row.bars === 0
                 && row.oldFigure === 0 && /tabular-nums/.test(row.meta.tabular ?? '')
-                && (expected.kind === 'failed' || row.meta.colour === row.refText)
+                // Importing steps up to the full text colour (e8b835537c, design A); the other words keep the line's colour.
+                && (expected.kind === 'failed' || (expected.kind === 'importing' ? row.meta.colour === 'rgb(255, 255, 255)' : row.meta.colour === row.refText))
                 && (expected.kind !== 'failed' || row.meta.colour === META_FAILED_DARK), row);
         }
         const failedNative = SEASON.findIndex(fixture => fixture.kind === 'failed');
