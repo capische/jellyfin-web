@@ -1,9 +1,9 @@
-# Missing media behaves like available media (P1.FU24–28, planned)
+# Missing media behaves like available media (P1.FU24–29, planned)
 
-**Status:** P1.FU24, P1.FU25, P1.FU26 and P1.FU28 built (not accepted), 2026-10-15; P1.FU27 built (not accepted), 2026-10-17. Missed Phase 1 requirement (user, 2026-10-13).
+**Status:** P1.FU24, P1.FU25, P1.FU26 and P1.FU28 built (not accepted), 2026-10-15; P1.FU27 and P1.FU29 built (not accepted), 2026-10-17. Missed Phase 1 requirement (user, 2026-10-13).
 Approved by the user on 2026-10-15 ("Go and implement isPlaceHolder"; on the questions of section 9: "go with your
 recommendations"). The answers are in section 10, the FU28 design in section 11, and what FU24, FU25, FU26 and FU28 built in
-sections 12 to 16.
+sections 12 to 16; what FU29 fixed in section 17.
 **Owner:** Phase 1 (the TMDb catalog: entries, episode records, what Jellyfin shows for them). It touches Phase 5 (the import
 replaces a placeholder with the real file), Phase 3/10 (retention never reclaims a placeholder and writes one back after a
 reclaim), Phase 4 (Get a Release and the download states on placeholder items) and Phase 6/7 (Play hidden, the marks, the
@@ -424,6 +424,14 @@ recorded in [PLAN.md](../PLAN.md) P1.FU25: a list endpoint can show a just-swapp
 it before its first metadata refresh. *Fixed 2026-10-15 (PLAN.md P1.FU25 follow-up): Jellyfin's per-user data cache is refreshed by
 re-saving the re-attached data once after the new item's first refresh.*
 
+*P4.FU11 (2026-10-17, built, not accepted; [PLAN.md](../PLAN.md) P4.FU11): the swap no longer waits for Jellyfin's library
+monitor. Reporting the changed folders left the stub in place for the monitor's quiet delay (60 s), and a pack's reports refreshed
+nothing until the escalated library scan. After the swap the import now refreshes the destination's nearest Jellyfin folder itself
+(`ChangedExternally()`, as the monitor's refresher would: the season, a new season's series, or a movie's library root), so
+Jellyfin replaces the stub with the probed file within about a second; the reports and the scan escalation stay as the fallback.
+A reconciliation that binds the file wakes the import monitor, and the web reads its items again when the queue shows the import
+finished, so the page shows Play about 2–4 s after Jellyfin has the file.*
+
 ## 14. What P1.FU26 built (2026-10-15, built, not accepted)
 
 Plugin (`feat/placeholder-titles` from `feat/placeholder-swap`): `PlaceholderService` plans movie libraries
@@ -543,3 +551,96 @@ file's page has its track selectors. The block reads the queue by entry and epis
 season or series page gets nothing new: its cards and rows carry the rings (P4.FU6) and the series section lists the episodes on
 their way. Cards and rows of placeholders map to the queue by the series' entry and the episode numbers (a pack's episodes
 included), and placeholder movies through the plugin's lookup by item id.
+
+## 17. What P1.FU29 fixed (2026-10-17, built, not accepted)
+
+**The bug** (user, 2026-10-17, on 28096): Jellyfin's *Delete media* on Adolescence's only season left the series with no seasons
+and an empty folder; the user expects "the season with no files on disk". **Why:** Jellyfin 12 deletes a season or series with
+its children but raises `ItemRemoved` only for the season or series itself, and the plugin's listener reconciled movies, series
+and episodes only; even then, a per-title reconciliation never drops a binding (only the absence check that ends a library scan
+does, P2.R6), and that check refused an empty nearest folder as possibly an unmounted mount point, which is exactly what a
+series' only season leaves behind. So the catalog kept the four episodes on disk, bound to deleted items, and the placeholder
+sync, which writes only for episodes not on disk, wrote nothing (28096's progress read 8 of 8 done).
+
+**The fix** (plugin `fix/recreate-after-delete`; web the same branch):
+
+- `PlaceholderDeleteListener` (`PlaceholderTasks.cs`): Jellyfin's removal of a movie, series, season or episode with a path
+  (not a virtual item, not one the plugin removed itself) starts one placeholder batch 5 s after the last removal, once no library
+  scan runs (a scan ends with its own absence check; the batch follows it). Never two batches at once (the P1.FU27 gate).
+- The batch's first step, `PlaceholderBackfill.RepairVanishedAsync`: every bound file that is gone from disk, proved as the
+  absence check proves it (on the very mount it was seen on). When Jellyfin no longer holds its item, the catalog's own absence
+  check runs at once (`CatalogBackfillRunner` with `confirmAbsence`, the post-scan run; 6 to 10 s for 28096's 164 titles); when
+  Jellyfin still holds it (a delete made while the server was down, or by a file manager it has not noticed), the nearest folder
+  still there is reported to Jellyfin, whose removal of the items then starts a batch through the listener. An item the check
+  could not clear asks for it only once. This is also the safety net after a restart and for the state 28096 is in now.
+- Absence check: with the mount identity proved (`IsCurrent`), an empty nearest folder is proof too
+  (`MediaStorageIdentity.IsProvablyAbsent(…, mountVerified: true)`): an unmounted mount point would have changed the path's mount.
+  Bindings without a recorded identity keep the old rule.
+- The plugin's own removals (the import's swap, a stale stub, Remove Placeholders, Remove Entry) note each stub and each folder
+  they empty for 10 minutes (`PlaceholderStub.NoteRemoved`), and Jellyfin's removal of those items starts nothing: no
+  delete-recreate loop, and Remove Placeholders and Remove Entry bring nothing back. Retention's reclaim already leaves its stub
+  (P1.FU25), so a batch after it finds nothing to write.
+- The batch writes the stubs where and as the import names files, so Jellyfin makes the same items (ids follow paths) and
+  re-attaches the parked user data by key: a played and favourite episode came back played and favourite.
+- Web (`MissingChildren.tsx`, `useHeldNatives`): an item Jellyfin no longer lists is forgotten, so when it comes back under the
+  same id it counts as added and upstream's list is drawn again. Before, the mod's stand-in card went away when the placeholder
+  season returned and upstream's list was never redrawn, leaving the series page without the season until a reload.
+
+**What the user saw before P4.FU12 (superseded by §18):** after *Delete media* on a season, the series page keeps upstream's card for a few seconds, then the mod's
+stand-in card for the season (about 20 s after the delete, once the catalog check and the page's 10 s library refresh have run),
+then Jellyfin's own season card with its placeholder episodes (about 70 to 115 s, Jellyfin's 60 s library monitor delay
+included), without a reload and never without the season.
+
+**Unchanged:** a library turned off, a read-only folder, a title no longer in the catalog, unaired episodes and specials get
+nothing; the stub rules (marker first line, under 4 KB, only marked files removed). No migration, version 0.1.0.0.
+
+## 18. What P4.FU12 changed (2026-10-18, built, not accepted)
+
+User decision 2026-10-18: "Go with what Codex proposed" ([no-delay-codex-design.md](no-delay-codex-design.md)), plus the import-flows
+audit's additions B1 and B3 to B8 ([no-delay-import-audit.md](no-delay-import-audit.md)); B2 (reclaim and last-version removal order)
+is left out. This replaces §17's listener, its 5 s quiet period and the 60 s Jellyfin waits.
+
+- **A delete made in Jellyfin** (season, episode, series, movie) is repaired per title from Jellyfin's own removal announcements
+  (`DeleteRepair`): about 250 ms after the first one the bindings the removals name are cleared under the library lease when their
+  files are provably gone (`ReconciliationService.ConfirmAbsenceInScopeUnderLeaseAsync`, mount identity kept; no library-wide pass),
+  the title's placeholders are written where the title was, and Jellyfin is made to hold them (`FolderRefresh`, below). Both
+  announcement patterns (descendants then the root, or the root alone) are handled. The plugin's own removals are marked by
+  Jellyfin item id (B1): the plugin deletes those items itself, so there is nothing to wait for and nothing to mistake for a user
+  delete. The 10-minute path suppression and `_repairedGone` are gone.
+- **Making Jellyfin hold what was written** (`FolderRefresh`, `IMediaDiscovery`): `Folder.ValidateChildren` on the nearest folder
+  Jellyfin holds an item for (a season for its files, a series for a new season, the library folder, shallow, for a new title
+  folder, `ValidateTopLibraryFolders` when the library folder has no item yet), awaited, one batch per library, only the changed paths
+  refreshed (`RefreshPaths`); a new series in full. Never `ChangedExternally` on a library folder, never a hand-built item. Used by
+  the placeholder writer, the delete repair and the import. Jellyfin's own library monitor is still told as the fallback.
+- **An import** completes when Jellyfin can play the file (`NativeReadiness`: bound, not a placeholder, refreshed, video stream),
+  not when it lists it; a download is found within 2 s while an import awaits it (`ImportMonitor.ActivePoll`), bindings are looked at
+  every second between wakes (`LocalPoll`, no client read), and a replacement or upgrade whose new version waits to play is looked at
+  the same way (B8).
+- **Push first.** The plugin sends Jellyfin's own `LibraryChanged` message at once (`LibraryNotifications`, 250 ms window) to each
+  user's sessions, with only the item ids that user may see, after: an import completes, a delete is repaired, placeholders are
+  written or removed (Sync Now, Add, Remove Placeholders, Remove Entry), a native item is removed after a reclaim or a version
+  removal (B5). The web reads the catalog again on it, and after the person's own Remove Entry, Sync Now and Remove Placeholders
+  (B6). **The one fallback** is `hooks/useEntryFallbackPoll.ts`: an open title's detail once a second (every 5 s after 30 s) only
+  while it waits for a download or for the item that plays its file and the SDK socket is down, or the file shows on disk without
+  that item and no push came within 5 s; never while the tab is hidden or nothing waits; when it sees the title playable it reads the
+  catalog as the push would have. The download client has no push, so the plugin reads it every 2 s while an import awaits its
+  download. Nothing else on the web polls for these updates.
+- **`playableItemId`** (response only, no migration) names the Jellyfin item that plays an entry's or episode's file; the web keeps
+  the importing ring until the page has drawn it (UX §3.3).
+- **A real file beside a placeholder** (copied in, or another tool's import; B3): a reconcile that binds it, or that finds Jellyfin
+  took it for a further source of the placeholder item, syncs the title's placeholders at once, so the stub goes about a second after
+  Jellyfin has the file instead of at the next sync; user-owned `.disc` files and read-only folders are left as before.
+- **B4** needed no extra code: the placeholder writer no longer asks Jellyfin for a library scan (step 6), so one library's run no
+  longer makes another's give way; a scan the person started still does.
+
+**Finished 2026-10-18 (the finisher, after the queued-state runner and the audits):** a pack row's state comes from an import
+still waiting for its download before one importing, so it no longer steps back once pack episodes import in seconds; on the push
+the web reads the queue before its catalog, so a list redrawn with the file never meets the last answer's `queued`; a card or row
+that is the file's own item ends the importing ring at once; Remove Placeholders and Remove Entry wait, under the library lock, for
+the library's discoveries asked for before them (`IMediaDiscovery.IdleAsync`, at most 60 s), so a discovery still running can no
+longer make items after the removal looked; the native season and episode lists are read again whenever a page draws them unless
+read within 2 s, so a copy restored from the persisted cache after a reload no longer shows a placeholder's row beside the mod's
+missing row; the Transmission transport sends the last session id per endpoint, so a read every 2 s costs one request, not two.
+
+**Not changed:** the 60 s Jellyfin waits for files written by something other than the plugin (a copy, a file removed with a file
+manager); the retention delete path (only a notification was added after its native removal); version 0.1.0.0, no migration.
