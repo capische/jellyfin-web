@@ -1051,9 +1051,8 @@
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
     color: #fff;
     // The mock drew the system font (its "Noto Sans" never matched); the user approved that look and chose a bundled font so it
-    // is the same everywhere: Inter, then the bundled Noto Sans sets (the mod interface's stack, shell/modFont.scss; the fallback
-    // after the comma serves a dialog opened outside it). Never the machine's font (user, 2026-10-11).
-    font-family: var(--jfmod-font, 'jfmod-inter', 'Noto Sans', sans-serif);
+    // is the same everywhere: Inter first, then the system font and Noto Sans as fallbacks.
+    font-family: 'jfmod-inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
     line-height: 1.35;
 
     // The mock was drawn with the browser's default smoothing; Jellyfin sets `antialiased` on the page, which on macOS draws
