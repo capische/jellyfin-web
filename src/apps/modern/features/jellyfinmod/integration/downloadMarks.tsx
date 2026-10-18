@@ -1,11 +1,13 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
+import { useQueryClient } from '@tanstack/react-query';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 
-import { getEntries, GRAB_EVENT } from '../api/modApi';
+import { type EntryDetail, getEntries, GRAB_EVENT } from '../api/modApi';
+import { entryDetailQuery } from '../hooks/useEntries';
 import { aggregateProgress, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
 import { currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
@@ -184,17 +186,22 @@ const scopeDone = (queue: QueueIndex, scope: Scope, grabs: Set<string>) => {
 };
 
 /**
- * A download that ended with its file, on a card or row that still shows the title without one (P4.FU10): Jellyfin has not
- * drawn the new item yet, so the page still holds its Not Downloaded mark. It keeps reading as importing until the page does,
- * at most this long, so the cloud never comes back between the import and the file.
+ * A download that ended with its file, on a card or row whose page has not drawn the file's own item yet (P4.FU10, P4.FU12): it
+ * keeps reading as importing until it has, so the cloud never comes back between the import and the file. It is the plugin's
+ * fresh entry detail that says when the file is playable (`playableItemId`) and the card or row's own `data-id` that says the page
+ * drew it, never a mark that may be absent for a frame while upstream redraws. Only an ended or cancelled download stops it;
+ * after this long it stops anyway, as a safety, with its tooltip saying it takes longer than usual from DELAYED_MS on.
  */
-const IMPORTED_CARRY_MS = 3 * 60 * 1000;
+const IMPORTED_CARRY_MS = 10 * 60 * 1000;
+/** From this long after the import ended the carried ring says it is taking longer than usual; the entry is read every 5 s, not every 1 s. */
+const DELAYED_MS = 30 * 1000;
 
 /** While a page's first queue read is under way, its Not Downloaded marks wait hidden (downloadProgress.scss), this long at most. */
 const READING_CLASS = 'jfmod-dlReading';
 const READING_MS = 1500;
 const endReading = () => document.documentElement.classList.remove(READING_CLASS);
 const IMPORTED = describeDownload('importing', 100, false);
+const IMPORTED_DELAYED = { ...IMPORTED, tooltip: IMPORTED.tooltip + ' (taking longer than usual)' };
 const showsNoFile = (element: HTMLElement) => !!element.querySelector('.jfmod-mark--none, .jfmod-mark--unaired');
 
 /**
@@ -452,7 +459,7 @@ const useBoundItems = (api: Api | undefined, userId: string | undefined, onBound
  * What showed a download on this visit, by what it stands for (an entry and its season, episode number or episode), so a card or
  * row upstream draws again keeps it: the grabs it was, and when it was seen to end with its file (0 while it runs).
  */
-type Carried = Map<string, { grabs: Set<string>; ended: number }>;
+type Carried = Map<string, { grabs: Set<string>; ended: number; clean: number }>;
 const keyOf = (scope: Scope) => [scope.entryId, scope.season, scope.number, scope.episodeId].join('|');
 
 interface PassContext {
@@ -464,13 +471,46 @@ interface PassContext {
     idle: boolean;
     /** Native seasons and episodes to place, filled by the pass. */
     unplaced: string[];
+    /** An entry's detail as the plugin last answered it (what names the playable items), or undefined when not read yet. */
+    detailOf: (entryId: string) => EntryDetail | undefined;
 }
 
 /**
- * What a card or row shows once its download is no longer on its way: the import while its downloads ended with their files and
- * the page still shows the title without one, else nothing (a cancelled or failed download, or the page caught up).
+ * Whether the page has drawn what the plugin says is playable for a scope (P4.FU12). A movie, or one native episode: the card or
+ * row is the playable item itself. A season or series (or a card of the mod's): every episode the download named is playable. An
+ * entry detail not read yet, or one that does not name the item, means not yet.
  */
-const afterwards = (element: HTMLElement, scope: Scope, { index, carried, now }: PassContext) => {
+const playableDrawn = (element: HTMLElement, scope: Scope, { index, detailOf }: PassContext): 'no' | 'yes' | 'itself' => {
+    const detail = detailOf(scope.entryId);
+    if (!detail) return 'no';
+    const drawn = normalId(element.getAttribute('data-id'));
+    // The card or row is Jellyfin's item of the file itself: the playable item, or (a detail read before the import ended) an
+    // item that is not the placeholder the title had. A placeholder drawn again keeps its id, so this never ends the ring early.
+    const isFile = (playable: string | null | undefined, placeholder: string | null | undefined) => !!drawn
+        && (normalId(playable) === drawn || (!!placeholder && normalId(placeholder) !== drawn));
+    if (detail.entry.mediaType === 'movie') {
+        if (isFile(detail.entry.playableItemId, detail.entry.placeholderItemId)) return 'itself';
+        const playable = detail.entry.playableItemId;
+        return !!playable && !drawn ? 'yes' : 'no';
+    }
+    const ids = scope.episodeId ? [scope.episodeId] : Array.from(namedEpisodes(index.all, scope.entryId, scope.season, scope.number));
+    const episodes = ids.map(id => detail.episodes.find(episode => episode.id === id));
+    if (episodes.length === 0) return 'no';
+    // A season's or series' card is not the episode: only a card or row of one episode must be the playable item itself.
+    const itself = !!scope.episodeId || scope.number !== null;
+    if (itself && drawn) return isFile(episodes[0]?.playableItemId, episodes[0]?.placeholderItemId) ? 'itself' : 'no';
+    return episodes.every(episode => !!episode?.playableItemId) ? 'yes' : 'no';
+};
+
+/**
+ * What a card or row shows once its download is no longer on its way: the import while its downloads ended with their files and
+ * the page has not drawn the file's own item (P4.FU12), else nothing (a cancelled or failed download, or the page caught up).
+ * The page has caught up at once when a card or row of the episode or movie is the file's own item, and otherwise (a season's or
+ * series' card) when the plugin names every playable item and the card shows no missing file for two passes running; until then
+ * a mark that is absent for a frame while upstream redraws changes nothing.
+ */
+const afterwards = (element: HTMLElement, scope: Scope, context: PassContext) => {
+    const { index, carried, now } = context;
     const key = keyOf(scope);
     const memory = carried.get(key);
     if (!memory) return null;
@@ -479,9 +519,15 @@ const afterwards = (element: HTMLElement, scope: Scope, { index, carried, now }:
         carried.delete(key);
         return null;
     }
-    carried.set(key, { grabs: memory.grabs, ended });
-    // A card or row drawn again shows its mark a moment after it is added: the memory stays for it.
-    return showsNoFile(element) ? IMPORTED : null;
+    const drawn = showsNoFile(element) ? 'no' : playableDrawn(element, scope, context);
+    const clean = drawn === 'no' ? 0 : memory.clean + 1;
+    // The file's own item drawn ends it at once (P4.FU12): a new card or row is the file, never a frame of a placeholder.
+    if (drawn === 'itself' || clean >= 2) {
+        carried.delete(key);
+        return null;
+    }
+    carried.set(key, { grabs: memory.grabs, ended, clean });
+    return now - ended >= DELAYED_MS ? IMPORTED_DELAYED : IMPORTED;
 };
 
 /** One card's or row's download, drawn for this pass; true when it shows one on its way. */
@@ -501,7 +547,7 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
         const key = keyOf(live);
         const grabs = carried.get(key)?.grabs ?? new Set<string>();
         for (const row of rows) grabs.add(row.grabId);
-        carried.set(key, { grabs, ended: 0 });
+        carried.set(key, { grabs, ended: 0, clean: 0 });
     } else if (!progress && scope) {
         progress = afterwards(element, scope, context);
     }
@@ -512,6 +558,7 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
 
 const DownloadMarks: FC = () => {
     const { api, user } = useApi();
+    const queryClient = useQueryClient();
     const capability = useQueueCapability();
     const [watching, setWatching] = useState(false);
     // A grab was just made here: the queue is read at once and then every 5 s for three minutes (a plugin that lists held grabs
@@ -526,6 +573,31 @@ const DownloadMarks: FC = () => {
     const { bound, bind } = useBoundItems(api, user?.Id, onPlaced);
     const carried = useRef<Carried>(new Map());
     const items = queue.data?.items;
+    const detailOf = useCallback((entryId: string) => (api && user?.Id ?
+        queryClient.getQueryData<EntryDetail>(entryDetailQuery(api, user.Id, entryId).queryKey) : undefined), [api, queryClient, user?.Id]);
+
+    // An import that ended waits for the page to draw the file's own item (P4.FU12). The plugin pushes that (an early LibraryChanged,
+    // after which the catalog queries are read again), so a page pass follows each answer for an entry's detail; the one fallback for
+    // a push that does not come is `useEntryFallbackPoll`, not this file.
+    useEffect(() => {
+        const timers = new Set<number>();
+        const unsubscribe = queryClient.getQueryCache().subscribe(event => {
+            if (event.type === 'updated' && event.action.type === 'success' && event.query.queryKey[3] === 'EntryDetail' && carried.current.size > 0) {
+                onPlaced();
+                // The ring ends after two clean passes (see `afterwards`): the second follows the first by a moment, a pass of the
+                // page only (no request), so it does not wait for the next answer.
+                const timer = window.setTimeout(() => {
+                    timers.delete(timer);
+                    onPlaced();
+                }, 400);
+                timers.add(timer);
+            }
+        });
+        return () => {
+            unsubscribe();
+            for (const timer of timers) window.clearTimeout(timer);
+        };
+    }, [queryClient, onPlaced]);
 
     // One read when a page opens (the app's first page too: the query cache is kept across reloads), joining a read already
     // under way, and when the tab is shown again; a queue kept private (403) is not asked again. Until a page's read has been
@@ -602,7 +674,7 @@ const DownloadMarks: FC = () => {
             timer = undefined;
             let shown = 0;
             const unplaced: string[] = [];
-            const context: PassContext = { index, placements, carried: carried.current, now: Date.now(), idle: relevant.length === 0, unplaced };
+            const context: PassContext = { index, placements, carried: carried.current, now: Date.now(), idle: relevant.length === 0, unplaced, detailOf };
             document.querySelectorAll<HTMLElement>(TARGETS).forEach(element => {
                 if (markElement(element, context) && !element.closest('.hide')) shown++;
             });
@@ -617,7 +689,7 @@ const DownloadMarks: FC = () => {
             observer.disconnect();
             if (timer !== undefined) window.clearTimeout(timer);
         };
-    }, [items, dataUpdatedAt, readable, placed, placements, seriesEntries, place, bound, bind]);
+    }, [items, dataUpdatedAt, readable, placed, placements, seriesEntries, place, bound, bind, detailOf]);
 
     useEffect(() => clearAll, []);
     return null;

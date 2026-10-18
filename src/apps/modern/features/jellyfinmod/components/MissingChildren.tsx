@@ -145,9 +145,13 @@ const useHeldNatives = (items: { Id?: string | null }[] | undefined, container: 
     const initial = useRef<Set<string> | null>(null);
     const ids = useMemo(() => (items ?? []).flatMap(item => (item.Id ? [normalId(item.Id)] : [])), [items]);
     if (items && !initial.current) initial.current = new Set(ids);
+    const known = initial.current;
+    // An item Jellyfin no longer lists is forgotten (P1.FU29): a season or episode deleted in Jellyfin comes back as a
+    // placeholder under the same id (Jellyfin derives ids from paths), and must then count as added, so upstream's list is
+    // drawn again and shows it, instead of the mod's card going with nothing in its place.
+    if (items && known) for (const id of Array.from(known)) if (!ids.includes(id)) known.delete(id);
     const drawn = useUpstreamIds(container);
     const asked = useRef('');
-    const known = initial.current;
     useEffect(() => {
         if (!items || !known || !container) return;
         const listed = new Set(ids);

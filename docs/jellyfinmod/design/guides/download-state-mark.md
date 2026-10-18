@@ -1,7 +1,8 @@
 # Download state mark
 
 **Status:** approved 2026-10-13 (ring family, artifact v3: "ring only, arrow, time left: meta line + tooltip"), glass disc
-2026-10-13 (v11: "use top bar's exact recipe"), icon colour 2026-10-15 (v12: "replace yellow … to the color of icons").
+2026-10-13 (v11: "use top bar's exact recipe"), icon colour 2026-10-15 (v12: "replace yellow … to the color of icons"), importing until
+the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4).
 Built on `next-release` (P4.FU6–FU8). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
@@ -59,6 +60,16 @@ easing. Motion is transform and opacity only.
 - **Queue page:** the disc in place of the state word; the row keeps its bar (the one place the bar is the content).
 - **Release picker, added row:** the disc takes the Add slot while the torrent downloads; the X stays; no bar.
 - **Episode page:** inside the download block ([download-block.md](download-block.md)); the still carries no mark.
+
+## After the download: importing until the file is drawn
+
+When a download ends with its file (the queue says `seeding`, a pack episode's import `completed`), a card or row that stands
+for it keeps the **importing** disc (spinner, `importing…`, tooltip `Importing…`) instead of going to the Not Downloaded cloud
+(P4.FU12). It is kept per target (entry, season, episode number or episode), not per element, so a card or row that upstream
+draws again keeps it. It ends when the plugin's fresh entry detail (read on the plugin's push; fallback in [UX §3.3](../../UX.md)) names the item that plays the file (`playableItemId`) and the
+card or row **is** that item (`data-id`) and shows no missing-file mark for two passes running; a season or series card ends
+when every episode the download named is playable. A cancelled or failed download ends it at once; from 30 s after the import
+the tooltip adds "(taking longer than usual)"; a safety stop at 10 minutes. The cloud never appears between the two.
 
 ## Text
 
