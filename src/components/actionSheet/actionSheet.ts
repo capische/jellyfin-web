@@ -1,12 +1,10 @@
 import escapeHtml from 'escape-html';
 import dialogHelper from '../dialogHelper/dialogHelper';
 import layoutManager from '../layoutManager';
-import { appendPlayerOverlayFrost } from '../playback/playerOverlayFrost';
 import globalize from '../../lib/globalize';
 import dom from '../../utils/dom';
 import '../../elements/emby-button/emby-button';
 import './actionSheet.scss';
-import '../playback/playerOverlayFrost.scss';
 import 'material-design-icons-iconfont';
 import '../../styles/scrollstyles.scss';
 import '../../components/listview/listview.scss';
@@ -356,10 +354,6 @@ export function show(options: Options) {
     html += '</div>';
 
     dlg.innerHTML = html;
-
-    if (isCenteredBox) {
-        appendPlayerOverlayFrost(dlg);
-    }
 
     if (layoutManager.tv) {
         const scroller = dlg.querySelector('.actionSheetScroller');

@@ -653,9 +653,6 @@ export class HtmlVideoPlayer {
 
         const elem = await this.createMediaElement(options);
         this.#applyAspectRatio(options.aspectRatio || this.getAspectRatio());
-        // Read by playerOverlayFrost. Cleared, unlike the poster, when the item has no
-        // artwork, so a frosted menu never shows the previous item's backdrop.
-        elem.dataset.backdropUrl = options.backdropUrl || '';
         // webOS 6 and newer lift web graphics to HDR peak brightness while HDR video plays,
         // so white overlays glare; style.scss dims them while this class is set.
         document.documentElement.classList.toggle('hdrPlayback', browser.web0sVersion >= 6
