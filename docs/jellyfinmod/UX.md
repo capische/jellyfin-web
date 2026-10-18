@@ -371,7 +371,7 @@ its last value, the disc and figure dimmed.
   (P4.FU7, user 2026-10-13: "switch from yellow to white card glyph, and use top bar's exact recipe"; a 1em white glyph, the arc over a
   white 30 % track) top right, the first of upstream's indicators, so it sits **left of
   upstream's played tick or count pill: two icons**, the pill untouched (no arrow in it); a card with no indicator cluster has
-  it alone in the corner. The two-layer bar stays: 0.24em along the poster's bottom edge over a dark track, the download in
+  it alone in the corner. The two-layer bar stays: 0.28em along the poster's bottom edge over a dark track, the download in
   the icon colour at 85 % beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
   season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
   queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.

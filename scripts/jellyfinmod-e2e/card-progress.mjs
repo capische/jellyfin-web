@@ -377,9 +377,9 @@ async function run(browser, layout) {
         const opened = reads.length;
         const nativeCard = `.page:not(.hide) #listChildrenCollapsible .card[data-id="${native.id}"]`;
         const season = await cardState(page, nativeCard);
-        record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.24em`,
+        record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.28em`,
             !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === BAR_DARK
-            && Math.abs(season.heightEm - 0.24) < 0.03 && season.upstreamBarHidden, season);
+            && Math.abs(season.heightEm - 0.28) < 0.03 && season.upstreamBarHidden, season);
         record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow bobbing, the white arc at ${seasonMean}%`,
             season?.disc?.card && season.disc.kind === 'downloading' && Math.abs(season.disc.sizeEm - 1.6) < 0.05 && season.disc.topRight
             && season.disc.colour === WHITE && season.disc.arcColour === WHITE && season.disc.glyphAnimation === 'jfmod-dlmarkBob'

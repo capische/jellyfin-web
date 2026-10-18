@@ -51,7 +51,7 @@ easing. Motion is transform and opacity only.
 
 - **Cards:** first in upstream's `.cardIndicators`, 0.25em before the played tick or the count pill (two icons; the pill
   is upstream's, no arrow in it); with no cluster, alone top right (`--corner`, `0.225em`). The disc wins over the
-  Not Downloaded and Unaired marks in the corner. The card's bottom bar stays: 0.24em over a dark track, the download layer
+  Not Downloaded and Unaired marks in the corner. The card's bottom bar stays: 0.28em over a dark track, the download layer
   in the ink at 85 % beneath the watched layer in the primary. Failed and finished are not drawn on a card.
 - **Rows:** the first round icon of the end slot, upstream's padding, nothing textual left of the icons. The figure goes on
   the meta line after the date (or, where the layout hides that line, as the row's last text line).
