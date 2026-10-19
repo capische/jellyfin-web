@@ -974,7 +974,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   the State column takes the width of what it holds and the title 50 % (was 30 % and 20 %); the title's parts link the series,
   `Season N` and the episode (the mod's season and episode routes) on desktop and phone (the TV row is a button, so text); the
   desktop table's cells share one centre line (`vertical-align: middle`, was top); the row menu has no title above its items
-  (user: "No need for such header at all. Just show menu Remove"; on the TV's action sheet too); the
+  (user: "No need for such header at all. Just show menu Remove"; on the TV's action sheet too), and on the desktop table it is
+  a popover under the three dots that does not dim the page (user: "why menu mutes / darkens the whole page? it's menu"; MUI's
+  Menu as the track dropdown's; phone and TV keep the action sheet, which still dims); the
   Client cell no longer wraps and its name is a link for administrators with a saved link; `Open in Client` is gone from the row
   menu (`integration/queueActions.ts`; it was administrators only, so no ordinary user loses anything; the TV's action sheet,
   which had it, now has no link out to the client). First look on local environment charlie (Chromium headless, web built from

@@ -63,15 +63,18 @@ const queueApi = page => page.evaluate(async () => {
     const body = await response.json();
     return { status: response.status, ids: (body.items ?? []).map(item => item.id), states: (body.items ?? []).map(item => item.state) };
 });
-const sheet = page => page.evaluate(() => {
-    const dialog = [...document.querySelectorAll('.actionSheet')].find(node => node.getBoundingClientRect().width > 0 && node.closest('.dialogContainer'));
+// The row menu: the stock action sheet on the phone and the TV, the desktop table's popover since 2026-10-19 (UX §10).
+const ROW_MENU = '.actionSheet, .jfmod-queueMenuPopover .MuiPaper-root';
+const sheet = page => page.evaluate(selector => {
+    const dialog = [...document.querySelectorAll(selector)].find(node => node.getBoundingClientRect().width > 0
+        && (node.closest('.dialogContainer') || node.closest('.jfmod-queueMenuPopover')));
     if (!dialog) return null;
     return {
         ids: [...dialog.querySelectorAll('[data-id]')].map(node => node.getAttribute('data-id')),
         title: dialog.querySelector('.actionSheetTitle')?.textContent ?? null,
         focusInside: dialog.contains(document.activeElement)
     };
-});
+}, ROW_MENU);
 const focusInfo = page => page.evaluate(() => {
     const node = document.activeElement;
     return { tag: node?.tagName, cls: String(node?.className ?? '').slice(0, 80), queueId: node?.getAttribute?.('data-jfmod-queue-id') ?? null,
@@ -124,13 +127,13 @@ for (const name of only) {
             opener = { label: await button.getAttribute('aria-label') };
             if (name === 'mobile') await button.tap(); else await button.click();
         }
-        const opened = await page.waitForFunction(() => [...document.querySelectorAll('.actionSheet')].some(node => node.getBoundingClientRect().width > 0),
-            undefined, { timeout: 10000 }).then(() => true, () => false);
+        const opened = await page.waitForFunction(selector => [...document.querySelectorAll(selector)].some(node => node.getBoundingClientRect().width > 0),
+            ROW_MENU, { timeout: 10000 }).then(() => true, () => false);
         const shown = await sheet(page);
-        record(name, 'The row menu opens the stock action sheet with the admin actions (read by data-id, none activated)',
+        record(name, 'The row menu opens (the action sheet; the popover on the desktop table) with the admin actions (read by data-id, none activated)',
             opened && !!shown && shown.ids.includes('remove'), shown);
-        const sheetGone = () => page.waitForFunction(() => ![...document.querySelectorAll('.actionSheet')].some(node => node.getBoundingClientRect().width > 0),
-            undefined, { timeout: 10000 }).then(() => true, () => false);
+        const sheetGone = () => page.waitForFunction(selector => ![...document.querySelectorAll(selector)].some(node => node.getBoundingClientRect().width > 0),
+            ROW_MENU, { timeout: 10000 }).then(() => true, () => false);
         await page.keyboard.press('Escape');
         const closed = await sheetGone();
         await page.waitForTimeout(700);

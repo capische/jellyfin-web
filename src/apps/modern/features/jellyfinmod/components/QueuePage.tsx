@@ -3,6 +3,9 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import type { Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import classNames from 'classnames';
 import React, { type FC, type FocusEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -20,7 +23,7 @@ import {
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
 import DownloadStateMark, { ringLink } from './DownloadStateMark';
 import { episodePath, seasonPath } from './MissingChildren';
-import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
+import { openQueueRowMenu, queueRowActions, runQueueRowAction } from '../integration/queueActions';
 import type { QueueList, QueueRow } from '../types/queue';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 
@@ -198,6 +201,8 @@ interface RowProps {
     linked: boolean;
     stale: boolean;
     onMenu: (row: QueueRow, target: HTMLElement) => void;
+    /** An item chosen in the desktop popover. */
+    onPick: (row: QueueRow, id: string, target: HTMLElement) => void;
 }
 
 /*
@@ -214,7 +219,42 @@ const MenuButton: FC<{ row: QueueRow; title: string; onMenu: RowProps['onMenu'] 
     </button>;
 };
 
-const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, onMenu }) => <tr className='jfmod-queueTableRow'>
+const PopoverItem: FC<{ item: { id: string; name: string; icon: string }; onPick: (id: string) => void }> = ({ item, onPick }) => {
+    const pick = useCallback(() => onPick(item.id), [item.id, onPick]);
+    return <MenuItem className='jfmod-queueMenuItem' onClick={pick} data-id={item.id}>
+        <ListItemIcon className='jfmod-queueMenuIcon'><span className={'material-icons ' + item.icon} aria-hidden='true' /></ListItemIcon>
+        {item.name}
+    </MenuItem>;
+};
+
+/**
+ * The desktop row menu (user 2026-10-19: "why menu mutes / darkens the whole page? it's menu"): a popover under the three dots,
+ * MUI's Menu as the track dropdown's, with no dimming (its click-away layer is invisible), its items only, closing on a click
+ * outside, Escape or a choice. The items and what they do are the action sheet's (`runQueueRowAction`).
+ */
+const PopoverMenuButton: FC<{ row: QueueRow; title: string; isAdmin: boolean; onPick: RowProps['onPick'] }> = ({ row, title, isAdmin, onPick }) => {
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+    const open = useCallback((event: MouseEvent<HTMLButtonElement>) => setAnchor(event.currentTarget), []);
+    const close = useCallback(() => setAnchor(null), []);
+    const pick = useCallback((id: string) => {
+        const target = anchor;
+        setAnchor(null);
+        if (target) onPick(row, id, target);
+    }, [anchor, onPick, row]);
+    return <>
+        <button type='button' className='paper-icon-button-light jfmod-queueMenu jfmod-queueFocus' title='Actions'
+            aria-label={'Actions for ' + title} aria-haspopup='menu' aria-expanded={!!anchor} onClick={open}>
+            <span className='material-icons more_vert' aria-hidden='true' />
+        </button>
+        <Menu anchorEl={anchor} open={!!anchor} onClose={close} className='jfmod-queueMenuPopover'
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            slotProps={{ paper: { className: 'jfmod-queueMenuPaper' }, list: { 'aria-label': 'Actions for ' + title } }}>
+            {queueRowActions(row, isAdmin).map(item => <PopoverItem key={item.id} item={item} onPick={pick} />)}
+        </Menu>
+    </>;
+};
+
+const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, onPick }) => <tr className='jfmod-queueTableRow'>
     <td className='jfmod-queueCellThumb'><Thumb api={api} row={row} /></td>
     <td className='jfmod-queueCellTitle'><TitleLines row={row} text={text} serverId={serverId} linked={linked} /></td>
     <td className='jfmod-queueCellProgress'><ProgressBar text={text} stale={stale} /></td>
@@ -224,11 +264,11 @@ const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId,
     <td className='jfmod-queueCellState'><StateLines row={row} text={text} /></td>
     {showClient && <td className='jfmod-queueCellClient'>{row.client ? <ClientName row={row} linked={linked} /> : '—'}</td>}
     {isAdmin && <td className='jfmod-queueCellMenu'>
-        {queueRowActions(row, isAdmin).length > 0 && <MenuButton row={row} title={text.title} onMenu={onMenu} />}
+        {queueRowActions(row, isAdmin).length > 0 && <PopoverMenuButton row={row} title={text.title} isAdmin={isAdmin} onPick={onPick} />}
     </td>}
 </tr>;
 
-const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu'>> = ({ api, row, text, showClient, serverId, linked, stale }) => <>
+const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu' | 'onPick'>> = ({ api, row, text, showClient, serverId, linked, stale }) => <>
     <Thumb api={api} row={row} />
     <span className='jfmod-queueRowBody'>
         <TitleLines row={row} text={text} serverId={serverId} linked={linked} />
@@ -316,6 +356,9 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     const onMenu = useCallback((row: QueueRow, target: HTMLElement) => {
         void openQueueRowMenu({ api, row, isAdmin, positionTo: target, onChanged });
     }, [api, isAdmin, onChanged]);
+    const onPick = useCallback((row: QueueRow, id: string, target: HTMLElement) => {
+        void runQueueRowAction({ api, row, isAdmin, positionTo: target, onChanged }, id);
+    }, [api, isAdmin, onChanged]);
 
     // Once a removed row has left the list, focus its neighbour (or the empty-state link) if focus fell out with it,
     // so a D-pad user is never thrown to the top of the page.
@@ -343,7 +386,7 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
 
     const rowProps = (row: QueueRow): RowProps => ({
         api, row, text: describeRow(row, list.generatedAt), isAdmin, showClient, serverId, linked: layout !== 'tv',
-        stale: staleAll || row.state === 'unknown', onMenu
+        stale: staleAll || row.state === 'unknown', onMenu, onPick
     });
     const seeding = rows.some(row => row.state === 'seeding');
     // Administrators only; an older plugin sends no automation block and the line stays away (P6.M8).
