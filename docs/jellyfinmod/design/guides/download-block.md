@@ -46,7 +46,7 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 | downloading | 42 % inside, arc | 42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB (no word) | release, marks, pack, bar | View Queue · Cancel Download |
 | stalled | 42 % dimmed | Stalled 42% · no progress for 20 min (75 %) | same, bar dimmed | same |
 | queued | clock | Queued waiting to start (75 %) | release, marks, pack (muted) | same |
-| importing | spinner | Importing linking into the library… | release, marks, breathing bar | View Queue |
+| importing | spinner | Importing linking into the library… | release, marks, full bar, still | View Queue |
 | failed | red bang | Failed reason (all red) | release, marks | Search Again · View Queue |
 | not downloaded | cloud | Not Downloaded | — | Get a Release; others see "no release chosen yet" |
 | unaired | clock, 70 % | Unaired · airs 19 May 2027 · in 7 months | — | — |
