@@ -417,7 +417,7 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
 
 const addedLabel = (added: AddedRow | null | undefined) => {
     if (!added) return '';
-    return ', added' + (added.progress ? ', ' + added.progress.text : '');
+    return ', added' + (added.progress ? ', ' + added.progress.tooltip : '');
 };
 
 const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => qualityText(candidate.parsed)

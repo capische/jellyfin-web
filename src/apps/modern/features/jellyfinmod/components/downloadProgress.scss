@@ -2,8 +2,8 @@
  * user-approved 2026-10-13; UX §3.3; the icon colour P4.FU8, user-approved 2026-10-15, replacing amber).
  *
  * The disc itself is `downloadStateMark.scss`. Here: a card's bar is the icon colour at 85 % (white, the light schemes' dark
- * text), stalled the same at 55 % opacity, a failure red at its last value, importing a full bar that breathes; the meta line's
- * figure is ordinary secondary text, only a failure is red. Cards keep the two-layer bar; rows have no bar (ring only).
+ * text), stalled the same at 55 % opacity, a failure red at its last value, importing a full, still bar; the meta line's
+ * text is lifted to the text colour at 600 (treatment B, below), a failure red. Cards keep the two-layer bar; rows have no bar (ring only).
  * Additive only: every class is `jfmod-`, sizes are in `em` (TV 125 %, mobile 90 %), and no flex gap, min() or max() for
  * older TV engines.
  */
@@ -44,15 +44,25 @@
 .jfmod-dlBar--stalled .jfmod-dlBar-fill { opacity: 0.55; }
 .jfmod-dlBar--failed .jfmod-dlBar-fill { background: var(--jfmod-dl-failed); }
 
-/* The figure on a row's meta line, after the date: `42% · 12 min left`, `42% · stalled`, `queued`, `importing…`,
- * `Failed · reason` (cut with an ellipsis; the whole reason is in the tooltip). Also the picker's added row's figure. */
-.jfmod-dlMeta {
+/* The state text on a row's meta line, after the date: `42% · 12 min left`, `Stalled · 42%`, `Queued`, `Importing…`,
+ * `Failed · reason` (cut with an ellipsis; the whole reason is in the tooltip). Also the picker's added row's figure. Treatment B
+ * (user 2026-10-19: "B, 600, Inter, no need for Downloading, just % and time"): the whole text steps up from the line's muted
+ * colour to the full text colour at 600, in Inter (the mod font reaches it through its `jfmod-` class); a waiting state (queued,
+ * stalled) at 75 % so the active ones lead; nothing animates. The rule wins over upstream's `.listItem .secondary` grey on a
+ * row's own text line (the phone). */
+.jfmod-dlMeta,
+.listItem .secondary.jfmod-dlMeta {
     overflow: hidden;
     max-width: 100%;
     white-space: nowrap;
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--jf-palette-text-primary, #fff);
 }
+
+.jfmod-dlMeta--queued,
+.jfmod-dlMeta--stalled { opacity: 0.75; }
 
 /* Beside upstream's side media info a long reason must not push the title away. */
 .mediaInfoItem.jfmod-dlMeta {
@@ -60,23 +70,14 @@
     max-width: 22em;
 }
 
-/* Only a failure has a colour; every other state reads in the line's own secondary text. It wins over upstream's
- * `.listItem .secondary` grey on a row's own text line (the phone). */
+/* A failure keeps its red, at the same weight. */
 .jfmod-dlMeta--failed,
 .listItem .jfmod-dlMeta.jfmod-dlMeta--failed {
     color: var(--jfmod-dl-text-failed);
 }
 
-.jfmod-dlMeta--stale { opacity: 0.55; }
-
-/* Importing (user 2026-10-18, design A): the word steps up from the line's muted colour to the full text colour at 600; no
- * animation (user 2026-10-19: remove all breathing; the text states are being redesigned). It wins over upstream's
- * `.listItem .secondary` grey. */
-.jfmod-dlMeta--importing,
-.listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
-    color: var(--jf-palette-text-primary, #fff);
-    font-weight: 600;
-}
+/* A client that could not be read: the last value, dimmed (wins over the waiting states' 75 %). */
+.jfmod-dlMeta.jfmod-dlMeta--stale { opacity: 0.55; }
 
 /* A failure takes the Not Downloaded mark's place on a row, an indicator (since P1.FU22 an administrator's button there is
  * disabled meanwhile): a red bang instead of the cloud, never both, at the row glyph's size. */

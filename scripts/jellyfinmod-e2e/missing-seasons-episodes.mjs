@@ -1056,6 +1056,9 @@ const blockView = page => page.evaluate(() => {
         ringEm: ring && font ? Math.round(ring.getBoundingClientRect().width / font * 100) / 100 : null,
         word: block.querySelector('.jfmod-dlblock-word')?.textContent ?? null,
         figure: figure?.textContent ?? null,
+        // P4.FU15 (treatment B): the whole state line at 600 in Inter, waiting states at 75 %; downloading's word is visually hidden.
+        stateLine: (node => node ? { weight: getComputedStyle(node).fontWeight, opacity: getComputedStyle(node).opacity, colour: getComputedStyle(node).color,
+            family: getComputedStyle(node).fontFamily, wordVisible: shown(block.querySelector('.jfmod-dlblock-word')) && block.querySelector('.jfmod-dlblock-word').getBoundingClientRect().width > 2 } : null)(block.querySelector('.jfmod-dlblock-state')),
         // P4.FU8: the ring (its glyph, number and arc), the figure, the bar and the not-finished dots are the block's own text colour.
         colours: { block: getComputedStyle(block).color, ring: ring ? getComputedStyle(ring).color : null,
             arc: ring?.querySelector('.jfmod-dlmark-fill') ? getComputedStyle(ring.querySelector('.jfmod-dlmark-fill')).stroke : null,
@@ -1175,8 +1178,9 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         const strip = season.map(item => dotOf(item) + (item.id === episode.id ? '*' : ''));
         record(label, 'download block, downloading: in the track selectors\' place, the 4em ring (3.2em on the phone) with "42" inside and no glyph',
             ok && shown.beforeTracks && shown.ringKind === 'downloading' && shown.number === '42' && !shown.glyph && Math.abs(shown.ringEm - (layout === 'mobile' ? 3.2 : 4)) < 0.05, shown);
-        record(label, `download block, downloading: "Downloading 42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" in the page's text colour, no amber`,
-            shown.word === 'Downloading' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'plain'
+        record(label, `download block, downloading: "42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" alone (no "Downloading" word on screen, kept hidden for assistive technology) in the page's text colour at 600, no amber`,
+            shown.word === 'Downloading' && shown.stateLine?.wordVisible === false && shown.stateLine.weight === '600' && /inter/i.test(shown.stateLine.family)
+            && shown.stateLine.opacity === '1' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'plain'
             && shown.colours.figure === shown.colours.block && shown.colours.ring === shown.colours.block && shown.colours.arc === shown.colours.block
             && shown.colours.bar === shown.colours.block, { figure: shown.figure, colours: shown.colours });
         record(label, 'download block: the release name and its marks (1080p WEB-DL, the codec and audio marks, EN, the pack\'s 38.2 GB, the indexer)',
@@ -1222,8 +1226,8 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         // ---- Stalled, one episode's own torrent.
         ok = await open([single({ state: 'stalled', stalledSince: new Date(Date.now() - 20 * 60000).toISOString() })], 'stalled');
         shown = await blockView(page);
-        record(label, 'download block, stalled: "42" in the dimmed ring, "Stalled 42% · no progress for 20 min", the bar dimmed, no pack line',
-            ok && shown.ringKind === 'stalled' && shown.number === '42' && shown.word === 'Stalled' && shown.figure === '42% · no progress for 20 min'
+        record(label, 'download block, stalled: "42" in the dimmed ring, "Stalled 42% · no progress for 20 min" at 600 and 75 %, the bar dimmed, no pack line',
+            ok && shown.stateLine?.weight === '600' && shown.stateLine.opacity === '0.75' && shown.ringKind === 'stalled' && shown.number === '42' && shown.word === 'Stalled' && shown.figure === '42% · no progress for 20 min'
             && shown.bar?.kind === 'stalled' && shown.pack === null && shown.marks.includes('4.6 GB'), shown);
         await shoot('stalled');
 
@@ -1232,7 +1236,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         shown = await blockView(page);
         record(label, `download block, queued: the clock, "Queued waiting to start", no bar, ${admin ? 'View Queue and Cancel Download' : 'View Queue'}`,
             ok && shown.ringKind === 'queued' && shown.glyph && shown.number === null && shown.word === 'Queued' && shown.figure === 'waiting to start'
-            && shown.tone === 'muted' && !shown.bar && JSON.stringify(shown.actions) === (admin ? actions('View Queue', 'Cancel Download') : actions('View Queue')), shown);
+            && shown.tone === 'plain' && shown.stateLine?.weight === '600' && shown.stateLine.opacity === '0.75' && !shown.bar && JSON.stringify(shown.actions) === (admin ? actions('View Queue', 'Cancel Download') : actions('View Queue')), shown);
         await shoot('queued');
 
         // ---- Importing: the spinner, the step, a full bar breathing, no Cancel.
