@@ -188,10 +188,6 @@
 
 .jfmod-dlblock-barFill--stalled { opacity: 0.55; }
 
-.jfmod-dlblock-barFill--importing {
-    animation: jfmod-dlblockBreathe 1.2s ease-in-out infinite;
-}
-
 .jfmod-dlblock--stale .jfmod-dlblock-barFill { opacity: 0.55; }
 
 .jfmod-dlblock-actions {
@@ -253,18 +249,8 @@
     }
 }
 
-@keyframes jfmod-dlblockBreathe {
-    50% { opacity: 0.45; }
-}
-
-/* Importing (user 2026-10-18, design A): the state word breathes with the bar. */
-.jfmod-dlblock--importing .jfmod-dlblock-word {
-    animation: jfmod-dlblockBreathe 1.2s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .jfmod-dlblock .jfmod-dlblock-barFill,
-    .jfmod-dlblock .jfmod-dlblock-word {
+    .jfmod-dlblock .jfmod-dlblock-barFill {
         animation: none;
         transition: none;
     }
