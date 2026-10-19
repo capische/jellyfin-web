@@ -73,7 +73,7 @@ the tooltip adds "(taking longer than usual)"; a safety stop at 10 minutes. The 
 
 ## Text
 
-The `importing…` meta word steps up from the muted meta colour to the full text colour at 600 and breathes (`opacity 1 → .45`, 1.2 s ease-in-out, `jfmod-dlBreathe`, the same keyframe as the bar; `.jfmod-dlMeta--importing`; none under reduced motion, where colour and weight alone set it apart) (user 2026-10-18).
+The `importing…` meta word steps up from the muted meta colour to the full text colour at 600 (`.jfmod-dlMeta--importing`). Nothing animates: no breathing anywhere (user 2026-10-19: "remove the whole breathing animations completely"; the text states are being redesigned by the design session). The ring's own bob and turn stay.
 
 Meta line: `42% · 12 min left` (`1 h 05 min left` from an hour), `42% · stalled`, `queued`, `importing…`,
 `Failed · reason` (cut with an ellipsis). Tooltip, on every disc: `Downloading · 42% · 12 min left · 3 MB/s`, `Queued`,

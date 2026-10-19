@@ -374,7 +374,7 @@ its last value, the disc and figure dimmed.
   it alone in the corner. The two-layer bar stays: 0.28em along the poster's bottom edge over a dark track, the download in
   the icon colour at 85 % beneath and the watched part in the primary on top (read from upstream's own bar, which hides meanwhile). A series or
   season card shows the mean of its episodes on their way (a pack counts once per episode it holds) and the liveliest state;
-  queued draws the bar's track alone, importing a full bar breathing. A failed or finished download is not drawn on a card.
+  queued draws the bar's track alone, importing a full bar, still (no breathing since 2026-10-19). A failed or finished download is not drawn on a card.
   The disc wins over Not Downloaded and Unaired in the corner (never both). A series or season card with nothing on disk and a download on its way
   keeps no Play: the administrator's cloud stays in its hover centre (§5.7, P1.FU19 and P1.FU23).
 
@@ -1052,7 +1052,7 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   | Downloading | `42%` inside, the arc in the page's text colour | **Downloading** `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (the text colour) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
   | Stalled | `42%` dimmed, arc dimmed | **Stalled** `42% · no progress for 20 min` | release, marks, pack line, bar dimmed | the same |
   | Queued | clock | **Queued** `waiting to start` | release, marks, pack line | the same |
-  | Importing | turning arc | **Importing** `identifying the file…` / `linking into the library…` / `waiting for the library scan…` | release, marks, full bar breathing | View Queue |
+  | Importing | turning arc | **Importing** `identifying the file…` / `linking into the library…` / `waiting for the library scan…` | release, marks, full bar, still | View Queue |
   | Failed | red bang | **Failed** the reason in red | release, marks | Search Again (red, administrators who may search) · View Queue |
   | Not downloaded | cloud in the text colour | **Not Downloaded** (`no release chosen yet` for everyone else) | — | Get a Release (blue, administrators who may search) |
   | Unaired (with an air date) | clock | **Unaired** `airs 19 May 2027 · in 7 months` (`in N days` under 30 days) | — | — |
@@ -1067,8 +1067,7 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
   may read the queue; Cancel Download is upstream's grey raised button and asks the picker's *Remove the Torrent*
   (`DELETE /Queue/{id}` with `removeFromClient`, no blocklist; for a pack the whole torrent); Search Again and Get a Release
   open the picker on this episode. The ring, the marks and the strip are no stops; on the TV the D-pad goes from the header's
-  Get a Release down to View Queue, right to Cancel Download, down to the person cards. Reduced motion stops the arc and the
-  bar's breathing. Data: the shared queue read (every 3 s once a download was seen on the page, else once a minute and on each
+  Get a Release down to View Queue, right to Cancel Download, down to the person cards. Reduced motion stops the arc. Nothing breathes. Data: the shared queue read (every 3 s once a download was seen on the page, else once a minute and on each
   page open); while the queue cannot be read the entry's projected state shows the figures alone. **Imported:** when the queue's
   row reaches `seeding` the page reads its entry again; once the episode is on disk with its Jellyfin item, the page is replaced
   by Jellyfin's own episode page (its Video / Audio / Subtitle selectors and Play). A finished row for an episode that has no
