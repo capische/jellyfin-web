@@ -1504,7 +1504,7 @@ a once-a-quarter admin task, not a browsing surface.
 
 **Quality Profiles in the settings area (P4.FU9, approved redesign, user 2026-10-15: "Love new design. Go ahead and
 implement it.").** The section keeps its card, its blue *Add Profile* and its row icons (Make Default, Edit, Remove).
-Each row says in one line what the profile does ("4K first, then down to 720p · up to 20 GB per hour · no upgrades"),
+Each row says in one line what the profile does ("4K first, then down to 720p · any size · no upgrades"),
 a profile made from a predefined profile carries a grey *Predefined* chip and the default the blue *Default* chip; a grey
 *Add Predefined Profiles* appears beside *Add Profile* only while one is missing (and the empty state names it); a footer line says
 a title uses the default unless you pick another one in the release picker. Profiles are listed best first everywhere (4K, 2K, 1080p, 720p, SD): the plugin returns them in that order, by the resolution of each profile's best quality, and the settings list, the Default profile select and the picker's Quality Profile dropdown all show it as given, with no sort of their own (user, 2026-10-19). The picker's dropdown has no "Title default" entry: the default profile reads "4K (Default)" and is selected unless the title has its own profile, picking the profile the search already uses sends no override. The dialog is simple by
