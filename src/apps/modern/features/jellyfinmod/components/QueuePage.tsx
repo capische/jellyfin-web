@@ -14,11 +14,12 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    automationPausedText, downloadProgress, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent, QUEUE_STATE_LABEL,
-    queueRowTitle, reasonMessage, seedingSummary, sortQueueRows, updatedAgo
+    automationPausedText, downloadProgress, episodeCode, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent,
+    QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, seedingSummary, sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
-import DownloadStateMark from './DownloadStateMark';
+import DownloadStateMark, { ringLink } from './DownloadStateMark';
+import { episodePath, seasonPath } from './MissingChildren';
 import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
 import type { QueueList, QueueRow } from '../types/queue';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
@@ -111,12 +112,62 @@ const ProgressBar: FC<{ text: RowText; stale: boolean }> = ({ text, stale }) => 
     </span>;
 };
 
-/** Parsed title first, the raw release title dimmed beneath and never hidden (UX §9 style). */
-const TitleLines: FC<{ row: QueueRow; text: RowText; href?: string }> = ({ row, text, href }) => <>
-    {href ? <a className='jfmod-queueTitle' href={href}>{text.title}</a> : <span className='jfmod-queueTitle'>{text.title}</span>}
+interface TitlePart {
+    text: string;
+    href?: string;
+    key?: string;
+}
+
+const SEPARATOR: TitlePart = { text: ' · ' };
+
+/**
+ * The title as its parts, each a link to its own page (user, 2026-10-19): the series (or the movie) to its entry, `Season N` to
+ * the season page and the episode to its page (the mod's routes, which open Jellyfin's own page once it has the episode). A
+ * season pack names its season, a series pack only its series; the separators and a pack's count stay plain text.
+ */
+const titleParts = (row: QueueRow, serverId: string | undefined): TitlePart[] => partsOf(row, serverId)
+    .map((part, index) => ({ ...part, key: 'part' + index }));
+
+const partsOf = (row: QueueRow, serverId: string | undefined): TitlePart[] => {
+    const entry = row.entry;
+    if (!entry) return [{ text: row.releaseTitle }];
+    const server = serverId ?? '';
+    const series: TitlePart = { text: entry.year ? entry.title + ' (' + entry.year + ')' : entry.title, href: '#' + getEntryPath(entry.id, serverId) };
+    const season = (number: number): TitlePart => ({ text: 'Season ' + number, href: '#' + seasonPath(entry.id, number, server) });
+    if (row.pack) {
+        const number = row.pack.scope === 'season' ? row.pack.episodes[0]?.seasonNumber : undefined;
+        const named = number === undefined ? '' : 'Season ' + number;
+        if (!named || !row.pack.label.startsWith(named + ' ')) return [series, SEPARATOR, { text: row.pack.label }];
+        return [series, SEPARATOR, season(number!), { text: row.pack.label.slice(named.length) }];
+    }
+    if (!row.episode) return [series];
+    const { seasonNumber, episodeNumber, title } = row.episode;
+    return [series, SEPARATOR, season(seasonNumber), SEPARATOR, {
+        text: episodeCode(seasonNumber, episodeNumber) + (title ? ' ' + title : ''),
+        href: '#' + episodePath(entry.id, seasonNumber, episodeNumber, server)
+    }];
+};
+
+/** Parsed title first (its parts linked where `linked`), the raw release title dimmed beneath and never hidden (UX §9 style). */
+const TitleLines: FC<{ row: QueueRow; text: RowText; serverId?: string; linked: boolean }> = ({ row, text, serverId, linked }) => <>
+    <span className='jfmod-queueTitle'>{linked ? titleParts(row, serverId).map(part => (part.href ?
+        <a key={part.key} className='jfmod-queueTitleLink' href={part.href}>{part.text}</a> :
+        <React.Fragment key={part.key}>{part.text}</React.Fragment>)) : text.title}</span>
     {text.version && <span className='jfmod-queueMuted'>{text.version}</span>}
     <span className='jfmod-queueRelease'>{row.releaseTitle}</span>
 </>;
+
+/**
+ * The row's client, a link to its web page where the ring is one (`ringLink`'s rule: administrators, a saved Web interface
+ * link, not the TV), else its name; the row menu no longer has Open in Client (user, 2026-10-19).
+ */
+const ClientName: FC<{ row: QueueRow; linked: boolean; className?: string }> = ({ row, linked, className }) => {
+    const client = row.client;
+    if (!client) return null;
+    if (!linked || layoutManager.tv || !client.openUrl) return <span className={className}>{client.name}</span>;
+    return <span className={className}><a className='jfmod-queueTitleLink' href={client.openUrl} target='_blank' rel='noopener noreferrer'
+        title={'Open ' + client.name}>{client.name}</a></span>;
+};
 
 /**
  * The state: the download disc in place of the word while the row is a download (P4.FU6), its tooltip the state and figure;
@@ -127,7 +178,8 @@ const StateLines: FC<{ row: QueueRow; text: RowText }> = ({ row, text }) => {
     // The import's own step (Linking into the library) and Blocked say more than the family's words; the reason follows.
     const title = progress?.kind === 'importing' || row.state === 'blocked' ? text.state : progress?.tooltip;
     return <>
-        {progress ? <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={title} /></span> :
+        {progress ? <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={title}
+            link={ringLink([row], progress)} /></span> :
             <span className={classNames('jfmod-queueState', { 'jfmod-queueState--problem': text.problem })}>{text.state}</span>}
         {text.detail && <span className='jfmod-queueDetail'>{text.detail}</span>}
     </>;
@@ -141,7 +193,9 @@ interface RowProps {
     text: RowText;
     isAdmin: boolean;
     showClient: boolean;
-    href?: string;
+    serverId?: string;
+    /** The title's parts and the client are links (not inside the TV's row button). */
+    linked: boolean;
     stale: boolean;
     onMenu: (row: QueueRow, target: HTMLElement) => void;
 }
@@ -160,28 +214,28 @@ const MenuButton: FC<{ row: QueueRow; title: string; onMenu: RowProps['onMenu'] 
     </button>;
 };
 
-const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, href, stale, onMenu }) => <tr className='jfmod-queueTableRow'>
+const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, onMenu }) => <tr className='jfmod-queueTableRow'>
     <td className='jfmod-queueCellThumb'><Thumb api={api} row={row} /></td>
-    <td className='jfmod-queueCellTitle'><TitleLines row={row} text={text} href={href} /></td>
+    <td className='jfmod-queueCellTitle'><TitleLines row={row} text={text} serverId={serverId} linked={linked} /></td>
     <td className='jfmod-queueCellProgress'><ProgressBar text={text} stale={stale} /></td>
     <td className='jfmod-queueCellNumber'>{text.size ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.speed ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.eta ?? '—'}</td>
     <td className='jfmod-queueCellState'><StateLines row={row} text={text} /></td>
-    {showClient && <td>{row.client?.name ?? '—'}</td>}
+    {showClient && <td className='jfmod-queueCellClient'>{row.client ? <ClientName row={row} linked={linked} /> : '—'}</td>}
     {isAdmin && <td className='jfmod-queueCellMenu'>
         {queueRowActions(row, isAdmin).length > 0 && <MenuButton row={row} title={text.title} onMenu={onMenu} />}
     </td>}
 </tr>;
 
-const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu'>> = ({ api, row, text, showClient, href, stale }) => <>
+const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu'>> = ({ api, row, text, showClient, serverId, linked, stale }) => <>
     <Thumb api={api} row={row} />
     <span className='jfmod-queueRowBody'>
-        <TitleLines row={row} text={text} href={href} />
+        <TitleLines row={row} text={text} serverId={serverId} linked={linked} />
         <ProgressBar text={text} stale={stale} />
         {metaLine(text) && <span className='jfmod-queueMuted'>{metaLine(text)}</span>}
         <StateLines row={row} text={text} />
-        {showClient && row.client && <span className='jfmod-queueMuted'>{row.client.name}</span>}
+        {showClient && <ClientName row={row} linked={linked} className='jfmod-queueMuted' />}
     </span>
 </>;
 
@@ -197,7 +251,7 @@ const TvRow: FC<RowProps> = props => {
     const { row, onMenu } = props;
     const open = useCallback((event: MouseEvent<HTMLButtonElement>) => onMenu(row, event.currentTarget), [onMenu, row]);
     return <button type='button' className='jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus' data-jfmod-queue-id={row.id} onClick={open}>
-        <RowBody {...props} href={undefined} />
+        <RowBody {...props} linked={false} />
     </button>;
 };
 
@@ -287,9 +341,8 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
         if (target) focusManager.focus(target);
     }, [layout, rows.length, viewsReady]);
 
-    const href = (row: QueueRow) => row.entry ? '#' + getEntryPath(row.entry.id, serverId) : undefined;
     const rowProps = (row: QueueRow): RowProps => ({
-        api, row, text: describeRow(row, list.generatedAt), isAdmin, showClient, href: href(row),
+        api, row, text: describeRow(row, list.generatedAt), isAdmin, showClient, serverId, linked: layout !== 'tv',
         stale: staleAll || row.state === 'unknown', onMenu
     });
     const seeding = rows.some(row => row.state === 'seeding');

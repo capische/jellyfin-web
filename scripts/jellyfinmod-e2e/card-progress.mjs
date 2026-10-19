@@ -251,7 +251,9 @@ const INERT_PROPS = ['backgroundColor', 'boxShadow', 'outlineStyle', 'transform'
  * A disc or mark that is no control (P1.FU19, user 2026-10-13): its computed look (background, shadow, outline, transform,
  * opacity, colour, its ::before veil) is the same under the mouse as without it, the pointer is the default arrow, it is no focus
  * stop (a decorative button may hold it: `holder`; an administrator's row button is disabled while a failure takes it, P1.FU22),
- * and its tooltip stays. Desktop only.
+ * and its tooltip stays. Desktop only. The intercepted rows carry no client (`client: null`), as an ordinary user's do and as
+ * an administrator's do when the client has no saved Web interface link: an administrator's ring with a link opens the client
+ * (P4.FU16, user 2026-10-19) and is checked live by the Ring Link first look, not here.
  */
 async function checkInert(page, label, what, locator, holder = false) {
     if (!await locator.count()) { record(label, `${what}: present`, 'NOT VERIFIED', 'not on the page'); return; }
