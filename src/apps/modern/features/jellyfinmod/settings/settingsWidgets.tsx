@@ -352,7 +352,7 @@ export interface FieldSpec {
     help?: string;
     /** An emptied number is sent as null (the server's nullable fields), not NaN. */
     optional?: boolean;
-    /** The field must hold a value to save: its label gets the asterisk first (`.jfmod-required`) and its input `aria-required`. */
+    /** The field must hold a value to save: its label ends with the asterisk (`.jfmod-required`) and its input `aria-required`. */
     required?: boolean;
 }
 
@@ -444,7 +444,7 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     );
 };
 
-/** Only a required field is marked, with the asterisk first; no field says "(Optional)" (user, 2026-10-19). */
+/** Only a required field is marked, with the asterisk at the end; no field says "(Optional)" (user, 2026-10-19). */
 export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: FieldChange }> = ({
     fields, draft, onChange
 }) => (
