@@ -2836,6 +2836,12 @@ export class PlaybackManager {
                         onPlaybackStartedFn();
                         onPlaybackStarted(player, playOptions, streamInfo, mediaSource);
                     }, function (err) {
+                        // The player was stopped or replaced before it began: not a start, not an error.
+                        if (err?.playbackCancelled) {
+                            loading.hide();
+                            return;
+                        }
+
                         // TODO: Improve this because it will report playback start on a failure
                         onPlaybackStartedFn();
                         onPlaybackStarted(player, playOptions, streamInfo, mediaSource);
