@@ -162,6 +162,31 @@
     flex-shrink: 0;
 }
 
+// The desktop row menu (user 2026-10-19): a popover under the three dots, the track dropdown's paper (track-dropdown.md), no
+// dimming; each item the action sheet's icon and word. A hover tint and the keyboard's focus only, nothing highlighted on open.
+.jfmod-queueMenuPaper.MuiPaper-root {
+    margin-top: 0.25em;
+    border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    border-radius: 0.2em;
+    background-color: var(--jf-palette-background-paper, #202020);
+    background-image: none;
+
+    .MuiList-root {
+        padding: 0.25em 0;
+    }
+}
+
+.jfmod-queueMenuItem.MuiMenuItem-root {
+    min-height: 0;
+    padding: 0.6em 1.2em 0.6em 0.9em;
+    font: inherit;
+}
+
+.jfmod-queueMenuIcon.MuiListItemIcon-root {
+    min-width: 2.2em;
+    color: inherit;
+}
+
 // Desktop: one table.
 
 .jfmod-queueTable {

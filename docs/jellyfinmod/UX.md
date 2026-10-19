@@ -1364,8 +1364,12 @@ stating, because the alternative is slowly reimplementing qBittorrent's UI in Re
 its bugs.
 
 Columns: poster thumb · title · progress bar · size · speed · ETA · state · client. On the desktop table every cell of a row
-sits on one centre line (`vertical-align: middle`), text left-aligned under its header (user 2026-10-19). The row menu is the
-stock action sheet with its items only, no title above them (user 2026-10-19), on every layout.
+sits on one centre line (`vertical-align: middle`), text left-aligned under its header (user 2026-10-19). The row menu shows its
+items only, no title above them (user 2026-10-19). On the desktop table it is a popover under the three dots (MUI's Menu, the
+track dropdown's paper: [track-dropdown.md](design/guides/track-dropdown.md)) that does not dim the page (user 2026-10-19: "why
+menu mutes / darkens the whole page? it's menu"), closes on a click outside, Escape or a choice, and highlights nothing on
+open (the keyboard's focus only); each item is the action sheet's icon and word. The phone and the TV keep the stock action
+sheet. What an item does, and Remove's question, are the same in both.
 
 The title is its parts, each a link to its own page (user 2026-10-19): the series to its page, `Season N` to the season page,
 the episode (`S01E02 Title`) to its page (the mod's `&season=N` and `&episode=M` routes, which open Jellyfin's own episode
