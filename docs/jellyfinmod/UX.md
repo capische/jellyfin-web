@@ -409,8 +409,9 @@ its last value, the disc and figure dimmed.
 - **An administrator's ring opens the download client** (P4.FU16, user 2026-10-19: "The buttons only (I believe you meant a
   ring)", "Administrators only"): a queued, downloading, importing or stalled disc, on every surface above, opens the client's
   saved Web interface link in a new tab and nothing else (not the card's or row's title). The link comes from the queue rows the
-  page already reads, whose `client` the plugin sends to administrators only; no new request. A pointer, a thin ring in the disc's
-  own ink under the mouse, the cyan keyboard ring, a Tab stop on desktop and phone, the tooltip's second line `Open Transmission`.
+  page already reads, whose `client` the plugin sends to administrators only; no new request. A pointer and the tooltip's second
+  line `Open Transmission`, nothing drawn under the mouse or after a click (user 2026-10-19), the cyan ring for the keyboard
+  only, a Tab stop on desktop and phone.
   Not on the TV, not for a failed disc, a cloud or an unaired clock, not for an ordinary user, and not when the client has no
   saved Web interface link (the picker's title row works one out from the RPC address; the ring does not): those stay
   indicators. The words beside the discs (`queued`, `42% · 12 min left`, `importing…`) stay plain text.
@@ -1362,7 +1363,9 @@ Route `/catalog/queue`. This is a **monitor, not a torrent client** — a scope 
 stating, because the alternative is slowly reimplementing qBittorrent's UI in React and owning
 its bugs.
 
-Columns: poster thumb · title · progress bar · size · speed · ETA · state · client.
+Columns: poster thumb · title · progress bar · size · speed · ETA · state · client. On the desktop table every cell of a row
+sits on one centre line (`vertical-align: middle`), text left-aligned under its header (user 2026-10-19). The row menu is the
+stock action sheet with its items only, no title above them (user 2026-10-19), on every layout.
 
 The title is its parts, each a link to its own page (user 2026-10-19): the series to its page, `Season N` to the season page,
 the episode (`S01E02 Title`) to its page (the mod's `&season=N` and `&episode=M` routes, which open Jellyfin's own episode

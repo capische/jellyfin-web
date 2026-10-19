@@ -103,8 +103,9 @@ A ring that opens the client adds a second tooltip line, `Open <client name>` (`
 (`window.open(url, '_blank', 'noopener')`; P4.FU16, user 2026-10-19), wherever it is drawn: cards, rows, the detail line, the Queue
 page, the picker's added row and the download block. The link is the client's saved *Web interface link*, which the queue gives
 only to administrators (`client.openUrl` on `GET /JellyfinMod/Queue`; `ringLink`); with no saved link the ring stays as below. A
-linked ring is `role="link"` (`.jfmod-dlmark--link`): a pointer, under the mouse a thin ring in its own ink (`box-shadow: 0 0 0
-0.0625em currentcolor`), the cyan keyboard ring (`0 0 0 0.15em #00a4dc`, `:focus-visible`), a Tab stop on the desktop and phone
+linked ring is `role="link"` (`.jfmod-dlmark--link`): a pointer and its tooltip, and nothing drawn under the mouse or after a
+click (user 2026-10-19: "Selection of buttons are awful, probably remove selection at all"); only the keyboard gets the cyan
+ring (`0 0 0 0.15em #00a4dc`, `:focus-visible`). A Tab stop on the desktop and phone
 layouts (not inside the picker's added slot, which is hidden from assistive technology; the title row has the same link), Enter
 opens it. Its click opens only the client, never the card or row's title. No colour of its own.
 
