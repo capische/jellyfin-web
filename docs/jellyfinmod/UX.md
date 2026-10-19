@@ -723,6 +723,14 @@ next actions:
   title's kept card keeps P1.FU19's rule. A download on its way does not change this (the card shows its download and the
   centre cloud).
 
+- **When it was watched, in the played tick's tooltip** (P1.FU32, user 2026-10-19). Hovering upstream's played tick (a card's
+  `.playedIndicator`, a row's or the detail page's Played button, the card hover menu's Watched button) shows `Watched` and the
+  date and time it was last played, in the user's date locale: `Watched 12 Oct 2026, 9:41 pm`. A played item without a play date
+  says `Watched` only, never a made-up date. Series, season and collection ticks keep upstream's (no tooltip on the tick, `Watched`
+  on the button). Nothing is drawn: it is the native `title`, set when the pointer reaches the tick (on a React card, whose link
+  covers the tick, the link carries it only while the pointer is over the tick). The dates come from one item read per page for
+  the played ticks it shows, on the desktop layout only (`integration/watchedHint.ts`).
+
 ---
 
 ## 6. Search

@@ -15,6 +15,7 @@ import { installDpadModals } from './dpadModals';
 import CardGetRelease from '../integration/cardGetRelease';
 import DownloadMarks from '../integration/downloadMarks';
 import JellyfinModQueryClientEventHandler from '../integration/queryClientEventHandler';
+import WatchedHint from '../integration/watchedHint';
 
 /**
  * The JellyfinMod interface's application root (P7.S2).
@@ -47,6 +48,7 @@ const ModApp = () => (
                     <JellyfinModQueryClientEventHandler />
                     <DownloadMarks />
                     <CardGetRelease />
+                    <WatchedHint />
                     <ModAppRouter />
                 </WebConfigProvider>
             </UserSettingsProvider>
