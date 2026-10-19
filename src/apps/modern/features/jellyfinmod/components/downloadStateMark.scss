@@ -97,6 +97,24 @@
     opacity: 0.55;
 }
 
+/* An administrator's ring that opens the download client (user, 2026-10-19: queued, downloading, importing, stalled): a pointer,
+ * a thin ring in its own ink under the mouse, and for the keyboard the cyan ring of the row mark's button. No colour of its own. */
+.jfmod-dlmark--link {
+    cursor: pointer;
+
+    &:hover {
+        box-shadow: 0 0 0 0.0625em currentcolor;
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+}
+
 /* A card with no indicator cluster: the disc alone in the top-right corner. Inside the cluster it comes first, before
  * upstream's tick or count pill (two icons, user 2026-10-13). */
 .jfmod-dlmark--corner {

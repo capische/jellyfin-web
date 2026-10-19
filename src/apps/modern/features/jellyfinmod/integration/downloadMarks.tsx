@@ -12,7 +12,7 @@ import { aggregateProgress, describeDownload, downloadProgress, type DownloadPro
 import { currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
-import { paintDownloadMark } from '../components/DownloadStateMark';
+import { type DownloadMarkLink, paintDownloadMark, ringLink } from '../components/DownloadStateMark';
 
 import '../components/fileStateMark.scss';
 import '../components/downloadProgress.scss';
@@ -244,7 +244,7 @@ const clearCard = (frame: Element) => {
  * The bar at the poster's bottom (download beneath, watched on top) and the disc top right: the first of upstream's indicators,
  * left of the played tick or the plain count pill (two icons, user 2026-10-13), or alone in the corner.
  */
-const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
+const drawCard = (card: HTMLElement, progress: DownloadProgress | null, link: DownloadMarkLink | null) => {
     const frame = card.querySelector('.cardScalable') ?? card;
     if (!progress) {
         clearCard(frame);
@@ -267,11 +267,14 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null) => {
     // `contain: strict` puts it under the hover veil (white at half, user 2026-10-17). It is placed just left of the cluster.
     let disc = frame.querySelector<HTMLElement>('.jfmod-dlmark');
     if (!disc) {
-        disc = document.createElement('span');
-        // A click on it is a click on the card, as it was under the veil.
-        disc.addEventListener('click', () => frame.querySelector<HTMLElement>('.cardOverlayContainer')?.click());
+        const created = document.createElement('span');
+        // A click on it is a click on the card, as it was under the veil, unless it opens the download client (an administrator's).
+        created.addEventListener('click', () => {
+            if (!created.hasAttribute('data-jfmod-open')) frame.querySelector<HTMLElement>('.cardOverlayContainer')?.click();
+        });
+        disc = created;
     }
-    paintDownloadMark(disc, progress, 'card', 'jfmod-dlmark--corner');
+    paintDownloadMark(disc, progress, 'card', 'jfmod-dlmark--corner', progress.tooltip, link);
     if (disc.parentNode !== frame) frame.appendChild(disc);
     const indicators = frame.querySelector('.cardIndicators');
     const size = parseFloat(getComputedStyle(disc).fontSize) || 16;
@@ -332,19 +335,19 @@ const metaHost = (row: HTMLElement) => Array.from(row.querySelectorAll<HTMLEleme
  * Downloaded mark's place where the row has one: a red bang, an indicator (an administrator's button disabled meanwhile; never
  * both); a row without it (a file on disk) gets the red bang as a plain disc.
  */
-const drawRow = (row: HTMLElement, progress: DownloadProgress | null) => {
+const drawRow = (row: HTMLElement, progress: DownloadProgress | null, link: DownloadMarkLink | null) => {
     if (!progress) {
         clearRow(row);
         return;
     }
     row.classList.add('jfmod-dlRow');
     row.classList.toggle('jfmod-dlRow--failed', progress.kind === 'failed');
-    drawRowDisc(row, progress);
+    drawRowDisc(row, progress, link);
     drawRowMeta(row, progress);
 };
 
 /** The disc first in the end slot, or the failure on the Not Downloaded button. */
-const drawRowDisc = (row: HTMLElement, progress: DownloadProgress) => {
+const drawRowDisc = (row: HTMLElement, progress: DownloadProgress, link: DownloadMarkLink | null) => {
     // Upstream's React list rows wrap their content once (`.listItem-content`); the legacy rows and the mod's do not.
     const line: HTMLElement = ownChild(row, 'listItem-content') ?? row;
     const mark = row.querySelector<HTMLElement>('.jfmod-mark--none');
@@ -356,7 +359,7 @@ const drawRowDisc = (row: HTMLElement, progress: DownloadProgress) => {
     }
     if (mark) borrowTitle(mark, null);
     const disc = existing ?? document.createElement('span');
-    paintDownloadMark(disc, progress, 'row');
+    paintDownloadMark(disc, progress, 'row', '', progress.tooltip, link);
     const anchor = Array.from(line.children).find(child => !child.classList.contains('jfmod-dlmark') && child.matches(END_SLOT)) ?? null;
     if (anchor ? disc.nextElementSibling !== anchor : disc.parentElement !== line) line.insertBefore(disc, anchor);
 };
@@ -530,6 +533,12 @@ const afterwards = (element: HTMLElement, scope: Scope, context: PassContext) =>
     return now - ended >= DELAYED_MS ? IMPORTED_DELAYED : IMPORTED;
 };
 
+/** The client a ring opens (administrators only, `ringLink`): a row of the scope's, or of its entry's once the download ended. */
+const linkOf = (index: QueueIndex, scope: Scope | null | undefined, rows: QueueRow[], progress: DownloadProgress | null) => {
+    if (!scope) return null;
+    return ringLink(rows.length > 0 ? rows : index.all.filter(row => row.entry?.id === scope.entryId), progress);
+};
+
 /** One card's or row's download, drawn for this pass; true when it shows one on its way. */
 const markElement = (element: HTMLElement, context: PassContext): boolean => {
     const { index, placements, carried, idle, unplaced } = context;
@@ -551,8 +560,9 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
     } else if (!progress && scope) {
         progress = afterwards(element, scope, context);
     }
-    if (isRow) drawRow(element, progress);
-    else drawCard(element, progress);
+    const link = linkOf(index, scope, rows, progress);
+    if (isRow) drawRow(element, progress, link);
+    else drawCard(element, progress, link);
     return onItsWay;
 };
 

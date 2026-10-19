@@ -15,7 +15,7 @@ import { cancelDownload, confirmTorrentRemoval, isHeldRow } from '../integration
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
 import { raisedButtonClass } from '../utils/flatButton';
-import DownloadStateMark from './DownloadStateMark';
+import DownloadStateMark, { ringLink } from './DownloadStateMark';
 import { NotDownloadedGlyph } from './FileStateMark';
 import { formatSize, MediaMarks, qualityText } from './ReleaseRowParts';
 
@@ -236,7 +236,7 @@ const isWorking = (kind: BlockKind) => kind === 'queued' || kind === 'downloadin
 const isCancellable = (kind: BlockKind) => kind === 'queued' || kind === 'downloading' || kind === 'stalled';
 
 const BlockIcon: FC<{ state: BlockState }> = ({ state }) => {
-    if (state.progress) return <DownloadStateMark progress={state.progress} size='page' />;
+    if (state.progress) return <DownloadStateMark progress={state.progress} size='page' link={ringLink([state.row], state.progress)} />;
     if (state.kind === 'unaired') {
         return <span className='jfmod-dlmark jfmod-dlmark--page jfmod-dlblock-unaired' role='img' aria-label='Unaired' title='Unaired'>{CLOCK}</span>;
     }

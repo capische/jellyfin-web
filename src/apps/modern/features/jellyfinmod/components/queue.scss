@@ -75,10 +75,17 @@
     overflow-wrap: break-word;
 }
 
-a.jfmod-queueTitle:hover,
-a.jfmod-queueTitle:focus {
-    color: #00a4dc;
-    text-decoration: underline;
+// The title's parts and the client name, each a link to its own page (user, 2026-10-19): the text's own colour, the primary and
+// an underline under the mouse and for the keyboard, as the title link was.
+.jfmod-queueTitleLink {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus {
+        color: #00a4dc;
+        text-decoration: underline;
+    }
 }
 
 // Always visible and wrapped, never truncated: it is the diagnostic when an import goes wrong (UX §9).
@@ -182,7 +189,7 @@ a.jfmod-queueTitle:focus {
 }
 
 .jfmod-queueCellTitle {
-    width: 30%;
+    width: 50%;
 }
 
 .jfmod-queueCellProgress {
@@ -194,7 +201,13 @@ a.jfmod-queueTitle:focus {
 }
 
 .jfmod-queueCellState {
-    width: 20%;
+    // As wide as its content: the ring alone while the row downloads (the words are its tooltip), a seeding copy's or a
+    // failure's words otherwise (user, 2026-10-19: no empty room before Client).
+    width: auto;
+}
+
+.jfmod-queueCellClient {
+    white-space: nowrap;
 }
 
 .jfmod-queueCellMenu {

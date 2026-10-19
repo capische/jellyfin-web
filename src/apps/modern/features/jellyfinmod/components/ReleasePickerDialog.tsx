@@ -18,7 +18,7 @@ import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseC
 import type { QueueRow } from '../types/queue';
 
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
-import DownloadStateMark from './DownloadStateMark';
+import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
 import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
 import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
 import { flatButtonClass } from '../utils/flatButton';
@@ -300,6 +300,8 @@ interface AddedRow {
     xOff: boolean;
     onX: () => void;
     progress: DownloadProgress | null;
+    /** The download client the ring opens (administrators only, `ringLink`). */
+    link?: DownloadMarkLink | null;
 }
 
 // The figure shares its words and colours with the rows' meta lines (downloadProgress.scss, P4.FU1/P4.FU6); no bar (rows are
@@ -369,7 +371,7 @@ const AddedActions: FC<{ candidate: ReleaseCandidate; added: AddedRow }> = ({ ca
     return <span className='jfmod-releaseActions jfmod-releaseActions--pressed'>
         <button type='button' className={actionClass(classNames('jfmod-releaseAction--add', { 'jfmod-releaseAction--dl': !!progress }), state)}
             title={title} aria-hidden='true' tabIndex={-1} data-jfmod-release-add={candidate.releaseId}>
-            {progress ? <DownloadStateMark progress={progress} size='row' /> : <AddGlyph />}
+            {progress ? <DownloadStateMark progress={progress} size='row' link={added.link} /> : <AddGlyph />}
         </button>
         {x && <button type='button' className={actionClass('jfmod-releaseAction--danger jfmod-releaseAction--x')}
             title={x === 'cancel' ? 'Cancel' : 'Remove from Queue'}
@@ -954,12 +956,14 @@ interface AddedViewInput {
 /** The added row's slots and download: X cancels during the hold, removes (administrators) once the client has it. */
 const addedView = ({ accepted, isAdmin, queue, removing, cancelling, cancel, remove }: AddedViewInput): AddedRow => {
     if (!accepted) return { accepted, x: 'cancel', xOff: cancelling, onX: cancel, progress: null };
+    const progress = queue?.denied ? null : downloadProgress(queue?.row ?? null, queue?.last ?? null);
     return {
         accepted,
         x: isAdmin ? 'remove' : null,
         xOff: !queue?.row || removing,
         onX: remove,
-        progress: queue?.denied ? null : downloadProgress(queue?.row ?? null, queue?.last ?? null)
+        progress,
+        link: ringLink([queue?.row], progress)
     };
 };
 

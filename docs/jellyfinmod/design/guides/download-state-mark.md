@@ -4,7 +4,9 @@
 2026-10-13 (v11: "use top bar's exact recipe"), icon colour 2026-10-15 (v12: "replace yellow … to the color of icons"), importing until
 the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4), state text
 treatment B 2026-10-19 (P4.FU15, "I'd go with B, 600, Inter, but no need for Downloading ... just put % and time"; design
-session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>). Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
+session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>), an administrator's ring opens the download client
+2026-10-19 (P4.FU16, the user's answers: "The buttons only (I believe you meant a ring)", "Administrators only"; built, not accepted).
+Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
 `components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`), `integration/downloadMarks.tsx`.
@@ -92,11 +94,23 @@ completely"). The ring's own bob and turn stay.
 One mapping words both (`describeDownload`). Queued never says how many are ahead (the client has no position). The picker's
 row label for assistive technology reads the tooltip, so "Downloading" is not lost. The Queue page draws the disc instead of
 words and is unchanged; the download block follows the same rule ([download-block.md](download-block.md)).
+A ring that opens the client adds a second tooltip line, `Open <client name>` (`Open Transmission`), and is named
+`Open Transmission (Downloading · 42% · …)`.
 
 ## Interaction
 
-Never a control: `cursor: default`, no hover growth, not a D-pad stop; the tooltip is the only affordance. A failure on a
-row disables the administrator's row button while it holds.
+**For an administrator, a queued, downloading, importing or stalled ring opens the download client's web page** in a new tab
+(`window.open(url, '_blank', 'noopener')`; P4.FU16, user 2026-10-19), wherever it is drawn: cards, rows, the detail line, the Queue
+page, the picker's added row and the download block. The link is the client's saved *Web interface link*, which the queue gives
+only to administrators (`client.openUrl` on `GET /JellyfinMod/Queue`; `ringLink`); with no saved link the ring stays as below. A
+linked ring is `role="link"` (`.jfmod-dlmark--link`): a pointer, under the mouse a thin ring in its own ink (`box-shadow: 0 0 0
+0.0625em currentcolor`), the cyan keyboard ring (`0 0 0 0.15em #00a4dc`, `:focus-visible`), a Tab stop on the desktop and phone
+layouts (not inside the picker's added slot, which is hidden from assistive technology; the title row has the same link), Enter
+opens it. Its click opens only the client, never the card or row's title. No colour of its own.
+
+Everyone else, every failed ring, every Not Downloaded and Unaired mark, and every ring on the TV (nothing there can open a tab):
+never a control, `cursor: default`, no hover growth, not a D-pad stop; the tooltip is the only affordance; a click on a card's
+disc is a click on the card. A failure on a row disables the administrator's row button while it holds.
 
 ## Do not
 

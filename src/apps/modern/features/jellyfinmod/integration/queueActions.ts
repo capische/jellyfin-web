@@ -7,7 +7,6 @@ import dialogHelper from 'components/dialogHelper/dialogHelper';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
-import shell from 'scripts/shell';
 
 import { cancelGrab, removeQueueRow, retryImport } from '../api/modApi';
 import { actionErrorMessage, isRetryable, QUEUE_ROUTE, queueRowTitle } from '../constants/queue';
@@ -97,7 +96,6 @@ export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {
     if (isHeldRow(row)) return row.importState === 'held' ? [{ id: 'cancel', name: 'Cancel', icon: 'close' }] : [];
     const items = [{ id: 'remove', name: 'Remove', icon: 'delete' }];
     if (isRetryable(row.state)) items.push({ id: 'retry', name: 'Retry', icon: 'refresh' });
-    if (row.client?.openUrl) items.push({ id: 'open', name: 'Open in Client', icon: 'open_in_new' });
     return items;
 };
 
@@ -109,10 +107,6 @@ export const openQueueRowMenu = async ({ api, row, isAdmin, positionTo, onChange
     try {
         id = await actionsheet.show({ items, positionTo, title: queueRowTitle(row) });
     } catch {
-        return;
-    }
-    if (id === 'open' && row.client?.openUrl) {
-        shell.openUrl(row.client.openUrl, '_blank');
         return;
     }
     if (id === 'cancel') {

@@ -1,6 +1,9 @@
 import React, { type FC, useLayoutEffect, useRef } from 'react';
 
+import layoutManager from 'components/layoutManager';
+
 import type { DownloadProgress } from '../constants/queue';
+import type { QueueRow } from '../types/queue';
 
 import './downloadStateMark.scss';
 
@@ -51,6 +54,72 @@ const setAttribute = (element: Element, name: string, value: string) => {
     if (element.getAttribute(name) !== value) element.setAttribute(name, value);
 };
 
+const removeAttribute = (element: Element, name: string) => {
+    if (element.hasAttribute(name)) element.removeAttribute(name);
+};
+
+/** The download client's web page a ring opens (user, 2026-10-19): its name ("Open Transmission") and credential-free link. */
+export interface DownloadMarkLink {
+    name: string;
+    url: string;
+}
+
+/** The states whose ring opens the client: the torrent is in it. Failed, finished and the file-state marks never do. */
+const LINKED = new Set<DownloadProgress['kind']>(['queued', 'downloading', 'importing', 'stalled']);
+
+/**
+ * The client link a ring opens (user, 2026-10-19: "The buttons only", "Administrators only"): the first of the rows' clients with
+ * a web link. The queue names a row's client for administrators only (`client`, null for everyone else), and its `openUrl` is the
+ * client's saved Web interface link, so an ordinary user's ring, or one whose client has no saved link, stays an indicator. Never
+ * on the TV, where nothing can open a tab.
+ */
+export const ringLink = (rows: Array<QueueRow | null | undefined>, progress: DownloadProgress | null | undefined): DownloadMarkLink | null => {
+    if (!progress || !LINKED.has(progress.kind) || layoutManager.tv) return null;
+    const client = rows.find(row => row?.client?.openUrl)?.client;
+    return client?.openUrl ? { name: client.name, url: client.openUrl } : null;
+};
+
+/** A linked ring opens its client and nothing else: not the card or row it sits on (a click there opens the title). */
+const openLinked = (event: Event) => {
+    const element = event.currentTarget as HTMLElement;
+    const url = element.getAttribute('data-jfmod-open');
+    if (!url || (event instanceof KeyboardEvent && event.key !== 'Enter')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    window.open(url, '_blank', 'noopener');
+};
+
+const listening = new WeakSet<HTMLElement>();
+
+/**
+ * Makes the ring a link to its client, or an indicator again. A link is a `role="link"` stop on the desktop and phone layouts
+ * (not where its host is hidden from assistive technology, the picker's added slot, whose title row has the same link), its
+ * tooltip the state and then "Open Transmission".
+ */
+const paintLink = (element: HTMLElement, title: string, link: DownloadMarkLink | null | undefined) => {
+    element.classList.toggle('jfmod-dlmark--link', !!link);
+    if (!link) {
+        removeAttribute(element, 'data-jfmod-open');
+        removeAttribute(element, 'tabindex');
+        setAttribute(element, 'role', 'img');
+        setAttribute(element, 'aria-label', title);
+        if (element.title !== title) element.title = title;
+        return;
+    }
+    const open = 'Open ' + link.name;
+    setAttribute(element, 'data-jfmod-open', link.url);
+    if (element.closest('[aria-hidden="true"]')) removeAttribute(element, 'tabindex');
+    else setAttribute(element, 'tabindex', '0');
+    setAttribute(element, 'role', 'link');
+    setAttribute(element, 'aria-label', open + ' (' + title + ')');
+    if (element.title !== title + '\n' + open) element.title = title + '\n' + open;
+    if (!listening.has(element)) {
+        listening.add(element);
+        element.addEventListener('click', openLinked);
+        element.addEventListener('keydown', openLinked);
+    }
+};
+
 /** The arc's length: the percent, or importing's turning 28 % segment. */
 const paintArc = (element: HTMLElement, progress: DownloadProgress) => {
     const fill = element.querySelector<SVGElement>('.jfmod-dlmark-fill');
@@ -63,12 +132,13 @@ const paintArc = (element: HTMLElement, progress: DownloadProgress) => {
 
 /**
  * Draws the disc into `element` (a `span`), changing only what differs, so the arc's 0.35 s move from one poll's percent to
- * the next is kept. `extra` adds placement classes (a card's lone corner disc). `title` replaces the tooltip.
+ * the next is kept. `extra` adds placement classes (a card's lone corner disc). `title` replaces the tooltip. `link` makes it
+ * open the download client (`ringLink`).
  */
 export const paintDownloadMark = (element: HTMLElement, progress: DownloadProgress, size: DownloadMarkSize, extra = '',
-    title = progress.tooltip) => {
+    title = progress.tooltip, link: DownloadMarkLink | null = null) => {
     const className = ['jfmod-dlmark', 'jfmod-dlmark--' + size, 'jfmod-dlmark--' + progress.kind,
-        progress.stale ? 'jfmod-dlmark--stale' : '', extra].filter(Boolean).join(' ');
+        progress.stale ? 'jfmod-dlmark--stale' : '', link ? 'jfmod-dlmark--link' : '', extra].filter(Boolean).join(' ');
     if (element.className !== className) element.className = className;
     const withNumber = numbered(progress.kind, size);
     const drawn = progress.kind + (withNumber ? ' number' : '');
@@ -80,9 +150,7 @@ export const paintDownloadMark = (element: HTMLElement, progress: DownloadProgre
     const value = element.querySelector('.jfmod-dlmark-numValue');
     if (value && value.textContent !== String(progress.percent ?? 0)) value.textContent = String(progress.percent ?? 0);
     paintArc(element, progress);
-    if (element.title !== title) element.title = title;
-    setAttribute(element, 'role', 'img');
-    setAttribute(element, 'aria-label', title);
+    paintLink(element, title, link);
 };
 
 interface DownloadStateMarkProps {
@@ -90,15 +158,17 @@ interface DownloadStateMarkProps {
     size: DownloadMarkSize;
     /** Replaces the tooltip. */
     title?: string;
+    /** The download client the ring opens (`ringLink`). */
+    link?: DownloadMarkLink | null;
 }
 
 /** The disc in the mod's own views: the episode detail line, the Queue page's rows, the release picker's added row and a missing
  * episode's download block. */
-const DownloadStateMark: FC<DownloadStateMarkProps> = ({ progress, size, title }) => {
+const DownloadStateMark: FC<DownloadStateMarkProps> = ({ progress, size, title, link = null }) => {
     const ref = useRef<HTMLSpanElement>(null);
     useLayoutEffect(() => {
-        if (ref.current) paintDownloadMark(ref.current, progress, size, '', title);
-    }, [progress, size, title]);
+        if (ref.current) paintDownloadMark(ref.current, progress, size, '', title, link);
+    }, [progress, size, title, link]);
     return <span ref={ref} />;
 };
 
