@@ -158,6 +158,8 @@ video[controls]::-webkit-media-controls {
    longer shows through the fill. */
 .hdrPlayback {
     .videoSubtitles,
+    // Image subtitles (ASS, PGS and VobSub) are drawn on canvases beside the video.
+    .videoPlayerContainer canvas,
     .videoOsdBottom > *,
     .osdHeader > *,
     .upNextDialog > *,

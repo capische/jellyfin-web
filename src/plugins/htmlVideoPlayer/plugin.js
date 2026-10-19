@@ -328,6 +328,21 @@ const VOBSUB_DEBAND_THRESHOLD = 64;
 const VOBSUB_DEBAND_RANGE = 15;
 const SECONDARY_TEXT_TRACK_INDEX = 1;
 
+/**
+ * Whether a transcode only repackages the video, so an HDR source stays HDR: the server's
+ * reasons for it are all about the audio or the container.
+ * @param {object} mediaSource
+ * @returns {boolean}
+ */
+function transcodeKeepsVideo(mediaSource) {
+    try {
+        const reasons = new URL(mediaSource.TranscodingUrl, window.location.href).searchParams.get('TranscodeReasons');
+        return !!reasons && reasons.split(',').every((reason) => /^(Audio|SecondaryAudio|ContainerNotSupported)/.test(reason));
+    } catch {
+        return false;
+    }
+}
+
 export class HtmlVideoPlayer {
     /**
      * @type {string}
@@ -473,6 +488,11 @@ export class HtmlVideoPlayer {
      * @type {boolean}
      */
     #initialAudioPending = false;
+    // Bumped by play(), stop() and destroy(), so a start that is waiting on the paused audio
+    // switch can tell it was replaced or cancelled and must not touch the element any more.
+    #playGeneration = 0;
+    /** @type {(() => void) | null} */
+    #cancelAudioSwitch = null;
     /**
      * @type {boolean | undefined}
      */
@@ -636,6 +656,7 @@ export class HtmlVideoPlayer {
     }
 
     async play(options) {
+        this.#cancelPendingStart();
         this.#started = false;
         // Disarmed until the new source is attached, so a late event from the previous source
         // cannot apply a selection to the wrong tracks.
@@ -656,8 +677,13 @@ export class HtmlVideoPlayer {
         this.#applyAspectRatio(options.aspectRatio || this.getAspectRatio());
         // webOS 6 and newer lift web graphics to HDR peak brightness while HDR video plays,
         // so white overlays glare; style.scss dims them while this class is set.
+        // A video transcode may be tone-mapped to SDR while the source still says HDR, so only
+        // streams that keep the video count. Dolby Vision with an SDR base layer is reported
+        // as SDR but is shown as Dolby Vision, so it counts too.
         const hdrVideo = browser.web0sVersion >= 6
-            && options.mediaSource.MediaStreams?.some((s) => s.Type === 'Video' && s.VideoRange === 'HDR');
+            && (options.playMethod !== 'Transcode' || transcodeKeepsVideo(options.mediaSource))
+            && options.mediaSource.MediaStreams?.some((s) => s.Type === 'Video'
+                && (s.VideoRange === 'HDR' || s.VideoRangeType?.startsWith('DOVI')));
         applyHdrOverlayDim();
         document.documentElement.classList.toggle('hdrPlayback', !!hdrVideo);
 
@@ -807,10 +833,16 @@ export class HtmlVideoPlayer {
                 elem.crossOrigin = 'use-credentials';
             }
 
+            const generation = this.#playGeneration;
             return applySrc(elem, val, options).then(async () => {
                 this.#currentSrc = val;
                 if (switchBeforePlay) {
                     await this.switchAudioTrackBeforePlay(elem);
+                }
+                // Stopped or replaced while waiting: that start owns the element now. The manager
+                // is told it never started, not that it succeeded.
+                if (generation !== this.#playGeneration) {
+                    return Promise.reject({ playbackCancelled: true });
                 }
                 this.armInitialAudioTrack();
 
@@ -1098,6 +1130,7 @@ export class HtmlVideoPlayer {
         const src = this.#currentSrc;
 
         document.documentElement.classList.remove('hdrPlayback');
+        this.#cancelPendingStart();
 
         if (elem) {
             if (src) {
@@ -1118,6 +1151,7 @@ export class HtmlVideoPlayer {
 
     destroy() {
         this.setSubtitleOffset.cancel();
+        this.#cancelPendingStart();
 
         destroyHlsPlayer(this);
         destroyFlvPlayer(this);
@@ -1174,6 +1208,7 @@ export class HtmlVideoPlayer {
          * @type {HTMLMediaElement}
          */
         const elem = e.target;
+        document.documentElement.classList.remove('hdrPlayback');
         this.destroyCustomTrack(elem);
         onEndedInternal(this, elem, this.onError);
     };
@@ -1233,6 +1268,16 @@ export class HtmlVideoPlayer {
      * @param elem {HTMLMediaElement} The video element
      * @returns {Promise<void>}
      */
+    /**
+     * Cancels a start that is waiting on the paused audio switch: its listeners and timer go and
+     * the wait resolves, and the start then sees the bumped generation and stops.
+     * @private
+     */
+    #cancelPendingStart() {
+        this.#playGeneration++;
+        this.#cancelAudioSwitch?.();
+    }
+
     switchAudioTrackBeforePlay(elem) {
         const index = this.#audioTrackIndexToSetOnPlaying;
 
@@ -1242,6 +1287,7 @@ export class HtmlVideoPlayer {
             const events = ['loadedmetadata', 'loadeddata', 'canplay'];
 
             const finish = () => {
+                if (this.#cancelAudioSwitch === finish) this.#cancelAudioSwitch = null;
                 clearTimeout(timer);
                 events.forEach((ev) => {
                     elem.removeEventListener(ev, trySwitch);
@@ -1253,6 +1299,7 @@ export class HtmlVideoPlayer {
             const onChange = () => {
                 if (switched) finish();
             };
+            this.#cancelAudioSwitch = finish;
             const trySwitch = () => {
                 if (switched) return;
                 const streams = this.getSupportedAudioStreams();
