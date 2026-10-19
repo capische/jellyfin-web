@@ -1570,12 +1570,19 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
     10/9/2026, 10:06:58 PM" is now "verified").
   - **The TMDB token is optional (P1.FU13, user 2026-10-12).** Its note, in the settings area and on the Dashboard page,
     reads "Leave empty to use Jellyfin's built-in TMDb connection. A saved token is used instead, for JellyfinMod
-    discovery only." (user, 2026-10-15: "Optional" moved into the settings area's label, "TMDB API Read Access Token (Optional)",
-    as for every optional field there; the Test Token icon has no description under the box). Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
+    discovery only." (user, 2026-10-19: the label is "TMDB API Read Access Token", with no "(Optional)" and no mark, as for every
+    field that is not required; the Test Token icon has no description under the box). Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
     "Using your token · tested …" / "Using your token · not tested since it changed". With no token there is no Test icon
     (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
-  - **Optional fields say so (user, 2026-10-15).** The settings area's `FieldForm` appends " (Optional)" to the label of every field
-    declared `optional`; the secret fields are labelled by hand. The Dashboard page is unchanged.
+  - **Required fields say so with an asterisk first; nothing says "(Optional)" (user, 2026-10-19: "Go with asterisks everywhere", P7.FU7,
+    replacing "Optional fields say so" of 2026-10-15, whose suffix was cut off on phones).** A field that must hold a value to save
+    is labelled `* Name`: the star is the label's CSS `::before` (`.jfmod-required`), takes the label's colour and size, and is
+    kept out of the accessible name, while the input says `aria-required`. A field that has a default or can stay empty has no
+    mark. Twelve fields carry it: the Prowlarr address and its API key (only while none is saved), the indexer's Name and Torznab
+    address, the download client's Name, Transmission RPC address and both folders, a path mapping's two paths, and, only while
+    shown, Selected user and a separate seed's RPC address. Every settings-area field, in the wizard, the sections and the
+    dialogs, goes through `FieldForm`/`SecretField` and follows this; the Dashboard page is unchanged. No legend. Details:
+    [guides/settings-field.md](design/guides/settings-field.md); the audit: [required-fields-audit.md](design/required-fields-audit.md).
   - **The wizard's Continue (user, 2026-10-15).** A done step shows no banner ("This step is done." is gone) and no top notice: what
     blocks a step is one muted line with a small lock in the card footer, left of the buttons (P7.FU4, user 2026-10-15, option A of the
     design session's `wizard-step-blockers`): **"To continue,** test Prowlarr after saving it and add at least one indexer and turn it

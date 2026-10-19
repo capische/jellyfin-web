@@ -132,9 +132,18 @@ export const SectionFrame: FC<SectionFrameProps> = ({
     );
 };
 
+/**
+ * The marks of a required field (user, 2026-10-19, `design/guides/settings-field.md`): the asterisk is the label's CSS
+ * `::before` (not MUI's `required`, whose DOM text would change the accessible name every runner finds the field by), and
+ * the input says `aria-required` for screen readers.
+ */
+export const REQUIRED_SLOTS = { inputLabel: { className: 'jfmod-required' }, htmlInput: { 'aria-required': true } };
+
 interface SecretFieldProps {
     id: string;
     label: string;
+    /** The labelled, unconfigured field is required (a Prowlarr key to add the source); the Configured box needs no mark. */
+    required?: boolean;
     configured: boolean;
     change: SecretChange;
     onChange: (change: SecretChange) => void;
@@ -234,7 +243,7 @@ const SecretIcon: FC<{ label: string; red?: boolean; onClick: () => void; action
  * input only while a replacement is being typed. The page never receives, holds or logs a stored value.
  * Sections key it by their revision, so a save returns it to "Configured" instead of an empty "New …" input.
  */
-export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, change, onChange, test, save }) => {
+export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configured, change, onChange, test, save }) => {
     const [editing, setEditing] = useState(false);
     const undo = useCallback(() => onChange({ action: 'unchanged', value: null }), [onChange]);
     const type = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value ?
@@ -280,6 +289,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
         // text start are the box's, see settings.scss); a secret with nothing stored keeps its labelled field.
         const fieldNaming = configured ? { className: 'jfmod-secret-input', placeholder: 'New value', hiddenLabel: true } : { label };
         const accessibleName = configured ? { 'aria-label': `New ${label}` } : undefined;
+        const requiredMarks = required && !configured ? REQUIRED_SLOTS : undefined;
         // One field: the buttons sit inside it, at its right end, as the Configured box holds its own (user, 2026-10-09).
         const buttons = (save || configured) && (
             <span className='jfmod-secret-inputrow'>
@@ -308,7 +318,8 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, configured, chang
                     onKeyDown={saveOnEnter}
                     slotProps={{
                         input: { endAdornment: buttons || undefined },
-                        htmlInput: accessibleName
+                        inputLabel: requiredMarks?.inputLabel,
+                        htmlInput: { ...accessibleName, ...requiredMarks?.htmlInput }
                     }}
                 />
                 {below}
@@ -339,7 +350,10 @@ export interface FieldSpec {
     type: 'bool' | 'int' | 'number' | 'text' | 'select' | 'list';
     options?: { value: string; label: string }[];
     help?: string;
+    /** An emptied number is sent as null (the server's nullable fields), not NaN. */
     optional?: boolean;
+    /** The field must hold a value to save: its label gets the asterisk first (`.jfmod-required`) and its input `aria-required`. */
+    required?: boolean;
 }
 
 export type Draft = Record<string, unknown>;
@@ -370,7 +384,12 @@ const ListField: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange }>
         onChange(field.key, parseList(event.target.value));
     }, [field.key, onChange]);
     const tidy = useCallback(() => setText(list.join(', ')), [list]);
-    return <TextField fullWidth margin='dense' label={field.label} helperText={field.help} value={text} onChange={edit} onBlur={tidy} />;
+    return (
+        <TextField
+            fullWidth margin='dense' label={field.label} helperText={field.help} value={text} onChange={edit} onBlur={tidy}
+            slotProps={field.required ? REQUIRED_SLOTS : undefined}
+        />
+    );
 };
 
 /** One control of a FieldForm, chosen by the field's type. */
@@ -399,7 +418,7 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
         return (
             <TextField
                 select fullWidth margin='dense' label={field.label} helperText={field.help}
-                value={value ?? ''} onChange={choose} slotProps={FOCUSABLE_SELECT}
+                value={value ?? ''} onChange={choose} slotProps={field.required ? { ...FOCUSABLE_SELECT, ...REQUIRED_SLOTS } : FOCUSABLE_SELECT}
             >
                 {field.options?.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
             </TextField>
@@ -414,20 +433,18 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
             type={type === 'int' || type === 'number' ? 'number' : 'text'}
             value={shown}
             onChange={edit}
+            slotProps={field.required ? REQUIRED_SLOTS : undefined}
         />
     );
 };
 
-/** An optional field says so in its label (user, 2026-10-15). */
+/** Only a required field is marked, with the asterisk first; no field says "(Optional)" (user, 2026-10-19). */
 export const FieldForm: FC<{ fields: FieldSpec[]; draft: Draft; onChange: FieldChange }> = ({
     fields, draft, onChange
 }) => (
     <div className='jfmod-group'>
         {fields.map(field => (
-            <FieldControl
-                key={field.key} value={draft[field.key]} onChange={onChange}
-                field={field.optional ? { ...field, label: `${field.label} (Optional)` } : field}
-            />
+            <FieldControl key={field.key} value={draft[field.key]} onChange={onChange} field={field} />
         ))}
     </div>
 );
