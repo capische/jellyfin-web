@@ -31,8 +31,8 @@ Mark it when a new record starts with the field empty and Save, Test or Add refu
 without it. A field with a default or a value it keeps (Priority, Label, Sync every, the Automation numbers, a profile's Name),
 or that may stay empty (Username, Password, Web interface link, seed goals), has no mark. A field that is shown only in some
 state (Selected user, a separate seed's RPC address) is marked only while shown. In a phone dialog the field is about 248 px
-wide, so a marked label must fit with its two extra characters; a label that fits by little (*\* Download folder as Transmission
-sees it*, 1 px to spare at 360 px) is shortened rather than allowed to cut.
+wide, so a marked label must fit with its two extra characters; a label that fits by little (*\* Download folder as Transmission sees it*, 1 px to spare at 360 px, became "Download folder in Transmission")
+is shortened rather than allowed to cut.
 
 ## Spec in code
 
