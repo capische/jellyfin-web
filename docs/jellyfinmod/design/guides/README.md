@@ -15,6 +15,7 @@ values.
 | [download-block.md](download-block.md) | a missing episode's download panel | the episode page |
 | [quality-profiles.md](quality-profiles.md) | the Quality Profiles section rows and the Add / Edit dialog | settings area, setup wizard |
 | [wizard-step-footer.md](wizard-step-footer.md) | the "To continue, …" line beside Continue | the setup wizard |
+| [settings-field.md](settings-field.md) | a settings field's label, the required asterisk and the help line | settings area, setup wizard, settings dialogs |
 | [buttons-and-row-actions.md](buttons-and-row-actions.md) | the three button kinds and the round icon-only row actions | everywhere in the mod |
 
 ## How to use a guide
