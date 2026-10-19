@@ -955,6 +955,32 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Queue page draws discs, not words, and is unchanged. Runners moved to the new strings: `card-progress.mjs`,
   `missing-seasons-episodes.mjs`, `queued-state.mjs`. Gate 1 (first look) on local
   delta; the rest, real Chrome and the Codex review are not run.
+  **P4.FU16, built (not accepted) 2026-10-19: an administrator's download ring opens the download client, and the Queue page's
+  titles and client are links** (user 2026-10-19: "Can you make download or queued clickable and open in download client?", then
+  "The buttons only (I believe you meant a ring)" and "Administrators only"; on the Queue page: no empty room between State and
+  Client, the title split into links, the client name a link and Open in Client out of the row menu; [UX.md](UX.md) §3.3, §10;
+  guide [download-state-mark.md](design/guides/download-state-mark.md), which said "never a control" and now names this
+  exception). Owner: Phase 4's ring family (P4.FU6) with Phase 5's queue page. Web only, no plugin change, no migration: the link
+  is the queue row's `client.openUrl`, the client's saved Web interface link, which `GET /JellyfinMod/Queue` already sends to
+  administrators only (null for everyone else), so the rings read it from the queue the page already holds, with no new request
+  and nothing new exposed. `ringLink` (`components/DownloadStateMark.tsx`): a queued, downloading, importing or stalled ring on
+  cards, rows, the detail line, the Queue page, the picker's added row and the download block becomes `role="link"`, a Tab stop on
+  desktop and phone, a pointer and a thin ring in its own ink under the mouse (picked live from two candidates, the other a
+  brightening that did not show on transparent rows), the cyan keyboard ring, the tooltip's second line `Open <client name>`;
+  a click or Enter opens the link in a new tab (`noopener`) and stops there, so a card's or row's title does not open. Not on the
+  TV, not for a failed disc or the cloud, not for an ordinary user, not without a saved Web interface link: those stay as they
+  were (an ordinary user's card disc still forwards its click to the card). Queue page (`components/QueuePage.tsx`, `queue.scss`):
+  the State column takes the width of what it holds and the title 50 % (was 30 % and 20 %); the title's parts link the series,
+  `Season N` and the episode (the mod's season and episode routes) on desktop and phone (the TV row is a button, so text); the
+  Client cell no longer wraps and its name is a link for administrators with a saved link; `Open in Client` is gone from the row
+  menu (`integration/queueActions.ts`; it was administrators only, so no ordinary user loses anything; the TV's action sheet,
+  which had it, now has no link out to the client). First look on local environment charlie (Chromium headless, web built from
+  `main-stubs` `2ac29996ae` plus this slice, plugin `main-stubs` `5f2199e`, stand-ins at port base 38210 with a Season 2 pack at
+  25 %, another version of S01E01 queued and of the movie at 42 %, Web interface link set to the shared Transmission's page):
+  administrator desktop 1440 and 1280 25/25 each, phone 360 25/25, TV 1920×1080 16/16 (no links), ordinary user (nata) desktop
+  and phone 19/19 each (no link, no client in any response), administrator with an empty Web interface link 20/20 (no links).
+  Not run: real Chrome, the TV at 1280×720, a physical TV, the full runner matrix, the importing and stalled states live (same
+  code path as queued and downloading), a failed ring live (excluded by `ringLink`), Codex review.
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
