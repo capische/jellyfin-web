@@ -1033,7 +1033,7 @@ const syncNotice = (outcome: any): NoticeState => {
 const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     const source = data.prowlarr?.[0];
     const section = useSectionState(reload, PROWLARR_READS);
-    const [draft, set, , sourceSaved] = useDraft(source, { name: 'Prowlarr', baseUrl: '', enabled: true, syncIntervalMinutes: 360 }, section);
+    const [draft, set, , sourceSaved] = useDraft(source, { baseUrl: '', enabled: true, syncIntervalMinutes: 360 }, section);
     const keySecret = useSecretChange(source?.id, source?.revision, section.resets);
     const key = keySecret.change;
     const setKey = keySecret.set;
@@ -1054,7 +1054,7 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
         const revision = source ? keySecret.revisionFor((draft.revision as number | undefined) ?? source.revision) : undefined;
         const origin = keySecret.origin(revision);
         void run(async () => {
-            const body = { ...pick(draft, ['name', 'baseUrl', 'enabled', 'syncIntervalMinutes']), apiKey: key };
+            const body = { ...pick(draft, ['baseUrl', 'enabled', 'syncIntervalMinutes']), apiKey: key };
             const saved = source ?
                 await request<any>(api, 'PATCH', `Settings/Prowlarr/${source.id}`, { ...body, revision }) :
                 await request<any>(api, 'POST', 'Settings/Prowlarr', body);
@@ -1085,7 +1085,6 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
                 </p>
             )}
             <FieldForm fields={[
-                { key: 'name', label: 'Name', type: 'text' },
                 { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true, help: 'For example http://host:9696, without credentials.' },
                 { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
                 { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }

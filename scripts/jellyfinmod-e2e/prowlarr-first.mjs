@@ -190,7 +190,6 @@ for (const name of ready ? only : []) {
         if (firstLayout) {
             // ---- The Indexers step: Prowlarr's address and key, Add, Sync Now; its synced indexer verifies the step.
             const card = page.locator('[data-prowlarr="card"]');
-            await field(card, 'Name').fill('JellyfinMod Prowlarr');
             await field(card, 'Prowlarr address').fill(prowlarrUrl);
             await page.locator('#jfmodProwlarrKey').fill(fixture.PROWLARR_KEY);
             await press(layout, card.locator('button', { hasText: 'Add Prowlarr' }));

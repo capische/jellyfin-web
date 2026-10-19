@@ -491,6 +491,10 @@ The client Test reads `session-get` only and never adds a torrent.
 `webdl-1080p`). `PATCH` with `enabled: true` answers 409 `acquisition_not_ready` with the blockers
 until a verified indexer, a verified enabled client and a default profile exist.
 
+`POST` and `PATCH /JellyfinMod/Settings/Prowlarr` take `name` as optional (user, 2026-10-19; the settings form has no Name
+field, and there is one source): a new source without a name is called `Prowlarr`, an edit without one keeps the stored name,
+and a name that is sent is still stored (unique, at most 64 characters). The old `invalid_name` answer is gone.
+
 `GET /JellyfinMod/Settings/Prowlarr/{id}/DownloadClients` (P6.FU1, administrator-only like every Prowlarr route)
 reads Prowlarr's `api/v1/downloadclient` with the source's saved key, on the server: the key never reaches the browser.
 It uses the acquisition HTTP client (no redirects, 20 s timeout) and refuses a body over 256 KiB (`response_too_large`).

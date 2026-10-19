@@ -39,7 +39,7 @@ const secretValues = [secrets.PROWLARR_KEY, secrets.TX_PASSWORD, secrets.TMDB_TO
 const TX = `http://${standin}:${portBase + 2}/transmission/rpc`;
 const PROWLARR = `http://${standin}:${portBase + 1}`;
 const TORZNAB = `${PROWLARR}/1/api`;
-const NAMES = { client: 'JellyfinMod Standin Transmission', indexer: 'JellyfinMod Standin Torznab', invalid: 'JellyfinMod Invalid Indexer', prowlarr: 'JellyfinMod Standin Prowlarr' };
+const NAMES = { client: 'JellyfinMod Standin Transmission', indexer: 'JellyfinMod Standin Torznab', invalid: 'JellyfinMod Invalid Indexer' };
 
 const control = path => JSON.parse(execFileSync('ssh', [required('JELLYFINMOD_STANDIN_SSH'), `curl -s 'http://127.0.0.1:${portBase + 9}${path}'`], { encoding: 'utf8' }));
 const scrub = value => {
@@ -296,7 +296,6 @@ try {
     // ---- 3 Prowlarr card: add, replace the key, Test, Sync, Remove
     const card = page.locator('[data-prowlarr="card"]');
     const cardNotice = () => noticeText(card.locator('.jfmod-notice').first());
-    await fill(card, 'Name', NAMES.prowlarr);
     await fill(card, 'Prowlarr address', PROWLARR);
     await page.locator('#jfmodProwlarrKey').fill(secrets.PROWLARR_KEY);
     await card.getByRole('button', { name: 'Add Prowlarr' }).click();
@@ -387,7 +386,8 @@ try {
 try {
     const leftovers = [];
     for (const item of (await api('GET', 'JellyfinMod/Settings/Prowlarr')).body ?? []) {
-        if (/^JellyfinMod/.test(item.name)) { leftovers.push('prowlarr ' + item.name); await api('DELETE', `JellyfinMod/Settings/Prowlarr/${item.id}`); }
+        // The card has no Name field, so the fixture source is just "Prowlarr": a leftover is any source the snapshot lacked.
+        if (!(before['Settings/Prowlarr'] ?? []).some(kept => kept.id === item.id)) { leftovers.push('prowlarr ' + item.name); await api('DELETE', `JellyfinMod/Settings/Prowlarr/${item.id}`); }
     }
     for (const item of (await api('GET', 'JellyfinMod/Settings/Indexers')).body ?? []) {
         if (/^JellyfinMod/.test(item.name) && item.managedBy !== 'prowlarr') { leftovers.push('indexer ' + item.name); await api('DELETE', `JellyfinMod/Settings/Indexers/${item.id}`); }
