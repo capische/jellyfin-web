@@ -16,7 +16,7 @@
 //     importing (turning arc), stalled (pause, dimmed arc) and failed (no download on a card); Next Up where Home shows one;
 //   - rows (native and mod season page rows, the pack's episodes each with their own figure, the library list rows): the disc
 //     (2.5em, transparent) as the first round icon of the end slot, NO bar, no figure left of the icons, the figure on the meta
-//     line after the date (`42% · 12 min left`, `42% · 6 min left`, `queued`, `importing…`, `30% · stalled`, `Failed · …`) and
+//     line after the date (`42% · 12 min left`, `42% · 6 min left`, `Queued`, `Importing…`, `Stalled · 30%`, `Failed · …`; treatment B, P4.FU15: all in the text colour at 600, queued and stalled at 75 %) and
 //     in the disc's tooltip; a failure on a row with Not Downloaded takes that mark (a red bang, an indicator since P1.FU19: no
 //     button or, since P1.FU22, the administrator's button disabled; no focus stop, no "search again"), never both; a failure without one is the red bang disc; the light scheme's
 //     colours; P1.FU19: the row disc has the box and glyph of upstream's round row buttons beside it (the heart, More), and no
@@ -211,6 +211,9 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
     return {
         refIcon: disc ? getComputedStyle(neighbour ?? disc.parentElement).color : null,
         refText: meta ? getComputedStyle(text ?? meta.parentElement).color : null,
+        // The theme's full text colour (`--jf-palette-text-primary`), read through a probe.
+        refPrimary: (probe => { document.body.appendChild(probe); const colour = getComputedStyle(probe).color; probe.remove(); return colour; })(
+            Object.assign(document.createElement('i'), { style: 'color: var(--jf-palette-text-primary, #fff)' })),
         id: row.getAttribute('data-id') ?? row.getAttribute('data-jfmod-episode-id'),
         disc: disc ? {
             kind: disc.getAttribute('data-jfmod-kind'), row: disc.classList.contains('jfmod-dlmark--row'), title: disc.title,
@@ -222,7 +225,8 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
             arcOffset: disc.querySelector('.jfmod-dlmark-fill') ? parseFloat(getComputedStyle(disc.querySelector('.jfmod-dlmark-fill')).strokeDashoffset) : null
         } : null,
         meta: meta ? {
-            text: meta.textContent, title: meta.title, colour: getComputedStyle(meta).color, tabular: getComputedStyle(meta).fontVariantNumeric,
+            text: meta.textContent, title: meta.title, colour: getComputedStyle(meta).color, weight: getComputedStyle(meta).fontWeight,
+            opacity: getComputedStyle(meta).opacity, family: getComputedStyle(meta).fontFamily, tabular: getComputedStyle(meta).fontVariantNumeric,
             where: (meta.parentElement.matches('.listItemMediaInfo, .jfmod-missingMeta') && 'meta line')
                 || (meta.parentElement.classList.contains('listItemBody') && 'last line') || 'elsewhere',
             visible: meta.getBoundingClientRect().width > 0, ellipsis: getComputedStyle(meta).textOverflow
@@ -328,9 +332,9 @@ async function run(browser, layout) {
             { state: 'downloading', progress: 0.42, etaSeconds: 720, downloadRateBytes: 3100000, meta: '42% · 12 min left',
                 tooltip: 'Downloading · 42% · 12 min left · 3 MB/s', kind: 'downloading', percent: 42 },
             { pack: true, meta: '42% · 6 min left', tooltip: 'Downloading · 42% · 6 min left · 2 MB/s', kind: 'downloading', percent: 42 },
-            { state: 'queued', meta: 'queued', tooltip: 'Queued', kind: 'queued' },
-            { state: 'linking', progress: 1, meta: 'importing…', tooltip: 'Importing…', kind: 'importing' },
-            { state: 'stalled', progress: 0.3, meta: '30% · stalled', tooltip: 'Stalled at 30%', kind: 'stalled', percent: 30 },
+            { state: 'queued', meta: 'Queued', tooltip: 'Queued', kind: 'queued' },
+            { state: 'linking', progress: 1, meta: 'Importing…', tooltip: 'Importing…', kind: 'importing' },
+            { state: 'stalled', progress: 0.3, meta: 'Stalled · 30%', tooltip: 'Stalled at 30%', kind: 'stalled', percent: 30 },
             { state: 'failed', progress: 0.1, message: 'No space left on the download disk.', meta: 'Failed · No space left on the download disk.',
                 tooltip: 'Failed · No space left on the download disk.', kind: 'failed' }
         ].slice(0, inSeason.length);
@@ -352,16 +356,16 @@ async function run(browser, layout) {
 
         // The pack's episodes on the missing season, each with its own file (P4.FU5).
         const PACK_OWN = [
-            { importState: 'scanning', progress: 1, meta: 'importing…', kind: 'importing' },
+            { importState: 'scanning', progress: 1, meta: 'Importing…', kind: 'importing' },
             { importState: 'waiting', progress: 0.42, sizeBytes: 1200000000, meta: '42% · 6 min left', kind: 'downloading' },
             { importState: 'waiting', progress: 0.1, meta: '10%', kind: 'downloading' },
-            { importState: 'waiting', progress: 1, meta: 'importing…', kind: 'importing' },
-            { importState: 'waiting', progress: 0, meta: 'queued', kind: 'queued' },
+            { importState: 'waiting', progress: 1, meta: 'Importing…', kind: 'importing' },
+            { importState: 'waiting', progress: 0, meta: 'Queued', kind: 'queued' },
             { importState: 'blocked', reason: 'source_missing', progress: 0.3, meta: 'Failed · The downloaded file could not be found.', kind: 'failed' }
         ];
         const packEpisodes = missingSeason === undefined ? [] : detail.episodes.filter(episode => episode.seasonNumber === missingSeason)
             .sort((a, b) => a.episodeNumber - b.episodeNumber);
-        const packExpected = packEpisodes.map((episode, index) => ({ episode, ...(PACK_OWN[index] ?? { importState: null, progress: null, meta: 'queued', kind: 'queued' }) }));
+        const packExpected = packEpisodes.map((episode, index) => ({ episode, ...(PACK_OWN[index] ?? { importState: null, progress: null, meta: 'Queued', kind: 'queued' }) }));
         const packItems = missingSeason === undefined ? [] : [queueRow(entry, { state: 'downloading', progress: 0.6, etaSeconds: 3900,
             downloadRateBytes: 2000000, pack: { scope: 'season', label: `Season ${missingSeason} pack`, mode: 'fill',
                 episodes: packExpected.map(({ episode, ...own }) => packEpisode(episode, own)) } })];
@@ -494,8 +498,9 @@ async function run(browser, layout) {
             record(label, `season page E${episode.episodeNumber} (${kind} row): ${expected.kind === 'failed' && row?.failedButton ? 'the red bang takes Not Downloaded, an indicator' : 'the ' + expected.kind + ' disc (2.78em) first in the end slot'}, "${expected.meta}" on the meta line, no bar, no figure left of the icons`,
                 !!row && !!discOk && row.meta?.text === expected.meta && row.meta.where !== 'elsewhere' && row.meta.visible && row.bars === 0
                 && row.oldFigure === 0 && /tabular-nums/.test(row.meta.tabular ?? '')
-                // Importing steps up to the full text colour (e8b835537c, design A); the other words keep the line's colour.
-                && (expected.kind === 'failed' || (expected.kind === 'importing' ? row.meta.colour === 'rgb(255, 255, 255)' : row.meta.colour === row.refText))
+                // Treatment B (P4.FU15): every state's text is the full text colour at 600 in Inter, queued and stalled at 75 %.
+                && (expected.kind === 'failed' || row.meta.colour === 'rgb(255, 255, 255)') && row.meta.weight === '600' && /inter/i.test(row.meta.family)
+                && row.meta.opacity === (expected.kind === 'queued' || expected.kind === 'stalled' ? '0.75' : '1')
                 && (expected.kind !== 'failed' || row.meta.colour === META_FAILED_DARK), row);
         }
         const failedNative = SEASON.findIndex(fixture => fixture.kind === 'failed');
@@ -507,12 +512,12 @@ async function run(browser, layout) {
         const light = await rowStates(page);
         await shot('rows-season-light', true);
         const lightDownloading = light.find(row => row.meta?.text === '42% · 12 min left');
-        const lightStalled = light.find(row => row.meta?.text === '30% · stalled');
+        const lightStalled = light.find(row => row.meta?.text === 'Stalled · 30%');
         const lightFailed = light.find(row => row.meta?.text?.startsWith('Failed · '));
-        record(label, 'light scheme: the figure is the line\'s own text colour and the disc the upstream row icons\' (neither amber), a failure #c62828',
-            lightDownloading?.meta?.colour === lightDownloading?.refText && lightDownloading?.disc?.colour === lightDownloading?.refIcon
+        record(label, 'light scheme: the figure is the text colour at 600 and the disc the upstream row icons\' (neither amber), a failure #c62828',
+            lightDownloading?.meta?.colour === lightDownloading?.refPrimary && lightDownloading?.meta?.weight === '600' && lightDownloading?.disc?.colour === lightDownloading?.refIcon
             && !/255, 179/.test(lightDownloading?.disc?.colour ?? '') && lightDownloading?.meta?.colour !== 'rgb(154, 103, 0)'
-            && (!lightStalled || lightStalled.meta.colour === lightStalled.refText)
+            && (!lightStalled || lightStalled.meta.colour === lightStalled.refPrimary)
             && (!lightFailed || lightFailed.meta.colour === RED_LIGHT) && (!lightFailed?.failedButton || lightFailed.failedButton.bangColour === 'light')
             && (!lightFailed?.disc || lightFailed.disc.colour === RED_LIGHT), { lightDownloading, lightStalled, lightFailed });
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));

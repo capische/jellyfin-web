@@ -248,7 +248,7 @@ export const seedingSummary = (seeding: QueueSeeding): string => {
 export interface DownloadProgress {
     kind: 'queued' | 'downloading' | 'stalled' | 'importing' | 'failed';
     percent: number | null;
-    /** The meta line: `42% · 12 min left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason`. */
+    /** The meta line: `42% · 12 min left`, `Stalled · 42%`, `Queued`, `Importing…`, `Failed · reason` (no "Downloading" word: the figure alone says it). */
     text: string;
     /** Every disc's tooltip, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s`. */
     tooltip: string;
@@ -274,17 +274,17 @@ export const describeDownload = (kind: DownloadProgress['kind'], percent: number
         text = [percent + '%', eta].filter(Boolean).join(' · ');
         tooltip = ['Downloading', percent + '%', eta, detail.rate ? formatRate(detail.rate) : null].filter(Boolean).join(' · ');
     } else if (kind === 'stalled') {
-        text = percent + '% · stalled';
+        text = 'Stalled · ' + percent + '%';
         tooltip = 'Stalled at ' + percent + '%';
     } else if (kind === 'importing') {
-        text = 'importing…';
+        text = 'Importing…';
         tooltip = 'Importing…';
     } else if (kind === 'failed') {
         text = 'Failed · ' + (detail.reason ?? 'see the download queue');
         tooltip = text;
     } else {
         // The client's own queue position is not in the queue answer, so no "2 ahead" (P4.FU6).
-        text = 'queued';
+        text = 'Queued';
         tooltip = 'Queued';
     }
     return { kind, percent: kind === 'queued' ? null : percent, text, tooltip: tooltip + (stale ? ' · last known' : ''), stale };

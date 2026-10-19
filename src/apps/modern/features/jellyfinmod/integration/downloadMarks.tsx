@@ -25,7 +25,7 @@ import '../components/downloadProgress.scss';
  * part in the primary on top) and the download disc (`DownloadStateMark`: the arrow and the icon-colour arc, a clock, the importing
  * spinner, the pause) top right, left of upstream's tick or count pill, with the figure in its tooltip; a season page's or list
  * view's row gets the disc as the first round icon of its end slot (no bar) and the figure on its meta line (`42% · 12 min
- * left`, `42% · stalled`, `queued`, `importing…`, `Failed · reason`). A series or season shows the mean of its episodes on
+ * left`, `Stalled · 42%`, `Queued`, `Importing…`, `Failed · reason`). A series or season shows the mean of its episodes on
  * their way.
  *
  * One component for the whole app, so every card and row of a page costs one `GET /JellyfinMod/Queue` (the shared queue query):

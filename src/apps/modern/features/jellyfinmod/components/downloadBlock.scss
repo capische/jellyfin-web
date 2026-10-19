@@ -77,6 +77,35 @@
 .jfmod-dlblock-figure--error { color: var(--jfmod-dlblock-error); }
 .jfmod-dlblock-figure--muted { opacity: 0.7; }
 
+/* Treatment B (user 2026-10-19): in every download state the whole line, word and figures, is the text colour at 600; a waiting
+ * state (queued, stalled) at 75 %, a failure red. Downloading has no word on screen, only the figures; the word stays for
+ * assistive technology. Not Downloaded and Unaired keep the quiet look above. */
+.jfmod-dlblock--downloading,
+.jfmod-dlblock--queued,
+.jfmod-dlblock--stalled,
+.jfmod-dlblock--importing,
+.jfmod-dlblock--failed {
+    .jfmod-dlblock-state {
+        font-weight: 600;
+        color: var(--jf-palette-text-primary, #fff);
+    }
+}
+
+.jfmod-dlblock--queued .jfmod-dlblock-state,
+.jfmod-dlblock--stalled .jfmod-dlblock-state { opacity: 0.75; }
+
+.jfmod-dlblock--failed .jfmod-dlblock-state { color: var(--jfmod-dlblock-error); }
+
+.jfmod-dlblock-word--hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
 .jfmod-dlblock-release {
     margin-top: 0.35em;
     overflow: hidden;

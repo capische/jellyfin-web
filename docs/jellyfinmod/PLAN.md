@@ -943,6 +943,18 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (desktop and phone) on local environment delta, with the picker check now showing the 15 GB 4K row accepted; typecheck clean. Not
   run: real Chrome, TV, Codex review.
 
+  **P4.FU15, built (not accepted) 2026-10-19: the download state text, treatment B** (user 2026-10-19, after the design session's
+  playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>: "I'd go with B, 600, Inter, but no need for
+  Downloading... just put % and time"; [guide](design/guides/download-state-mark.md) *Text*, [download block](design/guides/download-block.md),
+  [UX.md](UX.md) §3.3). Owner: P4.FU6's ring family (the text states); web only, style and strings only, no plugin change. One rule
+  for every state replaces the importing-only one: the whole state text in the text colour at 600 in Inter with tabular figures,
+  queued and stalled at 75 %, failed red, a client that could not be read at 55 %, no animation. Strings (`describeDownload`):
+  `42% · 12 min left` (no "Downloading" word; `42%` alone when the time is unknown), `Queued`, `Importing…`, `Stalled · 42%`,
+  `Failed · reason`; tooltips and the picker row's label keep the full words. The download block's line is the same B: downloading
+  shows the figures only (the word stays visually hidden for assistive technology), the other states keep their word. The
+  Queue page draws discs, not words, and is unchanged. Runners moved to the new strings: `card-progress.mjs`,
+  `missing-seasons-episodes.mjs`, `queued-state.mjs`. Gate 1 (first look) on local
+  delta; the rest, real Chrome and the Codex review are not run.
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
