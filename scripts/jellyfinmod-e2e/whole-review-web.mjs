@@ -1921,7 +1921,7 @@ checks.editorDuringSave = async browser => {
         const saved = responseTo(page, 'PATCH', /\/Settings\/QualityProfiles\/[^/]+$/, 20000).catch(() => null);
         await dialog.locator('button', { hasText: /^Save$/ }).click();
         await page.waitForTimeout(400);
-        const seeders = dialog.getByLabel('Minimum seeders (Optional)');
+        const seeders = dialog.getByLabel('Minimum seeders');
         const typed = String((profile?.minimumSeeders ?? 0) + 17);
         await seeders.fill(typed);
         const status = (await saved)?.status();
