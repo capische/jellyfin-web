@@ -69,7 +69,7 @@ export const confirmTorrentRemoval = (releaseTitle: string): Promise<void> =>
     confirm({ title: 'Remove the Torrent', text: REMOVE_TEXT + '<span class="jfmod-confirmName">' + escapeHtml(releaseTitle) + '</span>',
         confirmText: 'Remove', primary: 'delete' });
 
-interface RowMenuOptions {
+export interface RowMenuOptions {
     api: Api;
     row: QueueRow;
     isAdmin: boolean;
@@ -99,17 +99,24 @@ export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {
     return items;
 };
 
-/** The row menu: the stock action sheet on every layout; on TV it is what Enter on a row opens (UX §13). */
-export const openQueueRowMenu = async ({ api, row, isAdmin, positionTo, onChanged }: RowMenuOptions) => {
-    const items = queueRowActions(row, isAdmin);
+/**
+ * The row menu on the phone and the TV: the stock action sheet (on TV what Enter on a row opens, UX §13), its items only (user
+ * 2026-10-19: "No need for such header at all. Just show menu Remove"). The desktop table opens its own popover (QueuePage).
+ */
+export const openQueueRowMenu = async (options: RowMenuOptions) => {
+    const items = queueRowActions(options.row, options.isAdmin);
     if (!items.length) return;
     let id: unknown;
     try {
-        // No title above the items (user 2026-10-19: "No need for such header at all. Just show menu Remove").
-        id = await actionsheet.show({ items, positionTo });
+        id = await actionsheet.show({ items, positionTo: options.positionTo });
     } catch {
         return;
     }
+    await runQueueRowAction(options, id);
+};
+
+/** What a row menu's item does, whichever menu it was chosen in. */
+export const runQueueRowAction = async ({ api, row, positionTo, onChanged }: RowMenuOptions, id: unknown) => {
     if (id === 'cancel') {
         try {
             await cancelGrab(api, row.grabId);
