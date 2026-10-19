@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optional Field Marker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Design proposal (2026-10-18): where "Optional" goes on a settings field so a phone never cuts it off.
+   Static mockup, no build. The field reproduces MUI's filled TextField as the settings area draws it (margin="dense"):
+   the floating label is one line, max-width calc(100% - 24px), white-space nowrap, ellipsis. Theme values from
+   themes/_base/theme.ts (dark) and themes/light/index.ts (light). Root font: 90 % phone, 100 % laptop, 125 % TV. */
+:root {
+  --ground: #101010; --paper: #202020; --fg: #fff; --muted: rgba(255,255,255,.7); --line: rgba(255,255,255,.12);
+  --fill: rgba(255,255,255,.09); --under: rgba(255,255,255,.7); --prim: #00a4dc; --btn: rgba(255,255,255,.16);
+  --btnfg: #fff; --cut: #ff7b72; --ok: #81c784; --page: #181818; color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #f2f2f2; --paper: #e8e8e8; --fg: #000; --muted: rgba(0,0,0,.87); --line: rgba(0,0,0,.12);
+    --fill: rgba(0,0,0,.06); --under: rgba(0,0,0,.42); --btn: #d8d8d8; --btnfg: #000; --cut: #c62828; --ok: #2e7d32;
+    --page: #fafafa; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --ground: #f2f2f2; --paper: #e8e8e8; --fg: #000; --muted: rgba(0,0,0,.87); --line: rgba(0,0,0,.12);
+  --fill: rgba(0,0,0,.06); --under: rgba(0,0,0,.42); --btn: #d8d8d8; --btnfg: #000; --cut: #c62828; --ok: #2e7d32;
+  --page: #fafafa; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #101010; --paper: #202020; --fg: #fff; --muted: rgba(255,255,255,.7); --line: rgba(255,255,255,.12);
+    --fill: rgba(255,255,255,.09); --under: rgba(255,255,255,.7); --btn: rgba(255,255,255,.16); --btnfg: #fff;
+    --cut: #ff7b72; --ok: #81c784; --page: #181818; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #101010; --paper: #202020; --fg: #fff; --muted: rgba(255,255,255,.7); --line: rgba(255,255,255,.12);
+  --fill: rgba(255,255,255,.09); --under: rgba(255,255,255,.7); --btn: rgba(255,255,255,.16); --btnfg: #fff;
+  --cut: #ff7b72; --ok: #81c784; --page: #181818; color-scheme: dark;
+}
+
+/* Root sizing as the app: phone 90 %, laptop 100 %, TV 125 %. */
+html { font-size: 100%; }
+@media (max-width: 600px) { html { font-size: 90%; } }
+@media (min-width: 1800px) { html { font-size: 125%; } }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--fg); font-family: "Noto Sans", sans-serif; font-size: 1rem; line-height: 1.4; }
+
+/* ---- page chrome (the proposal, not the app) ---- */
+.page { padding: 1.2em 3.3% 3em; max-width: 120em; margin: 0 auto; }
+.intro { max-width: 52em; margin-bottom: 1.4em; }
+.intro h1 { font-size: 1.5rem; font-weight: 500; margin: 0 0 .3em; }
+.intro p { margin: 0 0 .5em; color: var(--muted); font-size: .95em; }
+.themes { display: flex; flex-wrap: wrap; margin: .6em 0 0; }
+.themes button { font: inherit; font-size: .85em; min-height: 2.5em; padding: 0 1em; margin: 0 .5em .5em 0; border-radius: .2em; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.themes button[aria-pressed="true"] { background: var(--prim); border-color: var(--prim); color: #fff; }
+.opt { margin: 0 0 2.4em; }
+.opthead { max-width: 60em; margin: 0 0 .8em; }
+.tag { display: inline-block; font-size: .78em; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: .15em .6em; border-radius: .2em; background: var(--btn); color: var(--btnfg); }
+.tag.rec { background: var(--prim); color: #fff; }
+.opthead h2 { font-size: 1.2rem; font-weight: 500; margin: .35em 0 .25em; }
+.opthead p { margin: 0 0 .3em; color: var(--muted); font-size: .92em; }
+.pros { margin: .3em 0 0; padding: 0; list-style: none; font-size: .88em; color: var(--muted); }
+.pros li { margin: 0 0 .15em; padding-left: 1.2em; position: relative; }
+.pros li::before { position: absolute; left: 0; font-weight: 700; }
+.pros li.plus::before { content: "+"; color: var(--ok); }
+.pros li.minus::before { content: "\2212"; color: var(--cut); }
+
+/* ---- the app: wizard rail + section card (settings.scss) ---- */
+.app { display: flex; align-items: flex-start; }
+.rail { flex: none; width: 21em; background: var(--paper); border-radius: .2em; padding: 1em 0 .6em; margin-right: 1.5em; }
+.rail .hd { padding: 0 1.1em .8em; border-bottom: 1px solid var(--line); }
+.rail .hd b { display: block; font-weight: 500; font-size: 1.05em; }
+.rail .hd span { font-size: .85em; color: var(--muted); }
+.rail ol { list-style: none; margin: .4em 0 0; padding: 0; }
+.rail li { display: flex; align-items: center; padding: .55em 1.1em .55em .9em; border-left: .25em solid transparent; }
+.rail li.cur { border-left-color: var(--prim); background: var(--fill); }
+.rail .n { flex: none; width: 1.7em; height: 1.7em; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .8em; font-weight: 600; margin-right: .85em; border: .12em solid var(--muted); color: var(--muted); }
+.rail .n.ok { border-color: var(--ok); color: var(--ok); }
+.main { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 960px) { .rail { display: none; } }
+
+.card { background: var(--paper); border-radius: .2em; margin: 0 0 1em; }
+.sechead { padding: 1.1em 1.5em 1em; border-bottom: 1px solid var(--line); }
+.eyebrow { font-size: .78em; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .15em; }
+.sechead h3 { margin: 0; font-size: 1.25em; font-weight: 500; }
+.sechead .st { font-size: .85em; color: var(--ok); margin-top: .25em; }
+.secbody { padding: 1.4em 1.5em .4em; }
+.secfoot { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; padding: .9em 1.5em; border-top: 1px solid var(--line); }
+@media (max-width: 960px) { .sechead, .secbody, .secfoot { padding-left: 1em; padding-right: 1em; } }
+
+/* MUI Dialog (fullWidth, maxWidth sm): 32 px margin, 600 px wide, content padding 0 24 px. */
+.dialog { background: var(--paper); border-radius: 4px; max-width: 600px; margin: 0 0 1em; box-shadow: 0 11px 15px -7px rgba(0,0,0,.2), 0 24px 38px 3px rgba(0,0,0,.14); }
+@media (max-width: 600px) { .dialog { margin: 0 calc(32px - 3.3vw) 1em; } }
+.dialog .dt { padding: 16px 24px; font-size: 1.25rem; font-weight: 500; }
+.dialog .dc { padding: 0 24px 8px; }
+.dialog .da { display: flex; justify-content: flex-end; padding: 8px; }
+.context { font-size: .8em; color: var(--muted); margin: 0 0 .4em; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5em; padding: 0 1.4em; border-radius: .2em; font: inherit; font-size: .9em; font-weight: 600; background: var(--btn); color: var(--btnfg); margin-left: .6em; border: 0; white-space: nowrap; }
+.btn.blue { background: var(--prim); color: #fff; }
+
+/* ---- MUI filled TextField, margin="dense" (px as MUI writes them) ---- */
+.fc { position: relative; display: flex; flex-direction: column; width: 100%; margin: 8px 0 4px; }
+.fl { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; transform-origin: top left; transform: translate(12px, 13px) scale(1);
+      max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 1rem; line-height: 1.4375em; }
+.fc.shrunk .fl { transform: translate(12px, 4px) scale(.75); max-width: calc(133% - 32px); }
+.fi { position: relative; display: flex; align-items: center; background: var(--fill); border-radius: 4px 4px 0 0; }
+.fi::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; border-bottom: 1px solid var(--under); }
+.fi .val { flex: 1; min-width: 0; font-size: 1rem; line-height: 1.4375em; height: 1.4375em; padding: 21px 12px 4px; box-sizing: content-box; color: var(--fg); white-space: nowrap; overflow: hidden; }
+.fh { margin: 3px 12px 0; font-size: 1rem; line-height: 1.66; color: var(--muted); }
+.fd { font-size: .9em; color: var(--muted); margin: .4em 0 .6em; line-height: 1.45; }
+.fh b, .fd b { font-weight: 600; color: inherit; }
+.ri { flex: none; width: 2.5em; height: 2.5em; margin-right: 4px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); opacity: .45; }
+.ri svg { width: 1.4em; height: 1.4em; fill: currentColor; }
+
+/* Today's failure, shown honestly: the cut label gets a red bracket in the mockup only. */
+.fc.cut .fi { box-shadow: inset .2em 0 0 var(--cut); }
+.cutnote { font-size: .78em; color: var(--cut); margin: 2px 12px 0; }
+
+/* C: the optional glyph, a dashed ring (no Material icon means "optional"). */
+.og { display: inline-block; width: .8em; height: .8em; margin-left: .35em; vertical-align: -.06em; }
+.og circle { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-dasharray: 3.4 2.6; }
+.legend { display: flex; align-items: center; font-size: .9em; color: var(--muted); margin: 0 0 .4em; }
+.legend .og { margin: 0 .45em 0 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <h1>Optional Field Marker</h1>
+    <p>On a phone the settings fields' floating label is one line and is cut with an ellipsis, so <b>(Optional)</b>, the last
+      thing in it, is what disappears. A is today; B moves the word to the line under the field, where text wraps; C replaces it with an icon.</p>
+    <p><b>Recommendation: B.</b> The word stays a word: no legend to learn, nothing to hover on a phone or a TV, and it can never be cut.</p>
+    <div class="themes" role="group" aria-label="Theme">
+      <button type="button" data-set="" aria-pressed="true">Auto</button>
+      <button type="button" data-set="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-set="light" aria-pressed="false">Light</button>
+    </div>
+  </header>
+  <div id="opts"></div>
+</div>
+
+<script>
+(function () {
+  var SAVE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>';
+  var RING = '<svg class="og" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/></svg>';
+  var TMDB_NOTE = 'Leave empty to use Jellyfin’s built-in TMDb connection. A saved token is used instead, for JellyfinMod discovery only.';
+  // The Add Indexer dialog's fields, as settingsSections.tsx declares them (an excerpt).
+  var INDEXER = [
+    { label: 'Priority (lower first)', value: '25' },
+    { label: 'Extra download hosts', optional: true },
+    { label: 'Minimum seed ratio', optional: true },
+    { label: 'Minimum seeding minutes', optional: true, value: '60' },
+    { label: 'Seconds between searches', optional: true }
+  ];
+  var CLIENT = [
+    { label: 'Transmission RPC address', value: 'http://nas:9091/transmission/rpc', help: 'For example http://host:9091/transmission/rpc, without credentials.' },
+    { label: 'Web interface link', optional: true, help: 'Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' }
+  ];
+
+  var OPTIONS = [
+    { key: 'a', tag: 'A · Today', title: '“(Optional)” at the end of the label',
+      text: 'FieldForm appends “ (Optional)” to the label (P7.FU2) and the TMDB token is labelled by hand. MUI keeps a floating label on one line and cuts it with an ellipsis, so on a phone the marker is lost exactly where it is needed; the red bar marks a label that is cut or runs under the field\u2019s Save icon (mockup only; open the page at 360 px to see the TMDB one).',
+      pros: [] },
+    { key: 'b', tag: 'B · Recommended', rec: true, title: '“Optional.” leads the line under the field',
+      text: 'The label is the plain name. The line under the field starts with a bold “Optional.” and then the field’s help, if it has any, the way the wizard footer starts with a bold “To continue,”. Required fields are unmarked, as today.',
+      pros: [
+        ['plus', 'A word, not a symbol: understood without a legend, on a phone, a TV and by a screen reader (MUI links the line to the input with aria-describedby).'],
+        ['plus', 'Wraps, so it is never cut at any width; nothing to hover, no new focus stop for the remote.'],
+        ['plus', 'Smallest change: one line in FieldForm and the TMDB note; no new icon or class to learn.'],
+        ['minus', 'It sits under the field, not beside the name, and adds one line to the ten optional fields that have no help.'],
+        ['minus', 'It reverses where the word went on 2026-10-15 (moved from the help into the label).']
+      ] },
+    { key: 'c', tag: 'C · Alternative', title: 'A small icon after the label, with a one-line legend',
+      text: 'The label ends in a dashed ring instead of the word; the card’s first line explains it once; screen readers hear a hidden “(Optional)”. Required fields stay unmarked: most required fields already hold a value, and some fields that are not declared optional (Username, Label) are not required either, so an asterisk on them would be wrong.',
+      pros: [
+        ['plus', 'Stays beside the name and costs about 1 em instead of about 5 em, so these labels fit on a phone.'],
+        ['minus', 'No icon means “optional”: it needs the legend on every card and dialog that has one, and the legend is easy to miss.'],
+        ['minus', 'No tooltip helps: a label is not focusable, so a phone or a remote cannot reach one.'],
+        ['minus', 'Still inside the one-line label: a label that is long by itself still cuts, and the icon goes with it.']
+      ] }
+  ];
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  function field(o, f, adorn) {
+    var label = esc(f.label);
+    var help = f.help ? esc(f.help) : '';
+    if (f.optional && o.key === 'a') label += ' (Optional)';
+    if (f.optional && o.key === 'b') help = '<b>Optional.</b>' + (help ? ' ' + help : '');
+    if (f.optional && o.key === 'c') label += RING + '<span class="sr"> (Optional)</span>';
+    var shrunk = f.value ? ' shrunk' : '';
+    return '<div class="fc' + shrunk + '" data-opt="' + (f.optional ? '1' : '') + '">' +
+      '<label class="fl">' + label + '</label>' +
+      '<div class="fi"><span class="val">' + (f.value ? esc(f.value) : '') + '</span>' + (adorn || '') + '</div>' +
+      (help ? '<p class="fh">' + help + '</p>' : '') + '</div>';
+  }
+
+  function legend(o) {
+    return o.key === 'c' ? '<p class="legend">' + RING + 'Fields marked like this can be left empty.</p>' : '';
+  }
+
+  function rail() {
+    var steps = ['Discovery', 'Indexers', 'Download Client', 'Quality Profile', 'Turn Grabbing On', 'Optional'];
+    return '<nav class="rail" aria-hidden="true"><div class="hd"><b>Set Up JellyfinMod</b><span>Each step unlocks when the one before it passes its test.</span></div><ol>' +
+      steps.map(function (s, i) { return '<li' + (i === 0 ? ' class="cur"' : '') + '><span class="n' + (i === 0 ? ' ok' : '') + '">' + (i + 1) + '</span>' + s + '</li>'; }).join('') +
+      '</ol></nav>';
+  }
+
+  function option(o) {
+    var tmdb = { label: 'TMDB API Read Access Token', optional: true };
+    var tmdbField = field(o, tmdb, '<span class="ri" title="Save TMDB Token">' + SAVE + '</span>');
+    var note = o.key === 'b' ? '<b>Optional.</b> ' + TMDB_NOTE : TMDB_NOTE;
+    // The TMDB note is the section's own line under the secret field, not MUI's helper text: B starts it with the word too.
+    tmdbField = tmdbField.replace('<p class="fh"><b>Optional.</b></p>', '');
+    var pros = o.pros.map(function (p) { return '<li class="' + p[0] + '">' + p[1] + '</li>'; }).join('');
+    return '<section class="opt" data-option="' + o.key + '">' +
+      '<div class="opthead"><span class="tag' + (o.rec ? ' rec' : '') + '">' + o.tag + '</span><h2>' + o.title + '</h2><p>' + o.text + '</p>' +
+      (pros ? '<ul class="pros">' + pros + '</ul>' : '') + '</div>' +
+      '<div class="app">' + rail() + '<div class="main">' +
+        '<div class="card"><div class="sechead"><div class="eyebrow">Step 1 of 6</div><h3>Discovery</h3><div class="st">Using Jellyfin’s TMDb connection</div></div>' +
+        '<div class="secbody">' + legend(o) + tmdbField + '<p class="fd">' + note + '</p></div>' +
+        '<div class="secfoot"><button class="btn" type="button">Save</button><button class="btn blue" type="button">Continue</button></div></div>' +
+        '<p class="context">Step 2, Add Indexer (dialog, excerpt)</p>' +
+        '<div class="dialog"><div class="dt">Add Indexer</div><div class="dc">' + legend(o) + INDEXER.map(function (f) { return field(o, f); }).join('') + '</div>' +
+        '<div class="da"><button class="btn" type="button">Cancel</button><button class="btn blue" type="button">Save</button></div></div>' +
+        '<p class="context">Step 3, Download Client (excerpt)</p>' +
+        '<div class="card"><div class="secbody">' + legend(o) + CLIENT.map(function (f) { return field(o, f); }).join('') + '</div></div>' +
+      '</div></div></section>';
+  }
+
+  document.getElementById('opts').innerHTML = OPTIONS.map(option).join('');
+
+  // Mark the labels that are cut at this width (red bar, mockup only), so the failure is visible in the screenshot.
+  function markCut() {
+    var all = document.querySelectorAll('.fc');
+    for (var i = 0; i < all.length; i++) {
+      var fc = all[i], fl = fc.querySelector('.fl');
+      var cut = fl.scrollWidth > fl.clientWidth + 1;
+      // A label that runs under the field's own icon (the TMDB Save) is lost as surely as one cut with an ellipsis.
+      var icon = fc.querySelector('.ri');
+      if (icon && fl.getBoundingClientRect().right > icon.getBoundingClientRect().left + 2) cut = true;
+      fc.classList.toggle('cut', cut);
+      fc.setAttribute('data-cut', cut ? '1' : '');
+    }
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(markCut);
+  markCut();
+  window.addEventListener('resize', markCut);
+
+  var buttons = document.querySelectorAll('.themes button');
+  for (var b = 0; b < buttons.length; b++) {
+    buttons[b].addEventListener('click', function (e) {
+      var v = e.currentTarget.getAttribute('data-set');
+      if (v) document.documentElement.setAttribute('data-theme', v); else document.documentElement.removeAttribute('data-theme');
+      for (var k = 0; k < buttons.length; k++) buttons[k].setAttribute('aria-pressed', buttons[k] === e.currentTarget ? 'true' : 'false');
+      markCut();
+    });
+  }
+})();
+</script>
+</body>
+</html>
