@@ -1574,9 +1574,9 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
     field that is not required; the Test Token icon has no description under the box). Discovery's state names the source in use: "Using Jellyfin's TMDb connection" (no token saved), or
     "Using your token · tested …" / "Using your token · not tested since it changed". With no token there is no Test icon
     (it lives in the Configured box); the API's Test checks Jellyfin's connection then.
-  - **Required fields say so with an asterisk first; nothing says "(Optional)" (user, 2026-10-19: "Go with asterisks everywhere", P7.FU7,
+  - **Required fields say so with an asterisk at the end of the label; nothing says "(Optional)" (user, 2026-10-19: "Go with asterisks everywhere", P7.FU7,
     replacing "Optional fields say so" of 2026-10-15, whose suffix was cut off on phones).** A field that must hold a value to save
-    is labelled `* Name`: the star is the label's CSS `::before` (`.jfmod-required`), takes the label's colour and size, and is
+    is labelled `Name *`: the star is the label's CSS `::after` (`.jfmod-required`), takes the label's colour and size, and is
     kept out of the accessible name, while the input says `aria-required`. A field that has a default or can stay empty has no
     mark. Twelve fields carry it: the Prowlarr address and its API key (only while none is saved), the indexer's Name and Torznab
     address, the download client's Name, Transmission RPC address and both folders, a path mapping's two paths, and, only while
