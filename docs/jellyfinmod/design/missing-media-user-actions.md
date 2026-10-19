@@ -716,3 +716,28 @@ series' favourite set before a whole-series swap shows on lists at once but on t
 (Jellyfin's single-item answer comes from a stale cached instance); the open series page shows no season card for about a
 second while a deleted season is replaced. NFO and artwork: the baseline libraries save no metadata to folders, so nothing is
 written; the plugin's item's internal metadata folder goes with it, and the real item downloads its own images.
+
+## 20. P1.FU31: the overview note for native apps (2026-10-19, built, not accepted)
+
+User decision 2026-10-19: native Jellyfin clients (Swiftfin, Android TV, Infuse) see placeholder items as ordinary library items;
+instead of a placeholder clip or stream, the item's overview starts with a short note, and nothing else is added (no stream, no
+clip, no media source, no tagline). Playback of placeholders stays refused as before.
+
+**The note.** `Not downloaded yet. Request it from the JellyfinMod web app.`, then a blank line and the title's own overview,
+if it has one (`PlaceholderItems.Note`, the only copy in the plugin). It is on every item of the plugin's: a file-less series,
+the plugin's seasons, its episodes and its movies. A real series that holds placeholder episodes keeps its own overview.
+
+**Keeping it.** The item store sets it when it makes an item. Jellyfin's refresh fills only an empty overview, so an item made
+with no overview gets the note only after its first refresh, or TMDb's text would never arrive. A refresh with *replace all
+metadata* writes TMDb's overview over the note; `PlaceholderItemListener` sees the save and, after its two-second pause, puts
+the note back and saves once (that save finds the overview right and queues nothing). The same check strips a doubled note to
+one and takes the note off any item that is not the plugin's, so the real item that takes a placeholder's place (a different
+item with its own path and metadata; nothing copies the overview) can never keep it. The catalog never reads a placeholder's
+overview: the native title source skips the plugin's items.
+
+**The web app** shows its own Not Downloaded marks, so it removes the note's paragraph from upstream's rendered overviews on the
+details page: the item's own overview and the episode rows of a season page (`integration/placeholderNote.ts`, a
+MutationObserver started by `integration/nativeEntryDetails.js`, which re-sizes the Show More link and hides an overview left
+empty). No upstream file is patched; other places that show an overview (the mod's Home hero, the item's Share text) are not
+reached by placeholders today and are left alone.
+

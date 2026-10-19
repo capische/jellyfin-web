@@ -958,6 +958,16 @@ by key when it is made, so a placeholder made again after a delete or a reclaim 
 items are never bound by reconciliation and never start a repair. A reclaim (P1.FU25) makes the item at the point where the
 reclaim is recorded (Retention preview `leavesPlaceholder` when the library's switch is on).
 
+**The overview note for native apps (P1.FU31, user 2026-10-19).** A native app (Swiftfin, Android TV, Infuse) shows a
+placeholder as an ordinary item; all it is told is its `Overview`, which starts with `Not downloaded yet. Request it from the
+JellyfinMod web app.`, then a blank line (`\n\n`) and the title's own overview, if any (`PlaceholderItems.Note`). Nothing
+else is added: no stream, clip, media source or tagline, and PlaybackInfo stays refused. The note goes on every placeholder
+series, season, episode and movie; one with no overview of its own gets it with its first metadata refresh (Jellyfin fills only
+an empty overview, so a note alone would keep TMDb's text out). After any save of the item (a refresh that replaced the
+overview, an edit) the plugin puts it back, exactly once; any other item's overview never keeps it (it is taken off), so the
+real item that takes a placeholder's place never has it. The web app takes the note's paragraph out of the details page's
+overviews (`integration/placeholderNote.ts`), since it shows its own Not Downloaded marks.
+
 **Elsewhere in the plugin's API.** An episode in `GET /JellyfinMod/Entries/{id}` gains `placeholderItemId` (omitted when null):
 the Jellyfin placeholder that stands for it while it has no file; its `state`, `availability` and `jellyfinItemId` stay those
 of an episode without a file (reconciliation reads placeholder episodes as not on disk). `GET /JellyfinMod/Entries?jellyfinItemId=`

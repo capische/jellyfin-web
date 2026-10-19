@@ -1201,7 +1201,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   2026-10-17); **P1.FU28** Next Up's
   next real episode and play queues that skip stubs; **P1.FU29** placeholders come back after a delete in Jellyfin (built,
   not accepted 2026-10-17); **P1.FU30** placeholders as Jellyfin items with no file instead of stubs, on Jellyfin 12.2 (built,
-  not accepted 2026-10-18, below). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  not accepted 2026-10-18, below); **P1.FU31** the overview note for native apps on placeholder items (built, not accepted
+  2026-10-19, below). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
   episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
@@ -1474,6 +1475,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   file-less series becomes real, the real series' favourite shows on lists but on its own page only after a restart (Jellyfin's
   single-item answer comes from a stale cached instance); about a second without a season card on the open series page while
   a deleted season is replaced. **Not run:** the Pi, real Chrome, the TV and phone layouts, a 100-episode series, Codex review.
+  **P1.FU31, built (not accepted) 2026-10-19: the overview note for native apps** (user 2026-10-19: native clients see
+  placeholder items as ordinary items; instead of a placeholder clip or stream the item's overview starts with a short note, and
+  nothing else is added; playback stays refused). Owner: P1.FU30's item store. Branches `feat/placeholder-note` off `main-items`
+  in both repositories. Every placeholder series, season, episode and movie's `Overview` is `Not downloaded yet. Request it from
+  the JellyfinMod web app.`, a blank line, then the title's own overview (`PlaceholderItems.Note`, the one constant); no stream,
+  clip, media source or tagline. Set when the item is made; one with no overview of its own gets it with its first refresh
+  (Jellyfin fills only an empty overview). `PlaceholderItemListener` puts it back, exactly once, after any save that lost or
+  doubled it (a refresh with replace all, an edit), and takes it off any other item, so a real item that takes a placeholder's
+  place never keeps it. The web app removes the note's paragraph from the details page's overviews (the item's and its episode
+  rows', a MutationObserver from `integration/nativeEntryDetails.js`, `integration/placeholderNote.ts`); no upstream file is
+  patched. API: [API.md](API.md) *Placeholders*; design [§20](design/missing-media-user-actions.md). **Checks** on delta
+  (Jellyfin 12.2, no TMDB token, Chromium headless): `placeholder-items.mjs` with a new `note` step and checks in `backfill`,
+  `browser` and `arrive`, 58 checks, 57 pass; the one failure is P1.FU30's open point (the real series' favourite on its own page
+  after a whole-series swap). The note is on the episode, season, series and movie placeholders, once, the title's overview below
+  it; an edit with the note twice is put right in 1.9 s; after a forced full refresh with replace all metadata the note is back on
+  all four in 2.3 s (the overviews read without it for about 1.7 s, the listener's pause), still once five seconds later, the
+  overview below it TMDb's as before; PlaybackInfo still NotAllowed; the web episode, movie and season pages show the overviews
+  without the note; the real episodes, season, series and movie that took placeholders' places have none, and a real item given
+  the note loses it in 0.7 s. Phase 0 and 1 smoke pass on macOS. **Not run:** a real native app (Swiftfin, Android TV, Infuse),
+  the Pi, real Chrome, the TV and phone layouts, Codex review. **Known limits:** a placeholder made with no overview shows no note
+  until Jellyfin's queued refresh has run (1.7 s on delta; longer in a big backfill); a placeholder whose TMDb overview is empty
+  keeps the note alone, and a later default refresh does not fill it (a full refresh does); the mod's Home hero and the item's
+  Share text are not stripped (no placeholder reaches them today).
 - Phase 1 follow-up **P1.FU32, built (not accepted) 2026-10-19: when it was watched, in the played tick's tooltip** (user,
   2026-10-19: "hover over watched check should show a hint when it was watched"). Web only, on `feat/watched-hint` from
   `main-stubs`; no upstream file touched (mounted in the mod's `ModApp.tsx`), so the patch surface is unchanged. Hovering
