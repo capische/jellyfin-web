@@ -44,16 +44,6 @@
 .jfmod-dlBar--stalled .jfmod-dlBar-fill { opacity: 0.55; }
 .jfmod-dlBar--failed .jfmod-dlBar-fill { background: var(--jfmod-dl-failed); }
 
-.jfmod-dlBar--importing .jfmod-dlBar-fill {
-    animation: jfmod-dlBreathe 1.2s ease-in-out infinite;
-}
-
-@keyframes jfmod-dlBreathe {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.45; }
-}
-
 /* The figure on a row's meta line, after the date: `42% · 12 min left`, `42% · stalled`, `queued`, `importing…`,
  * `Failed · reason` (cut with an ellipsis; the whole reason is in the tooltip). Also the picker's added row's figure. */
 .jfmod-dlMeta {
@@ -79,13 +69,13 @@
 
 .jfmod-dlMeta--stale { opacity: 0.55; }
 
-/* Importing (user 2026-10-18, design A): the word steps up from the line's muted colour to the full text colour at 600 and
- * breathes in step with the ring's turn and the block's bar. It wins over upstream's `.listItem .secondary` grey. */
+/* Importing (user 2026-10-18, design A): the word steps up from the line's muted colour to the full text colour at 600; no
+ * animation (user 2026-10-19: remove all breathing; the text states are being redesigned). It wins over upstream's
+ * `.listItem .secondary` grey. */
 .jfmod-dlMeta--importing,
 .listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
     color: var(--jf-palette-text-primary, #fff);
     font-weight: 600;
-    animation: jfmod-dlBreathe 1.2s ease-in-out infinite;
 }
 
 /* A failure takes the Not Downloaded mark's place on a row, an indicator (since P1.FU22 an administrator's button there is
@@ -156,12 +146,4 @@
 .jfmod-dlCard .itemProgressBar,
 .jfmod-dlCard .itemLinearProgress {
     visibility: hidden;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .jfmod-dlBar--importing .jfmod-dlBar-fill,
-    .jfmod-dlMeta--importing,
-    .listItem .jfmod-dlMeta.jfmod-dlMeta--importing {
-        animation: none;
-    }
 }
