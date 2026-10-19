@@ -20,7 +20,7 @@ import {
 } from './settingsApi';
 import { profileSummary, QualityProfileDialog, usePresets } from './qualityProfiles';
 import {
-    type Draft, FieldForm, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
+    type Draft, FieldForm, REQUIRED_SLOTS, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
     ScrollList, type TestState, TestIcon, useConfirm, WhenLine
 } from './settingsWidgets';
 
@@ -669,7 +669,7 @@ export const DiscoverySection: FC<SectionProps> = props => {
             onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
         >
             <div className='jfmod-group'>
-                <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token (Optional)' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
+                <SecretField key={discovery.revision} id='jfmodTmdbToken' label='TMDB API Read Access Token' configured={!!discovery.tokenConfigured} change={token} onChange={setToken}
                     test={tokenTest} save={tokenSave} />
                 <div className='fieldDescription jfmod-lead'>
                     Leave empty to use Jellyfin&apos;s built-in TMDb connection. A saved token is used instead, for JellyfinMod discovery only.
@@ -694,10 +694,10 @@ const MappingRow: FC<{ index: number; mapping: PathMapping; setMappings: (change
     return (
         <div className='jfmod-maprow'>
             <TextField size='small' label='Transmission path' value={mapping.clientPathPrefix}
-                onChange={editClient} />
+                onChange={editClient} slotProps={REQUIRED_SLOTS} />
             <span className='jfmod-maparrow' aria-hidden='true'>→</span>
             <TextField size='small' label='Local path' value={mapping.localPathPrefix}
-                onChange={editLocal} />
+                onChange={editLocal} slotProps={REQUIRED_SLOTS} />
             <div className='jfmod-mapfoot'>
                 <StatePill kind={mapping.verifiedAt ? 'ok' : 'warn'}>{mapping.verifiedAt ? 'verified' : pathSentence(mapping.verificationReason ?? 'path_unmapped')}</StatePill>
                 <span className='jfmod-rowactions'>
@@ -875,12 +875,12 @@ export const ClientSection: FC<SectionProps> = props => {
     const addMapping = useCallback(() => setMappings(rows => [...rows, { clientPathPrefix: '', localPathPrefix: '' }]), [setMappings]);
     const editProbePath = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setProbePath(event.target.value), []);
     const fields: FieldSpec[] = [
-        { key: 'name', label: 'Name', type: 'text' },
-        { key: 'baseUrl', label: 'Transmission RPC address', type: 'text', help: 'For example http://host:9091/transmission/rpc, without credentials.' },
+        { key: 'name', label: 'Name', type: 'text', required: true },
+        { key: 'baseUrl', label: 'Transmission RPC address', type: 'text', required: true, help: 'For example http://host:9091/transmission/rpc, without credentials.' },
         { key: 'username', label: 'Username', type: 'text' },
         { key: 'label', label: 'Label added to every grab', type: 'text' },
-        { key: 'downloadDirectory', label: 'Download folder as Transmission sees it', type: 'text' },
-        { key: 'localDirectory', label: 'The same folder as this server sees it', type: 'text', help: 'Must be on the same filesystem as the libraries, so imports can hardlink.' },
+        { key: 'downloadDirectory', label: 'Download folder as Transmission sees it', type: 'text', required: true },
+        { key: 'localDirectory', label: 'The same folder as this server sees it', type: 'text', required: true, help: 'Must be on the same filesystem as the libraries, so imports can hardlink.' },
         { key: 'openUrl', label: 'Web interface link', type: 'text', optional: true, help: 'Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' },
         { key: 'enabled', label: 'Send grabs to this client', type: 'bool' }
     ];
@@ -956,8 +956,8 @@ const IndexerDialog: FC<{ api: Api; indexer: any | null; onClose: (saved: boolea
         }).catch(error => setNotice({ kind: 'err', text: problemText(error) }));
     }, [api, indexer, replace]);
     const fields: FieldSpec[] = [
-        { key: 'name', label: 'Name', type: 'text' },
-        { key: 'baseUrl', label: 'Torznab address', type: 'text', help: 'The feed URL without the API key.' },
+        { key: 'name', label: 'Name', type: 'text', required: true },
+        { key: 'baseUrl', label: 'Torznab address', type: 'text', required: true, help: 'The feed URL without the API key.' },
         { key: 'categories', label: 'Categories', type: 'list', help: 'Torznab category numbers, comma separated.' },
         { key: 'priority', label: 'Priority (lower first)', type: 'int' },
         { key: 'downloadHosts', label: 'Extra download hosts', type: 'list', optional: true },
@@ -1086,11 +1086,11 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
             )}
             <FieldForm fields={[
                 { key: 'name', label: 'Name', type: 'text' },
-                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', help: 'For example http://host:9696, without credentials.' },
+                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true, help: 'For example http://host:9696, without credentials.' },
                 { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
                 { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }
             ]} draft={draft} onChange={set} />
-            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
+            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
             <div className='jfmod-inlineactions'>
                 <Button variant='contained' color='inherit' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
                 {source && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testSource}>Test</Button>}
@@ -1498,7 +1498,7 @@ export const RetentionSection: FC<SectionProps> = props => {
                     { value: 'selectedUser', label: 'A selected user has watched it' },
                     { value: 'anyUser', label: 'Any user with library access has watched it' }
                 ] },
-                ...(draft.watchedUserMode === 'selectedUser' ? [{ key: 'selectedUserId', label: 'Selected user', type: 'select' as const, options: users,
+                ...(draft.watchedUserMode === 'selectedUser' ? [{ key: 'selectedUserId', label: 'Selected user', type: 'select' as const, required: true, options: users,
                     help: 'If this account is removed, retention is blocked rather than falling back to another user.' }] : []),
                 { key: 'exemptFavourites', label: 'Never reclaim favourites', type: 'bool' }
             ]} draft={draft} onChange={set} />
@@ -1515,7 +1515,7 @@ export const RetentionSection: FC<SectionProps> = props => {
                         { value: 'acquisitionClient', label: 'The download client' }, { value: 'separate', label: 'A separate Transmission' }
                     ] },
                     ...(seedDraft.source === 'separate' ? [
-                        { key: 'rpcUrl', label: 'Transmission RPC address', type: 'text' as const },
+                        { key: 'rpcUrl', label: 'Transmission RPC address', type: 'text' as const, required: true },
                         { key: 'username', label: 'Username', type: 'text' as const }
                     ] : [])
                 ]} draft={seedDraft} onChange={setSeed} />
