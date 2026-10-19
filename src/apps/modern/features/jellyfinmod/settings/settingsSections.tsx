@@ -1311,7 +1311,7 @@ export const ProfilesSection: FC<SectionProps> = props => {
                         onMakeDefault={makeDefault} onEdit={setEditing} />
                 ))}
             </div>
-            <p className='jfmod-sub jfmod-qp-foot'>A title uses the default profile unless it has its own, chosen in the release picker (&ldquo;Title default&rdquo;).</p>
+            <p className='jfmod-sub jfmod-qp-foot'>A title uses the default profile unless you pick another one in the release picker.</p>
             {editing !== undefined && (
                 <QualityProfileDialog api={api} profile={editing} qualities={data.acquisition?.qualities ?? []} presets={presets}
                     onClose={closeDialog} />
