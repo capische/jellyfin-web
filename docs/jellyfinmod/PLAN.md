@@ -1422,6 +1422,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   review; the switch-off-then-Remove path in the browser (Remove Placeholders itself is P1.FU24's, unchanged). Fixture artifacts
   that are not product behaviour: the seed gave episodes made-up TMDB ids, so opening a series page (P1.FU9's list load) added a
   second plugin row per position; a file deleted from the macOS side stayed visible to `stat` inside OrbStack's VM.
+- Phase 1 follow-up **P1.FU32, built (not accepted) 2026-10-19: when it was watched, in the played tick's tooltip** (user,
+  2026-10-19: "hover over watched check should show a hint when it was watched"). Web only, on `feat/watched-hint` from
+  `main-stubs`; no upstream file touched (mounted in the mod's `ModApp.tsx`), so the patch surface is unchanged. Hovering
+  upstream's played tick on a card, a list row's or the detail page's Played button, or the Watched button of a card's hover
+  menu shows `Watched 12 Oct 2026, 9:41 pm` (the user's `LastPlayedDate`, in the date locale); a played item with no date says
+  `Watched`; series, season and collection ticks are left as they are (their own date is empty, and their episodes' latest would
+  cost a request per card). One `GET /Items?Ids=` per page for the played ticks it shows (none on TV and phone, which have no
+  hover), kept current by `UserDataChanged`. Rule in [UX.md](UX.md) §5.7; code `integration/watchedHint.ts`. First look on
+  local environment bravo (Chromium, desktop): movie and episode cards, a React library grid's card, season-page rows, the
+  episode and movie Played buttons; Home and the Shows grid 0 extra requests, the Movies grid and the season page 1. **Not
+  run:** real Chrome, the phone and TV layouts, a placeholder (missing-media) item, a large library, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
