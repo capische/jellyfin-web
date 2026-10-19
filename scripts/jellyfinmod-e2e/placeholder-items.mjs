@@ -15,6 +15,10 @@
 //   series     Delete media of a whole series (Fawlty Towers): a file-less series with every aired episode comes back,
 //              favourite and played kept
 //   movie      Delete media of a movie: its placeholder movie comes back, favourite kept
+//   note       (P1.FU31) the placeholder episode, season, series and movie overviews start with the note for native apps, once,
+//              the title's own overview below it; an edit with the note twice is put right; a forced full metadata refresh
+//              (replace all) brings the note back once; PlaybackInfo still refused; the web app's episode, season and movie pages
+//              show the overview without the note; the movie's file copied in: the real movie's overview has no note
 //   arrive     a real file copied in by hand for a placeholder of a file-less series: the series becomes the real one, the
 //              episode the real file with the placeholder's played and favourite, the other placeholders under the real series
 //   restart    every placeholder item and its user data survive a restart and a library scan
@@ -47,7 +51,7 @@ const CLIP = need('JELLYFINMOD_PI_CLIP');
 const OUT = process.env.JELLYFINMOD_PI_OUT ?? 'placeholder-items.json';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const STEPS = new Set((process.env.JELLYFINMOD_PI_STEPS
-    ?? 'setup,backfill,episode,season,browser,series,movie,arrive,restart,user,optout,entry,library,cleanup').split(','));
+    ?? 'setup,backfill,episode,season,browser,series,movie,note,arrive,restart,user,optout,entry,library,cleanup').split(','));
 const DOCKER = process.env.JELLYFINMOD_DOCKER ?? '/usr/local/bin/docker';
 const ADOLESCENCE = 'Adolescence (2025) [tmdbid-249042]';
 const FAWLTY = 'Fawlty Towers (1975) [tmdbid-2207]';
@@ -98,6 +102,25 @@ async function until(read, timeoutMs, stepMs = 100) {
 }
 
 const own = item => (item?.Path ?? '').startsWith('jellyfinmod://');
+// The note the plugin puts in front of a placeholder's overview (PlaceholderItems.Note, P1.FU31).
+const NOTE = 'Not downloaded yet. Request it from the JellyfinMod web app.';
+const noteOnce = text => typeof text === 'string' && text.startsWith(NOTE) && !text.slice(NOTE.length).includes(NOTE);
+const below = text => (noteOnce(text) && text.startsWith(NOTE + '\n\n') ? text.slice(NOTE.length + 2) : '');
+const noNote = text => !(text ?? '').includes(NOTE);
+const overviewOf = async id => (await get(`/Items/${id}?userId=${sessions.oleksii.id}`))?.Overview ?? null;
+async function signedInPage(browser) {
+    const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+    await page.goto(new URL('/web/', origin).href);
+    await page.waitForFunction(() => !!window.ApiClient);
+    await page.locator('.btnManual').first().waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
+    if (!await page.locator('#txtManualName').isVisible()) await page.locator('.btnManual').first().evaluate(node => node.click());
+    await page.waitForTimeout(1000);
+    await page.locator('#txtManualName').fill('oleksii');
+    await page.locator('#txtManualPassword').fill('');
+    await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+    await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
+    return page;
+}
 let shows; let movies;
 async function libraries() {
     const folders = await get('/Library/VirtualFolders');
@@ -204,6 +227,9 @@ async function main() {
         record('backfill', 'a placeholder item is IsPlaceHolder, LocationType Remote, CanDelete and CanDownload false',
             placeholder?.IsPlaceHolder === true && placeholder.LocationType === 'Remote' && placeholder.CanDelete === false && placeholder.CanDownload === false,
             { placeholder: placeholder && { p: placeholder.IsPlaceHolder, l: placeholder.LocationType, d: placeholder.CanDelete, dl: placeholder.CanDownload } });
+        const placeholderOverview = await overviewOf(placeholder.Id);
+        record('backfill', 'a placeholder episode\'s overview starts with the note, once, and its own overview follows',
+            below(placeholderOverview).length > 0, { overview: placeholderOverview?.slice(0, 160) });
         const playback = await call('POST', `/Items/${placeholder.Id}/PlaybackInfo?userId=${sessions.oleksii.id}`, {});
         record('backfill', 'PlaybackInfo answers NotAllowed with no source', playback.json?.ErrorCode === 'NotAllowed' && !(playback.json?.MediaSources ?? []).length, playback.json);
         const download = await call('GET', `/Items/${placeholder.Id}/Download`);
@@ -277,18 +303,12 @@ async function main() {
         record('browser', 'two real files copied in by hand replace their placeholders (no duplicate), the others stay',
             list.length === 4 && list.filter(own).length === 2 && at(list, 1, 2)?.UserData?.Played === true,
             list.map(item => `${item.IndexNumber}:${own(item) ? 'p' : 'f'}`));
+        const realOverviews = await Promise.all(list.filter(item => !own(item)).map(item => overviewOf(item.Id)));
+        record('browser', 'the real episodes that took the placeholders\' place have no note', realOverviews.length === 2 && realOverviews.every(noNote),
+            realOverviews.map(text => text?.slice(0, 80)));
         const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
         try {
-            const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
-            await page.goto(new URL('/web/', origin).href);
-            await page.waitForFunction(() => !!window.ApiClient);
-            await page.locator('.btnManual').first().waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
-            if (!await page.locator('#txtManualName').isVisible()) await page.locator('.btnManual').first().evaluate(node => node.click());
-            await page.waitForTimeout(1000);
-            await page.locator('#txtManualName').fill('oleksii');
-            await page.locator('#txtManualPassword').fill('');
-            await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
-            await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
+            const page = await signedInPage(browser);
             const season = (await seasonsOf(adolescence.Id)).find(item => !own(item)) ?? (await seasonsOf(adolescence.Id))[0];
             await page.goto(new URL(`/web/#/details?id=${season.Id}`, origin).href);
             await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .listItem', { timeout: 30000 });
@@ -357,6 +377,129 @@ async function main() {
             && (await userData(back.value.Id))?.IsFavorite === true, { seconds: back.seconds });
     }
 
+    if (STEPS.has('note') && STEPS.has('series') && STEPS.has('movie')) {
+        const movieItem = (await get(`/Items?Recursive=true&IncludeItemTypes=Movie&ParentId=${movies}&Fields=Path,ProviderIds`)).Items
+            .find(item => item.ProviderIds?.Tmdb === '603' && own(item));
+        const items = { episode: at(await episodesOf(fawlty.Id), 1, 4), season: (await seasonsOf(fawlty.Id))[0], series: fawlty, movie: movieItem };
+        record('note', 'the file-less series, its season, an episode and the movie are placeholder items',
+            Object.values(items).every(own), Object.fromEntries(Object.entries(items).map(([kind, item]) => [kind, item?.Path])));
+        const overviews = async () => Object.fromEntries(await Promise.all(Object.entries(items).map(async ([kind, item]) => [kind, await overviewOf(item.Id)])));
+        // A season the plugin made has no overview of its own; it gets the note with its first refresh.
+        let last = {};
+        const first = await until(async () => {
+            last = await overviews();
+            return Object.values(last).every(noteOnce) ? last : null;
+        }, 90000, 500);
+        record('note', 'episode, season, series and movie: the overview starts with the note, exactly once', !!first.value,
+            { seconds: first.seconds, overviews: Object.fromEntries(Object.entries(last).map(([kind, text]) => [kind, text?.slice(0, 100)])) });
+        record('note', 'the episode\'s, series\' and movie\'s own overviews follow the note after a blank line',
+            ['episode', 'series', 'movie'].every(kind => below(last[kind]).length > 0));
+        const own0 = Object.fromEntries(Object.entries(last).map(([kind, text]) => [kind, below(text)]));
+
+        // An edit that puts the note in twice (with a marker) is put right by the plugin: the note once, the marker kept.
+        const MARKER = 'Runner marker, replaced by the refresh below.';
+        const edits = [];
+        for (const item of Object.values(items)) {
+            const dto = await get(`/Items/${item.Id}?userId=${sessions.oleksii.id}`);
+            edits.push((await call('POST', `/Items/${item.Id}`, { ...dto, Overview: `${NOTE}\n\n${NOTE}\n\n${MARKER}` })).status);
+        }
+        const normal = await until(async () => {
+            last = await overviews();
+            return Object.values(last).every(text => noteOnce(text) && below(text) === MARKER) ? last : null;
+        }, 30000, 200);
+        record('note', 'an edit with the note twice is put right on all four: the note once, the rest kept', edits.every(status => status === 204) && !!normal.value,
+            { edits, seconds: normal.seconds, overviews: Object.fromEntries(Object.entries(last).map(([kind, text]) => [kind, text?.slice(0, 140)])) });
+
+        // A forced full refresh that replaces all metadata (Jellyfin writes TMDb's overview over the note): the note comes back once.
+        const gaps = Object.fromEntries(Object.keys(items).map(kind => [kind, 0]));
+        const started = Date.now();
+        for (const item of Object.values(items)) {
+            await call('POST', `/Items/${item.Id}/Refresh?metadataRefreshMode=FullRefresh&imageRefreshMode=Default&replaceAllMetadata=true&replaceAllImages=false`);
+        }
+        const refreshed = await until(async () => {
+            last = await overviews();
+            for (const [kind, text] of Object.entries(last)) if (!noteOnce(text)) gaps[kind]++;
+            return Object.values(last).every(text => noteOnce(text) && !text.includes(MARKER)) ? last : null;
+        }, 120000, 100);
+        time('note_back_after_full_refresh_api', (Date.now() - started) / 1000);
+        record('note', 'after a full refresh with replace all metadata the note is back on all four, exactly once', !!refreshed.value,
+            { seconds: refreshed.seconds, samplesWithoutNote: gaps, overviews: Object.fromEntries(Object.entries(last).map(([kind, text]) => [kind, text?.slice(0, 100)])) });
+        record('note', 'the refresh did replace the overviews (the marker is gone); below the note each title\'s own overview as before the edit',
+            !!refreshed.value && Object.keys(items).every(kind => below(last[kind]) === own0[kind]) && ['episode', 'series', 'movie'].every(kind => own0[kind].length > 0));
+        await sleep(5000);
+        const settled = await overviews();
+        record('note', 'five seconds later still the note once (no second prefix from a later save)', Object.values(settled).every(text => noteOnce(text) && !text.includes(MARKER)));
+        for (const kind of ['episode', 'movie']) {
+            const playback = await call('POST', `/Items/${items[kind].Id}/PlaybackInfo?userId=${sessions.oleksii.id}`, {});
+            record('note', `PlaybackInfo of the placeholder ${kind} is still refused (NotAllowed, no source)`,
+                playback.json?.ErrorCode === 'NotAllowed' && !(playback.json?.MediaSources ?? []).length, { status: playback.status, error: playback.json?.ErrorCode });
+        }
+
+        // The web app shows its own marks and never the note: the episode, its season and the movie pages, in a real browser.
+        const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
+        try {
+            const page = await signedInPage(browser);
+            for (const kind of ['episode', 'movie']) {
+                await page.goto(new URL(`/web/#/details?id=${items[kind].Id}`, origin).href);
+                await page.waitForSelector('.page:not(.hide) .overview:not(.hide)', { timeout: 30000 }).catch(() => {});
+                await page.waitForTimeout(2000);
+                const shown = await page.evaluate(() => ({
+                    overview: [...document.querySelectorAll('.page:not(.hide) .overview')].map(node => node.innerText).join(' | '),
+                    text: document.querySelector('.page:not(.hide)')?.innerText ?? ''
+                }));
+                const expected = below(settled[kind]).replace(/\s+/g, ' ').trim().slice(0, 60);
+                record('note', `the web app's ${kind} page shows the overview without the note`,
+                    noNote(shown.text) && expected.length > 0 && shown.overview.replace(/\s+/g, ' ').includes(expected), { overview: shown.overview.slice(0, 160) });
+                await page.screenshot({ path: OUT.replace(/\.json$/, `-note-${kind}-page.png`) }).catch(() => {});
+            }
+            await page.goto(new URL(`/web/#/details?id=${items.season.Id}`, origin).href);
+            await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .listItem', { timeout: 30000 }).catch(() => {});
+            await page.waitForTimeout(2000);
+            const rows = await page.evaluate(() => ({
+                rows: [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem-overview, .page:not(.hide) #listChildrenCollapsible .listItem-bottomoverview')]
+                    .map(node => node.innerText),
+                text: document.querySelector('.page:not(.hide)')?.innerText ?? ''
+            }));
+            record('note', 'the web app\'s season page: no note anywhere, the episode rows show their own overviews',
+                noNote(rows.text) && rows.rows.length > 0 && rows.rows.every(text => text.trim().length > 0), { rows: rows.rows.length, first: rows.rows[0]?.slice(0, 80) });
+            await page.screenshot({ path: OUT.replace(/\.json$/, '-note-season-page.png') }).catch(() => {});
+        } finally {
+            await browser.close();
+        }
+
+        // The movie's file copied in: the real movie that takes the placeholder's place has no note; a real item given the note
+        // loses it. Then Delete media again, so the steps below have the file-less movie.
+        realFile(`/test-media/movies/${MATRIX}`, `${MATRIX}.webm`);
+        const arrivedAt = Date.now();
+        await scan();
+        const real = await until(async () => {
+            const list = (await get(`/Items?Recursive=true&IncludeItemTypes=Movie&ParentId=${movies}&Fields=Path,ProviderIds`)).Items
+                .filter(item => item.ProviderIds?.Tmdb === '603');
+            return list.length === 1 && !own(list[0]) ? list[0] : null;
+        }, 180000, 1000);
+        time('note_movie_file_arrives_real_api', (Date.now() - arrivedAt) / 1000);
+        const realOverview = real.value && await overviewOf(real.value.Id);
+        record('note', 'the movie\'s file copied in: one real movie, the placeholder gone, its overview has no note',
+            !!real.value && noNote(realOverview), { seconds: real.seconds, overview: realOverview?.slice(0, 80) });
+        if (real.value) {
+            const dto = await get(`/Items/${real.value.Id}?userId=${sessions.oleksii.id}`);
+            await call('POST', `/Items/${real.value.Id}`, { ...dto, Overview: `${NOTE}\n\n${dto.Overview ?? ''}` });
+            const stripped = await until(async () => {
+                const text = await overviewOf(real.value.Id);
+                return noNote(text) ? text ?? '' : null;
+            }, 30000, 200);
+            record('note', 'a real item given the note loses it, its own overview kept', stripped.value !== null && (stripped.value ?? '') === (dto.Overview ?? ''),
+                { seconds: stripped.seconds });
+            await call('DELETE', `/Items/${real.value.Id}`);
+            const back = await until(async () => (await get(`/Items?Recursive=true&IncludeItemTypes=Movie&ParentId=${movies}&Fields=Path,ProviderIds`)).Items
+                .find(item => item.ProviderIds?.Tmdb === '603' && own(item)), 60000);
+            // The catalog has no overview for this fixture movie, so the note comes with the placeholder's first refresh.
+            const noted = back.value && await until(async () => noteOnce(await overviewOf(back.value.Id)), 60000, 200);
+            record('note', 'Delete media again: the placeholder movie is back, the note on it once refreshed', !!noted?.value,
+                { back: back.seconds, note: noted?.seconds });
+        }
+    }
+
     if (STEPS.has('arrive') && STEPS.has('series')) {
         // A file for the file-less Fawlty Towers' S01E04 (played and favourite) copied in by hand: the series becomes real.
         const started = Date.now();
@@ -378,6 +521,12 @@ async function main() {
                 { e4: await userData(real.Id), series: (await userData(fawlty.Id))?.IsFavorite, seconds: kept.seconds });
             record('arrive', 'Season 1 is the real folder, Season 2 the plugin\'s', (await seasonsOf(fawlty.Id)).map(s => own(s)).join() === 'false,true',
                 (await seasonsOf(fawlty.Id)).map(s => s.Path));
+            const realSeason = (await seasonsOf(fawlty.Id)).find(s => !own(s));
+            const texts = { series: await overviewOf(fawlty.Id), season: realSeason && await overviewOf(realSeason.Id), episode: await overviewOf(real.Id) };
+            record('arrive', 'the real series, its real Season 1 and the real S01E04 have no note', Object.values(texts).every(noNote),
+                Object.fromEntries(Object.entries(texts).map(([kind, text]) => [kind, text?.slice(0, 80)])));
+            const left = at(swapped.value.list, 1, 5);
+            record('arrive', 'a placeholder left under the real series (S01E05) still has the note once', noteOnce(left && await overviewOf(left.Id)));
         }
     }
 
