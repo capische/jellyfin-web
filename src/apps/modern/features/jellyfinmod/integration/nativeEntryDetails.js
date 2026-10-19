@@ -8,6 +8,7 @@ import { nativeItemFacts, nativeItemKey, prefetchNativeChildren, prefetchNativeE
 import NativeEntryDetails from '../components/NativeEntryDetails';
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
+import { observePlaceholderNote } from './placeholderNote';
 import { moveShuffle } from './shuffleMenu';
 
 import './placeholderPage.scss';
@@ -52,6 +53,8 @@ async function handleMissingNativeItem(view, params, error, isCurrent) {
 }
 
 export default function initializeNativeEntryDetails(view, params) {
+    // The plugin's note for native apps never shows here: the page has its own marks (P1.FU31).
+    const stopNote = observePlaceholderNote(view);
     let mount;
     let traktMount;
     let unmount;
@@ -152,6 +155,7 @@ export default function initializeNativeEntryDetails(view, params) {
     };
     const destroy = () => {
         hide();
+        stopNote();
         view.removeEventListener('viewshow', show);
         view.removeEventListener('viewbeforehide', hide);
         view.removeEventListener('viewdestroy', destroy);
