@@ -16,7 +16,7 @@ it is **required**; nothing is ever marked "(Optional)".
 - Label: MUI's floating label, one line with an ellipsis; it shrinks to 75 % once the field holds a value.
 - Required: the label starts with **`* `**, drawn by `.jfmod-required::before` (`content: "* "` then `content: "* " / ""`), so
   the star takes the label's colour and scales with it and is not part of the accessible name. The input carries
-  `aria-required="true"`. Never MUI's `required` prop: it adds an `aria-hidden` span with the star after the label, and the
+  `aria-required="true"` (on a select, on its combobox, `REQUIRED_SELECT_SLOTS`). Never MUI's `required` prop: it adds an `aria-hidden` span with the star after the label, and the
   accessible name (and every runner's `getByLabel('Name', { exact: true })`) changes.
 - Help line `fieldDescription` under the field: one or two sentences that say what to type or what empty means, never a
   repeat of the label.

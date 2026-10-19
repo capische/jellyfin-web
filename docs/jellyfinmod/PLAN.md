@@ -1055,7 +1055,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   address and both folders, the two mapping paths, and while shown Selected user and a separate seed's RPC address). `FieldForm`
   no longer appends "(Optional)" and the TMDB label is "TMDB API Read Access Token". Runners `s11-fresh.mjs` (Seconds between
   searches, Searches per day) and `whole-review-web.mjs` (Minimum seeders) lose the suffix. Web `feat/required-asterisk` from
-  `next-release` `2ac29996ae`. Not run: the full matrix, real Chrome, Codex review. Stale and left alone: `s11-fresh.mjs` 378, 385
+  `main-stubs` (the former `next-release`) `2ac29996ae`. Not run: the full matrix, real Chrome, Codex review. Stale and left alone: `s11-fresh.mjs` 378, 385
   and 953 (*Upgrade until (Optional)*, an "Add a quality" list), which no longer match the profile dialog since P4.FU9.
 
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from

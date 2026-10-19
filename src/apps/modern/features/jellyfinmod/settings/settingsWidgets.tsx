@@ -367,6 +367,12 @@ type FieldChange = (key: string, value: unknown) => void;
  */
 export const FOCUSABLE_SELECT = { select: { SelectDisplayProps: { className: 'focusable' } } };
 
+/** A required select: MUI puts `aria-required` on a select's hidden native input, so the combobox the user meets takes it itself. */
+const REQUIRED_SELECT_SLOTS = {
+    inputLabel: REQUIRED_SLOTS.inputLabel,
+    select: { SelectDisplayProps: { className: 'focusable', 'aria-required': true as const } }
+};
+
 const parseList = (text: string) => text.split(',').map(part => part.trim()).filter(Boolean);
 
 /**
@@ -418,7 +424,7 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
         return (
             <TextField
                 select fullWidth margin='dense' label={field.label} helperText={field.help}
-                value={value ?? ''} onChange={choose} slotProps={field.required ? { ...FOCUSABLE_SELECT, ...REQUIRED_SLOTS } : FOCUSABLE_SELECT}
+                value={value ?? ''} onChange={choose} slotProps={field.required ? REQUIRED_SELECT_SLOTS : FOCUSABLE_SELECT}
             >
                 {field.options?.map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
             </TextField>
