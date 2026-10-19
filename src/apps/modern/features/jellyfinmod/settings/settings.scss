@@ -350,13 +350,13 @@
     cursor: progress;
 }
 
-/* A required field's label starts with an asterisk (user, 2026-10-19, design/guides/settings-field.md). It is drawn here, not by
+/* A required field's label ends with an asterisk (user, 2026-10-19: first, then "Asterics at the end - please redo"; design/guides/settings-field.md). It is drawn here, not by
    MUI's `required` (a DOM span that would join the accessible name and break getByLabel). The second declaration gives the
    star an empty alt text, so it stays out of the accessible name; a browser that does not know that form keeps the first.
    It takes the label's own colour and size. */
-.jfmod-required::before {
-    content: "* ";
-    content: "* " / "";
+.jfmod-required::after {
+    content: " *";
+    content: " *" / "";
 }
 
 /* Secrets: a component, never a password field with a placeholder. */

@@ -1046,11 +1046,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   on the one-file row), not this change. Not verified: a file with DTS-HD MA, TrueHD or Atmos (none in the local media), a
   file with two versions, Dolby Vision or HDR10 marks, an ordinary user, a physical TV, the next-release plugin, Codex review.
 
-  **P7.FU7, built (not accepted) 2026-10-19: an asterisk first on the required settings fields, and no "(Optional)" anywhere** (user
+  **P7.FU7, built (not accepted) 2026-10-19: an asterisk at the end of the required settings fields' labels, and no "(Optional)" anywhere** (user
   2026-10-19: "Go with asterisks everywhere", after [design/required-fields-audit.md](design/required-fields-audit.md) and
   [design/optional-field-marker.html](design/optional-field-marker.html); [UX.md](UX.md) §12.1, guide
   [settings-field.md](design/guides/settings-field.md)). Owner: Phase 7 (the settings area and wizard); web only, no plugin or API
-  change. The star is the label's CSS `::before` (`.jfmod-required`, outside the accessible name) with `aria-required` on the input;
+  change. The star is the label's CSS `::after` (`.jfmod-required`, outside the accessible name) with `aria-required` on the input;
   twelve fields carry it (Prowlarr address and key while none is saved, indexer Name and Torznab address, download client Name, RPC
   address and both folders, the two mapping paths, and while shown Selected user and a separate seed's RPC address). `FieldForm`
   no longer appends "(Optional)" and the TMDB label is "TMDB API Read Access Token". Runners `s11-fresh.mjs` (Seconds between
