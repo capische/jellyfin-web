@@ -965,13 +965,16 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   administrators only (null for everyone else), so the rings read it from the queue the page already holds, with no new request
   and nothing new exposed. `ringLink` (`components/DownloadStateMark.tsx`): a queued, downloading, importing or stalled ring on
   cards, rows, the detail line, the Queue page, the picker's added row and the download block becomes `role="link"`, a Tab stop on
-  desktop and phone, a pointer and a thin ring in its own ink under the mouse (picked live from two candidates, the other a
-  brightening that did not show on transparent rows), the cyan keyboard ring, the tooltip's second line `Open <client name>`;
+  desktop and phone, a pointer, the cyan ring for the keyboard only, the tooltip's second line `Open <client name>` (a thin hover
+  ring in the disc's ink was built and taken out after the user's look: "Selection of buttons are awful, probably remove selection
+  at all");
   a click or Enter opens the link in a new tab (`noopener`) and stops there, so a card's or row's title does not open. Not on the
   TV, not for a failed disc or the cloud, not for an ordinary user, not without a saved Web interface link: those stay as they
   were (an ordinary user's card disc still forwards its click to the card). Queue page (`components/QueuePage.tsx`, `queue.scss`):
   the State column takes the width of what it holds and the title 50 % (was 30 % and 20 %); the title's parts link the series,
   `Season N` and the episode (the mod's season and episode routes) on desktop and phone (the TV row is a button, so text); the
+  desktop table's cells share one centre line (`vertical-align: middle`, was top); the row menu has no title above its items
+  (user: "No need for such header at all. Just show menu Remove"; on the TV's action sheet too); the
   Client cell no longer wraps and its name is a link for administrators with a saved link; `Open in Client` is gone from the row
   menu (`integration/queueActions.ts`; it was administrators only, so no ordinary user loses anything; the TV's action sheet,
   which had it, now has no link out to the client). First look on local environment charlie (Chromium headless, web built from

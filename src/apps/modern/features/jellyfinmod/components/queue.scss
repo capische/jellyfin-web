@@ -180,7 +180,8 @@
     td {
         padding: 0.5em 0.6em;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
-        vertical-align: top;
+        // One centre line per row: thumbnail, title block, bar, figures, ring, client and menu (user 2026-10-19).
+        vertical-align: middle;
     }
 }
 
