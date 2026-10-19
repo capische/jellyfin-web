@@ -1114,6 +1114,14 @@ export class HtmlVideoPlayer {
         const elemAudioTracks = elem.audioTracks || [];
         console.debug(`found ${elemAudioTracks.length} audio tracks`);
 
+        // Already the only track enabled: leave it alone. On webOS every assignment makes the
+        // TV rebuild its audio track list and stall the pipeline, and a start applies the
+        // choice several times (before play, on each early media event, on opening the OSD).
+        const currentTracks = Array.from(elemAudioTracks);
+        if (currentTracks.length && currentTracks.every((track, i) => track.enabled === (i === audioIndex))) {
+            return;
+        }
+
         for (const [i, audioTrack] of Array.from(elemAudioTracks).entries()) {
             if (audioIndex === i) {
                 console.debug(`setting audio track ${i} to enabled`);
