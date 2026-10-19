@@ -1058,6 +1058,18 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `main-stubs` (the former `next-release`) `2ac29996ae`. Not run: the full matrix, real Chrome, Codex review. Stale and left alone: `s11-fresh.mjs` 378, 385
   and 953 (*Upgrade until (Optional)*, an "Add a quality" list), which no longer match the profile dialog since P4.FU9.
 
+  **P7.FU8, built (not accepted) 2026-10-19: the Prowlarr card loses its Name field** (user 2026-10-19, with a screenshot of the
+  card: "I don't need field. It's useless", choosing *Name*; [UX.md](UX.md) §12.1, [API.md](API.md) *Settings*). Owner: Phase 7 S9
+  (the Prowlarr source) and its settings card. Only one Prowlarr source can exist (`Create` answers 409 `prowlarr_source_exists`
+  for a second), so the name never told sources apart; it only appears in the sync log, the `prowlarr_synced` history line and
+  as the suffix on a synced indexer whose name collides. Web: the card shows Prowlarr address, Sync every, Sync on a schedule
+  and the API key, and sends no name. Plugin: `name` is optional on `POST`/`PATCH /Settings/Prowlarr` (a new source is "Prowlarr",
+  an edit without one keeps the stored name, `invalid_name` is gone); a name that is sent is still stored, so older callers keep
+  working, and an existing source keeps its name. Runners `prowlarr-first.mjs`, `s11-fresh.mjs`, `settings-changes.mjs` and
+  `settings-prowlarr.mjs` no longer fill the field; the `settings-changes.mjs` hygiene pass removes a Prowlarr source the snapshot
+  lacked instead of one named `JellyfinMod …`. Web `feat/prowlarr-no-name` on `feat/required-asterisk` `f7a089d091`; plugin
+  `feat/prowlarr-no-name` on `main-stubs` `5f2199e`. Not run: the full matrix, real Chrome, TV, Codex review.
+
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
   Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of
   [design/service-discovery.md](design/service-discovery.md); [PHASE7.md](PHASE7.md) §7, [UX.md](UX.md) §12.2,

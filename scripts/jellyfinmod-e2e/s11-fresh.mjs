@@ -320,7 +320,6 @@ async function resume() {
 
         // 3 Indexers through Prowlarr: a wrong key fails its Test, the right one passes, Sync imports and verifies.
         const card = page.locator('[data-prowlarr="card"]');
-        await fill(card, 'Name', 'JellyfinMod Standin Prowlarr');
         await fill(card, 'Prowlarr address', `http://${standin}:${port(1)}`);
         await page.locator('#jfmodProwlarrKey').fill(wrong.key);
         await card.getByRole('button', { name: 'Add Prowlarr' }).click();

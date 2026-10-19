@@ -1611,6 +1611,10 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
     and carries a small dim time on every entry, newest first: *Detected* for a conflict, *Added* for an entry (the plugin
     records when it was catalogued, not when its library was removed), *Found* for a run's reason.
 
+- **The Prowlarr card has no Name field** (user, 2026-10-19: "I don't need field. It's useless"). There is one Prowlarr source and
+  it is always called Prowlarr, so the card shows only *Prowlarr address*, *Sync every (minutes)*, *Sync on a schedule* and the
+  *API key*; the plugin names a new source "Prowlarr" and an edit leaves the stored name alone.
+
 ### 12.2 Indexers before the download client, and Found in Prowlarr (P6.FU1, user 2026-10-15)
 
 - **Order.** The setup wizard is Discovery, Indexers, Download Client, Quality Profile, Turn Grabbing On, Optional
