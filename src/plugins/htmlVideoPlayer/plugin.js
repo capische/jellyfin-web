@@ -837,7 +837,10 @@ export class HtmlVideoPlayer {
             return applySrc(elem, val, options).then(async () => {
                 this.#currentSrc = val;
                 if (switchBeforePlay) {
-                    await this.switchAudioTrackBeforePlay(elem);
+                    const switched = await this.switchAudioTrackBeforePlay(elem);
+                    if (switched && generation === this.#playGeneration) {
+                        await this.flushBufferedAudio(elem);
+                    }
                 }
                 // Stopped or replaced while waiting: that start owns the element now. The manager
                 // is told it never started, not that it succeeded.
@@ -1277,6 +1280,27 @@ export class HtmlVideoPlayer {
      * @returns {Promise<void>}
      */
     /**
+     * A TV applies a changed audio track only once the audio it had already buffered has played
+     * (a few seconds on webOS), so the file's default track is heard first. A seek flushes that
+     * buffer, and while the video is still paused it cannot be seen or heard.
+     * @private
+     * @param {HTMLMediaElement} elem
+     * @returns {Promise<void>}
+     */
+    flushBufferedAudio(elem) {
+        return new Promise((resolve) => {
+            const done = () => {
+                clearTimeout(timer);
+                elem.removeEventListener('seeked', done);
+                resolve();
+            };
+            const timer = setTimeout(done, 1500);
+            elem.addEventListener('seeked', done);
+            elem.currentTime += 0.001;
+        });
+    }
+
+    /**
      * Cancels a start that is waiting on the paused audio switch: its listeners and timer go and
      * the wait resolves, and the start then sees the bumped generation and stops.
      * @private
@@ -1286,6 +1310,11 @@ export class HtmlVideoPlayer {
         this.#cancelAudioSwitch?.();
     }
 
+    /**
+     * @private
+     * @param {HTMLMediaElement} elem
+     * @returns {Promise<boolean>} Whether a track was switched, as opposed to already being right.
+     */
     switchAudioTrackBeforePlay(elem) {
         const index = this.#audioTrackIndexToSetOnPlaying;
 
@@ -1302,7 +1331,7 @@ export class HtmlVideoPlayer {
                 });
                 elem.audioTracks?.removeEventListener?.('addtrack', trySwitch);
                 elem.audioTracks?.removeEventListener?.('change', onChange);
-                resolve();
+                resolve(switched);
             };
             const onChange = () => {
                 if (switched) finish();
