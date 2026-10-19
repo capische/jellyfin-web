@@ -555,7 +555,7 @@ Profiles add `presetId`: the preset a profile was created from (its id is the pr
   "description":"Best picture, big files. Falls back to lower quality if 4K is not available.",
   "isDefaultPreset":true,"qualities":["remux-2160p","bluray-2160p","webdl-2160p","webrip-2160p","hdtv-2160p","bluray-1440p",
   "webdl-1440p","webrip-1440p","remux-1080p","bluray-1080p","webdl-1080p","webrip-1080p","hdtv-1080p","bluray-720p","webdl-720p",
-  "webrip-720p","hdtv-720p"],"minimumBytesPerHour":null,"maximumBytesPerHour":20000000000,"cutoff":"remux-2160p",
+  "webrip-720p","hdtv-720p"],"minimumBytesPerHour":null,"maximumBytesPerHour":null,"cutoff":"remux-2160p",
   "upgradeAllowed":false,"upgradeMode":"replace","minimumSeeders":2,"added":true}]
 ```
 
@@ -568,7 +568,7 @@ upgrades on needs nothing else:
 
 | Preset | Description | Qualities | Size cap per runtime hour |
 | --- | --- | --- | --- |
-| **4K** (default) | Best picture, big files. Falls back to lower quality if 4K is not available. | 2160p, 1440p, 1080p, 720p (17) | 20 GB (Balanced) |
+| **4K** (default) | Best picture, big files. Falls back to lower quality if 4K is not available. | 2160p, 1440p, 1080p, 720p (17) | none (Large; user, 2026-10-19) |
 | 2K | 1440p, a step below 4K at about half the size. Falls back to lower quality. | 1440p, 1080p, 720p (12) | 10 GB (Balanced) |
 | 1080p | Full HD, the sensible middle. Falls back to 720p. | 1080p, 720p (9) | 6 GB (Balanced) |
 | 720p | Small files for small screens or slow links. | 720p (4) | 1 GB (Small) |

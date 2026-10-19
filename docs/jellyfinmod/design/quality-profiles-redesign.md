@@ -21,7 +21,7 @@ The section keeps its card, its blue *Add Profile* and its row icons (Make Defau
 
 ## Starting profiles (the three the user asked for, plus the other presets' data)
 
-4K · Default · Preset — 2160p first, down to 720p, Balanced 8–20 GB/h, no upgrades, seeders ≥ 2 (order: remux-2160p, bluray-2160p, webdl-2160p, webrip-2160p, hdtv-2160p, …1440p…, …1080p…, …720p).
+4K · Default · Preset — 2160p first, down to 720p, Large (no size limit; user, 2026-10-19, was Balanced 8–20 GB/h), no upgrades, seeders ≥ 2 (order: remux-2160p, bluray-2160p, webdl-2160p, webrip-2160p, hdtv-2160p, …1440p…, …1080p…, …720p).
 2K · Preset — 1440p first, down to 720p, 4–10 GB/h. **Needs 1440p in the plugin's quality list** (see decisions).
 1080p · Preset — 1080p first, down to 720p, 2–6 GB/h.
 720p, Any Quality (2160p → 480p, no size limit), SD (576p/480p incl. DVD) as the other presets.

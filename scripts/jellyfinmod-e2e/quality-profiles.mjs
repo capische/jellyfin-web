@@ -18,9 +18,9 @@
 //     sentence stay hidden until Change the Order Tried is opened, then Move Up / Move Down change the order that is saved;
 //   6 the live rules: no name, or a cutoff the profile does not allow, refuse Save with the rule shown;
 // and in the release picker (a missing Peep Show episode, a Torznab server of the runner's own over real HTTP, answering
-// 2160p, 1080p and 720p WEB-DL rows and a 2160p row too large for the 4K profile):
-//   7 the picker searches with "4K (Default)", lists the 4K row first, then 1080p, then 720p, the oversized row rejected;
-//     choosing the 1080p profile lists the 1080p row first.
+// 2160p, 1080p and 720p WEB-DL rows and a 15 GB 2160p row, which the 4K profile accepts because it has no size limit):
+//   7 the picker searches with "4K (Default)", lists both 4K rows first, then 1080p, then 720p, none rejected;
+//     choosing the 1080p profile lists the 1080p row first and rejects both 4K rows.
 // Fixtures: profiles named "JellyfinMod QP …" and the indexer "JellyfinMod QP Indexer", all removed at the end; the removed preset
 // is added back by the run itself. Nothing is grabbed.
 import { chromium } from 'playwright';
@@ -49,7 +49,7 @@ const LAYOUTS = {
 };
 const PRESETS = ['4K', '2K', '1080p', '720p', 'Any Quality', 'SD'];
 const SUMMARIES = {
-    '4K': '4K first, then down to 720p · up to 20 GB per hour · no upgrades',
+    '4K': '4K first, then down to 720p · any size · no upgrades',
     '2K': '2K first, then down to 720p · up to 10 GB per hour · no upgrades',
     '1080p': '1080p first, then down to 720p · up to 6 GB per hour · no upgrades',
     '720p': '720p only · up to 1 GB per hour · no upgrades',
@@ -213,9 +213,9 @@ async function settingsChecks(page, layout) {
     await dialog(page).waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(400);
     const opened = await dialogState(page);
-    record(layout, '3 Add Profile starts from the 4K preset: its name, 4K and Balanced pressed, fall back to 720p, the sentence',
-        opened.preset === '4K' && opened.name === '4K' && opened.best.join() === 'best-2160p' && opened.size.join() === 'size-balanced' && opened.fallback && opened.floor === '720p'
-            && opened.summary === '4K picks 4K (2160p) first, then down to 720p, files up to 20 GB per hour, and does not upgrade later.'
+    record(layout, '3 Add Profile starts from the 4K preset: its name, 4K and Large pressed, fall back to 720p, the sentence',
+        opened.preset === '4K' && opened.name === '4K' && opened.best.join() === 'best-2160p' && opened.size.join() === 'size-large' && opened.fallback && opened.floor === '720p'
+            && opened.summary === '4K picks 4K (2160p) first, then down to 720p, any file size, and does not upgrade later.'
             && opened.order.join() === FOUR_K.join() && !opened.saveDisabled, opened);
     record(layout, '3 the Predefined dropdown shows 4K with its description; no Custom heading, provenance line, Reset or chip',
         opened.heading === 'Predefined' && opened.preset === '4K' && opened.presetDescription === 'Best picture, big files. Falls back to lower quality if 4K is not available.'
@@ -265,7 +265,7 @@ async function settingsChecks(page, layout) {
     await dialog(page).waitFor({ state: 'detached', timeout: 15000 }).catch(() => undefined);
     const saved = (await profilesByName(page))[name];
     record(layout, '3 Save writes the 4K preset\'s record under the new name',
-        !!saved && saved.qualities.join() === FOUR_K.join() && saved.maximumBytesPerHour === 20 * GiB && saved.minimumBytesPerHour === null
+        !!saved && saved.qualities.join() === FOUR_K.join() && saved.maximumBytesPerHour === null && saved.minimumBytesPerHour === null
             && saved.cutoff === 'remux-2160p' && saved.upgradeAllowed === false && saved.upgradeMode === 'replace' && saved.minimumSeeders === 2 && saved.presetId === null, saved);
 
     // 4 the simple controls write the order and the size.
@@ -274,6 +274,7 @@ async function settingsChecks(page, layout) {
     await dialog(page).waitFor({ state: 'visible', timeout: 15000 });
     await page.locator('[data-qp="name"]').fill(custom);
     await page.locator('[data-qp="best-1080p"]').click();
+    await page.locator('[data-qp="size-balanced"]').click();
     let state = await dialogState(page);
     record(layout, '4 Best 1080p: 1080p by source, then 720p; Balanced is up to 6 GB per hour',
         state.order.join() === 'remux-1080p,bluray-1080p,webdl-1080p,webrip-1080p,hdtv-1080p,bluray-720p,webdl-720p,webrip-720p,hdtv-720p'
@@ -375,9 +376,10 @@ async function pickerChecks(page, layout) {
     record(layout, '7 the runner\'s Torznab indexer is created and verified over HTTP', tested.ok === true, tested);
     const search = await api(page, 'GET', `Releases?entryId=${entryId}&episodeId=${episode.id}`);
     const eligible = (search.candidates ?? []).filter(candidate => candidate.eligible).map(candidate => candidate.rawTitle);
-    record(layout, '7 the server ranks the episode\'s releases 4K, 1080p, 720p under the default 4K profile; the oversized 4K is rejected for its size',
-        search.profile?.name === '4K' && eligible.join() === [ROWS[3][0], ROWS[2][0], ROWS[0][0]].join()
-            && search.candidates.find(candidate => candidate.rawTitle === ROWS[1][0])?.rejections.some(rejection => rejection.code === 'size_above_maximum'),
+    record(layout, '7 the server ranks the episode\'s releases 4K, 1080p, 720p under the default 4K profile, which has no size limit: the 15 GB 4K row is not rejected',
+        search.profile?.name === '4K' && eligible.length === 4 && eligible.slice(0, 2).sort().join() === [ROWS[3][0], ROWS[1][0]].sort().join()
+            && eligible[2] === ROWS[2][0] && eligible[3] === ROWS[0][0]
+            && !search.candidates.some(candidate => candidate.rejections.some(rejection => rejection.code === 'size_above_maximum')),
         (search.candidates ?? []).map(candidate => [candidate.rawTitle, candidate.score, candidate.rejections.map(rejection => rejection.code)]));
     await page.evaluate(([id]) => { location.hash = `#/details?entryId=${id}&season=1&episode=3`; }, [entryId]);
     const opener = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first();
@@ -395,9 +397,9 @@ async function pickerChecks(page, layout) {
     const firstQuality = await page.locator('.jfmod-releaseDialog .jfmod-releaseItem .jfmod-releaseQuality').first().textContent();
     record(layout, '7 the picker names the quality as everywhere: 4K WEB-DL', firstQuality?.trim() === '4K WEB-DL', firstQuality);
     const at = (list, token) => list.rows.findIndex(text => text.includes(token));
-    record(layout, '7 the picker searches with "4K (Default)" and lists 4K, then 1080p, then 720p; the oversized 4K is in the collapsed Rejected group',
-        first.profile === '4K (Default)' && !first.options.includes('Title default') && at(first, 'H.265-QP') === 0 && at(first, '1080p.WEB-DL') === 1 && at(first, '720p.WEB-DL') === 2
-            && first.rows.length === 3 && first.rejected === '1', first);
+    record(layout, '7 the picker searches with "4K (Default)" and lists both 4K rows, then 1080p, then 720p, with no Rejected group',
+        first.profile === '4K (Default)' && !first.options.includes('Title default') && at(first, '2160p') < 2 && first.rows.filter(text => text.includes('2160p')).length === 2
+            && at(first, '1080p.WEB-DL') === 2 && at(first, '720p.WEB-DL') === 3 && first.rows.length === 4 && first.rejected === null, first);
     console.log('  shot', await shot(page, `${layout}-picker`, page.locator('.jfmod-releaseDialog')));
     await page.locator('#jfmod-releaseProfile').selectOption({ label: '1080p' });
     await page.waitForFunction(() => document.querySelector('.jfmod-releaseDialog .jfmod-releaseItem')?.textContent.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })

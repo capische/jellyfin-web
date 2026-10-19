@@ -1,7 +1,7 @@
 # Quality Profiles section and dialog
 
 **Status:** approved 2026-10-15 ("Love quality profiles - implement it too"), revised the same day and 2026-10-16/17 to
-artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). Built on
+artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). Built on
 `next-release` (P4.FU9). Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,
 `settings/qualityProfiles.scss` (`.jfmod-qp-*`), `settings/settingsSections.tsx` (`ProfileRow`, `QualityRow`).
@@ -14,7 +14,7 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
 
 - The card, the blue *Add Profile* and the row icons stay ([buttons-and-row-actions.md](buttons-and-row-actions.md)):
   Make Default `star_border`, Edit pencil, Remove red bin.
-- Each row says in one sentence what the profile does: **"4K first, then down to 720p · 8–20 GB per hour · no upgrades"**,
+- Each row says in one sentence what the profile does: **"4K first, then down to 720p · any size · no upgrades"**,
   never the quality list. Chips: *Predefined* on the shipped profiles, the blue *Default* on the default.
 - **Order (user, 2026-10-19):** profiles list best first, 4K, 2K, 1080p, 720p, SD, in the Settings list, the wizard step, the Default
   profile select and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (by the resolution of

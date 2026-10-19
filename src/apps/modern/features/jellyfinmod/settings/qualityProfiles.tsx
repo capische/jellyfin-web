@@ -105,7 +105,7 @@ const sizeWords = (record: Draft, short: boolean) => {
     return `${prefix}of at least ${gbText((minimum ?? 0) / GB)} GB per hour`;
 };
 
-/** A profile's row in the section, in one line: "4K first, then down to 720p · up to 20 GB per hour · no upgrades". */
+/** A profile's row in the section, in one line: "4K first, then down to 720p · any size · no upgrades". */
 export const profileSummary = (profile: Draft) => {
     const qualities = (profile.qualities as string[] | undefined) ?? [];
     if (!qualities.length) return 'Allows no quality';

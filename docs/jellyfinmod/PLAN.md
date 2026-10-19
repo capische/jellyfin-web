@@ -932,6 +932,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   720p, Any Quality, SD). The picker's Quality Profile dropdown lists the profiles, the default reads "4K (Default)", and the selected
   entry is the title's own profile or else the default; picking the profile the search already uses sends no override. Plugin
   `feat/profile-order`, web `feat/profile-order`. Not run: real Chrome, TV, Codex review, the Pi.
+  **P4.FU14, built (not accepted) 2026-10-19: the 4K predefined profile has no file size limit** (user 2026-10-19, after a 35.1 GB 4K
+  WEB-DL season pack sat under Rejected with "The profile limits size per hour, but the runtime is unknown.": "Remove file size limit
+  for 4K defaults. Any size for highest limits."). Owner: Phase 4's presets (P4.FU9). The 4K preset's `maximumBytesPerHour` is `null`
+  (the Large tier, like Any Quality) in `quality-presets.json`; 2K 10 GB per hour, 1080p 6, 720p 1 and SD 0.5 stay. Its row reads
+  "4K first, then down to 720p · any size · no upgrades" and the dialog opens with Large pressed. No migration: presets are copied only
+  when added, so an existing install keeps its stored 4K profile until its owner edits it (API.md, [UX.md](UX.md) §12, the
+  [Quality Profiles guide](design/guides/quality-profiles.md)). Checks: plugin `PhaseFourIntegration` preset scenario on Linux (the
+  4K profile has no maximum, the other caps are asserted, an 80 GB 4K remux is eligible); `quality-profiles.mjs` 63/63 in Chromium
+  (desktop and phone) on local environment delta, with the picker check now showing the 15 GB 4K row accepted; typecheck clean. Not
+  run: real Chrome, TV, Codex review.
+
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`
