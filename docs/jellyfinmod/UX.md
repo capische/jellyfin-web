@@ -352,14 +352,14 @@ is gone from the whole download design; this supersedes every "amber" below and 
 card the disc's glass ink (white; the light schemes' dark text); on a row the colour of upstream's round row icons beside it
 (inherited, as the row's Not Downloaded mark since P1.FU22); on the episode page the page's text colour. The card's bar is that
 colour at 85 %. Stalled is the same colour at 55 % opacity (arc, bar, number). The meta line's figures, the picker's added-row
-figure and the detail line are the line's ordinary secondary text, with no colour of their own. Failed stays red. Accepted trade
+figure and the detail line were the line's ordinary secondary text; P4.FU15 (below, treatment B) lifts the meta line's and the picker's text. Failed stays red. Accepted trade
 (the design session's): a downloading row no longer stands out of a long list by colour alone; the full-opacity glyph beside
 muted neighbours and the bobbing arrow carry it. The hover of a card disc is scale 1.08 only; a row's Not Downloaded keeps
 P1.FU22's upstream round-icon hover (the primary glyph over its veil).
 
 The figure is never inside the ring (the percent-inside and the caption and tooltip-only time placements stay in the artifact
 for later, not built). It is on the **meta line** after the date, in upstream's own items: `42% · 12 min left` (`1 h 05 min
-left` from an hour), `42% · stalled`, `queued`, `importing…`, `Failed · reason` (cut with an ellipsis); and in **every disc's
+left` from an hour), `Stalled · 42%`, `Queued`, `Importing…`, `Failed · reason` (cut with an ellipsis), the whole text in the text colour at 600 in Inter, queued and stalled at 75 %, failed red, no "Downloading" word (**P4.FU15, treatment B, user 2026-10-19**: "B, 600, Inter, no need for Downloading, just % and time"; [guide](design/guides/download-state-mark.md)); and in **every disc's
 tooltip**, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s` (the rate from the queue's
 `downloadRateBytes`, the sum of the torrents downloading for a series or season), `Queued`, `Importing…`, `Stalled at 42%`,
 `Failed · reason`. The queue has no position in the client's queue, so queued never says how many are ahead. One mapping words
@@ -424,7 +424,7 @@ its last value, the disc and figure dimmed.
   progress if the whole season or all seasons are downloading?"). An episode's row, card and detail line take its own
   entry of the queue's `pack.episodes` (`progress`, `sizeBytes`, `importState`) instead of the pack's figure, in the same
   wording: `42% · 6 min left` (its remaining bytes at the pack's current download rate; only the percent when the client
-  does not list its file's size), `queued` while its file has not started, `importing…` once its file is
+  does not list its file's size), `Queued` while its file has not started, `Importing…` once its file is
   finished (also before the import starts) or being imported, `Failed · reason` for its own blocked, failed or skipped
   import, and nothing once it is in the library. A season or series card keeps one bar and disc for the pack (the pack's
   whole torrent, counted once per episode it holds). A plugin without per-episode progress keeps the pack's figure on
@@ -449,7 +449,7 @@ its last value, the disc and figure dimmed.
     their state;
   - a page with nothing on its way still reads the queue once a minute, and when its tab is shown again, so a grab made on
     another device shows on a page left open there within a minute;
-  - an import that is done while the page has not drawn the file's own item keeps reading `importing…` on that card or row
+  - an import that is done while the page has not drawn the file's own item keeps reading `Importing…` on that card or row
     until it has (P4.FU12): the plugin's entry detail names the item that plays the file (`playableItemId`, read from Jellyfin,
     bound, not a placeholder, refreshed and probed). The plugin pushes the change (an early `LibraryChanged`, see below) and the
     page reads that detail on it; only when the push cannot be relied on does the one fallback poll (below) read it, once a
@@ -1049,8 +1049,8 @@ back to the dashed placeholder with the number, as does a season or episode TMDB
 
   | State | Ring | State line | Lines below | Actions |
   | --- | --- | --- | --- | --- |
-  | Downloading | `42%` inside, the arc in the page's text colour | **Downloading** `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (the text colour) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
-  | Stalled | `42%` dimmed, arc dimmed | **Stalled** `42% · no progress for 20 min` | release, marks, pack line, bar dimmed | the same |
+  | Downloading | `42%` inside, the arc in the page's text colour | `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB` (no word; the text colour at 600, P4.FU15) | release, marks, pack line, bar | View Queue · Cancel Download (administrators) |
+  | Stalled | `42%` dimmed, arc dimmed | **Stalled** `42% · no progress for 20 min` (all 600; queued and stalled at 75 %) | release, marks, pack line, bar dimmed | the same |
   | Queued | clock | **Queued** `waiting to start` | release, marks, pack line | the same |
   | Importing | turning arc | **Importing** `identifying the file…` / `linking into the library…` / `waiting for the library scan…` | release, marks, full bar, still | View Queue |
   | Failed | red bang | **Failed** the reason in red | release, marks | Search Again (red, administrators who may search) · View Queue |
@@ -1332,8 +1332,8 @@ Approved design: the release picker's added-row sheet (2026-10-12). What the pic
   `GET /Grabs/{id}`) and marks the row whose infohash matches it; once the client has it, no block is shown.
 - **Its download.** Once the client has the torrent, the picker reads `GET /Queue` right away and every 5 s while it is
   open, until the row is imported: the ring family's disc in the Add slot (§3.3, P4.FU6; the figure in its tooltip) and the
-  figure at the right end of the marks line, `queued`, `42% · 12 min left`, `42% · stalled` (plain secondary text), `importing…` or
-  `Failed · reason` (red, at the last value); an unreadable client keeps the last value dimmed. No bar since P4.FU6.
+  figure at the right end of the marks line, `Queued`, `42% · 12 min left`, `Stalled · 42%`, `Importing…` or
+  `Failed · reason` (red, at the last value), set as §3.3's treatment B (the text colour at 600, waiting states at 75 %); an unreadable client keeps the last value dimmed. No bar since P4.FU6.
   Imported, the row reads as the in-library row (the green check after the quality, no actions).
 - **The release page link.** Where the indexer gives a page (`detailsUrl`: Torznab `comments`, else an http `guid`; a URL
   carrying a credential is never passed on), the indexer name is a link that looks like the plain name at rest, with a

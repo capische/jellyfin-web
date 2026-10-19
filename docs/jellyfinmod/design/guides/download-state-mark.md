@@ -2,8 +2,9 @@
 
 **Status:** approved 2026-10-13 (ring family, artifact v3: "ring only, arrow, time left: meta line + tooltip"), glass disc
 2026-10-13 (v11: "use top bar's exact recipe"), icon colour 2026-10-15 (v12: "replace yellow … to the color of icons"), importing until
-the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4).
-Built on `next-release` (P4.FU6–FU8). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
+the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4), state text
+treatment B 2026-10-19 (P4.FU15, "I'd go with B, 600, Inter, but no need for Downloading ... just put % and time"; design
+session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>). Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
 `components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`), `integration/downloadMarks.tsx`.
@@ -73,12 +74,24 @@ the tooltip adds "(taking longer than usual)"; a safety stop at 10 minutes. The 
 
 ## Text
 
-The `importing…` meta word steps up from the muted meta colour to the full text colour at 600 (`.jfmod-dlMeta--importing`). Nothing animates: no breathing anywhere (user 2026-10-19: "remove the whole breathing animations completely"; the text states are being redesigned by the design session). The ring's own bob and turn stay.
+**Treatment B (P4.FU15, user 2026-10-19).** The state text on a row's meta line and the picker's added-row figure is lifted as a
+whole: the text colour (`--jf-palette-text-primary`) at weight **600**, in Inter (the mod font reaches it through the `jfmod-`
+class), tabular figures, one rule for every state (`.jfmod-dlMeta` in `downloadProgress.scss`). A waiting state (queued, stalled)
+is that at 75 % opacity so the active ones lead; a failure is the failed red at the same weight; a client that could not be read
+is 55 % (it wins over the 75 %). Nothing animates: no breathing anywhere (user 2026-10-19: "remove the whole breathing animations
+completely"). The ring's own bob and turn stay.
 
-Meta line: `42% · 12 min left` (`1 h 05 min left` from an hour), `42% · stalled`, `queued`, `importing…`,
-`Failed · reason` (cut with an ellipsis). Tooltip, on every disc: `Downloading · 42% · 12 min left · 3 MB/s`, `Queued`,
-`Importing…`, `Stalled at 42%`, `Failed · reason`. One mapping words both (`describeDownload`). Queued never says how
-many are ahead (the client has no position).
+| State | Meta line, picker figure | Disc tooltip (keeps the full words) |
+| --- | --- | --- |
+| downloading | `42% · 12 min left` (`1 h 05 min left` from an hour; `42%` alone when the time is unknown); **no "Downloading" word** | `Downloading · 42% · 12 min left · 3 MB/s` |
+| queued | `Queued` | `Queued` |
+| importing | `Importing…` | `Importing…` |
+| stalled | `Stalled · 42%` | `Stalled at 42%` |
+| failed | `Failed · reason` (red, cut with an ellipsis) | `Failed · reason` |
+
+One mapping words both (`describeDownload`). Queued never says how many are ahead (the client has no position). The picker's
+row label for assistive technology reads the tooltip, so "Downloading" is not lost. The Queue page draws the disc instead of
+words and is unchanged; the download block follows the same rule ([download-block.md](download-block.md)).
 
 ## Interaction
 

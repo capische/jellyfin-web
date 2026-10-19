@@ -703,7 +703,7 @@ async function stepA5() {
     // E03 complete: importing while the rest still wait; E01 and E02 complete together; then the rest.
     await control(`/progress?hash=${torrent.hashString}&file=${index(3)}&fraction=1`);
     await until(async () => (await now(page, 'row:E3')) === 'importing', { timeout: 30000, every: 200, label: 'E03 importing' }).catch(() => undefined);
-    await checkTooltips(page, 'row 3 importing', /^Importing…$/, /^importing…$/);
+    await checkTooltips(page, 'row 3 importing', /^Importing…$/, /^Importing…$/);
     await shot(page, 'a5-e03-importing');
     for (const number of [1, 2]) await control(`/progress?hash=${torrent.hashString}&file=${index(number)}&fraction=1`);
     await until(async () => { await importedAt(); return done.has(3); }, { timeout: 180000, every: 500, label: 'E03 imported' }).catch(() => undefined);

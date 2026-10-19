@@ -108,9 +108,9 @@ const downloadFigure = (view: QueueRow | undefined, progress: DownloadProgress):
     switch (progress.kind) {
         case 'downloading': return { tone: 'plain', text: downloadingText(view, progress) + stale };
         case 'stalled': return { tone: 'plain', text: progress.percent + '% · ' + stalledText(view) + stale };
-        case 'importing': return { tone: 'muted', text: importingText(view) };
+        case 'importing': return { tone: 'plain', text: importingText(view) };
         case 'failed': return { tone: 'error', text: (view ? reasonMessage(view.reason, view.message) : null) ?? 'see the download queue' };
-        default: return { tone: 'muted', text: 'waiting to start' + stale };
+        default: return { tone: 'plain', text: 'waiting to start' + stale };
     }
 };
 
@@ -344,7 +344,7 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
         <div className='jfmod-dlblock-ring'><BlockIcon state={state} /></div>
         <div className='jfmod-dlblock-body'>
             <div className='jfmod-dlblock-state'>
-                <span className='jfmod-dlblock-word'>{WORD[kind]}</span>
+                <span className={'jfmod-dlblock-word' + (kind === 'downloading' ? ' jfmod-dlblock-word--hidden' : '')}>{WORD[kind]}</span>
                 {figure && <span className={'jfmod-dlblock-figure jfmod-dlblock-figure--' + figure.tone}>{figure.text}</span>}
             </div>
             <ReleaseLines state={state} episodeId={episode.id} isAdmin={isAdmin} />

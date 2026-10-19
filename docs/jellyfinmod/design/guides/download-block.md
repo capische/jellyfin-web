@@ -1,7 +1,7 @@
 # Download block (missing episode page)
 
 **Status:** approved 2026-10-13 (artifact v2: "no download cloud over the episode card"), colours to the icon colour
-2026-10-15. Built on `next-release` (P1.FU20, P4.FU8). Records: [design note](../missing-episode-page-download-block.md),
+2026-10-15, state-line text treatment B 2026-10-19 (P4.FU15, user: "I'd go with B, 600, Inter, but no need for Downloading ... just put % and time"; design session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>). Built on `next-release` (P1.FU20, P4.FU8, P4.FU15 not accepted). Records: [design note](../missing-episode-page-download-block.md),
 [interactive page](../missing-episode-page-download-block.html), artifact <https://claude.ai/artifact/1Fu8eWkkNgzobkRimgHfHS>,
 [UX.md §7.2.1](../../UX.md). Code: `components/DownloadBlock.tsx`, `components/downloadBlock.scss` (`.jfmod-dlblock*`),
 mounted by `EntryEpisodeDetails` into the track-selector slot.
@@ -21,9 +21,12 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 - Ring `.jfmod-dlblock-ring`: the download mark at page size ([download-state-mark.md](download-state-mark.md)), 4em, percent
   inside while downloading or stalled; `margin-right 1.1em`. Not Downloaded and Unaired show the glyph alone (2em, unaired
   at 70 %).
-- State line `.jfmod-dlblock-state`: 1.05em; the word `.jfmod-dlblock-word` in 600, then the figures separated by ` · `:
-  `Downloading 42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB`. Error figures in `--jfmod-dlblock-error`
-  (`#ff7b72`; light `#c62828`), muted figures at 70 %.
+- State line `.jfmod-dlblock-state`: 1.05em. **Treatment B** for the five download states: the whole line, word and figures, in
+  the text colour at 600 (Inter), a waiting state (queued, stalled) at 75 %, a failure whole in `--jfmod-dlblock-error`
+  (`#ff7b72`; light `#c62828`). **Downloading has no word on screen**: the line is the figures only,
+  `42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB`; the word stays in the DOM, visually hidden
+  (`.jfmod-dlblock-word--hidden`), for assistive technology. Other states keep the word, then the figures:
+  `Stalled 42% · no progress for 20 min`. Not Downloaded and Unaired keep the quiet look (word 600, figures muted at 70 %).
 - Release name `.jfmod-dlblock-release`: monospace, .8em, 70 %, one line with an ellipsis.
 - Marks line `.jfmod-dlblock-marks`: .9em; quality word, [media marks](media-marks.md), language (.74em, 700, spaced,
   82 %), size, the indexer name (80 %; a link when the plugin keeps the release page), and for administrators the client's
@@ -40,11 +43,11 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 
 | State | Ring | State line | Below | Actions |
 | --- | --- | --- | --- | --- |
-| downloading | 42 % inside, arc | Downloading · 42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB | release, marks, pack, bar | View Queue · Cancel Download |
-| stalled | 42 % dimmed | Stalled · 42% · no seeders for 20 min | same, bar dimmed | same |
-| queued | clock | Queued | release, marks, pack (muted) | same |
-| importing | spinner | Importing · linking into the library… | release, marks, breathing bar | View Queue |
-| failed | red bang | Failed · reason (red) | release, marks | Search Again · View Queue |
+| downloading | 42 % inside, arc | 42% · 12 min left · 3.1 MB/s · 1.9 of 4.6 GB (no word) | release, marks, pack, bar | View Queue · Cancel Download |
+| stalled | 42 % dimmed | Stalled 42% · no progress for 20 min (75 %) | same, bar dimmed | same |
+| queued | clock | Queued waiting to start (75 %) | release, marks, pack (muted) | same |
+| importing | spinner | Importing linking into the library… | release, marks, breathing bar | View Queue |
+| failed | red bang | Failed reason (all red) | release, marks | Search Again · View Queue |
 | not downloaded | cloud | Not Downloaded | — | Get a Release; others see "no release chosen yet" |
 | unaired | clock, 70 % | Unaired · airs 19 May 2027 · in 7 months | — | — |
 
