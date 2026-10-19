@@ -217,7 +217,7 @@ async function clientStep(page) {
         await fill(client, 'Transmission RPC address', `http://${standin}:${port(2)}/transmission/rpc`);
         // Username and password left blank, as for a Transmission with authentication off (the stand-in is switched so).
         await fill(client, 'Label added to every grab', 'jellyfinmod');
-        await fill(client, 'Download folder as Transmission sees it', '/downloads');
+        await fill(client, 'Download folder in Transmission', '/downloads');
         await fill(client, 'The same folder as this server sees it', '/data/media/movies');
         control('/fault?service=txauth&mode=off');
         await page.locator('[data-submit="client"]').click();

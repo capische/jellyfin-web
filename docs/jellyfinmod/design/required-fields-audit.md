@@ -42,7 +42,7 @@ the settings area shows the same sections plus Import and Seeding and Missing Ep
 | 20 | Download Client | Transmission RPC address | no | **REQUIRED** | `invalid_client_url`. [AcquisitionSettingsController.cs:535](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:535) |
 | 21 | Download Client | Username | no | OPTIONAL | Not required on the server; the runner saves a client with it blank (201). [AcquisitionSettingsContracts.cs:153](../../../../plugin-nextrelease/JellyfinMod/Api/Contracts/AcquisitionSettingsContracts.cs:153), [s11-fresh.mjs:234](../../../scripts/jellyfinmod-e2e/s11-fresh.mjs:234) |
 | 22 | Download Client | Label added to every grab | no | DEFAULTED, must keep a value | Starts as "jellyfinmod"; must match `^[A-Za-z0-9._-]{1,64}$`. [settingsSections.tsx:727](../../../src/apps/modern/features/jellyfinmod/settings/settingsSections.tsx:727), [AcquisitionSettingsController.cs:536](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:536) |
-| 23 | Download Client | Download folder as Transmission sees it | no | **REQUIRED** | Absolute path, else `invalid_download_directory`. [AcquisitionSettingsController.cs:538](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:538) |
+| 23 | Download Client | Download folder in Transmission | no | **REQUIRED** | Absolute path, else `invalid_download_directory`. [AcquisitionSettingsController.cs:538](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:538) |
 | 24 | Download Client | The same folder as this server sees it | no | **REQUIRED** | Absolute path, and on the libraries' filesystem. [AcquisitionSettingsController.cs:538](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:538), [AcquisitionSettingsController.cs:171](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:171) |
 | 25 | Download Client | Web interface link | yes | OPTIONAL | Empty is stored as null and built from the RPC address. [AcquisitionSettingsController.cs:539](../../../../plugin-nextrelease/JellyfinMod/Api/AcquisitionSettingsController.cs:539) |
 | 26 | Download Client | Send grabs to this client (switch) | no | DEFAULTED | On. [settingsSections.tsx:727](../../../src/apps/modern/features/jellyfinmod/settings/settingsSections.tsx:727) |
@@ -132,9 +132,7 @@ one line with an ellipsis: room is the field width minus 24 px while the field i
 padding, 1 em card padding), so the label has 283 px empty and 385 px filled; a dialog field is about 248 px wide (MUI's 32 px
 margin and 24 px padding), so 224 px empty and 306 px filled. Expect a few px either way.
 
-- **REQUIRED fields with "* " added: none is cut.** The tightest is *\* Download folder as Transmission sees it* at 282 px
-  of 283 (fits by about 1 px; any change to padding or font would cut it, so a shorter label is worth having to hand:
-  "Download folder in Transmission"). The rest have room: *\* The same folder as this server sees it* 261/283,
+- **REQUIRED fields with "* " added: none is cut.** The tightest was *\* Download folder as Transmission sees it* at 282 px of 283, so on 2026-10-19 the user had it shortened to "Download folder in Transmission". The rest have room: *\* The same folder as this server sees it* 261/283,
   *\* Transmission RPC address* 188/283, *\* Torznab address* 123/224.
 - **Cut today because of "(Optional)"**, fixed by removing it: *Minimum seeding minutes* (252/224 empty), *Seconds between
   searches* (253/224 empty), and the TMDB token (it fits by width but runs under the field's Save icon; see the earlier

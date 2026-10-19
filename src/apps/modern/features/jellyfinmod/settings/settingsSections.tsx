@@ -879,7 +879,7 @@ export const ClientSection: FC<SectionProps> = props => {
         { key: 'baseUrl', label: 'Transmission RPC address', type: 'text', required: true, help: 'For example http://host:9091/transmission/rpc, without credentials.' },
         { key: 'username', label: 'Username', type: 'text' },
         { key: 'label', label: 'Label added to every grab', type: 'text' },
-        { key: 'downloadDirectory', label: 'Download folder as Transmission sees it', type: 'text', required: true },
+        { key: 'downloadDirectory', label: 'Download folder in Transmission', type: 'text', required: true },
         { key: 'localDirectory', label: 'The same folder as this server sees it', type: 'text', required: true, help: 'Must be on the same filesystem as the libraries, so imports can hardlink.' },
         { key: 'openUrl', label: 'Web interface link', type: 'text', optional: true, help: 'Leave empty to build it from the RPC address (its rpc path becomes web). Set it when the web page is reached through another address or port.' },
         { key: 'enabled', label: 'Send grabs to this client', type: 'bool' }
