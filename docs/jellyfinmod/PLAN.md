@@ -921,6 +921,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   1280×720, Codex review. Seen, not fixed: a page loaded in the second or two while Jellyfin has made placeholder items but not
   yet given them their numbers drew them nameless at the top beside the mod's missing rows (a page already open converges at
   once).
+  **P4.FU13, built (not accepted) 2026-10-19: quality profiles list best first everywhere, and the picker has no "Title default"**
+  (user 2026-10-19: "Higher profiles first, i.e. 4k 2k. Make those changes in settings, not drop down"; then "No sense in Default
+  if 4k is default. So it should be 4k (Default) selected, that's it."). Owner: P4.FU9's profiles. One order, decided in the data:
+  `GET /Settings/QualityProfiles` returns profiles by the resolution of each one's best (first) quality, descending, then name, so a
+  fresh six read 4K, Any Quality, 2K, 1080p, 720p, SD; the Settings list, the wizard step, the Default profile select and the picker
+  all show it as given and none sorts. The brief's literal rule (position of the best quality in the global quality list) cannot give
+  4K, 2K, 1080p because that list puts `remux-1080p` above `bluray-1440p`, so the key is the resolution number; the tie-break is name
+  (not allowed-quality count) so 4K precedes Any Quality. The predefined dropdown in the dialog keeps its shipped order (4K, 2K, 1080p,
+  720p, Any Quality, SD). The picker's Quality Profile dropdown lists the profiles, the default reads "4K (Default)", and the selected
+  entry is the title's own profile or else the default; picking the profile the search already uses sends no override. Plugin
+  `feat/profile-order`, web `feat/profile-order`. Not run: real Chrome, TV, Codex review, the Pi.
   **P1.FU21, built (not accepted) 2026-10-13: every season card says how many episodes it has** (user: "it should be 10
   episodes, screenshot showed nothing", Ted Lasso's Season 4 with 10 files; [UX.md](UX.md) §3.1). Owner: Phase 1 (the P1.FU11
   season cards). Upstream's own season cards on a series page get the mod's missing season cards' second line, `N episodes`

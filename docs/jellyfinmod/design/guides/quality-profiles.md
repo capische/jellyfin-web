@@ -16,6 +16,10 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
   Make Default `star_border`, Edit pencil, Remove red bin.
 - Each row says in one sentence what the profile does: **"4K first, then down to 720p · 8–20 GB per hour · no upgrades"**,
   never the quality list. Chips: *Predefined* on the shipped profiles, the blue *Default* on the default.
+- **Order (user, 2026-10-19):** profiles list best first, 4K, 2K, 1080p, 720p, SD, in the Settings list, the wizard step, the Default
+  profile select and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (by the resolution of
+  each profile's best quality, then name); no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
+  profile reads **"4K (Default)"** and is selected unless the title has its own profile.
 - A grey *Add Predefined Profiles* button shows while a predefined profile is missing (and in the empty state).
 
 ## Dialog, in order
