@@ -1507,7 +1507,7 @@ implement it.").** The section keeps its card, its blue *Add Profile* and its ro
 Each row says in one line what the profile does ("4K first, then down to 720p · up to 20 GB per hour · no upgrades"),
 a profile made from a predefined profile carries a grey *Predefined* chip and the default the blue *Default* chip; a grey
 *Add Predefined Profiles* appears beside *Add Profile* only while one is missing (and the empty state names it); a footer line says
-a title uses the default unless it has its own, chosen in the release picker ("Title default"). The dialog is simple by
+a title uses the default unless you pick another one in the release picker. Profiles are listed best first everywhere (4K, 2K, 1080p, 720p, SD): the plugin returns them in that order, by the resolution of each profile's best quality, and the settings list, the Default profile select and the picker's Quality Profile dropdown all show it as given, with no sort of their own (user, 2026-10-19). The picker's dropdown has no "Title default" entry: the default profile reads "4K (Default)" and is selected unless the title has its own profile, picking the profile the search already uses sends no override. The dialog is simple by
 default, in this order: the **Predefined** dropdown (user 2026-10-15: "use custom dropdown (we already got one on details
 page) so you can keep the font weight size difference inside dropdown"), a field-like trigger showing the chosen entry's
 name in weight 600 over its one-line description in the smaller muted size, with a chevron, opening a paper list of the six

@@ -892,7 +892,7 @@ async function pickerRecoveryRun(page, created, at) {
     at.step = `refusal ${refused?.status()} ${refusedBody?.type}`;
     const profiles = await page.locator('#jfmod-releaseProfile option').evaluateAll(options => options.map(option => option.value));
     at.step = 'profile switch';
-    await page.locator('#jfmod-releaseProfile').selectOption(profiles.find(value => value) ?? '');
+    await page.locator('#jfmod-releaseProfile').selectOption(profiles[1] ?? profiles[0]);
     await settled();
     at.step = 'own grab click: ' + (await page.locator('.jfmod-releaseStatus').innerText().catch(() => '')).trim();
     const ownCreated = page.waitForResponse(response => response.request().method() === 'POST'

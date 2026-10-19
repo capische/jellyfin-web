@@ -265,11 +265,6 @@ const statusText = (search: ReleaseSearch | undefined, waiting: string, loading:
     return text;
 };
 
-const profileLabel = (search: ReleaseSearch | undefined, overridden: boolean) => {
-    if (!search || overridden) return 'Title default';
-    return (search.profile.inherited ? 'Default' : 'Title profile') + ' (' + search.profile.name + ')';
-};
-
 const seasonCode = (season: number) => 'S' + (season < 10 ? '0' : '') + season;
 
 /**
@@ -1139,11 +1134,21 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
     const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage, loading }),
         [episodes, packs, pageEpisode, seasonPage, loading]);
-    const defaultProfileLabel = profileLabel(data, !!profileId);
-    const profileOptions = useMemo<EmbySelectOption[]>(() => [
-        { value: '', label: defaultProfileLabel },
-        ...(profiles.data ?? []).map(profile => ({ value: profile.id, label: profile.name }))
-    ], [defaultProfileLabel, profiles.data]);
+    // The list comes best-first from the plugin (user, 2026-10-19). The default profile reads "4K (Default)" and is what is
+    // selected unless the title has its own profile; there is no separate "Title default" option. Picking the profile a search
+    // uses without an override clears the override, so only a different profile is sent.
+    const defaultProfileId = profiles.data?.find(profile => profile.isDefault)?.id ?? '';
+    const noOverrideId = useRef('');
+    useEffect(() => {
+        if (!profileId && data) noOverrideId.current = data.profile.id;
+    }, [profileId, data]);
+    const profileOptions = useMemo<EmbySelectOption[]>(() => (profiles.data ?? []).map(profile => ({
+        value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name
+    })), [profiles.data]);
+    const shownProfileId = profileId || (data?.profile.id ?? defaultProfileId);
+    const chooseProfile = useCallback((value: string) => {
+        setProfileId(value === (noOverrideId.current || defaultProfileId) ? '' : value);
+    }, [defaultProfileId]);
 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
     const eligible = data?.candidates.filter(candidate => candidate.eligible) ?? [];
@@ -1188,7 +1193,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choice}
                 options={scope.options} onChange={chooseScope} />}
             {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality Profile'
-                value={profileId} options={profileOptions} onChange={setProfileId} />}
+                value={shownProfileId} options={profileOptions} onChange={chooseProfile} />}
         </div>
         {listError && <p className='jfmod-releaseNotice jfmod-releaseNotice--info jfmod-episodeListFailure'>{listError}</p>}
         {notice && !bare && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}

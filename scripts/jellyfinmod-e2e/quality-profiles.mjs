@@ -19,7 +19,7 @@
 //   6 the live rules: no name, or a cutoff the profile does not allow, refuse Save with the rule shown;
 // and in the release picker (a missing Peep Show episode, a Torznab server of the runner's own over real HTTP, answering
 // 2160p, 1080p and 720p WEB-DL rows and a 2160p row too large for the 4K profile):
-//   7 the picker searches with "Default (4K)", lists the 4K row first, then 1080p, then 720p, the oversized row rejected;
+//   7 the picker searches with "4K (Default)", lists the 4K row first, then 1080p, then 720p, the oversized row rejected;
 //     choosing the 1080p profile lists the 1080p row first.
 // Fixtures: profiles named "JellyfinMod QP …" and the indexer "JellyfinMod QP Indexer", all removed at the end; the removed preset
 // is added back by the run itself. Nothing is grabbed.
@@ -184,7 +184,7 @@ async function settingsChecks(page, layout) {
         PRESETS.every(name => byName[name]?.summary === SUMMARIES[name] && byName[name].preset) && byName['4K'].isDefault
             && listed.filter(row => row.isDefault).length === 1 && byName['2K'].icons === 3 && byName['4K'].icons === 2, listed);
     record(layout, '1 Add Predefined Profiles is hidden while every predefined profile exists; the footer says how a title takes its profile',
-        await presetButton(page).count() === 0 && /Title default/.test(await page.locator('.jfmod-qp-foot').textContent()), await presetButton(page).count());
+        await presetButton(page).count() === 0 && /pick another one in the release picker/.test(await page.locator('.jfmod-qp-foot').textContent()), await presetButton(page).count());
     console.log('  shot', await shot(page, `${layout}-section`, page.locator('.jfmod-check-section[data-section="profiles"]')));
 
     // 2 a removed predefined profile comes back through Add Predefined Profiles, with its own id.
@@ -395,8 +395,8 @@ async function pickerChecks(page, layout) {
     const firstQuality = await page.locator('.jfmod-releaseDialog .jfmod-releaseItem .jfmod-releaseQuality').first().textContent();
     record(layout, '7 the picker names the quality as everywhere: 4K WEB-DL', firstQuality?.trim() === '4K WEB-DL', firstQuality);
     const at = (list, token) => list.rows.findIndex(text => text.includes(token));
-    record(layout, '7 the picker searches with "Default (4K)" and lists 4K, then 1080p, then 720p; the oversized 4K is in the collapsed Rejected group',
-        first.profile === 'Default (4K)' && at(first, 'H.265-QP') === 0 && at(first, '1080p.WEB-DL') === 1 && at(first, '720p.WEB-DL') === 2
+    record(layout, '7 the picker searches with "4K (Default)" and lists 4K, then 1080p, then 720p; the oversized 4K is in the collapsed Rejected group',
+        first.profile === '4K (Default)' && !first.options.includes('Title default') && at(first, 'H.265-QP') === 0 && at(first, '1080p.WEB-DL') === 1 && at(first, '720p.WEB-DL') === 2
             && first.rows.length === 3 && first.rejected === '1', first);
     console.log('  shot', await shot(page, `${layout}-picker`, page.locator('.jfmod-releaseDialog')));
     await page.locator('#jfmod-releaseProfile').selectOption({ label: '1080p' });
