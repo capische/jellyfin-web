@@ -105,7 +105,8 @@ export const openQueueRowMenu = async ({ api, row, isAdmin, positionTo, onChange
     if (!items.length) return;
     let id: unknown;
     try {
-        id = await actionsheet.show({ items, positionTo, title: queueRowTitle(row) });
+        // No title above the items (user 2026-10-19: "No need for such header at all. Just show menu Remove").
+        id = await actionsheet.show({ items, positionTo });
     } catch {
         return;
     }
