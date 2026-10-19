@@ -13,7 +13,8 @@
 //   season     Delete media of a whole real season (Adolescence): its season and episodes come back, a played one played
 //   browser    the series page open while a season is deleted: when the page shows the placeholders again
 //   series     Delete media of a whole series (Fawlty Towers): a file-less series with every aired episode comes back,
-//              favourite and played kept
+//              favourite and played kept; the new series item and its episodes find the entry, and its card in the Shows grid
+//              keeps the administrator's Get a Release in the hover centre
 //   movie      Delete media of a movie: its placeholder movie comes back, favourite kept
 //   note       (P1.FU31) the placeholder episode, season, series and movie overviews start with the note for native apps, once,
 //              the title's own overview below it; an edit with the note twice is put right; a forced full metadata refresh
@@ -359,6 +360,28 @@ async function main() {
             record('series', 'S01E02 and S01E04 played on their date and favourite, the series favourite', !!kept.value,
                 { e2: at(list, 1, 2)?.UserData, e4: at(list, 1, 4)?.UserData, series: (await userData(fawlty.Id))?.IsFavorite, seconds: kept.seconds });
             record('series', 'the series lists two seasons, both the plugin\'s', (await seasonsOf(fawlty.Id)).length === 2);
+            // The made-again series item and its episodes find the series' entry: what a card's Get a Release asks on hover
+            // (user, 2026-10-19: the cloud was missing from the series card after the delete).
+            const entry = await entryOf(2207);
+            const finds = async id => ((await get(`/JellyfinMod/Entries?jellyfinItemId=${id}&limit=1`))?.items ?? [])[0]?.id === entry?.id;
+            record('series', 'the made-again series item and a placeholder episode of it find the series\' entry (Entries?jellyfinItemId=)',
+                !!entry && await finds(fawlty.Id) && await finds(at(list, 1, 1)?.Id));
+            const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
+            try {
+                const page = await signedInPage(browser);
+                const card = `.page:not(.hide) .card[data-id="${fawlty.Id}"]`;
+                await page.goto(new URL(`/web/#/tv?topParentId=${shows}`, origin).href);
+                await page.waitForSelector(card, { timeout: 30000 });
+                await page.locator(card).first().hover();
+                await page.waitForTimeout(1500);
+                const hover = await page.evaluate(selector => {
+                    const button = document.querySelector(`${selector} .cardOverlayContainer > .jfmod-cardGet.cardOverlayFab-primary`);
+                    return { centre: !!button && !button.hidden && button.getClientRects().length > 0, title: button?.title };
+                }, card);
+                record('series', 'Shows grid: the made-again series\' card keeps the administrator\'s Get a Release in its hover centre', hover.centre, hover);
+            } finally {
+                await browser.close();
+            }
             const counts = await get(`/Items/${fawlty.Id}?userId=${sessions.oleksii.id}`);
             record('series', 'a file-less series is not "watched" (it has unplayed placeholders)', counts?.UserData?.Played === false,
                 { played: counts?.UserData?.Played, unplayed: counts?.UserData?.UnplayedItemCount });
