@@ -229,7 +229,7 @@ for (const name of ready ? only : []) {
         record(name, 'Use saves nothing', !(await api(page, 'GET', 'JellyfinMod/Settings/DownloadClients')).body.length);
 
         // ---- Save and Test: Prowlarr's localhost does not answer from Jellyfin; the gateway is offered, once.
-        await field(client, 'Download folder as Transmission sees it').fill('/downloads');
+        await field(client, 'Download folder in Transmission').fill('/downloads');
         await field(client, 'The same folder as this server sees it').fill(root + '/downloads');
         await page.locator('#jfmodClientPassword').fill(fixture.TX_PASSWORD);
         await press(layout, client.locator('[data-submit="client"]'));
