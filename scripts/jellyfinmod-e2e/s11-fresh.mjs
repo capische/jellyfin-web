@@ -959,8 +959,8 @@ async function automation() {
             await section(page, 'indexers').locator('.jfmod-brow', { hasText: 'JellyfinMod Standin Indexer' }).getByRole('button', { name: 'Edit' }).click();
             dialog = page.locator('.jfmod-settingsDialog').last();
             await dialog.waitFor({ state: 'visible', timeout: 10000 });
-            await fill(dialog, 'Seconds between searches (Optional)', '2');
-            await fill(dialog, 'Searches per day (Optional)', '60');
+            await fill(dialog, 'Seconds between searches', '2');
+            await fill(dialog, 'Searches per day', '60');
             await saveDialog(page, dialog);
             const indexer = (await api(page, 'GET', 'JellyfinMod/Settings/Indexers')).body[0];
             // The test host's disk is over 90 % full, so the default floor (10 %, at least 25 GB) is above its free space and
