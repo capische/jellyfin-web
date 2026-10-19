@@ -400,12 +400,23 @@ its last value, the disc and figure dimmed.
   download queue · 42% · 12 min left`, then View queue where the queue may be opened. The mod's page for a missing episode
   showed it from P1.FU19 until P1.FU20 replaced it with the download block (§7.2.1).
 - **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
-  copy keeps its word; the progress bar column stays.
+  copy keeps its word; the progress bar column stays. The State column is as wide as what it holds (the disc alone while a row
+  downloads), the room going to the title (user 2026-10-19).
 - **The release picker's added row:** the disc takes the Add slot while the torrent downloads (the green tick when the queue
   cannot be read; the in-library row once imported); the X stays; the figure stays at the right end of the marks line; no bar.
-  The Add slot is no control there: no pointer, no veil, no growth under the mouse (P1.FU19); the X keeps its hover.
+  The Add slot is no control there: no pointer, no veil, no growth under the mouse (P1.FU19); the X keeps its hover. An
+  administrator's ring in it opens the client (below), as the title row's Open Transmission does.
+- **An administrator's ring opens the download client** (P4.FU16, user 2026-10-19: "The buttons only (I believe you meant a
+  ring)", "Administrators only"): a queued, downloading, importing or stalled disc, on every surface above, opens the client's
+  saved Web interface link in a new tab and nothing else (not the card's or row's title). The link comes from the queue rows the
+  page already reads, whose `client` the plugin sends to administrators only; no new request. A pointer, a thin ring in the disc's
+  own ink under the mouse, the cyan keyboard ring, a Tab stop on desktop and phone, the tooltip's second line `Open Transmission`.
+  Not on the TV, not for a failed disc, a cloud or an unaired clock, not for an ordinary user, and not when the client has no
+  saved Web interface link (the picker's title row works one out from the RPC address; the ring does not): those stay
+  indicators. The words beside the discs (`queued`, `42% · 12 min left`, `importing…`) stay plain text.
 - **TV and phone:** sizes in `em`, so TV 125 % and phone 90 %; no flex gap, `min()` or `max()`; nothing waits for a hover; the
-  discs are not focus stops (since P1.FU19 not even a failure on a row; an administrator's row Not Downloaded, P1.FU22, is the
+  discs are not D-pad stops (since P1.FU19 not even a failure on a row; an administrator's linked disc is a Tab stop on desktop
+  and phone only; an administrator's row Not Downloaded, P1.FU22, is the
   row's second stop only while no download holds it). Reduced motion stops the
   bob, the turning arc and the arc's easing.
 - **Data:** one `GET /JellyfinMod/Queue` when a page opens (the shared queue query, so every card and row of the
@@ -1353,9 +1364,18 @@ its bugs.
 
 Columns: poster thumb · title · progress bar · size · speed · ETA · state · client.
 
+The title is its parts, each a link to its own page (user 2026-10-19): the series to its page, `Season N` to the season page,
+the episode (`S01E02 Title`) to its page (the mod's `&season=N` and `&episode=M` routes, which open Jellyfin's own episode
+page once it has the episode); a season pack names its series and season (`Peep Show (2003) · Season 2 pack · 6 episodes`), a
+series pack its series, a movie is one link. Separators and a pack's count stay plain text; the links take the text's colour,
+the primary and an underline under the mouse and for the keyboard. On the TV the row is one button, so its title stays text.
+
 Actions, and only these: **Remove** (with sub-options *remove from client* and *blocklist this
-release*), and **Open in client** (a link out). No pause, no resume, no priority, no per-file
-selection, no tracker editing. If you need those, you need qBittorrent, and it is one link away.
+release*), Retry for a failed import, and the **link out to the client**: since 2026-10-19 the client's name in the Client
+column (and in a phone row) and the row's state disc are links to its web page, for administrators with a saved Web interface
+link, and the row menu has no Open in Client any more (it was administrators only; the TV, whose rows are buttons, has no link
+out). No pause, no resume, no priority, no per-file selection, no tracker editing. If you need those, you need qBittorrent, and
+it is one link away.
 
 Progress updates by **polling `GET /JellyfinMod/Queue` every 3 seconds**, and only while the
 queue route is mounted or a `downloading` card is on screen. No websocket in Phase 5; the Pi does
