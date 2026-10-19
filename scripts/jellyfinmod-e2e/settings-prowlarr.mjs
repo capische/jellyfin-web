@@ -4,7 +4,7 @@
 //
 //   JELLYFINMOD_TEST_URL=http://<host>:<isolated-port>/ JELLYFINMOD_BROWSER=chromium|chrome node settings-area.mjs
 //
-// Signs in as oleksii with an empty password. Adds a "JellyfinMod Prowlarr" source pointing at a closed port with a
+// Signs in as oleksii with an empty password. Adds a Prowlarr source (named Prowlarr by default) pointing at a closed port with a
 // dummy key, tests and syncs it (both must report unreachable and change nothing), then removes it. No real Prowlarr
 // is contacted; the sync rules themselves are proven by the plugin suite against a Prowlarr boundary server.
 import { chromium } from 'playwright';
@@ -97,8 +97,7 @@ try {
     await card().waitFor({ state: 'visible', timeout: 30000 });
     record('desktop', 'The Indexers section carries the Prowlarr card', true);
     const inputs = card().locator('input');
-    await inputs.nth(0).fill('JellyfinMod Prowlarr');
-    await inputs.nth(1).fill('http://127.0.0.1:9');
+    await inputs.nth(0).fill('http://127.0.0.1:9');
     await card().locator('input[type="password"]').fill(DUMMY);
     await card().locator('button', { hasText: 'Add Prowlarr' }).click();
     record('desktop', 'Adding a source saves it', /Saved/.test(await notice()), await notice());
