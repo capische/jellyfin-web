@@ -8,7 +8,7 @@
 //   - a season with real files deleted through Jellyfin's own API (DELETE /Items/{season}, what Delete media sends): its aired
 //     episodes come back as placeholder items in the same folder names, a played and favourite episode comes back played and
 //     favourite, and the series page shows the season all the while (the mod's card, then Jellyfin's), without a reload;
-//   - the same for one episode, for a whole series and for a movie;
+//   - the same for one episode, for a whole series (every season back with its placeholders) and for a movie;
 //   - a season folder removed inside the container while the server runs, and one removed while the container is stopped
 //     (the batch's check of the catalog's files after start);
 //   - the plugin's own removals start nothing: Remove Entry of a placeholder-only series brings nothing back; a library turned
@@ -276,6 +276,13 @@ async function seriesStep() {
     });
     record(label, 'the series comes back in a folder of the same name with its 12 aired episodes as placeholders', !!back.value,
         { seconds: back.seconds, stubs: stubsIn(FAWLTY).length, deleteSeconds: lastDeleteSeconds });
+    // Every season comes back too, each holding its six placeholders (user 2026-10-19: "the show should stay but files are gone").
+    const now = await seriesAt(FAWLTY);
+    const seasons = now ? (await call('GET', `/Shows/${now.Id}/Seasons?userId=${userId}`)).json?.Items ?? [] : [];
+    const perSeason = await Promise.all(seasons.map(async season => ({ season: season.IndexNumber,
+        episodes: ((await call('GET', `/Shows/${now.Id}/Episodes?userId=${userId}&seasonId=${season.Id}`)).json?.Items ?? []).length })));
+    record(label, 'both seasons come back under the series, six placeholders each',
+        perSeason.length === 2 && perSeason.every(season => season.episodes === 6), perSeason);
 }
 
 async function movieStep() {
