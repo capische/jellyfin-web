@@ -123,9 +123,14 @@ try {
         if (stubs.length !== (fx.episodes.length || 1)) throw Error(`${fx.case}: placeholder count ${stubs.length}`);
         const series = selected.find(x => x.Type === 'Series');
         const season = selected.find(x => x.Type === 'Season');
-        const surfaces = fx.case === 'movie' ? [{ name: 'movie', id: stubs[0].Id, target: '.page:not(.hide)' }]
+        // The library grid's card of the title too (P2-6 of the 2026-10-22 review): a page that never reads the title's detail.
+        // It is found by its name, because a movie's card is a new item once the file is in.
+        const grid = fx.case === 'movie'
+            ? { name: 'grid-movie-card', url: `#/movies?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=movies`, target: '.page:not(.hide) .card', text: fx.title }
+            : { name: 'grid-series-card', url: `#/tv?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=tvshows`, target: '.page:not(.hide) .card', text: fx.title };
+        const surfaces = fx.case === 'movie' ? [{ name: 'movie', id: stubs[0].Id, target: '.page:not(.hide)' }, grid]
             : [{ name: 'season-rows', id: season.Id, target: '.page:not(.hide) #listChildrenCollapsible' },
-                { name: 'series-season-card', id: series.Id, target: `.page:not(.hide) .card[data-id="${season.Id}"]` },
+                { name: 'series-season-card', id: series.Id, target: `.page:not(.hide) .card[data-id="${season.Id}"]` }, grid,
                 ...(ordinaryMode && fx.case === 'episode' ? [{ name: 'ordinary-season-rows', id: season.Id, target: '.page:not(.hide) #listChildrenCollapsible', user: 'ordinary', block: ordinaryMode === 'blocked' }] : [])];
         const dotted = fx.title.replaceAll(' ', '.');
         const releaseTitle = `${dotted}.${fx.case === 'movie' ? '2025' : fx.case === 'pack' ? 'S01' : 'S01E01'}.1080p.WEB-DL.H264-JFMOD`;
@@ -178,14 +183,15 @@ try {
                     result.websockets.push({ at: Date.now(), surface: surface.name, data: m.Data }); } catch {}
             }));
             await signIn(page, surface.user);
-            await page.goto(base + '/web/#/details?id=' + surface.id);
+            await page.goto(base + '/web/' + (surface.url ?? '#/details?id=' + surface.id));
             await page.waitForSelector(surface.target, { timeout: 30000 });
-            if (surface.name !== 'movie' && !surface.user) await page.locator(surface.target).hover().catch(() => {});
-            await page.evaluate(({ selector, name }) => {
+            if (surface.text) await page.locator(surface.target).filter({ hasText: surface.text }).first().waitFor({ timeout: 30000 });
+            if (surface.name !== 'movie' && !surface.user && !surface.text) await page.locator(surface.target).hover().catch(() => {});
+            await page.evaluate(({ selector, name, text }) => {
                 window.importSamples = [];
                 const shown = n => n && getComputedStyle(n).display !== 'none' && getComputedStyle(n).visibility !== 'hidden' && n.getClientRects().length > 0;
                 window.importTimer = setInterval(() => {
-                    const n = document.querySelector(selector);
+                    const n = text ? [...document.querySelectorAll(selector)].find(card => card.textContent.includes(text)) : document.querySelector(selector);
                     if (!n) { window.importSamples.push({ at: Date.now(), missing: true }); return; }
                     const rows = name.endsWith('season-rows') ? [...n.querySelectorAll('.listItem')] : [n];
                     window.importSamples.push({ at: Date.now(), rows: rows.map(r => ({ id: r.getAttribute('data-id'),
@@ -195,7 +201,7 @@ try {
                         play: [...r.querySelectorAll('.listItemImageButton,[data-action="play"],[data-action="resume"],.btnPlay')].filter(shown).length,
                         placeholder: r.hasAttribute('data-jfmod-placeholder'), word: r.querySelector('.jfmod-dlMeta,.jfmod-dlblock-word')?.textContent })) });
                 }, 100);
-            }, { selector: surface.target, name: surface.name });
+            }, { selector: surface.target, name: surface.name, text: surface.text });
         }
         console.log(`${fx.case}: observing queued pages`);
         await until(async () => pages[0].evaluate(() => window.importSamples.some(s => s.rows?.some(r => r.ring))), 'download ring did not appear', 80000).catch(async error => {
@@ -240,7 +246,8 @@ try {
         for (let i = 0; i < pages.length; i++) {
             result.dom[surfaces[i].name] = await pages[i].evaluate(() => { clearInterval(window.importTimer); return window.importSamples; });
             // What each surface holds at the end, to see what kept a ring (P4.FU12).
-            (result.finalHtml ??= {})[surfaces[i].name] = await pages[i].evaluate(selector => document.querySelector(selector)?.outerHTML?.slice(0, 6000), surfaces[i].target);
+            (result.finalHtml ??= {})[surfaces[i].name] = await pages[i].evaluate(({ selector, text }) => (text ? [...document.querySelectorAll(selector)]
+                .find(card => card.textContent.includes(text)) : document.querySelector(selector))?.outerHTML?.slice(0, 6000), { selector: surfaces[i].target, text: surfaces[i].text });
             await pages[i].screenshot({ path: join(output, `${label}-${tier}-${fx.case}-${surfaces[i].name}.png`), timeout: 5000, animations: 'disabled' }).catch(() => {});
             await pages[i].close();
         }
