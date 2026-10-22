@@ -69,9 +69,10 @@ easing. Motion is transform and opacity only.
 When a download ends with its file (the queue says `seeding`, a pack episode's import `completed`), a card or row that stands
 for it keeps the **importing** disc (spinner, `importing…`, tooltip `Importing…`) instead of going to the Not Downloaded cloud
 (P4.FU12). It is kept per target (entry, season, episode number or episode), not per element, so a card or row that upstream
-draws again keeps it. It ends when the plugin's fresh entry detail (read on the plugin's push; fallback in [UX §3.3](../../UX.md)) names the item that plays the file (`playableItemId`) and the
-card or row **is** that item (`data-id`) and shows no missing-file mark for two passes running; a season or series card ends
-when every episode the download named is playable. A cancelled or failed download ends it at once; from 30 s after the import
+draws again keeps it. A card or row of one episode or a movie ends it at once when the plugin's fresh entry detail (read on the
+plugin's push; fallback in [UX §3.3](../../UX.md)) names the item that plays the file (`playableItemId`) and the card or row
+**is** that item (`data-id`). A season or series card ends it when the detail names every episode the download named as
+playable and the card shows no missing-file mark for two passes running. A cancelled or failed download ends it at once; from 30 s after the import
 the tooltip adds "(taking longer than usual)"; a safety stop at 10 minutes. The cloud never appears between the two.
 
 ## Text
