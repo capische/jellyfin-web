@@ -127,7 +127,10 @@ const LIST_KEYS = {
 async function snapshot() {
     const out = {};
     for (const [path, keys] of Object.entries(LIST_KEYS)) {
-        out[path] = ((await api('GET', 'JellyfinMod/' + path)).body ?? []).map(item => Object.fromEntries(keys.map(key => [key, item[key]])));
+        const read = await api('GET', 'JellyfinMod/' + path);
+        // A list that could not be read is no snapshot: the sweep below would take every item for a leftover.
+        if (read.status !== 200 || !Array.isArray(read.body)) throw new Error(`snapshot: GET ${path} answered ${read.status}`);
+        out[path] = read.body.map(item => Object.fromEntries(keys.map(key => [key, item[key]])));
     }
     const acquisition = (await api('GET', 'JellyfinMod/Settings/Acquisition')).body;
     out.acquisition = { enabled: acquisition.enabled, downloadClientId: acquisition.downloadClientId, defaultQualityProfileId: acquisition.defaultQualityProfileId,
@@ -385,9 +388,12 @@ try {
 // ---- Hygiene: every fixture gone (removed by API only if a page step failed), then the lists equal the snapshot
 try {
     const leftovers = [];
-    for (const item of (await api('GET', 'JellyfinMod/Settings/Prowlarr')).body ?? []) {
-        // The card has no Name field, so the fixture source is just "Prowlarr": a leftover is any source the snapshot lacked.
-        if (!(before['Settings/Prowlarr'] ?? []).some(kept => kept.id === item.id)) { leftovers.push('prowlarr ' + item.name); await api('DELETE', `JellyfinMod/Settings/Prowlarr/${item.id}`); }
+    // The card has no Name field, so the fixture source is just "Prowlarr": a leftover is any source the snapshot lacked. Without a
+    // snapshot (it failed) nothing is deleted: every source, an instance's real one too, would read as a leftover.
+    const keptSources = before['Settings/Prowlarr'];
+    if (!Array.isArray(keptSources)) leftovers.push('prowlarr sources not swept: no snapshot');
+    for (const item of Array.isArray(keptSources) ? (await api('GET', 'JellyfinMod/Settings/Prowlarr')).body ?? [] : []) {
+        if (!keptSources.some(kept => kept.id === item.id)) { leftovers.push('prowlarr ' + item.name); await api('DELETE', `JellyfinMod/Settings/Prowlarr/${item.id}`); }
     }
     for (const item of (await api('GET', 'JellyfinMod/Settings/Indexers')).body ?? []) {
         if (/^JellyfinMod/.test(item.name) && item.managedBy !== 'prowlarr') { leftovers.push('indexer ' + item.name); await api('DELETE', `JellyfinMod/Settings/Indexers/${item.id}`); }
