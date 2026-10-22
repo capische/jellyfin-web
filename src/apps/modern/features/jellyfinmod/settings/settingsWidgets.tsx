@@ -134,7 +134,7 @@ export const SectionFrame: FC<SectionFrameProps> = ({
 
 /**
  * The marks of a required field (user, 2026-10-19, `design/guides/settings-field.md`): the asterisk is the label's CSS
- * `::before` (not MUI's `required`, whose DOM text would change the accessible name every runner finds the field by), and
+ * `::after` (not MUI's `required`, whose DOM text would change the accessible name every runner finds the field by), and
  * the input says `aria-required` for screen readers.
  */
 export const REQUIRED_SLOTS = { inputLabel: { className: 'jfmod-required' }, htmlInput: { 'aria-required': true } };
