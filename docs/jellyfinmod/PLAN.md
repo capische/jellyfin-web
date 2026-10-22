@@ -925,7 +925,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   a delete, a new title, an import) and a removed one are watched for two minutes (`LibraryNotifications`, at most 1000), and a
   first cover is told as `ItemsUpdated` 3 s after it came, the rest of a burst in one more message once no cover came for 3 s,
   so an open page shows the poster without Jellyfin's 30 s batch; the 3 s let the placeholder listener put back the user data
-  Jellyfin parked for a re-made id first. Not run: real Chrome, the Pi, Codex review.
+  Jellyfin parked for a re-made id first. Not run: real Chrome, the Pi, Codex review. Review fixes 2026-10-22 (the Opus review of
+  that day, workspace `reviews/fable-review-2026-10-22.md`): Remove Placeholders and Remove Entry now drop the Series and Season
+  items of the folders they removed and report the surviving parents again (P2-4; on local delta with real-time monitoring off,
+  Peep Show's eight emptied seasons left Jellyfin 0.6 s after Remove Placeholders); an import Blocked after its scans no longer
+  keeps the one-second local pass running (P2-5; looked at on a binding change and the full ticks); a card on Home, a library grid
+  or search reads the title's detail itself while its importing ring waits, once per queue read, so the ring ends there too (P2-6:
+  on local echo the grid cards' rings ended 2.3 to 3.6 s after the download, where they had stayed until the 10-minute stop;
+  `import-delay.mjs` now samples the library grid's card; first look on echo, waiting for the user). Runners: `settings-changes.mjs` sweeps no Prowlarr source without a
+  snapshot, `prowlarr-first.mjs` cleans up only an environment it proved fresh, `placeholder-redelete.mjs` and
+  `placeholder-flows.mjs` prove one pool environment first (`local-env.mjs`, never alpha or beta), `placeholder-flows.mjs` has a
+  verdict, and `import-delay-report.mjs --verify` fails a ring that never clears.
   **P4.FU13, built (not accepted) 2026-10-19: quality profiles list best first everywhere, and the picker has no "Title default"**
   (user 2026-10-19: "Higher profiles first, i.e. 4k 2k. Make those changes in settings, not drop down"; then "No sense in Default
   if 4k is default. So it should be 4k (Default) selected, that's it."). Owner: P4.FU9's profiles. One order, decided in the data:
