@@ -14,6 +14,7 @@ import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeader
 import { getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import { episodesWord, MissingEpisodeRows } from './MissingChildren';
+import SeasonTotal from './SeasonTotal';
 
 import './entryDetails.scss';
 
@@ -59,7 +60,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, detail, reload, season]);
     useStockHeaderButton(view, { enabled: canAcquire && capabilities.includes(PACKS_CAPABILITY), icon: 'cloud_download',
-        title: 'Get a Release', className: 'jfmod-getRelease', onClick: openPicker });
+        title: 'Get a Release', className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-seasonTotal'] });
     // Once Jellyfin holds the season (its placeholders written while the page is open, P1.FU27), Jellyfin's season page opens,
     // as the route opens it for a season Jellyfin had already: its series is the entry's item, or its placeholders' series.
     const live = useLiveEntryDetail(api, initial);
@@ -110,6 +111,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
             node, String(index)))}
+        <SeasonTotal view={view} entryId={detail.entry.id} season={season} />
         <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail} season={season} canAcquire={canAcquire}
             onChanged={reload} />
     </>;

@@ -327,3 +327,64 @@ export const aggregateProgress = (rows: QueueRow[]): DownloadProgress | null => 
     const rate = Array.from(rates.values()).reduce((sum, value) => sum + value, 0);
     return describeDownload(kind, percent, parts.every(part => part.stale), { eta, rate });
 };
+
+/** A batch of episodes on their way, as one figure (a season's or series' header, P4.FU21): `done` of `total` episodes. */
+export interface BatchProgress extends DownloadProgress {
+    done: number;
+    total: number;
+}
+
+/**
+ * One episode of a batch: its season, its own view (`packEpisodeView` for a pack) and the queue row it comes from (the torrent).
+ */
+export interface BatchEpisode {
+    season: number;
+    view: QueueRow;
+    row: QueueRow;
+}
+
+const seasonWord = (season: number) => (season === 0 ? 'Specials' : 'Season ' + season);
+
+/**
+ * A season's or series' episodes as one download (P4.FU21, user 2026-10-22 and 2026-10-24): `total` counts every episode the
+ * queue has a row for (on its way, importing, or in the library by a row still listed; a pack once per episode), `done` those in
+ * the library; a failed or blocked episode is left out. The percent is the bytes downloaded over the bytes expected when every
+ * size is known (a done or importing episode is all of its bytes), else the plain mean of the percentages, as the cards'; the
+ * time left is the longest of the torrents downloading; the kind the liveliest. The tooltip adds the breakdown: by state for a
+ * season (`2 done, 4 downloading, 2 queued`), by season for a series (`Season 1: 3 of 8 · Season 2: 2 of 8`). Null when nothing
+ * is on its way.
+ */
+export const batchProgress = (episodes: BatchEpisode[], bySeason = false): BatchProgress | null => {
+    const counted = episodes.filter(({ view }) => view.state !== 'failed' && view.state !== 'blocked');
+    const moving = counted.filter(({ view }) => view.state !== 'seeding');
+    if (moving.length === 0) return null;
+    const parts = moving.map(({ view }) => downloadProgress(view));
+    const done = counted.length - moving.length;
+    const kind = (['downloading', 'importing', 'stalled', 'queued'] as const).find(name => parts.some(part => part.kind === name)) ?? 'queued';
+    const size = (view: QueueRow) => view.sizeBytes ?? 0;
+    const got = (view: QueueRow) => {
+        if (view.state === 'seeding' || IMPORTING_STATES.has(view.state)) return size(view);
+        return view.downloadedBytes ?? size(view) * (view.progress ?? 0);
+    };
+    const percent = counted.every(({ view }) => size(view) > 0) ?
+        Math.floor(100 * counted.reduce((sum, { view }) => sum + got(view), 0) / counted.reduce((sum, { view }) => sum + size(view), 0)) :
+        Math.floor((done * 100 + parts.reduce((sum, part) => sum + (part.percent ?? 0), 0)) / counted.length);
+    const torrents = new Map(moving.filter(({ row }) => row.state === 'downloading').map(({ row }) => [row.id, row]));
+    const eta = Math.max(0, ...Array.from(torrents.values(), row => row.etaSeconds ?? 0));
+    const rate = Array.from(torrents.values()).reduce((sum, row) => sum + (row.downloadRateBytes ?? 0), 0);
+    const base = describeDownload(kind, Math.min(100, Math.max(0, percent)), parts.every(part => part.stale), { eta, rate });
+    let breakdown: string;
+    if (bySeason) {
+        const seasons = Array.from(new Set(counted.map(episode => episode.season))).sort((a, b) => a - b);
+        breakdown = seasons.map(season => {
+            const own = counted.filter(episode => episode.season === season);
+            return seasonWord(season) + ': ' + own.filter(({ view }) => view.state === 'seeding').length + ' of ' + own.length;
+        }).join(' · ');
+    } else {
+        const counts = [[done, 'done'] as const, ...(['downloading', 'importing', 'stalled', 'queued'] as const)
+            .map(name => [parts.filter(part => part.kind === name).length, name] as const)].filter(([count]) => count > 0);
+        const word = counted.length === 1 ? ' episode' : ' episodes';
+        breakdown = counts.length > 1 ? counts.map(([count, name]) => count + ' ' + name).join(', ') : counted.length + word;
+    }
+    return { ...base, tooltip: base.tooltip + ' · ' + breakdown, done, total: counted.length };
+};

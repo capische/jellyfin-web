@@ -5,11 +5,15 @@
 the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4), state text
 treatment B 2026-10-19 (P4.FU15, "I'd go with B, 600, Inter, but no need for Downloading ... just put % and time"; design
 session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>), an administrator's ring opens the download client
-2026-10-19 (P4.FU16, the user's answers: "The buttons only (I believe you meant a ring)", "Administrators only"; built, not accepted).
+2026-10-19 (P4.FU16, the user's answers: "The buttons only (I believe you meant a ring)", "Administrators only"; built, not accepted),
+the season's total in its header 2026-10-22 and the series' 2026-10-24 (P4.FU21, "Season total is good too but apply new download
+state text", "keep B", "yes add series page total"; [design note](../season-total-download.md), artifact
+<https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>; built, not accepted).
 Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
-`components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`), `integration/downloadMarks.tsx`.
+`components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`, `batchProgress`), `integration/downloadMarks.tsx`,
+`components/SeasonTotal.tsx` and `seasonTotal.scss` (the season header).
 
 ## What it is
 
@@ -63,6 +67,15 @@ easing. Motion is transform and opacity only.
 - **Queue page:** the disc in place of the state word; the row keeps its bar (the one place the bar is the content).
 - **Release picker, added row:** the disc takes the Add slot while the torrent downloads; the X stays; no bar.
 - **Episode page:** inside the download block ([download-block.md](download-block.md)); the still carries no mark.
+- **Season and series headers** (the native and the mod's season page, the native series page): the row-size mark (2.5em) as an
+  indicator in upstream's action row, after the Get a Release cloud and before Favourite (`span.jfmod-seasonTotal`), then 0.45em
+  on the figure at 86 %: `2 of 8 episodes · 38% · 2 h 10 min left`. On the phone (`.layout-mobile`) the ring stays in the centred
+  row and the figure is one centred line under it (`.jfmod-seasonTotalLine`); the TV is the desktop row at 125 %. The total over
+  the batch (`batchProgress`): M is every episode of the season (of every season on the series page) a queue row names (on its
+  way, importing, or in the library by a row still listed; a pack once per episode), N those in the library; the percent
+  bytes-weighted over M when every size is known, else the plain mean; the longest time left; the liveliest glyph; failed and
+  blocked episodes left out. Shown while one episode is queued, downloading, importing or stalled; gone when nothing is. Never a
+  control, a link or a D-pad stop, for anyone.
 
 ## After the download: importing until the file is drawn
 
@@ -94,7 +107,9 @@ completely"). The ring's own bob and turn stay.
 | stalled | `Stalled · 42%` | `Stalled at 42%` |
 | failed | `Failed · reason` (red, cut with an ellipsis) | `Failed · reason` |
 
-One mapping words both (`describeDownload`). Queued never says how many are ahead (the client has no position). The picker's
+The season and series headers put `N of M episodes · ` before the state text, the whole figure in the same treatment B, and the
+tooltip adds the breakdown: on a season by state, `Downloading · 38% · 2 h 10 min left · 3 MB/s · 2 done, 4 downloading, 2 queued`
+(one kind alone: `Queued · 8 episodes`); on a series by season, `… · Season 1: 3 of 8 · Season 2: 2 of 8`. One mapping words both (`describeDownload`). Queued never says how many are ahead (the client has no position). The picker's
 row label for assistive technology reads the tooltip, so "Downloading" is not lost. The Queue page draws the disc instead of
 words and is unchanged; the download block follows the same rule ([download-block.md](download-block.md)).
 A ring that opens the client adds a second tooltip line, `Open <client name>` (`Open Transmission`), and is named
