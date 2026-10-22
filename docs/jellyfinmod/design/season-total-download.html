@@ -1,0 +1,140 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Season Total Download</title>
+<style>
+:root{--bg:#f2f2f2;--paper:#fff;--text:rgba(0,0,0,.87);--muted:rgba(0,0,0,.6);--track:rgba(0,0,0,.14);--line:rgba(0,0,0,.12);--blue:#00a4dc;--icon:rgba(0,0,0,.87);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101010;--paper:#202020;--text:#fff;--muted:rgba(255,255,255,.7);--track:rgba(255,255,255,.12);--line:rgba(255,255,255,.12);--icon:#fff;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#101010;--paper:#202020;--text:#fff;--muted:rgba(255,255,255,.7);--track:rgba(255,255,255,.12);--line:rgba(255,255,255,.12);--icon:#fff;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 "Noto Sans",system-ui,sans-serif;padding-block:1.2em;padding-inline:16px}
+.wrap{max-width:64em;margin:0 auto}
+h1{font-size:1.3em;margin:0 0 .2em}
+.lead{color:var(--muted);margin:0 0 1em;max-width:62ch}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;margin:0 0 1em;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:.5em 0;z-index:5;border-bottom:1px solid var(--line)}
+.ctl>*{margin:0 1em .4em 0}.ctl label{color:var(--muted);font-size:.9em}
+.ctl button{font:inherit;font-size:.9em;color:var(--text);background:var(--paper);border:1px solid var(--line);border-radius:.3em;padding:.3em .6em}
+h2{font-size:1em;font-weight:600;margin:1.6em 0 .5em;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cap{font-size:.8em;color:var(--muted);margin:.6em 0 .2em}
+.note{color:var(--muted);font-size:.9em;max-width:72ch;margin:.5em 0 0}
+.frame{background:var(--paper);border-radius:.3em;padding:1em 1.2em;margin:0 0 .8em;max-width:56em;overflow:hidden}
+.frame.phone{width:360px;max-width:100%;box-sizing:border-box;font-size:90%;padding:.8em}
+.frame.tv{font-size:125%;max-width:none}
+/* header */
+.hdr{display:flex;align-items:flex-start}
+.poster{flex:0 0 auto;width:9em;height:13.5em;border-radius:.2em;background:linear-gradient(160deg,#374151,#0b1020);margin-right:1.4em}
+.phone .poster{width:5.5em;height:8.25em;margin-right:1em}
+.ttl{flex:1 1 0;min-width:0}
+.series{font-size:1.5em;font-weight:400;line-height:1.2}
+.phone .series{font-size:1.25em}
+.season{font-size:1.1em;margin-top:.1em}
+.misc{color:var(--muted);font-size:.9em;margin-top:.4em}
+.btns{display:flex;align-items:center;flex-wrap:wrap;margin:1em 0 0}
+.phone .btns{justify-content:center;margin:.8em 0 0}
+.phone .db{padding:.7em .55em}
+.phone .tot{padding:0 .3em 0 .1em}
+.db{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.7em .8em;color:var(--icon);border-radius:.2em}
+.db svg{width:1.6em;height:1.6em;fill:currentColor}
+.db.focus{box-shadow:0 0 0 .14em #fff,0 0 0 .3em rgba(0,0,0,.6);background:rgba(255,255,255,.08)}
+/* the total: the row-size ring + the figure */
+.tot{display:flex;align-items:center;padding:0 .6em 0 .2em;color:var(--icon)}
+.dl{position:relative;display:inline-flex;align-items:center;justify-content:center;width:2.5em;height:2.5em;flex:0 0 auto}
+.dl .g{width:1.4em;height:1.4em;fill:currentColor;position:relative;z-index:1}
+.dl .arc{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.dl .arc circle{fill:none;stroke-width:2.2}
+.dl .tr{stroke:var(--track)}
+.dl .p{stroke:currentColor;stroke-linecap:round;transition:stroke-dashoffset .35s ease-out}
+.dl.importing .p{stroke-dasharray:28 72;stroke-dashoffset:0;animation:spin 1.2s linear infinite;transform-origin:center}
+.dl.downloading .g{animation:bob 1.4s ease-in-out infinite}
+.dl.stalled .p{opacity:.55}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bob{0%,100%{transform:translateY(-.08em)}50%{transform:translateY(.12em)}}
+@keyframes breathe{50%{opacity:.45}}
+.fig{font-size:.86em;color:var(--muted);margin-left:.45em;white-space:nowrap}
+.fig b{font-weight:600;color:var(--text);animation:breathe 1.2s ease-in-out infinite}
+.phone .tot .fig{display:none}
+.figline{display:none;text-align:center;font-size:.86em;color:var(--muted);margin-top:.15em}
+.phone .figline{display:block}
+.figline b{font-weight:600;color:var(--text);animation:breathe 1.2s ease-in-out infinite}
+.rm .fig b,.rm .figline b,.rm .dl .g,.rm .dl .p{animation:none}
+@media (prefers-reduced-motion:reduce){.fig b,.figline b,.dl .g,.dl .p{animation:none}}
+.tip{display:inline-block;background:#616161;color:#fff;font:.75em/1.3 system-ui;padding:.3em .6em;border-radius:.25em;margin:.6em 0 0 .2em}
+.tbl{border-collapse:collapse;font-size:.9em;margin-top:.6em;max-width:60em}
+.tbl td,.tbl th{text-align:left;padding:.35em .9em .35em 0;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{color:var(--muted);font-weight:600}
+code{font-size:.9em}
+</style>
+<div class="wrap" id="root">
+<h1>Season page: the season's total download, in the header</h1>
+<p class="lead">One indicator in the header's action row, right after the download cloud: the season's ring (the row-size download mark with the total arc and the liveliest glyph) and, beside it, the figure for the whole season — episodes done of episodes on their way, the total percent and the time left. It appears while any episode of the season is queued, downloading or importing, and is gone when nothing is.</p>
+<div class="ctl"><label>Theme</label><button data-theme="dark">dark</button><button data-theme="light">light</button><label><input type="checkbox" id="rmc"> reduced motion</label></div>
+
+<h2>Laptop · five states</h2>
+<div id="laptop"></div>
+<p class="note">Order in the row: Play · Played · Get a Release (cloud) · <b>season total</b> · Favourite · More. The total is an indicator, not a button: no hover, no focus stop, the tooltip carries the breakdown. The cloud keeps its job (get a release for the missing episodes) whether or not something downloads.</p>
+
+<h2>Series page · the same indicator, total over every season (added 2026-10-24)</h2>
+<div id="series"></div>
+<p class="note">Same component, same place (after the cloud where the page has one, otherwise before Favourite), same figure; M and N count every season's episodes the queue has rows for, the tooltip breaks the total down by season. The series card already shows this aggregate, so the page and the card agree.</p>
+
+<h2>Phone 360 (90 %) · the figure drops under the row</h2>
+<div id="phone"></div>
+<p class="note">The header row is centred and icon-only on the phone, so the ring joins it and the figure becomes one centred line under the row. Nothing is cut.</p>
+
+<h2>TV 125 % · the same row; focus walks Play → Played → cloud → Favourite → More and skips the total</h2>
+<div id="tv"></div>
+
+<h2>What the figure says</h2>
+<table class="tbl">
+<tr><th>State of the season</th><th>Ring</th><th>Figure</th><th>Tooltip</th></tr>
+<tr><td>queued only</td><td>clock, no arc</td><td>0 of 8 episodes · <b>queued</b></td><td>Queued · 8 episodes</td></tr>
+<tr><td>downloading</td><td>arrow (bobs), arc at the total</td><td>2 of 8 episodes · <b>38% · 2 h 10 min left</b></td><td>Downloading · 38% · 2 h 10 min left · 3.1 MB/s · 2 done, 4 downloading, 2 queued</td></tr>
+<tr><td>importing</td><td>spinner, segment turning</td><td>7 of 8 episodes · <b>importing…</b></td><td>Importing… · 7 done, 1 importing</td></tr>
+<tr><td>mixed (downloading, importing, queued, done)</td><td>the liveliest: arrow + arc</td><td>3 of 8 episodes · <b>52% · 1 h 05 min left</b></td><td>Downloading · 52% · 1 h 05 min left · 2.4 MB/s · 3 done, 2 downloading, 1 importing, 2 queued</td></tr>
+<tr><td>stalled only</td><td>pause, arc at 55 %</td><td>2 of 8 episodes · 38% · stalled</td><td>Stalled at 38% · no seeders for 20 min</td></tr>
+<tr><td>complete, or nothing on its way</td><td colspan="3">nothing in the header; the episode rows say what each file is</td></tr>
+</table>
+<p class="note">The bold part is the meta word that already breathes on rows (text colour, 600, opacity 1 → .45 over 1.2 s); “N of M episodes ·” stays muted. Reduced motion: no breathe, no bob, no turn; colour and weight stay.</p>
+
+<h2>What “total” means</h2>
+<table class="tbl">
+<tr><th>Figure</th><th>Rule</th><th>Data</th></tr>
+<tr><td>M, the episodes</td><td>every episode of this season the queue has a row for: on its way, importing, or finished in this batch (seeding / imported and still listed). A pack counts once per episode it holds. Episodes nobody has asked for are not in M.</td><td>the shared queue read the page already makes; <code>pack.episodes</code> for packs</td></tr>
+<tr><td>N, done</td><td>episodes of M whose file is in the library (imported; a seeding row counts as done)</td><td>row state / <code>pack.episodes[].importState</code></td></tr>
+<tr><td>percent</td><td>bytes downloaded over bytes expected across M, where sizes are known (a done episode is all of its bytes); the plain mean of percentages where they are not — the same fallback the series and season cards use</td><td><code>downloadedBytes</code>, <code>sizeBytes</code>; per-episode sizes for packs</td></tr>
+<tr><td>time left</td><td>the longest time left among the torrents downloading, as the cards' aggregate does</td><td><code>etaSeconds</code></td></tr>
+<tr><td>word and glyph</td><td>the liveliest state present: downloading › importing › stalled › queued (the cards' rule); failed episodes are left out of the total and keep their red bang on their rows</td><td><code>aggregateProgress</code> in <code>constants/queue.ts</code>, extended with the count and the bytes</td></tr>
+</table>
+<p class="note">No plugin field is needed: the queue rows already carry bytes, sizes, time left and per-episode pack progress. If the user prefers “of all missing episodes in the season” (not-yet-asked-for ones in M at 0 %), the page's own episode list gives that count; the figure then reads lower while part of a season is unasked, which is why the batch is the default.</p>
+
+<h2>Not proposed</h2>
+<p class="note">A ring drawn on the cloud button itself: the cloud is an action and the ring is an indicator, and the header already badges a button (the played countdown) — two badges in one row read as noise. The figure in the misc line under the title: it is then far from the ring and not read as one thing. Percent digits inside the header ring: the ring is row-size (2.5em), where the rule keeps the glyph and puts the number in text. The series page can take the same indicator (total over all seasons, the same aggregate the series card uses) with no new work; not drawn here, say if wanted.</p>
+</div>
+<script>
+const I={play:'M8 5v14l11-7z',check:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',cloud:'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z',heart:'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z',more:'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
+arrow:'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',clock:'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',sync:'M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z',pause:'M6 19h4V5H6v14zm8-14v14h4V5h-4z'};
+const svg=p=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${p}"/></svg>`;
+const db=(p,extra='')=>`<span class="db ${extra}">${svg(p)}</span>`;
+const GL={downloading:'arrow',queued:'clock',importing:'sync',stalled:'pause'};
+function ring(st,pct){const arc=st==='queued'?'':`<svg class="arc" viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15.9"/><circle class="p" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${st==='importing'?0:100-pct}"/></svg>`;
+ return `<span class="dl ${st}">${arc}<svg class="g" viewBox="0 0 24 24"><path d="${I[GL[st]]}"/></svg></span>`}
+const S={
+ none:{label:'complete / nothing on its way'},
+ queued:{label:'queued only',st:'queued',pct:0,n:0,m:8,fig:'<b>queued</b>',tip:'Queued · 8 episodes'},
+ downloading:{label:'downloading',st:'downloading',pct:38,n:2,m:8,fig:'<b>38% · 2 h 10 min left</b>',tip:'Downloading · 38% · 2 h 10 min left · 3.1 MB/s · 2 done, 4 downloading, 2 queued'},
+ importing:{label:'importing',st:'importing',pct:100,n:7,m:8,fig:'<b>importing…</b>',tip:'Importing… · 7 done, 1 importing'},
+ mixed:{label:'mixed',st:'downloading',pct:52,n:3,m:8,fig:'<b>52% · 1 h 05 min left</b>',tip:'Downloading · 52% · 1 h 05 min left · 2.4 MB/s · 3 done, 2 downloading, 1 importing, 2 queued'}
+};
+function header(s,o={}){
+ const tot=s.st?`<span class="tot" title="${s.tip}">${ring(s.st,s.pct)}<span class="fig">${s.n} of ${s.m} episodes · ${s.fig}</span></span>`:'';
+ const line=s.st?`<div class="figline">${s.n} of ${s.m} episodes · ${s.fig}</div>`:'';
+ return `<div class="cap">${s.label}${o.cap?' · '+o.cap:''}</div><div class="frame ${o.cls||''}"><div class="hdr"><div class="poster"></div><div class="ttl"><div class="series">Adolescence</div>${o.series?'<div class="misc">2025 · TV-MA · 2 seasons · 16 episodes</div>':'<div class="season">Season 1</div><div class="misc">2025 · TV-MA · 8 episodes</div>'}
+ <div class="btns">${db(I.play,o.focus?'focus':'')}${db(I.check)}${db(I.cloud)}${tot}${db(I.heart)}${db(I.more)}</div>${line}${s.st&&o.tip?`<div class="tip">${s.tip}</div>`:''}</div></div></div>`;
+}
+document.getElementById('laptop').innerHTML=['queued','downloading','importing','mixed','none'].map((k,i)=>header(S[k],{tip:k==='downloading'})).join('');
+S.series={label:'series page, two seasons on their way',st:'downloading',pct:44,n:5,m:16,fig:'<b>44% · 3 h 20 min left</b>',tip:'Downloading · 44% · 3 h 20 min left · 3.1 MB/s · Season 1: 3 of 8 · Season 2: 2 of 8'};
+document.getElementById('series').innerHTML=header(S.series,{tip:true,series:true});
+document.getElementById('phone').innerHTML=['downloading','queued'].map(k=>header(S[k],{cls:'phone'})).join('');
+document.getElementById('tv').innerHTML=header(S.mixed,{cls:'tv',focus:true,cap:'focus on Play'});
+document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>document.documentElement.dataset.theme=b.dataset.theme);
+document.getElementById('rmc').onchange=e=>document.getElementById('root').classList.toggle('rm',e.target.checked);
+</script>
+
+</body></html>

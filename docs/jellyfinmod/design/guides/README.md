@@ -8,7 +8,7 @@ values.
 
 | Guide | Component | Used by |
 | --- | --- | --- |
-| [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block |
+| [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block, the season and series headers |
 | [card-glass.md](card-glass.md) | the frosted-glass recipe and its ink colours | the scrolled top bar, every mark on a poster |
 | [media-marks.md](media-marks.md) | codec, HDR and audio marks (Dolby and DTS chips, channel tags) | the release picker, the Video / Audio / Subtitles dropdowns, the download block |
 | [track-dropdown.md](track-dropdown.md) | the custom dropdown: field-like trigger, paper list, blue bar on the current entry | Video / Audio / Subtitles on the detail page, Predefined in the profile dialog |

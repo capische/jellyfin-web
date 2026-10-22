@@ -1,0 +1,57 @@
+/* JellyfinMod — a season's or series' total download in its header (P4.FU21, user-approved design 2026-10-22 and 2026-10-24,
+ * `design/season-total-download.html`; guide `design/guides/download-state-mark.md`, *Where it sits*).
+ *
+ * The row-size ring (`downloadStateMark.scss`) and the figure beside it in upstream's action row; the whole figure is the rows'
+ * treatment B (`.jfmod-dlMeta`, downloadProgress.scss). On the phone the row is centred and icon-only, so the figure is one
+ * centred line under it. Additive only: `jfmod-` classes, sizes in `em`
+ * (TV 125 %, phone 90 %), no flex gap, min() or max().
+ */
+
+.jfmod-seasonTotal {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    min-width: 0;
+    padding: 0 0.6em 0 0.2em;
+
+    [dir='rtl'] & {
+        padding: 0 0.2em 0 0.6em;
+    }
+}
+
+.jfmod-seasonTotal-figure {
+    overflow: hidden;
+    min-width: 0;
+    margin: 0 0 0 0.45em;
+    font-size: 0.86em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    [dir='rtl'] & {
+        margin: 0 0.45em 0 0;
+    }
+}
+
+.jfmod-seasonTotalLine {
+    display: none;
+}
+
+.layout-mobile {
+    .jfmod-seasonTotal {
+        padding: 0 0.3em 0 0.1em;
+    }
+
+    .jfmod-seasonTotal-figure {
+        display: none;
+    }
+
+    .jfmod-seasonTotalLine {
+        display: block;
+        overflow: hidden;
+        margin: 0.15em 0 0;
+        font-size: 0.86em;
+        text-align: center;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}

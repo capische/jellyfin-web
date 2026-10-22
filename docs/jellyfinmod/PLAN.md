@@ -1476,6 +1476,29 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (stubs line; the items line had it), and a title already in folder form is not tagged twice. Plugin main-stubs `b0b59c5`
   `fdf6a9d`, main-items `0789cb0` `f1b94aa` (the items line carries its own copy). Phase 2/3/4/5 suites pass on both lines;
   live on bravo (Prowlarr utp.to, delete repair) on both. **Not run:** real Chrome, full matrix, Codex review.
+  **P4.FU21, built (not accepted) 2026-10-24: a season's and a series' total download in its header** (user 2026-10-22: "Season
+  total is good too but apply new download state text"; 2026-10-24: "keep B", "yes add series page total"; the design session's
+  proposal, artifact <https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>, [design note](design/season-total-download.md) with its
+  page and screenshots; [UX.md](UX.md) §3.3; guide [download-state-mark.md](design/guides/download-state-mark.md) *Where it sits*,
+  *Text*). Owner: P4.FU6's ring family. Web only, no plugin change: the queue rows already carry the bytes, sizes, time left and
+  each pack episode's progress. On the native and the mod's season page and on the native series page
+  (`components/SeasonTotal.tsx`, mounted by `NativeEntryDetails` and `EntrySeasonDetails`; `seasonTotal.scss`): a non-button
+  `span.jfmod-seasonTotal` in upstream's action row after Get a Release (its header button names `jfmod-seasonTotal` in `before`)
+  and before Favourite, holding the row-size ring and `N of M episodes · <state text>`; on the phone the figure is a centred line
+  under the row (`.jfmod-seasonTotalLine`). The whole figure is treatment B (P4.FU15): text colour, 600, Inter, tabular figures,
+  queued and stalled at 75 %, no "Downloading" word, no animation. The total is `batchProgress` in `constants/queue.ts` (beside
+  `aggregateProgress`, which the cards keep unchanged): M every episode of the season (or of every season) a queue row names (a
+  pack once per episode, a finished one by a row still listed), N those in the library, failed and blocked left out, the percent
+  bytes over the batch when every size is known else the plain mean, the longest time left of the torrents downloading, the
+  liveliest kind; the tooltip adds the breakdown, by state on a season (`2 done, 4 downloading, 2 queued`) and by season on a
+  series (`Season 1: 3 of 8 · Season 2: 2 of 8`). Never a control or a stop, an administrator's included (P4.FU16's client link
+  is not on it). The mod's own page for a series with no Jellyfin item keeps its raised buttons and has no total. Gate 1 (first
+  look) on local environment charlie (Jellyfin 12.0.0, web `main-stubs` `b22ddee0c8` plus this slice, plugin `main-stubs`
+  `fdf6a9d`), Chromium headless, intercepted queue answers for Peep Show: the native Season 1 page, the mod's Season 2 page and the
+  series page, queued, downloading, importing, mixed and none at desktop 1440, phone 360 and TV 1920×1080, dark and light. Row
+  order Play, (Trailer,) Shuffle, Played, Get a Release, total, Favourite, More; the TV's focus skips the total; the series
+  tooltip reads `Downloading · 53% · 3 h 20 min left · 4 MB/s · Season 1: 1 of 2 · Season 2: 2 of 6`. Not run: real Chrome, the
+  TV at 1280×720, a live download, the full runner matrix, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

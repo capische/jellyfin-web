@@ -31,6 +31,7 @@ import HistoryToggle from './HistoryToggle';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
+import SeasonTotal from './SeasonTotal';
 import TrackDropdowns from './TrackDropdown';
 import './entryDetails.scss';
 
@@ -574,7 +575,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         icon: 'cloud_download',
         title: 'Get a Release',
         className: 'jfmod-getRelease',
-        onClick: getRelease
+        onClick: getRelease,
+        before: ['jfmod-seasonTotal']
     });
     const deleteWarning = usePageDeleteWarning(view, data, versions, capabilities);
     const sources = useMediaSources(api, userId, itemId, versions.length > 0);
@@ -606,14 +608,18 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
     if (isSeasonPage) {
-        return <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail.data} season={seasonOf ?? 0}
-            native={{ seriesItemId: seriesId ?? '', seasonItemId: itemId }} canAcquire={canAcquire} onChanged={refreshAfterPlayed} />;
+        return <>
+            <SeasonTotal view={view} entryId={detail.data.entry.id} season={seasonOf ?? 0} />
+            <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail.data} season={seasonOf ?? 0}
+                native={{ seriesItemId: seriesId ?? '', seasonItemId: itemId }} canAcquire={canAcquire} onChanged={refreshAfterPlayed} />
+        </>;
     }
     const entry = detail.data.entry;
 
     if (isSeriesPage) {
         return <>
             <SeriesSection detail={detail.data} />
+            <SeasonTotal view={view} entryId={detail.data.entry.id} season={null} />
             <MissingSeasonCards api={api} userId={userId} serverId={serverId} view={view} seriesItemId={itemId} detail={detail.data}
                 canAcquire={canAcquire} onChanged={refreshAfterPlayed} />
         </>;
