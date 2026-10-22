@@ -17,12 +17,14 @@
 //     sync cycles.
 //
 //   JELLYFINMOD_TEST_URL=http://127.0.0.1:<port>/   a local environment (loopback only)
-//   JELLYFINMOD_RD_CONTAINER=jellyfinmod-<name>      its container (docker exec, stop, start)
+//   [JELLYFINMOD_RD_CONTAINER=jellyfinmod-<name>]    its container (docker exec, stop, start); found from the URL, and checked
+//                                                    against it when given
 //   JELLYFINMOD_RD_ADOLESCENCE, JELLYFINMOD_RD_FAWLTY  the container folders of a one-season series (all files real) and of a
 //                                                    two-season series with some real files, both in a writable Shows folder
 //   JELLYFINMOD_RD_MOVIE                             the container folder of a movie with a real file in a writable Movies folder
 //   JELLYFINMOD_RD_CLIP                              a small video file inside the container, copied for the import case
-//   JELLYFINMOD_RD_HOST_MEDIA                        the host folder mounted at /test-media
+//   [JELLYFINMOD_RD_HOST_MEDIA]                      the host folder mounted at /test-media; read from docker inspect, and checked
+//                                                    against it when given
 //   [JELLYFINMOD_RD_STEPS=season,episode,browser,series,movie,rm,stopped,optout,readonly,noloop,removeentry]
 //   [JELLYFINMOD_BROWSER=chromium|chrome]  [JELLYFINMOD_SHOTS=<folder>]
 //
@@ -31,20 +33,20 @@
 import { execFileSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { provenLocalEnvironment } from './local-env.mjs';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 if (!['127.0.0.1', 'localhost'].includes(origin.hostname) || ['8096', '18096', '28096', '48096'].includes(origin.port)) {
     throw new Error('Runs on a local environment only (loopback, never 8096 or a Pi instance)');
 }
 const need = name => process.env[name] ?? (() => { throw new Error(name + ' is required'); })();
-const container = need('JELLYFINMOD_RD_CONTAINER');
-if (!/^jellyfinmod-[a-z]+$/.test(container) || container === 'jellyfinmod-alpha') throw new Error('Not a pool environment container');
+// The server, its container and the host folder are proven to be one pool environment before anything else runs (never alpha or beta).
+const { container, hostMedia: HOST_MEDIA } = await provenLocalEnvironment(origin,
+    { container: process.env.JELLYFINMOD_RD_CONTAINER, hostMedia: process.env.JELLYFINMOD_RD_HOST_MEDIA });
 const ADOLESCENCE = need('JELLYFINMOD_RD_ADOLESCENCE');
 const FAWLTY = need('JELLYFINMOD_RD_FAWLTY');
 const MOVIE = need('JELLYFINMOD_RD_MOVIE');
 const CLIP = need('JELLYFINMOD_RD_CLIP');
-// The host folder bind-mounted at /test-media, for the step that removes a folder while the container is stopped.
-const HOST_MEDIA = need('JELLYFINMOD_RD_HOST_MEDIA');
 const steps = new Set((process.env.JELLYFINMOD_RD_STEPS ?? 'season,browser,episode,series,movie,rm,stopped,optout,readonly,noloop,removeentry').split(','));
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
 const SHOTS = process.env.JELLYFINMOD_SHOTS ?? '.';
