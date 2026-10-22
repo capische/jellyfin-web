@@ -34,7 +34,9 @@ for (const c of recording.cases) {
         const active = samples.filter(s => firstRing && s.at >= firstRing.at);
         const gap = active.filter(s => s.rows?.some(r => r.cloud && !r.ring));
         const ringGone = active.find(s => s.rows?.length && s.rows.every(r => !r.ring));
-        const play = active.find(s => s.rows?.length && s.rows.every(r => r.play && !r.cloud));
+        // A grid card shows its play button only on hover: there the file is drawn when the ring is gone and no cloud shows.
+        const grid = surface.startsWith('grid-');
+        const play = active.find(s => s.rows?.length && s.rows.every(r => (grid ? !r.ring : r.play) && !r.cloud));
         const websocket = c.websockets.find(e => e.surface === surface && e.at >= Math.max(...links)
             && ([...(e.data.ItemsAdded ?? []), ...(e.data.ItemsUpdated ?? [])].some(id => finalIds.has(normal(id)))
                 || (e.data.ItemsRemoved ?? []).some(id => stubIds.has(normal(id)))));
