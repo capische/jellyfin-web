@@ -1202,7 +1202,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   next real episode and play queues that skip stubs; **P1.FU29** placeholders come back after a delete in Jellyfin (built,
   not accepted 2026-10-17); **P1.FU30** placeholders as Jellyfin items with no file instead of stubs, on Jellyfin 12.2 (built,
   not accepted 2026-10-18, below); **P1.FU31** the overview note for native apps on placeholder items (built, not accepted
-  2026-10-19, below). No migration planned. Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
+  2026-10-19, below). No migration of the plugin's database; the items line removes the stubs line's files once at start (review
+  fixes 2026-10-22, below). Approved 2026-10-15 ("Go and implement isPlaceHolder"; on the plan's
   questions: "go with your recommendations": aired episodes only, a marked stub with Kodi's message, ~~off by default per
   library after a dry run~~ on by default with a per-library opt-out (user, after the first look on alpha: "Show missing
   episodes - should be enabled by default. That's the point."), nothing in read-only folders, Next Up to show the next real episode and play queues to skip stubs in P1.FU28,
@@ -1475,6 +1476,32 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   file-less series becomes real, the real series' favourite shows on lists but on its own page only after a restart (Jellyfin's
   single-item answer comes from a stale cached instance); about a second without a season card on the open series page while
   a deleted season is replaced. **Not run:** the Pi, real Chrome, the TV and phone layouts, a 100-episode series, Codex review.
+  **Review fixes, 2026-10-22** (the Opus review of that day, workspace `reviews/fable-review-2026-10-22.md`: P1-1 and P2-1 to P2-3). **A server that ran
+  the stubs line** (P1-1): `PlaceholderStubCleanup` runs once at start, before any placeholder item is made (a sync waits for it,
+  at most a minute, then defers its items; the reclaim's items wait for it too): every `.disc` file in a TV or movie library
+  whose first line is the stubs' marker goes, with the season and `[tmdbid-N]` title folders that left empty and Jellyfin's items
+  for them; a `.disc` without the marker, a link, a file over 4 KB, a non-empty folder and a library folder are never touched;
+  the run is recorded in the configuration (`PlaceholderStubsRemoved`) and repeated at the next start while a stub could not be
+  removed. Until then the title source never takes a marked stub for a movie's file. The delete repair then makes the items for
+  what the stubs stood for at once, with the stubs' user data (Jellyfin's keys). Chosen over a "refuse to run over stubs" gate:
+  the marker makes the plugin's own files certain, and the clean-up is the stubs line's own Remove Placeholders rules. Measured on
+  local delta (Jellyfin 12.0 with the stubs line and 61 stubs, then 12.2 with this line): 61 stub files removed at start, no
+  `.disc` item left, 60 episode and 1 movie placeholder items, no S/E twice, a stubbed episode's played date and favourite kept,
+  the stub-only movie not on disk and nothing of it due. **Uninstall and Remove All Virtual Items** (P2-1): the uninstall turns
+  placeholders off in every library first (Jellyfin keeps the services until its restart), and both remove each library's items
+  under its lease; a sync reads the switch again before each title. **The lease** (P2-2) is released across the 3 s pause between
+  titles and the title's work read again under it, as on the stubs line. **Items added** (P2-3): an added item starts a sync only
+  when one of the plugin's items can be its twin, as an update does, never every library for an episode whose series id is not
+  set yet. **Open, a user decision** (P2-1): a plugin disabled from the Dashboard, or not loaded after a Jellyfin upgrade, leaves
+  its placeholder items as present, unplayable items nobody can delete (not file items, so no scan removes them) and no filter
+  in front of them; the way out is to enable or reinstall the plugin and use Remove All Virtual Items, or else to remove and add
+  the library again. **Tests:** Phase 5 `PlaceholderItemsScenarios` (the clean-up, the marked stub never bound nor due, and the
+  catalog side of Delete media: bindings cleared once, history once per removal, the series on disk through its other season,
+  the early `LibraryChanged` only to a user who sees the library); all of Phase 1 smoke, 2, 3, 3 protection, 4, 5 and 6 pass.
+  `placeholder-items.mjs` on delta (12.2) 57 of 60, the same three failing on the unchanged line on bravo (the note at the
+  backfill's first read, and the series' favourite after a whole-series delete and after its file arrives);
+  `placeholder-reclaim.mjs` 8 of 8 with its new scope checks. Not restored: the backfill batching, the import swap's edge
+  cases and the watched restore's write path.
   **P1.FU31, built (not accepted) 2026-10-19: the overview note for native apps** (user 2026-10-19: native clients see
   placeholder items as ordinary items; instead of a placeholder clip or stream the item's overview starts with a short note, and
   nothing else is added; playback stays refused). Owner: P1.FU30's item store. Branches `feat/placeholder-note` off `main-items`
