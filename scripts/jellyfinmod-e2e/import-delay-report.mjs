@@ -1,4 +1,4 @@
-// Summarize a recording from import-delay.mjs; --verify fails if a cloud appeared after the download ring.
+// Summarize a recording from import-delay.mjs; --verify fails if a cloud appeared after the download ring, or the ring never cleared.
 // node import-delay-report.mjs <recording.json> [--verify]
 import { readFileSync } from 'node:fs';
 
@@ -47,7 +47,7 @@ for (const c of recording.cases) {
             cloudGapSeconds: gap.length ? +((gap.at(-1).at - gap[0].at + 100) / 1000).toFixed(3) : 0,
             sampleIntervalP99Ms: intervals[Math.floor(intervals.length * 0.99)] };
         rows.push(row);
-        if (!firstRing || !native || !play || gap.length) failed = true;
+        if (!firstRing || !native || !play || !ringGone || gap.length) failed = true;
     }
 }
 console.log(JSON.stringify({ label: recording.label, tier: recording.tier, build: recording.build, rows }, null, 2));

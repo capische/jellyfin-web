@@ -15,11 +15,12 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { provenLocalEnvironment } from './local-env.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const workspace = resolve(here, '../../..');
 const envName = process.env.JFMOD_ENV ?? 'bravo';
-if (!/^[a-z]+$/.test(envName) || envName === 'alpha') throw Error('bad environment');
+if (!/^[a-z]+$/.test(envName) || envName === 'alpha' || envName === 'beta') throw Error('bad environment');
 const port = readFileSync(join(workspace, 'envs/pool.list'), 'utf8').split('\n').map(line => line.trim().split(/\s+/)).find(([name]) => name === envName)?.[1];
 if (!port) throw Error('unknown environment ' + envName);
 const label = process.argv[2] ?? 'run';
@@ -45,8 +46,8 @@ const until = async (read, message, timeout = 180000) => {
 };
 const exec = (...args) => execFileSync('docker', ['exec', container, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
-const info = await api('GET', '/System/Info/Public');
-if (info.ServerName !== 'jellyfinmod-' + envName) throw Error(envName + ' identity mismatch');
+// The server at the port, its container and the docker exec target are one pool environment (never alpha or beta).
+await provenLocalEnvironment(new URL(base), { container });
 const login = await api('POST', '/Users/AuthenticateByName', { Username: 'oleksii', Pw: '' });
 token = login.AccessToken;
 auth = client + `, Token="${token}"`;
@@ -77,7 +78,9 @@ const waitFrame = async (from, test) => { const at = await until(() => firstFram
 let movieEntry = (await api('GET', '/JellyfinMod/Entries?mediaType=movie&limit=50')).items.find(e => e.tmdbId === 603);
 if (!movieEntry) movieEntry = await api('POST', '/JellyfinMod/Entries', { mediaType: 'movie', tmdbId: 603, targetLibraryId: movies.ItemId });
 await until(async () => (await placeholders(movies)).some(item => /Matrix \(1999\)/.test(item.Path ?? '')), 'matrix stub', 60000);
-const stubIdsOf = async library => new Set((await placeholders(library)).map(i => i.Id));
+// Ids compared without dashes: the REST answers and the websocket frames do not write them alike.
+const norm = id => String(id ?? '').replace(/-/g, '').toLowerCase();
+const stubIdsOf = async library => new Set((await placeholders(library)).map(i => norm(i.Id)));
 // Both libraries start with placeholders Jellyfin holds (a first Sync Now, not measured).
 // The series' full episode lists (a detail page opening loads them): the missing episodes are what get placeholders.
 for (const entry of (await api('GET', '/JellyfinMod/Entries?mediaType=series&limit=50')).items.filter(e => ['Fawlty Towers', 'Adolescence'].includes(e.title)))
@@ -100,7 +103,7 @@ for (const [name, library] of [['tv', tv], ['movies', movies]]) {
     await api('POST', `/JellyfinMod/Placeholders/${library.ItemId}/Remove`);
     const answered = performance.now();
     const gone = await until(async () => (await placeholders(library)).length === 0 ? performance.now() : null, 'removed', 180000);
-    const frame = await waitFrame(frameFrom, data => (data.ItemsRemoved ?? []).some(id => idsBefore.has(id.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5'))) || (data.ItemsRemoved ?? []).length > 0);
+    const frame = await waitFrame(frameFrom, data => (data.ItemsRemoved ?? []).some(id => idsBefore.has(norm(id))));
     await sleep(5000);
     const back = (await placeholders(library)).length;
     results.steps['removePlaceholders-' + name] = { before, answeredSeconds: seconds(t0, answered), itemsGoneSeconds: seconds(t0, gone), frameSeconds: seconds(t0, frame), writtenBackAfter5s: back };
@@ -183,6 +186,23 @@ for (const [name, library] of [['tv', tv], ['movies', movies]]) {
 
 results.frames = frames.map(f => ({ at: seconds(startedAt, f.at), added: (f.data.ItemsAdded ?? []).length, removed: (f.data.ItemsRemoved ?? []).length, updated: (f.data.ItemsUpdated ?? []).length, folders: (f.data.FoldersAddedTo ?? []).length }));
 socket.close();
+// The verdict: every flow reached its end state (the times above are what is measured; these say whether it worked at all).
+const steps = results.steps;
+const checks = [
+    ...['tv', 'movies'].map(name => [`Remove Placeholders (${name}): the items go, the frame names them, nothing is written back`,
+        steps['removePlaceholders-' + name]?.itemsGoneSeconds != null && steps['removePlaceholders-' + name]?.frameSeconds != null
+            && steps['removePlaceholders-' + name]?.writtenBackAfter5s === 0]),
+    ['Sync Now: both libraries hold placeholder items again', steps.syncNow?.tvItemsSeconds != null && steps.syncNow?.moviesItemsSeconds != null],
+    ['A copied file: Jellyfin binds it, the placeholder goes, one version left', steps.copiedFile?.jellyfinBoundSeconds != null
+        && steps.copiedFile?.stubFileGoneSeconds != null && steps.copiedFile?.oneVersionSeconds != null],
+    ['Remove Entry: answered, and the movie\'s placeholder item goes', (steps.removeEntry?.status ?? 500) < 300 && steps.removeEntry?.itemGoneSeconds != null],
+    ['Remove during Sync Now: no item, file or delete repair after 75 s', steps.removeDuringSync?.placeholderItemsAfter75s === 0
+        && steps.removeDuringSync?.stubFilesAfter75s === 0 && steps.removeDuringSync?.repairBatches === 0]
+];
+results.checks = checks.map(([check, pass]) => ({ check, pass }));
+for (const [check, pass] of checks) console.log(`${pass ? 'PASS' : 'FAIL'} ${check}`);
 writeFileSync(join(output, `${label}.json`), JSON.stringify(results, null, 2));
 await api('DELETE', '/Devices?id=placeholder-flows').catch(() => {});
-console.log('done');
+const failed = checks.filter(([, pass]) => !pass).length;
+console.log(`${checks.length - failed} of ${checks.length} checks passed`);
+process.exitCode = failed ? 1 : 0;
