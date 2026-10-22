@@ -138,6 +138,9 @@ const watchBodies = page => page.on('response', async response => {
 
 let setupPage;
 let ready = false;
+// Set once the environment proved fresh (no source, client or indexer): only then is everything there at the end this run's own,
+// so only then does the cleanup below remove sources, clients, the test library and the host folder.
+let fresh = false;
 const setupContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 try {
     setupPage = await setupContext.newPage();
@@ -146,6 +149,7 @@ try {
     const clients = (await api(setupPage, 'GET', 'JellyfinMod/Settings/DownloadClients')).body;
     const indexers = (await api(setupPage, 'GET', 'JellyfinMod/Settings/Indexers')).body;
     if (sources.length || clients.length || indexers.length) throw new Error('needs a fresh environment: no Prowlarr source, download client or indexer');
+    fresh = true;
     await standin('/prowlarr-clients', [
         { name: SEEDBOX, implementation: 'Transmission', host: 'localhost', port: txPort, urlBase: '/transmission/', username: fixture.TX_USER },
         { name: 'JellyfinMod Qbit', implementation: 'QBittorrent', host: 'qbit', port: 8080 }
@@ -284,6 +288,7 @@ record('all', 'No response carried the Prowlarr key or the Transmission password
 record('all', 'The download-client read never carried a password, masked or not',
     bodies.filter(item => /\/DownloadClients$/.test(new URL(item.url).pathname) && /Prowlarr/.test(item.url)).every(item => !/password|\*{8}/i.test(item.body)));
 try {
+    if (!fresh) throw new Error('cleanup skipped: the environment was not proven fresh, so nothing was removed');
     await removeClients(setupPage);
     for (const source of (await api(setupPage, 'GET', 'JellyfinMod/Settings/Prowlarr')).body ?? []) {
         await api(setupPage, 'DELETE', `JellyfinMod/Settings/Prowlarr/${source.id}`);
