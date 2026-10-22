@@ -920,7 +920,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Remove Entry show on the next page without a reload, in both browsers. Not run: the Pi, 28096, a physical TV, the TV at
   1280×720, Codex review. Seen, not fixed: a page loaded in the second or two while Jellyfin has made placeholder items but not
   yet given them their numbers drew them nameless at the top beside the mod's missing rows (a page already open converges at
-  once).
+  once). Cover push, built (not accepted) 2026-10-19 (plugin `feat/cover-push` `9f9440e` on `main-stubs`, the same delta
+  `b371f96` on `main-items`; landed 2026-10-22): an item the plugin told the clients about (a placeholder title made again after
+  a delete, a new title, an import) and a removed one are watched for two minutes (`LibraryNotifications`, at most 1000), and a
+  first cover is told as `ItemsUpdated` 3 s after it came, the rest of a burst in one more message once no cover came for 3 s,
+  so an open page shows the poster without Jellyfin's 30 s batch; the 3 s let the placeholder listener put back the user data
+  Jellyfin parked for a re-made id first. Not run: real Chrome, the Pi, Codex review.
   **P4.FU13, built (not accepted) 2026-10-19: quality profiles list best first everywhere, and the picker has no "Title default"**
   (user 2026-10-19: "Higher profiles first, i.e. 4k 2k. Make those changes in settings, not drop down"; then "No sense in Default
   if 4k is default. So it should be 4k (Default) selected, that's it."). Owner: P4.FU9's profiles. One order, decided in the data:
