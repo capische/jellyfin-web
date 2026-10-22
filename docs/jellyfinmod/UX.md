@@ -399,6 +399,20 @@ its last value, the disc and figure dimmed.
 - **The episode detail line** (`QueueStatusLine`, also on a movie's and a series' page): the 2.5em disc, then `In the
   download queue · 42% · 12 min left`, then View queue where the queue may be opened. The mod's page for a missing episode
   showed it from P1.FU19 until P1.FU20 replaced it with the download block (§7.2.1).
+- **A season's and a series' total in its header** (P4.FU21, user 2026-10-22: "Season total is good too but apply new download
+  state text"; 2026-10-24: "keep B", "yes add series page total"; [design note](design/season-total-download.md),
+  [guide](design/guides/download-state-mark.md) *Where it sits*): on the native and the mod's season page and the native series
+  page, upstream's action row gets, after the Get a Release cloud and before Favourite, the row-size disc (2.5em) with the total
+  arc and the liveliest glyph, and beside it `2 of 8 episodes · 38% · 2 h 10 min left` at 86 %, the whole figure treatment B
+  (`… · Queued`, `… · Importing…`, `… · Stalled · 42%`). On the phone the disc joins the centred row and the figure is one centred
+  line under it; on the TV the same row at 125 %. Its tooltip adds the breakdown: by state on a season (`… · 2 done, 4
+  downloading, 2 queued`), by season on a series (`… · Season 1: 3 of 8 · Season 2: 2 of 8`). M counts every episode of the
+  season (of every season, on the series page) a queue row names (on its way, importing, or in the library by a row still listed;
+  a pack once per episode), N those in the library; the percent is bytes over the batch where every size is known, else the plain
+  mean (the cards' fallback); the longest time left; failed episodes are left out (their rows keep the red bang). Shown while one
+  episode is on its way, gone when nothing is. An indicator for everyone: no button, no link, no focus or D-pad stop. Read from
+  the page's shared queue query (`components/SeasonTotal.tsx`, `batchProgress`). The mod's page for a series with no Jellyfin item
+  (raised buttons, no Favourite) has none.
 - **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
   copy keeps its word; the progress bar column stays. The State column is as wide as what it holds (the disc alone while a row
   downloads), the room going to the title (user 2026-10-19).
