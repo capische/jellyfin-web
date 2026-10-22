@@ -30,8 +30,10 @@
 //   library    the Shows library removed and added again: its placeholders come back
 //   cleanup    Remove All Virtual Items leaves no item with the plugin's path in the database
 //
-//   JELLYFINMOD_TEST_URL=http://127.0.0.1:<port>/   JELLYFINMOD_PI_CONTAINER=jellyfinmod-<name>
-//   JELLYFINMOD_PI_HOST_MEDIA=<host folder mounted at /test-media>   JELLYFINMOD_PI_CLIP=<small video file on the host>
+//   JELLYFINMOD_TEST_URL=http://127.0.0.1:<port>/   [JELLYFINMOD_PI_CONTAINER=jellyfinmod-<name>]
+//   [JELLYFINMOD_PI_HOST_MEDIA=<host folder mounted at /test-media>]   JELLYFINMOD_PI_CLIP=<small video file on the host>
+// The URL must answer as a pool environment on Jellyfin 12.2 (never alpha or beta) whose container publishes that port; the
+// container and the host folder are the ones proven there (local-env.mjs), and checked against the two variables when given.
 //   [JELLYFINMOD_PI_STEPS=setup,backfill,...]  [JELLYFINMOD_PI_OUT=<json file>]  [JELLYFINMOD_BROWSER=chromium|chrome]
 //
 // The environment is reset to its baseline afterwards (envs/bin/reset-to-baseline.sh).
@@ -39,15 +41,18 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
+import { provenLocalEnvironment } from './local-env.mjs';
 
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 if (!['127.0.0.1', 'localhost'].includes(origin.hostname) || ['8096', '18096', '28096', '48096'].includes(origin.port)) {
     throw new Error('Runs on a local environment only (loopback, never 8096 or a Pi instance)');
 }
 const need = name => process.env[name] ?? (() => { throw new Error(name + ' is required'); })();
-const container = need('JELLYFINMOD_PI_CONTAINER');
-if (!/^jellyfinmod-[a-z]+$/.test(container) || container === 'jellyfinmod-alpha') throw new Error('Not a pool environment container');
-const HOST_MEDIA = need('JELLYFINMOD_PI_HOST_MEDIA');
+// The server, its container and the host folder are one pool environment on 12.2, proven before anything is copied or deleted.
+const environment = await provenLocalEnvironment(origin,
+    { container: process.env.JELLYFINMOD_PI_CONTAINER, hostMedia: process.env.JELLYFINMOD_PI_HOST_MEDIA });
+if (!environment.version?.startsWith('12.2')) throw new Error(`${environment.container} runs Jellyfin ${environment.version}, not 12.2`);
+const { container, hostMedia: HOST_MEDIA } = environment;
 const CLIP = need('JELLYFINMOD_PI_CLIP');
 const OUT = process.env.JELLYFINMOD_PI_OUT ?? 'placeholder-items.json';
 const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
@@ -155,6 +160,12 @@ async function ownCount() {
     const items = (await get('/Items?Recursive=true&IncludeItemTypes=Episode,Movie,Season,Series&Fields=Path'))?.Items ?? [];
     return items.filter(own).length;
 }
+/** Lets a delete repair run before "nothing comes back" is read: it defers while a library scan runs, so the scan is waited out. */
+async function settled() {
+    await sleep(6000);
+    await until(async () => (await get('/ScheduledTasks?isHidden=false'))?.find(task => task.Key === 'RefreshLibrary')?.State === 'Idle', 300000, 1000);
+    await sleep(10000);
+}
 async function scan() {
     await call('POST', '/Library/Refresh');
     await sleep(1500);
@@ -247,7 +258,7 @@ async function main() {
             next?.Items?.map(item => `S${item.ParentIndexNumber}E${item.IndexNumber}`));
         for (const e of [1, 3]) await call('DELETE', `/UserPlayedItems/${at(episodes, 1, e).Id}?userId=${sessions.oleksii.id}`);
         const latest = await get(`/Items/Latest?userId=${sessions.oleksii.id}&parentId=${shows}&limit=50&groupItems=false&IncludeItemTypes=Episode`);
-        record('backfill', 'Latest lists no placeholder episode', (latest ?? []).every(item => !own(item)), (latest ?? []).map(item => item.Name));
+        record('backfill', 'Latest lists no placeholder episode', Array.isArray(latest) && latest.every(item => !own(item)), (latest ?? []).map(item => item.Name));
         // User data kept through the steps below: S01E02 (real) and S01E04 (placeholder) played on 2025-08-01 and favourite.
         await mark(at(episodes, 1, 2).Id);
         await mark(placeholder.Id);
@@ -585,7 +596,7 @@ async function main() {
         await call('PUT', `/JellyfinMod/Placeholders/${shows}`, { enabled: false });
         const real = at(await episodesOf(fawlty.Id), 1, 4);
         await call('DELETE', `/Items/${real.Id}`);
-        await sleep(6000);
+        await settled();
         record('optout', 'with the library off a delete brings no placeholder back', !at(await episodesOf(fawlty.Id), 1, 4));
         const removal = await get(`/JellyfinMod/Placeholders/${shows}/Removal`);
         const ownBefore = (await get(`/Items?Recursive=true&ParentId=${shows}&IncludeItemTypes=Episode&Fields=Path`)).Items.filter(own).length;
@@ -605,7 +616,7 @@ async function main() {
     if (STEPS.has('entry')) {
         const entry = await entryOf(603);
         const removed = await call('DELETE', `/JellyfinMod/Entries/${entry.id}`);
-        await sleep(5000);
+        await settled();
         const left = (await get(`/Items?Recursive=true&IncludeItemTypes=Movie&ParentId=${movies}&Fields=Path,ProviderIds`)).Items.filter(item => item.ProviderIds?.Tmdb === '603');
         record('entry', 'Remove Entry of the file-less movie removes its item, nothing comes back', removed.status === 204 && left.length === 0,
             { status: removed.status, left: left.length });
