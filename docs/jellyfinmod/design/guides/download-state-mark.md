@@ -72,7 +72,9 @@ for it keeps the **importing** disc (spinner, `importing…`, tooltip `Importing
 draws again keeps it. A card or row of one episode or a movie ends it at once when the plugin's fresh entry detail (read on the
 plugin's push; fallback in [UX §3.3](../../UX.md)) names the item that plays the file (`playableItemId`) and the card or row
 **is** that item (`data-id`). A season or series card ends it when the detail names every episode the download named as
-playable and the card shows no missing-file mark for two passes running. A cancelled or failed download ends it at once; from 30 s after the import
+playable and the card shows no missing-file mark for two passes running. On a page that does not read the title's detail
+(Home, a library grid, search), a waiting card reads it itself, once per queue read (the push reads the queue first), so the
+ring ends there as fast as on the title's own page. A cancelled or failed download ends it at once; from 30 s after the import
 the tooltip adds "(taking longer than usual)"; a safety stop at 10 minutes. The cloud never appears between the two.
 
 ## Text
