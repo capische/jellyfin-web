@@ -476,6 +476,12 @@ interface PassContext {
     unplaced: string[];
     /** An entry's detail as the plugin last answered it (what names the playable items), or undefined when not read yet. */
     detailOf: (entryId: string) => EntryDetail | undefined;
+    /**
+     * Reads an entry's detail again when no copy is newer than the queue's last read (P2-6 of the 2026-10-22 review): a card on
+     * Home, a library grid or search has no page that reads it, so a waiting ring reads it itself, once per queue read (the
+     * plugin's push reads the queue first).
+     */
+    readDetail: (entryId: string) => void;
 }
 
 /**
@@ -523,6 +529,7 @@ const afterwards = (element: HTMLElement, scope: Scope, context: PassContext) =>
         return null;
     }
     const drawn = showsNoFile(element) ? 'no' : playableDrawn(element, scope, context);
+    if (drawn === 'no') context.readDetail(scope.entryId);
     const clean = drawn === 'no' ? 0 : memory.clean + 1;
     // The file's own item drawn ends it at once (P4.FU12): a new card or row is the file, never a frame of a placeholder.
     if (drawn === 'itself' || clean >= 2) {
@@ -585,6 +592,15 @@ const DownloadMarks: FC = () => {
     const items = queue.data?.items;
     const detailOf = useCallback((entryId: string) => (api && user?.Id ?
         queryClient.getQueryData<EntryDetail>(entryDetailQuery(api, user.Id, entryId).queryKey) : undefined), [api, queryClient, user?.Id]);
+    // The answer to it is a page pass (the subscription below); a read already under way is joined, not repeated.
+    const queueReadAt = useRef(0);
+    const readDetail = useCallback((entryId: string) => {
+        if (!api || !user?.Id) return;
+        const query = entryDetailQuery(api, user.Id, entryId);
+        const state = queryClient.getQueryState(query.queryKey);
+        if (state?.fetchStatus === 'fetching' || (state?.dataUpdatedAt ?? 0) >= queueReadAt.current) return;
+        queryClient.fetchQuery({ ...query, staleTime: 0 }).catch(() => undefined);
+    }, [api, queryClient, user?.Id]);
 
     // An import that ended waits for the page to draw the file's own item (P4.FU12). The plugin pushes that (an early LibraryChanged,
     // after which the catalog queries are read again), so a page pass follows each answer for an entry's detail; the one fallback for
@@ -659,6 +675,7 @@ const DownloadMarks: FC = () => {
         const all = items ?? [];
         const relevant = all.filter(row => row.state !== 'seeding');
         const read = dataUpdatedAt >= readingSince.current;
+        queueReadAt.current = dataUpdatedAt;
         if (!readable || all.length === 0) {
             clearAll();
             carried.current.clear();
@@ -684,7 +701,7 @@ const DownloadMarks: FC = () => {
             timer = undefined;
             let shown = 0;
             const unplaced: string[] = [];
-            const context: PassContext = { index, placements, carried: carried.current, now: Date.now(), idle: relevant.length === 0, unplaced, detailOf };
+            const context: PassContext = { index, placements, carried: carried.current, now: Date.now(), idle: relevant.length === 0, unplaced, detailOf, readDetail };
             document.querySelectorAll<HTMLElement>(TARGETS).forEach(element => {
                 if (markElement(element, context) && !element.closest('.hide')) shown++;
             });
@@ -699,7 +716,7 @@ const DownloadMarks: FC = () => {
             observer.disconnect();
             if (timer !== undefined) window.clearTimeout(timer);
         };
-    }, [items, dataUpdatedAt, readable, placed, placements, seriesEntries, place, bound, bind, detailOf]);
+    }, [items, dataUpdatedAt, readable, placed, placements, seriesEntries, place, bound, bind, detailOf, readDetail]);
 
     useEffect(() => clearAll, []);
     return null;
