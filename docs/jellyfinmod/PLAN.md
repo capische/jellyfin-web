@@ -1495,7 +1495,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   set yet. **Open, a user decision** (P2-1): a plugin disabled from the Dashboard, or not loaded after a Jellyfin upgrade, leaves
   its placeholder items as present, unplayable items nobody can delete (not file items, so no scan removes them) and no filter
   in front of them; the way out is to enable or reinstall the plugin and use Remove All Virtual Items, or else to remove and add
-  the library again. **Tests:** Phase 5 `PlaceholderItemsScenarios` (the clean-up, the marked stub never bound nor due, and the
+  the library again. **Decided by the user, 2026-10-24: a warning is enough, no Dashboard dialog.** The Missing Episodes section
+  says so in one help line under Remove All Virtual Items ([UX.md](UX.md) §3.1, *Virtual items when JellyfinMod does not run*);
+  checked on local beta in Chromium at 1440 and 360 px. **Tests:** Phase 5 `PlaceholderItemsScenarios` (the clean-up, the marked stub never bound nor due, and the
   catalog side of Delete media: bindings cleared once, history once per removal, the series on disk through its other season,
   the early `LibraryChanged` only to a user who sees the library); all of Phase 1 smoke, 2, 3, 3 protection, 4, 5 and 6 pass.
   `placeholder-items.mjs` on delta (12.2) 57 of 60, the same three failing on the unchanged line on bravo (the note at the

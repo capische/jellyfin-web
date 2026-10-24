@@ -321,6 +321,11 @@ Retention").** Like every other section, its rail row has a status line and stat
 off), *Read-only · nothing is written* (every library that is on has no folder that can be written), *No TV or movie library*;
 N is what Jellyfin holds across the libraries. The per-library switches stay in the section; changing one updates the rail.
 
+**Virtual items when JellyfinMod does not run (P1.FU30, user 2026-10-24: a warning is enough, no Dashboard dialog).** Under
+*Remove All Virtual Items* one help line (`fieldDescription`) says: "Disabling JellyfinMod, or a failed load after a Jellyfin
+upgrade, leaves these items in your libraries, and they cannot be deleted until JellyfinMod runs again. Uninstalling removes
+them." The way out is to run JellyfinMod again and press Remove All Virtual Items.
+
 ### 3.2 Colour
 
 State reads from shape and opacity first, colour second, because the TV is viewed at three

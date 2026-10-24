@@ -263,6 +263,11 @@ const VirtualItems: FC<Omit<BackfillProps, 'version'>> = ({ api, busy, setBusy, 
                 <div className='jfmod-inlineactions'>
                     <Button variant='contained' color='error' disabled={busy || !state?.items} onClick={removeAll}>Remove All Virtual Items</Button>
                 </div>
+                {/* What is left when the plugin does not run (user, 2026-10-24: a warning is enough, no Dashboard dialog). */}
+                <div className='fieldDescription' data-jfmod-virtual-warning=''>
+                    Disabling JellyfinMod, or a failed load after a Jellyfin upgrade, leaves these items in your libraries, and they cannot
+                    be deleted until JellyfinMod runs again. Uninstalling removes them.
+                </div>
             </div>
         </div>
     );
