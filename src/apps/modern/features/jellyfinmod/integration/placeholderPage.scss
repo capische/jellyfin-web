@@ -8,3 +8,10 @@
 .listItem[data-jfmod-placeholder] .endsAt {
     display: none;
 }
+
+// A season's episode rows on a computer have no row action (upstream's `.listItem[data-action=none]` keeps the arrow), yet
+// their image opens the episode (or plays it, through its Play button): the image shows the hand, as a card's does (P1.FU33).
+// An image with no action of its own (no artwork, or an action of none) keeps the arrow.
+.listItem[data-action='none'] .listItemImage.itemAction[data-action]:not([data-action='none']) {
+    cursor: pointer;
+}
