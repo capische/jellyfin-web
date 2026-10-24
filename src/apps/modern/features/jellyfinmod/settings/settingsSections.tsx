@@ -1350,7 +1350,8 @@ export const GrabbingSection: FC<SectionProps> = props => {
             <FieldForm fields={[
                 { key: 'enabled', label: 'Allow grabs', type: 'bool', help: `A grab can be cancelled for ${acquisition.holdSeconds ?? 5} seconds before it is sent.` },
                 { key: 'downloadClientId', label: 'Download client', type: 'select', options: data.clients.map(client => ({ value: client.id, label: client.name })) },
-                { key: 'defaultQualityProfileId', label: 'Default quality profile', type: 'select', options: data.profiles.map(profile => ({ value: profile.id, label: profile.name })) }
+                { key: 'defaultQualityProfileId', label: 'Default quality profile', type: 'select',
+                    options: data.profiles.map(profile => ({ value: profile.id, label: profile.name, detail: profileSummary(profile) })) }
             ]} draft={draft} onChange={set} />
         </SectionFrame>
     );

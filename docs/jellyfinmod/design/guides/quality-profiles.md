@@ -1,7 +1,8 @@
 # Quality Profiles section and dialog
 
 **Status:** approved 2026-10-15 ("Love quality profiles - implement it too"), revised the same day and 2026-10-16/17 to
-artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). Built on
+artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). The Default quality profile select's two-line options:
+user, 2026-10-24 (P4.FU17). Built on
 `next-release` (P4.FU9). Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,
 `settings/qualityProfiles.scss` (`.jfmod-qp-*`), `settings/settingsSections.tsx` (`ProfileRow`, `QualityRow`).
@@ -21,6 +22,15 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
   each profile's best quality, then name); no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
   profile reads **"4K (Default)"** and is selected unless the title has its own profile.
 - A grey *Add Predefined Profiles* button shows while a predefined profile is missing (and in the empty state).
+
+## Default quality profile select (Grabbing)
+
+- (user, 2026-10-24, P4.FU17) In Grabbing (the wizard's *Turn Grabbing On* step and the settings section), each option of the
+  open menu is two lines: the profile's name in 600 over the row's summary (`profileSummary`, the same words as the section's
+  row) at 0.88em in the secondary text colour, the list rows' own `.jfmod-brow-main` styles; `FieldSpec` options carry the
+  summary as `detail`, and an option with one is `.jfmod-optdetail` (`white-space: normal`, so a long summary wraps on a phone
+  instead of widening the menu). The closed select shows the name only (`renderValue`). The release picker's Quality Profile
+  dropdown keeps its one-line names.
 
 ## Dialog, in order
 
