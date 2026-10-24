@@ -20,7 +20,7 @@ import {
 } from './settingsApi';
 import { profileSummary, QualityProfileDialog, usePresets } from './qualityProfiles';
 import {
-    type Draft, FieldForm, REQUIRED_SLOTS, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
+    type Draft, FieldForm, FillExample, REQUIRED_SLOTS, type FieldSpec, IconAction, Notice, type NoticeState, pick, SecretField, SectionFrame, type StateKind, StatePill,
     ScrollList, type TestState, TestIcon, useConfirm, WhenLine
 } from './settingsWidgets';
 
@@ -1030,6 +1030,24 @@ const syncNotice = (outcome: any): NoticeState => {
     };
 };
 
+/** The address the Prowlarr card's help offers to fill in (P7.FU9): Prowlarr's own name and port in a Docker network. */
+// eslint-disable-next-line sonarjs/no-clear-text-protocols -- an example address on a Docker network, which Prowlarr serves over http
+const PROWLARR_EXAMPLE = 'http://prowlarr:9696';
+
+/** Prowlarr's General settings page, where its API key is, for a typed http(s) address; nothing for anything else (P7.FU9). */
+const prowlarrKeyPage = (address: unknown) => {
+    let url: URL;
+    try {
+        url = new URL(typeof address === 'string' ? address.trim() : '');
+    } catch {
+        return undefined;
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
+    // Relative to the address with one trailing slash, so a Prowlarr under a path (http://host/prowlarr) keeps it.
+    const href = new URL('settings/general', url.href.endsWith('/') ? url.href : url.href + '/').href;
+    return { href, title: 'Open Prowlarr\'s General settings, where its API key is' };
+};
+
 const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     const source = data.prowlarr?.[0];
     const section = useSectionState(reload, PROWLARR_READS);
@@ -1039,6 +1057,8 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
     const setKey = keySecret.set;
     const [confirmDialog, ask] = useConfirm();
     const { run, test, setNotice: setSourceNotice, reloadNow: reloadSource } = section;
+    const fillAddress = useCallback((address: string) => set('baseUrl', address), [set]);
+    const keyPage = useMemo(() => prowlarrKeyPage(draft.baseUrl), [draft.baseUrl]);
     // `source` is undefined until one is added; the handlers that read its id are only reachable once it exists.
     const save = useCallback(() => {
         // A key typed for another source (or for a new one before this one appeared) is never sent to this one, and neither
@@ -1085,11 +1105,13 @@ const ProwlarrCard: FC<SectionProps> = ({ api, data, reload }) => {
                 </p>
             )}
             <FieldForm fields={[
-                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true, help: 'For example http://host:9696, without credentials.' },
+                { key: 'baseUrl', label: 'Prowlarr address', type: 'text', required: true,
+                    help: <>For example <FillExample value={PROWLARR_EXAMPLE} onFill={fillAddress} />, without credentials.</> },
                 { key: 'syncIntervalMinutes', label: 'Sync every (minutes)', type: 'int' },
                 { key: 'enabled', label: 'Sync on a schedule', type: 'bool' }
             ]} draft={draft} onChange={set} />
-            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey} />
+            <SecretField key={source?.revision ?? 'new'} id='jfmodProwlarrKey' label='API key' required={!source?.apiKeyConfigured} configured={!!source?.apiKeyConfigured} change={key} onChange={setKey}
+                keyPage={keyPage} />
             <div className='jfmod-inlineactions'>
                 <Button variant='contained' color='inherit' disabled={section.busy} onClick={save}>{source ? 'Save' : 'Add Prowlarr'}</Button>
                 {source && <Button variant='contained' color='inherit' disabled={section.busy} onClick={testSource}>Test</Button>}

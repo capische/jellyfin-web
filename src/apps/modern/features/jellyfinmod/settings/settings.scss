@@ -798,6 +798,36 @@
 .jfmod-check-links a:hover,
 .jfmod-lead a:hover { text-decoration: underline; }
 
+/* An example in a help line that fills its field (P7.FU9), and a secret's Key Page link inside its empty field: both in the
+   links' look, the primary colour at 600 with an underline on hover; the button carries no button chrome. */
+.jfmod-example,
+.jfmod-keypage {
+    color: #00a4dc;
+    color: var(--jf-palette-primary-main, #00a4dc);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.jfmod-example {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+}
+
+.jfmod-keypage {
+    flex: 0 0 auto;
+    margin-left: 0.6em;
+    white-space: nowrap;
+}
+
+.jfmod-example:hover,
+.jfmod-example:focus-visible,
+.jfmod-keypage:hover,
+.jfmod-keypage:focus-visible { text-decoration: underline; }
+
 /* A select's option with a detail (the Default quality profile, P4.FU17): the name over the summary, in a list row's sizes
    (.jfmod-brow-main); the summary wraps in a narrow menu instead of widening it. */
 .jfmod-optdetail.MuiMenuItem-root { white-space: normal; }
