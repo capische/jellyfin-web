@@ -1158,14 +1158,16 @@
     }
 
     // The two choices: a small label over a value with a hairline under it and a small chevron, not upstream's boxed select.
-    .jfmod-releaseControls > .selectContainer {
+    .jfmod-releaseControls > .selectContainer,
+    .jfmod-releaseControls > .jfmod-releaseProfileField {
         position: relative;
         flex: 1 1 15em;
         margin: 0 1em 0.5em 0;
         font-size: 0.8em;
     }
 
-    .jfmod-releaseControls .selectLabel {
+    .jfmod-releaseControls .selectLabel,
+    .jfmod-releaseProfileLabel {
         position: static;
         display: block;
         margin: 0 0 0.15em;
@@ -1197,7 +1199,33 @@
         display: none;
     }
 
-    .jfmod-releaseControls > .selectContainer::after {
+    // The Quality Profile choice is an MUI select (P4.FU19), drawn as the scope switch beside it: the value on a hairline, the
+    // same ▾, a blue hairline while it has the focus.
+    .jfmod-releaseProfileField .MuiInputBase-root {
+        width: 100%;
+        font: inherit;
+        color: inherit;
+    }
+
+    .jfmod-releaseProfileField .MuiSelect-select.MuiInputBase-input {
+        box-sizing: content-box;
+        height: 1.35em;
+        min-height: 0;
+        padding: 0.25em 1em 0.25em 0;
+        border-bottom: 1px solid var(--jfmod-line);
+        border-radius: 0;
+        background: transparent;
+        font-size: 1.2em;
+        line-height: 1.35;
+    }
+
+    .jfmod-releaseProfileField .MuiSelect-select.MuiInputBase-input:focus {
+        border-bottom-color: var(--jf-palette-primary-main, #00a4dc);
+        background: transparent;
+    }
+
+    .jfmod-releaseControls > .selectContainer::after,
+    .jfmod-releaseControls > .jfmod-releaseProfileField::after {
         content: '\25BE';
         position: absolute;
         right: 0;
@@ -1321,4 +1349,9 @@
     --jfmod-focus: #222;
 
     color: #222;
+}
+
+// The Quality Profile menu is a portal on the body: it sits over upstream's dialog layer (999999), not under it (P4.FU19).
+.MuiPopover-root.jfmod-releaseProfileMenu {
+    z-index: 1000000;
 }

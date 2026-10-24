@@ -9,6 +9,20 @@
 //   JELLYFINMOD_LIVE_ENTRY  a file-less movie entry with a 1080p fixture release; JELLYFINMOD_LIVE_PROFILE  the 720p-only profile name
 import { api, control, launch, newPage, notVerified, record, saveResults, setTvLayout, signIn, tier } from './live-lib.mjs';
 
+/**
+ * The release picker's Quality Profile is an MUI select (P4.FU19): opens its menu and picks the option named `name` (its first
+ * line, "4K (Default)" for the default), or the `index`th; returns the names the menu listed.
+ */
+async function pickProfile(page, { name, index }) {
+    await page.locator('#jfmod-releaseProfile').click();
+    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    await options.first().waitFor({ state: 'visible', timeout: 10000 });
+    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    await options.nth(name === undefined ? index : names.indexOf(name)).click();
+    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    return names;
+}
+
 const entryId = process.env.JELLYFINMOD_LIVE_ENTRY;
 const otherProfile = process.env.JELLYFINMOD_LIVE_PROFILE ?? 'Live 720p only';
 const layouts = (process.env.JELLYFINMOD_LIVE_LAYOUTS ?? 'desktop,mobile,tv1080,tv720').split(',');
@@ -46,8 +60,7 @@ for (const layout of layouts) {
 
         // Profile change: a new search in place, the dialog stays, the rows re-evaluate, the entry keeps its profile.
         const rowsBefore = await page.locator('.jfmod-releaseList .jfmod-releaseRow').count();
-        const option = await page.locator('#jfmod-releaseProfile option', { hasText: otherProfile }).getAttribute('value');
-        await page.locator('#jfmod-releaseProfile').selectOption(option);
+        await pickProfile(page, { name: otherProfile });
         await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
         await page.waitForTimeout(1500);
         const after = await page.evaluate(() => ({ open: !!document.querySelector('.jfmod-releasePicker'), eligible: document.querySelectorAll('.jfmod-releaseList .jfmod-releaseRow').length,

@@ -1457,7 +1457,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   started on the non-selectable *Choose what to search for* and searched nothing); a season page keeps its season, an episode
   page its episode ([UX.md](UX.md) §9). **P4.FU17** ("update dropdown with profiles to contain more detailed information"): the
   Grabbing step's and section's Default quality profile options show the Quality Profiles row's summary under the name
-  ([guides/quality-profiles.md](design/guides/quality-profiles.md)). **P7.FU9** ("replace http://host:9696 with clickable
+  ([guides/quality-profiles.md](design/guides/quality-profiles.md)). **P4.FU19** ("As for quality profiles see more about it
+  here", on the picker's native profile list): the release picker's Quality Profile becomes the same two-line MUI menu, drawn
+  like the scope switch, choosing as before. **P7.FU9** ("replace http://host:9696 with clickable
   http://prowlarr:9696", "add inside API Key field … Key Page and link to prowlarr"): the Prowlarr address's example fills the
   field, and the empty API key field links to `<address>/settings/general` while the address is a URL
   ([guides/settings-field.md](design/guides/settings-field.md), UX §12.1). Checked on local beta (items line) in Chromium headless

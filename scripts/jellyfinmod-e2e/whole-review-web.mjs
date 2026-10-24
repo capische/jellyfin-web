@@ -28,6 +28,20 @@
 //     node whole-review-web.mjs
 import { chromium } from 'playwright';
 
+/**
+ * The release picker's Quality Profile is an MUI select (P4.FU19): opens its menu and picks the option named `name` (its first
+ * line, "4K (Default)" for the default), or the `index`th; returns the names the menu listed.
+ */
+async function pickProfile(page, { name, index }) {
+    await page.locator('#jfmod-releaseProfile').click();
+    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    await options.first().waitFor({ state: 'visible', timeout: 10000 });
+    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    await options.nth(name === undefined ? index : names.indexOf(name)).click();
+    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    return names;
+}
+
 const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 if (origin.port !== '28096') throw new Error('Runs only against the acceptance instance');
 const env = name => process.env[name] ?? (() => { throw new Error(name + ' is required'); })();
@@ -890,9 +904,11 @@ async function pickerRecoveryRun(page, created, at) {
     const conflict = refused?.status() === 409 && refusedBody?.type === 'grab_active'
         && String(refusedBody?.operationId ?? '').toLowerCase() === String(otherId).toLowerCase();
     at.step = `refusal ${refused?.status()} ${refusedBody?.type}`;
-    const profiles = await page.locator('#jfmod-releaseProfile option').evaluateAll(options => options.map(option => option.value));
     at.step = 'profile switch';
-    await page.locator('#jfmod-releaseProfile').selectOption(profiles[1] ?? profiles[0]);
+    const profileCount = await page.locator('#jfmod-releaseProfile').click()
+        .then(() => page.locator('.jfmod-releaseProfileMenu [role="option"]').count());
+    await page.keyboard.press('Escape');
+    await pickProfile(page, { index: profileCount > 1 ? 1 : 0 });
     await settled();
     at.step = 'own grab click: ' + (await page.locator('.jfmod-releaseStatus').innerText().catch(() => '')).trim();
     const ownCreated = page.waitForResponse(response => response.request().method() === 'POST'
