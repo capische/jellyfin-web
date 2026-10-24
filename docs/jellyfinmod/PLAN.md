@@ -1464,6 +1464,18 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   field, and the empty API key field links to `<address>/settings/general` while the address is a URL
   ([guides/settings-field.md](design/guides/settings-field.md), UX §12.1). Checked on local beta (items line) in Chromium headless
   only; **not run:** real Chrome, the TV layout, any runner, Codex review.
+  **P4.FU20, built (not accepted) 2026-10-24: library-found titles take releases that carry their ids, and come back after a
+  delete** (user 2026-10-24: every UA. utp.to release for The Matrix (1999) on alpha refused with "The indexer reports a
+  different title identity"; "keep the TVDB rule"). Owner: Phase 4. An entry made when Jellyfin first saw a file kept the
+  folder name, no IMDb id and no release date, so the evaluator counted a release's IMDb id as a mismatch and the placeholder
+  plan counted the movie as unreleased (a delete in Jellyfin never brought it back). Now a provider id is a mismatch only when
+  both sides know it; a movie release carrying a TVDB id is a series (Teen Titans and The Matrix Reloaded share TMDB id 604).
+  Reconciliation fills what an entry lacks from the Jellyfin item (the name while the title is still the folder name, IMDb id,
+  year, release date, overview, runtime); existing entries get it on the next reconciliation pass, new ones on Jellyfin's
+  first metadata update, which now counts as a change. A movie with no release date but an earlier year counts as released
+  (stubs line; the items line had it), and a title already in folder form is not tagged twice. Plugin main-stubs `b0b59c5`
+  `fdf6a9d`, main-items `0789cb0` `f1b94aa` (the items line carries its own copy). Phase 2/3/4/5 suites pass on both lines;
+  live on bravo (Prowlarr utp.to, delete repair) on both. **Not run:** real Chrome, full matrix, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
