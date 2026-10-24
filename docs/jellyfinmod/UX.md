@@ -1654,6 +1654,11 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
 - **The Prowlarr card has no Name field** (user, 2026-10-19: "I don't need field. It's useless"). There is one Prowlarr source and
   it is always called Prowlarr, so the card shows only *Prowlarr address*, *Sync every (minutes)*, *Sync on a schedule* and the
   *API key*; the plugin names a new source "Prowlarr" and an edit leaves the stored name alone.
+- **The Default quality profile select names what each profile does (user, 2026-10-24, P4.FU17).** In Grabbing (the wizard's
+  *Turn Grabbing On* step and the settings section, one component), each option of the open menu is the profile's name over the
+  Quality Profiles row's one-line summary ("4K first, then down to 720p · any size · no upgrades"), in the rows' sizes and
+  secondary colour, best first as the plugin gives them; a long summary wraps in a narrow menu. The closed select shows the name.
+  The release picker's Quality Profile dropdown is unchanged.
 
 ### 12.2 Indexers before the download client, and Found in Prowlarr (P6.FU1, user 2026-10-15)
 
