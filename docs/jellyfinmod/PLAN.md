@@ -1505,6 +1505,18 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   order Play, (Trailer,) Shuffle, Played, Get a Release, total, Favourite, More; the TV's focus skips the total; the series
   tooltip reads `Downloading · 53% · 3 h 20 min left · 4 MB/s · Season 1: 1 of 2 · Season 2: 2 of 6`. Not run: real Chrome, the
   TV at 1280×720, a live download, the full runner matrix, Codex review.
+  **P2.R7 follow-up, built (not accepted) 2026-10-24: a binding outside every library root is dropped and never fallen back
+  to** (user 2026-10-24: "start the Peep Show stale data fix"). Owner: Phase 2 (reconciliation), with the delete repair of
+  P1.FU29/P4.FU12. A binding under a root the library no longer has (local beta: Peep Show under `/data5/TV Series`, removed
+  as a library path while its files stay) could never be proven absent, so it was kept and, after Peep Show was deleted in
+  Jellyfin, the delete repair fell back to it: the entry stayed on disk through a gone series, two episodes pointed at gone
+  items and the series page hid them, no placeholders came back. Now a binding outside every current location of its
+  library is dropped by the post-scan absence check and by the delete repair of its title even when its file still exists
+  (only the row; no file is touched), and the delete repair never falls back to a copy whose Jellyfin item is gone. This
+  replaces P2.R6 acceptance item 4's direct existence check for files outside the current locations; files under a current
+  root keep the old proof rules. Plugin main-stubs `0c54488`, main-items `c237796`; Phase 2/3 (macOS) and Phase 5 (Linux)
+  pass on both lines, new checks fail before the fix; live on local echo on both lines. An env's next library scan cleans
+  existing stale bindings. **Not run:** browser check of the series page, the Pi, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
