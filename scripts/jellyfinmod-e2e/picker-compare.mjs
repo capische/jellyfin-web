@@ -10,6 +10,20 @@ import { launch, newPage, signIn, setTvLayout, api } from './live-lib.mjs';
 import { search, progress } from './picker-compare-fixture.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+/**
+ * The release picker's Quality Profile is an MUI select (P4.FU19): opens its menu and picks the option named `name` (its first
+ * line, "4K (Default)" for the default), or the `index`th; returns the names the menu listed.
+ */
+async function pickProfile(page, { name, index }) {
+    await page.locator('#jfmod-releaseProfile').click();
+    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    await options.first().waitFor({ state: 'visible', timeout: 10000 });
+    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    await options.nth(name === undefined ? index : names.indexOf(name)).click();
+    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    return names;
+}
 const MOCK = fileURLToPath(new URL('../../docs/jellyfinmod/design/release-picker-design.html', import.meta.url));
 const OUT = process.env.JELLYFINMOD_COMPARE_OUT ?? 'picker-compare-out';
 mkdirSync(OUT, { recursive: true });
@@ -59,7 +73,7 @@ await page.waitForSelector('.jfmod-releaseDialog .jfmod-releasePicker');
 if (state === 'searching') await page.waitForTimeout(6300);
 else if (state === 'over') {
     await page.waitForSelector('.jfmod-releaseList .jfmod-releaseItem'); await page.waitForTimeout(700);
-    gateOn = true; await page.locator('#jfmod-releaseProfile').selectOption({ index: 1 }); await page.waitForTimeout(6300);
+    gateOn = true; await pickProfile(page, { index: 1 }); await page.waitForTimeout(6300);
 }
 else if (state === 'noresults' || state === 'allfailed') { await page.waitForSelector('.jfmod-searchBlock--quiet, .jfmod-searchBlock--error'); await page.waitForTimeout(700); }
 else {
