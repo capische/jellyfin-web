@@ -1654,6 +1654,14 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
 - **The Prowlarr card has no Name field** (user, 2026-10-19: "I don't need field. It's useless"). There is one Prowlarr source and
   it is always called Prowlarr, so the card shows only *Prowlarr address*, *Sync every (minutes)*, *Sync on a schedule* and the
   *API key*; the plugin names a new source "Prowlarr" and an edit leaves the stored name alone.
+- **The Prowlarr card helps with the address and the key (user, 2026-10-24, P7.FU9).** The address's help line reads "For example
+  http://prowlarr:9696, without credentials.", and the address in it is a link-styled button (*Use http://prowlarr:9696*) that
+  fills the field as if typed and puts the focus there; nothing is saved until Add Prowlarr or Save. While the address is an
+  http(s) URL and no key is saved, the empty *API key* field holds a **Key Page** link at its right end that opens
+  `<address>/settings/general` (Prowlarr's Settings → General, where Security → API Key is) in a new tab; its tooltip is "Open
+  Prowlarr's General settings, where its API key is". It goes once the address is cleared or not a URL, and once a key is saved
+  (the Configured box). An address only Jellyfin's server can resolve (a Docker service name such as `prowlarr`) may not open in
+  the person's own browser; the link is offered as it is.
 - **The Default quality profile select names what each profile does (user, 2026-10-24, P4.FU17).** In Grabbing (the wizard's
   *Turn Grabbing On* step and the settings section, one component), each option of the open menu is the profile's name over the
   Quality Profiles row's one-line summary ("4K first, then down to 720p · any size · no upgrades"), in the rows' sizes and
