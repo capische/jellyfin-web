@@ -1326,6 +1326,12 @@ Design rules:
 Opened from: the catalog card context menu, the catalog detail page, and (Phase 6) the version
 list's *Get another quality*.
 
+**Where the scope switch starts (user, 2026-10-24, P4.FU18).** Opened from a series page (its header's Get a Release, or a
+series card's, which opens the series as its page does), the switch starts on *All Seasons* and that search runs at once; until
+then it started on the non-selectable *Choose what to search for* and searched nothing. The placeholder stays only for a series
+with no aired season. A season page starts on its season and an episode page on its episode, as before; any other scope is one
+choice away.
+
 **Open question for the user (review 2026-09-18):** the *Enter grabs* rule rests on the queue
 being where a mistake is undone, and that queue does not exist until Phase 5; `PHASE4.md` offers no
 queue Undo. Options recorded in `PHASE4.md`: keep one Enter with no confirmation, add a short

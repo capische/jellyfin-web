@@ -219,7 +219,8 @@ async function run(browser, layout) {
         await settle(page, loads, answered, loadsBefore);
         const after = await scopeOptions(page);
         const texts = after.map(option => option.text);
-        record(layout, 'the switch starts at Choose what to search for, which is no choice', texts[0] === 'Choose what to search for', texts.slice(0, 2));
+        const value = await page.locator('.jfmod-releaseDialog #jfmod-releaseEpisode').inputValue().catch(() => null);
+        record(layout, 'the switch starts on All Seasons (user, 2026-10-24)', texts[0] === 'All Seasons' && value === 'series', { first: texts.slice(0, 2), value });
         const choices = texts.filter(text => text !== 'Choose what to search for');
         record(layout, 'the picker made no request of its own: the page and the picker share one load per visit',
             loads.length === loadsBefore + (stub || failStatus ? 1 : 0) && refreshes.length === 0, { loads, refreshes });

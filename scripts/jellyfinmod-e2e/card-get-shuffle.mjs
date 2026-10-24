@@ -398,7 +398,7 @@ async function run(browser, layout, user, admin) {
                 if (await checkOverlay(page, label, `${type} card`, card, expected)) {
                     await shot(type.toLowerCase() + '-card');
                     await checkPicker(page, label, `${type} card's ${expected}`, () => page.locator(`${card} .jfmod-cardGet`).click(),
-                        { heading: expected, scope: type === 'Series' ? choices => choices.some(option => option.text === 'All Seasons')
+                        { heading: expected, scope: type === 'Series' ? (choices, selected) => selected === 'All Seasons'
                             && !choices.some(option => /S\d+E\d+/.test(option.text)) : null });
                 }
             }
