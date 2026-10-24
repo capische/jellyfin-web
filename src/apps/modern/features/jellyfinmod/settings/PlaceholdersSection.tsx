@@ -208,7 +208,7 @@ interface VirtualItemsState {
     removed: number;
 }
 
-/** Remove All Virtual Items (P1.FU30): the clean-up before an uninstall, since nothing else removes the plugin's items. */
+/** Remove All Virtual Items (P1.FU30): removes the plugin's items by hand; an uninstall removes them too, a disabled plugin does not. */
 const VirtualItems: FC<Omit<BackfillProps, 'version'>> = ({ api, busy, setBusy, setNotice, ask, onSynced }) => {
     const [state, setState] = useState<VirtualItemsState | null>(null);
     const read = useCallback(async () => {
@@ -233,7 +233,8 @@ const VirtualItems: FC<Omit<BackfillProps, 'version'>> = ({ api, busy, setBusy, 
         ask({
             title: 'Remove all virtual items?',
             text: `This removes ${plural(dry.items, 'Jellyfin item')} with no file that JellyfinMod made, in every library, and turns placeholders `
-                + 'off everywhere so none are made again. Do this before you uninstall JellyfinMod: nothing else removes these items. '
+                + 'off everywhere so none are made again. Disabling JellyfinMod, or a failed load after a Jellyfin upgrade, leaves these items; '
+                + 'uninstalling removes them. '
                 + 'Real files and their items are not touched.',
             action: 'Remove',
             onConfirm: () => {
