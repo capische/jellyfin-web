@@ -1448,6 +1448,20 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   local environment bravo (Chromium, desktop): movie and episode cards, a React library grid's card, season-page rows, the
   episode and movie Played buttons; Home and the Shows grid 0 extra requests, the Movies grid and the season page 1. **Not
   run:** real Chrome, the phone and TV layouts, a placeholder (missing-media) item, a large library, Codex review.
+- Small web follow-ups of 2026-10-24, **built (not accepted)**, web only, on `fix/row-cursor` from `main-stubs` (so both lines
+  carry them); no upstream file touched. **P1.FU33** (user: "Episodes list view when hover over poster no hand icon, as everywhere
+  else"): on a computer upstream draws a season's episode rows with no row action (`.listItem[data-action=none]`, the arrow), yet
+  their image opens the episode; an additive rule in `integration/placeholderPage.scss` gives such an image the hand, an image with
+  no action keeps the arrow; phone and TV rows were already links. **P4.FU18** ("Shows page - I click download and by default
+  should be selected 'All Seasons'"): the release picker opened from a series page or a series card starts on All Seasons (it
+  started on the non-selectable *Choose what to search for* and searched nothing); a season page keeps its season, an episode
+  page its episode ([UX.md](UX.md) §9). **P4.FU17** ("update dropdown with profiles to contain more detailed information"): the
+  Grabbing step's and section's Default quality profile options show the Quality Profiles row's summary under the name
+  ([guides/quality-profiles.md](design/guides/quality-profiles.md)). **P7.FU9** ("replace http://host:9696 with clickable
+  http://prowlarr:9696", "add inside API Key field … Key Page and link to prowlarr"): the Prowlarr address's example fills the
+  field, and the empty API key field links to `<address>/settings/general` while the address is a URL
+  ([guides/settings-field.md](design/guides/settings-field.md), UX §12.1). Checked on local beta (items line) in Chromium headless
+  only; **not run:** real Chrome, the TV layout, any runner, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
