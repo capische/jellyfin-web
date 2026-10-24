@@ -736,12 +736,23 @@ const scopeOptions = ({ episodes, packs, pageEpisode, pageSeason, loading }: Sco
     }
     const seasons = Array.from(new Set(episodes.filter(episode => episode.seasonNumber > 0 && !episode.unaired)
         .map(episode => episode.seasonNumber))).sort((a, b) => a - b);
+    // A series page starts on All Seasons (user, 2026-10-24), so "Choose what to search for" is left only while there is none.
     return { label: 'Search For', options: [
-        { value: '', label: 'Choose what to search for' },
+        ...(seasons.length > 0 ? [{ value: SERIES_VALUE, label: 'All Seasons' }] : [{ value: '', label: 'Choose what to search for' }]),
         ...loadingOption,
-        ...(seasons.length > 0 ? [{ value: SERIES_VALUE, label: 'All Seasons' }] : []),
         ...seasons.map(season => ({ value: SEASON_PREFIX + season, label: 'Season ' + season }))
     ] };
+};
+
+/**
+ * The scope chosen, or where the switch starts with nothing chosen: opened from a series page (its header or its card), on All
+ * Seasons once it offers it (user, 2026-10-24); a season page starts on its season and an episode page on its episode, as given.
+ */
+const choiceOrStart = (choice: string, options: EmbySelectOption[],
+    opener: Pick<ReleasePickerProps, 'mediaType' | 'episodePage' | 'seasonPage' | 'initialEpisodeId'>) => {
+    if (choice) return choice;
+    const seriesPage = opener.mediaType === 'series' && !opener.episodePage && opener.seasonPage === undefined && !opener.initialEpisodeId;
+    return seriesPage && options.some(option => option.value === SERIES_VALUE) ? SERIES_VALUE : '';
 };
 
 /** Whether a search's rows may offer Replace: the plugin's `modes`, else, from an older plugin, as before (user, 2026-10-09). */
@@ -1063,7 +1074,11 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const grab = useGrab(api, onChanged);
     // Pack scopes only where the plugin serves them; an older plugin keeps the episode list (season packs, 2026-10-08).
     const packs = usePluginCapabilities(api).includes(PACKS_CAPABILITY);
-    const { chosen, isPack, waiting, searchIntent } = searchScope(choice, packs, mediaType, intent, loading);
+    const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
+    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage, loading }),
+        [episodes, packs, pageEpisode, seasonPage, loading]);
+    const choiceNow = choiceOrStart(choice, scope.options, { mediaType, episodePage, seasonPage, initialEpisodeId });
+    const { chosen, isPack, waiting, searchIntent } = searchScope(choiceNow, packs, mediaType, intent, loading);
 
     const profiles = useQuery({
         queryKey: ['JellyfinMod', api.basePath, 'QualityProfiles'],
@@ -1071,7 +1086,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         retry: false
     });
     const search = useQuery({
-        queryKey: ['JellyfinMod', api.basePath, 'Releases', entryId, choice, profileId, searchIntent ?? 'acquire'],
+        queryKey: ['JellyfinMod', api.basePath, 'Releases', entryId, choiceNow, profileId, searchIntent ?? 'acquire'],
         // `intent` is sent only for another version, and `scope` only for a pack, so an acquire search of one episode or a
         // movie reads exactly as it did before.
         queryFn: ({ signal }) => {
@@ -1135,9 +1150,6 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const chooseScope = useCallback((value: string) => {
         if (value !== LOADING_VALUE) setChoice(value);
     }, []);
-    const pageEpisode = episodePage && initialEpisodeId ? episodes.find(episode => episode.id === initialEpisodeId) : undefined;
-    const scope = useMemo(() => scopeOptions({ episodes, packs, pageEpisode, pageSeason: seasonPage, loading }),
-        [episodes, packs, pageEpisode, seasonPage, loading]);
     // The list comes best-first from the plugin (user, 2026-10-19). The default profile reads "4K (Default)" and is what is
     // selected unless the title has its own profile; there is no separate "Title default" option. Picking the profile a search
     // uses without an override clears the override, so only a different profile is sent.
@@ -1194,7 +1206,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>
-            {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choice}
+            {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choiceNow}
                 options={scope.options} onChange={chooseScope} />}
             {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality Profile'
                 value={shownProfileId} options={profileOptions} onChange={chooseProfile} />}

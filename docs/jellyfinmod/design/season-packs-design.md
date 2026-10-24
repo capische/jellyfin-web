@@ -166,7 +166,8 @@ except specials (series). The requester must be able to read every one (`CanRead
 - **Picker scope switch** (`ReleasePickerDialog`): on an episode page one dropdown `Episode: S01E01 · Name` /
   `Season 1` / `All Seasons`, default Episode; on a series page `All Seasons`, `Season 1…n`, then the episodes, default the
   first missing episode as today. Same line as the quality profile. **Changed (user, 2026-10-12):** a series page offers
-  only `All Seasons` and each season with aired episodes, after the non-selectable *Choose what to search for*; an episode
+  only `All Seasons` and each season with aired episodes, after the non-selectable *Choose what to search for* (since 2026-10-24
+  the switch starts on `All Seasons`, the placeholder left only for a series with no aired season, UX §9); an episode
   is searched from its own page or its row on a file-less series page (that episode, its season, All Seasons). A plugin
   without packs keeps the episode list.
 - **Rows**: coverage chips (`Season 2 · 8 episodes`, `Complete · S01–S05`), and where the scope holds files two actions at
