@@ -2,7 +2,7 @@
 
 **Status:** approved 2026-10-15 ("Love quality profiles - implement it too"), revised the same day and 2026-10-16/17 to
 artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). The profile selects' two-line options:
-user, 2026-10-24 (P4.FU17, P4.FU19). Built on
+user, 2026-10-24 (P4.FU17, P4.FU19). The release picker's BDRip label and Full Disc: user, 2026-10-25 (P4.FU22). Built on
 `next-release` (P4.FU9). Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,
 `settings/qualityProfiles.scss` (`.jfmod-qp-*`), `settings/settingsSections.tsx` (`ProfileRow`, `QualityRow`).
@@ -66,6 +66,10 @@ focus underline in the primary; every size in `em`; no `gap` outside the dialog'
 - Quality ids are **pretty-printed** everywhere the user reads them: `remux-2160p` → **4K Remux**, `bluray-1080p` →
   **1080p Blu-ray**, `webdl-2160p` → **4K WEB-DL**, `hdtv-720p` → **720p HDTV**, `dvd-576p` → **576p DVD**, 1440p → **2K …**.
   One function; the raw id survives only as data and as the list item's `title`.
+- A release in the picker whose name calls a Blu-ray encode a rip reads that word: **4K BDRip**, **1080p BRRip** (the
+  same `bluray` tier as **4K Blu-ray**; a plain BluRay encode stays **4K Blu-ray**, a remux **4K Remux**). A whole disc
+  (BD50, BDMV, BR-DISK, COMPLETE UHD BLURAY) reads **4K Full Disc** and is refused: "Full disc releases cannot be
+  imported." (P4.FU22, user 2026-10-25).
 - Sources read Remux › Blu-ray › WEB-DL › WEBRip › HDTV (DVD for SD). Title Case for buttons and headings, sentence case
   for help and the summary.
 

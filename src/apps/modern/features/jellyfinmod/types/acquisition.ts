@@ -25,6 +25,8 @@ export interface ParsedRelease {
     subtitles?: string[] | null;
     /** `5.1`, `7.1`; null when the title names none. */
     audioChannels?: string | null;
+    /** The rip word a Blu-ray encode's name uses (`BDRip`, `BRRip`), for its label; the tier stays `bluray` (P4.FU22). */
+    rip?: string | null;
 }
 
 export interface ReleaseRejection {

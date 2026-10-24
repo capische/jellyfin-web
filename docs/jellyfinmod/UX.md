@@ -1584,7 +1584,9 @@ is stored and sent as before; profile rows never show it. **Qualities are writte
 *4K Remux*, *2K WEB-DL*, *1080p Blu-ray*, *720p WEBRip*, *576p DVD* (2160p is 4K, 1440p is 2K, other resolutions as they
 are; sources Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD). That holds in the cutoff select, the order list and its
 sentence, the live sentence, the Upgrade help line, the row summaries, the order icons' names and the release picker's
-quality ("4K WEB-DL", which read "2160p WEB-DL" and "BluRay" before). The plugin's ids (`remux-2160p`) stay in the data
+quality ("4K WEB-DL", which read "2160p WEB-DL" and "BluRay" before; a Blu-ray encode the release calls a rip keeps the
+word, "4K BDRip" or "1080p BRRip", in the same tier as "4K Blu-ray", and a whole disc reads "4K Full Disc" and is refused
+as one that cannot be imported: user 2026-10-25, P4.FU22). The plugin's ids (`remux-2160p`) stay in the data
 and the API, and as an order row's title. The names live in one hard-coded place, `constants/quality.ts`, which a later
 configuration can replace. The simple controls write the record (best tier and every lower tier to the floor, each in the
 source order Remux, Blu-ray, WEB-DL, WEBRip, HDTV, DVD; the size as a maximum; cutoff the first quality); an Advanced

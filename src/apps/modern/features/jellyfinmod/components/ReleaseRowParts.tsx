@@ -35,8 +35,8 @@ export const formatSize = (bytes: number | null) => {
     return Math.max(1, Math.round(bytes / 1e6)) + ' MB';
 };
 
-/** `4K WEB-DL`: the resolution and source only, named as everywhere (constants/quality); everything else becomes a mark or a line. */
-export const qualityText = (parsed: ParsedRelease) => qualityLabel(parsed.resolution, parsed.source) || 'Unknown quality';
+/** `4K WEB-DL`, `4K BDRip`: the resolution and source only, named as everywhere (constants/quality); everything else becomes a mark or a line. */
+export const qualityText = (parsed: ParsedRelease) => qualityLabel(parsed.resolution, parsed.source, parsed.rip) || 'Unknown quality';
 
 const names = (codes: string[]) => codes.map(code => LANGUAGE_NAMES.get(code) ?? code).join(', ');
 
