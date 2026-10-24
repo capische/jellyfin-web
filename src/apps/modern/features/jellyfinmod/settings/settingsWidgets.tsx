@@ -151,6 +151,11 @@ interface SecretFieldProps {
     test?: { id: string; label: string; run: () => void; disabled?: boolean; help?: ReactNode; result: NoticeState | null; state: TestState };
     /** A Save at the end of the input (user, 2026-10-09): it saves just this secret, and the caller then starts the field's test. */
     save?: { label: string; run: () => void; busy?: boolean };
+    /**
+     * The page where the secret is found (Prowlarr's General settings, P7.FU9): a *Key Page* link inside the empty field,
+     * opened in a new tab, only while nothing is configured. `title` is its tooltip.
+     */
+    keyPage?: { href: string; title: string };
 }
 
 /**
@@ -238,12 +243,18 @@ const SecretIcon: FC<{ label: string; red?: boolean; onClick: () => void; action
     <IconAction label={label} red={red} onClick={onClick} data={{ 'secret-action': action }}>{children}</IconAction>
 );
 
+/** Where to get a secret, inside its empty field (P7.FU9); the adornment takes its own width, so typed text never runs under it. */
+const keyPageLink = (keyPage: SecretFieldProps['keyPage'], configured: boolean) => (keyPage && !configured ? (
+    <a className='jfmod-keypage' href={keyPage.href} target='_blank' rel='noopener noreferrer' title={keyPage.title}
+        data-secret-action='key-page'>Key Page</a>
+) : undefined);
+
 /**
  * A write-only secret (PHASE7 §5.1): "Configured" with Replace and Clear, a pending clear with Undo, and an
  * input only while a replacement is being typed. The page never receives, holds or logs a stored value.
  * Sections key it by their revision, so a save returns it to "Configured" instead of an empty "New …" input.
  */
-export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configured, change, onChange, test, save }) => {
+export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configured, change, onChange, test, save, keyPage }) => {
     const [editing, setEditing] = useState(false);
     const undo = useCallback(() => onChange({ action: 'unchanged', value: null }), [onChange]);
     const type = useCallback((event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value ?
@@ -301,6 +312,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
                 )}
             </span>
         );
+        const keyLink = keyPageLink(keyPage, configured);
         return (
             <div className='jfmod-secret'>
                 {/* The header stays while a replacement is typed, as in the Configured view (user, 2026-10-10); the input's own
@@ -317,7 +329,7 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
                     onChange={type}
                     onKeyDown={saveOnEnter}
                     slotProps={{
-                        input: { endAdornment: buttons || undefined },
+                        input: { endAdornment: buttons || keyLink || undefined },
                         inputLabel: requiredMarks?.inputLabel,
                         htmlInput: { ...accessibleName, ...requiredMarks?.htmlInput }
                     }}
@@ -343,6 +355,19 @@ export const SecretField: FC<SecretFieldProps> = ({ id, label, required, configu
     );
 };
 
+/**
+ * An example in a field's help line that fills the field when pressed (P7.FU9): an inline text button in the page's link
+ * look, through the field's own change path, so Save sees it as typed; focus then goes to the field's input.
+ */
+export const FillExample: FC<{ value: string; onFill: (value: string) => void }> = ({ value, onFill }) => {
+    const fill = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        const input = event.currentTarget.closest('.MuiFormControl-root')?.querySelector('input');
+        onFill(value);
+        input?.focus();
+    }, [onFill, value]);
+    return <button type='button' className='jfmod-example' aria-label={`Use ${value}`} onClick={fill}>{value}</button>;
+};
+
 /** A field of a flat settings form: the DTO key, how to edit it and what to say about it. */
 export interface FieldSpec {
     key: string;
@@ -350,7 +375,7 @@ export interface FieldSpec {
     type: 'bool' | 'int' | 'number' | 'text' | 'select' | 'list';
     /** A select's choices; with `detail`, an option is two lines in the open menu and the closed select shows just its label (P4.FU17). */
     options?: { value: string; label: string; detail?: string }[];
-    help?: string;
+    help?: ReactNode;
     /** An emptied number is sent as null (the server's nullable fields), not NaN. */
     optional?: boolean;
     /** The field must hold a value to save: its label ends with the asterisk (`.jfmod-required`) and its input `aria-required`. */
