@@ -1,0 +1,23 @@
+// A select's two-line options (P4.FU17, P4.FU19): the Quality Profiles row's sizes, the name over the summary. The menu is a
+// portal outside any page, so these rules are not scoped to one.
+.jfmod-optdetail.MuiMenuItem-root {
+    white-space: normal;
+}
+
+.jfmod-optdetail-text {
+    display: block;
+    min-width: 0;
+}
+
+.jfmod-optdetail-text > strong {
+    display: block;
+    font-weight: 600;
+}
+
+.jfmod-optdetail-text > span {
+    display: block;
+    margin-top: 0.15em;
+    font-size: 0.88em;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    word-break: break-word;
+}

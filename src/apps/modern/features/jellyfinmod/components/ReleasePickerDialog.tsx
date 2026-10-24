@@ -1,4 +1,5 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
 import escapeHtml from 'escape-html';
@@ -14,9 +15,11 @@ import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { confirmTorrentRemoval } from '../integration/queueActions';
+import { profileSummary } from '../settings/qualityProfiles';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 import type { QueueRow } from '../types/queue';
 
+import { type DetailOption, detailLabelOf, detailMenuItems } from './detailOptions';
 import EmbySelect, { type EmbySelectOption } from './EmbySelect';
 import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
 import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
@@ -755,6 +758,29 @@ const choiceOrStart = (choice: string, options: EmbySelectOption[],
     return seriesPage && options.some(option => option.value === SERIES_VALUE) ? SERIES_VALUE : '';
 };
 
+/**
+ * The picker's Quality Profile choice (P4.FU19): an MUI select whose open menu names each profile over its summary, drawn as the
+ * scope switch beside it is (a small label over the value on a hairline). Its trigger keeps the id the runners find it by and is a
+ * TV focus stop; the menu sits above upstream's dialog layer.
+ */
+const ProfileSelect: FC<{ value: string; options: DetailOption[]; onChange: (value: string) => void }> = ({ value, options, onChange }) => {
+    const change = useCallback((event: SelectChangeEvent) => onChange(event.target.value), [onChange]);
+    return (
+        <div className='jfmod-releaseProfileField'>
+            <span className='jfmod-releaseProfileLabel' id='jfmod-releaseProfileLabel'>Quality Profile</span>
+            <Select variant='standard' disableUnderline fullWidth value={value} onChange={change} labelId='jfmod-releaseProfileLabel'
+                renderValue={detailLabelOf(options)} IconComponent={NoIcon}
+                SelectDisplayProps={{ id: 'jfmod-releaseProfile', className: 'focusable' }}
+                MenuProps={{ className: 'jfmod-releaseProfileMenu' }}>
+                {detailMenuItems(options)}
+            </Select>
+        </div>
+    );
+};
+
+/** The scope switch's own ▾ is drawn by the field's `::after`, so MUI's icon is left out. */
+const NoIcon = () => null;
+
 /** Whether a search's rows may offer Replace: the plugin's `modes`, else, from an older plugin, as before (user, 2026-10-09). */
 const replaceOffered = (search: ReleaseSearch) => !search.grab.modes || search.grab.modes.includes('replace');
 
@@ -1158,8 +1184,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     useEffect(() => {
         if (!profileId && data) noOverrideId.current = data.profile.id;
     }, [profileId, data]);
-    const profileOptions = useMemo<EmbySelectOption[]>(() => (profiles.data ?? []).map(profile => ({
-        value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name
+    // Each profile says what it does under its name, as the Default quality profile select does (user, 2026-10-24, P4.FU19).
+    const profileOptions = useMemo<DetailOption[]>(() => (profiles.data ?? []).map(profile => ({
+        value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name, detail: profileSummary({ ...profile })
     })), [profiles.data]);
     const shownProfileId = profileId || (data?.profile.id ?? defaultProfileId);
     const chooseProfile = useCallback((value: string) => {
@@ -1208,8 +1235,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         <div className='jfmod-releaseControls'>
             {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choiceNow}
                 options={scope.options} onChange={chooseScope} />}
-            {!!profiles.data?.length && <EmbySelect id='jfmod-releaseProfile' label='Quality Profile'
-                value={shownProfileId} options={profileOptions} onChange={chooseProfile} />}
+            {!!profiles.data?.length && <ProfileSelect value={shownProfileId} options={profileOptions} onChange={chooseProfile} />}
         </div>
         {listError && <p className='jfmod-releaseNotice jfmod-releaseNotice--info jfmod-episodeListFailure'>{listError}</p>}
         {notice && !bare && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}

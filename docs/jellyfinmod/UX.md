@@ -1547,7 +1547,8 @@ implement it.").** The section keeps its card, its blue *Add Profile* and its ro
 Each row says in one line what the profile does ("4K first, then down to 720p · any size · no upgrades"),
 a profile made from a predefined profile carries a grey *Predefined* chip and the default the blue *Default* chip; a grey
 *Add Predefined Profiles* appears beside *Add Profile* only while one is missing (and the empty state names it); a footer line says
-a title uses the default unless you pick another one in the release picker. Profiles are listed best first everywhere (4K, 2K, 1080p, 720p, SD): the plugin returns them in that order, by the resolution of each profile's best quality, and the settings list, the Default profile select and the picker's Quality Profile dropdown all show it as given, with no sort of their own (user, 2026-10-19). The picker's dropdown has no "Title default" entry: the default profile reads "4K (Default)" and is selected unless the title has its own profile, picking the profile the search already uses sends no override. The dialog is simple by
+a title uses the default unless you pick another one in the release picker. Profiles are listed best first everywhere (4K, 2K, 1080p, 720p, SD): the plugin returns them in that order, by the resolution of each profile's best quality, and the settings list, the Default profile select and the picker's Quality Profile dropdown all show it as given, with no sort of their own (user, 2026-10-19); the Default select and
+the picker's dropdown put each profile's summary under its name (2026-10-24, §12.1). The picker's dropdown has no "Title default" entry: the default profile reads "4K (Default)" and is selected unless the title has its own profile, picking the profile the search already uses sends no override. The dialog is simple by
 default, in this order: the **Predefined** dropdown (user 2026-10-15: "use custom dropdown (we already got one on details
 page) so you can keep the font weight size difference inside dropdown"), a field-like trigger showing the chosen entry's
 name in weight 600 over its one-line description in the smaller muted size, with a chevron, opening a paper list of the six
@@ -1662,11 +1663,12 @@ custom. The Dashboard plugin page keeps its own profile editor unchanged.
   Prowlarr's General settings, where its API key is". It goes once the address is cleared or not a URL, and once a key is saved
   (the Configured box). An address only Jellyfin's server can resolve (a Docker service name such as `prowlarr`) may not open in
   the person's own browser; the link is offered as it is.
-- **The Default quality profile select names what each profile does (user, 2026-10-24, P4.FU17).** In Grabbing (the wizard's
-  *Turn Grabbing On* step and the settings section, one component), each option of the open menu is the profile's name over the
-  Quality Profiles row's one-line summary ("4K first, then down to 720p · any size · no upgrades"), in the rows' sizes and
-  secondary colour, best first as the plugin gives them; a long summary wraps in a narrow menu. The closed select shows the name.
-  The release picker's Quality Profile dropdown is unchanged.
+- **The profile selects name what each profile does (user, 2026-10-24, P4.FU17; the picker's, P4.FU19).** In Grabbing (the
+  wizard's *Turn Grabbing On* step and the settings section, one component) and in the release picker's Quality Profile, each
+  option of the open menu is the profile's name (the picker's default as "4K (Default)") over the Quality Profiles row's one-line
+  summary ("4K first, then down to 720p · any size · no upgrades"), in the rows' sizes and secondary colour, best first as the
+  plugin gives them; a long summary wraps in a narrow menu. The closed select shows the name. The picker's is now the mod's MUI
+  menu, not the browser's native list, drawn like the scope switch beside it; it chooses as before (§12, the picker's dropdown).
 
 ### 12.2 Indexers before the download client, and Found in Prowlarr (P6.FU1, user 2026-10-15)
 

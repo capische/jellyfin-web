@@ -9,12 +9,12 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import React, { createContext, type FC, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { type DetailOption, detailLabelOf, detailMenuItems } from '../components/detailOptions';
 import type { SecretChange } from './settingsApi';
 
 /** A dot with its words: state is never said by colour alone (UX §13). */
@@ -374,7 +374,7 @@ export interface FieldSpec {
     label: string;
     type: 'bool' | 'int' | 'number' | 'text' | 'select' | 'list';
     /** A select's choices; with `detail`, an option is two lines in the open menu and the closed select shows just its label (P4.FU17). */
-    options?: { value: string; label: string; detail?: string }[];
+    options?: DetailOption[];
     help?: ReactNode;
     /** An emptied number is sent as null (the server's nullable fields), not NaN. */
     optional?: boolean;
@@ -448,21 +448,15 @@ const FieldControl: FC<{ field: FieldSpec; value: unknown; onChange: FieldChange
     }
     if (type === 'select') {
         const slots = field.required ? REQUIRED_SELECT_SLOTS : FOCUSABLE_SELECT;
-        const detailed = field.options?.some(option => option.detail);
-        const nameOf = (chosen: unknown) => field.options?.find(option => option.value === chosen)?.label ?? '';
+        const options = field.options ?? [];
+        const detailed = options.some(option => option.detail);
         return (
             <TextField
                 select fullWidth margin='dense' label={field.label} helperText={field.help}
                 value={value ?? ''} onChange={choose}
-                slotProps={detailed ? { ...slots, select: { ...slots.select, renderValue: nameOf } } : slots}
+                slotProps={detailed ? { ...slots, select: { ...slots.select, renderValue: detailLabelOf(options) } } : slots}
             >
-                {field.options?.map(option => (
-                    <MenuItem key={option.value} value={option.value} className={option.detail ? 'jfmod-optdetail' : undefined}>
-                        {option.detail ?
-                            <span className='jfmod-brow-main'><strong>{option.label}</strong><span className='jfmod-sub'>{option.detail}</span></span> :
-                            option.label}
-                    </MenuItem>
-                ))}
+                {detailMenuItems(options)}
             </TextField>
         );
     }

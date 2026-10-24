@@ -325,16 +325,16 @@ async function checkDetails(page, name, cfg, movieLib) {
             const rows = await page.evaluate(() => document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseRow').length);
             record(name, `Release picker opens by Enter, focus lands inside, arrows stay inside (${how})`, inDialog && stillInside, { rows, moves });
             if (how === 'escape') {
-                // The profile select opens upstream's action sheet by Enter; Back closes the sheet, not the picker.
+                // The profile select (an MUI select, P4.FU19) opens its menu by Enter; Back closes the menu, not the picker.
                 for (let i = 0; i < 4 && !await page.evaluate(() => document.activeElement?.id === 'jfmod-releaseProfile'); i++) await press(page, 'ArrowUp');
                 if (await page.evaluate(() => document.activeElement?.id === 'jfmod-releaseProfile')) {
                     await press(page, 'Enter');
                     await page.waitForTimeout(800);
-                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.dialogContainer .dialog.opened.actionSheet').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
+                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.jfmod-releaseProfileMenu [role="listbox"]').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
                     await press(page, 'Escape');
                     await page.waitForTimeout(900);
-                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.dialogContainer .dialog.opened.actionSheet').length, picker: !!document.querySelector('.dialogContainer .dialog.opened.jfmod-releaseDialog'), focusId: document.activeElement?.id }));
-                    record(name, 'Release picker: profile select opens its action sheet by Enter; Back closes only the sheet', sheet.sheets === 1 && afterSheet.sheets === 0 && afterSheet.picker, { sheet, afterSheet });
+                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.jfmod-releaseProfileMenu [role="listbox"]').length, picker: !!document.querySelector('.dialogContainer .dialog.opened.jfmod-releaseDialog'), focusId: document.activeElement?.id }));
+                    record(name, 'Release picker: profile select opens its menu by Enter; Back closes only the menu', sheet.sheets === 1 && afterSheet.sheets === 0 && afterSheet.picker, { sheet, afterSheet });
                 } else {
                     record(name, 'Release picker: profile select reachable by ArrowUp', undefined, await describeFocus(page));
                 }

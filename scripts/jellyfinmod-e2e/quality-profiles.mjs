@@ -27,6 +27,20 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { mkdirSync } from 'node:fs';
 
+/**
+ * The release picker's Quality Profile is an MUI select (P4.FU19): opens its menu and picks the option named `name` (its first
+ * line, "4K (Default)" for the default), or the `index`th; returns the names the menu listed.
+ */
+async function pickProfile(page, { name, index }) {
+    await page.locator('#jfmod-releaseProfile').click();
+    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    await options.first().waitFor({ state: 'visible', timeout: 10000 });
+    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    await options.nth(name === undefined ? index : names.indexOf(name)).click();
+    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    return names;
+}
+
 const testUrl = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
 const LOCAL = ['alpha', 'bravo', 'charlie', 'delta', 'echo'];
 if (!['127.0.0.1', 'localhost'].includes(testUrl.hostname) || !['8096', '9096', '10096', '11096', '12096'].includes(testUrl.port)) {
@@ -389,19 +403,20 @@ async function pickerChecks(page, layout) {
     await page.waitForTimeout(1200);
     const listed = () => page.evaluate(() => ({
         rows: [...document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseItem')].map(item => item.textContent),
-        profile: document.querySelector('#jfmod-releaseProfile')?.selectedOptions?.[0]?.textContent ?? null,
-        rejected: /(\d+) Rejected/.exec(document.querySelector('.jfmod-releaseDialog')?.textContent ?? '')?.[1] ?? null,
-        options: [...(document.querySelector('#jfmod-releaseProfile')?.options ?? [])].map(option => option.textContent)
+        profile: document.querySelector('#jfmod-releaseProfile')?.textContent ?? null,
+        rejected: /(\d+) Rejected/.exec(document.querySelector('.jfmod-releaseDialog')?.textContent ?? '')?.[1] ?? null
     }));
     const first = await listed();
     const firstQuality = await page.locator('.jfmod-releaseDialog .jfmod-releaseItem .jfmod-releaseQuality').first().textContent();
     record(layout, '7 the picker names the quality as everywhere: 4K WEB-DL', firstQuality?.trim() === '4K WEB-DL', firstQuality);
     const at = (list, token) => list.rows.findIndex(text => text.includes(token));
     record(layout, '7 the picker searches with "4K (Default)" and lists both 4K rows, then 1080p, then 720p, with no Rejected group',
-        first.profile === '4K (Default)' && !first.options.includes('Title default') && at(first, '2160p') < 2 && first.rows.filter(text => text.includes('2160p')).length === 2
+        first.profile === '4K (Default)' && at(first, '2160p') < 2 && first.rows.filter(text => text.includes('2160p')).length === 2
             && at(first, '1080p.WEB-DL') === 2 && at(first, '720p.WEB-DL') === 3 && first.rows.length === 4 && first.rejected === null, first);
     console.log('  shot', await shot(page, `${layout}-picker`, page.locator('.jfmod-releaseDialog')));
-    await page.locator('#jfmod-releaseProfile').selectOption({ label: '1080p' });
+    first.options = await pickProfile(page, { name: '1080p' });
+    record(layout, '7 the picker\'s profile menu lists "4K (Default)" first and no "Title default"', first.options[0] === '4K (Default)'
+        && !first.options.includes('Title default'), first.options);
     await page.waitForFunction(() => document.querySelector('.jfmod-releaseDialog .jfmod-releaseItem')?.textContent.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })
         .catch(() => undefined);
     const second = await listed();
