@@ -798,6 +798,10 @@
 .jfmod-check-links a:hover,
 .jfmod-lead a:hover { text-decoration: underline; }
 
+/* A select's option with a detail (the Default quality profile, P4.FU17): the name over the summary, in a list row's sizes
+   (.jfmod-brow-main); the summary wraps in a narrow menu instead of widening it. */
+.jfmod-optdetail.MuiMenuItem-root { white-space: normal; }
+
 .jfmod-check-picker {
     display: none;
     padding: 0 1.1em 0.8em;
