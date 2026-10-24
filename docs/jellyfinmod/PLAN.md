@@ -1476,6 +1476,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (stubs line; the items line had it), and a title already in folder form is not tagged twice. Plugin main-stubs `b0b59c5`
   `fdf6a9d`, main-items `0789cb0` `f1b94aa` (the items line carries its own copy). Phase 2/3/4/5 suites pass on both lines;
   live on bravo (Prowlarr utp.to, delete repair) on both. **Not run:** real Chrome, full matrix, Codex review.
+  Then (user 2026-10-24: "for TMDb can you add to compare TV show or Movies so no confusion?") a release's TMDB id is
+  compared only when the release is the same kind as the entry: the kind comes from a tvdbid, the Torznab categories
+  (2000s movie, 5000s TV, every `<category>` now read) and season/episode/pack markers in the name; a release the indexer
+  lists as the other kind is refused ("The indexer lists this release as a TV series, not a movie." and the reverse) even
+  with an equal TMDB number; series now compare TMDB ids too; an undecided kind keeps the old comparison. Plugin main-stubs
+  `ebebff3`, main-items `b451577`; Phase 4 and 6 pass on both lines.
   **P4.FU21, built (not accepted) 2026-10-24: a season's and a series' total download in its header** (user 2026-10-22: "Season
   total is good too but apply new download state text"; 2026-10-24: "keep B", "yes add series page total"; the design session's
   proposal, artifact <https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>, [design note](design/season-total-download.md) with its
