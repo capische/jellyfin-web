@@ -11,7 +11,8 @@ import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
-import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, grabRelease, removeQueueRow, searchReleases } from '../api/modApi';
+import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, getSourceIndexers, grabRelease, type ReleaseQuery, removeQueueRow,
+    searchReleases } from '../api/modApi';
 import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
@@ -25,6 +26,7 @@ import EmbySelect, { type EmbySelectOption } from './EmbySelect';
 import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
 import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
 import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
+import { ReleaseSources, type SourceLine, type TrainLine, useTrain } from './ReleaseSources';
 import { flatButtonClass } from '../utils/flatButton';
 
 import './interFont.scss';
@@ -63,6 +65,8 @@ export interface ReleasePickerProps {
     loadEpisodes?: () => Promise<ReleasePickerEpisode[]>;
     /** Called after a grab reaches a final state, so the opener can refresh history and summaries. */
     onChanged?: () => void;
+    /** The title row's place for the Sources icon (P4.FU25); without it the picker has no Sources. */
+    sourcesSlot?: HTMLElement;
 }
 
 const GRAB_REASONS = new Map([
@@ -138,24 +142,24 @@ const releaseCount = (count: number) => count + (count === 1 ? ' release' : ' re
 /** One indexer's line while its search runs, from the plugin's progress. */
 const progressLine = (line: IndexerProgress, now: number, base: number): SearchLine => {
     const id = line.indexerId;
-    const { name } = line;
-    if (line.state === 'queued') return { id, name, kind: 'waiting', text: 'waiting' };
+    const { name, colorIndex } = line;
+    if (line.state === 'queued') return { id, name, colorIndex, kind: 'waiting', text: 'waiting' };
     if (line.state === 'verifying' || line.state === 'asking') {
         const seconds = line.startedAt ? Math.max(0, Math.floor((now - Date.parse(line.startedAt)) / 1000)) : null;
-        return { id, name, kind: 'asking', text: 'asking…' + (seconds === null ? '' : ' ' + seconds + ' s') };
+        return { id, name, colorIndex, kind: 'asking', text: 'asking…' + (seconds === null ? '' : ' ' + seconds + ' s') };
     }
-    if (line.state === 'ok') return { id, name, kind: 'ok', text: releaseCount(line.resultCount) };
-    if (line.state === 'no_results') return { id, name, kind: 'none', text: 'nothing' };
-    return { id, name, kind: 'failed', text: failureText(line.state, null, line.retryAfterSeconds, base) };
+    if (line.state === 'ok') return { id, name, colorIndex, kind: 'ok', text: releaseCount(line.resultCount) };
+    if (line.state === 'no_results') return { id, name, colorIndex, kind: 'none', text: 'nothing' };
+    return { id, name, colorIndex, kind: 'failed', text: failureText(line.state, null, line.retryAfterSeconds, base) };
 };
 
 /** One indexer's line once the search is over, from its outcome. */
 const outcomeLine = (outcome: IndexerOutcome, base: number): SearchLine => {
     const id = outcome.indexerId;
-    const { name } = outcome;
-    if (outcome.status === 'ok') return { id, name, kind: 'ok', text: releaseCount(outcome.resultCount) };
-    if (outcome.status === 'no_results') return { id, name, kind: 'none', text: 'nothing' };
-    return { id, name, kind: 'failed', text: failureText(outcome.status, outcome.message, outcome.retryAfterSeconds, base) };
+    const { name, colorIndex } = outcome;
+    if (outcome.status === 'ok') return { id, name, colorIndex, kind: 'ok', text: releaseCount(outcome.resultCount) };
+    if (outcome.status === 'no_results') return { id, name, colorIndex, kind: 'none', text: 'nothing' };
+    return { id, name, colorIndex, kind: 'failed', text: failureText(outcome.status, outcome.message, outcome.retryAfterSeconds, base) };
 };
 
 /**
@@ -271,24 +275,35 @@ const STILL_ASKING = new Set(['queued', 'verifying', 'asking']);
  * The status line while a running search shows the rows so far (P4.FU24): `32 releases so far · waiting for RU. RuTracker.org,
  * UA. utp.to` with the indexers still asked in the asking light blue. Text only; the Sources control carries the progress.
  */
-const EarlyStatus: FC<{ search: ReleaseSearch; progress: ReleaseProgress | null; notes: string }> = ({ search, progress, notes }) => {
-    const asking = (progress?.indexers ?? []).filter(line => STILL_ASKING.has(line.state)).map(line => line.name);
-    return <>
-        {releaseCount(search.eligibleCount)} so far
-        {asking.length > 0 && <> · waiting for <span className='jfmod-releaseStatus-asking'>{asking.join(', ')}</span></>}
-        {notes && ' · ' + notes}
-    </>;
-};
+const EarlyStatus: FC<{ count: number; progress: ReleaseProgress | null; notes: string; sources: string; hidden: ReadonlySet<string> }> =
+    ({ count, progress, notes, sources, hidden }) => {
+        // An unticked source's search goes on, but it is not waited for (P4.FU25).
+        const asking = (progress?.indexers ?? []).filter(line => STILL_ASKING.has(line.state) && !hidden.has(line.indexerId))
+            .map(line => line.name);
+        return <>
+            {releaseCount(count)} so far{sources}
+            {asking.length > 0 && <> · waiting for <span className='jfmod-releaseStatus-asking'>{asking.join(', ')}</span></>}
+            {notes && ' · ' + notes}
+        </>;
+    };
 
-const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null) => {
+/**
+ * The finished status line. `search` carries the counts of the rows shown (the ticked sources'), and `sources` says how many sources
+ * are ticked while some are not (` · 5 of 7 sources`, P4.FU25).
+ */
+const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null,
+    sources = '') => {
     if (waiting) return waiting;
     // A search in progress shows its block; the status line only says it started, for screen readers.
     if (loading) return '';
     if (error) return error;
     if (!search) return '';
-    let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}`;
-    if (search.eligibleCount === 0) text = search.rejectedCount === 0 ? unavailable ?? 'No releases found' : 'No release passes the profile';
-    else if (search.indexers.length > 0) text += ` · ${answeredCount(search)} of ${search.indexers.length} indexers answered`;
+    let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}` + sources;
+    if (search.eligibleCount === 0) {
+        text = (search.rejectedCount === 0 ? unavailable ?? 'No releases found' : 'No release passes the profile') + sources;
+    } else if (search.indexers.length > 0) {
+        text += ` · ${answeredCount(search)} of ${search.indexers.length} indexers answered`;
+    }
     if (search.truncated) text += ' · more results exist than were read';
     if (!search.grab.available && search.grab.reason) text += ' · ' + (GRAB_REASONS.get(search.grab.reason) ?? 'Grabbing is unavailable.');
     return text;
@@ -1210,6 +1225,208 @@ const useKeepPlace = (container: RefObject<HTMLDivElement | null>, searchId: str
     }, [key]);
 };
 
+/** The unticked sources, remembered per browser like Show Names and shared with Get Another Quality (P4.FU25). */
+const HIDDEN_SOURCES_KEY = 'jfmod-releaseSourcesHidden';
+
+const readHiddenSources = (): string[] => {
+    try {
+        const stored: unknown = JSON.parse(localStorage.getItem(HIDDEN_SOURCES_KEY) ?? '[]');
+        return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+        return [];
+    }
+};
+
+const saveHiddenSources = (ids: string[]) => {
+    try {
+        localStorage.setItem(HIDDEN_SOURCES_KEY, JSON.stringify(ids));
+    } catch {
+        // A browser without storage just forgets the choice.
+    }
+};
+
+/**
+ * The Sources' indexers (the enabled ones, in the plugin's order) and which are unticked. A new indexer starts ticked, since only
+ * the unticked are stored.
+ */
+const useSources = (api: Api) => {
+    const indexers = useQuery({
+        queryKey: ['JellyfinMod', api.basePath, 'SourceIndexers'],
+        queryFn: ({ signal }) => getSourceIndexers(api, { signal }),
+        retry: false,
+        gcTime: 0,
+        refetchOnWindowFocus: false
+    });
+    const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(readHiddenSources()));
+    const list = useMemo(() => (indexers.data ?? []).filter(indexer => indexer.enabled), [indexers.data]);
+    const toggle = useCallback((id: string) => setHidden(current => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        saveHiddenSources(Array.from(next));
+        return next;
+    }), []);
+    // With sources unticked, a search waits for the list so it can name the ticked ones.
+    return { list, hidden, toggle, ready: hidden.size === 0 || !indexers.isLoading };
+};
+
+/** An indexer ticked in while this search ran without it: asked alone, its rows joining the list as they arrive (P4.FU25). */
+interface ExtraSearch {
+    id: string;
+    data?: ReleaseSearch;
+    error?: string;
+}
+
+/**
+ * Asks single indexers beside the search on screen. `generation` names that search: a new one forgets the indexers asked beside
+ * the last, and an answer that comes after it is dropped.
+ */
+const useExtraSearches = (api: Api, generation: string | null) => {
+    const [extras, setExtras] = useState<ExtraSearch[]>([]);
+    const current = useRef(generation);
+    useEffect(() => {
+        current.current = generation;
+        setExtras([]);
+    }, [generation]);
+    const ask = useCallback((id: string, query: ReleaseQuery) => {
+        const mine = current.current;
+        setExtras(list => (list.some(extra => extra.id === id) ? list : [...list, { id }]));
+        const settle = (change: Partial<ExtraSearch>) => {
+            if (current.current === mine) setExtras(list => list.map(extra => (extra.id === id ? { ...extra, ...change } : extra)));
+        };
+        searchReleases(api, { ...query, progressKey: undefined, indexerIds: [id] })
+            .then(data => settle({ data }), (error: unknown) => settle({ error: problemOf(error, 'The search failed.').title }));
+    }, [api]);
+    return { extras: generation === current.current ? extras : [], ask };
+};
+
+/** The ids a new search names: the ticked sources while some are not, else none (every enabled indexer, as before). */
+const tickedIndexers = ({ list, hidden }: { list: Array<{ id: string }>; hidden: ReadonlySet<string> }) => {
+    const ticked = list.filter(indexer => !hidden.has(indexer.id)).map(indexer => indexer.id);
+    return ticked.length > 0 && ticked.length < list.length ? ticked : undefined;
+};
+
+/** A row of an indexer asked beside the search grabs from that indexer's own search. */
+const searchIdOf = (candidate: ReleaseCandidate, extras: ExtraSearch[], fallback: string) =>
+    extras.find(extra => extra.data?.candidates.some(row => row.releaseId === candidate.releaseId))?.data?.searchId ?? fallback;
+
+/** The rows' order, as the plugin ranks them: eligible first, then score, then seeders (none last). */
+const byRank = (a: ReleaseCandidate, b: ReleaseCandidate) => Number(b.eligible) - Number(a.eligible) || b.score - a.score
+    || Number(a.seeders === null) - Number(b.seeders === null) || (b.seeders ?? 0) - (a.seeders ?? 0);
+
+/** The search on screen with the rows of the indexers asked beside it slotted into their ranked places (P4.FU25). */
+const mergeSearches = (base: ReleaseSearch | undefined, extras: ExtraSearch[]): ReleaseSearch | undefined => {
+    const more = extras.flatMap(extra => (extra.data ? [extra.data] : []));
+    if (!base || more.length === 0) return base;
+    const seen = new Set(base.candidates.map(candidate => candidate.releaseId));
+    const candidates = base.candidates.concat(more.flatMap(search => search.candidates).filter(candidate => !seen.has(candidate.releaseId)))
+        .sort(byRank);
+    const asked = new Set(base.indexers.map(outcome => outcome.indexerId));
+    return {
+        ...base,
+        candidates,
+        indexers: base.indexers.concat(more.flatMap(search => search.indexers).filter(outcome => !asked.has(outcome.indexerId))),
+        eligibleCount: candidates.filter(candidate => candidate.eligible).length,
+        rejectedCount: candidates.filter(candidate => !candidate.eligible).length
+    };
+};
+
+/** One indexer's state for the checklist and the train: the search on screen's line, or the one asked beside it. */
+const sourceStates = (input: { fetching: boolean; progress: ReleaseProgress | null; final: ReleaseSearch | undefined; extras: ExtraSearch[];
+    asked: string[] | null; list: Array<{ id: string; name: string; colorIndex?: number }>; now: number; startedAt: number; receivedAt: number }) => {
+    const states = new Map<string, SearchLine>();
+    if (input.fetching && input.progress) {
+        for (const line of input.progress.indexers) states.set(line.indexerId, progressLine(line, input.now, input.startedAt));
+    } else if (input.fetching) {
+        // Before the first read every indexer this search asks is waiting.
+        for (const indexer of input.list.filter(known => !input.asked || input.asked.includes(known.id))) {
+            states.set(indexer.id, { id: indexer.id, name: indexer.name, colorIndex: indexer.colorIndex, kind: 'waiting', text: 'waiting' });
+        }
+    } else {
+        for (const outcome of input.final?.indexers ?? []) states.set(outcome.indexerId, outcomeLine(outcome, input.receivedAt));
+    }
+    for (const extra of input.extras) {
+        const known = input.list.find(indexer => indexer.id === extra.id);
+        const base = { id: extra.id, name: known?.name ?? '', colorIndex: known?.colorIndex };
+        const outcome = extra.data?.indexers.find(line => line.indexerId === extra.id);
+        if (outcome) states.set(extra.id, outcomeLine(outcome, input.receivedAt));
+        else if (extra.error) states.set(extra.id, { ...base, kind: 'failed', text: extra.error });
+        else if (!extra.data) states.set(extra.id, { ...base, kind: 'asking', text: 'asking…' });
+    }
+    return states;
+};
+
+/** The checklist's state words at the right of a line (P4.FU25). */
+const sourceStateText = (line: SearchLine | undefined, ticked: boolean, rows: { eligible: number; rejected: number }) => {
+    if (!line) return { state: ticked ? '' : 'not asked', bad: false };
+    const hidden = ticked ? '' : 'hidden · ';
+    switch (line.kind) {
+        case 'waiting': return { state: hidden + 'waiting', bad: false };
+        case 'asking': return { state: hidden + 'asking…', bad: false };
+        case 'none': return { state: 'no results', bad: false };
+        case 'failed': return { state: 'failed · ' + line.text, bad: true };
+        default:
+            if (!ticked) return { state: hidden + releaseCount(rows.eligible + rows.rejected), bad: false };
+            return { state: releaseCount(rows.eligible) + (rows.rejected ? ' · ' + rows.rejected + ' rejected' : ''), bad: false };
+    }
+};
+
+interface SourcesViewInput {
+    sources: ReturnType<typeof useSources>;
+    data: ReleaseSearch | undefined;
+    extras: ExtraSearch[];
+    asked: string[] | null;
+    ask: (id: string, query: ReleaseQuery) => void;
+    lastQuery: RefObject<ReleaseQuery | null>;
+    progressKey: string | null;
+    fetching: boolean;
+    progress: ReleaseProgress | null;
+    final: ReleaseSearch | undefined;
+    now: number;
+    startedAt: number;
+    receivedAt: number;
+}
+
+/**
+ * What the Sources change on screen (P4.FU25): the rows of the ticked sources (an unticked one's, eligible and rejected, hide at
+ * once; its search is not stopped), the counts the status line gives, the checklist's lines and the train.
+ */
+const useSourcesView = (input: SourcesViewInput) => {
+    const { sources, data, extras, asked, ask, lastQuery, progressKey, progress } = input;
+    const { hidden, toggle } = sources;
+    const candidates = data?.candidates ?? [];
+    const eligible = candidates.filter(candidate => candidate.eligible && !hidden.has(candidate.indexerId));
+    const rejected = candidates.filter(candidate => !candidate.eligible && !hidden.has(candidate.indexerId));
+    const list = sources.list.length > 0 ? sources.list :
+        (data?.indexers ?? []).map(outcome => ({ id: outcome.indexerId, name: outcome.name, colorIndex: outcome.colorIndex }));
+    const ticked = list.filter(indexer => !hidden.has(indexer.id)).length;
+    const states = sourceStates({ fetching: input.fetching, progress, final: input.final, extras, asked, list, now: input.now,
+        startedAt: input.startedAt, receivedAt: input.receivedAt });
+    const sourceLines: SourceLine[] = list.map(indexer => {
+        const on = !hidden.has(indexer.id);
+        const rows = candidates.filter(candidate => candidate.indexerId === indexer.id);
+        return { id: indexer.id, name: indexer.name, colorIndex: indexer.colorIndex, ticked: on,
+            ...sourceStateText(states.get(indexer.id), on, { eligible: rows.filter(row => row.eligible).length,
+                rejected: rows.filter(row => !row.eligible).length }) };
+    });
+    const trainLines: TrainLine[] = Array.from(states.values()).map(line => ({ id: line.id, colorIndex: line.colorIndex,
+        finished: line.kind !== 'asking' && line.kind !== 'waiting', failed: line.kind === 'failed',
+        startedAt: progress?.indexers.find(row => row.indexerId === line.id)?.startedAt }));
+    const train = useTrain(trainLines, progressKey ?? '');
+    const toggleSource = useCallback((id: string) => {
+        // Ticking a source this search did not ask asks it now, alone; one it asked just shows again.
+        const wasAsked = !asked || asked.includes(id) || extras.some(extra => extra.id === id);
+        if (hidden.has(id) && !wasAsked && lastQuery.current && progressKey) ask(id, lastQuery.current);
+        toggle(id);
+    }, [ask, asked, extras, hidden, lastQuery, progressKey, toggle]);
+    return {
+        hidden, eligible, rejected, sourceLines, train, toggleSource,
+        sourcesNote: ticked < list.length ? ` · ${ticked} of ${list.length} sources` : '',
+        shownSearch: data && { ...data, eligibleCount: eligible.length, rejectedCount: rejected.length },
+        sourcesSearching: input.fetching || extras.some(extra => !extra.data && !extra.error)
+    };
+};
+
 /**
  * The release picker (UX §9, PHASE4 A7): parsed summary plus the raw title, descending scores, a collapsed
  * rejected group with reasons, and one Enter to grab. The server holds a grab before sending it, so a focusable
@@ -1217,12 +1434,18 @@ const useKeepPlace = (container: RefObject<HTMLDivElement | null>, searchId: str
  * a new scope or profile. Nothing refetches underneath a focused row.
  */
 const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes: givenEpisodes, initialEpisodeId, episodePage,
-    seasonPage, intent, loadEpisodes, onChanged }) => {
+    seasonPage, intent, loadEpisodes, onChanged, sourcesSlot }) => {
     const { episodes, loading, listError } = useEpisodeList(givenEpisodes, loadEpisodes, onChanged);
     const [choice, setChoice] = useState(initialEpisodeId ?? (seasonPage === undefined ? '' : SEASON_PREFIX + seasonPage));
     const [profileId, setProfileId] = useState('');
     const [rejectedOpen, setRejectedOpen] = useState(false);
     const [progressKey, setProgressKey] = useState<string | null>(null);
+    // The indexers the search on screen asked (null: every enabled one), and the query it was, for asking one more beside it.
+    const [asked, setAsked] = useState<string[] | null>(null);
+    const lastQuery = useRef<ReleaseQuery | null>(null);
+    const sources = useSources(api);
+    const sourcesNow = useRef(sources);
+    sourcesNow.current = sources;
     const container = useRef<HTMLDivElement>(null);
     const grab = useGrab(api, onChanged);
     // Pack scopes only where the plugin serves them; an older plugin keeps the episode list (season packs, 2026-10-08).
@@ -1245,17 +1468,21 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         queryFn: ({ signal }) => {
             // A fresh key per search: the page reads what each indexer is doing from it while the search runs.
             const key = newKey('search');
-            setProgressKey(key);
-            return searchReleases(api, {
+            // A new search asks only the ticked sources (P4.FU25); with every one ticked it names none, as before.
+            const indexerIds = tickedIndexers(sourcesNow.current);
+            const query: ReleaseQuery = {
                 entryId,
                 episodeId: chosen.episodeId,
                 profileId: profileId || undefined,
                 intent: searchIntent === 'addVersion' ? searchIntent : undefined,
-                progressKey: key,
                 ...(isPack ? { scope: chosen.scope as 'season' | 'series', seasonNumber: chosen.seasonNumber } : {})
-            }, { signal });
+            };
+            lastQuery.current = query;
+            setAsked(indexerIds ?? null);
+            setProgressKey(key);
+            return searchReleases(api, { ...query, progressKey: key, indexerIds }, { signal });
         },
-        enabled: !waiting,
+        enabled: [!waiting, sources.ready].every(Boolean),
         retry: false,
         gcTime: 0,
         refetchOnWindowFocus: false,
@@ -1283,24 +1510,28 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // One confirmation at a time (Replace, a rejected release, Remove the Torrent); a second activation while one is open does
     // nothing.
     const confirming = useRef(false);
-    const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: early ?? search.data, grab, onChanged,
+    // Indexers ticked in while unasked are asked beside this search; their rows join it (P4.FU25).
+    const { extras, ask } = useExtraSearches(api, progressKey);
+    const merged = useMemo(() => mergeSearches(early || search.data, extras), [early, search.data, extras]);
+    const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: merged, grab, onChanged,
         container, confirming });
     const arrived = useArrivals(data);
     useKeepPlace(container, data?.searchId ?? '', data?.candidates.length ?? 0);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
         if (!data?.grab.available || busy || operation?.state === 'accepted' || refreshing || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
+        const searchId = searchIdOf(candidate, extras, data.searchId);
         if (mode !== 'replace' && !chosenRejection) {
-            start(data.searchId, candidate, mode);
+            start(searchId, candidate, mode);
             return;
         }
         if (confirming.current) return;
         confirming.current = true;
         confirm(confirmationFor(candidate, mode, plan, mediaType))
-            .then(() => start(data.searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
+            .then(() => start(searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, mediaType, operation, refreshing, start]);
+    }, [busy, data, extras, mediaType, operation, refreshing, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     // The TV's action sheet may offer the disabled loading line too; choosing it changes nothing.
     const chooseScope = useCallback((value: string) => {
@@ -1324,8 +1555,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [defaultProfileId]);
 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
-    const eligible = data?.candidates.filter(candidate => candidate.eligible) ?? [];
-    const rejected = data?.candidates.filter(candidate => !candidate.eligible) ?? [];
+    const { hidden, eligible, rejected, sourceLines, sourcesNote, shownSearch, train, sourcesSearching, toggleSource } = useSourcesView({
+        sources, data, extras, asked, ask, lastQuery, progressKey, fetching: search.isFetching, progress, final: search.data,
+        now: progressNow, startedAt, receivedAt: search.dataUpdatedAt });
     // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
     // current rows can grab.
     const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || refreshing;
@@ -1333,8 +1565,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const failedIndexers = early ? [] : data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
     const notes = [grab.error, removeError].filter(Boolean).join(' · ');
-    const status: ReactNode = early ? <EarlyStatus search={early} progress={progress} notes={notes} /> :
-        [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), notes].filter(Boolean).join(' · ');
+    const status: ReactNode = early ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} sources={sourcesNote} hidden={hidden} /> :
+        [statusText(shownSearch, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable, sourcesNote), notes]
+            .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
@@ -1348,7 +1581,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
     const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt,
-        early: early ? [releaseCount(early.eligibleCount) + ' so far', notes].filter(Boolean).join(' · ') : null,
+        early: early ? [releaseCount(eligible.length) + ' so far', notes].filter(Boolean).join(' · ') : null,
         fetching: search.isFetching, waiting, error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status,
         grabError: grab.error });
     const stale = refreshing;
@@ -1363,6 +1596,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [flash, grabbedId, operationState, pressed, starting]);
 
     return <div className={classNames('jfmod-releasePicker', { 'jfmod-releasePicker--holding': !!added })} ref={container}>
+        {sourcesSlot && <ReleaseSources slot={sourcesSlot} lines={sourceLines} onToggle={toggleSource}
+            searching={sourcesSearching} train={train} showing={!!search.data} generation={progressKey ?? ''} />}
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>

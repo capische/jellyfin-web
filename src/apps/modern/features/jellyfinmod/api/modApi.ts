@@ -292,12 +292,40 @@ export interface ReleaseQuery {
     seasonNumber?: number;
     /** A fresh key per search; the page reads what each indexer is doing from `getReleaseProgress` while the search runs. */
     progressKey?: string;
+    /** Asks only these of the enabled indexers (the picker's Sources, P4.FU25); omitted asks every one. */
+    indexerIds?: string[];
 }
 
 /** Searches enabled indexers for one target. Never starts a download. Administrator-only. */
-export const searchReleases = async (api: Api, params: ReleaseQuery, options?: AxiosRequestConfig): Promise<ReleaseSearch> => {
+export const searchReleases = async (api: Api, query: ReleaseQuery, options?: AxiosRequestConfig): Promise<ReleaseSearch> => {
+    // The plugin reads `indexerIds` repeated (`indexerIds=a&indexerIds=b`), which axios' own array form (`indexerIds[]=`) is not.
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+        if (Array.isArray(value)) {
+            for (const item of value) params.append(key, String(item));
+        } else if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+        }
+    }
     const response = await api.axiosInstance.get<ReleaseSearch>(api.basePath + BASE + '/Releases',
         { ...options, headers: authorization(api), params });
+    return response.data;
+};
+
+/** One indexer as the release picker's Sources list it (P4.FU25). */
+export interface SourceIndexer {
+    id: string;
+    name: string;
+    enabled: boolean;
+    priority: number;
+    /** An index into `INDEXER_COLOURS`; absent from older plugins. */
+    colorIndex?: number;
+}
+
+/** The indexers, in the plugin's order (priority, then name). Administrator-only, as the picker is. */
+export const getSourceIndexers = async (api: Api, options?: AxiosRequestConfig): Promise<SourceIndexer[]> => {
+    const response = await api.axiosInstance.get<SourceIndexer[]>(api.basePath + BASE + '/Settings/Indexers',
+        { ...options, headers: authorization(api) });
     return response.data;
 };
 
