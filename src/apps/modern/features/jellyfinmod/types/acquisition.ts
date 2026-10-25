@@ -122,6 +122,11 @@ export interface IndexerProgress {
 export interface ReleaseProgress {
     indexers: IndexerProgress[];
     finished: boolean;
+    /**
+     * The rows of the indexers that have answered, ranked as the final list and grabbable by its `searchId` (the final answer
+     * carries the same id); null until one has, absent from older plugins (P4.FU24).
+     */
+    search?: ReleaseSearch | null;
 }
 
 export interface ReleaseSearch {
