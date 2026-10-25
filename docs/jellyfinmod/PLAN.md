@@ -1581,8 +1581,19 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   (untick hides, tick-in asks alone and merges, new searches ask the ticked, remembered per browser), the status line's
   `N of M sources`, the ring's segments and lines in indexer colours, the colour before each indexer's name in both settings
   pages. Phase 4 checks the colours across adds, a removal, a wrap and a restart, and that `indexerIds` asks only those
-  indexers. Branches `feat/picker-sources` in both repositories from `main-stubs`; not yet on `main-items`. Not in it: the
-  items line, the phone, TV and light-theme passes, real Chrome, Codex review.
+  indexers. Plugin `feat/picker-sources` `11b74cb`, web `feat/picker-sources` `044e572b5e`, both from `main-stubs`; items line
+  `feat/picker-sources-items` from `main-items`: plugin `9fa10a3`, web `a1a1f169e9` (cherry-picks). Phase 4 passes on both lines
+  in the Linux SDK container. Gate 1 (first look) on local alpha, laptop dark, `reviews/picker-sources/first-look/` in the
+  workspace; the user then asked for gate 2 without waiting (2026-10-25). Gate 2: alpha (stubs, bundle `9eb2724920c3`) and beta
+  (items, bundle `0e3a20140e8d`), Inception (2010) Get Another Quality: Playwright Chromium laptop 1280×860, phone 390×844 and TV
+  1920×1080 in dark and light, and real Chrome laptop dark and light, 16 runs, all checks pass (ring and line colours, the
+  train, the F1 red dot, the icon's place, the checklist's order, colours, ticks and states, untick hides rows and counts
+  `6 of 7 sources` with a grey dot and no request, re-tick restores, focus back on the icon, on the TV arrows and Enter in the
+  menu, on the phone the menu full width; laptop: a narrowed new search sends six ids, a tick-in sends one and its rows join,
+  the settings swatches); reduced motion shows the still blue dot on both. Progress was replayed at stretched timing (the
+  server's own answers). Fixed during gate 2: the checklist now focuses its first line on opening (MUI's MenuList props reach
+  the item), which the TV needed. `reviews/picker-sources/gate-2/` in the workspace. **Not run:** the TV at 1280×720, a real
+  TV or phone, the Pi, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
