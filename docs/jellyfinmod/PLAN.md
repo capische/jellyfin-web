@@ -1618,6 +1618,37 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   file is reserved with `mktemp` and only this run's file is cleaned up) and P3 (Disable sorting), all fixed by amending;
   final delta approved. **Not run:** the Pi or any household Prowlarr, Radarr/Sonarr app sync after the switch, the manual
   UI path in a browser.
+  **P4.FU27, built (not accepted) 2026-10-25: Settings and the picker mark an indexer on Prowlarr's slow default 1337x
+  definition** (user-approved design 2026-10-25, revision 3 with the label on the title line and casing A; workspace
+  `reviews/prowlarr-slow-hint/` index.html and DECISION-PENDING.md; [UX.md](UX.md) §9;
+  [guides/buttons-and-row-actions.md](design/guides/buttons-and-row-actions.md) *A warning on a row's title line*,
+  [guides/release-picker-sources.md](design/guides/release-picker-sources.md)). Owner: Phase 4 (the Prowlarr sync's indexers,
+  the picker's Sources), with P4.FU26's how-to as the link. Plugin: the sync stores each synced indexer's Prowlarr
+  `definitionName` (`AcquisitionIndexer.ProwlarrDefinitionName`, migration `IndexerDefinitionNames`, forward-only, one nullable
+  column filled by the next sync) and reads it again on every sync without counting an update or re-verifying;
+  `GET /Settings/Indexers` returns `slowSetupHowTo`, the how-to's address, for definition `1337x` and null for `1337x-fast`, any
+  other definition and manual indexers. The address is one constant, `ProwlarrSync.SlowSetupHowTo`, which names
+  `main-stubs` (`docs/prowlarr-1337x-fast.md` is not on `master` yet): **switch it to `master` when this line is released.**
+  Web (`components/SlowSetup.tsx`, `slowSetup.scss`): Settings rows read `EN. 1337x ⚠ Slow setup · How to speed it up` on the
+  name's line (0.85em, 0.5em after the name, never breaking inside, moving under a long name as one piece), the link opening the
+  how-to in a new tab; the checklist line reads `EN. 1337x ⚠ slow setup`, a link with tooltip "How to speed it up" that opens the
+  how-to without toggling the line and is no focus stop (Enter always toggles). Amber `#f2b01e` dark, `#7a5000` light and Apple
+  TV; on the TV's focused checklist line (primary fill) the label takes the line's dark ink (about 1.5:1 in amber; not in the
+  mockup). The Dashboard page draws the same group in the name's `strong` (inline SVG glyph). The Phase 7 Prowlarr suite (it
+  holds the Prowlarr stand-in; Phase 4 has none) checks `1337x` is flagged, `1337x-fast` and a manual indexer are not, a sync
+  after the definitions swap flips them with no update, no new revision and no re-verification, and the column in SQLite.
+  Plugin `feat/slow-setup-hint` `b0141b7` from `main-stubs`, items line `feat/slow-setup-hint-items` `2babd05`; web
+  `feat/slow-setup-hint` `eb88dd3313` from `main-stubs`, items line `a89e4923e5` (cherry-picks). Phase 7 Prowlarr and Phase 4
+  pass on both lines in the Linux SDK container. Live: alpha (stubs, bundle `a6467a71567e`) and beta (items, bundle
+  `fd283fcbba4f`) sync `definitionName` from the Pi's Prowlarr (EN. 1337x `1337x-fast`, so none is flagged live); the flag was
+  staged in the browser (the Settings answer passed through with `slowSetupHowTo` set for EN. 1337x). Gate 1 (first look) on
+  alpha laptop dark, then gate 2 without waiting (user away, coordinator's instruction): Playwright Chromium laptop 1280×860,
+  phone 390×844 and TV 1920×1080 in dark and light, and real Chrome laptop dark and light, on both, 16 runs, all checks pass
+  (label only on the flagged indexer in the React rows, the Dashboard page and the checklist; computed amber, sizes and glyph;
+  link href, `_blank`, `noopener`; clicking the checklist label opens a new page and leaves the line's tick; clicking the line
+  toggles; keyboard and D-pad Enter toggles and the label never takes focus; a long name on the phone moves the group under the
+  name; no page errors). **Not run:** a real TV or phone, the TV at 1280×720, the Pi, Codex review. Seen, not fixed:
+  `.jfmod-refused .jfmod-checkdesc` and `.jfmod-secret-pending` draw `#f2b01e` text on the light theme (1.6:1).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
