@@ -1548,7 +1548,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `GET /Releases/Progress/{key}` returns it as `search` with its grab availability; the final snapshot replaces it under the
   same id, so the existing grab path (`searchId` + `releaseId`) takes a row before the slowest indexer is done. Web
   (`ReleasePickerDialog.tsx`, `releasePicker.scss`): the rows replace the searching block once any indexer has rows; the status
-  line reads `N releases so far · waiting for …` (names in `#74c9ec`); rows grab while others ask; a late indexer's rows carry
+  line reads `N releases so far · waiting for …` (names in `#74c9ec`, `#0277bd` on the light theme); rows grab while others ask; a late indexer's rows carry
   `.jfmod-releaseItem--arrived` (a primary left edge fading over 2 s, no tint; user 2026-10-25 first look), only the
   release list scrolls (`.jfmod-releaseScroll`; header, choices, notice and status line stay at the top); the hovered (after the pointer moved) or focused
   row keeps its screen place; the final answer wins and the finished state is unchanged. Phase 4 checks a fast indexer's rows
@@ -1562,8 +1562,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   partial line while asking, edge-only arrival, the hovered or D-pad-focused row moves under 0.5 px while the Quality Profile
   stays put, finished status, one search id); on each environment Add was pressed on the rows so far 1.7 s before the search
   ended, held (202) and cancelled during the hold, nothing sent, `/Grabs` empty. Progress was replayed to the page at stretched
-  timing (the server's own answers) so each state could be checked. **Not run:** the TV at 1280×720, a real TV or phone, the Pi,
-  Codex review. The asking blue `#74c9ec` is pale on the light theme (a design question). Room is left for the Sources control
+  timing (the server's own answers) so each state could be checked. **Not run:** the TV at 1280×720, a real TV or phone, the Pi. Codex GPT-6.1 Sol high: approve with fixes, three
+  P2s fixed in follow-up commits (Progress rechecks on every poll that the requester can still read the entry, episode and
+  pack episodes, else the concealed 404, with a mid-search check in Phase 4; the rows so far reach screen readers through the
+  live region; a focused Rejected toggle is kept in place), and the fix delta approved; Phase 4 and the affected browser runs
+  re-passed. The waiting names use `#0277bd` on the light theme (4.8:1 on white; user 2026-10-25). Room is left for the Sources control
   in the title row (a later task).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
