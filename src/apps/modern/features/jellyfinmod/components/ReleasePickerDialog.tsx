@@ -226,8 +226,11 @@ interface SearchViewInput {
     progress: ReleaseProgress | null;
     now: number;
     startedAt: number;
-    /** The rows so far of a running search are shown (P4.FU24): they take the block's place. */
-    early: boolean;
+    /**
+     * While the rows so far of a running search are shown (P4.FU24), what the live region says about them (`32 releases so far`,
+     * and a grab's error); they take the block's place. Null otherwise.
+     */
+    early: string | null;
     fetching: boolean;
     waiting: string;
     error: string;
@@ -248,13 +251,16 @@ const searchView = (input: SearchViewInput) => {
     const hasRows = (input.data?.candidates.length ?? 0) > 0;
     const searching = input.fetching && !input.waiting;
     const nothingFound = !searching && !input.waiting && !input.error && !!input.data && !hasRows;
-    const block = input.early ? null : searchBlockOf({ searching, nothingFound, data: input.data, progress, now, startedAt,
+    const block = input.early !== null ? null : searchBlockOf({ searching, nothingFound, data: input.data, progress, now, startedAt,
         unavailable: input.unavailable, receivedAt: input.receivedAt });
     // With no rows the block is the whole list area: it draws the caption itself, and the notice and status lines give way to it
     // (the mock shows none of them), so the status line only tells screen readers, once at the start and once at the end.
     const bare = !!block && !hasRows && !input.grabError;
+    // The visible line changes with every poll, so it stays hidden from screen readers while indexers are asked; the count so
+    // far and an early grab's error are said instead (P4.FU24 review).
     let spoken: ReactNode = '';
-    if (searching) spoken = 'Searching indexers';
+    if (input.early !== null) spoken = input.early;
+    else if (searching) spoken = 'Searching indexers';
     else if (bare) spoken = input.status;
     return { block, hasRows, bare, spoken, shown: bare ? '' : input.status, searching };
 };
@@ -1186,8 +1192,9 @@ const useKeepPlace = (container: RefObject<HTMLDivElement | null>, searchId: str
     }, [container, searchId]);
     const root = container.current;
     if (key !== committed.current && root) {
-        const focused = document.activeElement?.closest('.jfmod-releaseItem');
-        const hovered = pointed.current ? root.querySelector('.jfmod-releaseItem:hover') : null;
+        // The Rejected toggle too: with only rejected rows so far it holds the TV's focus, and eligible rows arrive above it.
+        const focused = document.activeElement?.closest('.jfmod-releaseItem, .jfmod-rejectedToggle');
+        const hovered = pointed.current ? root.querySelector('.jfmod-releaseItem:hover, .jfmod-rejectedToggle:hover') : null;
         const item = hovered ?? (focused && root.contains(focused) ? focused : null);
         anchor.current = item ? { element: item, top: item.getBoundingClientRect().top } : null;
     }
@@ -1340,7 +1347,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
-    const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt, early: !!early,
+    const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt,
+        early: early ? [releaseCount(early.eligibleCount) + ' so far', notes].filter(Boolean).join(' · ') : null,
         fetching: search.isFetching, waiting, error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status,
         grabError: grab.error });
     const stale = refreshing;
