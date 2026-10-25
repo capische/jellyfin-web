@@ -3,7 +3,8 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
 import escapeHtml from 'escape-html';
-import React, { type FC, Fragment, type MouseEvent, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type FC, Fragment, type MouseEvent, type ReactNode, type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef,
+    useState } from 'react';
 
 import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
@@ -222,36 +223,55 @@ const searchBlockOf = (input: SearchBlockInput): { mode: 'searching' | 'quiet' |
 };
 
 interface SearchViewInput {
-    api: Api;
-    progressKey: string | null;
+    progress: ReleaseProgress | null;
+    now: number;
+    startedAt: number;
+    /** The rows so far of a running search are shown (P4.FU24): they take the block's place. */
+    early: boolean;
     fetching: boolean;
     waiting: string;
     error: string;
     data: ReleaseSearch | undefined;
     unavailable: string | null;
     receivedAt: number;
-    status: string;
+    status: ReactNode;
     grabError: string;
 }
 
 /**
  * The search block while a search runs (over the old rows when it replaces a list) and where a finished one has no rows. The
- * block draws its own caption, so the status line then only tells screen readers: once at the start, once at the end.
+ * block draws its own caption, so the status line then only tells screen readers: once at the start, once at the end. Once any
+ * indexer has rows, they replace the block and the status line says how many so far and who is still asked (P4.FU24).
  */
-const useSearchView = (input: SearchViewInput) => {
-    const { progress, now, startedAt } = useSearchProgress(input.api, input.progressKey, input.fetching);
+const searchView = (input: SearchViewInput) => {
+    const { progress, now, startedAt } = input;
     const hasRows = (input.data?.candidates.length ?? 0) > 0;
     const searching = input.fetching && !input.waiting;
     const nothingFound = !searching && !input.waiting && !input.error && !!input.data && !hasRows;
-    const block = searchBlockOf({ searching, nothingFound, data: input.data, progress, now, startedAt, unavailable: input.unavailable,
-        receivedAt: input.receivedAt });
+    const block = input.early ? null : searchBlockOf({ searching, nothingFound, data: input.data, progress, now, startedAt,
+        unavailable: input.unavailable, receivedAt: input.receivedAt });
     // With no rows the block is the whole list area: it draws the caption itself, and the notice and status lines give way to it
     // (the mock shows none of them), so the status line only tells screen readers, once at the start and once at the end.
     const bare = !!block && !hasRows && !input.grabError;
-    let spoken = '';
+    let spoken: ReactNode = '';
     if (searching) spoken = 'Searching indexers';
     else if (bare) spoken = input.status;
     return { block, hasRows, bare, spoken, shown: bare ? '' : input.status, searching };
+};
+
+const STILL_ASKING = new Set(['queued', 'verifying', 'asking']);
+
+/**
+ * The status line while a running search shows the rows so far (P4.FU24): `32 releases so far · waiting for RU. RuTracker.org,
+ * UA. utp.to` with the indexers still asked in the asking light blue. Text only; the Sources control carries the progress.
+ */
+const EarlyStatus: FC<{ search: ReleaseSearch; progress: ReleaseProgress | null; notes: string }> = ({ search, progress, notes }) => {
+    const asking = (progress?.indexers ?? []).filter(line => STILL_ASKING.has(line.state)).map(line => line.name);
+    return <>
+        {releaseCount(search.eligibleCount)} so far
+        {asking.length > 0 && <> · waiting for <span className='jfmod-releaseStatus-asking'>{asking.join(', ')}</span></>}
+        {notes && ' · ' + notes}
+    </>;
 };
 
 const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null) => {
@@ -355,6 +375,8 @@ interface ReleaseRowProps {
     actionState: (releaseId: string, mode: 'add' | 'replace') => ActionState;
     /** Set on the row whose grab is held, being sent or in the client. */
     added?: AddedRow | null;
+    /** A late indexer's row, just slotted in: the arrival mark fades over two seconds (P4.FU24). */
+    arrived?: boolean;
 }
 
 /** The added row's two slots: the decorative arrow or tick (no stop), then the X where there is one. */
@@ -435,11 +457,11 @@ const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => quali
  * focusable for reading, but cannot be grabbed: the server would answer 409 `held_quality` (P6.M6).
  */
 const ReleaseRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search, disabled, plan, onGrab, added } = props;
+    const { candidate, search, disabled, plan, onGrab, added, arrived } = props;
     // The added row is never dimmed: it is the one the grab is about.
     const off = !added && (disabled || !!candidate.heldQuality);
     const activate = useCallback(() => onGrab(candidate, plan.first, plan), [candidate, onGrab, plan]);
-    return <div className={classNames('jfmod-releaseItem', { 'jfmod-releaseItem--added': !!added })}>
+    return <div className={classNames('jfmod-releaseItem', { 'jfmod-releaseItem--added': !!added, 'jfmod-releaseItem--arrived': arrived })}>
         <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate, added)}
             data-jfmod-release-row={candidate.releaseId} onClick={activate}>
             <RowLines candidate={candidate} search={search} added={added} />
@@ -455,8 +477,9 @@ const ReleaseRow: FC<ReleaseRowProps> = props => {
  * what the profile rejected it for. Automation never grabs a rejected release.
  */
 const RejectedRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search, added } = props;
-    return <div className={classNames('jfmod-releaseItem jfmod-releaseItem--rejected', { 'jfmod-releaseItem--added': !!added })}>
+    const { candidate, search, added, arrived } = props;
+    return <div className={classNames('jfmod-releaseItem jfmod-releaseItem--rejected', { 'jfmod-releaseItem--added': !!added,
+        'jfmod-releaseItem--arrived': arrived })}>
         <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'
             aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}>
             <RowLines candidate={candidate} search={search} added={added} />
@@ -1077,10 +1100,107 @@ const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirmin
 
     useAddedFocus(container, addedId, added);
 
-    // The search answered "this title already has an active grab" for a grab that has since ended here: rows are free again.
-    const freed = !!data && !data.grab.available && data.grab.reason === 'grab_active' && !!activeId && released.includes(activeId);
+    // The search answered "this title already has an active grab" for a grab that has since ended here, or for the one this picker
+    // follows (grabbed from a running search's rows, P4.FU24; while it is live the rows are held by it anyway): free again.
+    const freed = !!data && !data.grab.available && data.grab.reason === 'grab_active' && !!activeId
+        && (released.includes(activeId) || activeId === operation?.id);
     const view = freed && data ? { ...data, grab: { ...data.grab, available: true, reason: null } } : data;
     return { added, addedId, imported, removeError, view };
+};
+
+/**
+ * A running search's rows so far (P4.FU24), read with its progress: shown once any indexer has rows, until the final answer,
+ * which wins. `refreshing` is a search under way with nothing to show yet. The rows so far and the final answer share their
+ * search id, so `resultKey` changes once, when rows first show (the TV focuses the first row then, never under the user later).
+ */
+const useEarlyRows = (api: Api, progressKey: string | null, fetching: boolean, final: { data?: ReleaseSearch; error: unknown }) => {
+    const { progress, now, startedAt } = useSearchProgress(api, progressKey, fetching);
+    const early = fetching && progress?.search?.candidates.length ? progress.search : undefined;
+    let resultKey: string | null = early?.searchId ?? null;
+    if (!fetching) resultKey = final.data?.searchId ?? (final.error ? 'error' : null);
+    return { progress, now, startedAt, early, refreshing: fetching && !early, resultKey };
+};
+
+const NO_ROWS: ReadonlySet<string> = new Set();
+
+/**
+ * The rows that arrived after the first ones of a search (P4.FU24): a late indexer's, and any the final answer adds. They carry
+ * the arrival mark for the two seconds its fade takes. The first rows of a search, and a search shown only when it is done, have
+ * none.
+ */
+const useArrivals = (search: ReleaseSearch | undefined): ReadonlySet<string> => {
+    const [arrived, setArrived] = useState<ReadonlySet<string>>(NO_ROWS);
+    const seen = useRef<{ id: string; rows: Set<string> } | null>(null);
+    const mounted = useRef(true);
+    useEffect(() => () => {
+        mounted.current = false;
+    }, []);
+    const ids = search?.candidates.map(candidate => candidate.releaseId) ?? [];
+    const key = search ? search.searchId + ':' + ids.length : '';
+    useEffect(() => {
+        if (!search) return;
+        const before = seen.current?.id === search.searchId ? seen.current.rows : null;
+        seen.current = { id: search.searchId, rows: new Set(ids) };
+        const added = before && before.size > 0 ? ids.filter(id => !before.has(id)) : [];
+        if (added.length === 0) return;
+        setArrived(current => new Set(Array.from(current).concat(added)));
+        const fade = (current: ReadonlySet<string>) => new Set(Array.from(current).filter(id => !added.includes(id)));
+        window.setTimeout(() => {
+            if (mounted.current) setArrived(fade);
+        }, 2000);
+        // Only a change of rows matters; `ids` and `search` are read for that change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+    return arrived;
+};
+
+/** The nearest ancestor that scrolls the list (the dialog's content). */
+const scrollerOf = (element: Element): HTMLElement | null => {
+    for (let node = element.parentElement; node; node = node.parentElement) {
+        const overflow = window.getComputedStyle(node).overflowY;
+        if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) return node;
+    }
+    return null;
+};
+
+/**
+ * Keeps the row under the pointer, else the focused one (the TV's), where it is on screen when rows arrive above it (P4.FU24):
+ * its place is read while the new list renders, before the page changes, and the list is scrolled by however far it moved. The
+ * pointer counts once it has moved over the list since this search's rows showed, so a pointer left where the picker was opened
+ * does not scroll the best rows away.
+ */
+const useKeepPlace = (container: RefObject<HTMLDivElement | null>, searchId: string, count: number) => {
+    const key = searchId + ':' + count;
+    const committed = useRef(key);
+    const anchor = useRef<{ element: Element; top: number } | null>(null);
+    const pointed = useRef(false);
+    useEffect(() => {
+        pointed.current = false;
+        const root = container.current;
+        if (!root) return;
+        const moved = () => {
+            pointed.current = true;
+        };
+        root.addEventListener('mousemove', moved);
+        return () => root.removeEventListener('mousemove', moved);
+    }, [container, searchId]);
+    const root = container.current;
+    if (key !== committed.current && root) {
+        const focused = document.activeElement?.closest('.jfmod-releaseItem');
+        const hovered = pointed.current ? root.querySelector('.jfmod-releaseItem:hover') : null;
+        const item = hovered ?? (focused && root.contains(focused) ? focused : null);
+        anchor.current = item ? { element: item, top: item.getBoundingClientRect().top } : null;
+    }
+    useLayoutEffect(() => {
+        if (committed.current === key) return;
+        committed.current = key;
+        const noted = anchor.current;
+        anchor.current = null;
+        if (!noted?.element.isConnected) return;
+        const shift = noted.element.getBoundingClientRect().top - noted.top;
+        const scroller = Math.abs(shift) >= 1 ? scrollerOf(noted.element) : null;
+        if (scroller) scroller.scrollTop += shift;
+    }, [key]);
 };
 
 /**
@@ -1135,8 +1255,9 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         refetchOnReconnect: false
     });
 
-    let resultKey: string | null = null;
-    if (!search.isFetching) resultKey = search.data?.searchId ?? (search.error ? 'error' : null);
+    // The rows of the indexers that have answered, while the others are still asked (P4.FU24); the final answer wins.
+    const { progress, now: progressNow, startedAt, early, refreshing, resultKey } = useEarlyRows(api, progressKey, search.isFetching,
+        search);
     useEffect(() => {
         if (!resultKey) return;
         setRejectedOpen(false);
@@ -1155,10 +1276,12 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // One confirmation at a time (Replace, a rejected release, Remove the Torrent); a second activation while one is open does
     // nothing.
     const confirming = useRef(false);
-    const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: search.data, grab, onChanged,
+    const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: early ?? search.data, grab, onChanged,
         container, confirming });
+    const arrived = useArrivals(data);
+    useKeepPlace(container, data?.searchId ?? '', data?.candidates.length ?? 0);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || search.isFetching || candidate.heldQuality) return;
+        if (!data?.grab.available || busy || operation?.state === 'accepted' || refreshing || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
         if (mode !== 'replace' && !chosenRejection) {
             start(data.searchId, candidate, mode);
@@ -1170,7 +1293,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             .then(() => start(data.searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, mediaType, operation, search.isFetching, start]);
+    }, [busy, data, mediaType, operation, refreshing, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     // The TV's action sheet may offer the disabled loading line too; choosing it changes nothing.
     const chooseScope = useCallback((value: string) => {
@@ -1198,12 +1321,13 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const rejected = data?.candidates.filter(candidate => !candidate.eligible) ?? [];
     // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
     // current rows can grab.
-    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || search.isFetching;
-    const failedIndexers = data?.indexers.filter(failed) ?? [];
+    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || refreshing;
+    // Which indexers failed is said once the search is over, as today.
+    const failedIndexers = early ? [] : data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
-    const status = [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), grab.error,
-        removeError]
-        .filter(Boolean).join(' · ');
+    const notes = [grab.error, removeError].filter(Boolean).join(' · ');
+    const status: ReactNode = early ? <EarlyStatus search={early} progress={progress} notes={notes} /> :
+        [statusText(data, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), notes].filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
@@ -1216,9 +1340,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
-    const { block, hasRows, bare, spoken, shown, searching } = useSearchView({ api, progressKey, fetching: search.isFetching, waiting,
-        error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status, grabError: grab.error });
-    const stale = search.isFetching;
+    const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt, early: !!early,
+        fetching: search.isFetching, waiting, error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status,
+        grabError: grab.error });
+    const stale = refreshing;
 
     const { releaseId: grabbedId, pressed, flash, starting } = grab;
     const operationState = operation?.state;
@@ -1254,7 +1379,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             {eligible.map(candidate => <Fragment key={candidate.releaseId}>
                 <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
                     plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                    added={candidate.releaseId === addedId ? added : null} />
+                    added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
                 {blockRowId === candidate.releaseId && grabStatus}
             </Fragment>)}
             {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
@@ -1265,7 +1390,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             </button>
             {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={shownCandidate(candidate)} search={data}
                 disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                added={candidate.releaseId === addedId ? added : null} />)}
+                added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />)}
         </div>}
     </div>;
 };
