@@ -98,9 +98,13 @@ const isEnabled = (element: HTMLElement) => (
     && !element.classList.contains('Mui-disabled')
 );
 
+/**
+ * A control marked `data-jfmod-dpad-skip` is for the pointer only and never a remote's stop, even with Right inside its row: the
+ * Sources checklist's slow-setup link, whose row Enter must always toggle (P4.FU27 review).
+ */
 const navigableIn = (root: HTMLElement) => Array.prototype.filter.call(
     root.querySelectorAll<HTMLElement>(NAVIGABLE_SELECTOR),
-    (element: HTMLElement) => isVisible(element) && isEnabled(element)
+    (element: HTMLElement) => isVisible(element) && isEnabled(element) && !element.hasAttribute('data-jfmod-dpad-skip')
 ) as HTMLElement[];
 
 /** Candidates for moving between rows: a control nested inside another candidate is reached with Right instead. */

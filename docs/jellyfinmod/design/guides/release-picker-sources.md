@@ -47,7 +47,8 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   .6em`, 85 %, weight 600, the warning amber and glyph of [buttons-and-row-actions.md](buttons-and-row-actions.md) *A warning on a
   row's title line*); the state at the right is unchanged. The label is a link to the how-to (new tab, `noopener`; tooltip and
   name "How to speed it up"; its hit area is the text padded .3em above and below): clicking it opens the how-to and **does not
-  toggle** the line; a click elsewhere on the line toggles it. It is **not a focus stop** (`tabindex -1`), so on the keyboard and
+  toggle** the line; a click elsewhere on the line toggles it. It is **not a focus stop** (`tabindex -1`, and `data-jfmod-dpad-skip` so
+  `shell/dpadModals` never lands on it, not even with Right), and a pointer press leaves focus on the line, so on the keyboard and
   the TV Enter always toggles the line; the link for them is in Settings. On the TV's focused line (the primary fill with dark ink)
   the label takes the line's ink, as amber would read at about 1.5:1 there. Lower case like every state in this menu.
 - Opening it puts focus on the first line. Click or Enter toggles a line (`role=menuitemcheckbox`, `aria-checked`); the menu stays
