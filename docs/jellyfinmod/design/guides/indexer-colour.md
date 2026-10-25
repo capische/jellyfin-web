@@ -32,9 +32,12 @@ Eight hues that stay apart on the dark and the light theme and from the two colo
 ## Assignment
 
 - The plugin stores `colorIndex` (0–7) on the indexer when it is first saved (added by hand or by a Prowlarr sync): the colour the
-  fewest indexers have, the lowest first. The first eight indexers get eight colours; a ninth wraps to the first; an indexer removed
-  and added again gets its old colour back when nothing was added meanwhile.
-- It never changes afterwards and cannot be edited. The migration gave the indexers already there the palette in the plugin's
+  fewest of the remaining indexers have, the lowest first, given under the same write lock as the insert so two indexers added at
+  once never share a free colour. The first eight indexers get eight colours; a ninth wraps to the first; a removed indexer's
+  colour is the first given again.
+- It never changes while the indexer exists and cannot be edited. An indexer removed and added again is a new indexer: it gets
+  the colour free at that moment, usually its old one, but nothing promises it (Codex review 2026-10-25; no identity is kept
+  across a removal). The migration gave the indexers already there the palette in the plugin's
   indexer order (priority, then name).
 - The plugin returns it in `GET /Settings/Indexers` (`colorIndex`), in every search's and progress line's `indexers[]`
   (`colorIndex`) and on each candidate (`indexerColorIndex`). The web maps the index to the hue with `indexerColour()`; a plugin
