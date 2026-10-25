@@ -1504,6 +1504,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   backfill's first read, and the series' favourite after a whole-series delete and after its file arrives);
   `placeholder-reclaim.mjs` 8 of 8 with its new scope checks. Not restored: the backfill batching, the import swap's edge
   cases and the watched restore's write path.
+  **Phase 5 fix, 2026-10-25** (plugin `d687eaf`, test only): the stub clean-up scenario's real episode beside the stubs is
+  backfilled as a title, and its fixture clean-up left that entry's `media_missing` history behind whenever the backfill had
+  bound the file first (a race), so the run's last check failed. The scenario now waits for the backfill, removes the series,
+  waits for the delete repair and removes the entry and its history; the last check names any rows it finds. No product
+  change; Phase 5 passes twice in the Linux container (516–519 s); Codex GPT-6.1 Sol high (test-only pass): approve.
   **P1.FU31, built (not accepted) 2026-10-19: the overview note for native apps** (user 2026-10-19: native clients see
   placeholder items as ordinary items; instead of a placeholder clip or stream the item's overview starts with a short note, and
   nothing else is added; playback stays refused). Owner: P1.FU30's item store. Branches `feat/placeholder-note` off `main-items`
