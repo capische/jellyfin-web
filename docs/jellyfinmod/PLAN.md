@@ -1599,6 +1599,25 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   back is dropped; the lead changes colour without a transition); the fix re-review found one more P2 (a held rejected row of a
   ticked-in indexer lost its Cancel when the search caught up: the Rejected group now closes only when a new search starts),
   fixed, and that delta approved. **Not run:** the TV at 1280×720, a real TV or phone, the Pi.
+  **P4.FU26, built (not accepted) 2026-10-25: a script and how-to that let users make Prowlarr's 1337x searches fast**
+  (user 2026-10-25: "a script or instructions how to change it, so users can go and fix it"). Owner: Phase 4. Prowlarr's
+  official 1337x definition reads four keyword pages three seconds apart (10–12 s a search, more through FlareSolverr).
+  Plugin `scripts/prowlarr-1337x-fast.sh` writes `Definitions/Custom/1337x-fast.yml` from the user's current official
+  `1337x.yml` (id `1337x-fast`, name `1337x Fast`, keyword pages 2–4 render page 1, which Prowlarr skips; RSS unchanged;
+  stops if the expected page pattern is missing), switches every `1337x` indexer through the API (sets `definitionName`
+  and the hidden `definitionFile` field, keeps id, name, tags and settings), times one search before and after;
+  `--restore` switches back and removes the file; idempotent; the API key comes from an env var, a file or `config.xml`,
+  never the command line, and never shows in a trace or through a `.curlrc`. A new Custom file loads without a restart; a
+  changed one needs a restart (the script says so at once). How-to `docs/prowlarr-1337x-fast.md` (why; costs: the first
+  20 results under the indexer's sort, newest first by default, with seeders/desc and Disable sorting unchecked as an
+  option, and no automatic definition updates for 1337x; script; manual UI steps; undo), linked from the README. Plugin
+  `feat/prowlarr-1337x-fast` `3b8c359` from `main-stubs`, items line `532509e` (cherry-pick) from `main-items`. Tested on a
+  throwaway local Prowlarr 2.6.5.5623 with FlareSolverr: "the matrix" 80 rows in 9.2 s → 20 rows in 2.9 s, RSS still 80
+  items, restore leaves the indexer byte-identical, re-runs are no-ops. Codex GPT-6.1 Sol high: approve with fixes (three
+  P2, two P3: key tracing, atomic replace, sort wording, restart note, quoted undo line), then one more P2 (the temporary
+  file is reserved with `mktemp` and only this run's file is cleaned up) and P3 (Disable sorting), all fixed by amending;
+  final delta approved. **Not run:** the Pi or any household Prowlarr, Radarr/Sonarr app sync after the switch, the manual
+  UI path in a browser.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
