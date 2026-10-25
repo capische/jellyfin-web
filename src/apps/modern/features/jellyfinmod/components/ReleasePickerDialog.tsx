@@ -1519,11 +1519,17 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // The rows of the indexers that have answered, while the others are still asked (P4.FU24); the final answer wins.
     const { progress, now: progressNow, startedAt, early, refreshing, resultKey } = useEarlyRows(api, progressKey, search.isFetching,
         search);
+    // A new search starts with the Rejected group closed. Only a new search: rows of an indexer ticked in may already be on screen
+    // when the search's own first rows arrive, and a held grab on one of their rejected rows must keep its Cancel (P4.FU25 review).
+    useEffect(() => {
+        setRejectedOpen(false);
+    }, [progressKey]);
     useEffect(() => {
         if (!resultKey) return;
-        setRejectedOpen(false);
         window.requestAnimationFrame(() => {
             const root = container.current;
+            // The D-pad already on a row or its action (rows of an indexer ticked in) stays where it is.
+            if (root?.querySelector('.jfmod-releaseScroll')?.contains(document.activeElement)) return;
             const target = root?.querySelector<HTMLElement>('.jfmod-releaseRow:not([aria-disabled="true"])')
                 ?? root?.querySelector<HTMLElement>('.jfmod-releaseRow, .jfmod-rejectedToggle')
                 ?? root?.querySelector<HTMLElement>('.jfmod-releaseStatus');
