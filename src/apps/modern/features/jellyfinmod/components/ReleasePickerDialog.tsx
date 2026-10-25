@@ -1257,17 +1257,23 @@ const useSources = (api: Api) => {
         gcTime: 0,
         refetchOnWindowFocus: false
     });
-    const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(readHiddenSources()));
+    const [saved, setSaved] = useState<ReadonlySet<string>>(() => new Set(readHiddenSources()));
     const list = useMemo(() => (indexers.data ?? []).filter(indexer => indexer.enabled), [indexers.data]);
-    const toggle = useCallback((id: string) => setHidden(current => {
-        const next = new Set(current);
+    // The saved choice read against the indexers enabled now (P4.FU25 review): when it leaves none ticked (the ticked ones were
+    // turned off or removed), the first is ticked again, so a search never asks a source the list shows unticked.
+    const hidden = useMemo(() => (list.length > 0 && list.every(indexer => saved.has(indexer.id)) ?
+        new Set(Array.from(saved).filter(id => id !== list[0].id)) : saved), [list, saved]);
+    const hiddenNow = useRef(hidden);
+    hiddenNow.current = hidden;
+    const toggle = useCallback((id: string) => {
+        const next = new Set(hiddenNow.current);
         if (next.has(id)) next.delete(id);
         else next.add(id);
         saveHiddenSources(Array.from(next));
-        return next;
-    }), []);
+        setSaved(next);
+    }, []);
     // With sources unticked, a search waits for the list so it can name the ticked ones.
-    return { list, hidden, toggle, ready: hidden.size === 0 || !indexers.isLoading };
+    return { list, hidden, toggle, ready: saved.size === 0 || !indexers.isLoading };
 };
 
 /** An indexer ticked in while this search ran without it: asked alone, its rows joining the list as they arrive (P4.FU25). */
@@ -1314,9 +1320,15 @@ const searchIdOf = (candidate: ReleaseCandidate, extras: ExtraSearch[], fallback
 const byRank = (a: ReleaseCandidate, b: ReleaseCandidate) => Number(b.eligible) - Number(a.eligible) || b.score - a.score
     || Number(a.seeders === null) - Number(b.seeders === null) || (b.seeders ?? 0) - (a.seeders ?? 0);
 
-/** The search on screen with the rows of the indexers asked beside it slotted into their ranked places (P4.FU25). */
-const mergeSearches = (base: ReleaseSearch | undefined, extras: ExtraSearch[]): ReleaseSearch | undefined => {
-    const more = extras.flatMap(extra => (extra.data ? [extra.data] : []));
+/**
+ * The search on screen with the rows of the indexers asked beside it slotted into their ranked places (P4.FU25). While the search
+ * itself has nothing to show (still asking, or failed), the first indexer asked beside it that answered stands in for it, its
+ * rows grabbable from its own search.
+ */
+const mergeSearches = (main: ReleaseSearch | undefined, extras: ExtraSearch[]): ReleaseSearch | undefined => {
+    const answered = extras.flatMap(extra => (extra.data ? [extra.data] : []));
+    const base = main ?? answered[0];
+    const more = main ? answered : answered.slice(1);
     if (!base || more.length === 0) return base;
     const seen = new Set(base.candidates.map(candidate => candidate.releaseId));
     const candidates = base.candidates.concat(more.flatMap(search => search.candidates).filter(candidate => !seen.has(candidate.releaseId)))
@@ -1371,6 +1383,18 @@ const sourceStateText = (line: SearchLine | undefined, ticked: boolean, rows: { 
     }
 };
 
+/**
+ * Where the list stands (P4.FU25): `waitingForRows` while a search has nothing current to show (rows of an indexer asked beside it
+ * are current, so they grab while it still asks); `soFar` while rows show and the search still asks; `held`, the row a grab is
+ * being sent or held for.
+ */
+const listState = (input: { refreshing: boolean; fetching: boolean; extras: ExtraSearch[]; data: ReleaseSearch | undefined;
+    addedId: string | null; grab: { starting: boolean; releaseId: string | null } }) => ({
+    waitingForRows: input.refreshing && !input.extras.some(extra => extra.data?.candidates.length),
+    soFar: input.fetching && !!input.data?.candidates.length,
+    held: input.addedId ?? (input.grab.starting ? input.grab.releaseId : null)
+});
+
 interface SourcesViewInput {
     sources: ReturnType<typeof useSources>;
     data: ReleaseSearch | undefined;
@@ -1379,6 +1403,8 @@ interface SourcesViewInput {
     ask: (id: string, query: ReleaseQuery) => void;
     lastQuery: RefObject<ReleaseQuery | null>;
     progressKey: string | null;
+    /** The row a grab is being sent or held for: it stays in the list when its source is unticked, so its Cancel stays reachable. */
+    held: string | null;
     fetching: boolean;
     progress: ReleaseProgress | null;
     final: ReleaseSearch | undefined;
@@ -1395,8 +1421,9 @@ const useSourcesView = (input: SourcesViewInput) => {
     const { sources, data, extras, asked, ask, lastQuery, progressKey, progress } = input;
     const { hidden, toggle } = sources;
     const candidates = data?.candidates ?? [];
-    const eligible = candidates.filter(candidate => candidate.eligible && !hidden.has(candidate.indexerId));
-    const rejected = candidates.filter(candidate => !candidate.eligible && !hidden.has(candidate.indexerId));
+    const shown = (candidate: ReleaseCandidate) => !hidden.has(candidate.indexerId) || candidate.releaseId === input.held;
+    const eligible = candidates.filter(candidate => candidate.eligible && shown(candidate));
+    const rejected = candidates.filter(candidate => !candidate.eligible && shown(candidate));
     const list = sources.list.length > 0 ? sources.list :
         (data?.indexers ?? []).map(outcome => ({ id: outcome.indexerId, name: outcome.name, colorIndex: outcome.colorIndex }));
     const ticked = list.filter(indexer => !hidden.has(indexer.id)).length;
@@ -1515,10 +1542,11 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const merged = useMemo(() => mergeSearches(early || search.data, extras), [early, search.data, extras]);
     const { added, addedId, imported, removeError, view: data } = useAddedRow({ api, entryId, data: merged, grab, onChanged,
         container, confirming });
+    const { waitingForRows, soFar, held } = listState({ refreshing, fetching: search.isFetching, extras, data, addedId, grab });
     const arrived = useArrivals(data);
     useKeepPlace(container, data?.searchId ?? '', data?.candidates.length ?? 0);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || refreshing || candidate.heldQuality) return;
+        if (!data?.grab.available || busy || operation?.state === 'accepted' || waitingForRows || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
         const searchId = searchIdOf(candidate, extras, data.searchId);
         if (mode !== 'replace' && !chosenRejection) {
@@ -1531,7 +1559,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             .then(() => start(searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, extras, mediaType, operation, refreshing, start]);
+    }, [busy, data, extras, mediaType, operation, waitingForRows, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     // The TV's action sheet may offer the disabled loading line too; choosing it changes nothing.
     const chooseScope = useCallback((value: string) => {
@@ -1556,16 +1584,17 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
     const { hidden, eligible, rejected, sourceLines, sourcesNote, shownSearch, train, sourcesSearching, toggleSource } = useSourcesView({
-        sources, data, extras, asked, ask, lastQuery, progressKey, fetching: search.isFetching, progress, final: search.data,
+        sources, data, extras, asked, ask, lastQuery, progressKey, held,
+        fetching: search.isFetching, progress, final: search.data,
         now: progressNow, startedAt, receivedAt: search.dataUpdatedAt });
     // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
     // current rows can grab.
-    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || refreshing;
+    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || waitingForRows;
     // Which indexers failed is said once the search is over, as today.
-    const failedIndexers = early ? [] : data?.indexers.filter(failed) ?? [];
+    const failedIndexers = soFar ? [] : data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
     const notes = [grab.error, removeError].filter(Boolean).join(' · ');
-    const status: ReactNode = early ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} sources={sourcesNote} hidden={hidden} /> :
+    const status: ReactNode = soFar ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} sources={sourcesNote} hidden={hidden} /> :
         [statusText(shownSearch, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable, sourcesNote), notes]
             .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
@@ -1581,10 +1610,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
 
     const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt,
-        early: early ? [releaseCount(eligible.length) + ' so far', notes].filter(Boolean).join(' · ') : null,
+        early: soFar ? [releaseCount(eligible.length) + ' so far', notes].filter(Boolean).join(' · ') : null,
         fetching: search.isFetching, waiting, error: searchError, data, unavailable, receivedAt: search.dataUpdatedAt, status,
         grabError: grab.error });
-    const stale = refreshing;
+    const stale = waitingForRows;
 
     const { releaseId: grabbedId, pressed, flash, starting } = grab;
     const operationState = operation?.state;

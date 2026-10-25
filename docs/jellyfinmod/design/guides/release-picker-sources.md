@@ -27,7 +27,7 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 - Every indexer being asked is a **follower** in its colour on the same circle, **40°** apart behind the lead, in asking order (the
   first asked nearest).
 - When an indexer finishes (answered, no results or failed) its follower turns to the lead's place and fades into it over 0.45 s
-  (`--merging`), and the **lead takes its colour**; the followers behind close up one place. Several finishing between two reads
+  (`--merging`), and the **lead takes its colour** at once, with no colour transition; the followers behind close up one place. Several finishing between two reads
   merge one after another.
 - An indexer ticked in during or after a search (asked alone) joins the train the same way.
 - Transform and opacity only. **Reduced motion:** no train; a still blue `#00a4dc` dot in the corner while searching.
@@ -49,13 +49,14 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 ## Behaviour
 
 - **Untick:** that indexer's rows, eligible and rejected, hide at once; its search is not cancelled and its results are kept, so
-  ticking it again shows them at once.
+  ticking it again shows them at once. The row a grab is being sent or held for stays, so its Cancel stays reachable.
 - **Tick an indexer this search did not ask:** it is asked now, alone (`indexerIds=<id>`); its rows join the list in their ranked
-  places as it answers and grab from its own search.
+  places as it answers and grab from its own search. They show and grab even while the search itself has no rows yet or failed.
 - **A new search** (another scope or profile, the picker opened again) asks only the ticked indexers (`indexerIds`, repeated);
   with every one ticked it names none, as before.
 - Remembered per browser (`localStorage` `jfmod-releaseSourcesHidden`, the unticked ids, so a new indexer starts ticked), shared
-  by Get a Release and Get Another Quality.
+  by Get a Release and Get Another Quality. The saved choice is read against the indexers enabled now: if it leaves none ticked
+  (the ticked ones were turned off or removed), the first is ticked again, so a search never asks a source shown unticked.
 - **Status line:** `18 releases · 5 of 7 sources · 6 of 7 indexers answered` (rows shown · sources ticked, only while some are not
   · the search's health); while rows arrive `12 releases so far · 5 of 7 sources · waiting for …` (an unticked indexer is not
   waited for). The Rejected group's count follows the ticked sources; the red "Partial results" line is unchanged.
