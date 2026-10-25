@@ -71,12 +71,9 @@
     }
 }
 
+// The lead takes a finished indexer's colour at once, as its follower fades into it: no paint-driven transition.
 .jfmod-srcCar--lead {
     z-index: 1;
-
-    i {
-        transition: background-color 0.2s linear;
-    }
 }
 
 .jfmod-srcCar--merging {

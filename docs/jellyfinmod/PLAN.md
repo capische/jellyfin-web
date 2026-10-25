@@ -1592,8 +1592,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   menu, on the phone the menu full width; laptop: a narrowed new search sends six ids, a tick-in sends one and its rows join,
   the settings swatches); reduced motion shows the still blue dot on both. Progress was replayed at stretched timing (the
   server's own answers). Fixed during gate 2: the checklist now focuses its first line on opening (MUI's MenuList props reach
-  the item), which the TV needed. `reviews/picker-sources/gate-2/` in the workspace. **Not run:** the TV at 1280×720, a real
-  TV or phone, the Pi, Codex review.
+  the item), which the TV needed. `reviews/picker-sources/gate-2/` in the workspace. Codex GPT-6.1 Sol high: approve with fixes,
+  six P2 and one P3, fixed in follow-up commits (the held grab's row stays when its source is unticked; a ticked-in indexer's
+  rows show and grab without the search's own; a saved choice that leaves none ticked ticks the first; colours are given under
+  the insert's write lock and ignore indexers removed in the same save; the promise that a re-added indexer gets its old colour
+  back is dropped; the lead changes colour without a transition). **Not run:** the TV at 1280×720, a real TV or phone, the Pi.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
