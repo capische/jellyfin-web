@@ -1517,6 +1517,30 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   root keep the old proof rules. Plugin main-stubs `0c54488`, main-items `c237796`; Phase 2/3 (macOS) and Phase 5 (Linux)
   pass on both lines, new checks fail before the fix; live on local echo on both lines. An env's next library scan cleans
   existing stale bindings. **Not run:** browser check of the series page, the Pi, Codex review.
+  **P4.FU22, built (not accepted) 2026-10-24: Russian and Ukrainian tracker names match by title words and year, full
+  discs are refused, and a Blu-ray rip is labelled as a rip** (user 2026-10-24: every RuTracker release for Inception (2010)
+  refused as a title mismatch). Owner: Phase 4. RuTracker, Kinozal and Mazepa put a local title first (`Начало / Inception
+  [2010, США, …, UHD BDRemux 2160p]`), so the parsed title never matched. When it does not, the evaluator now looks for the
+  entry's title or original title as whole words anywhere in the name (bounded by the start, a bracket, a slash or a leading
+  article before it, and the end, a bracket, a slash, a year or a season or episode marker after it); a film's year is the
+  first one after the title, and a run of years is a collection and refused. Provider-id rules are unchanged and still win.
+  Season forms `S1E1-6 of 6`, `Сезон: N`, `Серии: A-B из C` are read. A pixel resolution wins over UHD/4K; a full Blu-ray
+  disc (BD25/50/66/100, Full BD, BDMV, ISO, BR-DISK, COMPLETE BLURAY) is source `disc` and refused with "Full disc releases
+  cannot be imported."; BDRip, BD-Rip and BRRip stay in the Blu-ray tier but carry their own word (`parsed.rip`), which the
+  picker shows instead of "Blu-ray", and a full disc reads "Full Disc" (web `ReleaseRowParts.tsx`, `constants/quality.ts`,
+  [guides/quality-profiles.md](design/guides/quality-profiles.md), [UX.md](UX.md)). Plugin main-stubs `731b1e1`, main-items
+  `d8c6804`; web main-stubs `9cf758429c`, main-items `89b02c201c`. Phase 4 (with its new real-tracker-title scenario) passes
+  on both lines in the Linux SDK container; web typecheck and eslint clean on both. Live on local alpha (stubs) and beta
+  (items), Inception (2010): RuTracker 27 rows, the 19 named `Начало / Inception [2010` none refused for the title (7
+  eligible, 10 without a readable resolution, 2 full discs), the 8 for other titles (The Cobol Job, Extras, HBO First Look)
+  refused for the title; all 50 BDRip/BRRip rows across indexers labelled as rips. **Not run:** the picker in a browser, real
+  Chrome, the Pi, Codex review.
+  **P4.FU23, built (not accepted) 2026-10-24: an indexer gets 60 seconds for its queries** (was 20). Owner: Phase 4.
+  `TorznabOptions.Default` covers all of one indexer's queries and pages; indexers behind Prowlarr (1337x through
+  FlareSolverr, RuTracker) take 10 to 22 seconds a query, since Prowlarr reads paced pages and queues every client's query
+  behind the one before, so a title that needs its fallback query ran out of time and came back partial. Plugin main-stubs
+  `d8037cc`, main-items `89b16f1`; Phase 4's new slow-indexer scenario (two 12-second queries under the production bound)
+  passes on both lines. **Not run:** the Pi, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
