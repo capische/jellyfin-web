@@ -27,7 +27,14 @@ export const SlowSetupGroup: FC<{ href: string }> = ({ href }) => <span classNam
  * line, and no focus stop, so on the keyboard and the TV Enter always toggles the line (the link for them is in Settings).
  */
 export const SlowSetupLink: FC<{ href: string }> = ({ href }) => {
+    // The line's toggle never sees the click; the link opens as links do (plain, modified and middle clicks alike).
     const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+    // A pointer press leaves focus on the line, not on the link, so the next Enter still toggles the line.
+    const keepLineFocus = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+        event.currentTarget.closest<HTMLElement>('.jfmod-sourceItem')?.focus();
+    };
     return <a className='jfmod-slow jfmod-sourceSlow' href={href} target='_blank' rel='noopener noreferrer' tabIndex={-1}
-        title='How to speed it up' aria-label='How to speed it up' onClick={stop}><SlowMark text='slow setup' /></a>;
+        data-jfmod-dpad-skip='' title='How to speed it up' aria-label='How to speed it up' onClick={stop} onMouseDown={keepLineFocus}>
+        <SlowMark text='slow setup' /></a>;
 };
