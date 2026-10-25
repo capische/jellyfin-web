@@ -320,6 +320,8 @@ export interface SourceIndexer {
     priority: number;
     /** An index into `INDEXER_COLOURS`; absent from older plugins. */
     colorIndex?: number;
+    /** The how-to's address when it runs on Prowlarr's slow default 1337x definition, else null (P4.FU27); absent from older plugins. */
+    slowSetupHowTo?: string | null;
 }
 
 /** The indexers, in the plugin's order (priority, then name). Administrator-only, as the picker is. */

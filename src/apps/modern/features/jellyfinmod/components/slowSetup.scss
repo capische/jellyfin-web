@@ -1,0 +1,60 @@
+// Prowlarr's slow default 1337x definition (P4.FU27, approved 2026-10-25; design/guides/buttons-and-row-actions.md): the glyph and
+// its words in the warning amber, the theme's starIcon on dark themes and a darker amber on the light ones (5.8:1 on #e8e8e8).
+.jfmod-slow {
+    color: #f2b01e;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+[data-theme='light'] .jfmod-slow,
+[data-theme='appletv'] .jfmod-slow {
+    color: #7a5000;
+}
+
+.jfmod-slow .jfmod-slowGlyph {
+    width: 1.15em;
+    height: 1.15em;
+    margin-right: 0.25em;
+    font-size: inherit;
+    vertical-align: -0.2em;
+}
+
+// A settings row's title line: 0.5em after the name at 0.85em, the separator in the secondary text, the link in the links' look.
+.jfmod-indexerSlow {
+    display: inline-block;
+    margin-left: 0.5em;
+    font-size: 0.85em;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+
+    a {
+        color: #00a4dc;
+        color: var(--jf-palette-primary-main, #00a4dc);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    a:hover,
+    a:focus-visible {
+        text-decoration: underline;
+    }
+}
+
+// The picker's checklist label after the name, at 85 %; its hit area is its text padded 0.3em above and below.
+.jfmod-sourceSlow {
+    margin-left: 0.6em;
+    padding: 0.3em 0;
+    font-size: 85%;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+// The TV's focused menu line is the primary fill with dark ink, on which amber would read at about 1.5:1: the label takes the
+// line's ink there, glyph included.
+.layout-tv .MuiModal-root .jfmod-sourceItem:focus .jfmod-sourceSlow {
+    color: inherit;
+}

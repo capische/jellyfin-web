@@ -32,6 +32,27 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
 - On the TV each icon is a focus stop with the white double focus ring; the arrows walk a row's icons left to right.
   Indicators (the download mark, the file-state marks) are **not** buttons and take none of this.
 
+## A warning on a row's title line
+
+**Status:** approved 2026-10-25 (user, Prowlarr slow-setup label, revision 3 of `reviews/prowlarr-slow-hint/` in the workspace; the
+title line, and sentence case in the picker). Built in P4.FU27 (built, not accepted). Code: web `components/SlowSetup.tsx`
+(`SlowSetupGroup`), `components/slowSetup.scss`; the Dashboard page's `slowSetupLabel()` in `configPage.html`.
+
+- A row that needs a warning which is not a failure (today only an indexer on Prowlarr's slow default `1337x` definition) gets it
+  **on the name's line**, never a third line: the group `⚠ Slow setup · How to speed it up` sits **0.5em** after the name at
+  **0.85em**, weight 400, the separator ` · ` in the secondary text colour (`.jfmod-indexerSlow`).
+- **The warning** (`.jfmod-slow`): Material `Warning` (the filled triangle; an inline SVG with the same path on the Dashboard page),
+  **1.15em**, `margin-right .25em`, `vertical-align -.2em`, `aria-hidden`; then the words in sentence case, weight **600**, in the
+  warning amber: **`#f2b01e`** on the dark themes (the theme's starIcon, 8.5:1 on the row), **`#7a5000`** on light and Apple TV
+  (5.8:1 on `#e8e8e8`). Amber, not red: red means failed, and this row works. The row's pill and icons do not change.
+- **The link** is its own words, *How to speed it up*, in the links' look (primary `#00a4dc`, 600, underline on hover and keyboard
+  focus), new tab, `noopener`; a focus stop like any link. Not the label as a link: a tooltip would have to say what it does, and
+  touch and the TV show none.
+- **Wrapping:** the group never breaks inside (`inline-block`, `nowrap`); when it does not fit beside the name it moves under it as
+  one piece, and the name wraps as before, never cut.
+- The link's address is the plugin's (`slowSetupHowTo` in `GET /Settings/Indexers`, one constant `ProwlarrSync.SlowSetupHowTo`).
+  The picker's checklist shows the same warning as a link of its own: [release-picker-sources.md](release-picker-sources.md).
+
 ## Do not
 
 - Put a text button inside a list row, or a labelled button where a row icon is the pattern.

@@ -1370,6 +1370,16 @@ searching ring's segments and its indexer lines take the indexer colours too (st
 record: [design/release-picker-source-filter.md](design/release-picker-source-filter.md), mockup
 [design/release-picker-sources-dot.html](design/release-picker-sources-dot.html).
 
+**Slow setup (user, 2026-10-25, P4.FU27).** An indexer that Prowlarr runs on its official `1337x` definition (four pages three
+seconds apart for every search) is marked where it is named: in Settings (the React rows and the Dashboard page) the name's line
+reads `EN. 1337x ⚠ Slow setup · How to speed it up`, the link opening the how-to (the P4.FU26 script) in a new tab; in the
+checklist the line reads `EN. 1337x ⚠ slow setup` (sentence case, casing A), a link to the how-to that does not toggle the line and
+is no focus stop, so Enter always toggles the line. Amber `#f2b01e` on dark themes, `#7a5000` on light and Apple TV. Nothing for
+`1337x-fast`, other definitions or manual indexers; the plugin reads the definition on every Prowlarr sync. Values:
+[guides/buttons-and-row-actions.md](design/guides/buttons-and-row-actions.md) (*A warning on a row's title line*),
+[guides/release-picker-sources.md](design/guides/release-picker-sources.md); approved mockup: `reviews/prowlarr-slow-hint/` in
+the workspace (revision 3).
+
 **Open question for the user (review 2026-09-18):** the *Enter grabs* rule rests on the queue
 being where a mistake is undone, and that queue does not exist until Phase 5; `PHASE4.md` offers no
 queue Undo. Options recorded in `PHASE4.md`: keep one Enter with no confirmation, add a short
