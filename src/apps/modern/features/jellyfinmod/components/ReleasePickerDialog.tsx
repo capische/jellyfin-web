@@ -1374,24 +1374,27 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         </p>}
         {/* The grab's status stays in view for its whole hold, also when a changed search no longer lists the release it grabbed
             (whole-review chunk 4a, P2 4). */}
-        {(!blockRowId || !eligible.some(candidate => candidate.releaseId === blockRowId)) && grabStatus}
-        <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
-            {eligible.map(candidate => <Fragment key={candidate.releaseId}>
-                <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
-                    plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                    added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
-                {blockRowId === candidate.releaseId && grabStatus}
-            </Fragment>)}
-            {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
+        {/* Only the list scrolls; everything above it stays put (P4.FU24). */}
+        <div className='jfmod-releaseScroll scrollY'>
+            {(!blockRowId || !eligible.some(candidate => candidate.releaseId === blockRowId)) && grabStatus}
+            <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
+                {eligible.map(candidate => <Fragment key={candidate.releaseId}>
+                    <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
+                        plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
+                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
+                    {blockRowId === candidate.releaseId && grabStatus}
+                </Fragment>)}
+                {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
+            </div>
+            {rejected.length > 0 && <div className='jfmod-rejectedGroup'>
+                <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
+                    {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
+                </button>
+                {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={shownCandidate(candidate)} search={data}
+                    disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
+                    added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />)}
+            </div>}
         </div>
-        {rejected.length > 0 && <div className='jfmod-rejectedGroup'>
-            <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
-                {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
-            </button>
-            {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={shownCandidate(candidate)} search={data}
-                disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />)}
-        </div>}
     </div>;
 };
 
