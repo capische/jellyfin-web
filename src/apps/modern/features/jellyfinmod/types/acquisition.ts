@@ -43,6 +43,8 @@ export interface ReleaseCandidate {
     releaseId: string;
     indexerId: string;
     indexerName: string;
+    /** The indexer's colour, an index into `INDEXER_COLOURS` (P4.FU25); absent from older plugins. */
+    indexerColorIndex?: number;
     rawTitle: string;
     parsed: ParsedRelease;
     match: { identity: string; method: string };
@@ -106,6 +108,8 @@ export interface IndexerOutcome {
     resultCount: number;
     truncated: boolean;
     retryAfterSeconds: number | null;
+    /** The indexer's colour, an index into `INDEXER_COLOURS` (P4.FU25); absent from older plugins. */
+    colorIndex?: number;
 }
 
 /** One indexer's line of a running search (`GET /Releases/Progress/{key}`). */
@@ -117,6 +121,8 @@ export interface IndexerProgress {
     startedAt: string | null;
     resultCount: number;
     retryAfterSeconds: number | null;
+    /** The indexer's colour, an index into `INDEXER_COLOURS` (P4.FU25); absent from older plugins. */
+    colorIndex?: number;
 }
 
 export interface ReleaseProgress {

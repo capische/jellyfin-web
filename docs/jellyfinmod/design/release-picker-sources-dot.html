@@ -1,0 +1,184 @@
+<title>Picker Sources Dot</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#f2f2f2;--paper:#fff;--text:rgba(0,0,0,.87);--muted:rgba(0,0,0,.6);--line:rgba(0,0,0,.12);--blue:#00a4dc;--fail:#e53935;--hover:rgba(0,0,0,.05);--menu:#fff;--track:rgba(0,0,0,.12);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101010;--paper:#202020;--text:#fff;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hover:rgba(255,255,255,.06);--menu:#2a2a2a;--track:rgba(255,255,255,.14);color-scheme:dark}}
+:root[data-theme=dark]{--bg:#101010;--paper:#202020;--text:#fff;--muted:rgba(255,255,255,.7);--line:rgba(255,255,255,.12);--hover:rgba(255,255,255,.06);--menu:#2a2a2a;--track:rgba(255,255,255,.14);color-scheme:dark}
+/* the indexer palette: eight hues that stay apart on dark and light, none of them the primary or the failure red */
+:root{--c1:#4fc3f7;--c2:#81c784;--c3:#ffb74d;--c4:#ba68c8;--c5:#f06292;--c6:#4db6ac;--c7:#fff176;--c8:#ff8a65}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 Inter,system-ui,sans-serif;padding-block:1.2em;padding-inline:16px}
+.wrap{max-width:66em;margin:0 auto}
+h1{font-size:1.3em;margin:0 0 .2em}
+.lead{color:var(--muted);margin:0 0 1em;max-width:74ch}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;margin:0 0 1em;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:.5em 0;z-index:5;border-bottom:1px solid var(--line)}
+.ctl>*{margin:0 .8em .4em 0}.ctl label{color:var(--muted);font-size:.85em}
+.ctl button{font:inherit;font-size:.85em;color:var(--text);background:var(--paper);border:1px solid var(--line);border-radius:.3em;padding:.3em .6em}
+h2{font-size:.95em;font-weight:600;margin:1.8em 0 .5em;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.note{color:var(--muted);font-size:.9em;max-width:76ch;margin:.5em 0 0}
+.strip{display:flex;flex-wrap:wrap;align-items:flex-start}.strip>div{margin:0 1.4em 1em 0}
+.cap{font-size:.75em;color:var(--muted);margin-bottom:.3em}
+.bar{display:inline-flex;align-items:center;background:var(--paper);border-radius:.3em;padding:.3em .5em .3em 1em;font-weight:600;font-size:1.1em;position:relative}
+.bar.tv{font-size:1.375em}
+.ic{width:2.5em;height:2.5em;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);margin-left:.1em;position:relative;flex:0 0 auto}
+.ic svg.g{width:1.4em;height:1.4em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ic.on{color:var(--blue)}
+.ic.focus{box-shadow:0 0 0 .14em #fff,0 0 0 .3em rgba(0,0,0,.6)}
+.bar .ic:first-of-type{margin-left:1.4em}
+/* the dot */
+.dot{position:absolute;right:.35em;top:.4em;width:.5em;height:.5em;border-radius:50%;background:var(--muted)}
+.dot.red{background:var(--fail)}
+/* the orbit: a carrier turns around the icon's centre; the dot sits at its top edge and changes colour each turn */
+.orb{position:absolute;inset:.15em;border-radius:50%;animation:orbit 1.2s linear infinite}
+.orb i{position:absolute;left:50%;top:-.25em;width:.5em;height:.5em;margin-left:-.25em;border-radius:50%;background:var(--c1)}
+.orb.cyc3 i{animation:cyc3 3.6s steps(1,end) infinite}
+.orb.cyc2 i{animation:cyc2 2.4s steps(1,end) infinite}
+.orb.one i{background:var(--c6)}
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes cyc3{0%{background:var(--c3)}33.3%{background:var(--c4)}66.6%{background:var(--c6)}}
+@keyframes cyc2{0%{background:var(--c4)}50%{background:var(--c6)}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none}.orb i{animation:none;background:var(--blue)}}
+
+/* the train: one orbit, a lead dot and a follower per indexer being asked; a follower trails the lead by 40° and, when its
+   indexer finishes, closes the gap and merges; the lead takes that colour. Demo timeline 9 s, looping. */
+.train{position:absolute;inset:.15em;border-radius:50%;animation:orbit 1.2s linear infinite}
+.train .d{position:absolute;inset:0}
+.train .d i{position:absolute;left:50%;top:-.25em;width:.5em;height:.5em;margin-left:-.25em;border-radius:50%}
+.train .lead i{background:var(--muted);animation:lead 9s steps(1,end) infinite}
+@keyframes lead{0%{background:var(--muted)}33%{background:var(--c3)}61%{background:var(--c4)}89%{background:var(--c6)}}
+.train .f1{transform:rotate(-40deg);animation:merge1 9s ease-in-out infinite}
+.train .f1 i{background:var(--c3);animation:fade1 9s linear infinite}
+.train .f2{transform:rotate(-80deg);animation:merge2 9s ease-in-out infinite}
+.train .f2 i{background:var(--c4);animation:fade2 9s linear infinite}
+.train .f3{transform:rotate(-120deg);animation:merge3 9s ease-in-out infinite}
+.train .f3 i{background:var(--c6);animation:fade3 9s linear infinite}
+@keyframes merge1{0%,25%{transform:rotate(-40deg)}33%,100%{transform:rotate(0)}}
+@keyframes fade1{0%,31%{opacity:1}33%,100%{opacity:0}}
+@keyframes merge2{0%,25%{transform:rotate(-80deg)}33%,53%{transform:rotate(-40deg)}61%,100%{transform:rotate(0)}}
+@keyframes fade2{0%,59%{opacity:1}61%,100%{opacity:0}}
+@keyframes merge3{0%,25%{transform:rotate(-120deg)}33%,53%{transform:rotate(-80deg)}61%,81%{transform:rotate(-40deg)}89%,100%{transform:rotate(0)}}
+@keyframes fade3{0%,87%{opacity:1}89%,100%{opacity:0}}
+.train.still,.train.still .d,.train.still .d i{animation:none}
+@media (prefers-reduced-motion:reduce){.train,.train .d,.train .d i{animation:none}.train .d:not(.lead){display:none}.train .lead i{background:var(--blue)}}
+.dot.last{background:var(--c6)}
+/* finished F2: the mini ring of sources */
+.mini{position:absolute;right:.2em;top:.25em;width:.9em;height:.9em;transform:rotate(-90deg)}
+.mini circle{fill:none;stroke-width:5}
+.chk{display:inline-block;width:.75em;height:.75em;border-radius:50%;vertical-align:-.08em;margin-right:.45em;flex:0 0 auto}
+/* big ring (torrent glyph, simplified) */
+.glyph{width:4em;height:4em;transform:rotate(-90deg)}
+.glyph circle{fill:none;stroke-width:3.2;stroke-linecap:butt}
+.glyph .ask{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+.dlg{background:var(--paper);border-radius:.3em;padding:1em 1.2em 1.2em;max-width:54em;box-shadow:0 2px 12px rgba(0,0,0,.35);position:relative;margin-bottom:.8em}
+.ttl{display:flex;align-items:center;font-weight:600;font-size:1.1em;margin-bottom:.6em;position:relative}
+.ttl .ic:first-of-type{margin-left:auto}
+.controls{display:flex;flex-wrap:wrap;align-items:flex-end}
+.fld{flex:1 1 12em;min-width:0;margin:0 1.2em .6em 0}
+.fld .lab{font-size:.75em;color:var(--muted);margin-bottom:.15em}
+.fld .val{display:flex;align-items:center;padding:.3em 0;border-bottom:1px solid var(--line)}
+.fld .val::after{content:'▾';margin-left:auto;padding-left:.5em;color:var(--muted)}
+.status{font-size:.9em;color:var(--muted);min-height:1.6em;margin:.1em 0 .3em}
+.rowsk{height:2.6em;border-radius:.2em;background:var(--hover);margin-bottom:.35em;opacity:.6}
+.blk{display:flex;align-items:center;padding:1em;border:1px solid var(--line);border-radius:.3em;max-width:34em}
+.blk .lines{margin-left:1.2em;font-size:.9em}
+.li{display:flex;align-items:center;padding:.15em 0}
+.li .nm{font-weight:600;min-width:9em}.li .st{color:var(--muted);margin-left:.6em}
+.menu{position:absolute;z-index:3;right:0;top:100%;margin-top:.2em;min-width:19em;background:var(--menu);border:1px solid var(--line);border-radius:.25em;box-shadow:0 4px 16px rgba(0,0,0,.4);padding:.3em 0;font-weight:400;font-size:.9em}
+.mi{display:flex;align-items:center;padding:.4em .9em}
+.mi .cb{--c:var(--muted);--tick:#fff;width:1.15em;height:1.15em;border:.14em solid var(--c);border-radius:.25em;margin-right:.75em;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.mi.on .cb{background:var(--c)}
+.mi.on .cb::after{content:'';width:.55em;height:.3em;border-left:.14em solid var(--tick);border-bottom:.14em solid var(--tick);transform:translateY(-.1em) rotate(-45deg)}
+.mi.off{opacity:1}.mi.off b{color:var(--muted)}
+.mi b{font-weight:600;flex:1 1 auto;color:var(--text)}
+.mi span.s{color:var(--muted);font-size:.9em;margin-left:.8em;white-space:nowrap}
+.mi span.s.bad{color:#ff7b72}
+.mi.off{opacity:.6}
+/* settings row */
+.set{background:var(--paper);border-radius:.3em;padding:.4em 1em;max-width:40em}
+.srow{display:flex;align-items:center;padding:.55em 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow .nm{font-weight:500;flex:1 1 auto}
+.srow .sub{color:var(--muted);font-size:.86em;margin-left:.6em}
+.srow .ri{width:2.5em;height:2.5em;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);margin-left:.2em}
+.srow .ri svg{width:1.3em;height:1.3em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.pal{display:flex;flex-wrap:wrap;align-items:center;margin-top:.4em}
+.pal span{display:inline-flex;align-items:center;margin:0 1em .4em 0;font-size:.85em;color:var(--muted)}
+.tbl{border-collapse:collapse;font-size:.9em;margin-top:.6em;max-width:66em}
+.tbl td,.tbl th{text-align:left;padding:.35em .9em .35em 0;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{color:var(--muted);font-weight:600}
+</style>
+<div class="wrap">
+<h1>Picker sources: the dot, in each indexer's colour</h1>
+<p class="lead">Chosen direction (user, 2026-10-25): the plain icon with a dot. Each indexer gets a colour of its own, fixed and visible in settings; while the picker searches, the dot circles the icon and takes the colour of the indexer being asked; the checklist shows the colours. One thing to know first: today the torrent ring's segments are coloured by <b>state</b> (green answered, red failed, light blue asking, pale blue waiting), not by indexer, so an indexer colour is new. The proposal below gives every indexer one, uses it in the dot, in the checklist and in settings, and offers to recolour the torrent ring's segments by indexer as well so the two match.</p>
+<div class="ctl"><label>Theme</label><button data-theme="dark">dark</button><button data-theme="light">light</button></div>
+
+<h2>The palette</h2>
+<p class="note">Eight hues that stay apart from each other on the dark and the light theme and from the two colours that mean something already (the primary blue, the failure red). Assigned in the indexers' order the first time an indexer is seen, kept for its lifetime; a ninth indexer starts the palette again. Not editable, but shown wherever the indexer is named.</p>
+<div class="pal" id="pal"></div>
+
+<h2>The dot, state by state</h2>
+<div class="strip" id="dots"></div>
+<p class="note"><b>Searching, the train (user, 2026-10-25):</b> when the search starts the dot leaves its corner and circles the icon once per 1.2 s as the <b>lead, grey</b>. Every indexer being asked is a <b>follower</b> in its own colour, trailing the lead on the same circle, 40° apart in the order they were asked (up to seven; on a 2.5em icon that is a short comet tail). When an indexer finishes (answered, no results or failed) its follower closes the gap, merges into the lead, and the lead takes that indexer's colour; the followers behind it close up by one place. So the lead always shows the last indexer that finished, and the tail shows how many are still out. Transform and opacity only. <b>Reduced motion:</b> no circling; a still blue dot in the corner while searching. <b>Narrowed</b> and quiet: a still grey dot, as before. The first strip loops a 9 s demo with three indexers; the frozen frames show two moments of it.</p>
+
+<h2>Finished — two ways to end</h2>
+<div class="strip" id="fin"></div>
+<p class="note"><b>F1 · the lead comes to rest (recommended):</b> when the last follower has merged, the lead slows into the corner and stays there in the colour of the last indexer that finished (the train's natural end); if any indexer failed it rests red instead. When the picker is reopened for a new search it is grey again. A quiet end that still says "done" and "who was last". <b>F2 · the dot becomes the ring:</b> on finishing, the corner shows a 0.9em ring of segments, one per ticked source in its colour, failed ones red, as a miniature of the torrent ring: at a glance how many sources answered and which failed, still, no text. It stays while the results are on screen. More to look at than the user asked for; drawn so the choice is real.</p>
+
+<h2>The checklist</h2>
+<div id="dlg"></div>
+<p class="note">Same checklist as before; the checkbox itself is the indexer's colour (filled when ticked, outlined in the colour when unticked; a dark tick on the two light hues), the name in the text colour, the state at the right in the secondary colour. (User, 2026-10-25: black text, coloured checkboxes instead of dots.)</p>
+
+<h2>The torrent ring, recoloured by indexer (to match)</h2>
+<div class="blk" id="glyph"></div>
+<p class="note">Today's ring: a segment per indexer, coloured by state. Matched: each segment in its indexer's colour, the state carried by opacity (waiting 0.3, asking pulsing, answered full) and red only for a failure, so the ring, the dot and the checklist speak one colour language. The indexer lines under the ring take the same dot. Optional; without it the dot's colours mean nothing in the ring.</p>
+
+<h2>Settings · Indexers</h2>
+<div class="set" id="settings"></div>
+<p class="note">The colour sits before the indexer's name on its row (and on the Dashboard page's indexer list), read-only, with the tooltip "Colour in the release picker". No field, no picker; it is there so a colour seen in the picker can be looked up.</p>
+
+<h2>Build</h2>
+<table class="tbl">
+<tr><th>Piece</th><th>Where</th></tr>
+<tr><td>Colour per indexer</td><td>Plugin: `colorIndex` (0–7) on the indexer record, assigned on creation / sync in order, returned with `GET /Settings/Indexers` and in every search's `indexers[]` and `candidate.indexer`; the web maps index → hue (`--jfmod-ix-1…8`). Without the plugin field the web hashes the indexer id to 0–7 (stable but not shown in the Dashboard page, which is plugin-rendered).</td></tr>
+<tr><td>The dot</td><td>`integration/releasePicker.ts`: the Sources icon gains a `span.jfmod-srcDot` (corner) and `span.jfmod-srcOrbit > i` (searching); `ReleasePickerDialog` sets the state class and the current indexer's colour variable from the progress poll. ~40 lines SCSS, ~30 TSX.</td></tr>
+<tr><td>Checklist</td><td>Revision 2's menu with the colour dot per line.</td></tr>
+<tr><td>Ring (optional)</td><td>`ReleaseSearchBlock`: segment stroke from the indexer's hue instead of the state colour; state as opacity/pulse; failed red.</td></tr>
+<tr><td>Settings</td><td>`settingsSections.tsx` indexer rows: the dot before the name; `configPage.html` the same.</td></tr>
+</table>
+</div>
+<script>
+const G={x:'<path d="M6 6L18 18M18 6L6 18"/>',names:'<path d="M4 7h16M4 12h10M4 17h13"/>',client:'<path d="M12 20v-7M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6.3 5.3a8 8 0 0 0 0 11.4M17.7 5.3a8 8 0 0 1 0 11.4"/>',src:'<path d="M4 6h16M7 12h10M10 18h4"/>',pen:'<path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4"/>',bin:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>'};
+const svg=(p,c='g')=>`<svg class="${c}" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+const IX=[['RU. RuTracker.org',1],['RU. Kinozal',2],['UA. Mazepa',3],['EN. 0Magnet',4],['EN. 1337x',5],['Uindex',6],['UA. utp.to',7]];
+const col=i=>`var(--c${i})`;
+document.getElementById('pal').innerHTML=IX.map(([n,i])=>`<span><i class="chk" style="background:${col(i)}"></i>${n}</span>`).join('')+`<span><i class="chk" style="background:var(--c8)"></i>(8th: next indexer)</span>`;
+const tail=`<span class="ic on">${svg(G.names)}</span><span class="ic">${svg(G.client)}</span><span class="ic">${svg(G.x)}</span>`;
+const bar=(inner,cap,cls='')=>`<div><div class="cap">${cap}</div><div class="bar ${cls}">Get a Release <span class="ic">${svg(G.src)}${inner}</span>${tail}</div></div>`;
+const TRAIN='<span class="train"><span class="d lead"><i></i></span><span class="d f1"><i></i></span><span class="d f2"><i></i></span><span class="d f3"><i></i></span></span>';
+const STILL=(n)=>`<span class="train still"><span class="d lead"><i></i></span>${[['f1',-40],['f2',-80],['f3',-120]].slice(0,n).map(([c,a])=>`<span class="d ${c}" style="transform:rotate(${a}deg)"><i style="opacity:1"></i></span>`).join('')}</span>`;
+document.getElementById('dots').innerHTML=[
+ bar('','idle, all ticked, quiet'),
+ bar(TRAIN,'searching · the train (looping demo: three indexers asked, each merges into the grey lead as it finishes)'),
+ bar(STILL(3),'frozen frame · grey lead, three followers (Mazepa, 0Magnet, Uindex)'),
+ bar('<span class="train still"><span class="d lead"><i style="background:var(--c3)"></i></span><span class="d f2" style="transform:rotate(-40deg)"><i style="opacity:1"></i></span><span class="d f3" style="transform:rotate(-80deg)"><i style="opacity:1"></i></span></span>','frozen frame · Mazepa merged: the lead is now Mazepa\'s colour, two followers close up'),
+ bar('<span class="dot"></span>','narrowed and quiet: a still grey dot'),
+ bar(TRAIN,'TV 125 %','tv')
+].join('');
+const mini=(segs)=>{let off=0;const total=segs.length;return `<svg class="mini" viewBox="0 0 36 36">${segs.map(([c])=>{const len=100/total-6;const s=`<circle cx="18" cy="18" r="14" pathLength="100" stroke="${c}" stroke-dasharray="${len} ${100-len}" stroke-dashoffset="${-off}"/>`;off+=100/total;return s}).join('')}</svg>`};
+document.getElementById('fin').innerHTML=[
+ bar('<span class="dot last"></span>','F1 · done: the lead comes to rest in the corner in the last indexer\'s colour (here Uindex) and stays while the results are on screen'),
+ bar('<span class="dot red"></span>','F1 · one failed: the lead comes to rest red'),
+ bar(mini([[col(1)],[col(2)],[col(3)],[col(4)],[col(5)],[col(6)],['var(--fail)']]),'F2 · the mini ring: seven sources, utp.to failed'),
+ bar(mini([[col(1)],[col(4)],[col(5)],[col(6)],['var(--fail)']]),'F2 · narrowed to five sources')
+].join('');
+const L=[[0,1,'','8 · 2 rejected'],[1,0,'','hidden · 5'],[2,0,'','hidden · 3'],[3,1,'','2 · 1 rejected'],[4,1,'','4 · 1 rejected'],[5,1,'','1'],[6,1,'bad','failed · timed out']];
+document.getElementById('dlg').innerHTML=`<div class="dlg"><div class="ttl">Get a Release <span class="ic on">${svg(G.src)}<span class="dot"></span><div class="menu">${L.map(([k,on,s,t])=>`<div class="mi ${on?'on':'off'}"><span class="cb" style="--c:${col(IX[k][1])};--tick:${[3,7].includes(IX[k][1])?'#1d1f22':'#fff'}"></span><b>${IX[k][0]}</b><span class="s ${s}">${t}</span></div>`).join('')}</div></span>${tail}</div>
+<div class="controls"><div class="fld"><div class="lab">Search For</div><div class="val">All Seasons</div></div><div class="fld"><div class="lab">Quality Profile</div><div class="val">4K (Default)</div></div></div>
+<div class="status">15 releases · 5 of 7 sources · 6 of 7 indexers answered</div>${'<div class="rowsk"></div>'.repeat(4)}</div>`;
+// torrent ring recoloured
+const ST=['ok','ok','ask','ask','ok','wait','failed'];
+let off=0;const segs=IX.map(([n,i],k)=>{const len=100/7-4;const st=ST[k];const stroke=st==='failed'?'var(--fail)':col(i);const op=st==='wait'?.3:1;const s=`<circle class="${st==='ask'?'ask':''}" cx="24" cy="24" r="20" pathLength="100" stroke="${stroke}" opacity="${op}" stroke-dasharray="${len} ${100-len}" stroke-dashoffset="${-off}"/>`;off+=100/7;return s}).join('');
+document.getElementById('glyph').innerHTML=`<svg class="glyph" viewBox="0 0 48 48">${segs}<path d="M24 14v18M18 26l6 6 6-6" fill="none" stroke="var(--blue)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90 24 24)"/></svg><div class="lines">${IX.map(([n,i],k)=>`<div class="li"><i class="chk" style="background:${ST[k]==='failed'?'var(--fail)':col(i)};opacity:${ST[k]==='wait'?.3:1}"></i><span class="nm">${n}</span><span class="st">${{ok:'answered',ask:'asking…',wait:'waiting',failed:'failed · timed out'}[ST[k]]}</span></div>`).join('')}</div>`;
+document.getElementById('settings').innerHTML=IX.slice(0,4).map(([n,i])=>`<div class="srow"><i class="chk" style="background:${col(i)}" title="Colour in the release picker"></i><span class="nm">${n}</span><span class="sub">Prowlarr · priority ${i*5} · verified</span><span class="ri">${svg(G.pen)}</span><span class="ri" style="color:#ff7b72">${svg(G.bin)}</span></div>`).join('');
+document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>document.documentElement.dataset.theme=b.dataset.theme);
+</script>

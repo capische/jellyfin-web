@@ -17,6 +17,8 @@ values.
 | [wizard-step-footer.md](wizard-step-footer.md) | the "To continue, …" line beside Continue | the setup wizard |
 | [settings-field.md](settings-field.md) | a settings field's label, the required asterisk and the help line | settings area, setup wizard, settings dialogs |
 | [buttons-and-row-actions.md](buttons-and-row-actions.md) | the three button kinds and the round icon-only row actions | everywhere in the mod |
+| [indexer-colour.md](indexer-colour.md) | each indexer's fixed colour: the eight-hue palette and how it is given | the picker's Sources and searching ring, the settings indexer rows |
+| [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Get a Release, Get Another Quality) |
 
 ## How to use a guide
 
