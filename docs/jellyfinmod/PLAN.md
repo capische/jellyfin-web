@@ -1541,6 +1541,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   behind the one before, so a title that needs its fallback query ran out of time and came back partial. Plugin main-stubs
   `d8037cc`, main-items `89b16f1`; Phase 4's new slow-indexer scenario (two 12-second queries under the production bound)
   passes on both lines. **Not run:** the Pi, Codex review.
+  **P4.FU24, built (not accepted) 2026-10-25: the release picker shows releases as indexers answer** (user-approved design,
+  2026-10-25, without the small ring in the status line; workspace `reviews/progressive-results/` DECISION.md and mockup;
+  [UX.md](UX.md) §9). Owner: Phase 4 (the picker and the progress side channel). Plugin: each indexer that answers stores the
+  ranked rows so far (blocklist read before the fan-out) as a snapshot under the search id fixed at the start, and
+  `GET /Releases/Progress/{key}` returns it as `search` with its grab availability; the final snapshot replaces it under the
+  same id, so the existing grab path (`searchId` + `releaseId`) takes a row before the slowest indexer is done. Web
+  (`ReleasePickerDialog.tsx`, `releasePicker.scss`): the rows replace the searching block once any indexer has rows; the status
+  line reads `N releases so far · waiting for …` (names in `#74c9ec`); rows grab while others ask; a late indexer's rows carry
+  `.jfmod-releaseItem--arrived` (primary left edge and tint fading over 2 s); the hovered (after the pointer moved) or focused
+  row keeps its screen place; the final answer wins and the finished state is unchanged. Phase 4 checks a fast indexer's rows
+  are readable from the progress and grabbable (then cancelled) while a slow one still asks (passes in the Linux SDK
+  container). Plugin `feat/progressive-results` `5a4b095`, web `feat/progressive-results` `4393c30ad9`, both from `main-stubs`;
+  not on the items line yet. Gate 1 (first look) on local alpha
+  (Jellyfin 12.0.0), Chromium headless, laptop 1280×860, dark, Inception (2010). **Not run:** the phone and TV layouts, light
+  theme, real Chrome, a grab from the rows so far in the browser, other environments, Codex review. Room is left for the
+  Sources control in the title row (a later task).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
