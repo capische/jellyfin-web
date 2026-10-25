@@ -774,6 +774,29 @@
     }
 }
 
+// Rows while a search still runs (P4.FU24, approved 2026-10-25, reviews/progressive-results): the indexers still asked are named
+// in the status line in the searching ring's asking blue; a late indexer's rows slot into their ranked places with a primary
+// left edge and a faint primary tint that fade over 2 s.
+.jfmod-releaseStatus-asking {
+    color: #74c9ec;
+}
+
+.jfmod-releaseItem--arrived {
+    animation: jfmod-releaseArrived 2s ease-in;
+}
+
+@keyframes jfmod-releaseArrived {
+    from {
+        background-color: rgba(0, 164, 220, 0.14);
+        box-shadow: inset 0.2em 0 0 #00a4dc;
+    }
+
+    to {
+        background-color: rgba(0, 164, 220, 0);
+        box-shadow: inset 0.2em 0 0 rgba(0, 164, 220, 0);
+    }
+}
+
 // While a grab holds the added row, the other rows dim (the approved sheet, 2026-10-12); they come back when it is cancelled,
 // removed or imported.
 .jfmod-releasePicker--holding .jfmod-releaseItem:not(.jfmod-releaseItem--added) {
