@@ -1396,6 +1396,11 @@
     --jfmod-focus: #222;
 
     color: #222;
+
+    // The indexers still asked, readable on the white paper: 4.8:1 (user, 2026-10-25, P4.FU24); #74c9ec is 1.9:1 there.
+    .jfmod-releaseStatus-asking {
+        color: #0277bd;
+    }
 }
 
 // The Quality Profile menu is a portal on the body: it sits over upstream's dialog layer (999999), not under it (P4.FU19).
