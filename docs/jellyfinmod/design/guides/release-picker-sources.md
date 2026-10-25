@@ -51,7 +51,9 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 - **Untick:** that indexer's rows, eligible and rejected, hide at once; its search is not cancelled and its results are kept, so
   ticking it again shows them at once. The row a grab is being sent or held for stays, so its Cancel stays reachable.
 - **Tick an indexer this search did not ask:** it is asked now, alone (`indexerIds=<id>`); its rows join the list in their ranked
-  places as it answers and grab from its own search. They show and grab even while the search itself has no rows yet or failed.
+  places as it answers and grab from its own search. They show and grab even while the search itself has no rows yet or failed;
+  when the search's own rows then arrive, an open Rejected group stays open and the TV's focus stays where it is (only a new
+  search closes the group), so a grab held on one of those rows keeps its Cancel.
 - **A new search** (another scope or profile, the picker opened again) asks only the ticked indexers (`indexerIds`, repeated);
   with every one ticked it names none, as before.
 - Remembered per browser (`localStorage` `jfmod-releaseSourcesHidden`, the unticked ids, so a new indexer starts ticked), shared
