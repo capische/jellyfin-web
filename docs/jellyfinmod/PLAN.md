@@ -1549,14 +1549,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   same id, so the existing grab path (`searchId` + `releaseId`) takes a row before the slowest indexer is done. Web
   (`ReleasePickerDialog.tsx`, `releasePicker.scss`): the rows replace the searching block once any indexer has rows; the status
   line reads `N releases so far · waiting for …` (names in `#74c9ec`); rows grab while others ask; a late indexer's rows carry
-  `.jfmod-releaseItem--arrived` (primary left edge and tint fading over 2 s); the hovered (after the pointer moved) or focused
+  `.jfmod-releaseItem--arrived` (a primary left edge fading over 2 s, no tint; user 2026-10-25 first look), only the
+  release list scrolls (`.jfmod-releaseScroll`; header, choices, notice and status line stay at the top); the hovered (after the pointer moved) or focused
   row keeps its screen place; the final answer wins and the finished state is unchanged. Phase 4 checks a fast indexer's rows
   are readable from the progress and grabbable (then cancelled) while a slow one still asks (passes in the Linux SDK
-  container). Plugin `feat/progressive-results` `5a4b095`, web `feat/progressive-results` `4393c30ad9`, both from `main-stubs`;
-  not on the items line yet. Gate 1 (first look) on local alpha
-  (Jellyfin 12.0.0), Chromium headless, laptop 1280×860, dark, Inception (2010). **Not run:** the phone and TV layouts, light
-  theme, real Chrome, a grab from the rows so far in the browser, other environments, Codex review. Room is left for the
-  Sources control in the title row (a later task).
+  container). Plugin `feat/progressive-results` `5a4b095`, web `feat/progressive-results` `4393c30ad9` `eca633e10c`, both from `main-stubs`;
+  items line `feat/progressive-results-items` from `main-items`: plugin `c6e72ba`, web `77a0d021a3` `12fd0c9e81` (cherry-picks); Phase 4
+  passes on both lines in the Linux SDK container. Gate 1 (first look) on local alpha, approved 2026-10-25 with two changes
+  (edge-only mark, list-only scroll; follow-up commit). Gate 2: alpha (stubs, bundle `e14b1d27ffbd`) and beta (items, bundle
+  `f1a839687682`), Inception (2010): Playwright Chromium laptop 1280×860, phone 390×844 and TV 1920×1080 in dark and light, and
+  real Chrome laptop dark and light, 16 runs, all checks pass (first rows replace the block, status and asking colour, no
+  partial line while asking, edge-only arrival, the hovered or D-pad-focused row moves under 0.5 px while the Quality Profile
+  stays put, finished status, one search id); on each environment Add was pressed on the rows so far 1.7 s before the search
+  ended, held (202) and cancelled during the hold, nothing sent, `/Grabs` empty. Progress was replayed to the page at stretched
+  timing (the server's own answers) so each state could be checked. **Not run:** the TV at 1280×720, a real TV or phone, the Pi,
+  Codex review. The asking blue `#74c9ec` is pale on the light theme (a design question). Room is left for the Sources control
+  in the title row (a later task).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
