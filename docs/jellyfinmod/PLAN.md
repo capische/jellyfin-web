@@ -1652,8 +1652,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   could leave focus on it), fixed in a follow-up commit (`data-jfmod-dpad-skip` left out of the D-pad's candidates; a press keeps
   focus on the line; middle and Ctrl/Cmd clicks still open the link natively); TV dark and light on both and laptop dark on alpha
   re-pass with Right/Left, focus-after-press and native-click checks added. Seen, pre-existing (not P4.FU27): on the TV, Right
-  or Left on any checklist line moves focus to the menu itself. **Not run:** a real TV or phone, the TV at 1280×720, the Pi,
-  a re-review of the fix delta. Seen, not fixed:
+  or Left on any checklist line moves focus to the menu itself. **Not run:** a real TV or phone, the TV at 1280×720, the Pi.
+  The fix delta's re-review: approve. Seen, not fixed:
   `.jfmod-refused .jfmod-checkdesc` and `.jfmod-secret-pending` draw `#f2b01e` text on the light theme (1.6:1).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
