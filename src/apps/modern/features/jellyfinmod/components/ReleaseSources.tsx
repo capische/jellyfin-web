@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import layoutManager from 'components/layoutManager';
 
 import { indexerColour, indexerTick } from '../constants/indexerColours';
+import { SlowSetupLink } from './SlowSetup';
 
 import './releaseSources.scss';
 
@@ -27,6 +28,8 @@ export interface SourceLine {
     state: string;
     /** A failure: the state in red. */
     bad: boolean;
+    /** The how-to's address when the indexer runs on Prowlarr's slow default 1337x definition (P4.FU27). */
+    slowSetupHowTo?: string | null;
 }
 
 /** One indexer of the running search, for the train. */
@@ -165,7 +168,7 @@ const SourceItem: FC<SourceItemProps> = ({ line, last, onToggle, autoFocus, tabI
         // eslint-disable-next-line jsx-a11y/no-autofocus -- MUI's MenuList focuses its first item on opening through this prop
         autoFocus={autoFocus}>
         <span className='jfmod-sourceCheck' style={style} aria-hidden='true' />
-        <span className='jfmod-sourceName'>{line.name}</span>
+        <span className='jfmod-sourceName'>{line.name}{line.slowSetupHowTo && <SlowSetupLink href={line.slowSetupHowTo} />}</span>
         <span className={classNames('jfmod-sourceState', { 'jfmod-sourceState--bad': line.bad })}>{line.state}</span>
     </MenuItem>;
 };

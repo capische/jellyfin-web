@@ -1433,6 +1433,7 @@ const useSourcesView = (input: SourcesViewInput) => {
         const on = !hidden.has(indexer.id);
         const rows = candidates.filter(candidate => candidate.indexerId === indexer.id);
         return { id: indexer.id, name: indexer.name, colorIndex: indexer.colorIndex, ticked: on,
+            slowSetupHowTo: 'slowSetupHowTo' in indexer ? indexer.slowSetupHowTo : null,
             ...sourceStateText(states.get(indexer.id), on, { eligible: rows.filter(row => row.eligible).length,
                 rejected: rows.filter(row => !row.eligible).length }) };
     });

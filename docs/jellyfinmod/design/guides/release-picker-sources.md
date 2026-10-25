@@ -42,6 +42,14 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   - the **state** at the right in the secondary colour, 90 %: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
     `failed · timed out` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked
     by this search).
+- **Slow setup** (approved 2026-10-25, P4.FU27; `reviews/prowlarr-slow-hint/` revision 3, casing A): an indexer on Prowlarr's slow
+  default `1337x` definition reads `EN. 1337x ⚠ slow setup`, the label right after the name (`.jfmod-sourceSlow`, `margin-left
+  .6em`, 85 %, weight 600, the warning amber and glyph of [buttons-and-row-actions.md](buttons-and-row-actions.md) *A warning on a
+  row's title line*); the state at the right is unchanged. The label is a link to the how-to (new tab, `noopener`; tooltip and
+  name "How to speed it up"; its hit area is the text padded .3em above and below): clicking it opens the how-to and **does not
+  toggle** the line; a click elsewhere on the line toggles it. It is **not a focus stop** (`tabindex -1`), so on the keyboard and
+  the TV Enter always toggles the line; the link for them is in Settings. On the TV's focused line (the primary fill with dark ink)
+  the label takes the line's ink, as amber would read at about 1.5:1 there. Lower case like every state in this menu.
 - Opening it puts focus on the first line. Click or Enter toggles a line (`role=menuitemcheckbox`, `aria-checked`); the menu stays
   open until Back, Escape or a click outside, and focus returns to the icon. The last ticked line cannot be unticked (`aria-disabled`, tooltip "At least one source
   stays on"). On the TV `shell/dpadModals` gives the menu arrows, Enter and Back.

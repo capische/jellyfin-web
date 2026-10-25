@@ -13,6 +13,7 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { SlowSetupGroup } from '../components/SlowSetup';
 import { indexerColour } from '../constants/indexerColours';
 
 import { FoundInProwlarr, type ProwlarrClient } from './FoundInProwlarr';
@@ -1179,7 +1180,9 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
             <div className='jfmod-brow-main'>
                 {/* The indexer's colour in the release picker, read-only (P4.FU25, guides/indexer-colour.md). */}
                 <strong><span className='jfmod-indexerColour' title='Colour in the release picker'
-                    style={{ background: indexerColour(indexer.colorIndex) }} />{indexer.name}</strong>
+                    style={{ background: indexerColour(indexer.colorIndex) }} />{indexer.name}
+                {/* Prowlarr's slow default 1337x definition (P4.FU27, guides/buttons-and-row-actions.md). */}
+                {indexer.slowSetupHowTo && <SlowSetupGroup href={indexer.slowSetupHowTo} />}</strong>
                 <span className='jfmod-sub'>
                     {indexer.managedBy === 'prowlarr' ? 'Synced from Prowlarr · ' : ''}priority {indexer.priority}
                     {indexer.lastError ? ` · last error ${indexer.lastError}` : ''}
