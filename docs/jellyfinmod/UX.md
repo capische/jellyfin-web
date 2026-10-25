@@ -1346,6 +1346,16 @@ then it started on the non-selectable *Choose what to search for* and searched n
 with no aired season. A season page starts on its season and an episode page on its episode, as before; any other scope is one
 choice away.
 
+**Rows as indexers answer (user, 2026-10-25, P4.FU24).** Until any indexer has rows, the searching block stays as it is; once
+one has, its rows replace the block, ranked as the final list, and Add and Replace work at once. The status line is text only:
+`32 releases so far · waiting for RU. RuTracker.org, UA. utp.to` (eligible rows so far; the indexers still asked in the
+searching ring's asking blue `#74c9ec`). A late indexer's rows slot into their ranked places with a primary left edge and a
+faint primary tint that fade over 2 s; the first rows of a search have no mark. The row under the pointer (once the pointer has
+moved over the list) or the focused row keeps its place on screen: rows arriving above it push the list up. The partial-results
+line and the finished status (`44 releases · 5 of 7 indexers answered`) come when the search is over, as before. The plugin
+serves the rows so far through `GET /Releases/Progress/{key}` (`search`), under the search id the final answer carries.
+Approved design: `reviews/progressive-results/` in the workspace (without the small ring; the Sources control carries progress).
+
 **Open question for the user (review 2026-09-18):** the *Enter grabs* rule rests on the queue
 being where a mistake is undone, and that queue does not exist until Phase 5; `PHASE4.md` offers no
 queue Undo. Options recorded in `PHASE4.md`: keep one Enter with no confirmation, add a short
