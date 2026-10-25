@@ -1358,6 +1358,18 @@ serves the rows so far through `GET /Releases/Progress/{key}` (`search`), under 
 and checks on every poll that the requester can still read the title.
 Approved design: `reviews/progressive-results/` in the workspace (without the small ring; the Sources control carries progress).
 
+**Sources (user, 2026-10-25, P4.FU25).** A funnel icon first in the title row (Sources · Show Names · Open Transmission · Close)
+opens a checklist of the enabled indexers, each with its checkbox in the indexer's own fixed colour and its state at the right.
+Untick hides that indexer's rows (eligible and rejected) without cancelling its search; ticking one the search did not ask asks it
+alone and its rows join; a new search asks only the ticked ones; the choice is remembered per browser and shared with Get Another
+Quality. The icon's corner dot carries the search: grey while narrowed, the train while indexers are asked (a grey lead circling
+once per 1.2 s, a follower per asked indexer in its colour that merges into the lead as it finishes, the lead taking its colour),
+and at the end the last indexer's colour, red if one failed (F1). The status line adds `5 of 7 sources` while narrowed. The
+searching ring's segments and its indexer lines take the indexer colours too (state as opacity, failure red). Values:
+[guides/release-picker-sources.md](design/guides/release-picker-sources.md), [guides/indexer-colour.md](design/guides/indexer-colour.md);
+record: [design/release-picker-source-filter.md](design/release-picker-source-filter.md), mockup
+[design/release-picker-sources-dot.html](design/release-picker-sources-dot.html).
+
 **Open question for the user (review 2026-09-18):** the *Enter grabs* rule rests on the queue
 being where a mistake is undone, and that queue does not exist until Phase 5; `PHASE4.md` offers no
 queue Undo. Options recorded in `PHASE4.md`: keep one Enter with no confirmation, add a short

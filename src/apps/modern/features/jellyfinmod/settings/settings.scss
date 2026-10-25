@@ -617,6 +617,16 @@
     font-weight: 600;
 }
 
+// An indexer's colour in the release picker, before its name, read-only (P4.FU25, design/guides/indexer-colour.md).
+.jfmod-indexerColour {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    margin-right: 0.45em;
+    border-radius: 50%;
+    vertical-align: -0.04em;
+}
+
 .jfmod-brow-main .jfmod-sub {
     font-size: 0.88em;
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));

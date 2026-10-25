@@ -861,8 +861,15 @@
     animation: jfmod-searchBreathe 1.6s ease-in-out infinite;
 }
 
-.jfmod-searchGlyph-seg--ok {
-    stroke: #43a047;
+// Each segment is its indexer's colour (P4.FU25, user 2026-10-25), so the ring, the Sources dot and the checklist speak one colour
+// language; the state is opacity: waiting faint, asking pulsing, answered (with rows or none) full, and a failure red. Until the
+// first progress names the indexers, the four stand-in segments are the asking blue.
+.jfmod-searchGlyph-seg--known {
+    stroke: var(--jfmod-ix);
+}
+
+.jfmod-searchGlyph-seg--ok,
+.jfmod-searchGlyph-seg--none {
     opacity: 1;
     animation: none;
 }
@@ -878,13 +885,11 @@
     animation: jfmod-searchAsk 1.2s ease-in-out infinite;
 }
 
-.jfmod-searchGlyph-seg--waiting {
-    stroke: #a9ddf3;
-    opacity: 1;
-    animation: none;
+.jfmod-searchGlyph-seg--asking.jfmod-searchGlyph-seg--known {
+    stroke: var(--jfmod-ix);
 }
 
-.jfmod-searchGlyph-seg--none {
+.jfmod-searchGlyph-seg--waiting {
     opacity: 0.3;
     animation: none;
 }
@@ -902,7 +907,7 @@
 @keyframes jfmod-searchAsk {
     0%,
     100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    50% { opacity: 0.45; }
 }
 
 .jfmod-searchCaption {
@@ -925,13 +930,14 @@
     line-height: 1.7;
 }
 
+// The line's dot is its indexer's colour, as its segment is (P4.FU25): faint while waiting, blinking while asked, full once it
+// answered, red when it failed.
 .jfmod-searchIndexer-dot {
     width: 0.55em;
     height: 0.55em;
     margin-right: 0.5em;
     border-radius: 50%;
-    background: currentColor;
-    opacity: 0.5;
+    background: var(--jfmod-ix, currentColor);
 }
 
 .jfmod-searchIndexer-name {
@@ -940,22 +946,14 @@
 }
 
 .jfmod-searchIndexer--asking .jfmod-searchIndexer-dot {
-    background: #00a4dc;
-    opacity: 1;
     animation: jfmod-searchBlink 1s ease-in-out infinite;
 }
 .jfmod-searchIndexer--waiting .jfmod-searchIndexer-dot { opacity: 0.3; }
 
-.jfmod-searchIndexer--ok .jfmod-searchIndexer-dot {
-    background: #81c784;
-    opacity: 1;
-}
 .jfmod-searchIndexer--ok .jfmod-searchIndexer-state { color: #81c784; }
-.jfmod-searchIndexer--none .jfmod-searchIndexer-dot { opacity: 0.35; }
 
 .jfmod-searchIndexer--failed .jfmod-searchIndexer-dot {
     background: #ff7b72;
-    opacity: 1;
 }
 .jfmod-searchIndexer--failed .jfmod-searchIndexer-state { color: #ff7b72; }
 
@@ -1018,10 +1016,6 @@
 
     .jfmod-grabStatus--error {
         border-left-color: #c62828;
-    }
-
-    .jfmod-searchIndexer--ok .jfmod-searchIndexer-dot {
-        background: #2e7d32;
     }
 
     .jfmod-searchIndexer--failed .jfmod-searchIndexer-dot {
@@ -1151,6 +1145,15 @@
                 display: none;
             }
         }
+    }
+
+    // Sources (P4.FU25) is first of the icons, so it takes the gap after the title.
+    .jfmod-sourcesSlot {
+        margin-left: auto;
+    }
+
+    .jfmod-sourcesSlot + .jfmod-namesToggle {
+        margin-left: 0.1em;
     }
 
     // Open Transmission, between Show Names and Close (user, 2026-10-12): a link drawn as the same round grey button, hidden

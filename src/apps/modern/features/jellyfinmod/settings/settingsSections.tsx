@@ -13,6 +13,8 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { indexerColour } from '../constants/indexerColours';
+
 import { FoundInProwlarr, type ProwlarrClient } from './FoundInProwlarr';
 import {
     blockerSentence, BLOCKER_SECTIONS, CONFLICT_MESSAGE, type ConnectionTest, type Overview, partialSave, PAUSE_SENTENCES, pathSentence, problemText, request,
@@ -1175,7 +1177,9 @@ const IndexerRow: FC<IndexerRowProps> = ({ api, indexer, busy, test, run, ask, o
     return (
         <div className='jfmod-brow' data-indexer={indexer.id}>
             <div className='jfmod-brow-main'>
-                <strong>{indexer.name}</strong>
+                {/* The indexer's colour in the release picker, read-only (P4.FU25, guides/indexer-colour.md). */}
+                <strong><span className='jfmod-indexerColour' title='Colour in the release picker'
+                    style={{ background: indexerColour(indexer.colorIndex) }} />{indexer.name}</strong>
                 <span className='jfmod-sub'>
                     {indexer.managedBy === 'prowlarr' ? 'Synced from Prowlarr · ' : ''}priority {indexer.priority}
                     {indexer.lastError ? ` · last error ${indexer.lastError}` : ''}

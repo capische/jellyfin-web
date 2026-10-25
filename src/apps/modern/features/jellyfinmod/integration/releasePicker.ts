@@ -150,6 +150,8 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     // through the dialog helper (user, 2026-10-08).
     dlg.innerHTML = '<div class="formDialogHeader">'
         + '<h3 class="formDialogHeaderTitle"></h3>'
+        // Sources (P4.FU25): first of the title row's icons; the picker draws its icon and checklist here.
+        + '<span class="jfmod-sourcesSlot"></span>'
         + '<button is="paper-icon-button-light" type="button" class="autoSize jfmod-releaseAction jfmod-namesToggle"'
         + ' title="Show Names" aria-label="Show Names" aria-pressed="false">'
         + namesToggleGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</button>'
@@ -185,6 +187,7 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         episodePage: options.episodePage,
         seasonPage: options.seasonNumber,
         intent: options.intent,
+        sourcesSlot: dlg.querySelector<HTMLElement>('.jfmod-sourcesSlot') ?? undefined,
         loadEpisodes: options.mediaType === 'series' && options.episodeListLoaded === false ?
             () => loadEpisodeList(options.api, options.entryId).then(detail => pickerEpisodes(detail.episodes)) : undefined,
         onChanged: options.onChanged

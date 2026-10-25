@@ -1,10 +1,13 @@
 import classNames from 'classnames';
-import React, { type FC } from 'react';
+import React, { type CSSProperties, type FC } from 'react';
+
+import { indexerColour } from '../constants/indexerColours';
 
 /**
  * The search block (release picker redesign, 2026-10-10; docs/jellyfinmod/design/release-picker-searching.md): the G2 torrent
- * ring, a caption and one line per indexer. The ring has a segment per indexer; with the plugin's progress each segment takes
- * its indexer's colour. Nothing in it is focusable, and the glyph is hidden from screen readers: the status line above says
+ * ring, a caption and one line per indexer. The ring has a segment per indexer in the indexer's own colour (P4.FU25, user
+ * 2026-10-25), its state shown by opacity (waiting faint, asking pulsing, answered full) and a failure in red; each line's dot
+ * matches its segment. Nothing in it is focusable, and the glyph is hidden from screen readers: the status line above says
  * the start and the end once.
  */
 
@@ -15,7 +18,12 @@ export interface SearchLine {
     name: string;
     kind: SearchLineKind;
     text: string;
+    /** The indexer's colour index (P4.FU25); absent from older plugins, where the first colour stands in. */
+    colorIndex?: number;
 }
+
+/** The indexer's colour, for its segment and its line's dot. */
+const hue = (colorIndex: number | undefined): CSSProperties => ({ ['--jfmod-ix' as string]: indexerColour(colorIndex) });
 
 export type SearchBlockMode = 'searching' | 'quiet' | 'error';
 
@@ -39,7 +47,7 @@ const segmentPath = (index: number, count: number) => {
 };
 
 // Until the first line is known the ring holds four segments, all asking.
-const UNKNOWN: Array<{ id: string; kind: SearchLineKind }> = ['a', 'b', 'c', 'd'].map(id => ({ id, kind: 'asking' }));
+const UNKNOWN: Array<{ id: string; kind: SearchLineKind; colorIndex?: number }> = ['a', 'b', 'c', 'd'].map(id => ({ id, kind: 'asking' }));
 
 const SearchGlyph: FC<{ lines: SearchLine[] }> = ({ lines }) => {
     // Until any indexer has answered the whole ring is asking, so it reads as one search in progress (waiting shows once one has).
@@ -48,8 +56,9 @@ const SearchGlyph: FC<{ lines: SearchLine[] }> = ({ lines }) => {
     return <svg className='jfmod-searchGlyph' viewBox='0 0 48 48' fill='none' stroke='currentColor' strokeWidth='3.2'
         strokeLinecap='round' aria-hidden='true' focusable='false'>
         <g className='jfmod-searchGlyph-segs'>
-            {segments.map(({ id, kind }, index) => <path key={id} className={'jfmod-searchGlyph-seg jfmod-searchGlyph-seg--' + kind}
-                d={segmentPath(index, segments.length)} style={{ animationDelay: (index * 0.2).toFixed(2) + 's' }} />)}
+            {segments.map(({ id, kind, colorIndex }, index) => <path key={id}
+                className={classNames('jfmod-searchGlyph-seg jfmod-searchGlyph-seg--' + kind, { 'jfmod-searchGlyph-seg--known': lines.length > 0 })}
+                d={segmentPath(index, segments.length)} style={{ ...hue(colorIndex), animationDelay: (index * 0.2).toFixed(2) + 's' }} />)}
         </g>
         <g><path d='M24 15.5V32' /><path d='M18.3 26.3L24 32L29.7 26.3' /></g>
     </svg>;
@@ -70,7 +79,7 @@ export const SearchBlock: FC<SearchBlockProps> = ({ mode, caption, lines, over }
         {/* The lines change silently; the status line above says the end once. */}
         <ul className='jfmod-searchIndexers' aria-live='off'>
             {lines.map(line => <li key={line.id} className={'jfmod-searchIndexer jfmod-searchIndexer--' + line.kind}>
-                <span className='jfmod-searchIndexer-dot' />
+                <span className='jfmod-searchIndexer-dot' style={hue(line.colorIndex)} />
                 <span className='jfmod-searchIndexer-name'>{line.name}</span>
                 <span className='jfmod-searchIndexer-state'>{line.text}</span>
             </li>)}

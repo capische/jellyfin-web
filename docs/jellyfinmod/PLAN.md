@@ -1568,6 +1568,21 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   live region; a focused Rejected toggle is kept in place), and the fix delta approved; Phase 4 and the affected browser runs
   re-passed. The waiting names use `#0277bd` on the light theme (4.8:1 on white; user 2026-10-25). Room is left for the Sources control
   in the title row (a later task).
+  **P4.FU25, built (not accepted) 2026-10-25: the release picker's Sources and each indexer's colour** (user-approved design,
+  2026-10-25, finished state F1, and the searching ring recoloured the same day; design note
+  [release-picker-source-filter.md](design/release-picker-source-filter.md) Revisions 2, 5 and 5b, mockup
+  [release-picker-sources-dot.html](design/release-picker-sources-dot.html); [UX.md](UX.md) §9;
+  [guides/release-picker-sources.md](design/guides/release-picker-sources.md), [guides/indexer-colour.md](design/guides/indexer-colour.md)).
+  Owner: Phase 4 (the picker and its search). Plugin: `AcquisitionIndexer.ColorIndex` (migration `IndexerColours`, forward-only:
+  the indexers already there get the palette in priority-then-name order), given on first save as the least used of eight and
+  kept; returned in `GET /Settings/Indexers`, every search's and progress line's `indexers[]` and each candidate
+  (`indexerColorIndex`); `GET /Releases` takes optional repeated `indexerIds` and asks only those enabled indexers (409
+  `no_chosen_indexers` when none is). Web: the funnel icon first in the title row with its corner dot and the train, the checklist
+  (untick hides, tick-in asks alone and merges, new searches ask the ticked, remembered per browser), the status line's
+  `N of M sources`, the ring's segments and lines in indexer colours, the colour before each indexer's name in both settings
+  pages. Phase 4 checks the colours across adds, a removal, a wrap and a restart, and that `indexerIds` asks only those
+  indexers. Branches `feat/picker-sources` in both repositories from `main-stubs`; not yet on `main-items`. Not in it: the
+  items line, the phone, TV and light-theme passes, real Chrome, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);

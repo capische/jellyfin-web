@@ -1,0 +1,189 @@
+// The release picker's Sources (P4.FU25, approved 2026-10-25; design/guides/release-picker-sources.md, the mockup
+// design/release-picker-sources-dot.html): the icon's corner dot, the train that circles it while indexers are asked, and the
+// checklist of indexers in their colours. Transform and opacity only.
+
+.jfmod-sourcesSlot {
+    display: inline-flex;
+}
+
+// The corner dot: grey while some sources are unticked and nothing runs, the last indexer's colour once a search is over, red
+// when one failed.
+.jfmod-srcDot {
+    position: absolute;
+    top: 0.4em;
+    right: 0.35em;
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: var(--jfmod-src, var(--jfmod-sec, rgba(255, 255, 255, 0.7)));
+    pointer-events: none;
+    animation: jfmod-srcRest 0.45s ease-out;
+}
+
+.jfmod-srcDot--failed {
+    background: #e53935;
+}
+
+// Reduced motion only: a still blue dot while searching, in place of the train.
+.jfmod-srcDot--searching {
+    display: none;
+    background: #00a4dc;
+    animation: none;
+}
+
+@keyframes jfmod-srcRest {
+    from {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+}
+
+// The train: a carrier turning once per 1.2 s around the icon's centre; each car sits on the circle at its own angle, the lead at
+// the top. A follower that finishes turns to the lead's angle and fades into it.
+.jfmod-srcTrain {
+    position: absolute;
+    top: 0.15em;
+    right: 0.15em;
+    bottom: 0.15em;
+    left: 0.15em;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: jfmod-srcOrbit 1.2s linear infinite;
+}
+
+.jfmod-srcCar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transition: transform 0.45s ease-in-out, opacity 0.45s ease-in;
+
+    i {
+        position: absolute;
+        top: -0.25em;
+        left: 50%;
+        width: 0.5em;
+        height: 0.5em;
+        margin-left: -0.25em;
+        border-radius: 50%;
+        background: var(--jfmod-src, var(--jfmod-sec, rgba(255, 255, 255, 0.7)));
+    }
+}
+
+.jfmod-srcCar--lead {
+    z-index: 1;
+
+    i {
+        transition: background-color 0.2s linear;
+    }
+}
+
+.jfmod-srcCar--merging {
+    opacity: 0;
+}
+
+@keyframes jfmod-srcOrbit {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-srcTrain {
+        display: none;
+    }
+
+    .jfmod-srcDot--searching {
+        display: block;
+    }
+
+    .jfmod-srcDot {
+        animation: none;
+    }
+}
+
+// The checklist: one line per indexer, the checkbox in its colour (filled when ticked, outlined when not, a dark tick on the two
+// light hues), the name in the text colour, the state at the right in the secondary colour.
+.MuiPopover-root.jfmod-sourcesMenu {
+    z-index: 1000000;
+}
+
+.jfmod-sourcesMenu .MuiPaper-root {
+    min-width: 19em;
+}
+
+.jfmod-sourcesMenu .jfmod-sourcesMenu-phone {
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+}
+
+.jfmod-sourceItem.MuiMenuItem-root {
+    display: flex;
+    align-items: center;
+    padding: 0.45em 0.9em;
+}
+
+.jfmod-sourceItem[aria-disabled='true'] {
+    cursor: default;
+}
+
+.jfmod-sourceCheck {
+    position: relative;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 1.15em;
+    height: 1.15em;
+    margin-right: 0.75em;
+    border: 0.14em solid var(--jfmod-src);
+    border-radius: 0.25em;
+    background: var(--jfmod-src);
+
+    // The tick, drawn with two borders.
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0.18em;
+        left: 0.2em;
+        width: 0.55em;
+        height: 0.3em;
+        border-bottom: 0.14em solid var(--jfmod-tick, #fff);
+        border-left: 0.14em solid var(--jfmod-tick, #fff);
+        transform: rotate(-45deg);
+    }
+}
+
+.jfmod-sourceItem--off .jfmod-sourceCheck {
+    background: transparent;
+
+    &::after {
+        display: none;
+    }
+}
+
+.jfmod-sourceName {
+    flex: 1 1 auto;
+    font-weight: 600;
+}
+
+.jfmod-sourceItem--off .jfmod-sourceName {
+    opacity: 0.6;
+}
+
+.jfmod-sourceState {
+    margin-left: 0.8em;
+    font-size: 90%;
+    white-space: nowrap;
+    opacity: 0.7;
+}
+
+.jfmod-sourceState--bad {
+    color: #ff7b72;
+    opacity: 1;
+}
+
+[data-theme='light'] .jfmod-sourceState--bad {
+    color: #c62828;
+}
