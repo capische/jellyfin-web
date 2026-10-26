@@ -176,8 +176,12 @@
 }
 
 .jfmod-sourceState {
+    // A fixed minimum width, so the menu (anchored at its right edge) keeps its size when "asking…" turns into "12 releases ·
+    // 37 rejected" and does not shift left under the pointer (user, 2026-10-26).
+    min-width: 11.5em;
     margin-left: 0.8em;
     font-size: 90%;
+    text-align: right;
     white-space: nowrap;
     opacity: 0.7;
 }

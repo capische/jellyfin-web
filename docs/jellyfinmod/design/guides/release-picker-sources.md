@@ -40,7 +40,8 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   - the **checkbox in the indexer's colour** (`.jfmod-sourceCheck`, 1.15em, border .14em, radius .25em): filled with a tick when
     ticked (a dark tick on the two light hues, centred in the box), outlined in the colour when not;
   - the **name** in the text colour at 600 (60 % when unticked);
-  - the **state** at the right in the secondary colour, 90 %: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
+  - the **state** at the right in the secondary colour, 90 %, right-aligned in a column at least 11.5em wide so the menu keeps its
+    width while states change: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
     `failed · timed out` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked
     by this search). A failure is a short lower-case reason after `failed · ` (`timed out`, `unavailable`, `rate limited`,
     `login refused`, `cannot search this`, `bad answer`, …; 2026-10-26: never the plugin's full sentence).
