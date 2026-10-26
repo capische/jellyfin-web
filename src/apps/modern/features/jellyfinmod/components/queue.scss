@@ -171,6 +171,20 @@
     }
 }
 
+// The computer's disc without a client link (failed, blocked, an ordinary user's): a keyboard stop for its tooltip, the same cyan
+// ring as the phone's button and a linked disc, for the keyboard only (Codex final review, 2026-10-26).
+.jfmod-queueStateFocus {
+    border-radius: 50%;
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+}
+
 // The computer's tooltip above the disc: one fact per line.
 .jfmod-queueTipLine {
     display: block;

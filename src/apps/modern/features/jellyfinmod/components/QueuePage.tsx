@@ -235,8 +235,11 @@ const StateCell: FC<{ row: QueueRow; text: RowText; layout: QueueLayout; onInfo:
             <DownloadStateMark progress={progress} size='row' title={name} hostTip />
         </button>;
     }
+    // Every disc is a keyboard stop on the computer, so its tip shows on focus as on hover (Codex final review, 2026-10-26): a linked
+    // disc is one itself (Enter opens the client), any other one through its wrapper.
     return <Tooltip placement='top' title={<>{tooltipLines(tip, link).map(line => <span key={line} className='jfmod-queueTipLine'>{line}</span>)}</>}>
-        <span className='jfmod-queueState jfmod-queueState--disc'>
+        <span className={classNames('jfmod-queueState jfmod-queueState--disc', { 'jfmod-queueStateFocus': !link })}
+            tabIndex={link ? undefined : 0}>
             <DownloadStateMark progress={progress} size='row' title={name} link={link} hostTip />
         </span>
     </Tooltip>;
