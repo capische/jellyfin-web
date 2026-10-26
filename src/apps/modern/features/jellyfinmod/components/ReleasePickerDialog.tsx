@@ -1643,7 +1643,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
 
     return <div className={classNames('jfmod-releasePicker', { 'jfmod-releasePicker--holding': !!added })} ref={container}>
         {sourcesSlot && <ReleaseSources slot={sourcesSlot} lines={sourceLines} onToggle={toggleSource}
-            searching={sourcesSearching} train={train} showing={!!search.data} generation={progressKey ?? ''} />}
+            searching={sourcesSearching} train={train} showing={!!data} />}
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
         <div className='jfmod-releaseControls'>
