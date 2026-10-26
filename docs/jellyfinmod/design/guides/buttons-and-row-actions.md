@@ -54,6 +54,29 @@ title line, and sentence case in the picker). Built in P4.FU27 (built, not accep
 - The link's address is the plugin's (`slowSetupHowTo` in `GET /Settings/Indexers`, one constant `ProwlarrSync.SlowSetupHowTo`).
   The picker's checklist shows the same warning as a link of its own: [release-picker-sources.md](release-picker-sources.md).
 
+## Removing a download: the two confirmations
+
+**Status:** approved 2026-10-26 (user: the three texts of `reviews/queue-remove-delete/` in the workspace, and "the
+confirmation's Remove button red"). Built on `feat/remove-delete-files` (P5.I7/I8, built, not accepted). Code:
+`integration/queueActions.ts` (`confirmQueueRemoval`, `confirmTorrentRemoval`), `queue.scss`, `releasePicker.scss`.
+
+- **Remove from Queue** (the Queue page's row menu): the stock form dialog, Remove red and full width in its footer; stock
+  `emby-checkbox` options with sentence-case labels and a description each.
+  - Not imported yet (`queued`, `downloading`, `stalled`, `failed`): *Also remove it from the download client* — "The client
+    forgets the torrent." Under it, indented **2.2em** (its label lines up with the client option's label) and shown only
+    while the client option is ticked: *Delete the downloaded files*, ticked by default — "What this torrent downloaded so
+    far. Library files are never touched." Hidden, its tick is not sent. Then *Blocklist this release* — "Later release
+    searches reject it."
+  - Imported or seeding (every other state): no delete option. The client option reads "The client forgets the torrent and
+    stops seeding. The seeding copy stays on disk; library files are never touched."
+- **Remove the Torrent** (the picker's added-row X and a missing episode's *Cancel Download*): the stock confirm, Cancel and
+  a red Remove — "Remove this torrent from the download queue? The download stops, the torrent leaves the client and the
+  files it downloaded are deleted. Files already in your library are not touched." and the release name under it
+  (`.jfmod-confirmName`). It always deletes the files; the plugin refuses (`delete_not_allowed`, its sentence shown) when
+  part of the download is already in the library.
+- **Both Removes stay red under the pointer** (`background: var(--jf-palette-error-main)` on hover; the stock `.raised:hover`
+  would turn them grey). Keyboard and TV focus keep the stock focus colour, as every button does.
+
 ## Do not
 
 - Put a text button inside a list row, or a labelled button where a row icon is the pattern.

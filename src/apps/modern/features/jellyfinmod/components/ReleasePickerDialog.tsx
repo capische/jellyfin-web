@@ -16,7 +16,7 @@ import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, 
 import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
-import { confirmTorrentRemoval } from '../integration/queueActions';
+import { confirmTorrentRemoval, TORRENT_REMOVAL } from '../integration/queueActions';
 import { profileSummary } from '../settings/qualityProfiles';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 import type { QueueRow } from '../types/queue';
@@ -1123,8 +1123,8 @@ const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirmin
         confirmTorrentRemoval(live.releaseTitle).then(() => {
             setRemoving(true);
             setRemoveError('');
-            // The queue page's torrent-only removal: the client forgets the torrent, its files stay on disk, nothing is blocklisted.
-            return removeQueueRow(api, queueRowId, { removeFromClient: true, blocklist: false }).then(() => {
+            // The torrent removal: the client forgets the torrent and deletes what it downloaded, nothing is blocklisted.
+            return removeQueueRow(api, queueRowId, TORRENT_REMOVAL).then(() => {
                 release(id);
                 clear();
                 onChanged?.();
