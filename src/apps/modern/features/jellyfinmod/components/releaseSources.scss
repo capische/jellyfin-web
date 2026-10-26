@@ -217,6 +217,12 @@
     font-size: inherit;
 }
 
+// The computer's keyboard focus on the (i) (Right from its line): the cyan ring of the picker's round buttons. The TV's own ring
+// below wins there.
+.jfmod-sourceItem .jfmod-infoButton.MuiIconButton-root:focus-visible {
+    box-shadow: 0 0 0 0.15em #00a4dc;
+}
+
 // The tooltip sits over the checklist, which sits over upstream's dialog layer.
 .MuiTooltip-popper.jfmod-infoTipPopper {
     z-index: 1000001;
