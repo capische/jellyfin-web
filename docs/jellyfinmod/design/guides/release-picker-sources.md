@@ -51,8 +51,10 @@ Code: `components/ReleaseSources.tsx` (`ReleaseSources`, `useTrain`), `component
   plugin's full message (`None of the configured categories is advertised by the indexer.`) in the MUI tooltip above the (i), or,
   when the plugin sent none (a timeout, or while the search still runs), the short reason (`timed out`, `unavailable`, `rate
   limited`, `login refused`, `cannot search this`, `bad answer`, …); a click, a tap or the TV's Enter opens the same text in the
-  info popover, titled with the indexer's name. A click on the (i) never toggles the line. On the TV, Enter on the line still only
-  toggles it, Right steps into the (i), Left back; on the focused line the (i) takes the line's ink. The line's `aria-description`
+  info popover, titled with the indexer's name. A click on the (i) never toggles the line. On the TV and the computer's keyboard
+  alike, Enter on the line still only toggles it, Right steps into the (i), Left back (the computer: Codex final review,
+  2026-10-26; the focused (i) shows its tooltip, Enter opens the popover, Escape returns to the (i)); on the TV's focused line the
+  (i) takes the line's ink. The line's `aria-description`
   is the same text.
 - **Slow setup** (approved 2026-10-25, P4.FU27; `reviews/prowlarr-slow-hint/` revision 3, casing A): an indexer on Prowlarr's slow
   default `1337x` definition reads `EN. 1337x ⚠ slow setup`, the label right after the name (`.jfmod-sourceSlow`, `margin-left

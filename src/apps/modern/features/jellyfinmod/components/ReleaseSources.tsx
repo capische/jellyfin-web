@@ -171,9 +171,34 @@ interface SourceItemProps {
 }
 
 /**
+ * The computer's keyboard on the (i) (Codex final review, 2026-10-26): Left goes back to its line, Up and Down move as its line
+ * does (the line takes focus first, so MUI's list moves from it), and its own keys never reach the list's type-ahead. The TV's
+ * `shell/dpadModals` moves the remote's focus itself.
+ */
+const infoKeys = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (layoutManager.tv) return;
+    const line = event.currentTarget.closest<HTMLElement>('.jfmod-sourceItem');
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        line?.focus();
+        if (event.key === 'ArrowLeft') event.preventDefault();
+        return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+};
+
+/** Right on a failed line steps into its (i) on the computer, as it does on the TV (Codex final review, 2026-10-26). */
+const lineKeys = (event: React.KeyboardEvent<HTMLLIElement>) => {
+    if (layoutManager.tv || event.key !== 'ArrowRight' || event.target !== event.currentTarget) return;
+    const info = event.currentTarget.querySelector<HTMLElement>('.jfmod-infoButton');
+    if (!info) return;
+    event.preventDefault();
+    info.focus();
+};
+
+/**
  * A failed line's (i), right after the name (approved 2026-10-26; guides/info-tip.md): the message in a tooltip above it on hover
- * (the computer), and a popover on a click, a tap or the remote's Enter. A click never toggles the line, and a pointer press leaves
- * focus on the line, so the keyboard's Enter still toggles it; on the TV it is a focus stop that Right reaches.
+ * or keyboard focus (the computer), and a popover on a click, a tap or Enter. A click never toggles the line, and a pointer press
+ * leaves focus on the line, so the keyboard's Enter still toggles it; Right reaches it from its line and Left goes back.
  */
 const FailureInfo: FC<{ line: SourceLine; onInfo: SourceItemProps['onInfo'] }> = ({ line, onInfo }) => {
     const message = line.failure ?? '';
@@ -188,7 +213,7 @@ const FailureInfo: FC<{ line: SourceLine; onInfo: SourceItemProps['onInfo'] }> =
         event.currentTarget.closest<HTMLElement>('.jfmod-sourceItem')?.focus();
     };
     const button = <IconButton className='jfmod-infoButton' aria-label={'Why ' + line.name + ' failed'} onClick={open}
-        onMouseDown={keepLineFocus} onTouchStart={event => event.stopPropagation()} disableRipple>
+        onMouseDown={keepLineFocus} onKeyDown={infoKeys} onTouchStart={event => event.stopPropagation()} disableRipple>
         <InfoOutlined className='jfmod-infoGlyph' aria-hidden='true' focusable='false' />
     </IconButton>;
     if (layoutManager.tv || layoutManager.mobile) return button;
@@ -207,7 +232,7 @@ const SourceItem: FC<SourceItemProps> = ({ line, last, onToggle, onInfo, autoFoc
     // eslint-disable-next-line jsx-a11y/role-supports-aria-props
     return <MenuItem role='menuitemcheckbox' aria-checked={line.ticked} aria-disabled={last || undefined}
         className={classNames('jfmod-sourceItem', { 'jfmod-sourceItem--off': !line.ticked })} data-jfmod-source={line.id}
-        title={last ? 'At least one source stays on' : undefined} onClick={toggle} tabIndex={tabIndex}
+        title={last ? 'At least one source stays on' : undefined} onClick={toggle} onKeyDown={failure ? lineKeys : undefined} tabIndex={tabIndex}
         aria-description={failure}
         // eslint-disable-next-line jsx-a11y/no-autofocus -- MUI's MenuList focuses its first item on opening through this prop
         autoFocus={autoFocus}>
