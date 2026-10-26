@@ -1664,6 +1664,15 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   or Left on any checklist line moves focus to the menu itself. **Not run:** a real TV or phone, the TV at 1280×720, the Pi.
   The fix delta's re-review: approve. Seen, not fixed:
   `.jfmod-refused .jfmod-checkdesc` and `.jfmod-secret-pending` draw `#f2b01e` text on the light theme (1.6:1).
+  **WR follow-up, built (not accepted) 2026-10-26: Add stays usable when the picker reopens on an active grab** (user report on
+  beta: "I've cancelled the download and clicked Get a Release - + is disabled"). Owner: the release picker's added row (WR). A
+  picker reopened while a grab is held or in the client follows that grab and found its row only by infohash; RuTracker rows
+  carry a torrent file, so the search has no infohash and every Add stayed off with no tick, no X and no reason. The added row
+  now falls back to the one row with the grab's title, indexer and size; when the followed grab has no row in the list (another
+  profile, an unticked source), the status line keeps "This title already has an active grab." and the grab's block stays. The
+  queue removal itself was correct. Web `fix/add-after-remove` `c7e280f846` `d3fb88282e`, plugin unchanged. Verified on local delta (Playwright Chromium, desktop: the
+  bug before, the added row with its X after, Add again after removal, Cancel in the hold, the no-row reason). **Not run:** mobile,
+  TV, real Chrome, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
