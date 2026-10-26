@@ -129,8 +129,6 @@ interface SourcesProps {
     train: TrainView;
     /** Results are on screen: the finished dot rests in the corner. */
     showing: boolean;
-    /** Names the search on screen; a change of the ticked sources after it ends puts the dot back to grey or none. */
-    generation: string;
 }
 
 /** The funnel: three lines, each shorter, as the design draws it. */
@@ -138,13 +136,14 @@ const FunnelGlyph = () => <svg className='jfmod-releaseGlyph' viewBox='0 0 24 24
     strokeLinecap='round' aria-hidden='true' focusable='false'><path d='M4 6h16M7 12h10M10 18h4' /></svg>;
 
 /**
- * The corner dot's state once nothing runs: the last indexer's colour (red when one failed) while the search's results are on
- * screen as it ended; once the ticked sources change, grey while some are unticked and none while all are.
+ * The corner dot's state once nothing runs: grey while some sources are unticked; with all ticked, the search's result while it
+ * is on screen, the last indexer's colour or red when one failed (user, 2026-10-26: unticking and ticking back brings it back).
  */
-const restingDot = (props: SourcesProps, narrowed: boolean, touched: boolean): { colour: string | null; kind: string } | null => {
+const restingDot = (props: SourcesProps, narrowed: boolean): { colour: string | null; kind: string } | null => {
     const { train, showing } = props;
-    if (showing && train.finished && !touched) return train.failed ? { colour: null, kind: 'failed' } : { colour: train.rest, kind: 'done' };
-    return narrowed ? { colour: null, kind: 'narrowed' } : null;
+    if (narrowed) return { colour: null, kind: 'narrowed' };
+    if (showing && train.finished) return train.failed ? { colour: null, kind: 'failed' } : { colour: train.rest, kind: 'done' };
+    return null;
 };
 
 interface SourceItemProps {
@@ -179,20 +178,14 @@ const SourceItem: FC<SourceItemProps> = ({ line, last, onToggle, autoFocus, tabI
  * under the title row.
  */
 export const ReleaseSources: FC<SourcesProps> = props => {
-    const { slot, lines, onToggle, searching, train, generation } = props;
+    const { slot, lines, onToggle, searching, train } = props;
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-    // The search whose finished dot a change of the ticked sources has put away.
-    const [touched, setTouched] = useState<string | null>(null);
-    const toggle = useCallback((id: string) => {
-        setTouched(generation);
-        onToggle(id);
-    }, [generation, onToggle]);
     const open = useCallback((event: React.MouseEvent<HTMLButtonElement>) => setAnchor(event.currentTarget), []);
     const close = useCallback(() => setAnchor(null), []);
     const ticked = lines.filter(line => line.ticked).length;
     const narrowed = lines.length > 0 && ticked < lines.length;
     const label = narrowed ? `Sources · ${ticked} of ${lines.length}` : 'Sources';
-    const rest = searching ? null : restingDot(props, narrowed, touched === generation);
+    const rest = searching ? null : restingDot(props, narrowed);
     const phone = layoutManager.mobile;
     const header = slot.closest('.formDialogHeader');
     const below = phone && header ? header.getBoundingClientRect().bottom : 0;
@@ -219,7 +212,7 @@ export const ReleaseSources: FC<SourcesProps> = props => {
                 anchorReference: 'anchorPosition' as const, anchorPosition: { top: below, left: 0 }, marginThreshold: 0
             } : { anchorOrigin: { vertical: 'bottom', horizontal: 'right' } as const,
                 transformOrigin: { vertical: 'top', horizontal: 'right' } as const })}>
-            {lines.map(line => <SourceItem key={line.id} line={line} last={line.ticked && ticked === 1} onToggle={toggle} />)}
+            {lines.map(line => <SourceItem key={line.id} line={line} last={line.ticked && ticked === 1} onToggle={onToggle} />)}
         </Menu>
     </>, slot);
 };
