@@ -6,6 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Tooltip from '@mui/material/Tooltip';
 import classNames from 'classnames';
 import React, { type FC, type FocusEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -17,11 +18,12 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    automationPausedText, downloadProgress, episodeCode, formatBytes, formatDuration, formatRate, packEpisodeProblems, progressPercent,
-    QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, seedingSummary, sortQueueRows, updatedAgo
+    automationPausedText, downloadProgress, episodeCode, formatBytes, formatDuration, formatRate, type MarkProgress, packEpisodeProblems,
+    progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, seedingFacts, seedProgress, sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
-import DownloadStateMark, { ringLink } from './DownloadStateMark';
+import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
+import InfoPopover from './InfoPopover';
 import { episodePath, seasonPath } from './MissingChildren';
 import { openQueueRowMenu, queueRowActions, runQueueRowAction } from '../integration/queueActions';
 import type { QueueList, QueueRow } from '../types/queue';
@@ -44,23 +46,6 @@ const freshnessOf = (row: QueueRow, generatedAt: string) => {
     return null;
 };
 
-/** The reason sentence for a blocked or failed import, or the seeding goals in words. */
-const detailOf = (row: QueueRow) => {
-    // A grab before the client has it (P4.FU10).
-    if (row.importState === 'held') return 'Waiting to be sent to the download client.';
-    if (row.importState === 'submitting') return 'Being sent to the download client.';
-    if (row.state === 'blocked' || row.state === 'failed') return reasonMessage(row.reason, row.message);
-    // A pack's own episodes that were skipped or need attention, while its torrent reads otherwise.
-    const episodes = packEpisodeProblems(row);
-    if (episodes) return episodes;
-    if (row.state !== 'seeding' || !row.seeding) return null;
-    const summary = seedingSummary(row.seeding);
-    let reason = row.seeding.reason;
-    if (!reason && !row.seeding.releaseEnabled) reason = 'seed_release_disabled';
-    const why = row.seeding.state === 'blocked' || !row.seeding.releaseEnabled ? reasonMessage(reason) : null;
-    return why ? summary + '. ' + why : summary;
-};
-
 const versionOf = (row: QueueRow) => {
     // A pack adding or replacing held files says so; one filling missing episodes needs no words.
     if (row.pack?.mode === 'add') return 'Added beside the files held';
@@ -79,12 +64,10 @@ const describeRow = (row: QueueRow, generatedAt: string) => {
         version: versionOf(row),
         percent: progressPercent(row.progress),
         freshness: freshnessOf(row, generatedAt),
-        detail: detailOf(row),
         state: QUEUE_STATE_LABEL[row.state] ?? row.state,
         size: downloaded && size && row.state !== 'seeding' ? downloaded + ' of ' + size : size,
         speed: transferring ? formatRate(row.downloadRateBytes) : null,
-        eta: transferring ? formatDuration(row.etaSeconds) : null,
-        problem: row.state === 'blocked' || row.state === 'failed'
+        eta: transferring ? formatDuration(row.etaSeconds) : null
     };
 };
 
@@ -172,20 +155,91 @@ const ClientName: FC<{ row: QueueRow; linked: boolean; className?: string }> = (
         title={'Open ' + client.name}>{client.name}</a></span>;
 };
 
+/** What a state disc says (P4.FU28): the state word, the figures after it, then one fact per line. */
+interface StateTip {
+    title: string;
+    /** After the title on the tooltip's first line (`Seeding · ratio 0.19 of 1.00`); the popover's first line, capitalised. */
+    summary: string | null;
+    lines: string[];
+    /** The summary only repeats the row's own figures (a download's percent, time and rate), so the TV's line leaves it out. */
+    figures: boolean;
+}
+
+const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** The tip of a row's disc: every detail the State column used to write beside it, worded once for the tooltip, popover and TV. */
+const stateTipOf = (row: QueueRow, progress: MarkProgress, text: RowText): StateTip => {
+    let tip: StateTip;
+    if (row.state === 'seeding') {
+        const facts = row.seeding ? seedingFacts(row.seeding) : { figures: null, lines: [] };
+        tip = { title: text.state, summary: facts.figures, lines: facts.lines, figures: false };
+    } else if (row.importState === 'held' || row.importState === 'submitting') {
+        // A grab before the client has it (P4.FU10).
+        tip = { title: QUEUE_STATE_LABEL.queued, figures: false, lines: [],
+            summary: row.importState === 'held' ? 'waiting to be sent to the download client' : 'being sent to the download client' };
+    } else if (row.state === 'blocked' || row.state === 'failed') {
+        tip = { title: text.state, summary: reasonMessage(row.reason, row.message), lines: [], figures: false };
+    } else if (progress.kind === 'importing') {
+        // The import's own step (Linking into the library) says more than the family's word.
+        tip = { title: text.state, summary: progress.stale ? 'last known' : null, lines: [], figures: true };
+    } else {
+        const split = progress.tooltip.indexOf(' · ');
+        tip = split < 0 ? { title: progress.tooltip, summary: null, lines: [], figures: true } :
+            { title: progress.tooltip.slice(0, split), summary: progress.tooltip.slice(split + 3), lines: [], figures: true };
+    }
+    // A pack's own episodes that were skipped or need attention, while its torrent reads otherwise.
+    return { ...tip, lines: [...tip.lines, ...packEpisodeProblems(row)] };
+};
+
+/** The tooltip's lines: `Seeding · ratio 0.19 of 1.00 · seeded 4 d of 7 d`, then the facts, then the client a click opens. */
+const tooltipLines = (tip: StateTip, link: DownloadMarkLink | null) => [tip.summary ? tip.title + ' · ' + tip.summary : tip.title,
+    ...tip.lines, ...(link ? ['Open ' + link.name] : [])];
+
+/** The popover's lines (the title is its heading). */
+const popoverLines = (tip: StateTip) => [...(tip.summary ? [capitalise(tip.summary)] : []), ...tip.lines];
+
+/** A row's disc and its tip: a seeding copy's or a download's (a failure is the red bang). */
+const rowDisc = (row: QueueRow, text: RowText) => {
+    const progress = row.state === 'seeding' ? seedProgress(row.seeding) : downloadProgress(row);
+    const tip = stateTipOf(row, progress, text);
+    return { progress, tip, link: ringLink([row], progress) };
+};
+
+/** The phone's popover for one row's disc: the row it is for and the disc that opened it. */
+interface StateInfo {
+    id: string;
+    anchor: HTMLElement;
+}
+
 /**
- * The state: the download disc in place of the word while the row is a download (P4.FU6), its tooltip the state and figure;
- * a seeding copy keeps its word. The reason or the seeding goals follow.
+ * The State column: the disc alone, every detail in its tip (P4.FU28, user-approved 2026-10-26). The computer shows the tip in a
+ * tooltip above the disc, and an administrator's click opens the client (now for a seeding copy too); the phone's tap opens the
+ * popover (state, facts, "Open <client>"), never the client directly; the TV row is one button, so its details stay a line under
+ * the disc.
  */
-const StateLines: FC<{ row: QueueRow; text: RowText }> = ({ row, text }) => {
-    const progress = row.state === 'seeding' ? null : downloadProgress(row);
-    // The import's own step (Linking into the library) and Blocked say more than the family's words; the reason follows.
-    const title = progress?.kind === 'importing' || row.state === 'blocked' ? text.state : progress?.tooltip;
-    return <>
-        {progress ? <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={title}
-            link={ringLink([row], progress)} /></span> :
-            <span className={classNames('jfmod-queueState', { 'jfmod-queueState--problem': text.problem })}>{text.state}</span>}
-        {text.detail && <span className='jfmod-queueDetail'>{text.detail}</span>}
-    </>;
+const StateCell: FC<{ row: QueueRow; text: RowText; layout: QueueLayout; onInfo: (info: StateInfo) => void }> = ({ row, text, layout, onInfo }) => {
+    const { progress, tip, link } = rowDisc(row, text);
+    const lines = tooltipLines(tip, null);
+    const name = lines.join('. ');
+    const openInfo = useCallback((event: MouseEvent<HTMLButtonElement>) => onInfo({ id: row.id, anchor: event.currentTarget }), [onInfo, row.id]);
+    if (layout === 'tv') {
+        const detail = [...(tip.summary && !tip.figures ? [capitalise(tip.summary)] : []), ...tip.lines];
+        return <>
+            <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={name} /></span>
+            {detail.map(line => <span key={line} className='jfmod-queueDetail'>{line}</span>)}
+        </>;
+    }
+    if (layout === 'mobile') {
+        return <button type='button' className='jfmod-queueState jfmod-queueState--disc jfmod-queueStateButton' aria-haspopup='dialog'
+            aria-label={name} onClick={openInfo}>
+            <DownloadStateMark progress={progress} size='row' title={name} hostTip />
+        </button>;
+    }
+    return <Tooltip placement='top' title={<>{tooltipLines(tip, link).map(line => <span key={line} className='jfmod-queueTipLine'>{line}</span>)}</>}>
+        <span className='jfmod-queueState jfmod-queueState--disc'>
+            <DownloadStateMark progress={progress} size='row' title={name} link={link} hostTip />
+        </span>
+    </Tooltip>;
 };
 
 const metaLine = (text: RowText) => [text.size, text.speed, text.eta ? text.eta + ' left' : null].filter(Boolean).join(' · ');
@@ -200,6 +254,9 @@ interface RowProps {
     /** The title's parts and the client are links (not inside the TV's row button). */
     linked: boolean;
     stale: boolean;
+    layout: QueueLayout;
+    /** The phone's tap on a disc. */
+    onInfo: (info: StateInfo) => void;
     onMenu: (row: QueueRow, target: HTMLElement) => void;
     /** An item chosen in the desktop popover. */
     onPick: (row: QueueRow, id: string, target: HTMLElement) => void;
@@ -254,27 +311,27 @@ const PopoverMenuButton: FC<{ row: QueueRow; title: string; isAdmin: boolean; on
     </>;
 };
 
-const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, onPick }) => <tr className='jfmod-queueTableRow'>
+const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, layout, onInfo, onPick }) => <tr className='jfmod-queueTableRow'>
     <td className='jfmod-queueCellThumb'><Thumb api={api} row={row} /></td>
     <td className='jfmod-queueCellTitle'><TitleLines row={row} text={text} serverId={serverId} linked={linked} /></td>
     <td className='jfmod-queueCellProgress'><ProgressBar text={text} stale={stale} /></td>
     <td className='jfmod-queueCellNumber'>{text.size ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.speed ?? '—'}</td>
     <td className='jfmod-queueCellNumber'>{text.eta ?? '—'}</td>
-    <td className='jfmod-queueCellState'><StateLines row={row} text={text} /></td>
+    <td className='jfmod-queueCellState'><StateCell row={row} text={text} layout={layout} onInfo={onInfo} /></td>
     {showClient && <td className='jfmod-queueCellClient'>{row.client ? <ClientName row={row} linked={linked} /> : '—'}</td>}
     {isAdmin && <td className='jfmod-queueCellMenu'>
         {queueRowActions(row, isAdmin).length > 0 && <PopoverMenuButton row={row} title={text.title} isAdmin={isAdmin} onPick={onPick} />}
     </td>}
 </tr>;
 
-const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu' | 'onPick'>> = ({ api, row, text, showClient, serverId, linked, stale }) => <>
+const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu' | 'onPick'>> = ({ api, row, text, showClient, serverId, linked, stale, layout, onInfo }) => <>
     <Thumb api={api} row={row} />
     <span className='jfmod-queueRowBody'>
         <TitleLines row={row} text={text} serverId={serverId} linked={linked} />
         <ProgressBar text={text} stale={stale} />
         {metaLine(text) && <span className='jfmod-queueMuted'>{metaLine(text)}</span>}
-        <StateLines row={row} text={text} />
+        <StateCell row={row} text={text} layout={layout} onInfo={onInfo} />
         {showClient && <ClientName row={row} linked={linked} className='jfmod-queueMuted' />}
     </span>
 </>;
@@ -359,6 +416,11 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     const onPick = useCallback((row: QueueRow, id: string, target: HTMLElement) => {
         void runQueueRowAction({ api, row, isAdmin, positionTo: target, onChanged }, id);
     }, [api, isAdmin, onChanged]);
+    // The phone's popover follows its row through polls and closes when the row leaves.
+    const [info, setInfo] = useState<StateInfo | null>(null);
+    const closeInfo = useCallback(() => setInfo(null), []);
+    const infoRow = info ? rows.find(row => row.id === info.id) : undefined;
+    const infoDisc = infoRow ? rowDisc(infoRow, describeRow(infoRow, list.generatedAt)) : null;
 
     // Once a removed row has left the list, focus its neighbour (or the empty-state link) if focus fell out with it,
     // so a D-pad user is never thrown to the top of the page.
@@ -386,7 +448,7 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
 
     const rowProps = (row: QueueRow): RowProps => ({
         api, row, text: describeRow(row, list.generatedAt), isAdmin, showClient, serverId, linked: layout !== 'tv',
-        stale: staleAll || row.state === 'unknown', onMenu, onPick
+        stale: staleAll || row.state === 'unknown', layout, onInfo: setInfo, onMenu, onPick
     });
     const seeding = rows.some(row => row.state === 'seeding');
     // Administrators only; an older plugin sends no automation block and the line stays away (P6.M8).
@@ -432,6 +494,9 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
             Automatic release of seeding copies is off.
         </p>}
         {body}
+        {layout === 'mobile' && <InfoPopover anchor={infoDisc ? info?.anchor ?? null : null} title={infoDisc?.tip.title ?? ''}
+            message={infoDisc ? popoverLines(infoDisc.tip) : []} link={infoDisc?.link} onClose={closeInfo}
+            row={info?.anchor.closest<HTMLElement>('.jfmod-queueRow')} />}
     </div>;
 };
 

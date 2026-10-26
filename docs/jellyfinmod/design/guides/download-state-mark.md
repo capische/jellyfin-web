@@ -8,11 +8,12 @@ session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i
 2026-10-19 (P4.FU16, the user's answers: "The buttons only (I believe you meant a ring)", "Administrators only"; built, not accepted),
 the season's total in its header 2026-10-22 and the series' 2026-10-24 (P4.FU21, "Season total is good too but apply new download
 state text", "keep B", "yes add series page total"; [design note](../season-total-download.md), artifact
-<https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>; built, not accepted).
+<https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>; built, not accepted), the seeding disc and the Queue page's discs-only State
+column with every detail in a tip 2026-10-26 (P4.FU28, "approve both"; workspace `reviews/queue-state-icons/`; built, not accepted).
 Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
-`components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`, `batchProgress`), `integration/downloadMarks.tsx`,
+`components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`, `batchProgress`, `seedProgress`, `seedingFacts`), `integration/downloadMarks.tsx`,
 `components/SeasonTotal.tsx` and `seasonTotal.scss` (the season header).
 
 ## What it is
@@ -50,6 +51,8 @@ SVG rotated −90° so the arc starts at the top. Everything in `em` (TV 125 %, 
 | importing | `--importing` | spinner arrow | **a 28 % segment** (`stroke-dasharray: 28 72`) turning | the arc turns once per 1.2 s, linear (`jfmod-dlmarkSpin`, −90° → 270°); glyph still. A full arc turning is invisible: the segment is the motion |
 | stalled | `--stalled` | pause | the percent at 55 % | — |
 | failed | `--failed` | bang | none | — ; replaces Not Downloaded's cloud on a row (never both) |
+| seeding | `--seeding` | the arrow turned up (`M12 20V7`, head at 7: sending, not receiving) | **how far to release**: the slower of its goals (ratio 0.19 of 1.00 and 4 d of 7 d → 19 %); full once the goals are met; empty with no seeding figures | none (seeding lasts days) |
+| releasing | `--releasing` | the up arrow | importing's turning 28 % segment | the arc turns as importing's |
 | not downloaded, unaired | file-state marks (`fileStateMark.scss`), same disc and ink | cloud + arrow; clock + short date | none | — |
 
 Arc value changes ease 0.35 s (`stroke-dashoffset`). `prefers-reduced-motion: reduce` stops the bob, the turn and the
@@ -64,7 +67,24 @@ easing. Motion is transform and opacity only.
 - **Rows:** the first round icon of the end slot, upstream's padding, nothing textual left of the icons. The figure goes on
   the meta line after the date (or, where the layout hides that line, as the row's last text line).
 - **Detail line** (`QueueStatusLine`): the 2.5em disc, then "In the download queue · 42% · 12 min left", then View queue.
-- **Queue page:** the disc in place of the state word; the row keeps its bar (the one place the bar is the content).
+- **Queue page:** the State column holds **only the disc**, every state's words in its tip (P4.FU28): a download's family, the
+  seeding disc for a seeding copy, the red bang for a blocked or failed import. The row keeps its bar (the one place the bar is
+  the content). **Computer:** the product's MUI tooltip **above** the disc (`placement="top"`, as the picker's (i)), one fact
+  per line (`.jfmod-queueTipLine`): `Seeding · ratio 0.19 of 1.00 · seeded 4 d of 7 d`, `Waiting for the ratio goal and the
+  seeding time goal`, and for an administrator's linked disc `Open Shared Transmission (VPN)`; the disc drops its native
+  tooltip (`hostTip`). **Phone:** the disc is a button (`.jfmod-queueStateButton`, the cyan ring for the keyboard only) whose tap
+  opens the [info tip's popover](info-tip.md): the state word as title, the facts (the first capitalised), and for an
+  administrator the `Open <client>` link; the tap never opens the client itself. **TV:** the row is one button whose Enter opens
+  the action sheet, so the disc is no stop; the facts stay as lines under it (`.jfmod-queueDetail`), all but a download's
+  figures, which the row already shows. What each state's tip says:
+
+  | State | Tip (first line, then one per line) |
+  | --- | --- |
+  | queued, downloading, stalled, importing, unknown | the disc's own tooltip as before (`Downloading · 42% · 12 min left · 3 MB/s`, `Stalled at 42%`, `Linking into the library`, `… · last known`) |
+  | held, submitting | `Queued · waiting to be sent to the download client` (`being sent …`) |
+  | blocked, failed | `Blocked · <the reason sentence>`; Retry stays in the row menu |
+  | seeding | `Seeding · ratio … of … · seeded … of …`; then what the release waits for (`Waiting for …`), `Releasing the seeding copy` or `Goal met`; then why it is kept (a blocked release's reason, or `Kept seeding: automatic release is off.` once the goals are met). "Seeding until its goal is met." is never shown: the waiting line says it |
+  | a pack with episode problems | the torrent's tip, then one line per episode (`S01E03: The pack holds no file for this episode.`) |
 - **Release picker, added row:** the disc takes the Add slot while the torrent downloads; the X stays; no bar.
 - **Episode page:** inside the download block ([download-block.md](download-block.md)); the still carries no mark.
 - **Season and series headers** (the native and the mod's season page, the native series page): the row-size mark (2.5em) as an
@@ -117,7 +137,7 @@ A ring that opens the client adds a second tooltip line, `Open <client name>` (`
 
 ## Interaction
 
-**For an administrator, a queued, downloading, importing or stalled ring opens the download client's web page** in a new tab
+**For an administrator, a queued, downloading, importing, stalled, seeding or releasing ring opens the download client's web page** in a new tab
 (`window.open(url, '_blank', 'noopener')`; P4.FU16, user 2026-10-19), wherever it is drawn: cards, rows, the detail line, the Queue
 page, the picker's added row and the download block. The link is the client's saved *Web interface link*, which the queue gives
 only to administrators (`client.openUrl` on `GET /JellyfinMod/Queue`; `ringLink`); with no saved link the ring stays as below. A
