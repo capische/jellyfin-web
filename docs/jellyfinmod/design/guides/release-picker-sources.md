@@ -3,7 +3,9 @@
 **Status:** approved 2026-10-25 (user: "Looks great, tell parent to implement", finished state F1; "yes, recolour the torrent ring
 too" the same day). Record: [release-picker-source-filter.md](../release-picker-source-filter.md) Revisions 2, 5 and 5b, the mockup
 [release-picker-sources-dot.html](../release-picker-sources-dot.html) (PNGs beside it), [UX.md §9](../../UX.md). Built in P4.FU25
-(built, not accepted). Code: `components/ReleaseSources.tsx` (`ReleaseSources`, `useTrain`), `components/releaseSources.scss`,
+(built, not accepted). The failure (i), the state `failed` and the status line without the sources part: approved 2026-10-26
+(user, revision 2 of `reviews/picker-failure-info/` in the workspace; "drop the sources part"), built on `feat/failure-info`.
+Code: `components/ReleaseSources.tsx` (`ReleaseSources`, `useTrain`), `components/releaseSources.scss`,
 `components/ReleasePickerDialog.tsx` (`useSources`, `useExtraSearches`, `useSourcesView`), `components/ReleaseSearchBlock.tsx`,
 `integration/releasePicker.ts` (`.jfmod-sourcesSlot`). Colours: [indexer-colour.md](indexer-colour.md).
 
@@ -42,9 +44,16 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   - the **name** in the text colour at 600 (60 % when unticked);
   - the **state** at the right in the secondary colour, 90 %, right-aligned in a column at least 11.5em wide so the menu keeps its
     width while states change: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
-    `failed · timed out` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked
-    by this search). A failure is a short lower-case reason after `failed · ` (`timed out`, `unavailable`, `rate limited`,
-    `login refused`, `cannot search this`, `bad answer`, …; 2026-10-26: never the plugin's full sentence).
+    `failed` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked by this
+    search). A failure reads just `failed`; its reason is behind the line's (i).
+- **The failure (i)** (2026-10-26; [info-tip.md](info-tip.md)): a failed line reads `EN. 0Magnet ⓘ` … `failed`, the (i) right after
+  the name and always before a slow-setup label (`EN. 1337x ⓘ ⚠ slow setup`), never after it. On a computer hover shows the
+  plugin's full message (`None of the configured categories is advertised by the indexer.`) in the MUI tooltip above the (i), or,
+  when the plugin sent none (a timeout, or while the search still runs), the short reason (`timed out`, `unavailable`, `rate
+  limited`, `login refused`, `cannot search this`, `bad answer`, …); a click, a tap or the TV's Enter opens the same text in the
+  info popover, titled with the indexer's name. A click on the (i) never toggles the line. On the TV, Enter on the line still only
+  toggles it, Right steps into the (i), Left back; on the focused line the (i) takes the line's ink. The line's `aria-description`
+  is the same text.
 - **Slow setup** (approved 2026-10-25, P4.FU27; `reviews/prowlarr-slow-hint/` revision 3, casing A): an indexer on Prowlarr's slow
   default `1337x` definition reads `EN. 1337x ⚠ slow setup`, the label right after the name (`.jfmod-sourceSlow`, `margin-left
   .6em`, 85 %, weight 600, the warning amber and glyph of [buttons-and-row-actions.md](buttons-and-row-actions.md) *A warning on a
@@ -71,9 +80,11 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 - Remembered per browser (`localStorage` `jfmod-releaseSourcesHidden`, the unticked ids, so a new indexer starts ticked), shared
   by Get a Release and Get Another Quality. The saved choice is read against the indexers enabled now: if it leaves none ticked
   (the ticked ones were turned off or removed), the first is ticked again, so a search never asks a source shown unticked.
-- **Status line:** `18 releases · 5 of 7 sources · 6 of 7 indexers answered` (rows shown · sources ticked, only while some are not
-  · the search's health); while rows arrive `12 releases so far · 5 of 7 sources · waiting for …` (an unticked indexer is not
-  waited for). The Rejected group's count follows the ticked sources; the red "Partial results" line is unchanged.
+- **Status line:** `18 releases · 6 of 7 indexers answered` (rows shown · the search's health); while rows arrive
+  `12 releases so far · waiting for …` (an unticked indexer is not waited for). It names no sources count (user, 2026-10-26: "drop
+  the sources part"): the grey dot says a filter is on. The Rejected group's count follows the ticked sources. There is **no red
+  "Partial results" line** (removed 2026-10-26): a failure shows in the status line's count, the red dot, the line's `failed` and
+  (i), and the searching ring's red segment.
 
 ## The searching ring and its lines
 
@@ -87,4 +98,5 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 ## Do not
 
 - Colour the funnel glyph, add a count badge, or move the state into text in the title row.
+- Bring back a failure banner or the reason at the right of a line; it lives behind the (i).
 - Cancel an indexer's search when it is unticked, or forget its rows.

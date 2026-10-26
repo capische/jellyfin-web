@@ -169,7 +169,7 @@ const outcomeLine = (outcome: IndexerOutcome, base: number): SearchLine => {
     const { name, colorIndex } = outcome;
     if (outcome.status === 'ok') return { id, name, colorIndex, kind: 'ok', text: releaseCount(outcome.resultCount) };
     if (outcome.status === 'no_results') return { id, name, colorIndex, kind: 'none', text: 'nothing' };
-    return { id, name, colorIndex, kind: 'failed', text: failureText(outcome.status, outcome.retryAfterSeconds, base) };
+    return { id, name, colorIndex, kind: 'failed', text: failureText(outcome.status, outcome.retryAfterSeconds, base), message: outcome.message };
 };
 
 /**
@@ -285,32 +285,31 @@ const STILL_ASKING = new Set(['queued', 'verifying', 'asking']);
  * The status line while a running search shows the rows so far (P4.FU24): `32 releases so far · waiting for RU. RuTracker.org,
  * UA. utp.to` with the indexers still asked in the asking light blue. Text only; the Sources control carries the progress.
  */
-const EarlyStatus: FC<{ count: number; progress: ReleaseProgress | null; notes: string; sources: string; hidden: ReadonlySet<string> }> =
-    ({ count, progress, notes, sources, hidden }) => {
+const EarlyStatus: FC<{ count: number; progress: ReleaseProgress | null; notes: string; hidden: ReadonlySet<string> }> =
+    ({ count, progress, notes, hidden }) => {
         // An unticked source's search goes on, but it is not waited for (P4.FU25).
         const asking = (progress?.indexers ?? []).filter(line => STILL_ASKING.has(line.state) && !hidden.has(line.indexerId))
             .map(line => line.name);
         return <>
-            {releaseCount(count)} so far{sources}
+            {releaseCount(count)} so far
             {asking.length > 0 && <> · waiting for <span className='jfmod-releaseStatus-asking'>{asking.join(', ')}</span></>}
             {notes && ' · ' + notes}
         </>;
     };
 
 /**
- * The finished status line. `search` carries the counts of the rows shown (the ticked sources'), and `sources` says how many sources
- * are ticked while some are not (` · 5 of 7 sources`, P4.FU25).
+ * The finished status line. `search` carries the counts of the rows shown (the ticked sources'); how many sources are ticked is the
+ * Sources icon's grey dot, not a part of this line (user, 2026-10-26).
  */
-const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null,
-    sources = '') => {
+const statusText = (search: ReleaseSearch | undefined, waiting: string, loading: boolean, error: string, unavailable: string | null) => {
     if (waiting) return waiting;
     // A search in progress shows its block; the status line only says it started, for screen readers.
     if (loading) return '';
     if (error) return error;
     if (!search) return '';
-    let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}` + sources;
+    let text = `${search.eligibleCount} ${search.eligibleCount === 1 ? 'release' : 'releases'}`;
     if (search.eligibleCount === 0) {
-        text = (search.rejectedCount === 0 ? unavailable ?? 'No releases found' : 'No release passes the profile') + sources;
+        text = search.rejectedCount === 0 ? unavailable ?? 'No releases found' : 'No release passes the profile';
     } else if (search.indexers.length > 0) {
         text += ` · ${answeredCount(search)} of ${search.indexers.length} indexers answered`;
     }
@@ -1393,7 +1392,8 @@ const sourceStateText = (line: SearchLine | undefined, ticked: boolean, rows: { 
         case 'waiting': return { state: hidden + 'waiting', bad: false };
         case 'asking': return { state: hidden + 'asking…', bad: false };
         case 'none': return { state: 'no results', bad: false };
-        case 'failed': return { state: 'failed · ' + line.text, bad: true };
+        // The reason is behind the line's (i): the plugin's message, or the short reason when it sent none (user, 2026-10-26).
+        case 'failed': return { state: 'failed', bad: true, failure: line.message || line.text };
         default:
             if (!ticked) return { state: hidden + releaseCount(rows.eligible + rows.rejected), bad: false };
             return { state: releaseCount(rows.eligible) + (rows.rejected ? ' · ' + rows.rejected + ' rejected' : ''), bad: false };
@@ -1443,7 +1443,6 @@ const useSourcesView = (input: SourcesViewInput) => {
     const rejected = candidates.filter(candidate => !candidate.eligible && shown(candidate));
     const list = sources.list.length > 0 ? sources.list :
         (data?.indexers ?? []).map(outcome => ({ id: outcome.indexerId, name: outcome.name, colorIndex: outcome.colorIndex }));
-    const ticked = list.filter(indexer => !hidden.has(indexer.id)).length;
     const states = sourceStates({ fetching: input.fetching, progress, final: input.final, extras, asked, list, now: input.now,
         startedAt: input.startedAt, receivedAt: input.receivedAt });
     const sourceLines: SourceLine[] = list.map(indexer => {
@@ -1466,7 +1465,6 @@ const useSourcesView = (input: SourcesViewInput) => {
     }, [ask, asked, extras, hidden, lastQuery, progressKey, toggle]);
     return {
         hidden, eligible, rejected, sourceLines, train, toggleSource,
-        sourcesNote: ticked < list.length ? ` · ${ticked} of ${list.length} sources` : '',
         shownSearch: data && { ...data, eligibleCount: eligible.length, rejectedCount: rejected.length },
         sourcesSearching: input.fetching || extras.some(extra => !extra.data && !extra.error)
     };
@@ -1607,19 +1605,17 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [defaultProfileId]);
 
     const searchError = search.error ? problemOf(search.error, 'Release search failed. Please try again.').title : '';
-    const { hidden, eligible, rejected, sourceLines, sourcesNote, shownSearch, train, sourcesSearching, toggleSource } = useSourcesView({
+    const { hidden, eligible, rejected, sourceLines, shownSearch, train, sourcesSearching, toggleSource } = useSourcesView({
         sources, data, extras, asked, ask, lastQuery, progressKey, held,
         fetching: search.isFetching, progress, final: search.data,
         now: progressNow, startedAt, receivedAt: search.dataUpdatedAt });
     // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
     // current rows can grab.
     const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || waitingForRows;
-    // Which indexers failed is said once the search is over, as today.
-    const failedIndexers = soFar ? [] : data?.indexers.filter(failed) ?? [];
     const unavailable = unavailableText(data, search.dataUpdatedAt);
     const notes = [grab.error, removeError].filter(Boolean).join(' · ');
-    const status: ReactNode = soFar ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} sources={sourcesNote} hidden={hidden} /> :
-        [statusText(shownSearch, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable, sourcesNote), notes]
+    const status: ReactNode = soFar ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} hidden={hidden} /> :
+        [statusText(shownSearch, waiting, search.isFetching && !data?.candidates.length, searchError, unavailable), notes]
             .filter(Boolean).join(' · ');
     const plans = new Map(data ? data.candidates.map(candidate => [candidate.releaseId,
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
@@ -1665,10 +1661,6 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             {spoken && <span className='jfmod-releaseStatus-spoken'>{spoken}</span>}
             {shown && <span aria-hidden={searching}>{shown}</span>}
         </p>
-        {failedIndexers.length > 0 && !bare && <p className='jfmod-releaseNotice'>
-            {unavailable ? '' : 'Partial results: '}
-            {failedIndexers.map(outcome => outcome.name + ' (' + (outcome.message ?? outcome.status) + ')').join('; ')}
-        </p>}
         {/* The grab's status stays in view for its whole hold, also when a changed search no longer lists the release it grabbed
             (whole-review chunk 4a, P2 4). */}
         {/* Only the list scrolls; everything above it stays put (P4.FU24). */}
