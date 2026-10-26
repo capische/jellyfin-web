@@ -413,9 +413,11 @@ its last value, the disc and figure dimmed.
   episode is on its way, gone when nothing is. An indicator for everyone: no button, no link, no focus or D-pad stop. Read from
   the page's shared queue query (`components/SeasonTotal.tsx`, `batchProgress`). The mod's page for a series with no Jellyfin item
   (raised buttons, no Favourite) has none.
-- **The Queue page:** the disc in place of each row's state word (its tooltip the state, the reason line under it); a seeding
-  copy keeps its word; the progress bar column stays. The State column is as wide as what it holds (the disc alone while a row
-  downloads), the room going to the title (user 2026-10-19).
+- **The Queue page:** the disc in place of each row's state word; the progress bar column stays. The State column holds only
+  discs, one disc wide, the room going to the title (user 2026-10-19). Since 2026-10-26 (P4.FU28, "approve both") a seeding copy
+  has its own disc (the arrow turned up, the arc how far to release by the slower goal) and every detail (the seeding goals, the
+  held line, a blocked or failed reason, a pack's episode problems) is in the disc's tip: a tooltip above it on the computer, the
+  info popover on a phone tap, a line under it on the TV ([guides/download-state-mark.md](design/guides/download-state-mark.md)).
 - **The release picker's added row:** the disc takes the Add slot while the torrent downloads (the green tick when the queue
   cannot be read; the in-library row once imported); the X stays; the figure stays at the right end of the marks line; no bar.
   The Add slot is no control there: no pointer, no veil, no growth under the mouse (P1.FU19); the X keeps its hover. An
@@ -1445,7 +1447,8 @@ the primary and an underline under the mouse and for the keyboard. On the TV the
 
 Actions, and only these: **Remove** (with sub-options *remove from client* and *blocklist this
 release*), Retry for a failed import, and the **link out to the client**: since 2026-10-19 the client's name in the Client
-column (and in a phone row) and the row's state disc are links to its web page, for administrators with a saved Web interface
+column (and in a phone row) and the row's state disc (on the computer; a seeding copy's too since P4.FU28, while a phone's tap
+opens the disc's popover with the link in it) are links to its web page, for administrators with a saved Web interface
 link, and the row menu has no Open in Client any more (it was administrators only; the TV, whose rows are buttons, has no link
 out). No pause, no resume, no priority, no per-file selection, no tracker editing. If you need those, you need qBittorrent, and
 it is one link away.

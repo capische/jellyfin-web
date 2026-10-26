@@ -198,14 +198,11 @@ export const packProblem = (importState: string | null, reason: string | null) =
 
 /**
  * A pack row's episodes that need attention while the torrent's own row reads otherwise: `S01E03: The pack holds no file
- * for this episode.` One sentence per episode, or null when none.
+ * for this episode.` One sentence per episode, none when every episode is fine.
  */
-export const packEpisodeProblems = (row: QueueRow): string | null => {
-    const problems = row.pack?.episodes.filter(episode => packProblem(episode.importState, episode.reason)) ?? [];
-    if (problems.length === 0) return null;
-    return problems.map(episode => episodeCode(episode.seasonNumber, episode.episodeNumber) + ': '
-        + (reasonMessage(episode.reason) ?? 'Something needs attention.')).join(' ');
-};
+export const packEpisodeProblems = (row: QueueRow): string[] => (row.pack?.episodes ?? [])
+    .filter(episode => packProblem(episode.importState, episode.reason))
+    .map(episode => episodeCode(episode.seasonNumber, episode.episodeNumber) + ': ' + (reasonMessage(episode.reason) ?? 'Something needs attention.'));
 
 const WAIT_WORDS: Record<SeedWaitReason, string> = {
     complete: 'the download to finish',
@@ -218,26 +215,42 @@ const joinWords = (words: string[]) => {
     return words.slice(0, -1).join(', ') + ' and ' + words[words.length - 1];
 };
 
-/** Ratio, time and what the release still waits for, in words (UX §13 rows are read from across the room). */
-export const seedingSummary = (seeding: QueueSeeding): string => {
+/** A seeding copy's ratio and time, each against its goal. */
+const seedingFigures = (seeding: QueueSeeding): string | null => {
     const parts: string[] = [];
     if (seeding.ratio !== null) {
-        parts.push('Ratio ' + seeding.ratio.toFixed(2) + (seeding.goalRatio !== null ? ' of ' + seeding.goalRatio.toFixed(2) : ''));
+        parts.push('ratio ' + seeding.ratio.toFixed(2) + (seeding.goalRatio !== null ? ' of ' + seeding.goalRatio.toFixed(2) : ''));
     }
     const seeded = formatDuration(seeding.seedingSeconds);
     if (seeded) {
         const goal = formatDuration(seeding.goalSeconds);
         parts.push('seeded ' + seeded + (goal ? ' of ' + goal : ''));
     }
+    return parts.length ? parts.join(' · ') : null;
+};
+
+/**
+ * A seeding copy in words (P4.FU28): its figures (`ratio 0.19 of 1.00 · seeded 4 d of 7 d`, lower-case, as they follow the state
+ * word) and one line each for what the release waits for and why it is kept. Goal-unmet is no reason of its own: the waiting
+ * line says it.
+ */
+export const seedingFacts = (seeding: QueueSeeding): { figures: string | null; lines: string[] } => {
+    const lines: string[] = [];
     if (seeding.state === 'removing') {
-        parts.push('releasing the seeding copy');
+        lines.push('Releasing the seeding copy');
     } else if (seeding.waitingFor.length > 0) {
-        parts.push('waiting for ' + joinWords(seeding.waitingFor.map(reason => WAIT_WORDS[reason] ?? reason)));
+        const words = joinWords(seeding.waitingFor.map(reason => WAIT_WORDS[reason] ?? reason));
+        lines.push('Waiting for ' + words);
     } else if (seeding.goalMetAt) {
-        parts.push('goal met');
+        lines.push('Goal met');
     }
-    const text = parts.join(' · ');
-    return text ? text.charAt(0).toUpperCase() + text.slice(1) : 'Seeding';
+    if (seeding.state === 'blocked' && seeding.reason !== 'seed_goal_unmet') {
+        const why = reasonMessage(seeding.reason);
+        if (why) lines.push(why);
+    } else if (!seeding.releaseEnabled && seeding.state !== 'removing' && seeding.waitingFor.length === 0) {
+        lines.push(reasonMessage('seed_release_disabled') ?? '');
+    }
+    return { figures: seedingFigures(seeding), lines };
 };
 
 /**
@@ -253,6 +266,14 @@ export interface DownloadProgress {
     /** Every disc's tooltip, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s`. */
     tooltip: string;
     stale: boolean;
+}
+
+/** The ring family's kinds beyond a download's (P4.FU28): a seeding copy (the up arrow, its arc how far to release) and its release. */
+export type MarkKind = DownloadProgress['kind'] | 'seeding' | 'releasing';
+
+/** What a disc draws: a download's look, or a seeding copy's (`seedProgress`). */
+export interface MarkProgress extends Omit<DownloadProgress, 'kind'> {
+    kind: MarkKind;
 }
 
 /** `12 min left`, `1 h 05 min left`. */
@@ -305,6 +326,26 @@ export const downloadProgress = (row: QueueRow | null, last: QueueRow | null = n
         return describeDownload('failed', percent, stale, { reason: shown.message ?? shown.reason ?? undefined });
     }
     return describeDownload('downloading', percent, stale, { eta: shown.etaSeconds, rate: stale ? null : shown.downloadRateBytes });
+};
+
+/**
+ * A seeding copy as a disc (P4.FU28, user-approved 2026-10-26): the arc is how far it is from release, by the slower of its goals
+ * (the copy is released only when every goal is met: ratio 0.19 of 1.00 and 4 d of 7 d is 19 %), full once the goals are met;
+ * releasing turns importing's segment. No figure without the plugin's seeding block.
+ */
+export const seedProgress = (seeding: QueueSeeding | null): MarkProgress => {
+    const figures = seeding ? seedingFacts(seeding).figures : null;
+    const tooltip = 'Seeding' + (figures ? ' · ' + figures : '');
+    if (seeding?.state === 'removing') return { kind: 'releasing', percent: null, text: 'Releasing', tooltip, stale: false };
+    let percent = 0;
+    if (seeding?.goalMetAt || (seeding && seeding.waitingFor.length === 0)) {
+        percent = 100;
+    } else if (seeding) {
+        const shares = [[seeding.ratio, seeding.goalRatio], [seeding.seedingSeconds, seeding.goalSeconds]]
+            .filter(([, goal]) => goal !== null && goal > 0).map(([value, goal]) => (value ?? 0) / (goal as number));
+        percent = shares.length ? Math.floor(Math.min(1, Math.max(0, Math.min(...shares))) * 100) : 0;
+    }
+    return { kind: 'seeding', percent, text: 'Seeding', tooltip, stale: false };
 };
 
 /** Something is on its way for the title: a card shows its bar and disc. Failed, blocked and seeding rows are not. */

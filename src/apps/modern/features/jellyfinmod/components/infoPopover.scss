@@ -35,3 +35,24 @@
     font-size: 92%;
     opacity: 0.86;
 }
+
+// One line per fact (the Queue page's state, P4.FU28), each its own paragraph.
+.jfmod-infoPopoverText + .jfmod-infoPopoverText {
+    margin-top: 0.35em;
+}
+
+// The administrator's "Open <client>": the primary, 600, at full strength; underlined under the pointer and for the keyboard.
+.jfmod-infoPopoverLinkLine {
+    opacity: 1;
+}
+
+.jfmod-infoPopoverLink {
+    color: #00a4dc;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus {
+        text-decoration: underline;
+    }
+}

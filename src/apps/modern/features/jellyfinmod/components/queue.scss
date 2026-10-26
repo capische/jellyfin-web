@@ -147,9 +147,33 @@
     display: block;
 }
 
-.jfmod-queueState--problem {
-    color: #c62828;
-    font-weight: 600;
+// The phone's disc is a button that opens its popover (P4.FU28): nothing drawn but the disc, the cyan ring for the keyboard only.
+.jfmod-queueStateButton {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        box-shadow: 0 0 0 0.15em #00a4dc;
+    }
+
+    .jfmod-dlmark {
+        cursor: inherit;
+    }
+}
+
+// The computer's tooltip above the disc: one fact per line.
+.jfmod-queueTipLine {
+    display: block;
 }
 
 .jfmod-queueDetail {
@@ -227,8 +251,7 @@
 }
 
 .jfmod-queueCellState {
-    // As wide as its content: the ring alone while the row downloads (the words are its tooltip), a seeding copy's or a
-    // failure's words otherwise (user, 2026-10-19: no empty room before Client).
+    // As wide as its content, one disc: every state's words are its tooltip (P4.FU28; user, 2026-10-19: no empty room before Client).
     width: auto;
 }
 
