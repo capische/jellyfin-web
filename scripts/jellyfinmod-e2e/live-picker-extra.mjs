@@ -53,9 +53,12 @@ for (const layout of layouts) {
         const top = await page.evaluate(() => window.jfmodRow?.getBoundingClientRect().top ?? null);
         await page.waitForTimeout(15000);
         const held = await page.evaluate(() => ({ same: document.activeElement === window.jfmodRow && window.jfmodRow.isConnected,
-            top: window.jfmodRow?.getBoundingClientRect().top ?? null, notice: document.querySelector('.jfmod-releaseNotice')?.textContent ?? null }));
+            top: window.jfmodRow?.getBoundingClientRect().top ?? null, status: document.querySelector('.jfmod-releaseStatus')?.textContent ?? null }));
+        // The partial result shows in the status line (the red "Partial results" line is gone, 2026-10-26; the reason is behind the
+        // Sources line's (i)).
+        const answered = /(\d{1,3}) of (\d{1,3}) indexers answered/.exec(held.status ?? '');
         record(label, 'A feed that answers late yields one partial result; the focused row keeps focus and position for 15 s',
-            held.same && held.top === top && /Partial results/.test(held.notice ?? ''), { top, ...held });
+            held.same && held.top === top && !!answered && Number(answered[1]) < Number(answered[2]), { top, ...held });
         control('/fault?service=torznab3&mode=ok');
 
         // Profile change: a new search in place, the dialog stays, the rows re-evaluate, the entry keeps its profile.

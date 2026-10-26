@@ -1352,8 +1352,9 @@ one has, its rows replace the block, ranked as the final list, and Add and Repla
 searching ring's asking blue `#74c9ec`, `#0277bd` on the light theme). A late indexer's rows slot into their ranked places with a primary left edge that
 fades over 2 s, no tint, so it never reads as the hover (user, 2026-10-25); the first rows of a search have no mark. Only the
 release list scrolls: the header, the choices, the notice and the status line stay at the top. The row under the pointer (once
-the pointer has moved over the list) or the focused row keeps its place on screen: rows arriving above it push the list up. The partial-results
-line and the finished status (`44 releases · 5 of 7 indexers answered`) come when the search is over, as before. The plugin
+the pointer has moved over the list) or the focused row keeps its place on screen: rows arriving above it push the list up. The finished
+status (`44 releases · 5 of 7 indexers answered`) comes when the search is over, as before; the red partial-results line under it was
+removed on 2026-10-26 (the failure is behind the Sources line's (i)). The plugin
 serves the rows so far through `GET /Releases/Progress/{key}` (`search`), under the search id the final answer carries,
 and checks on every poll that the requester can still read the title.
 Approved design: `reviews/progressive-results/` in the workspace (without the small ring; the Sources control carries progress).
@@ -1364,7 +1365,10 @@ Untick hides that indexer's rows (eligible and rejected) without cancelling its 
 alone and its rows join; a new search asks only the ticked ones; the choice is remembered per browser and shared with Get Another
 Quality. The icon's corner dot carries the search: grey while narrowed, the train while indexers are asked (a grey lead circling
 once per 1.2 s, a follower per asked indexer in its colour that merges into the lead as it finishes, the lead taking its colour),
-and at the end the last indexer's colour, red if one failed (F1). The status line adds `5 of 7 sources` while narrowed. The
+and at the end the last indexer's colour, red if one failed (F1). The status line names no sources count (user, 2026-10-26: "drop
+the sources part"). A failed indexer's line reads `failed` with an (i) after the name that shows the plugin's message (tooltip
+above it on a computer, a popover on a click, the phone and the TV's Enter; [guides/info-tip.md](design/guides/info-tip.md)), and
+the red "Partial results" line is gone (approved 2026-10-26, `reviews/picker-failure-info/` revision 2 in the workspace). The
 searching ring's segments and its indexer lines take the indexer colours too (state as opacity, failure red). Values:
 [guides/release-picker-sources.md](design/guides/release-picker-sources.md), [guides/indexer-colour.md](design/guides/indexer-colour.md);
 record: [design/release-picker-source-filter.md](design/release-picker-source-filter.md), mockup

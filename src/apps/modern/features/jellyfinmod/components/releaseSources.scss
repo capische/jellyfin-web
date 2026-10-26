@@ -194,3 +194,45 @@
 [data-theme='light'] .jfmod-sourceState--bad {
     color: #c62828;
 }
+
+// A failed line's (i) right after the name (approved 2026-10-26; design/guides/info-tip.md): Material InfoOutlined at 1.15em in the
+// failure red, a round transparent 2.5em button 0.4em after the name whose negative margins keep the line's height.
+.jfmod-sourceItem .jfmod-infoButton.MuiIconButton-root {
+    width: 2.5em;
+    height: 2.5em;
+    margin: -0.6em 0 -0.6em 0.4em;
+    padding: 0;
+    font-size: inherit;
+    vertical-align: middle;
+    color: #ff7b72;
+}
+
+[data-theme='light'] .jfmod-sourceItem .jfmod-infoButton.MuiIconButton-root {
+    color: #c62828;
+}
+
+.jfmod-sourceItem .jfmod-infoGlyph.MuiSvgIcon-root {
+    width: 1.15em;
+    height: 1.15em;
+    font-size: inherit;
+}
+
+// The tooltip sits over the checklist, which sits over upstream's dialog layer.
+.MuiTooltip-popper.jfmod-infoTipPopper {
+    z-index: 1000001;
+}
+
+// The TV: on the focused line (the primary fill) the (i) takes the line's ink; the focused (i) itself is the primary fill of every
+// MUI icon button in a pop-up (shell/dpadModals.scss) with the white ring of the picker's round buttons.
+.layout-tv .MuiModal-root .jfmod-sourceItem:focus .jfmod-infoButton.MuiIconButton-root {
+    color: inherit;
+}
+
+.layout-tv .MuiModal-root .jfmod-sourceItem .jfmod-infoButton.MuiIconButton-root:focus {
+    color: #fff;
+    box-shadow: 0 0 0 0.12em #383838, 0 0 0 0.28em #fff;
+}
+
+[data-theme='light'].layout-tv .MuiModal-root .jfmod-sourceItem .jfmod-infoButton.MuiIconButton-root:focus {
+    box-shadow: 0 0 0 0.12em #fff, 0 0 0 0.28em #222;
+}

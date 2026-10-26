@@ -1,5 +1,8 @@
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Tooltip from '@mui/material/Tooltip';
 import classNames from 'classnames';
 import React, { type CSSProperties, type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -7,6 +10,7 @@ import { createPortal } from 'react-dom';
 import layoutManager from 'components/layoutManager';
 
 import { indexerColour, indexerTick } from '../constants/indexerColours';
+import InfoPopover from './InfoPopover';
 import { SlowSetupLink } from './SlowSetup';
 
 import './releaseSources.scss';
@@ -26,8 +30,10 @@ export interface SourceLine {
     ticked: boolean;
     /** What it is doing or found, at the right: `8 releases · 2 rejected`, `asking…`, `hidden · 3 releases`. */
     state: string;
-    /** A failure: the state in red. */
+    /** A failure: the state `failed` in red. */
     bad: boolean;
+    /** A failure's explanation behind the line's (i): the plugin's message, or the short reason (`timed out`) when it sent none. */
+    failure?: string;
     /** The how-to's address when the indexer runs on Prowlarr's slow default 1337x definition (P4.FU27). */
     slowSetupHowTo?: string | null;
 }
@@ -146,28 +152,68 @@ const restingDot = (props: SourcesProps, narrowed: boolean): { colour: string | 
     return null;
 };
 
+/** What the open popover explains: the (i) that opened it and its line. */
+interface InfoOpen {
+    anchor: HTMLElement;
+    title: string;
+    message: string;
+}
+
 interface SourceItemProps {
     line: SourceLine;
     last: boolean;
     onToggle: (id: string) => void;
+    /** Opens the (i)'s popover; null while it is open, so the tooltip gives way to it. */
+    onInfo: ((info: InfoOpen) => void) | null;
     /** Set by MUI's MenuList on its children (the first line's focus on opening, the roving tab stop); passed on to the item. */
     autoFocus?: boolean;
     tabIndex?: number;
 }
 
+/**
+ * A failed line's (i), right after the name (approved 2026-10-26; guides/info-tip.md): the message in a tooltip above it on hover
+ * (the computer), and a popover on a click, a tap or the remote's Enter. A click never toggles the line, and a pointer press leaves
+ * focus on the line, so the keyboard's Enter still toggles it; on the TV it is a focus stop that Right reaches.
+ */
+const FailureInfo: FC<{ line: SourceLine; onInfo: SourceItemProps['onInfo'] }> = ({ line, onInfo }) => {
+    const message = line.failure ?? '';
+    const open = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onInfo?.({ anchor: event.currentTarget, title: line.name, message });
+    };
+    // A pointer press leaves focus on the line (as the slow-setup label does), so the popover hands it back there.
+    const keepLineFocus = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.closest<HTMLElement>('.jfmod-sourceItem')?.focus();
+    };
+    const button = <IconButton className='jfmod-infoButton' aria-label={'Why ' + line.name + ' failed'} onClick={open}
+        onMouseDown={keepLineFocus} onTouchStart={event => event.stopPropagation()} disableRipple>
+        <InfoOutlined className='jfmod-infoGlyph' aria-hidden='true' focusable='false' />
+    </IconButton>;
+    if (layoutManager.tv || layoutManager.mobile) return button;
+    return <Tooltip title={onInfo ? message : ''} placement='top' describeChild
+        slotProps={{ popper: { className: 'jfmod-infoTipPopper' } }}>{button}</Tooltip>;
+};
+
 /** One checklist line: the checkbox in the indexer's colour, the name, the state at the right. */
-const SourceItem: FC<SourceItemProps> = ({ line, last, onToggle, autoFocus, tabIndex }) => {
+const SourceItem: FC<SourceItemProps> = ({ line, last, onToggle, onInfo, autoFocus, tabIndex }) => {
     const toggle = useCallback(() => {
         if (!last) onToggle(line.id);
     }, [last, line.id, onToggle]);
+    const failure = line.bad ? line.failure : undefined;
     const style = { ['--jfmod-src' as string]: indexerColour(line.colorIndex), ['--jfmod-tick' as string]: indexerTick(line.colorIndex) };
+    // ARIA 1.3's aria-description, which the rule does not know yet: a screen reader reads the failure with the line.
+    // eslint-disable-next-line jsx-a11y/role-supports-aria-props
     return <MenuItem role='menuitemcheckbox' aria-checked={line.ticked} aria-disabled={last || undefined}
         className={classNames('jfmod-sourceItem', { 'jfmod-sourceItem--off': !line.ticked })} data-jfmod-source={line.id}
         title={last ? 'At least one source stays on' : undefined} onClick={toggle} tabIndex={tabIndex}
+        aria-description={failure}
         // eslint-disable-next-line jsx-a11y/no-autofocus -- MUI's MenuList focuses its first item on opening through this prop
         autoFocus={autoFocus}>
         <span className='jfmod-sourceCheck' style={style} aria-hidden='true' />
-        <span className='jfmod-sourceName'>{line.name}{line.slowSetupHowTo && <SlowSetupLink href={line.slowSetupHowTo} />}</span>
+        <span className='jfmod-sourceName'>{line.name}{failure && <FailureInfo line={line} onInfo={onInfo} />}
+            {line.slowSetupHowTo && <SlowSetupLink href={line.slowSetupHowTo} />}</span>
         <span className={classNames('jfmod-sourceState', { 'jfmod-sourceState--bad': line.bad })}>{line.state}</span>
     </MenuItem>;
 };
@@ -182,6 +228,8 @@ export const ReleaseSources: FC<SourcesProps> = props => {
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const open = useCallback((event: React.MouseEvent<HTMLButtonElement>) => setAnchor(event.currentTarget), []);
     const close = useCallback(() => setAnchor(null), []);
+    const [info, setInfo] = useState<InfoOpen | null>(null);
+    const closeInfo = useCallback(() => setInfo(null), []);
     const ticked = lines.filter(line => line.ticked).length;
     const narrowed = lines.length > 0 && ticked < lines.length;
     const label = narrowed ? `Sources · ${ticked} of ${lines.length}` : 'Sources';
@@ -212,7 +260,11 @@ export const ReleaseSources: FC<SourcesProps> = props => {
                 anchorReference: 'anchorPosition' as const, anchorPosition: { top: below, left: 0 }, marginThreshold: 0
             } : { anchorOrigin: { vertical: 'bottom', horizontal: 'right' } as const,
                 transformOrigin: { vertical: 'top', horizontal: 'right' } as const })}>
-            {lines.map(line => <SourceItem key={line.id} line={line} last={line.ticked && ticked === 1} onToggle={onToggle} />)}
+            {lines.map(line => <SourceItem key={line.id} line={line} last={line.ticked && ticked === 1} onToggle={onToggle}
+                onInfo={info ? null : setInfo} />)}
         </Menu>
+        {/* Outside the menu in React's tree too, so the popover's keys and clicks never reach the menu's list or a line. */}
+        <InfoPopover anchor={info?.anchor ?? null} title={info?.title ?? ''} message={info?.message ?? ''} onClose={closeInfo}
+            row={info?.anchor.closest<HTMLElement>('.jfmod-sourceItem')} />
     </>, slot);
 };

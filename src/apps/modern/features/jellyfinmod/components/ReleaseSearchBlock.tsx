@@ -18,6 +18,8 @@ export interface SearchLine {
     name: string;
     kind: SearchLineKind;
     text: string;
+    /** A failure's full message from the plugin, when it sent one (the Sources line's (i) shows it). */
+    message?: string | null;
     /** The indexer's colour index (P4.FU25); absent from older plugins, where the first colour stands in. */
     colorIndex?: number;
 }
