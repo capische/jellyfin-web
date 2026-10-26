@@ -1482,6 +1482,15 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   lists as the other kind is refused ("The indexer lists this release as a TV series, not a movie." and the reverse) even
   with an equal TMDB number; series now compare TMDB ids too; an undecided kind keeps the old comparison. Plugin main-stubs
   `ebebff3`, main-items `b451577`; Phase 4 and 6 pass on both lines.
+  Then (user 2026-10-26: "you telling me that The Matrix is only available in utp.to?") an entry made from a folder name kept
+  "The Matrix (1999) [tmdbid-603]" (beta): its file was gone before the fill could run, placeholders are never observed, and every
+  text-only indexer answered the decorated query with nothing. A provider tag (`[tmdbid-…]`, `[imdbid-…]`, `[tvdbid-…]`,
+  `{tmdb-…}`) is the only sign of a folder name (`ImportNaming.TitleOf`; "Dune (2021)" is left alone): the fill also renames a
+  title that still carries one, and a release search never sends a tag (a movie drops the year too, which its query adds anyway;
+  a series keeps it). A placeholder-only entry made from a tagged folder keeps showing its tagged name until its file returns; its
+  searches are clean. Plugin main-stubs `fix/entry-folder-title` `db80ae3` `6c9e39f`. Codex GPT-6.1 Sol high: two rounds; the clean-up pass that caused the
+  remaining findings was removed. Phase 2/4 pass on both lines; live on beta The Matrix searches every text indexer again.
+  **Not run:** real Chrome, full matrix. Built (not accepted).
   **P4.FU21, built (not accepted) 2026-10-24: a season's and a series' total download in its header** (user 2026-10-22: "Season
   total is good too but apply new download state text"; 2026-10-24: "keep B", "yes add series page total"; the design session's
   proposal, artifact <https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>, [design note](design/season-total-download.md) with its
