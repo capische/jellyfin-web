@@ -72,7 +72,10 @@ easing. Motion is transform and opacity only.
   the content). **Computer:** the product's MUI tooltip **above** the disc (`placement="top"`, as the picker's (i)), one fact
   per line (`.jfmod-queueTipLine`): `Seeding · ratio 0.19 of 1.00 · seeded 4 d of 7 d`, `Waiting for the ratio goal and the
   seeding time goal`, and for an administrator's linked disc `Open Shared Transmission (VPN)`; the disc drops its native
-  tooltip (`hostTip`). **Phone:** the disc is a button (`.jfmod-queueStateButton`, the cyan ring for the keyboard only) whose tap
+  tooltip (`hostTip`). Every disc is one Tab stop with its tooltip on focus as on hover (Codex final review, 2026-10-26): a
+  linked disc is the stop itself (Enter opens the client), any other one (failed, blocked, an ordinary user's, a client with no
+  saved link) through its wrapper (`.jfmod-queueStateFocus`, `tabindex 0`, the same cyan ring for the keyboard only, Enter does
+  nothing). **Phone:** the disc is a button (`.jfmod-queueStateButton`, the cyan ring for the keyboard only) whose tap
   opens the [info tip's popover](info-tip.md): the state word as title, the facts (the first capitalised), and for an
   administrator the `Open <client>` link; the tap never opens the client itself. **TV:** the row is one button whose Enter opens
   the action sheet, so the disc is no stop; the facts stay as lines under it (`.jfmod-queueDetail`), all but a download's
@@ -149,7 +152,7 @@ opens it. Its click opens only the client, never the card or row's title. No col
 
 Everyone else, every failed ring, every Not Downloaded and Unaired mark, and every ring on the TV (nothing there can open a tab):
 never a control, `cursor: default`, no hover growth, not a D-pad stop; the tooltip is the only affordance; a click on a card's
-disc is a click on the card. A failure on a row disables the administrator's row button while it holds.
+disc is a click on the card. (On the Queue page the computer's keyboard still reaches such a disc's tooltip through its wrapper, above.) A failure on a row disables the administrator's row button while it holds.
 
 ## Do not
 
