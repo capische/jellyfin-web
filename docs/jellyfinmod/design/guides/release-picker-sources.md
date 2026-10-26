@@ -15,10 +15,10 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   the state. Tooltip and name "Sources", or "Sources · 5 of 7" while some are unticked.
 - **The corner dot** (`.jfmod-srcDot`, 0.5em, `top .4em; right .35em`):
   - none while every source is ticked and nothing runs;
-  - **grey** (the secondary text colour) while some are unticked and nothing runs;
+  - **grey** (the secondary text colour) while some are unticked and nothing runs; grey wins over the finished state;
   - **finished (F1):** when a search ends the dot rests in the colour of the last indexer that finished (`--done`), **red**
-    `#e53935` if any indexer of it failed (`--failed`), and stays while those results are on screen; a change of the ticked
-    sources puts it back to grey or none, and the next search starts grey again.
+    `#e53935` if any indexer of it failed (`--failed`), and stays while those results are on screen with every source ticked:
+    unticking turns it grey and ticking all back brings the result back (user, 2026-10-26); the next search starts grey again.
 
 ## The train (while indexers are asked)
 
