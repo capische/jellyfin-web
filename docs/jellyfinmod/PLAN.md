@@ -1668,8 +1668,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   beta: "I've cancelled the download and clicked Get a Release - + is disabled"). Owner: the release picker's added row (WR). A
   picker reopened while a grab is held or in the client follows that grab and found its row only by infohash; RuTracker rows
   carry a torrent file, so the search has no infohash and every Add stayed off with no tick, no X and no reason. The added row
-  now falls back to the one row with the grab's title, indexer and size; when the followed grab has no row in the list (another
-  profile, an unticked source), the status line keeps "This title already has an active grab." and the grab's block stays. The
+  now falls back to the one row with the grab's title, indexer and size, only when exactly one row matches (Codex final review,
+  2026-10-26: with two alike neither is marked); when the followed grab has no such row in the list (another profile, an
+  unticked source, two alike), the status line keeps "This title already has an active grab." and the grab's block stays. The
   queue removal itself was correct. Web `fix/add-after-remove` `c7e280f846` `d3fb88282e`, plugin unchanged. Verified on local delta (Playwright Chromium, desktop: the
   bug before, the added row with its X after, Add again after removal, Cancel in the hold, the no-row reason). **Not run:** mobile,
   TV, real Chrome, Codex review.
