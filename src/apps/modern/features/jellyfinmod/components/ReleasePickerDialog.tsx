@@ -999,11 +999,17 @@ type Grab = ReturnType<typeof useGrab>;
 const isLive = (operation: GrabOperation | null): operation is GrabOperation =>
     !!operation && (operation.state === 'pending' || operation.state === 'submitting' || operation.state === 'accepted');
 
-/** The row a followed grab is about: the one pressed here, else the one with the grab's infohash (found again on reopening). */
+/**
+ * The row a followed grab is about: the one pressed here, else, found again on reopening, the one with the grab's infohash, or
+ * for an indexer whose search gives none (RuTracker's torrent-file rows), the one with its title, indexer and size. Without
+ * it every Add stayed off with no added row and no X (2026-10-26).
+ */
 const addedRowId = (operation: GrabOperation, pressedId: string | null, candidates: ReleaseCandidate[]) => {
     if (pressedId && candidates.some(candidate => candidate.releaseId === pressedId)) return pressedId;
     const hash = operation.infoHash;
-    return (hash && candidates.find(candidate => candidate.infoHash === hash)?.releaseId) || null;
+    return (hash && candidates.find(candidate => candidate.infoHash === hash)?.releaseId)
+        || candidates.find(candidate => !candidate.infoHash && candidate.rawTitle === operation.releaseTitle
+            && candidate.indexerName === operation.indexerName && candidate.size === operation.size)?.releaseId || null;
 };
 
 /**
