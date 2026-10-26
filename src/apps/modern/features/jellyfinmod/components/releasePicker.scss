@@ -380,6 +380,12 @@
     word-break: break-all;
 }
 
+// Remove the Torrent deletes what the torrent downloaded (user, 2026-10-26): its Remove stays red under the pointer as at rest;
+// the stock `.raised:hover` would turn it grey.
+#jfmodTorrentRemoval .button-delete:hover {
+    background: var(--jf-palette-error-main, #c62828);
+}
+
 // A row (release picker redesign, 2026-10-10): line 1 holds the quality, flags and languages at the left and three fixed
 // columns (size, seeds, indexer) at the right; line 2 the media marks; the file name while Show Names is on.
 // Every mark after the quality sits on a 1.2em-tall track, centred: no baseline mixing.
