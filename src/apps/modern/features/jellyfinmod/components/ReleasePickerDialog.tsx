@@ -1001,14 +1001,17 @@ const isLive = (operation: GrabOperation | null): operation is GrabOperation =>
 /**
  * The row a followed grab is about: the one pressed here, else, found again on reopening, the one with the grab's infohash, or
  * for an indexer whose search gives none (RuTracker's torrent-file rows), the one with its title, indexer and size. Without
- * it every Add stayed off with no added row and no X (2026-10-26).
+ * it every Add stayed off with no added row and no X (2026-10-26). The fallback holds only when exactly one row matches: with
+ * two alike there is no telling which was grabbed, so none is marked and the grab stays an active grab with no row.
  */
 const addedRowId = (operation: GrabOperation, pressedId: string | null, candidates: ReleaseCandidate[]) => {
     if (pressedId && candidates.some(candidate => candidate.releaseId === pressedId)) return pressedId;
     const hash = operation.infoHash;
-    return (hash && candidates.find(candidate => candidate.infoHash === hash)?.releaseId)
-        || candidates.find(candidate => !candidate.infoHash && candidate.rawTitle === operation.releaseTitle
-            && candidate.indexerName === operation.indexerName && candidate.size === operation.size)?.releaseId || null;
+    const byHash = hash ? candidates.find(candidate => candidate.infoHash === hash)?.releaseId : undefined;
+    if (byHash) return byHash;
+    const alike = candidates.filter(candidate => !candidate.infoHash && candidate.rawTitle === operation.releaseTitle
+        && candidate.indexerName === operation.indexerName && candidate.size === operation.size);
+    return alike.length === 1 ? alike[0].releaseId : null;
 };
 
 /**
