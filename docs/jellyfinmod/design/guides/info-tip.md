@@ -21,6 +21,10 @@ a computer the text shows on hover; a click, a tap or the remote's Enter opens i
 - `aria-label` says what it answers: *Why EN. 0Magnet failed*. The line it sits on carries the text as its `aria-description`.
 - A click on it never acts on its line (the click stops at the button), and a pointer press leaves focus on the line, so the
   line's own Enter keeps working.
+- **Computer keyboard** (Codex final review, 2026-10-26): Right on its line focuses it, Left goes back to the line, Up and Down
+  move as the line does; focused it shows its tooltip and the cyan ring of the picker's round buttons (`0 0 0 .15em #00a4dc`,
+  `:focus-visible`); Enter or Space opens the popover, and Escape closes it with focus back on the (i). Enter on the line still
+  only toggles it. Tab still closes the menu (MUI), so Right is the way in.
 - **Computer:** hover shows the text in the product's MUI tooltip (grey `rgba(97,97,97,.92)`, white, 4 px radius) **above** the
   (i) (`placement="top"`; MUI flips it below only when there is no room), over the menus (`.jfmod-infoTipPopper`, z-index
   1000001). While the popover is open the tooltip gives way.

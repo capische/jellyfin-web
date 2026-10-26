@@ -1683,7 +1683,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   and the status line's `N of M sources` are gone. Also the same day: the Sources button no longer clips the train, the checklist
   ticks are centred, the menu keeps its width while states change, the finished dot returns after re-ticking, and a failure reads
   as a short reason. Web `feat/failure-info` `c1d235c9b8`. Gate 2 on alpha and beta: Chromium laptop, phone, TV 1080 and 720, dark and light, and real
-  Chrome laptop dark and light, 20 runs pass. **Not run:** Codex review, a real TV or phone.
+  Chrome laptop dark and light, 20 runs pass. **Not run:** Codex review, a real TV or phone. Codex final review fix (2026-10-26):
+  the computer's keyboard reaches the (i) with Right, Left returns, Enter opens the popover, Escape returns to the (i); local
+  delta, Chromium laptop dark and light and TV 1080 dark pass.
   **P4.FU28, built (not accepted) 2026-10-26: the Queue page's State column as discs only, a seeding disc, every detail in a tip**
   (user-approved design 2026-10-26, "approve both"; workspace `reviews/queue-state-icons/`; [guides/download-state-mark.md](design/guides/download-state-mark.md),
   [guides/info-tip.md](design/guides/info-tip.md), [UX.md](UX.md) §3.3 and §10). Owner: Phase 4's ring family (P4.FU6) with Phase 5's
