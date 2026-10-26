@@ -1138,9 +1138,10 @@ const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirmin
     useAddedFocus(container, addedId, added);
 
     // The search answered "this title already has an active grab" for a grab that has since ended here, or for the one this picker
-    // follows (grabbed from a running search's rows, P4.FU24; while it is live the rows are held by it anyway): free again.
+    // follows (grabbed from a running search's rows, P4.FU24; while it is live the rows are held by it anyway): free again. One it
+    // follows with no row in this list (another profile, no longer listed) keeps the reason, so every Add being off is explained.
     const freed = !!data && !data.grab.available && data.grab.reason === 'grab_active' && !!activeId
-        && (released.includes(activeId) || activeId === operation?.id);
+        && (released.includes(activeId) || (activeId === operation?.id && !!addedId));
     const view = freed && data ? { ...data, grab: { ...data.grab, available: true, reason: null } } : data;
     return { added, addedId, imported, removeError, view };
 };
@@ -1624,7 +1625,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         rowPlanFor(candidate, data, packs, (data.intent ?? searchIntent) === 'addVersion', mediaType)]) : []);
     const choices = Array.from(plans.values()).some(plan => plan.choices);
     const replaceChoices = Array.from(plans.values()).some(plan => plan.choices && plan.replace);
-    const grabStatus = operation && <GrabStatus operation={operation} now={grab.now} adopted={grab.adopted} />;
+    // A grab found again on reopening with no row here keeps its block (accepted, Open in Client, the file name): no tick carries it.
+    const grabStatus = operation && <GrabStatus operation={operation} now={grab.now} adopted={grab.adopted && !!addedId} />;
     // The block sits under the row the grab is about: the added row, or the one pressed when the grab failed.
     const blockRowId = addedId ?? grab.releaseId;
     // An imported row reads as the in-library row: a green check after the quality and no actions.
