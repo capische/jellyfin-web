@@ -1673,6 +1673,16 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   queue removal itself was correct. Web `fix/add-after-remove` `c7e280f846` `d3fb88282e`, plugin unchanged. Verified on local delta (Playwright Chromium, desktop: the
   bug before, the added row with its X after, Add again after removal, Cancel in the hold, the no-row reason). **Not run:** mobile,
   TV, real Chrome, Codex review.
+  **P4.FU25 follow-up, built (not accepted) 2026-10-26: an indexer's failure behind an (i) in Sources, no red partial line, no
+  sources count in the status line** (user-approved design, workspace `reviews/picker-failure-info/` revision 2, tooltip above the
+  (i), "drop the sources part"; [guides/info-tip.md](design/guides/info-tip.md), [guides/release-picker-sources.md](design/guides/release-picker-sources.md)).
+  A failed checklist line reads `failed` with an (i) after the name; hover shows the plugin's message (or the short reason) in a
+  tooltip above it; a click, a tap or the TV's Enter opens the reusable `InfoPopover` (title, round Close, message; full width on
+  the phone); the (i) never toggles the line; on the TV Right reaches it and Back returns to it. The red "Partial results" line
+  and the status line's `N of M sources` are gone. Also the same day: the Sources button no longer clips the train, the checklist
+  ticks are centred, the menu keeps its width while states change, the finished dot returns after re-ticking, and a failure reads
+  as a short reason. Web `feat/failure-info` `c1d235c9b8`. Gate 2 on alpha and beta: Chromium laptop, phone, TV 1080 and 720, dark and light, and real
+  Chrome laptop dark and light, 20 runs pass. **Not run:** Codex review, a real TV or phone.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
