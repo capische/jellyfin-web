@@ -1683,6 +1683,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   ticks are centred, the menu keeps its width while states change, the finished dot returns after re-ticking, and a failure reads
   as a short reason. Web `feat/failure-info` `c1d235c9b8`. Gate 2 on alpha and beta: Chromium laptop, phone, TV 1080 and 720, dark and light, and real
   Chrome laptop dark and light, 20 runs pass. **Not run:** Codex review, a real TV or phone.
+  **P4.FU28, built (not accepted) 2026-10-26: the Queue page's State column as discs only, a seeding disc, every detail in a tip**
+  (user-approved design 2026-10-26, "approve both"; workspace `reviews/queue-state-icons/`; [guides/download-state-mark.md](design/guides/download-state-mark.md),
+  [guides/info-tip.md](design/guides/info-tip.md), [UX.md](UX.md) §3.3 and §10). Owner: Phase 4's ring family (P4.FU6) with Phase 5's
+  queue page. Web only, no plugin change (the queue rows already carry the seeding ratio, time and goals), no migration. A seeding
+  copy gets the ring family's up arrow at row size, its arc how far it is from release by the slower goal (`seedProgress`; full once
+  the goals are met; releasing turns importing's segment; no motion); an administrator's seeding disc opens the client like a
+  download's. The State column holds only discs: the held line, a blocked or failed reason, the seeding goals and a pack's episode
+  problems move into the disc's tip, a MUI tooltip above the disc on the computer (one fact per line, then `Open <client>`), the
+  reusable `InfoPopover` on a phone tap (state as title, the facts, the `Open <client>` link; the tap no longer opens the client),
+  and lines under the disc on the TV, whose row stays one button. "Seeding until its goal is met." is gone. Web
+  `feat/queue-state-discs` (from `main-stubs`) and `feat/queue-state-discs-items` (from `main-items`). Gate 2 on alpha (stubs) and
+  beta (items) with `scripts/jellyfinmod-e2e/queue-state-discs.mjs`: the environments' own rows (alpha's Fawlty Towers pack and
+  beta's Adolescence pack and The Matrix, all seeding) plus eleven staged states in the intercepted queue answer (held, blocked,
+  failed, stalled, linking, unknown, a pack with a skipped episode, seeding at 19 %, goal met with release off, releasing, a
+  blocked release); Chromium laptop, phone, TV 1080 and 720, dark and light, and real Chrome laptop dark and light, 20 runs pass.
+  **Not run:** Codex review, a real TV or phone, a live downloading row (none was downloading during the run; staged ones covered it).
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
