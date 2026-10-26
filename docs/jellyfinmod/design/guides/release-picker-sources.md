@@ -41,7 +41,8 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
   - the **name** in the text colour at 600 (60 % when unticked);
   - the **state** at the right in the secondary colour, 90 %: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
     `failed · timed out` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked
-    by this search).
+    by this search). A failure is a short lower-case reason after `failed · ` (`timed out`, `unavailable`, `rate limited`,
+    `login refused`, `cannot search this`, `bad answer`, …; 2026-10-26: never the plugin's full sentence).
 - **Slow setup** (approved 2026-10-25, P4.FU27; `reviews/prowlarr-slow-hint/` revision 3, casing A): an indexer on Prowlarr's slow
   default `1337x` definition reads `EN. 1337x ⚠ slow setup`, the label right after the name (`.jfmod-sourceSlow`, `margin-left
   .6em`, 85 %, weight 600, the warning amber and glyph of [buttons-and-row-actions.md](buttons-and-row-actions.md) *A warning on a

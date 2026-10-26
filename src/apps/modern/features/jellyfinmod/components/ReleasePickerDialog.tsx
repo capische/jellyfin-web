@@ -125,15 +125,25 @@ const unavailableText = (search: ReleaseSearch | undefined, receivedAt: number):
 const answeredCount = (search: ReleaseSearch) => search.indexers.filter(outcome => !failed(outcome)).length;
 
 /** Why an indexer gave nothing, in the picker's words (Sentence case). `base` is when the wait began. */
-const failureText = (status: string, message: string | null, retry: number | null, base: number) => {
+const failureText = (status: string, retry: number | null, base: number) => {
     switch (status) {
         case 'timeout': return 'timed out';
         case 'rate_limited': return retry ? 'rate limited · retry ' + clockTime(base, retry) : 'rate limited';
         case 'breaker_open': return retry ? 'paused until ' + clockTime(base, retry) : 'paused';
         case 'budget_exhausted': return 'daily budget used up';
         case 'secret_unavailable': return 'no API key';
-        case 'unsupported_search': return 'cannot search this';
-        default: return message ?? status.replace(/_/g, ' ');
+        case 'unsupported_search':
+        case 'unsupported_request':
+        case 'capabilities_unavailable': return 'cannot search this';
+        // Not reached, an HTTP error or a cut-off answer: the plugin uses one code for all three.
+        case 'unavailable': return 'unavailable';
+        case 'auth_failed': return 'login refused';
+        case 'indexer_error': return 'indexer error';
+        case 'malformed_response':
+        case 'response_too_large':
+        case 'redirect_rejected': return 'bad answer';
+        case 'source_changed': return 'try again';
+        default: return 'error';
     }
 };
 
@@ -150,7 +160,7 @@ const progressLine = (line: IndexerProgress, now: number, base: number): SearchL
     }
     if (line.state === 'ok') return { id, name, colorIndex, kind: 'ok', text: releaseCount(line.resultCount) };
     if (line.state === 'no_results') return { id, name, colorIndex, kind: 'none', text: 'nothing' };
-    return { id, name, colorIndex, kind: 'failed', text: failureText(line.state, null, line.retryAfterSeconds, base) };
+    return { id, name, colorIndex, kind: 'failed', text: failureText(line.state, line.retryAfterSeconds, base) };
 };
 
 /** One indexer's line once the search is over, from its outcome. */
@@ -159,7 +169,7 @@ const outcomeLine = (outcome: IndexerOutcome, base: number): SearchLine => {
     const { name, colorIndex } = outcome;
     if (outcome.status === 'ok') return { id, name, colorIndex, kind: 'ok', text: releaseCount(outcome.resultCount) };
     if (outcome.status === 'no_results') return { id, name, colorIndex, kind: 'none', text: 'nothing' };
-    return { id, name, colorIndex, kind: 'failed', text: failureText(outcome.status, outcome.message, outcome.retryAfterSeconds, base) };
+    return { id, name, colorIndex, kind: 'failed', text: failureText(outcome.status, outcome.retryAfterSeconds, base) };
 };
 
 /**
