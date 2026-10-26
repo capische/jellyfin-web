@@ -6,6 +6,12 @@
     display: inline-flex;
 }
 
+// The train circles just outside the 2.5em button; upstream's `.paper-icon-button-light` clipping cut its cars (user,
+// 2026-10-26). Two classes, so it wins over upstream's rule whatever the load order.
+.paper-icon-button-light.jfmod-sourcesButton {
+    overflow: visible;
+}
+
 // The corner dot: grey while some sources are unticked and nothing runs, the last indexer's colour once a search is over, red
 // when one failed.
 .jfmod-srcDot {
@@ -138,17 +144,17 @@
     border-radius: 0.25em;
     background: var(--jfmod-src);
 
-    // The tick, drawn with two borders.
+    // The tick, drawn with two borders and centred in the box (user, 2026-10-26: the ticks sat off-centre).
     &::after {
         content: '';
         position: absolute;
-        top: 0.18em;
-        left: 0.2em;
-        width: 0.55em;
-        height: 0.3em;
+        top: 50%;
+        left: 50%;
+        width: 0.5em;
+        height: 0.25em;
         border-bottom: 0.14em solid var(--jfmod-tick, #fff);
         border-left: 0.14em solid var(--jfmod-tick, #fff);
-        transform: rotate(-45deg);
+        transform: translate(-40%, -80%) rotate(-45deg);
     }
 }
 
