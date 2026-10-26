@@ -8,7 +8,7 @@
  * a row's and a page's the colour they inherit, the round row icons' beside it and the page's text; failed red `#ff5a4f` (the
  * light scheme's rows `#c62828`); stalled dims its arc and number to 55 %. Motion is transform and opacity only (the arrow bobs, importing's arc
  * turns) and stops under reduced motion. Additive only: every class is `jfmod-`, sizes in `em` (TV 125 %, phone 90 %), no
- * flex gap, min() or max() for older TV engines.
+ * flex gap, min() or max() for older TV engines. Seeding (P4.FU28): the arrow turned up, its arc how far to release, still.
  */
 
 @use './cardGlass' as glass;
@@ -84,7 +84,9 @@
     animation: jfmod-dlmarkBob 1.4s ease-in-out infinite;
 }
 
-.jfmod-dlmark--importing .jfmod-dlmark-arc {
+// Releasing a seeding copy (P4.FU28) turns importing's segment; a seeding disc itself never moves (it lasts days).
+.jfmod-dlmark--importing .jfmod-dlmark-arc,
+.jfmod-dlmark--releasing .jfmod-dlmark-arc {
     animation: jfmod-dlmarkSpin 1.2s linear infinite;
 }
 
