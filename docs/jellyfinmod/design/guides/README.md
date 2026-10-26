@@ -18,6 +18,7 @@ values.
 | [settings-field.md](settings-field.md) | a settings field's label, the required asterisk and the help line | settings area, setup wizard, settings dialogs |
 | [buttons-and-row-actions.md](buttons-and-row-actions.md) | the three button kinds and the round icon-only row actions | everywhere in the mod |
 | [indexer-colour.md](indexer-colour.md) | each indexer's fixed colour: the eight-hue palette and how it is given | the picker's Sources and searching ring, the settings indexer rows |
+| [info-tip.md](info-tip.md) | the (i) that explains a short state: tooltip on a computer, popover on a click, the TV and the phone | the picker's Sources checklist (an indexer's failure); next, the Queue page's State tips on the phone |
 | [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Get a Release, Get Another Quality) |
 
 ## How to use a guide

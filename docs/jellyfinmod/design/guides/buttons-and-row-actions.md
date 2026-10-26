@@ -24,7 +24,8 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
   upstream's round icons; grey by default, red for a destructive one (bin, cross), the primary for a kept pin.
 - Each has an `aria-label` and a Title Case tooltip that name the row it acts on: *Remove Prowlarr 1337x*, *Keep the 1080p
   file*. Icons: Test `network_check`, Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows,
-  Fix `build`, Rebind `link`, Keep `push_pin`, History, Add +, Replace the circular swap.
+  Fix `build`, Rebind `link`, Keep `push_pin`, History, Add +, Replace the circular swap. An (i) that explains a short state
+  (`InfoOutlined`, in the state's colour) is [info-tip.md](info-tip.md).
 - A refused action (nowhere to move, busy, blocked) uses `aria-disabled`, never `disabled`, so the D-pad keeps its place;
   it dims to 45 % and its tooltip says why.
 - State lives in the glyph, not in a badge: a working icon animates its own glyph (transform or opacity only), a passed one

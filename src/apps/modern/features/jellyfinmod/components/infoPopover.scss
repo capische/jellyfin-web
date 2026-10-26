@@ -1,0 +1,37 @@
+// An (i)'s explanation (approved 2026-10-26; design/guides/info-tip.md): the file-history popover's look (fileHistory.scss), with
+// the title at 600 and the message at 92 %. Paper #202020 comes from the MUI theme.
+
+// Over upstream's dialog layer (999999) and the mod's menus on it (1000000), so it opens over the menu that holds the (i).
+.MuiPopover-root.jfmod-infoPopoverRoot {
+    z-index: 1000001;
+}
+
+.jfmod-infoPopover {
+    max-width: 30em;
+    padding: 0.8em 1em;
+}
+
+// The phone: the full width under the (i)'s row, 8 px from each edge (marginThreshold keeps the left one).
+.jfmod-infoPopover.jfmod-infoPopover--phone {
+    box-sizing: border-box;
+    width: calc(100% - 16px);
+    max-width: none;
+}
+
+.jfmod-infoPopoverHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 0.5em;
+}
+
+.jfmod-infoPopoverTitle {
+    margin-right: 1em;
+    font-weight: 600;
+}
+
+.jfmod-infoPopoverText {
+    margin: 0;
+    font-size: 92%;
+    opacity: 0.86;
+}
