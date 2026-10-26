@@ -148,10 +148,15 @@ export interface QueueQuery {
 }
 
 export interface RemoveQueueRequest {
-    /** Removes the torrent and its data from the client; only torrents the plugin added. */
+    /** The client forgets the torrent; only torrents the plugin added. */
     removeFromClient: boolean;
     /** Stores the infohash and indexer GUID so later searches reject the release. */
     blocklist: boolean;
+    /**
+     * With `removeFromClient`, the client also deletes what the torrent downloaded; the plugin refuses it (409
+     * `delete_not_allowed`) once any of its files was imported (user, 2026-10-26). Absent or false keeps the files.
+     */
+    deleteFiles?: boolean;
 }
 
 export interface ImportOperation {
