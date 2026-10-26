@@ -1704,6 +1704,13 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   **Not run:** Codex review, a real TV or phone, a live downloading row (none was downloading during the run; staged ones covered it).
   Codex final review fix (2026-10-26): every computer disc is a Tab stop with its tooltip on focus (an unlinked one through its
   wrapper, `.jfmod-queueStateFocus`); local delta, Chromium laptop dark and light, TV 1080 dark, phone dark pass.
+  **P5.I7/I8 follow-up, withdrawn 2026-10-26: Remove from Queue deleting the downloaded files.** Built and live-tested, then
+  rejected by the final Codex GPT-6.1 Sol high review (workspace `reviews/final-2026-10-26/codex-plugin.md`): four P1s, all about
+  deleting files that are not the download's own (Transmission's incomplete folder and `.part` names not inspected, library files
+  reachable through a bind-mount alias, two torrents sharing one file, and the gap between the checks and Transmission's
+  delete-with-data, which deletes whatever the torrent points at by then). Not on the lines; kept on `wip/remove-delete-files`
+  (and `-items`) in both repositories for the user's decision. A safe version would remove the torrent without data and delete
+  only the verified files itself.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
