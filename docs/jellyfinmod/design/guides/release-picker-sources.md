@@ -22,7 +22,8 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 
 ## The train (while indexers are asked)
 
-- The dot leaves the corner and becomes the **lead**, grey, circling the icon once per **1.2 s** (`.jfmod-srcTrain`, linear,
+- The dot leaves the corner and becomes the **lead**, grey, circling the icon once per **1.2 s** (the button does not clip it:
+  `overflow: visible`; `.jfmod-srcTrain`, linear,
   inset .15em; each car a 0.5em dot at the circle's top, `.jfmod-srcCar`).
 - Every indexer being asked is a **follower** in its colour on the same circle, **40°** apart behind the lead, in asking order (the
   first asked nearest).
@@ -37,7 +38,7 @@ too" the same day). Record: [release-picker-source-filter.md](../release-picker-
 - An MUI Menu under the icon, right-aligned (`.jfmod-sourcesMenu`, min-width 19em, above upstream's dialog layer); on the phone it
   spans the full width under the title row. One line per enabled indexer in the plugin's order (priority, then name):
   - the **checkbox in the indexer's colour** (`.jfmod-sourceCheck`, 1.15em, border .14em, radius .25em): filled with a tick when
-    ticked (a dark tick on the two light hues), outlined in the colour when not;
+    ticked (a dark tick on the two light hues, centred in the box), outlined in the colour when not;
   - the **name** in the text colour at 600 (60 % when unticked);
   - the **state** at the right in the secondary colour, 90 %: `8 releases · 2 rejected`, `asking…`, `waiting`, `no results`,
     `failed · timed out` (red), `hidden · 3 releases` (unticked, answered), `hidden · asking…`, `not asked` (unticked, not asked
