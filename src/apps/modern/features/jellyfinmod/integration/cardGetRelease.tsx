@@ -34,7 +34,9 @@ import './cardGetRelease.scss';
  *   is: an administrator, a plugin that searches releases (and packs, for a series or season), the card's type. Whether the
  *   title has an entry is asked once the card is first hovered or focused, so a grid of a hundred cards costs no request
  *   until one is pointed at; the rare card whose answer is no (no entry, a special) loses the icon then (on 28096, 1 title of
- *   164 and no season or episode, 2026-10-13).
+ *   164 and no season or episode, 2026-10-13). The answer belongs to the card's item, not to its element: a title's card keeps
+ *   its element when its movie is deleted and its placeholder takes its place (user 2026-10-27, The Matrix on beta), so the
+ *   icon is drawn and asked again for the new item.
  * - **Touch and TV** (no hover overlay): the card's item menu (its More button, a long press, the Menu key) carries the same
  *   item, through `moreMenuItem`'s card items.
  *
@@ -67,6 +69,9 @@ const EMPTY_ATTRIBUTE = 'data-jfmod-empty';
 const PACK_TYPES = new Set(['Series', 'Season']);
 const NOT_AVAILABLE = 'Get a Release is not available for this title.';
 const CENTRE_CLASS = 'cardOverlayFab-primary';
+/** The item a card's icon (and a card's asked lookup) is for: a card element can be drawn again for another item. */
+const ITEM_ATTRIBUTE = 'data-jfmod-item';
+const ASKED_ATTRIBUTE = 'data-jfmod-asked';
 /** A card's answer is asked again after this long, so a title that gained a file reads "Get Another Quality". */
 const KEEP_MS = 60_000;
 
@@ -177,6 +182,7 @@ const makeButton = (itemId: string, type: string) => {
     button.type = 'button';
     button.className = `paper-icon-button-light cardOverlayButton cardOverlayButton-hover ${BUTTON_CLASS}`;
     button.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover cloud_download" aria-hidden="true"></span>';
+    button.setAttribute(ITEM_ATTRIBUTE, itemId);
     applyTarget(button, settledTarget(itemId, type)?.target);
     return button;
 };
@@ -190,6 +196,12 @@ const placeIn = (overlay: Element, packs: boolean) => {
     const group = overlay.querySelector(':scope > .cardOverlayButton-br');
     if (!found || !group || !eligible(found.type, packs)) return;
     const button = overlay.querySelector<HTMLButtonElement>('.' + BUTTON_CLASS) ?? makeButton(found.itemId, found.type);
+    // The same card drawn for another item (a title's card keeps its element when its movie is deleted and its placeholder
+    // takes its place): the icon is drawn for that item, not from the answer the old one had.
+    if (button.getAttribute(ITEM_ATTRIBUTE) !== found.itemId) {
+        button.setAttribute(ITEM_ATTRIBUTE, found.itemId);
+        applyTarget(button, settledTarget(found.itemId, found.type)?.target);
+    }
     const centre = hasNoFile(found.card);
     button.classList.toggle(CENTRE_CLASS, centre);
     if (centre) {
@@ -410,13 +422,17 @@ const CardGetRelease: FC = () => {
             });
         });
 
-        // A card's answer is asked once, when the card is first hovered or focused; the icon is shown meanwhile.
+        // A card's answer is asked once per item, when the card is first hovered or focused; the icon is shown meanwhile. A card
+        // drawn again for another item (its title's movie deleted and its placeholder in its place) is asked again, and a late
+        // answer for the item it showed before is not applied.
         const ask = (card: HTMLElement) => {
             const found = cardOf(card);
-            if (!found || !eligible(found.type, packs) || card.hasAttribute('data-jfmod-asked')) return;
-            card.setAttribute('data-jfmod-asked', '');
+            if (!found || !eligible(found.type, packs) || card.getAttribute(ASKED_ATTRIBUTE) === found.itemId) return;
+            card.setAttribute(ASKED_ATTRIBUTE, found.itemId);
             lookup(found.itemId, found.type).then(target => {
-                for (const button of card.querySelectorAll<HTMLButtonElement>('.' + BUTTON_CLASS)) applyTarget(button, target);
+                for (const button of card.querySelectorAll<HTMLButtonElement>('.' + BUTTON_CLASS)) {
+                    if (button.getAttribute(ITEM_ATTRIBUTE) === found.itemId) applyTarget(button, target);
+                }
             }).catch(() => undefined);
         };
         const reveal = (event: Event) => {
@@ -435,8 +451,8 @@ const CardGetRelease: FC = () => {
         };
 
         place(document.body);
-        // New overlays (a card drawn or redrawn), and cards marked (or no longer marked) as having nothing on disk after their
-        // overlay was drawn. The callback runs before the browser paints what was added.
+        // New overlays (a card drawn or redrawn), cards marked (or no longer marked) as having nothing on disk after their overlay
+        // was drawn, and cards drawn again for another item. The callback runs before the browser paints what was added.
         const observer = new MutationObserver(records => {
             for (const record of records) {
                 if (record.type === 'attributes') {
@@ -449,7 +465,7 @@ const CardGetRelease: FC = () => {
             }
         });
         observer.observe(document.body, { childList: true, subtree: true, attributes: true,
-            attributeFilter: [NO_FILE_ATTRIBUTE, EMPTY_ATTRIBUTE] });
+            attributeFilter: [NO_FILE_ATTRIBUTE, EMPTY_ATTRIBUTE, 'data-id'] });
         document.addEventListener('pointerover', reveal, true);
         document.addEventListener('focusin', reveal, true);
         // Capture at the document, so the click is stopped before any card or container listener sees it.
@@ -463,8 +479,8 @@ const CardGetRelease: FC = () => {
             document.querySelectorAll('.' + BUTTON_CLASS).forEach(button => {
                 button.remove();
             });
-            document.querySelectorAll('[data-jfmod-asked]').forEach(card => {
-                card.removeAttribute('data-jfmod-asked');
+            document.querySelectorAll(`[${ASKED_ATTRIBUTE}]`).forEach(card => {
+                card.removeAttribute(ASKED_ATTRIBUTE);
             });
         };
     }, [api, enabled, packs, userId]);
