@@ -1,8 +1,10 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
+import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { getAncestorsQuery } from 'apps/modern/features/libraries/hooks/api/useAncestors';
 import layoutManager from 'components/layoutManager';
 import loading from 'components/loading/loading';
 
@@ -17,7 +19,7 @@ import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '..
 import { entryDetailQuery, entryIdQuery } from '../hooks/useEntries';
 import { useDeleteWarning } from '../hooks/useDeleteWarning';
 import { useVersionRemoval } from '../hooks/useVersionRemoval';
-import { registerMoreMenuItem } from '../integration/moreMenuItem';
+import { registerDeleteReturn, registerMoreMenuItem } from '../integration/moreMenuItem';
 import { usePlayedBadge, usePlayedRefresh } from '../integration/playedBadge';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -219,6 +221,17 @@ interface PageMenuItem {
 }
 
 /**
+ * True when a More menu is this page's own header More button, for this page's own item (or one of its files): a card's menu
+ * elsewhere on the page (Next Up, More Like This) is another item's menu.
+ */
+const isOwnHeaderMore = (view: HTMLElement, own: string[], options: { item?: { Id?: string } | null; positionTo?: Element | null }) => {
+    const button = options.positionTo;
+    const header = view.querySelector('.mainDetailButtons');
+    return !!button && !!header && document.body.contains(view) && button.classList.contains('btnMoreCommands')
+        && header.contains(button) && own.some(id => sameItemId(id, options.item?.Id));
+};
+
+/**
  * A mod item in the page's stock More menu, registered while the page shows: "Remove after watching…" on an episode page
  * (user, 2026-10-07), "Keep Series" on a series page (user, 2026-10-12).
  */
@@ -232,17 +245,26 @@ const usePageMenuItem = (view: HTMLElement, { enabled, itemIds, name, icon, run 
         return registerMoreMenuItem({
             name,
             icon,
-            // Only this page's own header More button, for this page's own item (or one of its files): a card's menu
-            // elsewhere on the page (Next Up, More Like This) is another item's menu and gets nothing.
-            matches: options => {
-                const button = options.positionTo;
-                const header = view.querySelector('.mainDetailButtons');
-                return !!button && !!header && document.body.contains(view) && button.classList.contains('btnMoreCommands')
-                    && header.contains(button) && own.some(id => sameItemId(id, options.item?.Id));
-            },
+            matches: options => isOwnHeaderMore(view, own, options),
             run: () => runRef.current()
         }) ?? undefined;
     }, [view, enabled, ids, name, icon]);
+};
+
+/**
+ * A movie's or a series' Delete in the page's More menu goes to the title's library, where the placeholder the plugin makes for it
+ * shows, instead of upstream's folder list of the physical folder its files were in (user, 2026-10-27; `registerDeleteReturn`).
+ * The library is the item's `CollectionFolder` ancestor, read while the page shows (the top bar reads the same query), because
+ * the item is gone once the delete is answered.
+ */
+const useDeleteReturn = (api: Api, userId: string, view: HTMLElement, itemId: string, itemType: string | undefined) => {
+    const enabled = itemType === BaseItemKind.Movie || itemType === BaseItemKind.Series;
+    const ancestors = useQuery({ ...getAncestorsQuery(api, { itemId, userId }), enabled: enabled && !!itemId });
+    const library = ancestors.data?.find(ancestor => ancestor.Type === BaseItemKind.CollectionFolder);
+    useEffect(() => {
+        if (!enabled || !library) return;
+        return registerDeleteReturn({ matches: options => isOwnHeaderMore(view, [itemId], options), target: () => library }) ?? undefined;
+    }, [enabled, itemId, library, view]);
 };
 
 interface EpisodeWindowOptions {
@@ -604,6 +626,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         itemIds: [itemId, ...versions.map(version => version.jellyfinItemId), ...versions.map(version => version.mediaSourceId)],
         busy, change });
     useKeepSeriesItem(api, view, onlyWhen(isAdmin && isSeriesPage, data), itemId, change);
+    useDeleteReturn(api, userId, view, itemId, itemType);
 
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).

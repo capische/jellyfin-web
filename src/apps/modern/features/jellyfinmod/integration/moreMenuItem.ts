@@ -1,5 +1,6 @@
 import actionsheet from 'components/actionSheet/actionSheet';
 import itemContextMenu from 'components/itemContextMenu';
+import { appRouter } from 'components/router/appRouter';
 
 /**
  * One mod item in upstream's More (`⋯`) menu on a detail page (user, 2026-10-07; UX §7 "More-menu coupling").
@@ -37,6 +38,20 @@ import itemContextMenu from 'components/itemContextMenu';
 interface MenuOptions {
     item?: { Id?: string } | null;
     positionTo?: Element | null;
+}
+
+/**
+ * Where a page goes after its own More menu deleted its item (user, 2026-10-27: "when I removed Matrix I was redirected to Movies
+ * page and I don't see Matrix anymore"). Upstream shows the deleted item's parent, and a movie's or a series' parent is one of the
+ * library's physical folders: a folder list (`#/list?parentId=…`, Sort by Folders, that folder's own children), not the library.
+ * The placeholder the plugin makes for the title goes in the library's first folder, so it never shows there, even after a reload.
+ * A registered return shows its target instead, and the call answers nothing deleted and nothing updated, so upstream's page
+ * navigates nowhere.
+ */
+export interface DeleteReturn {
+    matches: (options: MenuOptions) => boolean;
+    /** The item to show instead (its library), or null to leave upstream's navigation as it is. */
+    target: () => { Id?: string | null } | null | undefined;
 }
 
 export interface MoreMenuItem {
@@ -86,6 +101,7 @@ interface Invocation {
 }
 
 const registered: MoreMenuItem[] = [];
+const deleteReturns: DeleteReturn[] = [];
 const cardItems: CardMenuItem[] = [];
 let originalShow: Show | null = null;
 let originalSheet: SheetShow | null = null;
@@ -139,7 +155,7 @@ const wrappedSheet: SheetShow = function (this: unknown, options) {
     });
 };
 
-const wrappedShow: Show = async function (this: unknown, options) {
+const showWithItems: Show = async function (this: unknown, options) {
     const stock = originalShow as Show;
     const items = registered.filter(item => item.matches(options));
     if (!items.length || typeof menu.getCommands !== 'function') return stock.call(this, options);
@@ -161,6 +177,15 @@ const wrappedShow: Show = async function (this: unknown, options) {
     } finally {
         pending.splice(pending.indexOf(invocation), 1);
     }
+};
+
+const wrappedShow: Show = async function (this: unknown, options) {
+    const back = deleteReturns.find(entry => entry.matches(options));
+    const result = await showWithItems.call(this, options);
+    const target = back && (result as { deleted?: boolean } | null)?.deleted ? back.target() : null;
+    if (!target?.Id) return result;
+    appRouter.showItem(target);
+    return {};
 };
 
 /** Installs both wraps once; false when upstream's shape has changed and nothing could be wrapped. */
@@ -190,6 +215,13 @@ export const registerMoreMenuItem = (item: MoreMenuItem): (() => void) | null =>
     if (!install()) return null;
     registered.push(item);
     return removeFrom(registered, item);
+};
+
+/** Registers a page's return after a delete; the returned function removes it. Null as for `registerMoreMenuItem`. */
+export const registerDeleteReturn = (entry: DeleteReturn): (() => void) | null => {
+    if (!install()) return null;
+    deleteReturns.push(entry);
+    return removeFrom(deleteReturns, entry);
 };
 
 /** Registers an item for cards' menus (P1.FU12); the returned function removes it. Null as for `registerMoreMenuItem`. */
