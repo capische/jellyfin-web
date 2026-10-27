@@ -1410,6 +1410,11 @@ Approved design: the release picker's added-row sheet (2026-10-12). What the pic
   or imported. A failed grab shows a red bang for three seconds and the row's actions come back.
 - **Found again on reopening.** The picker follows the search's active operation (`grab.activeOperationId`, then
   `GET /Grabs/{id}`) and marks the row whose infohash matches it; once the client has it, no block is shown.
+- **A release still seeding** (user, 2026-10-28, P4.FU29). Add on a release whose torrent the title's earlier grab still
+  seeds in the client, after its library file was deleted, imports it again from the seeding copy instead of downloading it
+  twice: the row goes straight to its added state (`Importing…`) and then reads as in the library. A refusal that names
+  another, finished grab (the torrent owned elsewhere) leaves the row's Add as it was, usable again after the three-second bang,
+  with the reason in the status line; it no longer reads as in the library until the picker is reopened.
 - **Its download.** Once the client has the torrent, the picker reads `GET /Queue` right away and every 5 s while it is
   open, until the row is imported: the ring family's disc in the Add slot (§3.3, P4.FU6; the figure in its tooltip) and the
   figure at the right end of the marks line, `Queued`, `42% · 12 min left`, `Stalled · 42%`, `Importing…` or

@@ -1761,6 +1761,25 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   of downloading; both times the `.part` file, the folder and the torrent were gone (charlie reset afterwards). Deployed to
   alpha and beta; the dialogs checked there on intercepted rows (Chromium laptop dark), nothing removed. **Not run:** Codex
   review of the two fixes, the full dialog matrix (phone, TV, light, Chrome) on this build, TV 1280×720, a physical TV.
+  **P4.FU29, built (not accepted) 2026-10-28: Add on a release still seeding imports it again from the seeding copy** (user
+  report on beta: The Matrix's 1080p row lost its + after Add and had it back on reopening; user decision 2026-10-28:
+  "re-import from the seeding copy instead of re-downloading"). Owners: the grab (P4, `GrabService`) and the release picker's
+  added row (WR). Cause: the earlier grab still owns the torrent's infohash while it seeds, so Add was refused with
+  `duplicate_hash`; the picker then followed that finished grab as its added row, matched the hashless RuTracker row by title,
+  read its seeding queue row as imported and drew the row as in the library with no +, every row off until reopened. Now the
+  grab of such a torrent (same title, earlier grab accepted, not a pack, its import completed and none open, no seed release
+  removing; a person's grab, not automation) starts a new import of the earlier grab instead (it holds the title while the
+  import runs; the finished import's seed release closes as `reimported`, so the queue keeps one row), sends nothing to the
+  client and answers 200 with that grab; and a refusal naming a finished grab no longer turns the row into an added or
+  in-library row (`isLive` needs `active`). Not covered: a torrent still in the client that no grab owns any more (a row
+  removed from the queue with its torrent kept by hand), which still fails with `client_torrent_exists`. No design change.
+  Plugin `8a012b4` (stubs `19ea168`), web `11457eca9d` (stubs `72e4c4d371`). Phase 5 passes on both lines in the Linux container with a new scenario (added again
+  after Delete Media: no torrent-add, the seeding file hardlinked again, one seeding row). Live on local bravo (Jellyfin 12.2,
+  real Prowlarr, shared Transmission, a 829 MB 1337x row with no infohash): before, Add answered `duplicate_hash` and the row
+  read in library with no +; after, Add showed Importing… and the movie was back in 3 s with no new grab and one queue row,
+  twice; the + was the same on four opens (and a reload) during the download, after Delete Media, and on beta's The Matrix.
+  Bravo reset afterwards. Deployed to beta (items) and alpha (stubs). **Not run:** phone, TV, real Chrome, a grab on the
+  stubs line live, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
