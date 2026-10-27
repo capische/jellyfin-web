@@ -994,9 +994,14 @@ const useQueueRead = (api: Api, entryId: string, grabId: string | null): QueueRe
 
 type Grab = ReturnType<typeof useGrab>;
 
-/** A grab the added row shows: held, being sent, or in the client. */
+/**
+ * A grab the added row shows: held, being sent, or in the client, while it still holds its title. A finished grab a refusal
+ * names (the torrent another grab already owns, imported and seeding) is no added row: followed as one, its seeding queue row
+ * marked this row as in the library and hid its Add until the picker was opened again (user report, 2026-10-28).
+ */
 const isLive = (operation: GrabOperation | null): operation is GrabOperation =>
-    !!operation && (operation.state === 'pending' || operation.state === 'submitting' || operation.state === 'accepted');
+    !!operation && operation.active !== false
+    && (operation.state === 'pending' || operation.state === 'submitting' || operation.state === 'accepted');
 
 /**
  * The row a followed grab is about: the one pressed here, else, found again on reopening, the one with the grab's infohash, or
@@ -1559,6 +1564,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [resultKey]);
 
     const { busy, operation, start } = grab;
+    // A grab in the client holds the rows; a finished one a refusal named does not (user report, 2026-10-28).
+    const holding = isLive(operation) && operation.state === 'accepted';
     // One confirmation at a time (Replace, a rejected release, Remove the Torrent); a second activation while one is open does
     // nothing.
     const confirming = useRef(false);
@@ -1571,7 +1578,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const arrived = useArrivals(data);
     useKeepPlace(container, data?.searchId ?? '', data?.candidates.length ?? 0);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || operation?.state === 'accepted' || waitingForRows || candidate.heldQuality) return;
+        if (!data?.grab.available || busy || holding || waitingForRows || candidate.heldQuality) return;
         const chosenRejection = !candidate.eligible;
         const searchId = searchIdOf(candidate, extras, data.searchId);
         if (mode !== 'replace' && !chosenRejection) {
@@ -1584,7 +1591,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             .then(() => start(searchId, candidate, mode, chosenRejection), () => undefined).finally(() => {
                 confirming.current = false;
             });
-    }, [busy, data, extras, mediaType, operation, waitingForRows, start]);
+    }, [busy, data, extras, holding, mediaType, waitingForRows, start]);
     const toggleRejected = useCallback(() => setRejectedOpen(value => !value), []);
     // The TV's action sheet may offer the disabled loading line too; choosing it changes nothing.
     const chooseScope = useCallback((value: string) => {
@@ -1614,7 +1621,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         now: progressNow, startedAt, receivedAt: search.dataUpdatedAt });
     // A new search (another season, another profile) clears the rows of the last one and starts from the searching state; only
     // current rows can grab.
-    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || operation?.state === 'accepted' || waitingForRows;
+    const grabDisabled = !data?.grab.available || busy || grab.starting || grab.flash || holding || waitingForRows;
     const unavailable = unavailableText(data, search.dataUpdatedAt);
     const notes = [grab.error, removeError].filter(Boolean).join(' · ');
     const status: ReactNode = soFar ? <EarlyStatus count={eligible.length} progress={progress} notes={notes} hidden={hidden} /> :
