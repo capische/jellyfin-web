@@ -255,16 +255,19 @@ const usePageMenuItem = (view: HTMLElement, { enabled, itemIds, name, icon, run 
  * A movie's or a series' Delete in the page's More menu goes to the title's library, where the placeholder the plugin makes for it
  * shows, instead of upstream's folder list of the physical folder its files were in (user, 2026-10-27; `registerDeleteReturn`).
  * The library is the item's `CollectionFolder` ancestor, read while the page shows (the top bar reads the same query), because
- * the item is gone once the delete is answered.
+ * the item is gone once the delete is answered. The menu deletes the version picked in the page's version select, which may be
+ * another item than the page's (a grouped version), so the page's own ids include every version the select and the plugin list.
  */
-const useDeleteReturn = (api: Api, userId: string, view: HTMLElement, itemId: string, itemType: string | undefined) => {
+const useDeleteReturn = (api: Api, userId: string, view: HTMLElement, itemId: string, itemType: string | undefined, ownIds: string[]) => {
     const enabled = itemType === BaseItemKind.Movie || itemType === BaseItemKind.Series;
     const ancestors = useQuery({ ...getAncestorsQuery(api, { itemId, userId }), enabled: enabled && !!itemId });
     const library = ancestors.data?.find(ancestor => ancestor.Type === BaseItemKind.CollectionFolder);
+    const ids = ownIds.join(',');
     useEffect(() => {
         if (!enabled || !library) return;
-        return registerDeleteReturn({ matches: options => isOwnHeaderMore(view, [itemId], options), target: () => library }) ?? undefined;
-    }, [enabled, itemId, library, view]);
+        const own = ids.split(',');
+        return registerDeleteReturn({ matches: options => isOwnHeaderMore(view, own, options), target: () => library }) ?? undefined;
+    }, [enabled, ids, library, view]);
 };
 
 interface EpisodeWindowOptions {
@@ -626,7 +629,8 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         itemIds: [itemId, ...versions.map(version => version.jellyfinItemId), ...versions.map(version => version.mediaSourceId)],
         busy, change });
     useKeepSeriesItem(api, view, onlyWhen(isAdmin && isSeriesPage, data), itemId, change);
-    useDeleteReturn(api, userId, view, itemId, itemType);
+    useDeleteReturn(api, userId, view, itemId, itemType, [itemId, ...(stockIds?.split(',') ?? []),
+        ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])].filter((id): id is string => !!id));
 
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
