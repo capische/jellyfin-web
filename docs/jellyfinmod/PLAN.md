@@ -1736,13 +1736,31 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   **Not run:** Codex review, a real TV or phone, a live downloading row (none was downloading during the run; staged ones covered it).
   Codex final review fix (2026-10-26): every computer disc is a Tab stop with its tooltip on focus (an unlinked one through its
   wrapper, `.jfmod-queueStateFocus`); local delta, Chromium laptop dark and light, TV 1080 dark, phone dark pass.
-  **P5.I7/I8 follow-up, withdrawn 2026-10-26: Remove from Queue deleting the downloaded files.** Built and live-tested, then
-  rejected by the final Codex GPT-6.1 Sol high review (workspace `reviews/final-2026-10-26/codex-plugin.md`): four P1s, all about
-  deleting files that are not the download's own (Transmission's incomplete folder and `.part` names not inspected, library files
-  reachable through a bind-mount alias, two torrents sharing one file, and the gap between the checks and Transmission's
-  delete-with-data, which deletes whatever the torrent points at by then). Not on the lines; kept on `wip/remove-delete-files`
-  (and `-items`) in both repositories for the user's decision. A safe version would remove the torrent without data and delete
-  only the verified files itself.
+  **P5.I7/I8 follow-up, built (not accepted) 2026-10-27: Remove from Queue deletes the downloaded files** (user-approved copy,
+  workspace `reviews/queue-remove-delete/`). Withdrawn on 2026-10-26 after the final Codex GPT-6.1 Sol high review
+  (`reviews/final-2026-10-26/codex-plugin.md`), then brought back by the **user's decision of 2026-10-27: "just use
+  transmission api to remove the file"**: the deletion stays Transmission's own `torrent-remove` with `delete-local-data`, with
+  no per-download folder and no plugin-side deletion. **Accepted risk (user, 2026-10-27):** another torrent in the same client
+  whose files have identical names in the same folder can lose them, and the review's other P1s (incomplete folder and `.part`
+  names, bind-mount aliases, the gap between the checks and the RPC) are not addressed by this decision. `DELETE /Queue/{id}` takes `deleteFiles`:
+  only with `removeFromClient`, only for a torrent the plugin added (owner label) whose data is outside every library and has no
+  second name (link count 1), and only while nothing of it was imported (no import of its grab or infohash recorded a
+  destination, linked or bound; no seed release; for a pack none of its episodes); otherwise 409 `delete_not_allowed` with
+  nothing changed. Two review P2s fixed: (6) the removed row's own infohash is always read from the client, so a failed,
+  unimported torrent is no longer taken as gone and its files kept; (7) a torrent the client no longer has removes the row with
+  nothing deleted and is checked before the eligibility checks, so it never answers `delete_not_allowed`, also while a seed
+  release is still `removing` (its RPC went through, then timed out): `seed_release_in_progress` now applies only to a removal
+  that deletes nothing, and a deleting one whose torrent is still there gets `delete_not_allowed` (Codex re-review 2026-10-27); and (P3 9) every
+  refusal of a deleting removal is 409 `delete_not_allowed`. The Queue dialog offers "Delete the downloaded files" (ticked,
+  indented 2.2em, only while the client option is ticked) for queued/downloading/stalled/failed rows; seeding rows say the
+  seeding copy stays. Remove the Torrent (picker X, Cancel Download) deletes the files, with the new text; both Removes stay red
+  under the pointer. Plugin `364bdbd` `655b51f`, web `8f216443f4`. Phase 5 passes on both lines in the Linux
+  container (with a failed unimported row whose files are deleted, and an imported seeding row whose torrent was removed by
+  hand: 200, row gone, nothing deleted). Live on local charlie with the real Prowlarr and the shared Transmission: a
+  downloading row removed from the Queue page with Delete ticked, and a picked release removed with the picker's X after 90 s
+  of downloading; both times the `.part` file, the folder and the torrent were gone (charlie reset afterwards). Deployed to
+  alpha and beta; the dialogs checked there on intercepted rows (Chromium laptop dark), nothing removed. **Not run:** Codex
+  review of the two fixes, the full dialog matrix (phone, TV, light, Chrome) on this build, TV 1280×720, a physical TV.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
