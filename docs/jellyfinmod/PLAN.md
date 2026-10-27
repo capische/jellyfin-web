@@ -1114,6 +1114,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `3af9a2a0a7` (stubs); deployed to beta (bundle `59838307aba0`) and alpha (`a3bc99ee9823`), whose Matrix cards show the icon.
   **Not run:** phone and TV (no hover icon there; the card menu reads the answer per item already), real Chrome, the full
   matrix, Codex review. Built (not accepted).
+  **P1.FU29 follow-up, built (not accepted) 2026-10-27: a movie or series deleted from its page goes to its library** (user
+  2026-10-27 on beta: "when I removed Matrix I was redirected to Movies page and I don't see Matrix anymore"). Not a filter
+  and not timing: upstream's detail page shows the deleted item's parent, and a movie's or a series' parent is one of the
+  library's physical folders, so Delete Media landed on that folder's list (`#/list?parentId=…`, "Sort by Folders", "1-2 of
+  2", the folder's own children; beta's Matrix was in `/test-media/movies-w`, which holds only Inception and The Matrix
+  Reloaded). The items line makes the placeholder in the library's first folder (`/data5/Movies`), so it never showed there,
+  even after a reload; the stubs line writes the stub beside the deleted file, where only a reload showed it. The page's own
+  More menu now shows the title's library (its `CollectionFolder` ancestor, read while the page shows; the top bar reads the
+  same query) through the existing More-menu wrap (`registerDeleteReturn`, no upstream file edited); episodes and seasons keep
+  upstream's navigation. Measured on bravo (Chromium, desktop, details → More → Delete media): before, the folder list
+  with no Matrix for 20 s and after a reload (items 12.2); after, the Movies grid at once and the placeholder card in place of
+  the deleted one 1–2 s after the delete, without a reload (items 12.2: The Matrix, Inception; stubs 12.0: The Matrix; real
+  Chrome once on items: The Matrix Reloaded), Peep Show's delete lands on Shows with its placeholder series card at 2 s, an
+  episode's delete still lands on its season. Web `fix/grid-after-delete` (items), `fix/grid-after-delete-stubs` (stubs);
+  deployed to beta and alpha. **Not run:** phone and TV layouts, a card menu's Delete (the wrap does not claim it), the full
+  matrix, Codex review. Built (not accepted).
   **P7.FU4, built (not accepted) 2026-10-15: what blocks a setup step is said beside Continue** (user 2026-10-15, option A of the design
   session's `wizard-step-blockers`: "A, tell parent to implement it"; [UX.md](UX.md) §12.2). The top notice ("This step is not done yet. …")
   is gone; the step card's footer shows one muted line with a lock, "To continue, <instruction>.", built from the step's blocker codes, and
