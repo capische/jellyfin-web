@@ -1098,6 +1098,22 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   cards). Not run: `card-get-shuffle.mjs` and `missing-seasons-episodes.mjs` (their picker steps run release searches, not
   read-only on 28096), the TV at 1280×720, a physical TV, a deployment, Codex review. The row Not Downloaded mark is left to
   `feat/row-mark-click`.
+  Then (user 2026-10-27 on beta: "I've removed Matrix through Delete Media ... I see no grab icon over the poster") the card
+  of a title whose movie was deleted in Jellyfin offered no Get a Release until a reload. A library grid draws a title's card
+  keyed by its entry (`EntryCards`), so when the movie's item is replaced by its placeholder React keeps the card element and
+  only changes its `data-id`; the card's answer was tied to the element (`data-jfmod-asked` and the injected icon), so a card
+  first pointed at after the delete but before the grid refreshed asked for the deleted item, got no entry and hid the icon,
+  and no lookup was ever made for the placeholder (the plugin answers it at once; `GET /Entries?jellyfinItemId=` was never
+  sent). A card pointed at before the delete kept "Get Another Quality" instead. The icon and the asked mark now carry their
+  item: a card drawn for another item is drawn and asked again (the observer also watches `data-id`), and a late answer for
+  the old item is not applied. Web only, the same on both lines. Measured on bravo (Chromium, desktop, Movies grid, The
+  Matrix deleted through Jellyfin's `DELETE /Items/{id}` with the grid open and the card first hovered 0.45 s later): before,
+  no icon on the placeholder card in 90 s on both lines (items 12.2, stubs 12.0); after, the icon 1.1 s (items) and 1.6 s
+  (stubs) after the delete, as soon as the card shows the placeholder, and it opens the picker; the details page's Delete
+  Media then the Movies link: 1.3 s. Web `fix/card-grab-after-delete` `8b60b82be5` (items), `fix/card-grab-after-delete-stubs`
+  `3af9a2a0a7` (stubs); deployed to beta (bundle `59838307aba0`) and alpha (`a3bc99ee9823`), whose Matrix cards show the icon.
+  **Not run:** phone and TV (no hover icon there; the card menu reads the answer per item already), real Chrome, the full
+  matrix, Codex review. Built (not accepted).
   **P7.FU4, built (not accepted) 2026-10-15: what blocks a setup step is said beside Continue** (user 2026-10-15, option A of the design
   session's `wizard-step-blockers`: "A, tell parent to implement it"; [UX.md](UX.md) §12.2). The top notice ("This step is not done yet. …")
   is gone; the step card's footer shows one muted line with a lock, "To continue, <instruction>.", built from the step's blocker codes, and
