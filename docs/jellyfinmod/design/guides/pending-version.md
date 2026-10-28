@@ -18,7 +18,7 @@ title's page content.
 ## Anatomy
 
 - **Where:** under the [track strip](track-dropdown.md), left-aligned with it (`padding-left .2em`); while the Video list is
-  open it is that list's row instead, between the files and *Get Another Quality*, its ring where the rows' text starts.
+  open it is that list's row instead, after the files, its ring where the rows' text starts.
 - **Ring:** the [download state mark](download-state-mark.md) at the row size (2.5em), `.45em` before the text; downloading
   draws the **+**, the other states their own glyph; an administrator's ring opens the client (not on the TV).
 - **First line:** the quality in 600 (`4K Remux`, from the grab's parsed name; else the queue's label), the release's media

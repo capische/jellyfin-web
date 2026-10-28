@@ -224,8 +224,7 @@
 // The list slides open on a grid row growing from 0fr to 1fr, so it moves at its own height for the whole 0.18s (a max-height
 // of 40em was over in about 30 ms opening and waited about 140 ms before closing; user, 2026-10-12). An engine that cannot
 // animate the row (older webOS) just opens it. The panel is as wide as the Video value and never reaches left of it: each
-// row's text starts where the value's text does, and Get Another Quality's plus starts there too, its text after it (user,
-// 2026-10-12).
+// row's text starts where the value's text does (user, 2026-10-12).
 // Where a segment's text starts: its 0.6em padding inside the strip's 0.135em border.
 $text-inset: 0.735em;
 
@@ -312,15 +311,6 @@ $text-inset: 0.735em;
         background: rgba(0, 164, 220, 0.2);
         outline: none;
     }
-}
-
-.jfmod-fileRow--add .jfmod-fileChoose {
-    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
-}
-
-.jfmod-fileMark {
-    margin-right: 0.7em;
-    color: var(--jf-palette-text-primary, #fff);
 }
 
 .jfmod-fileBody {
