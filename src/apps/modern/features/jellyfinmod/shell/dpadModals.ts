@@ -83,7 +83,7 @@ export const getTopModal = (): HTMLElement | null => {
     return modals.length ? modals[modals.length - 1] : null;
 };
 
-const isBackKey = (key: string) => (
+export const isBackKey = (key: string) => (
     key === 'Back'
     || key === 'Escape'
     || key === 'BrowserBack'
