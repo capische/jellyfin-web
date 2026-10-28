@@ -37,6 +37,7 @@ import { MediaError } from 'types/mediaError';
 import { getMediaError } from 'utils/mediaError';
 import { bindSkipSegment } from './skipsegment.ts';
 import { skipPlaceholders } from 'apps/modern/features/jellyfinmod/integration/playQueue';
+import { deviceMediaSource } from 'apps/modern/features/jellyfinmod/integration/deviceSource';
 import * as bitrateTest from 'utils/bitrateTest';
 
 const UNLIMITED_ITEMS = -1;
@@ -504,7 +505,7 @@ async function getPlaybackInfo(player, apiClient, item, deviceProfile, mediaSour
     return res.data;
 }
 
-function getOptimalMediaSource(apiClient, item, versions) {
+function getOptimalMediaSource(apiClient, item, versions, mediaSourceId, options) {
     const promises = versions.map(function (v) {
         return supportsDirectPlay(apiClient, item, v);
     });
@@ -516,6 +517,11 @@ function getOptimalMediaSource(apiClient, item, versions) {
     return Promise.all(promises).then(function (results) {
         for (let i = 0, length = versions.length; i < length; i++) {
             versions[i].enableDirectPlay = results[i] || false;
+        }
+
+        const deviceSource = deviceMediaSource(versions, mediaSourceId, options);
+        if (deviceSource) {
+            return deviceSource;
         }
 
         // Prefer the played item's own source, transcoding it if needed, over another version
@@ -3084,7 +3090,7 @@ export class PlaybackManager {
 
             return getPlaybackInfo(player, apiClient, item, deviceProfile, mediaSourceId, null, options).then(function (playbackInfoResult) {
                 if (validatePlaybackInfoResult(self, playbackInfoResult)) {
-                    return getOptimalMediaSource(apiClient, item, playbackInfoResult.MediaSources).then(function (mediaSource) {
+                    return getOptimalMediaSource(apiClient, item, playbackInfoResult.MediaSources, mediaSourceId, options).then(function (mediaSource) {
                         if (mediaSource) {
                             // Remember whether alternate versions exists
                             mediaSource.hasAlternateVersions = playbackInfoResult.MediaSources.length > 1
