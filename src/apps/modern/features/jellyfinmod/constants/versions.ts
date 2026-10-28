@@ -2,7 +2,7 @@ import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/
 import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/media-stream';
 
 import type { ParsedRelease } from '../types/acquisition';
-import type { VersionDto, VersionRetention } from '../types/versions';
+import type { VersionDto } from '../types/versions';
 import { formatBytes } from './queue';
 
 /**
@@ -185,18 +185,6 @@ export const videoRangeTypes = (sources: MediaSourceInfo[]): VideoRangeTypes => 
     return types;
 };
 
-/**
- * A short suffix for the few retention states worth reading on a row: a copy that is still seeding, or one the
- * next retention run may remove. Anything else says nothing, so ordinary rows stay short.
- */
-export const versionRetentionSuffix = (retention: VersionRetention | null | undefined): string | null => {
-    if (!retention) return null;
-    const reason = retention.reason ?? '';
-    if (reason === 'seeding' || reason.startsWith('seed_') || reason.startsWith('seeding_')) return 'waiting for seeding';
-    if (retention.state === 'scheduled') return 'scheduled for removal';
-    return null;
-};
-
 /** Everything a row shows, worded once for all layouts. */
 export const describeVersion = (version: VersionDto) => {
     const resolution = versionResolution(version);
@@ -207,8 +195,7 @@ export const describeVersion = (version: VersionDto) => {
         label,
         video: versionVideo(version),
         audio: versionAudio(version),
-        size: formatBytes(version.sizeBytes),
-        retention: versionRetentionSuffix(version.retention)
+        size: formatBytes(version.sizeBytes)
     };
 };
 
