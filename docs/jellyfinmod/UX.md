@@ -1495,8 +1495,9 @@ selector, not a replacement for it. Everything it does today it still does.
 ### 11.1 Versions on Jellyfin 12 (V1, 2026-09-28)
 
 The rows list every file Jellyfin plays for the movie or episode, read from its media sources, so a
-copy the plugin has not bound yet still shows (marked *not tracked yet*) and a multi-episode file
-names the episodes it holds (`S01E01-E02`). *Default* is Jellyfin's own default copy.
+copy the plugin has not bound yet still shows (with no mark: torrent and bookkeeping states such as
+*not tracked yet* or *waiting for seeding* are not shown on the rows, user 2026-10-28) and a
+multi-episode file names the episodes it holds (`S01E01-E02`). *Default* is Jellyfin's own default copy.
 
 **Which copy a device starts with** (user decision 4, answered 2026-09-28): on the TV layout the
 page preselects the highest-resolution copy, high dynamic range first at equal resolution; on the
@@ -1538,7 +1539,8 @@ The version rows below the track block are replaced by a chooser in the **Video*
 - With two or more files the Video value carries a chevron and toggles the list (a height transition;
   none under `prefers-reduced-motion`). Choosing a row selects that file and closes the list. Each row:
   mark, resolution, details from `describeVersion`, the `DEFAULT` chip on Jellyfin's default copy,
-  `not tracked yet` and a multi-episode range as before, a scheduled removal as `· removes <date>`,
+  a multi-episode range as before, a scheduled removal as `· removes <date>` (and nothing else: no
+  seeding or tracking words, user 2026-10-28),
   then three icons: **history** (§7.2), **pin** (per-file Keep, filled in primary when kept) and
   **cross** (Remove this version with upstream's confirmation, as in §11.1). The last row is *Get
   another quality* for administrators with release search.
