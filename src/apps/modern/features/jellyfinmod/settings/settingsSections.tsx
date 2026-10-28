@@ -95,12 +95,32 @@ export interface TvModels {
 
 /** One Jellyfin user the stock Trakt plugin holds a sign-in for (Phase 13). */
 export interface TraktExportUser {
+    /** The Jellyfin user's id, for the Trakt plugin's own Deauthorize (Disconnect). */
+    userId: string;
     name: string;
     /** `linked`, or `reconnect` when its sign-in could not be renewed and the plugin skips the user. */
     state: 'linked' | 'reconnect';
     since: string | null;
     collections: boolean;
     postWatched: boolean;
+    /** The Trakt username and avatar the server read (D49); null until read, or when Trakt has none. */
+    traktUsername?: string | null;
+    avatarUrl?: string | null;
+}
+
+/** One export run of the Activity list (D50, D73), newest first; the server leaves null fields out. */
+export interface TraktExportRun {
+    startedAt: string;
+    endedAt: string;
+    status: string;
+    clean: boolean;
+    /** `watch`, `reconnect`, `daily`, `retry`, `sync_now`, `first`, or null for a run JellyfinMod did not start. */
+    why?: string | null;
+    episodesWatched?: number | null;
+    moviesWatched?: number | null;
+    episodesCollected?: number | null;
+    moviesCollected?: number | null;
+    error?: string | null;
 }
 
 /** `GET /JellyfinMod/Trakt/Export` (Phase 13). */
@@ -119,6 +139,8 @@ export interface TraktExport {
     failures: number;
     quietMinutes: number;
     users: TraktExportUser[];
+    activity?: TraktExportRun[];
+    runningWhy?: string | null;
 }
 
 /** `today 14:05`, `yesterday 21:40` or `12 Oct 21:40`: a short local time for the Trakt lines. */

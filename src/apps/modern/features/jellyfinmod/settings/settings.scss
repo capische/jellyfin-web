@@ -1313,3 +1313,104 @@
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
     margin: 0 0 1em;
 }
+
+/* Settings › Trakt, the account row and Activity (Phase 13, D67–D74; approved mockups reviews/phase13/mockups-v2). The account
+   row: Trakt avatar | name, state and help | Disconnect. */
+.jfmod-brow.jfmod-traktUser { grid-template-columns: auto 1fr auto; }
+
+/* Phone (and a narrow window): the row's icons go under it at the right, as on every row; the avatar keeps its column. */
+@media (max-width: 48em) {
+    .jfmod-brow.jfmod-traktUser { grid-template-columns: auto 1fr; }
+
+    .jfmod-brow.jfmod-traktUser .jfmod-rowactions {
+        grid-column: 2;
+        justify-self: end;
+    }
+}
+.layout-mobile .jfmod-brow.jfmod-traktUser { grid-template-columns: auto 1fr; }
+
+.layout-mobile .jfmod-brow.jfmod-traktUser .jfmod-rowactions {
+    grid-column: 2;
+    justify-self: end;
+}
+
+/* The avatar: round, the row-action size, on the name's line. */
+.jfmod-traktAvatar {
+    display: block;
+    align-self: start;
+    width: 2.5em;
+    height: 2.5em;
+    margin-top: 0.05em;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #424242;
+    background: var(--jf-palette-Button-inheritContainedBg, #424242);
+}
+
+/* No avatar (none on Trakt, or nothing read yet): the person glyph on the grey disc. */
+.jfmod-traktAvatar-none {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-brow .jfmod-traktAvatar-none .MuiSvgIcon-root {
+    width: 1.5em;
+    height: 1.5em;
+}
+
+/* Reconnect needed: the last known avatar, dimmed. */
+.jfmod-brow-err .jfmod-traktAvatar {
+    opacity: 0.45;
+    filter: grayscale(1);
+}
+
+/* The Trakt username after the Jellyfin name, in the secondary text. */
+.jfmod-traktHandle {
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+/* Activity: a disclosure in the group title's look (the picker's "▸ 12 Rejected"). */
+.jfmod-traktActivity { margin-top: -0.4em; }
+
+.jfmod-activityToggle.emby-button {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    width: auto;
+    margin: 0 0 0.5em -0.45em;
+    padding: 0.4em 0.45em;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-activityChevron {
+    width: 1em;
+    font-size: 0.9em;
+}
+
+.jfmod-activityTitle {
+    font-size: 0.8em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.jfmod-activityHint {
+    margin-left: 0.8em;
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
+/* The runs, one notch tighter, in the scrolling list, tall enough here for six; the other fourteen scroll (D74). */
+.jfmod-traktActivity .jfmod-scrolllist { max-height: 23em; }
+.jfmod-traktActivity .jfmod-scrolllist .jfmod-brow { padding: 0.5em 0; }
+.jfmod-traktActivity .jfmod-brow .jfmod-state { margin-right: 0.35em; }
+
+/* TV: the toggle takes the stock focused-button fill through show-focus, with dark text on the cyan. */
+.layout-tv .jfmod-activityToggle.emby-button.show-focus:focus { color: rgba(0, 0, 0, 0.87); }
