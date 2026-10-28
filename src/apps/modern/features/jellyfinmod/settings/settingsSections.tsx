@@ -1,6 +1,8 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import BuildIcon from '@mui/icons-material/Build';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import EditIcon from '@mui/icons-material/Edit';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Button from '@mui/material/Button';
@@ -8,10 +10,13 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { queryClient } from 'utils/query/queryClient';
 
 import { SlowSetupGroup } from '../components/SlowSetup';
 import { indexerColour } from '../constants/indexerColours';
@@ -57,6 +62,9 @@ export interface SettingsData {
     prowlarr?: any[];
     /** Each TV and movie library's placeholder switch (`GET /JellyfinMod/Placeholders`, P1.FU24, P1.FU26). */
     placeholders?: PlaceholderLibrary[];
+    /** Ratings settings and the fetcher's status; undefined when the plugin build has no ratings (Phase 9). */
+    ratings?: any;
+    ratingsStatus?: any;
 }
 
 /** A TV or movie library and its placeholder switch (`GET /JellyfinMod/Placeholders`). */
@@ -88,6 +96,7 @@ const PROWLARR_READS = ['Settings/Prowlarr'];
 const ACQUISITION_READS = ['Settings/Acquisition'];
 const RETENTION_READS = ['Settings/Retention', 'Settings/SeedProtection'];
 const DISCOVERY_READS = ['Settings/Discovery'];
+const RATINGS_READS = ['Settings/Ratings'];
 
 /** What a settings refetch resolves with: the query's own result, as `refetch` returns it. */
 interface ReloadResult {
@@ -504,6 +513,18 @@ const summariseDiagnostics = (data: SettingsData): Summary => {
     return open ? { kind: 'warn', words: `${open} item(s) need a decision` } : { kind: 'ok', words: `Last run ${when(latest.completedAt ?? latest.startedAt)}` };
 };
 
+const summariseRatings = (data: SettingsData): Summary => {
+    const ratings = data.ratings;
+    if (!ratings) return { kind: 'off', words: 'Not in this plugin build' };
+    if (!ratings.enabled) return { kind: 'off', words: 'Turned off' };
+    if (!ratings.apiKeyConfigured) return { kind: 'warn', words: 'No MDBList key · TMDB and server metadata only' };
+    const status = data.ratingsStatus;
+    if (status?.blocker === 'unauthorized') return { kind: 'err', words: 'MDBList refused the key' };
+    if (status?.breaker?.open) return { kind: 'warn', words: `Paused until ${when(status.breaker.until)}` };
+    if (status?.running) return { kind: 'ok', words: `Fetching · ${status.running.remaining} title(s) left` };
+    return ratings.verified ? { kind: 'ok', words: `Key tested ${when(ratings.verifiedAt)}` } : { kind: 'warn', words: 'Key not tested since it changed' };
+};
+
 export const summarise = (id: string, data: SettingsData): Summary => {
     switch (id) {
         case 'overview': return summariseOverview(data);
@@ -518,6 +539,7 @@ export const summarise = (id: string, data: SettingsData): Summary => {
         case 'placeholders': return summarisePlaceholders(data.placeholders);
         case 'interface': return summariseInterface(data);
         case 'diagnostics': return summariseDiagnostics(data);
+        case 'ratings': return summariseRatings(data);
         default:
             return data.overview?.areas.find(candidate => candidate.id === id)?.ready ? { kind: 'ok', words: 'Ready' } : { kind: 'off', words: '' };
     }
@@ -1659,3 +1681,249 @@ export const DiagnosticsSection: FC<SectionProps> = props => {
 };
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ---- Ratings (Phase 9) ----
+
+/** The cached reads a ratings save changes: the defaults, each title's ratings and the grids that show a card rating. */
+const isRatingsQuery = (key: readonly unknown[], basePath: string) => key[0] === 'JellyfinMod' && key[1] === basePath
+    && key.some(part => ['RatingsDefaults', 'Ratings', 'Browse', 'SearchBrowse', 'HomeRecent', 'NativeDetail'].includes(part as string));
+
+const RATING_SOURCE_NAMES: Record<string, string> = Object.fromEntries([
+    ['imdb', 'IMDb'], ['tomatoes_critic', 'Rotten Tomatoes critics'], ['tomatoes_audience', 'Rotten Tomatoes audience'], ['tmdb', 'TMDB'],
+    ['trakt', 'Trakt'], ['metacritic', 'Metacritic critics'], ['metacritic_user', 'Metacritic users'], ['letterboxd', 'Letterboxd'],
+    ['rogerebert', 'Roger Ebert']
+]);
+
+const STOP_SENTENCES: Record<string, string> = Object.fromEntries([
+    ['budget_spent', 'the daily budget was spent'], ['breaker_open', 'the provider was paused'], ['ratings_disabled', 'ratings were off'],
+    ['not_configured', 'no key was saved'], ['unauthorized', 'MDBList refused the key']
+]);
+
+interface RatingsRun {
+    startedAt: string;
+    fetched: number;
+    failed: number;
+    stopReason?: string | null;
+}
+
+/** The provider's state in words: stopped, paused and why, or ready. */
+const providerState = (status: { blocker?: string | null; breaker: { open: boolean; until?: string | null; reason?: string | null } }) => {
+    if (status.blocker === 'unauthorized') return 'Stopped: MDBList refused the key';
+    if (!status.breaker.open) return 'Ready';
+    const why = status.breaker.reason === 'rate_limited' ? 'daily limit reached' : 'repeated errors';
+    return `Paused until ${when(status.breaker.until)} (${why})`;
+};
+
+/** The last run in one line. */
+const lastRunText = (run: RatingsRun | null | undefined) => {
+    if (!run) return 'No run yet';
+    const stop = run.stopReason ? ` · stopped because ${STOP_SENTENCES[run.stopReason] ?? run.stopReason}` : '';
+    return `${when(run.startedAt)} · ${run.fetched} fetched · ${run.failed} failed${stop}`;
+};
+
+const ratingsRead = (data: SettingsData) => data.ratings !== undefined && data.ratings !== null;
+
+/** What started a pass in progress (user decision 8). */
+const PASS_KINDS: Record<string, string> = { daily: 'the daily run', arrivals: 'new titles', setup: 'setup', startup: 'the first start' };
+
+/**
+ * The fetcher's state; while a pass is in progress it says so, with how many titles it has left, and reads the status again
+ * every few seconds until the pass ends (user decision 8: titles are fetched on arrival and in full at setup).
+ */
+interface RatingsStatusView {
+    blocker?: string | null;
+    breaker: { open: boolean; until?: string | null; reason?: string | null };
+    budget: { used: number; limit: number };
+    entries: number;
+    entriesWithoutRatings: number;
+    lastRun?: RatingsRun | null;
+    running?: { kind: string; startedAt: string; remaining: number } | null;
+}
+
+/** How often the open Ratings section reads the status again: often while a pass runs, slowly while idle. */
+const STATUS_BUSY_MS = 3000;
+const STATUS_IDLE_MS = 15000;
+
+/**
+ * Keeps `Ratings/Status` current while the Ratings section is open (review 2026-10-08, P3 6-7): a bounded read every few
+ * seconds while a pass runs and every 15 s while idle (none while the page is hidden), written into the settings area's own
+ * cached data, so the section's header and the rail's summary read the same live status as the panel — without reading the
+ * whole settings area again, and without touching any form the administrator is editing.
+ */
+const useLiveRatingsStatus = (api: Api, status: RatingsStatusView | undefined, enabled: boolean) => {
+    const running = !!status?.running;
+    useEffect(() => {
+        if (!enabled) return;
+        let alive = true;
+        let timer: number | undefined;
+        const tick = async () => {
+            if (!document.hidden) {
+                const next = await request<RatingsStatusView>(api, 'GET', 'Ratings/Status').catch(() => undefined);
+                if (!alive) return;
+                if (next) {
+                    queryClient.setQueryData<SettingsData>(['JellyfinMod', api.basePath, 'SettingsArea'],
+                        current => current ? { ...current, ratingsStatus: next } : current);
+                }
+            }
+            if (alive) timer = window.setTimeout(tick, running ? STATUS_BUSY_MS : STATUS_IDLE_MS);
+        };
+        // A save or a Test may just have started a pass in the background: the first look comes soon.
+        timer = window.setTimeout(tick, running ? STATUS_BUSY_MS : 2500);
+        return () => {
+            alive = false;
+            window.clearTimeout(timer);
+        };
+    }, [api, running, enabled]);
+};
+
+const RatingsFetching: FC<{ status: RatingsStatusView | undefined }> = ({ status }) => {
+    if (!status) return null;
+    return <div className='jfmod-group'>
+        <h3 className='jfmod-grouptitle'>Fetching</h3>
+        <dl className='jfmod-kv'>
+            {status.running && <><dt>Now</dt><dd role='status' data-jfmod-ratings-running={status.running.kind}>
+                Fetching, {status.running.remaining} title(s) left · started by {PASS_KINDS[status.running.kind] ?? status.running.kind} {when(status.running.startedAt)}
+            </dd></>}
+            <dt>Today</dt><dd>{status.budget.used} of {status.budget.limit} calls</dd>
+            <dt>Titles without ratings</dt><dd>{status.entriesWithoutRatings} of {status.entries}</dd>
+            <dt>Provider</dt><dd>{providerState(status)}</dd>
+            <dt>Last run</dt><dd>{lastRunText(status.lastRun)}</dd>
+        </dl>
+    </div>;
+};
+
+/**
+ * One default source: ticked or not, and its place in the order every user starts from (user decisions 6 and 9). Move Up and
+ * Move Down are round icons (UX §12.1); a move with nowhere to go is refused, not disabled, and the moved source's button
+ * keeps the focus, as a quality's does, so a remote can press it again.
+ */
+const SourceRow: FC<{ source: string; index: number; count: number; on: boolean; onToggle: (source: string) => void; onMove: (source: string, by: number) => void }> = ({
+    source, index, count, on, onToggle, onMove
+}) => {
+    const name = RATING_SOURCE_NAMES[source] ?? source;
+    const toggle = useCallback(() => onToggle(source), [onToggle, source]);
+    const move = useCallback((by: number, action: string) => {
+        onMove(source, by);
+        window.setTimeout(() => {
+            const button = [...document.querySelectorAll<HTMLElement>(`[data-jfmod-default-source] [data-row-action="${action}"]`)]
+                .find(element => element.dataset.source === source);
+            if (button && document.activeElement !== button) button.focus();
+        }, 0);
+    }, [onMove, source]);
+    const up = useCallback(() => move(-1, 'up'), [move]);
+    const down = useCallback(() => move(1, 'down'), [move]);
+    return (
+        <div className='jfmod-qrow' data-jfmod-default-source={source}>
+            <FormControlLabel control={<Checkbox checked={on} onChange={toggle} />} label={name} />
+            {on && <span className='jfmod-rowactions'>
+                <IconAction label={`Move ${name} Up`} refused={index === 0} onClick={up} data={{ 'row-action': 'up', source }}><ArrowUpwardIcon /></IconAction>
+                <IconAction label={`Move ${name} Down`} refused={index === count - 1} onClick={down} data={{ 'row-action': 'down', source }}>
+                    <ArrowDownwardIcon />
+                </IconAction>
+            </span>}
+        </div>
+    );
+};
+
+export const RatingsSection: FC<SectionProps> = props => {
+    const { api, data, reload } = props;
+    const ratings = data.ratings;
+    const status = data.ratingsStatus;
+    const section = useSectionState(reload, RATINGS_READS, ratingsRead);
+    useLiveRatingsStatus(api, status, !!ratings);
+    const [draft, set, , ratingsSaved] = useDraft(ratings, {}, section);
+    const keySecret = useSecretChange('ratings', ratings?.revision, section.resets);
+    const apiKey = keySecret.change;
+    const { run, test } = section;
+    const chosen: string[] = useMemo(() => Array.isArray(draft.defaultSources) ? draft.defaultSources as string[] : ratings?.defaultSources ?? [],
+        [draft.defaultSources, ratings?.defaultSources]);
+    const available: string[] = ratings?.availableSources ?? [];
+    const toggleSource = useCallback((source: string) => {
+        set('defaultSources', chosen.includes(source) ? chosen.filter(value => value !== source) : [...chosen, source]);
+    }, [chosen, set]);
+    const moveSource = useCallback((source: string, by: number) => {
+        const index = chosen.indexOf(source);
+        const target = index + by;
+        if (index < 0 || target < 0 || target >= chosen.length) return;
+        const next = [...chosen];
+        [next[index], next[target]] = [next[target], next[index]];
+        set('defaultSources', next);
+    }, [chosen, set]);
+    const save = useCallback(() => run(async () => {
+        const revision = keySecret.revisionFor((draft.revision as number | undefined) ?? ratings.revision);
+        const origin = keySecret.origin(revision);
+        const saved = await request<{ revision?: number }>(api, 'PATCH', 'Settings/Ratings', {
+            ...pick(draft, ['enabled', 'refreshDays', 'dailyBudget']), defaultSources: chosen, apiKey, revision
+        });
+        keySecret.saved(apiKey, { id: 'ratings', revision: saved?.revision }, origin);
+        ratingsSaved(draft, sameRevision(saved), saved);
+        // Detail pages and grids read the defaults (order, on/off) and the ratings themselves from the shared cache; a save
+        // marks them stale so this browser shows the change at once and others within RATINGS_STALE_MS (web review 2026-10-07, P2 1).
+        queryClient.invalidateQueries({ predicate: query => isRatingsQuery(query.queryKey, api.basePath) }).catch(() => undefined);
+    }, 'Saved.'), [run, api, draft, chosen, apiKey, keySecret, ratings, ratingsSaved]);
+    // Test sits in the key's box as an icon, its words and its result under the box, as the TMDB token's does (UX §12.1). A
+    // result belongs to the revision it tested: a saved replacement or clear, or a key being typed, hides it.
+    const [testResult, setTestResult] = useState<{ revision: unknown; notice: NoticeState } | null>(null);
+    const testedRevision = ratings?.revision;
+    const sayTest = useCallback((notice: NoticeState | null) => setTestResult(notice && { revision: testedRevision, notice }), [testedRevision]);
+    // The icon shows the test's state as the TMDB token's does: testing, the shown result, else the saved key's last pass.
+    const [testing, setTesting] = useState(false);
+    const testRun = useRef(0);
+    const testKey = useCallback(async () => {
+        testRun.current += 1;
+        const mine = testRun.current;
+        setTesting(true);
+        try {
+            await test('Settings/Ratings/Test', api, sayTest);
+        } finally {
+            if (mine === testRun.current) setTesting(false);
+        }
+    }, [test, api, sayTest]);
+    const shownResult = testResult && testResult.revision === ratings?.revision && apiKey.action === 'unchanged' && ratings?.apiKeyConfigured ?
+        testResult.notice : null;
+    const testState: TestState = useMemo(() => {
+        if (testing) return { kind: 'testing' };
+        if (shownResult) return { kind: shownResult.kind === 'ok' ? 'ok' : 'fail', reason: shownResult.kind === 'ok' ? null : shownResult.text };
+        return ratings?.verified && ratings.apiKeyConfigured ? { kind: 'ok', checkedAt: ratings.verifiedAt } : { kind: 'idle' };
+    }, [testing, shownResult, ratings?.verified, ratings?.apiKeyConfigured, ratings?.verifiedAt]);
+    const keyTest = useMemo(() => ({
+        id: 'ratings', label: 'Test Key', run: testKey, disabled: section.busy, result: shownResult, state: testState,
+        help: 'Makes one real MDBList call for a well-known title. Save a new key first. A key that passes starts fetching every title at once, within the daily budget.'
+    }), [testKey, section.busy, shownResult, testState]);
+    if (!ratings) {
+        return <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' notice={{ kind: 'warn', text: 'Unavailable in this plugin build.' }} onGo={props.onGo}><span /></SectionFrame>;
+    }
+    const rows = [...chosen, ...available.filter(source => !chosen.includes(source))];
+    return (
+        <SectionFrame id='ratings' eyebrow={props.eyebrow} title='Ratings' state={summarise('ratings', data)} notice={section.notice}
+            onSave={save} saving={section.busy} saveMeta={`Revision ${ratings.revision}.`} next={props.next} onGo={props.onGo}
+        >
+            <FieldForm fields={[
+                { key: 'enabled', label: 'Fetch and show title ratings', type: 'bool', help: 'Display only: ratings never steer searching, grabbing or retention.' },
+                { key: 'refreshDays', label: 'Fetch a title again after (days)', type: 'int' },
+                { key: 'dailyBudget', label: 'MDBList calls per day', type: 'int', help: 'Stay below your MDBList tier (the free tier allows 1,000 a day); manual refreshes and Test count too.' }
+            ]} draft={draft} onChange={set} />
+            <div className='jfmod-group'>
+                <SecretField key={ratings.revision} id='jfmodMdbListKey' label='MDBList API Key' configured={!!ratings.apiKeyConfigured} change={apiKey} onChange={keySecret.set}
+                    test={keyTest} />
+                {ratings.providerOverride && <Notice notice={{ kind: 'warn', text: 'This server fetches ratings from a test address set in its configuration file, not from MDBList.' }} />}
+                <div className='fieldDescription jfmod-lead'>
+                    One MDBList key brings IMDb, Rotten Tomatoes critics and audience, TMDB, Trakt, Metacritic, Letterboxd and Roger Ebert. TMDB&apos;s own score comes
+                    from the title&apos;s TMDB metadata, and on-disk titles fall back to what this server&apos;s own metadata stored. MDBList is a cache of those sites,
+                    so its numbers can lag or differ from what each site shows today.
+                </div>
+            </div>
+            <div className='jfmod-group'>
+                <h3 className='jfmod-grouptitle'>Ratings Shown</h3>
+                <div className='fieldDescription'>
+                    Ticked ratings show for every user who has not chosen their own in Ratings Display. IMDb and Rotten Tomatoes show
+                    beside the title, and Trakt when the line has room; every ticked rating shows with its votes, in this order, in the
+                    popup that opens on hover, a tap or OK. Fetching is the same either way.
+                </div>
+                {rows.map(source => <SourceRow key={source} source={source} index={chosen.indexOf(source)} count={chosen.length}
+                    on={chosen.includes(source)} onToggle={toggleSource} onMove={moveSource} />)}
+            </div>
+            <RatingsFetching status={status} />
+        </SectionFrame>
+    );
+};
