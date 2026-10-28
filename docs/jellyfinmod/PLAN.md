@@ -1190,7 +1190,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   stays authoritative and does not toggle twice), skipped for an `aria-disabled` one. The Missing Episodes and Interface switches
   keep their focus while they save (`aria-disabled` on the input and a busy guard in the handler, as Trakt's, instead of
   `disabled`). Desktop and phone are unchanged (Space and click). Web only: `dpadModals.ts`, `PlaceholdersSection.tsx`,
-  `settingsSections.tsx`. Not run: the physical TV, Codex review.
+  `settingsSections.tsx`. Then the dropdowns (user 2026-10-28: "fix the dropdowns too"): on the TV, Up and Down on a closed
+  select outside a pop-up (Grabbing's Download client and Default quality profile, Retention's Start the window when and Read
+  seeding state from) opened its menu; `dpadModals.ts` now moves the focus past it with the spatial navigation upstream's keys
+  use, OK opens it, and the open menu keeps the pop-up rules. Not run: the physical TV, Codex review.
 
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
   Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of
