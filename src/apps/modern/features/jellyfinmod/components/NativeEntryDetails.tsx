@@ -33,6 +33,8 @@ import HistoryToggle from './HistoryToggle';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import PendingVersion from './PendingVersion';
 import QueueStatusLine from './QueueStatusLine';
+import { useRatingsRefresh } from './RatingsRefreshButton';
+import { itemRatingsKey } from './NativeRatingsLine';
 import RetentionStatus from './RetentionStatus';
 import SeasonTotal from './SeasonTotal';
 import TrackDropdowns from './TrackDropdown';
@@ -266,6 +268,8 @@ const pageKept = (detail: EntryDetail, episode: EntryEpisode | undefined, versio
 
 interface PageMenuItem {
     enabled: boolean;
+    /** The sheet item's own id: each action has its own, so choosing one never runs another (review 2026-10-28, P2 1). */
+    id: string;
     /** The page's own item and its files' items: the menus the item belongs to. */
     itemIds: string[];
     name: string;
@@ -288,7 +292,7 @@ const isOwnHeaderMore = (view: HTMLElement, own: string[], options: { item?: { I
  * A mod item in the page's stock More menu, registered while the page shows: "Remove after watching…" on an episode page
  * (user, 2026-10-07), "Keep Series" on a series page (user, 2026-10-12).
  */
-const usePageMenuItem = (view: HTMLElement, { enabled, itemIds, name, icon, run }: PageMenuItem) => {
+const usePageMenuItem = (view: HTMLElement, { enabled, id, itemIds, name, icon, run }: PageMenuItem) => {
     const runRef = useRef(run);
     runRef.current = run;
     const ids = itemIds.join(',');
@@ -296,12 +300,13 @@ const usePageMenuItem = (view: HTMLElement, { enabled, itemIds, name, icon, run 
         if (!enabled) return;
         const own = ids.split(',');
         return registerMoreMenuItem({
+            id,
             name,
             icon,
             matches: options => isOwnHeaderMore(view, own, options),
             run: () => runRef.current()
         }) ?? undefined;
-    }, [view, enabled, ids, name, icon]);
+    }, [view, enabled, id, ids, name, icon]);
 };
 
 /**
@@ -345,7 +350,7 @@ const useEpisodeWindow = ({ api, view, entryId, episode, itemIds, busy, change }
     const show = useCallback(() => setOpen(true), []);
     const close = useCallback(() => setOpen(false), []);
     // An administrator's episode window, where the plugin has the episode controls and the episode is not kept by itself.
-    usePageMenuItem(view, { enabled, itemIds, name: 'Remove After Watching…', icon: 'auto_delete', run: show });
+    usePageMenuItem(view, { enabled, id: 'jfmod-more-item', itemIds, name: 'Remove After Watching…', icon: 'auto_delete', run: show });
     const value = episode?.retentionPolicy === 'days' && episode.reclaimAfterDays ? String(episode.reclaimAfterDays) : 'inherit';
     const choose = useCallback((next: string) => {
         if (!entryId || !episode) return;
@@ -394,8 +399,35 @@ const useKeepSeriesItem = (api: Api, view: HTMLElement, detail: EntryDetail | nu
         if (!detail || kept) return;
         change(() => keepEntry(api, detail.entry.id), keptMessage(false, detail)).catch(() => undefined);
     }, [api, change, detail, kept]);
-    usePageMenuItem(view, { enabled: !!detail, itemIds: [itemId], name: kept ? 'Series Kept' : 'Keep Series',
+    usePageMenuItem(view, { enabled: !!detail, id: 'jfmod-more-keep-series', itemIds: [itemId], name: kept ? 'Series Kept' : 'Keep Series',
         icon: kept ? 'check' : 'push_pin', run });
+};
+
+/**
+ * An administrator's manual ratings refresh on a movie's or a series' page, in the page's More menu like Keep Series (Phase 9,
+ * user decision 5). The ratings group has its own mount and query; a finished refresh asks it to read again.
+ */
+interface RefreshRatingsItemOptions {
+    api: Api;
+    userId: string;
+    view: HTMLElement;
+    itemId: string;
+    data: EntryDetail | undefined;
+    isAdmin: boolean;
+    isSeriesPage: boolean;
+    versions: VersionDto[];
+}
+
+const useRefreshRatingsItem = ({ api, userId, view, itemId, data, isAdmin, isSeriesPage, versions }: RefreshRatingsItemOptions) => {
+    const detail = isAdmin && (isSeriesPage || data?.entry.mediaType === 'movie') ? data : undefined;
+    const queryClient = useQueryClient();
+    const reread = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: itemRatingsKey(api.basePath, userId, itemId) }).catch(() => undefined);
+    }, [api.basePath, itemId, queryClient, userId]);
+    const { available, run } = useRatingsRefresh({ api, entryId: detail?.entry.id, onMessage: announce, onDone: reread });
+    const itemIds = [itemId, ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])]
+        .filter((id): id is string => !!id);
+    usePageMenuItem(view, { enabled: !!detail && available, id: 'jfmod-more-refresh-ratings', itemIds, name: 'Refresh Ratings', icon: 'star_half', run });
 };
 
 /**
@@ -687,6 +719,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
         itemIds: [itemId, ...versions.map(version => version.jellyfinItemId), ...versions.map(version => version.mediaSourceId)],
         busy, change });
     useKeepSeriesItem(api, view, onlyWhen(isAdmin && isSeriesPage, data), itemId, change);
+    useRefreshRatingsItem({ api, userId, view, itemId, data, isAdmin, isSeriesPage, versions });
     useDeleteReturn(api, userId, view, itemId, itemType, [itemId, ...(stockIds?.split(',') ?? []),
         ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])].filter((id): id is string => !!id));
     // Video, Audio and Subtitles as one strip with the pending download under it (D4–D9), on a page that lists files.

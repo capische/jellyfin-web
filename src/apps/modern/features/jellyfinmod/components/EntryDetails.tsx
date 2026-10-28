@@ -17,6 +17,7 @@ import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refres
 import { openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
+import { isKnownScale } from '../constants/ratings';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -27,7 +28,11 @@ import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
+import RatingsGroup from './RatingsGroup';
+import RatingsRefreshButton, { useRatingsRefresh } from './RatingsRefreshButton';
+import type { Rating } from '../types/ratings';
 import RetentionStatus from './RetentionStatus';
+import { useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import { raisedButtonClass } from '../utils/flatButton';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
@@ -80,6 +85,23 @@ const useTrackBlockMount = (view: HTMLElement, enabled: boolean) => {
 const rowIconClass = () => 'paper-icon-button-light jfmod-fileIcon' + (layoutManager.tv ? ' show-focus' : '');
 
 /** Reuses the existing detail template's slots without constructing a synthetic native item. */
+/**
+ * Refresh Ratings in a file-less movie's More menu, whose actions are all there (review 2026-10-28, P2 3); the menu opens for
+ * administrators only, and the item shows only where the plugin offers the refresh.
+ */
+const useRefreshRatingsMenuItem = (api: Api, entryId: string, onDone: (ratings: Rating[]) => void,
+    closeMenu: (anchor: null) => void) => {
+    const { available, busy, run } = useRatingsRefresh({ api, entryId, onMessage: announce, onDone });
+    const choose = useCallback(() => {
+        closeMenu(null);
+        run();
+    }, [closeMenu, run]);
+    return available ? <MenuItem onClick={choose} aria-disabled={busy} data-jfmod-menu='refresh-ratings'>
+        <ListItemIcon><span className='material-icons star_half' aria-hidden='true' /></ListItemIcon>
+        <ListItemText>Refresh Ratings</ListItemText>
+    </MenuItem> : null;
+};
+
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
     const [entry, setEntry] = useState(detail.entry);
     // A title with no file opens Jellyfin's page once Jellyfin holds an item for it: its placeholder, written while the page is
@@ -94,6 +116,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // An older plugin omits the summary; the page must still render (P1.W14).
     const [retention, setRetention] = useState<EntryDetail['retention'] | null>(detail.retention ?? null);
     const [acquisition, setAcquisition] = useState(detail.acquisition ?? null);
+    // Ratings come with the entry; the user's choice is loaded before the page mounts (entryDetails.js), so the line is in the
+    // page's first paint (Phase 9). An older plugin sends none.
+    const [ratings, setRatings] = useState(detail.ratings);
+    const ratingsPreferences = useRatingsPreferences(api);
     // A series discovered in the library lists only its files until its TMDB list loads (P1.FU); an older plugin omits it.
     const [listLoaded, setListLoaded] = useState(detail.episodeListLoaded !== false);
     // Release search is administrator-only and gated on the plugin's advertised capability (P4.A7).
@@ -240,10 +266,22 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         if (availability === 'reclaimed') return 'Removed after watching';
         return 'Missing';
     };
+    const rereadRatings = useCallback((updated: Rating[]) => {
+        if (!signal.aborted) setRatings(updated);
+    }, [signal]);
+    const refreshRatingsItem = useRefreshRatingsMenuItem(api, entry.id, rereadRatings, setMenuAnchor);
     return <>
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
-        {mount('.itemMiscInfo-secondary', entry.metadata?.communityRating ? <>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</> : null)}
+        {mount('.itemMiscInfo-secondary', <>
+            {/* The page's own star gives way only to an IMDb value the group shows: ratings on, IMDb ticked, a value in a scale
+                the page reads (user decisions 10 and 13; web review 2026-10-08 round 10, P2 3). */}
+            {entry.metadata?.communityRating && !(ratingsPreferences.enabled && ratingsPreferences.sources.includes('imdb')
+                && ratings?.some(rating => rating.source === 'imdb' && isKnownScale(rating.scale))) ?
+                <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
+            <RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
+                wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar />
+        </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} interactive={false} /></div>, node, String(index)))}
         {!isMovie && mount('.mainDetailButtons', <div className='jfmod-entryActions'>
@@ -268,6 +306,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     onClick={remove}>Remove Entry</button>
                 {entry.mediaType === 'series' && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
                     onClick={refresh}>Refresh Metadata</button>}
+                <RatingsRefreshButton api={api} entryId={entry.id} onMessage={announce} onDone={rereadRatings} />
             </>}
         </div>)}
         {isMovie && <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} className='jfmod-entryMenu'>
@@ -277,6 +316,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                     aria-hidden='true' /></ListItemIcon>
                 <ListItemText>{entry.monitored ? 'Stop Monitoring' : 'Monitor'}</ListItemText>
             </MenuItem>
+            {refreshRatingsItem}
             <MenuItem onClick={removeFromMenu} aria-disabled={busy} data-jfmod-menu='remove'>
                 <ListItemIcon><span className='material-icons delete' aria-hidden='true' /></ListItemIcon>
                 <ListItemText>Remove Entry</ListItemText>

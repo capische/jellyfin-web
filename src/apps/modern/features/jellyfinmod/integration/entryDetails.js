@@ -9,6 +9,7 @@ import { renderComponent } from 'utils/reactUtils';
 
 import { getEntry } from '../api/modApi';
 import { entryDetailQuery } from '../hooks/useEntries';
+import { prefetchRatingsPreferences } from '../hooks/useRatingsPreferences';
 import EntryDetails from '../components/EntryDetails';
 import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
@@ -82,7 +83,9 @@ export default function initializeEntryDetails(view, params) {
             // from it at once and take the fresh read when it lands (P1.FU16). Every other page waits for the read.
             const known = params.season !== undefined ? queryClient.getQueryData(detailKey) : undefined;
             if (known) read.catch(() => undefined);
-            const [detail, user] = await Promise.all([known ?? read, client.getCurrentUser()]);
+            // The ratings line's preferences load with the entry, so the line never arrives after the actions are focused (Phase 9).
+            const [detail, user] = await Promise.all([known ?? read, client.getCurrentUser(),
+                prefetchRatingsPreferences(api, client.getCurrentUserId())]);
             if (currentGeneration !== generation) return;
             // `season=N` is the mod's page for a season Jellyfin has no item for (P1.FU11): it stays, file or no file.
             const season = Number(params.season);
