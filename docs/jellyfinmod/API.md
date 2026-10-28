@@ -1087,6 +1087,108 @@ plugin started observing show history after Trakt's next sync touches them. Data
 (`UserId`, `JellyfinItemId`, `SeriesId`, `SeasonId`, `FirstSyncedAt`, `LastSyncedAt`; unique per user and item),
 migration `PhaseSevenTraktObservations`. Design and evidence: [PHASE7.md §7.1.3](PHASE7.md#713-detecting-the-plugin-and-what-to-show).
 
+## Ratings (Phase 9)
+
+Display only (PHASE9 user decision 7): nothing in acquisition, automation or retention reads a rating. Health `Capabilities`
+adds `ratings` (the reads below and `ratings[]` on entry detail), `ratings.cards` (`POST /Browse` takes `ratingSource`) and
+`settings.ratings` (the administrator endpoints). Design, decisions and evidence: [PHASE9.md](PHASE9.md).
+
+**One rating.** A source that has no value is absent, never `0` or `null`. Values stay in their own scale; nothing is
+converted or combined.
+
+```json
+{"source":"imdb","value":8.1,"scale":"ten","votes":250000,"provider":"mdblist","fetchedAt":"2026-10-07T05:11:19.54Z","stale":false}
+```
+
+`source` is one of `imdb`, `tomatoes_critic`, `tomatoes_audience`, `tmdb`, `trakt`, `metacritic`, `metacritic_user`,
+`letterboxd`, `rogerebert`, always in that order; `scale` is `ten`, `percent`, `five` or `four`; `provider` is `tmdb` (the
+entry's own TMDB snapshot), `mdblist`, `host_omdb` or `host_tmdb` (read from the host's native item: `CriticRating`, and
+`CommunityRating` labelled by whichever of OMDb and TheMovieDb comes first in the library's fetcher order); `votes` and
+`fetchedAt` may be `null`; `stale` is true once `fetchedAt` is older than `refreshDays` (for a host value,
+`fetchedAt` is the item's last metadata refresh). There is no `hundred` scale: a 0–100 value (TMDB through MDBList, the
+Rotten Tomatoes and Metacritic scores) is `percent`, and a client skips a scale it does not know. There is no provider
+link: the plugin never reads, stores or returns the `url` MDBList sends (a provider-written link can carry the caller's key
+in its path or host; review 2026-10-07, round 2), and a database from the first Phase 9 build loses its stored links in
+migration `PhaseNineRatingsIdentity`. One value per source:
+`tmdb` prefers the snapshot, then MDBList, then the host; `imdb` and `tomatoes_critic` prefer MDBList, then the host.
+
+**Reads (any signed-in user; 401 anonymous).**
+
+- `GET /JellyfinMod/Entries/{id}` gains `ratings[]` (empty while ratings are off).
+- `GET /JellyfinMod/Ratings/Items/{itemId}` — a native movie or series page: `{"entryId": "…" | null, "ratings": [...]}`.
+  404 for an item the user cannot see (the host's own check); an episode or season answers `ratings: []`.
+- `GET /JellyfinMod/Ratings/Defaults` — `{"enabled":true,"defaultSources":["imdb","tomatoes_critic","tomatoes_audience","trakt"],
+  "availableSources":[…],"refreshDays":14}`, nothing about the key. `defaultSources` is the sources shown, in order (user
+  decision 9, 2026-10-08: TMDB and the four optional sources off by default); migration `PhaseNineRatingsDisplayDefaults`
+  moves a server still holding decision 6's exact list (`…,"tmdb","trakt"`) to it and keeps any other list
+  ([PHASE9.md](PHASE9.md), design options 2).
+- `POST /JellyfinMod/Browse` with `"ratingSource":"imdb"` (a known source; anything else 400): each row gains `rating` (one
+  value) when it has one; without the field no row carries `rating`.
+
+**Administrator only (403 for an ordinary user).**
+
+- `GET /JellyfinMod/Settings/Ratings` — `{enabled, apiKeyConfigured, refreshDays, dailyBudget, defaultSources[],
+  availableSources[], verified, verifiedAt, providerOverride, revision}`.
+- `PATCH /JellyfinMod/Settings/Ratings` — any of `enabled`, `refreshDays` (1–365), `dailyBudget` (1–250,000),
+  `defaultSources` (known, each once), `apiKey` (`{"action":"replace","value":"…"}`, `{"action":"clear"}` or
+  `{"action":"unchanged"}`) and the required `revision` (409 when stale, 400 for an unknown field). The key goes to the
+  `0600` secret store and is never returned; replacing it lifts an `unauthorized` block and closes a breaker a 429 opened.
+- `POST /JellyfinMod/Settings/Ratings/Test` — one MDBList call for TMDB movie 278, counted in the budget:
+  `{"ok":true,"code":"ok","message":"MDBList accepted the key and returned ratings.","sources":["imdb",…]}`; other codes
+  `not_configured`, `unauthorized`, `rate_limited`, `unreachable`, `timeout`, `malformed`, `not_found`, and — with no
+  call made — `budget_spent` and `breaker_open`; `database_busy` when the database stayed busy past the fetcher's bound
+  (nothing was recorded; try again). A refused key may be tested (that is how a new one is proven); a pass
+  marks the key verified only if the settings did not change during the call.
+- `GET /JellyfinMod/Ratings/Status` — `{enabled, apiKeyConfigured, blocker, breaker:{open,until,reason,consecutiveFailures},
+  budget:{day,used,limit}, lastRun:{startedAt,finishedAt,fetched,failed,stopReason}, entries, entriesWithoutRatings, queued,
+  running}`. `running` is `null`, or the pass in progress: `{"kind":"daily"|"arrivals"|"setup"|"startup","startedAt":"…",
+  "remaining":42}` (`remaining` counts the titles it still has before it, the current one included). `lastRun` is the last pass
+  of any kind that had titles to fetch. `queued` counts manual refreshes waiting or running; it drops when a refresh has finished, which is what the web's
+  Refresh ratings button waits for (at most a minute, each request with its own time limit) before reading the title again;
+  a failed read is asked again, and a 403 or an answer without `queued` means the server will not say, never "finished".
+- `POST /JellyfinMod/Entries/{id}/Ratings/Refresh` — 202 `{"queued":true}`; 409 with `type` `ratings_disabled`,
+  `not_configured`, `unauthorized`, `breaker_open`, `budget_spent` or `queue_full` and a sentence in `title`; 404 for an
+  entry the administrator cannot see.
+
+**Automatic fetching (user decision 8, 2026-10-08).** Ratings do not wait for 04:00. A title that arrives — an entry created by
+`POST /Entries` or by reconciliation (a library scan, the backfill), a file newly bound to an entry, a Phase 5 import completed
+— wakes a background fetcher that runs one *arrivals* pass once arrivals have been quiet for 2 s (at most 30 s after the
+first, however steady): every title never attempted, plus the arrived titles that are due by the rule below; the 14-day
+refresh of other titles stays with the daily task. A key verified by `Settings/Ratings/Test`, and ratings switched on in
+`PATCH Settings/Ratings` while a key is saved, start a *setup* run at once; a start with a key saved and no run ever
+completed starts a *startup* run. Both fetch exactly what the daily task would. Nothing is fetched, recorded or adopted while
+ratings are off, there is no key, the key is refused, the breaker is open or the budget is spent: those titles wait for the
+daily task. One pass at a time: a trigger during a pass is folded into the next one, and every pass goes through the same
+gate, claim, budget, breaker and credential gate as the daily task, so a settings save during a pass waits at most for the
+one call out, as it does during the daily task. Saving a key does not start a run by itself (Test does), and raising the
+budget does not either.
+
+**Fetching.** The native task `JellyfinModRatingsRefresh` (daily, 04:00) calls `GET {base}/tmdb/{movie|show}/{tmdbId}?apikey=…`
+once per title identity (every entry of the same TMDB title shares the answer, and the identity's latest attempt decides
+whether it is due; a new entry of a known title adopts its siblings' values): titles never fetched first, then titles past
+`refreshDays` or with a failed attempt older than a day, each group newest first, within `dailyBudget`, one call a second.
+A title's attempt belongs to its identity, not to an entry: removing the entry being fetched keeps it, so the same title in
+another library still waits out an interrupted attempt; a run forgets the attempt of a title no library holds once its
+refresh window and failure wait have passed. An answer about the key rather than the title (refused, or the quota spent)
+leaves the title due as soon as fetching may resume. The settings save and the fetcher share one gate: the fetcher's last
+look at the settings, the key and the provider state happens under it after the pause between calls, and it holds it
+through the call and the recording of its answer. So a save waits for a call already out (at most the 15 s call limit plus
+the recording, which is bounded to about 8 s: a database that stays busy longer leaves the answer unrecorded, the claim
+pending for the next run to count as interrupted, and the run stopped with `database_busy`), that call's answer is recorded
+first and about the key it used, and no call starts after the save with what it replaced. The ratings save takes that gate
+before the gate every settings save shares, so while it waits no other settings save waits on it;
+turning ratings off, lowering the budget or replacing the key stops a running fetch at its next call, and replacing the key
+lifts the refused-key block and closes a 429 breaker even when the old key's answer arrived during the save. 401/403 (or a
+body naming a refused key) blocks fetching; 429 opens a breaker to the latest of `Retry-After` (however long: a delay in
+seconds is read from the header's own digits, and one past the last representable moment ends there), `X-RateLimit-Reset` and
+the next UTC day; five server errors, timeouts or malformed
+answers in a row open a one-hour breaker; a 404 is `not_found`. Failures keep the stored values. An answer is malformed,
+and changes nothing, when `ratings` is not a list or an item is not an object, has no string `source`, or a `value`,
+`score` or `votes` of the wrong kind; `null`, `""` and `"N/A"` mean no value. `base` is MDBList's own
+address unless the hidden XML field `RatingsProviderBaseUrl` points an isolated instance at a stand-in. Data: tables
+`RatingsSettings`, `RatingsProviderStates`, `TitleRatings`, `RatingsFetches` (one row per title identity), migrations
+`PhaseNineRatings` and `PhaseNineRatingsIdentity`.
+
 ## Review corrections — 2026-09-18
 
 Index of the notes above, from the review of plugin 81c1aae in
