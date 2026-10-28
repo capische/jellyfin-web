@@ -5,8 +5,11 @@ import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
+import inputManager from 'scripts/inputManager';
+import { getKeyName } from 'scripts/keyboardNavigation';
 
 import { describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
+import { isBackKey } from '../shell/dpadModals';
 import type { VersionDto } from '../types/versions';
 import { MediaMarks } from './ReleaseRowParts';
 
@@ -341,6 +344,40 @@ const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, so
     </div>;
 };
 
+/** Something drawn over the page (an MUI pop-up, a stock dialog) takes Back before the list does. */
+const OVERLAY_SELECTOR = '.MuiModal-root:not(.MuiModal-hidden):not([aria-hidden="true"]), .dialogContainer .dialog';
+
+/**
+ * While the Video list is open, the remote's Back (and Escape) closes it and nothing else, as for the Audio and Subtitles
+ * lists (D4: one component, one step per change); with it closed, Back navigates as before.
+ */
+const useBackCloses = (open: boolean, close: () => void) => {
+    const latest = useRef(close);
+    latest.current = close;
+    useEffect(() => {
+        if (!open) return;
+        const covered = () => !!document.querySelector(OVERLAY_SELECTOR);
+        const onKey = (event: KeyboardEvent) => {
+            const key = getKeyName(event) || event.key;
+            if (event.defaultPrevented || covered() || (!isBackKey(key) && !isBackKey(event.key))) return;
+            event.preventDefault();
+            event.stopPropagation();
+            latest.current();
+        };
+        const onCommand = (event: Event) => {
+            if ((event as CustomEvent<{ command?: string }>).detail?.command !== 'back' || event.defaultPrevented || covered()) return;
+            event.preventDefault();
+            latest.current();
+        };
+        window.addEventListener('keydown', onKey, true);
+        inputManager.on(window, onCommand);
+        return () => {
+            window.removeEventListener('keydown', onKey, true);
+            inputManager.off(window, onCommand);
+        };
+    }, [open]);
+};
+
 /** Slides open and closed; the rows exist only while open or closing, so a closed list is never a D-pad stop. */
 const useSlide = () => {
     const [open, setOpen] = useState(false);
@@ -389,6 +426,11 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         if (trigger.current) focusManager.focus(trigger.current);
     }, [slide, view]);
     const addVersion = useCallback((event: MouseEvent<HTMLButtonElement>) => onAddVersion?.(event.currentTarget), [onAddVersion]);
+    const backClose = useCallback(() => {
+        slide.hide();
+        if (trigger.current) focusManager.focus(trigger.current);
+    }, [slide]);
+    useBackCloses(slide.open, backClose);
 
     // With no option to match (one version, or a page that cannot choose sources) the default is the one that plays.
     const selectedId = versions.find(version => sameItemId(version.mediaSourceId, current))?.mediaSourceId
