@@ -1187,6 +1187,23 @@ step at the More menu would not be enough to run it on a local environment.
 **Not run yet:** the live chain, the physical TV, the user's own MDBList key (open question 1), and the Codex review, which
 runs once after the user approves the tested change.
 
+## Review fixes of the port — 2026-10-28
+
+Opus 5.5, high. The Codex GPT-6.1 Sol high review of the port approved the plugin and the migrations and asked for three web
+fixes, folded into the web product commit on both lines. Each was reproduced in Playwright Chromium on delta against the
+stand-in before the fix and passes after it (workspace `reviews/phase9/review-fixes/`, `before-fix.txt`, `after-fix.txt`).
+
+| # | Finding | Fix | Check |
+|---|---|---|---|
+| 1 | Refresh Ratings and Keep Series both registered as `jfmod-more-item`: choosing Refresh Ratings on a series kept the series (1 Keep call, 0 refreshes) | `usePageMenuItem` takes an id: `jfmod-more-keep-series`, `jfmod-more-refresh-ratings`; Remove After Watching keeps `jfmod-more-item` (the detail-design runner selects it by that id). Shuffle already had its own | Series page: distinct ids; Refresh Ratings sends one Ratings/Refresh and no Keep |
+| 2 | The native page waited up to 3 s for the ratings prefetch before applying the placeholder attribute: Play showed and took focus, then vanished and TV focus fell to the page | The ratings are read beside the page's own reads and nothing waits for them (the group reserves its place at its first paint) | Ratings read held 2.5 s on a placeholder episode: Play never shown, the attribute at about 80–130 ms, TV 720 focus on a control (two runs; a first TV run stayed on Home, a harness navigation miss) |
+| 3 | A file-less movie's entry page (placeholders off) had no Refresh Ratings | A Refresh Ratings item in the movie's More menu, where the plugin offers the refresh | Movies' placeholders off, a file-less movie: the menu lists it and choosing it sends one refresh |
+
+Re-run: tsc, eslint (no errors) and the production build on both lines; design harness 123/123 on the items bundle and on the
+stubs bundle (one earlier stubs run had one TV 1080 "Play never moved" miss, the page scrolled while the popup was open; three
+runs after it passed); the gate 2 matrix on delta for TV 1280×720 (17/17) and the desktop (11/11). Delta runs the fixed items
+bundle and was restored from the baseline afterwards, keeping the build.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
