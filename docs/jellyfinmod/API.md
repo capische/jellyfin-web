@@ -1245,6 +1245,17 @@ Trakt, with Jellyfin's `LastPlayedDate`.
 - `users`: the Jellyfin users the Trakt plugin holds a sign-in for, read-only from its settings in memory: `state` is
   `linked`, or `reconnect` when it has a refresh token but no access token (a refresh failed and the plugin skips the
   user until it is authorized again), with `since` (the token's expiry, UTC). Never a token value.
+  Each also carries `userId` (for the Trakt plugin's own `POST /Trakt/Users/{userId}/Deauthorize`, which Disconnect calls:
+  it revokes the sign-in and removes the plugin's entry for the user, so a new link starts from the plugin's defaults),
+  and `traktUsername` and `avatarUrl` when the server has read them: one read-only `GET https://api.trakt.tv/users/settings`
+  per account, once a day or when its link changes, with the token the Trakt plugin holds, which is read on the server
+  only and never logged, stored or returned (D49). The browser loads the avatar from its Trakt address.
+- `activity`: the last 20 export runs, newest first, kept in `trakt-activity.json` in the plugin's data folder: `startedAt`,
+  `endedAt`, `status`, `clean`, `why` (`watch`, `reconnect`, `daily`, `retry`, `sync_now`, `first`; left out for a run
+  JellyfinMod did not start), `episodesWatched`, `moviesWatched`, `episodesCollected`, `moviesCollected` (the stock plugin's
+  own count lines in that run's log; left out when it logged none) and `error` (the Trakt error in a clause). `runningWhy`:
+  while a run JellyfinMod started goes, why it started it. Each run's end is queued as the host reports it and judged by
+  the background check, so two runs close together are both listed.
 - `lastRun` is the host's last result of the task (omitted when it never ran). `lastRunConfirmed` is false when that run
   did not look clean, best effort: the host did not say Completed, or the Trakt plugin logged a Trakt error
   (`Trakt.ScheduledTasks.SyncLibraryTask`, `Trakt.Api.TraktApi`, ERR or FTL) in the host's file log while it ran (it
