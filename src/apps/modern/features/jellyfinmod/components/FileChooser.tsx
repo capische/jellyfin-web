@@ -11,6 +11,7 @@ import { getKeyName } from 'scripts/keyboardNavigation';
 import { describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import { isBackKey } from '../shell/dpadModals';
 import type { VersionDto } from '../types/versions';
+import PhoneMark, { PHONE_COPY_LABEL } from './PhoneMark';
 import { MediaMarks } from './ReleaseRowParts';
 
 import './fileChooser.scss';
@@ -301,7 +302,9 @@ interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
  * file's audio matters when a whole release is chosen (the picker, the Queue), not here (user, 2026-10-29; D105).
  */
 const VideoSummary: FC<{ version: VersionDto; source: MediaSourceInfo | null }> = ({ version, source }) => <>
-    <span className='jfmod-fileResolution'>{describeVersion(version).resolution}</span>
+    {/* The file phones play carries the phone mark inside its resolution word (Phase 12, D52); the plugin marks it only on a
+        title with two or more files, and nothing names the best copy: the list is best first. */}
+    <span className='jfmod-fileResolution'>{describeVersion(version).resolution}{version.phoneCopy && <PhoneMark label={PHONE_COPY_LABEL} />}</span>
     <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).video} /></span>
 </>;
 
