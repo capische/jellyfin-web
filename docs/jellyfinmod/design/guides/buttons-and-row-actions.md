@@ -1,7 +1,9 @@
 # Buttons and row actions
 
 **Status:** user rules 2026-10-07/08 (three button kinds, Title Case, round icon-only row actions), applied across the
-settings area, the Dashboard page, the detail page and the dialogs. Record: [UX.md §12.1](../../UX.md) (the authoritative
+settings area, the Dashboard page, the detail page and the dialogs. Settings › Trakt's red Disconnect (`link_off`) and the
+group-title disclosure: user approval 2026-10-29 ("Round red icon is fine, go ahead with Trakt build"; decisions D67, D72,
+D74, mockups `reviews/phase13/mockups-v2`). Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
 the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
 
@@ -24,7 +26,8 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
   upstream's round icons; grey by default, red for a destructive one (bin, cross), the primary for a kept pin.
 - Each has an `aria-label` and a Title Case tooltip that name the row it acts on: *Remove Prowlarr 1337x*, *Keep the 1080p
   file*. Icons: Test `network_check`, Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows,
-  Fix `build`, Rebind `link`, Keep `push_pin`, History, Add +, Replace the circular swap. An (i) that explains a short state
+  Fix `build`, Rebind `link`, Disconnect red `link_off` (Settings › Trakt's account row: *Disconnect Trakt for oleksii*, then
+  the settings confirmation), Keep `push_pin`, History, Add +, Replace the circular swap. An (i) that explains a short state
   (`InfoOutlined`, in the state's colour) is [info-tip.md](info-tip.md).
 - A refused action (nowhere to move, busy, blocked) uses `aria-disabled`, never `disabled`, so the D-pad keeps its place;
   it dims to 45 % and its tooltip says why.
@@ -34,6 +37,16 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
   (user, 2026-10-29: the file chooser's 1.75em icons with an invisible 2.5em circle let the tilted pin fill its tint; D107).
 - On the TV each icon is a focus stop with the white double focus ring; the arrows walk a row's icons left to right.
   Indicators (the download mark, the file-state marks) are **not** buttons and take none of this.
+
+## A disclosure in the group title's look
+
+A group that is closed by default (the picker's **▸ 12 Rejected**, Settings › Trakt's **▸ ACTIVITY**) opens from a flat
+button in the group title's look, not from a raised button: `flatButtonClass()` plus the surface's own class, `aria-expanded`,
+the chevron ▸ / ▾ in its own `aria-hidden` span, the title in small capitals (0.8em, weight 600, letter-spacing 0.06em) and
+a short hint after it in the secondary text (0.85em). Its contents follow it; a long list goes in the settings
+`ScrollList` (a focus stop on the TV whose arrows scroll it; Activity raises it from 17em to 23em, six runs). On the TV it
+takes the stock focused-button fill through `show-focus`, with dark text on the cyan. Not remembered between visits.
+Code: `ReleasePickerDialog.tsx` (`jfmod-rejectedToggle`), `TraktSection.tsx` and `settings.scss` (`jfmod-activityToggle`).
 
 ## A warning on a row's title line
 
