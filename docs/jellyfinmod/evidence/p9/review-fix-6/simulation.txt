@@ -1,0 +1,19 @@
+PASS Normal step: the service stops, the SQL runs, the service starts once the stop has finished :: {"events": ["stop-begin", "stop-end", "start"]}
+PASS A failing SQL step keeps its status and the service is started again :: {"exit": 1, "events": ["stop-begin", "stop-end", "start"]}
+PASS TERM to the step's shell mid-SQL: the whole work group ends (no sleeper left), and only then is the service started :: {"exit": 143, "sleeperLeft": false, "events": ["stop-begin", "stop-end", "start"]}
+PASS A local time-out mid-SQL: the operation is ended and confirmed gone before the start; its SQL never runs afterwards :: {"lateSqlRan": false, "events": ["stop-begin", "stop-end", "start"]}
+PASS A local time-out during the stop itself: the start waits for the daemon's stop to finish, and the service stays up after :: {"events": ["stop-begin", "stop-end", "start"]}
+PASS A member that ignores TERM is killed after the TERM wait: the group is confirmed empty before the start :: {"memberSeen": true, "secondsAfterTimeout": 3, "termWait": 3, "events": ["stop-begin", "stop-end", "start"]}
+PASS When the recovery call itself fails, the service is not started and the step reports a recovery failure :: {"events": ["stop-begin", "stop-end"]}
+PASS An orphaned member whose group leader has gone is found by the recorded group, ended, and the group confirmed empty :: {"aliveBefore": true, "recovered": true, "aliveAfter": false}
+PASS A member a finished step left behind in its group is ended before the service starts :: {"events": ["stop-begin", "stop-end", "start"]}
+PASS Without a valid report of the step's groups nothing can be confirmed, so the service is not started :: {"events": ["stop-begin", "stop-end"]}
+PASS The fixture key is saved against the run's revision and its reference recorded with the revision it produced
+PASS A key saved right after the run's own save is not taken for the run's: nothing is recorded and the run stops
+PASS Cleanup's clear is refused (409) and the user's key stays
+PASS Test, a refresh, the daily task and a configuration change are refused before any request :: {"blocked": [true, true, true, true], "tests": 0, "refreshes": 0}
+PASS Another setting saved by someone else is not overwritten: the run's save is refused (409)
+PASS While the settings are as the run left them, Test and a refresh go through
+PASS The drain cleanup starts with waits until no refresh is queued and the ratings task is idle :: {"seconds": 6.0}
+PASS If the task does not finish, the drain says so (and cleanup then clears nothing)
+simulation: 18 passed, 0 failed

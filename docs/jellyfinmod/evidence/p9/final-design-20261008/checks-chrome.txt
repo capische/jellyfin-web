@@ -1,0 +1,116 @@
+browser: chrome 153.0.8010.54
+ok - desktop series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - desktop series: no votes and no links in the row; the group is the row's one focus stop
+ok - desktop series: every mark in the row is drawn at its size (none squeezed)
+ok - desktop series: the row with the group stays on one line
+ok - desktop series: the group stays inside its row
+ok - desktop series: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources
+ok - desktop series: the popup stays open with the pointer on it and closes when it leaves
+ok - desktop series: keyboard focus opens it, Escape closes it
+ok - desktop movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - desktop movie: no votes and no links in the row; the group is the row's one focus stop
+ok - desktop movie: every mark in the row is drawn at its size (none squeezed)
+ok - desktop movie: the row with the group stays on one line
+ok - desktop movie: the group stays inside its row
+ok - desktop movie: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources
+ok - desktop movie: the popup stays open with the pointer on it and closes when it leaves
+ok - desktop movie: keyboard focus opens it, Escape closes it
+ok - desktop long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - desktop long: no votes and no links in the row; the group is the row's one focus stop
+ok - desktop long: every mark in the row is drawn at its size (none squeezed)
+ok - desktop long: the row with the group stays on one line
+ok - desktop long: the group stays inside its row
+ok - desktop stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - desktop file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - mobile series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room
+ok - mobile series: no votes and no links in the row; the group is the row's one focus stop
+ok - mobile series: every mark in the row is drawn at its size (none squeezed)
+ok - mobile series: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster
+ok - mobile series: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target
+ok - mobile series: a tap elsewhere closes it
+ok - mobile movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room
+ok - mobile movie: no votes and no links in the row; the group is the row's one focus stop
+ok - mobile movie: every mark in the row is drawn at its size (none squeezed)
+ok - mobile movie: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster
+ok - mobile movie: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target
+ok - mobile movie: a tap elsewhere closes it
+ok - mobile long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room
+ok - mobile long: no votes and no links in the row; the group is the row's one focus stop
+ok - mobile long: every mark in the row is drawn at its size (none squeezed)
+ok - mobile long: the group stays inside the phone's narrow row (wrapping inside its own box), clear of the poster
+ok - mobile stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - mobile file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - tv1080 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - tv1080 series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - tv1080 series: no votes and no links in the row; the group is the row's one focus stop
+ok - tv1080 series: every mark in the row is drawn at its size (none squeezed)
+ok - tv1080 series: the row with the group stays on one line
+ok - tv1080 series: the group stays inside its row
+ok - tv1080 series: first focus is Play
+ok - tv1080 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - tv1080 series: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles
+ok - tv1080 series: Back closes only the popup; focus stays on the group, the page stays
+ok - tv1080 series: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - tv1080 series: Down returns to the buttons; Play never moved
+ok - tv1080 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - tv1080 movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - tv1080 movie: no votes and no links in the row; the group is the row's one focus stop
+ok - tv1080 movie: every mark in the row is drawn at its size (none squeezed)
+ok - tv1080 movie: the row with the group stays on one line
+ok - tv1080 movie: the group stays inside its row
+ok - tv1080 movie: first focus is Play
+ok - tv1080 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - tv1080 movie: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles
+ok - tv1080 movie: Back closes only the popup; focus stays on the group, the page stays
+ok - tv1080 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - tv1080 movie: Down returns to the buttons; Play never moved
+ok - tv1080: with the group focused and no popup open, Back leaves the page as usual
+ok - tv1080 long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - tv1080 long: no votes and no links in the row; the group is the row's one focus stop
+ok - tv1080 long: every mark in the row is drawn at its size (none squeezed)
+ok - tv1080 long: the row with the group stays on one line
+ok - tv1080 long: the group stays inside its row
+ok - tv1080 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - tv1080 file-less entry: the group in the entry's row, IMDb in place of its own TMDB star
+ok - tv720 series: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - tv720 series: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - tv720 series: no votes and no links in the row; the group is the row's one focus stop
+ok - tv720 series: every mark in the row is drawn at its size (none squeezed)
+ok - tv720 series: the row with the group stays on one line
+ok - tv720 series: the group stays inside its row
+ok - tv720 series: first focus is Play
+ok - tv720 series: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - tv720 series: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles
+ok - tv720 series: Back closes only the popup; focus stays on the group, the page stays
+ok - tv720 series: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - tv720 series: Down returns to the buttons; Play never moved
+ok - tv720 movie: before the answer the space is reserved; the late answer fills it and Play keeps focus and place
+ok - tv720 movie: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too
+ok - tv720 movie: no votes and no links in the row; the group is the row's one focus stop
+ok - tv720 movie: every mark in the row is drawn at its size (none squeezed)
+ok - tv720 movie: the row with the group stays on one line
+ok - tv720 movie: the group stays inside its row
+ok - tv720 movie: first focus is Play
+ok - tv720 movie: Up reaches the group, one focus stop (Right leaves it), no popup on focus
+ok - tv720 movie: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles
+ok - tv720 movie: Back closes only the popup; focus stays on the group, the page stays
+ok - tv720 movie: an upstream refill of the row puts the group back in its place, focused, same width, one line
+ok - tv720 movie: Down returns to the buttons; Play never moved
+ok - tv720: with the group focused and no popup open, Back leaves the page as usual
+ok - tv720 long: IMDb, RT critics (tomato) and RT audience (popcorn) inline in place of the stock star and tomato; Trakt too — given way, the row has no room
+ok - tv720 long: no votes and no links in the row; the group is the row's one focus stop
+ok - tv720 long: every mark in the row is drawn at its size (none squeezed)
+ok - tv720 long: the row with the group stays on one line
+ok - tv720 long: the group stays inside its row
+ok - tv720 stock: without IMDb or Rotten Tomatoes values the stock star and tomato stay, the group shows Trakt
+ok - fresh default: only IMDb, RT critics, RT audience and Trakt — inline and in the popup (TMDB and the rest off)
+ok - unticked in the settings area (Trakt, RT audience, TMDB): gone inline and from the popup; RT shows one number
+ok - desktop: below 60 % the splat and the spilled bucket
+ok - desktop: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room
+ok - tv720: below 60 % the splat and the spilled bucket
+ok - tv720: a user's own two of the three (RT and Trakt) follow the same rule — the stock star back, RT kept, Trakt only if the row has room
+ok - desktop: the popup follows the user's own order with every source; the row keeps IMDb, RT critics, RT audience, Trakt
+ok - desktop: cards show the chosen source's mark and value, with no tooltip or focus stop of their own
+ok - no request left the machine apart from upstream's cast sender (11 of those, all blocked)
+ok - no icon was requested as a file
+114 passed, 0 failed

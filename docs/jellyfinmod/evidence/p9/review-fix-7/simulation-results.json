@@ -1,0 +1,184 @@
+{
+ "at": "2026-10-07T21:20:27Z",
+ "results": [
+  {
+   "check": "Normal step: the service stops, the SQL runs, the service starts once the stop has finished",
+   "verdict": "PASS",
+   "detail": {
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "A failing SQL step keeps its status and the service is started again",
+   "verdict": "PASS",
+   "detail": {
+    "exit": 1,
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "TERM to the step's shell mid-SQL: the whole work group ends (no sleeper left), and only then is the service started",
+   "verdict": "PASS",
+   "detail": {
+    "exit": 143,
+    "sleeperLeft": false,
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "The late-SQL sentinel is created at a path with an apostrophe and $(...), taken literally",
+   "verdict": "PASS",
+   "detail": {
+    "created": true
+   }
+  },
+  {
+   "check": "A local time-out mid-SQL: the operation is ended and confirmed gone before the start; its SQL never runs afterwards",
+   "verdict": "PASS",
+   "detail": {
+    "lateSqlRan": false,
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "A local time-out during the stop itself: the start waits for the daemon's stop to finish, and the service stays up after",
+   "verdict": "PASS",
+   "detail": {
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "A member that ignores TERM is killed after the TERM wait: the group is confirmed empty before the start",
+   "verdict": "PASS",
+   "detail": {
+    "memberSeen": true,
+    "secondsAfterTimeout": 3,
+    "termWait": 3,
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "When the recovery call itself fails, the service is not started and the step reports a recovery failure",
+   "verdict": "PASS",
+   "detail": {
+    "events": [
+     "stop-begin",
+     "stop-end"
+    ]
+   }
+  },
+  {
+   "check": "An orphaned member whose group leader has gone is found by the recorded group, ended, and the group confirmed empty",
+   "verdict": "PASS",
+   "detail": {
+    "aliveBefore": true,
+    "recovered": true,
+    "aliveAfter": false
+   }
+  },
+  {
+   "check": "A process carrying the step's marker but outside its recorded groups is left alone by recovery",
+   "verdict": "PASS",
+   "detail": {
+    "recovered": true,
+    "bystanderUntouched": true
+   }
+  },
+  {
+   "check": "A member a finished step left behind in its group is ended before the service starts",
+   "verdict": "PASS",
+   "detail": {
+    "events": [
+     "stop-begin",
+     "stop-end",
+     "start"
+    ]
+   }
+  },
+  {
+   "check": "Without a valid report of the step's groups nothing can be confirmed, so the service is not started",
+   "verdict": "PASS",
+   "detail": {
+    "events": [
+     "stop-begin",
+     "stop-end"
+    ]
+   }
+  },
+  {
+   "check": "The fixture key is saved against the run's revision and its reference recorded with the revision it produced",
+   "verdict": "PASS",
+   "detail": null
+  },
+  {
+   "check": "A key saved right after the run's own save is not taken for the run's: nothing is recorded and the run stops",
+   "verdict": "PASS",
+   "detail": null
+  },
+  {
+   "check": "Cleanup's clear is refused (409) and the user's key stays",
+   "verdict": "PASS",
+   "detail": null
+  },
+  {
+   "check": "Test, a refresh, the daily task and a configuration change are refused before any request",
+   "verdict": "PASS",
+   "detail": {
+    "blocked": [
+     true,
+     true,
+     true,
+     true
+    ],
+    "tests": 0,
+    "refreshes": 0
+   }
+  },
+  {
+   "check": "Another setting saved by someone else is not overwritten: the run's save is refused (409)",
+   "verdict": "PASS",
+   "detail": null
+  },
+  {
+   "check": "While the settings are as the run left them, Test and a refresh go through",
+   "verdict": "PASS",
+   "detail": null
+  },
+  {
+   "check": "The drain cleanup starts with waits until no refresh is queued and the ratings task is idle",
+   "verdict": "PASS",
+   "detail": {
+    "seconds": 6.0
+   }
+  },
+  {
+   "check": "If the task does not finish, the drain says so (and cleanup then clears nothing)",
+   "verdict": "PASS",
+   "detail": null
+  }
+ ]
+}

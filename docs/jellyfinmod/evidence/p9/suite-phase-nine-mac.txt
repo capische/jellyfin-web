@@ -1,0 +1,122 @@
+ok - The released 0.1.0.0 schema has no ratings tables
+ok - PhaseNineRatings adds the four ratings tables on top of the released schema
+ok - Existing rows survive the Phase 9 migration
+ok - One stored rating per entry, source and provider is enforced
+ok - One fetch row per entry keeps the attempt log bounded
+ok - The migrated database passes its integrity check
+ok - No migration is left pending
+ok - A copy of the isolated instance's database migrates (6 pending: PhaseSevenTraktObservations, PhaseFiveScanAnchor, V1Versions, WholeReviewSeedCleanupManifest, WholeReviewQueueCleanupManifest, PhaseNineRatings) and keeps every row: Entries=170, Episodes=559, EntryBindings=171, EpisodeBindings=543, History=423, CompletionObservations=2905, RetentionEvaluations=601
+ok - The migrated copy passes integrity and foreign-key checks
+ok - Anonymous JellyfinMod/Settings/Ratings is 401
+ok - Anonymous JellyfinMod/Ratings/Status is 401
+ok - Anonymous JellyfinMod/Ratings/Defaults is 401
+ok - Anonymous JellyfinMod/Ratings/Items/c47948f4-a7cd-40b2-826c-67395e1bd821 is 401
+ok - An ordinary user cannot read the ratings settings (403)
+ok - An ordinary user cannot change the ratings settings (403)
+ok - An ordinary user cannot run Test (403)
+ok - An ordinary user cannot read the fetcher's status (403)
+ok - Health lists ratings, ratings.cards and settings.ratings
+ok - The ratings settings start on, without a key, every 14 days, 500 calls a day, in the decided default order
+ok - An ordinary user reads the default order and nothing about the key
+ok - movie 9101 is added through the real add path (TMDB boundary)
+ok - movie 9102 is added through the real add path (TMDB boundary)
+ok - series 9201 is added through the real add path (TMDB boundary)
+ok - movie 9101 is added through the real add path (TMDB boundary)
+ok - movie 9103 is added through the real add path (TMDB boundary)
+ok - movie 9104 is added through the real add path (TMDB boundary)
+ok - movie 9105 is added through the real add path (TMDB boundary)
+ok - movie 9106 is added through the real add path (TMDB boundary)
+ok - movie 9107 is added through the real add path (TMDB boundary)
+ok - movie 9108 is added through the real add path (TMDB boundary)
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Unconfigured: a file-less entry shows TMDB only, from its own snapshot, with the vote count
+ok - entry a1e05edd-b59b-478e-ba85-f3f48735df5c is readable
+ok - Unconfigured: an on-disk title shows RT critics as host_omdb and, with TheMovieDb first, the native score as TMDB (host_tmdb), never as IMDb
+ok - entry a1e05edd-b59b-478e-ba85-f3f48735df5c is readable
+ok - With OMDb first in the fetcher order the native score is IMDb (host_omdb), without votes, as Jellyfin stores none
+ok - entry a1e05edd-b59b-478e-ba85-f3f48735df5c is readable
+ok - Without OMDb enabled the native critic score is not claimed as Rotten Tomatoes
+ok - A native series page reads its entry's ratings and the host's
+ok - A native movie with no catalog entry still shows what the host stored
+ok - An episode page has no ratings line
+ok - An item the user cannot see answers 404, like an unknown one
+ok - A user without access to the movie library cannot read its entry or its ratings (404)
+ok - Unconfigured, the daily task makes no call and records why it stopped
+ok - A manual refresh without a key is 409 not_configured
+ok - An ordinary user cannot refresh ratings (403)
+ok - A save against a stale revision is 409
+ok - An unknown field is 400
+ok - Google is not a source (user decision 2) and an unknown source is 400
+ok - Out-of-range refresh days and budgets are 400
+ok - Replacing the key reports it configured, bumps the revision and is not yet verified
+ok - The key lives in the 0600 secret store, not in SQLite or the XML configuration
+ok - The change is on the record as area and revision only; SQLite holds an opaque reference
+ok - Test makes one call for the fixed title, answers ok with the sources and marks the key verified
+ok - The first run calls MDBList once per title identity (9 titles, 10 entries), with the saved key
+ok - Titles never fetched go newest first (a title's newest entry counts); a series is asked for as a show
+ok - entry ddafa579-d3d7-40cb-a173-b416012ab990 is readable
+ok - entry ddafa579-d3d7-40cb-a173-b416012ab990 is readable
+ok - One call served both libraries' entries of the same title
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Every known source arrives, one value each, in the complete order; the unknown and the zero-without-votes sources are not shown
+ok - IMDb: 8.1 on ten, with votes, via MDBList, with its fetch time
+ok - Each value stays in its own scale: RT critics and audience in percent, Letterboxd of five, Roger Ebert of four
+ok - TMDB stays first-party: the entry's own snapshot wins over MDBList's TMDB value
+ok - entry 75a7fe34-dd93-4b33-a3bf-186b65e48749 is readable
+ok - A partial answer stores what arrived: no audience score, and no placeholder for it
+ok - entry a1e05edd-b59b-478e-ba85-f3f48735df5c is readable
+ok - Configured: MDBList values replace the host fallback (a backfilled title's TMDB comes from MDBList)
+ok - An unknown source is stored raw and hidden; no zero is ever stored
+ok - A second run inside the refresh window makes no call
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - A value older than the refresh window is marked stale, never presented as current
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Past the window each title is fetched exactly once again, and its values are current again
+ok - The administrator lowers the daily budget to 2
+ok - The budget holds: two calls, then the run stops with budget_spent
+ok - A manual refresh inside a spent budget is 409 budget_spent
+ok - A manual refresh is accepted (202)
+ok - The attempt is recorded as manual
+ok - Refreshing an unknown entry is 404
+ok - 401 stops the run after one call and blocks fetching
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Existing values are kept and shown with their fetch time
+ok - While blocked, the next run makes no call
+ok - A manual refresh while blocked is 409 unauthorized
+ok - Replacing the key lifts the blocker
+ok - A 200 whose body names a refused key is unauthorized too, from Test as from a run
+ok - A passing Test lifts the blocker
+ok - 429 opens the breaker past Retry-After and to the end of the UTC day
+ok - The attempt records when the provider asked to be called again
+ok - While the breaker is open nothing is called; a manual refresh is 409 breaker_open
+ok - Replacing the key closes a breaker opened by a 429: the daily quota is the key's
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Five server errors in a row open a one-hour breaker and stop the run
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - A failure changes no stored value
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - After the hour fetching resumes; malformed bodies count as failures (the remaining four titles) and change nothing
+ok - Each malformed answer is recorded as such, on every entry of its title
+ok - A slow provider times out, an unknown title is not_found, an answer about another title is malformed
+ok - entry 956bf14f-f93d-4cda-b02d-a435b77b8bb7 is readable
+ok - not_found keeps the values the title already had
+ok - The killed run left its claim behind, committed before the call
+ok - After a restart the left claim counts as an interrupted attempt
+ok - The interrupted title is not fetched again that day; the others are
+ok - A day later the interrupted title is fetched once
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Settings, the key and the stored ratings survive a restart
+ok - Browse rows carry no rating unless the request asks for one (list payloads do not grow)
+ok - With ratingSource each row carries that one source and nothing else
+ok - An unknown card source is 400
+ok - The administrator turns ratings off
+ok - entry b659e099-0588-4189-b34c-114e1650cd4e is readable
+ok - Turned off, nothing is fetched and ratings are absent from detail, item pages and cards
+ok - Clear removes the key from the secret store
+ok - An entry is removed
+ok - Its ratings and fetch attempt go with it
+ok - None of the 90 responses carries the key or its secret-store reference
+ok - None of the 3279 log lines carries the key
+ok - The HTTP client's own request log lines were captured (at Debug) and are among those checked
+evidence - a captured HTTP client line: Information System.Net.Http.HttpClient.Default.LogicalHandler: Start processing HTTP request GET http://<boundary>/tmdb/movie/278?* 
+PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access (19.6s)

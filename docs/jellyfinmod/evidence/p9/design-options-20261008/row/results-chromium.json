@@ -1,0 +1,393 @@
+{
+  "tier": "chromium",
+  "results": [
+    {
+      "name": "row desktop series: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row desktop series: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 27.265665600000002,
+        "height": 27.265625,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row desktop series: the stock star repeating IMDb is hidden",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 27.265665600000002,
+        "height": 27.265625,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row desktop movie: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row desktop movie: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 27.265665600000002,
+        "height": 27.265625,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row desktop movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 27.265665600000002,
+        "height": 27.265625,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row desktop: hover shows the tooltip with the votes",
+      "ok": true,
+      "detail": "IMDb 8.1 · 250,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "row mobile series: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row mobile series: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 145.07856,
+        "height": 145.078125,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row mobile series: the stock star repeating IMDb is hidden",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 145.07856,
+        "height": 145.078125,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row mobile movie: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row mobile movie: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 145.07856,
+        "height": 145.078125,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row mobile movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 145.07856,
+        "height": 145.078125,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row mobile: a tap shows the tooltip with the votes",
+      "ok": true,
+      "detail": "Rotten Tomatoes critics (Tomatometer) 91% · 310 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+    },
+    {
+      "name": "row tv1080 series: a late answer fills the reserved line and the focused Play does not move",
+      "ok": true,
+      "detail": {
+        "hadRatings": 0,
+        "early": 270.2,
+        "late": 270.2
+      }
+    },
+    {
+      "name": "row tv1080 series: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row tv1080 series: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv1080 series: the stock star repeating IMDb is hidden",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv1080 series: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "row tv1080 series: Up reaches a rating, OK shows its tooltip, Back closes only that",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "tip": "IMDb 8.3 · 108,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+      }
+    },
+    {
+      "name": "row tv1080 movie: a late answer fills the reserved line and the focused Play does not move",
+      "ok": true,
+      "detail": {
+        "hadRatings": 0,
+        "early": 270.2,
+        "late": 270.2
+      }
+    },
+    {
+      "name": "row tv1080 movie: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row tv1080 movie: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv1080 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv1080 movie: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "row tv1080 movie: Up reaches a rating, OK shows its tooltip, Back closes only that",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "tip": "IMDb 8.1 · 250,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+      }
+    },
+    {
+      "name": "row tv720 series: a late answer fills the reserved line and the focused Play does not move",
+      "ok": true,
+      "detail": {
+        "hadRatings": 0,
+        "early": 266.3,
+        "late": 266.3
+      }
+    },
+    {
+      "name": "row tv720 series: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row tv720 series: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv720 series: the stock star repeating IMDb is hidden",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv720 series: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "row tv720 series: Up reaches a rating, OK shows its tooltip, Back closes only that",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "tip": "IMDb 8.3 · 108,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+      }
+    },
+    {
+      "name": "row tv720 movie: a late answer fills the reserved line and the focused Play does not move",
+      "ok": true,
+      "detail": {
+        "hadRatings": 0,
+        "early": 266.3,
+        "late": 266.3
+      }
+    },
+    {
+      "name": "row tv720 movie: every enabled source on the ratings' own line, in order",
+      "ok": true,
+      "detail": [
+        "imdb",
+        "tomatoes_critic",
+        "tomatoes_audience",
+        "tmdb",
+        "trakt"
+      ]
+    },
+    {
+      "name": "row tv720 movie: the line sits under the stock rows, outside them, within its reserved height",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv720 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics",
+      "ok": true,
+      "detail": {
+        "below": true,
+        "reserved": 36.7188,
+        "height": 36.71875,
+        "stockStar": false,
+        "stockTomato": false,
+        "inUpstreamRow": false
+      }
+    },
+    {
+      "name": "row tv720 movie: first focus is Play",
+      "ok": true,
+      "detail": "button-flat btnPlay detailButton emby-button show-focus"
+    },
+    {
+      "name": "row tv720 movie: Up reaches a rating, OK shows its tooltip, Back closes only that",
+      "ok": true,
+      "detail": {
+        "up": "imdb",
+        "tip": "IMDb 8.1 · 250,000 votes\nVia MDBList, as of 10/5/2026; may differ from the source’s own site"
+      }
+    },
+    {
+      "name": "no request left the machine apart from upstream's cast sender (4 of those, all blocked)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no icon was requested as a file",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

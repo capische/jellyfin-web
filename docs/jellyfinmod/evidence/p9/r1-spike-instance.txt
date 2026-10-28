@@ -1,0 +1,16 @@
+# R1 spike, isolated instance (read-only), 2026-10-07T04:34:25Z
+## GET /Library/VirtualFolders - metadata fetchers per type
+Shows Series fetchers= ['TheMovieDb', 'The Open Movie Database'] order= ['TheMovieDb', 'The Open Movie Database']
+Shows Season fetchers= ['TheMovieDb'] order= ['TheMovieDb']
+Shows Episode fetchers= ['TheMovieDb', 'The Open Movie Database'] order= ['TheMovieDb', 'The Open Movie Database']
+Movies Movie fetchers= ['TheMovieDb', 'The Open Movie Database'] order= ['TheMovieDb', 'The Open Movie Database']
+## GET /Users/{oleksii}/Items Movie,Series - native rating fields
+titles 159 CommunityRating 157 CriticRating 35
+CommunityRating values with more than one decimal (TMDb vote_average, not IMDb): 37
+example: 20 Days in Mariupol [(8.082, 100)]
+no VoteCount field on BaseItemDto: True
+## GET /JellyfinMod/Entries - TMDB snapshot communityRating
+entries 160
+('snapshot has communityRating', 'none') 2
+('snapshot without communityRating', 'none') 55
+('snapshot without communityRating', 'onDisk') 103
