@@ -268,3 +268,26 @@ reset to its baseline and released. Not run: the layout matrix and the real-Chro
 for a new Trakt UI (a Disconnect button, the account's avatar and username, a collapsed activity log), which a design
 session mocks up first; they run once on that UI. Built (not accepted), waiting for the new UI and the user's own check.
 
+**Trakt additions, gate 1 (2026-10-29).** The user approved the design ("Round red icon is fine, go ahead with Trakt build";
+workspace `reviews/phase13/mockups-v2`, decisions D48–D50, D67–D74). Built on both lines: the account row's Trakt avatar
+(the person glyph on the grey disc without one, dimmed while a reconnect is needed), "oleksii · <username> on Trakt", and a
+round red `link_off` Disconnect that asks first (Cancel focused, red Disconnect; the confirmation also says the Trakt
+plugin's settings for the user are reset) and then calls the Trakt plugin's own Deauthorize; Activity, closed by default,
+with the last 20 runs, why each ran and what it sent. Plugin: the server's profile read (D49) and the activity with the
+plugin's counts from each run's log lines (D50, D73); API above. Gate 1 is the computer layout, dark, on echo; the phone,
+the TV, light and Chrome follow after the user's look. The user approved the first look ("Trakt design looks great").
+
+**Trakt additions, gate 2 (2026-10-29).** On echo (plugin `e3ba762`, web bundle `2bff3332fdc0` from `c1b4bbb26b`; the later
+web commits change only runners and docs): the full live list `trakt-export.mjs` **83/83** at the test pace (the earlier
+steps plus profile, activity and disconnect), the real pace restored after it. The layout matrix `trakt-export-matrix.mjs`
+**134/134 in Chromium and 134/134 in Google Chrome 156**: desktop dark and light, phone dark and light, TV 1920×1080 and
+1280×720, in both states; the account row (avatar, "oleksii · <username> on Trakt", a round red Disconnect of 40 px or more,
+under the text on the phone), Activity opening and keeping 4.5:1 on every layout, and on the TV the D-pad reaching
+Disconnect and the Activity header, OK on Disconnect opening the confirmation on Cancel (Right reaches Disconnect, Back closes
+it with nothing changed and the focus back on the icon), OK on the header opening Activity, Down reaching the run list whose
+arrows scroll it. A first matrix run failed four desktop rows only because the section-button size check counted the Activity
+disclosure (30 px, a group title with its own guide); the check now measures it apart (24 px or more). Stubs line on bravo
+(Jellyfin 12.0, Trakt plugin 31, web `34ac91de91` / bundle `518a452c4c70`): still `old_plugin`, Sync Now 409, Settings shows
+only the refusal (no account rows, no Disconnect, no Activity), `activity` empty; bravo was reset to its baseline and
+released.
+
