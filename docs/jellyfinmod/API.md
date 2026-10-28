@@ -750,6 +750,15 @@ release came from (null when the grab is gone). Both are shown to everyone who m
 download block draws its marks from them. The release's page on the tracker (`detailsUrl`) is not kept after a grab, so the
 queue has no link to it.
 
+**Mode and what a Replace removes (the upgrade status, 2026-10-28, additive; absent from older plugins).** Every row carries
+`mode`, its grab's `fill` (a first download), `add` (another version beside what the title holds) or `replace` (one that then
+replaces it); null when the grab is gone. A movie's or an episode's Replace also carries `replaces`, the files its grab fixed as
+its targets, each `{ "bindingId": "…", "label": "1080p" }` with the resolution its file name gives (`label` null when the name
+gives none); `[]` for a Replace decided before targets were recorded, null for every other row (a pack fixes its targets per
+episode as each import completes). A pack's `pack.episodes[]` carry `held`, true when the episode held a file when the pack
+claimed it, so an `add` / `replace` pack brings it a new version. The web draws the detail page's pending entry, the card's +,
+the header totals and the Queue page's `Replaces 1080p: …` from these.
+
 **Held grabs are queued rows (P4.FU10, 2026-10-17, additive).** A grab the client has not accepted yet (held for its 5 s
 cancel window, being sent, or sent and not confirmed) is a row too, from the moment `POST /Releases/Grab` answers: `id` and
 `grabId` are the grab's, `state` is `queued`, `importState` is `held` while `POST /Grabs/{id}/Cancel` can still stop it and

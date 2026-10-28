@@ -8,7 +8,7 @@ import { useApi } from 'hooks/useApi';
 
 import { type EntryDetail, getEntries, GRAB_EVENT } from '../api/modApi';
 import { entryDetailQuery } from '../hooks/useEntries';
-import { aggregateProgress, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
+import { aggregateProgress, asNewVersion, describeDownload, downloadProgress, type DownloadProgress, isUnderWay } from '../constants/queue';
 import { currentRowFor, finishedRow, packEpisodeView, packHolds, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 
@@ -210,9 +210,24 @@ const showsNoFile = (element: HTMLElement) => !!element.querySelector('.jfmod-ma
  * A card's download: the mean of what is on its way (a failed, blocked or finished download is not). A row's: one episode's or
  * movie's own, a failure included, or the mean of a series' or season's episodes on their way.
  */
-const progressOf = (rows: QueueRow[], row: boolean): DownloadProgress | null => {
-    if (row && rows.length === 1 && rows[0].state !== 'seeding') return downloadProgress(rows[0]);
-    return aggregateProgress(rows.filter(isUnderWay));
+const progressOf = (rows: QueueRow[], row: boolean, views: QueueRow[]): DownloadProgress | null => {
+    // Another version of a title that already plays draws the + while it downloads (D12); a mix with a first download keeps the
+    // arrow. Which it is, is read from the episodes the card or row stands for (`views`), not from a pack's whole torrent, which
+    // may also fill another season (Codex review of the upgrade status, P3 5).
+    if (row && rows.length === 1 && rows[0].state !== 'seeding') return asNewVersion(downloadProgress(rows[0]), views);
+    const progress = aggregateProgress(rows.filter(isUnderWay));
+    return progress && asNewVersion(progress, views.filter(isUnderWay));
+};
+
+/** Each episode's own view of what the scope's rows bring it (a pack's per episode), or the rows themselves for a title or episode. */
+const viewsIn = (queue: QueueIndex, scope: Scope, rows: QueueRow[]): QueueRow[] => {
+    if (scope.episodeId || (scope.season === null && scope.number === null && currentRowFor(queue.items, scope.entryId, null))) return rows;
+    const views: QueueRow[] = [];
+    for (const id of namedEpisodes(queue.items, scope.entryId, scope.season, scope.number)) {
+        const view = heldRow(queue, scope.entryId, id, true);
+        if (view) views.push(view);
+    }
+    return views;
 };
 
 const ownChild = (parent: Element, className: string) =>
@@ -559,7 +574,7 @@ const markElement = (element: HTMLElement, context: PassContext): boolean => {
     const rows = live ? rowsIn(index, live) : [];
     // A card that stands for one episode of the mod's (the missing episode page's still) shows its download as a row does, a
     // failure included.
-    let progress = live ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id')) : null;
+    let progress = live ? progressOf(rows, isRow || element.hasAttribute('data-jfmod-episode-id'), viewsIn(index, live, rows)) : null;
     const onItsWay = !!live && !!progress && progress.kind !== 'failed';
     if (onItsWay) {
         const key = keyOf(live);

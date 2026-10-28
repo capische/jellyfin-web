@@ -36,6 +36,9 @@ const GLYPHS: Record<MarkKind, string> = {
     failed: '<path d="M12 5V14"/><circle cx="12" cy="18.6" r="1.4" fill="currentColor" stroke="none"/>'
 };
 
+/** Another version of a title that already plays (D12): the picker's +, drawn while it downloads in place of the arrow. */
+const PLUS = '<path d="M12 5.5V18.5M5.5 12H18.5"/>';
+
 /** The arc: a track and the fill; downloading, stalled, seeding, and importing and releasing (a turning 28 % segment) draw one. */
 const ARC = '<svg class="jfmod-dlmark-arc" viewBox="0 0 36 36" aria-hidden="true" focusable="false">'
     + '<circle class="jfmod-dlmark-track" cx="18" cy="18" r="15.9"/>'
@@ -45,10 +48,10 @@ const ARCS = new Set<MarkKind>(['downloading', 'stalled', 'importing', 'seeding'
 
 const turning = (kind: MarkKind) => kind === 'importing' || kind === 'releasing';
 
-const inner = (kind: MarkKind) => (ARCS.has(kind) ? ARC : '')
+const inner = (kind: MarkKind, plus: boolean) => (ARCS.has(kind) ? ARC : '')
     + '<svg class="jfmod-dlmark-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'
     + (kind === 'failed' ? '2.8' : '2.4') + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
-    + GLYPHS[kind] + '</svg>';
+    + (plus ? PLUS : GLYPHS[kind]) + '</svg>';
 
 /** The page ring's figure in place of the glyph: `42` and a small `%`. */
 const NUMBER = '<b class="jfmod-dlmark-num" aria-hidden="true"><span class="jfmod-dlmark-numValue"></span><i>%</i></b>';
@@ -149,15 +152,16 @@ const paintArc = (element: HTMLElement, progress: MarkProgress) => {
  */
 export const paintDownloadMark = (element: HTMLElement, progress: MarkProgress, size: DownloadMarkSize, extra = '',
     title = progress.tooltip, link: DownloadMarkLink | null = null, hostTip = false) => {
-    const className = ['jfmod-dlmark', 'jfmod-dlmark--' + size, 'jfmod-dlmark--' + progress.kind,
+    const plus = !!progress.plus && progress.kind === 'downloading';
+    const className = ['jfmod-dlmark', 'jfmod-dlmark--' + size, 'jfmod-dlmark--' + progress.kind, plus ? 'jfmod-dlmark--plus' : '',
         progress.stale ? 'jfmod-dlmark--stale' : '', link ? 'jfmod-dlmark--link' : '', extra].filter(Boolean).join(' ');
     if (element.className !== className) element.className = className;
     const withNumber = numbered(progress.kind, size);
-    const drawn = progress.kind + (withNumber ? ' number' : '');
+    const drawn = progress.kind + (withNumber ? ' number' : '') + (plus ? ' plus' : '');
     if (element.getAttribute('data-jfmod-kind') !== progress.kind || element.getAttribute('data-jfmod-drawn') !== drawn) {
         element.setAttribute('data-jfmod-kind', progress.kind);
         element.setAttribute('data-jfmod-drawn', drawn);
-        element.innerHTML = withNumber ? ARC + NUMBER : inner(progress.kind);
+        element.innerHTML = withNumber ? ARC + NUMBER : inner(progress.kind, plus);
     }
     const value = element.querySelector('.jfmod-dlmark-numValue');
     if (value && value.textContent !== String(progress.percent ?? 0)) value.textContent = String(progress.percent ?? 0);

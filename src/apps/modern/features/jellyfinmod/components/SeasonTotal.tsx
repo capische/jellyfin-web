@@ -1,7 +1,7 @@
 import React, { type FC, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { batchProgress, type BatchEpisode } from '../constants/queue';
+import { batchProgress, type BatchEpisode, type BatchProgress } from '../constants/queue';
 import { currentRowFor, packEpisodeView, useQueue, useQueueCapability } from '../hooks/useQueue';
 import type { QueueRow } from '../types/queue';
 import DownloadStateMark from './DownloadStateMark';
@@ -15,19 +15,29 @@ import './seasonTotal.scss';
  * view and the row it comes from.
  */
 const batchEpisodes = (items: QueueRow[], entryId: string, season: number | null): BatchEpisode[] => {
-    const seasons = new Map<string, number>();
+    const places = new Map<string, { season: number; number: number }>();
     for (const row of items) {
         if (row.entry?.id !== entryId) continue;
-        const named = [...(row.episode ? [{ id: row.episode.id, season: row.episode.seasonNumber }] : []),
-            ...(row.pack?.episodes ?? []).map(episode => ({ id: episode.episodeId, season: episode.seasonNumber }))];
+        const named = [...(row.episode ? [{ id: row.episode.id, season: row.episode.seasonNumber, number: row.episode.episodeNumber }] : []),
+            ...(row.pack?.episodes ?? []).map(episode => ({ id: episode.episodeId, season: episode.seasonNumber, number: episode.episodeNumber }))];
         for (const episode of named) {
-            if (season === null || episode.season === season) seasons.set(episode.id, episode.season);
+            if (season === null || episode.season === season) places.set(episode.id, { season: episode.season, number: episode.number });
         }
     }
-    return Array.from(seasons).flatMap(([id, number]) => {
+    return Array.from(places).flatMap(([id, place]) => {
         const row = currentRowFor(items, entryId, id);
-        return row ? [{ season: number, row, view: row.pack ? packEpisodeView(row, id) : row }] : [];
+        return row ? [{ ...place, row, view: row.pack ? packEpisodeView(row, id) : row }] : [];
     });
+};
+
+/**
+ * `2 of 8 episodes · 38% · …`; an episode that already plays counts apart as a new version (D12): `1 new version · 60% · …`,
+ * `2 of 5 episodes · 1 new version · 38% · …`.
+ */
+const totalText = (total: BatchProgress) => {
+    const versions = total.versions + (total.versions === 1 ? ' new version' : ' new versions');
+    return [total.total > 0 ? total.done + ' of ' + episodesWord(total.total) : null, total.versions > 0 ? versions : null, total.text]
+        .filter(Boolean).join(' · ');
 };
 
 interface SeasonTotalProps {
@@ -74,7 +84,7 @@ const SeasonTotal: FC<SeasonTotalProps> = ({ view, entryId, season }) => {
     }, [view, shown]);
     if (!total || !hosts) return null;
     const figure = <span title={total.tooltip} className={'jfmod-dlMeta jfmod-dlMeta--' + total.kind + (total.stale ? ' jfmod-dlMeta--stale' : '')}>
-        {total.done + ' of ' + episodesWord(total.total) + ' · ' + total.text}
+        {totalText(total)}
     </span>;
     return <>
         {createPortal(<><DownloadStateMark progress={total} size='row' /><span className='jfmod-seasonTotal-figure'>{figure}</span></>,

@@ -1525,6 +1525,12 @@ are split by moving files into their own folders; *Split versions* only undoes a
 
 ### 11.2 The Video row is the file chooser (design fix, 2026-10-07)
 
+> **2026-10-28 (built overnight, awaiting the user's approval):** Video, Audio and Subtitles are now one strip of three
+> segments with captions, and a new version on its way shows as a pending entry under it (the user's picks: option 3 and
+> strip B, approach 1; decisions D4–D13 of workspace `reviews/overnight-2026-10-28/DECISIONS.md`). The current values are in
+> the [track strip guide](design/guides/track-dropdown.md) and the [pending version guide](design/guides/pending-version.md);
+> the label column below is superseded.
+
 The version rows below the track block are replaced by a chooser in the **Video** row itself
 ([design record](design/episode-page-design-spec.md), step 2):
 
