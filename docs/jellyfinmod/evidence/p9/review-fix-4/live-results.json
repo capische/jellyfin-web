@@ -1,0 +1,498 @@
+{
+ "runs": [
+  {
+   "step": "setup",
+   "at": "2026-10-07T10:28:43Z",
+   "results": [
+    {
+     "check": "Health lists the ratings capabilities",
+     "verdict": "PASS",
+     "detail": "{\"version\": \"0.1.0.0\", \"bundle\": \"f4c3035c1649\"}"
+    },
+    {
+     "check": "The disposable library is created (fetchers listed, NFOs locked, no image fetchers)",
+     "verdict": "PASS",
+     "detail": "204"
+    },
+    {
+     "check": "The host item carries the NFO's community and critic ratings",
+     "verdict": "PASS",
+     "detail": "{\"CommunityRating\": 7.4, \"CriticRating\": 87}"
+    },
+    {
+     "check": "A temporary ordinary viewer (Movies only) exists for the access checks",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 17 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "unconfigured",
+   "at": "2026-10-07T10:28:49Z",
+   "results": [
+    {
+     "check": "Unconfigured defaults: on, no key, 14 days, 500 a day, the decided order, no override",
+     "verdict": "PASS",
+     "detail": "{\"enabled\": true, \"apiKeyConfigured\": false, \"refreshDays\": 14, \"dailyBudget\": 500, \"defaultSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\"], \"availableSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\", \"metacritic\", \"metacritic_user\", \"letterboxd\", \"rogerebert\"], \"verified\": false, \"verifiedAt\": null, \"providerOverride\": false, \"revision\": 1}"
+    },
+    {
+     "check": "Unconfigured: the on-disk title shows the host's critic score as RT (host_omdb) and its community score as TMDB (TheMovieDb first)",
+     "verdict": "PASS",
+     "detail": "[{\"source\": \"tomatoes_critic\", \"value\": 87, \"scale\": \"percent\", \"votes\": null, \"provider\": \"host_omdb\", \"fetchedAt\": \"2026-10-07T10:28:38.3369012Z\", \"stale\": false}, {\"source\": \"tmdb\", \"value\": 7.4, \"scale\": \"ten\", \"votes\": null, \"provider\": \"host_tmdb\", \"fetchedAt\": \"2026-10-07T10:28:38.3369012Z\", \"stale\": false}]"
+    },
+    {
+     "check": "The entry detail answers the same as the item page",
+     "verdict": "PASS",
+     "detail": "[\"tomatoes_critic\", \"tmdb\"]"
+    },
+    {
+     "check": "Unconfigured: a file-less entry shows TMDB only, from its own snapshot",
+     "verdict": "PASS",
+     "detail": "[{\"source\": \"tmdb\", \"value\": 8.7, \"scale\": \"ten\", \"votes\": null, \"provider\": \"tmdb\", \"fetchedAt\": null, \"stale\": false}]"
+    },
+    {
+     "check": "With OMDb first the host's community score is IMDb (host_omdb), without votes",
+     "verdict": "PASS",
+     "detail": "{\"imdb\": {\"source\": \"imdb\", \"value\": 7.4, \"scale\": \"ten\", \"votes\": null, \"provider\": \"host_omdb\", \"fetchedAt\": \"2026-10-07T10:28:38.3369012Z\", \"stale\": false}, \"tomatoes_critic\": {\"source\": \"tomatoes_critic\", \"value\": 87, \"scale\": \"percent\", \"votes\": null, \"provider\": \"host_omdb\", \"fetchedAt\": \"2026-10-07T10:28:38.3369012Z\", \"stale\": false}}"
+    },
+    {
+     "check": "Unconfigured, the daily task (run through Jellyfin's task manager) calls nothing and says why",
+     "verdict": "PASS",
+     "detail": "{\"startedAt\": \"2026-10-07T10:28:46.1203988Z\", \"finishedAt\": \"2026-10-07T10:28:46.2362394Z\", \"fetched\": 0, \"failed\": 0, \"stopReason\": \"not_configured\"}"
+    },
+    {
+     "check": "A manual refresh without a key is 409 not_configured",
+     "verdict": "PASS",
+     "detail": "{\"type\": \"not_configured\", \"title\": \"No MDBList key is saved yet.\", \"status\": 409}"
+    },
+    {
+     "check": "An ordinary user gets 403 from the settings, status, Test and refresh",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "A user without access to the disposable library gets 404 for its item and entry",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "Anonymous requests get 401",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "An ordinary user reads the defaults and nothing about the key",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 19 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "configure",
+   "at": "2026-10-07T10:28:51Z",
+   "results": [
+    {
+     "check": "The instance points at the MDBList stand-in through the hidden XML field",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The fixture key is saved, write-only",
+     "verdict": "PASS",
+     "detail": "{\"enabled\": true, \"apiKeyConfigured\": true, \"refreshDays\": 14, \"dailyBudget\": 500, \"defaultSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\"], \"availableSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\", \"metacritic\", \"metacritic_user\", \"letterboxd\", \"rogerebert\"], \"verified\": false, \"verifiedAt\": null, \"providerOverride\": true, \"revision\": 2}"
+    },
+    {
+     "check": "A save against a stale revision is 409",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "Test makes one call for the fixed title with the key and marks it verified",
+     "verdict": "PASS",
+     "detail": "{\"ok\": true, \"code\": \"ok\", \"message\": \"MDBList accepted the key and returned ratings.\", \"sources\": [\"imdb\", \"metacritic\", \"metacritic_user\", \"trakt\", \"tomatoes_critic\", \"letterboxd\", \"rogerebert\", \"tmdb\", \"tomatoes_audience\"]}"
+    },
+    {
+     "check": "None of the 8 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "fetch",
+   "at": "2026-10-07T10:31:44Z",
+   "results": [
+    {
+     "check": "The first run calls MDBList once per title identity (167 titles, 173 entries), each with the key",
+     "verdict": "PASS",
+     "detail": "{\"calls\": 167, \"distinct\": 167, \"seconds\": 169}"
+    },
+    {
+     "check": "Never-fetched titles go newest first (the two disposable titles were added last)",
+     "verdict": "PASS",
+     "detail": "[990902, 990901, 875828, 1418]"
+    },
+    {
+     "check": "Status: every title fetched, none failed, the budget counts the run and the Test",
+     "verdict": "PASS",
+     "detail": "{\"enabled\": true, \"apiKeyConfigured\": true, \"blocker\": null, \"breaker\": {\"open\": false, \"until\": null, \"reason\": null, \"consecutiveFailures\": 0}, \"budget\": {\"day\": \"2026-10-07T00:00:00.0000000Z\", \"used\": 168, \"limit\": 500}, \"lastRun\": {\"startedAt\": \"2026-10-07T10:28:52.2828801Z\", \"finishedAt\": \"2026-10-07T10:31:39.6175384Z\", \"fetched\": 167, \"failed\": 0, \"stopReason\": null}, \"entries\": 173, \"entriesWithoutRatings\": 0, \"queued\": 0}"
+    },
+    {
+     "check": "Configured: MDBList's values replace the host fallback, one per source, each in its own scale",
+     "verdict": "PASS",
+     "detail": "{\"imdb\": {\"source\": \"imdb\", \"value\": 8.1, \"scale\": \"ten\", \"votes\": 250000, \"provider\": \"mdblist\", \"fetchedAt\": \"2026-10-07T10:28:53.3953107Z\", \"stale\": false}, \"tomatoes_critic\": {\"source\": \"tomatoes_critic\", \"value\": 91, \"scale\": \"percent\", \"votes\": 310, \"provider\": \"mdblist\", \"fetchedAt\": \"2026-10-07T10:28:53.3953107Z\", \"stale\": false}, \"tomatoes_audience\": {\"source\": \"tomatoes_audience\", \"value\": 88, \"scale\": \"percent\", \"votes\": 25000, \"provider\": \"mdblist\", \"fetchedAt\": \"2026-10-07T10:28:53.3953107Z\", \"stale\": false}, \"tmdb\": {\"source\": \"tmdb\", \"value\": 79, \"scale\": \"percent\", \"votes\": 150"
+    },
+    {
+     "check": "TMDB stays first-party on a title with its own TMDB snapshot",
+     "verdict": "PASS",
+     "detail": "{\"imdb\": \"mdblist\", \"tomatoes_critic\": \"mdblist\", \"tomatoes_audience\": \"mdblist\", \"tmdb\": \"tmdb\", \"trakt\": \"mdblist\", \"metacritic\": \"mdblist\", \"metacritic_user\": \"mdblist\", \"letterboxd\": \"mdblist\", \"rogerebert\": \"mdblist\"}"
+    },
+    {
+     "check": "An ordinary user reads the ratings of a title they can see, and no provider state",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "A second run inside the refresh window calls nothing",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "Browse rows carry no rating unless asked; with ratingSource each carries that one source",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 8 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "restart",
+   "at": "2026-10-07T10:32:01Z",
+   "results": [
+    {
+     "check": "The isolated service restarts",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "Settings, the key and the ratings survive a restart",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 5 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "age",
+   "at": "2026-10-07T10:32:18Z",
+   "results": [
+    {
+     "check": "One title's MDBList values are 40 days old and read as stale; the other title's stay current",
+     "verdict": "PASS",
+     "detail": "\"10\""
+    },
+    {
+     "check": "None of the 5 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "guard",
+   "at": "2026-10-07T10:32:18Z",
+   "results": [
+    {
+     "check": "No ratings key this run did not set is configured",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 1 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "guard",
+   "at": "2026-10-07T10:44:33Z",
+   "results": [
+    {
+     "check": "No ratings key this run did not set is configured",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 1 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "unage",
+   "at": "2026-10-07T10:53:11Z",
+   "results": [
+    {
+     "check": "The aged title's values are current again",
+     "verdict": "PASS",
+     "detail": "\"10\""
+    },
+    {
+     "check": "None of the 4 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "failures",
+   "at": "2026-10-07T10:53:53Z",
+   "results": [
+    {
+     "check": "A spent budget stops the task and refuses a manual refresh (409 budget_spent)",
+     "verdict": "PASS",
+     "detail": "{\"type\": \"budget_spent\", \"title\": \"Today's ratings budget is spent; try again tomorrow.\", \"status\": 409}"
+    },
+    {
+     "check": "A manual refresh is accepted (202) and fetches that title once",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "401 blocks fetching (409 unauthorized) and keeps the stored values with their date",
+     "verdict": "PASS",
+     "detail": "{\"type\": \"unauthorized\", \"title\": \"MDBList refused the saved key; replace it in the settings first.\", \"status\": 409}"
+    },
+    {
+     "check": "Replacing the key lifts the blocker",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "A 200 that names a refused key is unauthorized too",
+     "verdict": "PASS",
+     "detail": "{\"ok\": false, \"code\": \"unauthorized\", \"message\": \"MDBList refused the key. Check it was copied completely.\", \"sources\": []}"
+    },
+    {
+     "check": "A passing Test lifts it",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "429 opens the breaker until the next UTC day at least; a manual refresh is 409 breaker_open",
+     "verdict": "PASS",
+     "detail": "{\"open\": true, \"until\": \"2026-10-08T00:00:00.0000000Z\", \"reason\": \"rate_limited\", \"consecutiveFailures\": 0}"
+    },
+    {
+     "check": "A new key closes a rate-limit breaker (the quota is the key's)",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "A malformed answer changes no stored value and counts as a failure",
+     "verdict": "PASS",
+     "detail": "{\"open\": false, \"until\": null, \"reason\": null, \"consecutiveFailures\": 1}"
+    },
+    {
+     "check": "A notfound answer changes no stored value and is not a provider failure",
+     "verdict": "PASS",
+     "detail": "{\"open\": false, \"until\": null, \"reason\": null, \"consecutiveFailures\": 0}"
+    },
+    {
+     "check": "A provider slower than 15 s times out and counts as a failure",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "Five server errors in a row open the one-hour breaker",
+     "verdict": "PASS",
+     "detail": "{\"open\": true, \"until\": \"2026-10-07T11:53:51.5081328Z\", \"reason\": \"failures\", \"consecutiveFailures\": 0}"
+    },
+    {
+     "check": "None of the 51 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "kill",
+   "at": "2026-10-07T10:54:38Z",
+   "results": [
+    {
+     "check": "The failure breaker is cleared with the service stopped (test harness, not product behaviour)",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The container is killed (SIGKILL) while the call is in flight, then started",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The killed call left its claim behind, committed before the call",
+     "verdict": "PASS",
+     "detail": "\"pending\""
+    },
+    {
+     "check": "After the kill the interrupted title is not fetched again that day; the next run calls nothing",
+     "verdict": "PASS",
+     "detail": "{\"calls\": 1, \"lastRun\": {\"startedAt\": \"2026-10-07T10:54:36.4423105Z\", \"finishedAt\": \"2026-10-07T10:54:36.713198Z\", \"fetched\": 0, \"failed\": 0, \"stopReason\": null}, \"latestOutcome\": \"interrupted\"}"
+    },
+    {
+     "check": "None of the 11 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "leak",
+   "at": "2026-10-07T10:54:41Z",
+   "results": [
+    {
+     "check": "The container log since the run started never contains the fixture key",
+     "verdict": "PASS",
+     "detail": "{\"lines\": 18358}"
+    },
+    {
+     "check": "The host's HTTP client request logs are redacted (?*) where it writes them; at this host's log level it writes none, and the plugin itself never logs a request address",
+     "verdict": "PASS",
+     "detail": "{\"redactedLines\": 0, \"httpClientLines\": 0}"
+    },
+    {
+     "check": "The disposable titles were only ever read by local providers (NFO, probe): no TMDb or OMDb provider ran for them",
+     "verdict": "PASS",
+     "detail": "{\"providers\": [\"AttachmentExtractionProvider\", \"FolderImageProvider\", \"MovieNfoProvider\", \"ProbeProvider\", \"SubtitleExtractionProvider\", \"TrickplayProvider\"], \"outboundHostsLogged\": []}"
+    },
+    {
+     "check": "None of the 1 JellyfinMod responses in this step carries the key",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 1 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "interrupt",
+   "at": "2026-10-07T10:56:20Z",
+   "results": [
+    {
+     "check": "TERM to the remote shell mid-step (its SQL step waiting 40 s): the trap ends the step, starts the service at once and exits with the signal's status",
+     "verdict": "PASS",
+     "detail": "{\"exit\": 143, \"running\": true, \"secondsAfterTerm\": 1}"
+    },
+    {
+     "check": "A local time-out mid-step: the remote operation is ended before the service starts, its SQL never runs afterwards, and the service stays up",
+     "verdict": "PASS",
+     "detail": "{\"exit\": 124, \"operationGone\": true, \"lateSqlRan\": false, \"stillUp\": true}"
+    },
+    {
+     "check": "A local time-out during the stop itself: recovery waits for it, and the service is up afterwards and stays up",
+     "verdict": "PASS",
+     "detail": "{\"exit\": 124, \"operationGone\": true, \"stillUp\": true}"
+    },
+    {
+     "check": "None of the 11 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  },
+  {
+   "step": "cleanup",
+   "at": "2026-10-07T10:57:36Z",
+   "results": [
+    {
+     "check": "oleksii's ratings display preferences are exactly as setup found them (or were already restored)",
+     "verdict": "PASS",
+     "detail": "{\"keysBefore\": [], \"snapshotRetired\": true}"
+    },
+    {
+     "check": "The disposable library is removed through DELETE /Library/VirtualFolders",
+     "verdict": "PASS",
+     "detail": "204"
+    },
+    {
+     "check": "The disposable media and NFOs are deleted",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The temporary viewer is deleted",
+     "verdict": "PASS",
+     "detail": "204"
+    },
+    {
+     "check": "The fixture key is cleared from the secret store; settings are back to the defaults",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The stand-in address is removed from the configuration",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "The fixture entries are removed (service stopped, foreign keys on)",
+     "verdict": "PASS",
+     "detail": "\"0\""
+    },
+    {
+     "check": "Every stored rating, attempt and ratings setting is removed (service stopped, then started)",
+     "verdict": "PASS",
+     "detail": "\"0\""
+    },
+    {
+     "check": "Ratings settings are fresh defaults again",
+     "verdict": "PASS",
+     "detail": "{\"enabled\": true, \"apiKeyConfigured\": false, \"refreshDays\": 14, \"dailyBudget\": 500, \"defaultSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\"], \"availableSources\": [\"imdb\", \"tomatoes_critic\", \"tomatoes_audience\", \"tmdb\", \"trakt\", \"metacritic\", \"metacritic_user\", \"letterboxd\", \"rogerebert\"], \"verified\": false, \"verifiedAt\": null, \"providerOverride\": false, \"revision\": 1}"
+    },
+    {
+     "check": "GET /UserViews for oleksii lists only Movies and Shows",
+     "verdict": "PASS",
+     "detail": "[\"Movies\", \"Shows\"]"
+    },
+    {
+     "check": "No JellyfinMod fixture title is left in the catalog",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "check": "No temporary user is left",
+     "verdict": "PASS",
+     "detail": null
+    },
+    {
+     "check": "None of the 12 JellyfinMod responses in this step carries the fixture key",
+     "verdict": "PASS",
+     "detail": null
+    }
+   ]
+  }
+ ]
+}

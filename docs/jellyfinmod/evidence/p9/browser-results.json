@@ -1,0 +1,476 @@
+{
+ "runs": [
+  {
+   "browser": "chromium",
+   "version": "153.0.8010.12",
+   "at": "2026-10-07T05:49:02.881Z",
+   "results": [
+    {
+     "layout": "desktop",
+     "check": "The user menu offers Ratings display",
+     "verdict": "PASS",
+     "detail": "[\"Profile\",\"Settings\",\"Queue\",\"JellyfinMod settings\",\"Ratings display\",\"Dashboard\",\"Metadata Manager\",\"Quick Connect\",\"Sign Out\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "desktop",
+     "check": "The native page shows the Ratings line in the default order",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K)\",\"RT critics 91% (310)\",\"RT audience 88% (25K)\",\"TMDB 79% (15K)\",\"Trakt 83% (21K)\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Each chip shows its value in its own scale with votes, and says where it came from",
+     "verdict": "PASS",
+     "detail": "[{\"source\":\"imdb\",\"provider\":\"mdblist\",\"text\":\"IMDb 8.1 (250K)\",\"title\":\"IMDb 8.1, 250,000 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site\",\"tabIndex\":-1,\"inSection\":true,\"inMisc\":false},{\"source\":\"tomatoes_critic\",\"provider\":\"mdblist\",\"text\":\"RT critics 91% (310)\",\"title\":\"Rotten Tomatoes critics (Tomatometer) 91%, 310 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site\",\"tabIndex\":-1,\"inSection\":true,\"inMisc\":false},{\"source\":\"tomatoes_audien"
+    },
+    {
+     "layout": "desktop",
+     "check": "The line sits in the detail section and is not focusable",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "desktop",
+     "check": "The Ratings mount leads the detail section content",
+     "verdict": "PASS",
+     "detail": "[\"jfmod-ratingsMount\",\"jfmod-traktMount\",\"itemGenres\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Refresh ratings queues a refresh and says so",
+     "verdict": "PASS",
+     "detail": "\"Ratings refresh queued. New values show in a moment.\""
+    },
+    {
+     "layout": "desktop",
+     "check": "The file-less entry page shows the line beside the TMDB star, TMDB first-party",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K) [mdblist]\",\"RT critics 91% (310) [mdblist]\",\"RT audience 88% (25K) [mdblist]\",\"TMDB 8.7 [tmdb]\",\"Trakt 83% (21K) [mdblist]\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Moving a source keeps focus on the control that moved it and says it was saved",
+     "verdict": "PASS",
+     "detail": "{\"focused\":\"up\",\"status\":\"Letterboxd moved up. Saved.\"}"
+    },
+    {
+     "layout": "desktop",
+     "check": "The detail line follows the user's own sources and order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"letterboxd\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "The choice is saved in Jellyfin's per-user display preferences",
+     "verdict": "PASS",
+     "detail": "\"[\\\"imdb\\\",\\\"tomatoes_critic\\\",\\\"tomatoes_audience\\\",\\\"tmdb\\\",\\\"letterboxd\\\",\\\"trakt\\\"]\""
+    },
+    {
+     "layout": "desktop",
+     "check": "Cards are unchanged with the preference off: no card rating and no ratingSource sent",
+     "verdict": "PASS",
+     "detail": "{\"cardText\":[],\"requests\":1}"
+    },
+    {
+     "layout": "desktop",
+     "check": "With IMDb chosen each card carries it in its secondary text line, no badge",
+     "verdict": "PASS",
+     "detail": "[{\"text\":\" · IMDb 8.1\",\"inSecondary\":true,\"badge\":false},{\"text\":\" · IMDb 8.1\",\"inSecondary\":true,\"badge\":false}]"
+    },
+    {
+     "layout": "desktop",
+     "check": "The card rating adds no focus stop",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "desktop",
+     "check": "The settings area's Ratings section shows the key as configured, Test passes and the stand-in is flagged",
+     "verdict": "PASS",
+     "detail": "\"STEP 10 OF 12\\nRatings\\nKey tested 10/7/2026, 4:47:30 PM\\nMDBList accepted the key and returned ratings. (ok) Sources: IMDb, Metacritic critics, Metacritic users, Trakt, Rotten Tomatoes critics, Letterboxd, Roger Ebert, TMDB, Rotten Tomatoes audience.\\nFetch and show title ratings\\nDisplay only: ratings never steer searching, grabbing or retention.\\nFetch a title again after (days)\\nMDBList calls per day\""
+    },
+    {
+     "layout": "desktop",
+     "check": "A plugin without the ratings capabilities: no line, no menu item, no card rating and no ratingSource sent (card choice still on)",
+     "verdict": "PASS",
+     "detail": "{\"chips\":0,\"cards\":0,\"requests\":4}"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings turned off: the line is absent and the page otherwise unchanged",
+     "verdict": "PASS",
+     "detail": "{\"buttons\":4}"
+    },
+    {
+     "layout": "desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "The native page shows the Ratings line, wrapped, without horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "The file-less entry page shows the line",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K)\",\"RT critics 91% (310)\",\"RT audience 88% (25K)\",\"TMDB 8.7\",\"Trakt 83% (21K)\"]"
+    },
+    {
+     "layout": "mobile",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "mobile",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "tv1080",
+     "check": "Down from Home reaches the Ratings display link",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "tv1080",
+     "check": "Ratings display opens with focus on its first switch",
+     "verdict": "PASS",
+     "detail": "\"imdb\""
+    },
+    {
+     "layout": "tv1080",
+     "check": "Down reaches a source, Enter toggles it and focus stays on it",
+     "verdict": "PASS",
+     "detail": "{\"target\":\"letterboxd\",\"on\":\"true\",\"off\":\"false\",\"stillFocused\":\"letterboxd\"}"
+    },
+    {
+     "layout": "tv1080",
+     "check": "The remote's Back leaves Ratings display for the page that opened it",
+     "verdict": "PASS",
+     "detail": "\"#/home\""
+    },
+    {
+     "layout": "tv1080",
+     "check": "The line shows on the TV title page and D-pad navigation never focuses it",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"start\":\"BUTTON\"}"
+    },
+    {
+     "layout": "tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "tv720",
+     "check": "Down from Home reaches the Ratings display link",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "tv720",
+     "check": "Ratings display opens with focus on its first switch",
+     "verdict": "PASS",
+     "detail": "\"imdb\""
+    },
+    {
+     "layout": "tv720",
+     "check": "Down reaches a source, Enter toggles it and focus stays on it",
+     "verdict": "PASS",
+     "detail": "{\"target\":\"letterboxd\",\"on\":\"true\",\"off\":\"false\",\"stillFocused\":\"letterboxd\"}"
+    },
+    {
+     "layout": "tv720",
+     "check": "The remote's Back leaves Ratings display for the page that opened it",
+     "verdict": "PASS",
+     "detail": "\"#/home\""
+    },
+    {
+     "layout": "tv720",
+     "check": "The line shows on the TV title page and D-pad navigation never focuses it",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"start\":\"BUTTON\"}"
+    },
+    {
+     "layout": "tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "all",
+     "check": "None of the 124 JellyfinMod responses the browser received carries the key",
+     "verdict": "PASS"
+    }
+   ]
+  },
+  {
+   "browser": "chrome",
+   "version": "153.0.8010.54",
+   "at": "2026-10-07T05:51:38.996Z",
+   "results": [
+    {
+     "layout": "desktop",
+     "check": "The user menu offers Ratings display",
+     "verdict": "PASS",
+     "detail": "[\"Profile\",\"Settings\",\"Queue\",\"JellyfinMod settings\",\"Ratings display\",\"Dashboard\",\"Metadata Manager\",\"Quick Connect\",\"Sign Out\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "desktop",
+     "check": "The native page shows the Ratings line in the default order",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K)\",\"RT critics 91% (310)\",\"RT audience 88% (25K)\",\"TMDB 79% (15K)\",\"Trakt 83% (21K)\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Each chip shows its value in its own scale with votes, and says where it came from",
+     "verdict": "PASS",
+     "detail": "[{\"source\":\"imdb\",\"provider\":\"mdblist\",\"text\":\"IMDb 8.1 (250K)\",\"title\":\"IMDb 8.1, 250,000 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site\",\"tabIndex\":-1,\"inSection\":true,\"inMisc\":false},{\"source\":\"tomatoes_critic\",\"provider\":\"mdblist\",\"text\":\"RT critics 91% (310)\",\"title\":\"Rotten Tomatoes critics (Tomatometer) 91%, 310 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site\",\"tabIndex\":-1,\"inSection\":true,\"inMisc\":false},{\"source\":\"tomatoes_audien"
+    },
+    {
+     "layout": "desktop",
+     "check": "The line sits in the detail section and is not focusable",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "desktop",
+     "check": "The Ratings mount leads the detail section content",
+     "verdict": "PASS",
+     "detail": "[\"jfmod-ratingsMount\",\"jfmod-traktMount\",\"itemGenres\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Refresh ratings queues a refresh and says so",
+     "verdict": "PASS",
+     "detail": "\"Ratings refresh queued. New values show in a moment.\""
+    },
+    {
+     "layout": "desktop",
+     "check": "The file-less entry page shows the line beside the TMDB star, TMDB first-party",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K) [mdblist]\",\"RT critics 91% (310) [mdblist]\",\"RT audience 88% (25K) [mdblist]\",\"TMDB 8.7 [tmdb]\",\"Trakt 83% (21K) [mdblist]\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Moving a source keeps focus on the control that moved it and says it was saved",
+     "verdict": "PASS",
+     "detail": "{\"focused\":\"up\",\"status\":\"Letterboxd moved up. Saved.\"}"
+    },
+    {
+     "layout": "desktop",
+     "check": "The detail line follows the user's own sources and order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"letterboxd\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "The choice is saved in Jellyfin's per-user display preferences",
+     "verdict": "PASS",
+     "detail": "\"[\\\"imdb\\\",\\\"tomatoes_critic\\\",\\\"tomatoes_audience\\\",\\\"tmdb\\\",\\\"letterboxd\\\",\\\"trakt\\\"]\""
+    },
+    {
+     "layout": "desktop",
+     "check": "Cards are unchanged with the preference off: no card rating and no ratingSource sent",
+     "verdict": "PASS",
+     "detail": "{\"cardText\":[],\"requests\":1}"
+    },
+    {
+     "layout": "desktop",
+     "check": "With IMDb chosen each card carries it in its secondary text line, no badge",
+     "verdict": "PASS",
+     "detail": "[{\"text\":\" · IMDb 8.1\",\"inSecondary\":true,\"badge\":false},{\"text\":\" · IMDb 8.1\",\"inSecondary\":true,\"badge\":false}]"
+    },
+    {
+     "layout": "desktop",
+     "check": "The card rating adds no focus stop",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "desktop",
+     "check": "The settings area's Ratings section shows the key as configured, Test passes and the stand-in is flagged",
+     "verdict": "PASS",
+     "detail": "\"STEP 10 OF 12\\nRatings\\nKey tested 10/7/2026, 4:50:05 PM\\nMDBList accepted the key and returned ratings. (ok) Sources: IMDb, Metacritic critics, Metacritic users, Trakt, Rotten Tomatoes critics, Letterboxd, Roger Ebert, TMDB, Rotten Tomatoes audience.\\nFetch and show title ratings\\nDisplay only: ratings never steer searching, grabbing or retention.\\nFetch a title again after (days)\\nMDBList calls per day\""
+    },
+    {
+     "layout": "desktop",
+     "check": "A plugin without the ratings capabilities: no line, no menu item, no card rating and no ratingSource sent (card choice still on)",
+     "verdict": "PASS",
+     "detail": "{\"chips\":0,\"cards\":0,\"requests\":4}"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings turned off: the line is absent and the page otherwise unchanged",
+     "verdict": "PASS",
+     "detail": "{\"buttons\":4}"
+    },
+    {
+     "layout": "desktop",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "desktop",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "The native page shows the Ratings line, wrapped, without horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "The file-less entry page shows the line",
+     "verdict": "PASS",
+     "detail": "[\"IMDb 8.1 (250K)\",\"RT critics 91% (310)\",\"RT audience 88% (25K)\",\"TMDB 8.7\",\"Trakt 83% (21K)\"]"
+    },
+    {
+     "layout": "mobile",
+     "check": "Ratings display starts from the administrator's default order",
+     "verdict": "PASS",
+     "detail": "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"trakt\"]"
+    },
+    {
+     "layout": "mobile",
+     "check": "Ratings display has no horizontal scroll",
+     "verdict": "PASS",
+     "detail": "{\"overflow\":0}"
+    },
+    {
+     "layout": "mobile",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "tv1080",
+     "check": "Down from Home reaches the Ratings display link",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "tv1080",
+     "check": "Ratings display opens with focus on its first switch",
+     "verdict": "PASS",
+     "detail": "\"imdb\""
+    },
+    {
+     "layout": "tv1080",
+     "check": "Down reaches a source, Enter toggles it and focus stays on it",
+     "verdict": "PASS",
+     "detail": "{\"target\":\"letterboxd\",\"on\":\"true\",\"off\":\"false\",\"stillFocused\":\"letterboxd\"}"
+    },
+    {
+     "layout": "tv1080",
+     "check": "The remote's Back leaves Ratings display for the page that opened it",
+     "verdict": "PASS",
+     "detail": "\"#/home\""
+    },
+    {
+     "layout": "tv1080",
+     "check": "The line shows on the TV title page and D-pad navigation never focuses it",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"start\":\"BUTTON\"}"
+    },
+    {
+     "layout": "tv1080",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "tv720",
+     "check": "Down from Home reaches the Ratings display link",
+     "verdict": "PASS"
+    },
+    {
+     "layout": "tv720",
+     "check": "Ratings display opens with focus on its first switch",
+     "verdict": "PASS",
+     "detail": "\"imdb\""
+    },
+    {
+     "layout": "tv720",
+     "check": "Down reaches a source, Enter toggles it and focus stays on it",
+     "verdict": "PASS",
+     "detail": "{\"target\":\"letterboxd\",\"on\":\"true\",\"off\":\"false\",\"stillFocused\":\"letterboxd\"}"
+    },
+    {
+     "layout": "tv720",
+     "check": "The remote's Back leaves Ratings display for the page that opened it",
+     "verdict": "PASS",
+     "detail": "\"#/home\""
+    },
+    {
+     "layout": "tv720",
+     "check": "The line shows on the TV title page and D-pad navigation never focuses it",
+     "verdict": "PASS",
+     "detail": "{\"chips\":5,\"start\":\"BUTTON\"}"
+    },
+    {
+     "layout": "tv720",
+     "check": "No page errors",
+     "verdict": "PASS",
+     "detail": "[]"
+    },
+    {
+     "layout": "all",
+     "check": "None of the 125 JellyfinMod responses the browser received carries the key",
+     "verdict": "PASS"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+browser: chromium 153.0.8010.12
+ok - badges desktop series: every enabled source on the ratings' own line, in order
+ok - badges desktop series: the line sits under the stock rows, outside them, within its reserved height
+ok - badges desktop series: the stock star repeating IMDb is hidden
+ok - badges desktop movie: every enabled source on the ratings' own line, in order
+ok - badges desktop movie: the line sits under the stock rows, outside them, within its reserved height
+ok - badges desktop movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - badges desktop: hover shows the tooltip with the votes
+ok - badges mobile series: every enabled source on the ratings' own line, in order
+ok - badges mobile series: the line sits under the stock rows, outside them, within its reserved height
+ok - badges mobile series: the stock star repeating IMDb is hidden
+ok - badges mobile movie: every enabled source on the ratings' own line, in order
+ok - badges mobile movie: the line sits under the stock rows, outside them, within its reserved height
+ok - badges mobile movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - badges mobile: a tap shows the tooltip with the votes
+ok - badges tv1080 series: a late answer fills the reserved line and the focused Play does not move
+ok - badges tv1080 series: every enabled source on the ratings' own line, in order
+ok - badges tv1080 series: the line sits under the stock rows, outside them, within its reserved height
+ok - badges tv1080 series: the stock star repeating IMDb is hidden
+ok - badges tv1080 series: first focus is Play
+ok - badges tv1080 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - badges tv1080 movie: a late answer fills the reserved line and the focused Play does not move
+ok - badges tv1080 movie: every enabled source on the ratings' own line, in order
+ok - badges tv1080 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - badges tv1080 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - badges tv1080 movie: first focus is Play
+ok - badges tv1080 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - badges tv720 series: a late answer fills the reserved line and the focused Play does not move
+ok - badges tv720 series: every enabled source on the ratings' own line, in order
+ok - badges tv720 series: the line sits under the stock rows, outside them, within its reserved height
+ok - badges tv720 series: the stock star repeating IMDb is hidden
+ok - badges tv720 series: first focus is Play
+ok - badges tv720 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - badges tv720 movie: a late answer fills the reserved line and the focused Play does not move
+ok - badges tv720 movie: every enabled source on the ratings' own line, in order
+ok - badges tv720 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - badges tv720 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - badges tv720 movie: first focus is Play
+ok - badges tv720 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - no request left the machine apart from upstream's cast sender (4 of those, all blocked)
+ok - no icon was requested as a file
+40 passed, 0 failed

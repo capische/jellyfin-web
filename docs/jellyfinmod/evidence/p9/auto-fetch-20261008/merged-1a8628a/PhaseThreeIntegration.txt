@@ -1,0 +1,2 @@
+PASS: Phase 3 policy and completion evidence survive real events, SQLite migration and restart
+exit=0 seconds=7
