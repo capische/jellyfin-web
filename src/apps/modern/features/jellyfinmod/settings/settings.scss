@@ -1290,3 +1290,26 @@
     font-size: 0.78em;
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }
+
+// The TVs section (Phase 12 M32, mockup 1 B; UX.md §12): a checklist of the TVs catalogue, a lead and an outcome sentence.
+// The checkbox stays beside the model on a phone too, where other rows stack (the rules above).
+.jfmod-brow.jfmod-tvrow,
+.layout-mobile .jfmod-brow.jfmod-tvrow {
+    grid-template-columns: auto 1fr;
+    column-gap: 0.9em;
+    cursor: pointer;
+}
+
+.jfmod-tvcheck {
+    width: 1.2em;
+    height: 1.2em;
+    margin: 0.15em 0 0;
+    align-self: start;
+    accent-color: var(--jf-palette-primary-main, #00a4dc);
+}
+
+.jfmod-tvs-lead,
+.jfmod-tvs-outcome {
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    margin: 0 0 1em;
+}

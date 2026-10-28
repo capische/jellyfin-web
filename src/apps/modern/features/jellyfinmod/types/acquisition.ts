@@ -166,6 +166,8 @@ export interface ReleaseSearch {
         modes?: GrabMode[];
         /** For a movie's another version, how many files it holds: what Replace removes (user, 2026-10-28). */
         heldFiles?: number | null;
+        /** This search, on the quality profile for phones, adds the copy phones play to a title that has none (Phase 12): Add only. */
+        forPhones?: boolean;
     };
     candidates: ReleaseCandidate[];
     eligibleCount: number;
@@ -217,6 +219,10 @@ export interface QualityProfile {
     maximumBytesPerHour: number | null;
     revision: number;
     isDefault: boolean;
+    /** The quality profile for phones (Phase 12); absent before `copies`. */
+    isPhoneProfile?: boolean;
+    /** Best on My TVs (`tvs`), Plays Everywhere (`everywhere`) or No Preference (null); absent before `copies`. */
+    prefer?: 'tvs' | 'everywhere' | null;
 }
 
 /** Newest grab for an entry or episode on detail reads (P4.A6). Ordinary users see only state and time. */

@@ -3,7 +3,9 @@
 **Status:** approved 2026-10-15 ("Love quality profiles - implement it too"), revised the same day and 2026-10-16/17 to
 artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). The profile selects' two-line options:
 user, 2026-10-24 (P4.FU17, P4.FU19). The release picker's BDRip label and Full Disc: user, 2026-10-25 (P4.FU22). Built on
-`next-release` (P4.FU9). Records: [design note](../quality-profiles-redesign.md), artifact
+`next-release` (P4.FU9). **Phase 12** (user-approved 2026-10-29, D53–D56, D58; mockups `reviews/phase12/mockups/1-settings.html`,
+`2-profile-dialog.html`; built 2026-10-29, not accepted): the Prefer field, the row's preference clause, the phone mark on the
+quality profile for phones, the Quality profile for phones select, the 1080p preset's Plays Everywhere. Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,
 `settings/qualityProfiles.scss` (`.jfmod-qp-*`), `settings/settingsSections.tsx` (`ProfileRow`, `QualityRow`).
 
@@ -16,7 +18,12 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
 - The card, the blue *Add Profile* and the row icons stay ([buttons-and-row-actions.md](buttons-and-row-actions.md)):
   Make Default `star_border`, Edit pencil, Remove red bin.
 - Each row says in one sentence what the profile does: **"4K first, then down to 720p · any size · no upgrades"**,
-  never the quality list. Chips: *Predefined* on the shipped profiles, the blue *Default* on the default.
+  never the quality list; a profile with a preference adds it before the upgrades: **"· best on my TVs"** or **"· plays
+  everywhere"** (Phase 12). Chips: *Predefined* on the shipped profiles, the blue *Default* on the default.
+- **The quality profile for phones** (D54) carries the phone mark after its name (`components/PhoneMark.tsx`, the
+  [track dropdown](track-dropdown.md)'s mark: Material `smartphone`, 1.05em, 86 %, `.28em` after the name; label and tooltip
+  **"Quality profile for phones"**) in its row, in both profile selects' options and closed values, and in the picker's Quality
+  Profile field. No chip; not in the profile dialog (the choice is made in Grabbing).
 - **Order (user, 2026-10-19):** profiles list best first, 4K, 2K, 1080p, 720p, SD, in the Settings list, the wizard step, the Default
   profile select and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (by the resolution of
   each profile's best quality, then name); no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
@@ -36,7 +43,12 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
   keeps the id `jfmod-releaseProfile` and the `focusable` class (a TV focus stop; Enter opens the menu, `shell/dpadModals` drives
   it, Back closes only the menu); the menu (`.jfmod-releaseProfileMenu`) sits above upstream's dialog layer at z-index 1000000.
   Behaviour as before: the title's own profile, else the default, is selected; picking the profile the search already uses sends
-  no override; another one sends `profileId` and searches once.
+  no override; another one sends `profileId` and searches once. On a title with no file at 1080p or below, Get Another Quality
+  (the page's cloud icon) opens on the quality profile for phones; on the profile for phones the notice reads "Adds a 1080p copy
+  for phones. The 4K stays." and only Add is offered (Phase 12, D57, D103).
+- **Quality profile for phones** (Grabbing, after *Default quality profile*; Phase 12, D55): the same two-line select; help
+  "Phones play a title's file at 1080p or below. Get Another Quality starts with this profile on a title that has none." Both
+  selects mark the profile chosen for phones as the form has it, so the mark moves as it is chosen.
 
 ## Dialog, in order
 
@@ -48,14 +60,22 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
    1080p · 720p · SD.
 4. **Fall back to lower quality … down to [720p]** (checkbox + `.jfmod-qp-floor` select), on by default.
 5. **File size**: Small · Balanced · Large (`.jfmod-qp-size`), each with its GB-per-hour range and the "2-hour film" figure.
-6. **Upgrade later when something better appears** (off; help "Needs Automation on").
-7. **Summary** (`.jfmod-qp-sum`): one live sentence, a 0.2em primary left bar on a 12 % primary wash.
-8. **Advanced** (`<details class="jfmod-qp-adv">`, collapsed): the source × resolution checkbox matrix (`.jfmod-qp-matrix`,
+6. **Prefer** (Phase 12, only with a plugin that has `copies`): three segmented buttons of the File size kind
+   (`.jfmod-qp-seg.jfmod-qp-size`, `data-qp="prefer-tvs|prefer-everywhere|prefer-none"`), each a title over a small line:
+   **Best on My TVs** (the ticked TVs' names, "LG C1, LG G2", or "best picture and sound" with none) · **Plays Everywhere**
+   (phones, browsers) · **No Preference** (as before); a hint under them (`data-qp="prefer-hint"`) says what it prefers: "Among
+   releases of the same quality: Dolby Vision first, then HDR10; Dolby Digital Plus and Dolby Digital sound first; DTS last." /
+   "… no HDR and H.264 first; AAC, Dolby Digital and Dolby Digital Plus sound first; TrueHD and DTS last."
+7. **Upgrade later when something better appears** (off; help "Needs Automation on").
+8. **Summary** (`.jfmod-qp-sum`): one live sentence, a 0.2em primary left bar on a 12 % primary wash; with a preference it adds
+   "among releases of the same quality takes the one that plays best on your TVs" / "… the one most devices play without the
+   server converting it".
+9. **Advanced** (`<details class="jfmod-qp-adv">`, collapsed): the source × resolution checkbox matrix (`.jfmod-qp-matrix`,
    Remux / Blu-ray / WEB-DL / WEBRip / HDTV / DVD × 2160p / 1440p / 1080p / 720p / 576p / 480p; impossible cells
    `.jfmod-qp-na` at 35 %), then **"Change the order tried ▸"** (`.jfmod-qp-ordertried`, collapsed) wrapping the ranked
    list with Move Up / Move Down / Remove icons and a one-line note that the matrix already sets the usual order, then
    cutoff, upgrade mode, minimum score, minimum seeders and the size limits as GB per hour.
-9. Problems (`.jfmod-qp-problem`, red bar) and Save refused until they pass: at least one quality; the cutoff must be an
+10. Problems (`.jfmod-qp-problem`, red bar) and Save refused until they pass: at least one quality; the cutoff must be an
    allowed quality and upgrades need one; min size below max; a name.
 
 Fields: label `.jfmod-qp-label` .88em secondary; inputs 6 % white fill with a bottom hairline, radius `.2em .2em 0 0`,
@@ -77,14 +97,15 @@ focus underline in the primary; every size in `em`; no `gap` outside the dialog'
 
 | Name | Best | Down to | GB per hour (small ≤ / balanced / large) | Upgrades |
 | --- | --- | --- | --- | --- |
-| 4K (default) | 2160p | 720p | 8 / 8–20 / no max | off |
+| 4K (default; prefers Best on My TVs) | 2160p | 720p | 8 / 8–20 / no max | off |
 | 2K | 1440p (needs the parser's 1440p qualities) | 720p | 4 / 4–10 / — | off |
-| 1080p | 1080p | 720p | 2 / 2–6 / — | off |
+| 1080p (the profile for phones; prefers Plays Everywhere; "Full HD, the sensible middle. Plays on phones too. Falls back to 720p.") | 1080p | 720p | 2 / 2–6 / — | off |
 | 720p | 720p | 720p | 1 / 1–3 / — | off |
 | Any Quality | 2160p | 480p | no limit | off |
 | SD | 576p (incl. DVD) | 480p | 0.5 / 0.5–1.5 / — | off |
 
-Seeders ≥ 2, score empty, cutoff = the first quality of the order, `upgradeMode` replace unless Advanced says add.
+Seeders ≥ 2, score empty, cutoff = the first quality of the order, `upgradeMode` replace unless Advanced says add. There is no
+Mobile preset (D53); presets are copied when added, so an existing install's stored 1080p keeps No Preference until edited.
 
 ## Do not
 
