@@ -1429,6 +1429,12 @@
         box-shadow: 0 0 0 0.12em var(--jfmod-paper), 0 0 0 0.28em var(--jfmod-focus, #fff);
         transform: none;
     }
+
+    // The last action's focus ring (Replace) reaches past the row; the room it needs inside the list's clip at 1920×1080 (TV check
+    // 2026-10-28: clipped at the dialog's right edge).
+    .jfmod-releaseItem {
+        padding-right: 0.45em;
+    }
 }
 
 [data-theme='light'] .formDialog.jfmod-releaseDialog {

@@ -11,7 +11,8 @@ values.
 | [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block, the season and series headers |
 | [card-glass.md](card-glass.md) | the frosted-glass recipe and its ink colours | the scrolled top bar, every mark on a poster |
 | [media-marks.md](media-marks.md) | codec, HDR and audio marks (Dolby and DTS chips, channel tags) | the release picker, the Video / Audio / Subtitles dropdowns, the download block |
-| [track-dropdown.md](track-dropdown.md) | the custom dropdown: field-like trigger, paper list, blue bar on the current entry | Video / Audio / Subtitles on the detail page, Predefined in the profile dialog |
+| [track-dropdown.md](track-dropdown.md) | the track strip and the custom dropdown: one field of Video / Audio / Subtitles segments, paper lists, blue bar on the current entry | the detail page's strip, Predefined in the profile dialog |
+| [pending-version.md](pending-version.md) | another version on its way for a title that plays: ring, two lines, the Replace / Add flag, the admin's X | under the detail page's track strip, in its open Video list |
 | [download-block.md](download-block.md) | a missing episode's download panel | the episode page |
 | [quality-profiles.md](quality-profiles.md) | the Quality Profiles section rows and the Add / Edit dialog | settings area, setup wizard |
 | [wizard-step-footer.md](wizard-step-footer.md) | the "To continue, …" line beside Continue | the setup wizard |

@@ -98,6 +98,24 @@ export interface QueueRow {
     parsed?: ParsedRelease | null;
     /** The indexer the release came from (P1.FU20); absent from older plugins. */
     indexerName?: string | null;
+    /**
+     * The grab's mode (the upgrade status, 2026-10-28): `fill` a first download, `add` another version beside what the title
+     * holds, `replace` one that then replaces it. Absent from older plugins.
+     */
+    mode?: 'fill' | 'add' | 'replace' | null;
+    /** A movie's or an episode's Replace: the files it removes, with the resolution their names give. Null for any other row. */
+    replaces?: QueueReplaceTarget[] | null;
+    /**
+     * Web only: this row (or a pack episode's view of it, `packEpisodeView`) brings a title that already plays another version.
+     * Absent on the server's rows, where `intent` and the pack's `held` say it (`isNewVersion`).
+     */
+    newVersion?: boolean;
+}
+
+/** One file a Replace removes; `label` is its resolution (`1080p`) when its file name gives one. */
+export interface QueueReplaceTarget {
+    bindingId: string;
+    label: string | null;
 }
 
 /** One claimed episode of a pack and its newest import, if one has started. */
@@ -115,6 +133,8 @@ export interface QueuePackEpisode {
     progress?: number | null;
     /** The episode's file length while the client lists it (P4.FU5), for its time left at the pack's rate. */
     sizeBytes?: number | null;
+    /** The episode held a file when the pack claimed it, so an `add` or `replace` pack brings it a new version. */
+    held?: boolean;
 }
 
 /** A pack's row detail (season packs, 2026-10-08): `Season 1 pack · 4 episodes`, its mode and each claimed episode. */

@@ -1,6 +1,6 @@
-// The Video row as the file chooser (design step 2, UX §11.2). Values from the base theme and librarybrowser.scss: primary
-// #00a4dc, card radius 0.2em, secondary text 86%, the track label's 6.25em column (4.5em on mobile). No flex gap, min()/max()
-// or display: contents, for older TV engines (P1.W11); every size in em.
+// The track strip and its Video list (design step 2, UX §11.2; the strip D4–D9, 2026-10-28). Values from the base theme and
+// librarybrowser.scss: primary #00a4dc, card radius 0.2em, secondary text 86%. No flex gap, min()/max() or display: contents,
+// for older TV engines (P1.W11); every size in em.
 
 // Upstream's Version select stays in the DOM and keeps working; it is not shown while the chooser is mounted (UX §1.1
 // exception 2). The selector is new and names upstream's classes only to outrank `.trackSelections .selectContainer`.
@@ -8,65 +8,73 @@
     display: none;
 }
 
-// With one video stream the chooser's trigger shows upstream's text, so the row's disabled select and its arrow step aside; the
-// Audio and Subtitles rows' selects likewise while their dropdowns are mounted (P7.FU6). Each stays in the DOM and keeps its value.
-.jfmod-videoHost > .emby-select,
-.jfmod-videoHost > .selectArrowContainer,
-.jfmod-trackHost > .emby-select,
-.jfmod-trackHost > .selectArrowContainer {
+// The track strip (D4–D9, user-approved 2026-10-28): upstream's Video, Audio and Subtitles rows step aside while their segments
+// are drawn in the strip after the form; each stays in the DOM and keeps its value. A row whose segment is not drawn (its streams
+// unread) stays as upstream draws it.
+.trackSelections.jfmod-stripMounted > .jfmod-videoHost,
+.trackSelections.jfmod-stripMounted > .jfmod-trackHost {
     display: none;
 }
 
-.jfmod-videoChooser,
-.jfmod-trackChooser {
-    // The media marks knock their words out of a chip in the page's colour.
-    --jfmod-paper: #101010;
+// One field-like strip (the trigger's border, paper and radius) of three segments, as wide as upstream's form (44em): Video grows
+// and ends with the size and chevron, Audio and Subtitles size to their value; hairline dividers between them.
+.jfmod-strip {
+    // The media marks knock their words out of a chip in the strip's colour.
+    --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
     display: flex;
-    align-items: flex-start;
-    flex: 0 0 auto;
+    align-items: stretch;
+    // As wide as the page's text column, as drawn (B-laptop-rest.png): the longest 2160p row fits its list at 1280 (D6).
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 0.3em;
+    border: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+    border-radius: 0.2em;
+    background: var(--jf-palette-background-paper, #202020);
 }
 
-.jfmod-videoHost > .jfmod-videoChooser,
-.jfmod-trackChooser {
-    flex: 1 1 auto;
+.jfmod-stripSegment {
+    display: flex;
+    flex: 0 1 auto;
     min-width: 0;
 }
 
-// A file with several video streams: the chooser has its own row above upstream's Video select, laid out like a track row.
-.jfmod-videoChooser--row {
-    max-width: 44em;
-    margin: 0 0 0.3em;
-}
-
-.jfmod-chooserLabel {
-    flex: 0 0 6.25em;
-    margin: 0 0.2em 0 0;
-    line-height: 1.75;
-}
-
-.layout-mobile .jfmod-chooserLabel {
-    flex-basis: 4.5em;
-}
-
-.jfmod-chooserValue {
+.jfmod-stripSegment--video {
     flex: 1 1 auto;
 }
 
+.jfmod-stripSegment:empty {
+    display: none;
+}
+
+.jfmod-stripSegment:not(:empty) ~ .jfmod-stripSegment {
+    border-left: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+}
+
+// The phone stacks the segments into rows of the same card (D4).
+.layout-mobile .jfmod-strip {
+    flex-direction: column;
+}
+
+.layout-mobile .jfmod-stripSegment:not(:empty) ~ .jfmod-stripSegment {
+    border-top: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+    border-left: 0;
+}
+
+// A segment: a small uppercase caption over the value line (D8). Hover and focus ring the segment in the primary, over the
+// strip's border, as the field's border did.
 .jfmod-videoTrigger,
 .jfmod-trackTrigger {
-    // The closed Video value is a dropdown like the Audio and Subtitles selects beside it (user, 2026-10-10), measured against
-    // them: the same width, the 1.75em height, the 2px border, the paper background and the chevron at the right end.
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-    height: 1.75em;
-    padding: 0 0 0 0.4em;
-    border: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+    padding: 0.3em 0.5em 0.35em 0.6em;
+    border: 0;
     border-radius: 0.2em;
-    // The theme's own select colours, so the value reads in the light theme too (it was a dark box there).
-    background: var(--jf-palette-background-paper, #202020);
+    background: transparent;
     color: inherit;
     font: inherit;
     line-height: normal;
@@ -75,9 +83,28 @@
 
     &:hover,
     &:focus {
-        border-color: #00a4dc;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 0 0 0.135em #00a4dc;
         outline: none;
     }
+}
+
+.jfmod-stripCaption {
+    font-size: 0.72em;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0.62;
+}
+
+.jfmod-stripValue {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    line-height: 1.5;
 }
 
 .jfmod-videoTriggerText {
@@ -94,22 +121,28 @@
     opacity: 0.7;
 }
 
-// A track row upstream does not let you change (one audio track): the same field, no chevron, not a focus stop.
+// Audio's and Subtitles' chevron follows the value, as their segment sizes to it.
+.jfmod-trackTrigger .jfmod-videoChevron {
+    margin-left: 0.3em;
+}
+
+// A track upstream does not let you change (one audio track): the same segment, no chevron, not a focus stop.
 .jfmod-trackTrigger.jfmod-trackStatic {
-    padding-right: 0.4em;
+    padding-right: 0.6em;
     cursor: default;
 
     &:hover {
-        border-color: var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+        box-shadow: none;
     }
 }
 
-// The Audio and Subtitles list: a paper popover as wide as the field, drawn like the Video list (the paper colour, a hairline
-// border, rows of the same height), at most 20em tall so it opens under its field; the current entry has a blue left bar (the
-// settings area's predefined picker's bar).
+// The Audio and Subtitles list: a paper popover under its segment, right-aligned with it, at least as wide and at most 34em
+// (D6), drawn like the Video list (the paper colour, a hairline border, rows of the same height), at most 20em tall and
+// scrolling (D7); the current entry has a blue left bar (the settings area's predefined picker's bar).
 .jfmod-trackMenuPaper.MuiPaper-root {
     --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
+    max-width: 34em;
     max-height: 20em;
     margin-top: 0.25em;
     border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
@@ -124,11 +157,24 @@
 
 .jfmod-trackMenu .jfmod-trackItem {
     min-height: 0;
-    // The text starts where the field's does (its 0.535em inset), the bar inside it.
-    padding: 0.45em 0.8em 0.45em calc(0.535em - 1px - 0.2em);
+    // The text starts as a segment's does (its 0.6em inset), the bar inside it.
+    padding: 0.45em 0.8em 0.45em calc(0.6em - 1px - 0.2em);
     border-left: 0.2em solid transparent;
+    overflow: hidden;
     font: inherit;
     white-space: nowrap;
+
+    > span {
+        flex-shrink: 0;
+    }
+}
+
+// A long title is cut with an ellipsis, last, so the language, the marks and the flags stay (D5).
+.jfmod-trackMenu .jfmod-trackItem > .jfmod-trackTitle {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .jfmod-trackMenu .jfmod-trackItem--on {
@@ -140,13 +186,13 @@
 // animate the row (older webOS) just opens it. The panel is as wide as the Video value and never reaches left of it: each
 // row's text starts where the value's text does, and Get Another Quality's plus starts there too, its text after it (user,
 // 2026-10-12).
-// Where the closed value's text starts: its 0.4em padding inside its 0.135em border.
-$text-inset: 0.535em;
+// Where a segment's text starts: its 0.6em padding inside the strip's 0.135em border.
+$text-inset: 0.735em;
 
 .jfmod-fileList {
     display: grid;
     grid-template-rows: 0fr;
-    max-width: 44em;
+    width: 100%;
     transition: grid-template-rows 0.18s ease-out;
 }
 
@@ -159,10 +205,14 @@ $text-inset: 0.535em;
     overflow: hidden;
 }
 
+// The Video list is as wide as the whole strip (D6) and drawn on the paper, as the Audio and Subtitles lists are.
 .jfmod-fileListBox {
+    --jfmod-paper: var(--jf-palette-background-paper, #202020);
+
     margin: 0.25em 0 0.6em;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.2em;
+    background: var(--jf-palette-background-paper, #202020);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -300,14 +350,14 @@ $text-inset: 0.535em;
 }
 
 // The size at the value's right end, just before the chevron (P7.FU6, option A), and at each row's end before its icons.
-.jfmod-videoTrigger > .jfmod-fileSize,
+.jfmod-stripValue > .jfmod-fileSize,
 .jfmod-fileChoose > .jfmod-fileSize {
     flex: 0 0 auto;
     margin: 0 0 0 auto;
     padding-left: 0.8em;
 }
 
-.jfmod-videoTrigger > .jfmod-fileSize + .jfmod-videoChevron {
+.jfmod-stripValue > .jfmod-fileSize + .jfmod-videoChevron {
     margin-left: 0.2em;
 }
 
@@ -422,8 +472,8 @@ $text-inset: 0.535em;
     opacity: 0.8;
 }
 
-[data-theme='light'] .jfmod-videoChooser,
-[data-theme='light'] .jfmod-trackChooser {
+[data-theme='light'] .jfmod-strip,
+[data-theme='light'] .jfmod-fileListBox {
     --jfmod-paper: #fff;
 }
 
@@ -431,4 +481,10 @@ $text-inset: 0.535em;
 .jfmod-deleteWarning {
     margin: 1em 0 0;
     color: #f2b01e;
+}
+
+// The strip goes with the form when upstream hides it (nothing to play).
+.trackSelections.hide ~ .jfmod-strip,
+.trackSelections.hide ~ .jfmod-stripBelow {
+    display: none;
 }

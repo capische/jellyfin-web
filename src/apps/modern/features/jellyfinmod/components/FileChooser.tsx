@@ -1,6 +1,6 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import classNames from 'classnames';
-import React, { type FC, type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import focusManager from 'components/focusManager';
@@ -16,6 +16,7 @@ import './releasePicker.scss';
 
 const SOURCE_SELECTOR = '.selectSource';
 const VIDEO_SELECTOR = '.trackSelections .selectVideoContainer';
+const FORM_SELECTOR = '.trackSelections';
 /** How long the list takes to slide back before its rows leave the page; matches the stylesheet. */
 const SLIDE_MS = 180;
 
@@ -50,6 +51,10 @@ export interface FileChooserProps {
     note?: string | null;
     /** The page item's media sources, once read: each file's marks come from its streams (P7.FU6). */
     sources?: MediaSourceInfo[];
+    /** The strip's hosts (`useTrackStrip`): the Video segment and the place under the strip. */
+    strip: StripHosts;
+    /** Another version on its way (`PendingVersion`): under the strip while the list is closed, inside the list while it is open. */
+    pending?: ReactNode;
 }
 
 const findSelect = (view: HTMLElement) => view.querySelector<HTMLSelectElement>(SOURCE_SELECTOR);
@@ -155,51 +160,69 @@ const useDevicePreference = (view: HTMLElement, preferred: VersionDto | null | u
     }, [view, preferred, chosen]);
 };
 
-interface VideoHost {
-    host: HTMLElement | null;
-    /** True when the chooser sits inside upstream's Video row; false when that row lists several video streams. */
-    inline: boolean;
+/** Where the strip draws (`useTrackStrip`): a slot per segment and the place under the strip for the Video list and the pending entry. */
+export interface StripHosts {
+    video: HTMLElement;
+    audio: HTMLElement;
+    subtitles: HTMLElement;
+    below: HTMLElement;
 }
 
 /**
- * Where the chooser lives (design step 2): inside upstream's Video row, after its select. With one video stream, the row's
- * disabled select is hidden by a mod class on the row and the chooser's trigger takes its place, so the row reads as one
- * value with a chevron. A file with several video streams keeps upstream's select visible
- * and the chooser takes a row of its own directly above it. Upstream's Version select is hidden only while the chooser is
- * mounted (UX §1.1 exception 2). Nothing here edits upstream's markup beyond these mod classes and the mount.
+ * The track strip (D4–D9, user-approved 2026-10-28, `reviews/upgrade-status-options/all-in-one`): Video, Audio and Subtitles as
+ * one field of three segments, right after upstream's track form, with a place under it. Upstream's form stays in the DOM as the
+ * source of truth (its selects keep their values and events); each of its rows steps aside only while its segment is drawn, so a
+ * row whose dropdown cannot mount (its streams unread) still shows as upstream draws it. The strip goes with the form when
+ * upstream hides it (nothing to play).
  */
-const useVideoHost = (view: HTMLElement): VideoHost => {
-    const [state, setState] = useState<VideoHost>({ host: null, inline: true });
+export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts | null => {
+    const [hosts, setHosts] = useState<StripHosts | null>(null);
+    useEffect(() => {
+        const form = view.querySelector<HTMLElement>(FORM_SELECTOR);
+        const parent = form?.parentNode;
+        if (!enabled || !form || !parent) return;
+        const strip = document.createElement('div');
+        strip.className = 'jfmod-strip';
+        const slot = (name: string) => {
+            const element = document.createElement('div');
+            element.className = 'jfmod-stripSegment jfmod-stripSegment--' + name;
+            strip.appendChild(element);
+            return element;
+        };
+        const below = document.createElement('div');
+        below.className = 'jfmod-stripBelow';
+        const next = { video: slot('video'), audio: slot('audio'), subtitles: slot('subtitles'), below };
+        parent.insertBefore(below, form.nextSibling);
+        parent.insertBefore(strip, below);
+        form.classList.add('jfmod-stripMounted');
+        setHosts(next);
+        return () => {
+            strip.remove();
+            below.remove();
+            form.classList.remove('jfmod-stripMounted');
+            setHosts(null);
+        };
+    }, [view, enabled]);
+    // Null in the very render that disables it (the page lists no file any more), not one effect later: the segments must never
+    // draw without a file (Codex review of the upgrade status, P2 2).
+    return enabled ? hosts : null;
+};
+
+/**
+ * Upstream's Video row steps aside while the Video segment is drawn (its select is disabled and only names the stream; the
+ * segment names the file), and its Version select while the chooser is mounted (UX §1.1 exception 2).
+ */
+const useVideoRowHidden = (view: HTMLElement) => {
     useEffect(() => {
         const container = view.querySelector<HTMLElement>(VIDEO_SELECTOR);
-        const select = container?.querySelector<HTMLSelectElement>('select');
-        const form = container?.parentNode as HTMLElement | null | undefined;
-        if (!container || !select || !form) return;
-        const host = document.createElement('div');
-        host.className = 'jfmod-videoChooser';
-        const place = () => {
-            const inline = select.options.length <= 1;
-            if (inline && host.parentNode !== container) container.appendChild(host);
-            if (!inline && host.nextSibling !== container) form.insertBefore(host, container);
-            if (inline) host.classList.remove('jfmod-videoChooser--row');
-            else host.classList.add('jfmod-videoChooser--row');
-            if (inline) container.classList.add('jfmod-videoHost');
-            else container.classList.remove('jfmod-videoHost');
-            setState(current => (current.host === host && current.inline === inline ? current : { host, inline }));
-        };
-        place();
-        form.classList.add('jfmod-chooserMounted');
-        const observer = new MutationObserver(place);
-        observer.observe(select, { childList: true });
+        const form = view.querySelector<HTMLElement>(FORM_SELECTOR);
+        container?.classList.add('jfmod-videoHost');
+        form?.classList.add('jfmod-chooserMounted');
         return () => {
-            observer.disconnect();
-            host.remove();
-            container.classList.remove('jfmod-videoHost');
-            form.classList.remove('jfmod-chooserMounted');
-            setState({ host: null, inline: true });
+            container?.classList.remove('jfmod-videoHost');
+            form?.classList.remove('jfmod-chooserMounted');
         };
     }, [view]);
-    return state;
 };
 
 /** A row action: upstream's round icon button, grey, red when it destroys, with the TV's focus ring (user, 2026-10-08). */
@@ -340,15 +363,17 @@ const useSlide = () => {
 };
 
 /**
- * The Video row as the file chooser (design step 2, user 2026-10-07; UX §11.2). Its value carries a chevron and opens a list
- * of the files, also when there is only one (user, 2026-10-08: one dropdown everywhere, with Get Another Quality in it); choosing one sets upstream's `.selectSource` and dispatches its bubbling `change`,
- * exactly as the version rows did, so Play, audio and subtitles follow, the viewer's own choice is never replaced and the
- * device preference still applies. If upstream's Video row is not there, nothing is mounted and the stock Version select stays visible.
+ * The Video segment of the track strip as the file chooser (design step 2, user 2026-10-07; UX §11.2; the strip D4–D9,
+ * 2026-10-28). Its value carries a chevron and opens a list of the files under the strip, as wide as it, also when there is
+ * only one (user, 2026-10-08: one dropdown everywhere, with Get Another Quality in it); choosing one sets upstream's
+ * `.selectSource` and dispatches its bubbling `change`, exactly as the version rows did, so Play, audio and subtitles follow,
+ * the viewer's own choice is never replaced and the device preference still applies. The pending download (`pending`) sits
+ * under the strip, or in the list while it is open.
  */
 const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onAddVersion, onHistory, pin, onPin, canRemove,
-    onRemove, removeDate, note, sources }) => {
+    onRemove, removeDate, note, sources, strip, pending }) => {
     const multi = versions.length > 1;
-    const { host, inline } = useVideoHost(view);
+    useVideoRowHidden(view);
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
@@ -365,7 +390,6 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     }, [slide, view]);
     const addVersion = useCallback((event: MouseEvent<HTMLButtonElement>) => onAddVersion?.(event.currentTarget), [onAddVersion]);
 
-    if (!host) return null;
     // With no option to match (one version, or a page that cannot choose sources) the default is the one that plays.
     const selectedId = versions.find(version => sameItemId(version.mediaSourceId, current))?.mediaSourceId
         ?? versions.find(version => version.isDefault)?.mediaSourceId
@@ -378,24 +402,27 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     });
 
     const listId = 'jfmod-fileList-' + (selected?.mediaSourceId ?? 'files');
-    return createPortal(<>
-        {!inline && <span className='jfmod-chooserLabel'>Version</span>}
-        <div className='jfmod-chooserValue'>
-            <button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
-                aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
-                onClick={toggle}>
+    return <>
+        {createPortal(<button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
+            aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
+            onClick={toggle}>
+            <span className='jfmod-stripCaption' aria-hidden='true'>Video</span>
+            <span className='jfmod-stripValue'>
                 <span className='jfmod-videoTriggerText'><VideoSummary version={selected} source={findSource(sources, selected.mediaSourceId)} /></span>
                 <FileSize version={selected} />
                 <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
-            </button>
+            </span>
+        </button>, strip.video)}
+        {createPortal(<>
             {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
-                was over in two frames opening and waited 140 ms closing). */}
+                was over in two frames opening and waited 140 ms closing). It is as wide as the whole strip (D6). */}
             <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}>
                 <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
                     {versions.map(version => <FileRow key={version.mediaSourceId} version={version}
                         selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
                         source={findSource(sources, version.mediaSourceId)}
                         {...iconProps(version)} />)}
+                    {pending}
                     {onAddVersion && <div className='jfmod-fileRow jfmod-fileRow--add'>
                         <button type='button' className='jfmod-fileChoose' data-jfmod-add-version='' onClick={addVersion}>
                             <span className='jfmod-fileMark' aria-hidden='true'>+</span>
@@ -405,8 +432,10 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                     {note && <p className='jfmod-fileNote'>{note}</p>}
                 </div>}</div>
             </div>
-        </div>
-    </>, host);
+            {/* The pending entry under the strip (D9); while the list is open it is the list's row instead. */}
+            {!slide.rendered && pending}
+        </>, strip.below)}
+    </>;
 };
 
 export default FileChooser;

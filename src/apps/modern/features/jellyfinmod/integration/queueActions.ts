@@ -82,21 +82,33 @@ export const confirmQueueRemoval = (row: QueueRow): Promise<RemoveQueueRequest |
 const REMOVE_TEXT = 'Remove this torrent from the download queue? The download stops, the torrent leaves the client and the files '
     + 'it downloaded are deleted. Files already in your library are not touched.';
 
+/** A pack part of which is already in the library: its torrent can go, but what it downloaded stays (the server's rule). */
+const REMOVE_KEEP_TEXT = 'Remove this torrent from the download queue? The download stops and the torrent leaves the client. Part of '
+    + 'it is already in your library, so the files it downloaded stay on disk. Files already in your library are not touched.';
+
 /**
  * The torrent removal's confirmation (2026-10-12): the release picker's added-row X and a missing episode's Cancel Download
  * (P1.FU20) ask the same question, and since 2026-10-26 delete what the torrent downloaded, so Remove is the red delete
  * button. Resolves when confirmed, rejects when declined.
  */
-export const confirmTorrentRemoval = (releaseTitle: string): Promise<void> => {
+export const confirmTorrentRemoval = (releaseTitle: string, keepFiles = false): Promise<void> => {
     // The stock dialog takes its options' `dialogOptions` (an id here), which the confirm passes through: releasePicker.scss
     // keeps Remove red under the pointer by it, where the stock `.raised:hover` would turn it grey.
-    const options = { title: 'Remove the Torrent', text: REMOVE_TEXT + '<span class="jfmod-confirmName">' + escapeHtml(releaseTitle) + '</span>',
+    const options = { title: 'Remove the Torrent', text: (keepFiles ? REMOVE_KEEP_TEXT : REMOVE_TEXT) + '<span class="jfmod-confirmName">' + escapeHtml(releaseTitle) + '</span>',
         confirmText: 'Remove', primary: 'delete', dialogOptions: { id: 'jfmodTorrentRemoval' } };
     return confirm(options);
 };
 
 /** The torrent removal itself: the client forgets the torrent and deletes what it downloaded, nothing else (user, 2026-10-26). */
 export const TORRENT_REMOVAL: RemoveQueueRequest = { removeFromClient: true, blocklist: false, deleteFiles: true };
+
+/**
+ * A pack whose episodes have started importing may already have files in the library, and the plugin then refuses to delete what
+ * the torrent downloaded (409 `delete_not_allowed`): its removal keeps them. Read on the client before asking, so the question
+ * says what happens (Codex review of the upgrade status, P2 3); any episode past waiting counts, which may keep files a little
+ * more often than the plugin would delete them, never the other way round.
+ */
+export const keepsDownloadedFiles = (row: QueueRow) => !!row.pack?.episodes.some(episode => !!episode.importState && episode.importState !== 'waiting');
 
 export interface RowMenuOptions {
     api: Api;
@@ -114,9 +126,11 @@ export const isHeldRow = (row: QueueRow) => row.importState === 'held' || row.im
  * Cancels a held grab or removes a download from the queue (the client forgets the torrent and deletes what it downloaded):
  * what the missing episode page's Cancel Download does.
  */
-export const cancelDownload = (api: Api, row: QueueRow) => (isHeldRow(row) ?
-    cancelGrab(api, row.grabId).then(() => undefined) :
-    removeQueueRow(api, row.id, TORRENT_REMOVAL).then(() => undefined));
+export const cancelDownload = (api: Api, row: QueueRow) => {
+    if (isHeldRow(row)) return cancelGrab(api, row.grabId).then(() => undefined);
+    const request = keepsDownloadedFiles(row) ? { ...TORRENT_REMOVAL, deleteFiles: false } : TORRENT_REMOVAL;
+    return removeQueueRow(api, row.id, request).then(() => undefined);
+};
 
 /** Actions a row offers the caller. Ordinary users get none (PHASE5 I7: the writes are admin-only). */
 export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {

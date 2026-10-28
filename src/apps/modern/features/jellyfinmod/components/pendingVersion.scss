@@ -1,0 +1,91 @@
+// Another version on its way for a title that plays (option 3, D9–D11, user-approved 2026-10-28): the picker's added row under
+// the track strip, or a row of the open Video list. The row ring, two lines, the size at the right end and the administrator's X.
+// No flex gap, min()/max(); every size in em (TV 125 %, phone 90 %).
+
+.jfmod-pending {
+    // The marks knock their words out in the page's colour under the strip, the paper's inside the list.
+    --jfmod-paper: #101010;
+
+    display: flex;
+    align-items: center;
+    margin: 0 0 0.5em;
+    padding: 0.15em 0 0.15em 0.2em;
+}
+
+.jfmod-pending > .jfmod-dlmark {
+    flex: 0 0 auto;
+    margin-right: 0.45em;
+}
+
+.jfmod-pendingBody {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+// The quality in 600, the marks (cut first) and the size at the right end, as a file's row draws them.
+.jfmod-pendingLine,
+.jfmod-pendingMeta {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.jfmod-pendingLine > .jfmod-fileResolution {
+    flex: 0 0 auto;
+}
+
+.jfmod-pendingLine > .jfmod-fileMarks {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.jfmod-pendingLine > .jfmod-fileSize {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 0.8em;
+}
+
+// The state in treatment B and the muted flag: `42% · 12 min left · replaces 1080p`.
+.jfmod-pendingMeta {
+    font-size: 86%;
+}
+
+.jfmod-pendingMeta > .jfmod-dlMeta {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.jfmod-pendingMeta > .jfmod-fileExtra {
+    flex: 0 0 auto;
+    margin-left: 0.3em;
+    font-size: 100%;
+}
+
+.jfmod-pending > .jfmod-fileIcons {
+    flex: 0 0 auto;
+}
+
+// Inside the open Video list it is a row of the list, its ring where the rows' text starts.
+.jfmod-fileListBox .jfmod-pending {
+    --jfmod-paper: var(--jf-palette-background-paper, #202020);
+
+    margin: 0;
+    padding: 0.2em 0.8em 0.2em calc(0.735em - 1px - 0.35em);
+}
+
+.jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+    // The X sits in the file rows' X column.
+    margin-right: -0.8em;
+}
+
+[data-theme='light'] .jfmod-pending {
+    --jfmod-paper: var(--jf-palette-background-default, #f2f2f2);
+}
+
+[data-theme='light'] .jfmod-fileListBox .jfmod-pending {
+    --jfmod-paper: #fff;
+}

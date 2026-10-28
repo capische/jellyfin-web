@@ -10,7 +10,9 @@ the season's total in its header 2026-10-22 and the series' 2026-10-24 (P4.FU21,
 state text", "keep B", "yes add series page total"; [design note](../season-total-download.md), artifact
 <https://claude.ai/artifact/B6Ro1yXbYBfvpGWNiYgck4>; built, not accepted), the seeding disc and the Queue page's discs-only State
 column with every detail in a tip 2026-10-26 (P4.FU28, "approve both"; workspace `reviews/queue-state-icons/`; built, not accepted).
-Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
+The **+** for a new version of a title that already plays, and the season and series totals that count it apart and no
+longer count a finished torrent (D12, user-approved 2026-10-28; workspace `reviews/replace-upgrade-design/DESIGN.md` §2):
+**built overnight 2026-10-28, awaiting the user's approval**. Built on `next-release` (P4.FU6–FU8, FU15 not accepted). Records: [UX.md §3.3](../../UX.md), [design note](../download-state-ring-family.md),
 [interactive page](../download-state-ring-family.html), artifact <https://claude.ai/artifact/VLaNuUTV2m5CogxmpTJ4pC>.
 Code: `components/DownloadStateMark.tsx` (`paintDownloadMark`), `components/downloadStateMark.scss` (`jfmod-dlmark-*`),
 `components/_cardGlass.scss`, `constants/queue.ts` (`describeDownload`, `batchProgress`, `seedProgress`, `seedingFacts`), `integration/downloadMarks.tsx`,
@@ -47,6 +49,7 @@ SVG rotated −90° so the arc starts at the top. Everything in `em` (TV 125 %, 
 | State | Class | Glyph | Arc | Motion |
 | --- | --- | --- | --- | --- |
 | downloading | `--downloading` | arrow | the percent | glyph bobs (`jfmod-dlmarkBob`, 1.4 s ease-in-out: −0.08em → +0.12em) |
+| downloading a new version | `--downloading --plus` | the picker's **+** (`M12 5.5V18.5M5.5 12H18.5`) | the percent | none: the arc carries the motion |
 | queued | `--queued` | clock | none | — |
 | importing | `--importing` | spinner arrow | **a 28 % segment** (`stroke-dasharray: 28 72`) turning | the arc turns once per 1.2 s, linear (`jfmod-dlmarkSpin`, −90° → 270°); glyph still. A full arc turning is invisible: the segment is the motion |
 | stalled | `--stalled` | pause | the percent at 55 % | — |
@@ -54,6 +57,12 @@ SVG rotated −90° so the arc starts at the top. Everything in `em` (TV 125 %, 
 | seeding | `--seeding` | the arrow turned up (`M12 20V7`, head at 7: sending, not receiving) | **how far to release**: the slower of its goals (ratio 0.19 of 1.00 and 4 d of 7 d → 19 %); full once the goals are met; empty with no seeding figures | none (seeding lasts days) |
 | releasing | `--releasing` | the up arrow | importing's turning 28 % segment | the arc turns as importing's |
 | not downloaded, unaired | file-state marks (`fileStateMark.scss`), same disc and ink | cloud + arrow; clock + short date | none | — |
+
+**A new version** (D12): a download for a title that already plays (`isNewVersion`: a movie's or an episode's Add or Replace,
+an `add` / `replace` pack's episode that held a file) draws the + while it downloads, everywhere the ring is (cards, rows, the
+Queue page's disc, the season and series header, the [pending entry](pending-version.md)); queued, stalled, importing and
+failed keep their glyphs. Add and Replace look the same on the mark; the words carry Replace. A card or header whose
+downloads mix a first download and a new version keeps the arrow.
 
 Arc value changes ease 0.35 s (`stroke-dashoffset`). `prefers-reduced-motion: reduce` stops the bob, the turn and the
 easing. Motion is transform and opacity only.
@@ -88,14 +97,22 @@ easing. Motion is transform and opacity only.
   | blocked, failed | `Blocked · <the reason sentence>`; Retry stays in the row menu |
   | seeding | `Seeding · ratio … of … · seeded … of …`; then what the release waits for (`Waiting for …`), `Releasing the seeding copy` or `Goal met`; then why it is kept (a blocked release's reason, or `Kept seeding: automatic release is off.` once the goals are met). "Seeding until its goal is met." is never shown: the waiting line says it |
   | a pack with episode problems | the torrent's tip, then one line per episode (`S01E03: The pack holds no file for this episode.`) |
-- **Release picker, added row:** the disc takes the Add slot while the torrent downloads; the X stays; no bar.
+- **Release picker, added row:** the disc takes the Add slot while the torrent downloads; the X stays; no bar. The grab
+  block under it says what happens to the file held (replace-upgrade design §3): a Replace `Replacing the current file. Sending
+  to the download client in 4 s.`, then `In the download queue. The current file is removed once this one is in the library.`,
+  a refusal adding `The current file stays.`; an Add, once the client has it, `In the download queue. The current file stays.`
+  (a pack: `the current files`); a first download keeps `The download client accepted the torrent.`
+- **Queue page subtitle:** a Replace reads `Replaces 1080p: 2160p Remux` (D13, worded as D11), an Add `Another version: …`.
 - **Episode page:** inside the download block ([download-block.md](download-block.md)); the still carries no mark.
 - **Season and series headers** (the native and the mod's season page, the native series page): the row-size mark (2.5em) as an
   indicator in upstream's action row, after the Get a Release cloud and before Favourite (`span.jfmod-seasonTotal`), then 0.45em
   on the figure at 86 %: `2 of 8 episodes · 38% · 2 h 10 min left`. On the phone (`.layout-mobile`) the ring stays in the centred
   row and the figure is one centred line under it (`.jfmod-seasonTotalLine`); the TV is the desktop row at 125 %. The total over
-  the batch (`batchProgress`): M is every episode of the season (of every season on the series page) a queue row names (on its
-  way, importing, or in the library by a row still listed; a pack once per episode), N those in the library; the percent
+  the batch (`batchProgress`): M is every episode of the season (of every season on the series page) that had no file and a
+  queue row names (on its way, importing, or in the library by a row whose torrent still downloads; a pack once per episode),
+  N those in the library; a torrent that is finished (its row seeding) is history and not counted (D12); an episode that
+  already plays counts apart as a **new version**: `1 new version · 60% · 14 min left`, with missing ones too
+  `2 of 5 episodes · 1 new version · 38% · …`, the ring the + only when every episode is a new version; the percent
   bytes-weighted over M when every size is known, else the plain mean; the longest time left; the liveliest glyph; failed and
   blocked episodes left out. Shown while one episode is queued, downloading, importing or stalled; gone when nothing is. Never a
   control, a link or a D-pad stop, for anyone.
@@ -124,7 +141,7 @@ completely"). The ring's own bob and turn stay.
 
 | State | Meta line, picker figure | Disc tooltip (keeps the full words) |
 | --- | --- | --- |
-| downloading | `42% · 12 min left` (`1 h 05 min left` from an hour; `42%` alone when the time is unknown); **no "Downloading" word** | `Downloading · 42% · 12 min left · 3 MB/s` |
+| downloading | `42% · 12 min left` (`1 h 05 min left` from an hour; `42%` alone when the time is unknown); **no "Downloading" word** | `Downloading · 42% · 12 min left · 3 MB/s`; a new version `New version · 42% · …`, a Replace adding a line `Replaces 1080p` (D11); a header names each new version, `S01E02: another version` |
 | queued | `Queued` | `Queued` |
 | importing | `Importing…` | `Importing…` |
 | stalled | `Stalled · 42%` | `Stalled at 42%` |

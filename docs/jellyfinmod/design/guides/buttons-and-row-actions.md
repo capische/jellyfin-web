@@ -69,11 +69,15 @@ confirmation's Remove button red"). Built on `feat/remove-delete-files` (P5.I7/I
     searches reject it."
   - Imported or seeding (every other state): no delete option. The client option reads "The client forgets the torrent and
     stops seeding. The seeding copy stays on disk; library files are never touched."
-- **Remove the Torrent** (the picker's added-row X and a missing episode's *Cancel Download*): the stock confirm, Cancel and
-  a red Remove — "Remove this torrent from the download queue? The download stops, the torrent leaves the client and the
-  files it downloaded are deleted. Files already in your library are not touched." and the release name under it
-  (`.jfmod-confirmName`). It always deletes the files; the plugin refuses (`delete_not_allowed`, its sentence shown) when
-  part of the download is already in the library.
+- **Remove the Torrent** (the picker's added-row X, a missing episode's *Cancel Download* and the pending entry's X): the
+  stock confirm, Cancel and a red Remove — "Remove this torrent from the download queue? The download stops, the torrent
+  leaves the client and the files it downloaded are deleted. Files already in your library are not touched." and the release
+  name under it (`.jfmod-confirmName`). It deletes the files; the plugin refuses (`delete_not_allowed`, its sentence shown) when
+  part of the download is already in the library. **A pack whose episodes have started importing** (D39, built overnight
+  2026-10-28, awaiting the user's approval) is asked and removed keeping the files instead (the Cancel Download and the pending
+  X): "Remove this torrent from the download queue? The download stops and the torrent leaves the client. Part of it is already
+  in your library, so the files it downloaded stay on disk. Files already in your library are not touched." The picker's X
+  still always deletes.
 - **Both Removes stay red under the pointer** (`background: var(--jf-palette-error-main)` on hover; the stock `.raised:hover`
   would turn them grey). Keyboard and TV focus keep the stock focus colour, as every button does.
 

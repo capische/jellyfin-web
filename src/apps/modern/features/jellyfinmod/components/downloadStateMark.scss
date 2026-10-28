@@ -218,6 +218,11 @@
     &.jfmod-dlmark--failed { color: #c62828; }
 }
 
+// Another version of a title that plays (D12): the + stands still, the arc carries the motion.
+.jfmod-dlmark--downloading.jfmod-dlmark--plus .jfmod-dlmark-glyph {
+    animation: none;
+}
+
 @keyframes jfmod-dlmarkBob {
     0%,
     100% { transform: translateY(-0.08em); }

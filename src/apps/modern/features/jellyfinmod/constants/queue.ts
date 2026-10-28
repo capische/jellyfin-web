@@ -266,6 +266,11 @@ export interface DownloadProgress {
     /** Every disc's tooltip, the only figure on a card: `Downloading · 42% · 12 min left · 3 MB/s`. */
     tooltip: string;
     stale: boolean;
+    /**
+     * Another version of a title that already plays (D12, user-approved 2026-10-28): the downloading ring draws the picker's +
+     * instead of its arrow, still; the other states keep their glyphs.
+     */
+    plus?: boolean;
 }
 
 /** The ring family's kinds beyond a download's (P4.FU28): a seeding copy (the up arrow, its arc how far to release) and its release. */
@@ -348,6 +353,49 @@ export const seedProgress = (seeding: QueueSeeding | null): MarkProgress => {
     return { kind: 'seeding', percent, text: 'Seeding', tooltip, stale: false };
 };
 
+/**
+ * A download that brings a title which already plays another version (the upgrade status, D12): a movie's or an episode's Add
+ * or Replace, or an `add` / `replace` pack's episode that held a file (a pack's whole row only when it held every one).
+ */
+export const isNewVersion = (row: QueueRow): boolean => {
+    if (row.newVersion !== undefined) return row.newVersion;
+    if (row.pack) return row.pack.mode !== 'fill' && row.pack.episodes.length > 0 && row.pack.episodes.every(episode => !!episode.held);
+    return row.intent === 'addVersion';
+};
+
+/** The row's Replace removes what the title holds once the new file is in the library. */
+export const isReplace = (row: QueueRow) => (row.pack?.mode ?? row.mode) === 'replace';
+
+/**
+ * The files a Replace removes, in words (D11, user 2026-10-28: "use profile and I don't think you need `the`"): `1080p`, two
+ * `1080p, 720p`, three or more (or two of one quality) `3 files`; `the current file` when the plugin did not name them. `labelOf`
+ * gives the page's own label of a file by its binding (the Video list's), else the plugin's from the file name.
+ */
+export const replacedWords = (row: QueueRow, labelOf?: (bindingId: string) => string | null | undefined) => {
+    const labels = (row.replaces ?? []).map(target => labelOf?.(target.bindingId) ?? target.label);
+    const named = labels.every(Boolean) && new Set(labels).size === labels.length;
+    if (labels.length === 1 && named) return { words: labels[0] as string, many: false };
+    if (labels.length === 2 && named) return { words: labels.join(', '), many: true };
+    if (labels.length >= 2) return { words: labels.length + ' files', many: true };
+    return { words: 'the current file', many: false };
+};
+
+/** A new version's muted flag (D11): `replaces 1080p` or `another version`. */
+export const versionFlag = (row: QueueRow, labelOf?: (bindingId: string) => string | null | undefined) =>
+    (isReplace(row) ? 'replaces ' + replacedWords(row, labelOf).words : 'another version');
+
+/**
+ * A download's look for a new version (D12): while it downloads the ring draws the + and the tooltip leads with "New version";
+ * a Replace adds a second line, `Replaces 1080p`. Every other state keeps its look.
+ */
+export const asNewVersion = <T extends DownloadProgress>(progress: T, rows: QueueRow[]): T => {
+    if (!rows.length || !rows.every(isNewVersion)) return progress;
+    const downloading = progress.kind === 'downloading';
+    let tooltip = downloading ? progress.tooltip.replace(/^Downloading/, 'New version') : progress.tooltip;
+    if (rows.length === 1 && isReplace(rows[0])) tooltip += '\nReplaces ' + replacedWords(rows[0]).words;
+    return { ...progress, plus: downloading, tooltip };
+};
+
 /** Something is on its way for the title: a card shows its bar and disc. Failed, blocked and seeding rows are not. */
 export const isUnderWay = (row: QueueRow) => row.state !== 'failed' && row.state !== 'blocked' && row.state !== 'seeding';
 
@@ -369,17 +417,23 @@ export const aggregateProgress = (rows: QueueRow[]): DownloadProgress | null => 
     return describeDownload(kind, percent, parts.every(part => part.stale), { eta, rate });
 };
 
-/** A batch of episodes on their way, as one figure (a season's or series' header, P4.FU21): `done` of `total` episodes. */
+/**
+ * A batch of episodes on their way, as one figure (a season's or series' header, P4.FU21): `done` of `total` episodes that had
+ * no file, and `versions` episodes that already play and get a new version (D12).
+ */
 export interface BatchProgress extends DownloadProgress {
     done: number;
     total: number;
+    versions: number;
 }
 
 /**
- * One episode of a batch: its season, its own view (`packEpisodeView` for a pack) and the queue row it comes from (the torrent).
+ * One episode of a batch: its season and number, its own view (`packEpisodeView` for a pack) and the queue row it comes from
+ * (the torrent).
  */
 export interface BatchEpisode {
     season: number;
+    number: number;
     view: QueueRow;
     row: QueueRow;
 }
@@ -396,11 +450,16 @@ const seasonWord = (season: number) => (season === 0 ? 'Specials' : 'Season ' + 
  * is on its way.
  */
 export const batchProgress = (episodes: BatchEpisode[], bySeason = false): BatchProgress | null => {
-    const counted = episodes.filter(({ view }) => view.state !== 'failed' && view.state !== 'blocked');
+    // A torrent that is finished (its row seeding) is history, not part of what is on its way (D12: "3 of 4 episodes" counted an
+    // earlier pack's seeding row).
+    const counted = episodes.filter(({ view, row }) => view.state !== 'failed' && view.state !== 'blocked' && row.state !== 'seeding');
     const moving = counted.filter(({ view }) => view.state !== 'seeding');
     if (moving.length === 0) return null;
     const parts = moving.map(({ view }) => downloadProgress(view));
-    const done = counted.length - moving.length;
+    // An episode that already plays counts as a new version, never as one of "N of M episodes" (D12).
+    const firsts = counted.filter(({ view }) => !isNewVersion(view));
+    const versions = counted.filter(({ view }) => isNewVersion(view));
+    const done = firsts.filter(({ view }) => view.state === 'seeding').length;
     const kind = (['downloading', 'importing', 'stalled', 'queued'] as const).find(name => parts.some(part => part.kind === name)) ?? 'queued';
     const size = (view: QueueRow) => view.sizeBytes ?? 0;
     const got = (view: QueueRow) => {
@@ -409,7 +468,7 @@ export const batchProgress = (episodes: BatchEpisode[], bySeason = false): Batch
     };
     const percent = counted.every(({ view }) => size(view) > 0) ?
         Math.floor(100 * counted.reduce((sum, { view }) => sum + got(view), 0) / counted.reduce((sum, { view }) => sum + size(view), 0)) :
-        Math.floor((done * 100 + parts.reduce((sum, part) => sum + (part.percent ?? 0), 0)) / counted.length);
+        Math.floor(((counted.length - moving.length) * 100 + parts.reduce((sum, part) => sum + (part.percent ?? 0), 0)) / counted.length);
     const torrents = new Map(moving.filter(({ row }) => row.state === 'downloading').map(({ row }) => [row.id, row]));
     const eta = Math.max(0, ...Array.from(torrents.values(), row => row.etaSeconds ?? 0));
     const rate = Array.from(torrents.values()).reduce((sum, row) => sum + (row.downloadRateBytes ?? 0), 0);
@@ -422,10 +481,14 @@ export const batchProgress = (episodes: BatchEpisode[], bySeason = false): Batch
             return seasonWord(season) + ': ' + own.filter(({ view }) => view.state === 'seeding').length + ' of ' + own.length;
         }).join(' · ');
     } else {
-        const counts = [[done, 'done'] as const, ...(['downloading', 'importing', 'stalled', 'queued'] as const)
+        const counts = [[counted.length - moving.length, 'done'] as const, ...(['downloading', 'importing', 'stalled', 'queued'] as const)
             .map(name => [parts.filter(part => part.kind === name).length, name] as const)].filter(([count]) => count > 0);
         const word = counted.length === 1 ? ' episode' : ' episodes';
         breakdown = counts.length > 1 ? counts.map(([count, name]) => count + ' ' + name).join(', ') : counted.length + word;
     }
-    return { ...base, tooltip: base.tooltip + ' · ' + breakdown, done, total: counted.length };
+    // The tooltip names each new version: `S01E02: another version`, `S01E02: replaces 1080p`.
+    const named = versions.map(({ season, number, view }) => '\n' + episodeCode(season, number) + ': ' + versionFlag(view)).join('');
+    const plus = base.kind === 'downloading' && firsts.length === 0;
+    return { ...base, plus, tooltip: (plus ? base.tooltip.replace(/^Downloading/, 'New version') : base.tooltip) + ' · ' + breakdown + named,
+        done, total: firsts.length, versions: versions.length };
 };
