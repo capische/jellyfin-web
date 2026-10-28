@@ -1,0 +1,54 @@
+PASS [chromium/desktop] The user menu offers Ratings display :: ["Profile","Settings","Queue","JellyfinMod settings","Ratings display","Dashboard","Metadata Manager","Quick Connect","Sign Out"]
+PASS [chromium/desktop] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chromium/desktop] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chromium/desktop] The native page shows the Ratings line in the default order :: ["IMDb 8.1 (250K)","RT critics 91% (310)","RT audience 88% (25K)","TMDB 79% (15K)","Trakt 83% (21K)"]
+PASS [chromium/desktop] Each chip shows its value in its own scale with votes, and says where it came from :: [{"source":"imdb","provider":"mdblist","text":"IMDb 8.1 (250K)","title":"IMDb 8.1, 250,000 votes — via MDBList, as of 10/7/2026; may differ from the source’s own site","tabIndex":0,"tag":"BUTTON","inSection":true,"inMisc":false},{"source":"
+PASS [chromium/desktop] The line sits in the detail section; outside TV each chip is a button in the tab order :: [{"tag":"BUTTON","tabIndex":0},{"tag":"BUTTON","tabIndex":0},{"tag":"BUTTON","tabIndex":0},{"tag":"BUTTON","tabIndex":0},{"tag":"BUTTON","tabIndex":0}]
+PASS [chromium/desktop] Enter on a chip shows where its value came from, and Enter again hides it :: {"note":"IMDb: via MDBList, as of 10/7/2026; may differ from the source’s own site","expanded":"true","closed":0}
+PASS [chromium/desktop] The Ratings mount leads the detail section content :: ["jfmod-ratingsMount","jfmod-traktMount","itemGenres"]
+PASS [chromium/desktop] Refresh ratings queues a refresh and says so :: "Ratings refresh queued…"
+PASS [chromium/desktop] When the queued refresh has run the page says so, the button is free although a background read stalls, and the line stays :: {"finished":"Ratings refreshed.","busy":"false","stalledReads":2,"chips":5}
+PASS [chromium/desktop] With focus on a chip, a refetch that widens an earlier chip is shown at once and focus stays on that chip :: {"widened":1,"imdbText":"IMDb 8.1 (123M)","stillOn":"tmdb"}
+PASS [chromium/desktop] The file-less entry page shows the line beside the TMDB star, TMDB first-party :: ["IMDb 8.1 (250K) [mdblist]","RT critics 91% (310) [mdblist]","RT audience 88% (25K) [mdblist]","TMDB 8.7 [tmdb]","Trakt 83% (21K) [mdblist]"]
+PASS [chromium/desktop] Moving a source keeps focus on the control that moved it and says it was saved :: {"focused":"up","status":"Letterboxd moved up. Saved."}
+PASS [chromium/desktop] The detail line follows the user's own sources and order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","letterboxd","trakt"]
+PASS [chromium/desktop] The choice is saved in Jellyfin's per-user display preferences :: "[\"imdb\",\"tomatoes_critic\",\"tomatoes_audience\",\"tmdb\",\"letterboxd\",\"trakt\"]"
+PASS [chromium/desktop] Cards are unchanged with the preference off: no card rating and no ratingSource sent :: {"cardText":[],"requests":1}
+PASS [chromium/desktop] With IMDb chosen each card carries it in its secondary text line, no badge :: [{"text":" · IMDb 8.1","inSecondary":true,"badge":false},{"text":" · IMDb 8.1 (Aug 2026)","inSecondary":true,"badge":false}]
+PASS [chromium/desktop] A stale card value says how old it is, compactly; a current one does not :: [{"text":"IMDb 8.1","stale":false,"title":"JellyfinMod P9 Ratings Host"},{"text":"IMDb 8.1 (Aug 2026)","stale":true,"title":"JellyfinMod P9 Ratings Second"}]
+PASS [chromium/desktop] The card rating adds no focus stop
+PASS [chromium/desktop] The settings area's Ratings section shows the key as configured, Test passes and the stand-in is flagged :: "STEP 10 OF 12\nRatings\nKey tested 10/7/2026, 9:34:26 PM\nMDBList accepted the key and returned ratings. (ok) Sources: IMDb, Metacritic critics, Metacritic users, Trakt, Rotten Tomatoes critics, Letterboxd, Roger Ebert, TMDB, Rotten Tomato
+PASS [chromium/desktop] Turning ratings off and on in the settings area changes the title page in the same visit, without waiting :: {"off":0,"on":6}
+PASS [chromium/desktop] A plugin without the ratings capabilities: no line, no menu item, no card rating and no ratingSource sent (card choice still on) :: {"chips":0,"cards":0,"requests":4}
+PASS [chromium/desktop] Ratings turned off: the line is absent and the page otherwise unchanged :: {"buttons":4}
+PASS [chromium/desktop] No page errors :: []
+PASS [chromium/desktop] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chromium/desktop] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chromium/mobile] The native page shows the Ratings line, wrapped, without horizontal scroll :: {"chips":5,"overflow":0}
+PASS [chromium/mobile] Each chip is at least 44 px high with room beside it, and a tap shows its provenance and a second tap hides it :: {"heights":[45,45,45,45,45],"gaps":[8,8],"tapped":"Rotten Tomatoes critics (Tomatometer): via MDBList, as of 10/7/2026; may differ from the source’s own site","closedAfterTap":0}
+PASS [chromium/mobile] The file-less entry page shows the line :: ["IMDb 8.1 (250K)","RT critics 91% (310)","RT audience 88% (25K)","TMDB 8.7","Trakt 83% (21K)"]
+PASS [chromium/mobile] Ratings display starts from the administrator's default order :: ["imdb","tomatoes_critic","tomatoes_audience","tmdb","trakt"]
+PASS [chromium/mobile] Ratings display has no horizontal scroll :: {"overflow":0}
+PASS [chromium/mobile] No page errors :: []
+PASS [chromium/tv1080] Down from Home reaches the Ratings display link
+PASS [chromium/tv1080] Ratings display opens with focus on its first switch :: "imdb"
+PASS [chromium/tv1080] Down reaches a source, Enter toggles it and focus stays on it :: {"target":"letterboxd","on":"true","off":"false","stillFocused":"letterboxd"}
+PASS [chromium/tv1080] Enter on "Use the server's default" moves focus to the first source switch :: {"onReset":true,"source":"imdb","reset":false,"body":false}
+PASS [chromium/tv1080] The remote's Back leaves Ratings display for the page that opened it :: "#/home"
+PASS [chromium/tv1080] Nothing the ratings bring in moves the focused control (same control, same place, once the line is there) :: {"focusedFirst":{"tag":"BUTTON","text":"","top":176},"focusedLater":{"tag":"BUTTON","text":"","top":176}}
+PASS [chromium/tv1080] The line shows on the TV title page and D-pad navigation never focuses it :: {"chips":5,"start":"BUTTON"}
+PASS [chromium/tv1080] Focus below the line stays put through a failed refetch (the line keeps its values) and a refetch with wider values :: {"below":true,"errorReads":1,"widerReads":1,"before":{"tag":"BUTTON","text":"JellyfinMod P9 Ratings Second2","top":392},"afterError":{"tag":"BUTTON","text":"JellyfinMod P9 Ratings Second2","top":392},"afterWider":{"tag":"BUTTON","text":"Jel
+PASS [chromium/tv1080] No page errors :: []
+PASS [chromium/tv1080] At this window width the longer line keeps its own height and wraps the shared row (the case under test) :: {"found":{"width":1183,"shorter":2,"longer":6,"rowWidth":1234},"windowWidth":1849,"base":{"row":27,"line":24,"chips":2},"wider":{"row":51,"line":24,"chips":6}}
+PASS [chromium/tv1080] A wider line that keeps its own height but wraps the shared row above a focused control waits; the next visit shows it :: {"below":true,"focus":["Search releases",499,499],"held":{"row":27,"line":24,"chips":2},"next":{"row":51,"line":24,"chips":6}}
+PASS [chromium/tv720] Down from Home reaches the Ratings display link
+PASS [chromium/tv720] Ratings display opens with focus on its first switch :: "imdb"
+PASS [chromium/tv720] Down reaches a source, Enter toggles it and focus stays on it :: {"target":"letterboxd","on":"true","off":"false","stillFocused":"letterboxd"}
+PASS [chromium/tv720] Enter on "Use the server's default" moves focus to the first source switch :: {"onReset":true,"source":"imdb","reset":false,"body":false}
+PASS [chromium/tv720] The remote's Back leaves Ratings display for the page that opened it :: "#/home"
+PASS [chromium/tv720] Nothing the ratings bring in moves the focused control (same control, same place, once the line is there) :: {"focusedFirst":{"tag":"BUTTON","text":"","top":175},"focusedLater":{"tag":"BUTTON","text":"","top":175}}
+PASS [chromium/tv720] The line shows on the TV title page and D-pad navigation never focuses it :: {"chips":5,"start":"BUTTON"}
+PASS [chromium/tv720] No page errors :: []
+PASS [chromium/all] oleksii's ratings display preferences are exactly as they were before the run :: {"keysBefore":[],"keysAfter":[]}
+PASS [chromium/all] None of the 256 JellyfinMod responses the browser received carries the key
+chromium 153.0.8010.12: 53 passed, 0 failed

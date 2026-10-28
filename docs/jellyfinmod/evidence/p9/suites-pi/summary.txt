@@ -1,0 +1,31 @@
+Test host, offline mcr.microsoft.com/dotnet/sdk:10.0 container, plugin source at 0060c32 (p9-run-all.sh, unprivileged; PhaseFourIntegration as root)
+PhaseZeroSmoke exit=0
+PhaseOneSmoke exit=0
+PhaseTwoIntegration exit=0
+PhaseThreeIntegration exit=0
+PhaseThreeProtectionIntegration exit=0
+PhaseFiveIntegration exit=134
+PhaseSixIntegration exit=0
+PhaseSevenSettingsIntegration exit=0
+PhaseSevenProwlarrIntegration exit=0
+PhaseSevenTakeoverIntegration exit=0
+PhaseSevenTraktIntegration exit=0
+PhaseTenRetentionIntegration exit=0
+PhaseNineRatingsIntegration exit=0
+PhaseFourIntegration exit=0
+--- last line of each log
+PhaseFiveIntegration.log :: PASS: Phase 5 import, hardlinks, targeted scan, binding attribution, seed release, queue and recovery (258.0s)
+PhaseFourIntegration.log :: PASS: Phase 4 acquisition settings, Torznab search, scoring, held Transmission handoff, recovery and redaction (309.2s)
+PhaseNineRatingsIntegration.log :: PASS: Phase 9 ratings — migration, settings, secret, Test, fetcher, budget, breaker, claims, projection, access (27.2s)
+PhaseOneSmoke.log :: PASS: real SQLite migration/restart and authenticated HTTP integration workflows
+PhaseSevenProwlarrIntegration.log :: PASS: Phase 7 Prowlarr sync, fail-closed rules, overrides, breaker, rotation and removal (10.1s)
+PhaseSevenSettingsIntegration.log :: PASS: Phase 7 settings contract, XML import, typed endpoints, tests, overview and setup (25.5s, 89 responses leak-checked)
+PhaseSevenTakeoverIntegration.log :: PASS: real filesystem patch, URL prefix, both write failures, process death, restart, exact restore and history rows
+PhaseSevenTraktIntegration.log :: PASS: Phase 7 Q16 Trakt observations, migration, endpoint, isolation and degradation (10.2s)
+PhaseSixIntegration.log :: PASS: Phase 6 scheduler, budgets, breaker, new episodes, upgrades, added versions, per-version retention and versions API (22.9s)
+PhaseTenRetentionIntegration.log :: PASS: switching retention on while previewing, keeping and switching on again (600 targets, 3 rounds): every request answered, the Keep won, slow write-lock holds 5
+PhaseThreeIntegration.log :: PASS: Phase 3 policy and completion evidence survive real events, SQLite migration and restart
+PhaseThreeProtectionIntegration.log :: PASS: real Linux hardlinks and Transmission HTTP seed protection
+PhaseTwoIntegration.log :: PASS: deterministic Phase 2 reconciliation persists across real SQLite transactions and restart
+PhaseZeroSmoke.log :: PASS: migrations, restart persistence, health readiness/failure, configuration XML
+PhaseFiveIntegration (first run above lacked the bind-mount aliases the earlier Pi runners pass); re-run with JFMOD_ALIAS_A/B, one folder mounted twice: exit=0 — its log above is that re-run

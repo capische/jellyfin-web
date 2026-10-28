@@ -1,0 +1,42 @@
+{
+ "at": "2026-10-07T21:11:56.973Z",
+ "browser": "153.0.8010.12",
+ "results": [
+  {
+   "check": "A Save carrying the run's revision is forwarded exactly as the page made it, and the answer's revision is noted",
+   "verdict": "PASS",
+   "detail": {
+    "status": 200,
+    "received": [
+     "{\"revision\":4,\"enabled\":true}",
+     "{\"revision\":5,\"enabled\":true}"
+    ],
+    "lastRevision": 5
+   }
+  },
+  {
+   "check": "A Save carrying an older revision fails the check and never reaches the server",
+   "verdict": "PASS",
+   "detail": {
+    "status": "refused",
+    "notOurs": "the settings area sent revision 4, the run's is 5"
+   }
+  },
+  {
+   "check": "A Save carrying no revision fails the check and never reaches the server",
+   "verdict": "PASS",
+   "detail": {
+    "status": "refused",
+    "notOurs": "the settings area sent revision undefined, the run's is 5"
+   }
+  },
+  {
+   "check": "A forwarded Save the plugin refuses (409) is not noted and stops the run",
+   "verdict": "PASS",
+   "detail": {
+    "status": 409,
+    "notOurs": "a ratings save from the settings area was refused (409)"
+   }
+  }
+ ]
+}

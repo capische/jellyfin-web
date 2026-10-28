@@ -1,0 +1,42 @@
+browser: chromium 153.0.8010.12
+ok - lead desktop series: every enabled source on the ratings' own line, in order
+ok - lead desktop series: the line sits under the stock rows, outside them, within its reserved height
+ok - lead desktop series: the stock star repeating IMDb is hidden
+ok - lead desktop movie: every enabled source on the ratings' own line, in order
+ok - lead desktop movie: the line sits under the stock rows, outside them, within its reserved height
+ok - lead desktop movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - lead desktop: hover shows the tooltip with the votes
+ok - lead mobile series: every enabled source on the ratings' own line, in order
+ok - lead mobile series: the line sits under the stock rows, outside them, within its reserved height
+ok - lead mobile series: the stock star repeating IMDb is hidden
+ok - lead mobile movie: every enabled source on the ratings' own line, in order
+ok - lead mobile movie: the line sits under the stock rows, outside them, within its reserved height
+ok - lead mobile movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - lead mobile: a tap shows the tooltip with the votes
+ok - lead tv1080 series: a late answer fills the reserved line and the focused Play does not move
+ok - lead tv1080 series: every enabled source on the ratings' own line, in order
+ok - lead tv1080 series: the line sits under the stock rows, outside them, within its reserved height
+ok - lead tv1080 series: the stock star repeating IMDb is hidden
+ok - lead tv1080 series: first focus is Play
+ok - lead tv1080 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - lead tv1080 movie: a late answer fills the reserved line and the focused Play does not move
+ok - lead tv1080 movie: every enabled source on the ratings' own line, in order
+ok - lead tv1080 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - lead tv1080 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - lead tv1080 movie: first focus is Play
+ok - lead tv1080 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - lead tv720 series: a late answer fills the reserved line and the focused Play does not move
+ok - lead tv720 series: every enabled source on the ratings' own line, in order
+ok - lead tv720 series: the line sits under the stock rows, outside them, within its reserved height
+ok - lead tv720 series: the stock star repeating IMDb is hidden
+ok - lead tv720 series: first focus is Play
+ok - lead tv720 series: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - lead tv720 movie: a late answer fills the reserved line and the focused Play does not move
+ok - lead tv720 movie: every enabled source on the ratings' own line, in order
+ok - lead tv720 movie: the line sits under the stock rows, outside them, within its reserved height
+ok - lead tv720 movie: the stock star repeating IMDb is hidden, and the tomato repeating RT critics
+ok - lead tv720 movie: first focus is Play
+ok - lead tv720 movie: Up reaches a rating, OK shows its tooltip, Back closes only that
+ok - no request left the machine apart from upstream's cast sender (4 of those, all blocked)
+ok - no icon was requested as a file
+40 passed, 0 failed
