@@ -36,7 +36,9 @@ import '../components/downloadProgress.scss';
  * queue (403) sees none of it.
  */
 
-const TARGETS = '.card[data-id], .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
+// A Scenes chapter card carries its title's `data-id`, but it is a moment of the title, not the title: it never takes the mark
+// (user, 2026-10-28; 40 rings on a downloading movie's page).
+const TARGETS = '.card[data-id]:not(.chapterCard), .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
 const MEDIA_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
 
 /** What a card or row is drawn on at once for: itself, a mark in it (Not Downloaded, Unaired), or its entry's stamp. */
