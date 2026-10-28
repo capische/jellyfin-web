@@ -463,8 +463,10 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   Retention stays off on real media until the user decides otherwise (see
   [`PHASE10.md`](PHASE10.md)).
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
-- Phase 12 — multiple held qualities: planned, not scheduled (moved from Phase 6 on 2026-09-25)
-  (see [`PHASE12.md`](PHASE12.md)).
+- Phase 12 — multiple held qualities: the first slice, **a best copy for TVs and computers and a 1080p copy for phones** (M30–M38,
+  plan `reviews/phase12/PLAN-REFRESH.md`, design approved by the user 2026-10-29), is **built (not accepted)**: M30, M31, M32–M34
+  (computer, dark), M35 and M36 on the items line (`feat/phase12-items`), at gate 1 (first look) on charlie; M37 waits for the movie
+  Replace branch, M38 for acceptance. The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
 - Phase 13 — offline episode watches to Trakt: planned, not scheduled (requested 2026-10-07;
   see [`PHASE13.md`](PHASE13.md)). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming
   history observations. Implementation requires connection and single-writer design refinement.
