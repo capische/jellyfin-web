@@ -104,8 +104,9 @@ const eventDetail = (event: HistoryRecord): string | null => {
         return rest || null;
     }
     if (event.eventType === 'pack_replaced' || event.eventType === 'pack_replace_refused') {
-        // `S01E01: replaced old.mkv.` → `old.mkv`; `S01E01: kept old.mkv (kept) beside the new file.` → that sentence.
-        const rest = summary.replace(/^S\d+E\d+:\s*/, '').replace(/^replaced\s+/, '').replace(/\.$/, '');
+        // `S01E01: replaced old.mkv.` → `old.mkv`; `S01E01: kept old.mkv (kept) beside the new file.` → that sentence. A movie's
+        // lines have no number: `Replaced old.mkv.` → `old.mkv`.
+        const rest = summary.replace(/^S\d+E\d+:\s*/, '').replace(/^replaced\s+/i, '').replace(/\.$/, '');
         return rest || null;
     }
     if (event.eventType === 'imported') {

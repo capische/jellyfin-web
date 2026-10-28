@@ -1440,7 +1440,7 @@ const AUTOMATION_FIELDS: FieldSpec[] = [
     { key: 'freeSpaceFloorPercent', label: 'Keep this much of the library disk free (%)', type: 'int' },
     { key: 'freeSpaceFloorBytes', label: 'And at least (bytes)', type: 'int' },
     { key: 'decisionLogCap', label: 'Decisions kept', type: 'int' },
-    { key: 'episodeUpgradesEnabled', label: 'Upgrade episodes too', type: 'bool' },
+    { key: 'episodeUpgradesEnabled', label: 'Upgrade episodes and allow Replace', type: 'bool' },
     { key: 'reacquireReclaimed', label: 'Grab reclaimed titles again', type: 'bool' }
 ];
 

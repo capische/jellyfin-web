@@ -82,7 +82,7 @@ const GRAB_REASONS = new Map([
 /** Grab refusals of a pack, by ProblemDetails `type`; others keep the server's title (season packs, 2026-10-08). */
 const PACK_GRAB_REFUSALS = new Map([
     ['nothing_to_fill', 'Every episode this pack covers already has a file. Use Add or Replace.'],
-    ['episode_replace_disabled', 'Replacing a file needs episode upgrades turned on in the plugin settings. Add keeps both files.'],
+    ['episode_replace_disabled', 'Replace needs “Upgrade episodes and allow Replace” turned on in Settings › Automation. Add keeps both files.'],
     ['no_covered_episodes', 'This season has no aired episodes to search for.']
 ]);
 const FINAL_STATES = new Set(['accepted', 'failed', 'unknown', 'cancelled']);
@@ -371,13 +371,13 @@ const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefi
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
  * nothing, add where it holds files; undefined sends no mode, as before packs. `choices` is true where the scope holds files:
- * the row then ends with Add, and with Replace where the search offers it (only while episode upgrades are on, user
- * 2026-10-09). `held` counts the episodes whose files Replace would remove.
+ * the row then ends with Add, and with Replace where the search offers it (only while “Upgrade episodes and allow Replace” is on,
+ * user 2026-10-09). `held` counts the episodes whose files Replace would remove, or a movie's files.
  */
 interface RowPlan {
     first: GrabMode | undefined;
     choices: boolean;
-    /** Replace follows Add; false while episode upgrades are off. */
+    /** Replace follows Add; false while “Upgrade episodes and allow Replace” is off. */
     replace: boolean;
     held: number;
     /** A pack row: Replace names how many episodes, not "this episode". */
@@ -523,6 +523,9 @@ const RejectedRow: FC<ReleaseRowProps> = props => {
 
 /** Replace's confirmation (user decision 2): what goes, and that nothing goes before the new files are in the library. */
 const replaceText = (plan: RowPlan, mediaType: 'movie' | 'series') => {
+    if (plan.held > 1 && mediaType === 'movie') {
+        return `Replace the ${plan.held} files of this movie? They are removed once the new one is in the library.`;
+    }
     if (plan.held > 1) {
         return `Replace the files of ${plan.held} episodes? Their current files are removed once the new ones are in the library.`;
     }
@@ -839,9 +842,10 @@ const NoIcon = () => null;
 const replaceOffered = (search: ReleaseSearch) => !search.grab.modes || search.grab.modes.includes('replace');
 
 /**
- * How each row of a search grabs. A pack row holding files offers Add, and Replace while episode upgrades are on, and adds on
- * Enter; one holding nothing fills. An episode's Get Another Quality offers the same and adds. Everything else, and every
- * search of a plugin without packs, grabs as before with no mode.
+ * How each row of a search grabs. A pack row holding files offers Add, and Replace while “Upgrade episodes and allow Replace” is
+ * on, and adds on Enter; one holding nothing fills. An episode's Get Another Quality offers the same and adds, and so does a
+ * movie's while the switch is on (user, 2026-10-28). Everything else, and every search of a plugin without packs, grabs as
+ * before with no mode.
  */
 const rowPlanFor = (candidate: ReleaseCandidate, search: ReleaseSearch, packs: boolean, addVersion: boolean,
     mediaType: 'movie' | 'series'): RowPlan => {
@@ -854,9 +858,14 @@ const rowPlanFor = (candidate: ReleaseCandidate, search: ReleaseSearch, packs: b
         if (held > 0) return { first: 'add', choices: true, replace, held, pack: true };
         return { first: 'fill', choices: false, replace: false, held: 0, pack: true };
     }
-    // A movie's another version is only ever added; an episode's may replace what is held (plugin GrabService modes).
+    // Another version of an episode or a movie is added on Enter and may replace what is held (plugin GrabService modes); a
+    // movie's Replace removes every file it holds, which the plugin counts (user, 2026-10-28).
     if (addVersion && mediaType === 'series' && search.target.episodeId) {
         return { first: 'add', choices: true, replace, held: 1, pack: false };
+    }
+    // Only where the plugin offers it: with the switch off, or from an older plugin, a movie's rows add as before.
+    if (addVersion && mediaType === 'movie' && search.grab.modes?.includes('replace')) {
+        return { first: 'add', choices: true, replace: true, held: search.grab.heldFiles ?? 1, pack: false };
     }
     return PLAIN_ROW;
 };
@@ -878,10 +887,13 @@ const searchScope = (choice: string, packs: boolean, mediaType: 'movie' | 'serie
 
 /**
  * What the rows' actions do, above the list: Add, and Replace where a row offers it, another version where it is added. With
- * episode upgrades off only Add is offered, and the line says so without naming Replace (user, 2026-10-09).
+ * “Upgrade episodes and allow Replace” off only Add is offered, and the line says so without naming Replace (user, 2026-10-09).
  */
-const noticeText = (choices: boolean, replace: boolean, scope: string | undefined, addVersion: boolean): string | null => {
+const noticeText = (choices: boolean, replace: boolean, scope: string | undefined, addVersion: boolean, heldFiles?: number | null): string | null => {
     const pack = scope === 'season' || scope === 'series';
+    if (choices && replace && !pack && (heldFiles ?? 1) > 1) {
+        return 'Add puts the release beside the files you have; Replace removes all of them once the new one is in the library.';
+    }
     if (choices && replace) {
         return pack ?
             'Where episodes already have files, Add puts the pack\'s files beside them and Replace removes them once the new ones '
@@ -1647,7 +1659,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // An imported row reads as the in-library row: a green check after the quality and no actions.
     const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ? { ...candidate, heldQuality: true } : candidate);
 
-    const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack);
+    const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack, data?.grab.heldFiles);
 
     const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt,
         early: soFar ? [releaseCount(eligible.length) + ' so far', notes].filter(Boolean).join(' · ') : null,

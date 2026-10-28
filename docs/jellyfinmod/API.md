@@ -833,6 +833,10 @@ the target due at the next run and reset its back-off.
 a playable file (409 `no_playable_version`; episodes answer 409 `episode_versions_unsupported`
 while episode upgrades are off). Candidates carry `heldQuality: true` for qualities already in the
 library, and grabbing one answers 409 `held_quality`. An unknown `intent` is 400 `invalid_intent`.
+`grab.modes` is `["add","replace"]` for an episode's or a movie's another version while `episodeUpgradesEnabled`
+(Settings › Automation, "Upgrade episodes and allow Replace") is on, `["add"]` while it is off; a grab with
+`"mode":"replace"` then answers 409 `episode_replace_disabled`. For a movie, `grab.heldFiles` counts the files it holds: once
+the new file is bound and playable, Replace removes every file the movie held when the import completed (user, 2026-10-28).
 
 Entry detail adds `versions` and, for administrators, `upgrade`; episodes add `versions`:
 

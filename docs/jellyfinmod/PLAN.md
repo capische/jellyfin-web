@@ -1793,6 +1793,20 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   twice; the + was the same on four opens (and a reload) during the download, after Delete Media, and on beta's The Matrix.
   Bravo reset afterwards. Deployed to beta (items) and alpha (stubs). **Not run:** phone, TV, real Chrome, a grab on the
   stubs line live, Codex review.
+  **P6.M6 follow-up, built (not accepted) 2026-10-28: Replace for a movie's Get Another Quality** (user 2026-10-28: "There
+  should've been two buttons + and replace instead of plus as upgrade should be supported"; decisions 1 and 2 of that day).
+  Owner: P6.M6 (Get another quality), with the 2026-10-09 replace rule. A movie's rows offer Add and Replace, the episode
+  pair as it is ([buttons-and-row-actions.md](design/guides/buttons-and-row-actions.md), no new design), only while
+  `episodeUpgradesEnabled` is on; the switch keeps its key and is now labelled "Upgrade episodes and allow Replace" (Settings ›
+  Automation and the Dashboard page). It now gates automatic episode upgrades and extra episode versions (unchanged) and
+  Replace for packs, episodes and movies; movie upgrades still follow their quality profile. Replace removes every file the
+  movie holds when the new file's import completes (`ReplaceTargets` fixed under the library lock; a file added later is
+  never one), through the episode Replace's guarded removal (`RetentionExecutor.ReplaceVersionAsync`: per-file Keep,
+  playback, sharing, retained downloads, the successor still bound, unchanged and played, title Keep read last); title Keep
+  keeps every file, and the switch turned off before the import completes removes nothing. The search's `grab.heldFiles`
+  names the count: "Replace 3 Files" and "Replace the 3 files of this movie?" ([API.md](API.md) *addVersion*). Phase 6 suite
+  extended (modes, the refusal, the late switch-off, a three-file replace, Keep); Phase 5 passes unchanged. **Not run:**
+  phone, TV, light, real Chrome, a real movie replace live, Codex review.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
