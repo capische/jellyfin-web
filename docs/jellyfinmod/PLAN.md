@@ -1181,6 +1181,16 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   `settings-prowlarr.mjs` no longer fill the field; the `settings-changes.mjs` hygiene pass removes a Prowlarr source the snapshot
   lacked instead of one named `JellyfinMod …`. Web `feat/prowlarr-no-name` on `feat/required-asterisk` `f7a089d091`; plugin
   `feat/prowlarr-no-name` on `main-stubs` `5f2199e`. Not run: the full matrix, real Chrome, TV, Codex review.
+  **P7.TV, built (not accepted) 2026-10-28: Enter toggles the switches outside pop-ups on the TV** (user 2026-10-28: "fix TV
+  enter"; [UX.md](UX.md) §13 rule 10). The remote's OK did nothing on the settings area's switches (Missing Episodes per library,
+  Serve this interface at /web, and every on/off field of the sections), because browsers toggle a checkbox on Space and
+  `shell/dpadModals.ts` gave Enter to checkboxes inside MUI pop-ups only. Now a second, bubble-phase keydown listener there toggles
+  a focused checkbox or switch outside a pop-up on the TV layout: once per press (`event.repeat` ignored, inside pop-ups too),
+  skipped when the event's default was already prevented (`emby-checkbox`, and Phase 13's Trakt switch, whose own Enter handler
+  stays authoritative and does not toggle twice), skipped for an `aria-disabled` one. The Missing Episodes and Interface switches
+  keep their focus while they save (`aria-disabled` on the input and a busy guard in the handler, as Trakt's, instead of
+  `disabled`). Desktop and phone are unchanged (Space and click). Web only: `dpadModals.ts`, `PlaceholdersSection.tsx`,
+  `settingsSections.tsx`. Not run: the physical TV, Codex review.
 
   **P6.FU1, built (not accepted) 2026-10-15: Indexers before the Download Client in setup, and the client filled from
   Prowlarr** (user 2026-10-15: "Then you should reorder and put Prowlarr before Download Client", approving option 1 of

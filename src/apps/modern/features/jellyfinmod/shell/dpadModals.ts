@@ -31,6 +31,10 @@ import './dpadModals.scss';
  * - **Opening a pop-up focuses its first control**, not the pop-up's paper, so the remote always has a target
  *   (UX §13 rule 5).
  *
+ * Outside a pop-up, on the TV layout, Enter toggles a focused checkbox or switch too (the settings area's switches): once per
+ * press, never for a refused (`aria-disabled`) one, and never for one whose own handler took the Enter already
+ * (`emby-checkbox`, a switch with its own Enter handler).
+ *
  * One mechanism for every MUI pop-up the mod shows on a TV — the library grid's sort, view, filter and view menus
  * today, the settings area and the wizard next — installed once, with no change to upstream components.
  */
@@ -180,6 +184,17 @@ const toggleFor = (element: HTMLElement): HTMLInputElement | null => {
     return toggles.length === 1 && others.length === 0 ? toggles[0] : null;
 };
 
+/** Enter on a checkbox or switch in the pop-up, or on a row holding only one, toggles it. */
+const toggleInModal = (e: KeyboardEvent, modal: HTMLElement) => {
+    const active = document.activeElement as HTMLElement | null;
+    const toggle = active && modal.contains(active) ? toggleFor(active) : null;
+    if (!toggle) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // A held OK repeats its keydown: only the first press toggles.
+    if (!e.repeat) toggle.click();
+};
+
 /** Close the top pop-up the way MUI expects to be closed from the keyboard: an Escape inside it. */
 export const closeTopModal = (): boolean => {
     const modal = getTopModal();
@@ -224,15 +239,23 @@ const onKeyDown = (e: KeyboardEvent) => {
         return;
     }
 
-    if (key === 'Enter') {
-        const active = document.activeElement as HTMLElement | null;
-        const toggle = active && modal.contains(active) ? toggleFor(active) : null;
-        if (toggle) {
-            e.preventDefault();
-            e.stopPropagation();
-            toggle.click();
-        }
-    }
+    if (key === 'Enter') toggleInModal(e, modal);
+};
+
+/**
+ * Enter on a checkbox or switch outside a pop-up, on the TV layout: browsers toggle one on Space only, and a remote has
+ * none. Bubble phase on window, after React's and upstream's own handlers, so a control that handles Enter itself (and
+ * prevents its default) is left alone and never toggles twice. A control refused while its save runs keeps its focus
+ * with `aria-disabled` (UX §13) and ignores the press.
+ */
+const onToggleKey = (e: KeyboardEvent) => {
+    if (!layoutManager.tv || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if ((getKeyName(e) || e.key) !== 'Enter' || getTopModal()) return;
+    const target = e.target as HTMLElement | null;
+    if (!target?.matches?.(TOGGLE_SELECTOR)) return;
+    e.preventDefault();
+    if (e.repeat || (target as HTMLInputElement).disabled || target.getAttribute('aria-disabled') === 'true') return;
+    target.click();
 };
 
 /** A `back` command that did not come from a key (a host app's Back, a gamepad mapping) closes the pop-up too. */
@@ -258,13 +281,15 @@ const onFocusIn = (e: FocusEvent) => {
     }, 0);
 };
 
-/** Installs the handlers once for the lifetime of the page. They do nothing while no MUI pop-up is open. */
+/** Installs the handlers once for the lifetime of the page. Apart from Enter on a TV's checkbox, they act only while an MUI pop-up is open. */
 export const installDpadModals = () => {
     if (installed) return;
     installed = true;
 
     // Capture phase on window: ahead of MUI's React handlers and of upstream's keyboard navigation.
     window.addEventListener('keydown', onKeyDown, true);
+    // Bubble phase: after every other handler, so a control that took the Enter itself is left alone.
+    window.addEventListener('keydown', onToggleKey);
     document.addEventListener('focusin', onFocusIn, true);
     inputManager.on(window, onCommand);
 };

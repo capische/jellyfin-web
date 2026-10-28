@@ -251,9 +251,11 @@ const statusOf = (library: PlaceholderLibrary) => {
 
 /** One TV or movie library: its switch, Preview (the dry run) and Remove Placeholders, and the last plan read for it. */
 const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPreview, onRemove }) => {
+    // While a change runs, the switch stays focusable (aria-disabled, so a TV keeps its focus on it) and ignores presses.
     const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        if (busy) return;
         void onToggle(library, event.target.checked);
-    }, [library, onToggle]);
+    }, [busy, library, onToggle]);
     const preview = useCallback(() => {
         void onPreview(library);
     }, [library, onPreview]);
@@ -265,7 +267,8 @@ const LibraryRow: FC<LibraryRowProps> = ({ library, busy, plan, onToggle, onPrev
             <div className='jfmod-brow-main'>
                 <strong>{library.name}</strong>
                 <span className='jfmod-sub' data-jfmod-placeholder-status=''>{statusOf(library)} · {plural(library.stubs, 'placeholder')} in Jellyfin</span>
-                <FormControlLabel control={<Switch checked={library.enabled} disabled={busy} onChange={toggle} />}
+                <FormControlLabel
+                    control={<Switch checked={library.enabled} onChange={toggle} slotProps={{ input: { 'aria-disabled': busy || undefined } }} />}
                     label={library.mediaType === 'movie' ? 'Show missing movies as Jellyfin items' : 'Show missing episodes as Jellyfin items'} />
                 <div className='jfmod-inlineactions'>
                     <Button variant='contained' color='inherit' disabled={busy} onClick={preview}>Preview</Button>
