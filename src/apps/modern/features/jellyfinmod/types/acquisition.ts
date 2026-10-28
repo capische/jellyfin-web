@@ -160,10 +160,12 @@ export interface ReleaseSearch {
         holdSeconds: number;
         activeOperationId: string | null;
         /**
-         * The modes this search's rows may offer (user, 2026-10-09): `replace` only while episode upgrades are on. Absent from
+         * The modes this search's rows may offer (user, 2026-10-09): `replace` only while “Upgrade episodes and allow Replace” is on. Absent from
          * older plugins, whose rows offer what they did before.
          */
         modes?: GrabMode[];
+        /** For a movie's another version, how many files it holds: what Replace removes (user, 2026-10-28). */
+        heldFiles?: number | null;
     };
     candidates: ReleaseCandidate[];
     eligibleCount: number;
