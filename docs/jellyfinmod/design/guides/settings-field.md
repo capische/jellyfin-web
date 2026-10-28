@@ -44,6 +44,14 @@ state (Selected user, a separate seed's RPC address) is marked only while shown.
 wide, so a marked label should fit with its two extra characters, or the cut takes the asterisk with the end of the label; a label that fits by little (*\* Download folder as Transmission sees it*, 1 px to spare at 360 px, became "Download folder in Transmission")
 is shortened rather than allowed to cut.
 
+## Phase 12 fields (user-approved 2026-10-29, D55, D56)
+
+- Grabbing, **Quality profile for phones** (select, no mark: it has a value on a fresh install): "Phones play a title's file at
+  1080p or below. Get Another Quality starts with this profile on a title that has none."
+- Automation, **Also get a 1080p copy for phones** (switch, off), after the upgrades switch: "For a title whose only files are above
+  1080p, look for one with the quality profile for phones (Grabbing). A copy that you or retention removed is never fetched again."
+- Both are drawn only for a plugin that has them; a save to an older plugin never sends them.
+
 ## Spec in code
 
 `FieldSpec.required?: boolean` marks a `FieldForm` field. `optional` stays, because it makes an emptied number go to the server

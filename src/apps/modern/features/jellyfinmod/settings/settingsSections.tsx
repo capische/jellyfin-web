@@ -18,6 +18,7 @@ import React, { type Dispatch, type FC, type SetStateAction, useCallback, useEff
 
 import { queryClient } from 'utils/query/queryClient';
 
+import PhoneMark, { PHONE_PROFILE_LABEL } from '../components/PhoneMark';
 import { SlowSetupGroup } from '../components/SlowSetup';
 import { indexerColour } from '../constants/indexerColours';
 
@@ -65,6 +66,29 @@ export interface SettingsData {
     /** Ratings settings and the fetcher's status; undefined when the plugin build has no ratings (Phase 9). */
     ratings?: any;
     ratingsStatus?: any;
+    /** The TVs catalogue and the ticked models (`GET /JellyfinMod/Settings/TvModels`, Phase 12); undefined before `copies`. */
+    tvModels?: TvModels;
+}
+
+/** One model of the plugin's TVs catalogue (Phase 12 M30). */
+export interface TvModel {
+    id: string;
+    name: string;
+    year: number;
+    webOS: string;
+    dolbyVision: boolean;
+    hdr10Plus: boolean;
+    hlg: boolean;
+    ddPlusAtmos: boolean;
+    dts: boolean;
+    trueHd: boolean;
+    selected: boolean;
+}
+
+export interface TvModels {
+    models: TvModel[];
+    selected: string[];
+    revision: number;
 }
 
 /** A TV or movie library and its placeholder switch (`GET /JellyfinMod/Placeholders`). */
@@ -451,6 +475,14 @@ const summariseProfiles = (data: SettingsData): Summary => {
     return fallback ? { kind: 'ok', words: `Default: ${fallback.name}` } : { kind: 'err', words: 'No default profile' };
 };
 
+const tvCount = (count: number) => `${count} TV${count === 1 ? '' : 's'}`;
+
+const summariseTvs = (data: SettingsData): Summary => {
+    if (!data.tvModels) return { kind: 'off', words: 'Not in this plugin build' };
+    const ticked = data.tvModels.selected.length;
+    return ticked ? { kind: 'ok', words: tvCount(ticked) } : { kind: 'off', words: 'None ticked' };
+};
+
 const summariseGrabbing = (data: SettingsData): Summary => {
     const acquisition = data.acquisition;
     if (!acquisition) return { kind: 'off', words: 'Not loaded' };
@@ -532,6 +564,7 @@ export const summarise = (id: string, data: SettingsData): Summary => {
         case 'client': return summariseClient(data);
         case 'indexers': return summariseIndexers(data);
         case 'profiles': return summariseProfiles(data);
+        case 'tvs': return summariseTvs(data);
         case 'grabbing': return summariseGrabbing(data);
         case 'import': return summariseImport(data);
         case 'retention': return summariseRetention(data);
@@ -1292,7 +1325,7 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
     return (
         <div className='jfmod-brow' data-profile={profile.id}>
             <div className='jfmod-brow-main'>
-                <strong>{profile.name}</strong>
+                <strong>{profile.name}{profile.isPhoneProfile && <PhoneMark label={PHONE_PROFILE_LABEL} />}</strong>
                 <span className='jfmod-sub' data-qp='row-summary'>{profileSummary(profile)}</span>
             </div>
             <span>
@@ -1365,9 +1398,86 @@ export const ProfilesSection: FC<SectionProps> = props => {
             <p className='jfmod-sub jfmod-qp-foot'>A title uses the default profile unless you pick another one in the release picker.</p>
             {editing !== undefined && (
                 <QualityProfileDialog api={api} profile={editing} qualities={data.acquisition?.qualities ?? []} presets={presets}
-                    onClose={closeDialog} />
+                    tvNames={tvNames(data)} onClose={closeDialog} />
             )}
             {confirmDialog}
+        </SectionFrame>
+    );
+};
+
+/** The ticked TVs' names, in catalogue order (Phase 12): Best on My TVs's small line and its hint name them. */
+const tvNames = (data: SettingsData) =>
+    data.tvModels?.models.filter(model => data.tvModels?.selected.includes(model.id)).map(model => model.name) ?? [];
+
+// ---- TVs (Phase 12 M32, mockup 1 B; D58) ----
+
+/** A model's one line of what it plays, as the catalogue says it: `webOS 6 · Dolby Vision · HDR10 · HLG · no HDR10+ · …`. */
+const tvLine = (model: TvModel) => [
+    `webOS ${model.webOS}`, model.dolbyVision ? 'Dolby Vision' : 'no Dolby Vision', 'HDR10', model.hlg ? 'HLG' : 'no HLG',
+    model.hdr10Plus ? 'HDR10+' : 'no HDR10+', model.ddPlusAtmos ? 'Dolby Digital Plus and Atmos' : 'Dolby Digital Plus',
+    model.dts ? 'DTS' : 'no DTS'
+].join(' · ');
+
+/** What the ticks change, in words: what every ticked TV plays first and last, or the general order with none ticked. */
+const tvsOutcome = (models: TvModel[]) => {
+    if (!models.length) {
+        return 'With no TV ticked, Best on My TVs means the best picture and sound in general: Dolby Vision, then HDR10+, HDR10 and HDR; '
+            + 'Atmos and lossless sound first.';
+    }
+    const every = (has: (model: TvModel) => boolean) => models.every(has);
+    const these = models.length === 1 ? 'this TV' : 'these TVs';
+    const picture = every(model => model.dolbyVision) ? 'Dolby Vision first, then HDR10' : 'HDR10 first';
+    const plus = every(model => model.hdr10Plus) ? ', then HDR10+' : ' (HDR10+ plays as HDR10)';
+    const dts = every(model => model.dts) ? '' : `; DTS last, because ${these} cannot play it and the server would convert it`;
+    return `Releases for ${these}: ${picture}${plus}. Dolby Digital Plus and Dolby Digital sound first${dts}.`;
+};
+
+const TvRow: FC<{ model: TvModel; ticked: boolean; onToggle: (id: string) => void }> = ({ model, ticked, onToggle }) => {
+    const toggle = useCallback(() => onToggle(model.id), [onToggle, model.id]);
+    return (
+        <label className='jfmod-brow jfmod-tvrow' data-tv={model.id} htmlFor={'jfmod-tv-' + model.id} aria-label={`${model.name} (${model.year})`}>
+            <input type='checkbox' id={'jfmod-tv-' + model.id} className='jfmod-tvcheck' checked={ticked} onChange={toggle}
+                aria-label={`${model.name} (${model.year})`} aria-describedby={'jfmod-tvline-' + model.id} />
+            <span className='jfmod-brow-main'>
+                <strong>{model.name} ({model.year})</strong>
+                <span className='jfmod-sub' id={'jfmod-tvline-' + model.id}>{tvLine(model)}</span>
+            </span>
+        </label>
+    );
+};
+
+/**
+ * The TVs the household watches on (Phase 12 M32, mockup 1 B): a checklist of the plugin's TVs catalogue, each model with what it
+ * plays, and a sentence that says what the ticks change. A profile set to Best on My TVs prefers releases every ticked TV plays.
+ */
+export const TvsSection: FC<SectionProps> = props => {
+    const { api, data, reload } = props;
+    const section = useSectionState(reload, ['Settings/TvModels']);
+    const source = data.tvModels;
+    const [ticked, setTicked] = useState<string[]>(() => source?.selected ?? []);
+    const sourceKey = source ? `${source.revision}:${source.selected.join()}` : '';
+    useEffect(() => {
+        if (source) setTicked(source.selected);
+    // Read again only when the server's copy changes, not on every render of the same copy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sourceKey]);
+    const toggle = useCallback((id: string) => setTicked(current => (current.includes(id) ? current.filter(value => value !== id) : [...current, id])), []);
+    const { run } = section;
+    const save = useCallback(() => run(() => request(api, 'PATCH', 'Settings/TvModels', { selected: ticked, revision: source?.revision }), 'Saved.'),
+        [run, api, ticked, source?.revision]);
+    if (!source) {
+        return <SectionFrame id='tvs' eyebrow={props.eyebrow} title='TVs' notice={{ kind: 'warn', text: 'Unavailable in this plugin build.' }} onGo={props.onGo}><span /></SectionFrame>;
+    }
+    const chosen = source.models.filter(model => ticked.includes(model.id));
+    return (
+        <SectionFrame id='tvs' eyebrow={props.eyebrow} title='TVs' state={summarise('tvs', data)} notice={section.notice}
+            onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
+        >
+            <p className='jfmod-sub jfmod-tvs-lead'>Tick the TVs you watch on. A profile set to Best on My TVs picks releases that every ticked TV plays.</p>
+            <div className='jfmod-blist jfmod-tvs'>
+                {source.models.map(model => <TvRow key={model.id} model={model} ticked={ticked.includes(model.id)} onToggle={toggle} />)}
+            </div>
+            <p className='jfmod-sub jfmod-tvs-outcome' data-tvs='outcome'>{tvsOutcome(chosen)}</p>
         </SectionFrame>
     );
 };
@@ -1379,14 +1489,20 @@ export const GrabbingSection: FC<SectionProps> = props => {
     const acquisition = data.acquisition ?? {};
     const section = useSectionState(reload, ACQUISITION_READS);
     const [draft, set, , acquisitionSaved] = useDraft(data.acquisition, {}, section);
+    const phones = !!data.acquisition && 'phoneProfileId' in data.acquisition;
     const { run } = section;
     const save = useCallback(() => run(async () => {
         const saved = await request<any>(api, 'PATCH', 'Settings/Acquisition', {
             enabled: !!draft.enabled, downloadClientId: draft.downloadClientId ?? null, defaultQualityProfileId: draft.defaultQualityProfileId ?? null,
+            // Only to a plugin that has it (Phase 12): an older one refuses a field it does not know.
+            ...(phones ? { phoneProfileId: draft.phoneProfileId ?? null } : {}),
             revision: draft.revision ?? acquisition.revision
         });
         acquisitionSaved(draft, sameRevision(saved), saved);
-    }, 'Saved.'), [run, api, draft, acquisition.revision, acquisitionSaved]);
+    }, 'Saved.'), [run, api, draft, acquisition.revision, acquisitionSaved, phones]);
+    // Both profile selects mark the profile chosen for phones, as the draft has it, so the mark moves as it is chosen (D54).
+    const profileOptions = data.profiles.map(profile => ({ value: profile.id, label: profile.name, detail: profileSummary(profile),
+        phone: phones && profile.id === draft.phoneProfileId }));
     return (
         <SectionFrame id='grabbing' eyebrow={props.eyebrow} title='Grabbing' state={summarise('grabbing', data)} notice={section.notice}
             onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
@@ -1401,8 +1517,9 @@ export const GrabbingSection: FC<SectionProps> = props => {
             <FieldForm fields={[
                 { key: 'enabled', label: 'Allow grabs', type: 'bool', help: `A grab can be cancelled for ${acquisition.holdSeconds ?? 5} seconds before it is sent.` },
                 { key: 'downloadClientId', label: 'Download client', type: 'select', options: data.clients.map(client => ({ value: client.id, label: client.name })) },
-                { key: 'defaultQualityProfileId', label: 'Default quality profile', type: 'select',
-                    options: data.profiles.map(profile => ({ value: profile.id, label: profile.name, detail: profileSummary(profile) })) }
+                { key: 'defaultQualityProfileId', label: 'Default quality profile', type: 'select', options: profileOptions },
+                ...(phones ? [{ key: 'phoneProfileId', label: 'Quality profile for phones', type: 'select' as const, options: profileOptions,
+                    help: 'Phones play a title\'s file at 1080p or below. Get Another Quality starts with this profile on a title that has none.' }] : [])
             ]} draft={draft} onChange={set} />
         </SectionFrame>
     );
@@ -1466,6 +1583,19 @@ const AUTOMATION_FIELDS: FieldSpec[] = [
     { key: 'reacquireReclaimed', label: 'Grab reclaimed titles again', type: 'bool' }
 ];
 
+/** Also get a 1080p copy for phones (Phase 12 M36, D56), after the upgrades switch; only to a plugin that has it. */
+const PHONE_COPIES_FIELD: FieldSpec = {
+    key: 'fetchPhoneCopies', label: 'Also get a 1080p copy for phones', type: 'bool',
+    help: 'For a title whose only files are above 1080p, look for one with the quality profile for phones (Grabbing). A copy that you or '
+        + 'retention removed is never fetched again.'
+};
+
+const automationFields = (automation: any): FieldSpec[] => {
+    if (!automation || !('fetchPhoneCopies' in automation)) return AUTOMATION_FIELDS;
+    const at = AUTOMATION_FIELDS.findIndex(field => field.key === 'episodeUpgradesEnabled') + 1;
+    return [...AUTOMATION_FIELDS.slice(0, at), PHONE_COPIES_FIELD, ...AUTOMATION_FIELDS.slice(at)];
+};
+
 export const AutomationSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
     const section = useSectionState(reload);
@@ -1473,7 +1603,7 @@ export const AutomationSection: FC<SectionProps> = props => {
     const runNow = useCallback(() => run(() => request(api, 'POST', 'Automation/Run'), 'Run started.'), [run, api]);
     const decisions = data.decisions.slice(0, 10);
     return (
-        <FlatSection {...props} id='automation' title='Automation' path='Settings/Automation' source={data.automation} fields={AUTOMATION_FIELDS}
+        <FlatSection {...props} id='automation' title='Automation' path='Settings/Automation' source={data.automation} fields={automationFields(data.automation)}
             actions={<Button variant='contained' color='inherit' disabled={section.busy} onClick={runNow}>Run Now</Button>}
             extra={<div className='jfmod-group'>
                 <Notice notice={section.notice} />

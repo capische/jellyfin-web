@@ -105,7 +105,13 @@ const sizeWords = (record: Draft, short: boolean) => {
     return `${prefix}of at least ${gbText((minimum ?? 0) / GB)} GB per hour`;
 };
 
-/** A profile's row in the section, in one line: "4K first, then down to 720p · any size · no upgrades". */
+/** The Prefer field's values (Phase 12 M33): Best on My TVs, Plays Everywhere, or No Preference (null). */
+export type Prefer = 'tvs' | 'everywhere' | null;
+
+/** The row's clause for a profile's preference; none for No Preference (Phase 12, mockup 1 A). */
+const PREFER_CLAUSE = new Map<unknown, string>([['tvs', 'best on my TVs'], ['everywhere', 'plays everywhere']]);
+
+/** A profile's row in the section, in one line: "4K first, then down to 720p · any size · best on my TVs · no upgrades". */
 export const profileSummary = (profile: Draft) => {
     const qualities = (profile.qualities as string[] | undefined) ?? [];
     if (!qualities.length) return 'Allows no quality';
@@ -113,8 +119,15 @@ export const profileSummary = (profile: Draft) => {
     const lowest = resolutionOf(qualities[qualities.length - 1]);
     const reach = best === lowest ? `${tierName(best)} only` : `${tierName(best)} first, then down to ${lowest}`;
     const upgrades = profile.upgradeAllowed ? 'upgrades until ' + qualityName(profile.cutoff as string) : 'no upgrades';
-    return `${reach} · ${sizeWords(profile, true)} · ${upgrades}`;
+    const prefer = PREFER_CLAUSE.get(profile.prefer);
+    return [reach, sizeWords(profile, true), prefer, upgrades].filter(Boolean).join(' · ');
 };
+
+/** What a preference does among releases of the same quality, in the summary sentence (Phase 12, mockup 2). */
+const PREFER_SENTENCE = new Map<unknown, string>([
+    ['tvs', 'among releases of the same quality takes the one that plays best on your TVs'],
+    ['everywhere', 'among releases of the same quality takes the one most devices play without the server converting it']
+]);
 
 /** The dialog's live sentence: what this profile will do. */
 const Sentence: FC<{ record: Draft }> = ({ record }) => {
@@ -126,8 +139,9 @@ const Sentence: FC<{ record: Draft }> = ({ record }) => {
     const upgrade = record.upgradeAllowed ?
         <><b>upgrades</b> later until it holds {qualityName(record.cutoff as string)} ({record.upgradeMode === 'add' ? 'keeping both' : 'replacing the file'})</> :
         <>does not upgrade later</>;
+    const prefer = PREFER_SENTENCE.get(record.prefer);
     return qualities.length ?
-        <><b>{name}</b> picks {reach}, {sizeWords(record, false)}, and {upgrade}.</> :
+        <><b>{name}</b> picks {reach}, {sizeWords(record, false)}, {prefer ? <>{prefer}, </> : null}and {upgrade}.</> :
         <><b>{name}</b> allows no quality, so it will never pick anything.</>;
 };
 
@@ -206,18 +220,36 @@ export interface QualityPreset {
     upgradeMode: string;
     minimumSeeders: number | null;
     added: boolean;
+    /** Absent before `copies` (Phase 12). */
+    prefer?: Prefer;
 }
 
 const fromPreset = (preset: QualityPreset): Draft => ({
     qualities: preset.qualities, minimumBytesPerHour: preset.minimumBytesPerHour, maximumBytesPerHour: preset.maximumBytesPerHour, cutoff: preset.cutoff,
-    upgradeAllowed: preset.upgradeAllowed, upgradeMode: preset.upgradeMode, minimumSeeders: preset.minimumSeeders, minimumAutoScore: null
+    upgradeAllowed: preset.upgradeAllowed, upgradeMode: preset.upgradeMode, minimumSeeders: preset.minimumSeeders, minimumAutoScore: null,
+    ...('prefer' in preset ? { prefer: preset.prefer ?? null } : {})
 });
+
+/** What each preference prefers, under the buttons (Phase 12, mockup 2); Best on My TVs names what the ticked TVs play. */
+const preferHint = (prefer: unknown, tvs: string[]) => {
+    if (prefer === 'tvs') {
+        return tvs.length ?
+            'Among releases of the same quality: Dolby Vision first, then HDR10; Dolby Digital Plus and Dolby Digital sound first; DTS last.' :
+            'Among releases of the same quality: Dolby Vision first, then HDR10+, HDR10 and HDR; Atmos and lossless sound first. Tick your TVs in TVs.';
+    }
+    if (prefer === 'everywhere') {
+        return 'Among releases of the same quality: no HDR and H.264 first; AAC, Dolby Digital and Dolby Digital Plus sound first; TrueHD and DTS last.';
+    }
+    return 'Releases of the same quality keep the order they had before: by seeders.';
+};
 
 interface DialogProps {
     api: Api;
     profile: any | null;
     qualities: { id: string }[];
     presets: QualityPreset[];
+    /** The ticked TVs' names (Phase 12): Best on My TVs's small line. */
+    tvNames?: string[];
     onClose: (saved: boolean, close?: boolean) => void;
 }
 
@@ -226,8 +258,10 @@ interface DialogProps {
  * fall back, file size, upgrades, a live sentence), with the whole model under Advanced. The simple choices write the record;
  * an Advanced edit makes it Custom until a simple choice is made again.
  */
-export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, qualities, presets, onClose }) => {
+export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, qualities, presets, tvNames = [], onClose }) => {
     const known = useMemo(() => new Set(qualities.map(quality => quality.id)), [qualities]);
+    // The Prefer field shows only with a plugin that stores it (Phase 12, `copies`): its profiles and presets carry the key.
+    const prefers = initial ? 'prefer' in initial : presets.some(preset => 'prefer' in preset);
     const [profile, setProfile] = useState(initial);
     const firstPreset = presets.find(preset => preset.isDefaultPreset) ?? presets[0];
     // The predefined profile the values were filled from; it stays chosen while the values are changed (user, 2026-10-15:
@@ -318,7 +352,8 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
         setBusy(true);
         const sent = draftNow.current;
         try {
-            const body = { ...pick(sent, PROFILE_KEYS), name: String(sent.name ?? '').trim(), qualities: sent.qualities };
+            const body = { ...pick(sent, PROFILE_KEYS), name: String(sent.name ?? '').trim(), qualities: sent.qualities,
+                ...(prefers ? { prefer: sent.prefer ?? null } : {}) };
             const saved = profile ?
                 await request<any>(api, 'PATCH', `Settings/QualityProfiles/${profile.id}`, { ...body, revision: sent.revision ?? profile.revision }) :
                 await request<any>(api, 'POST', 'Settings/QualityProfiles', body);
@@ -341,8 +376,9 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
             saving.current = false;
             setBusy(false);
         }
-    }, [api, profile, onClose, reloadRecord]);
+    }, [api, profile, onClose, reloadRecord, prefers]);
     const cancel = useCallback(() => onClose(false), [onClose]);
+    const pickPrefer = useCallback((prefer: Prefer) => setDraft(current => ({ ...current, prefer })), []);
 
     const [small, balanced] = sizesOf(choice.best);
     const tier = tierName(choice.best);
@@ -405,6 +441,19 @@ export const QualityProfileDialog: FC<DialogProps> = ({ api, profile: initial, q
                         Approximate size per hour of runtime at {tier}. A 2-hour film at Balanced is about {gbText(small * 2)}–{gbText(balanced * 2)} GB.
                     </div>
                 </div>
+                {prefers && (
+                    <div className='jfmod-qp-field'>
+                        <span className='jfmod-qp-label'>Prefer</span>
+                        <div className='jfmod-qp-seg jfmod-qp-size' role='group' aria-label='Prefer'>
+                            <PreferSegment prefer='tvs' pressed={draft.prefer === 'tvs'} onPick={pickPrefer} title='Best on My TVs'
+                                hint={tvNames.length ? tvNames.join(', ') : 'best picture and sound'} />
+                            <PreferSegment prefer='everywhere' pressed={draft.prefer === 'everywhere'} onPick={pickPrefer} title='Plays Everywhere'
+                                hint='phones, browsers' />
+                            <PreferSegment prefer={null} pressed={!draft.prefer} onPick={pickPrefer} title='No Preference' hint='as before' />
+                        </div>
+                        <div className='fieldDescription' data-qp='prefer-hint'>{preferHint(draft.prefer, tvNames)}</div>
+                    </div>
+                )}
                 <div className='jfmod-qp-field'>
                     <label className='jfmod-qp-check'>
                         <input type='checkbox' checked={!!draft.upgradeAllowed} onChange={setUpgrade} data-qp='upgrade' />
@@ -541,6 +590,13 @@ const BestSegment: FC<{ resolution: string; pressed: boolean; onPick: (resolutio
 const SizeSegment: FC<{ size: Size; pressed: boolean; onPick: (size: Size) => void; title: string; hint: string }> = ({ size, pressed, onPick, title, hint }) => {
     const pickIt = useCallback(() => onPick(size), [onPick, size]);
     return <Segment pressed={pressed} onClick={pickIt} data={'size-' + size}>{title}<small>{hint}</small></Segment>;
+};
+
+const PreferSegment: FC<{ prefer: Prefer; pressed: boolean; onPick: (prefer: Prefer) => void; title: string; hint: string }> = ({
+    prefer, pressed, onPick, title, hint
+}) => {
+    const pickIt = useCallback(() => onPick(prefer), [onPick, prefer]);
+    return <Segment pressed={pressed} onClick={pickIt} data={'prefer-' + (prefer ?? 'none')}>{title}<small>{hint}</small></Segment>;
 };
 
 const MatrixCell: FC<{ id: string; known: boolean; checked: boolean; label: string; toggle: (id: string) => void }> = ({ id, known, checked, label, toggle }) => {
