@@ -21,6 +21,7 @@ values.
 | [indexer-colour.md](indexer-colour.md) | each indexer's fixed colour: the eight-hue palette and how it is given | the picker's Sources and searching ring, the settings indexer rows |
 | [info-tip.md](info-tip.md) | the (i) that explains a short state: tooltip on a computer, popover on a click, the TV and the phone | the picker's Sources checklist (an indexer's failure); the Queue page's state discs on the phone |
 | [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Get a Release, Get Another Quality) |
+| [ratings.md](ratings.md) | the ratings group in the first metadata row, its popup, the card rating and Refresh Ratings (built, awaiting approval) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
 
 ## How to use a guide
 
