@@ -6,6 +6,7 @@
 // ("Export library to trakt.tv", SyncLibraryTask) call at tag v33:
 //
 //   POST /oauth/device/code, /oauth/device/token, /oauth/token (refresh), /oauth/revoke
+//   GET  /users/settings (the account's username and avatar, which JellyfinMod reads for Settings › Trakt, D49)
 //   GET  /sync/watched/shows[?extended=progress], /sync/watched/episodes, /sync/watched/movies, /sync/collection/*,
 //        /sync/playback/*, /sync/last_activities (paged with X-Pagination-* headers at the page size set by control)
 //   POST /sync/history (adds one play per episode at its watched_at), /sync/history/remove (recorded, removes nothing
@@ -18,12 +19,14 @@
 //   TRAKT_TLS_DIR=<env>/trakt-standin TRAKT_PORT=<env port + 30000> TRAKT_CONTROL_PORT=<loopback port> node trakt-export.mjs
 //
 // Control (loopback only): GET /state (plays, counters, request log without credentials); POST /approve; POST /mode
-// {down, rejectRefresh, tokenSeconds, pageSize, failGets:{status,count}, failHistory:{status,count}, slowGets:ms}; POST /plays {plays:[{season,number,watched_at}]}
+// {down, rejectRefresh, tokenSeconds, pageSize, failGets:{status,count}, failHistory:{status,count}, slowGets:ms, username, avatar:bool};
+// GET /avatar.svg (the account's avatar, for the browser); POST /plays {plays:[{season,number,watched_at}]}
 // to seed; POST /forget {season,number}; POST /filler {shows:n}; POST /reset (history and log, keeps the token).
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 
 const port = Number(process.env.TRAKT_PORT ?? 42096);
@@ -37,7 +40,7 @@ export const SHOW = { title: 'JellyfinMod P13 Show', year: 2026, ids: { trakt: 9
 
 const state = {
     deviceCode: null, userCode: null, approved: false, codeUsed: false, accessToken: null, refreshToken: null, tokens: new Set(),
-    mode: { down: false, rejectRefresh: false, tokenSeconds: 7776000, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0 },
+    mode: { down: false, rejectRefresh: false, tokenSeconds: 7776000, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true },
     plays: [], removals: [], collectionPosts: 0, filler: 0, nextId: 1, requests: [], counters: {}
 };
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -166,6 +169,11 @@ const handler = async (request, response) => {
             fail.count--;
             return reply(fail.status, { error: 'injected' }, fail.status === 429 ? { 'Retry-After': '1' } : {});
         }
+        if (route === '/users/settings') {
+            // The avatar is served by the control port on this Mac, which the browser reaches (the real Trakt's comes from its CDN).
+            const avatar = state.mode.avatar ? { full: `http://127.0.0.1:${controlPort}/avatar.svg` } : { full: null };
+            return reply(200, { user: { username: state.mode.username, private: false, name: 'P13 Stand-in', vip: false, images: { avatar } }, account: { timezone: 'Australia/Sydney' } });
+        }
         let items;
         switch (route) {
             case '/sync/watched/shows': items = watchedShows(); break;
@@ -247,6 +255,10 @@ api.on('connection', socket => {
 
 const control = createHttpServer(async (request, response) => {
     const url = new URL(request.url, 'http://control');
+    if (request.method === 'GET' && url.pathname === '/avatar.svg') {
+        response.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' });
+        return response.end(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'trakt-avatar.svg')));
+    }
     if (request.method === 'GET' && url.pathname === '/state') {
         return send(response, 200, {
             deviceCodeIssued: !!state.deviceCode, approved: state.approved, tokenIssued: !!state.accessToken, mode: state.mode,
@@ -261,7 +273,8 @@ const control = createHttpServer(async (request, response) => {
     }
     const body = request.method === 'POST' ? await readJson(request) ?? {} : {};
     if (request.method === 'POST' && url.pathname === '/mode') {
-        for (const key of ['down', 'rejectRefresh']) if (typeof body[key] === 'boolean') state.mode[key] = body[key];
+        for (const key of ['down', 'rejectRefresh', 'avatar']) if (typeof body[key] === 'boolean') state.mode[key] = body[key];
+        if (typeof body.username === 'string') state.mode.username = body.username;
         for (const key of ['tokenSeconds', 'pageSize', 'slowGets']) if (Number.isFinite(body[key])) state.mode[key] = body[key];
         if ('failGets' in body) state.mode.failGets = body.failGets;
         if ('failHistory' in body) state.mode.failHistory = body.failHistory;
@@ -287,7 +300,7 @@ const control = createHttpServer(async (request, response) => {
         state.filler = 0;
         state.requests = [];
         state.counters = {};
-        state.mode = { ...state.mode, down: false, rejectRefresh: false, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0 };
+        state.mode = { ...state.mode, down: false, rejectRefresh: false, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true };
         return send(response, 200, { reset: true });
     }
     return send(response, 404, { error: 'not found' });

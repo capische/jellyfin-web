@@ -11,7 +11,7 @@
 // api.trakt.tv, the stand-in's control port and the lease); its address, control port and restart target all come from it.
 //
 // Steps (default: all, in order): setup offline online catchup rewatch failures paging refusal reconnect isolation absent
-// writefail reconnectrestart refresh (pace: only sets the test pace, P13_PACE; relink: links
+// writefail reconnectrestart refresh profile activity disconnect (pace: only sets the test pace, P13_PACE; relink: links
 // oleksii again after a stand-in restart)
 // Each check prints PASS/FAIL and the run writes <out>/results.json. Desktop Chromium screenshots of Settings › Trakt and
 // Home at the states the steps reach go to <out>/shots. No token or secret is printed or written.
@@ -135,30 +135,36 @@ const lastRunAfter = async when => {
 
 // ---- screenshots (desktop Chromium, one browser at a time)
 let browser = null;
-async function shot(name, path = '#/catalog/settings?section=trakt', scrollToNotice = false) {
+/** A desktop page signed in as oleksii, at `path`, settled. */
+async function openPage(path = '#/catalog/settings?section=trakt') {
     browser ??= await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    try {
-        await page.goto(origin + '/web/', { waitUntil: 'domcontentloaded' });
-        await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
-        await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId() || /login|selectuser|selectserver/.test(location.hash); } catch { return false; } }, undefined, { timeout: 30000 });
-        if (!await page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } })) {
-            const field = page.locator('#txtManualName');
-            if (!await field.isVisible().catch(() => false)) {
-                const chooser = page.locator('.btnManual').first();
-                if (await chooser.count()) await chooser.evaluate(node => node.click());
-                await field.waitFor({ state: 'visible', timeout: 15000 });
-            }
-            await field.fill('oleksii');
-            await page.waitForTimeout(1200);
-            await field.fill('oleksii');
-            await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
-            await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
+    await page.goto(origin + '/web/', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId() || /login|selectuser|selectserver/.test(location.hash); } catch { return false; } }, undefined, { timeout: 30000 });
+    if (!await page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } })) {
+        const field = page.locator('#txtManualName');
+        if (!await field.isVisible().catch(() => false)) {
+            const chooser = page.locator('.btnManual').first();
+            if (await chooser.count()) await chooser.evaluate(node => node.click());
+            await field.waitFor({ state: 'visible', timeout: 15000 });
         }
-        await page.evaluate(hash => { location.hash = hash; }, path);
-        if (path.includes('settings')) await page.waitForSelector('.jfmod-check-section[data-section="trakt"]', { timeout: 30000 });
-        else await page.waitForSelector('.jfmod-homeHero', { timeout: 30000 });
-        await page.waitForTimeout(2500);
+        await field.fill('oleksii');
+        await page.waitForTimeout(1200);
+        await field.fill('oleksii');
+        await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+        await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
+    }
+    await page.evaluate(hash => { location.hash = hash; }, path);
+    if (path.includes('settings')) await page.waitForSelector('.jfmod-check-section[data-section="trakt"]', { timeout: 30000 });
+    else await page.waitForSelector('.jfmod-homeHero', { timeout: 30000 });
+    await page.waitForTimeout(2500);
+    return page;
+}
+const traktText = page => page.evaluate(() => document.querySelector('.jfmod-check-section[data-section="trakt"]')?.innerText ?? '');
+async function shot(name, path = '#/catalog/settings?section=trakt', scrollToNotice = false) {
+    const page = await openPage(path);
+    try {
         if (scrollToNotice) await page.evaluate(() => document.querySelector('.jfmod-traktNoticeMount')?.scrollIntoView({ block: 'center' }));
         await page.waitForTimeout(500);
         const file = join(out, 'shots', `${name}.png`);
@@ -523,6 +529,128 @@ const steps = {
             await home.close();
             await settings.close();
         }
+    }
+,
+
+    // D49: the server reads the linked account's Trakt username and avatar (the stand-in's /users/settings) and Settings shows
+    // them; with no avatar on Trakt, the person glyph on the grey disc. The token never reaches the browser.
+    async profile() {
+        await control('/mode', { username: 'p13-standin', avatar: true });
+        const read = await until('the Trakt profile read', async () => {
+            const user = (await status()).users.find(entry => entry.name === 'oleksii');
+            return user?.traktUsername && user.avatarUrl ? user : null;
+        }, 150000, 3000).catch(() => null);
+        verify('profile', 'the server read the Trakt username and avatar', read?.traktUsername === 'p13-standin' && /^http:\/\/127\.0\.0\.1:\d+\/avatar\.svg$/.test(read?.avatarUrl ?? ''),
+            JSON.stringify({ traktUsername: read?.traktUsername, avatarUrl: read?.avatarUrl }));
+        const calls = (await control('/state')).requests.filter(entry => entry.route === '/users/settings');
+        verify('profile', 'one read-only /users/settings call with the plugin\'s headers and its token', calls.length >= 1 && calls.every(entry => entry.method === 'GET' && entry.apiHeaders && entry.authorized),
+            `${calls.length} call(s)`);
+        verify('profile', 'no response carries a token field', !/token/i.test(JSON.stringify(await status())));
+        const page = await openPage();
+        try {
+            const row = await page.evaluate(() => {
+                const node = document.querySelector('[data-jfmod-trakt-user="oleksii"]');
+                const image = node?.querySelector('img.jfmod-traktAvatar');
+                return { title: node?.querySelector('strong')?.textContent ?? '', loaded: !!image && image.complete && image.naturalWidth > 0,
+                    disconnect: node?.querySelector('[data-jfmod-trakt-disconnect="oleksii"]')?.getAttribute('aria-label') ?? '' };
+            });
+            verify('profile', 'the row shows the avatar and "oleksii · p13-standin on Trakt"', row.loaded && row.title === 'oleksii · p13-standin on Trakt', JSON.stringify(row));
+            verify('profile', 'the row has the Disconnect icon named for the account', row.disconnect === 'Disconnect Trakt for oleksii', row.disconnect);
+            await page.screenshot({ path: join(out, 'shots', '10-linked-avatar.png') });
+        } finally {
+            await page.close();
+        }
+        // No avatar on Trakt: linked again (a new link makes the server read the profile again), the person glyph.
+        await control('/mode', { avatar: false });
+        await authorize(7776000);
+        const none = await until('the profile without an avatar', async () => {
+            const user = (await status()).users.find(entry => entry.name === 'oleksii');
+            return user && !user.avatarUrl ? user : null;
+        }, 150000, 3000).catch(() => null);
+        const fallback = await openPage();
+        try {
+            const glyph = await fallback.evaluate(() => !!document.querySelector('[data-jfmod-trakt-user="oleksii"] .jfmod-traktAvatar-none svg'));
+            verify('profile', 'no avatar on Trakt: the person glyph on the grey disc', !!none && glyph);
+            await fallback.screenshot({ path: join(out, 'shots', '11-no-avatar.png') });
+        } finally {
+            await fallback.close();
+        }
+        await control('/mode', { avatar: true });
+        await authorize(7776000);
+        await until('the avatar back', async () => !!(await status()).users.find(entry => entry.name === 'oleksii')?.avatarUrl, 150000, 3000).catch(() => null);
+    },
+
+    // D50, D73: each run in Activity with why it ran and what it sent, from the plugin's own count lines.
+    async activity() {
+        // First bring Trakt level with Jellyfin (a restarted stand-in has no history), then take E06 away so the next run sends one.
+        const level = new Date();
+        await jf('POST', '/JellyfinMod/Trakt/Export');
+        const levelled = await until('the levelling run', () => lastRunAfter(level), 300000, 3000);
+        await control('/forget', { season: 1, number: 6 });
+        const mark = new Date();
+        await jf('POST', '/JellyfinMod/Trakt/Export');
+        await until('the Sync Now run', () => lastRunAfter(mark), 300000, 3000);
+        const judged = await until('the run judged', async () => {
+            const now = await status();
+            return now.activity?.[0]?.startedAt === now.lastRun?.startedAt ? now : null;
+        }, 90000, 3000).catch(() => null);
+        const run = judged?.activity?.[0];
+        verify('activity', 'the run is listed first: Sync Now, clean, 1 episode sent as watched', run?.why === 'sync_now' && run.clean && run.episodesWatched === 1,
+            JSON.stringify(run));
+        verify('activity', 'E06 reached Trakt once', playsOf(await plays(), 6).length === 1);
+        const before = judged?.activity?.[1];
+        verify('activity', 'the levelling run seconds before it is listed too, as Sync Now', before?.startedAt === levelled.lastRun.startedAt && before?.why === 'sync_now',
+            JSON.stringify(before));
+        const page = await openPage();
+        try {
+            const closed = await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'));
+            await page.locator('.jfmod-activityToggle').click();
+            await page.mouse.move(5, 995);
+            await page.waitForTimeout(400);
+            const shown = await page.evaluate(() => ({
+                expanded: document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'),
+                first: document.querySelector('[data-jfmod-trakt="activity"] .jfmod-scrolllist .jfmod-brow')?.innerText.replace(/\n/g, ' | ') ?? ''
+            }));
+            verify('activity', 'Activity is closed at first and opens', closed === 'false' && shown.expanded === 'true');
+            verify('activity', 'the first run reads "… · Sync Now" then "Completed · 1 episode marked watched…"', /· Sync Now/.test(shown.first) && /Completed \| · 1 episode marked watched/.test(shown.first), shown.first);
+            await page.screenshot({ path: join(out, 'shots', '12-activity-open.png'), fullPage: true });
+        } finally {
+            await page.close();
+        }
+    },
+
+    // D48, D68: Disconnect asks first (Cancel focused), then the Trakt plugin's own Deauthorize removes its entry for the
+    // user; the row leaves and the section says so. Linked again afterwards.
+    async disconnect() {
+        const page = await openPage();
+        try {
+            await page.locator('[data-jfmod-trakt-disconnect="oleksii"]').click();
+            await page.waitForSelector('[data-jfmod-confirm]', { timeout: 10000 });
+            await page.waitForTimeout(400);
+            const dialog = await page.evaluate(() => ({
+                text: document.querySelector('.MuiDialog-paper')?.innerText ?? '',
+                focused: document.activeElement?.getAttribute('data-jfmod-confirm') ?? ''
+            }));
+            verify('disconnect', 'the confirmation names the account and starts on Cancel', /Disconnect Trakt for oleksii\?/.test(dialog.text) && /the Trakt account p13-standin/.test(dialog.text) && dialog.focused === 'cancel',
+                dialog.text.replace(/\n/g, ' ').slice(0, 220));
+            verify('disconnect', 'it says the Trakt plugin\'s settings for oleksii are reset', /settings for oleksii are reset/.test(dialog.text));
+            await page.screenshot({ path: join(out, 'shots', '13-confirm.png') });
+            await page.locator('[data-jfmod-confirm="confirm"]').click();
+            const gone = await until('the row to leave', async () => (await page.locator('[data-jfmod-trakt-user="oleksii"]').count()) === 0, 30000, 1000).catch(() => false);
+            const text = await traktText(page);
+            verify('disconnect', 'the row leaves and the section says Trakt is disconnected for oleksii', !!gone && /Trakt is disconnected for oleksii\./.test(text), text.slice(0, 160));
+            await page.screenshot({ path: join(out, 'shots', '14-disconnected.png') });
+        } finally {
+            await page.close();
+        }
+        const trakt = (await plugins()).find(plugin => plugin.Name === 'Trakt');
+        const config = await jf('GET', `/Plugins/${trakt.Id}/Configuration`);
+        verify('disconnect', 'the Trakt plugin no longer holds an entry for oleksii', !(config.TraktUsers ?? []).some(user => user.LinkedMbUserId?.replace(/-/g, '') === userId.replace(/-/g, '')));
+        const now = await status();
+        verify('disconnect', 'no account is linked: the export is refused', now.refusal === 'no_users' && now.users.length === 0, now.refusal);
+        await authorize(7776000);
+        const back = await until('linked again', async () => (await status()).users.some(user => user.name === 'oleksii' && user.state === 'linked'), 60000, 2000).catch(() => false);
+        verify('disconnect', 'authorizing again links oleksii with the plugin\'s defaults', !!back);
     }
 };
 
