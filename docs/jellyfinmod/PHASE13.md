@@ -1,7 +1,7 @@
 # Phase 13 — offline episode watches to Trakt
 
-**Planned, not scheduled.** Outline recorded 2026-10-07. No implementation or live acceptance
-has started. Read [PLAN.md](PLAN.md), [PHASE7.md](PHASE7.md) §7.1 (Trakt integration),
+**Built (not accepted), 2026-10-28.** Outline recorded 2026-10-07; refined and built 2026-10-28 (see *Refinement and
+build* below, which supersedes the outline's proposed behaviour and task list where they differ). Read [PLAN.md](PLAN.md), [PHASE7.md](PHASE7.md) §7.1 (Trakt integration),
 [README.md](README.md) and [UX.md](UX.md) alongside it. The user requested this phase;
 the implementation choices below are proposals, not accepted architecture.
 
@@ -134,3 +134,137 @@ history with the authorized test account. No unit tests or production mutations.
 Creating this outline authorizes planning only. No new product version starts, no version is
 bumped, and the published `0.1.0.0` or `latest` image is not overwritten. Implementation starts
 only when this phase is scheduled and its refinement is accepted under the workspace rules.
+
+## Refinement and build (2026-10-28)
+
+Planned by an Opus 5.5 high agent (`reviews/phase13/PLAN.md` in the workspace, with the mockups); the six questions were
+answered by the coordinator under the user's overnight instruction (workspace `reviews/overnight-2026-10-28/DECISIONS.md`
+D16–D21): Q1 (a) the stock Trakt plugin stays the only writer and JellyfinMod schedules its export; Q2 (a) JellyfinMod
+reads the plugin's per-user link state read-only (whether a token is present, never its value; its expiry; three
+switches); Q3 (a) automatic sending off by default, Sync Now either way; Q4 (a) the collection side effect stays as the
+user configured it and is said on the account row; Q5 (b) Settings › Trakt plus an administrator's Home notice; Q6 (a)
+both lines the same, a Trakt plugin older than 33 explained with no automatic run and no Sync Now.
+
+**What the stock plugin does (source at v33).** It scrobbles on `PlaybackStopped` and drops a failure, so a watch that
+ends while Trakt is unreachable is lost. Its "Export library to trakt.tv" task (`TraktSyncLibraryTask`, no default trigger)
+sends each episode played in Jellyfin that has no play on Trakt, with Jellyfin's `LastPlayedDate`; it never adds a second
+play. Before a request it refreshes an expired token after blanking it in memory; a failed refresh (rejected, or no internet
+at that moment) leaves the user without a token, and every path then skips that user until it is authorized again: the
+2026-10-07 incident. v33 needs Jellyfin 12.1+: the items line (12.2) runs it, the stubs line (12.0) has 31/32.
+
+**As built (simplified after the sixth Codex re-review, see below).** Plugin `TraktExportService` (hosted, ticks every
+minute) starts the plugin's export, with the switch on, 10 minutes after a linked user's latest episode play (so the live
+scrobble lands first), when an account is linked again after a failed sign-in, once a day as a safety net, and after a
+run that was not clean; Sync Now starts it any time. Never while it runs; after a run that was not clean only after a
+retry wait of 15 min doubling to at most 6 h. Durable state is the host's (user data, the task's last result) plus the
+switch in the plugin XML; no table, no migration. `TraktPluginState` finds the task and reads the links. Refusals:
+`not_installed`, `old_plugin`, `unknown`, `no_users`, `unwatched_history`. API in [API.md](API.md#missed-watches-to-trakt-phase-13).
+Web: Settings › Trakt (step 11 of 13, after Missing Episodes) and `TraktReconnectNotice` under the Home hero (mounted
+by `integration/homeTab.ts`), both from existing components; no guide changed. Live runner
+`scripts/jellyfinmod-e2e/trakt-export.mjs`; stand-in `scripts/jellyfinmod-e2e/standins/trakt-export.mjs` (TLS as
+api.trakt.tv); local environments answer api.trakt.tv with it under `JFMOD_TRAKT=1` (workspace `envs/compose.trakt.yaml`).
+
+What the simple design loses: a rewatch during an outage is not sent; "completed" means the export ran with the user
+linked, not a per-episode check; an episode deleted from the library before the next export is not sent.
+
+Follow-ups (not in this phase): on the stubs line the stock plugin adds placeholder `.disc` episodes to a linked user's
+Trakt collection when *Synchronize collections* is on; an upstream fix for the token trap (keep the old token on a failed
+refresh and retry).
+
+**Evidence, 2026-10-28 (built, not accepted).** Items line on local environment echo (Jellyfin 12.2.0, stock Trakt plugin
+33.0.0.0, `JFMOD_TRAKT=1`, `TraktExportTestMinutes=1`), plugin `phase13-trakt-items` and web `phase13-trakt-items`:
+`trakt-export.mjs` **50/50** in one run (offline plays, the automatic export failing and retrying while Trakt is down, a
+restart keeping state, delivery at Jellyfin's watch times to the minute, no second play from two Sync Nows and a restart,
+catch-up adding only the three missing episodes while the seeded ones keep their id and time, a live scrobble once and no
+export duplicate, three 500s failing a run with a 60 s retry then two 429s ridden out, history on page 2 found, the
+unwatched-history refusal with nothing removed, a rejected refresh shown as Reconnect needed in Settings and on Home and
+the waiting watch sent once after reconnecting, 401 anonymous and 403 for an ordinary user, a disabled Trakt plugin
+reported not installed). `trakt-export-matrix.mjs` **66/66 in Chromium and 66/66 in Google Chrome**: Settings › Trakt in
+both states on desktop Dark and Light, phone 390 px and TV 1920×1080 and 1280×720 (D-pad Down reaches the switch, Sync
+Now and Reconnect Trakt; the remote's Back leaves), the Home notice only while reconnect is needed, no sideways scroll,
+text at 4.5:1 or more, no page error. Stubs line (Jellyfin 12.0.0, Trakt plugin 31.0.0.0): the export is refused as
+`old_plugin` (Sync Now 409) and the section says to update the plugin. Plugin suites Phase 0 and 1 smoke and Q16 Trakt pass
+on both lines (macOS). At the real pace (`TraktExportTestMinutes` 0) one watch while Trakt was down started the export 10 min after it ended, the failed run retried 15 min after it ended, and the watch reached Trakt once at its watch time. Not run: the Pi, a physical TV, the Codex review.
+
+**Found in the stock plugin (not changed by this phase).** It sends one Trakt request at a time and retries each for about
+90 s, so during an outage its queued scrobbles drain slowly; one still queued when Trakt returns lands with the return
+time, not the watch time, and the export then leaves it alone because Trakt has a play. A Jellyfin restart during the
+outage drops that queue, and the export then delivers the original times.
+
+**Codex review fixes (2026-10-28).** Codex GPT-6.1 Sol high reviewed the items line (no P1, five P2; record in the
+workspace, `reviews/phase13/codex-review.md`). Fixed on both lines, each shown failing on echo before the fix:
+(1) a run counts as delivered only when the host says Completed and the plugin logged no Trakt error while it ran (the
+plugin completes its task when Trakt refuses a history write); otherwise it is retried with the back-off. The signal is the
+host's own file log; what it loses: an unrelated Trakt error during the run (a live scrobble failing) costs one extra
+export, and a server without the file log retries at most every 6 hours. (2) The last confirmed run and the accounts owed
+a catch-up after a reconnect live in the plugin XML, so a restart between a dead sign-in and its reconnect still sends the
+waiting watches; no export runs while no account has a working sign-in. (3) The per-user settings are read only when
+every field has the v31–v33 type; anything else is `unknown` and refused. (4) The runners prove their environment
+(container, published port, server name, api.trakt.tv routed to the stand-in, the stand-in and the lease) before they
+sign in, and take the address and restart target from it. (5) Settings › Trakt and the Home notice read the state again
+every minute while open (every 5 s while the export runs).
+After the fixes on echo: `trakt-export.mjs` **65/65** in one run (the earlier 50 checks plus a refused history write
+retried and confirmed, a restart between a dead sign-in and its reconnect still delivering the waiting watch, no export
+while no account is linked, and the Home notice and Settings following the state without a reload); before the fixes the
+same new checks failed 8 of 14. `trakt-export-matrix.mjs` 66/66 in Chromium and 66/66 in Google Chrome again. The plugin
+suite's new Phase 13 checks (refusals, link shapes, administrator-only state, no token in the answer) failed before fix 3
+and pass on both lines; Phase 0 and 1 smoke pass. Stubs line on Jellyfin 12.0 with Trakt 31: still `old_plugin`, 409.
+
+**Codex re-review fixes (2026-10-28).** The re-review of that fix delta (no P1, three P2, one P3; workspace
+`reviews/phase13/codex-rereview.md`) is fixed on both lines. (1) A run is confirmed only from a log that holds it whole in
+one file: JellyfinMod writes the run's start line, with a run id, when the host starts the task, and reads that file from
+the start line to the host's end line (files over 160 MB are not read); a start or end not found, a run across a
+rotation or a pruned file, is not confirmed and is retried once more. (2) The export's state is changed and saved only
+under the plugin's configuration lock (`Plugin.ChangeTraktExportState`), and a settings save keeps the server's own
+`TraktExportConfirmedAt` and `TraktExportCatchUpUserIds` whatever the submitted copy says. (3) Each run records the linked
+accounts at its start with their link's fingerprint, the token expiry the plugin holds (a date, never a token); an
+account caught up only when the same fingerprint is there at the end. What that loses: a token refresh during the run
+also keeps the catch-up, which costs one more export. (4) The Settings rail's Trakt line reads the same live query as the
+section. Also: when an account is linked again, the retry wait left from its failing sign-in is dropped, so its catch-up
+starts within the quiet period (in memory; the catch-up itself is in the XML). A second re-review found one more P2, fixed the same way: a run that starts before the previous run's end was handled (a Dashboard start in the moment the host has set the task idle but not yet reported its end), or another run's start line between a run's start and end in the log, confirms nothing, and the catch-up is kept; what that loses: an overlapping manual run costs one more export. A third re-review found chained overlaps (A start, B start, A end, C start, B end, C end) still misconfirmed; JellyfinMod now matches each end to the context it captured at that run's start by the host's own start time (set right after the start event, within 2 s), and an end confirms nothing when no context matches, or another run started or ran inside its window. A fourth re-review found that a start whose end never comes (the host's history write throwing first) could leave a bare counter stuck; with the match by start time it only sits unused, and starts and ended windows are forgotten after 6 hours (an end that arrives later finds no context and confirms nothing). A fifth re-review found the match by start time still misconfirming when runs come close together (the host's end time taken before its end line, a start in that gap, slow start handlers), so the timing is gone and one rule reads only the log: the start lines and the host's end lines, in order, are grouped into clusters (one opens at a start and closes when starts and ends balance); an end makes JellyfinMod look at the latest finished cluster, and only a cluster with exactly one start, captured by JellyfinMod within the last 6 hours, and one end saying Completed, with no Trakt error between them, confirms. What that loses: any overlap of runs costs one more export. Before the fix the plugin suite's new nearest-time and slow-handler cases failed (its idle-gap cases already passed); all pass now on both lines.
+
+**Simplified after the sixth Codex re-review (2026-10-28).** The sixth re-review found three more P2s in the log parser.
+The coordinator stopped the parser chase on reading the stock export (v33 `SyncLibraryTask.cs`, lines 449–484): it compares
+Jellyfin's plays with Trakt's on every run and sends only what Trakt lacks, so any later successful export repairs a missed
+one, and proving that a run delivered is not needed. The run ids, log clusters, per-run account contexts, start-time
+matching and overlap rules are gone, and so are the confirmed watermark and the per-account catch-up list in the plugin
+XML (`TraktExportConfirmedAt`, `TraktExportCatchUpUserIds`) with the save-preservation they needed. Correctness now comes
+from running the export again (the triggers above). A run's result is best effort, for pacing and the Settings line only:
+clean when the host says Completed and the host's file log holds no ERR or FTL line from `Trakt.ScheduledTasks.SyncLibraryTask`
+or `Trakt.Api.TraktApi` between the run's start and 5 s after its end; anything else is retried. Each run is judged once,
+and a restart judges the last run again from the log. Accepted loss: a missed or misread run delays the missing watches
+until the next export (at most a day), never loses them, because the stock export sends whatever Trakt lacks. The live
+steps `stalesave` and `relinkmidrun` (they tested the removed catch-up list) are dropped; the plugin suite keeps the
+refusals and checks a refused write retried then clean, a reconnect starting the export, nothing starting after a clean
+run, and the daily safety-net export. Live on echo (items line, test pace) the steps this touches, `setup offline online catchup reconnect
+writefail reconnectrestart refresh` with `relink pace`, passed **47/47**; after the restart in `reconnectrestart` the last
+run was judged again from the log and its retry sent the waiting watch once. Plugin suites Phase 0 and 1 smoke and Q16
+Trakt pass on both lines.
+
+**Codex review of the simplified build (2026-10-28).** The design held (no authorization bypass, no token leaving, no
+history-removal path); two P2 and one P3 are fixed on both lines. (1) On a TV the remote's OK (Enter) now toggles the
+automatic-export switch: browsers toggle a checkbox on Space only, and the pop-up D-pad handler acts inside pop-ups only.
+(2) A status read never reads the log: the background check judges each run, one at a time, and `GET` answers what it
+found, or no result yet (at most a minute, 15 s at the test pace). (3) While a change of the switch is saved it stays
+focusable (`aria-disabled`) and ignores presses, so a TV keeps its focus on it. Before the fixes the TV matrix rows failed
+"Enter on the switch changes the server setting" and "the switch keeps the focus while Space saves it" (36/40), and the
+plugin suite failed "a status read right after a run ends does not judge it"; after them the TV rows pass 40/40 in
+Chromium, the plugin suites pass on both lines, and the live steps `relink pace writefail refresh` pass 13/13 on echo. The re-review of those fixes found two P2 and two P3, fixed on both lines: a
+held OK (its repeated keydowns) changes the switch once, not again after the first save (the TV rows failed "a held OK
+changes the switch exactly once" before, 40/42, and pass 42/42 after); the live `writefail` step waits for the retried run
+to be the last one before reading its result; a Completed run not yet judged says "Checking the last run…" instead of
+"Nothing is waiting" (D47); the plugin suite proves that no status request reads the host's log by recording who reads
+the log folder (it failed on the earlier code, where the status read judged the run) instead of racing the background
+check. Live `relink pace writefail refresh` 13/13 again.
+
+**Final gate, partly run (2026-10-29).** Codex approved the fix delta, product code included: review-clean. On echo
+(plugin `phase13-trakt-items` 0790bca, web bundle `754f698bedf0` built from the clean commit `774da11c90`, health marker
+`WebCommit` `774da11c90`) the full live list `trakt-export.mjs`, every step at the test pace, passed 64/66: the two
+`failures` checks read the retry before JellyfinMod's background check had judged the failed run ("Failed, failures 0, next
+undefined"), a runner wait the move of judging out of the status read had left behind. With that step waiting for the
+judgment, `relink pace failures` passed 6/6; the real pace is restored. Stubs line on bravo (Jellyfin 12.0, Trakt plugin
+31, web `3d3d078bb1` / bundle `227763561652`): `old_plugin`, Sync Now 409, Settings says to update the plugin; bravo was
+reset to its baseline and released. Not run: the layout matrix and the real-Chrome pass, stopped because the user asked
+for a new Trakt UI (a Disconnect button, the account's avatar and username, a collapsed activity log), which a design
+session mocks up first; they run once on that UI. Built (not accepted), waiting for the new UI and the user's own check.
+

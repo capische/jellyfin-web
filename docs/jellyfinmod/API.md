@@ -1222,6 +1222,43 @@ address unless the hidden XML field `RatingsProviderBaseUrl` points an isolated 
 `RatingsSettings`, `RatingsProviderStates`, `TitleRatings`, `RatingsFetches` (one row per title identity), migrations
 `PhaseNineRatings` and `PhaseNineRatingsIdentity`.
 
+## Missed watches to Trakt (Phase 13)
+
+Health `Capabilities` adds `trakt.export`. Administrators only (`Policies.RequiresElevation`; 401 anonymous, 403 for an
+ordinary user). JellyfinMod never calls Trakt: these endpoints report and start the stock Trakt plugin's own export task,
+"Export library to trakt.tv" (`TraktSyncLibraryTask`), which sends each episode played in Jellyfin that has no play on
+Trakt, with Jellyfin's `LastPlayedDate`.
+
+`GET /JellyfinMod/Trakt/Export`:
+
+```json
+{"installed":true,"version":"33.0.0.0","minimumVersion":"33.0.0.0","autoExport":true,"running":false,
+ "lastRun":{"status":"Failed","startedAt":"2026-10-28T08:41:02Z","endedAt":"2026-10-28T08:42:33Z"},
+ "nextAttemptAt":"2026-10-28T08:57:33Z","failures":1,"quietMinutes":10,
+ "users":[{"name":"oleksii","state":"linked","collections":true,"postWatched":true}]}
+```
+
+- `refusal` (omitted when none): `not_installed`, `old_plugin` (Trakt plugin older than `minimumVersion`), `unknown`
+  (the plugin's task or settings could not be read), `no_users` (no account has a working sign-in, including when every account needs reconnecting), `unwatched_history`
+  (a linked user has *Post unwatched history* on, so the export would remove Trakt plays). `unknown` also covers a
+  Trakt plugin whose per-user settings lack a field JellyfinMod relies on or carry it with another type. While refused nothing runs by itself and the POST answers 409.
+- `users`: the Jellyfin users the Trakt plugin holds a sign-in for, read-only from its settings in memory: `state` is
+  `linked`, or `reconnect` when it has a refresh token but no access token (a refresh failed and the plugin skips the
+  user until it is authorized again), with `since` (the token's expiry, UTC). Never a token value.
+- `lastRun` is the host's last result of the task (omitted when it never ran). `lastRunConfirmed` is false when that run
+  did not look clean, best effort: the host did not say Completed, or the Trakt plugin logged a Trakt error
+  (`Trakt.ScheduledTasks.SyncLibraryTask`, `Trakt.Api.TraktApi`, ERR or FTL) in the host's file log while it ran (it
+  completes its task even when Trakt refuses a write); null until JellyfinMod's background check has judged it
+  (within a minute of its end; a status read never reads the log). Such a run is retried;
+  `nextAttemptAt` and `failures` describe that retry (in memory: a restart judges the last run again from the log). The
+  result only paces retries and tells the administrator: the stock export sends whatever Trakt lacks, so the next run
+  repairs a missed one. With the switch on, the export also starts after episode plays, after a reconnect and daily.
+
+`POST /JellyfinMod/Trakt/Export` starts the export now, or joins the run already going: 202 with the state above, or 409
+`{"error":"<refusal>"}`. `PUT /JellyfinMod/Trakt/Export/Settings` `{"autoExport":bool}` turns the automatic export on or
+off (plugin XML `TraktAutoExport`, default off) and answers the state. `TraktExportTestMinutes` (XML only, isolated test
+instances) replaces the 10-minute quiet period and the first retry wait.
+
 ## Review corrections — 2026-09-18
 
 Index of the notes above, from the review of plugin 81c1aae in
