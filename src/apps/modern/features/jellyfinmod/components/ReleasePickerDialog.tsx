@@ -562,14 +562,22 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; adopted: boolean }
         const seconds = Math.max(0, Math.ceil((Date.parse(operation.holdUntil) - now) / 1000));
         const accepted = operation.state === 'accepted';
         const refused = !accepted && isFinal(operation);
+        // What happens to the file the title holds (replace-upgrade design §3, 2026-10-28): a Replace says it at every moment,
+        // an Add once the client has it; a first download keeps its words.
+        const replacing = operation.mode === 'replace';
+        const files = operation.scope === 'season' || operation.scope === 'series' ? 'the current files' : 'the current file';
+        const fileWord = files.charAt(0).toUpperCase() + files.slice(1);
+        let acceptedText = 'The download client accepted the torrent.';
+        if (replacing) acceptedText = `In the download queue. ${fileWord} ${files.endsWith('s') ? 'are' : 'is'} removed once this one is in the library.`;
+        else if (operation.mode === 'add') acceptedText = `In the download queue. ${fileWord} ${files.endsWith('s') ? 'stay' : 'stays'}.`;
         return <div className={classNames('jfmod-grabStatus', { 'jfmod-grabStatus--ok': accepted, 'jfmod-grabStatus--error': refused })}
             role='status' aria-live='polite'>
-            {operation.state === 'pending' && <span>Sending to the download client in {seconds} s.</span>}
-            {operation.state === 'submitting' && <span>Sending to the download client…</span>}
-            {accepted && <span>The download client accepted the torrent.</span>}
+            {operation.state === 'pending' && <span>{replacing && `Replacing ${files}. `}Sending to the download client in {seconds} s.</span>}
+            {operation.state === 'submitting' && <span>{replacing && `Replacing ${files}. `}Sending to the download client…</span>}
+            {accepted && <span>{acceptedText}</span>}
             {accepted && operation.openUrl && <a className={flatButtonClass() + ' jfmod-grabOpen'} href={operation.openUrl}
                 target='_blank' rel='noopener noreferrer'>Open in Client</a>}
-            {!accepted && isFinal(operation) && <span>{operation.message}</span>}
+            {!accepted && isFinal(operation) && <span>{operation.message}{replacing && ` ${fileWord} ${files.endsWith('s') ? 'stay' : 'stays'}.`}</span>}
             {/* The file name is the diagnostic when a grab goes wrong, so the block carries it (UX §9). */}
             <span className='jfmod-grabStatus-title'>{operation.releaseTitle}</span>
         </div>;

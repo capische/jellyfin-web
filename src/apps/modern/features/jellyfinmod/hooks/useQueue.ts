@@ -44,15 +44,31 @@ interface UseQueueOptions {
 }
 
 /**
+ * The queue keys whose last answer that was not another error was 403 (Codex re-reviews of the upgrade status): the rows read
+ * before stay hidden until a read succeeds, even when a later read fails another way (a 500 replaces the 403 as the query's error
+ * and would bring the cached rows back). Set on the 403 and cleared on the success itself, never by comparing times. Before any
+ * denial, a failed read keeps showing the last rows as before.
+ */
+const denied = new Set<string>();
+
+/**
  * The queue, shared by the route, the user menu probe and every in-flight mark through one query key, so any
  * number of consumers cost one request per tick. Previous rows stay while a poll is in flight, so the list is
  * never unmounted by a poll (UX §13).
  */
 export const useQueue = ({ enabled, poll }: UseQueueOptions) => {
     const { api, user } = useApi();
+    const queryKey = ['JellyfinMod', api?.basePath, user?.Id, 'Queue'];
+    const key = JSON.stringify(queryKey);
     const query = useQuery({
-        queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'Queue'],
-        queryFn: ({ signal }) => getQueue(api!, {}, { signal }),
+        queryKey,
+        queryFn: ({ signal }) => getQueue(api!, {}, { signal }).then(list => {
+            denied.delete(key);
+            return list;
+        }, (error: unknown) => {
+            if (isQueueAdminOnly(error)) denied.add(key);
+            throw error;
+        }),
         enabled: enabled && !!api && !!user?.Id,
         placeholderData: previous => previous,
         retry: false,
@@ -64,7 +80,10 @@ export const useQueue = ({ enabled, poll }: UseQueueOptions) => {
         // A queue that answered 403 is not asked again on every page that mounts a probe; polling consumers still recover.
         retryOnMount: false
     });
-    return { ...query, adminOnly: isQueueAdminOnly(query.error) };
+    // A queue made private since the last read answers 403; what was read before is not shown any more, until a read succeeds
+    // again (Codex review of the upgrade status, P2 4, and its re-review, P2 3).
+    const adminOnly = isQueueAdminOnly(query.error) || denied.has(key);
+    return { ...query, data: adminOnly ? undefined : query.data, adminOnly };
 };
 
 const IMPORT_FINISHED = new Set(['seeding']);
@@ -91,10 +110,13 @@ const EPISODE_IMPORTING: Record<string, QueueState> = { identifying: 'identifyin
  */
 export const packEpisodeView = (row: QueueRow, episodeId: string | null | undefined): QueueRow => {
     const own = ownEpisode(row, episodeId);
-    if (!own || own.progress === undefined || row.state === 'unknown') return row;
+    if (!own) return row;
+    // An `add` or `replace` pack brings an episode that held a file a new version, one without a file its first (D12).
+    const newVersion = !!own.held && !!row.pack && row.pack.mode !== 'fill';
+    if (own.progress === undefined || row.state === 'unknown') return { ...row, newVersion };
     const sizeBytes = own.sizeBytes ?? null;
     const view = (state: QueueState, progress: number | null, etaSeconds: number | null = null): QueueRow => ({
-        ...row, state, progress, etaSeconds, sizeBytes,
+        ...row, state, progress, etaSeconds, sizeBytes, newVersion,
         downloadedBytes: sizeBytes !== null && progress !== null ? Math.round(sizeBytes * progress) : null
     });
     if (packProblem(own.importState, own.reason)) {

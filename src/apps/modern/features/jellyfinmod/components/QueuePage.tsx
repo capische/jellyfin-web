@@ -18,8 +18,9 @@ import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 
 import {
-    automationPausedText, downloadProgress, episodeCode, formatBytes, formatDuration, formatRate, type MarkProgress, packEpisodeProblems,
-    progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, seedingFacts, seedProgress, sortQueueRows, updatedAgo
+    asNewVersion, automationPausedText, downloadProgress, episodeCode, formatBytes, formatDuration, formatRate, isReplace, type MarkProgress,
+    packEpisodeProblems, progressPercent, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage, replacedWords, seedingFacts, seedProgress,
+    sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
 import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
@@ -51,7 +52,9 @@ const versionOf = (row: QueueRow) => {
     if (row.pack?.mode === 'add') return 'Added beside the files held';
     if (row.pack?.mode === 'replace') return 'Replaces the files held';
     if (row.intent !== 'addVersion') return row.versionLabel;
-    return 'Another version' + (row.versionLabel ? ': ' + row.versionLabel : '');
+    // A Replace names what it removes (D13, worded as D11): `Replaces 1080p: 2160p Remux`.
+    const lead = isReplace(row) ? 'Replaces ' + replacedWords(row).words : 'Another version';
+    return lead + (row.versionLabel ? ': ' + row.versionLabel : '');
 };
 
 /** Everything a row shows, worded once for all three layouts. */
@@ -183,9 +186,11 @@ const stateTipOf = (row: QueueRow, progress: MarkProgress, text: RowText): State
         // The import's own step (Linking into the library) says more than the family's word.
         tip = { title: text.state, summary: progress.stale ? 'last known' : null, lines: [], figures: true };
     } else {
-        const split = progress.tooltip.indexOf(' · ');
-        tip = split < 0 ? { title: progress.tooltip, summary: null, lines: [], figures: true } :
-            { title: progress.tooltip.slice(0, split), summary: progress.tooltip.slice(split + 3), lines: [], figures: true };
+        // A new version's Replace adds its own line (`Replaces 1080p`, D12).
+        const [first, ...more] = progress.tooltip.split('\n');
+        const split = first.indexOf(' · ');
+        tip = split < 0 ? { title: first, summary: null, lines: more, figures: true } :
+            { title: first.slice(0, split), summary: first.slice(split + 3), lines: more, figures: true };
     }
     // A pack's own episodes that were skipped or need attention, while its torrent reads otherwise.
     return { ...tip, lines: [...tip.lines, ...packEpisodeProblems(row)] };
@@ -200,7 +205,7 @@ const popoverLines = (tip: StateTip) => [...(tip.summary ? [capitalise(tip.summa
 
 /** A row's disc and its tip: a seeding copy's or a download's (a failure is the red bang). */
 const rowDisc = (row: QueueRow, text: RowText) => {
-    const progress = row.state === 'seeding' ? seedProgress(row.seeding) : downloadProgress(row);
+    const progress = row.state === 'seeding' ? seedProgress(row.seeding) : asNewVersion(downloadProgress(row), [row]);
     const tip = stateTipOf(row, progress, text);
     return { progress, tip, link: ringLink([row], progress) };
 };

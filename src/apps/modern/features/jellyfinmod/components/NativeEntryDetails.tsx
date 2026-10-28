@@ -27,10 +27,11 @@ import { type EntryEpisode, FileState } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 import DownloadBlock, { type DownloadTarget } from './DownloadBlock';
 import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
-import FileChooser, { type PinState, useStockSourceIds } from './FileChooser';
+import FileChooser, { type PinState, useStockSourceIds, useTrackStrip } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
 import HistoryToggle from './HistoryToggle';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
+import PendingVersion from './PendingVersion';
 import QueueStatusLine from './QueueStatusLine';
 import RetentionStatus from './RetentionStatus';
 import SeasonTotal from './SeasonTotal';
@@ -145,6 +146,12 @@ const remainingAfterRemove = (fresh: EntryDetail, episode: EntryEpisode | undefi
     return remaining.filter(version => version.bindingId !== removed.bindingId);
 };
 
+/** The main copy's page, loaded afresh (`jfmodRefresh` when it is this very page, so the route builds a new view). */
+const showVersionPage = (serverId: string, itemId: string, target: string) => {
+    const refresh = sameItemId(target, itemId) ? '&jfmodRefresh=' + Date.now() : '';
+    window.location.replace('#/details?id=' + encodeURIComponent(target) + '&serverId=' + encodeURIComponent(serverId) + refresh);
+};
+
 /**
  * Where the page goes after Remove this version: upstream's page still holds the removed copy in its select and its
  * playback sources. With a copy left, the remaining main copy's page loads afresh; with none left, the catalog entry
@@ -162,8 +169,54 @@ const leaveAfterRemove = (serverId: string, itemId: string, fresh: EntryDetail |
         window.location.replace('#/details?entryId=' + encodeURIComponent(entryId) + server);
         return;
     }
-    const refresh = sameItemId(next.jellyfinItemId, itemId) ? '&jfmodRefresh=' + Date.now() : '';
-    window.location.replace('#/details?id=' + encodeURIComponent(next.jellyfinItemId) + server + refresh);
+    showVersionPage(serverId, itemId, next.jellyfinItemId);
+};
+
+/** Whether the plugin's files and upstream's Version select (its playback sources) name different copies. */
+const sourcesDiffer = (view: HTMLElement, listed: VersionDto[]) => {
+    const select = view.querySelector<HTMLSelectElement>('.selectSource');
+    if (!select) return false;
+    const stock = Array.from(select.options, option => option.value);
+    return listed.length !== stock.length || listed.some(version => !stock.some(id => sameItemId(id, version.mediaSourceId)));
+};
+
+/** The page an address opens: its route and item (`#/details?id=…`), whatever else the address carries. */
+const pageOf = (href: string) => {
+    const hash = href.split('#')[1] ?? '';
+    const [route, query = ''] = hash.split('?');
+    return route + '?' + (new URLSearchParams(query).get('id') ?? '').toLowerCase();
+};
+
+/**
+ * When the pending download ends, however it ends (Codex review of the upgrade status, P2 1, and its re-reviews): the entry is
+ * read again, and when its files are no longer the ones upstream's Version select and playback sources hold (an import added
+ * one, a Replace removed one) the page loads afresh on the title's main copy, as after Remove this version. A cancelled download
+ * changes no file and reloads nothing. Only for the visit it belongs to: the page the controller was opened on (its item id),
+ * checked against the address before the read and after it, so a navigation already under way (its destination still loading, this page
+ * still on screen) is never replaced; nor once the page went away.
+ */
+const usePendingFinished = (view: HTMLElement, refetch: () => Promise<{ data?: EntryDetail }>, serverId: string, itemId: string,
+    episodeId: string | undefined) => {
+    const mounted = useRef(true);
+    // The page as the controller was opened on it (its own route parameter, `itemId`), never the address at mount, which may
+    // already be another page's while the controller waited for its item (Codex re-review 3 of the upgrade status).
+    const opened = pageOf('#/details?id=' + itemId);
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+        };
+    }, []);
+    return useCallback(() => {
+        const here = () => mounted.current && pageOf(window.location.href) === opened && !view.classList.contains('hide');
+        if (!here()) return;
+        refetch().then(({ data }) => {
+            if (!data || !here()) return;
+            const listed = (episodeId ? data.episodes.find(candidate => candidate.id === episodeId)?.versions : data.versions) ?? [];
+            const next = listed.find(version => version.isDefault) ?? listed[0];
+            if (next?.jellyfinItemId && sourcesDiffer(view, listed)) showVersionPage(serverId, itemId, next.jellyfinItemId);
+        }).catch(() => undefined);
+    }, [view, refetch, serverId, itemId, episodeId, opened]);
 };
 
 /** What the pin on a file's row does when pressed. */
@@ -506,10 +559,16 @@ const PlaceholderSection: FC<PlaceholderSectionProps> = ({ view, entryId, episod
 /** The value when the condition holds, else null. */
 const onlyWhen = <T,>(condition: boolean, value: T) => (condition ? value : null);
 
-/** The line about the page's movie or episode download, while one is on its way. */
-const DownloadLine: FC<{ entry: EntryDetail['entry']; episode: EntryEpisode | undefined }> = ({ entry, episode }) => (episode ?
-    <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} /> :
-    <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />);
+/**
+ * The line about the page's movie or episode download, while one is on its way. A page with files shows it as the pending entry
+ * under the track strip instead (D9).
+ */
+const DownloadLine: FC<{ entry: EntryDetail['entry']; episode: EntryEpisode | undefined; files: boolean }> = ({ entry, episode, files }) => {
+    if (files) return null;
+    return episode ?
+        <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} /> :
+        <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />;
+};
 
 /** A series with nothing but placeholders has nothing to play: its page loses Play as a placeholder's does (P1.FU26). */
 const usePlaceholderSeries = (view: HTMLElement, data: EntryDetail | null | undefined, isSeriesPage: boolean, itemId: string) => {
@@ -631,6 +690,9 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     useKeepSeriesItem(api, view, onlyWhen(isAdmin && isSeriesPage, data), itemId, change);
     useDeleteReturn(api, userId, view, itemId, itemType, [itemId, ...(stockIds?.split(',') ?? []),
         ...versions.flatMap(version => [version.jellyfinItemId, version.mediaSourceId])].filter((id): id is string => !!id));
+    // Video, Audio and Subtitles as one strip with the pending download under it (D4–D9), on a page that lists files.
+    const strip = useTrackStrip(view, versions.length > 0);
+    const pendingFinished = usePendingFinished(view, refetch, serverId, itemId, episode?.id);
 
     if (!detail.data) return null;
     // A season page shows only the header icon and, beside upstream's rows, the episodes Jellyfin has no item for (P1.FU11).
@@ -660,17 +722,19 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
             canAcquire={canAcquire} onGetRelease={openPicker} onChanged={refreshAfterPlayed} />;
     }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
-        {versions.length > 0 && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
+        {strip && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
             onAddVersion={canAcquire ? addVersion : undefined}
             onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
             pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}
-            note={isAdmin ? deleteWarning : null} sources={sources.data} />}
-        {versions.length > 0 && <TrackDropdowns api={api} view={view} sources={sources.data} />}
+            note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}
+            pending={<PendingVersion entryId={entry.id} episodeId={episode?.id} versions={versions} isAdmin={isAdmin}
+                onFinished={pendingFinished} />} />}
+        {strip && <TrackDropdowns api={api} view={view} sources={sources.data} strip={strip} />}
         <FileHistoryPopover anchor={historyFor?.anchor ?? null} version={historyFor?.version ?? null} history={history}
             onClose={closeHistory} />
         {windowDialog}
         {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
-        <DownloadLine entry={entry} episode={episode} />
+        <DownloadLine entry={entry} episode={episode} files={versions.length > 0} />
     </section>;
 };
 
