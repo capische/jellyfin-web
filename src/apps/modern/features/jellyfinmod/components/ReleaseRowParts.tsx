@@ -158,8 +158,10 @@ interface ReleaseLinesProps {
     candidate: ReleaseCandidate;
     /** `Season 2 · 8 episodes` and `3 held` chips of a pack row. */
     coverage: string | null;
-    /** The added row's download figure (`42% · 12 min left`), at the right end of the marks line (2026-10-12). */
+    /** The added row's download figure (`42% · 12 min left`), under the size, seeders and indexer (2026-10-12, 2026-10-28). */
     progress?: ReactNode;
+    /** A rejected row's reasons, under the file name in the quality column. */
+    reasons?: ReactNode;
 }
 
 /** Whether a row's indexer name is a link: the indexer gave a page, and the layout can open a tab (not the TV). */
@@ -226,7 +228,7 @@ export const IndexerLink: FC<{ candidate: ReleaseCandidate }> = ({ candidate }) 
  * What a row's button holds: line 1, the marks line, and the file name (shown on every row while Show Names is on, and in the
  * grab block). A phone gets the three-line form, so nothing wraps unpredictably at 360 px.
  */
-export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progress }) => {
+export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progress, reasons }) => {
     const parsed = candidate.parsed;
     const held = candidate.coverage?.held ?? 0;
     const heldQuality = !!candidate.heldQuality;
@@ -267,18 +269,27 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progr
             {/* In the page for the runners and screen readers' text; a phone never shows it on the row (the grab block and the
                 confirmation carry the name). */}
             {title}
+            {reasons}
         </>;
     }
-    return <>
-        <span className='jfmod-releaseLine'>
-            <span className='jfmod-releaseLeft'>
-                <span className='jfmod-releaseQuality'>{qualityText(parsed)}</span>{flags}{languages}
+    // Two columns (user, 2026-10-28: a long file name ran under the size, seeders and indexer and broke the table): the quality,
+    // its marks, the file name and a rejected row's reasons wrap in the quality column; the figures and the download stay right.
+    return <span className='jfmod-releaseColumns'>
+        <span className='jfmod-releaseMain'>
+            <span className='jfmod-releaseLine'>
+                <span className='jfmod-releaseLeft'>
+                    <span className='jfmod-releaseQuality'>{qualityText(parsed)}</span>{flags}{languages}
+                </span>
             </span>
-            <span className='jfmod-releaseRight'>{size}{seedsColumn}{indexer}</span>
+            {marksOf(parsed).length > 0 && <span className='jfmod-releaseLine2'>{marks}</span>}
+            {title}
+            {reasons}
         </span>
-        {hasMarks && <span className='jfmod-releaseLine2'>{marks}{progress}</span>}
-        {title}
-    </>;
+        <span className='jfmod-releaseSide'>
+            <span className='jfmod-releaseRight'>{size}{seedsColumn}{indexer}</span>
+            {progress}
+        </span>
+    </span>;
 };
 
 const ActionSvg: FC<{ children: ReactNode }> = ({ children }) =>

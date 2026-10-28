@@ -389,6 +389,40 @@
 // A row (release picker redesign, 2026-10-10): line 1 holds the quality, flags and languages at the left and three fixed
 // columns (size, seeds, indexer) at the right; line 2 the media marks; the file name while Show Names is on.
 // Every mark after the quality sits on a 1.2em-tall track, centred: no baseline mixing.
+// A computer or TV row is two columns (user, 2026-10-28): the quality column takes the quality line, the marks, the file name and
+// a rejected row's reasons, and wraps there; the figures column keeps the size, seeders and indexer, with the added row's
+// download figure under them.
+.jfmod-releaseColumns {
+    display: flex;
+    align-items: flex-start;
+}
+
+.jfmod-releaseMain {
+    display: block;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.jfmod-releaseSide {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+
+    // The size, seeders and indexer set the column's width; the download text takes that width without adding to it (width 0,
+    // at least the column), so a long "Failed · …" is cut with an ellipsis (its tooltip keeps the whole text).
+    > .jfmod-addedFigure {
+        box-sizing: border-box;
+        width: 0;
+        min-width: 100%;
+        margin-top: 0.45em;
+        text-align: right;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 .jfmod-releaseLine {
     display: flex;
     align-items: flex-start;

@@ -363,9 +363,10 @@ const ProgressFigure: FC<{ progress: DownloadProgress }> = ({ progress }) =>
     <span className={classNames('jfmod-addedFigure jfmod-dlMeta', 'jfmod-dlMeta--' + progress.kind, { 'jfmod-dlMeta--stale': progress.stale })}
         title={progress.tooltip} aria-live='off'>{progress.text}</span>;
 
-const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null }> = ({ candidate, search, added }) =>
-    <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)}
-        progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />;
+const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null; reasons?: ReactNode }> =
+    ({ candidate, search, added, reasons }) =>
+        <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)} reasons={reasons}
+            progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />;
 
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
@@ -512,8 +513,8 @@ const RejectedRow: FC<ReleaseRowProps> = props => {
         'jfmod-releaseItem--arrived': arrived })}>
         <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'
             aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}>
-            <RowLines candidate={candidate} search={search} added={added} />
-            <span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>
+            <RowLines candidate={candidate} search={search} added={added}
+                reasons={<span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>} />
         </button>
         <RowActions {...props} rejected />
         <IndexerLink candidate={candidate} />
