@@ -128,15 +128,15 @@ const useMediaSources = (api: Api, userId: string, itemId: string, enabled: bool
 });
 
 /**
- * The copy this device starts with, or null for Jellyfin's default (V1 decision 4). Only with `versions.v1`: an older
- * plugin's rows do not say which copy the viewer is part-way through, so a preselect could replace a resumable copy. The TV
- * waits for Jellyfin's range types (from the media sources) so that Dolby Vision is told apart from HDR before anything is
- * selected.
+ * The copy this device starts with, or null for Jellyfin's default (V1 decision 4; Phase 12: TVs and computers the best copy,
+ * phones the phone copy). Only with `versions.v1`: an older plugin's rows do not say which copy the viewer is part-way through,
+ * so a preselect could replace a resumable copy. The TV and the computer wait for Jellyfin's range types (from the media
+ * sources) so that Dolby Vision is told apart from HDR before anything is selected.
  */
 const usePreferredVersion = (versions: VersionDto[], capabilities: string[], sources: { isPending: boolean; data?: MediaSourceInfo[] }) => {
     const device = devicePreference();
-    const active = capabilities.includes(VERSIONS_V1_CAPABILITY) && device !== 'desktop' && versions.length > 1;
-    if (!active || (device === 'tv' && sources.isPending)) return null;
+    const active = capabilities.includes(VERSIONS_V1_CAPABILITY) && versions.length > 1;
+    if (!active || (device !== 'mobile' && sources.isPending)) return null;
     return preferredVersion(versions, device, sources.data ? videoRangeTypes(sources.data) : null);
 };
 

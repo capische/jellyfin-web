@@ -247,21 +247,23 @@ export const dynamicRangeRank = (version: VersionDto, rangeTypes?: VideoRangeTyp
 };
 
 /**
- * The copy this device should start with, or null to leave Jellyfin's own default (V1 decision 4). The TV takes the highest
- * resolution and, at equal resolution, Dolby Vision, then HDR, then SDR. A phone takes the best copy at or below 1080p,
- * standard dynamic range first, or the smallest when every copy is larger. A desktop keeps Jellyfin's default. A version
- * the viewer is part-way through always wins, so resuming never switches copies. The full device presets are Phase 12
- * (M10–M21).
+ * The copy this device should start with, or null to leave Jellyfin's own default (V1 decision 4; Phase 12, user 2026-10-28:
+ * TVs and computers the best copy, phones the phone copy). A TV and a computer take the highest resolution and, at equal
+ * resolution, Dolby Vision, then HDR, then SDR. A phone takes the file the plugin marks as the phone copy, else the best copy at
+ * or below 1080p, standard dynamic range first, or the smallest when every copy is larger. A version the viewer is part-way
+ * through always wins, so resuming never switches copies.
  */
 export const preferredVersion = (versions: VersionDto[], device: DevicePreference,
     rangeTypes?: VideoRangeTypes | null): VersionDto | null => {
-    if (versions.length < 2 || device === 'desktop') return null;
+    if (versions.length < 2) return null;
     const resuming = versions.find(version => version.inProgress);
     if (resuming) return resuming;
     const byScore = (candidates: VersionDto[], score: (version: VersionDto) => number) =>
         [...candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
     const range = (version: VersionDto) => dynamicRangeRank(version, rangeTypes);
-    if (device === 'tv') return byScore(versions, version => versionRank(version) * 10 + range(version));
+    if (device !== 'mobile') return byScore(versions, version => versionRank(version) * 10 + range(version));
+    const marked = versions.find(version => version.phoneCopy);
+    if (marked) return marked;
     const fitting = versions.filter(version => versionRank(version) > 0 && versionRank(version) <= 3);
     if (fitting.length === 0) return byScore(versions, version => -versionRank(version));
     return byScore(fitting, version => versionRank(version) * 10 - range(version));

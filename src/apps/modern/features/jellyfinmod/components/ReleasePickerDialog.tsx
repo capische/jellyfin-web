@@ -897,7 +897,10 @@ const searchScope = (choice: string, packs: boolean, mediaType: 'movie' | 'serie
  * What the rows' actions do, above the list: Add, and Replace where a row offers it, another version where it is added. With
  * “Upgrade episodes and allow Replace” off only Add is offered, and the line says so without naming Replace (user, 2026-10-09).
  */
-const noticeText = (choices: boolean, replace: boolean, scope: string | undefined, addVersion: boolean, heldFiles?: number | null): string | null => {
+const noticeText = (choices: boolean, replace: boolean, scope: string | undefined, addVersion: boolean, heldFiles?: number | null,
+    forPhones?: boolean): string | null => {
+    // The copy phones play, on a title whose files are all 4K (Phase 12, D57): only Add, and the 4K stays.
+    if (forPhones) return 'Adds a 1080p copy for phones. The 4K stays.';
     const pack = scope === 'season' || scope === 'series';
     if (choices && replace && !pack && (heldFiles ?? 1) > 1) {
         return 'Add puts the release beside the files you have; Replace removes all of them once the new one is in the library.';
@@ -1630,7 +1633,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     }, [profileId, data]);
     // Each profile says what it does under its name, as the Default quality profile select does (user, 2026-10-24, P4.FU19).
     const profileOptions = useMemo<DetailOption[]>(() => (profiles.data ?? []).map(profile => ({
-        value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name, detail: profileSummary({ ...profile })
+        value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name, detail: profileSummary({ ...profile }),
+        phone: !!profile.isPhoneProfile
     })), [profiles.data]);
     const shownProfileId = profileId || (data?.profile.id ?? defaultProfileId);
     const chooseProfile = useCallback((value: string) => {
@@ -1665,7 +1669,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // An imported row reads as the in-library row: a green check after the quality and no actions.
     const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ? { ...candidate, heldQuality: true } : candidate);
 
-    const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack, data?.grab.heldFiles);
+    const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack, data?.grab.heldFiles,
+        data?.grab.forPhones);
 
     const { block, hasRows, bare, spoken, shown, searching } = searchView({ progress, now: progressNow, startedAt,
         early: soFar ? [releaseCount(eligible.length) + ' so far', notes].filter(Boolean).join(' · ') : null,
