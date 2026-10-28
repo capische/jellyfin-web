@@ -1,0 +1,14 @@
+// The phone mark (Phase 12, D52/D54; guides track-dropdown.md and quality-profiles.md).
+.jfmod-phoneMark {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.28em;
+    opacity: 0.86;
+    vertical-align: -0.15em;
+
+    svg {
+        width: 1.05em;
+        height: 1.05em;
+        fill: currentColor;
+    }
+}
