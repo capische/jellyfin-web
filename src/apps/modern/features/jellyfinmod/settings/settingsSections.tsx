@@ -68,6 +68,8 @@ export interface SettingsData {
     ratingsStatus?: any;
     /** The TVs catalogue and the ticked models (`GET /JellyfinMod/Settings/TvModels`, Phase 12); undefined before `copies`. */
     tvModels?: TvModels;
+    /** The Trakt plugin's missed-watch export (`GET /JellyfinMod/Trakt/Export`, Phase 13); undefined on an older plugin. */
+    trakt?: TraktExport;
 }
 
 /** One model of the plugin's TVs catalogue (Phase 12 M30). */
@@ -90,6 +92,68 @@ export interface TvModels {
     selected: string[];
     revision: number;
 }
+
+/** One Jellyfin user the stock Trakt plugin holds a sign-in for (Phase 13). */
+export interface TraktExportUser {
+    name: string;
+    /** `linked`, or `reconnect` when its sign-in could not be renewed and the plugin skips the user. */
+    state: 'linked' | 'reconnect';
+    since: string | null;
+    collections: boolean;
+    postWatched: boolean;
+}
+
+/** `GET /JellyfinMod/Trakt/Export` (Phase 13). */
+export interface TraktExport {
+    installed: boolean;
+    version: string | null;
+    minimumVersion: string;
+    autoExport: boolean;
+    running: boolean;
+    /** `not_installed`, `old_plugin`, `unknown`, `no_users` or `unwatched_history`. */
+    refusal: string | null;
+    lastRun: { status: string; startedAt: string; endedAt: string } | null;
+    /** False when the plugin completed its task but logged a Trakt error while it ran (a refused write): not delivered. */
+    lastRunConfirmed?: boolean | null;
+    nextAttemptAt: string | null;
+    failures: number;
+    quietMinutes: number;
+    users: TraktExportUser[];
+}
+
+/** `today 14:05`, `yesterday 21:40` or `12 Oct 21:40`: a short local time for the Trakt lines. */
+export const traktWhen = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const day = new Date(date);
+    day.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((today.getTime() - day.getTime()) / 86400000);
+    if (days === 0) return `today ${time}`;
+    if (days === 1) return `yesterday ${time}`;
+    return `${date.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
+};
+
+/** The Trakt section in a line, for the rail and the section's head (Phase 13). */
+export const summariseTrakt = (trakt: TraktExport | undefined): Summary => {
+    if (!trakt) return { kind: 'off', words: 'Not loaded' };
+    if (!trakt.installed) return { kind: 'off', words: 'Trakt plugin not installed' };
+    if (trakt.refusal === 'old_plugin') return { kind: 'warn', words: `Needs Trakt plugin ${trakt.minimumVersion.split('.')[0]}` };
+    const reconnect = trakt.users.filter(user => user.state === 'reconnect');
+    if (reconnect.length) return { kind: 'err', words: `Reconnect needed · ${reconnect.map(user => user.name).join(', ')}` };
+    if (trakt.refusal === 'no_users') return { kind: 'off', words: 'No account linked' };
+    if (trakt.refusal === 'unwatched_history') return { kind: 'warn', words: 'Export refused · post unwatched history is on' };
+    if (trakt.refusal) return { kind: 'warn', words: 'Trakt plugin settings unreadable' };
+    if (trakt.running) return { kind: 'busy', words: 'Exporting now' };
+    if (!trakt.autoExport) return { kind: 'off', words: 'Off · Sync Now works either way' };
+    if (trakt.lastRun && (trakt.lastRun.status !== 'Completed' || trakt.lastRunConfirmed === false)) {
+        return { kind: 'warn', words: trakt.nextAttemptAt ? `Waiting for Trakt · next try ${traktWhen(trakt.nextAttemptAt).replace(/^today /, '')}` : 'Waiting for Trakt' };
+    }
+    return { kind: 'ok', words: trakt.lastRun ? `On · last export ${traktWhen(trakt.lastRun.startedAt)}` : 'On · no export yet' };
+};
 
 /** A TV or movie library and its placeholder switch (`GET /JellyfinMod/Placeholders`). */
 export interface PlaceholderLibrary {
@@ -570,6 +634,7 @@ export const summarise = (id: string, data: SettingsData): Summary => {
         case 'retention': return summariseRetention(data);
         case 'automation': return summariseAutomation(data);
         case 'placeholders': return summarisePlaceholders(data.placeholders);
+        case 'trakt': return summariseTrakt(data.trakt);
         case 'interface': return summariseInterface(data);
         case 'diagnostics': return summariseDiagnostics(data);
         case 'ratings': return summariseRatings(data);

@@ -7,6 +7,7 @@ import * as userSettings from 'scripts/settings/userSettings';
 import { renderComponent } from 'utils/reactUtils';
 
 import HomeHero from '../components/HomeHero';
+import TraktReconnectNotice from '../components/TraktReconnectNotice';
 import { attachLegacyTopbar } from './homeChrome';
 import { composeHomeSections, unmountHomeRows } from './homeSections';
 
@@ -77,6 +78,8 @@ export default class ModHomeTab {
     private sections: HTMLElement | null;
     private heroMount: HTMLElement | null = null;
     private unmountHero: (() => void) | null = null;
+    private traktNoticeMount: HTMLElement | null = null;
+    private unmountTraktNotice: (() => void) | null = null;
     private generation = 0;
     private detachTopbar: (() => void) | null = null;
     /**
@@ -160,6 +163,10 @@ export default class ModHomeTab {
         }
         this.unmountHero?.();
         this.unmountHero = null;
+        this.unmountTraktNotice?.();
+        this.unmountTraktNotice = null;
+        this.traktNoticeMount?.remove();
+        this.traktNoticeMount = null;
         this.heroMount?.remove();
         this.heroMount = null;
         this.sections = null;
@@ -206,5 +213,12 @@ export default class ModHomeTab {
         this.heroMount = mount;
         this.unmountHero = renderComponent(HomeHero, {}, mount);
         if (layoutManager.tv) mount.classList.add('jfmod-homeHeroTv');
+        // Phase 13: the administrator's "Reconnect Trakt" notice sits under the hero, in a mount of its own that comes and
+        // goes with the hero's; it renders nothing for anyone else or while every Trakt account is fine.
+        const notice = document.createElement('div');
+        notice.className = 'jfmod-traktNoticeMount';
+        mount.after(notice);
+        this.traktNoticeMount = notice;
+        this.unmountTraktNotice = renderComponent(TraktReconnectNotice, {}, notice);
     }
 }

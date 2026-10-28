@@ -14,9 +14,11 @@ import { isSettingsProblem, type Overview, request } from './settingsApi';
 import { FOCUSABLE_SELECT, Notice } from './settingsWidgets';
 import {
     AutomationSection, ClientSection, DiagnosticsSection, DiscoverySection, GrabbingSection, ImportSection, IndexersSection, InterfaceSection,
-    OverviewSection, ProfilesSection, RatingsSection, RetentionSection, type SectionProps, type SettingsData, summarise, type PlaceholderLibrary, TvsSection
+    OverviewSection, ProfilesSection, RatingsSection, RetentionSection, type SectionProps, type SettingsData, summarise, type PlaceholderLibrary, type TraktExport,
+    TvsSection
 } from './settingsSections';
 import { PlaceholdersSection } from './PlaceholdersSection';
+import { TRAKT_POLL_MS, traktExportKey, TraktSection } from './TraktSection';
 
 import './settings.scss';
 
@@ -41,6 +43,7 @@ const SECTIONS: { id: string; title: string; Component: FC<SectionProps> }[] = [
     { id: 'placeholders', title: 'Missing Episodes', Component: PlaceholdersSection },
     // Phase 9: optional, display only; after the acquisition pipeline, before the interface.
     { id: 'ratings', title: 'Ratings', Component: RatingsSection },
+    { id: 'trakt', title: 'Trakt', Component: TraktSection },
     { id: 'interface', title: 'Interface', Component: InterfaceSection },
     { id: 'diagnostics', title: 'Diagnostics', Component: DiagnosticsSection }
 ];
@@ -77,7 +80,7 @@ export const useSettingsData = (enabled: boolean) => {
                 });
             const [overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
                 decisions, iface, reconciliation, conflicts, orphans, preview, lastRun, userList, prowlarr, placeholders, ratings,
-                ratingsStatus, tvModels] = await Promise.all([
+                ratingsStatus, tvModels, trakt] = await Promise.all([
                 get<Overview | undefined>('Settings/Overview', undefined), get('Settings/Discovery', undefined), get('Settings/SeedProtection', undefined),
                 get('Settings/Retention', undefined), get('Settings/Acquisition', undefined), get<unknown[]>('Settings/Indexers', []),
                 get<unknown[]>('Settings/DownloadClients', []), get<unknown[]>('Settings/QualityProfiles', []), get('Settings/Import', undefined),
@@ -86,13 +89,13 @@ export const useSettingsData = (enabled: boolean) => {
                 get<unknown[]>('Reconciliation/Orphans', []), get('Retention/Preview', undefined), get('Retention/Runs/Latest', undefined), users,
                 get<unknown[] | undefined>('Settings/Prowlarr', undefined), get<PlaceholderLibrary[] | undefined>('Placeholders', undefined),
                 get('Settings/Ratings', undefined), get('Ratings/Status', undefined),
-                get('Settings/TvModels', undefined)
+                get('Settings/TvModels', undefined), get<TraktExport | undefined>('Trakt/Export', undefined)
             ]);
             if (failures.includes('Settings/Overview')) throw new Error('The settings overview could not be read.');
             return {
                 overview, discovery, seed, retention, acquisition, indexers, clients, profiles, importSettings, automation, automationStatus,
                 decisions: decisions.items, iface, reconciliation, conflicts, orphans, preview, lastRun, users: userList, prowlarr, placeholders,
-                ratings, ratingsStatus, tvModels, failures, unsupported
+                ratings, ratingsStatus, tvModels, trakt, failures, unsupported
             } as SettingsData;
         }
     });
@@ -111,6 +114,17 @@ const SettingsPage: FC = () => {
     const health = usePluginHealth();
     const available = health.data?.ok === true && health.data.capabilities.includes(SETTINGS_CAPABILITY);
     const settings = useSettingsData(isAdmin && available);
+    // The Trakt export's state is read again while the settings area is open; the rail's summary and the section read the
+    // same query, so both say the same (Codex re-review P3).
+    const traktLoaded = settings.data?.trakt;
+    const traktLive = useQuery({
+        queryKey: api ? traktExportKey(api) : ['JellyfinMod', 'TraktExport'],
+        queryFn: () => request<TraktExport>(api!, 'GET', 'Trakt/Export'),
+        enabled: !!api && !!traktLoaded,
+        initialData: traktLoaded,
+        retry: false,
+        refetchInterval: TRAKT_POLL_MS
+    });
     const [params, setParams] = useSearchParams();
     const current = SECTIONS.some(section => section.id === params.get('section')) ? params.get('section')! : 'overview';
     const railRef = useRef<HTMLOListElement>(null);
@@ -158,7 +172,7 @@ const SettingsPage: FC = () => {
             <Notice notice={{ kind: 'err', text: 'The settings could not be loaded.', action: { label: 'Retry', run: retry } }} /> :
             <p className='jfmod-lead'>Loading…</p>;
     } else {
-        const data = settings.data;
+        const data = traktLive.data ? { ...settings.data, trakt: traktLive.data } : settings.data;
         const index = SECTIONS.findIndex(section => section.id === current);
         const section = SECTIONS[index];
         const next = SECTIONS[index + 1];
