@@ -1171,9 +1171,21 @@ Refresh Ratings making one call; one IMDb rating on cards; TV 1920×1080 with Pl
 popup and the remote's Back closing only it. Both environments were then restored from the baseline (no key, no override,
 no fixture title), delta keeping the build for the user.
 
-**Not run yet:** real Google Chrome, mobile and TV 1280×720, the live chain (`p9-live.py`, `p9-ratings.mjs`, written for
-the Pi's isolated instance), the physical TV, the user's own MDBList key (open question 1), and the Codex review, which runs
-once after the user approves the tested change.
+**Gate 2 on delta (items line), 2026-10-28,** against the stand-in with a generated key, one browser at a time: Playwright
+Chromium 153.0.8010.12 on a 375×812 phone (13/13: IMDb and both RT marks with Trakt giving way, a tap opens a popup that stays
+on the screen, a tap elsewhere closes it), TV 1280×720 by arrow keys, Enter and the remote's Back (17/17: the row on one line
+with all four values, Play first, Up to the group, OK opens the popup, Back closes only it, Down to the buttons, Back with no
+popup leaves the page) and the desktop light theme (11/11); real Google Chrome 156.0.8078.49 on the desktop, dark (11/11).
+Every run also checked the series page, a file-less movie's placeholder page, Refresh Ratings in the More menu (one call),
+the settings section, one IMDb rating on cards and no page errors. Screenshots and logs: the workspace's
+`reviews/phase9/matrix/`. Delta was then restored from the baseline, keeping the build.
+
+The live chain (`p9-live.py`, `p9-ratings.mjs`) was **not run**: it is bound to the Pi's 18096 (it refuses any other port, runs
+its host steps over SSH against the `jellyfinmod-test` compose service and database paths), so pointing its Refresh Ratings
+step at the More menu would not be enough to run it on a local environment.
+
+**Not run yet:** the live chain, the physical TV, the user's own MDBList key (open question 1), and the Codex review, which
+runs once after the user approves the tested change.
 
 ## Status and handover — 2026-10-07
 
