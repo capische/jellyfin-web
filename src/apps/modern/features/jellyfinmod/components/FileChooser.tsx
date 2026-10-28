@@ -298,7 +298,6 @@ const summaryLabel = (version: VersionDto) => {
  */
 const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
-    const text = describeVersion(version);
     return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
         <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
@@ -308,9 +307,9 @@ const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, so
                 <span className='jfmod-fileLine jfmod-fileLine--audio'>
                     <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).audio} /></span>
                     {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
-                    {version.tracked === false && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>not tracked yet</span>}
+                    {/* Only the removal date: torrent and bookkeeping states ("waiting for seeding", "not tracked yet") are not the
+                        viewer's business (user, 2026-10-28). */}
                     {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
-                    {!removeDate && text.retention && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{text.retention}</span>}
                 </span>
             </span>
             <FileSize version={version} />
