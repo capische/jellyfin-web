@@ -1829,7 +1829,11 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   removes nothing more (packs unchanged); turning Replace off takes the retention execution gate before it saves (order:
   settings gate, execution gate, library locks), so it waits for a removal under way and no later removal reads it on; and a
   pending replacement is refused for good once the switch is off, before any passing hold, so switching it on again never
-  revives it. Each reproduced in Phase 6 with its fix reverted.
+  revives it. Each reproduced in Phase 6 with its fix reverted. **Final re-review (one new P1, fixed):** a grab's dispatch took
+  the library lease before the settings gate, so with a switch-off waiting for a removal that waited for that library the
+  three deadlocked; the dispatch now takes the settings gate first (one order everywhere: settings gate, execution gate,
+  library locks), and a save takes the execution gate only when it turns Replace from on to off. Phase 6 runs the three at
+  once behind a held library and they all finish; with the old order they never do.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
