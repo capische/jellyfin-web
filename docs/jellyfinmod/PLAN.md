@@ -1824,7 +1824,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   that path (re-added from its seeding copy) is kept as `binding_changed`; (3) the switch is read at completion for every
   scope and again at the removal (`replace_disabled`); (4) the successor must have a video stream from its probe under the
   removal's locks, else the replacement waits and its 24-hour limit keeps the old files. An untracked version (one being
-  imported) is waited out. Each P1 reproduced in Phase 5/6 with its fix reverted. Codex re-review of the fix delta not run.
+  imported) is waited out. Each P1 reproduced in Phase 5/6 with its fix reverted. **Codex re-review (request changes), fixed:**
+  a movie's or an episode's pending replacement whose grab has no fixed targets (decided by an older build) is refused and
+  removes nothing more (packs unchanged); turning Replace off takes the retention execution gate before it saves (order:
+  settings gate, execution gate, library locks), so it waits for a removal under way and no later removal reads it on; and a
+  pending replacement is refused for good once the switch is off, before any passing hold, so switching it on again never
+  revives it. Each reproduced in Phase 6 with its fix reverted.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
