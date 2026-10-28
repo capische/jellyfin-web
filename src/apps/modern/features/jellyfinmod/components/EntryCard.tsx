@@ -1,4 +1,5 @@
 import React, { type FC, type MouseEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import CardBox from 'components/cardbuilder/Card/CardBox';
 import useCard from 'components/cardbuilder/Card/useCard';
@@ -11,12 +12,16 @@ import inputManager from 'scripts/inputManager';
 import { useQueueVisible } from '../hooks/useQueue';
 import { CardHoverGet } from '../integration/cardGetRelease';
 import { openInFlightCardMenu } from '../integration/queueActions';
+import { cardRatingValue, isKnownScale } from '../constants/ratings';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
+import type { Rating } from '../types/ratings';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import FileStateMark, { CardMarkSlot, useEntryDownload } from './FileStateMark';
+import RatingIcon from './RatingIcon';
 
 import 'components/cardbuilder/card.scss';
 import './entryCard.scss';
+import './ratings.scss';
 
 interface EntryCardProps {
     entry: Entry;
@@ -24,7 +29,39 @@ interface EntryCardProps {
     cardOptions: CardOptions;
     retention?: RetentionSummary | null;
     alwaysShowCountdown?: boolean;
+    /** The one rating the user chose for cards (P9.R7); absent unless they chose one. */
+    rating?: Rating | null;
 }
+
+/** The card rating's class: dimmed when the value is older than the refresh window, whose month it shows. */
+const cardRatingClass = (rating: Rating) => 'jfmod-cardRating' + (rating.stale ? ' jfmod-cardRating-stale' : '');
+
+/**
+ * A card's one rating: the source's mark and the value (inline design, 2026-10-08). No tooltip and no focus stop of its own:
+ * the card stays the one control, and the mark names its source for a screen reader.
+ */
+const CardRatingValue: FC<{ rating: Rating }> = ({ rating }) => <><RatingIcon rating={rating} />{cardRatingValue(rating)}</>;
+
+/**
+ * Puts the card rating into a native card's secondary text line, which upstream's card builds; a card that shows no
+ * secondary line gets one of its own in the footer. A portal, so upstream's card component is unchanged.
+ */
+const NativeCardRating: FC<{ rating: Rating }> = ({ rating }) => {
+    const anchor = useRef<HTMLSpanElement>(null);
+    const [target, setTarget] = useState<{ node: Element; own: boolean } | null>(null);
+    useLayoutEffect(() => {
+        // Upstream's React card puts its text lines straight into the card box (an outer footer only with a card layout); the
+        // secondary line is the year or the second line it chose, wherever it sits.
+        const card = anchor.current?.parentElement;
+        const secondary = card?.querySelector('.cardText-secondary');
+        const lines = card?.querySelector('.cardText')?.parentElement;
+        if (secondary) setTarget({ node: secondary, own: false });
+        else if (lines) setTarget({ node: lines, own: true });
+    }, []);
+    return <><span ref={anchor} hidden />{target && createPortal(target.own ?
+        <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}><CardRatingValue rating={rating} /></div> :
+        <span className={cardRatingClass(rating)}>{' · '}<CardRatingValue rating={rating} /></span>, target.node)}</>;
+};
 
 /** Anchored in the actual cover, so footer lengths and image shapes cannot shift the mark; placed by `CardMarkSlot` (UX §3.1). */
 const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; alwaysShowCountdown?: boolean }> = ({ entry, retention, alwaysShowCountdown }) => {
@@ -38,7 +75,7 @@ const NativeCardMark: FC<{ entry: Entry; retention?: RetentionSummary | null; al
     </CardMarkSlot>}</>;
 };
 
-const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, nativeItem, cardOptions, retention, alwaysShowCountdown }) => {
+const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, nativeItem, cardOptions, retention, alwaysShowCountdown, rating }) => {
     const { getCardWrapperProps, getCardBoxProps } = useCard({ item: nativeItem, cardOptions });
     const { className, dataAttributes } = getCardWrapperProps();
     const entryClassName = className + ' jfmod-entryCard';
@@ -49,6 +86,7 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
     const content = <>
         <CardBox {...getCardBoxProps()} />
         <NativeCardMark entry={entry} retention={retention} alwaysShowCountdown={alwaysShowCountdown} />
+        {rating && <NativeCardRating rating={rating} />}
     </>;
     return layoutManager.tv ?
         <button className={entryClassName} type='button' aria-label={entry.title} data-jfmod-tmdb-id={entry.tmdbId} {...dataAttributes} {...noFile}>{content}</button> :
@@ -86,7 +124,7 @@ const useInFlightMenu = (entry: Entry, pending: boolean) => {
 };
 
 /** File-less cards expose only an entry link; native actions require a real item. */
-const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, alwaysShowCountdown }) => {
+const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, alwaysShowCountdown, rating }) => {
     const requestedShape = cardOptions.shape;
     const shape = requestedShape && ![CardShape.Auto, CardShape.AutoHome, CardShape.AutoOverflow, CardShape.AutoVertical, CardShape.Mixed].includes(requestedShape) ?
         requestedShape : CardShape.Portrait;
@@ -115,7 +153,12 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
             </div>
             {!cardOptions.overlayText && <div className='cardFooter'>
                 {cardOptions.showTitle !== false && <div className='cardText cardTextCentered'>{entry.title}</div>}
-                {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>{entry.year}</div>}
+                {cardOptions.showYear && entry.year && <div className='cardText cardTextCentered cardText-secondary'>
+                    {entry.year}
+                    {rating && <span className={cardRatingClass(rating)}>{' · '}<CardRatingValue rating={rating} /></span>}
+                </div>}
+                {rating && !(cardOptions.showYear && entry.year) && <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}>
+                    <CardRatingValue rating={rating} /></div>}
             </div>}
         </div>
     );
@@ -132,8 +175,12 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
             {...menu}>{content}</a>;
 };
 
-const EntryCard: FC<EntryCardProps> = props => props.nativeItem ?
-    <NativeEntryCard {...props} nativeItem={props.nativeItem} /> :
-    <FilelessEntryCard {...props} />;
+const EntryCard: FC<EntryCardProps> = ({ rating, ...rest }) => {
+    // A value in a scale this release does not know is not shown, on cards as on detail pages (web review 2026-10-07 round 2).
+    const props = { ...rest, rating: rating && isKnownScale(rating.scale) ? rating : null };
+    return props.nativeItem ?
+        <NativeEntryCard {...props} nativeItem={props.nativeItem} /> :
+        <FilelessEntryCard {...props} />;
+};
 
 export default EntryCard;
