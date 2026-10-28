@@ -42,6 +42,8 @@ export interface VersionDto {
     inProgress?: boolean;
     /** `S01E01-E02` for a file holding several episodes. */
     episodeRange?: string | null;
+    /** The file phones play, on a title with two or more files (Phase 12 M31); absent before `copies`. */
+    phoneCopy?: boolean;
 }
 
 /** What Remove this version did (V1). */

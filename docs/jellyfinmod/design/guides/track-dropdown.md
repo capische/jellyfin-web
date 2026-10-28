@@ -18,8 +18,12 @@ D106, D107): built 2026-10-29, gate 1. **Fixed cells whatever the file (None whe
 marks' type** (the user, 2026-10-29; D131, D132): built 2026-10-29, gate 1. **Grey hover and focus on the other Video
 rows** (the user, 2026-10-30; D145): built 2026-10-30, gate 1. **The chosen track's extra words on the closed cell's caption
 line** (the user, 2026-10-30: "Love it. Accepted."; D137, D147): built 2026-10-30, gate 1.
+**The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
+`reviews/phase12/mockups/4-video-dropdown.html`): built 2026-10-29, not accepted. The mockup's *Get 1080p for Phones* row is
+dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
-Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
+Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/PhoneMark.tsx` + `phoneMark.scss`
+(`.jfmod-phoneMark`), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
 `.jfmod-videoTrigger`, `.jfmod-trackTrigger`, `.jfmod-trackStatic`, `.jfmod-stripBelow`, `.jfmod-fileList*`,
 `.jfmod-trackMenuPaper`, `.jfmod-trackItem`, `--on`, `--two`, `.jfmod-trackRun`, `.jfmod-trackExtra`, `.jfmod-trackLang`,
@@ -82,7 +86,13 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   keyboard and TV focus `var(--jf-palette-action-focus)` (12 %); the current file keeps its blue under the pointer; then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
   list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
-  another quality. The rows' text starts where the segment's does (.735em in).
+  another quality. The rows' text starts where the segment's does (.735em in). Sorted best first, as Jellyfin lists the versions: the top file is
+  the one TVs and computers play, and nothing names it (no "Best copy" or "Mobile copy" flag, D51).
+- **The phone mark** (D52): on a title with two or more files, the one file phones play (the plugin's `phoneCopy`: the best file at
+  1080p or below, SDR first) carries Material `smartphone` right after its resolution, inside the 600 word (`.jfmod-phoneMark`:
+  an inline SVG 1.05em square, `currentColor`, opacity .86, `margin-left .28em`, `vertical-align -.15em`), in its row and in the
+  closed Video value when it is the selected file; `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
+  on the TV). No mark on a single file.
 - **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): **exactly the cell** (D75). The theme paper,
   `1px solid var(--jf-palette-divider)` inside that width (`border-box`), **max-height 20em, scrolling** (D83), opened on the
   current entry (D7). MUI rounds the popover's top to a whole pixel, so it may sit up to half a pixel over the strip's border.
