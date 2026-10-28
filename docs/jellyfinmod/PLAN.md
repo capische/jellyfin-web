@@ -1817,6 +1817,14 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   ended it is an ordinary download. Live on beta: that Replace imported the seeding copy (no new torrent; 4 torrents
   before and after) and removed `v1.avi`, whose own torrent keeps seeding. Phase 6 covers +, Replace and the refusal from
   seeding copies a Replace removed.
+  **Codex review 2026-10-28 (request changes, four plugin P1s; web clean), fixed:** (1) a movie's or an episode's Replace
+  fixes its targets when the grab or the re-import is admitted (`GrabOperations.ReplaceTargets`, forward-only migration
+  `GrabReplaceTargets`), so a version added while it downloads stays; a pack still fixes each episode's targets when its
+  import completes (its accepted behaviour); (2) a replacement removes only the binding it chose, so a file bound again at
+  that path (re-added from its seeding copy) is kept as `binding_changed`; (3) the switch is read at completion for every
+  scope and again at the removal (`replace_disabled`); (4) the successor must have a video stream from its probe under the
+  removal's locks, else the replacement waits and its 24-hour limit keeps the old files. An untracked version (one being
+  imported) is waited out. Each P1 reproduced in Phase 5/6 with its fix reverted. Codex re-review of the fix delta not run.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
