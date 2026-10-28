@@ -1807,6 +1807,16 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   names the count: "Replace 3 Files" and "Replace the 3 files of this movie?" ([API.md](API.md) *addVersion*). Phase 6 suite
   extended (modes, the refusal, the late switch-off, a three-file replace, Keep); Phase 5 passes unchanged. **Not run:**
   phone, TV, light, real Chrome, a real movie replace live, Codex review.
+  **Re-import as another version (P4.FU29 with P6.M6, user 2026-10-28** on beta: Replace on The Matrix's seeding "BDRip 1080p,
+  HEVC, 60 FPS" showed no progress, refused `duplicate_hash`; and "when replace download is done - it can be reused in get a
+  new quality"): Add and Replace in Get Another Quality on a release this plugin still seeds for the title, whose library
+  file is gone (deleted, or removed by a Replace), import it again from the seeding copy as another version, under every
+  P4.FU29 guard; the earlier grab takes the request's mode, so Replace removes what the title holds once the copy is bound
+  and Add keeps it. A copy whose file is still bound answers 409 `duplicate_hash` "This release is already in your
+  library.". A Replace leaves the replaced file's torrent seeding, so it can be reused this way; once its seed release has
+  ended it is an ordinary download. Live on beta: that Replace imported the seeding copy (no new torrent; 4 torrents
+  before and after) and removed `v1.avi`, whose own torrent keeps seeding. Phase 6 covers +, Replace and the refusal from
+  seeding copies a Replace removed.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
