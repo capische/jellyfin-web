@@ -33,7 +33,8 @@ import './dpadModals.scss';
  *
  * Outside a pop-up, on the TV layout, Enter toggles a focused checkbox or switch too (the settings area's switches): once per
  * press, never for a refused (`aria-disabled`) one, and never for one whose own handler took the Enter already
- * (`emby-checkbox`, a switch with its own Enter handler).
+ * (`emby-checkbox`, a switch with its own Enter handler). Up and Down pass over a closed select instead of opening it; Enter
+ * opens it.
  *
  * One mechanism for every MUI pop-up the mod shows on a TV — the library grid's sort, view, filter and view menus
  * today, the settings area and the wizard next — installed once, with no change to upstream components.
@@ -59,6 +60,9 @@ const NAVIGABLE_SELECTOR = [
 ].join(',');
 
 const TOGGLE_SELECTOR = 'input[type="checkbox"], input[type="radio"]';
+
+/** A closed MUI select's field: MUI opens it on Up and Down as well as on Enter. */
+const SELECT_SELECTOR = '.MuiSelect-select[role="combobox"]';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -195,6 +199,20 @@ const toggleInModal = (e: KeyboardEvent, modal: HTMLElement) => {
     if (!e.repeat) toggle.click();
 };
 
+/**
+ * Outside a pop-up on the TV, Up and Down pass over a closed select like over any other field, through the same
+ * spatial navigation upstream's keyboard handler uses; MUI would open the menu on them and trap the remote. Enter (OK)
+ * still opens it, and inside the open menu the pop-up rules above apply.
+ */
+const passOverSelect = (e: KeyboardEvent, key: string) => {
+    const direction = DIRECTIONS[key];
+    const target = e.target as HTMLElement | null;
+    if ((direction !== 'up' && direction !== 'down') || !target?.matches?.(SELECT_SELECTOR)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    inputManager.handleCommand(direction);
+};
+
 /** Close the top pop-up the way MUI expects to be closed from the keyboard: an Escape inside it. */
 export const closeTopModal = (): boolean => {
     const modal = getTopModal();
@@ -214,10 +232,12 @@ export const closeTopModal = (): boolean => {
 const onKeyDown = (e: KeyboardEvent) => {
     if (closing || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
 
-    const modal = getTopModal();
-    if (!modal) return;
-
     const key = getKeyName(e) || e.key;
+    const modal = getTopModal();
+    if (!modal) {
+        if (layoutManager.tv) passOverSelect(e, key);
+        return;
+    }
 
     if (isBackKey(key) || isBackKey(e.key)) {
         // Before upstream's handler turns it into a navigation, and before MUI sees it.
@@ -281,7 +301,7 @@ const onFocusIn = (e: FocusEvent) => {
     }, 0);
 };
 
-/** Installs the handlers once for the lifetime of the page. Apart from Enter on a TV's checkbox, they act only while an MUI pop-up is open. */
+/** Installs the handlers once for the lifetime of the page. Apart from a TV's checkbox and select, they act only while an MUI pop-up is open. */
 export const installDpadModals = () => {
     if (installed) return;
     installed = true;

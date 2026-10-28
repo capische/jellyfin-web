@@ -1787,7 +1787,10 @@ explicit that TV bugs are only reachable by D-pad at 1920x1080.
    checkbox or switch anywhere on the TV layout, once per press (a held OK's repeats are ignored), and
    leaves alone one whose own handler took the Enter (`emby-checkbox`, or a switch with its own Enter
    handler). A switch that saves at once stays focusable while it saves (`aria-disabled` on its input
-   and a guard in its handler, not `disabled`), so the focus stays on it.
+   and a guard in its handler, not `disabled`), so the focus stays on it. A closed select outside a
+   pop-up is passed over by Up and Down like any other field (MUI would open its menu on them and
+   trap the remote; user 2026-10-28: "fix the dropdowns too"); OK opens it, and the open menu follows
+   rule 9.
 
 **Proposed (review 2026-09-18, not user-approved):** additional TV rules from
 [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), tracked as T19 in `PHASE3.md` and W9 and W11 in
