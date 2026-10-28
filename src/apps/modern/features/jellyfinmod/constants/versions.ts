@@ -202,7 +202,7 @@ export const describeVersion = (version: VersionDto) => {
 /** Picker and More menu sentences for an `addVersion` refusal the server can send. */
 export const ADD_VERSION_UNAVAILABLE = new Map([
     ['no_playable_version', 'This title has no playable version yet. Use Search releases instead.'],
-    ['episode_versions_unsupported', 'Another version of an episode cannot be added while episode upgrades are off.'],
+    ['episode_versions_unsupported', 'Another version of an episode cannot be added while “Upgrade episodes and allow Replace” is off.'],
     ['held_quality', 'This quality is already in the library.']
 ]);
 
