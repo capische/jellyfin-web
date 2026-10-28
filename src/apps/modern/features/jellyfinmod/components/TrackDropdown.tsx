@@ -7,12 +7,10 @@ import { useQuery } from '@tanstack/react-query';
 import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import layoutManager from 'components/layoutManager';
-
 import { getLanguageNames } from '../api/modApi';
 import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackRole } from '../constants/tracks';
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
-import type { StripHosts } from './FileChooser';
+import { listPlace, type StripHosts } from './FileChooser';
 import { MediaMarks } from './ReleaseRowParts';
 
 import './fileChooser.scss';
@@ -128,22 +126,6 @@ const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undef
         </span>
         {role && <RoleMark role={role} />}
     </>;
-};
-
-/**
- * Where a cell's list goes (D75): exactly under its cell, from the divider on its left to its right edge, the last cell's to the
- * strip's outer border; on the phone, under the stacked row, the card's width.
- */
-const listPlace = (trigger: HTMLElement) => {
-    const cell = trigger.closest<HTMLElement>('.jfmod-stripSegment') ?? trigger;
-    const strip = cell.closest<HTMLElement>('.jfmod-strip');
-    const box = cell.getBoundingClientRect();
-    if (!strip) return { top: box.bottom, left: box.left, width: box.width };
-    const outer = strip.getBoundingClientRect();
-    if (layoutManager.mobile) return { top: box.bottom, left: outer.left, width: outer.width };
-    let next = cell.nextElementSibling;
-    while (next && !next.childElementCount) next = next.nextElementSibling;
-    return { top: outer.bottom, left: box.left, width: (next ? box.right : outer.right) - box.left };
 };
 
 interface TrackDropdownProps {
