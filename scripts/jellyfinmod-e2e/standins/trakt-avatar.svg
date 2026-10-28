@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- A sample profile picture (a landscape), standing in for the avatar Trakt returns. Not a real account's image. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6a35b"/><stop offset="1" stop-color="#e2557a"/></linearGradient>
+  </defs>
+  <rect width="96" height="96" fill="url(#sky)"/>
+  <circle cx="62" cy="36" r="12" fill="#ffe1a8"/>
+  <path d="M0 70 L22 46 L38 60 L56 40 L96 74 L96 96 L0 96 Z" fill="#5b2a5e"/>
+  <path d="M0 82 L30 64 L52 78 L74 62 L96 80 L96 96 L0 96 Z" fill="#2e1838"/>
+</svg>

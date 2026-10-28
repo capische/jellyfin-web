@@ -27,7 +27,7 @@ const LAYOUTS = {
     tv720: { viewport: { width: 1280, height: 720 }, tv: true }
 };
 const only = process.env.P13_LAYOUTS?.split(',').map(name => name.trim()).filter(Boolean);
-const RUNS = [['desktop', 'dark'], ['desktop', 'light'], ['mobile', 'dark'], ['tv1080', 'dark'], ['tv720', 'dark']]
+const RUNS = [['desktop', 'dark'], ['desktop', 'light'], ['mobile', 'dark'], ['mobile', 'light'], ['tv1080', 'dark'], ['tv720', 'dark']]
     .filter(([layout]) => !only?.length || only.includes(layout));
 
 const results = [];
@@ -124,11 +124,15 @@ const audit = page => page.evaluate(() => {
         const b = lum(backgroundOf(element));
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     };
-    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label')].filter(node => node.offsetParent);
-    const buttons = [...section.querySelectorAll('button, a.MuiButton-root')].filter(node => node.offsetParent && !node.closest('.jfmod-check-secfoot'));
+    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label, .jfmod-traktHandle, .jfmod-runWhat, .jfmod-activityTitle, .jfmod-activityHint')].filter(node => node.offsetParent);
+    // The section's buttons and round icons; the Activity disclosure is a group title (its own guide), measured apart.
+    const buttons = [...section.querySelectorAll('button, a.MuiButton-root')].filter(node => node.offsetParent && !node.closest('.jfmod-check-secfoot') &&
+        !node.classList.contains('jfmod-activityToggle'));
+    const toggle = section.querySelector('.jfmod-activityToggle');
     return {
         overflow: document.scrollingElement.scrollWidth - window.innerWidth,
-        buttons: buttons.map(node => ({ text: node.textContent.trim(), height: Math.round(node.getBoundingClientRect().height) })),
+        buttons: buttons.map(node => ({ text: node.getAttribute('aria-label') || node.textContent.trim(), height: Math.round(node.getBoundingClientRect().height) })),
+        toggle: toggle ? Math.round(toggle.getBoundingClientRect().height) : null,
         weakest: Math.min(...texts.map(ratio)),
         weakestText: texts.map(node => ({ node, value: ratio(node) })).sort((a, b) => a.value - b.value).slice(0, 1)
             .map(({ node, value }) => `${node.className || node.tagName} "${node.textContent.trim().slice(0, 40)}" ${value.toFixed(2)}`)[0] ?? '',
@@ -195,6 +199,93 @@ async function tvHold(page, where) {
     await until('the setting put back', async () => (await jf('GET', '/JellyfinMod/Trakt/Export')).autoExport === before, 8000, 500).catch(() => false);
 }
 
+/** The account row on any layout: avatar, "oleksii · <username> on Trakt", the round Disconnect, and where it sits. */
+const accountRow = page => page.evaluate(() => {
+    const row = document.querySelector('[data-jfmod-trakt-user="oleksii"]');
+    if (!row) return null;
+    const box = node => node?.getBoundingClientRect();
+    const icon = row.querySelector('[data-jfmod-trakt-disconnect="oleksii"]');
+    const title = row.querySelector('strong');
+    const avatar = row.querySelector('.jfmod-traktAvatar');
+    return {
+        title: title?.textContent ?? '', avatar: avatar?.tagName ?? '', iconLabel: icon?.getAttribute('aria-label') ?? '',
+        icon: { top: Math.round(box(icon).top), bottom: Math.round(box(icon).bottom), right: Math.round(box(icon).right), size: Math.round(box(icon).height) },
+        titleBottom: Math.round(box(title).bottom), rowRight: Math.round(box(row).right), avatarSize: Math.round(box(avatar).height),
+        red: getComputedStyle(icon).backgroundColor
+    };
+});
+
+/** Opens Activity with the pointer or the remote, checks it, screenshots it and closes it again. */
+async function openActivity(page, where, file, remote) {
+    if (remote) {
+        await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.focus());
+        await page.keyboard.press('Enter');
+    } else {
+        await page.locator('.jfmod-activityToggle').click();
+        await page.mouse.move(2, 2);
+    }
+    await page.waitForTimeout(500);
+    const open = await page.evaluate(() => ({
+        expanded: document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'),
+        runs: document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-scrolllist [data-jfmod-trakt-run]').length,
+        overflow: document.scrollingElement.scrollWidth - window.innerWidth
+    }));
+    verify(where, 'Activity opens and lists the runs', open.expanded === 'true' && open.runs > 0 && open.overflow <= 1, JSON.stringify(open));
+    const geometry = await audit(page);
+    verify(where, 'Activity text keeps 4.5:1', geometry.weakest >= 4.5, geometry.weakestText);
+    await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: join(out, file) });
+    return open;
+}
+
+/** TV: OK on Disconnect opens the confirmation on Cancel; Right reaches Disconnect, Left comes back; Back closes it. */
+async function tvDisconnect(page, where) {
+    // The section's actions wait while a change of the switch is saved (the previous check's last press).
+    await page.waitForFunction(() => document.querySelector('[data-jfmod-trakt-disconnect="oleksii"]')?.getAttribute('aria-disabled') !== 'true', undefined, { timeout: 10000 });
+    await page.evaluate(() => document.querySelector('[data-jfmod-trakt-disconnect="oleksii"]')?.focus());
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-jfmod-confirm]', { timeout: 8000 }).catch(() => null);
+    await page.waitForTimeout(500);
+    const first = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-confirm') ?? '');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(250);
+    const right = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-confirm') ?? '');
+    await page.screenshot({ path: join(out, `tv-confirm-${where.replace(/\//g, '-')}.png`) });
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(250);
+    const left = await page.evaluate(() => document.activeElement?.getAttribute('data-jfmod-confirm') ?? '');
+    verify(where, 'OK on Disconnect opens the confirmation on Cancel; Right reaches Disconnect, Left comes back', first === 'cancel' && right === 'confirm' && left === 'cancel', `${first} → ${right} → ${left}`);
+    await pressRemoteBack(page);
+    await page.waitForTimeout(800);
+    const after = await page.evaluate(() => ({
+        open: !!document.querySelector('[data-jfmod-confirm]'),
+        focus: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName
+    }));
+    const still = (await jf('GET', '/JellyfinMod/Trakt/Export')).users.some(user => user.name === 'oleksii');
+    verify(where, 'Back closes it, nothing is disconnected, focus returns to Disconnect', !after.open && still && after.focus === 'Disconnect Trakt for oleksii', JSON.stringify(after));
+}
+
+/** TV: OK on the Activity header opens it; Down reaches the list, whose arrows scroll it; OK on the header closes it. */
+async function tvActivity(page, where) {
+    await openActivity(page, where, `tv-activity-${where.replace(/\//g, '-')}.png`, true);
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(300);
+    const list = await page.evaluate(() => {
+        const active = document.activeElement;
+        return { region: active?.getAttribute('role') === 'region' && !!active.closest('[data-jfmod-trakt="activity"]'), top: active?.scrollTop ?? -1,
+            room: active ? active.scrollHeight - active.clientHeight : 0 };
+    });
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(300);
+    const scrolled = await page.evaluate(() => document.activeElement?.scrollTop ?? -1);
+    verify(where, 'Down reaches the run list, and its arrows scroll it', list.region && (list.room <= 1 || scrolled > list.top), JSON.stringify({ ...list, scrolled }));
+    await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.focus());
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    verify(where, 'OK on the header closes Activity', await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded')) === 'false');
+}
+
 async function tvWalk(page) {
     // From the section's heading, Down walks the section's stops in order; the switch, Sync Now and (when shown)
     // Reconnect Trakt must each take the focus, then Back leaves the settings page.
@@ -206,7 +297,9 @@ async function tvWalk(page) {
         const label = await page.evaluate(() => {
             const active = document.activeElement;
             if (!active?.closest('.jfmod-check-section[data-section="trakt"]')) return null;
-            return active.type === 'checkbox' ? 'switch' : active.textContent.trim();
+            if (active.type === 'checkbox') return 'switch';
+            if (active.classList.contains('jfmod-activityToggle')) return 'Activity';
+            return active.getAttribute('aria-label') || active.textContent.trim();
         });
         if (label && !seen.includes(label)) seen.push(label);
     }
@@ -235,6 +328,8 @@ try {
             await authorize(7776000);
             await until('linked', async () => (await jf('GET', '/JellyfinMod/Trakt/Export')).users.every(user => user.state === 'linked'));
         }
+        // A new link makes the server read the Trakt profile again (within a minute at the real pace).
+        await until('the Trakt profile', async () => !!(await jf('GET', '/JellyfinMod/Trakt/Export')).users[0]?.avatarUrl, 180000, 3000);
         for (const [layout, theme] of RUNS) {
             const where = `${state}/${layout}/${theme}`;
             const { context, page, errors } = await open(browser, layout, theme, '#/catalog/settings?section=trakt');
@@ -245,17 +340,28 @@ try {
                 // The settings area's own buttons (Missing Episodes' Sync Now, Save) measure 35 px on a computer, 34 on the phone.
                 verify(where, 'section buttons the settings area\'s size (34 px or more)', geometry.buttons.every(button => button.height >= 34), JSON.stringify(geometry.buttons));
                 verify(where, 'section text keeps 4.5:1', geometry.weakest >= 4.5, geometry.weakestText);
+                verify(where, 'the Activity header is a target of 24 px or more', (geometry.toggle ?? 0) >= 24, `${geometry.toggle} px`);
                 verify(where, state === 'reconnect' ? 'Reconnect needed with Reconnect Trakt' : 'linked account, no reconnect notice',
                     state === 'reconnect' ? /Trakt gets nothing from oleksii/.test(geometry.text) && geometry.buttons.some(button => button.text === 'Reconnect Trakt') :
                         /Linked/.test(geometry.text) && !/Trakt gets nothing/.test(geometry.text));
+                const row = await accountRow(page);
+                verify(where, 'the account row: avatar, "oleksii · p13-standin on Trakt", a round red Disconnect of 40 px or more',
+                    !!row && row.avatar === 'IMG' && row.title === 'oleksii · p13-standin on Trakt' && row.iconLabel === 'Disconnect Trakt for oleksii' && row.icon.size >= 40 &&
+                        row.red === 'rgb(198, 40, 40)', JSON.stringify(row));
+                if (layout === 'mobile') {
+                    verify(where, 'phone: Disconnect goes under the text at the right', !!row && row.icon.top >= row.titleBottom && row.rowRight - row.icon.right <= 2, JSON.stringify(row?.icon));
+                }
+                if (!LAYOUTS[layout].tv && state === 'linked') await openActivity(page, where, `activity-${layout}-${theme}.png`, false);
                 if (LAYOUTS[layout].tv) {
                     const walk = await tvWalk(page);
-                    const wanted = ['switch', 'Sync Missing Watches Now', ...(state === 'reconnect' ? ['Reconnect Trakt'] : [])];
+                    const wanted = ['switch', 'Sync Missing Watches Now', ...(state === 'reconnect' ? ['Reconnect Trakt'] : []), 'Disconnect Trakt for oleksii', 'Activity'];
                     verify(where, 'D-pad Down reaches every stop of the section', wanted.every(stop => walk.includes(stop)), walk.join(' → '));
                     if (state === 'linked') {
                         await tvToggle(page, where, 'Enter');
                         await tvToggle(page, where, 'Space');
                         await tvHold(page, where);
+                        await tvDisconnect(page, where);
+                        await tvActivity(page, where);
                     }
                     const before = await page.evaluate(() => location.hash);
                     await pressRemoteBack(page);
