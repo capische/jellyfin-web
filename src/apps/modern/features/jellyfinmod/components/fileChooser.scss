@@ -43,6 +43,17 @@
     flex: 1 1 auto;
 }
 
+// Audio and Subtitles are cells of a fixed width, Video takes the rest (D75, D77, D80: Subtitles 13.2em for the FORCED badge).
+// The width holds the divider on the left. On the phone every cell is the card's width.
+.jfmod-stripSegment--audio,
+.jfmod-stripSegment--subtitles {
+    flex: none;
+    box-sizing: border-box;
+}
+
+.jfmod-stripSegment--audio { width: 17.8em; }
+.jfmod-stripSegment--subtitles { width: 13.2em; }
+
 .jfmod-stripSegment:empty {
     display: none;
 }
@@ -54,6 +65,11 @@
 // The phone stacks the segments into rows of the same card (D4).
 .layout-mobile .jfmod-strip {
     flex-direction: column;
+}
+
+.layout-mobile .jfmod-stripSegment--audio,
+.layout-mobile .jfmod-stripSegment--subtitles {
+    width: auto;
 }
 
 .layout-mobile .jfmod-stripSegment:not(:empty) ~ .jfmod-stripSegment {
@@ -121,9 +137,17 @@
     opacity: 0.7;
 }
 
-// Audio's and Subtitles' chevron follows the value, as their segment sizes to it.
+// Audio's and Subtitles' chevron sits at the fixed cell's right end; the value before it never pushes it out (D78).
 .jfmod-trackTrigger .jfmod-videoChevron {
-    margin-left: 0.3em;
+    flex: none;
+    margin: 0 -0.25em 0 auto;
+    padding-left: 0.2em;
+}
+
+// The cell's value (D76, D78): language and modifier shrink first (the modifier wraps out of sight, then the language is cut),
+// the marks and the role mark never.
+.jfmod-trackTrigger .jfmod-videoTriggerText {
+    flex: 0 1 auto;
 }
 
 // A track upstream does not let you change (one audio track): the same segment, no chevron, not a focus stop.
@@ -136,15 +160,16 @@
     }
 }
 
-// The Audio and Subtitles list: a paper popover under its segment, right-aligned with it, at least as wide and at most 34em
-// (D6), drawn like the Video list (the paper colour, a hairline border, rows of the same height), at most 20em tall and
-// scrolling (D7); the current entry has a blue left bar (the settings area's predefined picker's bar).
+// The Audio and Subtitles list: a paper popover exactly as wide as its cell and under it (D75, placed by the component), drawn
+// like the Video list (the paper colour, a hairline border), at most 20em tall and scrolling (D7, D83); the current entry has a
+// blue left bar (the settings area's predefined picker's bar).
 .jfmod-trackMenuPaper.MuiPaper-root {
     --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
-    max-width: 34em;
     max-height: 20em;
     margin-top: 0.25em;
+    // The width the component gives is the cell's, border included.
+    box-sizing: border-box;
     border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
     border-radius: 0.2em;
     background-color: var(--jf-palette-background-paper, #202020);
@@ -155,26 +180,39 @@
     }
 }
 
+// A row is drawn as the cell's value (D76): the same run, packed left to right, its text starting where the cell's does (the
+// cell's .6em padding and its .135em divider, less the list's 1px border and the .2em bar); no columns.
 .jfmod-trackMenu .jfmod-trackItem {
     min-height: 0;
-    // The text starts as a segment's does (its 0.6em inset), the bar inside it.
-    padding: 0.45em 0.8em 0.45em calc(0.6em - 1px - 0.2em);
+    padding: 0.45em 0.5em 0.45em calc(0.735em - 1px - 0.2em);
     border-left: 0.2em solid transparent;
     overflow: hidden;
     font: inherit;
+    line-height: 1.5;
     white-space: nowrap;
-
-    > span {
-        flex-shrink: 0;
-    }
 }
 
-// A long title is cut with an ellipsis, last, so the language, the marks and the flags stay (D5).
-.jfmod-trackMenu .jfmod-trackItem > .jfmod-trackTitle {
-    flex-shrink: 1;
+// A row whose title adds words (a dub's studio, a commentary's speakers): its run, then those words on a tiny second line
+// (D81 option A), cut with an ellipsis.
+.jfmod-trackMenu .jfmod-trackItem--two {
+    display: block;
+}
+
+.jfmod-trackRun {
+    display: flex;
+    align-items: center;
     min-width: 0;
+}
+
+.jfmod-trackExtra {
+    display: block;
+    margin-top: -0.05em;
+    font-size: 0.72em;
+    line-height: 1.3;
+    opacity: 0.62;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .jfmod-trackMenu .jfmod-trackItem--on {
@@ -285,6 +323,71 @@ $text-inset: 0.735em;
 .jfmod-trackLanguage {
     margin-right: 0.8em;
     font-weight: 600;
+}
+
+// A track's language and its short modifier (D60). When the cell is too narrow the modifier wraps onto a second line that the
+// 1.5em box hides, then the language is cut with an ellipsis (D78; CSS only, works on Chrome 79).
+.jfmod-trackLang {
+    display: inline-flex;
+    flex-wrap: wrap;
+    height: 1.5em;
+    margin-right: 0.6em;
+    overflow: hidden;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.jfmod-trackLang > .jfmod-trackLanguage {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-right: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jfmod-trackMod {
+    flex: none;
+    margin-left: 0.25em;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+// The row's one role mark (D61, D79, D80): outlined like the channel tag (the role family outlined, the format family filled),
+// the chips' height, the text colour at 82 %; the commentary bubble is a glyph.
+.jfmod-trackRoles {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.15em;
+    font-size: 130%;
+}
+
+.jfmod-trackRole {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.3em;
+    padding: 0.1em 0.4em 0;
+    border: 0.1em solid currentColor;
+    border-radius: 0.3em;
+    box-sizing: border-box;
+    font-size: 52%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.82;
+    white-space: nowrap;
+}
+
+.jfmod-trackRole--glyph {
+    height: 1.5em;
+    padding: 0;
+    border: 0;
+
+    > svg {
+        display: block;
+        width: 1.71em;
+        height: 1.5em;
+        fill: currentColor;
+    }
 }
 
 // A file's row (P7.FU6): its video, a hairline, its audio and extras; the size right-aligned before its icons.
@@ -487,4 +590,19 @@ $text-inset: 0.735em;
 .trackSelections.hide ~ .jfmod-strip,
 .trackSelections.hide ~ .jfmod-stripBelow {
     display: none;
+}
+
+// The run's pieces: the language (and modifier) shrink, the marks and the role mark keep their size.
+.jfmod-trackItem > .jfmod-trackLang,
+.jfmod-trackRun > .jfmod-trackLang,
+.jfmod-videoTriggerText > .jfmod-trackLang {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.jfmod-trackItem > .jfmod-fileMarks,
+.jfmod-trackRun > .jfmod-fileMarks,
+.jfmod-videoTriggerText > .jfmod-fileMarks,
+.jfmod-trackRoles {
+    flex: none;
 }

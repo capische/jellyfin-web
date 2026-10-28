@@ -6,7 +6,10 @@ Built on `next-release`. Records: [release picker note](../release-picker-design
 [UX.md §9 and §11.2](../../UX.md). Code: `components/ReleaseRowParts.tsx` (`MediaMarks`, `chipMark`),
 `components/releasePicker.scss` (`.jfmod-releaseMark*`, `.jfmod-releaseTag*`, `.jfmod-releaseJoin`,
 `.jfmod-releaseDivider`), SVGs in `assets/media-marks/` (`dolby-dd.svg`, `dolby-ddplus.svg`, `dolby-half.svg`,
-`dts-family.svg`).
+`dts-family.svg`). **Role marks** for a track's role (the track rows redesign, user's picks 2026-10-29, decisions D61–D63,
+D79, D80 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`): **built 2026-10-29, gate 1, awaiting the user's approval**;
+code `constants/tracks.ts` (`trackRole`), `components/TrackDropdown.tsx` (`RoleMark`), `components/fileChooser.scss`
+(`.jfmod-trackRoles`, `.jfmod-trackRole`, `--glyph`).
 
 ## What it is
 
@@ -59,3 +62,16 @@ The first matching audio format wins; Atmos is a mark of its own beside it. A fo
 - Marks wrap as a group only where the design says so (the picker's line 2, the chooser's phone rows); elsewhere they are
   `nowrap` and are cut before a number beside them (a file size) is.
 - The assets are trademarks drawn monochrome; the text-only fallback is the same chip without the icon.
+
+## Role marks (Audio and Subtitles rows)
+
+- **What:** one mark per track row saying what the track is for, after its format marks: audio `AD` (audio description), the
+  commentary bubble, or the translation type as the release writes it (`DUB`, `MVO`, `DVO`, `AVO`, `VO`); subtitles `SIGNS`
+  (the title says signs / songs / S&S / надписи), `FORCED` (the flag, or "forced"), `SDH` (hearing impaired, CC, HI).
+- **Which one** (D63): the first that applies — audio AD › Commentary › translation; subtitles SIGNS › FORCED › SDH. Stream flags
+  first (`IsForced`, `IsHearingImpaired`), then title words in en, ru, uk, de, fr, es, it, pt, ja (`trackRole`); a bare "VO" is
+  never read.
+- **Look:** the role family is outlined, the format family filled: a word mark is the channel tag standalone (`.jfmod-trackRole`:
+  height 1.3em, `padding .1em .4em 0`, `border .1em solid currentColor`, radius .3em, 52 %, 700, letter-spacing .05em, 82 %)
+  inside `.jfmod-trackRoles` (130 %, `.15em` after the marks); the commentary bubble (`--glyph`) is a filled 16×14 glyph, 1.5em
+  tall, no border. `currentColor` throughout; the role's name is its tooltip.
