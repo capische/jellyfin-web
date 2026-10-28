@@ -1834,6 +1834,43 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   three deadlocked; the dispatch now takes the settings gate first (one order everywhere: settings gate, execution gate,
   library locks), and a save takes the execution gate only when it turns Replace from on to off. Phase 6 runs the three at
   once behind a held library and they all finish; with the old order they never do.
+  **P6.M6 follow-up, built (not accepted) 2026-10-28 overnight: the upgrade status and the track strip** (the user's picks
+  2026-10-28: option 3 for "a title that already plays, with another copy on its way", strip B with the tightened lists of
+  approach 1; overnight decisions D4-D13 and D27-D38 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`; mockups
+  `reviews/upgrade-status-options/` and `reviews/replace-upgrade-design/DESIGN.md` §2-3). Owner: P6.M6 (Get another
+  quality and its versions). The detail page's Video, Audio and Subtitles are one strip of captioned segments; the Video list is
+  as wide as the strip, Audio and Subtitles lists hang under their segment up to 34em, the subtitle list is 20em and scrolls,
+  a track title that only repeats the language or marks is dropped and a long one is cut last; Back closes the open Video
+  list. A new version on its way shows under the strip (inside the open Video list) as the pending entry: the ring with the +,
+  quality and marks, the state and `· replaces 1080p` / `· another version` (failed `· 1080p stays`), the administrator's red X
+  with the Remove the Torrent question (none while importing). Cards, rows, the Queue disc and the season and series headers
+  draw the + for a new version; the totals count it apart (`1 new version · 60%`) and no longer count a finished torrent's
+  episodes (the "3 of 4 episodes" bug); the Queue page reads `Replaces 1080p: 2160p Remux`; the picker's grab block says what
+  happens to the current file; the picker's TV list has room for the Replace focus ring. Plugin: queue rows carry `mode`,
+  a Replace's `replaces` (its grab's fixed targets with the resolution of their file names) and a pack episode's `held`
+  ([API.md](API.md) *Mode and what a Replace removes*), no migration. Guides: [track-dropdown.md](design/guides/track-dropdown.md),
+  [download-state-mark.md](design/guides/download-state-mark.md), new [pending-version.md](design/guides/pending-version.md).
+  Branches `feat/upgrade-status-items` (beta) and `feat/upgrade-status` (alpha), not pushed. Checked on beta (laptop dark and
+  light, phone, TV 1920x1080 and 1280x720 with the D-pad, Chromium and real Chrome; queue rows and the worst case staged in the
+  browser, every write blocked) and on alpha (laptop dark, Chromium and Chrome); typecheck, lint, stylelint and the production
+  build on both lines; Phase 5 and Phase 6 in the Linux container on both lines. **Codex review (gpt-6.1-sol high): request
+  changes, four P2 and one P3, fixed in the feature commit:** once the new version is in the library the page loads afresh on
+  the title's main copy, so upstream's sources hold it; the strip goes in the same render when no file is listed (it crashed);
+  removing a pack whose episodes have started importing keeps what it downloaded and says so (D39; it was refused with
+  `delete_not_allowed`); a queue answering 403 hides what was read before; a season card takes the + from its own episodes.
+  Each reproduced in a staged browser check that failed before and passes after. **Codex re-review: three P2s left, fixed:**
+  the reload after a download ends belongs to the page the controller was opened on (its own item id, not the address at mount;
+  never once the viewer started moving on, or the page went away),
+  it no longer depends on seeing the row as seeding (the page reloads whenever the re-read files differ from upstream's Version
+  select, so a cancellation reloads nothing), and a queue that answered 403 keeps its rows hidden until a read succeeds again,
+  through later errors too (cleared by the next successful read, no clock involved; second re-review).
+  **Codex approved** after four re-reviews (`reviews/upgrade-status-build/codex-rereview4.md`; the third and fourth closed
+  the reload's binding to the page the controller was opened on and the denial being cleared only by a successful read).
+  **Full matrix on the final reviewed code passed** (2026-10-29, workspace `reviews/upgrade-status-build/final/`): on beta the 12
+  staged fix checks and the detail page (real, worst case, every pending state), the card +, the season total, the Queue page,
+  the episode page and the picker block, in laptop dark and light, phone, TV 1920x1080 and 1280x720 with the D-pad, in Chromium
+  and in real Chrome; the stubs line on alpha in Chromium and Chrome. **Built (not accepted), waiting for the user's own check.**
+  **Not run:** a real Add or Replace end to end with the pending entry live (beta's own downloads were only read), a physical TV.
 - Whole-codebase review fixes (all 60 findings, 42 plugin and 18 web): **released** 2026-10-03 as 0.1.0.0 (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0, republished with the whole-review fixes*). Codex GPT-6.1 Sol high approved
   both repositories (plugin `a48f857..abeffb7`, web `d49d215b4b..1924001186`, squashed from 77 and 37 fix commits);
