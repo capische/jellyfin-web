@@ -1116,6 +1116,65 @@ harness check, which failed on the build before the fix and passes after it (`ev
 153.0.8010.12 and 118/118 in Google Chrome 153.0.8010.54 (the four review checks included), the settings-area run 6/6. The
 plugin is unchanged since the rebase (its suites passed then).
 
+## Port onto the main lines — 2026-10-28
+
+Opus 5.5, high, on the user's request of 2026-10-28 ("keep them separately but synced to main-items and main-stubs"). The
+Phase 9 branches had been deleted in a cleanup; their latest tips were kept as `archive/jellyfinmod-phase9-20261025` (plugin
+`ecec70b`, web `8b1b97ec3b`, both after user decisions 8–13 and review round 10). Each series was squashed into its product,
+test and docs commits (review fixes folded into the commit they fix) and cherry-picked onto each line, as ordinary linear
+commits on their own branches, nothing merged or pushed:
+
+| Repository | Branch | Base (line tip) |
+| --- | --- | --- |
+| plugin | `phase9-ratings-items` | `main-items` `a3f4822` |
+| plugin | `phase9-ratings-stubs` | `main-stubs` `fd21d86` |
+| web | `phase9-ratings-items` | `main-items` `56521afa88` |
+| web | `phase9-ratings-stubs` | `main-stubs` `5f4d7f3e42` |
+
+"Synced" means each branch sits on its line's current tip; when the line moves, the branch is rebased onto it.
+
+**Migrations keep their 2026-10-07/08 ids** (`PhaseNineRatings`, `PhaseNineRatingsIdentity`,
+`PhaseNineRatingsDisplayDefaults`) instead of being generated again after each line's latest migration. The isolated
+instance and the local baseline cloned from it (and so every local environment) already carry the first two, applied
+before the lines' own later migrations; new ids would create the tables again on those databases and fail. EF Core applies
+any migration missing from a database's history, older id or not, so a database at a line's tip without Phase 9 takes all
+three. Checked both ways: delta's baseline database (Phase 9's first two applied, then the line's) took only
+`PhaseNineRatingsDisplayDefaults` and moved decision 6's list to decision 9's; a scratch database migrated to `main-items`'
+`GrabRequestKeys` without Phase 9 took all three (integrity and foreign-key checks clean). `dotnet ef migrations
+has-pending-model-changes` reports no change on either line after the model snapshot merge.
+
+**What conflicted and how it was resolved:**
+
+- Plugin: constructor parameters and registrations next to the lines' placeholder work (`BrowseController`,
+  `EntriesController`, `ImportService`, `PluginServiceRegistrator`, `HealthController`'s capability list) and TMDB's
+  `vote_count` beside the lines' episode ratings and cast (`TmdbClient`): both kept. **New in the port:** a file-less
+  title's page on these lines is its placeholder item, which is bound to nothing, so `Ratings/Items/{id}` now finds its entry
+  by TMDB id the way the entry lookup does (`EntriesController.PlaceholderMovieEntriesAsync` on the stubs line,
+  `PlaceholderTitleEntriesAsync` on the items line, made callable from `RatingsController`). Without it a file-less movie's
+  page showed only what the placeholder item's own metadata held.
+- Web: the detail-page redesign moved the native page's administrator actions into upstream's More menu (Keep Series). The
+  native page's **Refresh Ratings** is now a More-menu item on a movie's and a series' page, for administrators
+  (`useRatingsRefresh`, the button's logic as a hook); the file-less series page keeps it as a button beside Refresh
+  Metadata, in Title Case like the buttons around it. The file-less entry page uses the lines' toast (`announce`) for its
+  messages. The settings rework's Test icon shows a state: the ratings key's icon now shows testing, the shown result, or
+  the saved key's last pass (only while a key is saved). The settings area loads both the placeholders and the ratings.
+  The ratings group's row watch starts from the lines' cached item read (P1.FU16) instead of its own `getItem`.
+
+**Checks (Mac, 2026-10-28):** plugin suites on both lines — Phase 9 (298 checks), Phase 0 and 1 smoke, Phase 2, Phase 3,
+Q16 Trakt and Phase 10 on macOS, Phase 3 protection, 4, 5, 6, S7 settings, S9 Prowlarr
+and S7 takeover (with this branch's web zip) in the Linux container (`envs/bin/run-suite.sh --linux`): all pass. Web on both lines: tsc and stylelint clean, eslint no errors, the production
+build (patch-surface guard passing), and the design harness `p9-design.mjs` 123/123 in Playwright Chromium. First look on
+delta (127.0.0.1:11096, Jellyfin 12.2.0, items line) and charlie (Jellyfin 12.0.0, stubs line, released afterwards) against
+the MDBList stand-in with a generated key: the group in the first metadata row with IMDb, both Rotten Tomatoes marks and
+Trakt; the hover popup with four rows; a file-less movie's placeholder page with its entry's ratings; the More menu's
+Refresh Ratings making one call; one IMDb rating on cards; TV 1920×1080 with Play first, Up to the group, OK opening the
+popup and the remote's Back closing only it. Both environments were then restored from the baseline (no key, no override,
+no fixture title), delta keeping the build for the user.
+
+**Not run yet:** real Google Chrome, mobile and TV 1280×720, the live chain (`p9-live.py`, `p9-ratings.mjs`, written for
+the Pi's isolated instance), the physical TV, the user's own MDBList key (open question 1), and the Codex review, which runs
+once after the user approves the tested change.
+
 ## Status and handover — 2026-10-07
 
 **Built (not accepted).** R1–R8 are implemented on both `jellyfinmod-phase9` branches; the suites pass and the live run on the
