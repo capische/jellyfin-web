@@ -46,9 +46,13 @@ export const isSettingsProblem = (error: unknown): error is SettingsProblem =>
 
 const headers = (api: Api) => (api.authorizationHeader ? { Authorization: api.authorizationHeader } : undefined);
 
-export const request = async <T>(api: Api, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, data?: unknown): Promise<T> => {
+export const request = <T>(api: Api, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, data?: unknown): Promise<T> =>
+    requestServer<T>(api, method, BASE + path, data);
+
+/** The same as `request`, for a route of the server or another plugin (the Trakt plugin's Deauthorize): `path` from `/`. */
+export const requestServer = async <T>(api: Api, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, data?: unknown): Promise<T> => {
     try {
-        const response = await api.axiosInstance.request<T>({ method, url: api.basePath + BASE + path, data, headers: headers(api) });
+        const response = await api.axiosInstance.request<T>({ method, url: api.basePath + path, data, headers: headers(api) });
         return response.data;
     } catch (error) {
         if (isAxiosError(error) && error.response) {
