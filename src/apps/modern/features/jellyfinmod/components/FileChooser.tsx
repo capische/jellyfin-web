@@ -378,6 +378,28 @@ const useBackCloses = (open: boolean, close: () => void) => {
     }, [open]);
 };
 
+/**
+ * Where a cell's list goes (D75, and the user's 2026-10-29 look): exactly under its cell, flush against the strip's bottom edge,
+ * from the cell's left (its divider) to its right edge; the first cell's list starts at the strip's outer left edge and the last
+ * one's ends at its outer right edge. On the phone, under the stacked row, the card's width. Viewport coordinates.
+ */
+export const listPlace = (trigger: HTMLElement) => {
+    const cell = trigger.closest<HTMLElement>('.jfmod-stripSegment') ?? trigger;
+    const strip = cell.closest<HTMLElement>('.jfmod-strip');
+    const box = cell.getBoundingClientRect();
+    if (!strip) return { top: box.bottom, left: box.left, width: box.width };
+    const outer = strip.getBoundingClientRect();
+    if (layoutManager.mobile) return { top: box.bottom, left: outer.left, width: outer.width };
+    const drawn = (start: Element | null, step: (element: Element) => Element | null) => {
+        let element = start;
+        while (element && !element.childElementCount) element = step(element);
+        return element;
+    };
+    const left = drawn(cell.previousElementSibling, element => element.previousElementSibling) ? box.left : outer.left;
+    const right = drawn(cell.nextElementSibling, element => element.nextElementSibling) ? box.right : outer.right;
+    return { top: outer.bottom, left, width: right - left };
+};
+
 /** Slides open and closed; the rows exist only while open or closing, so a closed list is never a D-pad stop. */
 const useSlide = () => {
     const [open, setOpen] = useState(false);
@@ -416,8 +438,33 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     useViewerChoice(view, chosen);
     useDevicePreference(view, multi ? preferred : null, chosen);
     const slide = useSlide();
+    // The Video list floats like Audio's (user, 2026-10-29): placed under its cell when it opens; the pending entry under the strip
+    // leaves its height behind while it sits in the list, so the page does not move.
+    const [place, setPlace] = useState<{ top: number; left: number; width: number; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
-    const toggle = useCallback(() => (slide.open ? slide.hide() : slide.show()), [slide]);
+    const toggle = useCallback(() => {
+        if (slide.open) {
+            slide.hide();
+            return;
+        }
+        if (trigger.current) {
+            const at = listPlace(trigger.current);
+            const below = strip.below.getBoundingClientRect();
+            const entry = strip.below.querySelector(':scope > .jfmod-pending');
+            setPlace({ top: at.top - below.top, left: at.left - below.left, width: at.width, spacer: entry?.getBoundingClientRect().height ?? 0 });
+        }
+        slide.show();
+    }, [slide, strip.below]);
+    // A click outside the list and its cell closes it, as outside Audio's.
+    useEffect(() => {
+        if (!slide.open) return;
+        const outside = (event: Event) => {
+            const target = event.target as Node;
+            if (!strip.below.querySelector('.jfmod-fileList')?.contains(target) && !trigger.current?.contains(target)) slide.hide();
+        };
+        document.addEventListener('mousedown', outside, true);
+        return () => document.removeEventListener('mousedown', outside, true);
+    }, [slide, strip.below]);
     const choose = useCallback((version: VersionDto) => {
         chosen.current = true;
         selectVersion(view, version);
@@ -458,7 +505,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         {createPortal(<>
             {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
                 was over in two frames opening and waited 140 ms closing). It is as wide as the whole strip (D6). */}
-            <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}>
+            <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
+                style={place ? { top: place.top, left: place.left, width: place.width } : undefined}>
                 <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
                     {versions.map(version => <FileRow key={version.mediaSourceId} version={version}
                         selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
@@ -475,7 +523,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                 </div>}</div>
             </div>
             {/* The pending entry under the strip (D9); while the list is open it is the list's row instead. */}
-            {!slide.rendered && pending}
+            {slide.rendered ? <div style={{ height: place?.spacer ?? 0 }} aria-hidden='true' /> : pending}
         </>, strip.below)}
     </>;
 };
