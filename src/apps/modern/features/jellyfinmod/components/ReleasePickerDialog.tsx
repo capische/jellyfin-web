@@ -1019,6 +1019,10 @@ const addedRowId = (operation: GrabOperation, pressedId: string | null, candidat
     return alike.length === 1 ? alike[0].releaseId : null;
 };
 
+/** The row the grab block sits under: the added row, else the one pressed, else the row of the followed grab. */
+const blockRowOf = (addedId: string | null, pressedId: string | null, operation: GrabOperation | null, candidates: ReleaseCandidate[]) =>
+    addedId ?? pressedId ?? (operation ? addedRowId(operation, null, candidates) : null);
+
 /**
  * Pressing Add hands focus to the X, since the Add slot is no stop while added; when the added row goes back to Add (or reads as
  * in the library) with nothing focused, its row takes focus, so the D-pad never falls to the top of the page.
@@ -1633,9 +1637,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const replaceChoices = Array.from(plans.values()).some(plan => plan.choices && plan.replace);
     // A grab found again on reopening with no row here keeps its block (accepted, Open in Client, the file name): no tick carries it.
     const grabStatus = operation && <GrabStatus operation={operation} now={grab.now} adopted={grab.adopted && !!addedId} />;
-    // The block sits under the row the grab is about: the added row, or the one pressed when the grab failed, a rejected row too
-    // (user, 2026-10-27). Only when that row is not on screen does it go to the top of the list.
-    const blockRowId = addedId ?? grab.releaseId;
+    // The block sits under the row the grab is about: the added row, the one pressed when the grab failed, or the row of a
+    // finished grab a refusal names (a duplicate of a release already imported, user 2026-10-28), a rejected row too (user,
+    // 2026-10-27). Only when that row is not on screen does it go to the top of the list.
+    const blockRowId = blockRowOf(addedId, grab.releaseId, operation, data?.candidates ?? []);
     const blockShown = !!blockRowId && (eligible.some(candidate => candidate.releaseId === blockRowId)
         || (rejectedOpen && rejected.some(candidate => candidate.releaseId === blockRowId)));
     // An imported row reads as the in-library row: a green check after the quality and no actions.
