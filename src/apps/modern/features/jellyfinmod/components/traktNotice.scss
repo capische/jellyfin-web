@@ -1,0 +1,18 @@
+// Phase 13: the administrator's Reconnect Trakt notice on Home. It is the settings notice as the setup banner uses it; on
+// the phone its two buttons go under the words, so the sentence keeps the notice's full width instead of a narrow column.
+// The 1.32em indent lines the buttons up with the text after the notice's dot (0.62em dot + 0.7em gap).
+.layout-mobile .jfmod-traktNotice .jfmod-notice {
+    flex-wrap: wrap;
+}
+
+.layout-mobile .jfmod-traktNotice .jfmod-notice-text {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.layout-mobile .jfmod-traktNotice .jfmod-notice-action {
+    flex-basis: 100%;
+    margin-left: 1.32em;
+    margin-top: 0.7em;
+    padding-left: 0;
+}
