@@ -381,8 +381,9 @@ async function checkOneFile(page, layout, admin) {
         });
         return { rows: rows.length, add: !!document.querySelector(`${sel} [data-jfmod-add-version]`), names: shape.map(button => button.icon), shape };
     }, PAGE);
-    record(layout, 'one-file episode: the list has one file' + (admin ? ' and Get Another Quality' : ''),
-        !!icons && icons.rows === 1 && icons.add === admin, JSON.stringify({ rows: icons?.rows, add: icons?.add }));
+    // User, 2026-10-29: no Get Another Quality row; the header's cloud icon opens the picker for another quality.
+    record(layout, 'one-file episode: the list has one file and no Get Another Quality row',
+        !!icons && icons.rows === 1 && !icons.add, JSON.stringify({ rows: icons?.rows, add: icons?.add }));
     const want = admin ? ['history', 'push_pin', 'close'] : ['history'];
     record(layout, `one-file episode: the file's row ends with ${want.join(', ')}`, !!icons && JSON.stringify(icons.names) === JSON.stringify(want),
         JSON.stringify(icons?.names));
@@ -513,7 +514,7 @@ async function checkTwoFiles(page, layout, admin) {
     const rows = page.locator(`${PAGE} .jfmod-fileRow:not(.jfmod-fileRow--add)`);
     await rows.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     record(layout, 'chooser opens with one row per file', await rows.count() === facts.options.length, `${await rows.count()} rows`);
-    record(layout, `Get another quality row ${admin ? 'present' : 'absent'}`, (await page.locator(`${PAGE} [data-jfmod-add-version]`).count() > 0) === admin);
+    record(layout, 'no Get another quality row', await page.locator(`${PAGE} [data-jfmod-add-version]`).count() === 0);
     const other = facts.options.find(option => option !== before);
     const target = `.jfmod-fileChoose[data-jfmod-media-source-id="${other}"]`;
     if (!other || !await activate(page, layout, target, 'the other file\'s row')) return;
@@ -537,9 +538,8 @@ async function checkTwoFiles(page, layout, admin) {
     await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
     await page.waitForTimeout(2500);
     if (admin && layout === 'desktop') {
-        await openDetail(page, `id=${ids.two}`, `${PAGE} .jfmod-videoTrigger`);
-        await page.locator(`${PAGE} .jfmod-videoTrigger`).click();
-        await checkPickerOpens(page, layout, '[data-jfmod-add-version]', 'Get another quality row');
+        await openDetail(page, `id=${ids.two}`, `${PAGE} .jfmod-getRelease`);
+        await checkPickerOpens(page, layout, '.jfmod-getRelease', 'the cloud icon on a title with files');
     }
 }
 

@@ -9,7 +9,9 @@ lists of approach 1; overnight decisions D4–D9 in workspace `reviews/overnight
 voice-over marks, no detail line, each list exactly its fixed cell; decisions D59–D63, D75–D83; mockup workspace
 `reviews/track-row-icons/`): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's approval**.
 **The Video list as a dropdown like Audio's, every list flush with its cell** (the user's look 2026-10-29; D99–D101, replacing
-D6 and D28): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's approval**.
+D6 and D28): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's approval**. **No Get Another Quality row**
+(the user, 2026-10-29: "I have already the cloud icon over there"; D102): the header's cloud icon opens the same picker in the
+same mode; built 2026-10-29, gate 1.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
@@ -62,7 +64,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   the popover's shadow, sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file (quality 600, all marks, size,
   the three row icons; the figures wrap under the name when the width needs it), then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
-  list), then *Get Another Quality*, then the folder note. The rows' text starts where the segment's does (.735em in).
+  list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
+  another quality. The rows' text starts where the segment's does (.735em in).
 - **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): **exactly the cell** (D75). The theme paper,
   `1px solid var(--jf-palette-divider)` inside that width (`border-box`), **max-height 20em, scrolling** (D83), opened on the
   current entry (D7). MUI rounds the popover's top to a whole pixel, so it may sit up to half a pixel over the strip's border.

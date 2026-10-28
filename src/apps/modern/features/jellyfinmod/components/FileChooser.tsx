@@ -38,8 +38,6 @@ export interface FileChooserProps {
     /** The copy this device starts with (V1 decision 4); null leaves Jellyfin's default. */
     preferred?: VersionDto | null;
     busy: boolean;
-    /** Administrators with release search and `versions`: the last row is Get Another Quality. */
-    onAddVersion?: (opener: HTMLElement) => void;
     /** Opens one file's history; absent when the plugin does not stamp files on history events (`history.files`). */
     onHistory?: (version: VersionDto, opener: HTMLElement) => void;
     /** The pin for one file, or null where this viewer has none. */
@@ -424,12 +422,12 @@ const useSlide = () => {
 /**
  * The Video segment of the track strip as the file chooser (design step 2, user 2026-10-07; UX §11.2; the strip D4–D9,
  * 2026-10-28). Its value carries a chevron and opens a list of the files under the strip, as wide as it, also when there is
- * only one (user, 2026-10-08: one dropdown everywhere, with Get Another Quality in it); choosing one sets upstream's
+ * only one (user, 2026-10-08: one dropdown everywhere); choosing one sets upstream's
  * `.selectSource` and dispatches its bubbling `change`, exactly as the version rows did, so Play, audio and subtitles follow,
  * the viewer's own choice is never replaced and the device preference still applies. The pending download (`pending`) sits
  * under the strip, or in the list while it is open.
  */
-const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onAddVersion, onHistory, pin, onPin, canRemove,
+const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onHistory, pin, onPin, canRemove,
     onRemove, removeDate, note, sources, strip, pending }) => {
     const multi = versions.length > 1;
     useVideoRowHidden(view);
@@ -472,7 +470,6 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         // The focused row is about to leave the page; the remote stays on the value it opened.
         if (trigger.current) focusManager.focus(trigger.current);
     }, [slide, view]);
-    const addVersion = useCallback((event: MouseEvent<HTMLButtonElement>) => onAddVersion?.(event.currentTarget), [onAddVersion]);
     const backClose = useCallback(() => {
         slide.hide();
         if (trigger.current) focusManager.focus(trigger.current);
@@ -504,7 +501,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         </button>, strip.video)}
         {createPortal(<>
             {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
-                was over in two frames opening and waited 140 ms closing). It is as wide as the whole strip (D6). */}
+                was over in two frames opening and waited 140 ms closing). It is the Video cell's width (D99); another quality is
+                got from the page's cloud icon, so the list has no row for it (D102). */}
             <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
                 style={place ? { top: place.top, left: place.left, width: place.width } : undefined}>
                 <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
@@ -513,12 +511,6 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                         source={findSource(sources, version.mediaSourceId)}
                         {...iconProps(version)} />)}
                     {pending}
-                    {onAddVersion && <div className='jfmod-fileRow jfmod-fileRow--add'>
-                        <button type='button' className='jfmod-fileChoose' data-jfmod-add-version='' onClick={addVersion}>
-                            <span className='jfmod-fileMark' aria-hidden='true'>+</span>
-                            <span className='jfmod-fileBody'>Get Another Quality</span>
-                        </button>
-                    </div>}
                     {note && <p className='jfmod-fileNote'>{note}</p>}
                 </div>}</div>
             </div>
