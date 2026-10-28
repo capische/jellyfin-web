@@ -869,6 +869,38 @@ A superseded version removed after an upgrade is a Phase 3 `RetentionOperation` 
 `provenance: "upgrade_replaced"` and history event `upgrade_replaced`; automatic grabs write
 `auto_grabbed`.
 
+### A best copy and a 1080p copy for phones (Phase 12, built 2026-10-29, not accepted)
+
+Health `Capabilities` adds `copies`. Every route below is administrator-only, like the rest of the settings.
+
+- **Prefer:** a quality profile (DTO, `POST`, `PATCH`, presets) carries `prefer`: `"tvs"` (Best on My TVs), `"everywhere"` (Plays
+  Everywhere) or `null` (No Preference, the value of every profile stored before Phase 12). A request that leaves `prefer` out
+  keeps the stored value (the Dashboard page's editor does not send it); anything else answers 400 `invalid_prefer`. It reorders
+  releases of the same quality only: score contributions `prefer_picture` (a picture tier × 8, at most 32) and `prefer_sound` (a
+  sound tier, at most 7), together under the 45 points of proper, freeleech and seeders' headroom, so never above a better quality
+  step. Scoring version `p12.m30.v1`. The 4K preset prefers `tvs`, the 1080p preset `everywhere`; presets add `isPhonesPreset`.
+- **The quality profile for phones:** `GET/PATCH /JellyfinMod/Settings/Acquisition` add `phoneProfileId` (null when none); a
+  `PATCH` that leaves it out keeps it; an unknown id is 400 `invalid_phone_profile`. A fresh install sets it to the 1080p preset;
+  the migration sets it to an existing install's stored 1080p preset copy, else null, and Add Predefined Profiles sets it when it
+  is null. Profiles add `isPhoneProfile`. Deleting the chosen profile answers 409 `profile_is_phone_profile`.
+- **TVs:** `GET /JellyfinMod/Settings/TvModels` →
+  `{"models":[{"id":"lg-c1","name":"LG C1","year":2021,"webOS":"6","dolbyVision":true,"hdr10Plus":false,"hlg":true,"ddPlusAtmos":true,"dts":false,"trueHd":false,"selected":true}, …],"selected":["lg-c1","lg-g2"],"revision":2}`;
+  `PATCH` `{"selected":[…],"revision":n}` (409 `revision_conflict`, 400 `invalid_tv_model`). The catalogue is the plugin's
+  `Assets/tv-models.json`; a capability counts when every ticked TV has it.
+- **Copies on entry detail:** a `versions[]` row adds `phoneCopy` (true on the file phones play: on a title with two or more files,
+  the best one at 1080p or below, SDR first); entry detail (movies) and each episode add `phoneCopyMissing` (files held and none at
+  1080p or below).
+- **Get Another Quality for phones:** `GET /JellyfinMod/Releases?intent=addVersion` without `profileId` on a title whose phone copy
+  is missing searches with `phoneProfileId` (`profile.inherited` false), and a season or series pack search without `profileId`
+  does so when every covered episode holds files and none at 1080p or below. Such a search answers `grab.forPhones: true` and
+  `grab.modes: ["add"]`.
+- **Automation:** `GET/PATCH /JellyfinMod/Settings/Automation` add `fetchPhoneCopies` (Also get a 1080p copy for phones, off; a
+  `PATCH` that leaves it out keeps it). While it is on, a monitored movie or episode whose files are all above 1080p is searched with
+  the profile for phones, only releases at 1080p or below are taken, and the grab is an Add (a season of such episodes, every one
+  holding files, is tried as a pack first); decision detail `Copy for phones: <release>`. Reasons `phone_copy_removed` (a file at
+  1080p or below was removed by retention or Remove This Version: never fetched again; weekly retry of the check) and
+  `phone_copy_held`. While it is on, an upgrade from a file at 1080p or below to one above it adds instead of replacing.
+
 ### Versions on Jellyfin 12 (V1, 2026-09-28)
 
 Health `Capabilities` adds `versions.v1` (rows from Jellyfin's media sources) and `versions.remove`.

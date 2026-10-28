@@ -1602,6 +1602,15 @@ The version rows below the track block are replaced by a chooser in the **Video*
 
 ---
 
+**The phones' file (Phase 12, approved 2026-10-29, D51, D52, D57, D103; built, not accepted).** On a title with two or more files the
+one phones play carries the phone mark (Material `smartphone`) after its resolution, in its row and in the closed Video value when it
+is selected; no file is labelled best or mobile, because the list is best first. The Video list has no Get 1080p for Phones row
+(user, 2026-10-29, D103: the page's cloud icon is the way in): on a title whose files are all above 1080p the cloud icon's picker
+(*Get Another Quality*) opens on the quality profile for phones, with the notice "Adds a 1080p copy for phones. The 4K stays." and
+Add only. TVs and computers start the best copy (highest resolution, then Dolby
+Vision, HDR, SDR) and phones the phones' file, on the detail page and from every Play of a card, the hero, Continue Watching and Next
+Up; a copy part-way through always wins. Values in [guides/track-dropdown.md](design/guides/track-dropdown.md).
+
 ## 12. Settings
 
 Split by audience, and the split keeps the fork small:
@@ -1656,6 +1665,18 @@ and Save waits until they pass. **Differences from the mock, decided in the buil
 (Balanced reads "up to 20 GB/h", not "8–20 GB/h"), because one minimum for the whole profile would refuse every smaller
 lower-resolution copy it falls back to; and the size and best-quality buttons say nothing pressed while the profile is
 custom. The Dashboard plugin page keeps its own profile editor unchanged.
+
+**A best copy and a 1080p copy for phones (Phase 12, design approved 2026-10-29: "Design for mobile icon looks good for me. Go
+ahead"; mockups `reviews/phase12/mockups/`, decisions D51–D58; built, not accepted).** The 1080p profile is the quality profile for
+phones: Grabbing chooses it (*Quality profile for phones*, the Default profile's two-line select) and it carries the phone mark after
+its name in its row and in both selects; there is no Mobile profile and no copy label anywhere. Each profile row adds its preference
+(*best on my TVs*, *plays everywhere*). A **TVs** section after Quality Profiles lists the plugin's TVs catalogue (LG C1, LG G2) as a
+checklist, each model with what it plays, under the sentence "Tick the TVs you watch on. A profile set to Best on My TVs picks
+releases that every ticked TV plays." and over a sentence of what the ticks change; Save as in the other sections. Automation gains
+*Also get a 1080p copy for phones* (off) after the upgrades switch. The profile dialog gains **Prefer** after File size: Best on My
+TVs (its small line names the ticked TVs) · Plays Everywhere (phones, browsers) · No Preference (as before), the File size buttons'
+kind, with a one-line hint of what it prefers; the live sentence adds the clause. Values in
+[guides/quality-profiles.md](design/guides/quality-profiles.md) and [guides/settings-field.md](design/guides/settings-field.md).
 
 ### 12.1 Words and buttons in the settings area and on the Dashboard page (user, 2026-10-07/08)
 
