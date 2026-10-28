@@ -5,11 +5,16 @@ A for size"); the same list for the profile dialog's Predefined picker 2026-10-1
 one on details page"). **Video, Audio and Subtitles as one strip** (option B, the user's pick 2026-10-28, with the tightened
 lists of approach 1; overnight decisions D4–D9 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`; mockups
 `reviews/upgrade-status-options/all-in-one/` and `…/lists/`): **built overnight 2026-10-28, awaiting the user's approval**.
+**Audio and Subtitles rows redesigned** (the user's picks 2026-10-29: extra words option A, the FORCED / SIGNS badge, all five
+voice-over marks, no detail line, each list exactly its fixed cell; decisions D59–D63, D75–D83; mockup workspace
+`reviews/track-row-icons/`): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's approval**.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
 `.jfmod-videoTrigger`, `.jfmod-trackTrigger`, `.jfmod-trackStatic`, `.jfmod-stripBelow`, `.jfmod-fileList*`,
-`.jfmod-trackMenuPaper`, `.jfmod-trackItem`, `--on`, `.jfmod-trackTitle`), `settings/qualityProfiles.tsx` + `.scss` (`.jfmod-qp-pick*`).
+`.jfmod-trackMenuPaper`, `.jfmod-trackItem`, `--on`, `--two`, `.jfmod-trackRun`, `.jfmod-trackExtra`, `.jfmod-trackLang`,
+`.jfmod-trackMod`, `.jfmod-trackRoles`, `.jfmod-trackRole`), `constants/tracks.ts` (`trackRole`, `trackModifier`,
+`trackExtraWords`), `settings/qualityProfiles.tsx` + `.scss` (`.jfmod-qp-pick*`).
 
 ## What it is
 
@@ -22,17 +27,23 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 
 - **Box:** one field after upstream's track form (`.jfmod-strip`, as wide as the page's text column): `border .135em solid
   var(--jf-palette-FilledInput-borderColor)`, radius .2em, `background: var(--jf-palette-background-paper)`; three segments
-  (`.jfmod-stripSegment--video|audio|subtitles`), Video grows, Audio and Subtitles size to their value; dividers between
+  (`.jfmod-stripSegment--video|audio|subtitles`): Audio **17.8em** and Subtitles **13.2em** wide, the divider on their left
+  included (D75, D77, D80), Video takes the rest; dividers between
   segments in the border's colour and width. A segment upstream hides (no subtitles) is not drawn; the strip goes with the
   form when upstream hides it.
 - **Segment:** a caption (`.jfmod-stripCaption`: .72em, 600, uppercase, letter-spacing .06em, 62 %) over the value line
-  (`.jfmod-stripValue`): the entry's first word in **600** (resolution, language), then marks ([media-marks.md](media-marks.md),
-  130 %) and muted flags (`· Default`, `· Forced`, `· SDH`, a title); the Video value ends with the **file size, muted, at the
-  right end before the chevron**; Audio's and Subtitles' chevron follows the value. Padding `.3em .5em .35em .6em`. Captions
-  VIDEO · AUDIO · SUBTITLES stay (D8): there is no label column.
+  (`.jfmod-stripValue`): Video's resolution in **600**, its marks ([media-marks.md](media-marks.md), 130 %) and the **file size,
+  muted, at the right end before the chevron**; an Audio or Subtitles value is its track's run (below), the chevron at the
+  cell's right end. Padding `.3em .5em .35em .6em`. Captions VIDEO · AUDIO · SUBTITLES stay (D8): there is no label column.
+- **A track's run** (D59, D76): the language in 600 with its short modifier `(BR)` in 400 at 70 % (a fixed table only, D60),
+  .6em, the format marks (audio: the media marks; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
+  ([media-marks.md](media-marks.md), *Role marks*). A track's own title is never drawn in the run; Default, Original, External
+  and Full are not shown (the blue bar marks the current entry). When the run is too long for its cell the modifier goes first
+  (it wraps onto a hidden second line of the 1.5em box), then the language is cut with an ellipsis; the marks, the role mark
+  and the chevron never shrink (D78).
 - **Hover / focus:** the segment is ringed in the primary over the strip's border (`box-shadow 0 0 0 .135em #00a4dc`), no outline.
 - **One entry only** (`.jfmod-trackStatic`): the same segment without the chevron, `cursor: default`, not a focus stop.
-- **Phone:** the segments stack as rows of the same card, the dividers on top.
+- **Phone:** the segments stack as rows of the same card, the dividers on top; every cell is the card's width.
 - Upstream's Video, Audio and Subtitles rows step aside (display none) only while their segment is drawn; a row whose
   dropdown cannot mount (its streams unread) stays as upstream draws it, under the strip.
 
@@ -42,14 +53,18 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   divider border, sliding open in place (a grid row from 0fr to 1fr, 0.18 s); one row per file (quality 600, all marks, size,
   the three row icons), then the [pending download](pending-version.md) while one is on its way, then *Get Another Quality*.
   The rows' text starts where the segment's does (.735em in).
-- **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): under their segment, **right-aligned with it**, at
-  least as wide as the segment and **at most 34em** (D6); on the phone exactly the card's width. The theme paper,
-  `1px solid var(--jf-palette-divider)`, radius .2em, `margin-top .25em`, **max-height 20em, scrolling**, opened on the
-  current entry (D7). Entries: `padding .45em .8em .45em calc(.6em − 1px − .2em)`; `border-left .2em solid transparent`, the
-  current entry `--on` the primary. Entries are drawn as the closed segment draws them.
-- **Titles (D5):** a track's title is shown only when it adds a word: one that only repeats the language, its code or the
-  marks ("Original [ENG]" on an English track) is dropped; a long title comes last and is cut with an ellipsis, so the
-  language, marks and flags stay.
+- **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): **exactly the cell** (D75): from the divider on its
+  left to its right edge (the last cell's to the strip's outer border), `.25em` under the strip, placed by position
+  (`listPlace`); on the phone under the stacked row, the card's width. The theme paper, `1px solid var(--jf-palette-divider)`
+  inside that width (`border-box`), radius .2em, **max-height 20em, scrolling** (D83), opened on the current entry (D7).
+- **Rows** (`.jfmod-trackItem`, D76): drawn as the cell's value, the same run packed left to right, the text starting where the
+  cell's does: `padding .45em .5em .45em calc(.735em − 1px − .2em)`, `border-left .2em solid transparent`, the current entry
+  `--on` the primary; no columns, no detail line (D82).
+- **Extra words (D81 option A):** a title's words the run does not say (a dub's studio, a commentary's speakers, `Blu-ray CEE`),
+  trimmed of known words at its start and end only (languages, codes, format and role words, "Original", "Full"), go on a tiny
+  second line under the run (`.jfmod-trackItem--two`, `.jfmod-trackExtra`: .72em, 62 %, cut with an ellipsis); only those rows
+  grow. "Дубляж Мосфильм" → *Мосфильм*; "Дубляж [UKR]", "Original [ENG]", "Commentary", "日本語吹替" add nothing. The closed cell
+  never shows them; every row and the cell keep upstream's option text as their tooltip.
 - One entry per option of the hidden stock select, in its order; Subtitles start with *Off*. The entry's tooltip is
   upstream's option text.
 - Keys: opens on the current entry; arrows move, Enter picks, Escape closes; focus returns to the segment. On the TV

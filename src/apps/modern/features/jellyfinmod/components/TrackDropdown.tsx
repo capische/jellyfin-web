@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import layoutManager from 'components/layoutManager';
 
 import { getLanguageNames } from '../api/modApi';
+import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackRole } from '../constants/tracks';
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
 import type { StripHosts } from './FileChooser';
 import { MediaMarks } from './ReleaseRowParts';
@@ -28,6 +29,8 @@ import './releasePicker.scss';
  */
 
 interface Entry {
+    /** The title's extra words (a dub's studio, a commentary's speakers): the row's second line in the list, never in the cell. */
+    extra?: string;
     value: string;
     /** Upstream's option text, as the entry's tooltip. */
     title: string;
@@ -87,50 +90,60 @@ const useTrackHost = (view: HTMLElement, selector: string) => {
     return { state, choose };
 };
 
-/** Words a track's title may repeat without saying anything the language and the marks do not (D5). */
-const QUIET_WORDS = new Set(['original', 'default', 'forced', 'sdh', 'cc', 'full', 'audio', 'track', 'subtitles', 'subs', 'stereo',
-    'mono', 'surround', 'aac', 'ac3', 'eac3', 'dd', 'ddp', 'dd+', 'dolby', 'digital', 'plus', 'dts', 'hd', 'ma', 'x', 'truehd', 'atmos',
-    'flac', 'opus', 'mp3', 'pcm', 'lpcm', '1.0', '2.0', '5.1', '6.1', '7.1', 'ch', 'srt', 'ass', 'ssa', 'pgs', 'vobsub']);
+/** The commentary glyph (D61): a speech bubble, someone talking over the film. */
+const CommentaryGlyph: FC = () => <svg viewBox='0 0 16 14' aria-hidden='true' focusable='false'>
+    <path fillRule='evenodd' d='M2.2 .6h11.6c.9 0 1.6.7 1.6 1.6v6.5c0 .9-.7 1.6-1.6 1.6H7.4L3.6 13.4V10.3H2.2c-.9 0-1.6-.7-1.6-1.6V2.2C.6 1.3 1.3.6 2.2.6ZM3.6 3.4v1.5h8.8V3.4Zm0 2.9v1.5h5.8V6.3Z' />
+</svg>;
+
+/** The row's one role mark (D61, D63, D79, D80): outlined like the channel tag, the commentary bubble as a glyph. */
+const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className='jfmod-trackRoles'>
+    {role === 'comm' ?
+        <span className='jfmod-trackRole jfmod-trackRole--glyph' title={TRACK_ROLE_NAME[role]}><CommentaryGlyph /></span> :
+        <span className='jfmod-trackRole' title={TRACK_ROLE_NAME[role]}>{role}</span>}
+</span>;
 
 /**
- * Whether a title only repeats the language or the marks (D5, `reviews/upgrade-status-options/all-in-one/lists`): "Original
- * [ENG]" on an English track says nothing, "Дубляж [UKR]" does.
+ * The language in 600 and its short modifier (D60), which wraps out of sight first when the cell is narrow (D78); a language
+ * still too long is cut with an ellipsis.
  */
-const repeatsOnly = (title: string, language: string, code: string) => {
-    const known = new Set([...QUIET_WORDS, code, ...language.toLowerCase().split(/\s+/)]);
-    const words = title.toLowerCase().split(/[\s[\](){}\-_,;:/|]+/).filter(Boolean);
-    return words.length > 0 && words.every(word => known.has(word));
-};
+const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='jfmod-trackLang'>
+    <span className='jfmod-trackLanguage'>{language}</span>
+    {modifier && <span className='jfmod-trackMod'>({modifier})</span>}
+</span>;
 
 /**
- * Default, Forced and SDH from the stream's flags, and its own title (`Commentary`, `Latin American`) when it adds a word (D5); the
- * title last, cut with an ellipsis when long, so the flags stay.
+ * One track as its cell and its row draw it (D59, D76): language and modifier, the format marks, at most one role mark. The
+ * track's own title is never drawn as it is; its extra words are the list's second line (`trackExtraWords`, D81 option A).
  */
-const streamFlags = (stream: MediaStream, language: string) => {
-    const flags: string[] = [];
-    if (stream.IsDefault) flags.push('Default');
-    if (stream.IsForced) flags.push('Forced');
-    if (stream.IsHearingImpaired) flags.push('SDH');
-    const title = stream.Title?.trim();
-    const kept = title && !repeatsOnly(title, language, stream.Language?.toLowerCase() ?? '') ? title : null;
-    return { flags, title: kept };
-};
-
-/** One track: its language (600), its marks, its flags muted. */
 const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undefined }> = ({ stream, names }) => {
     const code = stream.Language?.toLowerCase() ?? '';
     const language = names?.[code] ?? (stream.Language || 'Unknown');
     const format = stream.Type === 'Subtitle' ? subtitleFormat(stream) : null;
-    const { flags, title } = streamFlags(stream, language);
+    const role = trackRole(stream);
     return <>
-        <span className='jfmod-trackLanguage'>{language}</span>
+        <TrackLanguage language={language} modifier={trackModifier(stream)} />
         <span className='jfmod-fileMarks'>
             {stream.Type === 'Audio' && <MediaMarks parsed={streamMarks(stream)} />}
             {format && <span className='jfmod-releaseMark'>{format}</span>}
         </span>
-        {flags.map(flag => <span key={flag} className='jfmod-fileExtra jfmod-fileExtra--dot'>{flag}</span>)}
-        {title && <span className='jfmod-fileExtra jfmod-fileExtra--dot jfmod-trackTitle'>{title}</span>}
+        {role && <RoleMark role={role} />}
     </>;
+};
+
+/**
+ * Where a cell's list goes (D75): exactly under its cell, from the divider on its left to its right edge, the last cell's to the
+ * strip's outer border; on the phone, under the stacked row, the card's width.
+ */
+const listPlace = (trigger: HTMLElement) => {
+    const cell = trigger.closest<HTMLElement>('.jfmod-stripSegment') ?? trigger;
+    const strip = cell.closest<HTMLElement>('.jfmod-strip');
+    const box = cell.getBoundingClientRect();
+    if (!strip) return { top: box.bottom, left: box.left, width: box.width };
+    const outer = strip.getBoundingClientRect();
+    if (layoutManager.mobile) return { top: box.bottom, left: outer.left, width: outer.width };
+    let next = cell.nextElementSibling;
+    while (next && !next.childElementCount) next = next.nextElementSibling;
+    return { top: outer.bottom, left: box.left, width: (next ? box.right : outer.right) - box.left };
 };
 
 interface TrackDropdownProps {
@@ -146,11 +159,11 @@ interface TrackDropdownProps {
  * the TV's remote; it opens on the current entry.
  */
 const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, onChoose }) => {
-    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-    const open = useCallback((event: MouseEvent<HTMLElement>) => setAnchor(event.currentTarget), []);
-    const close = useCallback(() => setAnchor(null), []);
+    const [place, setPlace] = useState<{ top: number; left: number; width: number } | null>(null);
+    const open = useCallback((event: MouseEvent<HTMLElement>) => setPlace(listPlace(event.currentTarget)), []);
+    const close = useCallback(() => setPlace(null), []);
     const pick = useCallback((event: MouseEvent<HTMLElement>) => {
-        setAnchor(null);
+        setPlace(null);
         onChoose(event.currentTarget.getAttribute('data-jfmod-track') ?? '');
     }, [onChoose]);
     const current = entries.find(entry => entry.value === value) ?? entries[0];
@@ -163,26 +176,29 @@ const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, 
             {caption}<span className='jfmod-stripValue'>{text}</span>
         </div>;
     }
-    // The list hangs under its segment, right-aligned with it, at least as wide and at most 34em (D6); on a phone the stacked
-    // segment is the card's width and so is the list.
-    const width = layoutManager.mobile ? { width: anchor?.offsetWidth } : { minWidth: anchor?.offsetWidth };
     return <>
-        <button type='button' className='jfmod-trackTrigger' aria-haspopup='listbox' aria-expanded={!!anchor}
+        <button type='button' className='jfmod-trackTrigger' aria-haspopup='listbox' aria-expanded={!!place}
             aria-label={`${name}: ${current.title}`} title={current.title} onClick={open} data-jfmod-track-field={name}>
             {caption}
             <span className='jfmod-stripValue'>
                 {text}
-                <span className={'material-icons jfmod-videoChevron ' + (anchor ? 'expand_less' : 'expand_more')} aria-hidden='true' />
+                <span className={'material-icons jfmod-videoChevron ' + (place ? 'expand_less' : 'expand_more')} aria-hidden='true' />
             </span>
         </button>
-        <Menu anchorEl={anchor} open={!!anchor} onClose={close} className='jfmod-trackMenu'
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            slotProps={{ list: { role: 'listbox', 'aria-label': name }, paper: { className: 'jfmod-trackMenuPaper', style: width } }}>
+        {/* Each list is exactly its cell (D75), so it is placed by position, not by the button. */}
+        <Menu open={!!place} onClose={close} className='jfmod-trackMenu' anchorReference='anchorPosition'
+            anchorPosition={place ? { top: place.top, left: place.left } : undefined}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            slotProps={{ list: { role: 'listbox', 'aria-label': name },
+                paper: { className: 'jfmod-trackMenuPaper', style: place ? { width: place.width } : undefined } }}>
             {/* Menu items as the menu's own children, so it opens on the current one (it focuses the child marked selected). */}
             {entries.map(entry => <MenuItem key={entry.value} role='option' aria-selected={entry === current} selected={entry === current}
-                title={entry.title} onClick={pick} className={'jfmod-trackItem' + (entry === current ? ' jfmod-trackItem--on' : '')}
-                data-jfmod-track={entry.value}>
-                {entry.content}
+                title={entry.title} onClick={pick} data-jfmod-track={entry.value}
+                className={'jfmod-trackItem' + (entry === current ? ' jfmod-trackItem--on' : '') + (entry.extra ? ' jfmod-trackItem--two' : '')}>
+                {entry.extra ? <>
+                    <span className='jfmod-trackRun'>{entry.content}</span>
+                    <span className='jfmod-trackExtra'>{entry.extra}</span>
+                </> : entry.content}
             </MenuItem>)}
         </Menu>
     </>;
@@ -206,10 +222,10 @@ const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources
     const streams = (findSource(sources, state.sourceId) ?? sources[0])?.MediaStreams ?? [];
     const entries = state.options.map(option => {
         const stream = streams.find(candidate => candidate.Type === type && String(candidate.Index) === option.value);
-        let content: ReactNode = <span className='jfmod-trackLanguage'>{option.text}</span>;
+        let content: ReactNode = <TrackLanguage language={option.text} />;
         if (stream) content = <TrackText stream={stream} names={names} />;
-        else if (type === 'Subtitle' && option.value === '-1') content = <span className='jfmod-trackLanguage'>Off</span>;
-        return { value: option.value, title: option.text, content };
+        else if (type === 'Subtitle' && option.value === '-1') content = <TrackLanguage language='Off' />;
+        return { value: option.value, title: option.text, content, extra: stream ? trackExtraWords(stream) || undefined : undefined };
     });
     return createPortal(<TrackDropdown name={name} entries={entries} value={state.value} enabled={!state.disabled} onChoose={choose} />,
         host);
