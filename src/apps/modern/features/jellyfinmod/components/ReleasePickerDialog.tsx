@@ -1633,8 +1633,11 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const replaceChoices = Array.from(plans.values()).some(plan => plan.choices && plan.replace);
     // A grab found again on reopening with no row here keeps its block (accepted, Open in Client, the file name): no tick carries it.
     const grabStatus = operation && <GrabStatus operation={operation} now={grab.now} adopted={grab.adopted && !!addedId} />;
-    // The block sits under the row the grab is about: the added row, or the one pressed when the grab failed.
+    // The block sits under the row the grab is about: the added row, or the one pressed when the grab failed, a rejected row too
+    // (user, 2026-10-27). Only when that row is not on screen does it go to the top of the list.
     const blockRowId = addedId ?? grab.releaseId;
+    const blockShown = !!blockRowId && (eligible.some(candidate => candidate.releaseId === blockRowId)
+        || (rejectedOpen && rejected.some(candidate => candidate.releaseId === blockRowId)));
     // An imported row reads as the in-library row: a green check after the quality and no actions.
     const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ? { ...candidate, heldQuality: true } : candidate);
 
@@ -1675,7 +1678,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
             (whole-review chunk 4a, P2 4). */}
         {/* Only the list scrolls; everything above it stays put (P4.FU24). */}
         <div className='jfmod-releaseScroll scrollY'>
-            {(!blockRowId || !eligible.some(candidate => candidate.releaseId === blockRowId)) && grabStatus}
+            {!blockShown && grabStatus}
             <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
                 {eligible.map(candidate => <Fragment key={candidate.releaseId}>
                     <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
@@ -1689,9 +1692,12 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
                 <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
                     {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
                 </button>
-                {rejectedOpen && rejected.map(candidate => <RejectedRow key={candidate.releaseId} candidate={shownCandidate(candidate)} search={data}
-                    disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                    added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />)}
+                {rejectedOpen && rejected.map(candidate => <Fragment key={candidate.releaseId}>
+                    <RejectedRow candidate={shownCandidate(candidate)} search={data}
+                        disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
+                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
+                    {blockRowId === candidate.releaseId && grabStatus}
+                </Fragment>)}
             </div>}
         </div>
     </div>;
