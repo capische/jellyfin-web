@@ -160,3 +160,5 @@ disc is a click on the card. (On the Queue page the computer's keyboard still re
 - Give the mark a colour of its own on rows or pages; it inherits.
 - Add a glyph, a state or a size without the user's approval; keep the percent-inside and caption placements in the
   interactive page, unbuilt.
+- Mark a Scenes chapter card (`.chapterCard`): it carries its title's `data-id` but is a moment of the title, not the title
+  (user, 2026-10-28).
