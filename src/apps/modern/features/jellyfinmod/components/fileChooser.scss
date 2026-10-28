@@ -162,16 +162,18 @@
 
 // The Audio and Subtitles list: a paper popover exactly as wide as its cell and under it (D75, placed by the component), drawn
 // like the Video list (the paper colour, a hairline border), at most 20em tall and scrolling (D7, D83); the current entry has a
-// blue left bar (the settings area's predefined picker's bar).
+// blue left bar (the settings area's predefined picker's bar). It hangs from the strip's bottom edge with no gap and no top
+// border of its own, so the cell and its list read as one piece (user, 2026-10-29; D100).
 .jfmod-trackMenuPaper.MuiPaper-root {
     --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
     max-height: 20em;
-    margin-top: 0.25em;
+    margin-top: 0;
     // The width the component gives is the cell's, border included.
     box-sizing: border-box;
     border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
-    border-radius: 0.2em;
+    border-top-width: 0;
+    border-radius: 0 0 0.2em 0.2em;
     background-color: var(--jf-palette-background-paper, #202020);
     background-image: none;
 
@@ -227,10 +229,20 @@
 // Where a segment's text starts: its 0.6em padding inside the strip's 0.135em border.
 $text-inset: 0.735em;
 
+// The Video list floats over the page as Audio's does (user, 2026-10-29; D99, replacing D28): the component places it under
+// the Video cell, flush with the strip's bottom edge, exactly the cell's width; a cell narrower than 24em (TV at 1280) lets the
+// list grow to 24em over the Audio cell, so a file row keeps its name and figures on two lines.
+.jfmod-stripBelow {
+    position: relative;
+}
+
 .jfmod-fileList {
+    position: absolute;
+    z-index: 5;
     display: grid;
     grid-template-rows: 0fr;
-    width: 100%;
+    min-width: 24em;
+    box-sizing: border-box;
     transition: grid-template-rows 0.18s ease-out;
 }
 
@@ -243,14 +255,17 @@ $text-inset: 0.735em;
     overflow: hidden;
 }
 
-// The Video list is as wide as the whole strip (D6) and drawn on the paper, as the Audio and Subtitles lists are.
+// The Video list is drawn on the paper as the Audio and Subtitles lists are: no top border, square top corners and the
+// popover's shadow.
 .jfmod-fileListBox {
     --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
-    margin: 0.25em 0 0.6em;
+    margin: 0;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0.2em;
+    border-top-width: 0;
+    border-radius: 0 0 0.2em 0.2em;
     background: var(--jf-palette-background-paper, #202020);
+    box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
