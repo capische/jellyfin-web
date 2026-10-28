@@ -645,7 +645,6 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
             episodeListLoaded: data.episodeListLoaded, onChanged: reload
         }).then(() => restoreFocusTo(opener), () => restoreFocusTo(opener));
     }, [api, data, episode?.id, isSeasonPage, refetch, seasonOf]);
-    const addVersion = useCallback((opener: HTMLElement) => openPicker(opener, 'addVersion'), [openPicker]);
     // Design step 1: the stock-styled header icon; with a file on the page it gets another quality. A series page and a season
     // page have it too (user, 2026-10-12); a season is searched as a pack, so its page needs the plugin's pack search.
     const openRelease = useCallback((button: HTMLElement) => openPicker(button, versions.length > 0 ? 'addVersion' : undefined),
@@ -723,7 +722,6 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
         {strip && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
-            onAddVersion={canAcquire ? addVersion : undefined}
             onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
             pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}
             note={isAdmin ? deleteWarning : null} sources={sources.data} strip={strip}

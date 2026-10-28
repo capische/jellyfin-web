@@ -943,8 +943,8 @@ file mark from §3, and season rows gain a monitor toggle.
   upstream's button row before Favorite. It opens the release picker (the `addVersion` intent when
   the title has a file). With no file it leads the row, since Play and Played are absent.
 - **Video row.** With two or more files the Video value is the file chooser (§11): a chevron opens a
-  list of the files, one row each, with history, pin (Keep) and cross (Remove this version) icons and
-  a last row *Get another quality*. With one file the Video row is upstream's, with the same three
+  list of the files, one row each, with history, pin (Keep) and cross (Remove this version) icons;
+  another quality is got from the header's cloud icon (user, 2026-10-29: the list has no row for it). With one file the Video row is upstream's, with the same three
   icons at its end. Pin and cross are administrators'; history is everyone's.
 - **History** is per file, in a popover opened from that file's history icon (§7.2).
 - **Retention** is a countdown badge on the stock Played tick (§8); the warning box is gone.
@@ -1339,8 +1339,8 @@ Design rules:
 - **On the TV** the table becomes a single-column list, one focusable row each, parsed summary as
   the primary line and the raw title dimmed beneath. No horizontal scrolling table on a D-pad.
 
-Opened from: the catalog card context menu, the catalog detail page, and (Phase 6) the version
-list's *Get another quality*.
+Opened from: the catalog card context menu and the catalog detail page; on a title with a file the
+detail page's cloud icon opens it for another quality (the version list's own row was removed on 2026-10-29).
 
 **Where the scope switch starts (user, 2026-10-24, P4.FU18).** Opened from a series page (its header's Get a Release, or a
 series card's, which opens the series as its page does), the switch starts on *All Seasons* and that search runs at once; until
@@ -1487,7 +1487,8 @@ Each row gains resolution, codec, audio and size:
 ```
 
 Requirements: resolution, codec, audio and size on every row; the default marked; every row a
-D-pad stop; and *Get another quality* opening the release picker from inside the selector.
+D-pad stop; and *Get another quality* opening the release picker from inside the selector (superseded 2026-10-29: the
+detail page's cloud icon opens it; the selector has no such row).
 
 Implementation shape that keeps Principles 0 and 4: a richer row renderer passed to the existing
 selector, not a replacement for it. Everything it does today it still does.
@@ -1538,7 +1539,6 @@ The version rows below the track block are replaced by a chooser in the **Video*
   Video      1080p HEVC SDR  ˅
              ○  2160p  HEVC 10-bit · DTS-HD 7.1 · 24.1 GB   DEFAULT   ⟲ 📌 ✕
              ●  1080p  HEVC 10-bit · AAC 5.1 · 783 MB · removes 12 Oct  ⟲ 📌 ✕
-             +  Get another quality
   Audio      English - DTS-HD MA - 7.1 - Default
 ```
 
@@ -1548,8 +1548,8 @@ The version rows below the track block are replaced by a chooser in the **Video*
   a multi-episode range as before, a scheduled removal as `· removes <date>` (and nothing else: no
   seeding or tracking words, user 2026-10-28),
   then three icons: **history** (§7.2), **pin** (per-file Keep, filled in primary when kept) and
-  **cross** (Remove this version with upstream's confirmation, as in §11.1). The last row is *Get
-  another quality* for administrators with release search.
+  **cross** (Remove this version with upstream's confirmation, as in §11.1). There is no *Get
+  another quality* row: the header's cloud icon opens the picker for another quality (user, 2026-10-29, D102).
 - The row's actions are round, icon-only buttons of at least 2.5em, each its own D-pad stop, named for their file
   ("Keep the 1080p file") with a Title Case tooltip: grey, the cross red, the pin in primary while kept (user UI rules,
   2026-10-08). Pin and cross are administrators'; history is everyone's.
