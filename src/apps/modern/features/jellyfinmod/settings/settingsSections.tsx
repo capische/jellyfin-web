@@ -1569,8 +1569,11 @@ export const InterfaceSection: FC<SectionProps> = props => {
     const face = data.iface;
     const section = useSectionState(reload);
     const { run } = section;
-    const toggleTakeover = useCallback((event: React.ChangeEvent<HTMLInputElement>) =>
-        run(() => request(api, 'PATCH', 'Settings/Interface', { takeoverEnabled: event.target.checked }), 'Saved.'), [run, api]);
+    // While it saves, the switch stays focusable (aria-disabled, so a TV keeps its focus on it) and ignores presses.
+    const toggleTakeover = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        if (section.busy) return;
+        void run(() => request(api, 'PATCH', 'Settings/Interface', { takeoverEnabled: event.target.checked }), 'Saved.');
+    }, [run, api, section.busy]);
     const restoreStock = useCallback(() => run(() => request(api, 'POST', 'Settings/Interface/RestoreStock'), 'Stock Jellyfin is back at /web until the next restart.'),
         [run, api]);
     if (!face) {
@@ -1580,8 +1583,8 @@ export const InterfaceSection: FC<SectionProps> = props => {
     return (
         <SectionFrame id='interface' eyebrow={props.eyebrow} title='Interface' state={summarise('interface', data)} notice={section.notice} next={props.next} onGo={props.onGo}>
             <FormControlLabel
-                control={<Switch checked={!!face.TakeoverEnabled} disabled={section.busy}
-                    onChange={toggleTakeover} />}
+                control={<Switch checked={!!face.TakeoverEnabled} onChange={toggleTakeover}
+                    slotProps={{ input: { 'aria-disabled': section.busy || undefined } }} />}
                 label='Serve this interface at /web'
             />
             <dl className='jfmod-kv'>

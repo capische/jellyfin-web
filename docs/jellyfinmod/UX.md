@@ -1782,6 +1782,12 @@ explicit that TV bugs are only reachable by D-pad at 1920x1080.
    never into the page behind; Enter toggles checkboxes and switches; opening one focuses its first
    control. `shell/dpadModals.ts` does this for every MUI pop-up, so a new screen gets it by using
    MUI rather than by handling keys itself.
+10. **Enter toggles a switch outside a pop-up too** (P7.TV, user 2026-10-28: "fix TV enter"). Browsers
+   toggle a checkbox on Space only; `shell/dpadModals.ts` makes the remote's OK toggle a focused
+   checkbox or switch anywhere on the TV layout, once per press (a held OK's repeats are ignored), and
+   leaves alone one whose own handler took the Enter (`emby-checkbox`, or a switch with its own Enter
+   handler). A switch that saves at once stays focusable while it saves (`aria-disabled` on its input
+   and a guard in its handler, not `disabled`), so the focus stays on it.
 
 **Proposed (review 2026-09-18, not user-approved):** additional TV rules from
 [`REVIEW-2026-09-18.md`](REVIEW-2026-09-18.md), tracked as T19 in `PHASE3.md` and W9 and W11 in
