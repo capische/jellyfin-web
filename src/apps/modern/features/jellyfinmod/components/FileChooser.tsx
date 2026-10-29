@@ -8,7 +8,7 @@ import layoutManager from 'components/layoutManager';
 import inputManager from 'scripts/inputManager';
 import { getKeyName } from 'scripts/keyboardNavigation';
 
-import { describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
+import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
 import { isBackKey } from '../shell/dpadModals';
 import type { VersionDto } from '../types/versions';
 import PhoneMark, { PHONE_COPY_LABEL } from './PhoneMark';
@@ -508,7 +508,8 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
             <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
                 style={place ? { top: place.top, left: place.left, width: place.width } : undefined}>
                 <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
-                    {versions.map(version => <FileRow key={version.mediaSourceId} version={version}
+                    {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
+                    {bestFirst(versions).map(version => <FileRow key={version.mediaSourceId} version={version}
                         selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
                         source={findSource(sources, version.mediaSourceId)}
                         {...iconProps(version)} />)}

@@ -848,7 +848,8 @@ the target due at the next run and reset its back-off.
 `GET /JellyfinMod/Releases?…&intent=addVersion` searches for another quality of a title that has
 a playable file (409 `no_playable_version`; episodes answer 409 `episode_versions_unsupported`
 while episode upgrades are off). Candidates carry `heldQuality: true` for qualities already in the
-library, and grabbing one answers 409 `held_quality`. An unknown `intent` is 400 `invalid_intent`.
+library. Add takes one (another file of that quality, user 2026-10-29, D108); only `mode: "replace"` with one answers 409
+`held_quality`. An unknown `intent` is 400 `invalid_intent`.
 `grab.modes` is `["add","replace"]` for an episode's or a movie's another version while `episodeUpgradesEnabled`
 (Settings › Automation, "Upgrade episodes and allow Replace") is on, `["add"]` while it is off; a grab with
 `"mode":"replace"` then answers 409 `episode_replace_disabled`. For a movie, `grab.heldFiles` counts the files it holds: once
@@ -888,7 +889,7 @@ Health `Capabilities` adds `copies`. Every route below is administrator-only, li
   `PATCH` `{"selected":[…],"revision":n}` (409 `revision_conflict`, 400 `invalid_tv_model`). The catalogue is the plugin's
   `Assets/tv-models.json`; a capability counts when every ticked TV has it.
 - **Copies on entry detail:** a `versions[]` row adds `phoneCopy` (true on the file phones play: on a title with two or more files,
-  the best one at 1080p or below, SDR first); entry detail (movies) and each episode add `phoneCopyMissing` (files held and none at
+  the best one at 1080p or below, never a 1440p (D114), SDR first); entry detail (movies) and each episode add `phoneCopyMissing` (files held and none at
   1080p or below).
 - **Get Another Quality for phones:** `GET /JellyfinMod/Releases?intent=addVersion` without `profileId` on a title whose phone copy
   is missing searches with `phoneProfileId` (`profile.inherited` false), and a season or series pack search without `profileId`

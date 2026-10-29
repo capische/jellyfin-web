@@ -246,6 +246,28 @@ export const dynamicRangeRank = (version: VersionDto, rangeTypes?: VideoRangeTyp
     return version.videoRange && !QUIET_RANGES.has(version.videoRange.toLowerCase()) ? 1 : 0;
 };
 
+/** Lines of picture per resolution the plugin reads, finer than `versionRank` (a 1440p is above a 1080p). */
+const RESOLUTION_LINES = new Map([['2160p', 2160], ['1440p', 1440], ['1080p', 1080], ['720p', 720], ['576p', 576], ['480p', 480]]);
+const linesOf = (version: VersionDto) => RESOLUTION_LINES.get(version.resolution ?? '') ?? version.height ?? 0;
+
+/**
+ * A title's files best first (user, 2026-10-29, D114: a title can hold many files): the higher resolution, then Dolby Vision,
+ * HDR, SDR, then the larger file; files that tie keep the plugin's order. The Video list shows them in this order, and its top
+ * file is the one TVs and computers start.
+ */
+export const bestFirst = (versions: VersionDto[], rangeTypes?: VideoRangeTypes | null): VersionDto[] => versions
+    .map((version, index) => ({ version, index }))
+    .sort((a, b) => linesOf(b.version) - linesOf(a.version)
+        || dynamicRangeRank(b.version, rangeTypes) - dynamicRangeRank(a.version, rangeTypes)
+        || (b.version.sizeBytes ?? 0) - (a.version.sizeBytes ?? 0) || a.index - b.index)
+    .map(item => item.version);
+
+/** Whether phones may play a file: 1080p or below, never a 1440p (D114); the height the host reported when no name says. */
+const fitsPhone = (version: VersionDto) => {
+    const lines = linesOf(version);
+    return lines > 0 && lines <= 1080;
+};
+
 /**
  * The copy this device should start with, or null to leave Jellyfin's own default (V1 decision 4; Phase 12, user 2026-10-28:
  * TVs and computers the best copy, phones the phone copy). A TV and a computer take the highest resolution and, at equal
@@ -261,12 +283,12 @@ export const preferredVersion = (versions: VersionDto[], device: DevicePreferenc
     const byScore = (candidates: VersionDto[], score: (version: VersionDto) => number) =>
         [...candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
     const range = (version: VersionDto) => dynamicRangeRank(version, rangeTypes);
-    if (device !== 'mobile') return byScore(versions, version => versionRank(version) * 10 + range(version));
+    if (device !== 'mobile') return bestFirst(versions, rangeTypes)[0] ?? null;
     const marked = versions.find(version => version.phoneCopy);
     if (marked) return marked;
-    const fitting = versions.filter(version => versionRank(version) > 0 && versionRank(version) <= 3);
-    if (fitting.length === 0) return byScore(versions, version => -versionRank(version));
-    return byScore(fitting, version => versionRank(version) * 10 - range(version));
+    const fitting = versions.filter(fitsPhone);
+    if (fitting.length === 0) return byScore(versions, version => -linesOf(version));
+    return byScore(fitting, version => linesOf(version) * 10 - range(version));
 };
 
 /** How a version is named in a sentence: its label, else its resolution. */

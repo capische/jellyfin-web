@@ -50,11 +50,18 @@ const range = (stream: SourceStream | undefined) => {
 
 const video = (source: PlayableSource) => source.MediaStreams?.find(stream => stream.Type === 'Video');
 
+/** Whether phones may play a source: 1080p or below (a 1920×1080 box), never a 1440p (D114). */
+const fitsPhone = (stream: SourceStream | undefined) => {
+    const width = stream?.Width ?? 0;
+    const height = stream?.Height ?? 0;
+    return (width > 0 || height > 0) && width <= 1920 && height <= 1080;
+};
+
 const playable = (source: PlayableSource) => !!(source.enableDirectPlay || source.SupportsDirectStream || source.SupportsTranscoding);
 
 /**
  * The media source this device should start, or null to let upstream choose. TVs and computers: the highest resolution, then Dolby
- * Vision, HDR, SDR. Phones: the best source at 1080p or below, SDR first; none when every source is larger.
+ * Vision, HDR, SDR. Phones: the best source at 1080p or below (never a 1440p), SDR first; none when every source is larger.
  */
 export function deviceMediaSource<T extends PlayableSource>(sources: T[], requestedSourceId: string | null | undefined,
     options: PlayOptions | null | undefined): T | null {
@@ -62,8 +69,8 @@ export function deviceMediaSource<T extends PlayableSource>(sources: T[], reques
     const candidates = sources.filter(playable);
     const score = layoutManager.mobile ?
         (source: T) => {
-            const tier = rank(video(source));
-            return tier > 0 && tier <= 3 ? tier * 10 - range(video(source)) : Number.NEGATIVE_INFINITY;
+            const stream = video(source);
+            return fitsPhone(stream) ? rank(stream) * 10 - range(stream) : Number.NEGATIVE_INFINITY;
         } :
         (source: T) => rank(video(source)) * 10 + range(video(source));
     const best = [...candidates].sort((a, b) => score(b) - score(a))[0];

@@ -86,10 +86,11 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   keyboard and TV focus `var(--jf-palette-action-focus)` (12 %); the current file keeps its blue under the pointer; then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
   list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
-  another quality. The rows' text starts where the segment's does (.735em in). Sorted best first, as Jellyfin lists the versions: the top file is
-  the one TVs and computers play, and nothing names it (no "Best copy" or "Mobile copy" flag, D51).
+  another quality. The rows' text starts where the segment's does (.735em in). Sorted best first, whatever order the files came
+  in (D114, a title can hold many files): the higher resolution (2160p, 1440p, 1080p, …), then Dolby Vision, HDR, SDR, then the
+  larger file. The top file is the one TVs and computers play, and nothing names it (no "Best copy" or "Mobile copy" flag, D51).
 - **The phone mark** (D52): on a title with two or more files, the one file phones play (the plugin's `phoneCopy`: the best file at
-  1080p or below, SDR first) carries Material `smartphone` right after its resolution, inside the 600 word (`.jfmod-phoneMark`:
+  1080p or below, never a 1440p, SDR first, D114) carries Material `smartphone` right after its resolution, inside the 600 word (`.jfmod-phoneMark`:
   an inline SVG 1.05em square, `currentColor`, opacity .86, `margin-left .28em`, `vertical-align -.15em`), in its row and in the
   closed Video value when it is the selected file; `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
   on the TV). No mark on a single file.

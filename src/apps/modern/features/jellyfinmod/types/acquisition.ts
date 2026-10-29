@@ -63,8 +63,13 @@ export interface ReleaseCandidate {
     rejections: ReleaseRejection[];
     seedRatio: number | null;
     seedMinutes: number | null;
-    /** The candidate's quality is already held; grabbing it as another version answers 409 `held_quality` (P6.M6). */
+    /**
+     * The candidate's quality is already held (P6.M6). Add still takes it, another file of the same quality (user, 2026-10-29);
+     * only Replace with it answers 409 `held_quality`.
+     */
     heldQuality?: boolean;
+    /** Set by the picker on the row whose own release was just imported: it reads as in the library and has no actions. */
+    inLibrary?: boolean;
     /** What a pack row covers; null outside season and series searches, absent from plugins without `acquisition.packs`. */
     coverage?: PackCoverage | null;
     /**
