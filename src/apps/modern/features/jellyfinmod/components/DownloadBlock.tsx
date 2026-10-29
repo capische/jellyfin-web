@@ -11,7 +11,7 @@ import { airDateLong, episodeMark } from '../constants/fileState';
 import { actionErrorMessage, describeDownload, downloadProgress, type DownloadProgress, etaText, formatDuration, QUEUE_ROUTE,
     QUEUE_STATE_LABEL, reasonMessage } from '../constants/queue';
 import { packEpisodeView, useQueueRowFor, useQueueVisible } from '../hooks/useQueue';
-import { cancelDownload, confirmTorrentRemoval, isHeldRow, keepsDownloadedFiles } from '../integration/queueActions';
+import { removeWithDialog } from '../integration/queueActions';
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
 import { raisedButtonClass } from '../utils/flatButton';
@@ -322,13 +322,11 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
             void queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === 'JellyfinMod' && query.queryKey[3] === 'Queue' });
             changed.current();
         };
-        // A held grab has no torrent yet: it is cancelled without the torrent's question (P4.FU10).
-        (isHeldRow(row) ? Promise.resolve() : confirmTorrentRemoval(row.releaseTitle, keepsDownloadedFiles(row))).then(() => {
-            setRemoving(true);
-            return cancelDownload(api, row)
-                .then(removed, (error: unknown) => toast(actionErrorMessage(error, 'It could not be removed. Please try again.')))
-                .finally(() => setRemoving(false));
-        }, () => undefined).finally(() => {
+        // The removal dialog for the row's state (D120); a held grab is cancelled without it (P4.FU10).
+        removeWithDialog(api, row, setRemoving).then(done => {
+            if (done) removed();
+        }, (error: unknown) => toast(actionErrorMessage(error, 'It could not be removed. Please try again.'))).finally(() => {
+            setRemoving(false);
             if (button.isConnected) button.focus();
         });
     }, [api, removing, row]);

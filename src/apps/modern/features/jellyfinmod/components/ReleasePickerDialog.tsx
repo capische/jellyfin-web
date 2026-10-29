@@ -11,12 +11,12 @@ import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
 
-import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, getSourceIndexers, grabRelease, type ReleaseQuery, removeQueueRow,
+import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, getSourceIndexers, grabRelease, type ReleaseQuery,
     searchReleases } from '../api/modApi';
 import { downloadProgress, type DownloadProgress } from '../constants/queue';
 import { ADD_VERSION_UNAVAILABLE } from '../constants/versions';
 import { PACKS_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
-import { confirmTorrentRemoval, TORRENT_REMOVAL } from '../integration/queueActions';
+import { removeWithDialog } from '../integration/queueActions';
 import { profileSummary } from '../settings/qualityProfiles';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 import type { QueueRow } from '../types/queue';
@@ -1145,25 +1145,23 @@ const useAddedRow = ({ api, entryId, data, grab, onChanged, container, confirmin
         onChanged?.();
     }, [importedNow, live, addedId, release, clear, onChanged]);
 
-    const queueRowId = queue?.row?.id ?? null;
+    const queueRow = queue?.row ?? null;
     const removeFromQueue = useCallback(() => {
-        if (!live || !queueRowId || removing || confirming.current) return;
+        if (!live || !queueRow || removing || confirming.current) return;
         confirming.current = true;
         const id = live.id;
-        confirmTorrentRemoval(live.releaseTitle).then(() => {
-            setRemoving(true);
-            setRemoveError('');
-            // The torrent removal: the client forgets the torrent and deletes what it downloaded, nothing is blocklisted.
-            return removeQueueRow(api, queueRowId, TORRENT_REMOVAL).then(() => {
-                release(id);
-                clear();
-                onChanged?.();
-            }, (failure: unknown) => setRemoveError(problemOf(failure, 'It could not be removed. Please try again.').title))
-                .finally(() => setRemoving(false));
-        }, () => undefined).finally(() => {
+        setRemoveError('');
+        // The removal dialog for the row's state (D120): Delete the Download, or keep it downloading.
+        removeWithDialog(api, queueRow, setRemoving).then(done => {
+            if (!done) return;
+            release(id);
+            clear();
+            onChanged?.();
+        }, (failure: unknown) => setRemoveError(problemOf(failure, 'It could not be removed. Please try again.').title)).finally(() => {
+            setRemoving(false);
             confirming.current = false;
         });
-    }, [api, clear, confirming, live, onChanged, queueRowId, release, removing]);
+    }, [api, clear, confirming, live, onChanged, queueRow, release, removing]);
 
     const added = live && addedId ? addedView({ accepted, isAdmin, queue, removing, cancelling, cancel, remove: removeFromQueue }) : null;
 

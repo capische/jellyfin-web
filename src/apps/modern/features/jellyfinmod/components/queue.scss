@@ -332,14 +332,3 @@
         [dir="rtl"] & { margin-left: 0.4em; }
     }
 }
-
-// Delete the downloaded files belongs to the client option above it (user, 2026-10-26): indented so its label lines up with
-// that option's label.
-.jfmod-queueRemoveDeleteOption {
-    margin-left: 2.2em;
-}
-
-// Remove can delete files, so it stays red under the pointer as at rest; the stock `.raised:hover` would turn it grey.
-.jfmod-queueRemoveConfirm.button-delete:hover {
-    background: var(--jf-palette-error-main, #c62828);
-}

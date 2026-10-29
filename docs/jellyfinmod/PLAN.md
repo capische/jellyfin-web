@@ -1774,6 +1774,32 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   of downloading; both times the `.part` file, the folder and the torrent were gone (charlie reset afterwards). Deployed to
   alpha and beta; the dialogs checked there on intercepted rows (Chromium laptop dark), nothing removed. **Not run:** Codex
   review of the two fixes, the full dialog matrix (phone, TV, light, Chrome) on this build, TV 1280×720, a physical TV.
+  **P5.I7/I8 follow-up, built (not accepted) 2026-10-29: one removal dialog whose buttons are the outcomes** (user on beta:
+  "Remove and then 'Stop importing The Matrix (1999)?' also remove from torrent - confusing"; proposal workspace
+  `reviews/queue-remove-dialog/`, approved "looks amazing"; D118–D124 and the build's decisions in
+  `reviews/overnight-2026-10-28/DECISIONS.md`). Replaces Remove from Queue and Remove the Torrent everywhere (Queue page, picker X,
+  Cancel Download, pending entry X): the row action names the outcome (Cancel Download, Remove, Stop Seeding, none while
+  importing), each choice is a button with its result under it, the destructive one red and the safe one focused; Delete the
+  Download only where the plugin's new `canDeleteFiles` says nothing of the download is in a library. Plugin: `canDeleteFiles` on
+  administrators' queue rows by the removal's own test, and that test counts a recorded destination as imported only while a file
+  is at that path (user, 2026-10-29: a link that failed left its planned destination, so a blocked download such as The Matrix's
+  could never be deleted). Phase 5 suite: a blocked row with nothing at its destination is deletable and deleted; the download's
+  own hardlink or another file there still refuses; seeding and partly imported pack rows report `canDeleteFiles` false. Gate 1
+  (computer, dark) approved by the user ("looks great for me"); gate 2 on local bravo with real rows from the stand-ins
+  (`scripts/jellyfinmod-e2e/queue-remove-dialog.mjs`): the four states on desktop, phone, TV 1920 and 1280, dark and light, 112
+  checks each in Chromium and Chrome (TV: the sheet's Remove by D-pad, focus on the safe choice, Up and Down between buttons,
+  OK and Back close it, focus back on the row; elsewhere back on the ⋮); the pending entry's X on a Replace ("Your 1080p file
+  stays."), the episode page's Cancel Download on a pack and the picker's X (Keep, then a real Delete of the download), and a
+  blocked Add whose file has a second name: the refused delete asks again without it and focus returns to the X, enabled.
+  Phase 5 and 6 suites pass on both lines. Accepted by the user 2026-10-30 ("Queue remove dialog - accepted"). Adversarial Codex
+  GPT-6.1 Sol high review (workspace `reviews/queue-remove-dialog/codex-review.md`): no server-side bypass, two P2s fixed: a
+  pack counts as in the library only its linked, scanned or bound episodes and never promises that while its files can be
+  deleted (a pack whose episodes all failed said "6 of 6 episodes are in your library and stay there" beside Delete the
+  Download: failed before, passes after); the runner's live delete now proves the files were there, the client got
+  delete-local-data and the files are gone. Re-run after the fixes: the dialog on every layout and theme, 176 checks each in
+  Chromium and Chrome, and the openers with the live delete. Codex re-review approved with a P3, fixed: an episode blocked
+  after its link (`binding_not_observed`, the hardlink kept) counts as in the library ("1 of 4" before, "2 of 4" after, on a
+  rewritten Queue read: the plugin completes such an import within seconds). **Not run:** a physical TV.
   **P4.FU29, built (not accepted) 2026-10-28: Add on a release still seeding imports it again from the seeding copy** (user
   report on beta: The Matrix's 1080p row lost its + after Add and had it back on reopening; user decision 2026-10-28:
   "re-import from the seeding copy instead of re-downloading"). Owners: the grab (P4, `GrabService`) and the release picker's

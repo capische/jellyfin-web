@@ -2,113 +2,307 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import escapeHtml from 'escape-html';
 
 import actionsheet from 'components/actionSheet/actionSheet';
-import confirm from 'components/confirm/confirm';
 import dialogHelper from 'components/dialogHelper/dialogHelper';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
 
 import { cancelGrab, removeQueueRow, retryImport } from '../api/modApi';
-import { actionErrorMessage, isRetryable, QUEUE_ROUTE, queueRowTitle } from '../constants/queue';
+import { actionErrorMessage, formatBytes, isReplace, isRetryable, progressPercent, QUEUE_ROUTE, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage,
+    replacedWords, seedingFacts } from '../constants/queue';
 import type { QueueRow, QueueState, RemoveQueueRequest } from '../types/queue';
 
 import 'elements/emby-button/emby-button';
 import 'elements/emby-button/paper-icon-button-light';
 import 'elements/emby-checkbox/emby-checkbox';
 import 'material-design-icons-iconfont';
+import '../components/removeDialog.scss';
 
-const DIALOG_HTML = '<div class="formDialogHeader">'
-    + '<button is="paper-icon-button-light" class="btnCancel autoSize" tabindex="-1" title="Back">'
-    + '<span class="material-icons arrow_back" aria-hidden="true"></span></button>'
-    + '<h3 class="formDialogHeaderTitle">Remove from Queue</h3></div>'
-    + '<div class="formDialogContent smoothScrollY"><div class="dialogContentInner dialog-content-centered jfmod-queueRemove">'
-    + '<p class="jfmod-queueRemoveText"></p>'
-    + '<div class="checkboxContainer checkboxContainer-withDescription"><label>'
-    + '<input type="checkbox" is="emby-checkbox" class="jfmod-queueRemoveClient" />'
-    + '<span>Also remove it from the download client</span></label>'
-    + '<div class="fieldDescription checkboxFieldDescription jfmod-queueRemoveClientText"></div></div>'
-    + '<div class="checkboxContainer checkboxContainer-withDescription jfmod-queueRemoveDeleteOption hide"><label>'
-    + '<input type="checkbox" is="emby-checkbox" class="jfmod-queueRemoveDelete" checked />'
-    + '<span>Delete the downloaded files</span></label>'
-    + '<div class="fieldDescription checkboxFieldDescription">What this torrent downloaded so far. Library files are never touched.'
-    + '</div></div>'
-    + '<div class="checkboxContainer checkboxContainer-withDescription"><label>'
-    + '<input type="checkbox" is="emby-checkbox" class="jfmod-queueRemoveBlocklist" />'
-    + '<span>Blocklist this release</span></label>'
-    + '<div class="fieldDescription checkboxFieldDescription">Later release searches reject it.</div></div>'
-    + '<div class="formDialogFooter">'
-    + '<button is="emby-button" type="button" class="raised button-delete block formDialogFooterItem jfmod-queueRemoveConfirm">'
-    + 'Remove</button></div></div></div>';
+/** A choice of the removal dialog: one button, its result under it (queue Remove dialog, D118, user-approved 2026-10-29). */
+interface RemovalChoice {
+    /** What the button asks the plugin: delete the files, keep them, or nothing (the safe choice). */
+    id: 'delete' | 'keep' | 'cancel';
+    name: string;
+    red?: boolean;
+    text?: string;
+}
 
-/** Rows whose download is not imported yet, so Remove can also delete what it downloaded (user, 2026-10-26). */
-const DELETABLE_STATES: ReadonlySet<QueueState> = new Set<QueueState>(['queued', 'downloading', 'stalled', 'failed']);
+/** What the dialog shows for a row: its title (the row's action), question, facts and choices. */
+interface RemovalPlan {
+    title: string;
+    question: string;
+    /** The facts that decide it: `42% · 3.1 of 7.4 GB downloaded …`; `fail` draws the line in the failure colour. */
+    facts: { html: string; fail?: boolean }[];
+    notes: string[];
+    choices: RemovalChoice[];
+    blocklist: boolean;
+}
+
+const UNDER_WAY_STATES: ReadonlySet<QueueState> = new Set<QueueState>(['queued', 'downloading', 'stalled', 'unknown']);
+const IMPORTING_STATES: ReadonlySet<QueueState> = new Set<QueueState>(['identifying', 'linking', 'scanning']);
 
 /**
- * The stock form dialog with Remove's sub-options (UX §10). For a download not imported yet, Delete the downloaded files sits
- * under the client option, shown (ticked) only while that one is ticked; an imported or seeding row has no delete option.
- * Back or Escape cancels and the dialog helper returns focus to the row that opened it (UX §13). Resolves null on cancel.
- */
-export const confirmQueueRemoval = (row: QueueRow): Promise<RemoveQueueRequest | null> => {
-    const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : 'small' });
-    dlg.classList.add('formDialog', 'jfmod-queueRemoveDialog');
-    dlg.innerHTML = DIALOG_HTML;
-    const text = dlg.querySelector('.jfmod-queueRemoveText');
-    if (text) text.textContent = 'Stop importing ' + queueRowTitle(row) + '?';
-    const deletable = DELETABLE_STATES.has(row.state);
-    const clientText = dlg.querySelector('.jfmod-queueRemoveClientText');
-    if (clientText) {
-        clientText.textContent = deletable ? 'The client forgets the torrent.' :
-            'The client forgets the torrent and stops seeding. The seeding copy stays on disk; library files are never touched.';
-    }
-    const client = dlg.querySelector<HTMLInputElement>('.jfmod-queueRemoveClient');
-    const deleteOption = dlg.querySelector('.jfmod-queueRemoveDeleteOption');
-    const deleteFiles = dlg.querySelector<HTMLInputElement>('.jfmod-queueRemoveDelete');
-    if (deletable) client?.addEventListener('change', () => deleteOption?.classList.toggle('hide', !client.checked));
-    let result: RemoveQueueRequest | null = null;
-    dlg.querySelector('.btnCancel')?.addEventListener('click', () => dialogHelper.close(dlg));
-    dlg.querySelector('.jfmod-queueRemoveConfirm')?.addEventListener('click', () => {
-        const removeFromClient = !!client?.checked;
-        result = {
-            removeFromClient,
-            blocklist: !!dlg.querySelector<HTMLInputElement>('.jfmod-queueRemoveBlocklist')?.checked,
-            // Only a shown option counts: hidden, its tick is not sent.
-            deleteFiles: deletable && removeFromClient && !!deleteFiles?.checked
-        };
-        dialogHelper.close(dlg);
-    });
-    return dialogHelper.open(dlg).then(() => result, () => result);
-};
-
-const REMOVE_TEXT = 'Remove this torrent from the download queue? The download stops, the torrent leaves the client and the files '
-    + 'it downloaded are deleted. Files already in your library are not touched.';
-
-/** A pack part of which is already in the library: its torrent can go, but what it downloaded stays (the server's rule). */
-const REMOVE_KEEP_TEXT = 'Remove this torrent from the download queue? The download stops and the torrent leaves the client. Part of '
-    + 'it is already in your library, so the files it downloaded stay on disk. Files already in your library are not touched.';
-
-/**
- * The torrent removal's confirmation (2026-10-12): the release picker's added-row X and a missing episode's Cancel Download
- * (P1.FU20) ask the same question, and since 2026-10-26 delete what the torrent downloaded, so Remove is the red delete
- * button. Resolves when confirmed, rejects when declined.
- */
-export const confirmTorrentRemoval = (releaseTitle: string, keepFiles = false): Promise<void> => {
-    // The stock dialog takes its options' `dialogOptions` (an id here), which the confirm passes through: releasePicker.scss
-    // keeps Remove red under the pointer by it, where the stock `.raised:hover` would turn it grey.
-    const options = { title: 'Remove the Torrent', text: (keepFiles ? REMOVE_KEEP_TEXT : REMOVE_TEXT) + '<span class="jfmod-confirmName">' + escapeHtml(releaseTitle) + '</span>',
-        confirmText: 'Remove', primary: 'delete', dialogOptions: { id: 'jfmodTorrentRemoval' } };
-    return confirm(options);
-};
-
-/** The torrent removal itself: the client forgets the torrent and deletes what it downloaded, nothing else (user, 2026-10-26). */
-export const TORRENT_REMOVAL: RemoveQueueRequest = { removeFromClient: true, blocklist: false, deleteFiles: true };
-
-/**
- * A pack whose episodes have started importing may already have files in the library, and the plugin then refuses to delete what
- * the torrent downloaded (409 `delete_not_allowed`): its removal keeps them. Read on the client before asking, so the question
- * says what happens (Codex review of the upgrade status, P2 3); any episode past waiting counts, which may keep files a little
- * more often than the plugin would delete them, never the other way round.
+ * A pack whose episodes have started importing may already have files in the library (D39). Only for a plugin that sends no
+ * `canDeleteFiles`, which is the plugin's own answer.
  */
 export const keepsDownloadedFiles = (row: QueueRow) => !!row.pack?.episodes.some(episode => !!episode.importState && episode.importState !== 'waiting');
+
+/** Whether Remove may delete what the download fetched: the plugin's `canDeleteFiles` (D124), else the same guess as before. */
+const canDeleteFiles = (row: QueueRow) => row.canDeleteFiles
+    ?? ((UNDER_WAY_STATES.has(row.state) || row.state === 'failed' || row.state === 'blocked') && !keepsDownloadedFiles(row));
+
+const clientName = (row: QueueRow) => row.client?.name ?? 'The download client';
+
+/** What a Replace keeps when it is cancelled: `Your 1080p file stays.` */
+const replaceStays = (row: QueueRow) => {
+    if (!isReplace(row)) return null;
+    const { words, many } = replacedWords(row);
+    if (words === 'the current file') return 'The current file stays.';
+    if (!many) return 'Your ' + words + ' file stays.';
+    return 'Your ' + words + (words.endsWith(' files') ? '' : ' files') + ' stay.';
+};
+
+const HIT_AND_RUN = 'Stopping earlier gives the tracker less than it asks for; on a private tracker that can count as a hit-and-run.';
+
+/** When the seeding stops by itself, and what leaving earlier means (D122). */
+const seedingNote = (seeding: QueueRow['seeding']) => {
+    if (seeding && !seeding.releaseEnabled) return 'Automatic stop is off, so it seeds until you stop it.';
+    const goals = seeding?.waitingFor.filter(reason => reason !== 'complete') ?? [];
+    if (!goals.length) return 'Its goals are met, so JellyfinMod stops it by itself soon.';
+    let which = 'the seeding time goal is';
+    if (goals.length > 1) which = 'both goals are';
+    else if (goals[0] === 'ratio') which = 'the ratio goal is';
+    return 'JellyfinMod stops it by itself once ' + which + ' met. ' + HIT_AND_RUN;
+};
+
+const libraryWord = (row: QueueRow) => {
+    if (row.pack) return 'The episodes stay in your library.';
+    return row.episode ? 'The episode stays in your library.' : 'The film stays in your library.';
+};
+
+/** Stop Seeding (D122): no delete, no blocklist; its file is the library's under a second name. */
+const seedingPlan = (row: QueueRow): RemovalPlan => {
+    const figures = row.seeding ? seedingFacts(row.seeding).figures : null;
+    const files = row.seeding?.libraryLinkPresent === false ?
+        'Its file stays in the download folder; it is not deleted from here.' :
+        'Nothing to delete: the seeding file and the library file are one file under two names (a hardlink), so it takes no extra space.';
+    return {
+        title: 'Stop Seeding', question: 'Stop seeding ' + queueRowTitle(row) + ' now?',
+        facts: [{ html: '<span class="jfmod-removeOk">In your library</span>' + (figures ? ' · ' + escapeHtml(figures) : '') }],
+        notes: [seedingNote(row.seeding), files],
+        choices: [{ id: 'keep', name: 'Stop Seeding', red: true, text: clientName(row) + ' removes the torrent. ' + libraryWord(row) },
+            { id: 'cancel', name: 'Keep Seeding' }],
+        blocklist: false
+    };
+};
+
+/** A pack episode's import that put its file in the library (linked, being scanned, or bound); a failure before the link did not. */
+const IN_LIBRARY: ReadonlySet<string> = new Set(['linked', 'scanning', 'completed']);
+
+/**
+ * The plugin's blocked reasons that come only after a successful link, the library hardlink kept (ImportService: Jellyfin did not
+ * bind the file after two scans; `scan_timeout` from older plugins); every other blocked reason is set before the link.
+ */
+const BLOCKED_AFTER_LINK: ReadonlySet<string> = new Set(['binding_not_observed', 'scan_timeout']);
+
+const inLibrary = (episode: { importState: string | null; reason: string | null }) => !!episode.importState
+    && (IN_LIBRARY.has(episode.importState) || (episode.importState === 'blocked' && !!episode.reason && BLOCKED_AFTER_LINK.has(episode.reason)));
+
+const importedEpisodes = (row: QueueRow) => row.pack?.episodes.filter(inLibrary).length ?? 0;
+
+/** How much is on disk: `3.1 GB`, from the client's bytes or the progress of the size. */
+const downloadedWords = (row: QueueRow) => {
+    if (row.downloadedBytes !== null) return formatBytes(row.downloadedBytes);
+    return row.progress !== null && row.sizeBytes !== null ? formatBytes(row.progress * row.sizeBytes) : null;
+};
+
+/** The waiting episodes' own files together (P5.FU3), when the plugin sends each one's progress. */
+const waitingPercent = (waiting: NonNullable<QueueRow['pack']>['episodes']) => {
+    const own = waiting.map(episode => episode.progress).filter((value): value is number => typeof value === 'number');
+    return own.length && own.length === waiting.length ? progressPercent(own.reduce((sum, value) => sum + value, 0) / own.length) : null;
+};
+
+/** The facts line under the question: the progress and what is on disk, or what of a pack is in the library. */
+const progressFacts = (row: QueueRow, underWay: boolean, deletable: boolean): string | null => {
+    const percent = progressPercent(row.progress);
+    const imported = importedEpisodes(row);
+    // The library's promise only where nothing is deleted (Codex review P2 1): a deletable pack says what the delete removes.
+    if (row.pack && imported > 0 && !deletable) {
+        const waiting = row.pack.episodes.filter(episode => !episode.importState || episode.importState === 'waiting');
+        const restPercent = waitingPercent(waiting) ?? percent;
+        const rest = underWay && waiting.length > 0 && restPercent !== null ? ' · the other ' + waiting.length + ' at ' + restPercent + '%' : '';
+        return '<span class="jfmod-removeOk">' + imported + ' of ' + row.pack.episodes.length + ' episodes are in your library</span> and stay there' + rest;
+    }
+    if (!deletable) return null;
+    const where = underWay ? 'nothing of it is in your library yet' : 'nothing of it is in your library';
+    if (underWay && !row.progress) return escapeHtml('Not started yet · ' + where);
+    const downloaded = downloadedWords(row);
+    const size = underWay ? formatBytes(row.sizeBytes) : null;
+    const ofSize = size ? ' of ' + size : '';
+    const amount = downloaded ? downloaded + ofSize + ' downloaded' : null;
+    return escapeHtml([underWay && percent !== null ? percent + '%' : null, amount, where].filter(Boolean).join(' · '));
+};
+
+/** Why the files stay (D123, D124): the plugin's refusal, or part of it already in the library. */
+const keptNote = (row: QueueRow, refused: string | null) => {
+    if (refused) return refused;
+    const imported = importedEpisodes(row);
+    const others = row.pack ? row.pack.episodes.length - imported : 0;
+    return 'Its files cannot be deleted from here, because part of it is already in your library.'
+        + (imported > 0 && others > 0 ? ' What the other ' + others + ' episodes downloaded stays in the download folder.' : '');
+};
+
+/** Delete the Download, and for a failure Keep the Files (D121). */
+const deleteChoices = (row: QueueRow, underWay: boolean): RemovalChoice[] => {
+    const client = clientName(row);
+    const downloaded = downloadedWords(row);
+    let what = 'what it downloaded.';
+    if (downloaded) what = underWay ? 'the ' + downloaded + ' downloaded so far.' : 'its ' + downloaded + '.';
+    const choices: RemovalChoice[] = [{ id: 'delete', name: 'Delete the Download', red: true, text: client + ' removes the torrent and deletes ' + what }];
+    if (!underWay) {
+        const kept = downloaded ? 'the ' + downloaded : 'what it downloaded';
+        choices.push({ id: 'keep', name: 'Keep the Files', text: client + ' removes the torrent; ' + kept + ' stays in the download folder.' });
+    }
+    return choices;
+};
+
+/** The choices (D121, D123): Delete the Download where it may, else a removal keeping the files; then the safe one. */
+const removalChoices = (row: QueueRow, underWay: boolean, deletable: boolean): RemovalChoice[] => {
+    let choices: RemovalChoice[];
+    if (deletable) {
+        choices = deleteChoices(row, underWay);
+    } else {
+        const imported = importedEpisodes(row);
+        const episodes = imported > 1 ? ' imported episodes' : ' imported episode';
+        const seeds = imported > 0 ? ' and stops seeding the ' + imported + episodes : '';
+        choices = [{ id: 'keep', name: underWay ? 'Stop the Download' : 'Remove from Queue', red: true,
+            text: clientName(row) + ' removes the torrent' + seeds + '. No file is deleted.' }];
+    }
+    choices.push({ id: 'cancel', name: underWay ? 'Keep Downloading' : 'Cancel' });
+    return choices;
+};
+
+/** The plan of the dialog for a row (D119–D123); `refused` is the plugin's sentence when it refused a delete. */
+const removalPlan = (row: QueueRow, refused: string | null): RemovalPlan => {
+    if (row.state === 'seeding') return seedingPlan(row);
+    const underWay = UNDER_WAY_STATES.has(row.state);
+    const deletable = !refused && canDeleteFiles(row);
+    const facts: RemovalPlan['facts'] = [];
+    if (!underWay) {
+        const why = reasonMessage(row.reason, row.message);
+        facts.push({ html: escapeHtml(QUEUE_STATE_LABEL[row.state] + (why ? ': ' + why : '')), fail: true });
+    }
+    const progress = progressFacts(row, underWay, deletable);
+    if (progress) facts.push({ html: progress });
+    const notes: string[] = [];
+    const stays = replaceStays(row);
+    if (stays) notes.push(stays);
+    if (!deletable) notes.push(keptNote(row, refused));
+    const title = queueRowTitle(row);
+    return {
+        title: underWay ? 'Cancel Download' : 'Remove Download',
+        question: underWay ? 'Stop downloading ' + title + '?' : 'Remove ' + title + ' from the queue?',
+        facts, notes, choices: removalChoices(row, underWay, deletable), blocklist: true
+    };
+};
+
+/**
+ * The removal dialog (D118): the row's action as its title, the question about the title, the facts that decide it, then one
+ * button per outcome with its result under it; the destructive one red, the safe one focused and changing nothing. Blocklist is
+ * one checkbox, independent of the choice. Back or Escape is the safe choice; the dialog helper returns focus to the opener.
+ */
+const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQueueRequest | null> => {
+    const plan = removalPlan(row, refused);
+    const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : undefined });
+    dlg.classList.add('formDialog', 'jfmod-removeDialog', 'align-items-center', 'justify-content-center');
+    if (!layoutManager.tv) dlg.classList.add('dialog-fullscreen-lowres');
+    let html = '<div class="formDialogContent smoothScrollY no-grow jfmod-removeContent"><div class="jfmod-remove">'
+        + '<h1 class="jfmod-removeTitle">' + escapeHtml(plan.title) + '</h1>'
+        + '<p class="jfmod-removeQuestion">' + escapeHtml(plan.question) + '</p>';
+    for (const fact of plan.facts) html += '<p class="jfmod-removeFacts' + (fact.fail ? ' jfmod-removeFacts--fail' : '') + '">' + fact.html + '</p>';
+    for (const note of plan.notes) html += '<p class="jfmod-removeNote">' + escapeHtml(note) + '</p>';
+    html += '<p class="jfmod-removeRelease jfmod-mono">' + escapeHtml(row.releaseTitle) + '</p>';
+    if (plan.blocklist) {
+        html += '<div class="checkboxContainer checkboxContainer-withDescription jfmod-removeBlocklist"><label>'
+            + '<input type="checkbox" is="emby-checkbox" class="jfmod-removeBlocklistBox" /><span>Blocklist this release</span></label>'
+            + '<div class="fieldDescription checkboxFieldDescription">Later searches skip it.</div></div>';
+    }
+    for (const choice of plan.choices) {
+        html += '<button is="emby-button" type="button" class="raised block jfmod-removeChoice' + (choice.red ? ' button-delete' : '') + '" data-choice="'
+            + choice.id + '"' + (choice.id === 'cancel' ? ' autofocus' : '') + '>' + escapeHtml(choice.name) + '</button>';
+        if (choice.text) html += '<div class="fieldDescription jfmod-removeChoiceText">' + escapeHtml(choice.text) + '</div>';
+    }
+    dlg.innerHTML = html + '</div></div>';
+    let result: RemoveQueueRequest | null = null;
+    dlg.querySelectorAll<HTMLButtonElement>('.jfmod-removeChoice').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.getAttribute('data-choice');
+            if (id === 'delete' || id === 'keep') {
+                result = {
+                    removeFromClient: true,
+                    deleteFiles: id === 'delete',
+                    blocklist: !!dlg.querySelector<HTMLInputElement>('.jfmod-removeBlocklistBox')?.checked
+                };
+            }
+            dialogHelper.close(dlg);
+        });
+    });
+    // The dialog helper gives focus back on the TV only; on a computer and a phone the opener gets it here, so the keyboard keeps
+    // its place in the list.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const done = () => {
+        if (!layoutManager.tv && opener?.isConnected) focusManager.focus(opener);
+        return result;
+    };
+    return dialogHelper.open(dlg).then(done, done);
+};
+
+const refusedDelete = (error: unknown) => {
+    const data = (error as { response?: { data?: { type?: unknown; title?: unknown } } })?.response?.data;
+    return data?.type === 'delete_not_allowed' && typeof data.title === 'string' ? data.title : null;
+};
+
+/** Two frames: React has rendered what was just set (an enabled opener, a closed menu and its focus trap gone). */
+const nextFrames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+/** Enables the opener a request disabled, lets it render, and gives it focus back before the dialog asks again. */
+const refocus = async (opener: HTMLElement | null, busy?: (on: boolean) => void) => {
+    busy?.(false);
+    await nextFrames();
+    if (opener?.isConnected) focusManager.focus(opener);
+};
+
+/**
+ * Asks the removal dialog and removes the row as chosen: every surface's Remove, Cancel Download and Stop Seeding (D120). A held
+ * grab has no torrent yet and is cancelled without a question (P4.FU10). A delete the plugin still refuses (`delete_not_allowed`:
+ * a file linked elsewhere, data outside the mapped folder) asks again without it, with the plugin's sentence (D124). Resolves
+ * true once removed, false when the person kept it; rejects with the plugin's error otherwise. `busy(true)` runs as a request goes,
+ * after the dialog has closed and returned focus; `busy(false)` before a refused delete asks again, so the opener is enabled and
+ * focused again first, and the dialog returns focus to it whatever the person picks.
+ */
+export const removeWithDialog = async (api: Api, row: QueueRow, busy?: (on: boolean) => void): Promise<boolean> => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (isHeldRow(row)) {
+        busy?.(true);
+        await cancelGrab(api, row.grabId);
+        return true;
+    }
+    let refused: string | null = null;
+    for (;;) {
+        const request = await confirmRemoval(row, refused);
+        if (!request) return false;
+        busy?.(true);
+        try {
+            await removeQueueRow(api, row.id, request);
+            return true;
+        } catch (error) {
+            const why = request.deleteFiles ? refusedDelete(error) : null;
+            if (!why) throw error;
+            refused = why;
+            await refocus(opener, busy);
+        }
+    }
+};
 
 export interface RowMenuOptions {
     api: Api;
@@ -123,23 +317,17 @@ export interface RowMenuOptions {
 export const isHeldRow = (row: QueueRow) => row.importState === 'held' || row.importState === 'submitting';
 
 /**
- * Cancels a held grab or removes a download from the queue (the client forgets the torrent and deletes what it downloaded):
- * what the missing episode page's Cancel Download does.
+ * Actions a row offers the caller, each named by its outcome (D119): Cancel Download while anything downloads, Remove for a failed
+ * or blocked row (with Retry), Stop Seeding for one in the library; none while it imports. Ordinary users get none (PHASE5 I7).
  */
-export const cancelDownload = (api: Api, row: QueueRow) => {
-    if (isHeldRow(row)) return cancelGrab(api, row.grabId).then(() => undefined);
-    const request = keepsDownloadedFiles(row) ? { ...TORRENT_REMOVAL, deleteFiles: false } : TORRENT_REMOVAL;
-    return removeQueueRow(api, row.id, request).then(() => undefined);
-};
-
-/** Actions a row offers the caller. Ordinary users get none (PHASE5 I7: the writes are admin-only). */
 export const queueRowActions = (row: QueueRow, isAdmin: boolean) => {
     if (!isAdmin) return [];
     // A held grab is cancelled; one being sent can be neither cancelled nor removed until the client answers.
     if (isHeldRow(row)) return row.importState === 'held' ? [{ id: 'cancel', name: 'Cancel', icon: 'close' }] : [];
-    const items = [{ id: 'remove', name: 'Remove', icon: 'delete' }];
-    if (isRetryable(row.state)) items.push({ id: 'retry', name: 'Retry', icon: 'refresh' });
-    return items;
+    if (IMPORTING_STATES.has(row.state)) return [];
+    if (row.state === 'seeding') return [{ id: 'remove', name: 'Stop Seeding', icon: 'stop' }];
+    if (!isRetryable(row.state)) return [{ id: 'remove', name: 'Cancel Download', icon: 'close' }];
+    return [{ id: 'remove', name: 'Remove', icon: 'delete' }, { id: 'retry', name: 'Retry', icon: 'refresh' }];
 };
 
 /**
@@ -181,12 +369,12 @@ export const runQueueRowAction = async ({ api, row, positionTo, onChanged }: Row
         return;
     }
     if (id !== 'remove') return;
-    // The action sheet has closed; the dialog must return focus to the row, not to a removed sheet item.
+    // The menu has closed (the desktop popover once React has rendered it closed, so its focus trap lets go); the dialog must
+    // return focus to the row or its ⋮, not to a removed menu item.
+    await nextFrames();
     if (document.body.contains(positionTo)) focusManager.focus(positionTo);
-    const request = await confirmQueueRemoval(row);
-    if (!request) return;
     try {
-        await removeQueueRow(api, row.id, request);
+        if (!await removeWithDialog(api, row)) return;
         toast('Removed from the queue.');
         onChanged(row, 'remove');
     } catch (error) {

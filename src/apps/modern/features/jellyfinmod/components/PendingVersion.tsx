@@ -4,11 +4,10 @@ import toast from 'components/toast/toast';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
 
-import { removeQueueRow } from '../api/modApi';
 import { actionErrorMessage, asNewVersion, downloadProgress, isNewVersion, isReplace, replacedWords, versionFlag } from '../constants/queue';
 import { describeVersion } from '../constants/versions';
 import { packEpisodeView, useQueueRowFor } from '../hooks/useQueue';
-import { cancelDownload, confirmQueueRemoval, confirmTorrentRemoval, isHeldRow, keepsDownloadedFiles } from '../integration/queueActions';
+import { removeWithDialog } from '../integration/queueActions';
 import type { QueueRow, QueueState } from '../types/queue';
 import type { VersionDto } from '../types/versions';
 import DownloadStateMark, { ringLink } from './DownloadStateMark';
@@ -82,20 +81,13 @@ const PendingVersion: FC<PendingVersionProps> = ({ entryId, episodeId, versions,
         const restore = () => {
             if (button.isConnected) button.focus();
         };
-        if (row.state === 'failed' || row.state === 'blocked') {
-            // A failure leaves the queue through Remove from Queue and its options, as on the Queue page.
-            void confirmQueueRemoval(row).then(request => {
-                if (!request) return;
-                setRemoving(true);
-                return removeQueueRow(api, row.id, request).then(removed, failed).finally(() => setRemoving(false));
-            }).finally(restore);
-            return;
-        }
-        // A held grab has no torrent yet: it is cancelled without the torrent's question (P4.FU10).
-        (isHeldRow(row) ? Promise.resolve() : confirmTorrentRemoval(row.releaseTitle, keepsDownloadedFiles(row))).then(() => {
-            setRemoving(true);
-            return cancelDownload(api, row).then(removed, failed).finally(() => setRemoving(false));
-        }, () => undefined).finally(restore);
+        // The removal dialog for the row's state (D120); a held grab is cancelled without it.
+        removeWithDialog(api, row, setRemoving).then(done => {
+            if (done) removed();
+        }, failed).finally(() => {
+            setRemoving(false);
+            restore();
+        });
     }, [api, removing, row]);
 
     if (!shown || !view || !row) return null;

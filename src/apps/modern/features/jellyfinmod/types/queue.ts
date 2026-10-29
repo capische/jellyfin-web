@@ -110,6 +110,11 @@ export interface QueueRow {
      * Absent on the server's rows, where `intent` and the pack's `held` say it (`isNewVersion`).
      */
     newVersion?: boolean;
+    /**
+     * Administrators only: whether Remove may also delete what the download fetched, by the plugin's own test (false once any
+     * file of it may be in a library; D124). Absent from older plugins.
+     */
+    canDeleteFiles?: boolean;
 }
 
 /** One file a Replace removes; `label` is its resolution (`1080p`) when its file name gives one. */

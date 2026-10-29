@@ -39,9 +39,9 @@ title's page content.
 
   A file is named by its own Video entry's resolution, else by the resolution of its file name (the queue's `replaces`).
 - **X** (administrators, `.jfmod-fileIcons` + `.jfmod-fileIcon--danger`, the file rows' red round cross): a held grab is
-  cancelled at once; a download asks the existing **Remove the Torrent** question (a pack whose episodes have started
-  importing asks its keep-the-files form and keeps them, D39, [buttons-and-row-actions.md](buttons-and-row-actions.md)); a
-  failure opens **Remove from Queue** with its options. No X while importing, nor while the grab is being sent. Its label: `Cancel Download` / `Remove from Queue`.
+  cancelled at once; otherwise it opens the removal dialog for the row's state (D120, 2026-10-29;
+  [buttons-and-row-actions.md](buttons-and-row-actions.md)), where a Replace adds "Your 1080p file stays.". No X while importing,
+  nor while the grab is being sent. Its label: `Cancel Download` / `Remove from Queue`.
 - When it ends, however it ends, the page reads its entry again; when the files it lists differ from upstream's Version select
   (an import added one, a Replace removed one) the page loads afresh on the title's main copy (as after Remove this version), so
   upstream's Version select and playback hold the new file (Add) or only it (Replace); a cancellation reloads nothing. Only on
