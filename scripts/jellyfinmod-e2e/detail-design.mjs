@@ -790,42 +790,30 @@ async function checkTracks(page, layout, itemId) {
         !!video?.size && video.sizeBeforeChevron && video.gap >= 0 && video.gap <= video.em && video.clear >= 0 && video.sizeColour !== video.colour,
         JSON.stringify(video));
 
-    // The open Video list: video │ audio and extras … size at each row's end, the selected row's size the value's.
+    // The open Video list: the video part only (no audio, no hairline; user, 2026-10-29, D105) … size at each row's end, the
+    // selected row's size the value's.
     if (await openFileList(page, layout)) {
         await page.mouse.move(0, 0);
         await page.waitForTimeout(400);
         const rows = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--add)`)].map(row => {
             const button = row.querySelector('.jfmod-fileChoose');
             const size = button.querySelector(':scope > .jfmod-fileSize');
-            const videoLine = row.querySelector('.jfmod-fileLine:not(.jfmod-fileLine--audio)');
-            const audioLine = row.querySelector('.jfmod-fileLine--audio');
+            const videoLine = row.querySelector('.jfmod-fileLine:not(.jfmod-fileLine--extra)');
             const box = el => el?.getBoundingClientRect() ?? { top: 0, bottom: 0, right: 0 };
             return { selected: row.classList.contains('jfmod-fileRow--selected'), id: button.getAttribute('data-jfmod-media-source-id'),
                 size: size?.textContent ?? null, sizeRight: Math.round(box(size).right),
                 end: Math.round(box(button).right - parseFloat(getComputedStyle(button).paddingRight)),
-                video: window.jfmodTrack(videoLine), audio: window.jfmodTrack(audioLine),
-                divider: getComputedStyle(row.querySelector('.jfmod-fileDivider')).display !== 'none',
-                videoTop: Math.round(box(videoLine).top), videoBottom: Math.round(box(videoLine).bottom), audioTop: Math.round(box(audioLine).top), audioBottom: Math.round(box(audioLine).bottom),
-                sizeTop: Math.round(box(size).top) };
+                video: window.jfmodTrack(videoLine), whole: window.jfmodTrack(button),
+                divider: !!row.querySelector('.jfmod-fileDivider, .jfmod-releaseDivider') };
         }), PAGE);
         const selected = rows.find(row => row.selected) ?? rows[0];
         record(layout, `${tag}: each file's size is right-aligned at its row's end, one column for every row`, rows.length > 0
             && rows.every(row => row.size && Math.abs(row.sizeRight - row.end) <= 1 && Math.abs(row.sizeRight - rows[0].sizeRight) <= 1),
         JSON.stringify(rows.map(row => [row.size, row.sizeRight, row.end])));
         record(layout, `${tag}: the selected row's size is the closed value's`, selected?.size === video?.size, `${selected?.size} / ${video?.size}`);
-        const defaultAudio = audioStreams.find(stream => stream.Index === source.DefaultAudioStreamIndex) ?? audioStreams[0];
-        const want = defaultAudio ? expectedAudio(defaultAudio) : null;
-        record(layout, `${tag}: a row's video part has no audio; its audio part is its default track's marks`, !!selected && selected.video.labels.length === 0
-            && !selected.video.channels && (!want?.labels || JSON.stringify(selected.audio.labels) === JSON.stringify(want.labels))
-            && (!want?.channels || selected.audio.channels === want.channels), JSON.stringify({ video: selected?.video, audio: selected?.audio, want }));
-        if (isMobile(layout)) {
-            record(layout, `${tag}: on a phone the audio and extras take a second line, the size stays on the first`, !!selected && !selected.divider
-                && selected.audioTop >= selected.videoBottom - 1 && selected.sizeTop < selected.audioTop, JSON.stringify(selected));
-        } else {
-            record(layout, `${tag}: video, a hairline, then audio on one line`, !!selected && selected.divider
-                && Math.abs(selected.audioTop + selected.audioBottom - selected.videoTop - selected.videoBottom) <= 4,
-            JSON.stringify(selected && [selected.videoTop, selected.videoBottom, selected.audioTop, selected.audioBottom]));
-        }
+        record(layout, `${tag}: every row shows the video part only: no audio marks, no channels, no hairline`, rows.length > 0
+            && rows.every(row => row.whole.labels.length === 0 && !row.whole.channels && !row.divider),
+        JSON.stringify(rows.map(row => ({ whole: row.whole, divider: row.divider }))));
         await activate(page, layout, '.selectVideoContainer .jfmod-videoTrigger', 'Video dropdown (close)');
         await page.waitForTimeout(500);
     } else {

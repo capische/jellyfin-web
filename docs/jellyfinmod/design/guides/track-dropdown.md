@@ -11,7 +11,9 @@ voice-over marks, no detail line, each list exactly its fixed cell; decisions D5
 **The Video list as a dropdown like Audio's, every list flush with its cell** (the user's look 2026-10-29; D99–D101, replacing
 D6 and D28): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's approval**. **No Get Another Quality row**
 (the user, 2026-10-29: "I have already the cloud icon over there"; D102): the header's cloud icon opens the same picker in the
-same mode; built 2026-10-29, gate 1.
+same mode; built 2026-10-29, gate 1. **The Video cell, rows and pending entry show the video only** (the user, 2026-10-29:
+"I don't think we need audio quality in video dropdown or subtitles"; D105): no audio or subtitle marks, no hairline; built
+2026-10-29, gate 1.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
@@ -61,8 +63,9 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
   lets the list grow right over the Audio cell, so a file row keeps two lines); on the paper with a 1px divider border and
-  the popover's shadow, sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file (quality 600, all marks, size,
-  the three row icons; the figures wrap under the name when the width needs it), then the
+  the popover's shadow, sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
+  only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
+  `removes <date>`), the size and the three row icons; then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
   list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
   another quality. The rows' text starts where the segment's does (.735em in).

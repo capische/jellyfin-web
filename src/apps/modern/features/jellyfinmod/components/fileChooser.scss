@@ -395,22 +395,14 @@ $text-inset: 0.735em;
     }
 }
 
-// A file's row (P7.FU6): its video, a hairline, its audio and extras; the size right-aligned before its icons.
+// A file's row (P7.FU6): its video and extras (no audio, D105); the size right-aligned before its icons.
 .jfmod-fileLine {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
 }
 
-.jfmod-fileDivider {
-    align-self: center;
-    width: 0;
-    height: 1.1em;
-    border-left: 1px solid currentColor;
-    opacity: 0.35;
-}
-
-// A phone stacks the audio and extras under the video; the size stays on the first line.
+// A phone stacks the extras under the video; the size stays on the first line.
 .layout-mobile {
     .jfmod-fileChoose {
         align-items: flex-start;
@@ -424,12 +416,8 @@ $text-inset: 0.735em;
         display: flex;
     }
 
-    .jfmod-fileLine--audio {
+    .jfmod-fileLine--extra {
         margin-top: 0.15em;
-    }
-
-    .jfmod-fileDivider {
-        display: none;
     }
 }
 
