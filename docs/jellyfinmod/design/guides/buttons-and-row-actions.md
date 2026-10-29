@@ -30,6 +30,8 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
   it dims to 45 % and its tooltip says why.
 - State lives in the glyph, not in a badge: a working icon animates its own glyph (transform or opacity only), a passed one
   turns green, a failed one turns red and changes shape. Reduced motion stops the animation and dims the glyph instead.
+- The hover tint and the focus ring are drawn on the whole round button, never on a smaller circle inside a bigger hit area
+  (user, 2026-10-29: the file chooser's 1.75em icons with an invisible 2.5em circle let the tilted pin fill its tint; D107).
 - On the TV each icon is a focus stop with the white double focus ring; the arrows walk a row's icons left to right.
   Indicators (the download mark, the file-state marks) are **not** buttons and take none of this.
 
