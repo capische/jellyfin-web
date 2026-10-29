@@ -35,6 +35,16 @@ const refusalSentence = (trakt: TraktExport) => {
     }
 };
 
+/** What the import switch does, or why the import is not run (D109, D111). */
+const importLine = (trakt: TraktExport) => {
+    if (trakt.importRefusal === 'unwatched_import') {
+        return 'Skip unwatched import is off in the Trakt plugin, so its import would mark unwatched here everything Trakt has no play of. '
+            + 'JellyfinMod does not run it while that is off.';
+    }
+    return 'Watches and playback positions from your other apps come into Jellyfin through the Trakt plugin’s own import: before the '
+        + 'export on Sync Now and after reconnecting, and once a day while sending is automatic. Nothing is marked unwatched here.';
+};
+
 /** `10 minutes`, `1 minute`: the quiet period after an episode ends. */
 const quietWords = (minutes: number) => `${minutes} minute${minutes === 1 ? '' : 's'}`;
 
@@ -114,18 +124,31 @@ const sentWords = (run: TraktExportRun) => {
     return [watched ? `${watched} marked watched` : '', collected ? `${collected} added to the collection` : ''].filter(Boolean).join(', ');
 };
 
-/** One run of the Activity list: when · why, then its result and what it sent (D73). */
+/** What an import brought into Jellyfin, counted from what it saved there while it ran. */
+const importedWords = (run: TraktExportRun) => {
+    const episodes = run.episodesWatched ?? 0;
+    const movies = run.moviesWatched ?? 0;
+    const positions = run.progressUpdated ?? 0;
+    if (!episodes && !movies && !positions) return 'Nothing new on Trakt';
+    const watched = [episodes ? plural(episodes, 'episode') : '', movies ? plural(movies, 'movie') : ''].filter(Boolean).join(' and ');
+    return [watched ? `${watched} marked watched in Jellyfin` : '', positions ? `${plural(positions, 'playback position')} updated` : '']
+        .filter(Boolean).join(', ');
+};
+
+/** One run of the Activity list: when · why (an import: "Import from Trakt · why"), then its result and what it did (D73). */
 const RunRow: FC<{ run: TraktExportRun; newer?: TraktExportRun; next: string | null }> = ({ run, newer, next }) => {
     let pill: { kind: 'ok' | 'err' | 'warn'; words: string };
     let what: string | null;
+    const imported = run.kind === 'import';
     if (run.clean) {
         pill = { kind: 'ok', words: 'Completed' };
-        what = sentWords(run);
+        what = imported ? importedWords(run) : sentWords(run);
     } else if (run.status === 'Completed' || run.status === 'Failed') {
         pill = { kind: 'err', words: 'Trakt error' };
         let retry = '';
-        if (newer) retry = `; retried at ${shortWhen(newer.startedAt)}`;
-        else if (next) retry = `; next try ${shortWhen(next)}`;
+        // Only the export is retried; an import waits for the next Sync Now, reconnect or daily import.
+        if (!imported && newer) retry = `; retried at ${shortWhen(newer.startedAt)}`;
+        else if (!imported && next) retry = `; next try ${shortWhen(next)}`;
         what = (run.error ?? (run.status === 'Failed' ? 'Trakt could not be reached' : 'the Trakt plugin logged an error')) + retry;
     } else {
         pill = { kind: 'warn', words: 'Stopped' };
@@ -134,7 +157,7 @@ const RunRow: FC<{ run: TraktExportRun; newer?: TraktExportRun; next: string | n
     return (
         <div className='jfmod-brow' data-jfmod-trakt-run={run.startedAt}>
             <div className='jfmod-brow-main'>
-                <strong>{traktWhen(run.startedAt)} · {whyWords(run.why)}</strong>
+                <strong>{traktWhen(run.startedAt)} · {imported ? `Import from Trakt · ${whyWords(run.why)}` : whyWords(run.why)}</strong>
                 <span className='jfmod-sub'>
                     <StatePill kind={pill.kind}>{pill.words}</StatePill>
                     {what && <span className='jfmod-runWhat'>· {what}</span>}
@@ -178,25 +201,28 @@ export const TraktSection: FC<SectionProps> = props => {
     const [confirmDialog, ask] = useConfirm();
     const refresh = useCallback(() => Promise.all([status.refetch(), reload()]), [status, reload]);
 
-    const save = useCallback((autoExport: boolean) => {
+    const save = useCallback((change: { autoExport?: boolean; import?: boolean }) => {
         // While a change is saved the switch stays focusable (aria-disabled, so a TV keeps its focus) and ignores presses.
         if (busy) return;
         setBusy(true);
         setNotice(null);
-        request(api, 'PUT', 'Trakt/Export/Settings', { autoExport })
+        request(api, 'PUT', 'Trakt/Export/Settings', change)
             .then(() => refresh())
             .catch(error => setNotice({ kind: 'err', text: problemText(error) }))
             .finally(() => setBusy(false));
     }, [api, busy, refresh]);
-    const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => save(event.target.checked), [save]);
+    const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => save({ autoExport: event.target.checked }), [save]);
+    const toggleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => save({ import: event.target.checked }), [save]);
     // Browsers toggle a checkbox on Space only; a remote has no Space, so its OK (Enter) toggles the switch too.
-    const toggleOnEnter = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const onEnter = useCallback((event: React.KeyboardEvent<HTMLButtonElement>, change: () => { autoExport?: boolean; import?: boolean }) => {
         if (event.key !== 'Enter' || !trakt) return;
         event.preventDefault();
         // A held OK repeats its keydown: only the first press changes the switch.
         if (event.repeat) return;
-        save(!trakt.autoExport);
+        save(change());
     }, [save, trakt]);
+    const toggleOnEnter = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => onEnter(event, () => ({ autoExport: !trakt?.autoExport })), [onEnter, trakt]);
+    const toggleImportOnEnter = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => onEnter(event, () => ({ import: !trakt?.importEnabled })), [onEnter, trakt]);
 
     // Disconnect (D48, D68): the Trakt plugin's own Deauthorize, which revokes the sign-in and removes the plugin's entry for
     // the user, so its settings start from the plugin's defaults when it is linked again.
@@ -279,6 +305,17 @@ export const TraktSection: FC<SectionProps> = props => {
                             </div>
                         </div>
                     </div>
+                    <div className='jfmod-brow' data-jfmod-trakt='import'>
+                        <div className='jfmod-brow-main'>
+                            <FormControlLabel
+                                control={<Switch checked={!!trakt.importEnabled} onChange={toggleImport} onKeyDown={toggleImportOnEnter}
+                                    slotProps={{ input: { 'aria-disabled': busy || undefined } }} />}
+                                label='Also import watches from Trakt' />
+                            <div className='fieldDescription'>
+                                {importLine(trakt)}
+                            </div>
+                        </div>
+                    </div>
                     <div className='jfmod-brow' data-jfmod-trakt='export'>
                         <div className='jfmod-brow-main'>
                             <strong data-jfmod-trakt-last=''>{lastRunLine(trakt)}</strong>
@@ -323,6 +360,14 @@ export const TraktSection: FC<SectionProps> = props => {
                         </button>
                         {activityOpen && (
                             <ScrollList label='Trakt exports, newest first'>
+                                {trakt.importRunning && (
+                                    <div className='jfmod-brow' data-jfmod-trakt-run='importing'>
+                                        <div className='jfmod-brow-main'>
+                                            <strong>now · Import from Trakt · {whyWords(trakt.runningWhy)}</strong>
+                                            <span className='jfmod-sub'><StatePill kind='busy'>Running</StatePill></span>
+                                        </div>
+                                    </div>
+                                )}
                                 {trakt.running && (
                                     <div className='jfmod-brow' data-jfmod-trakt-run='running'>
                                         <div className='jfmod-brow-main'>
@@ -331,10 +376,13 @@ export const TraktSection: FC<SectionProps> = props => {
                                         </div>
                                     </div>
                                 )}
-                                {(trakt.activity ?? []).map((run, index, all) => (
-                                    <RunRow key={run.startedAt} run={run} newer={all[index - 1]} next={index === 0 ? trakt.nextAttemptAt : null} />
-                                ))}
-                                {!trakt.running && !trakt.activity?.length && (
+                                {(trakt.activity ?? []).map((run, index, all) => {
+                                    // The run of the same kind just after it (an export's retry), and the export's next try on the newest.
+                                    const newer = all.slice(0, index).reverse().find(other => other.kind === run.kind);
+                                    const newest = !all.slice(0, index).some(other => other.kind === run.kind);
+                                    return <RunRow key={`${run.kind ?? 'export'}-${run.startedAt}`} run={run} newer={newer} next={newest ? trakt.nextAttemptAt : null} />;
+                                })}
+                                {!trakt.running && !trakt.importRunning && !trakt.activity?.length && (
                                     <div className='jfmod-brow'><div className='jfmod-brow-main'><span className='jfmod-sub'>No export has run yet.</span></div></div>
                                 )}
                             </ScrollList>

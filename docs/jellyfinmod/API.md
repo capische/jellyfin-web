@@ -1265,9 +1265,20 @@ Trakt, with Jellyfin's `LastPlayedDate`.
   result only paces retries and tells the administrator: the stock export sends whatever Trakt lacks, so the next run
   repairs a missed one. With the switch on, the export also starts after episode plays, after a reconnect and daily.
 
+- Both ways: `importEnabled` is the "Also import watches from Trakt" switch (plugin XML `TraktImport`, on by default);
+  `importRefusal` says why JellyfinMod will not run the Trakt plugin's own import ("Import watched states and playback
+  progress from trakt.tv", `TraktSyncFromTraktTask`): the export's refusals except `unwatched_history`, and
+  `unwatched_import` while a linked user's "skip unwatched import" is off in the Trakt plugin (the import would mark
+  unwatched here what Trakt has no play of); `importRunning` while it runs. An activity entry with `"kind":"import"` is an
+  import run: `episodesWatched` and `moviesWatched` are what it marked watched in Jellyfin and `progressUpdated` the playback
+  positions it set, counted from the host's own save events with the reason Import while it ran (the plugin logs those
+  changes at debug level only).
+
 `POST /JellyfinMod/Trakt/Export` starts the export now, or joins the run already going: 202 with the state above, or 409
-`{"error":"<refusal>"}`. `PUT /JellyfinMod/Trakt/Export/Settings` `{"autoExport":bool}` turns the automatic export on or
-off (plugin XML `TraktAutoExport`, default off) and answers the state. `TraktExportTestMinutes` (XML only, isolated test
+`{"error":"<refusal>"}`. With the import on and allowed it starts the import first, and the export when the import ends.
+`PUT /JellyfinMod/Trakt/Export/Settings` `{"autoExport":bool,"import":bool}` (either may be left out) turns the automatic
+export (plugin XML `TraktAutoExport`, default off) and the import on or off and answers the state. With the automatic export
+on, the import also runs after a reconnect (then the export) and once a day. `TraktExportTestMinutes` (XML only, isolated test
 instances) replaces the 10-minute quiet period and the first retry wait.
 
 ## Review corrections — 2026-09-18

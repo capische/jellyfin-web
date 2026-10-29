@@ -121,6 +121,9 @@ export interface TraktExportRun {
     episodesCollected?: number | null;
     moviesCollected?: number | null;
     error?: string | null;
+    /** `import` for a run of the Trakt plugin's import (the watched counts are what it marked watched in Jellyfin). */
+    kind?: string | null;
+    progressUpdated?: number | null;
 }
 
 /** `GET /JellyfinMod/Trakt/Export` (Phase 13). */
@@ -141,6 +144,10 @@ export interface TraktExport {
     users: TraktExportUser[];
     activity?: TraktExportRun[];
     runningWhy?: string | null;
+    /** The "Also import watches from Trakt" switch, why the import is refused (`unwatched_import`), and whether it runs. */
+    importEnabled?: boolean;
+    importRefusal?: string | null;
+    importRunning?: boolean;
 }
 
 /** `today 14:05`, `yesterday 21:40` or `12 Oct 21:40`: a short local time for the Trakt lines. */
