@@ -291,3 +291,14 @@ disclosure (30 px, a group title with its own guide); the check now measures it 
 only the refusal (no account rows, no Disconnect, no Activity), `activity` empty; bravo was reset to its baseline and
 released.
 
+**Both ways: the import from Trakt (2026-10-29).** The user approved gate 3 ("Trakt - looks amazing") and asked for a
+bidirectional sync. JellyfinMod now also runs the Trakt plugin's own import ("Import watched states and playback progress
+from trakt.tv", no default trigger at v33) and still writes no Trakt data itself: on Sync Now (the import first, then the
+export), after a reconnect (the same) and once a day while the automatic export is on, behind the switch "Also import
+watches from Trakt", on by default. Checked in the v33 source before building: the import saves with
+`UserDataSaveReason.Import`, and the plugin's ServerMediator acts on `TogglePlayed` only, so an imported watch is not sent
+back as a new play; the export then finds the play on Trakt and leaves it. The stock per-user import settings are kept as
+they are; while "skip unwatched import" is off for a linked user the import is refused (it would mark unwatched here
+everything Trakt has no play of), and Sync Now runs the export alone. Activity lists import runs ("Import from Trakt") with
+what each marked watched in Jellyfin and the playback positions it set. Decisions D109–D113 in the workspace log. Found on the way (upstream, not changed): after the import, Jellyfin 12.2's single-item answers (`/Items/{id}`, the detail page) can keep the watched state they cached before the import saved, while library lists show it; a restart clears it.
+
