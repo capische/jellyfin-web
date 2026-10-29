@@ -12,3 +12,24 @@
         fill: currentColor;
     }
 }
+
+// On a file (the Video list's rows and its closed value) the mark is a small suffix that takes no width (D133; user,
+// 2026-10-29: "can it be suffix mobile icon? small, than we don't have to align it"): drawn at the resolution's top right, in
+// the gap before the codec, so the codec starts where it does on the rows without it. A quality profile's name keeps the
+// inline mark above.
+.jfmod-fileResolution {
+    position: relative;
+
+    .jfmod-phoneMark {
+        position: absolute;
+        top: 0.06em;
+        left: 100%;
+        margin-left: 0.03em;
+        vertical-align: baseline;
+
+        svg {
+            width: 0.62em;
+            height: 0.62em;
+        }
+    }
+}

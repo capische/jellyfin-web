@@ -90,9 +90,14 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   in (D114, a title can hold many files): the higher resolution (2160p, 1440p, 1080p, …), then Dolby Vision, HDR, SDR, then the
   larger file. The top file is the one TVs and computers play, and nothing names it (no "Best copy" or "Mobile copy" flag, D51).
 - **The phone mark** (D52): on a title with two or more files, the one file phones play (the plugin's `phoneCopy`: the best file at
-  1080p or below, never a 1440p, SDR first, D114) carries Material `smartphone` right after its resolution, inside the 600 word (`.jfmod-phoneMark`:
-  an inline SVG 1.05em square, `currentColor`, opacity .86, `margin-left .28em`, `vertical-align -.15em`), in its row and in the
-  closed Video value when it is the selected file; `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
+  1080p or below, never a 1440p, SDR first, D114) carries Material `smartphone` as a small suffix of its resolution, in its row
+  and in the closed Video value when it is the selected file (user, 2026-10-29: "can it be suffix mobile icon? small, than we
+  don't have to align it", D133): an inline SVG **0.62em** square, `currentColor`, opacity .86, placed absolutely at the
+  resolution word's top right (`.jfmod-fileResolution` `position: relative`; the mark `left: 100%`, `top: .06em`,
+  `margin-left: .03em`), inside the word's .8em gap, so it takes no width and the codec starts where it does on the rows
+  without it (measured 482.4–483.4 px at 1280, 713.1–714.5 px TV 1920, 84.4–85.4 px phone; the 720p rows sit 7–10 px left by
+  their shorter word, as before; 2–3 px between the mark and the codec; not clipped in the closed cell). A quality profile's
+  name keeps the inline 1.05em mark; `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
   on the TV). No mark on a single file.
 - **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): **exactly the cell** (D75). The theme paper,
   `1px solid var(--jf-palette-divider)` inside that width (`border-box`), **max-height 20em, scrolling** (D83), opened on the
