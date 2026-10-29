@@ -116,7 +116,8 @@ const PendingVersion: FC<PendingVersionProps> = ({ entryId, episodeId, versions,
         <div className='jfmod-pendingBody'>
             <div className='jfmod-pendingLine'>
                 <span className='jfmod-fileResolution'>{quality}</span>
-                {row.parsed && <span className='jfmod-fileMarks'><MediaMarks parsed={row.parsed} /></span>}
+                {/* The video's marks only, as on the file rows (D105); the Queue page draws the whole release. */}
+                {row.parsed && <span className='jfmod-fileMarks'><MediaMarks parsed={{ ...row.parsed, audio: null, audioChannels: null }} /></span>}
                 {row.sizeBytes !== null && <span className='jfmod-fileSize'>{formatSize(row.sizeBytes)}</span>}
             </div>
             <div className='jfmod-pendingMeta'>
