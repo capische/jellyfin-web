@@ -1537,8 +1537,8 @@ The version rows below the track block are replaced by a chooser in the **Video*
 
 ```
   Video      1080p HEVC SDR  ˅
-             ○  2160p  HEVC 10-bit · DTS-HD 7.1 · 24.1 GB   DEFAULT   ⟲ 📌 ✕
-             ●  1080p  HEVC 10-bit · AAC 5.1 · 783 MB · removes 12 Oct  ⟲ 📌 ✕
+             ○  2160p  HEVC 10-bit · 24.1 GB   DEFAULT   ⟲ 📌 ✕
+             ●  1080p  HEVC 10-bit · 783 MB · removes 12 Oct  ⟲ 📌 ✕
   Audio      English - DTS-HD MA - 7.1 - Default
 ```
 
@@ -1568,16 +1568,17 @@ The version rows below the track block are replaced by a chooser in the **Video*
 
 ```
   Video      1080p  HEVC 10-BIT [DV]                                   24.6 GB  ˅
-             ▌2160p HEVC 10-BIT [DV] │ [DTS-HD|MA|7.1] · removes 3 Nov  24.6 GB  ⟲ 📌 ✕
+             ▌2160p HEVC 10-BIT [DV] · removes 3 Nov                    24.6 GB  ⟲ 📌 ✕
   Audio      English  [DTS-HD|MA|7.1]  · Default                                ˅
   Subtitles  Off                                                                ˅
 ```
 
 - **Video, closed:** the resolution word (600) and the video marks (codec at 70 %, 10-BIT, HDR10 or the Dolby Vision chip),
   then the file size, muted, at the right end just before the chevron; the marks are cut first, never the size. No audio here.
-- **Video, open:** each file's row is resolution and video marks, a hairline, its default audio track's marks and the extras
-  (episode range, `removes <date>`), then the size right-aligned at the row's end and the row's icons. On a phone the audio and
-  extras take a second line and the size stays on the first.
+- **Video, open:** each file's row is resolution and video marks and the extras (episode range, `removes <date>`), then the
+  size right-aligned at the row's end and the row's icons. No audio or subtitle marks and no hairline (user, 2026-10-29: a
+  file's audio matters only where a whole release is chosen or inspected, the picker, the Queue, the history; D105). On a
+  phone the extras take a second line and the size stays on the first.
 - **Audio and Subtitles** are the same field with a chevron, opening a paper list as wide as the field (at most 20em tall, so
   it opens under it), one entry per upstream option in upstream's order, the current one with a blue left bar. An entry is the
   language (600, the server's own language name), the marks and the flags, muted: `· Default`, `· Forced`, `· SDH`, then the

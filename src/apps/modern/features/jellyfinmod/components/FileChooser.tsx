@@ -297,7 +297,8 @@ interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
 
 /**
  * What a file's video is, the same on its row and on the closed dropdown (user, 2026-10-12; P7.FU6): the mod's resolution word
- * and the release picker's media marks for its video stream. Its audio is the Audio row's, and on the open list's rows.
+ * and the release picker's media marks for its video stream. Its audio and subtitles are the Audio and Subtitles cells' only: a
+ * file's audio matters when a whole release is chosen (the picker, the Queue), not here (user, 2026-10-29; D105).
  */
 const VideoSummary: FC<{ version: VersionDto; source: MediaSourceInfo | null }> = ({ version, source }) => <>
     <span className='jfmod-fileResolution'>{describeVersion(version).resolution}</span>
@@ -317,8 +318,8 @@ const summaryLabel = (version: VersionDto) => {
 };
 
 /**
- * A file's row (P7.FU6): resolution and video marks, a hairline, its default audio track's marks and the extras (episode range,
- * removal date), then the size right-aligned, then its icons. On a phone the audio and extras take a second line.
+ * A file's row (P7.FU6): resolution and video marks only (D105) and the extras (episode range, removal date), then the size
+ * right-aligned, then its icons. On a phone the extras take a second line.
  */
 const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
@@ -327,14 +328,12 @@ const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, so
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
             <span className='jfmod-fileBody'>
                 <span className='jfmod-fileLine'><VideoSummary version={version} source={source} /></span>
-                <span className='jfmod-fileDivider' aria-hidden='true' />
-                <span className='jfmod-fileLine jfmod-fileLine--audio'>
-                    <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).audio} /></span>
+                {(version.episodeRange || removeDate) && <span className='jfmod-fileLine jfmod-fileLine--extra'>
                     {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
                     {/* Only the removal date: torrent and bookkeeping states ("waiting for seeding", "not tracked yet") are not the
                         viewer's business (user, 2026-10-28). */}
                     {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
-                </span>
+                </span>}
             </span>
             <FileSize version={version} />
         </button>
