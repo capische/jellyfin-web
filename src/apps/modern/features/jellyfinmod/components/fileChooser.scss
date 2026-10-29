@@ -437,7 +437,10 @@ $text-inset: 0.735em;
 
 // Muted against the value's own text, which is already the theme's secondary colour on the detail page (as the extras are).
 .jfmod-fileSize {
-    font-size: 92%;
+    // The media marks' type (D132): the codec mark's 78 %, bold, .05em tracking, at the size's own 70 %.
+    font-size: 78%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     opacity: 0.7;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;

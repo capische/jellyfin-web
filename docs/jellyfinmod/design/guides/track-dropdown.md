@@ -14,7 +14,8 @@ D6 and D28): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's ap
 same mode; built 2026-10-29, gate 1. **The Video cell, rows and pending entry show the video only** (the user, 2026-10-29:
 "I don't think we need audio quality in video dropdown or subtitles"; D105): no audio or subtitle marks, no hairline; built
 2026-10-29, gate 1. **The current file marked as Audio's current track, and full-size row icons** (the user, 2026-10-29;
-D106, D107): built 2026-10-29, gate 1.
+D106, D107): built 2026-10-29, gate 1. **Fixed cells whatever the file (None when it has no such tracks) and the size in the
+marks' type** (the user, 2026-10-29; D131, D132): built 2026-10-29, gate 1.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
@@ -36,11 +37,14 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   var(--jf-palette-FilledInput-borderColor)`, radius .2em, `background: var(--jf-palette-background-paper)`; three segments
   (`.jfmod-stripSegment--video|audio|subtitles`): Audio **17.8em** and Subtitles **13.2em** wide, the divider on their left
   included (D75, D77, D80), Video takes the rest; dividers between
-  segments in the border's colour and width. A segment upstream hides (no subtitles) is not drawn; the strip goes with the
+  segments in the border's colour and width. Every cell is always drawn at its fixed width, so switching the file never resizes the cells or their lists:
+  a file with no subtitles (or no audio) reads **None** in that cell, static, no chevron (D131, replacing the hidden segment
+  of D30); the strip goes with the
   form when upstream hides it.
 - **Segment:** a caption (`.jfmod-stripCaption`: .72em, 600, uppercase, letter-spacing .06em, 62 %) over the value line
   (`.jfmod-stripValue`): Video's resolution in **600**, its marks ([media-marks.md](media-marks.md), 130 %) and the **file size,
-  muted, at the right end before the chevron**; an Audio or Subtitles value is its track's run (below), the chevron at the
+  muted, at the right end before the chevron**, in the media marks' type (78 %, 700, `.05em` tracking, 70 %; D132; also in
+  the list's rows and the pending entry); an Audio or Subtitles value is its track's run (below), the chevron at the
   cell's right end. Padding `.3em .5em .35em .6em`. Captions VIDEO · AUDIO · SUBTITLES stay (D8): there is no label column.
 - **A track's run** (D59, D76): the language in 600 with its short modifier `(BR)` in 400 at 70 % (a fixed table only, D60),
   .6em, the format marks (audio: the media marks; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
