@@ -781,6 +781,13 @@ disk (user decisions 2026-10-02: 0.1.0.0 never deletes downloaded files; a clean
 for a later version). An unreachable client answers 503 `client_unreachable` and nothing changes. `blocklist` stores the infohash so later searches reject it as `blocklisted`. Library
 files are never deleted by this route. Other refusals: 409 `not_in_queue`,
 `seed_release_in_progress`, `client_missing`.
+With `deleteFiles` as well (user, 2026-10-26) the client deletes what the torrent downloaded instead, only while nothing of it may
+be in a library: no import of its grab or infohash linked, bound or reached a linking state, no seed release of either, and no
+file at a destination an import recorded (the destination is recorded before the link is made, so a link that failed leaves
+nothing there; any file there, or a path that cannot be read, counts; 2026-10-29). Otherwise, and for a file linked elsewhere,
+data outside the mapped folder or a torrent JellyfinMod did not add, 409 `delete_not_allowed` with nothing changed.
+Administrators' queue rows carry `canDeleteFiles` (2026-10-29, additive), the first of those tests, read for every row at once,
+so a page offers the delete only where it is accepted; null for a held grab and absent for other users.
 
 `GET /JellyfinMod/Seeding` (admin) lists seed releases with their goal, the source of each goal
 (`indexer`, `client`, `floor`), observed ratio and seeding time, `goalMetAt`, `logicalBytes` and

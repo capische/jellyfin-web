@@ -1450,8 +1450,11 @@ page once it has the episode); a season pack names its series and season (`Peep 
 series pack its series, a movie is one link. Separators and a pack's count stay plain text; the links take the text's colour,
 the primary and an underline under the mouse and for the keyboard. On the TV the row is one button, so its title stays text.
 
-Actions, and only these: **Remove** (with sub-options *remove from client* and *blocklist this
-release*), Retry for a failed import, and the **link out to the client**: since 2026-10-19 the client's name in the Client
+Actions, and only these: **Remove**, named by its outcome (*Cancel Download* while it downloads, *Remove* for a failure,
+*Stop Seeding* for a title in the library, none while it imports; one dialog whose buttons are the outcomes, the same from
+the picker's X, the episode page's Cancel Download and the pending entry's X: Delete the Download only while nothing of it
+is in the library, Keep the Files for a failure, Blocklist one checkbox; D118–D124, user 2026-10-29, [buttons-and-row-actions.md](design/guides/buttons-and-row-actions.md#removing-a-download-one-dialog-its-buttons-the-outcomes)),
+Retry for a failed import, and the **link out to the client**: since 2026-10-19 the client's name in the Client
 column (and in a phone row) and the row's state disc (on the computer; a seeding copy's too since P4.FU28, while a phone's tap
 opens the disc's popover with the link in it) are links to its web page, for administrators with a saved Web interface
 link, and the row menu has no Open in Client any more (it was administrators only; the TV, whose rows are buttons, has no link

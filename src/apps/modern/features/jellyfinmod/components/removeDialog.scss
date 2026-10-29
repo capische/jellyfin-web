@@ -1,0 +1,93 @@
+// The removal dialog (queue Remove dialog, D118–D124, user-approved 2026-10-29; workspace reviews/queue-remove-dialog/):
+// the row's action as its title, the question, the facts that decide it, then one button per outcome with its result under
+// it. Stock pieces only: emby-button raised (red `button-delete` for the destructive choice, the stock focus on the safe one),
+// emby-checkbox, fieldDescription. Left-aligned, as several lines of text read better so.
+.jfmod-removeDialog {
+    --jfmod-remove-fail: #ff7b72;
+    --jfmod-remove-ok: #81c784;
+}
+
+[data-theme='light'] .jfmod-removeDialog {
+    --jfmod-remove-fail: #c62828;
+    --jfmod-remove-ok: #2e7d32;
+}
+
+.jfmod-removeContent {
+    width: 36em;
+    max-width: 100%;
+    padding: 1.6em 2em 1.2em;
+    box-sizing: border-box;
+}
+
+.layout-tv .jfmod-removeContent {
+    width: 50%;
+    padding: 0;
+}
+
+.layout-mobile .jfmod-removeContent {
+    width: 100%;
+    padding: 1.4em 1.1em 1.2em;
+}
+
+.jfmod-remove {
+    text-align: left;
+
+    [dir="rtl"] & { text-align: right; }
+}
+
+.jfmod-removeTitle {
+    font-size: 1.75em;
+    font-weight: 400;
+    margin: 0 0 0.7em;
+}
+
+.jfmod-removeQuestion {
+    font-size: 1.1em;
+    line-height: 1.4;
+    margin: 0 0 0.5em;
+}
+
+.jfmod-removeFacts,
+.jfmod-removeNote {
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    line-height: 1.45;
+    margin: 0 0 0.5em;
+}
+
+.jfmod-removeNote {
+    font-size: 0.95em;
+    margin-bottom: 0.6em;
+}
+
+.jfmod-removeFacts--fail { color: var(--jfmod-remove-fail); }
+.jfmod-removeOk { color: var(--jfmod-remove-ok); }
+
+// The release name, as the download block draws it.
+.jfmod-removeRelease {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8em;
+    opacity: 0.5;
+    margin: 0.3em 0 1.1em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jfmod-removeBlocklist {
+    margin-bottom: 1.3em;
+}
+
+.jfmod-removeChoice.emby-button {
+    margin: 0.9em 0 0;
+}
+
+.jfmod-removeChoiceText {
+    margin: 0.4em 0 0;
+    line-height: 1.4;
+}
+
+// The destructive choice stays red under the pointer as at rest; the stock `.raised:hover` would turn it grey. Keyboard and TV
+// focus keep the stock focus colour.
+.jfmod-removeChoice.button-delete:hover {
+    background: var(--jf-palette-error-main, #c62828);
+}

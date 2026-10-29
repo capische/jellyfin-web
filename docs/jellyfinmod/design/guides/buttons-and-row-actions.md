@@ -56,32 +56,46 @@ title line, and sentence case in the picker). Built in P4.FU27 (built, not accep
 - The link's address is the plugin's (`slowSetupHowTo` in `GET /Settings/Indexers`, one constant `ProwlarrSync.SlowSetupHowTo`).
   The picker's checklist shows the same warning as a link of its own: [release-picker-sources.md](release-picker-sources.md).
 
-## Removing a download: the two confirmations
+## Removing a download: one dialog, its buttons the outcomes
 
-**Status:** approved 2026-10-26 (user: the three texts of `reviews/queue-remove-delete/` in the workspace, and "the
-confirmation's Remove button red"). Built on `feat/remove-delete-files` (P5.I7/I8, built, not accepted). Code:
-`integration/queueActions.ts` (`confirmQueueRemoval`, `confirmTorrentRemoval`), `queue.scss`, `releasePicker.scss`.
+**Status:** approved 2026-10-29 (user: "looks amazing", the proposal of workspace `reviews/queue-remove-dialog/`; D118–D124 of
+`reviews/overnight-2026-10-28/DECISIONS.md`). Built on `feat/queue-remove-items` (gate 1, not accepted). Replaces the 2026-10-26
+Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`removeWithDialog`, `queueRowActions`),
+`components/removeDialog.scss` (`.jfmod-remove*`).
 
-- **Remove from Queue** (the Queue page's row menu): the stock form dialog, Remove red and full width in its footer; stock
-  `emby-checkbox` options with sentence-case labels and a description each.
-  - Not imported yet (`queued`, `downloading`, `stalled`, `failed`): *Also remove it from the download client* — "The client
-    forgets the torrent." Under it, indented **2.2em** (its label lines up with the client option's label) and shown only
-    while the client option is ticked: *Delete the downloaded files*, ticked by default — "What this torrent downloaded so
-    far. Library files are never touched." Hidden, its tick is not sent. Then *Blocklist this release* — "Later release
-    searches reject it."
-  - Imported or seeding (every other state): no delete option. The client option reads "The client forgets the torrent and
-    stops seeding. The seeding copy stays on disk; library files are never touched."
-- **Remove the Torrent** (the picker's added-row X, a missing episode's *Cancel Download* and the pending entry's X): the
-  stock confirm, Cancel and a red Remove — "Remove this torrent from the download queue? The download stops, the torrent
-  leaves the client and the files it downloaded are deleted. Files already in your library are not touched." and the release
-  name under it (`.jfmod-confirmName`). It deletes the files; the plugin refuses (`delete_not_allowed`, its sentence shown) when
-  part of the download is already in the library. **A pack whose episodes have started importing** (D39, built overnight
-  2026-10-28, awaiting the user's approval) is asked and removed keeping the files instead (the Cancel Download and the pending
-  X): "Remove this torrent from the download queue? The download stops and the torrent leaves the client. Part of it is already
-  in your library, so the files it downloaded stay on disk. Files already in your library are not touched." The picker's X
-  still always deletes.
-- **Both Removes stay red under the pointer** (`background: var(--jf-palette-error-main)` on hover; the stock `.raised:hover`
-  would turn them grey). Keyboard and TV focus keep the stock focus colour, as every button does.
+- **Where:** the Queue page's row menu, the picker's added-row X, a missing episode's *Cancel Download* and the pending entry's X
+  all open the same dialog for the row's state. A held grab is cancelled without it.
+- **The row action names the outcome:** *Cancel Download* (`close`) while anything downloads (queued, downloading, stalled,
+  unknown, a pack too); *Remove* (`delete`, with *Retry*) for failed and blocked; *Stop Seeding* (`stop`) for a title in the
+  library; none while it identifies, links or scans.
+- **Anatomy** (the stock dialog's look in the mod's Inter, as every mod surface; the release name monospace; left-aligned): the action as the title (1.75em, 400); the question about the title
+  (1.1em: "Stop downloading The Matrix (1999)?", "Remove … from the queue?", "Stop seeding … now?"); the facts in the secondary
+  text colour (`42% · 3.1 of 7.4 GB downloaded · nothing of it is in your library yet`; a failure `Failed: <reason>` in
+  `#ff7b72`, light `#c62828`; *In your library* and a pack's imported episodes in `#81c784`, light `#2e7d32`); notes at .95em;
+  the release name in monospace (.8em, 50 %, one line); *Blocklist this release* ("Later searches skip it."), a stock
+  `emby-checkbox`, off; then one full-width raised button per outcome (`.jfmod-removeChoice`, `margin-top .9em`), each with
+  its result under it as a `fieldDescription` (`.4em` above). Computer: 36em wide, `1.6em 2em 1.2em` padding; TV: the full
+  screen, the column 50 %; phone and low resolutions: full screen.
+- **Choices:** the destructive one red (`button-delete`, red under the pointer too), the safe one grey with `autofocus`, so it
+  carries the stock focus (blue; on the TV it grows 1.2×). Back on the TV and a click outside are the same as the safe one
+  (a computer's Escape closes no stock dialog). Focus returns to the opener (the row on the TV, its ⋮ or the opening button
+  elsewhere), also after a refused delete asks again.
+
+  | Row | Red | Others |
+  | --- | --- | --- |
+  | under way, `canDeleteFiles` | *Delete the Download*: "Transmission removes the torrent and deletes the 3.1 GB downloaded so far." | *Keep Downloading* |
+  | failed or blocked, `canDeleteFiles` | *Delete the Download*: "… deletes its 7.4 GB." | *Keep the Files*: "… the 7.4 GB stays in the download folder." · *Cancel* |
+  | seeding | *Stop Seeding*: "… removes the torrent. The film stays in your library." | *Keep Seeding* |
+  | anything else (part of it in the library) | *Stop the Download* / *Remove from Queue*: "… removes the torrent (and stops seeding the 2 imported episodes). No file is deleted." | *Keep Downloading* / *Cancel* |
+
+  Seeding has no blocklist; its notes say when JellyfinMod stops it by itself (or "Automatic stop is off, so it seeds until
+  you stop it."), that leaving earlier "can count as a hit-and-run" on a private tracker, and that there is nothing to delete
+  (the seeding file is the library file's hardlink). A row that cannot delete says why: "Its files cannot be deleted from here,
+  because part of it is already in your library." (a pack adds what stays in the download folder). A pack's "2 of 4 episodes
+  are in your library and stay there" counts only linked, scanned or bound episodes (and those blocked after their link, `binding_not_observed`), and shows
+  only where nothing is deleted. A Replace adds "Your 1080p
+  file stays.". A delete the plugin still refuses (`delete_not_allowed`) opens the dialog again without the delete, with the
+  plugin's sentence as the note.
 
 ## Do not
 
