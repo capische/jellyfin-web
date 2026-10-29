@@ -1611,6 +1611,14 @@ Add only. TVs and computers start the best copy (highest resolution, then Dolby
 Vision, HDR, SDR) and phones the phones' file, on the detail page and from every Play of a card, the hero, Continue Watching and Next
 Up; a copy part-way through always wins. Values in [guides/track-dropdown.md](design/guides/track-dropdown.md).
 
+**Many files (user, 2026-10-29, D108: "if I want to download 3 different profiles or the same quality profile but different files -
+i should be able to do so. Mobile is only tiny feature attached to ability to have many video files").** A title takes as many files
+as the person adds: Get Another Quality's Add takes any release, with any profile, a quality already held included. Such a row keeps
+its green check after the quality (tooltip *Quality in library*) and its Add; only its Replace is off. The row of the release just
+imported reads *In library* and has no actions. The Video list lists every file best first (resolution, then Dolby Vision, HDR,
+SDR, then the larger file), and the phone mark stays on one: the best file at 1080p or below, never a 1440p, which phones also
+start (D114).
+
 ## 12. Settings
 
 Split by audience, and the split keeps the fork small:
