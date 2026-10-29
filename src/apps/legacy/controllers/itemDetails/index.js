@@ -551,23 +551,26 @@ function renderHeaderBackdrop(page, item, apiClient) {
     return hasbackdrop;
 }
 
-function reloadFromItem(instance, page, params, item, user) {
+function reloadFromItem(instance, page, params, item, user, keepArtwork) {
     const apiClient = ServerConnections.getApiClient(item.ServerId);
 
     libraryMenu.setTitle('');
     unmount(instance);
 
-    // Start rendering the artwork first
-    renderImage(page, item, apiClient);
+    // JellyfinMod: a version switch keeps the drawn artwork (the versions of a title share it), so the cover does not flicker.
+    if (!keepArtwork) {
+        // Start rendering the artwork first
+        renderImage(page, item, apiClient);
 
-    renderLogo(page, item, apiClient);
+        renderLogo(page, item, apiClient);
 
-    // Render the mobile header backdrop
-    if (layoutManager.mobile) {
-        renderHeaderBackdrop(page, item, apiClient);
+        // Render the mobile header backdrop
+        if (layoutManager.mobile) {
+            renderHeaderBackdrop(page, item, apiClient);
+        }
+
+        renderBackdrop(page, item);
     }
-
-    renderBackdrop(page, item);
 
     // Render the main information for the item
     renderName(item, page.querySelector('.nameContainer'), params.context);
@@ -2198,7 +2201,7 @@ export default function (view, params) {
             }
 
             currentItem = versionItem;
-            reloadFromItem(self, view, params, versionItem, user);
+            reloadFromItem(self, view, params, versionItem, user, true);
             renderVideoSelections(view, self._currentPlaybackMediaSources);
             renderAudioSelections(view, self._currentPlaybackMediaSources);
             renderSubtitleSelections(view, self._currentPlaybackMediaSources);
