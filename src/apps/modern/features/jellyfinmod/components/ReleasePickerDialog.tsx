@@ -440,7 +440,9 @@ const AddedActions: FC<{ candidate: ReleaseCandidate; added: AddedRow }> = ({ ca
 
 /** Add, and Replace where the row offers it: each its own D-pad stop. A rejected row's actions ask first, so they say so. */
 const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, disabled, plan, onGrab, actionState, rejected, added }) => {
-    const off = disabled || !!candidate.heldQuality;
+    const off = disabled;
+    // Replace never takes a quality already held; Add does (user, 2026-10-29).
+    const replaceOff = disabled || !!candidate.heldQuality;
     const add = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
         onGrab(candidate, plan.choices ? 'add' : plan.first, plan);
@@ -450,8 +452,8 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
         onGrab(candidate, 'replace', plan);
     }, [candidate, onGrab, plan]);
     if (added) return <AddedActions candidate={candidate} added={added} />;
-    // A held quality has no actions, but keeps their room so the columns do not drift.
-    if (candidate.heldQuality) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
+    // The release just imported has no actions, but keeps their room so the columns do not drift.
+    if (candidate.inLibrary) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
     const addState = actionState(candidate.releaseId, 'add');
     const replaceState = actionState(candidate.releaseId, 'replace');
     const showReplace = plan.choices && plan.replace;
@@ -466,7 +468,7 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
         </button>
         {showReplace ? <button type='button' className={actionClass('jfmod-releaseAction--replace', replaceState)}
             title={actionTitle(plan.held > 1 ? `Replace ${plan.held} Files` : 'Replace File', replaceState)}
-            aria-label={'Replace the files held with ' + (rejected ? 'the rejected release ' : '') + candidate.rawTitle} aria-disabled={off}
+            aria-label={'Replace the files held with ' + (rejected ? 'the rejected release ' : '') + candidate.rawTitle} aria-disabled={replaceOff}
             data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
             <ReplaceGlyph />
         </button> : null}
@@ -479,18 +481,19 @@ const addedLabel = (added: AddedRow | null | undefined) => {
 };
 
 const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => qualityText(candidate.parsed)
-    + (candidate.heldQuality ? ', in library' : '') + addedLabel(added)
+    + (candidate.inLibrary ? ', in library' : '') + (candidate.heldQuality && !candidate.inLibrary ? ', quality in library' : '') + addedLabel(added)
     + (candidate.eligible ? '' : ', rejected: ' + candidate.rejections.map(rejection => rejection.message).join(' '));
 
 /**
  * One eligible release: the row is a button that grabs with the first action; where the scope holds files, Add and Replace
- * follow it as sibling icon buttons, each its own D-pad stop (no nested buttons). A quality already in the library stays
- * focusable for reading, but cannot be grabbed: the server would answer 409 `held_quality` (P6.M6).
+ * follow it as sibling icon buttons, each its own D-pad stop (no nested buttons). A quality already in the library is added
+ * like any other (another file of that quality, user 2026-10-29); only its Replace is off, as the server answers 409
+ * `held_quality`. The release just imported stays focusable for reading, but cannot be grabbed again.
  */
 const ReleaseRow: FC<ReleaseRowProps> = props => {
     const { candidate, search, disabled, plan, onGrab, added, arrived } = props;
     // The added row is never dimmed: it is the one the grab is about.
-    const off = !added && (disabled || !!candidate.heldQuality);
+    const off = !added && (disabled || !!candidate.inLibrary);
     const activate = useCallback(() => onGrab(candidate, plan.first, plan), [candidate, onGrab, plan]);
     return <div className={classNames('jfmod-releaseItem', { 'jfmod-releaseItem--added': !!added, 'jfmod-releaseItem--arrived': arrived })}>
         <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate, added)}
@@ -1604,7 +1607,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const arrived = useArrivals(data);
     useKeepPlace(container, data?.searchId ?? '', data?.candidates.length ?? 0);
     const onGrab = useCallback((candidate: ReleaseCandidate, mode: GrabMode | undefined, plan: RowPlan) => {
-        if (!data?.grab.available || busy || holding || waitingForRows || candidate.heldQuality) return;
+        const refused = candidate.inLibrary || (mode === 'replace' && candidate.heldQuality);
+        if (!data?.grab.available || busy || holding || waitingForRows || refused) return;
         const chosenRejection = !candidate.eligible;
         const searchId = searchIdOf(candidate, extras, data.searchId);
         if (mode !== 'replace' && !chosenRejection) {
@@ -1667,7 +1671,8 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     const blockShown = !!blockRowId && (eligible.some(candidate => candidate.releaseId === blockRowId)
         || (rejectedOpen && rejected.some(candidate => candidate.releaseId === blockRowId)));
     // An imported row reads as the in-library row: a green check after the quality and no actions.
-    const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ? { ...candidate, heldQuality: true } : candidate);
+    const shownCandidate = (candidate: ReleaseCandidate) => (imported.includes(candidate.releaseId) ?
+        { ...candidate, heldQuality: true, inLibrary: true } : candidate);
 
     const notice = noticeText(choices, replaceChoices, data?.target.scope, intent === 'addVersion' && !isPack, data?.grab.heldFiles,
         data?.grab.forPhones);

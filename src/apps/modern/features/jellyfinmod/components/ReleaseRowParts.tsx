@@ -232,9 +232,11 @@ export const ReleaseLines: FC<ReleaseLinesProps> = ({ candidate, coverage, progr
     const parsed = candidate.parsed;
     const held = candidate.coverage?.held ?? 0;
     const heldQuality = !!candidate.heldQuality;
+    // This release itself, just imported, or only its quality (another file of it can still be added, user 2026-10-29).
+    const heldTitle = candidate.inLibrary ? 'In library' : 'Quality in library';
     const seeds = candidate.seeders === null ? '?' : String(candidate.seeders);
     const flags = <>
-        {heldQuality && <span className='jfmod-releaseFlag jfmod-releaseFlag--held' title='In library' aria-label='In library'><HeldGlyph /></span>}
+        {heldQuality && <span className='jfmod-releaseFlag jfmod-releaseFlag--held' title={heldTitle} aria-label={heldTitle}><HeldGlyph /></span>}
         {candidate.freeleech === true && <span className='jfmod-releaseFlag jfmod-releaseFlag--freeleech' title='Freeleech' aria-label='Freeleech'>FL</span>}
         {(candidate.proper || candidate.repack) && <span className='jfmod-releaseBadge--note'>{candidate.proper ? 'Proper' : 'Repack'}</span>}
         {coverage && <span className='jfmod-releaseChip jfmod-releaseChip--coverage'>{coverage}</span>}
