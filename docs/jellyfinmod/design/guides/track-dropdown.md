@@ -13,7 +13,8 @@ D6 and D28): **built 2026-10-29, gate 1 (computer, dark), awaiting the user's ap
 (the user, 2026-10-29: "I have already the cloud icon over there"; D102): the header's cloud icon opens the same picker in the
 same mode; built 2026-10-29, gate 1. **The Video cell, rows and pending entry show the video only** (the user, 2026-10-29:
 "I don't think we need audio quality in video dropdown or subtitles"; D105): no audio or subtitle marks, no hairline; built
-2026-10-29, gate 1.
+2026-10-29, gate 1. **The current file marked as Audio's current track, and full-size row icons** (the user, 2026-10-29;
+D106, D107): built 2026-10-29, gate 1.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
@@ -65,7 +66,10 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   lets the list grow right over the Audio cell, so a file row keeps two lines); on the paper with a 1px divider border and
   the popover's shadow, sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
   only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
-  `removes <date>`), the size and the three row icons; then the
+  `removes <date>`), the size and the three row icons (the full 2.5em round buttons of
+  [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **The current file has
+  the Audio list's current look** (D106): a `.2em` `#00a4dc` bar on the left (an inset shadow, so the text stays under the
+  cell's) and MUI's selected fill `rgba(primary / selectedOpacity)`, square corners; then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
   list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
   another quality. The rows' text starts where the segment's does (.735em in).
