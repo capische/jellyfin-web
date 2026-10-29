@@ -37,10 +37,8 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
   it to 55 %; importing shows a full bar, still (no breathing anywhere since 2026-10-19: the bar and the state words do not animate).
 - Actions: *View Queue* (link, everyone), *Cancel Download* (grey, administrators), *Search Again* (red, administrators,
   failed), *Get a Release* (blue, administrators, not downloaded); Title Case, sized like Save
-  ([buttons-and-row-actions.md](buttons-and-row-actions.md)). *Cancel Download* asks the *Remove the Torrent* confirmation
-  (red Remove) and, since 2026-10-26, deletes what the torrent downloaded (a pack whose episodes have started importing keeps
-  it and says so, D39, built overnight 2026-10-28, awaiting the user's approval); a held grab is cancelled without asking
-  ([buttons-and-row-actions.md, Removing a download](buttons-and-row-actions.md#removing-a-download-the-two-confirmations)).
+  ([buttons-and-row-actions.md](buttons-and-row-actions.md)). *Cancel Download* opens the removal dialog for the download's state (D120, 2026-10-29); a held grab is cancelled without
+  asking ([buttons-and-row-actions.md, Removing a download](buttons-and-row-actions.md#removing-a-download-one-dialog-its-buttons-the-outcomes)).
 
 ## States
 
