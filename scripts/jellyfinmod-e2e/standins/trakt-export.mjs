@@ -8,7 +8,8 @@
 //   POST /oauth/device/code, /oauth/device/token, /oauth/token (refresh), /oauth/revoke
 //   GET  /users/settings (the account's username and avatar, which JellyfinMod reads for Settings › Trakt, D49)
 //   GET  /sync/watched/shows[?extended=progress], /sync/watched/episodes, /sync/watched/movies, /sync/collection/*,
-//        /sync/playback/*, /sync/last_activities (paged with X-Pagination-* headers at the page size set by control)
+//        /sync/playback/*, /sync/last_activities (paged with X-Pagination-* headers at the page size set by control; the
+//        last activities move whenever the history changes, so the plugin's import, SyncFromTraktTask, reads it again)
 //   POST /sync/history (adds one play per episode at its watched_at), /sync/history/remove (recorded, removes nothing
 //        unless asked), /sync/collection[/remove], /scrobble/start|pause|stop (a stop at 80 % or more adds a play now)
 //
@@ -67,7 +68,11 @@ const syncResponse = (added = 0) => ({
 });
 const minute = iso => new Date(Math.floor(new Date(iso).getTime() / 60000) * 60000).toISOString();
 const isShow = ids => !!ids && (String(ids.tvdb) === String(SHOW.ids.tvdb) || ids.trakt === SHOW.ids.trakt || ids.slug === SHOW.ids.slug);
+// When the account's watch history last changed, as Trakt's /sync/last_activities reports it.
+let activityAt = new Date().toISOString();
+const touched = () => { activityAt = new Date().toISOString(); };
 const addPlay = (season, number, watchedAt, source) => {
+    touched();
     // Trakt keeps a watch to the minute (observed 2026-10-07).
     state.plays.push({ id: state.nextId++, season, number, watched_at: minute(watchedAt ?? new Date().toISOString()), source });
 };
@@ -184,7 +189,11 @@ const handler = async (request, response) => {
             case '/sync/playback/movies':
             case '/sync/playback/episodes':
                 items = []; break;
-            case '/sync/last_activities': return reply(200, {});
+            case '/sync/last_activities': {
+                const quiet = '2026-01-01T00:00:00.000Z';
+                return reply(200, { all: activityAt, movies: { watched_at: quiet, paused_at: quiet }, episodes: { watched_at: activityAt, paused_at: quiet },
+                    shows: { hidden_at: quiet } });
+            }
             default: return reply(404, { error: 'not found' });
         }
         const { body, headers } = paged(url, items);
@@ -287,6 +296,7 @@ const control = createHttpServer(async (request, response) => {
     if (request.method === 'POST' && url.pathname === '/forget') {
         // Trakt no longer has this episode's plays (as if removed on trakt.tv): the next export must send it again.
         state.plays = state.plays.filter(play => !(play.season === body.season && play.number === body.number));
+        touched();
         return send(response, 200, { plays: state.plays });
     }
     if (request.method === 'POST' && url.pathname === '/filler') {
@@ -295,6 +305,7 @@ const control = createHttpServer(async (request, response) => {
     }
     if (request.method === 'POST' && url.pathname === '/reset') {
         state.plays = [];
+        touched();
         state.removals = [];
         state.collectionPosts = 0;
         state.filler = 0;

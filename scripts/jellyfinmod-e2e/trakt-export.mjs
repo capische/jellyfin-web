@@ -11,7 +11,7 @@
 // api.trakt.tv, the stand-in's control port and the lease); its address, control port and restart target all come from it.
 //
 // Steps (default: all, in order): setup offline online catchup rewatch failures paging refusal reconnect isolation absent
-// writefail reconnectrestart refresh profile activity disconnect (pace: only sets the test pace, P13_PACE; relink: links
+// writefail reconnectrestart refresh profile activity disconnect import (pace: only sets the test pace, P13_PACE; relink: links
 // oleksii again after a stand-in restart)
 // Each check prints PASS/FAIL and the run writes <out>/results.json. Desktop Chromium screenshots of Settings › Trakt and
 // Home at the states the steps reach go to <out>/shots. No token or secret is printed or written.
@@ -187,6 +187,8 @@ const steps = {
         if (!(await control('/state')).tokenIssued) await authorize(7776000);
         await modConfig(config => { config.TraktExportTestMinutes = 1; });
         await setAuto(false);
+        // The export's steps run with the import off; the import step turns it on (its default) and leaves it on.
+        await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: false });
         for (const item of episodes) if ((await userData(item.IndexNumber)).Played) await unplay(item.IndexNumber);
         const now = await status();
         verify('setup', 'stock Trakt plugin 33 installed and oleksii linked', now.installed && now.version?.startsWith('33') &&
@@ -617,6 +619,72 @@ const steps = {
         } finally {
             await page.close();
         }
+    },
+
+    // Both ways (user, 2026-10-29): Sync Now runs the Trakt plugin's own import first, then the export. A watch made
+    // elsewhere (on Trakt) lands in Jellyfin at its Trakt time and is not sent back as a new play: the import saves with
+    // the reason Import, which the plugin's ServerMediator ignores, and the export finds the play already on Trakt.
+    async import() {
+        const on = await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: true });
+        verify('import', 'the import switch is on, and the import is allowed', on.importEnabled === true && !on.importRefusal, JSON.stringify({ importEnabled: on.importEnabled, importRefusal: on.importRefusal }));
+        await control('/forget', { season: 1, number: 5 });
+        await unplay(5);
+        const watchedAt = '2026-09-05T19:30:00Z';
+        await control('/plays', { plays: [{ season: 1, number: 5, watched_at: watchedAt }] });
+        const before = await control('/state');
+        const scrobbles = Object.entries(before.counters).filter(([route]) => route.startsWith('/scrobble/')).reduce((sum, [, count]) => sum + count, 0);
+        verify('import', 'E05 starts unwatched in Jellyfin, with one play on Trakt', !(await userData(5)).Played && playsOf(before.plays, 5).length === 1);
+        const mark = new Date();
+        await jf('POST', '/JellyfinMod/Trakt/Export');
+        const both = await until('the import and then the export', async () => {
+            const now = await status();
+            const imported = now.activity?.find(run => run.kind === 'import' && new Date(run.startedAt) > mark);
+            const exported = now.activity?.find(run => !run.kind && new Date(run.startedAt) > mark);
+            return imported && exported && !now.running && !now.importRunning ? { now, imported, exported } : null;
+        }, 600000, 3000).catch(() => null);
+        verify('import', 'Sync Now ran the import, then the export', !!both && new Date(both.exported.startedAt) >= new Date(both.imported.endedAt) && both.imported.why === 'sync_now' && both.exported.why === 'sync_now',
+            JSON.stringify({ imported: both?.imported, exported: both?.exported }));
+        // Read from the library query: Jellyfin 12.2's single-item answer (/Items/{id}) keeps the user data it cached before
+        // the import saved (found 2026-10-29; upstream, see PHASE13), while the library's own query reads what was saved.
+        const listed = (await jf('GET', `/Items?userId=${userId}&ids=${episode(5).Id}&Fields=UserData`)).Items[0].UserData;
+        const single = await userData(5);
+        verify('import', 'E05 is watched in Jellyfin at its Trakt time', listed.Played && minute(listed.LastPlayedDate) === minute(watchedAt),
+            `library query: ${listed.Played} ${listed.LastPlayedDate}; single item: ${single.Played} ${single.LastPlayedDate ?? ''}`);
+        verify('import', 'Activity counts it: at least 1 episode marked watched in Jellyfin', (both?.imported.episodesWatched ?? 0) >= 1 && both?.imported.clean === true, JSON.stringify(both?.imported));
+        const after = await control('/state');
+        const scrobblesAfter = Object.entries(after.counters).filter(([route]) => route.startsWith('/scrobble/')).reduce((sum, [, count]) => sum + count, 0);
+        verify('import', 'nothing is sent back: E05 keeps its one Trakt play, no scrobble', playsOf(after.plays, 5).length === 1 && scrobblesAfter === scrobbles,
+            `${playsOf(after.plays, 5).length} play(s), scrobbles ${scrobbles} → ${scrobblesAfter}`);
+        const page = await openPage();
+        try {
+            const row = await page.evaluate(() => ({
+                label: document.querySelector('[data-jfmod-trakt="import"] .MuiFormControlLabel-label')?.textContent ?? '',
+                checked: document.querySelector('[data-jfmod-trakt="import"] input[type="checkbox"]')?.checked
+            }));
+            verify('import', 'Settings shows "Also import watches from Trakt", on', row.label === 'Also import watches from Trakt' && row.checked === true, JSON.stringify(row));
+            await page.screenshot({ path: join(out, 'shots', '15-import-switch.png') });
+            await page.locator('.jfmod-activityToggle').click();
+            await page.mouse.move(5, 995);
+            await page.waitForTimeout(400);
+            const runs = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-trakt="activity"] [data-jfmod-trakt-run]')].slice(0, 2).map(node => node.innerText.replace(/\n/g, ' | ')));
+            verify('import', 'Activity lists the export above the import: "… · Import from Trakt · Sync Now", "… marked watched in Jellyfin"', /· Sync Now/.test(runs[0] ?? '') &&
+                /Import from Trakt · Sync Now/.test(runs[1] ?? '') && /marked watched in Jellyfin/.test(runs[1] ?? ''), runs.join(' || '));
+            await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
+            await page.waitForTimeout(300);
+            await page.screenshot({ path: join(out, 'shots', '16-activity-import.png') });
+        } finally {
+            await page.close();
+        }
+        // With the switch off, Sync Now runs the export alone.
+        await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: false });
+        const alone = new Date();
+        await jf('POST', '/JellyfinMod/Trakt/Export');
+        const done = await until('the export alone', async () => {
+            const now = await status();
+            return now.activity?.some(run => !run.kind && new Date(run.startedAt) > alone) && !now.running ? now : null;
+        }, 300000, 3000).catch(() => null);
+        verify('import', 'with the switch off, Sync Now runs the export alone', !!done && !done.activity.some(run => run.kind === 'import' && new Date(run.startedAt) > alone));
+        await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: true });
     },
 
     // D48, D68: Disconnect asks first (Cancel focused), then the Trakt plugin's own Deauthorize removes its entry for the
