@@ -61,7 +61,7 @@ const useTrackHost = (view: HTMLElement, selector: string) => {
             options: Array.from(native.options).map(option => ({ value: option.value, text: option.textContent ?? '' })),
             value: native.value,
             disabled: native.disabled,
-            // Upstream hides the row when the file has no such track (no subtitles); the segment goes with it.
+            // Upstream hides the row when the file has no such track (no subtitles); the segment then reads None (D131).
             hidden: container.classList.contains('hide'),
             sourceId: view.querySelector<HTMLSelectElement>('.selectSource')?.value ?? ''
         });
@@ -200,7 +200,13 @@ interface TrackRowProps {
 /** One of upstream's track rows with its dropdown, its entries built from the select's options and the selected file's streams. */
 const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources, names }) => {
     const { state, choose } = useTrackHost(view, selector);
-    if (!state || state.hidden) return null;
+    if (!state) return null;
+    // A file without such tracks keeps its cell, at its fixed width, reading None, so switching the file never resizes the
+    // strip or its lists (user, 2026-10-29; D131, replacing D30's hidden segment).
+    if (state.hidden) {
+        const none = [{ value: '', title: `No ${name.toLowerCase()}`, content: <TrackLanguage language='None' />, extra: undefined }];
+        return createPortal(<TrackDropdown name={name} entries={none} value='' enabled={false} onChoose={choose} />, host);
+    }
     const streams = (findSource(sources, state.sourceId) ?? sources[0])?.MediaStreams ?? [];
     const entries = state.options.map(option => {
         const stream = streams.find(candidate => candidate.Type === type && String(candidate.Index) === option.value);

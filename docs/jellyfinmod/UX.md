@@ -1574,7 +1574,8 @@ The version rows below the track block are replaced by a chooser in the **Video*
 ```
 
 - **Video, closed:** the resolution word (600) and the video marks (codec at 70 %, 10-BIT, HDR10 or the Dolby Vision chip),
-  then the file size, muted, at the right end just before the chevron; the marks are cut first, never the size. No audio here.
+  then the file size, muted, in the marks' type (78 %, bold; D132), at the right end just before the chevron; the marks are cut
+  first, never the size. No audio here. A file with no subtitles keeps the Subtitles cell, reading None (D131).
 - **Video, open:** each file's row is resolution and video marks and the extras (episode range, `removes <date>`), then the
   size right-aligned at the row's end and the row's icons. No audio or subtitle marks and no hairline (user, 2026-10-29: a
   file's audio matters only where a whole release is chosen or inspected, the picker, the Queue, the history; D105). On a
