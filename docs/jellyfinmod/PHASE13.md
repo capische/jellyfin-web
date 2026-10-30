@@ -302,3 +302,28 @@ they are; while "skip unwatched import" is off for a linked user the import is r
 everything Trakt has no play of), and Sync Now runs the export alone. Activity lists import runs ("Import from Trakt") with
 what each marked watched in Jellyfin and the playback positions it set. Decisions D109–D113 in the workspace log. Found on the way (upstream, not changed): after the import, Jellyfin 12.2's single-item answers (`/Items/{id}`, the detail page) can keep the watched state they cached before the import saved, while library lists show it; a restart clears it.
 
+**Settings › Trakt v3: the account bar first and a per-title Activity (2026-10-29).** The user approved the v3 design
+("looks good"; workspace `reviews/phase13/mockups-v3`, decisions D125–D130, D134–D136). The account bar is first in the
+section; while nobody is linked it shows the signed-in user "· not connected to Trakt", an off pill and a main **Connect
+Trakt** to the Trakt plugin's page, and the two switches and Sync Now stay in place, dimmed to 45 % and aria-disabled, under
+"Connect a Trakt account to turn these on." (the no-account warning and Activity are left out then). Activity is one row per
+title and direction with its latest state, "**Title** S02E04 · time · action", under Today / Yesterday / date headings, the
+last 30 days, in the plugin's SQLite table `TraktActivity` (one forward-only migration; `trakt-activity.json` retired). A
+watch here waits for the export that the next-export line names ("The next export runs at 10:51 PM, 10 minutes after the
+last episode ended"), and reads marked watched on Trakt once a clean export that started after it has run; a title the
+export logs as not found reads failed and no longer holds back the run (D135); the import's saves read marked watched in
+Jellyfin or the playback position from Trakt; collection adds and a burst of more than 50 titles are one count row. A play
+by a linked account whose Trakt plugin Scrobble is on reads "watching now on Trakt (reported live by the Trakt plugin)" while
+it plays and "stopped at N % (…)" when it stops early, from Jellyfin's own playback events: the plugin reports it to Trakt
+live, JellyfinMod does not confirm it (D134). *Retention and imported watches* (user, 2026-10-29: "If you know the time
+from trakt - use it"): an imported watch keeps Trakt's watch time, and retention has no guard for it, so **with retention
+on, a title imported as watched long ago can be reclaimed at the next retention run**. Gate 1 is the computer layout, dark,
+on echo. Plugin suite PhaseSevenTraktIntegration (with smoke 0 and 1) passes on both lines; its new checks failed against the
+code before each fix. Live list on echo: the new `activity`, `import` and `disconnect` checks failed 11 of 17 against the
+previous build, and the full list `trakt-export.mjs` passed 89/92 on the new build, the three failures fixed or re-run in
+`absent activity import` (25/25): a missing or too old Trakt plugin lost its refusal while the account bar shows Connect
+(fixed), a stale import row matched the import check (the runner now waits for a new one), and a levelling run the runner
+did not see (not reproduced). Built (not accepted); the phone, TV, light themes and Chrome follow after the user's look.
+Not changed: the stand-in never keeps a collection, so every export there logs 15 collection adds and Activity shows a
+"15 titles" row per run; real Trakt keeps the collection and logs only new adds.
+
