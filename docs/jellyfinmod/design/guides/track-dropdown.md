@@ -88,7 +88,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   current entry (D7). MUI rounds the popover's top to a whole pixel, so it may sit up to half a pixel over the strip's border.
   The list never moves up over the strip (D149): with less than 10em under the strip the page scrolls first, and the list is
   no taller than the room left above the window's 16px margin (the TV at 1280x720 gave a 20em list 346px). A resize while it
-  is open places it again the same way, without scrolling (D166).
+  is open places it again the same way, without scrolling (D166); one that leaves less than a row (2.4em) under the strip
+  closes it instead (D168).
 - **Rows** (`.jfmod-trackItem`, D76): drawn as the cell's value, the same run packed left to right, the text starting where the
   cell's does: `padding .45em .5em .45em calc(.735em − 1px − .2em)`, `border-left .2em solid transparent`, the current entry
   `--on` the primary; no columns, no detail line (D82).
