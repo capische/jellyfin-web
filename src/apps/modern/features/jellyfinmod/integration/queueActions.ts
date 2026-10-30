@@ -238,7 +238,7 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     dlg.innerHTML = html + '</div></div>';
     let result: RemoveQueueRequest | null = null;
     // It closes once. The helper starts its close at once but marks the dialog closed only after the 120 ms animation, so a
-    // second Escape, X, Back, choice or click outside in between closed it again: the focus scope was popped and history went
+    // second Escape, X, Back, choice, click or right-click outside in between closed it again: the focus scope was popped and history went
     // Back twice, leaving the page (or the release picker under it). Every later attempt is dropped from the first `closing` on,
     // and a later choice no longer changes the answer.
     let closing = false;
@@ -249,12 +249,12 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
         if (!closing) dialogHelper.close(dlg);
     };
     const holdWhileClosing = (event: Event) => {
-        if (closing && (event.type === 'click' || (event as CustomEvent<{ command?: string }>).detail?.command === 'back')) {
+        if (closing && (event.type !== 'command' || (event as CustomEvent<{ command?: string }>).detail?.command === 'back')) {
             event.preventDefault();
             event.stopImmediatePropagation();
         }
     };
-    // The TV's Back and a click outside reach the helper's own handlers; they are held here first.
+    // The TV's Back and a click or right-click outside reach the helper's own handlers; they are held here first.
     dlg.addEventListener('command', holdWhileClosing, true);
     dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', close);
     // Escape closes it on a computer too (the TV already maps Escape to Back), wherever focus is.
@@ -285,7 +285,9 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
         return result;
     };
     const opened = dialogHelper.open(dlg).then(done, done);
-    (dlg as HTMLElement & { dialogContainer?: HTMLElement }).dialogContainer?.addEventListener('click', holdWhileClosing, true);
+    const container = (dlg as HTMLElement & { dialogContainer?: HTMLElement }).dialogContainer;
+    container?.addEventListener('click', holdWhileClosing, true);
+    container?.addEventListener('contextmenu', holdWhileClosing, true);
     return opened;
 };
 
