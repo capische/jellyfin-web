@@ -224,9 +224,14 @@ interface RowLayout {
     minWidth: string;
     /** The group gives its place back (nothing to show here). */
     gone: boolean;
+    /** Gone, but its height kept (no width) while focus sits below, so the row does not move. */
+    held?: boolean;
 }
 
-const sameLayout = (a: RowLayout, b: RowLayout) => a.hideStar === b.hideStar && a.hideCritic === b.hideCritic && a.minWidth === b.minWidth && a.gone === b.gone;
+const sameLayout = (a: RowLayout, b: RowLayout) => a.hideStar === b.hideStar && a.hideCritic === b.hideCritic && a.minWidth === b.minWidth && a.gone === b.gone
+    && !!a.held === !!b.held;
+
+const HELD_CLASS = 'jfmod-ratingsGroup-held';
 
 const STAR_CLASS = 'jfmod-ratings-hideStar';
 const CRITIC_CLASS = 'jfmod-ratings-hideCritic';
@@ -275,7 +280,8 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
         rowNode.current = target;
         const put = (next: RowLayout) => {
             node.style.minWidth = next.minWidth;
-            node.style.display = next.gone ? 'none' : '';
+            node.style.display = next.gone && !next.held ? 'none' : '';
+            node.classList.toggle(HELD_CLASS, !!next.held);
             // The page's own star (the file-less page) follows the same decision as upstream's: one source of truth.
             if (ownStar) onHidesStar?.(next.hideStar);
             else markRow(target, next.hideStar, next.hideCritic);
@@ -284,11 +290,13 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
         const moved = () => Math.abs((target?.getBoundingClientRect().height ?? 0) - before) > 0.5;
         put(layout);
         if (previous && target && focusIsPast(target) && moved()) {
-            // Refused while focus sits below: the group keeps its room, so nothing moves, but the stock marks follow what it
-            // shows now (an empty or failed answer gives them back; Codex review 2026-10-30, P2 1). Only if that too would
-            // move the row does everything stay as it was.
-            put({ ...previous, hideStar: layout.hideStar, hideCritic: layout.hideCritic });
-            if (moved()) put(previous);
+            // Refused while focus sits below. With nothing to show (an empty or failed answer, ratings turned off) the group is
+            // gone but keeps its height, with no width: the stock marks come back at once and Play does not move. Otherwise the
+            // layout on screen stays. Either way what is on screen is recorded, so a later change compares with it (Codex
+            // review 2026-10-30, P2 1, and its re-review, P2 1 and 2).
+            const kept = layout.gone ? { ...layout, held: true } : previous;
+            put(kept);
+            applied.current = kept;
             return;
         }
         applied.current = layout;
