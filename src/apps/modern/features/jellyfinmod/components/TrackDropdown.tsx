@@ -150,8 +150,11 @@ const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, 
     }, [onChoose]);
     const current = entries.find(entry => entry.value === value) ?? entries[0];
     if (!current) return null;
-    // The segment's caption over its value (D8: VIDEO · AUDIO · SUBTITLES are kept, the labels column goes).
-    const caption = <span className='jfmod-stripCaption' aria-hidden='true'>{name}</span>;
+    // The segment's caption over its value (D8: VIDEO · AUDIO · SUBTITLES are kept, the labels column goes); the chosen track's
+    // extra words share its line after a dot (D147), so the cell keeps its height. The label and tooltip carry the full text.
+    const caption = <span className='jfmod-stripCaption' aria-hidden='true'>
+        {name}{current.extra && <span className='jfmod-stripCaptionExtra'> · {current.extra}</span>}
+    </span>;
     const text = <span className='jfmod-videoTriggerText'>{current.content}</span>;
     if (!enabled || entries.length < 2) {
         return <div className='jfmod-trackTrigger jfmod-trackStatic' title={current.title} data-jfmod-track-field={name}>
