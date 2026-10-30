@@ -35,7 +35,9 @@ scale (`8.1`, `91%`, `4.1`).
   stay.
 - **Trakt gives way** when the row does not fit on one line with it; IMDb and both RT values never do. Decided once at the
   first paint from a hidden stand-in at the widest values ("10.0", "100%"); the space is reserved then, so a late answer never
-  moves a focused control. Phone (390 px): all four fit on the ratings' own line with the stacked items (Peep Show, 2026-10-30).
+  moves a focused control. Once the answer is in, the group gives back what it does not use and takes its own width (user,
+  2026-10-30): the next item ("Ends at") moves left once and sits the row's usual gap after the last value (computer 18 px,
+  TV 24 px), the fallback's single value included. Phone (390 px): all four fit on the ratings' own line with the stacked items (Peep Show, 2026-10-30).
 - **Stale** values (older than the refresh window) are dimmed (`.jfmod-groupItem-stale`).
 - **TV:** one focus stop reached by Up from the buttons; first focus stays on Play. Focused: `rgba(255,255,255,.18)` fill and a
   `0.12em` `#00a4dc` outline, `0.1em` offset. Touch: `3em` minimum height.

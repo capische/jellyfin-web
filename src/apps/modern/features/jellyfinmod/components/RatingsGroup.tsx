@@ -238,9 +238,10 @@ const markRow = (row: Element | null, hideStar: boolean, hideCritic: boolean) =>
 /**
  * The row's layout for what is known. Before the answer the row is laid out as it will most likely end: the stock star hidden
  * (Jellyfin's own community rating, from TMDB or IMDb, which the group's values duplicate: user, 2026-10-30) and the stock
- * tomato hidden for the Rotten Tomatoes values the group has room for, the room reserved. The answer then only fills
- * it; one without some of those values gives the stock ones back together with the room they needed (the reserve, wider than
- * they are). Nothing to show here (not a movie or series, ratings off, no value in the row) gives the place back.
+ * tomato hidden for the Rotten Tomatoes values the group has room for, the room reserved. The answer then gives the reserve
+ * back: the group takes the width of what it shows, so the row's next item ("Ends at") moves left once, and no gap is left
+ * after a value narrower than the widest one (user, 2026-10-30); one without the Rotten Tomatoes values gives the stock tomato
+ * back too. Nothing to show here (not a movie or series, ratings off, no value in the row) gives the place back.
  */
 const rowLayoutOf = (wanted: boolean | undefined, answered: boolean, inline: Rating[], reservedFor: string[], reserve: string): RowLayout => {
     if (wanted === false || (answered && !inline.length)) return { hideStar: false, hideCritic: false, minWidth: '', gone: true };
@@ -248,8 +249,7 @@ const rowLayoutOf = (wanted: boolean | undefined, answered: boolean, inline: Rat
         return { hideStar: true, hideCritic: reservedFor.some(source => source.startsWith('tomatoes')), minWidth: reserve, gone: false };
     }
     const has = (source: string) => inline.some(rating => rating.source === source);
-    const full = reservedFor.every(source => !(INLINE_SOURCES as string[]).includes(source) || has(source));
-    return { hideStar: true, hideCritic: has('tomatoes_critic') || has('tomatoes_audience'), minWidth: full ? reserve : '', gone: false };
+    return { hideStar: true, hideCritic: has('tomatoes_critic') || has('tomatoes_audience'), minWidth: '', gone: false };
 };
 
 /**
@@ -415,8 +415,8 @@ const popupWidthOf = (node: HTMLElement | null, reserved: Reserve | null, standI
  * rating in a compact popup — hover on a computer, a tap on a phone, OK on a TV (Back closes only the popup).
  *
  * Nothing it does moves a focused control (UX §13 rule 2; web review 2026-10-08, P2 2-5):
- * - its width (and whether Trakt is in the row) is decided at its first paint from the widest values it can show, and the
- *   answer only fills that space: nothing is fitted later, so nothing depends on when focus arrives;
+ * - its width (and whether Trakt is in the row) is decided at its first paint from the widest values it can show; the answer
+ *   fills that space and then gives back what it does not use (the group never grows, so the row keeps its line and height);
  * - it is one control: on a TV one focus stop, the group itself, which never moves or goes while it has focus;
  * - every later change to the row (the stock marks back, the space released or given back) is kept only if the row keeps its
  *   height while focus sits below it;
