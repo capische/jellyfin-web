@@ -269,6 +269,8 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
     onHidesStar?: (hides: boolean) => void) => {
     const applied = useRef<RowLayout | null>(null);
     const rowNode = useRef<Element | null>(null);
+    // Stops watching for focus leaving the area below a held row (set while a row is held).
+    const stopWatch = useRef<(() => void) | null>(null);
     useLayoutEffect(() => {
         const node = box.current;
         const target = row();
@@ -276,6 +278,7 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
         if (!node || (previous && sameLayout(previous, layout))) return;
         if (layout.gone && node.contains(document.activeElement)) return;
         rowNode.current = target;
+        stopWatch.current?.();
         const before = target?.getBoundingClientRect().height ?? 0;
         const put = (next: RowLayout) => {
             node.style.minWidth = next.minWidth;
@@ -296,6 +299,22 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
             const kept = layout.gone ? { ...layout, held: true } : previous;
             put(kept);
             applied.current = kept;
+            if (kept.held && target instanceof HTMLElement) {
+                // The held height is given back once focus is no longer below the row (Up to the header, say): a hidden group
+                // never gets the focus whose blur would otherwise try the layout again (Codex re-review 2026-10-30, P3).
+                stopWatch.current?.();
+                const release = () => {
+                    if (focusIsPast(target)) return;
+                    target.style.minHeight = '';
+                    if (applied.current?.held) applied.current = { ...applied.current, held: false };
+                    stopWatch.current?.();
+                };
+                document.addEventListener('focusin', release);
+                stopWatch.current = () => {
+                    document.removeEventListener('focusin', release);
+                    stopWatch.current = null;
+                };
+            }
             return;
         }
         applied.current = layout;
@@ -303,6 +322,7 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [layout.hideStar, layout.hideCritic, layout.minWidth, layout.gone, ownStar, focusMoves]);
     useEffect(() => () => {
+        stopWatch.current?.();
         rowNode.current?.classList.remove(STAR_CLASS, CRITIC_CLASS);
         if (rowNode.current instanceof HTMLElement) rowNode.current.style.minHeight = '';
     }, []);

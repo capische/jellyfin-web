@@ -33,7 +33,8 @@ scale (`8.1`, `91%`, `4.1`).
   (`.jfmod-ratings-hideStar`; user, 2026-10-30), and the file-less page's own TMDB star likewise, from the same decision (the
   group tells the page, `onHidesStar`). An answer that leaves the group nothing to show (empty, failed, ratings turned off) gives the
   stock marks back at once; while focus sits below, the group goes (nothing left to focus) and the row keeps the height it
-  had (an inline `min-height`, a wrapped row included) until the next layout, so nothing below it moves. The tomato gives way while the
+  had (an inline `min-height`, a wrapped row included) until the next layout or until focus is no longer below the row
+  (Up to the header), so nothing below it moves. The tomato gives way while the
   group shows Rotten Tomatoes (`.jfmod-ratings-hideCritic`). With the group not shown (ratings off, no value) the stock marks
   stay.
 - **Trakt gives way** when the row does not fit on one line with it; IMDb and both RT values never do. Decided once at the
