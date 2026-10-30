@@ -4,7 +4,7 @@ import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/medi
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { getLanguageNames } from '../api/modApi';
@@ -140,26 +140,41 @@ interface TrackDropdownProps {
 const LIST_MARGIN = 16;
 
 /**
+ * Where a cell's list opens and how tall it may be. The list hangs from the strip and never moves up over it (MUI shifts a
+ * popover that does not fit below, D149): when opening with less than 10em under the strip the page scrolls first, and the list
+ * is no taller than the room left (TV at 1280x720). In px: no min() for older TV engines; the paper's em is the strip's.
+ */
+const placeUnder = (trigger: HTMLElement, scroll: boolean) => {
+    const em = parseFloat(getComputedStyle(trigger).fontSize);
+    let at = listPlace(trigger);
+    const short = 10 * em - (window.innerHeight - LIST_MARGIN - at.top);
+    if (scroll && short > 0) {
+        window.scrollBy(0, short);
+        at = listPlace(trigger);
+    }
+    return { ...at, room: Math.min(20 * em, Math.max(0, window.innerHeight - LIST_MARGIN - at.top)) };
+};
+
+/**
  * The field and its list. MUI's menu gives the list its keys (arrows, Enter, Escape back to the field) and `shell/dpadModals`
  * the TV's remote; it opens on the current entry.
  */
 const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, onChoose }) => {
     const [place, setPlace] = useState<{ top: number; left: number; width: number; room: number } | null>(null);
+    const trigger = useRef<HTMLElement | null>(null);
     const open = useCallback((event: MouseEvent<HTMLElement>) => {
-        const trigger = event.currentTarget;
-        // The list hangs from the strip and never moves up over it (MUI shifts a popover that does not fit below): with less
-        // than 10em under the strip the page scrolls first, and the list is no taller than the room left (TV at 1280x720).
-        const em = parseFloat(getComputedStyle(trigger).fontSize);
-        const need = 10 * em;
-        let at = listPlace(trigger);
-        const short = need - (window.innerHeight - LIST_MARGIN - at.top);
-        if (short > 0) {
-            window.scrollBy(0, short);
-            at = listPlace(trigger);
-        }
-        // In px: no min() for older TV engines; the paper's em is the strip's.
-        setPlace({ ...at, room: Math.min(20 * em, Math.max(0, window.innerHeight - LIST_MARGIN - at.top)) });
+        trigger.current = event.currentTarget;
+        setPlace(placeUnder(event.currentTarget, true));
     }, []);
+    // A resize (a window, a rotated phone) places the open list again, so it stays under its cell (Codex review, P2 2).
+    useEffect(() => {
+        if (!place) return;
+        const again = () => {
+            if (trigger.current?.isConnected) setPlace(placeUnder(trigger.current, false));
+        };
+        window.addEventListener('resize', again);
+        return () => window.removeEventListener('resize', again);
+    }, [place]);
     const close = useCallback(() => setPlace(null), []);
     const pick = useCallback((event: MouseEvent<HTMLElement>) => {
         setPlace(null);
