@@ -20,6 +20,8 @@ interface RatingsGroupProps {
     wanted: boolean | undefined;
     /** The stock star this page shows in place of IMDb, when it is not upstream's (the file-less page's own TMDB star). */
     ownStar?: boolean;
+    /** With `ownStar`: told whether the page's own star should give way, from the same decision that hides upstream's. */
+    onHidesStar?: (hides: boolean) => void;
 }
 
 /** The sources the row shows, in the row's order (IMDb where the stock star was, Rotten Tomatoes where the tomato was, Trakt). */
@@ -260,7 +262,8 @@ const rowLayoutOf = (wanted: boolean | undefined, answered: boolean, inline: Rat
  * same guarded way when there is something to show again (web review 2026-10-08 round 10, P2 2). Upstream refills the row's
  * content, never the row itself, so the classes stay on it across a refill.
  */
-const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | null, layout: RowLayout, ownStar: boolean, focusMoves: number) => {
+const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | null, layout: RowLayout, ownStar: boolean, focusMoves: number,
+    onHidesStar?: (hides: boolean) => void) => {
     const applied = useRef<RowLayout | null>(null);
     const rowNode = useRef<Element | null>(null);
     useLayoutEffect(() => {
@@ -273,12 +276,19 @@ const useRowLayout = (box: React.RefObject<HTMLElement>, row: () => Element | nu
         const put = (next: RowLayout) => {
             node.style.minWidth = next.minWidth;
             node.style.display = next.gone ? 'none' : '';
-            if (!ownStar) markRow(target, next.hideStar, next.hideCritic);
+            // The page's own star (the file-less page) follows the same decision as upstream's: one source of truth.
+            if (ownStar) onHidesStar?.(next.hideStar);
+            else markRow(target, next.hideStar, next.hideCritic);
         };
         const before = target?.getBoundingClientRect().height ?? 0;
+        const moved = () => Math.abs((target?.getBoundingClientRect().height ?? 0) - before) > 0.5;
         put(layout);
-        if (previous && target && focusIsPast(target) && Math.abs(target.getBoundingClientRect().height - before) > 0.5) {
-            put(previous);
+        if (previous && target && focusIsPast(target) && moved()) {
+            // Refused while focus sits below: the group keeps its room, so nothing moves, but the stock marks follow what it
+            // shows now (an empty or failed answer gives them back; Codex review 2026-10-30, P2 1). Only if that too would
+            // move the row does everything stay as it was.
+            put({ ...previous, hideStar: layout.hideStar, hideCritic: layout.hideCritic });
+            if (moved()) put(previous);
             return;
         }
         applied.current = layout;
@@ -422,7 +432,7 @@ const popupWidthOf = (node: HTMLElement | null, reserved: Reserve | null, standI
  *   height while focus sits below it;
  * - Back is taken only while the popup is open, and the popup closes when there is nothing to show.
  */
-const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar }) => {
+const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar }) => {
     const box = useRef<HTMLSpanElement>(null);
     const button = useRef<HTMLButtonElement>(null);
     const row = () => box.current?.closest('.itemMiscInfo') ?? null;
@@ -440,7 +450,7 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     // width: a phone has no remote focus for a late answer to move (UX §13 rule 2 is the TV's).
     const reserve = reserved && !layoutManager.mobile ? reserved.em + 'em' : '';
     const layout = rowLayoutOf(focused && inline.length ? true : wanted, shown !== null, inline, reservedFor, reserve);
-    useRowLayout(box, row, layout, !!ownStar, focusMoves);
+    useRowLayout(box, row, layout, !!ownStar, focusMoves, onHidesStar);
 
     // The popup closes when there is nothing to show, even while the row keeps its last values.
     const popup = usePopup(box, popupId, live.length > 0 && wanted !== false, tv);

@@ -30,7 +30,9 @@ scale (`8.1`, `91%`, `4.1`).
   the digits'; the gaps between stacks stay even (computer and phone 14–15 px, TV 19–21 px).
 - **Stock marks:** the ★ is Jellyfin's own community rating, from its metadata providers (on delta 2026-10-30: Hack Your
   Health's ★ 6.7 matches TMDB's 67 %, Peep Show's ★ 8.7 matches IMDb's 8.7, not TMDB's 8.0), so it gives way whenever the group shows
-  (`.jfmod-ratings-hideStar`; user, 2026-10-30), and the file-less page's own TMDB star likewise. The tomato gives way while the
+  (`.jfmod-ratings-hideStar`; user, 2026-10-30), and the file-less page's own TMDB star likewise, from the same decision (the
+  group tells the page, `onHidesStar`). An answer that leaves the group nothing to show gives the stock marks back at once, even
+  while focus below keeps the group's room. The tomato gives way while the
   group shows Rotten Tomatoes (`.jfmod-ratings-hideCritic`). With the group not shown (ratings off, no value) the stock marks
   stay.
 - **Trakt gives way** when the row does not fit on one line with it; IMDb and both RT values never do. Decided once at the
@@ -47,7 +49,8 @@ scale (`8.1`, `91%`, `4.1`).
 - One row per ticked rating, in three aligned columns: **mark** (each centred in the column, so the marks line up under the
   IMDb badge, and on its row's text within 1 px), **value** (600), **votes** (compact: `250K votes`, `5.7K`,
   70 % opacity, clipped with an ellipsis). No heading, no footer, no "via …" line, no links.
-- Exactly as wide as the group with all its ticked sources (Trakt included even when it gave way); a row never widens it.
+- As wide as the group with all its ticked sources (Trakt included even when it gave way), and at least `11em` (one row of
+  mark, value and votes, so a single source's popup never clips its value); a row never widens it.
 - Paper `#202020`, ink `rgba(255,255,255,.87)`, `0.2em` radius, padding `0.45em 0.6em`, shadow `0 .2em .9em rgba(0,0,0,.6)`,
   `86 %` text, fixed above the page (z-index 1100), never wider or taller than the screen (scrolls inside).
 - Where a value came from and when ("via MDBList, as of …") is the row's `title` and hidden text for a screen reader.
