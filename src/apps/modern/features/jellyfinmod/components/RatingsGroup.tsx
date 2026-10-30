@@ -236,19 +236,20 @@ const markRow = (row: Element | null, hideStar: boolean, hideCritic: boolean) =>
 };
 
 /**
- * The row's layout for what is known. Before the answer the row is laid out as it will most likely end: the stock star and
- * tomato hidden for the IMDb and Rotten Tomatoes values the group has room for, the room reserved. The answer then only fills
+ * The row's layout for what is known. Before the answer the row is laid out as it will most likely end: the stock star hidden
+ * (Jellyfin's own community rating, from TMDB or IMDb, which the group's values duplicate: user, 2026-10-30) and the stock
+ * tomato hidden for the Rotten Tomatoes values the group has room for, the room reserved. The answer then only fills
  * it; one without some of those values gives the stock ones back together with the room they needed (the reserve, wider than
  * they are). Nothing to show here (not a movie or series, ratings off, no value in the row) gives the place back.
  */
 const rowLayoutOf = (wanted: boolean | undefined, answered: boolean, inline: Rating[], reservedFor: string[], reserve: string): RowLayout => {
     if (wanted === false || (answered && !inline.length)) return { hideStar: false, hideCritic: false, minWidth: '', gone: true };
     if (!answered) {
-        return { hideStar: reservedFor.includes('imdb'), hideCritic: reservedFor.some(source => source.startsWith('tomatoes')), minWidth: reserve, gone: false };
+        return { hideStar: true, hideCritic: reservedFor.some(source => source.startsWith('tomatoes')), minWidth: reserve, gone: false };
     }
     const has = (source: string) => inline.some(rating => rating.source === source);
     const full = reservedFor.every(source => !(INLINE_SOURCES as string[]).includes(source) || has(source));
-    return { hideStar: has('imdb'), hideCritic: has('tomatoes_critic') || has('tomatoes_audience'), minWidth: full ? reserve : '', gone: false };
+    return { hideStar: true, hideCritic: has('tomatoes_critic') || has('tomatoes_audience'), minWidth: full ? reserve : '', gone: false };
 };
 
 /**
@@ -346,7 +347,7 @@ const useReserve = (box: React.RefObject<HTMLElement>, row: () => Element | null
         node.style.minWidth = '';
         node.style.display = '';
         if (items) items.style.flexWrap = 'nowrap';
-        if (!ownStar) markRow(target, standInKey.includes('imdb'), standInKey.includes('tomatoes'));
+        if (!ownStar) markRow(target, true, standInKey.includes('tomatoes'));
         const em = Number.parseFloat(getComputedStyle(node).fontSize) || 16;
         const fullEm = node.getBoundingClientRect().width / em;
         let fits = { sources: standInKey.split(','), em: fullEm };

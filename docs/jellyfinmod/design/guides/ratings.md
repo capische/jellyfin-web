@@ -28,8 +28,11 @@ scale (`8.1`, `91%`, `4.1`).
   the number as a unit: centred on the whole number the digits looked left of the mark, centred on the digits alone the "%"
   looked right (user, 2026-10-30). The mark's centre is then about 2–3.5 px left of the whole number's and 1.5–4 px right of
   the digits'; the gaps between stacks stay even (computer and phone 14–15 px, TV 19–21 px).
-- **Stock marks:** the ★ gives way while the group shows IMDb (`.jfmod-ratings-hideStar`), the tomato while it shows Rotten
-  Tomatoes (`.jfmod-ratings-hideCritic`); a title without those values keeps the stock marks.
+- **Stock marks:** the ★ is Jellyfin's own community rating, from its metadata providers (on delta 2026-10-30: Hack Your
+  Health's ★ 6.7 matches TMDB's 67 %, Peep Show's ★ 8.7 matches IMDb's 8.7, not TMDB's 8.0), so it gives way whenever the group shows
+  (`.jfmod-ratings-hideStar`; user, 2026-10-30), and the file-less page's own TMDB star likewise. The tomato gives way while the
+  group shows Rotten Tomatoes (`.jfmod-ratings-hideCritic`). With the group not shown (ratings off, no value) the stock marks
+  stay.
 - **Trakt gives way** when the row does not fit on one line with it; IMDb and both RT values never do. Decided once at the
   first paint from a hidden stand-in at the widest values ("10.0", "100%"); the space is reserved then, so a late answer never
   moves a focused control. Phone (390 px): all four fit on the ratings' own line with the stacked items (Peep Show, 2026-10-30).
