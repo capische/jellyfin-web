@@ -1374,26 +1374,58 @@
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }
 
-/* Activity: a disclosure in the group title's look (the picker's "▸ 12 Rejected"). */
-.jfmod-traktActivity { margin-top: -0.4em; }
+/* Activity: a group header in its own space (D153, D154; approved mockups reviews/phase13/mockups-v4): 1.2em under the
+   export row, so no divider crosses it; the whole column's width as one flat button whose text lines up with the rows above. */
+.jfmod-traktActivity { margin-top: 1.2em; }
 
 .jfmod-activityToggle.emby-button {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
-    width: auto;
-    margin: 0 0 0.5em -0.45em;
-    padding: 0.4em 0.45em;
+    box-sizing: border-box;
+    width: calc(100% + 1.2em);
+    margin: 0 -0.6em;
+    padding: 0.55em 0.6em;
+    border-radius: 0.2em;
     text-align: left;
+    text-transform: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    transition: background-color 0.15s ease;
+}
+
+/* A quiet fill under the pointer and on keyboard focus on a computer; nothing else changes (not the settings flat button's cyan
+   text, `.jfmod-settings .emby-button.button-flat:hover`). */
+.jfmod-traktActivity > .jfmod-activityToggle.emby-button.button-flat:hover,
+.jfmod-traktActivity > .jfmod-activityToggle.emby-button.button-flat:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    background: var(--jf-palette-action-hover, rgba(255, 255, 255, 0.08));
     color: rgba(255, 255, 255, 0.7);
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }
 
-.jfmod-activityChevron {
-    width: 1em;
-    font-size: 0.9em;
+.jfmod-traktActivity.is-open > .jfmod-activityToggle.emby-button { margin-bottom: 0.35em; }
+
+/* Material ChevronRight in the text colour, turned a quarter down when open. */
+.jfmod-activityToggle .jfmod-activityChevron {
+    flex: none;
+    width: 1.35em;
+    height: 1.35em;
+    margin: 0 0.35em 0 -0.25em;
+    font-size: inherit;
+    fill: currentColor;
+    transition: transform 0.15s ease;
 }
 
+.jfmod-traktActivity.is-open > .jfmod-activityToggle .jfmod-activityChevron { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-activityToggle .jfmod-activityChevron,
+    .jfmod-activityToggle.emby-button { transition: none; }
+}
+
+/* ACTIVITY in the group-title look, then the count after a dot. */
 .jfmod-activityTitle {
     font-size: 0.8em;
     font-weight: 600;
@@ -1401,19 +1433,35 @@
     text-transform: uppercase;
 }
 
-.jfmod-activityHint {
-    margin-left: 0.8em;
+.jfmod-activityCount {
     font-size: 0.85em;
     font-weight: 400;
 }
 
-/* The runs, one notch tighter, in the scrolling list, tall enough here for six; the other fourteen scroll (D74). */
-.jfmod-traktActivity .jfmod-scrolllist { max-height: 23em; }
+.jfmod-activityCount::before {
+    content: "·";
+    margin: 0 0.55em;
+}
+
+/* TV: the stock focused-button cyan across the row with dark text and chevron, without the stock 1.2 zoom, as stock list rows
+   (a zoomed full-width row would run off the column). */
+.layout-tv .jfmod-activityToggle.emby-button.show-focus:focus {
+    transform: none;
+    outline: 0;
+    background: #00a4dc;
+    background: var(--jf-palette-primary-main, #00a4dc);
+    color: rgba(0, 0, 0, 0.87);
+    color: var(--jf-palette-primary-contrastText, rgba(0, 0, 0, 0.87));
+}
+
+/* The titles, one notch tighter, in the scrolling list (D74). */
+.jfmod-traktActivity .jfmod-scrolllist {
+    max-height: 23em;
+    margin-top: 0;
+}
+
 .jfmod-traktActivity .jfmod-scrolllist .jfmod-brow { padding: 0.5em 0; }
 .jfmod-traktActivity .jfmod-brow .jfmod-state { margin-right: 0.35em; }
-
-/* TV: the toggle takes the stock focused-button fill through show-focus, with dark text on the cyan. */
-.layout-tv .jfmod-activityToggle.emby-button.show-focus:focus { color: rgba(0, 0, 0, 0.87); }
 
 /* Settings › Trakt v3 (D125–D130; approved mockups reviews/phase13/mockups-v3). The account bar first: the section head
    already draws the line above it. */
@@ -1431,24 +1479,35 @@
 .jfmod-brow.jfmod-traktOff .fieldDescription,
 .jfmod-brow.jfmod-traktOff .MuiButton-root { opacity: 0.45; }
 
-/* Activity: one row per title, "media · time · action", under a day heading (D125). */
+/* Activity: one row per title (D125), the time in its own column first so the times line up (D162), then "media · action". */
 .jfmod-traktActivity .jfmod-scrolllist .jfmod-brow.jfmod-traktItem { padding: 0.42em 0; }
 
+/* The day as a band a shade lighter than the section (D159): the day in title case at the row's size, primary text, pinned at
+   the top of the list while its titles scroll under it; opaque (the section's paper with a veil of the text colour), so the
+   rows pass under it. Its day group ends the pin with its last title. */
 .jfmod-traktDay {
-    padding: 0.9em 0 0.3em;
-    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
-    font-size: 0.78em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-top: 0.9em;
+    padding: 0.4em 0.6em;
+    border-radius: 0.2em;
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.7);
-    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    color: #fff;
+    color: var(--jf-palette-text-primary, #fff);
+    background-color: #202020;
+    background-color: var(--jf-palette-background-paper, #202020);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.07));
+    background-image: linear-gradient(rgba(var(--jf-palette-text-primaryChannel) / 0.07), rgba(var(--jf-palette-text-primaryChannel) / 0.07));
 }
 
-.jfmod-traktDay:first-child { padding-top: 0.4em; }
+.jfmod-traktDayGroup:first-child > .jfmod-traktDay { margin-top: 0.5em; }
 
 .jfmod-traktLine {
-    display: block;
+    display: grid;
+    grid-template-columns: 4.6em 1fr;
+    column-gap: 0.9em;
+    align-items: baseline;
     line-height: 1.45;
 }
 
@@ -1460,7 +1519,12 @@
     color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
 }
 
-.jfmod-traktTime { font-variant-numeric: tabular-nums; }
+/* Tabular figures, right-aligned: "8:47 pm" and "10:41 pm" end on the same edge. */
+.jfmod-traktTime {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
 
 /* The action wraps with the line on a phone instead of overflowing it. */
 .jfmod-traktActivity .jfmod-traktItem .jfmod-state {
@@ -1474,7 +1538,7 @@
     top: 0.06em;
 }
 
-/* Phone (and a narrow window): the title on its own line, then "time · action" under it. */
+/* Phone (and a narrow window): the time and the title on the first line, the action under the title. */
 @media (max-width: 48em) {
     .jfmod-traktMedia { display: block; }
     .jfmod-traktMedia + .jfmod-traktSep { display: none; }
