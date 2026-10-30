@@ -34,8 +34,20 @@ const translation = (text: string): TrackRole | null => {
     return null;
 };
 
-/** A title that says the track is not forced ("non-forced", "not forced", "Нефорсированные") never reads as forced. */
-const NOT_FORCED = /\b(?:non|not|un)[- ]?forced\b|не ?форс|nicht erzwungen|no forzad|non[- ]forcé/;
+/** Words that negate the word after them ("not forced", "pas forcés", "sin forzados", "keine erzwungenen", "без …"). */
+const NEGATIONS = new Set(['not', 'non', 'no', 'pas', 'sin', 'keine', 'kein', 'nicht', 'не', 'без']);
+
+/**
+ * Whether a title calls the track forced (D167): a word that starts as a forced word (forced, forcé, forzado, форс…, erzwungen)
+ * and is not right after a negation word. A prefixed word ("unforced", "Нефорсированные") does not start as one, and
+ * "non-forced" splits into two words. Words are split on anything that is not a Latin or Cyrillic letter, so runs of spaces do
+ * not matter.
+ */
+const saysForced = (text: string) => {
+    // Latin with its accents and Cyrillic (no `\p{L}`: the build targets ES5).
+    const words = text.split(/[^a-z\u00c0-\u024f\u0400-\u04ff]+/).filter(Boolean);
+    return words.some((word, index) => /^(?:forced|forcé|forzad|форс|erzwung)/.test(word) && !NEGATIONS.has(words[index - 1] ?? ''));
+};
 
 /**
  * The stream's role, stream flags first, then title words (D62). Audio: audio description, then commentary ("тифлокомментарий"
@@ -53,9 +65,9 @@ export const trackRole = (stream: MediaStream): TrackRole | null => {
         return translation(text);
     }
     if (/signs|songs|\bs&s\b|надпис|напис/.test(text)) return 'SIGNS';
-    if (stream.IsForced || (/forced|форс|forcé|forzad|erzwungen/.test(text) && !NOT_FORCED.test(text))) return 'FORCED';
-    // The acronyms as whole words in any case, as the extra words strip them ("English sdh").
-    if (stream.IsHearingImpaired || /\b(?:sdh|cc|hi)\b/.test(text)
+    if (stream.IsForced || saysForced(text)) return 'FORCED';
+    // The acronyms as whole words in any case, as the extra words strip them ("English sdh"); "hi-fi" is not HI.
+    if (stream.IsHearingImpaired || /\b(?:sdh|cc)\b|\bhi\b(?!-fi)/.test(text)
         || /hearing impaired|deaf|слабослыш|глух|порушенням слуху|hörgeschädigt|sourds/.test(text)) return 'SDH';
     return null;
 };
@@ -85,7 +97,6 @@ const KNOWN = new Set(('original default forced sdh cc hi full audio track subti
     // The role words the role mark already says (D81), beyond the mockup's list: a track titled "Commentary" adds nothing.
     + 'commentary комментарий коментар kommentar commentaire comentario commento description descriptive').split(' '));
 const CJK_KNOWN = ['日本語', '吹替', '吹き替え', '简体', '繁體', '繁体'];
-const NEGATIONS = new Set(['not', 'non', 'no', 'nicht', 'не']);
 
 /** `text` without the given characters at either end. */
 const trimChars = (text: string, chars: string) => {
