@@ -67,8 +67,10 @@ The first matching audio format wins; Atmos is a mark of its own beside it. A fo
 
 - **What:** one mark per track row saying what the track is for, after its format marks: audio `AD` (audio description), the
   commentary bubble, or the translation type as the release writes it (`DUB`, `MVO`, `DVO`, `AVO`, `VO`); subtitles `SIGNS`
-  (the title says signs / songs / S&S / надписи), `FORCED` (the flag, or "forced" but never a negated "non-forced", "not
-  forced", "Нефорсированные"), `SDH` (hearing impaired, or the whole words SDH, CC, HI in any case: "English sdh"; D165).
+  (the title says signs / songs / S&S / надписи), `FORCED` (the flag, or a word that starts as forced / forcé / forzado /
+  форс… / erzwungen and is not right after not, non, no, pas, sin, keine, kein, nicht, не, без; "Castellano Forzados" is
+  forced, "Español sin forzados", "non-forced" and "Нефорсированные" are not; D165, D167), `SDH` (hearing impaired, or the
+  whole words SDH, CC, HI in any case: "English sdh", but not "hi-fi"; D165, D167).
 - **Which one** (D63): the first that applies — audio AD › Commentary › translation; subtitles SIGNS › FORCED › SDH. Stream flags
   first (`IsForced`, `IsHearingImpaired`), then title words in en, ru, uk, de, fr, es, it, pt, ja (`trackRole`); a bare "VO" is
   never read.
