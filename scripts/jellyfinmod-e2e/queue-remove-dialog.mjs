@@ -7,10 +7,15 @@
 //                action sheet, chosen by data-id), the dialog's title, facts and buttons for its state, the safe choice focused
 //                and blue, the destructive one red; on the TV Up and Down walk the buttons, OK on the safe choice closes it and
 //                Back closes it, and focus returns to the row (the TV) or its ⋮ (computer, phone); nothing is removed.
-//   step openers (desktop): the pending entry's X on a Replace (and its "Your 1080p file stays."), the episode page's Cancel
+//                The close X sits level with the title (at least 40 px); the safe choice is grey on open on a computer and a
+//                phone and blue on the TV; each dialog closes by turns with the safe choice, the X and Escape (the TV: OK, Back,
+//                the X by the D-pad), and its row stays. Without the stand-ins' titles (a real environment) it takes one row
+//                per state from the live queue.
+//   step openers (desktop): the pending entry's X on a Replace (and its "… file stays."), the episode page's Cancel
 //                Download on a pack, the picker's added-row X; each opens the dialog for its row's state, Keep returns focus to
 //                the opener; the picker's X then deletes its download for real: its files on disk before, the stand-in's
-//                delete-local-data request in its log, the files gone after. A failed pack (`Peep.Show.S02…`) joins step dialog.
+//                delete-local-data request in its log, the files gone after. The picker part runs with the stand-ins only
+//                (JELLYFINMOD_QR_DOWNLOADS and JELLYFINMOD_QR_STANDIN_LOG set). A failed pack (`Peep.Show.S02…`) joins step dialog.
 //   step postlink (desktop): a pack episode blocked after its link counts as in the library (a rewritten Queue read; see the step).
 //   step refused (desktop): JELLYFINMOD_QR_ADD=<grab id> names a blocked Add whose file has a second name: its pending entry's X,
 //                Delete is refused, the dialog asks again without it, and Cancel returns focus to the X, enabled.
@@ -66,7 +71,27 @@ const dialogState = () => page.evaluate(() => {
             red: button.classList.contains('button-delete'), background: getComputedStyle(button).backgroundColor })),
         focused: document.activeElement?.getAttribute?.('data-choice') ?? null,
         font: getComputedStyle(dialog.querySelector('.jfmod-removeTitle')).fontFamily.split(',')[0],
-        paper: getComputedStyle(dialog).backgroundColor
+        paper: getComputedStyle(dialog).backgroundColor,
+        focusVisible: document.activeElement?.matches?.(':focus-visible') ?? null,
+        close: (() => {
+            const x = dialog.querySelector('.jfmod-removeClose')?.getBoundingClientRect();
+            const title = dialog.querySelector('.jfmod-removeTitle').getBoundingClientRect();
+            return x ? { size: Math.round(Math.min(x.width, x.height)), dy: Math.round(Math.abs(x.top + x.height / 2 - title.top - title.height / 2)),
+                right: x.right > title.right, label: dialog.querySelector('.jfmod-removeClose').getAttribute('aria-label') } : null;
+        })(),
+        // The theme's own greys and focus blue, read through the same variables the stock button rules use.
+        colours: (() => {
+            const probe = value => {
+                const node = document.createElement('div');
+                node.style.background = value;
+                dialog.appendChild(node);
+                const colour = getComputedStyle(node).backgroundColor;
+                node.remove();
+                return colour;
+            };
+            return { grey: probe('var(--jf-palette-Button-inheritContainedBg, #424242)'), hover: probe('var(--jf-palette-Button-inheritContainedHoverBg, #616161)'),
+                blue: probe('var(--jf-palette-secondary-main, #00a4dc)') };
+        })()
     };
 });
 const waitDialog = () => page.waitForSelector('.jfmod-removeDialog .jfmod-removeChoice', { timeout: 15000 }).then(() => page.waitForTimeout(500));
@@ -107,7 +132,25 @@ async function dialogStep() {
     const titles = [['seeding', 'Inception.2010.1080p'], ['blocked', 'The.Matrix.Reloaded'], ['downloading', 'The.Matrix.1999'], ['pack', 'Adolescence.S01']];
     // A pack whose episodes all failed (Codex review P2 1): its files may be deleted, so it must not promise they stay.
     if ((await queueRows()).some(row => row.releaseTitle.startsWith('Peep.Show.S02'))) titles.push(['packfailed', 'Peep.Show.S02']);
-    for (const [key, title] of titles) {
+    // The stand-ins' titles that are present, then one row of each other state from the live queue (a real environment), a
+    // pack apart.
+    const live = await queueRows();
+    const stateKey = row => row.state + (row.pack ? '-pack' : '');
+    const picks = titles.filter(([, title]) => live.some(row => row.releaseTitle.startsWith(title)));
+    const covered = new Set(picks.map(([, title]) => stateKey(live.find(row => row.releaseTitle.startsWith(title)))));
+    for (const row of live) {
+        if (!covered.has(stateKey(row)) && !['importing', 'linking', 'scanning', 'identifying'].includes(row.state)) {
+            covered.add(stateKey(row));
+            picks.push([stateKey(row), row.releaseTitle]);
+        }
+    }
+    record(step, 'the queue has rows to open', picks.length > 0, picks.map(([key]) => key).join(', '));
+    // Every way to close it runs at least once: the safe choice, the X, Escape (the TV: OK, Back, the X by the D-pad).
+    const closers = tv ? ['ok', 'back', 'x'] : ['keep', 'x', 'escape'];
+    const opens = picks.length ? Math.max(picks.length, closers.length) : 0;
+    for (let index = 0; index < opens; index++) {
+        const [key, title] = picks[index % picks.length];
+        const closer = closers[index % closers.length];
         const data = (await queueRows()).find(row => row.releaseTitle.startsWith(title));
         const row = page.locator(rowSelector).filter({ hasText: title }).first();
         if (tv) {
@@ -141,7 +184,20 @@ async function dialogStep() {
         checkPlan(step, key, state, expected(data));
         record(step, `${key}: a dialog that can delete the files promises no episode stays in the library`,
             !state.choices.some(choice => choice.id === 'delete') || !state.facts.some(fact => fact.includes('stay there')), JSON.stringify(state.facts));
-        await shot(page, `dialog-${key}`);
+        record(step, `${key}: the close X is level with the title on its right, at least 40 px, labelled Close`,
+            !!state.close && state.close.size >= 40 && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
+        const safe = state.choices.find(choice => choice.id === 'cancel');
+        record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'grey'} as the dialog opens`,
+            safe?.background === (tv ? state.colours.blue : state.colours.grey), JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));
+        if (index === 0 && !tv && !phone) {
+            await page.locator('.jfmod-removeChoice[data-choice="cancel"]').hover();
+            await page.waitForTimeout(400);
+            const hover = await page.locator('.jfmod-removeChoice[data-choice="cancel"]').evaluate(button => getComputedStyle(button).backgroundColor);
+            record(step, `${key}: the safe choice takes the stock hover grey under the pointer`, hover === state.colours.hover, hover);
+            await page.mouse.move(5, 5);
+            await page.waitForTimeout(300);
+        }
+        await shot(page, `dialog-${key}-${closer}`);
         if (tv) {
             const walk = [];
             await page.keyboard.press('ArrowUp');
@@ -150,9 +206,23 @@ async function dialogStep() {
             walk.push(await page.evaluate(() => document.activeElement?.getAttribute('data-choice')));
             const ids = state.choices.map(choice => choice.id);
             record(step, `${key}: Up moves to the choice above the safe one, Down back to it`, walk[0] === ids[ids.length - 2] && walk[1] === 'cancel', walk.join(' → '));
-            // OK on the safe choice for the first two rows, Back for the other two.
-            if (key === 'seeding' || key === 'blocked') await page.keyboard.press('Enter');
-            else await page.keyboard.press('Escape');
+            if (closer === 'x') {
+                // The X by the D-pad: Up from the safe choice until it has focus, then OK.
+                for (let i = 0; i < 8 && !await page.evaluate(() => document.activeElement?.classList.contains('jfmod-removeClose')); i++) {
+                    await page.keyboard.press('ArrowUp');
+                    await page.waitForTimeout(250);
+                }
+                const onX = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-removeClose'));
+                record(step, `${key}: the D-pad reaches the close X`, onX, await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
+                if (onX) await shot(page, `dialog-${key}-x-focused`);
+                await page.keyboard.press(onX ? 'Enter' : 'Escape');
+            } else {
+                await page.keyboard.press(closer === 'ok' ? 'Enter' : 'Escape');
+            }
+        } else if (closer === 'x') {
+            await page.locator('.jfmod-removeClose').click();
+        } else if (closer === 'escape') {
+            await page.keyboard.press('Escape');
         } else {
             await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
         }
@@ -160,9 +230,10 @@ async function dialogStep() {
         const focus = await active();
         const name = data.entry.title;
         const back = tv ? focus.cls.includes('jfmod-queueRow--tv') && focus.text.includes(name) : focus.cls.includes('jfmod-queueMenu') && focus.label.includes(name);
-        let how = 'the safe choice';
-        if (tv) how = key === 'seeding' || key === 'blocked' ? 'OK on the safe choice' : 'Back';
+        const how = { keep: 'the safe choice', ok: 'OK on the safe choice', back: 'Back', x: 'the close X', escape: 'Escape' }[closer];
         record(step, `${key}: ${how} closes it and focus returns to ${tv ? 'the row' : 'its ⋮'}`, back, JSON.stringify(focus));
+        const now = (await queueRows()).find(candidate => candidate.id === data.id);
+        record(step, `${key}: after ${how} the row is unchanged`, !!now && now.state === data.state && now.grabId === data.grabId, JSON.stringify(now ? { state: now.state } : null));
     }
     const after = (await queueRows()).map(row => row.id).sort().join();
     record(step, 'nothing was removed', before === after, `${before.split(',').length} rows before, ${after.split(',').length} after`);
@@ -181,7 +252,9 @@ async function openersStep() {
         await waitDialog();
         const state = await dialogState();
         checkPlan(step, 'pending Replace', state, expected(replace));
-        record(step, 'pending Replace: says what stays', state.notes.includes('Your 1080p file stays.'), JSON.stringify(state.notes));
+        record(step, 'pending Replace: says what stays', state.notes.some(note => / file stays\.$/.test(note)), JSON.stringify(state.notes));
+        const safe = state.choices.find(choice => choice.id === 'cancel');
+        record(step, 'pending Replace: the safe choice is grey as the dialog opens', safe?.background === state.colours.grey, safe?.background);
         await shot(page, 'opener-pending-replace');
         await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
         await waitClosed();
@@ -213,7 +286,7 @@ async function openersStep() {
     const entries = (await api(page, 'GET', '/JellyfinMod/Entries?limit=200')).body.items;
     const res = entries.find(entry => entry.tmdbId === 624860);
     const item = (await api(page, 'GET', '/Items?recursive=true&searchTerm=Resurrections&includeItemTypes=Movie')).body.Items[0];
-    if (res && item) {
+    if (res && item && DOWNLOADS && STANDIN_LOG) {
         await page.evaluate(([id, server]) => { location.hash = `#/details?id=${id}&serverId=${server}`; }, [item.Id, serverId]);
         const get = page.locator('.jfmod-getRelease:visible').first();
         await get.waitFor({ state: 'visible', timeout: 30000 });
