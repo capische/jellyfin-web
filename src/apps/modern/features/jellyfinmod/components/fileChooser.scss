@@ -276,7 +276,8 @@ $text-inset: 0.735em;
     --jfmod-paper: var(--jf-palette-background-paper, #202020);
 
     margin: 0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    // The theme's divider, as the Audio and Subtitles lists' (the user, 2026-10-30: visible in light, the same in dark; D164).
+    border: 1px solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
     border-top-width: 0;
     border-radius: 0 0 0.2em 0.2em;
     background: var(--jf-palette-background-paper, #202020);
