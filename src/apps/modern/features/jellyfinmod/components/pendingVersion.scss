@@ -59,10 +59,16 @@
     min-width: 0;
 }
 
+// The flag (`· replaces 1080p`, `· 1080p stays`) in the strip captions' type, smaller (the user's pick, 2026-10-30; D148):
+// uppercase, 600, .06em tracking, 62 %, at .62em of the row (the meta line is 86 % of it, so .62 / .86).
 .jfmod-pendingMeta > .jfmod-fileExtra {
     flex: 0 0 auto;
     margin-left: 0.3em;
-    font-size: 100%;
+    font-size: 0.7209em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.62;
 }
 
 .jfmod-pending > .jfmod-fileIcons {
