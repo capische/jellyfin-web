@@ -17,7 +17,6 @@ import { getEntry, type EntryDetail, keepEntry, patchEntry, patchEpisode, refres
 import { openNativePage, useLiveEntryDetail } from '../hooks/useEntries';
 import { showsRetentionStatus } from '../constants/detailPage';
 import { keepButtonLabel } from '../constants/fileState';
-import { isKnownScale } from '../constants/ratings';
 import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
@@ -119,6 +118,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // Ratings come with the entry; the user's choice is loaded before the page mounts (entryDetails.js), so the line is in the
     // page's first paint (Phase 9). An older plugin sends none.
     const [ratings, setRatings] = useState(detail.ratings);
+    // Whether the ratings group hides the page's own star (it tells, from its own layout decision).
+    const [groupHidesStar, setGroupHidesStar] = useState(false);
     const ratingsPreferences = useRatingsPreferences(api);
     // A series discovered in the library lists only its files until its TMDB list loads (P1.FU); an older plugin omits it.
     const [listLoaded, setListLoaded] = useState(detail.episodeListLoaded !== false);
@@ -274,13 +275,12 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
-            {/* The page's own star (TMDB's score) gives way to any value the group shows: ratings on, a ticked source with a
-                value in a scale the page reads (user, 2026-10-30; web review 2026-10-08 round 10, P2 3). */}
-            {entry.metadata?.communityRating && !(ratingsPreferences.enabled
-                && ratings?.some(rating => ratingsPreferences.sources.includes(rating.source) && isKnownScale(rating.scale))) ?
+            {/* The page's own star (TMDB's score) gives way whenever the group shows, as the group itself decides (user,
+                2026-10-30; Codex review 2026-10-30, P2 2: one source of truth, fallback and reservation included). */}
+            {entry.metadata?.communityRating && !groupHidesStar ?
                 <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
             <RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
-                wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar />
+                wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} />
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} interactive={false} /></div>, node, String(index)))}

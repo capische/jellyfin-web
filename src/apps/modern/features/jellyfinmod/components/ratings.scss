@@ -186,7 +186,9 @@
     color: rgba(255, 255, 255, 0.87);
     box-shadow: 0 0.2em 0.9em rgba(0, 0, 0, 0.6);
     box-sizing: border-box;
-    // Never wider or taller than the screen (a phone): a taller list scrolls inside.
+    // At least as wide as one row of mark, value and votes (a single source's popup, whose stacked group is narrow: Codex review
+    // 2026-10-30, P2 3); never wider or taller than the screen (a phone): a taller list scrolls inside.
+    min-width: 11em;
     max-width: calc(100vw - 1em);
     max-height: calc(100vh - 1em);
     overflow-x: hidden;
