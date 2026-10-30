@@ -20,7 +20,8 @@
 //   TRAKT_TLS_DIR=<env>/trakt-standin TRAKT_PORT=<env port + 30000> TRAKT_CONTROL_PORT=<loopback port> node trakt-export.mjs
 //
 // Control (loopback only): GET /state (plays, counters, request log without credentials); POST /approve; POST /mode
-// {down, rejectRefresh, tokenSeconds, pageSize, failGets:{status,count}, failHistory:{status,count}, slowGets:ms, username, avatar:bool};
+// {down, rejectRefresh, tokenSeconds, pageSize, failGets:{status,count}, failHistory:{status,count}, slowGets:ms, username, avatar:bool,
+// unknown:[{season,number}] (episodes Trakt answers as not found, in a history write and a scrobble)};
 // GET /avatar.svg (the account's avatar, for the browser); POST /plays {plays:[{season,number,watched_at}]}
 // to seed; POST /forget {season,number}; POST /filler {shows:n}; POST /reset (history and log, keeps the token).
 import { createServer as createHttpServer } from 'node:http';
@@ -41,7 +42,7 @@ export const SHOW = { title: 'JellyfinMod P13 Show', year: 2026, ids: { trakt: 9
 
 const state = {
     deviceCode: null, userCode: null, approved: false, codeUsed: false, accessToken: null, refreshToken: null, tokens: new Set(),
-    mode: { down: false, rejectRefresh: false, tokenSeconds: 7776000, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true },
+    mode: { down: false, rejectRefresh: false, tokenSeconds: 7776000, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true, unknown: [] },
     plays: [], removals: [], collectionPosts: 0, filler: 0, nextId: 1, requests: [], counters: {}
 };
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -217,6 +218,11 @@ const handler = async (request, response) => {
                 }
                 for (const season of show.seasons ?? []) {
                     for (const episode of season.episodes ?? []) {
+                        // An episode Trakt does not know: named back by season and number, as Trakt answers a show's episode.
+                        if (state.mode.unknown.some(lost => lost.season === season.number && lost.number === episode.number)) {
+                            notFound.not_found.episodes.push({ season: season.number, number: episode.number, ids: {} });
+                            continue;
+                        }
                         addPlay(season.number, episode.number, episode.watched_at, 'history');
                         added++;
                     }
@@ -239,6 +245,8 @@ const handler = async (request, response) => {
         if (route.startsWith('/scrobble/')) {
             const action = route.slice('/scrobble/'.length);
             const progress = Number(body.progress ?? 0);
+            // An episode Trakt does not know: its scrobble is answered 404, as Trakt does, and adds nothing.
+            if (state.mode.unknown.some(lost => lost.season === body.episode?.season && lost.number === body.episode?.number)) return reply(404, { error: 'not found' });
             const scrobbled = action === 'stop' && progress >= 80 && isShow(body.show?.ids) && body.episode?.season !== undefined;
             if (scrobbled) addPlay(body.episode.season, body.episode.number, null, 'scrobble');
             entry.scrobbled = scrobbled;
@@ -287,6 +295,7 @@ const control = createHttpServer(async (request, response) => {
         for (const key of ['tokenSeconds', 'pageSize', 'slowGets']) if (Number.isFinite(body[key])) state.mode[key] = body[key];
         if ('failGets' in body) state.mode.failGets = body.failGets;
         if ('failHistory' in body) state.mode.failHistory = body.failHistory;
+        if (Array.isArray(body.unknown)) state.mode.unknown = body.unknown;
         return send(response, 200, { mode: state.mode });
     }
     if (request.method === 'POST' && url.pathname === '/plays') {
@@ -311,7 +320,7 @@ const control = createHttpServer(async (request, response) => {
         state.filler = 0;
         state.requests = [];
         state.counters = {};
-        state.mode = { ...state.mode, down: false, rejectRefresh: false, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true };
+        state.mode = { ...state.mode, down: false, rejectRefresh: false, pageSize: 1000, failGets: null, failHistory: null, slowGets: 0, username: 'p13-standin', avatar: true, unknown: [] };
         return send(response, 200, { reset: true });
     }
     return send(response, 404, { error: 'not found' });

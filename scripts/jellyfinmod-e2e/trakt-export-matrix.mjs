@@ -124,7 +124,7 @@ const audit = page => page.evaluate(() => {
         const b = lum(backgroundOf(element));
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     };
-    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label, .jfmod-traktHandle, .jfmod-runWhat, .jfmod-activityTitle, .jfmod-activityHint')].filter(node => node.offsetParent);
+    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label, .jfmod-traktHandle, .jfmod-traktLine, .jfmod-traktDay, .jfmod-activityTitle, .jfmod-activityHint')].filter(node => node.offsetParent);
     // The section's buttons and round icons; the Activity disclosure is a group title (its own guide), measured apart.
     const buttons = [...section.querySelectorAll('button, a.MuiButton-root')].filter(node => node.offsetParent && !node.closest('.jfmod-check-secfoot') &&
         !node.classList.contains('jfmod-activityToggle'));
@@ -227,10 +227,10 @@ async function openActivity(page, where, file, remote) {
     await page.waitForTimeout(500);
     const open = await page.evaluate(() => ({
         expanded: document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'),
-        runs: document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-scrolllist [data-jfmod-trakt-run]').length,
+        runs: document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-scrolllist .jfmod-traktItem').length,
         overflow: document.scrollingElement.scrollWidth - window.innerWidth
     }));
-    verify(where, 'Activity opens and lists the runs', open.expanded === 'true' && open.runs > 0 && open.overflow <= 1, JSON.stringify(open));
+    verify(where, 'Activity opens and lists the titles', open.expanded === 'true' && open.runs > 0 && open.overflow <= 1, JSON.stringify(open));
     const geometry = await audit(page);
     verify(where, 'Activity text keeps 4.5:1', geometry.weakest >= 4.5, geometry.weakestText);
     await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
