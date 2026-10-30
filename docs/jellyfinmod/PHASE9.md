@@ -1,7 +1,7 @@
 # Phase 9 — ratings and title enrichment
 
 **Started 2026-10-07 on the user's explicit decision** (PLAN.md: Phases 8 and 9 are picked up only on an explicit later
-decision; the user asked on 2026-10-07 to start Phase 9 now). Status: **built (not accepted)** until the Codex review
+decision; the user asked on 2026-10-07 to start Phase 9 now). Status: **accepted 2026-10-30** (user: "Phase 9 accepted, run codex and merge"; Codex approved the final fix delta). Before that it was built (not accepted) until the Codex review
 and the user's own checks pass; see *Status and handover* at the end. The outline below (2026-09-21) is kept as written;
 the **task-level plan** that turns it into work follows it, written by the implementing agent (Opus 5.5, high) on
 2026-10-07. Read [PLAN.md](PLAN.md), [README.md](README.md) §4–§5, [UX.md](UX.md) §3, §4, §7, §12 and §13,
