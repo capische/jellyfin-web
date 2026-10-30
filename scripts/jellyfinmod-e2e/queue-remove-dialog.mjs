@@ -16,12 +16,15 @@
 //                the opener; the picker's X then deletes its download for real: its files on disk before, the stand-in's
 //                delete-local-data request in its log, the files gone after. The picker part runs with the stand-ins only
 //                (JELLYFINMOD_QR_DOWNLOADS and JELLYFINMOD_QR_STANDIN_LOG set). A failed pack (`Peep.Show.S02…`) joins step dialog.
+//   step double (any layout): Escape (the TV: Back) pressed twice within the close animation, and on a computer and a phone
+//                the X and (on a computer) the page beside it clicked twice, close the dialog once: it is gone, the page is still the Queue page (a second close used
+//                to send a second history Back) and the next dialog opens and closes as usual; no removal request is sent.
 //   step postlink (desktop): a pack episode blocked after its link counts as in the library (a rewritten Queue read; see the step).
 //   step refused (desktop): JELLYFINMOD_QR_ADD=<grab id> names a blocked Add whose file has a second name: its pending entry's X,
 //                Delete is refused, the dialog asks again without it, and Cancel returns focus to the X, enabled.
 //
 //   JELLYFINMOD_LIVE_URL=http://127.0.0.1:<port>/   JELLYFINMOD_LIVE_FIXTURE_FILE=<stand-ins' 0600 secrets file>
-//   JELLYFINMOD_LIVE_LAYOUT=desktop|mobile|tv1080|tv720   JELLYFINMOD_QR_THEME=dark|light   JELLYFINMOD_QR_STEPS=dialog,openers,refused,postlink
+//   JELLYFINMOD_LIVE_LAYOUT=desktop|mobile|tv1080|tv720   JELLYFINMOD_QR_THEME=dark|light   JELLYFINMOD_QR_STEPS=dialog,openers,refused,postlink,double
 //   JELLYFINMOD_LIVE_SHOTS=<folder>   JELLYFINMOD_BROWSER=chromium|chrome   [JELLYFINMOD_QR_CONTROL=http://127.0.0.1:38419]
 //   JELLYFINMOD_QR_DOWNLOADS=<the stand-in client's /downloads on this Mac>   JELLYFINMOD_QR_STANDIN_LOG=<the stand-ins' log> (openers)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -55,6 +58,12 @@ if (tv) {
     await page.waitForTimeout(2000);
 }
 const serverId = await page.evaluate(() => ApiClient.serverId());
+// Every removal the page asks for: a queue row's DELETE or a held grab's Cancel. Steps dialog and double must send none.
+const removals = [];
+page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if ((request.method() === 'DELETE' && /\/JellyfinMod\/Queue\//.test(path)) || /\/JellyfinMod\/Grabs\/[^/]+\/Cancel$/.test(path)) removals.push(request.method() + ' ' + path);
+});
 
 /** What the open dialog shows, and where focus is. */
 const dialogState = () => page.evaluate(() => {
@@ -232,11 +241,90 @@ async function dialogStep() {
         const back = tv ? focus.cls.includes('jfmod-queueRow--tv') && focus.text.includes(name) : focus.cls.includes('jfmod-queueMenu') && focus.label.includes(name);
         const how = { keep: 'the safe choice', ok: 'OK on the safe choice', back: 'Back', x: 'the close X', escape: 'Escape' }[closer];
         record(step, `${key}: ${how} closes it and focus returns to ${tv ? 'the row' : 'its ⋮'}`, back, JSON.stringify(focus));
+        // The row and its grab are still there and nothing asked to remove it; its state may move on by itself (downloading to
+        // seeding, say) while the dialog is open.
         const now = (await queueRows()).find(candidate => candidate.id === data.id);
-        record(step, `${key}: after ${how} the row is unchanged`, !!now && now.state === data.state && now.grabId === data.grabId, JSON.stringify(now ? { state: now.state } : null));
+        record(step, `${key}: after ${how} the row and its grab are still there and no removal was sent`,
+            !!now && now.grabId === data.grabId && removals.length === 0, JSON.stringify({ state: now?.state ?? null, removals }));
     }
     const after = (await queueRows()).map(row => row.id).sort().join();
     record(step, 'nothing was removed', before === after, `${before.split(',').length} rows before, ${after.split(',').length} after`);
+}
+
+/** Opens the first row's dialog from the Queue page (the row menu, or the action sheet by its data-id on the phone and the TV). */
+async function openFromQueue(title) {
+    let rowSelector = '.jfmod-queueTableRow';
+    if (tv) rowSelector = '.jfmod-queueRow--tv';
+    else if (phone) rowSelector = '.jfmod-queueRow--stacked';
+    const row = page.locator(rowSelector).filter({ hasText: title }).first();
+    if (tv) {
+        await row.focus();
+        await page.keyboard.press('Enter');
+        await page.waitForSelector('.actionSheet [data-id="remove"]', { timeout: 10000 });
+        await page.waitForFunction(() => !!document.activeElement?.closest('.actionSheet'), undefined, { timeout: 10000 });
+        await page.waitForTimeout(400);
+        for (let i = 0; i < 4 && await page.evaluate(() => document.activeElement?.closest('[data-id]')?.getAttribute('data-id')) !== 'remove'; i++) {
+            await page.keyboard.press('ArrowDown');
+            await page.waitForTimeout(250);
+        }
+        await page.keyboard.press('Enter');
+    } else {
+        await row.locator('.jfmod-queueMenu').click();
+        if (phone) await page.locator('.actionSheet [data-id="remove"]').click();
+        else await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
+    }
+    await waitDialog();
+}
+
+async function doubleStep() {
+    const step = `double ${tag}`;
+    await page.evaluate(() => { location.hash = '#/catalog/queue'; });
+    await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(2000);
+    const rows = await queueRows();
+    const data = rows.find(row => !['importing', 'linking', 'scanning', 'identifying'].includes(row.state));
+    record(step, 'the queue has a row to open', !!data, data?.state ?? 'none');
+    if (!data) return;
+    const before = rows.map(row => row.id).sort().join();
+    // The phone's dialog fills the screen, so it has no outside to click.
+    let closers = ['Escape twice', 'the X twice', 'a click outside twice'];
+    if (tv) closers = ['Back twice'];
+    else if (phone) closers = ['Escape twice', 'the X twice'];
+    for (const closer of closers) {
+        await openFromQueue(data.releaseTitle);
+        if (closer === 'the X twice') {
+            // Two clicks 30 ms apart: the second lands while the close animation (120 ms) runs.
+            await page.locator('.jfmod-removeClose').click();
+            await page.locator('.jfmod-removeClose').click({ force: true, timeout: 1000 }).catch(() => undefined);
+        } else if (closer === 'a click outside twice') {
+            // Beside the dialog, on its container (the dimmed page).
+            await page.mouse.click(4, 300);
+            await page.mouse.click(4, 300);
+        } else {
+            await page.keyboard.press('Escape');
+            await page.keyboard.press('Escape');
+        }
+        await page.waitForTimeout(1500);
+        const where = await page.evaluate(() => ({ hash: location.hash, open: !!document.querySelector('.jfmod-removeDialog') }));
+        record(step, `${closer}: closes the dialog once and the page stays the Queue page`, !where.open && where.hash.startsWith('#/catalog/queue'), JSON.stringify(where));
+        await shot(page, `double-${closer.replace(/\W+/g, '-')}`);
+        if (!where.hash.startsWith('#/catalog/queue')) {
+            await page.evaluate(() => { location.hash = '#/catalog/queue'; });
+            await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+            await page.waitForTimeout(2000);
+        }
+    }
+    // The next dialog still opens, takes focus, and closes with its safe choice.
+    await openFromQueue(data.releaseTitle);
+    const state = await dialogState();
+    record(step, 'the next dialog opens with the safe choice focused', state?.focused === 'cancel', JSON.stringify({ focused: state?.focused }));
+    if (tv) await page.keyboard.press('Enter');
+    else await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+    await waitClosed();
+    const where = await page.evaluate(() => location.hash);
+    const after = (await queueRows()).map(row => row.id).sort().join();
+    record(step, 'it closes on the Queue page; nothing was removed and no removal was sent', where.startsWith('#/catalog/queue') && before === after && removals.length === 0,
+        JSON.stringify({ hash: where, removals }));
 }
 
 async function openersStep() {
@@ -404,6 +492,7 @@ async function addStep() {
 
 try {
     if (steps.includes('dialog')) await dialogStep();
+    if (steps.includes('double')) await doubleStep();
     if (steps.includes('openers')) await openersStep();
     if (steps.includes('refused')) await addStep();
     if (steps.includes('postlink')) await postLinkStep();
