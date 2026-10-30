@@ -34,6 +34,9 @@ const translation = (text: string): TrackRole | null => {
     return null;
 };
 
+/** A title that says the track is not forced ("non-forced", "not forced", "Нефорсированные") never reads as forced. */
+const NOT_FORCED = /\b(?:non|not|un)[- ]?forced\b|не ?форс|nicht erzwungen|no forzad|non[- ]forcé/;
+
 /**
  * The stream's role, stream flags first, then title words (D62). Audio: audio description, then commentary ("тифлокомментарий"
  * holds "комментарий", so AD is tested first), then the translation type. Subtitles: SIGNS when the title says signs / songs /
@@ -50,8 +53,9 @@ export const trackRole = (stream: MediaStream): TrackRole | null => {
         return translation(text);
     }
     if (/signs|songs|\bs&s\b|надпис|напис/.test(text)) return 'SIGNS';
-    if (stream.IsForced || /forced|форс|forcé|forzad|erzwungen/.test(text)) return 'FORCED';
-    if (stream.IsHearingImpaired || /\bSDH\b|\bCC\b|\bHI\b/.test(raw)
+    if (stream.IsForced || (/forced|форс|forcé|forzad|erzwungen/.test(text) && !NOT_FORCED.test(text))) return 'FORCED';
+    // The acronyms as whole words in any case, as the extra words strip them ("English sdh").
+    if (stream.IsHearingImpaired || /\b(?:sdh|cc|hi)\b/.test(text)
         || /hearing impaired|deaf|слабослыш|глух|порушенням слуху|hörgeschädigt|sourds/.test(text)) return 'SDH';
     return null;
 };
@@ -81,6 +85,7 @@ const KNOWN = new Set(('original default forced sdh cc hi full audio track subti
     // The role words the role mark already says (D81), beyond the mockup's list: a track titled "Commentary" adds nothing.
     + 'commentary комментарий коментар kommentar commentaire comentario commento description descriptive').split(' '));
 const CJK_KNOWN = ['日本語', '吹替', '吹き替え', '简体', '繁體', '繁体'];
+const NEGATIONS = new Set(['not', 'non', 'no', 'nicht', 'не']);
 
 /** `text` without the given characters at either end. */
 const trimChars = (text: string, chars: string) => {
@@ -105,6 +110,8 @@ export const trackExtraWords = (stream: MediaStream): string => {
         return bare === '' || KNOWN.has(bare) || (bare.length <= 3 && /^[a-z]+$/.test(bare) && /^\[.*\]$/.test(word));
     };
     while (tokens.length && known(tokens[0])) tokens.shift();
-    while (tokens.length && known(tokens[tokens.length - 1])) tokens.pop();
+    // A known word after a negation stays with it: "English (not forced)" adds "not forced", not "not".
+    const negated = () => tokens.length > 1 && NEGATIONS.has(trimChars(tokens[tokens.length - 2].toLowerCase(), '[](){}-_,;:/|.'));
+    while (tokens.length && known(tokens[tokens.length - 1]) && !negated()) tokens.pop();
     return trimChars(tokens.join(' '), '[](){}-–,;: ');
 };
