@@ -3,7 +3,7 @@
 **Status:** built, awaiting the user's approval. The design follows user decisions 9, 10 and 13 (2026-10-08, `PHASE9.md`
 *Final design*), ported onto both lines on 2026-10-28 (`PHASE9.md` *Port onto the main lines*); each item stacked, mark over
 number (design A2, approved by the user 2026-10-30, with a percent number's mark centred on the number as a unit and the popup's
-marks centred in their column); Phase 9 is built (not accepted). Code: web `components/RatingsGroup.tsx`, `components/RatingIcon.tsx`, `components/ratings.scss`,
+marks centred in their column); Phase 9 is accepted (user, 2026-10-30). Code: web `components/RatingsGroup.tsx`, `components/RatingIcon.tsx`, `components/ratings.scss`,
 `components/NativeRatingsLine.tsx`, `constants/ratings.ts`, `hooks/useRatingsPreferences.ts`; the card rating in
 `components/EntryCard.tsx`; the native mount in `integration/nativeEntryDetails.js`. Used by: the native and file-less detail
 pages of movies and series, and the cards of Movies and TV when the user picks a card source.
