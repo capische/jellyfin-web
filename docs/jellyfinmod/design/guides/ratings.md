@@ -31,8 +31,9 @@ scale (`8.1`, `91%`, `4.1`).
 - **Stock marks:** the ★ is Jellyfin's own community rating, from its metadata providers (on delta 2026-10-30: Hack Your
   Health's ★ 6.7 matches TMDB's 67 %, Peep Show's ★ 8.7 matches IMDb's 8.7, not TMDB's 8.0), so it gives way whenever the group shows
   (`.jfmod-ratings-hideStar`; user, 2026-10-30), and the file-less page's own TMDB star likewise, from the same decision (the
-  group tells the page, `onHidesStar`). An answer that leaves the group nothing to show gives the stock marks back at once, even
-  while focus below keeps the group's room. The tomato gives way while the
+  group tells the page, `onHidesStar`). An answer that leaves the group nothing to show (empty, failed, ratings turned off) gives the
+  stock marks back at once; while focus sits below, the group keeps only its height (`.jfmod-ratingsGroup-held`, no width), so
+  the row does not move. The tomato gives way while the
   group shows Rotten Tomatoes (`.jfmod-ratings-hideCritic`). With the group not shown (ratings off, no value) the stock marks
   stay.
 - **Trakt gives way** when the row does not fit on one line with it; IMDb and both RT values never do. Decided once at the
