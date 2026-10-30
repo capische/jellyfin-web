@@ -138,6 +138,8 @@ interface TrackDropdownProps {
 
 /** MUI's popover keeps this far from the window's edge (its `marginThreshold`). */
 const LIST_MARGIN = 16;
+/** One list row's height: .45em padding above and below a 1.5 line (`.jfmod-trackItem`). */
+const ROW_EMS = 2.4;
 
 /**
  * Where a cell's list opens and how tall it may be. The list hangs from the strip and never moves up over it (MUI shifts a
@@ -169,8 +171,13 @@ const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, 
     // A resize (a window, a rotated phone) places the open list again, so it stays under its cell (Codex review, P2 2).
     useEffect(() => {
         if (!place) return;
+        // With less than a row of room left under the strip the list closes instead (Codex re-review, P2 2): MUI's own 16px
+        // minimum would put it over the strip (D168).
         const again = () => {
-            if (trigger.current?.isConnected) setPlace(placeUnder(trigger.current, false));
+            const cell = trigger.current;
+            if (!cell?.isConnected) return;
+            const at = placeUnder(cell, false);
+            setPlace(at.room < ROW_EMS * parseFloat(getComputedStyle(cell).fontSize) ? null : at);
         };
         window.addEventListener('resize', again);
         return () => window.removeEventListener('resize', again);
