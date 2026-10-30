@@ -16,7 +16,7 @@
 // Each check prints PASS/FAIL and the run writes <out>/results.json. Desktop Chromium screenshots of Settings › Trakt and
 // Home at the states the steps reach go to <out>/shots. No token or secret is printed or written.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 import { verifiedEnv } from './trakt-export-env.mjs';
@@ -104,6 +104,16 @@ async function playToEnd(number) {
     await sleep(800);
 }
 const unplay = number => jf('DELETE', `/UserPlayedItems/${episode(number).Id}?userId=${userId}`);
+// The environment's own Jellyfin log (a local environment's config folder), the lines written since `since`.
+const logLines = since => {
+    const folder = join(envsBin, '..', 'pool', envName, 'config', 'log');
+    return readdirSync(folder).filter(name => /^log_\d{8}\.log$/.test(name)).sort().slice(-2)
+        .flatMap(name => readFileSync(join(folder, name), 'utf8').split('\n'))
+        .filter(line => {
+            const at = /^\[(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d\.\d+) ([+-]\d\d:\d\d)\]/.exec(line);
+            return at && new Date(`${at[1]}T${at[2]}${at[3]}`) >= since;
+        });
+};
 const minute = iso => new Date(Math.floor(new Date(iso).getTime() / 60000) * 60000).toISOString();
 
 // ---- plugin settings (the XML of an isolated environment; the Trakt plugin's own configuration is read and written
@@ -414,7 +424,8 @@ const steps = {
 
     // Links oleksii again when the stand-in has no token (a restarted stand-in), and changes nothing else.
     async relink() {
-        if (!(await control('/state')).tokenIssued) await authorize(7776000);
+        const linked = (await status()).users.some(user => user.name === 'oleksii' && user.state === 'linked');
+        if (!(await control('/state')).tokenIssued || !linked) await authorize(7776000);
         verify('relink', 'oleksii linked to the stand-in', (await status()).users.some(user => user.name === 'oleksii' && user.state === 'linked'));
     },
 
@@ -582,43 +593,133 @@ const steps = {
         await until('the avatar back', async () => !!(await status()).users.find(entry => entry.name === 'oleksii')?.avatarUrl, 150000, 3000).catch(() => null);
     },
 
-    // D50, D73: each run in Activity with why it ran and what it sent, from the plugin's own count lines.
+    // D125–D130, D134, D135: Activity is one row per title, "media · time · action", under a day heading. A watch here waits
+    // for the export that the next-export line names, then reads marked watched on Trakt; a title Trakt does not know reads
+    // failed without holding back the run; a play reported live reads watching now, then where it stopped.
     async activity() {
-        // First bring Trakt level with Jellyfin (a restarted stand-in has no history), then take E06 away so the next run sends one.
+        await setAuto(true);
+        // Bring Trakt level with Jellyfin first (a restarted stand-in has no history), then take E06 away so a watch sends it.
         const level = new Date();
         await jf('POST', '/JellyfinMod/Trakt/Export');
-        const levelled = await until('the levelling run', () => lastRunAfter(level), 300000, 3000);
+        await until('the levelling run', () => lastRunAfter(level), 300000, 3000);
+        await until('the levelling run judged', async () => (await status()).lastRunConfirmed === true, 90000, 3000).catch(() => null);
         await control('/forget', { season: 1, number: 6 });
-        const mark = new Date();
-        await jf('POST', '/JellyfinMod/Trakt/Export');
-        await until('the Sync Now run', () => lastRunAfter(mark), 300000, 3000);
-        const judged = await until('the run judged', async () => {
-            const now = await status();
-            return now.activity?.[0]?.startedAt === now.lastRun?.startedAt ? now : null;
-        }, 90000, 3000).catch(() => null);
-        const run = judged?.activity?.[0];
-        verify('activity', 'the run is listed first: Sync Now, clean, 1 episode sent as watched', run?.why === 'sync_now' && run.clean && run.episodesWatched === 1,
-            JSON.stringify(run));
-        verify('activity', 'E06 reached Trakt once', playsOf(await plays(), 6).length === 1);
-        const before = judged?.activity?.[1];
-        verify('activity', 'the levelling run seconds before it is listed too, as Sync Now', before?.startedAt === levelled.lastRun.startedAt && before?.why === 'sync_now',
-            JSON.stringify(before));
-        const page = await openPage();
-        try {
+        await unplay(6);
+        const rowOf = (list, code, direction = 'to') => (list ?? []).find(row => row.code === code && row.direction === direction && row.title === 'JellyfinMod P13 Show');
+        const itemText = (page, code) => page.evaluate(match => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
+            .find(node => node.getAttribute('data-jfmod-trakt-item')?.startsWith('to:') && node.getAttribute('data-jfmod-trakt-item').endsWith(match))?.innerText.replace(/\s+/g, ' ').trim() ?? '', `JellyfinMod P13 Show ${code}`);
+        const dotOf = (page, code) => page.evaluate(match => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
+            .find(node => node.getAttribute('data-jfmod-trakt-item')?.startsWith('to:') && node.getAttribute('data-jfmod-trakt-item').endsWith(match))?.querySelector('.jfmod-state')?.className ?? '', `JellyfinMod P13 Show ${code}`);
+        const openActivity = async page => {
             const closed = await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'));
             await page.locator('.jfmod-activityToggle').click();
             await page.mouse.move(5, 995);
             await page.waitForTimeout(400);
-            const shown = await page.evaluate(() => ({
-                expanded: document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'),
-                first: document.querySelector('[data-jfmod-trakt="activity"] .jfmod-scrolllist .jfmod-brow')?.innerText.replace(/\n/g, ' | ') ?? ''
-            }));
-            verify('activity', 'Activity is closed at first and opens', closed === 'false' && shown.expanded === 'true');
-            verify('activity', 'the first run reads "… · Sync Now" then "Completed · 1 episode marked watched…"', /· Sync Now/.test(shown.first) && /Completed \| · 1 episode marked watched/.test(shown.first), shown.first);
-            await page.screenshot({ path: join(out, 'shots', '12-activity-open.png'), fullPage: true });
+            return closed;
+        };
+
+        // A watch here: the row waits for the export the next-export line names, at the same time.
+        const watched = new Date();
+        await playToEnd(6);
+        const waiting = await until('the watch listed, waiting', async () => {
+            const now = await status();
+            return rowOf(now.activity, 'S01E06')?.state === 'waiting' && now.nextExportAt ? now : null;
+        }, 30000, 1000).catch(() => null);
+        const due = waiting?.nextExportAt ? new Date(waiting.nextExportAt) : null;
+        verify('activity', 'the watch is listed at once, waiting, with the export due a quiet minute after it ended', !!due && due - watched >= 50000 && due - watched <= 75000,
+            JSON.stringify({ row: rowOf(waiting?.activity, 'S01E06'), nextExportAt: waiting?.nextExportAt }));
+        const page = await openPage();
+        try {
+            const hint = await page.evaluate(() => document.querySelector('.jfmod-activityHint')?.textContent ?? '');
+            const closed = await openActivity(page);
+            const openHint = await page.evaluate(() => document.querySelector('.jfmod-activityHint')?.textContent ?? '');
+            verify('activity', 'Activity is closed at first with "Each title sent to Trakt or brought from it, the last 30 days", and opens',
+                closed === 'false' && hint === 'Each title sent to Trakt or brought from it, the last 30 days' && openHint === 'The last 30 days, newest first', `${hint} | ${openHint}`);
+            // The time as the page writes it, in the browser's own locale.
+            const clock = due ? await page.evaluate(iso => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), due.toISOString()) : '?';
+            const text = await itemText(page, 'S01E06');
+            const next = await page.evaluate(() => document.querySelector('[data-jfmod-trakt-next]')?.textContent ?? '');
+            const heading = await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"] .jfmod-traktDay')?.textContent ?? '');
+            verify('activity', `the row reads "JellyfinMod P13 Show S01E06 · <time> · waiting: the export runs at ${clock}" under Today, amber`,
+                heading === 'Today' && text.startsWith('JellyfinMod P13 Show S01E06 · ') && text.endsWith(`waiting: the export runs at ${clock}`) && /jfmod-state-warn/.test(await dotOf(page, 'S01E06')), `${heading} | ${text}`);
+            verify('activity', `the next-export line names the same time: "The next export runs at ${clock}, 1 minute after the last episode ended."`,
+                next === `The next export runs at ${clock}, 1 minute after the last episode ended.`, next);
+            await page.screenshot({ path: join(out, 'shots', '12-activity-waiting.png'), fullPage: true });
         } finally {
             await page.close();
         }
+        const sent = await until('the automatic export to send it', async () => {
+            const now = await status();
+            return rowOf(now.activity, 'S01E06')?.state === 'sent' ? now : null;
+        }, 240000, 3000).catch(() => null);
+        verify('activity', 'the automatic export sends it: the row reads marked watched on Trakt, once on Trakt', !!sent && playsOf(await plays(), 6).length >= 1,
+            JSON.stringify(rowOf(sent?.activity, 'S01E06')));
+
+        // A title Trakt does not know: failed, and the run still counts as delivered (no retry).
+        await control('/mode', { unknown: [{ season: 1, number: 7 }] });
+        await control('/forget', { season: 1, number: 7 });
+        await unplay(7);
+        await playToEnd(7);
+        const lost = await until('the export to answer E07 not found', async () => {
+            const now = await status();
+            return rowOf(now.activity, 'S01E07')?.state === 'failed' ? now : null;
+        }, 240000, 3000).catch(() => null);
+        verify('activity', 'the title Trakt answered as not found reads failed', !!lost, JSON.stringify(rowOf((await status()).activity, 'S01E07')));
+        const judged = await until('the not-found run judged', async () => {
+            const now = await status();
+            return now.lastRunConfirmed === true || now.lastRunConfirmed === false ? now : null;
+        }, 90000, 3000).catch(() => null);
+        verify('activity', 'it does not hold back the run: delivered, no failure and no retry', judged?.lastRunConfirmed === true && judged.failures === 0 && !judged.nextAttemptAt,
+            JSON.stringify({ lastRunConfirmed: judged?.lastRunConfirmed, failures: judged?.failures, nextAttemptAt: judged?.nextAttemptAt }));
+        await control('/mode', { unknown: [] });
+
+        // Live: a play by the linked account (the Trakt plugin's Scrobble on) reads watching now; stopped early, where it stopped.
+        const live = (await jf('GET', `/Items?userId=${userId}&ids=${episode(8).Id}&Fields=RunTimeTicks`)).Items[0];
+        const runtime = live.RunTimeTicks ?? 0;
+        const session = `p13-live-${Date.now()}`;
+        await jf('POST', '/Sessions/Playing', { ItemId: live.Id, PlaySessionId: session, PositionTicks: 0, CanSeek: true, PlayMethod: 'DirectPlay', IsPaused: false });
+        const playing = await until('the play listed as watching now', async () => rowOf((await status()).activity, 'S01E08')?.state === 'playing', 20000, 1000).catch(() => false);
+        verify('activity', 'a play by the linked account is listed at once as playing', !!playing);
+        const livePage = await openPage();
+        try {
+            await openActivity(livePage);
+            const text = await itemText(livePage, 'S01E08');
+            verify('activity', 'it reads "watching now on Trakt (reported live by the Trakt plugin)", amber', text.endsWith('watching now on Trakt (reported live by the Trakt plugin)') &&
+                /jfmod-state-warn/.test(await dotOf(livePage, 'S01E08')), text);
+            await livePage.screenshot({ path: join(out, 'shots', '12b-activity-playing.png'), fullPage: true });
+        } finally {
+            await livePage.close();
+        }
+        // The fixture episodes run 12 s, under the host's minimum resume duration (300 s), so any stop would mark them played:
+        // for this stop the minimum is 0, and the server's own value is put back after it.
+        const server = await jf('GET', '/System/Configuration');
+        const resume = server.MinResumeDurationSeconds;
+        await jf('POST', '/System/Configuration', { ...server, MinResumeDurationSeconds: 0 });
+        try {
+            await jf('POST', '/Sessions/Playing/Stopped', { ItemId: live.Id, PlaySessionId: session, PositionTicks: Math.round(runtime * 0.3) });
+        } finally {
+            await jf('POST', '/System/Configuration', { ...(await jf('GET', '/System/Configuration')), MinResumeDurationSeconds: resume });
+        }
+        const stopped = await until('the play stopped', async () => {
+            const row = rowOf((await status()).activity, 'S01E08');
+            return row?.state === 'stopped' ? row : null;
+        }, 20000, 1000).catch(() => null);
+        verify('activity', 'stopped at 30 %: the row says where it stopped', runtime > 0 && stopped?.detail === 30, JSON.stringify({ runtime, stopped }));
+        const endPage = await openPage();
+        try {
+            await openActivity(endPage);
+            const rows = {
+                e06: await itemText(endPage, 'S01E06'), e07: await itemText(endPage, 'S01E07'), e08: await itemText(endPage, 'S01E08'),
+                e07dot: await dotOf(endPage, 'S01E07')
+            };
+            verify('activity', 'E06 reads marked watched on Trakt, E07 failed in red, E08 stopped at 30 %', rows.e06.endsWith('· marked watched on Trakt') &&
+                rows.e07.endsWith('· failed: Trakt does not know this episode') && /jfmod-state-err/.test(rows.e07dot) &&
+                rows.e08.endsWith('· stopped at 30 % (reported live by the Trakt plugin)'), JSON.stringify(rows));
+            await endPage.screenshot({ path: join(out, 'shots', '12c-activity-open.png'), fullPage: true });
+        } finally {
+            await endPage.close();
+        }
+        await playToEnd(7);
     },
 
     // Both ways (user, 2026-10-29): Sync Now runs the Trakt plugin's own import first, then the export. A watch made
@@ -638,19 +739,19 @@ const steps = {
         await jf('POST', '/JellyfinMod/Trakt/Export');
         const both = await until('the import and then the export', async () => {
             const now = await status();
-            const imported = now.activity?.find(run => run.kind === 'import' && new Date(run.startedAt) > mark);
-            const exported = now.activity?.find(run => !run.kind && new Date(run.startedAt) > mark);
-            return imported && exported && !now.running && !now.importRunning ? { now, imported, exported } : null;
+            const imported = now.activity?.find(row => row.direction === 'from' && row.code === 'S01E05' && row.state === 'imported' && new Date(row.at) >= mark);
+            return imported && now.lastRun && new Date(now.lastRun.startedAt) > mark && !now.running && !now.importRunning ? { now, imported } : null;
         }, 600000, 3000).catch(() => null);
-        verify('import', 'Sync Now ran the import, then the export', !!both && new Date(both.exported.startedAt) >= new Date(both.imported.endedAt) && both.imported.why === 'sync_now' && both.exported.why === 'sync_now',
-            JSON.stringify({ imported: both?.imported, exported: both?.exported }));
+        const ran = logLines(mark).filter(line => /starts the Trakt plugin's (import|export) \(/.test(line)).map(line => line.replace(/^.*starts the Trakt plugin's /, ''));
+        verify('import', 'Sync Now ran the import, then the export after it', !!both && /^import \("requested by an administrator"\)/.test(ran[0] ?? '') &&
+            /^export \("after the import from Trakt"\)/.test(ran[1] ?? ''), ran.join(' || '));
         // Read from the library query: Jellyfin 12.2's single-item answer (/Items/{id}) keeps the user data it cached before
         // the import saved (found 2026-10-29; upstream, see PHASE13), while the library's own query reads what was saved.
         const listed = (await jf('GET', `/Items?userId=${userId}&ids=${episode(5).Id}&Fields=UserData`)).Items[0].UserData;
         const single = await userData(5);
         verify('import', 'E05 is watched in Jellyfin at its Trakt time', listed.Played && minute(listed.LastPlayedDate) === minute(watchedAt),
             `library query: ${listed.Played} ${listed.LastPlayedDate}; single item: ${single.Played} ${single.LastPlayedDate ?? ''}`);
-        verify('import', 'Activity counts it: at least 1 episode marked watched in Jellyfin', (both?.imported.episodesWatched ?? 0) >= 1 && both?.imported.clean === true, JSON.stringify(both?.imported));
+        verify('import', 'Activity lists E05 as brought from Trakt, at its time here', !!both && Math.abs(new Date(both.imported.at) - Date.now()) < 600000, JSON.stringify(both?.imported));
         const after = await control('/state');
         const scrobblesAfter = Object.entries(after.counters).filter(([route]) => route.startsWith('/scrobble/')).reduce((sum, [, count]) => sum + count, 0);
         verify('import', 'nothing is sent back: E05 keeps its one Trakt play, no scrobble', playsOf(after.plays, 5).length === 1 && scrobblesAfter === scrobbles,
@@ -666,9 +767,10 @@ const steps = {
             await page.locator('.jfmod-activityToggle').click();
             await page.mouse.move(5, 995);
             await page.waitForTimeout(400);
-            const runs = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-trakt="activity"] [data-jfmod-trakt-run]')].slice(0, 2).map(node => node.innerText.replace(/\n/g, ' | ')));
-            verify('import', 'Activity lists the export above the import: "… · Import from Trakt · Sync Now", "… marked watched in Jellyfin"', /· Sync Now/.test(runs[0] ?? '') &&
-                /Import from Trakt · Sync Now/.test(runs[1] ?? '') && /marked watched in Jellyfin/.test(runs[1] ?? ''), runs.join(' || '));
+            const line = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
+                .find(node => node.getAttribute('data-jfmod-trakt-item') === 'from:imported:JellyfinMod P13 Show S01E05')?.innerText.replace(/\s+/g, ' ').trim() ?? '');
+            verify('import', 'Activity reads "JellyfinMod P13 Show S01E05 · <time> · marked watched in Jellyfin (from Trakt)"',
+                line.startsWith('JellyfinMod P13 Show S01E05 · ') && line.endsWith('· marked watched in Jellyfin (from Trakt)'), line);
             await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
             await page.waitForTimeout(300);
             await page.screenshot({ path: join(out, 'shots', '16-activity-import.png') });
@@ -679,11 +781,9 @@ const steps = {
         await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: false });
         const alone = new Date();
         await jf('POST', '/JellyfinMod/Trakt/Export');
-        const done = await until('the export alone', async () => {
-            const now = await status();
-            return now.activity?.some(run => !run.kind && new Date(run.startedAt) > alone) && !now.running ? now : null;
-        }, 300000, 3000).catch(() => null);
-        verify('import', 'with the switch off, Sync Now runs the export alone', !!done && !done.activity.some(run => run.kind === 'import' && new Date(run.startedAt) > alone));
+        const done = await until('the export alone', () => lastRunAfter(alone), 300000, 3000).catch(() => null);
+        const alone2 = logLines(alone).filter(line => /starts the Trakt plugin's (import|export) \(/.test(line)).map(line => line.replace(/^.*starts the Trakt plugin's /, ''));
+        verify('import', 'with the switch off, Sync Now runs the export alone', !!done && alone2.length === 1 && /^export \("requested by an administrator"\)/.test(alone2[0]), alone2.join(' || '));
         await jf('PUT', '/JellyfinMod/Trakt/Export/Settings', { import: true });
     },
 
@@ -710,6 +810,42 @@ const steps = {
             await page.screenshot({ path: join(out, 'shots', '14-disconnected.png') });
         } finally {
             await page.close();
+        }
+        // Nobody connected (D128, D129): the account bar first with Connect Trakt; the switches and Sync Now dimmed under one hint.
+        const bare = await openPage();
+        try {
+            const view = await bare.evaluate(() => {
+                const section = document.querySelector('.jfmod-check-section[data-section="trakt"]');
+                const body = section?.querySelector('.jfmod-check-secbody');
+                const first = [...(body?.children ?? [])].find(node => !node.classList.contains('jfmod-notice'));
+                const bar = section?.querySelector('.jfmod-traktAccount [data-jfmod-trakt-user=""]');
+                const connect = bar?.querySelector('[data-jfmod-trakt-connect]');
+                const off = [...section.querySelectorAll('.jfmod-traktOff')].map(node => node.getAttribute('data-jfmod-trakt'));
+                const inputs = [...section.querySelectorAll('.jfmod-traktOff input[type="checkbox"]')].map(input => input.getAttribute('aria-disabled'));
+                const sync = section.querySelector('[data-jfmod-trakt="export"] .MuiButton-root');
+                return {
+                    first: first?.className ?? '', title: bar?.querySelector('strong')?.textContent ?? '', pill: bar?.querySelector('.jfmod-state')?.textContent ?? '',
+                    connect: connect ? { text: connect.textContent, href: connect.getAttribute('href') } : null, off, inputs,
+                    hint: section.querySelector('.jfmod-traktConnectHint')?.textContent ?? '', opacity: getComputedStyle(section.querySelector('.jfmod-traktOff .MuiFormControlLabel-root')).opacity,
+                    sync: { disabled: sync?.getAttribute('aria-disabled'), title: sync?.getAttribute('title') }, next: section.querySelector('[data-jfmod-trakt-next]')?.textContent ?? '',
+                    warning: /No Jellyfin user is linked/.test(section.innerText), activity: !!section.querySelector('[data-jfmod-trakt="activity"]')
+                };
+            });
+            verify('disconnect', 'the account bar comes first: "oleksii · not connected to Trakt", Not connected, Connect Trakt to the Trakt plugin\'s page',
+                /jfmod-traktAccount/.test(view.first) && view.title === 'oleksii · not connected to Trakt' && view.pill === 'Not connected' &&
+                view.connect?.text === 'Connect Trakt' && view.connect.href === '#/configurationpage?name=trakt', JSON.stringify(view));
+            verify('disconnect', 'the switches and Sync Now stay, dimmed to 45 % and aria-disabled, under "Connect a Trakt account to turn these on."',
+                view.off.join(',') === 'auto,import,export' && view.inputs.every(value => value === 'true') && view.inputs.length === 2 && view.opacity === '0.45' &&
+                view.hint === 'Connect a Trakt account to turn these on.' && view.sync.disabled === 'true' && view.sync.title === 'Connect a Trakt account first.', JSON.stringify(view));
+            verify('disconnect', 'no separate no-account warning, no Activity, and the next line says nothing is sent until an account is connected',
+                !view.warning && !view.activity && view.next === 'Nothing is sent until a Trakt account is connected.', JSON.stringify(view));
+            const before = (await status()).autoExport;
+            await bare.locator('[data-jfmod-trakt="auto"] input[type="checkbox"]').click({ force: true });
+            await bare.waitForTimeout(1500);
+            verify('disconnect', 'a press on the dimmed switch changes nothing', (await status()).autoExport === before);
+            await bare.screenshot({ path: join(out, 'shots', '14b-not-connected.png'), fullPage: true });
+        } finally {
+            await bare.close();
         }
         const trakt = (await plugins()).find(plugin => plugin.Name === 'Trakt');
         const config = await jf('GET', `/Plugins/${trakt.Id}/Configuration`);
