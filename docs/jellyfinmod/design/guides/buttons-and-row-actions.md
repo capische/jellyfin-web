@@ -83,7 +83,7 @@ Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`
 - **Choices:** the destructive one red (`button-delete`, red under the pointer too), the safe one grey with `autofocus`. On a
   computer and a phone it stays grey when the dialog opens and turns blue only when the keyboard moves focus (`:focus-visible`);
   on the TV it carries the stock focus (blue, grown 1.2×). The X, Back on the TV, Escape on a computer and a click outside are
-  the same as the safe one. It closes once: a second key, click or choice during the close animation is dropped. Focus returns to the opener (the row on the TV, its ⋮ or the opening button
+  the same as the safe one. It closes once: a second key, click, right-click or choice during the close animation is dropped. Focus returns to the opener (the row on the TV, its ⋮ or the opening button
   elsewhere), also after a refused delete asks again.
 
   | Row | Red | Others |
