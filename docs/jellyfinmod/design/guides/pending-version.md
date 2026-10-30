@@ -4,7 +4,7 @@
 (D9), with the admin's X (D10) and the Replace wording (D11, user: "use profile and I don't think you need `the`") of
 `reviews/overnight-2026-10-28/DECISIONS.md`: **built overnight 2026-10-28, awaiting the user's approval**. Video marks only
 (the user, 2026-10-29; D105): built 2026-10-29, gate 1 (computer, dark). The flag in the captions' type at .62em (D148):
-built 2026-10-30, gate 1. Code:
+built 2026-10-30, gate 1; centred on the status's figures (D156), built 2026-10-30. Code:
 `components/PendingVersion.tsx`, `components/pendingVersion.scss` (`.jfmod-pending`, `--<kind>`, `.jfmod-pendingBody`,
 `.jfmod-pendingLine`, `.jfmod-pendingMeta`), `constants/queue.ts` (`isNewVersion`, `isReplace`, `replacedWords`, `versionFlag`,
 `asNewVersion`).
@@ -29,7 +29,8 @@ title's page content.
 - **Second line** (86 %): the state text in treatment B (`42% · 12 min left`, `Queued`, `Stalled · 42%`, `Importing…`, a failure in
   red without its full stop) and the flag (`.jfmod-fileExtra--dot`) in the strip captions' type, smaller (D148, the user's
   pick 2026-10-30): uppercase, 600, `.06em` tracking, 62 %, at `.62em` of the row (`.7209em` of the 86 % line), so it reads
-  `· REPLACES 1080P`; the failure's `· 1080P STAYS` is the same element and takes the same type:
+  `· REPLACES 1080P`; the failure's `· 1080P STAYS` is the same element and takes the same type. Its caps are centred on the
+  status's figures (D156): the line aligns on the baseline and the flag rises `.14em` (half the two cap heights' difference):
 
   | | Replace | Add |
   | --- | --- | --- |
