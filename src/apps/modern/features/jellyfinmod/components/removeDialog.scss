@@ -35,10 +35,24 @@
     [dir="rtl"] & { text-align: right; }
 }
 
+// The title and the close X on one line; the X's glyph lines up with the buttons' right edge.
+.jfmod-removeHead {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    margin: 0 0 0.7em;
+}
+
 .jfmod-removeTitle {
+    flex: 1 1 auto;
     font-size: 1.75em;
     font-weight: 400;
-    margin: 0 0 0.7em;
+    margin: 0;
+}
+
+.jfmod-removeClose {
+    flex: none;
+    margin: -0.5em -0.6em -0.5em 0;
 }
 
 .jfmod-removeQuestion {
@@ -90,4 +104,14 @@
 // focus keep the stock focus colour.
 .jfmod-removeChoice.button-delete:hover {
     background: var(--jf-palette-error-main, #c62828);
+}
+
+// The safe choice takes focus when the dialog opens. On a computer and a phone it stays grey, as a cancel button, unless the
+// keyboard put focus there; the TV (`show-focus`) keeps the stock focus fill, so the D-pad shows where it is.
+.jfmod-removeChoice:not(.button-delete, .show-focus):focus:not(:focus-visible) {
+    background: var(--jf-palette-Button-inheritContainedBg, #424242);
+
+    &:hover {
+        background: var(--jf-palette-Button-inheritContainedHoverBg, #616161);
+    }
 }

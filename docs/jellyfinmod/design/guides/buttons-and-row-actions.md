@@ -59,7 +59,9 @@ title line, and sentence case in the picker). Built in P4.FU27 (built, not accep
 ## Removing a download: one dialog, its buttons the outcomes
 
 **Status:** approved 2026-10-29 (user: "looks amazing", the proposal of workspace `reviews/queue-remove-dialog/`; D118–D124 of
-`reviews/overnight-2026-10-28/DECISIONS.md`). Built on `feat/queue-remove-items` (gate 1, not accepted). Replaces the 2026-10-26
+`reviews/overnight-2026-10-28/DECISIONS.md`). Built on `feat/queue-remove-items` (gate 1, not accepted). The close X, Escape on a
+computer and the grey safe choice on open: user, 2026-10-30 ("Add to dialog X … it should be grey button as it has cancel action",
+"Also add ESC to close the dialog"), `fix/queue-dialog-x-items` (gate 1). Replaces the 2026-10-26
 Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`removeWithDialog`, `queueRowActions`),
 `components/removeDialog.scss` (`.jfmod-remove*`).
 
@@ -68,7 +70,9 @@ Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`
 - **The row action names the outcome:** *Cancel Download* (`close`) while anything downloads (queued, downloading, stalled,
   unknown, a pack too); *Remove* (`delete`, with *Retry*) for failed and blocked; *Stop Seeding* (`stop`) for a title in the
   library; none while it identifies, links or scans.
-- **Anatomy** (the stock dialog's look in the mod's Inter, as every mod surface; the release name monospace; left-aligned): the action as the title (1.75em, 400); the question about the title
+- **Anatomy** (the stock dialog's look in the mod's Inter, as every mod surface; the release name monospace; left-aligned): the action as the title (1.75em, 400) with the close X level with it on the right (the stock
+  `paper-icon-button-light` with the material `close` glyph, 41 px, `.jfmod-removeClose`, its glyph on the buttons' right edge, a
+  D-pad stop on the TV); the question about the title
   (1.1em: "Stop downloading The Matrix (1999)?", "Remove … from the queue?", "Stop seeding … now?"); the facts in the secondary
   text colour (`42% · 3.1 of 7.4 GB downloaded · nothing of it is in your library yet`; a failure `Failed: <reason>` in
   `#ff7b72`, light `#c62828`; *In your library* and a pack's imported episodes in `#81c784`, light `#2e7d32`); notes at .95em;
@@ -76,9 +80,10 @@ Remove from Queue and Remove the Torrent. Code: `integration/queueActions.ts` (`
   `emby-checkbox`, off; then one full-width raised button per outcome (`.jfmod-removeChoice`, `margin-top .9em`), each with
   its result under it as a `fieldDescription` (`.4em` above). Computer: 36em wide, `1.6em 2em 1.2em` padding; TV: the full
   screen, the column 50 %; phone and low resolutions: full screen.
-- **Choices:** the destructive one red (`button-delete`, red under the pointer too), the safe one grey with `autofocus`, so it
-  carries the stock focus (blue; on the TV it grows 1.2×). Back on the TV and a click outside are the same as the safe one
-  (a computer's Escape closes no stock dialog). Focus returns to the opener (the row on the TV, its ⋮ or the opening button
+- **Choices:** the destructive one red (`button-delete`, red under the pointer too), the safe one grey with `autofocus`. On a
+  computer and a phone it stays grey when the dialog opens and turns blue only when the keyboard moves focus (`:focus-visible`);
+  on the TV it carries the stock focus (blue, grown 1.2×). The X, Back on the TV, Escape on a computer and a click outside are
+  the same as the safe one. Focus returns to the opener (the row on the TV, its ⋮ or the opening button
   elsewhere), also after a refused delete asks again.
 
   | Row | Red | Others |
