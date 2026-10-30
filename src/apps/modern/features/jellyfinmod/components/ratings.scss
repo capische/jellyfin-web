@@ -103,24 +103,42 @@
     display: none;
 }
 
-// A little closer than the row's own items (1em), so the group leaves room for upstream's "Ends at" on a 1280×720 TV.
+// Each rating is a small stack, its mark over its number (user, 2026-10-30: design A2), centred on the row like the row's other
+// items. The blocks sit 0.6em apart; a percent value's number adds its own lead (below), so the gaps you see stay even.
 .jfmod-groupItem {
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    margin: 0 0.8em 0 0;
+    margin: 0 0.6em 0 0;
 
     &:last-child {
         margin-right: 0;
     }
 }
 
-// The two tomato marks (fresh and splat) differ a little in their aspect: one width for both keeps the reserved space exact.
+// The mark one em high over its number. The two tomato marks (fresh and splat) differ a little in their aspect: one width for
+// both keeps the reserved space exact.
 .jfmod-groupItem .jfmod-ratingIcon {
-    margin-right: 0.3em;
+    height: 1em;
+    margin: 0 0 0.1em;
 
     &[data-jfmod-icon^='tomatoesCritic'] {
-        width: 1.2em;
+        width: 1.04em;
     }
+}
+
+// The number under the mark: smaller and semi-bold, about as wide as its mark.
+.jfmod-groupValue {
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+// A percent value's "%" is almost as wide as its digits: centred on the whole number the digits look left of the mark, centred on
+// the digits alone the "%" looks right. A lead of about half the "%" on the left sets the mark over the number as a unit
+// (user, 2026-10-30).
+.jfmod-groupValue-percent {
+    padding-left: 0.45em;
 }
 
 // The row's items, side by side.
@@ -139,7 +157,8 @@
 .jfmod-groupStack {
     display: inline-flex;
     flex-direction: column;
-    height: 1.2em;
+    // One stacked item high: the mark (1em), its gap (0.1em) and the number's line (0.78em × 1.15).
+    height: 2.05em;
     overflow: hidden;
 
     .jfmod-groupItem {
@@ -185,6 +204,8 @@
 .jfmod-popMark {
     display: flex;
     align-items: center;
+    // Every mark centred in the column (the IMDb badge is its widest), so the marks line up down the popup.
+    justify-content: center;
     padding: 0.15em 0.6em 0.15em 0;
 
     .jfmod-ratingIcon {
