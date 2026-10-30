@@ -274,10 +274,10 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
         {mount('.itemMiscInfo-secondary', <>
-            {/* The page's own star gives way only to an IMDb value the group shows: ratings on, IMDb ticked, a value in a scale
-                the page reads (user decisions 10 and 13; web review 2026-10-08 round 10, P2 3). */}
-            {entry.metadata?.communityRating && !(ratingsPreferences.enabled && ratingsPreferences.sources.includes('imdb')
-                && ratings?.some(rating => rating.source === 'imdb' && isKnownScale(rating.scale))) ?
+            {/* The page's own star (TMDB's score) gives way to any value the group shows: ratings on, a ticked source with a
+                value in a scale the page reads (user, 2026-10-30; web review 2026-10-08 round 10, P2 3). */}
+            {entry.metadata?.communityRating && !(ratingsPreferences.enabled
+                && ratings?.some(rating => ratingsPreferences.sources.includes(rating.source) && isKnownScale(rating.scale))) ?
                 <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
             <RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
                 wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar />

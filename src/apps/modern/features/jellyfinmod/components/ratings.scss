@@ -97,7 +97,8 @@
     outline-offset: 0.1em;
 }
 
-// The stock star and tomato the group stands in for (classes the group puts on the row while it shows IMDb or Rotten Tomatoes).
+// The stock star and tomato the group stands in for (classes the group puts on the row: the star whenever the group shows, the
+// tomato while it shows Rotten Tomatoes).
 .jfmod-ratings-hideStar > .starRatingContainer,
 .jfmod-ratings-hideCritic > .mediaInfoCriticRating {
     display: none;
