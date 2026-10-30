@@ -255,6 +255,12 @@ $text-inset: 0.735em;
     transition: grid-template-rows 0.18s ease-out;
 }
 
+// The phone's Video list is its stacked cell's width, the card's: no 24em minimum, which overflowed a 320px screen (Codex review,
+// P2 1; D101 holds for the computer and the TV).
+.layout-mobile .jfmod-fileList {
+    min-width: 0;
+}
+
 .jfmod-fileList--open {
     grid-template-rows: 1fr;
 }
