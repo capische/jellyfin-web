@@ -16,7 +16,8 @@ same mode; built 2026-10-29, gate 1. **The Video cell, rows and pending entry sh
 2026-10-29, gate 1. **The current file marked as Audio's current track, and full-size row icons** (the user, 2026-10-29;
 D106, D107): built 2026-10-29, gate 1. **Fixed cells whatever the file (None when it has no such tracks) and the size in the
 marks' type** (the user, 2026-10-29; D131, D132): built 2026-10-29, gate 1. **Grey hover and focus on the other Video
-rows** (the user, 2026-10-30; D145): built 2026-10-30, gate 1.
+rows** (the user, 2026-10-30; D145): built 2026-10-30, gate 1. **The chosen track's extra words on the closed cell's caption
+line** (the user, 2026-10-30: "Love it. Accepted."; D137, D147): built 2026-10-30, gate 1.
 Records: [Video row note](../video-row-file-size.md), [UX.md §11.2](../../UX.md), [quality profiles note](../quality-profiles-redesign.md).
 Code: `components/FileChooser.tsx` (`useTrackStrip`, the Video segment and list), `components/TrackDropdown.tsx` (Audio,
 Subtitles), `components/fileChooser.scss` (`.jfmod-strip`, `.jfmod-stripSegment`, `.jfmod-stripCaption`, `.jfmod-stripValue`,
@@ -89,8 +90,13 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **Extra words (D81 option A):** a title's words the run does not say (a dub's studio, a commentary's speakers, `Blu-ray CEE`),
   trimmed of known words at its start and end only (languages, codes, format and role words, "Original", "Full"), go on a tiny
   second line under the run (`.jfmod-trackItem--two`, `.jfmod-trackExtra`: .72em, 62 %, cut with an ellipsis); only those rows
-  grow. "Дубляж Мосфильм" → *Мосфильм*; "Дубляж [UKR]", "Original [ENG]", "Commentary", "日本語吹替" add nothing. The closed cell
-  never shows them; every row and the cell keep upstream's option text as their tooltip.
+  grow. "Дубляж Мосфильм" → *Мосфильм*; "Дубляж [UKR]", "Original [ENG]", "Commentary", "日本語吹替" add nothing. **The
+  closed cell shows the chosen track's extra words on its caption's line** (D137, D147; mockup workspace
+  `reviews/track-row-icons/closed-extra/`): `AUDIO · Мосфильм`, `SUBTITLES · Кураж-Бамбей`, the words in
+  `.jfmod-stripCaptionExtra` (400, no tracking, not uppercase; the caption's .72em and 62 %), the caption one line
+  (`display block`) cut with an ellipsis at the cell's edge; no extra words, the caption alone. No line is added, so the cell
+  keeps its height. The caption stays `aria-hidden`; every row and the cell keep upstream's option text as their tooltip and
+  the button's label.
 - One entry per option of the hidden stock select, in its order; Subtitles start with *Off*. The entry's tooltip is
   upstream's option text.
 - Keys: opens on the current entry; arrows move, Enter picks, Escape closes; focus returns to the segment. On the TV
