@@ -74,11 +74,11 @@ const keyOf = (list: Rating[]) => list.map(rating => [rating.source, rating.valu
 const enabledOf = (all: Rating[], sources: RatingSource[]) =>
     sources.map(source => all.find(rating => rating.source === source)).filter((rating): rating is Rating => !!rating);
 
-/** One inline rating: its mark and its value. */
+/** One inline rating: its mark over its value (a percent value marked, so its "%" can hang after the digits). */
 const Item: FC<{ rating: Rating }> = ({ rating }) => <span className={'jfmod-groupItem' + (rating.stale ? ' jfmod-groupItem-stale' : '')}
     data-jfmod-rating={rating.source}>
     <RatingIcon rating={rating} />
-    <span className='jfmod-groupValue'>{formatValue(rating)}</span>
+    <span className={'jfmod-groupValue' + (rating.scale === 'percent' ? ' jfmod-groupValue-percent' : '')}>{formatValue(rating)}</span>
 </span>;
 
 /**
