@@ -70,7 +70,7 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
   lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is its stacked
-  cell's width, the card's, D163); on the paper with a 1px divider border and
+  cell's width, the card's, D166); on the paper with a 1px divider border and
   the popover's shadow (the border in the theme's divider `var(--jf-palette-divider)`, visible in light, unchanged in dark;
   D164), sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
   only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
@@ -88,7 +88,7 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   current entry (D7). MUI rounds the popover's top to a whole pixel, so it may sit up to half a pixel over the strip's border.
   The list never moves up over the strip (D149): with less than 10em under the strip the page scrolls first, and the list is
   no taller than the room left above the window's 16px margin (the TV at 1280x720 gave a 20em list 346px). A resize while it
-  is open places it again the same way, without scrolling (D163).
+  is open places it again the same way, without scrolling (D166).
 - **Rows** (`.jfmod-trackItem`, D76): drawn as the cell's value, the same run packed left to right, the text starting where the
   cell's does: `padding .45em .5em .45em calc(.735em − 1px − .2em)`, `border-left .2em solid transparent`, the current entry
   `--on` the primary; no columns, no detail line (D82).
