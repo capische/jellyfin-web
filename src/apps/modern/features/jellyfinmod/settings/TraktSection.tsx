@@ -1,3 +1,4 @@
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import PersonIcon from '@mui/icons-material/Person';
 import Button from '@mui/material/Button';
@@ -159,42 +160,49 @@ const mediaOf = (row: TraktActivity) => {
     return <><b>{row.title}</b>{row.code ? ` ${row.code}` : ''}</>;
 };
 
-/** One title of Activity: "media · time · action", with the Jellyfin user first when more than one account is linked (D125, D130). */
+/**
+ * One title of Activity: the time in its own column, then "media · action" (D125, D130, D162), with the Jellyfin user before the
+ * media when more than one account is linked.
+ */
 const ActivityRow: FC<{ row: TraktActivity; trakt: TraktExport; withUser: boolean }> = ({ row, trakt, withUser }) => {
     const action = actionOf(row, trakt);
     return (
         <div className='jfmod-brow jfmod-traktItem' data-jfmod-trakt-item={`${row.direction}:${row.state}:${row.title}${row.code ? ' ' + row.code : ''}`}>
             <div className='jfmod-brow-main'>
                 <span className='jfmod-traktLine'>
-                    <span className='jfmod-traktMedia'>{withUser && `${row.user} · `}{mediaOf(row)}</span>
-                    <span className='jfmod-traktSep'> · </span>
                     <span className='jfmod-traktTime'>{clock(row.at)}</span>
-                    <span className='jfmod-traktSep'> · </span>
-                    <StatePill kind={action.kind}>{action.words}</StatePill>
+                    <span className='jfmod-traktWhat'>
+                        <span className='jfmod-traktMedia'>{withUser && `${row.user} · `}{mediaOf(row)}</span>
+                        <span className='jfmod-traktSep'> · </span>
+                        <StatePill kind={action.kind}>{action.words}</StatePill>
+                    </span>
                 </span>
             </div>
         </div>
     );
 };
 
-/** The rows under their day headings, newest first. */
+/** The rows in one group per day under its pinned day band (D159), newest first. */
 const activityRows = (trakt: TraktExport) => {
     const rows = trakt.activity ?? [];
     if (!rows.length) {
         return [<div key='none' className='jfmod-brow'><div className='jfmod-brow-main'><span className='jfmod-sub'>Nothing was sent to Trakt or brought from it in the last 30 days.</span></div></div>];
     }
     const withUser = trakt.users.length > 1;
-    const out: React.ReactNode[] = [];
-    let day = '';
+    const days: { day: string; rows: TraktActivity[] }[] = [];
     for (const row of rows) {
-        const heading = dayOf(row.at);
-        if (heading !== day) {
-            day = heading;
-            out.push(<div key={`day-${heading}`} className='jfmod-traktDay' role='heading' aria-level={4}>{heading}</div>);
-        }
-        out.push(<ActivityRow key={`${row.direction}-${row.user}-${row.state}-${row.at}-${row.title}-${row.code ?? ''}`} row={row} trakt={trakt} withUser={withUser} />);
+        const day = dayOf(row.at);
+        if (days[days.length - 1]?.day === day) days[days.length - 1].rows.push(row);
+        else days.push({ day, rows: [row] });
     }
-    return out;
+    // Each day's band and titles share a wrapper, so the band stays at the top of the list while its titles scroll under it
+    // and leaves with them.
+    return days.map(({ day, rows: titles }) => (
+        <div key={day} className='jfmod-traktDayGroup'>
+            <div className='jfmod-traktDay' role='heading' aria-level={4}>{day}</div>
+            {titles.map(row => <ActivityRow key={`${row.direction}-${row.user}-${row.state}-${row.at}-${row.title}-${row.code ?? ''}`} row={row} trakt={trakt} withUser={withUser} />)}
+        </div>
+    ));
 };
 
 /** The account bar while nobody is linked: the signed-in user and Connect Trakt, to the Trakt plugin's page (D128). */
@@ -414,14 +422,13 @@ export const TraktSection: FC<SectionProps> = props => {
                         </div>
                     </div>
                     {!unlinked && (
-                        <div className='jfmod-group jfmod-traktActivity' data-jfmod-trakt='activity'>
+                        <div className={'jfmod-group jfmod-traktActivity' + (activityOpen ? ' is-open' : '')} data-jfmod-trakt='activity'>
+                            {/* A group header in its own space with a Material chevron and the count, the same words open and closed (D153). */}
                             <button type='button' className={flatButtonClass() + ' jfmod-activityToggle'} aria-expanded={activityOpen}
                                 onClick={toggleActivity}>
-                                <span className='jfmod-activityChevron' aria-hidden='true'>{activityOpen ? '▾' : '▸'}</span>
+                                <ChevronRightIcon className='jfmod-activityChevron' aria-hidden='true' />
                                 <span className='jfmod-activityTitle'>Activity</span>
-                                <span className='jfmod-activityHint'>
-                                    {activityOpen ? 'The last 30 days, newest first' : 'Each title sent to Trakt or brought from it, the last 30 days'}
-                                </span>
+                                <span className='jfmod-activityCount'>{plural(trakt.activity?.length ?? 0, 'title')} in the last 30 days</span>
                             </button>
                             {activityOpen && (
                                 <ScrollList label='Trakt activity, the last 30 days, newest first'>
