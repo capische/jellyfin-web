@@ -17,7 +17,8 @@
 //                delete-local-data request in its log, the files gone after. The picker part runs with the stand-ins only
 //                (JELLYFINMOD_QR_DOWNLOADS and JELLYFINMOD_QR_STANDIN_LOG set). A failed pack (`Peep.Show.S02…`) joins step dialog.
 //   step double (any layout): Escape (the TV: Back) pressed twice within the close animation, and on a computer and a phone
-//                the X and (on a computer) the page beside it clicked twice, close the dialog once: it is gone, the page is still the Queue page (a second close used
+//                the X and (on a computer) the page beside it clicked or right-clicked twice, or Escape then a right-click
+//                there, close the dialog once: it is gone, the page is still the Queue page (a second close used
 //                to send a second history Back) and the next dialog opens and closes as usual; no removal request is sent.
 //   step postlink (desktop): a pack episode blocked after its link counts as in the library (a rewritten Queue read; see the step).
 //   step refused (desktop): JELLYFINMOD_QR_ADD=<grab id> names a blocked Add whose file has a second name: its pending entry's X,
@@ -111,6 +112,8 @@ const active = () => page.evaluate(() => {
         pending: element?.getAttribute?.('data-jfmod-pending-remove') ?? null };
 });
 const queueRows = async () => (await api(page, 'GET', '/JellyfinMod/Queue')).body.items;
+/** A row whose menu offers the removal dialog: not mid-import, and not a grab the client has yet to accept (held, submitting). */
+const opensDialog = row => !['importing', 'linking', 'scanning', 'identifying'].includes(row.state) && !['held', 'submitting'].includes(row.importState);
 
 /** The row's expected plan, from its data (not from the page's code). */
 const expected = row => {
@@ -148,7 +151,7 @@ async function dialogStep() {
     const picks = titles.filter(([, title]) => live.some(row => row.releaseTitle.startsWith(title)));
     const covered = new Set(picks.map(([, title]) => stateKey(live.find(row => row.releaseTitle.startsWith(title)))));
     for (const row of live) {
-        if (!covered.has(stateKey(row)) && !['importing', 'linking', 'scanning', 'identifying'].includes(row.state)) {
+        if (!covered.has(stateKey(row)) && opensDialog(row)) {
             covered.add(stateKey(row));
             picks.push([stateKey(row), row.releaseTitle]);
         }
@@ -282,12 +285,12 @@ async function doubleStep() {
     await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(2000);
     const rows = await queueRows();
-    const data = rows.find(row => !['importing', 'linking', 'scanning', 'identifying'].includes(row.state));
+    const data = rows.find(opensDialog);
     record(step, 'the queue has a row to open', !!data, data?.state ?? 'none');
     if (!data) return;
     const before = rows.map(row => row.id).sort().join();
     // The phone's dialog fills the screen, so it has no outside to click.
-    let closers = ['Escape twice', 'the X twice', 'a click outside twice'];
+    let closers = ['Escape twice', 'the X twice', 'a click outside twice', 'a right-click outside twice', 'Escape and a right-click outside'];
     if (tv) closers = ['Back twice'];
     else if (phone) closers = ['Escape twice', 'the X twice'];
     for (const closer of closers) {
@@ -300,6 +303,13 @@ async function doubleStep() {
             // Beside the dialog, on its container (the dimmed page).
             await page.mouse.click(4, 300);
             await page.mouse.click(4, 300);
+        } else if (closer === 'a right-click outside twice') {
+            // The helper closes on a context menu over its container too.
+            await page.mouse.click(4, 300, { button: 'right' });
+            await page.mouse.click(4, 300, { button: 'right' });
+        } else if (closer === 'Escape and a right-click outside') {
+            await page.keyboard.press('Escape');
+            await page.mouse.click(4, 300, { button: 'right' });
         } else {
             await page.keyboard.press('Escape');
             await page.keyboard.press('Escape');
