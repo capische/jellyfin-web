@@ -8,7 +8,7 @@ import type { Api } from '@jellyfin/sdk/lib/api';
 import React, { type FC, useCallback, useState } from 'react';
 
 import { flatButtonClass } from '../utils/flatButton';
-import { type SectionProps, summariseTrakt, type TraktExport, type TraktExportRun, type TraktExportUser, traktWhen } from './settingsSections';
+import { type SectionProps, summariseTrakt, type TraktActivity, type TraktExport, type TraktExportUser, traktWhen } from './settingsSections';
 import { problemText, request, requestServer } from './settingsApi';
 import { IconAction, type NoticeState, ScrollList, SectionFrame, StatePill, useConfirm } from './settingsWidgets';
 
@@ -86,6 +86,7 @@ const userLine = (user: TraktExportUser) => {
 const nextLine = (trakt: TraktExport) => {
     const quiet = quietWords(trakt.quietMinutes);
     const reconnect = trakt.users.filter(user => user.state === 'reconnect');
+    if (!trakt.users.length) return 'Nothing is sent until a Trakt account is connected.';
     if (reconnect.length) {
         const once = trakt.autoExport ? '' : ' once the automatic export is on';
         return `Watches of ${reconnect.map(user => user.name).join(', ')} since ${traktWhen(reconnect[0].since) || 'the sign-in expired'} are sent by the first export after reconnecting; it starts by itself${once}.`;
@@ -98,74 +99,120 @@ const nextLine = (trakt: TraktExport) => {
     }
     // The host says Completed; JellyfinMod has not yet looked in the log for a Trakt error during the run (within a minute).
     if (trakt.lastRun && trakt.lastRunConfirmed !== true) return 'Checking the last run…';
+    // An export already due names its time, so it agrees with the waiting titles in Activity (D130).
+    if (trakt.nextExportAt) return `The next export runs at ${clock(trakt.nextExportAt)}, ${quiet} after the last episode ended.`;
     return `Nothing is waiting. The next export runs ${quiet} after the next episode ends.`;
 };
 
-/** Why a run ran, as the Activity list says it (D73). */
-const WHY_WORDS: [string, string][] = [
-    ['watch', 'After a watch'], ['reconnect', 'After reconnecting'], ['daily', 'Daily check'], ['retry', 'Retry'], ['sync_now', 'Sync Now'],
-    ['first', 'First export']
-];
-const whyWords = (why: string | null | undefined) => WHY_WORDS.find(([code]) => code === why)?.[1] ?? 'From the Dashboard';
+/** `10:41 PM`: a row's time, in the viewer's clock. */
+const clock = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
+
+/** `Today`, `Yesterday` or `Mon 27 Oct`: the day heading a row sits under (D125). */
+const dayOf = (iso: string) => {
+    const day = new Date(iso);
+    day.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((today.getTime() - day.getTime()) / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return day.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '');
+};
+
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
-/** `04:20 pm` today, otherwise with its day. */
-const shortWhen = (iso: string | null | undefined) => traktWhen(iso).replace(/^today /, '');
 
-/** What a clean run sent, from the stock plugin's count lines; null when its log had none. */
-const sentWords = (run: TraktExportRun) => {
-    // The server leaves a null out of its answer.
-    const counts = [run.episodesWatched, run.moviesWatched, run.episodesCollected, run.moviesCollected];
-    if (counts.every(count => count === null || count === undefined)) return null;
-    const episodes = run.episodesWatched ?? 0;
-    const movies = run.moviesWatched ?? 0;
-    const collected = (run.episodesCollected ?? 0) + (run.moviesCollected ?? 0);
-    if (!episodes && !movies && !collected) return 'Nothing to send: Trakt had every watch';
-    const watched = [episodes ? plural(episodes, 'episode') : '', movies ? plural(movies, 'movie') : ''].filter(Boolean).join(' and ');
-    return [watched ? `${watched} marked watched` : '', collected ? `${collected} added to the collection` : ''].filter(Boolean).join(', ');
-};
-
-/** What an import brought into Jellyfin, counted from what it saved there while it ran. */
-const importedWords = (run: TraktExportRun) => {
-    const episodes = run.episodesWatched ?? 0;
-    const movies = run.moviesWatched ?? 0;
-    const positions = run.progressUpdated ?? 0;
-    if (!episodes && !movies && !positions) return 'Nothing new on Trakt';
-    const watched = [episodes ? plural(episodes, 'episode') : '', movies ? plural(movies, 'movie') : ''].filter(Boolean).join(' and ');
-    return [watched ? `${watched} marked watched in Jellyfin` : '', positions ? `${plural(positions, 'playback position')} updated` : '']
-        .filter(Boolean).join(', ');
-};
-
-/** One run of the Activity list: when · why (an import: "Import from Trakt · why"), then its result and what it did (D73). */
-const RunRow: FC<{ run: TraktExportRun; newer?: TraktExportRun; next: string | null }> = ({ run, newer, next }) => {
-    let pill: { kind: 'ok' | 'err' | 'warn'; words: string };
-    let what: string | null;
-    const imported = run.kind === 'import';
-    if (run.clean) {
-        pill = { kind: 'ok', words: 'Completed' };
-        what = imported ? importedWords(run) : sentWords(run);
-    } else if (run.status === 'Completed' || run.status === 'Failed') {
-        pill = { kind: 'err', words: 'Trakt error' };
-        let retry = '';
-        // Only the export is retried; an import waits for the next Sync Now, reconnect or daily import.
-        if (!imported && newer) retry = `; retried at ${shortWhen(newer.startedAt)}`;
-        else if (!imported && next) retry = `; next try ${shortWhen(next)}`;
-        what = (run.error ?? (run.status === 'Failed' ? 'Trakt could not be reached' : 'the Trakt plugin logged an error')) + retry;
-    } else {
-        pill = { kind: 'warn', words: 'Stopped' };
-        what = null;
+/** Why a title still waits for Trakt (D126): its account's sign-in, Trakt's last answer, the automatic switch, or the due export. */
+const waitingWords = (row: TraktActivity, trakt: TraktExport) => {
+    if (trakt.users.find(user => user.name === row.user)?.state === 'reconnect') return 'waiting: reconnect Trakt to send it';
+    if (trakt.lastError && trakt.nextAttemptAt && trakt.autoExport) {
+        // `Trakt answered 500 Internal Server Error` reads `Trakt answered 500` in the row.
+        const answer = /^Trakt answered \d+/.exec(trakt.lastError)?.[0] ?? trakt.lastError;
+        return `waiting: ${answer}, next try ${clock(trakt.nextAttemptAt)}`;
     }
+    if (!trakt.autoExport) return 'not checked yet (automatic sending is off)';
+    if (trakt.nextExportAt) return `waiting: the export runs at ${clock(trakt.nextExportAt)}`;
+    return 'waiting: the next export sends it';
+};
+
+/** A row's action and its dot: blue done, amber waiting or in progress, red failed (D126, D130, D134). */
+const actionOf = (row: TraktActivity, trakt: TraktExport): { kind: 'ok' | 'warn' | 'err'; words: string } => {
+    const count = row.detail ?? 0;
+    switch (row.state) {
+        case 'playing': return { kind: 'warn', words: 'watching now on Trakt (reported live by the Trakt plugin)' };
+        case 'stopped': return { kind: 'ok', words: `stopped at ${count} % (reported live by the Trakt plugin)` };
+        case 'waiting': return { kind: 'warn', words: waitingWords(row, trakt) };
+        case 'sent': return { kind: 'ok', words: 'marked watched on Trakt' };
+        case 'failed': return { kind: 'err', words: `failed: Trakt does not know this ${row.kind === 'movie' ? 'movie' : 'episode'}` };
+        case 'imported': return { kind: 'ok', words: 'marked watched in Jellyfin (from Trakt)' };
+        case 'position': return { kind: 'ok', words: `playback position from Trakt: ${count} min` };
+        case 'collection': return { kind: 'ok', words: 'added to the Trakt collection' };
+        case 'summary': return { kind: 'ok', words: row.direction === 'from' ? 'marked watched in Jellyfin (from Trakt)' : 'marked watched on Trakt (one export)' };
+        default: return { kind: 'ok', words: row.state };
+    }
+};
+
+/** What the row names: the title in bold and its episode, or for a count row the count (D126). */
+const mediaOf = (row: TraktActivity) => {
+    const count = row.detail ?? 0;
+    if (row.state === 'collection') return <b>{plural(count, 'title')}</b>;
+    if (row.state === 'summary') return <b>{row.direction === 'from' ? plural(count, 'title') : plural(count, 'episode')}</b>;
+    return <><b>{row.title}</b>{row.code ? ` ${row.code}` : ''}</>;
+};
+
+/** One title of Activity: "media · time · action", with the Jellyfin user first when more than one account is linked (D125, D130). */
+const ActivityRow: FC<{ row: TraktActivity; trakt: TraktExport; withUser: boolean }> = ({ row, trakt, withUser }) => {
+    const action = actionOf(row, trakt);
     return (
-        <div className='jfmod-brow' data-jfmod-trakt-run={run.startedAt}>
+        <div className='jfmod-brow jfmod-traktItem' data-jfmod-trakt-item={`${row.direction}:${row.state}:${row.title}${row.code ? ' ' + row.code : ''}`}>
             <div className='jfmod-brow-main'>
-                <strong>{traktWhen(run.startedAt)} · {imported ? `Import from Trakt · ${whyWords(run.why)}` : whyWords(run.why)}</strong>
-                <span className='jfmod-sub'>
-                    <StatePill kind={pill.kind}>{pill.words}</StatePill>
-                    {what && <span className='jfmod-runWhat'>· {what}</span>}
+                <span className='jfmod-traktLine'>
+                    <span className='jfmod-traktMedia'>{withUser && `${row.user} · `}{mediaOf(row)}</span>
+                    <span className='jfmod-traktSep'> · </span>
+                    <span className='jfmod-traktTime'>{clock(row.at)}</span>
+                    <span className='jfmod-traktSep'> · </span>
+                    <StatePill kind={action.kind}>{action.words}</StatePill>
                 </span>
             </div>
         </div>
     );
 };
+
+/** The rows under their day headings, newest first. */
+const activityRows = (trakt: TraktExport) => {
+    const rows = trakt.activity ?? [];
+    if (!rows.length) {
+        return [<div key='none' className='jfmod-brow'><div className='jfmod-brow-main'><span className='jfmod-sub'>Nothing was sent to Trakt or brought from it in the last 30 days.</span></div></div>];
+    }
+    const withUser = trakt.users.length > 1;
+    const out: React.ReactNode[] = [];
+    let day = '';
+    for (const row of rows) {
+        const heading = dayOf(row.at);
+        if (heading !== day) {
+            day = heading;
+            out.push(<div key={`day-${heading}`} className='jfmod-traktDay' role='heading' aria-level={4}>{heading}</div>);
+        }
+        out.push(<ActivityRow key={`${row.direction}-${row.user}-${row.state}-${row.at}-${row.title}-${row.code ?? ''}`} row={row} trakt={trakt} withUser={withUser} />);
+    }
+    return out;
+};
+
+/** The account bar while nobody is linked: the signed-in user and Connect Trakt, to the Trakt plugin's page (D128). */
+const ConnectRow: FC<{ viewer: string }> = ({ viewer }) => (
+    <div className='jfmod-brow jfmod-traktUser' data-jfmod-trakt-user=''>
+        <TraktAvatar />
+        <div className='jfmod-brow-main'>
+            <strong>{viewer}<span className='jfmod-traktHandle'> · not connected to Trakt</span></strong>
+            <span className='jfmod-sub'><StatePill kind='off'>Not connected</StatePill></span>
+            <div className='fieldDescription'>
+                Connect opens the Trakt plugin’s page in the Dashboard: choose {viewer}, authorize, and enter the code on trakt.tv/activate.
+            </div>
+            <div className='jfmod-inlineactions'>
+                <Button variant='contained' href={TRAKT_PLUGIN_PAGE} data-jfmod-trakt-connect=''>Connect Trakt</Button>
+            </div>
+        </div>
+    </div>
+);
 
 /** The account's Trakt avatar, or the person glyph on the grey disc when there is none (D70). */
 const TraktAvatar: FC<{ url?: string | null }> = ({ url }) => {
@@ -177,9 +224,10 @@ const TraktAvatar: FC<{ url?: string | null }> = ({ url }) => {
 
 /**
  * Settings › Trakt (Phase 13): missed watches to Trakt. JellyfinMod never talks to Trakt; it runs the stock Trakt plugin's
- * own export, which sends each watched episode Trakt does not have yet with the time it was watched. The section shows
- * that export's state, the automatic switch (off until turned on, Q3), Sync Missing Watches Now, and each linked account,
- * with Reconnect Trakt when the plugin's sign-in could not be renewed. Design: `reviews/phase13/mockups` in the workspace.
+ * own export, which sends each watched episode Trakt does not have yet with the time it was watched. The section shows,
+ * in order (D128): each linked account, with Reconnect Trakt when the plugin's sign-in could not be renewed, or Connect Trakt
+ * while nobody is linked; the automatic and import switches (dimmed until an account is linked, D129); the export's state and
+ * Sync Missing Watches Now; and Activity, one row per title of the last 30 days (D125). Design: `reviews/phase13/mockups-v3`.
  */
 export const TraktSection: FC<SectionProps> = props => {
     const { api, data, reload } = props;
@@ -201,16 +249,19 @@ export const TraktSection: FC<SectionProps> = props => {
     const [confirmDialog, ask] = useConfirm();
     const refresh = useCallback(() => Promise.all([status.refetch(), reload()]), [status, reload]);
 
+    // Nobody connected: the switches and Sync Now stay in place, dimmed and still focus stops, and ignore presses (D129).
+    // Only while the Trakt plugin can be used: a missing or too old plugin, or unreadable settings, show their refusal instead.
+    const unlinked = !!trakt && trakt.installed && trakt.refusal !== 'old_plugin' && trakt.refusal !== 'unknown' && !trakt.users.length;
     const save = useCallback((change: { autoExport?: boolean; import?: boolean }) => {
         // While a change is saved the switch stays focusable (aria-disabled, so a TV keeps its focus) and ignores presses.
-        if (busy) return;
+        if (busy || unlinked) return;
         setBusy(true);
         setNotice(null);
         request(api, 'PUT', 'Trakt/Export/Settings', change)
             .then(() => refresh())
             .catch(error => setNotice({ kind: 'err', text: problemText(error) }))
             .finally(() => setBusy(false));
-    }, [api, busy, refresh]);
+    }, [api, busy, unlinked, refresh]);
     const toggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => save({ autoExport: event.target.checked }), [save]);
     const toggleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => save({ import: event.target.checked }), [save]);
     // Browsers toggle a checkbox on Space only; a remote has no Space, so its OK (Enter) toggles the switch too.
@@ -250,7 +301,7 @@ export const TraktSection: FC<SectionProps> = props => {
 
     const refusal = trakt ? refusalSentence(trakt) : null;
     const syncNow = useCallback(() => {
-        if (busy || refusal) return;
+        if (busy || refusal || unlinked) return;
         setBusy(true);
         setNotice(null);
         request(api, 'POST', 'Trakt/Export')
@@ -260,7 +311,7 @@ export const TraktSection: FC<SectionProps> = props => {
             })
             .catch(error => setNotice({ kind: 'err', text: problemText(error) }))
             .finally(() => setBusy(false));
-    }, [api, busy, refusal, refresh]);
+    }, [api, busy, refusal, unlinked, refresh]);
 
     if (!trakt) {
         return (
@@ -278,58 +329,30 @@ export const TraktSection: FC<SectionProps> = props => {
             text: `Trakt gets nothing from ${reconnect.map(user => user.name).join(', ')}: the Trakt plugin’s sign-in expired${since} and could not be renewed. Watches are kept in Jellyfin and sent once you reconnect.`
         };
     }
-    if (!shown && refusal) shown = { kind: 'warn', text: refusal };
+    // The no_users warning says what the account bar's Connect Trakt says, so it is left out while the bar shows it (D128).
+    if (!shown && refusal && !unlinked) shown = { kind: 'warn', text: refusal };
     const blocked = !trakt.installed || trakt.refusal === 'old_plugin' || trakt.refusal === 'unknown';
+    const off = unlinked ? ' jfmod-traktOff' : '';
+    let syncTitle = refusal ?? (trakt.running ? 'The export is running' : undefined);
+    if (unlinked) syncTitle = 'Connect a Trakt account first.';
+
+    const lead = (
+        <p className='fieldDescription jfmod-lead'>
+            The Trakt plugin sends each watch to Trakt as it ends. A watch that ends while Trakt cannot be reached would be lost, so
+            JellyfinMod runs the plugin’s own export once Trakt answers again: it sends every watched episode Trakt does not have yet,
+            with the time you watched it, and leaves the episodes Trakt already has alone, so no play is counted twice. JellyfinMod
+            never signs in to Trakt itself.
+        </p>
+    );
 
     return (
         <SectionFrame id='trakt' eyebrow={props.eyebrow} title='Trakt' state={summariseTrakt(trakt)} notice={shown} next={props.next} onGo={props.onGo}>
-            <p className='fieldDescription jfmod-lead'>
-                The Trakt plugin sends each watch to Trakt as it ends. A watch that ends while Trakt cannot be reached would be lost, so
-                JellyfinMod runs the plugin’s own export once Trakt answers again: it sends every watched episode Trakt does not have yet,
-                with the time you watched it, and leaves the episodes Trakt already has alone, so no play is counted twice. JellyfinMod
-                never signs in to Trakt itself.
-            </p>
+            {blocked && lead}
             {!blocked && (
                 <>
-                    <div className='jfmod-brow' data-jfmod-trakt='auto'>
-                        <div className='jfmod-brow-main'>
-                            <FormControlLabel
-                                // The key handler sits on the switch's root, which the input's keydown bubbles to: MUI 6 keeps
-                                // only onChange of the input slot's handlers.
-                                control={<Switch checked={trakt.autoExport} onChange={toggle} onKeyDown={toggleOnEnter}
-                                    slotProps={{ input: { 'aria-disabled': busy || undefined } }} />}
-                                label='Send missed watches automatically' />
-                            <div className='fieldDescription'>
-                                {quietWords(trakt.quietMinutes)} after an episode ends, and again until it works. Off until you turn it on: the first
-                                export also sends older watches that Trakt does not have.
-                            </div>
-                        </div>
-                    </div>
-                    <div className='jfmod-brow' data-jfmod-trakt='import'>
-                        <div className='jfmod-brow-main'>
-                            <FormControlLabel
-                                control={<Switch checked={!!trakt.importEnabled} onChange={toggleImport} onKeyDown={toggleImportOnEnter}
-                                    slotProps={{ input: { 'aria-disabled': busy || undefined } }} />}
-                                label='Also import watches from Trakt' />
-                            <div className='fieldDescription'>
-                                {importLine(trakt)}
-                            </div>
-                        </div>
-                    </div>
-                    <div className='jfmod-brow' data-jfmod-trakt='export'>
-                        <div className='jfmod-brow-main'>
-                            <strong data-jfmod-trakt-last=''>{lastRunLine(trakt)}</strong>
-                            <span className='jfmod-sub' data-jfmod-trakt-next=''>{nextLine(trakt)}</span>
-                            <div className='jfmod-inlineactions'>
-                                <Button variant='contained' color='inherit' onClick={syncNow}
-                                    aria-disabled={busy || !!refusal || trakt.running ? true : undefined}
-                                    title={refusal ?? (trakt.running ? 'The export is running' : undefined)}>
-                                    Sync Missing Watches Now
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                    <div className='jfmod-blist'>
+                    {/* The account bar comes first (D128): each linked account, or the signed-in user with Connect Trakt. */}
+                    <div className='jfmod-blist jfmod-traktAccount'>
+                        {unlinked && <ConnectRow viewer={trakt.viewerName ?? 'You'} />}
                         {trakt.users.map(user => (
                             <div key={user.name} className={`jfmod-brow jfmod-traktUser${user.state === 'reconnect' ? ' jfmod-brow-err' : ''}`} data-jfmod-trakt-user={user.name}>
                                 <TraktAvatar url={user.avatarUrl} />
@@ -350,44 +373,63 @@ export const TraktSection: FC<SectionProps> = props => {
                             </div>
                         ))}
                     </div>
-                    <div className='jfmod-group jfmod-traktActivity' data-jfmod-trakt='activity'>
-                        <button type='button' className={flatButtonClass() + ' jfmod-activityToggle'} aria-expanded={activityOpen} onClick={toggleActivity}>
-                            <span className='jfmod-activityChevron' aria-hidden='true'>{activityOpen ? '▾' : '▸'}</span>
-                            <span className='jfmod-activityTitle'>Activity</span>
-                            <span className='jfmod-activityHint'>
-                                {activityOpen ? 'The last 20 exports, newest first' : 'The last 20 exports: when, why and what each sent'}
-                            </span>
-                        </button>
-                        {activityOpen && (
-                            <ScrollList label='Trakt exports, newest first'>
-                                {trakt.importRunning && (
-                                    <div className='jfmod-brow' data-jfmod-trakt-run='importing'>
-                                        <div className='jfmod-brow-main'>
-                                            <strong>now · Import from Trakt · {whyWords(trakt.runningWhy)}</strong>
-                                            <span className='jfmod-sub'><StatePill kind='busy'>Running</StatePill></span>
-                                        </div>
-                                    </div>
-                                )}
-                                {trakt.running && (
-                                    <div className='jfmod-brow' data-jfmod-trakt-run='running'>
-                                        <div className='jfmod-brow-main'>
-                                            <strong>now · {whyWords(trakt.runningWhy)}</strong>
-                                            <span className='jfmod-sub'><StatePill kind='busy'>Running</StatePill></span>
-                                        </div>
-                                    </div>
-                                )}
-                                {(trakt.activity ?? []).map((run, index, all) => {
-                                    // The run of the same kind just after it (an export's retry), and the export's next try on the newest.
-                                    const newer = all.slice(0, index).reverse().find(other => other.kind === run.kind);
-                                    const newest = !all.slice(0, index).some(other => other.kind === run.kind);
-                                    return <RunRow key={`${run.kind ?? 'export'}-${run.startedAt}`} run={run} newer={newer} next={newest ? trakt.nextAttemptAt : null} />;
-                                })}
-                                {!trakt.running && !trakt.importRunning && !trakt.activity?.length && (
-                                    <div className='jfmod-brow'><div className='jfmod-brow-main'><span className='jfmod-sub'>No export has run yet.</span></div></div>
-                                )}
-                            </ScrollList>
-                        )}
+                    {lead}
+                    {unlinked && <p className='fieldDescription jfmod-traktConnectHint'>Connect a Trakt account to turn these on.</p>}
+                    <div className={'jfmod-brow' + off} data-jfmod-trakt='auto'>
+                        <div className='jfmod-brow-main'>
+                            <FormControlLabel
+                                // The key handler sits on the switch's root, which the input's keydown bubbles to: MUI 6 keeps
+                                // only onChange of the input slot's handlers.
+                                control={<Switch checked={trakt.autoExport} onChange={toggle} onKeyDown={toggleOnEnter}
+                                    slotProps={{ input: { 'aria-disabled': busy || unlinked || undefined } }} />}
+                                label='Send missed watches automatically' />
+                            <div className='fieldDescription'>
+                                {quietWords(trakt.quietMinutes)} after an episode ends, and again until it works. Off until you turn it on: the first
+                                export also sends older watches that Trakt does not have.
+                            </div>
+                        </div>
                     </div>
+                    <div className={'jfmod-brow' + off} data-jfmod-trakt='import'>
+                        <div className='jfmod-brow-main'>
+                            <FormControlLabel
+                                control={<Switch checked={!!trakt.importEnabled} onChange={toggleImport} onKeyDown={toggleImportOnEnter}
+                                    slotProps={{ input: { 'aria-disabled': busy || unlinked || undefined } }} />}
+                                label='Also import watches from Trakt' />
+                            <div className='fieldDescription'>
+                                {importLine(trakt)}
+                            </div>
+                        </div>
+                    </div>
+                    <div className={'jfmod-brow' + off} data-jfmod-trakt='export'>
+                        <div className='jfmod-brow-main'>
+                            <strong data-jfmod-trakt-last=''>{lastRunLine(trakt)}</strong>
+                            <span className='jfmod-sub' data-jfmod-trakt-next=''>{nextLine(trakt)}</span>
+                            <div className='jfmod-inlineactions'>
+                                <Button variant='contained' color='inherit' onClick={syncNow}
+                                    aria-disabled={busy || !!refusal || unlinked || trakt.running ? true : undefined}
+                                    title={syncTitle}>
+                                    Sync Missing Watches Now
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    {!unlinked && (
+                        <div className='jfmod-group jfmod-traktActivity' data-jfmod-trakt='activity'>
+                            <button type='button' className={flatButtonClass() + ' jfmod-activityToggle'} aria-expanded={activityOpen}
+                                onClick={toggleActivity}>
+                                <span className='jfmod-activityChevron' aria-hidden='true'>{activityOpen ? '▾' : '▸'}</span>
+                                <span className='jfmod-activityTitle'>Activity</span>
+                                <span className='jfmod-activityHint'>
+                                    {activityOpen ? 'The last 30 days, newest first' : 'Each title sent to Trakt or brought from it, the last 30 days'}
+                                </span>
+                            </button>
+                            {activityOpen && (
+                                <ScrollList label='Trakt activity, the last 30 days, newest first'>
+                                    {activityRows(trakt)}
+                                </ScrollList>
+                            )}
+                        </div>
+                    )}
                 </>
             )}
             {confirmDialog}
