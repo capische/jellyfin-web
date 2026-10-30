@@ -124,7 +124,7 @@ const audit = page => page.evaluate(() => {
         const b = lum(backgroundOf(element));
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     };
-    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label, .jfmod-traktHandle, .jfmod-traktLine, .jfmod-traktDay, .jfmod-activityTitle, .jfmod-activityHint')].filter(node => node.offsetParent);
+    const texts = [...section.querySelectorAll('h2, strong, .jfmod-sub, .fieldDescription, .jfmod-notice-text, .MuiFormControlLabel-label, .jfmod-traktHandle, .jfmod-traktLine, .jfmod-traktDay, .jfmod-activityTitle, .jfmod-activityCount')].filter(node => node.offsetParent);
     // The section's buttons and round icons; the Activity disclosure is a group title (its own guide), measured apart.
     const buttons = [...section.querySelectorAll('button, a.MuiButton-root')].filter(node => node.offsetParent && !node.closest('.jfmod-check-secfoot') &&
         !node.classList.contains('jfmod-activityToggle'));
