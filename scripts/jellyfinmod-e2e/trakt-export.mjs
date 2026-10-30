@@ -138,9 +138,11 @@ async function authorize(tokenSeconds) {
     await control('/approve', {});
     await until('Trakt authorized', async () => (await jf('GET', `/Trakt/Users/${userId}/PollAuthorizationStatus`)).isAuthorized === true, 30000, 1000);
 }
+// The environment's clock can run a little behind this Mac's, and a run that finds nothing to send takes milliseconds, so a
+// run is counted as after `when` from 1.5 s before it (every check leaves far more than that since the run before).
 const lastRunAfter = async when => {
     const now = await status();
-    return !now.running && now.lastRun && new Date(now.lastRun.startedAt) > when ? now : null;
+    return !now.running && now.lastRun && new Date(now.lastRun.startedAt) > new Date(when.getTime() - 1500) ? now : null;
 };
 
 // ---- screenshots (desktop Chromium, one browser at a time)
@@ -630,18 +632,32 @@ const steps = {
             JSON.stringify({ row: rowOf(waiting?.activity, 'S01E06'), nextExportAt: waiting?.nextExportAt }));
         const page = await openPage();
         try {
-            const hint = await page.evaluate(() => document.querySelector('.jfmod-activityHint')?.textContent ?? '');
+            // D153: a group header with a Material chevron and the count, the same words open and closed.
+            const titles = (await status()).activity.length;
+            const words = `${titles} title${titles === 1 ? '' : 's'} in the last 30 days`;
+            const header = () => page.evaluate(() => ({ count: document.querySelector('.jfmod-activityCount')?.textContent ?? '',
+                chevron: !!document.querySelector('.jfmod-activityToggle svg.jfmod-activityChevron') }));
+            const before = await header();
             const closed = await openActivity(page);
-            const openHint = await page.evaluate(() => document.querySelector('.jfmod-activityHint')?.textContent ?? '');
-            verify('activity', 'Activity is closed at first with "Each title sent to Trakt or brought from it, the last 30 days", and opens',
-                closed === 'false' && hint === 'Each title sent to Trakt or brought from it, the last 30 days' && openHint === 'The last 30 days, newest first', `${hint} | ${openHint}`);
+            const after = await header();
+            verify('activity', `Activity is closed at first, with the chevron and "${words}", and opens with the same words`,
+                closed === 'false' && before.chevron && before.count === words && after.count === words, JSON.stringify({ before, after }));
+            // D159, D162: each day's band pinned in its group; the times in one right-aligned column, the titles on one edge.
+            const layout = await page.evaluate(() => {
+                const list = document.querySelector('[data-jfmod-trakt="activity"] .jfmod-scrolllist');
+                const edges = selector => [...new Set([...list.querySelectorAll(selector)].map(node => Math.round(node.getBoundingClientRect()[selector.endsWith('Time') ? 'right' : 'left'])))];
+                const band = list.querySelector('.jfmod-traktDayGroup > .jfmod-traktDay');
+                return { times: edges('.jfmod-traktTime'), titles: edges('.jfmod-traktMedia'), sticky: band ? getComputedStyle(band).position : '' };
+            });
+            verify('activity', 'the times end on one edge and the titles start on one edge; the day band is pinned (sticky) in its day group',
+                layout.times.length === 1 && layout.titles.length === 1 && layout.sticky === 'sticky', JSON.stringify(layout));
             // The time as the page writes it, in the browser's own locale.
             const clock = due ? await page.evaluate(iso => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), due.toISOString()) : '?';
             const text = await itemText(page, 'S01E06');
             const next = await page.evaluate(() => document.querySelector('[data-jfmod-trakt-next]')?.textContent ?? '');
             const heading = await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"] .jfmod-traktDay')?.textContent ?? '');
-            verify('activity', `the row reads "JellyfinMod P13 Show S01E06 · <time> · waiting: the export runs at ${clock}" under Today, amber`,
-                heading === 'Today' && text.startsWith('JellyfinMod P13 Show S01E06 · ') && text.endsWith(`waiting: the export runs at ${clock}`) && /jfmod-state-warn/.test(await dotOf(page, 'S01E06')), `${heading} | ${text}`);
+            verify('activity', `the row reads "<time> JellyfinMod P13 Show S01E06 · waiting: the export runs at ${clock}" under Today, amber`,
+                heading === 'Today' && /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E06 · /i.test(text) && text.endsWith(`waiting: the export runs at ${clock}`) && /jfmod-state-warn/.test(await dotOf(page, 'S01E06')), `${heading} | ${text}`);
             verify('activity', `the next-export line names the same time: "The next export runs at ${clock}, 1 minute after the last episode ended."`,
                 next === `The next export runs at ${clock}, 1 minute after the last episode ended.`, next);
             await page.screenshot({ path: join(out, 'shots', '12-activity-waiting.png'), fullPage: true });
@@ -769,8 +785,8 @@ const steps = {
             await page.waitForTimeout(400);
             const line = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
                 .find(node => node.getAttribute('data-jfmod-trakt-item') === 'from:imported:JellyfinMod P13 Show S01E05')?.innerText.replace(/\s+/g, ' ').trim() ?? '');
-            verify('import', 'Activity reads "JellyfinMod P13 Show S01E05 · <time> · marked watched in Jellyfin (from Trakt)"',
-                line.startsWith('JellyfinMod P13 Show S01E05 · ') && line.endsWith('· marked watched in Jellyfin (from Trakt)'), line);
+            verify('import', 'Activity reads "<time> JellyfinMod P13 Show S01E05 · marked watched in Jellyfin (from Trakt)"',
+                /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E05 · /i.test(line) && line.endsWith('· marked watched in Jellyfin (from Trakt)'), line);
             await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
             await page.waitForTimeout(300);
             await page.screenshot({ path: join(out, 'shots', '16-activity-import.png') });
