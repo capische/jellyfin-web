@@ -136,13 +136,30 @@ interface TrackDropdownProps {
     onChoose: (value: string) => void;
 }
 
+/** MUI's popover keeps this far from the window's edge (its `marginThreshold`). */
+const LIST_MARGIN = 16;
+
 /**
  * The field and its list. MUI's menu gives the list its keys (arrows, Enter, Escape back to the field) and `shell/dpadModals`
  * the TV's remote; it opens on the current entry.
  */
 const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, onChoose }) => {
-    const [place, setPlace] = useState<{ top: number; left: number; width: number } | null>(null);
-    const open = useCallback((event: MouseEvent<HTMLElement>) => setPlace(listPlace(event.currentTarget)), []);
+    const [place, setPlace] = useState<{ top: number; left: number; width: number; room: number } | null>(null);
+    const open = useCallback((event: MouseEvent<HTMLElement>) => {
+        const trigger = event.currentTarget;
+        // The list hangs from the strip and never moves up over it (MUI shifts a popover that does not fit below): with less
+        // than 10em under the strip the page scrolls first, and the list is no taller than the room left (TV at 1280x720).
+        const em = parseFloat(getComputedStyle(trigger).fontSize);
+        const need = 10 * em;
+        let at = listPlace(trigger);
+        const short = need - (window.innerHeight - LIST_MARGIN - at.top);
+        if (short > 0) {
+            window.scrollBy(0, short);
+            at = listPlace(trigger);
+        }
+        // In px: no min() for older TV engines; the paper's em is the strip's.
+        setPlace({ ...at, room: Math.min(20 * em, Math.max(0, window.innerHeight - LIST_MARGIN - at.top)) });
+    }, []);
     const close = useCallback(() => setPlace(null), []);
     const pick = useCallback((event: MouseEvent<HTMLElement>) => {
         setPlace(null);
@@ -175,7 +192,7 @@ const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, 
             anchorPosition={place ? { top: place.top, left: place.left } : undefined}
             transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             slotProps={{ list: { role: 'listbox', 'aria-label': name },
-                paper: { className: 'jfmod-trackMenuPaper', style: place ? { width: place.width } : undefined } }}>
+                paper: { className: 'jfmod-trackMenuPaper', style: place ? { width: place.width, maxHeight: place.room } : undefined } }}>
             {/* Menu items as the menu's own children, so it opens on the current one (it focuses the child marked selected). */}
             {entries.map(entry => <MenuItem key={entry.value} role='option' aria-selected={entry === current} selected={entry === current}
                 title={entry.title} onClick={pick} data-jfmod-track={entry.value}
