@@ -327,3 +327,11 @@ did not see (not reproduced). Built (not accepted); the phone, TV, light themes 
 Not changed: the stand-in never keeps a collection, so every export there logs 15 collection adds and Activity shows a
 "15 titles" row per run; real Trakt keeps the collection and logs only new adds.
 
+**Activity v4 (2026-10-30).** The user approved the redesign (workspace `reviews/phase13/mockups-v4`, D153–D155) with option A
+for the days (D159), and asked for the time first (D162; build details D163). Activity is a full-width group header in its own
+space with a Material chevron and "ACTIVITY · N titles in the last 30 days"; each day is a band a shade lighter than the
+section, pinned at the top of the list while its titles scroll; each row starts with its time in a right-aligned column.
+Gate 1 is the computer layout, dark, on echo: the live `activity` and `import` steps pass (22/23, then `import` 11/11 after
+the runner allowed for the environment's clock running a little behind the Mac's on a run of milliseconds); every time ends at
+x 473 and every title starts at x 486 at 1440 px; the band is sticky and pins at the list's top. Built (not accepted).
+

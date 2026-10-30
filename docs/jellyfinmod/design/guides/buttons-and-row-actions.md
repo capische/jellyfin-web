@@ -4,7 +4,9 @@
 settings area, the Dashboard page, the detail page and the dialogs. Settings › Trakt's red Disconnect (`link_off`) and the
 group-title disclosure: user approval 2026-10-29 ("Round red icon is fine, go ahead with Trakt build"; decisions D67, D72,
 D74, mockups `reviews/phase13/mockups-v2`); Activity's per-title rows, hint and the main **Connect Trakt**: user approval
-2026-10-29 ("looks good"; D125–D130, mockups `reviews/phase13/mockups-v3`). Record: [UX.md §12.1](../../UX.md) (the authoritative
+2026-10-29 ("looks good"; D125–D130, mockups `reviews/phase13/mockups-v3`); Activity as a full-width group header with a
+Material chevron and its count, the pinned day bands and the time column: user approval 2026-10-30 (D153–D155, D159 option A,
+D162; mockups `reviews/phase13/mockups-v4`). Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
 the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
 
@@ -41,16 +43,32 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
 
 ## A disclosure in the group title's look
 
-A group that is closed by default (the picker's **▸ 12 Rejected**, Settings › Trakt's **▸ ACTIVITY**) opens from a flat
+A group that is closed by default (the picker's **▸ 12 Rejected**, Settings › Trakt's **ACTIVITY**) opens from a flat
 button in the group title's look, not from a raised button: `flatButtonClass()` plus the surface's own class, `aria-expanded`,
-the chevron ▸ / ▾ in its own `aria-hidden` span, the title in small capitals (0.8em, weight 600, letter-spacing 0.06em) and
-a short hint after it in the secondary text (0.85em; Activity: "Each title sent to Trakt or brought from it, the last 30
-days" closed, "The last 30 days, newest first" open). Its contents follow it; a long list goes in the settings `ScrollList`
-(a focus stop on the TV whose arrows scroll it; Activity raises it from 17em to 23em). Activity's rows (D125, D130) are one
-line per title, "**Title** S02E04 · 10:41 PM · ● action", tightened to 0.42em, under day headings (Today, Yesterday,
-Mon 27 Oct: 0.78em small capitals in the secondary text over a divider); the dot is blue done, amber waiting or playing, red
-failed; on the phone the title takes its own line and "time · action" goes under it. On the TV it
-takes the stock focused-button fill through `show-focus`, with dark text on the cyan. Not remembered between visits.
+a leading chevron, the title in small capitals (0.8em, weight 600, letter-spacing 0.06em) and a short text after it in the
+secondary text (0.85em). Its contents follow it; a long list goes in the settings `ScrollList` (a focus stop on the TV whose
+arrows scroll it; Activity raises it from 17em to 23em). Not remembered between visits.
+
+The picker's ▸ Rejected keeps the ▸ / ▾ text chevron in its own `aria-hidden` span and the stock focused-button fill on the TV.
+
+Settings › Trakt's Activity (D153, D154) is a group header in its own space:
+- 1.2em under the export row, never pulled over its divider.
+- The whole column's width is one flat button (0.55em by 0.6em padding; its text lines up with the rows above).
+- Material `ChevronRight` (1.35em, the text colour) turns a quarter down when open (0.15 s; none with reduced motion).
+- Then **ACTIVITY** and, after a dot, the count: "12 titles in the last 30 days", the same words open and closed.
+- On a computer: a quiet full-width `--jf-palette-action-hover` fill under the pointer and on keyboard focus. The text keeps
+  its colour (not the flat button's cyan).
+- On the TV: the stock cyan fill across the row with dark text and chevron, without the stock 1.2 zoom.
+
+Activity's rows (D125, D130, D162) are one line per title:
+- The time comes first, in its own right-aligned 4.6em column with tabular figures, then "**Title** S02E04 · ● action",
+  tightened to 0.42em. The dot is blue done, amber waiting or playing, red failed.
+- On the phone the time and the title share the first line and the action goes under the title.
+
+Each day is a `.jfmod-traktDayGroup` (D159): the day in title case at the row's size, weight 600, primary text, on a band a
+shade lighter than the section (the paper colour with a 7 % veil of the text colour; 0.4em by 0.6em padding, 0.2em corners,
+0.9em above). The band is pinned (`position: sticky`) at the top of the list while its titles scroll under it, and leaves
+with its group.
 Code: `ReleasePickerDialog.tsx` (`jfmod-rejectedToggle`), `TraktSection.tsx` and `settings.scss` (`jfmod-activityToggle`).
 
 ## A warning on a row's title line
