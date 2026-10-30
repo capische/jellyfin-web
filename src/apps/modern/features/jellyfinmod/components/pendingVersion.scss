@@ -26,7 +26,8 @@
 .jfmod-pendingLine,
 .jfmod-pendingMeta {
     display: flex;
-    align-items: center;
+    // Baseline, so the smaller flag can be centred on the status's figures (D156, below).
+    align-items: baseline;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -60,8 +61,12 @@
 }
 
 // The flag (`· replaces 1080p`, `· 1080p stays`) in the strip captions' type, smaller (the user's pick, 2026-10-30; D148):
-// uppercase, 600, .06em tracking, 62 %, at .62em of the row (the meta line is 86 % of it, so .62 / .86).
+// uppercase, 600, .06em tracking, 62 %, at .62em of the row (the meta line is 86 % of it, so .62 / .86). Its caps are centred
+// on the status's figures (D156): the line aligns on the baseline (`.jfmod-pendingMeta` above) and the flag rises by half the
+// difference of the two cap heights, .727 × (1 / .7209 − 1) / 2 = .14em of its own size (Inter's cap height .727em).
 .jfmod-pendingMeta > .jfmod-fileExtra {
+    position: relative;
+    top: -0.14em;
     flex: 0 0 auto;
     margin-left: 0.3em;
     font-size: 0.7209em;
