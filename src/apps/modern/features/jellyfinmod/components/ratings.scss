@@ -97,14 +97,6 @@
     outline-offset: 0.1em;
 }
 
-// Gone while focus sits below (nothing to show): its height kept so the row does not move, its width given back so the stock
-// marks fit where it was.
-.jfmod-ratingsGroup-held {
-    width: 0;
-    margin: 0;
-    overflow: hidden;
-}
-
 // The stock star and tomato the group stands in for (classes the group puts on the row: the star whenever the group shows, the
 // tomato while it shows Rotten Tomatoes).
 .jfmod-ratings-hideStar > .starRatingContainer,
