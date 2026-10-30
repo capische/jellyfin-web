@@ -444,7 +444,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not evidence, and has not been run.
 - Phase 8 — release attributes and playback evidence: planned, not scheduled (see
   [`PHASE8.md`](PHASE8.md)).
-- Phase 9 — ratings: **built (not accepted)**, started 2026-10-07 on the user's decision (see [`PHASE9.md`](PHASE9.md)). R1–R8
+- Phase 9 — ratings: **accepted 2026-10-30** (the user accepted it; Codex approved the final fix delta; merged into main-stubs and main-items), started 2026-10-07 on the user's decision (see [`PHASE9.md`](PHASE9.md)). R1–R8
   implemented on the `jellyfinmod-phase9` branches (plugin `abeffb7..612d557`, web from `95709dc6ca`); all 14 plugin
   suites pass on the test host (the new `PhaseNineRatingsIntegration` included), and the live chain passed on 18096 against an MDBList
   stand-in in Chromium and real Chrome (39/39 each), fixtures removed. 2026-10-08: automatic fetching on arrival and at setup
@@ -2073,7 +2073,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   and direct-play diagnostics that report rather than re-grab. Depends on Phase 12
   and Phase 7 S8–S9; its open questions are listed there.
 - **Phase 9 — ratings and title enrichment.** **Started 2026-10-07** on the user's explicit decision; task-level plan,
-  evidence and handover in [`PHASE9.md`](PHASE9.md) (R1–R8), status *built (not accepted)*. **Accepted 2026-09-21:** MDBList is the single ratings
+  evidence and handover in [`PHASE9.md`](PHASE9.md) (R1–R8), status *accepted 2026-10-30*. **Accepted 2026-09-21:** MDBList is the single ratings
   source (IMDb, TMDB, Trakt, Rotten Tomatoes critic and audience, plus its extra sources as
   optional), the host's OMDb plugin data is a read-only fallback for on-disk titles, and Google
   ratings are dropped. Ratings live in plugin SQLite, the key in the secret store, and a missing
