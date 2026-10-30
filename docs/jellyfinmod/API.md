@@ -1250,15 +1250,27 @@ Trakt, with Jellyfin's `LastPlayedDate`.
   and `traktUsername` and `avatarUrl` when the server has read them: one read-only `GET https://api.trakt.tv/users/settings`
   per account, once a day or when its link changes, with the token the Trakt plugin holds, which is read on the server
   only and never logged, stored or returned (D49). The browser loads the avatar from its Trakt address.
-- `activity`: the last 20 export runs, newest first, kept in `trakt-activity.json` in the plugin's data folder: `startedAt`,
-  `endedAt`, `status`, `clean`, `why` (`watch`, `reconnect`, `daily`, `retry`, `sync_now`, `first`; left out for a run
-  JellyfinMod did not start), `episodesWatched`, `moviesWatched`, `episodesCollected`, `moviesCollected` (the stock plugin's
-  own count lines in that run's log; left out when it logged none) and `error` (the Trakt error in a clause). `runningWhy`:
-  while a run JellyfinMod started goes, why it started it. Each run's end is queued as the host reports it and judged by
-  the background check, so two runs close together are both listed.
+- `activity`: Settings › Trakt's Activity (D125–D127, D134), the newest 200 rows of the last 30 days, newest first, one per
+  title and direction holding its latest state, kept in the plugin's SQLite table `TraktActivity` (pruned to 30 days on each
+  write; `trakt-activity.json` is retired). Each row: `at` (UTC), `user` (the Jellyfin user's name), `title` (a snapshot of
+  the series or movie name, so a deleted item still reads), `code` (`S02E04`; left out for a movie and a count row), `kind`
+  (`episode` or `movie`), `direction` (`to` Trakt or `from` it), `state` and `detail`. States: `playing` and `stopped`
+  (`detail` the percent) while a linked user with the Trakt plugin's Scrobble on plays a title, from the host's own playback
+  events (the plugin reports them to Trakt live; not confirmed); `waiting` from a linked user's watch here (reason
+  PlaybackFinished or TogglePlayed, while the account's Post watched history is on); `sent` once a clean export that started
+  after the watch has run; `failed` when that export logged the title as not found on Trakt (matched by its ids, or by season
+  and number when exactly one waiting episode has them; such a run still counts as clean, D135); `imported` and `position`
+  (`detail` minutes) from the import's saves with the reason Import; `collection` (`detail` the count) for a clean export's
+  collection adds; `summary` (`detail` the count) for more than 50 titles at once (both from the plugin's count lines,
+  which it logs before sending, so a run that is not clean adds neither). A finished play is read from the host's
+  `PlaybackStopped` (played to completion), not from its PlaybackFinished save, which a rewatch stopped early also makes. `nextExportAt`: when the automatic export
+  after the latest watch is due (null when none is, or the switch is off). `lastError`: the last export's Trakt error in a
+  clause (`Trakt answered 500 Internal Server Error`) while that run is not clean. `viewerName`: the signed-in user's name,
+  for the account bar while nobody is linked.
 - `lastRun` is the host's last result of the task (omitted when it never ran). `lastRunConfirmed` is false when that run
   did not look clean, best effort: the host did not say Completed, or the Trakt plugin logged a Trakt error
-  (`Trakt.ScheduledTasks.SyncLibraryTask`, `Trakt.Api.TraktApi`, ERR or FTL) in the host's file log while it ran (it
+  (`Trakt.ScheduledTasks.SyncLibraryTask`, `Trakt.Api.TraktApi`, ERR or FTL; not a title Trakt answered as not found,
+  D135) in the host's file log while it ran (it
   completes its task even when Trakt refuses a write); null until JellyfinMod's background check has judged it
   (within a minute of its end; a status read never reads the log). Such a run is retried;
   `nextAttemptAt` and `failures` describe that retry (in memory: a restart judges the last run again from the log). The
@@ -1269,10 +1281,9 @@ Trakt, with Jellyfin's `LastPlayedDate`.
   `importRefusal` says why JellyfinMod will not run the Trakt plugin's own import ("Import watched states and playback
   progress from trakt.tv", `TraktSyncFromTraktTask`): the export's refusals except `unwatched_history`, and
   `unwatched_import` while a linked user's "skip unwatched import" is off in the Trakt plugin (the import would mark
-  unwatched here what Trakt has no play of); `importRunning` while it runs. An activity entry with `"kind":"import"` is an
-  import run: `episodesWatched` and `moviesWatched` are what it marked watched in Jellyfin and `progressUpdated` the playback
-  positions it set, counted from the host's own save events with the reason Import while it ran (the plugin logs those
-  changes at debug level only).
+  unwatched here what Trakt has no play of); `importRunning` while it runs. What an import marked watched in Jellyfin, or
+  the playback positions it set, are `from` rows of `activity`, from the host's own save events with the reason Import (the
+  plugin logs those changes at debug level only).
 
 `POST /JellyfinMod/Trakt/Export` starts the export now, or joins the run already going: 202 with the state above, or 409
 `{"error":"<refusal>"}`. With the import on and allowed it starts the import first, and the export when the import ends.

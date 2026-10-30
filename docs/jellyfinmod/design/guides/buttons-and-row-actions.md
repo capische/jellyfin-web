@@ -3,7 +3,8 @@
 **Status:** user rules 2026-10-07/08 (three button kinds, Title Case, round icon-only row actions), applied across the
 settings area, the Dashboard page, the detail page and the dialogs. Settings › Trakt's red Disconnect (`link_off`) and the
 group-title disclosure: user approval 2026-10-29 ("Round red icon is fine, go ahead with Trakt build"; decisions D67, D72,
-D74, mockups `reviews/phase13/mockups-v2`). Record: [UX.md §12.1](../../UX.md) (the authoritative
+D74, mockups `reviews/phase13/mockups-v2`); Activity's per-title rows, hint and the main **Connect Trakt**: user approval
+2026-10-29 ("looks good"; D125–D130, mockups `reviews/phase13/mockups-v3`). Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
 the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
 
@@ -43,8 +44,12 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
 A group that is closed by default (the picker's **▸ 12 Rejected**, Settings › Trakt's **▸ ACTIVITY**) opens from a flat
 button in the group title's look, not from a raised button: `flatButtonClass()` plus the surface's own class, `aria-expanded`,
 the chevron ▸ / ▾ in its own `aria-hidden` span, the title in small capitals (0.8em, weight 600, letter-spacing 0.06em) and
-a short hint after it in the secondary text (0.85em). Its contents follow it; a long list goes in the settings
-`ScrollList` (a focus stop on the TV whose arrows scroll it; Activity raises it from 17em to 23em, six runs). On the TV it
+a short hint after it in the secondary text (0.85em; Activity: "Each title sent to Trakt or brought from it, the last 30
+days" closed, "The last 30 days, newest first" open). Its contents follow it; a long list goes in the settings `ScrollList`
+(a focus stop on the TV whose arrows scroll it; Activity raises it from 17em to 23em). Activity's rows (D125, D130) are one
+line per title, "**Title** S02E04 · 10:41 PM · ● action", tightened to 0.42em, under day headings (Today, Yesterday,
+Mon 27 Oct: 0.78em small capitals in the secondary text over a divider); the dot is blue done, amber waiting or playing, red
+failed; on the phone the title takes its own line and "time · action" goes under it. On the TV it
 takes the stock focused-button fill through `show-focus`, with dark text on the cyan. Not remembered between visits.
 Code: `ReleasePickerDialog.tsx` (`jfmod-rejectedToggle`), `TraktSection.tsx` and `settings.scss` (`jfmod-activityToggle`).
 

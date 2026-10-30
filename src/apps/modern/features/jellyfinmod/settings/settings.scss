@@ -1414,3 +1414,70 @@
 
 /* TV: the toggle takes the stock focused-button fill through show-focus, with dark text on the cyan. */
 .layout-tv .jfmod-activityToggle.emby-button.show-focus:focus { color: rgba(0, 0, 0, 0.87); }
+
+/* Settings › Trakt v3 (D125–D130; approved mockups reviews/phase13/mockups-v3). The account bar first: the section head
+   already draws the line above it. */
+.jfmod-blist.jfmod-traktAccount {
+    margin-bottom: 1.1em;
+    border-top: 0;
+}
+
+.jfmod-blist.jfmod-traktAccount .jfmod-brow { padding-top: 0.2em; }
+
+/* Nobody connected: the switches and Sync Now stay in place, dimmed to the refused-action 45 %, still focus stops (D129). */
+.jfmod-traktConnectHint { margin: 0.2em 0 0.6em; }
+
+.jfmod-brow.jfmod-traktOff .MuiFormControlLabel-root,
+.jfmod-brow.jfmod-traktOff .fieldDescription,
+.jfmod-brow.jfmod-traktOff .MuiButton-root { opacity: 0.45; }
+
+/* Activity: one row per title, "media · time · action", under a day heading (D125). */
+.jfmod-traktActivity .jfmod-scrolllist .jfmod-brow.jfmod-traktItem { padding: 0.42em 0; }
+
+.jfmod-traktDay {
+    padding: 0.9em 0 0.3em;
+    border-bottom: 0.07em solid var(--jf-palette-divider, rgba(255, 255, 255, 0.12));
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-traktDay:first-child { padding-top: 0.4em; }
+
+.jfmod-traktLine {
+    display: block;
+    line-height: 1.45;
+}
+
+.jfmod-traktMedia b { font-weight: 600; }
+
+.jfmod-traktSep,
+.jfmod-traktTime {
+    color: rgba(255, 255, 255, 0.7);
+    color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.jfmod-traktTime { font-variant-numeric: tabular-nums; }
+
+/* The action wraps with the line on a phone instead of overflowing it. */
+.jfmod-traktActivity .jfmod-traktItem .jfmod-state {
+    display: inline;
+    margin-right: 0;
+    font-size: 1em;
+}
+
+.jfmod-traktActivity .jfmod-traktItem .jfmod-state i {
+    display: inline-block;
+    top: 0.06em;
+}
+
+/* Phone (and a narrow window): the title on its own line, then "time · action" under it. */
+@media (max-width: 48em) {
+    .jfmod-traktMedia { display: block; }
+    .jfmod-traktMedia + .jfmod-traktSep { display: none; }
+}
+.layout-mobile .jfmod-traktMedia { display: block; }
+.layout-mobile .jfmod-traktMedia + .jfmod-traktSep { display: none; }

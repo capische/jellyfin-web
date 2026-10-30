@@ -108,22 +108,20 @@ export interface TraktExportUser {
     avatarUrl?: string | null;
 }
 
-/** One export run of the Activity list (D50, D73), newest first; the server leaves null fields out. */
-export interface TraktExportRun {
-    startedAt: string;
-    endedAt: string;
-    status: string;
-    clean: boolean;
-    /** `watch`, `reconnect`, `daily`, `retry`, `sync_now`, `first`, or null for a run JellyfinMod did not start. */
-    why?: string | null;
-    episodesWatched?: number | null;
-    moviesWatched?: number | null;
-    episodesCollected?: number | null;
-    moviesCollected?: number | null;
-    error?: string | null;
-    /** `import` for a run of the Trakt plugin's import (the watched counts are what it marked watched in Jellyfin). */
-    kind?: string | null;
-    progressUpdated?: number | null;
+/**
+ * One title of the Activity list (D125, D126), newest first; the server leaves null fields out. `direction` is `to` (sent to
+ * Trakt) or `from` (brought from it). `state` is `playing`, `stopped` (detail: percent), `waiting`, `sent`, `failed`, `imported`,
+ * `position` (detail: minutes), `collection` (detail: count) or `summary` (detail: count, a burst of more than 50 titles).
+ */
+export interface TraktActivity {
+    at: string;
+    user: string;
+    title: string;
+    code?: string | null;
+    kind: string;
+    direction: 'to' | 'from';
+    state: string;
+    detail?: number | null;
 }
 
 /** `GET /JellyfinMod/Trakt/Export` (Phase 13). */
@@ -142,12 +140,17 @@ export interface TraktExport {
     failures: number;
     quietMinutes: number;
     users: TraktExportUser[];
-    activity?: TraktExportRun[];
-    runningWhy?: string | null;
+    activity?: TraktActivity[];
     /** The "Also import watches from Trakt" switch, why the import is refused (`unwatched_import`), and whether it runs. */
     importEnabled?: boolean;
     importRefusal?: string | null;
     importRunning?: boolean;
+    /** When the automatic export is due (the quiet period after the last watch ended); null when none is due. */
+    nextExportAt?: string | null;
+    /** What went wrong in the last export that did not reach Trakt, such as `Trakt answered 500 Internal Server Error`. */
+    lastError?: string | null;
+    /** The signed-in Jellyfin user's name, for the account bar while nobody is connected (D128). */
+    viewerName?: string | null;
 }
 
 /** `today 14:05`, `yesterday 21:40` or `12 Oct 21:40`: a short local time for the Trakt lines. */
