@@ -71,7 +71,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
   lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is its stacked
   cell's width, the card's, D163); on the paper with a 1px divider border and
-  the popover's shadow, sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
+  the popover's shadow (the border in the theme's divider `var(--jf-palette-divider)`, visible in light, unchanged in dark;
+  D164), sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
   only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
   `removes <date>`), the size and the three row icons (the full 2.5em round buttons of
   [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **The current file has
