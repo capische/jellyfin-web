@@ -209,7 +209,8 @@ const removalPlan = (row: QueueRow, refused: string | null): RemovalPlan => {
 /**
  * The removal dialog (D118): the row's action as its title, the question about the title, the facts that decide it, then one
  * button per outcome with its result under it; the destructive one red, the safe one focused and changing nothing. Blocklist is
- * one checkbox, independent of the choice. Back or Escape is the safe choice; the dialog helper returns focus to the opener.
+ * one checkbox, independent of the choice. The close X in the header, Back on the TV and Escape on a computer are the safe choice
+ * too; the dialog helper returns focus to the opener.
  */
 const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQueueRequest | null> => {
     const plan = removalPlan(row, refused);
@@ -217,7 +218,9 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     dlg.classList.add('formDialog', 'jfmod-removeDialog', 'align-items-center', 'justify-content-center');
     if (!layoutManager.tv) dlg.classList.add('dialog-fullscreen-lowres');
     let html = '<div class="formDialogContent smoothScrollY no-grow jfmod-removeContent"><div class="jfmod-remove">'
-        + '<h1 class="jfmod-removeTitle">' + escapeHtml(plan.title) + '</h1>'
+        + '<div class="jfmod-removeHead"><h1 class="jfmod-removeTitle">' + escapeHtml(plan.title) + '</h1>'
+        + '<button is="paper-icon-button-light" type="button" class="jfmod-removeClose" title="Close" aria-label="Close">'
+        + '<span class="material-icons close" aria-hidden="true"></span></button></div>'
         + '<p class="jfmod-removeQuestion">' + escapeHtml(plan.question) + '</p>';
     for (const fact of plan.facts) html += '<p class="jfmod-removeFacts' + (fact.fail ? ' jfmod-removeFacts--fail' : '') + '">' + fact.html + '</p>';
     for (const note of plan.notes) html += '<p class="jfmod-removeNote">' + escapeHtml(note) + '</p>';
@@ -234,6 +237,12 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     }
     dlg.innerHTML = html + '</div></div>';
     let result: RemoveQueueRequest | null = null;
+    dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', () => dialogHelper.close(dlg));
+    // Escape closes it on a computer too (the TV already maps Escape to Back), wherever focus is.
+    const onKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && !layoutManager.tv) dialogHelper.close(dlg);
+    };
+    document.addEventListener('keydown', onKey);
     dlg.querySelectorAll<HTMLButtonElement>('.jfmod-removeChoice').forEach(button => {
         button.addEventListener('click', () => {
             const id = button.getAttribute('data-choice');
@@ -251,6 +260,7 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     // its place in the list.
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const done = () => {
+        document.removeEventListener('keydown', onKey);
         if (!layoutManager.tv && opener?.isConnected) focusManager.focus(opener);
         return result;
     };
