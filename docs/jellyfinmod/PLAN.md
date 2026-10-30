@@ -464,9 +464,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   [`PHASE10.md`](PHASE10.md)).
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: the first slice, **a best copy for TVs and computers and a 1080p copy for phones** (M30–M38,
-  plan `reviews/phase12/PLAN-REFRESH.md`, design approved by the user 2026-10-29), is **built (not accepted)**: M30, M31, M32–M34
-  (computer, dark), M35 and M36 on the items line (`feat/phase12-items`), at gate 1 (first look) on charlie; M37 waits for the movie
-  Replace branch, M38 for acceptance. The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
+  plan `reviews/phase12/PLAN-REFRESH.md`, design approved by the user 2026-10-29), is **built (not accepted)**: M30, M31, M32–M34,
+  M35 and M36 on both lines (`feat/phase12-items` on `main-items`, `feat/phase12` on `main-stubs`), with the user's later changes
+  (no Get 1080p for Phones row, D103; Add of any release, D108; best-first list and phones at 1080p or below, D114; the phone mark
+  as a small suffix, D133); gate 2 run on charlie (computer, phone, TV 1280 and 1920, dark and light, Chromium and real Chrome),
+  waiting for the user's re-verification. M37 waits for the movie Replace branch, M38 for acceptance (real services and the
+  physical C1 and G2). The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
 - Phase 13 — offline episode watches to Trakt: planned, not scheduled (requested 2026-10-07;
   see [`PHASE13.md`](PHASE13.md)). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming
   history observations. Implementation requires connection and single-writer design refinement.
