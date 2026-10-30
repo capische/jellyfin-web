@@ -237,14 +237,34 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     }
     dlg.innerHTML = html + '</div></div>';
     let result: RemoveQueueRequest | null = null;
-    dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', () => dialogHelper.close(dlg));
+    // It closes once. The helper starts its close at once but marks the dialog closed only after the 120 ms animation, so a
+    // second Escape, X, Back, choice or click outside in between closed it again: the focus scope was popped and history went
+    // Back twice, leaving the page (or the release picker under it). Every later attempt is dropped from the first `closing` on,
+    // and a later choice no longer changes the answer.
+    let closing = false;
+    dlg.addEventListener('closing', () => {
+        closing = true;
+    });
+    const close = () => {
+        if (!closing) dialogHelper.close(dlg);
+    };
+    const holdWhileClosing = (event: Event) => {
+        if (closing && (event.type === 'click' || (event as CustomEvent<{ command?: string }>).detail?.command === 'back')) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    };
+    // The TV's Back and a click outside reach the helper's own handlers; they are held here first.
+    dlg.addEventListener('command', holdWhileClosing, true);
+    dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', close);
     // Escape closes it on a computer too (the TV already maps Escape to Back), wherever focus is.
     const onKey = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && !layoutManager.tv) dialogHelper.close(dlg);
+        if (event.key === 'Escape' && !layoutManager.tv) close();
     };
     document.addEventListener('keydown', onKey);
     dlg.querySelectorAll<HTMLButtonElement>('.jfmod-removeChoice').forEach(button => {
         button.addEventListener('click', () => {
+            if (closing) return;
             const id = button.getAttribute('data-choice');
             if (id === 'delete' || id === 'keep') {
                 result = {
@@ -253,7 +273,7 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
                     blocklist: !!dlg.querySelector<HTMLInputElement>('.jfmod-removeBlocklistBox')?.checked
                 };
             }
-            dialogHelper.close(dlg);
+            close();
         });
     });
     // The dialog helper gives focus back on the TV only; on a computer and a phone the opener gets it here, so the keyboard keeps
@@ -264,7 +284,9 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
         if (!layoutManager.tv && opener?.isConnected) focusManager.focus(opener);
         return result;
     };
-    return dialogHelper.open(dlg).then(done, done);
+    const opened = dialogHelper.open(dlg).then(done, done);
+    (dlg as HTMLElement & { dialogContainer?: HTMLElement }).dialogContainer?.addEventListener('click', holdWhileClosing, true);
+    return opened;
 };
 
 const refusedDelete = (error: unknown) => {
