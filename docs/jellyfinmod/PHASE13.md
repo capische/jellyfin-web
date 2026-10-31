@@ -335,3 +335,11 @@ Gate 1 is the computer layout, dark, on echo: the live `activity` and `import` s
 the runner allowed for the environment's clock running a little behind the Mac's on a run of milliseconds); every time ends at
 x 473 and every title starts at x 486 at 1440 px; the band is sticky and pins at the list's top. Built (not accepted).
 
+**Activity's direction mark (2026-10-30).** The user, on v4: "What blue dot means? … so it's clear which direction was going",
+then, after mockups v5 to v8, accepted the Glyph ("Trakt glyph accepted too"; D182, workspace `reviews/phase13/mockups-v8`,
+guide `design/guides/trakt-direction-mark.md`). The state dot gives way to Trakt's disc with the check turned into the
+direction, in its own column after the time: up sent to Trakt, down brought from it, in Trakt's brand violet `#6438d0`
+(app.trakt.tv/branding); waiting or playing a dashed violet ring; failed a white cross on Trakt's red with the words red. The
+words drop "on Trakt" and "(from Trakt)". The mark is a redrawn Trakt mark, against Trakt's branding rules (no altered or
+recoloured logo); the user accepted that. Gate 1 is the computer layout, dark, on echo; built (not accepted).
+
