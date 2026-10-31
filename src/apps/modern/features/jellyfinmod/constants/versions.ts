@@ -248,24 +248,64 @@ export const dynamicRangeRank = (version: VersionDto, rangeTypes?: VideoRangeTyp
 
 /** Lines of picture per resolution the plugin reads, finer than `versionRank` (a 1440p is above a 1080p). */
 const RESOLUTION_LINES = new Map([['2160p', 2160], ['1440p', 1440], ['1080p', 1080], ['720p', 720], ['576p', 576], ['480p', 480]]);
-const linesOf = (version: VersionDto) => RESOLUTION_LINES.get(version.resolution ?? '') ?? version.height ?? 0;
+
+/**
+ * Lines of picture for a picture's size, on the plugin's boxes (`VersionQuality.FineNativeResolution`, `OrderOf`): 4K above
+ * 2560×1440, 1440p above 1920×1088, 1080p above 1280×962, 720p above 1024×576, then 576p from 540 lines, else 480p; 0 when
+ * unknown. A scope-ratio 3840×1600 is 2160p, 1920×800 is 1080p.
+ */
+export const linesOfSize = (width?: number | null, height?: number | null): number => {
+    const w = width ?? 0;
+    const h = height ?? 0;
+    if (w <= 0 && h <= 0) return 0;
+    if (w > 2560 || h > 1440) return 2160;
+    if (w > 1920 || h > 1088) return 1440;
+    if (w > 1280 || h > 962) return 1080;
+    if (w > 1024 || h > 576) return 720;
+    return h >= 540 ? 576 : 480;
+};
+
+const linesOf = (version: VersionDto) => RESOLUTION_LINES.get(version.resolution ?? '') ?? linesOfSize(version.width, version.height);
+
+/** What two copies of a title are compared on (D114): lines of picture, the range (2 Dolby Vision, 1 HDR, 0 SDR), the size. */
+export interface CopyFacts {
+    lines: number;
+    range: number;
+    size: number;
+}
+
+const bestOrder = (a: CopyFacts, b: CopyFacts) => b.lines - a.lines || b.range - a.range || b.size - a.size;
+const phoneOrder = (a: CopyFacts, b: CopyFacts) => b.lines - a.lines || a.range - b.range || b.size - a.size;
+const smallestOrder = (a: CopyFacts, b: CopyFacts) => a.lines - b.lines || a.range - b.range || a.size - b.size;
+
+/**
+ * The copy a device starts among a title's files, the one rule of the detail page and every Play (Codex review of Phase 12,
+ * P2): TVs and computers the best (more lines, then Dolby Vision, HDR, SDR, then the larger file); phones the best at 1080p or
+ * below (never 1440p), SDR first, then the larger file, or the smallest when every copy is larger. Ties keep the given order.
+ */
+export const pickCopy = <T>(items: T[], facts: (item: T) => CopyFacts, device: DevicePreference): T | null => {
+    const ranked = items.map((item, index) => ({ item, index, facts: facts(item) }));
+    const first = (list: typeof ranked, order: (a: CopyFacts, b: CopyFacts) => number) =>
+        [...list].sort((a, b) => order(a.facts, b.facts) || a.index - b.index)[0]?.item ?? null;
+    if (device !== 'mobile') return first(ranked, bestOrder);
+    const fitting = ranked.filter(item => item.facts.lines > 0 && item.facts.lines <= 1080);
+    return fitting.length > 0 ? first(fitting, phoneOrder) : first(ranked, smallestOrder);
+};
+
+const versionFacts = (rangeTypes?: VideoRangeTypes | null) => (version: VersionDto): CopyFacts => ({
+    lines: linesOf(version), range: dynamicRangeRank(version, rangeTypes), size: version.sizeBytes ?? 0
+});
 
 /**
  * A title's files best first (user, 2026-10-29, D114: a title can hold many files): the higher resolution, then Dolby Vision,
  * HDR, SDR, then the larger file; files that tie keep the plugin's order. The Video list shows them in this order, and its top
  * file is the one TVs and computers start.
  */
-export const bestFirst = (versions: VersionDto[], rangeTypes?: VideoRangeTypes | null): VersionDto[] => versions
-    .map((version, index) => ({ version, index }))
-    .sort((a, b) => linesOf(b.version) - linesOf(a.version)
-        || dynamicRangeRank(b.version, rangeTypes) - dynamicRangeRank(a.version, rangeTypes)
-        || (b.version.sizeBytes ?? 0) - (a.version.sizeBytes ?? 0) || a.index - b.index)
-    .map(item => item.version);
-
-/** Whether phones may play a file: 1080p or below, never a 1440p (D114); the height the host reported when no name says. */
-const fitsPhone = (version: VersionDto) => {
-    const lines = linesOf(version);
-    return lines > 0 && lines <= 1080;
+export const bestFirst = (versions: VersionDto[], rangeTypes?: VideoRangeTypes | null): VersionDto[] => {
+    const facts = versionFacts(rangeTypes);
+    return versions.map((version, index) => ({ version, index, facts: facts(version) }))
+        .sort((a, b) => bestOrder(a.facts, b.facts) || a.index - b.index)
+        .map(item => item.version);
 };
 
 /**
@@ -280,15 +320,9 @@ export const preferredVersion = (versions: VersionDto[], device: DevicePreferenc
     if (versions.length < 2) return null;
     const resuming = versions.find(version => version.inProgress);
     if (resuming) return resuming;
-    const byScore = (candidates: VersionDto[], score: (version: VersionDto) => number) =>
-        [...candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
-    const range = (version: VersionDto) => dynamicRangeRank(version, rangeTypes);
-    if (device !== 'mobile') return bestFirst(versions, rangeTypes)[0] ?? null;
-    const marked = versions.find(version => version.phoneCopy);
-    if (marked) return marked;
-    const fitting = versions.filter(fitsPhone);
-    if (fitting.length === 0) return byScore(versions, version => -linesOf(version));
-    return byScore(fitting, version => linesOf(version) * 10 - range(version));
+    // The plugin's mark follows the same rule (PhoneCopies.Mark), so it is the phone's file when there is one.
+    const marked = device === 'mobile' ? versions.find(version => version.phoneCopy) : undefined;
+    return marked ?? pickCopy(versions, versionFacts(rangeTypes), device);
 };
 
 /** How a version is named in a sentence: its label, else its resolution. */
