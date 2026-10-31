@@ -135,21 +135,59 @@ const waitingWords = (row: TraktActivity, trakt: TraktExport) => {
     return 'waiting: the next export sends it';
 };
 
-/** A row's action and its dot: blue done, amber waiting or in progress, red failed (D126, D130, D134). */
-const actionOf = (row: TraktActivity, trakt: TraktExport): { kind: 'ok' | 'warn' | 'err'; words: string } => {
+/**
+ * A row's action and its state: done, pending (waiting or playing) or failed (D126, D134). The direction mark beside it
+ * says "Trakt" and which way, so the words leave that out (D182).
+ */
+const actionOf = (row: TraktActivity, trakt: TraktExport): { state: MarkState; words: string } => {
     const count = row.detail ?? 0;
     switch (row.state) {
-        case 'playing': return { kind: 'warn', words: 'watching now on Trakt (reported live by the Trakt plugin)' };
-        case 'stopped': return { kind: 'ok', words: `stopped at ${count} % (reported live by the Trakt plugin)` };
-        case 'waiting': return { kind: 'warn', words: waitingWords(row, trakt) };
-        case 'sent': return { kind: 'ok', words: 'marked watched on Trakt' };
-        case 'failed': return { kind: 'err', words: `failed: Trakt does not know this ${row.kind === 'movie' ? 'movie' : 'episode'}` };
-        case 'imported': return { kind: 'ok', words: 'marked watched in Jellyfin (from Trakt)' };
-        case 'position': return { kind: 'ok', words: `playback position from Trakt: ${count} min` };
-        case 'collection': return { kind: 'ok', words: 'added to the Trakt collection' };
-        case 'summary': return { kind: 'ok', words: row.direction === 'from' ? 'marked watched in Jellyfin (from Trakt)' : 'marked watched on Trakt (one export)' };
-        default: return { kind: 'ok', words: row.state };
+        case 'playing': return { state: 'pending', words: 'watching now (reported live)' };
+        case 'stopped': return { state: 'done', words: `stopped at ${count} % (reported live)` };
+        case 'waiting': return { state: 'pending', words: waitingWords(row, trakt) };
+        case 'sent': return { state: 'done', words: 'marked watched' };
+        case 'failed': return { state: 'failed', words: `failed: Trakt does not know this ${row.kind === 'movie' ? 'movie' : 'episode'}` };
+        case 'imported': return { state: 'done', words: 'marked watched here' };
+        case 'position': return { state: 'done', words: `playback position: ${count} min` };
+        case 'collection': return { state: 'done', words: 'added to the collection' };
+        case 'summary': return { state: 'done', words: row.direction === 'from' ? 'marked watched here' : 'marked watched (one export)' };
+        default: return { state: 'done', words: row.state };
     }
+};
+
+type MarkState = 'done' | 'pending' | 'failed';
+const ARROW_UP = 'M12 16.6V7.6M8.1 11.4 12 7.5l3.9 3.9';
+const ARROW_DOWN = 'M12 7.4v9M8.1 12.6 12 16.5l3.9-3.9';
+const CROSS = 'M9.2 9.2l5.6 5.6M14.8 9.2l-5.6 5.6';
+
+/**
+ * The direction mark (D182, guide `trakt-direction-mark.md`): Trakt's disc with the check turned into the direction, up sent to
+ * Trakt and down brought from it, in Trakt's brand violet; pending a dashed ring in the theme's violet; failed a white cross on
+ * Trakt's red. Its words are its accessible name and tooltip.
+ */
+const DirectionMark: FC<{ direction: 'to' | 'from'; state: MarkState }> = ({ direction, state }) => {
+    let words = direction === 'to' ? 'Sent to Trakt' : 'Brought from Trakt';
+    if (state === 'pending') words += ', not yet done';
+    if (state === 'failed') words = 'Not sent to Trakt';
+    const arrow = direction === 'to' ? ARROW_UP : ARROW_DOWN;
+    return (
+        <span className={`jfmod-traktMark jfmod-traktMark-${state}`} role='img' aria-label={words} title={words}>
+            <svg className='jfmod-traktGlyph' viewBox='0 0 24 24' aria-hidden='true' focusable='false'>
+                {state === 'pending' ? (
+                    <>
+                        <circle cx='12' cy='12' r='10.6' fill='none' stroke='currentColor' strokeWidth='2.6' strokeDasharray='5.2 3.1' />
+                        <path d={arrow} fill='none' stroke='currentColor' strokeWidth='2.6' strokeLinecap='round' strokeLinejoin='round' />
+                    </>
+                ) : (
+                    <>
+                        <circle className='jfmod-traktGlyph-disc' cx='12' cy='12' r='12' />
+                        <circle cx='12' cy='12' r='8.2' fill='none' stroke='#fff' strokeWidth='1.7' />
+                        <path d={state === 'failed' ? CROSS : arrow} fill='none' stroke='#fff' strokeWidth='2.4' strokeLinecap='round' strokeLinejoin='round' />
+                    </>
+                )}
+            </svg>
+        </span>
+    );
 };
 
 /** What the row names: the title in bold and its episode, or for a count row the count (D126). */
@@ -161,8 +199,8 @@ const mediaOf = (row: TraktActivity) => {
 };
 
 /**
- * One title of Activity: the time in its own column, then "media · action" (D125, D130, D162), with the Jellyfin user before the
- * media when more than one account is linked.
+ * One title of Activity: the time in its own column, the direction mark in the next, then "media · action" (D125, D130, D162,
+ * D182), with the Jellyfin user before the media when more than one account is linked.
  */
 const ActivityRow: FC<{ row: TraktActivity; trakt: TraktExport; withUser: boolean }> = ({ row, trakt, withUser }) => {
     const action = actionOf(row, trakt);
@@ -171,10 +209,11 @@ const ActivityRow: FC<{ row: TraktActivity; trakt: TraktExport; withUser: boolea
             <div className='jfmod-brow-main'>
                 <span className='jfmod-traktLine'>
                     <span className='jfmod-traktTime'>{clock(row.at)}</span>
+                    <DirectionMark direction={row.direction} state={action.state} />
                     <span className='jfmod-traktWhat'>
                         <span className='jfmod-traktMedia'>{withUser && `${row.user} · `}{mediaOf(row)}</span>
                         <span className='jfmod-traktSep'> · </span>
-                        <StatePill kind={action.kind}>{action.words}</StatePill>
+                        <span className={`jfmod-traktAction jfmod-traktAction-${action.state}`}>{action.words}</span>
                     </span>
                 </span>
             </div>
