@@ -27,10 +27,13 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
   mark: Material `smartphone`, 1.05em, 86 %, `.28em` after the name; label and tooltip **"Plays on phones"**. In its row, in both
   profile selects' options and closed values, and in the picker's Quality Profile field; it follows the saved Prefer, so it moves
   when a profile's Prefer is changed and saved. No chip; not in the profile dialog. The profile chosen for phones in Grabbing gets
-  no mark of its own.
-- **Order (user, 2026-10-19):** profiles list best first, 4K, 2K, 1080p, 720p, SD, in the Settings list, the wizard step, the Default
-  profile select and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (by the resolution of
-  each profile's best quality, then name); no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
+  no mark of its own. *Known limit (D180, left as the user decided):* a 2K (1440p) profile set to Plays Everywhere carries the
+  mark, while a 1440p file is never a title's phone copy (D114), so phones do not start it.
+- **Order (user, 2026-10-19; Any Quality last, user 2026-10-30, D181: "can you put any to the bottom"):** profiles list best
+  first, 4K, 2K, 1080p, 720p, SD, then **Any Quality**, in the Settings list, the wizard step, the Default and phone profile selects
+  and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (a profile that spans every
+  resolution, 2160p down to SD, last; the rest by the resolution of their best quality, then name), and lists its presets the
+  same way; no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
   profile reads **"4K (Default)"** and is selected unless the title has its own profile.
 - A grey *Add Predefined Profiles* button shows while a predefined profile is missing (and in the empty state).
 

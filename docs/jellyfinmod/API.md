@@ -468,7 +468,7 @@ unknown values as explicit JSON `null`. The host's serializer writes GUIDs in co
 `GET/POST /JellyfinMod/Settings/Indexers`, `PATCH/DELETE /JellyfinMod/Settings/Indexers/{id}`,
 `POST /JellyfinMod/Settings/Indexers/{id}/Test`, and the same set for `DownloadClients` and
 `QualityProfiles` (profiles have no Test). A PATCH must echo the current `revision` or it gets 409
-`revision_conflict`. `GET .../QualityProfiles` lists profiles best first (user, 2026-10-19): by the resolution of each profile's best (first) quality, 4K, 2K, 1080p, 720p, SD, then by name; the web lists show it as given. Unknown fields are rejected. Secrets are write-only (user decision 3):
+`revision_conflict`. `GET .../QualityProfiles` lists profiles best first (user, 2026-10-19): by the resolution of each profile's best (first) quality, 4K, 2K, 1080p, 720p, SD, then by name, and a profile that spans every resolution (2160p down to SD, Any Quality) last (user, 2026-10-30, D181); the presets list the same way; the web lists show it as given. Unknown fields are rejected. Secrets are write-only (user decision 3):
 
 ```json
 {"name":"Tracker","baseUrl":"<torznab-api-url>","enabled":true,"categories":[2000,5000],"priority":1,
