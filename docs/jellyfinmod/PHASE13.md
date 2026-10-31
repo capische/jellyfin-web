@@ -343,3 +343,16 @@ direction, in its own column after the time: up sent to Trakt, down brought from
 words drop "on Trakt" and "(from Trakt)". The mark is a redrawn Trakt mark, against Trakt's branding rules (no altered or
 recoloured logo); the user accepted that. Gate 1 is the computer layout, dark, on echo; built (not accepted).
 
+**Gate 2 (2026-10-31).** The user accepted gate 1 of the mark ("Trakt glyph gate 1 accepted"). Both lines were rebased onto
+the main tips (web `main-items` a6a98dc99d, `main-stubs` dd7d30b53b; plugin `main-items` ee726aaead, `main-stubs` 7f8d755d99),
+with Phase 9's ratings and Phase 12's copies under them; the `TraktActivity` migration keeps its id and its designer was
+regenerated on the merged model (no pending model changes). On echo, rebased build: the full live list `trakt-export.mjs`
+**103/103**; the layout matrix **134/134 in Chromium and 134/134 in Google Chrome 156** (computer, phone, TV 1920 and 1280,
+dark and light). Plugin suites on both lines: smoke 0 and 1, PhaseSevenTraktIntegration and PhaseNineRatingsIntegration pass
+(PhaseSevenSettingsIntegration fails on macOS on `main-items` alone too, `destination_missing`, a Linux suite). Stubs line on
+bravo (Jellyfin 12.2, Trakt plugin 33, no account linked, no stand-in): the account bar with Connect Trakt, the switches and
+Sync Now dimmed, no Activity, Sync Now 409 `no_users`; bravo backed up, restored byte for byte and released. Two runner fixes
+on the way: the steps read watched states from the library query (an import left the single-item answer stale and a later
+run re-sent the episode), and the reconnect step's quiet window starts 3 s after the run that found the sign-in expired.
+Built (not accepted); the Codex review of the Activity changes and the merge follow.
+
