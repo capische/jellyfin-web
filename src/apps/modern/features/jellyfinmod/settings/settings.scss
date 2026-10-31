@@ -1479,7 +1479,8 @@
 .jfmod-brow.jfmod-traktOff .fieldDescription,
 .jfmod-brow.jfmod-traktOff .MuiButton-root { opacity: 0.45; }
 
-/* Activity: one row per title (D125), the time in its own column first so the times line up (D162), then "media · action". */
+/* Activity: one row per title (D125), the time in its own column first so the times line up (D162), the direction mark in
+   the next (D182), then "media · action". */
 .jfmod-traktActivity .jfmod-scrolllist .jfmod-brow.jfmod-traktItem { padding: 0.42em 0; }
 
 /* The day as a band a shade lighter than the section (D159): the day in title case at the row's size, primary text, pinned at
@@ -1505,8 +1506,8 @@
 
 .jfmod-traktLine {
     display: grid;
-    grid-template-columns: 4.6em 1fr;
-    column-gap: 0.9em;
+    grid-template-columns: 4.6em 1.05em 1fr;
+    column-gap: 0.6em;
     align-items: baseline;
     line-height: 1.45;
 }
@@ -1526,22 +1527,34 @@
     white-space: nowrap;
 }
 
-/* The action wraps with the line on a phone instead of overflowing it. */
-.jfmod-traktActivity .jfmod-traktItem .jfmod-state {
-    display: inline;
-    margin-right: 0;
-    font-size: 1em;
+/* The direction mark (D182, guide trakt-direction-mark.md): Trakt's disc, 1.05em square, centred on the first line. Done:
+   Trakt brand violet #6438d0 (app.trakt.tv/branding). Pending: a dashed ring and the arrow in currentColor, Trakt's lighter
+   violet #8a70f5 on dark (4.4:1 on the section), the brand violet on light. Failed: Trakt's red #ed1c24, and the words red. */
+.jfmod-traktMark {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    height: 1.45em;
+    color: #8a70f5;
 }
 
-.jfmod-traktActivity .jfmod-traktItem .jfmod-state i {
-    display: inline-block;
-    top: 0.06em;
+.jfmod-traktGlyph {
+    width: 1.05em;
+    height: 1.05em;
 }
 
-/* Phone (and a narrow window): the time and the title on the first line, the action under the title. */
+.jfmod-traktGlyph-disc { fill: #6438d0; }
+.jfmod-traktMark-failed .jfmod-traktGlyph-disc { fill: #ed1c24; }
+.jfmod-traktAction-failed { color: #ff5a4f; }
+:root[data-theme="light"] .jfmod-traktAction-failed { color: #c62828; }
+
+/* Phone (and a narrow window): the time, the mark and the title on the first line, the action under the title. */
 @media (max-width: 48em) {
     .jfmod-traktMedia { display: block; }
     .jfmod-traktMedia + .jfmod-traktSep { display: none; }
+    .jfmod-traktMark { align-self: start; }
 }
 .layout-mobile .jfmod-traktMedia { display: block; }
 .layout-mobile .jfmod-traktMedia + .jfmod-traktSep { display: none; }
+.layout-mobile .jfmod-traktMark { align-self: start; }
+:root[data-theme="light"] .jfmod-traktMark { color: #6438d0; }

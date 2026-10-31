@@ -6,7 +6,8 @@ group-title disclosure: user approval 2026-10-29 ("Round red icon is fine, go ah
 D74, mockups `reviews/phase13/mockups-v2`); Activity's per-title rows, hint and the main **Connect Trakt**: user approval
 2026-10-29 ("looks good"; D125–D130, mockups `reviews/phase13/mockups-v3`); Activity as a full-width group header with a
 Material chevron and its count, the pinned day bands and the time column: user approval 2026-10-30 (D153–D155, D159 option A,
-D162; mockups `reviews/phase13/mockups-v4`). Record: [UX.md §12.1](../../UX.md) (the authoritative
+D162; mockups `reviews/phase13/mockups-v4`); the rows' direction mark in place of the state dot: user approval 2026-10-30
+("Trakt glyph accepted too"; D182, mockups `reviews/phase13/mockups-v8`, guide [trakt-direction-mark.md](trakt-direction-mark.md)). Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
 the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
 
@@ -61,9 +62,10 @@ Settings › Trakt's Activity (D153, D154) is a group header in its own space:
 - On the TV: the stock cyan fill across the row with dark text and chevron, without the stock 1.2 zoom.
 
 Activity's rows (D125, D130, D162) are one line per title:
-- The time comes first, in its own right-aligned 4.6em column with tabular figures, then "**Title** S02E04 · ● action",
-  tightened to 0.42em. The dot is blue done, amber waiting or playing, red failed.
-- On the phone the time and the title share the first line and the action goes under the title.
+- The time comes first, in its own right-aligned 4.6em column with tabular figures, then the direction mark in its own
+  1.05em column ([trakt-direction-mark.md](trakt-direction-mark.md), D182), then "**Title** S02E04 · action", tightened to
+  0.42em. A failed row's action is red.
+- On the phone the time, the mark and the title share the first line and the action goes under the title.
 
 Each day is a `.jfmod-traktDayGroup` (D159): the day in title case at the row's size, weight 600, primary text, on a band a
 shade lighter than the section (the paper colour with a 7 % veil of the text colour; 0.4em by 0.6em padding, 0.2em corners,
