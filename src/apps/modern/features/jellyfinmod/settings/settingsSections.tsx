@@ -1325,7 +1325,7 @@ const ProfileRow: FC<ProfileRowProps> = ({ api, profile, busy, canMakeDefault, r
     return (
         <div className='jfmod-brow' data-profile={profile.id}>
             <div className='jfmod-brow-main'>
-                <strong>{profile.name}{profile.isPhoneProfile && <PhoneMark label={PHONE_PROFILE_LABEL} />}</strong>
+                <strong>{profile.name}{profile.prefer === 'everywhere' && <PhoneMark label={PHONE_PROFILE_LABEL} />}</strong>
                 <span className='jfmod-sub' data-qp='row-summary'>{profileSummary(profile)}</span>
             </div>
             <span>
@@ -1500,9 +1500,9 @@ export const GrabbingSection: FC<SectionProps> = props => {
         });
         acquisitionSaved(draft, sameRevision(saved), saved);
     }, 'Saved.'), [run, api, draft, acquisition.revision, acquisitionSaved, phones]);
-    // Both profile selects mark the profile chosen for phones, as the draft has it, so the mark moves as it is chosen (D54).
+    // Both profile selects mark every profile that plays everywhere, by its own Prefer (D180), whichever is chosen for phones.
     const profileOptions = data.profiles.map(profile => ({ value: profile.id, label: profile.name, detail: profileSummary(profile),
-        phone: phones && profile.id === draft.phoneProfileId }));
+        phone: profile.prefer === 'everywhere' }));
     return (
         <SectionFrame id='grabbing' eyebrow={props.eyebrow} title='Grabbing' state={summarise('grabbing', data)} notice={section.notice}
             onSave={save} saving={section.busy} next={props.next} onGo={props.onGo}
