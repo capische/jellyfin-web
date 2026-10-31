@@ -94,7 +94,9 @@ const loadEpisodes = async () => {
     return series.Items[0];
 };
 const episode = number => episodes.find(item => item.IndexNumber === number);
-const userData = async number => (await jf('GET', `/Items/${episode(number).Id}?userId=${userId}`)).UserData;
+// From the library query: Jellyfin 12.2's single-item answer (/Items/{id}) can keep the user data it cached before the Trakt
+// plugin's import saved (PHASE13), so after an import it may say unwatched for an episode that is watched.
+const userData = async number => (await jf('GET', `/Items?userId=${userId}&ids=${episode(number).Id}&Fields=UserData`)).Items[0].UserData;
 async function playToEnd(number) {
     const item = episode(number);
     const session = `p13-${number}-${Date.now()}`;
@@ -484,6 +486,8 @@ const steps = {
         const post = await jf('POST', '/JellyfinMod/Trakt/Export', undefined, { raw: true });
         verify('reconnectrestart', 'no account linked (all need reconnecting): Sync Now refused', post.status === 409, `${post.status}`);
         // Give a run that would skip the account (the old behaviour) time to happen, and JellyfinMod time to note the account.
+        // The mark waits 3 s past the run that found the sign-in expired, beyond lastRunAfter's 1.5 s allowance for the clock.
+        await sleep(3000);
         const mark = new Date();
         await sleep(150000);
         const skipped = await lastRunAfter(mark);
@@ -769,7 +773,7 @@ const steps = {
         // Read from the library query: Jellyfin 12.2's single-item answer (/Items/{id}) keeps the user data it cached before
         // the import saved (found 2026-10-29; upstream, see PHASE13), while the library's own query reads what was saved.
         const listed = (await jf('GET', `/Items?userId=${userId}&ids=${episode(5).Id}&Fields=UserData`)).Items[0].UserData;
-        const single = await userData(5);
+        const single = (await jf('GET', `/Items/${episode(5).Id}?userId=${userId}`)).UserData;
         verify('import', 'E05 is watched in Jellyfin at its Trakt time', listed.Played && minute(listed.LastPlayedDate) === minute(watchedAt),
             `library query: ${listed.Played} ${listed.LastPlayedDate}; single item: ${single.Played} ${single.LastPlayedDate ?? ''}`);
         verify('import', 'Activity lists E05 as brought from Trakt, at its time here', !!both && Math.abs(new Date(both.imported.at) - Date.now()) < 600000, JSON.stringify(both?.imported));
