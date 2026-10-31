@@ -1,8 +1,9 @@
 # Phase 12 — multiple held qualities
 
-**Status (2026-10-30): the first slice is built (not accepted).** A best copy for TVs and computers and a 1080p copy for
-phones, M30–M36, planned in `reviews/phase12/PLAN-REFRESH.md` and approved by the user on 2026-10-29, is built on both lines
-and through gate 2 on charlie; it waits for the user's re-verification, then review. M37 (Replace of one copy) waits for the
+**Status: the first slice is accepted 2026-10-30** (user: "Phase 12 accepted, run codex and merge"; the Codex review and the
+merge follow). A best copy for TVs and computers and a 1080p copy for phones, M30–M36 with D103, D108, D114, D133, D180 and D181,
+planned in `reviews/phase12/PLAN-REFRESH.md` and approved by the user on 2026-10-29, built on both lines and through gate 2 on
+charlie. Before that it was built (not accepted). M37 (Replace of one copy) waits for the
 movie Replace branch; M38's acceptance needs real services and the physical C1 and G2. What follows is the original outline,
 kept as the backlog.
 
