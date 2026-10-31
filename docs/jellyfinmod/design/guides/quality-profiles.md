@@ -4,8 +4,9 @@
 artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). The profile selects' two-line options:
 user, 2026-10-24 (P4.FU17, P4.FU19). The release picker's BDRip label and Full Disc: user, 2026-10-25 (P4.FU22). Built on
 `next-release` (P4.FU9). **Phase 12** (user-approved 2026-10-29, D53–D56, D58; mockups `reviews/phase12/mockups/1-settings.html`,
-`2-profile-dialog.html`; built 2026-10-29, not accepted): the Prefer field, the row's preference clause, the phone mark on the
-quality profile for phones, the Quality profile for phones select, the 1080p preset's Plays Everywhere. Records: [design note](../quality-profiles-redesign.md), artifact
+`2-profile-dialog.html`; built 2026-10-29, not accepted): the Prefer field, the row's preference clause, the phone mark on every
+profile that plays everywhere (user, 2026-10-30, D180, replacing D54's mark on the profile chosen for phones), the Quality
+profile for phones select, the 1080p preset's Plays Everywhere. Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,
 `settings/qualityProfiles.scss` (`.jfmod-qp-*`), `settings/settingsSections.tsx` (`ProfileRow`, `QualityRow`).
 
@@ -20,10 +21,13 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
 - Each row says in one sentence what the profile does: **"4K first, then down to 720p · any size · no upgrades"**,
   never the quality list; a profile with a preference adds it before the upgrades: **"· best on my TVs"** or **"· plays
   everywhere"** (Phase 12). Chips: *Predefined* on the shipped profiles, the blue *Default* on the default.
-- **The quality profile for phones** (D54) carries the phone mark after its name (`components/PhoneMark.tsx`, the
-  [track dropdown](track-dropdown.md)'s mark: Material `smartphone`, 1.05em, 86 %, `.28em` after the name; label and tooltip
-  **"Quality profile for phones"**) in its row, in both profile selects' options and closed values, and in the picker's Quality
-  Profile field. No chip; not in the profile dialog (the choice is made in Grabbing).
+- **Every profile whose Prefer is Plays Everywhere** carries the phone mark after its name (user, 2026-10-30, D180: "add mobile
+  icon to profiles when Plays Everywhere is selected. Because I can select 2K and leave name 1080p and it won't play on mobile";
+  it replaces D54's mark on the profile chosen for phones). `components/PhoneMark.tsx`, the [track dropdown](track-dropdown.md)'s
+  mark: Material `smartphone`, 1.05em, 86 %, `.28em` after the name; label and tooltip **"Plays on phones"**. In its row, in both
+  profile selects' options and closed values, and in the picker's Quality Profile field; it follows the saved Prefer, so it moves
+  when a profile's Prefer is changed and saved. No chip; not in the profile dialog. The profile chosen for phones in Grabbing gets
+  no mark of its own.
 - **Order (user, 2026-10-19):** profiles list best first, 4K, 2K, 1080p, 720p, SD, in the Settings list, the wizard step, the Default
   profile select and the release picker's Quality Profile dropdown alike. The plugin returns them in that order (by the resolution of
   each profile's best quality, then name); no list sorts on its own. The picker's dropdown has no "Title default" entry: the default
@@ -48,7 +52,7 @@ Simple by default, the whole model under Advanced. The 80 % path is open, pick a
   for phones. The 4K stays." and only Add is offered (Phase 12, D57, D103).
 - **Quality profile for phones** (Grabbing, after *Default quality profile*; Phase 12, D55): the same two-line select; help
   "Phones play a title's file at 1080p or below. Get Another Quality starts with this profile on a title that has none." Both
-  selects mark the profile chosen for phones as the form has it, so the mark moves as it is chosen.
+  selects mark every profile that plays everywhere (D180); choosing one that does not is allowed and shows no mark.
 
 ## Dialog, in order
 

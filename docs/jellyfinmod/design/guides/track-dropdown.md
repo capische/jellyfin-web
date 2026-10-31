@@ -97,7 +97,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   `margin-left: .03em`), inside the word's .8em gap, so it takes no width and the codec starts where it does on the rows
   without it (measured 482.4–483.4 px at 1280, 713.1–714.5 px TV 1920, 84.4–85.4 px phone; the 720p rows sit 7–10 px left by
   their shorter word, as before; 2–3 px between the mark and the codec; not clipped in the closed cell). A quality profile's
-  name keeps the inline 1.05em mark; `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
+  name keeps the inline 1.05em mark, on every profile that plays everywhere, with its own label "Plays on phones" (D180,
+  [quality-profiles.md](quality-profiles.md)); a file's mark has `role="img"`, `aria-label` and tooltip **"Phones play this copy"** (no tooltip
   on the TV). No mark on a single file.
 - **Audio and Subtitles lists** (`.jfmod-trackMenuPaper`, MUI Menu paper): **exactly the cell** (D75). The theme paper,
   `1px solid var(--jf-palette-divider)` inside that width (`border-box`), **max-height 20em, scrolling** (D83), opened on the

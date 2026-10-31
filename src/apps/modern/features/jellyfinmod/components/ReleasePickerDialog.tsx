@@ -1638,7 +1638,7 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
     // Each profile says what it does under its name, as the Default quality profile select does (user, 2026-10-24, P4.FU19).
     const profileOptions = useMemo<DetailOption[]>(() => (profiles.data ?? []).map(profile => ({
         value: profile.id, label: profile.isDefault ? profile.name + ' (Default)' : profile.name, detail: profileSummary({ ...profile }),
-        phone: !!profile.isPhoneProfile
+        phone: profile.prefer === 'everywhere'
     })), [profiles.data]);
     const shownProfileId = profileId || (data?.profile.id ?? defaultProfileId);
     const chooseProfile = useCallback((value: string) => {
