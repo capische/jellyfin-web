@@ -356,3 +356,19 @@ on the way: the steps read watched states from the library query (an import left
 run re-sent the episode), and the reconnect step's quiet window starts 3 s after the run that found the sign-in expired.
 Built (not accepted); the Codex review of the Activity changes and the merge follow.
 
+**Codex review of the additions (2026-10-31).** Codex (gpt-6.1-sol, high) asked for four changes
+(workspace `reviews/phase13/codex-review-additions.md`), all fixed on both lines. P2: a title the Trakt plugin never sends
+(under the account's excluded locations, a movie without an IMDb or TMDB id, an episode without a number or whose series
+has no TV ids, a virtual item) was listed as waiting and then sent; JellyfinMod now applies the plugin's own check
+(`CanSync`, read with `LocationsExcluded` from its settings) before recording a watch or a live play. P2: a restart judges
+the last run again, which wrote its collection and summary rows a second time; those rows are now written once per run,
+user and kind. P3: with the account's Post watched history off, a live play that ended played to completion stayed
+"watching now"; it now reads "marked watched (reported live)" (state `scrobbled`). P3: an import save that only set a
+playback position read as marked watched; a save with a position now reads as the position, one that only marks watched as
+marked watched here. No migration changed (`TraktActivity` keeps its id). Evidence: PhaseSevenTraktIntegration passes on
+both lines with new checks for each fix (the exclusion check failed against the code before the fix); on echo the live steps
+`relink pace activity import` pass 25/25 on the fixed build, two new `activity` checks (an excluded title adds no row and
+no scrobble; a finished live play with Post watched history off reads marked watched) failed on the previous build, and
+echo was restored byte for byte and released. Not re-run: the full live list, the layout matrix and the Chrome pass (the
+only visible change is one new row wording).
+
