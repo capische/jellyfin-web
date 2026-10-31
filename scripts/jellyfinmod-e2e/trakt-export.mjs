@@ -610,8 +610,12 @@ const steps = {
         const rowOf = (list, code, direction = 'to') => (list ?? []).find(row => row.code === code && row.direction === direction && row.title === 'JellyfinMod P13 Show');
         const itemText = (page, code) => page.evaluate(match => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
             .find(node => node.getAttribute('data-jfmod-trakt-item')?.startsWith('to:') && node.getAttribute('data-jfmod-trakt-item').endsWith(match))?.innerText.replace(/\s+/g, ' ').trim() ?? '', `JellyfinMod P13 Show ${code}`);
-        const dotOf = (page, code) => page.evaluate(match => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
-            .find(node => node.getAttribute('data-jfmod-trakt-item')?.startsWith('to:') && node.getAttribute('data-jfmod-trakt-item').endsWith(match))?.querySelector('.jfmod-state')?.className ?? '', `JellyfinMod P13 Show ${code}`);
+        // The row's direction mark (D182) as "its classes | its accessible name".
+        const dotOf = (page, code) => page.evaluate(match => {
+            const mark = [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
+                .find(node => node.getAttribute('data-jfmod-trakt-item')?.startsWith('to:') && node.getAttribute('data-jfmod-trakt-item').endsWith(match))?.querySelector('.jfmod-traktMark');
+            return mark ? `${mark.className} | ${mark.getAttribute('aria-label')}` : '';
+        }, `JellyfinMod P13 Show ${code}`);
         const openActivity = async page => {
             const closed = await page.evaluate(() => document.querySelector('.jfmod-activityToggle')?.getAttribute('aria-expanded'));
             await page.locator('.jfmod-activityToggle').click();
@@ -656,8 +660,8 @@ const steps = {
             const text = await itemText(page, 'S01E06');
             const next = await page.evaluate(() => document.querySelector('[data-jfmod-trakt-next]')?.textContent ?? '');
             const heading = await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"] .jfmod-traktDay')?.textContent ?? '');
-            verify('activity', `the row reads "<time> JellyfinMod P13 Show S01E06 · waiting: the export runs at ${clock}" under Today, amber`,
-                heading === 'Today' && /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E06 · /i.test(text) && text.endsWith(`waiting: the export runs at ${clock}`) && /jfmod-state-warn/.test(await dotOf(page, 'S01E06')), `${heading} | ${text}`);
+            verify('activity', `the row reads "<time> JellyfinMod P13 Show S01E06 · waiting: the export runs at ${clock}" under Today, its mark the dashed "Sent to Trakt, not yet done"`,
+                heading === 'Today' && /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E06 · /i.test(text) && text.endsWith(`waiting: the export runs at ${clock}`) && /jfmod-traktMark-pending \| Sent to Trakt, not yet done$/.test(await dotOf(page, 'S01E06')), `${heading} | ${text} | ${await dotOf(page, 'S01E06')}`);
             verify('activity', `the next-export line names the same time: "The next export runs at ${clock}, 1 minute after the last episode ended."`,
                 next === `The next export runs at ${clock}, 1 minute after the last episode ended.`, next);
             await page.screenshot({ path: join(out, 'shots', '12-activity-waiting.png'), fullPage: true });
@@ -668,7 +672,7 @@ const steps = {
             const now = await status();
             return rowOf(now.activity, 'S01E06')?.state === 'sent' ? now : null;
         }, 240000, 3000).catch(() => null);
-        verify('activity', 'the automatic export sends it: the row reads marked watched on Trakt, once on Trakt', !!sent && playsOf(await plays(), 6).length >= 1,
+        verify('activity', 'the automatic export sends it: the row reads sent, once on Trakt', !!sent && playsOf(await plays(), 6).length >= 1,
             JSON.stringify(rowOf(sent?.activity, 'S01E06')));
 
         // A title Trakt does not know: failed, and the run still counts as delivered (no retry).
@@ -700,8 +704,8 @@ const steps = {
         try {
             await openActivity(livePage);
             const text = await itemText(livePage, 'S01E08');
-            verify('activity', 'it reads "watching now on Trakt (reported live by the Trakt plugin)", amber', text.endsWith('watching now on Trakt (reported live by the Trakt plugin)') &&
-                /jfmod-state-warn/.test(await dotOf(livePage, 'S01E08')), text);
+            verify('activity', 'it reads "watching now (reported live)", its mark the dashed "Sent to Trakt, not yet done"', text.endsWith('watching now (reported live)') &&
+                /jfmod-traktMark-pending \| Sent to Trakt, not yet done$/.test(await dotOf(livePage, 'S01E08')), text);
             await livePage.screenshot({ path: join(out, 'shots', '12b-activity-playing.png'), fullPage: true });
         } finally {
             await livePage.close();
@@ -726,11 +730,12 @@ const steps = {
             await openActivity(endPage);
             const rows = {
                 e06: await itemText(endPage, 'S01E06'), e07: await itemText(endPage, 'S01E07'), e08: await itemText(endPage, 'S01E08'),
-                e07dot: await dotOf(endPage, 'S01E07')
+                e06mark: await dotOf(endPage, 'S01E06'), e07mark: await dotOf(endPage, 'S01E07')
             };
-            verify('activity', 'E06 reads marked watched on Trakt, E07 failed in red, E08 stopped at 30 %', rows.e06.endsWith('· marked watched on Trakt') &&
-                rows.e07.endsWith('· failed: Trakt does not know this episode') && /jfmod-state-err/.test(rows.e07dot) &&
-                rows.e08.endsWith('· stopped at 30 % (reported live by the Trakt plugin)'), JSON.stringify(rows));
+            verify('activity', 'E06 reads marked watched under "Sent to Trakt", E07 failed under the red "Not sent to Trakt", E08 stopped at 30 %',
+                rows.e06.endsWith('· marked watched') && /jfmod-traktMark-done \| Sent to Trakt$/.test(rows.e06mark) &&
+                rows.e07.endsWith('· failed: Trakt does not know this episode') && /jfmod-traktMark-failed \| Not sent to Trakt$/.test(rows.e07mark) &&
+                rows.e08.endsWith('· stopped at 30 % (reported live)'), JSON.stringify(rows));
             await endPage.screenshot({ path: join(out, 'shots', '12c-activity-open.png'), fullPage: true });
         } finally {
             await endPage.close();
@@ -785,8 +790,11 @@ const steps = {
             await page.waitForTimeout(400);
             const line = await page.evaluate(() => [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
                 .find(node => node.getAttribute('data-jfmod-trakt-item') === 'from:imported:JellyfinMod P13 Show S01E05')?.innerText.replace(/\s+/g, ' ').trim() ?? '');
-            verify('import', 'Activity reads "<time> JellyfinMod P13 Show S01E05 · marked watched in Jellyfin (from Trakt)"',
-                /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E05 · /i.test(line) && line.endsWith('· marked watched in Jellyfin (from Trakt)'), line);
+            const from = await page.evaluate(() => { const mark = [...document.querySelectorAll('[data-jfmod-trakt="activity"] .jfmod-traktItem')]
+                .find(node => node.getAttribute('data-jfmod-trakt-item') === 'from:imported:JellyfinMod P13 Show S01E05')?.querySelector('.jfmod-traktMark');
+            return mark ? `${mark.className} | ${mark.getAttribute('aria-label')}` : ''; });
+            verify('import', 'Activity reads "<time> JellyfinMod P13 Show S01E05 · marked watched here" under the down mark "Brought from Trakt"',
+                /^\d{1,2}:\d\d\s?[ap]m JellyfinMod P13 Show S01E05 · /i.test(line) && line.endsWith('· marked watched here') && /jfmod-traktMark-done \| Brought from Trakt$/.test(from), `${line} | ${from}`);
             await page.evaluate(() => document.querySelector('[data-jfmod-trakt="activity"]')?.scrollIntoView({ block: 'start' }));
             await page.waitForTimeout(300);
             await page.screenshot({ path: join(out, 'shots', '16-activity-import.png') });
