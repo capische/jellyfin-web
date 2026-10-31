@@ -39,6 +39,24 @@ import hardlinked it as a second version, and the 2160p kept its inode, size, mt
 read 1440p and was not taken for the phones copy; every Play on computers and TVs started the 2160p and on phones the
 1080p, including Next from Inception to The Matrix in a playlist (finding 6's path).
 
+**Re-review (2026-10-31).** Codex confirmed findings 3, 4 and 6 fixed, and 1 and 2 for their cases, and asked for three
+more P2 changes (`reviews/phase12/codex-rereview.md`), fixed on both lines as one more plugin fix commit:
+
+1. **A copy no release fits starved the upgrade.** A title missing its copy for phones now has its eligible upgrade searched
+   in the same run whenever the search for phones finds nothing to grab, within the same budgets, so neither starves the other.
+2. **A pack for phones imported episodes no longer wanting the copy.** At submission, under the same gates as the last check
+   of the hold, the pack drops the claims of episodes that were unmonitored, lost their file or got a copy for phones during the
+   hold; no import is made for them, and the episodes still wanting it go ahead.
+3. **An unlabelled 720×576 file read 480p.** Choosing the copy reads a lowest-tier picture at least 540 lines tall as 576p,
+   as the player reads the size, so a card and the detail page pick the same SD copy; retention keeps 576p with 480p.
+
+Evidence: `PhoneCopyFetchScenario` now also holds a movie whose Remux is out but no release fits a phone (its upgrade is
+grabbed in the run after the empty search for phones, and nothing replaces its file), and unmonitors the pack's first episode
+during the client lookup of the hold (only the second episode is claimed and imported). It fails without each of fixes 1 and
+2. Phase 4, 5 and 6 suites pass on both lines. On charlie, an unlabelled PAL 720×576 file and a larger NTSC 720×480 file
+beside Inception's 2160p read 576p and 480p, the PAL is the copy for phones, and a phone's card and detail Play both start it;
+computers start the 2160p, and the plays checks are unchanged.
+
 Planned, not scheduled. Moved from PHASE6.md's follow-up on 2026-09-25 (user decision); task ids
 M10–M21 and question numbers 11–22 are kept unchanged so existing references stay valid.
 
