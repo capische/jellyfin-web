@@ -1,6 +1,6 @@
 # Phase 13 — offline episode watches to Trakt
 
-**Built (not accepted), 2026-10-28.** Outline recorded 2026-10-07; refined and built 2026-10-28 (see *Refinement and
+**Accepted, 2026-10-31** (both lines; the user's "finish everything" while away stood in for the gate 3 re-check (D184, workspace `reviews/overnight-2026-10-28/DECISIONS.md`)). Outline recorded 2026-10-07; refined and built 2026-10-28 (see *Refinement and
 build* below, which supersedes the outline's proposed behaviour and task list where they differ). Read [PLAN.md](PLAN.md), [PHASE7.md](PHASE7.md) §7.1 (Trakt integration),
 [README.md](README.md) and [UX.md](UX.md) alongside it. The user requested this phase;
 the implementation choices below are proposals, not accepted architecture.
@@ -371,4 +371,14 @@ both lines with new checks for each fix (the exclusion check failed against the 
 no scrobble; a finished live play with Post watched history off reads marked watched) failed on the previous build, and
 echo was restored byte for byte and released. Not re-run: the full live list, the layout matrix and the Chrome pass (the
 only visible change is one new row wording).
+
+**Codex re-review (2026-10-31).** Codex confirmed the four fixes and raised two P3s, fixed on both lines without another round
+(workspace `reviews/phase13/codex-rereview-additions.md`). P3: a title paused here and then watched on Trakt read "playback
+position" (the plugin marks it watched and keeps the old resume point); JellyfinMod now reads each linked account's watched
+states and resume points as the import starts (the host raises the task's start before it runs) and reads every save against
+them: marked watched here when it went from unwatched to watched, a playback position when only the resume point moved, and
+the watch when one save does both. P3: two export runs within one second shared one count row; the row now matches its run's
+exact start, and a run's count lines are read from its own start (no longer from a second before it). PhaseSevenTraktIntegration
+passes on both lines with a check for each (the import check failed against the code before the fix); echo was not used.
+**Accepted 2026-10-31**: the user's "finish everything" while away stood in for the gate 3 re-check (D184, workspace `reviews/overnight-2026-10-28/DECISIONS.md`).
 

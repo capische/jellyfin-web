@@ -1261,13 +1261,14 @@ Trakt, with Jellyfin's `LastPlayedDate`.
   PlaybackFinished or TogglePlayed, while the account's Post watched history is on); `sent` once a clean export that started
   after the watch has run; `failed` when that export logged the title as not found on Trakt (matched by its ids, or by season
   and number when exactly one waiting episode has them; such a run still counts as clean, D135); `imported` (a save that
-  marked the title watched) and `position` (`detail` minutes; a save that set a playback position, watched or not) from the
-  import's saves with the reason Import; only titles the Trakt plugin would sync get `to` rows (its own check: a file not
+  marked an unwatched title watched) and `position` (`detail` minutes; a save that only moved its resume point) from the
+  import's saves with the reason Import, each read against the title's state as the import started (a save that does both
+  is `imported`); only titles the Trakt plugin would sync get `to` rows (its own check: a file not
   under the account's excluded locations, a movie with an IMDb or TMDB id, an episode with a number whose series has TV
   ids); `collection` (`detail` the count) for a clean export's
   collection adds; `summary` (`detail` the count) for more than 50 titles at once (both from the plugin's count lines,
   which it logs before sending, so a run that is not clean adds neither; a run judged again after a restart does not add
-  them twice). A finished play is read from the host's
+  them twice, and each run keeps its own, matched by its exact start). A finished play is read from the host's
   `PlaybackStopped` (played to completion), not from its PlaybackFinished save, which a rewatch stopped early also makes. `nextExportAt`: when the automatic export
   after the latest watch is due (null when none is, or the switch is off). `lastError`: the last export's Trakt error in a
   clause (`Trakt answered 500 Internal Server Error`) while that run is not clean. `viewerName`: the signed-in user's name,
