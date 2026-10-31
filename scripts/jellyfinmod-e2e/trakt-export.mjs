@@ -744,6 +744,51 @@ const steps = {
         } finally {
             await endPage.close();
         }
+
+        // Codex review of the additions, P2 1: a title under the account's excluded locations in the Trakt plugin is one it
+        // never sends, so it gets no row. The show's folder is excluded for a play of E08 to its end, then put back.
+        const trakt = (await plugins()).find(plugin => plugin.Name === 'Trakt');
+        const excludedBefore = (await jf('GET', `/Plugins/${trakt.Id}/Configuration`)).TraktUsers.map(user => user.LocationsExcluded);
+        const path = (await jf('GET', `/Items?userId=${userId}&ids=${episode(8).Id}&Fields=Path`)).Items[0].Path;
+        const scrobblesOf = state => Object.entries(state.counters).filter(([route]) => route.startsWith('/scrobble/')).reduce((sum, [, count]) => sum + count, 0);
+        const beforeExcluded = await control('/state');
+        await traktSwitch('LocationsExcluded', [path.slice(0, path.lastIndexOf('/'))]);
+        try {
+            await playToEnd(8);
+            await sleep(5000);
+            const afterExcluded = await control('/state');
+            const row = rowOf((await status()).activity, 'S01E08');
+            verify('activity', 'a play of a title in the excluded locations adds no row and no scrobble: E08 still reads stopped at 30 %',
+                row?.state === 'stopped' && row.detail === 30 && scrobblesOf(afterExcluded) === scrobblesOf(beforeExcluded),
+                JSON.stringify({ row, scrobbles: [scrobblesOf(beforeExcluded), scrobblesOf(afterExcluded)] }));
+            await unplay(8);
+        } finally {
+            const config = await jf('GET', `/Plugins/${trakt.Id}/Configuration`);
+            config.TraktUsers.forEach((user, index) => { user.LocationsExcluded = excludedBefore[index]; });
+            await jf('POST', `/Plugins/${trakt.Id}/Configuration`, config);
+        }
+
+        // P3 3: with the account's Post watched history off, a live play that ends played to completion is done, not still
+        // watching now (no export follows it). E08 is then taken off Trakt and unwatched again, with the switch back on.
+        await traktSwitch('PostWatchedHistory', false);
+        try {
+            await playToEnd(8);
+            const done = await until('the live play finished', async () => rowOf((await status()).activity, 'S01E08')?.state === 'scrobbled', 20000, 1000).catch(() => false);
+            const donePage = await openPage();
+            try {
+                await openActivity(donePage);
+                const text = await itemText(donePage, 'S01E08');
+                verify('activity', 'with Post watched history off a finished live play reads "marked watched (reported live)" under "Sent to Trakt"',
+                    !!done && text.endsWith('· marked watched (reported live)') && /jfmod-traktMark-done \| Sent to Trakt$/.test(await dotOf(donePage, 'S01E08')), text);
+            } finally {
+                await donePage.close();
+            }
+            await until('the live scrobble', async () => playsOf(await plays(), 8).length === 1, 30000, 1000).catch(() => null);
+            await unplay(8);
+            await control('/forget', { season: 1, number: 8 });
+        } finally {
+            await traktSwitch('PostWatchedHistory', true);
+        }
         await playToEnd(7);
     },
 
