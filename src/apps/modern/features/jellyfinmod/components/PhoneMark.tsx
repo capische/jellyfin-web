@@ -21,7 +21,10 @@ const PhoneMark: FC<{ label: string }> = ({ label }) => (
 /** The phone mark's words on a file. */
 export const PHONE_COPY_LABEL = 'Phones play this copy';
 
-/** The phone mark's words on a quality profile. */
-export const PHONE_PROFILE_LABEL = 'Quality profile for phones';
+/**
+ * The phone mark's words on a quality profile: on every profile whose Prefer is Plays Everywhere (user, 2026-10-30, D180: "add
+ * mobile icon to profiles when Plays Everywhere is selected"), not on the profile chosen for phones.
+ */
+export const PHONE_PROFILE_LABEL = 'Plays on phones';
 
 export default PhoneMark;
