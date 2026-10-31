@@ -2733,7 +2733,13 @@ export class PlaybackManager {
                     mediaSourceId = versionSource.Id;
                 }
 
-                const mediaStreams = versionSource?.MediaStreams || sourceItem?.MediaStreams || [];
+                // JellyfinMod (Phase 12): with no source asked for or kept, the device's copy, so remembered tracks match it.
+                const deviceSource = mediaSourceId ? null : deviceMediaSource(sourceItem?.MediaSources || [], null, { startPosition });
+                if (deviceSource) {
+                    mediaSourceId = deviceSource.Id;
+                }
+
+                const mediaStreams = versionSource?.MediaStreams || deviceSource?.MediaStreams || sourceItem?.MediaStreams || [];
 
                 const audioStreamIndex = playOptions.audioStreamIndex;
                 const subtitleStreamIndex = playOptions.subtitleStreamIndex;
