@@ -7,6 +7,38 @@ charlie. Before that it was built (not accepted). M37 (Replace of one copy) wait
 movie Replace branch; M38's acceptance needs real services and the physical C1 and G2. What follows is the original outline,
 kept as the backlog.
 
+## Codex review (2026-10-31)
+
+Codex (gpt-6.1-sol, high) reviewed the accepted slice and asked for changes: one P1 and five P2
+(`reviews/phase12/codex-review.md`). All six are fixed on both lines as follow-up fix commits, one per repository, since
+each finding reaches into several of the slice's commits:
+
+1. **P1, automatic copies for phones never downloaded.** Automation's copy for phones is an Add with no upgrade operation,
+   so dispatch after the hold rejected it as `no_longer_wanted`, and a pack failed the missing-file check. Dispatch now
+   re-checks such an Add on its own terms: still wanted while the title (or any monitored, held episode the pack claims) has
+   no copy for phones, and `phone_copies_disabled` if the switch was turned off during the hold. Import adds it as another
+   version, as a manual Add does, without touching the held file.
+2. **P2, an unfound upgrade starved the copy for phones.** The runner searched the upgrade first and never reached the copy.
+   A missing copy for phones is now searched first, and the upgrade waits for the next run.
+3. **P2, a removed copy named without its resolution was fetched again.** Remove This Version's record is now read through
+   the import that brought the file in, so an episode's unnamed lower version counts as removed (Q6: never fetched again).
+4. **P2, an unlabelled 1440p counted as the copy for phones.** Choosing the copy reads 2560×1440 as 1440p; retention keeps
+   its coarse tiers.
+5. **P2, the player merged 1440p with 1080p and 576p with 480p, with no size tie-break.** The player's device choice now
+   uses the detail page's own ordering (`pickCopy` in `constants/versions.ts`).
+6. **P2, remembered tracks started the 4K on a phone.** When no copy was asked for or kept, the player now picks the
+   device's copy before it matches remembered tracks, so the inferred item id is never read as the viewer's pick. The hook
+   in `playbackmanager.js` stays one import and two calls (PHASE7.md's seam list).
+
+Evidence: the new `PhoneCopyFetchScenario` (Phase 6 suite) runs automation through hold, dispatch, the Transmission
+boundary, completion and import for a movie whose upgrade finds nothing and for a two-episode pack, proves both files held
+and the best copy byte-identical, and then proves an unnamed removed copy is not fetched again. It fails without each of
+the fixes for findings 1, 2 and 3. Phase 4, 5, 6 and 10 retention suites pass on both lines. Live on charlie (items line):
+automation grabbed Inception's 1080p as a copy for phones while its remux upgrade found nothing, the stand-in downloaded it,
+import hardlinked it as a second version, and the 2160p kept its inode, size, mtime and SHA-256; an unlabelled 2560×1440 file
+read 1440p and was not taken for the phones copy; every Play on computers and TVs started the 2160p and on phones the
+1080p, including Next from Inception to The Matrix in a playlist (finding 6's path).
+
 Planned, not scheduled. Moved from PHASE6.md's follow-up on 2026-09-25 (user decision); task ids
 M10–M21 and question numbers 11–22 are kept unchanged so existing references stay valid.
 
