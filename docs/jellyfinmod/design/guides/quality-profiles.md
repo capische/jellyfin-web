@@ -4,7 +4,7 @@
 artifact v12 (order list hidden, pretty names, Predefined as a dropdown, no Custom heading or provenance line). The 4K preset has no size limit (Large; user, 2026-10-19, P4.FU14). The profile selects' two-line options:
 user, 2026-10-24 (P4.FU17, P4.FU19). The release picker's BDRip label and Full Disc: user, 2026-10-25 (P4.FU22). Built on
 `next-release` (P4.FU9). **Phase 12** (user-approved 2026-10-29, D53–D56, D58; mockups `reviews/phase12/mockups/1-settings.html`,
-`2-profile-dialog.html`; built 2026-10-29, not accepted): the Prefer field, the row's preference clause, the phone mark on every
+`2-profile-dialog.html`; accepted 2026-10-30 with D180 and D181): the Prefer field, the row's preference clause, the phone mark on every
 profile that plays everywhere (user, 2026-10-30, D180, replacing D54's mark on the profile chosen for phones), the Quality
 profile for phones select, the 1080p preset's Plays Everywhere. Records: [design note](../quality-profiles-redesign.md), artifact
 <https://claude.ai/artifact/M16LLzc8fK9axZtTwQtw1j>, [UX.md §12 and §12.1](../../UX.md). Code: `settings/qualityProfiles.tsx`,

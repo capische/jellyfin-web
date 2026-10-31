@@ -464,12 +464,13 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   [`PHASE10.md`](PHASE10.md)).
 - Phase 11 — notifications and the bell: planned, not scheduled (see [`PHASE11.md`](PHASE11.md)).
 - Phase 12 — multiple held qualities: the first slice, **a best copy for TVs and computers and a 1080p copy for phones** (M30–M38,
-  plan `reviews/phase12/PLAN-REFRESH.md`, design approved by the user 2026-10-29), is **built (not accepted)**: M30, M31, M32–M34,
+  plan `reviews/phase12/PLAN-REFRESH.md`, design approved by the user 2026-10-29), is **accepted 2026-10-30** (user: "Phase 12
+  accepted, run codex and merge"; the Codex review and the merge into main-stubs and main-items follow): M30, M31, M32–M34,
   M35 and M36 on both lines (`feat/phase12-items` on `main-items`, `feat/phase12` on `main-stubs`), with the user's later changes
   (no Get 1080p for Phones row, D103; Add of any release, D108; best-first list and phones at 1080p or below, D114; the phone mark
-  as a small suffix, D133); gate 2 run on charlie (computer, phone, TV 1280 and 1920, dark and light, Chromium and real Chrome),
-  waiting for the user's re-verification. M37 waits for the movie Replace branch, M38 for acceptance (real services and the
-  physical C1 and G2). The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
+  as a small suffix, D133; the phone icon on every Plays Everywhere profile, D180; Any Quality listed last, D181); gate 2 run on
+  charlie (computer, phone, TV 1280 and 1920, dark and light, Chromium and real Chrome). M37 waits for the movie Replace branch;
+  M38's real-services run and the physical C1 and G2 checks stay with the user. The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
 - Phase 13 — offline episode watches to Trakt: planned, not scheduled (requested 2026-10-07;
   see [`PHASE13.md`](PHASE13.md)). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming
   history observations. Implementation requires connection and single-writer design refinement.
@@ -2090,7 +2091,8 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   starting (including Trakt-imported watches) and files about to be deleted, then downloads,
   upgrades, indexer failures and interface changes. The user asked for it to be planned, not
   implemented now. Its open questions are listed there.
-- **Phase 12 — multiple held qualities.** Future, **not scheduled**; outline in
+- **Phase 12 — multiple held qualities.** First slice (a best copy and a 1080p copy for phones) **accepted 2026-10-30**; the rest is
+  future, **not scheduled**; outline in
   [PHASE12.md](PHASE12.md). Moved out of PHASE6.md's follow-up on 2026-09-25. The user wants to
   hold more than one quality on purpose — for example a best-possible version for the living-room
   television and a compatible one for everything else — chosen on attributes a flat quality list
