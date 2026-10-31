@@ -1,7 +1,7 @@
 # Trakt direction mark
 
 **Status:** approved 2026-10-30 (the user: "Trakt glyph accepted too"; the Glyph in Trakt's brand violet at 1.05em, D182,
-mockups `reviews/phase13/mockups-v8`); built (not accepted). Code: `settings/TraktSection.tsx` (`DirectionMark`),
+mockups `reviews/phase13/mockups-v8`); accepted 2026-10-31 with Phase 13 ("finish everything", D184). Code: `settings/TraktSection.tsx` (`DirectionMark`),
 `settings/settings.scss` (`.jfmod-traktMark`, `.jfmod-traktGlyph`). Used by: Settings › Trakt's Activity rows.
 
 ## What it is

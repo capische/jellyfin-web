@@ -471,13 +471,14 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   as a small suffix, D133; the phone icon on every Plays Everywhere profile, D180; Any Quality listed last, D181); gate 2 run on
   charlie (computer, phone, TV 1280 and 1920, dark and light, Chromium and real Chrome). M37 waits for the movie Replace branch;
   M38's real-services run and the physical C1 and G2 checks stay with the user. The outline in [`PHASE12.md`](PHASE12.md) stays the backlog.
-- Phase 13 — offline episode watches to Trakt: **built (not accepted)** 2026-10-28 on branches
+- Phase 13 — offline episode watches to Trakt: **accepted** 2026-10-31 (built 2026-10-28) on branches
   `phase13-trakt-items` (from `main-items`) and `phase13-trakt-stubs` (from `main-stubs`), plugin and web; refinement and
   build in [`PHASE13.md`](PHASE13.md). Owns outgoing episode recovery; Phase 7 Q16 keeps incoming history observations.
   The stock Trakt plugin stays the only Trakt writer: JellyfinMod schedules its export and reports its state.
   Codex review-clean 2026-10-29 for the export; the account bar, the import, the per-title Activity and its direction mark
   followed (D125–D136, D153–D163, D182). Gate 2 passed 2026-10-31 on both lines (live list 103/103, matrix 134/134 in Chromium
-  and Chrome); the Codex review of those additions and the merge follow (PHASE13, gate 2).
+  and Chrome); Codex reviewed the additions and re-reviewed their fixes, its last two P3s fixed (PHASE13). Accepted because
+  the user's "finish everything" while away stood in for the gate 3 re-check (D184, workspace `reviews/overnight-2026-10-28/DECISIONS.md`); the merge follows.
 - **Planned new feature (user, 2026-10-12, to start after the current detail-page, picker and episode-list work): download the first episode and the next unwatched episode first, and import each episode as soon as it finishes.** For a season or series pack (or several torrents), the torrent client is told to download the files of the first episode and the person's next unwatched episode (per Jellyfin watch state, kept current as episodes are watched) with high priority, and the import (Phase 5) takes a finished file straight away instead of waiting for the whole torrent, so the person can start watching while the rest downloads. Owners to name when it is designed: Phase 4 (grab handoff, torrent file priority through the client) and Phase 5 (per-file import while a torrent is incomplete, its seed and hardlink rules), with Phase 6's queue states. Needs a design pass (client capabilities: Transmission file priority and sequential download; partial-pack import safety; what retention does with files still seeding); not started.
 - Phase 1 follow-up, **built (not accepted) (user, 2026-10-12): the full season and episode list for a library-discovered series.**
   Phase 1 (accepted 2026-09-06) tracks every TMDB season and episode, aired or not, but only for a series added through TMDB;
@@ -2101,7 +2102,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   hold more than one quality on purpose — for example a best-possible version for the living-room
   television and a compatible one for everything else — chosen on attributes a flat quality list
   cannot see. Its open questions 11–22 are listed there.
-- **Phase 13 — offline episode watches to Trakt.** Future, **not scheduled**; outline in
+- **Phase 13 — offline episode watches to Trakt.** **Accepted** 2026-10-31 (the phase list above); outline in
   [PHASE13.md](PHASE13.md). Requested 2026-10-07 after recovering missing Peaky Blinders watches:
   preserve original watch times, retry after internet returns, prevent duplicate plays, offer
   explicit missing-watch catch-up and reconnect when authorization fails. Initial scope is watches
