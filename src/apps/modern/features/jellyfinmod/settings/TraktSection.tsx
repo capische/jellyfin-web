@@ -144,6 +144,7 @@ const actionOf = (row: TraktActivity, trakt: TraktExport): { state: MarkState; w
     switch (row.state) {
         case 'playing': return { state: 'pending', words: 'watching now (reported live)' };
         case 'stopped': return { state: 'done', words: `stopped at ${count} % (reported live)` };
+        case 'scrobbled': return { state: 'done', words: 'marked watched (reported live)' };
         case 'waiting': return { state: 'pending', words: waitingWords(row, trakt) };
         case 'sent': return { state: 'done', words: 'marked watched' };
         case 'failed': return { state: 'failed', words: `failed: Trakt does not know this ${row.kind === 'movie' ? 'movie' : 'episode'}` };

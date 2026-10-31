@@ -38,7 +38,7 @@ violet disc against the dark section is 2.3:1; the white arrow inside carries th
 The mark's accessible name and tooltip: "Sent to Trakt", "Brought from Trakt", either with ", not yet done" while pending,
 and "Not sent to Trakt" when failed (only sending can fail, so the failed mark has no direction). The row's action:
 "marked watched", "marked watched here", "playback position: 14 min", "added to the collection", "watching now (reported
-live)", "stopped at 30 % (reported live)", "waiting: …", "failed: Trakt does not know this episode".
+live)", "stopped at 30 % (reported live)", "marked watched (reported live)", "waiting: …", "failed: Trakt does not know this episode".
 
 ## Trakt's branding rules
 
