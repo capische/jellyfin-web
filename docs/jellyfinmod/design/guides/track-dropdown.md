@@ -24,7 +24,8 @@ whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it
 `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1 (phone, dark and light). Computer and TV unchanged.
 **The Video list always exactly the Video cell on the computer and the TV, two-line rows when the cell is narrow** (the user,
 2026-11-01: "I've asked it to be exact size as Video dropdown and I thought design was approved for it"; D198, withdrawing D101's
-24em minimum): built 2026-11-01, gate 1.
+24em minimum): built 2026-11-01, gate 1. **A narrow strip stacks, the narrow rows' size on line 1, and the TV walks a row by
+itself** (the user, 2026-11-01: "move it, stack, check it"; D199): built 2026-11-01, gate 1.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -71,6 +72,13 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **One entry only** (`.jfmod-trackStatic`): the same segment without the chevron, `cursor: default`, not a focus stop.
 - **Phone:** the segments stack as rows of the same card, the dividers on top; every cell is the card's width. The open Video
   list is a row of the card too, between Video and Audio (D197, *Lists*).
+- **A narrow strip stacks the same way** (D199; `.jfmod-strip--stacked`, set by `useTrackStrip` on the strip and again on a
+  resize): where the Video cell would be narrower than **11.09em** (φ⁵ of the 1em base) beside Audio's 17.8em and Subtitles'
+  13.2em, measured from the strip's own width, which the stacking does not change, so it never flips back and forth. A computer
+  window stacks under about 980 px (measured: 985 px a row, 980 px stacked) and the TV at 1280 (its cell was 9.9em); a 1000 px
+  window (11.9em) and the TV at 1920 stay a row. Stacked, the strip draws exactly as the phone's, the Video chevron in the others'
+  column and a closed value's marks dropped whole, and the Video list sits in the card (*Lists*), its rows one line or two by
+  their width with the layout's own action size.
 - Upstream's Video, Audio and Subtitles rows step aside (display none) only while their segment is drawn; a row whose
   dropdown cannot mount (its streams unread) stays as upstream draws it, under the strip.
 
@@ -83,11 +91,13 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   row, the card's width. A click outside the list and its cell, Escape or Back closes it. A window resize or a rotated phone
   while a list is open places it again under its cell, without scrolling (D166; the Video list too, 2026-11-01). Only the
   Audio and Subtitles lists close when less than a row is left under the strip (D168): the Video list floats in the page,
-  not in the window, so it is never pushed over the strip. **The phone's Video list is the exception** (D197): it is part of the
-  card, drawn in the Video segment under its value (`.layout-mobile .jfmod-fileList`, `position: static`), so it pushes Audio,
+  not in the window, so it is never pushed over the strip. **On a stacked strip the Video list is the exception** (the phone,
+  D197; a narrow window or the TV at 1280, D199): it is part of the card, drawn in the Video segment under its value
+  (`.jfmod-strip .jfmod-fileList`, `position: static`; the rows' text at the segment's `.6em`), so it pushes Audio,
   Subtitles and the page down with the same 0.18 s grid-row slide and covers nothing; no border, radius or shadow of its own, only
   the card's `.135em` line above it (the border's colour). A tap outside closes it at once, without the slide, so a tap on Audio or
-  Subtitles opens that list under the cell where it now is; it has no resize placement and no spacer for the pending entry.
+  Subtitles opens that list under the cell where it now is; it has no spacer for the pending entry. A resize that stacks or
+  unstacks the strip while the list is open moves the list into the card or back under the cell, open.
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **always, also after a resize, never wider** (D198: D101's 24em minimum is
   withdrawn; on the phone the list is the card's width inside its border, D197); on the paper with a 1px divider border and
@@ -102,12 +112,15 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   phone mark) and the marks across the whole row (one line, `padding-right 1.35em`, a mark that does not fit dropped whole); line
   2 the size in the marks' type, then the extras after a dot in 86 % at 70 % (`2.1 GB · removes 12 Nov`), the size and extras cut
   with an ellipsis when the row is short, `min-height` the action size, `margin-top -.45em`; History, Keep and Remove after the
-  row's button at line 2's level, `.1em` from the bottom, so on the TV Right walks from the row to them, and line 1 reaches over
-  them by the row's action count (`--jfmod-icons`) to `.5em` from the row's edge. Padding `.4em .3em .1em`, the text at the rows'
+  row's button at line 2's level, `.1em` from the bottom, and line 1 reaches over them by the row's action count
+  (`--jfmod-icons`) to `.5em` from the row's edge. **On a narrow computer or TV cell the size is at line 1's right end** (D199,
+  `.jfmod-fileLine--sized`: the size's own `.8em` before it, no padding after), so it is never cut beside the actions; the marks
+  drop whole before it, and line 2 keeps the extras (the first without a dot) and the actions. The phone keeps the size on line
+  2 (D197): at 360 px it is not cut. Padding `.4em .3em .1em`, the text at the rows'
   usual inset. **Phone:** the actions 40 px (2.7816em, glyph 1.39em), `.25em` from the row's edge, the text at the segment's
   `.6em` (the list is inside the card's border), and so the folder note (`.698em` of its 86 %): 4.33em, 62.4 px a row.
   **Computer and TV:** the buttons guide's 2.5em actions on the row's edge, the wide rows' column: 4.05em a row (60.2 px at a
-  1000 px window, 81 px on the TV at 1280, where the size is cut to its first figure beside the three actions). **The current file has
+  1000 px window; the TV at 1280 now stacks, D199). **The current file has
   the Audio list's current look** (D106): a `.2em` `#00a4dc` bar on the left (an inset shadow, so the text stays under the
   cell's) and MUI's selected fill `rgba(primary / selectedOpacity)`, square corners. **Another row hovered or focused is
   grey**, as in the Audio and Subtitles lists (D145): hover `var(--jf-palette-action-hover)` (8 % white) over the whole row,
@@ -151,7 +164,10 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - One entry per option of the hidden stock select, in its order; Subtitles start with *Off*. The entry's tooltip is
   upstream's option text.
 - Keys: opens on the current entry; arrows move, Enter picks, Escape closes; focus returns to the segment. On the TV
-  `shell/dpadModals` drives the menus and Back closes them.
+  `shell/dpadModals` drives the menus and Back closes them. **In the open Video list the TV's Right and Left walk a file's row
+  themselves** (D199): the row, History, Keep, Remove and back, before the remote's own search, which tied the focused, grown
+  History with the Video value above the first row and jumped there (it did so on `main-items` too); at a row's ends the keys go on
+  as before.
 
 ## Behaviour
 
