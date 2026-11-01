@@ -255,9 +255,16 @@ $text-inset: 0.735em;
     transition: grid-template-rows 0.18s ease-out;
 }
 
-// The phone's Video list is its stacked cell's width, the card's: no 24em minimum, which overflowed a 320px screen (Codex review,
-// P2 1; D101 holds for the computer and the TV).
+// On the phone the Video list is part of the card (D197): drawn in the Video segment under its value, it moves Audio, Subtitles
+// and the page down as it slides; the card's width (no 24em minimum, D101 holds for the computer and the TV), with no shadow or
+// border of its own, only the card's line above it.
+.layout-mobile .jfmod-stripSegment--video {
+    flex-direction: column;
+}
+
 .layout-mobile .jfmod-fileList {
+    position: static;
+    z-index: auto;
     min-width: 0;
 }
 
@@ -282,6 +289,13 @@ $text-inset: 0.735em;
     border-radius: 0 0 0.2em 0.2em;
     background: var(--jf-palette-background-paper, #202020);
     box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.layout-mobile .jfmod-fileListBox {
+    border: 0;
+    border-top: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
+    border-radius: 0;
+    box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -424,25 +438,6 @@ $text-inset: 0.735em;
     align-items: center;
 }
 
-// A phone stacks the extras under the video; the size stays on the first line.
-.layout-mobile {
-    .jfmod-fileChoose {
-        align-items: flex-start;
-    }
-
-    .jfmod-fileBody {
-        display: block;
-    }
-
-    .jfmod-fileLine {
-        display: flex;
-    }
-
-    .jfmod-fileLine--extra {
-        margin-top: 0.15em;
-    }
-}
-
 // The marks are drawn for the picker's second line; beside this line's full-size text they are 30% larger (chips 13px tall in
 // the 26px value at the desktop's 16px; user, 2026-10-12).
 .jfmod-fileMarks {
@@ -468,6 +463,12 @@ $text-inset: 0.735em;
 // One line in the closed value: the marks are cut at the field's end, before the size (P7.FU6).
 .jfmod-videoTriggerText .jfmod-fileMarks {
     flex-wrap: nowrap;
+}
+
+// On the phone the Video chevron sits in the Audio and Subtitles chevrons' column (D197).
+.layout-mobile .jfmod-videoTrigger .jfmod-videoChevron {
+    flex: none;
+    margin-right: -0.25em;
 }
 
 // The size at the value's right end, just before the chevron (P7.FU6, option A), and at each row's end before its icons.
@@ -580,6 +581,22 @@ $text-inset: 0.735em;
     opacity: 0.8;
 }
 
+// The phone's note starts where the rows' text does (.6em of the row at its 86 %).
+.layout-mobile .jfmod-fileNote {
+    margin: 0.35em 0.698em 0.6em;
+}
+
+// The phone's row actions are the guide's 40px minimum (D197): 2.7816em with a 1.39em glyph at the phone's 14.4px, the file rows'
+// and the pending entry's alike.
+.layout-mobile .jfmod-fileIcons > .jfmod-fileIcon {
+    width: 2.7816em;
+    height: 2.7816em;
+
+    > .material-icons {
+        font-size: 1.39em;
+    }
+}
+
 [data-theme='light'] .jfmod-strip,
 [data-theme='light'] .jfmod-fileListBox {
     --jfmod-paper: #fff;
@@ -610,4 +627,76 @@ $text-inset: 0.735em;
 .jfmod-videoTriggerText > .jfmod-fileMarks,
 .jfmod-trackRoles {
     flex: none;
+}
+
+// A phone's file row is two lines (D197): line 1 what the file is, resolution and marks across the whole row; line 2 the size and
+// the extras after a dot, with History, Keep and Remove on the right at 40px (2.7816em at the phone's 14.4px). The text starts
+// where the segment's does (its .6em padding: the list is inside the card's border here).
+.layout-mobile {
+    .jfmod-fileRow {
+        position: relative;
+        display: block;
+    }
+
+    .jfmod-fileChoose {
+        display: block;
+        width: 100%;
+        padding: 0.4em 0.5em 0.1em 0.6em;
+    }
+
+    .jfmod-fileLine {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        min-width: 0;
+        padding-right: 1.35em;
+        line-height: 1.5;
+        white-space: nowrap;
+    }
+
+    // Room on the right for the three actions (3 × 2.7816em, .25em from the row's edge, less the row's .5em padding).
+    .jfmod-fileLine--extra {
+        min-height: 2.7816em;
+        margin-top: -0.45em;
+        padding-right: 8.4em;
+    }
+
+    .jfmod-fileLine--extra > .jfmod-fileSize {
+        flex: none;
+    }
+
+    .jfmod-fileLine--extra > .jfmod-fileExtra {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin: 0 0 0 0.3em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .jfmod-fileRow > .jfmod-fileIcons {
+        position: absolute;
+        right: 0.25em;
+        bottom: 0.1em;
+        margin: 0;
+    }
+}
+
+// On the phone a mark that does not fit is dropped whole, never sliced (D197), in the closed value and the rows: it wraps onto a
+// second line that the one-mark-tall box hides (the Audio cell's trick, D78). The empty first item, a mark's height, sends even
+// the first mark to that hidden line when it alone does not fit.
+.layout-mobile .jfmod-videoTriggerText .jfmod-fileMarks,
+.layout-mobile .jfmod-fileRow .jfmod-fileMarks,
+.layout-mobile .jfmod-pendingLine > .jfmod-fileMarks {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    min-width: 0;
+    // One line of marks: a mark's 1.2em box at its 60 %.
+    height: 0.72em;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        height: 0.72em;
+    }
 }
