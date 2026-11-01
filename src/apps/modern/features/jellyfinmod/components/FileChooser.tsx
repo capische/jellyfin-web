@@ -438,23 +438,39 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     useViewerChoice(view, chosen);
     useDevicePreference(view, multi ? preferred : null, chosen);
     const slide = useSlide();
-    // The Video list floats like Audio's (user, 2026-10-29): placed under its cell when it opens; the pending entry under the strip
-    // leaves its height behind while it sits in the list, so the page does not move.
+    // The Video list floats like Audio's (user, 2026-10-29): placed under its cell when it opens and on a resize; the pending entry
+    // under the strip leaves its height behind while it sits in the list, so the page does not move.
     const [place, setPlace] = useState<{ top: number; left: number; width: number; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
+    const measure = useCallback(() => {
+        if (!trigger.current) return null;
+        const at = listPlace(trigger.current);
+        const below = strip.below.getBoundingClientRect();
+        return { top: at.top - below.top, left: at.left - below.left, width: at.width };
+    }, [strip.below]);
     const toggle = useCallback(() => {
         if (slide.open) {
             slide.hide();
             return;
         }
-        if (trigger.current) {
-            const at = listPlace(trigger.current);
-            const below = strip.below.getBoundingClientRect();
+        const at = measure();
+        if (at) {
             const entry = strip.below.querySelector(':scope > .jfmod-pending');
-            setPlace({ top: at.top - below.top, left: at.left - below.left, width: at.width, spacer: entry?.getBoundingClientRect().height ?? 0 });
+            setPlace({ ...at, spacer: entry?.getBoundingClientRect().height ?? 0 });
         }
         slide.show();
-    }, [slide, strip.below]);
+    }, [slide, strip.below, measure]);
+    // A resize (a window, a rotated phone) places the open list again under its cell, as Audio's (D166). It floats in the page,
+    // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
+    useEffect(() => {
+        if (!slide.open) return;
+        const again = () => {
+            const at = measure();
+            if (at) setPlace(previous => previous && { ...previous, ...at });
+        };
+        window.addEventListener('resize', again);
+        return () => window.removeEventListener('resize', again);
+    }, [slide.open, measure]);
     // A click outside the list and its cell closes it, as outside Audio's.
     useEffect(() => {
         if (!slide.open) return;
