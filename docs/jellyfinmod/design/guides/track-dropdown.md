@@ -18,6 +18,7 @@ D106, D107): built 2026-10-29, gate 1. **Fixed cells whatever the file (None whe
 marks' type** (the user, 2026-10-29; D131, D132): built 2026-10-29, gate 1. **Grey hover and focus on the other Video
 rows** (the user, 2026-10-30; D145): built 2026-10-30, gate 1. **The chosen track's extra words on the closed cell's caption
 line** (the user, 2026-10-30: "Love it. Accepted."; D137, D147): built 2026-10-30, gate 1.
+**The open Video list placed again on a resize**, as Audio's (the user's "Go", 2026-11-01; D166): built 2026-11-01, gate 1.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -70,7 +71,10 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   (the strip's border is the line between them), square top corners, radius `0 0 .2em .2em`; it floats over the page, which
   does not move. Placed by position with `listPlace` (in `FileChooser.tsx`): from the cell's left edge (the first cell's from
   the strip's outer left edge) to its right edge (the last cell's to the outer right edge); on the phone under the stacked
-  row, the card's width. A click outside the list and its cell, Escape or Back closes it.
+  row, the card's width. A click outside the list and its cell, Escape or Back closes it. A window resize or a rotated phone
+  while a list is open places it again under its cell, without scrolling (D166; the Video list too, 2026-11-01). Only the
+  Audio and Subtitles lists close when less than a row is left under the strip (D168): the Video list floats in the page,
+  not in the window, so it is never pushed over the strip.
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
   lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is its stacked
