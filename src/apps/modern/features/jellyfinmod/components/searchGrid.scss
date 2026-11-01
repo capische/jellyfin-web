@@ -1,0 +1,215 @@
+/* JellyfinMod — the search grid and its card (TM2; D200–D203; guide docs/jellyfinmod/design/guides/search-card.md).
+ *
+ * Golden ratio (workspace CLAUDE.md, Design): base unit 1em, the surface's font size. Cell padding 1em (base; even on every
+ * side, the named exception, as Jellyfin's own card), caption gap 0.382em (φ⁻²), caption line pitch 1.618 (φ), the kind
+ * label's gap 0.618em (φ⁻¹), secondary ink 85.4 % (1 − φ⁻⁴), the TV ring 0.382em (φ⁻²), the grid's side padding 3.236em (2φ).
+ * Exceptions: the 2:3 poster, and the + as upstream's own centre overlay button (user 2026-11-01: as the cloud or Play on a poster).
+ * No flex gap, min(), max() or :has (older webOS).
+ */
+
+.jfmod-searchGrid {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 3.236em;
+}
+
+.jfmod-searchCell {
+    box-sizing: border-box;
+    width: 20%;
+    padding: 1em;
+    position: relative;
+    // Square corners (D202: "hover should not [have] circled corners"); the poster keeps the card's 0.2em.
+    border-radius: 0;
+    transition: background-color 0.15s ease;
+}
+
+.jfmod-searchOpen {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+}
+
+.jfmod-searchPoster {
+    position: relative;
+    padding-top: 150%;
+    border-radius: 0.2em;
+    background: var(--jf-palette-background-paper, #202020);
+    overflow: hidden;
+
+    > img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+// Above the poster's centre, where the add disc sits (the mockup's 22 %).
+.jfmod-searchBlank {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    font-size: 3em;
+    width: 1em;
+    height: 1em;
+    margin-left: -0.5em;
+    opacity: 0.35;
+}
+
+// Three 1em lines at pitch φ: the title 700 at full ink; the year 400 at full ink, "TV Series" at 85.4 %; the two leads at 85.4 %.
+.jfmod-searchCaption {
+    color: var(--jf-palette-text-primary, #fff);
+    font-size: 1em;
+    line-height: 1.618;
+    padding: 0.382em 0 0;
+}
+
+.jfmod-searchLine {
+    min-height: 1.618em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jfmod-searchTitle {
+    font-weight: 700;
+}
+
+.jfmod-searchKind {
+    margin-left: 0.618em;
+    opacity: 0.854;
+
+    &:first-child { margin-left: 0; }
+}
+
+.jfmod-searchCast {
+    opacity: 0.854;
+}
+
+// The + sits on the poster: a box over the poster (its padding gives the 2:3 height) holding upstream's hover overlay, so the
+// + is a library poster's centre button (`cardOverlayFab-primary`: black 70 %, 3em at 130 %, the poster dimmed to black 50 %,
+// shown on the cell's hover or focus in 0.2 s, 1.4 under the pointer). These rules only place the overlay and keep it shown
+// while adding.
+.jfmod-searchAddBox {
+    position: absolute;
+    left: 1em;
+    right: 1em;
+    top: 1em;
+    pointer-events: none;
+}
+
+.jfmod-searchAddPad {
+    padding-top: 150%;
+}
+
+.jfmod-searchOverlay-adding,
+.jfmod-searchOverlay-adding .cardOverlayButton-hover {
+    opacity: 1;
+}
+
+.jfmod-searchAdd {
+    &:focus { outline: none; }
+    &:focus-visible { box-shadow: 0 0 0 0.15em var(--jf-palette-primary-main, #00a4dc); }
+
+    &[aria-busy='true'] {
+        cursor: default;
+        transform: none;
+    }
+}
+
+.jfmod-searchAddArc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke-width: 2;
+    pointer-events: none;
+}
+
+// Adding: the importing arc's turning 28 % segment (download-state-mark.md), white round the black disc.
+.jfmod-searchAddSeg {
+    stroke: #fff;
+    stroke-linecap: round;
+    stroke-dasharray: 28 72;
+    transform-origin: 50% 50%;
+    animation: jfmod-searchAddSpin 1.2s linear infinite;
+}
+
+@keyframes jfmod-searchAddSpin {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfmod-searchAddSeg { animation: none; }
+}
+
+// Loading more: a row of skeleton cells at the grid's end.
+.jfmod-searchSkeleton {
+    box-sizing: border-box;
+    width: 20%;
+    padding: 1em;
+
+    > div {
+        padding-top: 150%;
+        border-radius: 0.2em;
+        background: var(--jf-palette-background-paper, #202020);
+        opacity: 0.65;
+    }
+}
+
+.jfmod-searchEnd {
+    text-align: center;
+    opacity: 0.7;
+    line-height: 1.618;
+    padding: 1.618em 0 0.618em;
+}
+
+// The administrator's Undo, one line above the grid while it is offered.
+.jfmod-searchUndo {
+    display: flex;
+    align-items: center;
+    padding: 0 4.236em;
+    margin: 0 0 0.618em;
+
+    b {
+        font-weight: 600;
+        margin: 0 0.3em;
+    }
+
+    .emby-button { margin-left: 0.8em; }
+}
+
+.jfmod-searchNotice {
+    padding: 0 4.236em;
+    margin: 0 0 1em;
+}
+
+// The phone: two per row, flush cells, no hover panel.
+.layout-mobile {
+    .jfmod-searchGrid { padding: 0.618em 0.618em 0 1.618em; }
+
+    .jfmod-searchCell,
+    .jfmod-searchSkeleton {
+        width: 50%;
+        padding: 0 1em 1.618em 0;
+    }
+
+    .jfmod-searchUndo,
+    .jfmod-searchNotice { padding: 0 1.618em; }
+}
+
+// The whole cell lit in paper under the TV focus, with the primary ring inside it, and under the pointer (not on the phone; D202).
+.layout-tv .jfmod-searchCell:focus-within {
+    background: var(--jf-palette-background-paper, #202020);
+    box-shadow: inset 0 0 0 0.382em var(--jf-palette-primary-main, #00a4dc);
+}
+
+html:not(.layout-mobile) .jfmod-searchCell:hover {
+    background: var(--jf-palette-background-paper, #202020);
+}

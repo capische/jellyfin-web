@@ -2,6 +2,14 @@
 export const getEntryPath = (entryId: string, serverId?: string) =>
     '/details?entryId=' + encodeURIComponent(entryId) + (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
 
+/**
+ * The page of a TMDB title that is not in the library (TM2): upstream's detail route with the mod's `tmdbType`/`tmdbId`, a
+ * season's or an episode's with `season` and `episode`.
+ */
+export const getTmdbPath = (mediaType: 'movie' | 'series', tmdbId: number, serverId?: string, season?: number, episode?: number) =>
+    '/details?tmdbType=' + mediaType + '&tmdbId=' + tmdbId + (season !== undefined ? '&season=' + season : '')
+    + (episode !== undefined ? '&episode=' + episode : '') + (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
+
 /** TMDB provides image paths, never arbitrary remote image URLs. */
 export const getTmdbImage = (path?: string | null, size: 'w154' | 'w185' | 'w300' | 'w342' | 'w500' | 'w1280' = 'w500') =>
     path && /^\/[a-zA-Z0-9_./-]+$/.test(path) ? 'https://image.tmdb.org/t/p/' + size + path : undefined;
