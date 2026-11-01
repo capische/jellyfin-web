@@ -4,7 +4,7 @@ import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/
 import type { AxiosRequestConfig } from 'axios';
 
 import type { AcquisitionSummary, GrabMode, GrabOperation, QualityProfile, ReleaseIntent, ReleaseProgress, ReleaseScope, ReleaseSearch } from '../types/acquisition';
-import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbMetadata } from '../types/entry';
+import type { Entry, EntryEpisode, HistoryRecord, RetentionSummary, RetentionWarning, TmdbCrewCredit, TmdbMetadata } from '../types/entry';
 import type { BrowseRow } from '../types/browse';
 import type { Rating } from '../types/ratings';
 import type { ImportOperation, QueueList, QueueQuery, RemoveQueueRequest } from '../types/queue';
@@ -272,6 +272,24 @@ export const requestSearch = async (api: Api, entryId: string, episodeId?: strin
 
 export const removeEntry = async (api: Api, id: string, options?: AxiosRequestConfig): Promise<void> => {
     await api.axiosInstance.delete(api.basePath + BASE + '/Entries/' + encodeURIComponent(id), { ...options, headers: authorization(api) });
+};
+
+/** A TMDB title for its page before it is added (TM2): the season's episodes only when one was asked for. */
+export interface DiscoverTitle {
+    metadata: TmdbMetadata;
+    crew: TmdbCrewCredit[];
+    creators: string[];
+    episodes?: EntryEpisode[];
+}
+
+/** The plugin's capability for {@link getDiscoverTitle}; without it a TMDB result opens nothing (TM2). */
+export const DISCOVER_TITLE_CAPABILITY = 'discover.title';
+
+export const getDiscoverTitle = async (api: Api, params: { type: 'movie' | 'series'; tmdbId: number; season?: number },
+    options?: AxiosRequestConfig): Promise<DiscoverTitle> => {
+    const response = await api.axiosInstance.get<DiscoverTitle>(api.basePath + BASE + '/Discover/Title',
+        { ...options, headers: authorization(api), params });
+    return response.data;
 };
 
 export const searchDiscovery = async (api: Api, params: DiscoveryQuery, options?: AxiosRequestConfig): Promise<DiscoveryResult> => {

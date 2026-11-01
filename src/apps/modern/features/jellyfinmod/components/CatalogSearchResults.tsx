@@ -1,8 +1,10 @@
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import { useQueries } from '@tanstack/react-query';
-import React, { type FC, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
+import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import actionsheet from 'components/actionSheet/actionSheet';
 import SearchResults from 'apps/legacy/features/search/components/SearchResults';
 import SearchResultsRow from 'apps/legacy/features/search/components/SearchResultsRow';
 import { useSearchItems } from 'apps/legacy/features/search/api/useSearchItems';
@@ -12,19 +14,20 @@ import toast from 'components/toast/toast';
 import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
+import type { ItemDto } from 'types/base/models/item-dto';
 import { queryClient } from 'utils/query/queryClient';
 
-import { browseEntries, createEntry, removeEntry } from '../api/modApi';
+import { browseEntries, createEntry, DISCOVER_TITLE_CAPABILITY, removeEntry } from '../api/modApi';
+import { usePluginCapabilities } from '../hooks/useAcquisition';
 import { useDiscovery } from '../hooks/useDiscovery';
 import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
-import { FileState, type Entry, type TmdbMetadata } from '../types/entry';
-import { getTmdbImage } from '../utils/entryLinks';
-import EmbySelect from './EmbySelect';
-import EntryCards from './EntryCards';
-import { flatButtonClass, raisedButtonClass } from '../utils/flatButton';
+import type { Entry, TmdbMetadata } from '../types/entry';
+import { getEntryPath, getTmdbImage, getTmdbPath } from '../utils/entryLinks';
+import { raisedButtonClass } from '../utils/flatButton';
+import SearchCard, { type SearchCardItem } from './SearchCard';
 
-import './catalogSearch.scss';
+import './searchGrid.scss';
 
 interface Props {
     parentId?: string;
@@ -34,10 +37,10 @@ interface Props {
 
 type MediaType = 'movie' | 'series';
 
-/** A media type as a button's label says it, in Title Case (UX §12.1). */
-const MEDIA_WORDS: Record<MediaType, string> = { movie: 'Movie', series: 'Series' };
+/** The search grid shows both kinds wherever it was opened from (D201: "Library limit on search - A"). */
+const TYPES: MediaType[] = ['movie', 'series'];
 
-const cardOptions = {
+const stockCardOptions = {
     shape: CardShape.AutoOverflow,
     scalable: true,
     showTitle: true,
@@ -47,70 +50,94 @@ const cardOptions = {
     allowBottomPadding: false
 };
 
-const EntrySection: FC<{ mediaType: MediaType; title: string; rows: BrowseRow[]; serverId?: string }> = ({ mediaType, title, rows, serverId }) => {
-    const element = useRef<HTMLElement>(null);
-    const [itemsContainer, setItemsContainer] = useState<Element | null>(null);
+const identityOf = (mediaType: MediaType, tmdbId: number) => `${mediaType}:${tmdbId}`;
 
-    useEffect(() => {
-        setItemsContainer(element.current?.querySelector('.itemsContainer') ?? null);
-    }, []);
+/** Library titles by name, as Jellyfin sorts them: a leading article does not count. */
+const sortKey = (title: string) => title.replace(/^(the|a|an)\s+/i, '').toLocaleLowerCase();
 
-    return <section ref={element} className='verticalSection' data-jfmod-media-type={mediaType}>
-        <h2 className='sectionTitle sectionTitle-cards padded-left padded-right'>{title}</h2>
-        <div dangerouslySetInnerHTML={{
-            __html: `<div is="emby-scroller" data-horizontal="true" data-centerfocus="card" class="padded-top-focusscale padded-bottom-focusscale">
-                <div is="emby-itemscontainer" class="focuscontainer-x itemsContainer scrollSlider"></div>
-            </div>`
-        }} />
-        {itemsContainer && createPortal(<EntryCards rows={rows} cardOptions={{ ...cardOptions, serverId }} />, itemsContainer)}
-    </section>;
+/** A title as the full-match test compares it: case, spaces and punctuation do not count. */
+const normalTitle = (title: string) => title.toLocaleLowerCase().replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim();
+
+interface RankedCard {
+    card: SearchCardItem;
+    /** The title equals the query. */
+    full: boolean;
+    /** The fuzzy order: library titles by name, then TMDB's popularity order. */
+    rank: number;
+}
+
+/** Newest first: by year, then by the full date where both have one. */
+const byDate = (left?: string | null, right?: string | null) => {
+    const years = (Number(right?.slice(0, 4)) || 0) - (Number(left?.slice(0, 4)) || 0);
+    if (years || !left || !right || left.length < 10 || right.length < 10) return years;
+    return right.slice(0, 10).localeCompare(left.slice(0, 10));
+};
+
+const byMatchThenDate = (left: RankedCard, right: RankedCard) => {
+    if (left.full !== right.full) return left.full ? -1 : 1;
+    if (left.full) return byDate(left.card.date, right.card.date) || left.rank - right.rank;
+    return left.rank - right.rank;
 };
 
 /**
- * The TMDB suggestions scroll like every other search row: an emby-scroller with a scrollSlider, so mouse,
- * touch and D-pad focus can reach every card (P1.W9).
+ * The candidates by key: TMDB's results, and library titles (a library title replaces TMDB's card of the same title, except a
+ * title added from this search, which keeps its TMDB card in place). Among the fuzzy ones library titles come first, by name.
  */
-const DiscoveryRow: FC<{ children: React.ReactNode }> = ({ children }) => {
-    const element = useRef<HTMLDivElement>(null);
-    const [slider, setSlider] = useState<Element | null>(null);
-
-    useEffect(() => {
-        setSlider(element.current?.querySelector('.scrollSlider') ?? null);
-    }, []);
-
-    // The scroller measures its slider when attached and on frame resize only; cards portalled in afterwards,
-    // or appended by "More results", would stay out of reach of the desktop scroll buttons.
-    useEffect(() => {
-        element.current?.querySelector<HTMLElement & { scroller?: { reload(): void } }>('[is="emby-scroller"]')
-            ?.scroller?.reload();
+const rankCandidates = (library: SearchCardItem[], tmdb: SearchCardItem[], added: Map<string, Entry>, query: string) => {
+    const wanted = normalTitle(query);
+    const sorted = library.slice().sort((left, right) => sortKey(left.title).localeCompare(sortKey(right.title)));
+    const candidates = new Map<string, RankedCard>();
+    tmdb.forEach((card, index) => {
+        candidates.set(card.key, { card, full: normalTitle(card.title) === wanted, rank: sorted.length + index });
     });
-
-    return <div ref={element}>
-        <div dangerouslySetInnerHTML={{
-            __html: `<div is="emby-scroller" data-horizontal="true" data-centerfocus="card" class="padded-top-focusscale padded-bottom-focusscale">
-                <div class="focuscontainer-x scrollSlider jfmod-discoveryCards padded-left padded-right"></div>
-            </div>`
-        }} />
-        {slider && createPortal(children, slider)}
-    </div>;
+    sorted.forEach((card, index) => {
+        if (!added.has(card.key) || !candidates.has(card.key)) candidates.set(card.key, { card, full: normalTitle(card.title) === wanted, rank: index });
+    });
+    return candidates;
 };
 
-const optimisticEntry = (metadata: TmdbMetadata, targetLibraryId: string): Entry => ({
-    id: `pending:${metadata.mediaType}:${metadata.tmdbId}:${targetLibraryId}`,
-    mediaType: metadata.mediaType,
-    tmdbId: metadata.tmdbId,
-    imdbId: metadata.imdbId,
-    title: metadata.title,
-    year: metadata.premiereDate ? Number(metadata.premiereDate.slice(0, 4)) : null,
-    overview: metadata.overview,
-    posterPath: metadata.posterPath,
-    metadata,
-    retentionPolicy: 'inherit',
-    state: FileState.None,
-    monitored: true,
-    targetLibraryId,
-    addedAt: new Date().toISOString()
-});
+/**
+ * The order (user, 2026-11-01: "full match", "the latest release" and then "fuzzy match"): full matches by release date, newest
+ * first, then the fuzzy ones in the popularity order. Cards already shown keep their places; newly loaded ones follow them,
+ * sorted by the same rule.
+ */
+const orderedKeys = (shown: string[], candidates: Map<string, RankedCard>) => {
+    const kept = shown.filter(key => candidates.has(key));
+    const keptKeys = new Set(kept);
+    return [...kept, ...Array.from(candidates.values()).filter(item => !keptKeys.has(item.card.key)).sort(byMatchThenDate)
+        .map(item => item.card.key)];
+};
+
+/** A library title's card: its Jellyfin item's page, image and actors where it has one, else its entry's. */
+const libraryCard = (row: BrowseRow, context: { serverId?: string; nativeLeads: Map<string | undefined, string[]>;
+    imageOf: (item: ItemDto) => string | undefined }): SearchCardItem | null => {
+    const { serverId, nativeLeads, imageOf } = context;
+    const entry = row.entry ?? undefined;
+    if (row.kind === 'native') {
+        const item = row.nativeItem;
+        const mediaType: MediaType = item.Type === 'Series' ? 'series' : 'movie';
+        const title = item.Name ?? entry?.title ?? '';
+        return {
+            key: entry ? identityOf(entry.mediaType, entry.tmdbId) : 'native:' + item.Id,
+            mediaType, tmdbId: entry?.tmdbId, title, year: item.ProductionYear ?? entry?.year,
+            date: item.PremiereDate ?? entry?.metadata?.premiereDate,
+            cast: nativeLeads.get(item.Id ?? undefined) ?? leads(entry?.metadata?.cast),
+            poster: imageOf(item) ?? getTmdbImage(entry?.posterPath, 'w342'),
+            href: '#/details?id=' + encodeURIComponent(item.Id ?? '') + (serverId ? '&serverId=' + encodeURIComponent(serverId) : ''),
+            entry, retention: row.retention
+        };
+    }
+    if (!entry) return null;
+    return {
+        key: identityOf(entry.mediaType, entry.tmdbId), mediaType: entry.mediaType, tmdbId: entry.tmdbId, title: entry.title,
+        year: entry.year, date: entry.metadata?.premiereDate, cast: leads(entry.metadata?.cast), poster: getTmdbImage(entry.posterPath, 'w342'),
+        href: '#' + getEntryPath(entry.id, serverId), entry, retention: row.retention
+    };
+};
+
+const yearOf = (date?: string | null) => (date && /^\d{4}/.test(date) ? Number(date.slice(0, 4)) : null);
+
+const leads = (cast?: { name: string }[] | null) => (cast ?? []).slice(0, 2).map(person => person.name);
 
 /** The session's library choice per media type survives query edits (P1.W13). */
 const librariesKey = (userId?: string | null) => 'jfmod-searchLibraries:' + (userId ?? '');
@@ -123,19 +150,42 @@ const loadLibraryChoice = (userId?: string | null): Partial<Record<MediaType, st
     }
 };
 
+/** Everything of the catalog to refresh after an add or an undo, except this search's TMDB pages, so no card moves. */
+const refreshCatalog = (basePath: string, userId?: string) => queryClient.invalidateQueries({
+    queryKey: ['JellyfinMod', basePath, userId],
+    predicate: query => query.queryKey[3] !== 'DiscoverPages'
+});
+
+/** Whether the first library and TMDB answers are in. */
+const isAnswered = (browse: { isPending: boolean }[], discovery: { isPending: boolean }[], query: string) =>
+    !browse.some(result => result.isPending) && (query.length < 2 || discovery.every(result => !result.isPending));
+
+/** The cards in their shown order, once the first answers are in; none before. */
+const shownCards = (shown: { current: string[] }, candidates: Map<string, RankedCard>, ready: boolean) => {
+    if (!ready) return [];
+    shown.current = orderedKeys(shown.current, candidates);
+    return shown.current.map(key => candidates.get(key)!.card);
+};
+
+/** What TMDB could not answer: nothing, one kind, or both. */
+const DiscoveryNotice: FC<{ failedTypes: MediaType[] }> = ({ failedTypes }) => {
+    if (!failedTypes.length) return null;
+    if (failedTypes.length === TYPES.length) return <p className='jfmod-searchNotice'>TMDB is unavailable. Your library results are still shown.</p>;
+    return <p className='jfmod-searchNotice'>
+        TMDB {failedTypes.map(type => (type === 'movie' ? 'movie' : 'series')).join(' and ')} results are unavailable right now.
+    </p>;
+};
+
 const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const resultsRef = useRef<HTMLDivElement>(null);
+    const endRef = useRef<HTMLDivElement>(null);
     const { api, user, __legacyApiClient__ } = useApi();
+    const serverId = __legacyApiClient__?.serverId();
     const health = usePluginHealth();
+    const canBrowse = usePluginCapabilities(api, true).includes(DISCOVER_TITLE_CAPABILITY);
     const stock = useSearchItems(parentId, collectionType, query.trim());
     const views = useUserViews({ userId: user?.Id });
     const queryInput = query.trim();
-    const types = useMemo<MediaType[]>(() => {
-        if (collectionType === CollectionType.Movies) return ['movie'];
-        if (collectionType === CollectionType.Tvshows) return ['series'];
-        return ['movie', 'series'];
-    }, [collectionType]);
-    const [optimistic, setOptimistic] = useState<Entry[]>([]);
     const [selectedLibraries, setSelectedLibraries] = useState<Partial<Record<MediaType, string>>>(() => loadLibraryChoice(user?.Id));
     useEffect(() => {
         try {
@@ -144,6 +194,11 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
             // The choice is a convenience; without storage it lasts for this search only.
         }
     }, [selectedLibraries, user?.Id]);
+    // Titles added from this search, by TMDB identity: their card stays where it was and shows the cloud (state=added).
+    const [added, setAdded] = useState<Map<string, Entry>>(() => new Map());
+    const [adding, setAdding] = useState<Set<string>>(() => new Set());
+    const shownResults = useRef<TmdbMetadata[]>([]);
+    const shownOrder = useRef<string[]>([]);
     // Undo stays in the page, is focused on TV and waits for the viewer instead of a 4-second toast (P1.W13).
     const [undoEntry, setUndoEntry] = useState<Entry | null>(null);
     const undoButton = useRef<HTMLButtonElement>(null);
@@ -151,8 +206,6 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         if (undoEntry && layoutManager.tv) undoButton.current?.focus();
     }, [undoEntry]);
     const active = useRef(true);
-    const inFlight = useRef(new Set<string>());
-    const failedFocus = useRef<string>();
     useEffect(() => {
         active.current = true;
         return () => {
@@ -160,28 +213,16 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         };
     }, []);
 
-    const focusMovedEntry = (metadata: TmdbMetadata) => {
-        window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => {
-                const section = resultsRef.current?.querySelector(`[data-jfmod-media-type="${metadata.mediaType}"]`);
-                const card = section?.querySelector<HTMLElement>(`[data-jfmod-tmdb-id="${metadata.tmdbId}"]`);
-                const target = card?.matches('a, button') ? card : card?.querySelector<HTMLElement>('a[href], button');
-                target?.focus();
-            });
-        });
-    };
-
     const libraries = useMemo(() => ({
         movie: (views.data?.Items ?? []).filter(view => view.CollectionType === CollectionType.Movies && view.Id),
         series: (views.data?.Items ?? []).filter(view => view.CollectionType === CollectionType.Tvshows && view.Id)
     }), [views.data?.Items]);
 
     const browse = useQueries({
-        queries: types.map(mediaType => ({
-            queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'SearchBrowse', mediaType, parentId, queryInput],
+        queries: TYPES.map(mediaType => ({
+            queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'SearchBrowse', mediaType, queryInput],
             queryFn: ({ signal }: { signal: AbortSignal }) => browseEntries(api!, {
                 mediaType,
-                targetLibraryId: parentId,
                 query: queryInput,
                 sortBy: ['SortName'],
                 sortOrder: 'Ascending',
@@ -193,207 +234,209 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         }))
     });
 
-    const movieDiscovery = useDiscovery('movie', parentId, queryInput, types.includes('movie'));
-    const seriesDiscovery = useDiscovery('series', parentId, queryInput, types.includes('series'));
-    const discovery = types.map(type => type === 'movie' ? movieDiscovery : seriesDiscovery);
-    const authoritativeIds = browse.flatMap(result => result.data?.items ?? [])
-        .flatMap(row => row.entry ? [row.entry.id] : []).sort((left, right) => left.localeCompare(right)).join(',');
+    const movieDiscovery = useDiscovery('movie', undefined, queryInput, true);
+    const seriesDiscovery = useDiscovery('series', undefined, queryInput, true);
+    const discovery = [movieDiscovery, seriesDiscovery];
+
+    // The two lead actors of a library title Jellyfin holds: its people, read for the titles on this page only.
+    const libraryRows = browse.flatMap(result => result.data?.items ?? []);
+    const nativeIds = libraryRows.flatMap(row => (row.kind === 'native' && row.nativeItem.Id ? [row.nativeItem.Id] : []));
+    const people = useQuery({
+        queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'SearchPeople', nativeIds.join(',')],
+        queryFn: async ({ signal }) => (await getLibraryApi(api!).getItems({ userId: user!.Id, ids: nativeIds,
+            fields: [ItemFields.People] }, { signal })).data.Items ?? [],
+        enabled: !!api && !!user?.Id && nativeIds.length > 0,
+        retry: false
+    });
+    const nativeLeads = useMemo(() => new Map((people.data ?? []).map(item => [item.Id,
+        (item.People ?? []).filter(person => person.Type === 'Actor' && person.Name).slice(0, 2).map(person => person.Name!)])),
+    [people.data]);
+
+    const targetFor = useCallback((mediaType: MediaType) => {
+        const compatible = libraries[mediaType];
+        // Opened from a library of this kind: that library, as before D201; else the only one, else the session's choice.
+        if (parentId && compatible.some(library => library.Id === parentId)) return parentId;
+        if (compatible.length === 1) return compatible[0].Id ?? undefined;
+        return selectedLibraries[mediaType];
+    }, [libraries, parentId, selectedLibraries]);
+
+    const chooseLibrary = useCallback(async (mediaType: MediaType, button: HTMLElement) => {
+        const id = await actionsheet.show({
+            title: mediaType === 'movie' ? 'Movie Library' : 'TV Library',
+            items: libraries[mediaType].map(library => ({ id: library.Id ?? '', name: library.Name ?? '' })),
+            positionTo: button
+        }) as string;
+        setSelectedLibraries(current => ({ ...current, [mediaType]: id }));
+        return id;
+    }, [libraries]);
+
+    const focusCard = (key: string) => {
+        window.requestAnimationFrame(() => {
+            resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-key="${key}"] .jfmod-searchOpen`)?.focus();
+        });
+    };
+
+    const add = useCallback(async (metadata: TmdbMetadata, button: HTMLElement) => {
+        if (!api) return;
+        const identity = identityOf(metadata.mediaType, metadata.tmdbId);
+        let targetLibraryId = targetFor(metadata.mediaType);
+        if (!targetLibraryId) {
+            try {
+                targetLibraryId = await chooseLibrary(metadata.mediaType, button);
+            } catch {
+                return;
+            }
+        }
+        if (!targetLibraryId) return;
+        setAdding(current => new Set(current).add(identity));
+        try {
+            const result = await createEntry(api, { mediaType: metadata.mediaType, tmdbId: metadata.tmdbId, targetLibraryId });
+            await refreshCatalog(api.basePath, user?.Id);
+            if (!active.current) return;
+            setAdded(current => new Map(current).set(identity, result.entry));
+            if (button === document.activeElement) focusCard(identity);
+            // A duplicate/racing add returns created=false. Never let Undo delete an entry
+            // that existed before this action, even for an administrator.
+            if (user?.Policy?.IsAdministrator && result.created) setUndoEntry(result.entry);
+            else toast('Added to catalog');
+        } catch (error) {
+            if (!active.current) return;
+            toast('Could not add this title');
+            console.error('[JellyfinMod] add from search failed', error);
+        } finally {
+            if (active.current) {
+                setAdding(current => {
+                    const next = new Set(current);
+                    next.delete(identity);
+                    return next;
+                });
+            }
+        }
+    }, [api, chooseLibrary, targetFor, user?.Id, user?.Policy?.IsAdministrator]);
+
+    const undo = () => {
+        const entry = undoEntry;
+        if (!entry || !api) return;
+        removeEntry(api, entry.id).then(async () => {
+            const identity = identityOf(entry.mediaType, entry.tmdbId);
+            setAdded(current => {
+                const next = new Map(current);
+                next.delete(identity);
+                return next;
+            });
+            setUndoEntry(null);
+            await refreshCatalog(api.basePath, user?.Id);
+        }, (error: unknown) => {
+            console.error('[JellyfinMod] undo failed', error);
+            toast('Could not undo. The title is still in the catalog.');
+        });
+    };
+
+    // TMDB's pages: page N of movies and page N of shows ranked together by TMDB's popularity, pages in order. A title that a
+    // refetch leaves out keeps its place during the search: the plugin's push refreshes every catalog query after an add, and
+    // the card just added must stay where it was.
+    const pageCount = Math.max(...discovery.map(result => result.data?.pages.length ?? 0));
+    const fresh: TmdbMetadata[] = [];
+    const seen = new Set<string>();
+    for (let page = 0; page < pageCount; page++) {
+        const items = discovery.flatMap((result, index) => (result.data?.pages[page]?.items ?? [])
+            .map(metadata => ({ ...metadata, mediaType: TYPES[index] })));
+        items.sort((left, right) => (right.popularity ?? 0) - (left.popularity ?? 0));
+        for (const metadata of items) {
+            const identity = identityOf(metadata.mediaType, metadata.tmdbId);
+            if (seen.has(identity)) continue;
+            seen.add(identity);
+            fresh.push(metadata);
+        }
+    }
+    const tmdbResults = fresh.slice();
+    shownResults.current.forEach((metadata, index) => {
+        if (!seen.has(identityOf(metadata.mediaType, metadata.tmdbId))) tmdbResults.splice(Math.min(index, tmdbResults.length), 0, metadata);
+    });
+    shownResults.current = tmdbResults;
+
+    const hasMore = discovery.some(result => result.hasNextPage);
+    const fetching = queryInput.length >= 2 && discovery.some(result => result.isFetching || result.isPending);
+    const loadMore = useRef<() => void>();
+    loadMore.current = () => {
+        for (const result of discovery) {
+            if (result.hasNextPage && !result.isFetching && !result.isError) result.fetchNextPage().catch(console.error);
+        }
+    };
+    // More results load by themselves when the grid's end comes within a screen of the bottom.
     useEffect(() => {
-        const ids = new Set(authoritativeIds.split(','));
-        setOptimistic(current => current.some(entry => ids.has(entry.id)) ?
-            current.filter(entry => !ids.has(entry.id)) : current);
-    }, [authoritativeIds]);
-    useEffect(() => {
-        const identity = failedFocus.current;
-        if (!identity) return;
-        failedFocus.current = undefined;
-        const button = resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-add="${identity}"]`);
-        const fallback = resultsRef.current?.querySelector<HTMLElement>('[data-jfmod-add]:not(:disabled)');
-        (button ?? fallback ?? document.querySelector<HTMLElement>('#searchTextInput'))?.focus();
-    }, [optimistic]);
+        const end = endRef.current;
+        if (!end || typeof IntersectionObserver === 'undefined') return;
+        const observer = new IntersectionObserver(entries => {
+            if (entries.some(entry => entry.isIntersecting)) loadMore.current?.();
+        }, { rootMargin: '0px 0px 100% 0px' });
+        observer.observe(end);
+        return () => observer.disconnect();
+    }, [hasMore, fetching]);
 
     // A plugin outage keeps the exact upstream page working.
     if (health.isError || (health.isSuccess && !health.data.ok)) {
         return <SearchResults parentId={parentId} collectionType={collectionType} query={query} />;
     }
 
-    const remainingSections = stock.data?.filter(section => section.title !== 'Movies' && section.title !== 'Shows') ?? [];
-    const rowsByType = (mediaType: MediaType): BrowseRow[] => {
-        const index = types.indexOf(mediaType);
-        const serverRows = index >= 0 ? browse[index]?.data?.items ?? [] : [];
-        const pendingRows: Extract<BrowseRow, { kind: 'entry' }>[] = optimistic.filter(entry => entry.mediaType === mediaType)
-            .map(entry => ({ kind: 'entry', entry }));
-        const pendingKeys = new Set(optimistic.filter(entry => entry.mediaType === mediaType)
-            .map(entry => `${entry.mediaType}:${entry.tmdbId}`));
-        return [...pendingRows, ...serverRows.filter(row => {
-            const entry = row.entry;
-            return !entry || !pendingKeys.has(`${entry.mediaType}:${entry.tmdbId}`);
-        })];
-    };
-    const heldIdentities = new Set([...optimistic, ...browse.flatMap(result => result.data?.items ?? [])
-        .flatMap(row => row.entry ? [row.entry] : [])].map(entry => `${entry.mediaType}:${entry.tmdbId}`));
-    const discovered = types.flatMap((mediaType, index) => (discovery[index]?.data?.pages.flatMap(page => page.items) ?? [])
-        .map(metadata => ({ ...metadata, mediaType })))
-        .filter(metadata => !heldIdentities.has(`${metadata.mediaType}:${metadata.tmdbId}`))
-        .filter((metadata, index, items) => items.findIndex(item => item.mediaType === metadata.mediaType && item.tmdbId === metadata.tmdbId) === index);
-    const discoveryPending = queryInput.length >= 2 && discovery.some(result => result.isPending);
-    // One media type failing must not hide the other type's suggestions (P1.W13).
-    const discoveryFailed = discovery.length > 0 && discovery.every(result => result.isError);
-    const failedTypes = types.filter((_, index) => discovery[index]?.isError);
-
-    const targetFor = (mediaType: MediaType) => {
-        if (parentId) return parentId;
-        const compatible = libraries[mediaType];
-        if (compatible.length === 1) return compatible[0].Id;
-        return selectedLibraries[mediaType];
-    };
-
-    const undoAdd = async (entry: Entry) => {
-        if (!api) return;
-        await removeEntry(api, entry.id);
-        setOptimistic(current => current.filter(candidate => candidate.id !== entry.id));
-        await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath, user?.Id] });
-    };
-
-    const undo = () => {
-        const entry = undoEntry;
-        if (!entry) return;
-        undoAdd(entry).then(() => setUndoEntry(null), (error: unknown) => {
-            console.error('[JellyfinMod] undo failed', error);
-            toast('Could not undo. The title is still in the catalog.');
-        });
-    };
-
-    const restoreFocusAfterAdd = (metadata: TmdbMetadata, inputWasFocused: boolean, succeeded: boolean) => {
-        if (!active.current) return;
-        if (inputWasFocused) document.querySelector<HTMLElement>('#searchTextInput')?.focus();
-        else if (succeeded) focusMovedEntry(metadata);
-    };
-
-    const add = async (metadata: TmdbMetadata) => {
-        const targetLibraryId = targetFor(metadata.mediaType);
-        if (!api || !targetLibraryId) return;
-        const identity = `${metadata.mediaType}:${metadata.tmdbId}`;
-        if (inFlight.current.has(identity)) return;
-        inFlight.current.add(identity);
-        const inputWasFocused = document.activeElement?.id === 'searchTextInput';
-        let succeeded = false;
-        const pending = optimisticEntry(metadata, targetLibraryId);
-        setOptimistic(current => [...current, pending]);
-        if (!inputWasFocused) focusMovedEntry(metadata);
-        try {
-            const result = await createEntry(api, { mediaType: metadata.mediaType, tmdbId: metadata.tmdbId, targetLibraryId });
-            succeeded = true;
-            if (!active.current) {
-                await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath, user?.Id] });
-                return;
-            }
-            setOptimistic(current => current.map(entry => entry.id === pending.id ? result.entry : entry));
-            if (!inputWasFocused) focusMovedEntry(metadata);
-            await queryClient.invalidateQueries({ queryKey: ['JellyfinMod', api.basePath, user?.Id] });
-            // A duplicate/racing add returns created=false. Never let Undo delete an entry
-            // that existed before this action, even for an administrator.
-            if (!active.current) return;
-            if (user?.Policy?.IsAdministrator && result.created) setUndoEntry(result.entry);
-            else toast('Added to catalog');
-        } catch (error) {
-            if (!active.current) return;
-            failedFocus.current = inputWasFocused ? undefined : identity;
-            setOptimistic(current => current.filter(entry => entry.id !== pending.id));
-            toast('Could not add this title');
-            console.error('[JellyfinMod] add from search failed', error);
-        } finally {
-            inFlight.current.delete(identity);
-            restoreFocusAfterAdd(metadata, inputWasFocused, succeeded);
-        }
-    };
-
-    const renderEntrySection = (mediaType: MediaType, title: string) => {
-        const rows = rowsByType(mediaType);
-        return rows.length ? <EntrySection key={mediaType} mediaType={mediaType} title={globalize.translate(title)}
-            rows={rows} serverId={__legacyApiClient__?.serverId()} /> : null;
-    };
-
-    const stockSection = (title: 'Movies' | 'Shows') => stock.data?.find(section => section.title === title);
-    const renderMediaSection = (mediaType: MediaType, title: 'Movies' | 'Shows') => {
-        const index = types.indexOf(mediaType);
-        if (index >= 0 && browse[index]?.isError) {
-            const section = stockSection(title);
-            return section ? <SearchResultsRow
-                key={mediaType}
-                title={globalize.translate(section.title)}
-                items={section.items}
-                cardOptions={{ ...cardOptions, ...section.cardOptions }}
-            /> : null;
-        }
-        return renderEntrySection(mediaType, title);
-    };
     const browseFailed = browse.some(result => result.isError);
-    const stockMediaItems = types.reduce((count, mediaType) => {
-        const index = types.indexOf(mediaType);
-        const title = mediaType === 'movie' ? 'Movies' : 'Shows';
-        return count + (browse[index]?.isError ? stockSection(title)?.items.length ?? 0 : 0);
-    }, 0);
-    const allEmpty = !optimistic.length && !browse.some(result => result.data?.items.length) && !stockMediaItems && !remainingSections.length && !discovered.length;
+
+    const tmdbCard = (metadata: TmdbMetadata): SearchCardItem => {
+        const identity = identityOf(metadata.mediaType, metadata.tmdbId);
+        const entry = added.get(identity);
+        const base = { key: identity, mediaType: metadata.mediaType, tmdbId: metadata.tmdbId, title: metadata.title,
+            year: yearOf(metadata.premiereDate), date: metadata.premiereDate, cast: leads(metadata.cast),
+            poster: getTmdbImage(metadata.posterPath, 'w342') };
+        if (entry) return { ...base, entry, href: '#' + getEntryPath(entry.id, serverId) };
+        return { ...base,
+            href: canBrowse ? '#' + getTmdbPath(metadata.mediaType, metadata.tmdbId, serverId) : undefined,
+            add: { adding: adding.has(identity), onAdd: (_item, button) => { add(metadata, button).catch(console.error); } } };
+    };
+    const imageOf = (item: ItemDto) => (item.Id && item.ImageTags?.Primary ? __legacyApiClient__?.getScaledImageUrl(item.Id,
+        { type: 'Primary', maxWidth: 400, tag: item.ImageTags.Primary }) : undefined);
+    const library = libraryRows.map(row => libraryCard(row, { serverId, nativeLeads, imageOf })).filter((item): item is SearchCardItem => !!item);
+    const candidates = rankCandidates(library, browseFailed ? [] : tmdbResults.map(tmdbCard), added, queryInput);
+    // Until the first answers are in, the grid shows only skeletons, so nothing moves once shown.
+    const ready = isAnswered(browse, discovery, queryInput);
+    const cards = shownCards(shownOrder, candidates, ready);
+    const loading = fetching || !ready;
+
+    const failedTypes = TYPES.filter((_, index) => discovery[index].isError);
+    const discoveryFailed = failedTypes.length === TYPES.length;
+    const stockSection = (title: 'Movies' | 'Shows') => stock.data?.find(section => section.title === title);
+    const remainingSections = stock.data?.filter(section => section.title !== 'Movies' && section.title !== 'Shows') ?? [];
+    const allEmpty = !loading && !cards.length && !remainingSections.length;
+    const ended = queryInput.length >= 2 && !fetching && !hasMore && cards.length > 0;
+
     return <div ref={resultsRef} className='searchResults jfmod-searchResults padded-top padded-bottom-page'>
-        {types.includes('movie') && renderMediaSection('movie', 'Movies')}
-        {types.includes('series') && renderMediaSection('series', 'Shows')}
+        {browseFailed && TYPES.map(mediaType => {
+            const section = stockSection(mediaType === 'movie' ? 'Movies' : 'Shows');
+            return section ? <SearchResultsRow key={mediaType} title={globalize.translate(section.title)} items={section.items}
+                cardOptions={{ ...stockCardOptions, ...section.cardOptions }} /> : null;
+        })}
+        {undoEntry && <div className='jfmod-searchUndo' role='status'>
+            Added <b>{undoEntry.title}</b> to the catalog
+            <button ref={undoButton} type='button' className={raisedButtonClass()} onClick={undo}>Undo</button>
+        </div>}
+        {!browseFailed && !fetching && <DiscoveryNotice failedTypes={failedTypes} />}
+        <div className='jfmod-searchGrid' aria-busy={fetching}>
+            {cards.map(item => <SearchCard key={item.key} item={item} />)}
+            {loading && !browseFailed && [0, 1, 2, 3, 4].map(index => <div key={'skeleton:' + index} className='jfmod-searchSkeleton'
+                aria-hidden='true'><div /></div>)}
+        </div>
+        <div ref={endRef} />
+        {ended && <div className='jfmod-searchEnd'>No more results for “{queryInput}”</div>}
         {remainingSections.map(section => <SearchResultsRow
             key={section.title}
             title={globalize.translate(section.title)}
             items={section.items}
-            cardOptions={{ ...cardOptions, ...section.cardOptions }}
+            cardOptions={{ ...stockCardOptions, ...section.cardOptions }}
         />)}
-        {!browseFailed && <section className='verticalSection jfmod-discovery' aria-busy={discoveryPending}>
-            <div className='jfmod-discoveryHeading padded-left padded-right'>
-                <h2 className='sectionTitle sectionTitle-cards'>Add from TMDB</h2>
-                {/* Upstream's emby-select, so a webOS remote gets its action sheet instead of a native menu that does not open
-                    there (whole-review chunk 4a, P2 3). Each select is scoped to its media type. */}
-                {!discoveryFailed && !parentId && types.map(mediaType => libraries[mediaType].length > 1 && <div
-                    key={mediaType} className='jfmod-discoveryLibrary' data-jfmod-library-select={mediaType}>
-                    <EmbySelect
-                        id={'jfmodDiscoveryLibrary-' + mediaType}
-                        label={mediaType === 'movie' ? 'Movie library' : 'TV library'}
-                        value={selectedLibraries[mediaType] ?? ''}
-                        options={[{ value: '', label: 'Choose library' },
-                            ...libraries[mediaType].map(library => ({ value: library.Id ?? '', label: library.Name ?? '' }))]}
-                        // eslint-disable-next-line react/jsx-no-bind
-                        onChange={value => setSelectedLibraries(current => ({ ...current, [mediaType]: value }))}
-                    />
-                </div>)}
-            </div>
-            {discoveryPending && <div className='jfmod-searchSkeletons padded-left padded-right' aria-label='Searching TMDB'>
-                {[0, 1, 2, 3, 4, 5].map(index => <span key={index} />)}
-            </div>}
-            {undoEntry && <div className='jfmod-undoBar padded-left padded-right' role='status'>
-                Added {undoEntry.title} to the catalog{' '}
-                {/* eslint-disable-next-line react/jsx-no-bind */}
-                <button ref={undoButton} type='button' className={raisedButtonClass()} onClick={undo}>Undo</button>
-            </div>}
-            {!discoveryPending && discoveryFailed && <p className='jfmod-searchNotice padded-left padded-right'>TMDB is unavailable. Your library results are still shown above.</p>}
-            {!discoveryPending && !discoveryFailed && failedTypes.length > 0 && <p className='jfmod-searchNotice padded-left padded-right'>
-                TMDB {failedTypes.map(type => type === 'movie' ? 'movie' : 'series').join(' and ')} results are unavailable right now.
-            </p>}
-            {!discoveryPending && !discoveryFailed && <DiscoveryRow>
-                {discovered.map(metadata => <article className='jfmod-discoveryCard' key={`${metadata.mediaType}:${metadata.tmdbId}`}>
-                    <div className='jfmod-discoveryArtwork' style={getTmdbImage(metadata.posterPath) ? { backgroundImage: `url("${getTmdbImage(metadata.posterPath)}")` } : undefined} />
-                    <div className='jfmod-discoveryTitle'>{metadata.title}</div>
-                    {/* eslint-disable-next-line react/jsx-no-bind */}
-                    <button type='button' className={raisedButtonClass(undefined, 'button-submit')} disabled={!targetFor(metadata.mediaType)} onClick={() => { add(metadata).catch(console.error); }} data-jfmod-add={`${metadata.mediaType}:${metadata.tmdbId}`} aria-label={`Add ${metadata.title} to catalog`}>+</button>
-                </article>)}
-            </DiscoveryRow>}
-            {types.map((mediaType, index) => discovery[index]?.hasNextPage && <button
-                key={mediaType} type='button' className={flatButtonClass()} disabled={discovery[index].isFetching}
-                // eslint-disable-next-line react/jsx-no-bind
-                onClick={() => { discovery[index].fetchNextPage().catch(console.error); }}>
-                {discovery[index].isFetching ? 'Loading…' : `More ${MEDIA_WORDS[mediaType]} Results from TMDB`}
-            </button>)}
-        </section>}
-        {allEmpty && !discoveryPending && !discoveryFailed && <div className='noItemsMessage centerMessage'>{globalize.translate('SearchResultsEmpty', query)}</div>}
+        {allEmpty && !discoveryFailed && <div className='noItemsMessage centerMessage'>{globalize.translate('SearchResultsEmpty', query)}</div>}
     </div>;
 };
 
-/** A new search scope owns its own optimistic state and pending focus callbacks. */
+/** A new search scope owns its own added titles and pending focus callbacks. */
 const CatalogSearchResults: FC<Props> = props => {
     const { api, user } = useApi();
     const scope = JSON.stringify([api?.basePath, user?.Id, props.parentId, props.collectionType, props.query.trim()]);

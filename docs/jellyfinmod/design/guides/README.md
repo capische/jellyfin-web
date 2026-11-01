@@ -22,6 +22,7 @@ values.
 | [info-tip.md](info-tip.md) | the (i) that explains a short state: tooltip on a computer, popover on a click, the TV and the phone | the picker's Sources checklist (an indexer's failure); the Queue page's state discs on the phone |
 | [release-picker-sources.md](release-picker-sources.md) | the picker's Sources icon, its dot and train, the checklist, and the searching ring's indexer colours | the release picker (Get a Release, Get Another Quality) |
 | [ratings.md](ratings.md) | the ratings group in the first metadata row, its popup, the card rating and Refresh Ratings (accepted 2026-10-30) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
+| [search-card.md](search-card.md) | the search grid's card: seamless cells padded 1em, lit paper on hover and TV focus, the + shown on hover as a library poster's Play or cloud, the three-line caption, full matches first by date; the same cell with a two-line caption in the browse pages' rows (approved 2026-11-01, D200–D203; built, not accepted) | the search page, the browse pages of a TMDB title |
 | [trakt-direction-mark.md](trakt-direction-mark.md) | the Trakt disc with the direction: up sent to Trakt, down brought from it, pending dashed, failed red (accepted 2026-10-31) | Settings › Trakt's Activity rows |
 
 ## How to use a guide
