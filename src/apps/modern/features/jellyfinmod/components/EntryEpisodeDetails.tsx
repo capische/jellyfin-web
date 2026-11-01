@@ -46,7 +46,7 @@ interface EntryEpisodeDetailsProps {
 }
 
 /** One person card's data: upstream's card shows the name and, below it, the role or the person's kind. */
-interface Person {
+export interface Person {
     key: string;
     name: string;
     role: string;
@@ -54,7 +54,7 @@ interface Person {
 }
 
 /** Upstream's role line (cardBuilder's `getPeopleRoleOrTypeLabel`): "as Character" for cast, else the kind or the job. */
-const roleLabel = (type: string, role?: string | null) => {
+export const roleLabel = (type: string, role?: string | null) => {
     if ((type === 'Actor' || type === 'GuestStar') && role) return globalize.translate('PersonRole', role);
     return !role || role.toLowerCase() === type.toLowerCase() ? globalize.translate(type) : globalize.translate(role);
 };
@@ -63,7 +63,7 @@ const roleLabel = (type: string, role?: string | null) => {
  * The crew as upstream's Cast & Crew lists it: by kind (directors, writers, producers, as Jellyfin orders people), one card per
  * person with every role they hold joined by " / " (upstream merges a person's crew roles the same way).
  */
-const crewCards = (crew: TmdbCrewCredit[]): Person[] => {
+export const crewCards = (crew: TmdbCrewCredit[]): Person[] => {
     const kinds = ['Director', 'Writer', 'Producer'];
     const byPerson = new Map<string, Person & { roles: string[] }>();
     for (const person of [...crew].sort((a, b) => kinds.indexOf(a.type) - kinds.indexOf(b.type))) {
@@ -133,7 +133,7 @@ const PeopleSection: FC<{ view: HTMLElement; section: string; content: string; p
 };
 
 /** Upstream's details line for one kind (ItemDetailsMetadataList): "Director" or "Directors", then the names, plain text. */
-const DetailsLine: FC<{ label: string; names: string[] }> = ({ label, names }) => (names.length ? <Box className='detailsGroupItem'>
+export const DetailsLine: FC<{ label: string; names: string[] }> = ({ label, names }) => (names.length ? <Box className='detailsGroupItem'>
     <Typography className='label'>{label}</Typography>
     <Box className='focuscontainer-x'>{names.join(', ')}</Box>
 </Box> : null);
