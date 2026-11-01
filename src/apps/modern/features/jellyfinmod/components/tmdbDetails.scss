@@ -1,0 +1,152 @@
+/* JellyfinMod — the page of a TMDB title that is not in the library (TM2; D196, D203).
+ *
+ * The page is upstream's detail template; these rules draw only the mod's own parts. Card rows take the search card's lit cell
+ * (searchGrid.scss, guide search-card.md): cells touch, each padded 1em (base) on every side, lit paper with square corners
+ * under the pointer and the TV focus; captions left-aligned, line 1 700 at full ink, line 2 at 85.4 % (1 − φ⁻⁴), pitch φ, gap
+ * φ⁻² (0.382em). The row is pulled out by the cell padding so the first image lines up with the section heading. Exceptions:
+ * the cells' widths mirror upstream's overflow cards (12.9em portrait, 20em for an episode still), the images' 2:3 and 16:9.
+ */
+
+.jfmod-browseRow {
+    margin: 0 -1em;
+    white-space: nowrap;
+}
+
+.jfmod-browseCell {
+    box-sizing: content-box;
+    display: inline-block;
+    vertical-align: top;
+    white-space: normal;
+    width: 12.9em;
+    padding: 1em;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    outline: none;
+    transition: background-color 0.15s ease;
+}
+
+.jfmod-browseCell-wide {
+    width: 20em;
+}
+
+// The phone: flush cells (and no hover panel, below).
+.layout-mobile {
+    .jfmod-browseRow { margin: 0; }
+
+    .jfmod-browseCell {
+        width: 9.6em;
+        padding: 0 1em 1em 0;
+    }
+
+    .jfmod-browseCell-wide { width: 14em; }
+}
+
+#listChildrenCollapsible .jfmod-browseRow {
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+}
+
+.layout-tv .jfmod-browseCell:focus {
+    background: var(--jf-palette-background-paper, #202020);
+    box-shadow: inset 0 0 0 0.382em var(--jf-palette-primary-main, #00a4dc);
+}
+
+.jfmod-browseImage {
+    position: relative;
+    padding-top: 150%;
+    border-radius: 0.2em;
+    overflow: hidden;
+
+    > img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.jfmod-browseImage-wide {
+    padding-top: 56.25%;
+}
+
+.jfmod-browseIcon {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 3.2em;
+    width: 1em;
+    height: 1em;
+    margin: -0.5em 0 0 -0.5em;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.jfmod-browseLine {
+    color: var(--jf-palette-text-primary, #fff);
+    font-size: 1em;
+    line-height: 1.618;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jfmod-browseLine1 {
+    font-weight: 700;
+    padding-top: 0.382em;
+}
+
+.jfmod-browseLine2 {
+    opacity: 0.854;
+}
+
+// The header's series and season links and the More from heading's season, in the text's colour as upstream's are.
+a.jfmod-browseParent {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+}
+
+// Add to Library: the main kind (buttons-and-row-actions.md), its + before the label.
+.jfmod-browseAdd {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+
+    .material-icons {
+        font-size: 1.3em;
+        margin-right: 0.382em;
+    }
+
+    &[aria-busy='true'] { opacity: 0.7; }
+}
+
+.jfmod-browseNote {
+    line-height: 1.618;
+    margin: 0 0 1.618em;
+    opacity: 0.854;
+
+    .button-link {
+        color: var(--jf-palette-primary-main, #00a4dc);
+        font-weight: 600;
+    }
+}
+
+// A season's episode rows open their page from anywhere on the row.
+.jfmod-browseEpisode {
+    color: inherit;
+    text-decoration: none;
+}
+
+html:not(.layout-mobile) .jfmod-browseCell:hover {
+    background: var(--jf-palette-background-paper, #202020);
+}
