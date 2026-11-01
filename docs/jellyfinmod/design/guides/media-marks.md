@@ -10,7 +10,8 @@ Built on `next-release`. Records: [release picker note](../release-picker-design
 D79, D80 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`): **built 2026-10-29, gate 1, awaiting the user's approval**;
 code `constants/tracks.ts` (`trackRole`), `components/TrackDropdown.tsx` (`RoleMark`), `components/fileChooser.scss`
 (`.jfmod-trackRoles`, `.jfmod-trackRole`, `--glyph`). **Marks dropped whole on the phone** (user, 2026-11-01: "Phone Video
-Dropdown - accepted, go implement it."; D197, mockup workspace `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1.
+Dropdown - accepted, go implement it."; D197, mockup workspace `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1. The same in the
+computer's and TV's two-line Video rows (the user, 2026-11-01; D198): built 2026-11-01, gate 1.
 
 ## What it is
 
@@ -63,7 +64,7 @@ The first matching audio format wins; Atmos is a mark of its own beside it. A fo
 - Marks wrap as a group only where the design says so (the picker's line 2); elsewhere they are `nowrap` and are cut before a
   number beside them (a file size) is.
 - **On the phone a mark is never sliced** (D197): in the Video value, the Video list's rows and the pending entry, a mark that
-  does not fit is dropped whole. The marks shrink, wrap, and their box is one mark tall (`height .72em`, `overflow hidden`), so the
+  does not fit is dropped whole; so in every two-line Video row on the computer and the TV (D198). The marks shrink, wrap, and their box is one mark tall (`height .72em`, `overflow hidden`), so the
   marks that do not fit go to a hidden second line (the Audio cell's trick, D78); an empty first item (`::before`, a mark's
   height) sends even the first mark there when it alone does not fit. The size and the chevron never shrink.
 - The assets are trademarks drawn monochrome; the text-only fallback is the same chip without the icon.
