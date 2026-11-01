@@ -62,17 +62,18 @@
     border-left: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
 }
 
-// The phone stacks the segments into rows of the same card (D4).
-.layout-mobile .jfmod-strip {
+// The phone stacks the segments into rows of the same card (D4), and so does a strip whose Video cell would be narrower than
+// 11.09em, φ⁵ of the 1em base (D199: a window under about 980 px, the TV at 1280; `.jfmod-strip--stacked`, set by `useTrackStrip`).
+.jfmod-strip--stacked {
     flex-direction: column;
 }
 
-.layout-mobile .jfmod-stripSegment--audio,
-.layout-mobile .jfmod-stripSegment--subtitles {
+.jfmod-strip--stacked > .jfmod-stripSegment--audio,
+.jfmod-strip--stacked > .jfmod-stripSegment--subtitles {
     width: auto;
 }
 
-.layout-mobile .jfmod-stripSegment:not(:empty) ~ .jfmod-stripSegment {
+.jfmod-strip--stacked > .jfmod-stripSegment:not(:empty) ~ .jfmod-stripSegment {
     border-top: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
     border-left: 0;
 }
@@ -254,13 +255,13 @@ $text-inset: 0.735em;
     transition: grid-template-rows 0.18s ease-out;
 }
 
-// On the phone the Video list is part of the card (D197): drawn in the Video segment under its value, it moves Audio, Subtitles
-// and the page down as it slides; the card's width, with no shadow or border of its own, only the card's line above it.
-.layout-mobile .jfmod-stripSegment--video {
+// On a stacked strip the Video list is part of the card (D197, D199): drawn in the Video segment under its value, it moves Audio,
+// Subtitles and the page down as it slides; the card's width, with no shadow or border of its own, only the card's line above it.
+.jfmod-strip--stacked > .jfmod-stripSegment--video {
     flex-direction: column;
 }
 
-.layout-mobile .jfmod-fileList {
+.jfmod-strip .jfmod-fileList {
     position: static;
     z-index: auto;
 }
@@ -288,7 +289,7 @@ $text-inset: 0.735em;
     box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12);
 }
 
-.layout-mobile .jfmod-fileListBox {
+.jfmod-strip .jfmod-fileListBox {
     border: 0;
     border-top: 0.135em solid var(--jf-palette-FilledInput-borderColor, rgba(255, 255, 255, 0.09));
     border-radius: 0;
@@ -462,8 +463,8 @@ $text-inset: 0.735em;
     flex-wrap: nowrap;
 }
 
-// On the phone the Video chevron sits in the Audio and Subtitles chevrons' column (D197).
-.layout-mobile .jfmod-videoTrigger .jfmod-videoChevron {
+// On a stacked strip the Video chevron sits in the Audio and Subtitles chevrons' column (D197).
+.jfmod-strip--stacked .jfmod-videoTrigger .jfmod-videoChevron {
     flex: none;
     margin-right: -0.25em;
 }
@@ -578,8 +579,8 @@ $text-inset: 0.735em;
     opacity: 0.8;
 }
 
-// The phone's note starts where the rows' text does (.6em of the row at its 86 %).
-.layout-mobile .jfmod-fileNote {
+// In the card the note starts where the rows' text does (.6em of the row at its 86 %).
+.jfmod-strip .jfmod-fileNote {
     margin: 0.35em 0.698em 0.6em;
 }
 
@@ -651,8 +652,8 @@ $text-inset: 0.735em;
     padding: 0.4em 0.3em 0.1em calc(#{$text-inset} - 1px);
 }
 
-// On the phone the list is inside the card's border: the segment's .6em.
-.layout-mobile .jfmod-fileList--two .jfmod-fileChoose {
+// In the card the list is inside the card's border: the rows' text at the segment's .6em.
+.jfmod-strip .jfmod-fileChoose {
     padding-left: 0.6em;
 }
 
@@ -669,6 +670,17 @@ $text-inset: 0.735em;
 // Line 1 ends .5em from the row's edge, over the actions' column.
 .jfmod-fileList--two .jfmod-fileLine:first-child {
     margin-right: calc(0.2em - var(--jfmod-icons, 0) * var(--jfmod-action) - var(--jfmod-actionEdge));
+}
+
+// A narrow computer or TV cell puts the size at line 1's right end (D199): the marks drop whole before it does.
+.jfmod-fileList--two .jfmod-fileLine--sized {
+    padding-right: 0;
+}
+
+.jfmod-fileLine--sized > .jfmod-fileSize {
+    flex: none;
+    margin-left: auto;
+    padding-left: 0.8em;
 }
 
 .jfmod-fileList--two .jfmod-fileLine--extra {
@@ -700,7 +712,7 @@ $text-inset: 0.735em;
 // On the phone a mark that does not fit is dropped whole, never sliced (D197), in the closed value and the rows, and in every
 // two-line row (D198): it wraps onto a second line that the one-mark-tall box hides (the Audio cell's trick, D78). The empty first
 // item, a mark's height, sends even the first mark to that hidden line when it alone does not fit.
-.layout-mobile .jfmod-videoTriggerText .jfmod-fileMarks,
+.jfmod-strip--stacked .jfmod-videoTriggerText .jfmod-fileMarks,
 .jfmod-fileList--two .jfmod-fileRow .jfmod-fileMarks,
 .layout-mobile .jfmod-pendingLine > .jfmod-fileMarks {
     flex: 0 1 auto;

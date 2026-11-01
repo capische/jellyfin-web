@@ -101,12 +101,16 @@
     --jfmod-paper: #fff;
 }
 
-// In the phone's list (inside the card's border, D197) the ring sits where the rows' text starts (.6em, less the ring's .35em
-// inset) and the 40px X in the file rows' X column, .25em from the row's edge.
-.layout-mobile .jfmod-fileListBox .jfmod-pending {
+// In the card's list (inside its border, D197, D199) the ring sits where the rows' text starts (.6em, less the ring's .35em
+// inset) and the X in the file rows' X column: on the row's edge, on the phone 40px and .25em from it.
+.jfmod-strip .jfmod-fileListBox .jfmod-pending {
     padding: 0.35em 0.5em 0.15em 0.25em;
 }
 
-.layout-mobile .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+.jfmod-strip .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+    margin-right: -0.5em;
+}
+
+.layout-mobile .jfmod-strip .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
     margin-right: -0.25em;
 }
