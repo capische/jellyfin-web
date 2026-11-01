@@ -442,6 +442,14 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   fault which the acceptance-is-a-gate rule above (2026-09-25) prevents going forward (see
   [`PHASE7.md`](PHASE7.md), *Release 0.1.0.0*). [`PARITY.md`](PARITY.md) plans the stock `/web`
   versus mod `/web-mod` parity acceptance (P7.S6); it is a plan, not evidence, and has not been run.
+  **Republished 2026-11-01** from the `main-stubs` line (user: "Publish"; still 0.1.0.0, Jellyfin 12.0.0 on the same pinned
+  base digest as before): index `sha256:f1f15d9443f8f66e67dbb0146ddf535882157a177bf49ccc1a65eb7cc2bc0ec4` (amd64
+  `ce776a281a40…`, arm64 `0fbc47b09e83…`) on `0.1.0.0` and `:latest`, from plugin `40f5205` and web `dd790f6160` (bundle
+  `70fd01993351`), DLL sha256 `f919257c7604…`, meta.json `2026-11-01T06:06:18Z`. It adds Phase 9 ratings, Phase 12's first
+  slice, Phase 13 Trakt and the fixes merged since the 2026-10-10 index
+  `sha256:041c81fa3432b326d30491eb8d1da1476a98a6ef8d4a35d1be52842fe08dcfef`, the rollback target; Phase 14 is not in it.
+  Smoke on the Mac (fresh install, in-place upgrade from `041c81fa…`) and an arm64 start by digest passed. Not run: real
+  Chrome, the live runners and a Codex review of the release itself.
 - Phase 8 — release attributes and playback evidence: planned, not scheduled (see
   [`PHASE8.md`](PHASE8.md)).
 - Phase 9 — ratings: **accepted 2026-10-30** (the user accepted it; Codex approved the final fix delta; merged into main-stubs and main-items), started 2026-10-07 on the user's decision (see [`PHASE9.md`](PHASE9.md)). R1–R8
