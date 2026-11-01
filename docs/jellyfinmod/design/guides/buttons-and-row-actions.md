@@ -7,7 +7,9 @@ D74, mockups `reviews/phase13/mockups-v2`); Activity's per-title rows, hint and 
 2026-10-29 ("looks good"; D125–D130, mockups `reviews/phase13/mockups-v3`); Activity as a full-width group header with a
 Material chevron and its count, the pinned day bands and the time column: user approval 2026-10-30 (D153–D155, D159 option A,
 D162; mockups `reviews/phase13/mockups-v4`); the rows' direction mark in place of the state dot: user approval 2026-10-30
-("Trakt glyph accepted too"; D182, mockups `reviews/phase13/mockups-v8`, guide [trakt-direction-mark.md](trakt-direction-mark.md)). Record: [UX.md §12.1](../../UX.md) (the authoritative
+("Trakt glyph accepted too"; D182, mockups `reviews/phase13/mockups-v8`, guide [trakt-direction-mark.md](trakt-direction-mark.md)); the
+phone's file-row and pending-entry actions at 40 px: user approval 2026-11-01 ("Phone Video Dropdown - accepted, go implement it."; D197,
+mockup `reviews/video-dropdown-phone/mockup/`), built 2026-11-01, gate 1. Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
 the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
 
@@ -26,7 +28,9 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
 
 - Every action of a list row (indexers, quality profiles, path mappings, a profile's quality order, the file chooser's
   rows, the picker's rows) is a round icon-only button of at least 40 px: **2.5em** in the mod's own rows, **2.7816em with a
-  1.6696em glyph on upstream's `.listItem` rows** so it matches Played / Favourite / More beside it. Transparent, like
+  1.6696em glyph on upstream's `.listItem` rows** so it matches Played / Favourite / More beside it. On the phone the Video
+  list's file rows and the pending entry's X are **2.7816em with a 1.39em glyph** (D197): 2.5em at the phone's 14.4px root is
+  36 px, under the minimum. Transparent, like
   upstream's round icons; grey by default, red for a destructive one (bin, cross), the primary for a kept pin.
 - Each has an `aria-label` and a Title Case tooltip that name the row it acts on: *Remove Prowlarr 1337x*, *Keep the 1080p
   file*. Icons: Test `network_check`, Edit pencil, Remove red bin, Make Default `star_border`, Move Up / Move Down arrows,

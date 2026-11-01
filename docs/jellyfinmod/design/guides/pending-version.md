@@ -4,7 +4,9 @@
 (D9), with the admin's X (D10) and the Replace wording (D11, user: "use profile and I don't think you need `the`") of
 `reviews/overnight-2026-10-28/DECISIONS.md`: **built overnight 2026-10-28, awaiting the user's approval**. Video marks only
 (the user, 2026-10-29; D105): built 2026-10-29, gate 1 (computer, dark). The flag in the captions' type at .62em (D148):
-built 2026-10-30, gate 1; centred on the status's figures (D156), built 2026-10-30. Code:
+built 2026-10-30, gate 1; centred on the status's figures (D156), built 2026-10-30. On the phone the X at 40 px in the file
+rows' X column and the marks dropped whole (user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it."; D197, mockup
+workspace `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1. Code:
 `components/PendingVersion.tsx`, `components/pendingVersion.scss` (`.jfmod-pending`, `--<kind>`, `.jfmod-pendingBody`,
 `.jfmod-pendingLine`, `.jfmod-pendingMeta`), `constants/queue.ts` (`isNewVersion`, `isReplace`, `replacedWords`, `versionFlag`,
 `asNewVersion`).
@@ -51,8 +53,10 @@ title's page content.
 
 ## TV and phone
 
-TV: one stop, the X, reached by Down from the strip (the ring is no stop there). Phone: the same two lines at 90 %, the marks
-cut first.
+TV: one stop, the X, reached by Down from the strip (the ring is no stop there). Phone: the same two lines at 90 %; a mark that
+does not fit is dropped whole, never sliced ([media-marks.md](media-marks.md), D197), and the X is 40 px (2.7816em, glyph 1.39em,
+[buttons-and-row-actions.md](buttons-and-row-actions.md)). In the phone's Video list (inside the card) the entry's padding is `.35em
+.5em .15em .25em`, so the ring sits where the rows' text starts, and the X sits in the file rows' X column, `.25em` from the edge.
 
 ## Do not
 

@@ -1,7 +1,7 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import classNames from 'classnames';
 import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
@@ -322,10 +322,25 @@ const summaryLabel = (version: VersionDto) => {
 
 /**
  * A file's row (P7.FU6): resolution and video marks only (D105) and the extras (episode range, removal date), then the size
- * right-aligned, then its icons. On a phone the extras take a second line.
+ * right-aligned, then its icons. On a phone it is two lines (D197): what the file is across the whole row, then its size and
+ * extras after a dot, with the icons on the right.
  */
 const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
+    if (layoutManager.mobile) {
+        return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
+            <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
+                data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
+                <span className='jfmod-fileLine'><VideoSummary version={version} source={source} /></span>
+                <span className='jfmod-fileLine jfmod-fileLine--extra'>
+                    <FileSize version={version} />
+                    {version.episodeRange && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{version.episodeRange}</span>}
+                    {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
+                </span>
+            </button>
+            <FileIcons version={version} {...icons} />
+        </div>;
+    }
     return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
         <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
             data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
@@ -413,9 +428,14 @@ const useSlide = () => {
         // One frame with the rows present and the list closed, so the height transition has a start.
         window.requestAnimationFrame(() => setOpen(true));
     }, []);
-    const hide = useCallback(() => {
+    /** `instant` closes it at once, with no slide (the phone's tap outside, below). */
+    const hide = useCallback((instant?: boolean) => {
         setOpen(false);
         window.clearTimeout(timer.current);
+        if (instant) {
+            setRendered(false);
+            return;
+        }
         timer.current = window.setTimeout(() => setRendered(false), reduced() ? 0 : SLIDE_MS);
     }, []);
     return { open, rendered, show, hide };
@@ -438,8 +458,11 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     useViewerChoice(view, chosen);
     useDevicePreference(view, multi ? preferred : null, chosen);
     const slide = useSlide();
-    // The Video list floats like Audio's (user, 2026-10-29): placed under its cell when it opens and on a resize; the pending entry
-    // under the strip leaves its height behind while it sits in the list, so the page does not move.
+    // On the phone the list is part of the card (D197): drawn in the Video segment, under its value, it moves Audio, Subtitles and
+    // the page down. On a computer and the TV it floats like Audio's (user, 2026-10-29): placed under its cell when it opens and on
+    // a resize; the pending entry under the strip leaves its height behind while it sits in the list, so the page does not move.
+    const phone = layoutManager.mobile;
+    const list = useRef<HTMLDivElement>(null);
     const [place, setPlace] = useState<{ top: number; left: number; width: number; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const measure = useCallback(() => {
@@ -463,24 +486,31 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // A resize (a window, a rotated phone) places the open list again under its cell, as Audio's (D166). It floats in the page,
     // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
     useEffect(() => {
-        if (!slide.open) return;
+        if (!slide.open || phone) return;
         const again = () => {
             const at = measure();
             if (at) setPlace(previous => previous && { ...previous, ...at });
         };
         window.addEventListener('resize', again);
         return () => window.removeEventListener('resize', again);
-    }, [slide.open, measure]);
-    // A click outside the list and its cell closes it, as outside Audio's.
+    }, [slide.open, measure, phone]);
+    // A click outside the list and its cell closes it, as outside Audio's. On the phone the list moves Audio and Subtitles, so a tap
+    // on one closes it at once before that cell's own click places its list (a slide would leave that list where the cell was).
     useEffect(() => {
         if (!slide.open) return;
         const outside = (event: Event) => {
             const target = event.target as Node;
-            if (!strip.below.querySelector('.jfmod-fileList')?.contains(target) && !trigger.current?.contains(target)) slide.hide();
+            if (list.current?.contains(target) || trigger.current?.contains(target)) return;
+            if (phone) {
+                flushSync(() => slide.hide(true));
+            } else {
+                slide.hide();
+            }
         };
-        document.addEventListener('mousedown', outside, true);
-        return () => document.removeEventListener('mousedown', outside, true);
-    }, [slide, strip.below]);
+        const type = phone ? 'click' : 'mousedown';
+        document.addEventListener(type, outside, true);
+        return () => document.removeEventListener(type, outside, true);
+    }, [slide, phone]);
     const choose = useCallback((version: VersionDto) => {
         chosen.current = true;
         selectVersion(view, version);
@@ -506,8 +536,23 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     });
 
     const listId = 'jfmod-fileList-' + (selected?.mediaSourceId ?? 'files');
+    // A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide was over
+    // in two frames opening and waited 140 ms closing). Off the phone it is the Video cell's width (D99); another quality is got
+    // from the page's cloud icon, so the list has no row for it (D102).
+    const fileList = <div ref={list} id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
+        style={!phone && place ? { top: place.top, left: place.left, width: place.width } : undefined}>
+        <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
+            {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
+            {bestFirst(versions).map(version => <FileRow key={version.mediaSourceId} version={version}
+                selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
+                source={findSource(sources, version.mediaSourceId)}
+                {...iconProps(version)} />)}
+            {pending}
+            {note && <p className='jfmod-fileNote'>{note}</p>}
+        </div>}</div>
+    </div>;
     return <>
-        {createPortal(<button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
+        {createPortal(<><button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
             aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
             onClick={toggle}>
             <span className='jfmod-stripCaption' aria-hidden='true'>Video</span>
@@ -516,25 +561,12 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
                 <FileSize version={selected} />
                 <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
             </span>
-        </button>, strip.video)}
+        </button>{phone && fileList}</>, strip.video)}
         {createPortal(<>
-            {/* A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide
-                was over in two frames opening and waited 140 ms closing). It is the Video cell's width (D99); another quality is
-                got from the page's cloud icon, so the list has no row for it (D102). */}
-            <div id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
-                style={place ? { top: place.top, left: place.left, width: place.width } : undefined}>
-                <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
-                    {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
-                    {bestFirst(versions).map(version => <FileRow key={version.mediaSourceId} version={version}
-                        selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
-                        source={findSource(sources, version.mediaSourceId)}
-                        {...iconProps(version)} />)}
-                    {pending}
-                    {note && <p className='jfmod-fileNote'>{note}</p>}
-                </div>}</div>
-            </div>
-            {/* The pending entry under the strip (D9); while the list is open it is the list's row instead. */}
-            {slide.rendered ? <div style={{ height: place?.spacer ?? 0 }} aria-hidden='true' /> : pending}
+            {!phone && fileList}
+            {/* The pending entry under the strip (D9); while the list is open it is the list's row instead, and off the phone its
+                height stays behind. */}
+            {slide.rendered ? !phone && <div style={{ height: place?.spacer ?? 0 }} aria-hidden='true' /> : pending}
         </>, strip.below)}
     </>;
 };

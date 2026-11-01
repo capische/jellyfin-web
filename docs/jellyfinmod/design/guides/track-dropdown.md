@@ -19,6 +19,9 @@ marks' type** (the user, 2026-10-29; D131, D132): built 2026-10-29, gate 1. **Gr
 rows** (the user, 2026-10-30; D145): built 2026-10-30, gate 1. **The chosen track's extra words on the closed cell's caption
 line** (the user, 2026-10-30: "Love it. Accepted."; D137, D147): built 2026-10-30, gate 1.
 **The open Video list placed again on a resize**, as Audio's (the user's "Go", 2026-11-01; D166): built 2026-11-01, gate 1.
+**The phone's Video list in the card, two-line rows, 40 px actions, the Video chevron in the others' column and marks dropped
+whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it."; D197; mockup workspace
+`reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1 (phone, dark and light). Computer and TV unchanged.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -53,6 +56,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   muted, at the right end before the chevron**, in the media marks' type (78 %, 700, `.05em` tracking, 70 %; D132; also in
   the list's rows and the pending entry); an Audio or Subtitles value is its track's run (below), the chevron at the
   cell's right end. Padding `.3em .5em .35em .6em`. Captions VIDEO · AUDIO · SUBTITLES stay (D8): there is no label column.
+  **Phone** (D197): the Video chevron takes Audio's and Subtitles' `margin-right -.25em`, so the three chevrons share one column
+  (measured equal at 360, 390 and 430 px); a mark that does not fit the value is dropped whole (*Lists*, below), never sliced.
 - **A track's run** (D59, D76): the language in 600 with its short modifier `(BR)` in 400 at 70 % (a fixed table only, D60),
   .6em, the format marks (audio: the media marks; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
   ([media-marks.md](media-marks.md), *Role marks*). A track's own title is never drawn in the run; Default, Original, External
@@ -61,7 +66,8 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   and the chevron never shrink (D78).
 - **Hover / focus:** the segment is ringed in the primary over the strip's border (`box-shadow 0 0 0 .135em #00a4dc`), no outline.
 - **One entry only** (`.jfmod-trackStatic`): the same segment without the chevron, `cursor: default`, not a focus stop.
-- **Phone:** the segments stack as rows of the same card, the dividers on top; every cell is the card's width.
+- **Phone:** the segments stack as rows of the same card, the dividers on top; every cell is the card's width. The open Video
+  list is a row of the card too, between Video and Audio (D197, *Lists*).
 - Upstream's Video, Audio and Subtitles rows step aside (display none) only while their segment is drawn; a row whose
   dropdown cannot mount (its streams unread) stays as upstream draws it, under the strip.
 
@@ -74,16 +80,26 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   row, the card's width. A click outside the list and its cell, Escape or Back closes it. A window resize or a rotated phone
   while a list is open places it again under its cell, without scrolling (D166; the Video list too, 2026-11-01). Only the
   Audio and Subtitles lists close when less than a row is left under the strip (D168): the Video list floats in the page,
-  not in the window, so it is never pushed over the strip.
+  not in the window, so it is never pushed over the strip. **The phone's Video list is the exception** (D197): it is part of the
+  card, drawn in the Video segment under its value (`.layout-mobile .jfmod-fileList`, `position: static`), so it pushes Audio,
+  Subtitles and the page down with the same 0.18 s grid-row slide and covers nothing; no border, radius or shadow of its own, only
+  the card's `.135em` line above it (the border's colour). A tap outside closes it at once, without the slide, so a tap on Audio or
+  Subtitles opens that list under the cell where it now is; it has no resize placement and no spacer for the pending entry.
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
-  lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is its stacked
-  cell's width, the card's, D166); on the paper with a 1px divider border and
+  lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is the card's
+  width inside its border, D197); on the paper with a 1px divider border and
   the popover's shadow (the border in the theme's divider `var(--jf-palette-divider)`, visible in light, unchanged in dark;
   D164), sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
   only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
   `removes <date>`), the size and the three row icons (the full 2.5em round buttons of
-  [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **The current file has
+  [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **On the phone a row is two
+  lines** (D197): line 1 the resolution (with the phone mark) and the marks across the whole row (padding `.4em .5em .1em .6em`,
+  `padding-right 1.35em` on the line, one line, a mark that does not fit dropped whole); line 2 the size in the marks' type, then
+  the extras after a dot in 86 % at 70 % (`2.1 GB · removes 12 Nov`, cut with an ellipsis), `min-height 2.7816em`, `margin-top
+  -.45em`, with History, Keep and Remove on the right at 40 px (2.7816em, glyph 1.39em; absolute, `.25em` from the row's right
+  edge and `.1em` from its bottom; line 2 keeps `8.4em` for them): 4.33em, 62.4 px a row. The rows' text starts at the segment's
+  `.6em` (the list is inside the card's border), and so does the folder note (`.698em` of its 86 %). **The current file has
   the Audio list's current look** (D106): a `.2em` `#00a4dc` bar on the left (an inset shadow, so the text stays under the
   cell's) and MUI's selected fill `rgba(primary / selectedOpacity)`, square corners. **Another row hovered or focused is
   grey**, as in the Audio and Subtitles lists (D145): hover `var(--jf-palette-action-hover)` (8 % white) over the whole row,
