@@ -14,7 +14,8 @@ import type { RestoreViewFailResponse } from 'types/viewManager';
  * instead of inside upstream's file:
  *
  * - a catalog entry with no file (`entryId`) gets the mod's own controller on upstream's template, and upstream's
- *   controller never runs, because there is no native item for it to load;
+ *   controller never runs, because there is no native item for it to load; so does a TMDB title that is not in the library
+ *   (`tmdbType` and `tmdbId`, TM2);
  * - anything else gets the mod's augmentation and then upstream's controller, in that order, so the mod's
  *   `viewshow` listeners are registered first, exactly as the old in-file patch arranged;
  * - a person, album, book, photo or live TV item is "anything else": the mod augmentation finds no catalog entry
@@ -46,16 +47,23 @@ type ControllerFactory = (view: HTMLElement, params: Record<string, string>) => 
  * which is exactly what upstream's own route table avoids by loading every legacy controller lazily.
  */
 const loadController = async (): Promise<ControllerFactory> => {
-    const [{ default: initializeEntryDetails }, { default: initializeNativeEntryDetails }, { default: upstreamItemDetails }] =
-        await Promise.all([
-            import('../integration/entryDetails'),
-            import('../integration/nativeEntryDetails'),
-            import(/* webpackChunkName: "itemDetails" */ 'apps/legacy/controllers/itemDetails/index')
-        ]);
+    const [{ default: initializeEntryDetails }, { default: initializeNativeEntryDetails }, { default: upstreamItemDetails },
+        { default: initializeTmdbDetails }] = await Promise.all([
+        import('../integration/entryDetails'),
+        import('../integration/nativeEntryDetails'),
+        import(/* webpackChunkName: "itemDetails" */ 'apps/legacy/controllers/itemDetails/index'),
+        import('../integration/tmdbDetails')
+    ]);
 
     return function DetailController(view, params) {
         if (params.entryId) {
             initializeEntryDetails(view, params);
+            return;
+        }
+
+        // A TMDB title that is not in the library (TM2): the mod's own controller on the same template, like a file-less entry.
+        if (params.tmdbId) {
+            initializeTmdbDetails(view, params);
             return;
         }
 
