@@ -1,6 +1,6 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import classNames from 'classnames';
-import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type CSSProperties, type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 
 import focusManager from 'components/focusManager';
@@ -23,6 +23,8 @@ const VIDEO_SELECTOR = '.trackSelections .selectVideoContainer';
 const FORM_SELECTOR = '.trackSelections';
 /** How long the list takes to slide back before its rows leave the page; matches the stylesheet. */
 const SLIDE_MS = 180;
+/** Under this width (in the list's em) a file's one-line row does not fit and the rows take two lines (D198). */
+const ONE_LINE_EMS = 24;
 
 /** The pin on a file's row: per-file Keep, or the episode's or title's Keep where that is what the plugin offers. */
 export interface PinState {
@@ -243,6 +245,10 @@ const pinLabel = (pin: PinState, version: VersionDto) => {
     return `${pin.locked ?? pin.title}, on ${fileName(version)}`;
 };
 
+/** A file the plugin has not bound yet (its binding id empty or all zeros) has no events of its own, so no History. */
+const historyShown = (version: VersionDto, onHistory?: FileIconsProps['onHistory']) =>
+    !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
+
 interface FileIconsProps {
     version: VersionDto;
     busy: boolean;
@@ -266,8 +272,7 @@ const FileIcons: FC<FileIconsProps> = ({ version, busy, onHistory, pin, onPin, r
     const remove = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         if (!busy) onRemove(version, event.currentTarget);
     }, [busy, onRemove, version]);
-    // A file the plugin has not bound yet (its binding id empty or all zeros) has no events of its own.
-    const hasHistory = !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
+    const hasHistory = historyShown(version, onHistory);
     if (!hasHistory && !pin && !removable) return null;
     return <span className='jfmod-fileIcons'>
         {hasHistory && <button type='button' className={iconClass()} title='History' aria-label={`History of ${fileName(version)}`}
@@ -294,6 +299,8 @@ interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
     removable: boolean;
     removeDate: string | null;
     source: MediaSourceInfo | null;
+    /** The two-line row: the phone's, and a narrow Video cell's (D197, D198). */
+    twoLine: boolean;
 }
 
 /**
@@ -322,13 +329,16 @@ const summaryLabel = (version: VersionDto) => {
 
 /**
  * A file's row (P7.FU6): resolution and video marks only (D105) and the extras (episode range, removal date), then the size
- * right-aligned, then its icons. On a phone it is two lines (D197): what the file is across the whole row, then its size and
- * extras after a dot, with the icons on the right.
+ * right-aligned, then its icons. On a phone, and in a Video cell too narrow for that line, it is two lines (D197, D198): what the
+ * file is across the whole row, then its size and extras after a dot, with the icons on the right; line 1 reaches over the
+ * icons by their count.
  */
-const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, ...icons }) => {
+const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, twoLine, ...icons }) => {
     const choose = useCallback(() => onChoose(version), [onChoose, version]);
-    if (layoutManager.mobile) {
-        return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
+    if (twoLine) {
+        const count = Number(historyShown(version, icons.onHistory)) + Number(!!icons.pin) + Number(icons.removable);
+        return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}
+            style={{ '--jfmod-icons': count } as CSSProperties}>
             <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
                 data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
                 <span className='jfmod-fileLine'><VideoSummary version={version} source={source} /></span>
@@ -463,13 +473,14 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // a resize; the pending entry under the strip leaves its height behind while it sits in the list, so the page does not move.
     const phone = layoutManager.mobile;
     const list = useRef<HTMLDivElement>(null);
-    const [place, setPlace] = useState<{ top: number; left: number; width: number; spacer: number } | null>(null);
+    const [place, setPlace] = useState<{ top: number; left: number; width: number; narrow: boolean; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const measure = useCallback(() => {
         if (!trigger.current) return null;
         const at = listPlace(trigger.current);
         const below = strip.below.getBoundingClientRect();
-        return { top: at.top - below.top, left: at.left - below.left, width: at.width };
+        const em = parseFloat(getComputedStyle(strip.below).fontSize);
+        return { top: at.top - below.top, left: at.left - below.left, width: at.width, narrow: at.width < ONE_LINE_EMS * em };
     }, [strip.below]);
     const toggle = useCallback(() => {
         if (slide.open) {
@@ -483,8 +494,9 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         }
         slide.show();
     }, [slide, strip.below, measure]);
-    // A resize (a window, a rotated phone) places the open list again under its cell, as Audio's (D166). It floats in the page,
-    // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
+    // A resize (a window, a rotated phone) places the open list again under its cell, as Audio's (D166), at the cell's width and
+    // with the rows the width takes (D198). It floats in the page, not in the window, so it is never pushed over the strip and has
+    // no D168 close; the spacer keeps the height it opened with.
     useEffect(() => {
         if (!slide.open || phone) return;
         const again = () => {
@@ -539,13 +551,15 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide was over
     // in two frames opening and waited 140 ms closing). Off the phone it is the Video cell's width (D99); another quality is got
     // from the page's cloud icon, so the list has no row for it (D102).
-    const fileList = <div ref={list} id={listId} className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open })}
+    const twoLine = phone || !!place?.narrow;
+    const fileList = <div ref={list} id={listId}
+        className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open, 'jfmod-fileList--two': twoLine })}
         style={!phone && place ? { top: place.top, left: place.left, width: place.width } : undefined}>
         <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
             {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
             {bestFirst(versions).map(version => <FileRow key={version.mediaSourceId} version={version}
                 selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
-                source={findSource(sources, version.mediaSourceId)}
+                source={findSource(sources, version.mediaSourceId)} twoLine={twoLine}
                 {...iconProps(version)} />)}
             {pending}
             {note && <p className='jfmod-fileNote'>{note}</p>}

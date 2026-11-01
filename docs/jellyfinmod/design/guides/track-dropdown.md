@@ -22,6 +22,9 @@ line** (the user, 2026-10-30: "Love it. Accepted."; D137, D147): built 2026-10-3
 **The phone's Video list in the card, two-line rows, 40 px actions, the Video chevron in the others' column and marks dropped
 whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it."; D197; mockup workspace
 `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1 (phone, dark and light). Computer and TV unchanged.
+**The Video list always exactly the Video cell on the computer and the TV, two-line rows when the cell is narrow** (the user,
+2026-11-01: "I've asked it to be exact size as Video dropdown and I thought design was approved for it"; D198, withdrawing D101's
+24em minimum): built 2026-11-01, gate 1.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -86,20 +89,25 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   the card's `.135em` line above it (the border's colour). A tap outside closes it at once, without the slide, so a tap on Audio or
   Subtitles opens that list under the cell where it now is; it has no resize placement and no spacer for the pending entry.
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
-  strip's outer left edge to the Audio divider, **at least 24em** (D101: a narrower cell, TV at 1280 where it is about 10em,
-  lets the list grow right over the Audio cell, so a file row keeps two lines; not on the phone, where the list is the card's
-  width inside its border, D197); on the paper with a 1px divider border and
+  strip's outer left edge to the Audio divider, **always, also after a resize, never wider** (D198: D101's 24em minimum is
+  withdrawn; on the phone the list is the card's width inside its border, D197); on the paper with a 1px divider border and
   the popover's shadow (the border in the theme's divider `var(--jf-palette-divider)`, visible in light, unchanged in dark;
   D164), sliding open (a grid row from 0fr to 1fr, 0.18 s); one row per file: quality 600, the **video marks
   only** (codec, 10-BIT, HDR, Vision; no audio or subtitle marks and no hairline, D105), the extras (episode range,
   `removes <date>`), the size and the three row icons (the full 2.5em round buttons of
-  [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **On the phone a row is two
-  lines** (D197): line 1 the resolution (with the phone mark) and the marks across the whole row (padding `.4em .5em .1em .6em`,
-  `padding-right 1.35em` on the line, one line, a mark that does not fit dropped whole); line 2 the size in the marks' type, then
-  the extras after a dot in 86 % at 70 % (`2.1 GB · removes 12 Nov`, cut with an ellipsis), `min-height 2.7816em`, `margin-top
-  -.45em`, with History, Keep and Remove on the right at 40 px (2.7816em, glyph 1.39em; absolute, `.25em` from the row's right
-  edge and `.1em` from its bottom; line 2 keeps `8.4em` for them): 4.33em, 62.4 px a row. The rows' text starts at the segment's
-  `.6em` (the list is inside the card's border), and so does the folder note (`.698em` of its 86 %). **The current file has
+  [buttons-and-row-actions.md](buttons-and-row-actions.md), so the rows are as tall as them, D107). **The two-line row**
+  (`.jfmod-fileList--two`): always on the phone (D197), and on the computer and the TV when the Video cell is narrower than
+  **24em**, the one-line row's width (D198; set by the component when it places the list, again on a resize, so a window crossing
+  24em switches the rows; about 16em at a 1100 px window, 12em at 1000, 10em on the TV at 1280). Line 1 the resolution (with the
+  phone mark) and the marks across the whole row (one line, `padding-right 1.35em`, a mark that does not fit dropped whole); line
+  2 the size in the marks' type, then the extras after a dot in 86 % at 70 % (`2.1 GB · removes 12 Nov`), the size and extras cut
+  with an ellipsis when the row is short, `min-height` the action size, `margin-top -.45em`; History, Keep and Remove after the
+  row's button at line 2's level, `.1em` from the bottom, so on the TV Right walks from the row to them, and line 1 reaches over
+  them by the row's action count (`--jfmod-icons`) to `.5em` from the row's edge. Padding `.4em .3em .1em`, the text at the rows'
+  usual inset. **Phone:** the actions 40 px (2.7816em, glyph 1.39em), `.25em` from the row's edge, the text at the segment's
+  `.6em` (the list is inside the card's border), and so the folder note (`.698em` of its 86 %): 4.33em, 62.4 px a row.
+  **Computer and TV:** the buttons guide's 2.5em actions on the row's edge, the wide rows' column: 4.05em a row (60.2 px at a
+  1000 px window, 81 px on the TV at 1280, where the size is cut to its first figure beside the three actions). **The current file has
   the Audio list's current look** (D106): a `.2em` `#00a4dc` bar on the left (an inset shadow, so the text stays under the
   cell's) and MUI's selected fill `rgba(primary / selectedOpacity)`, square corners. **Another row hovered or focused is
   grey**, as in the Audio and Subtitles lists (D145): hover `var(--jf-palette-action-hover)` (8 % white) over the whole row,
