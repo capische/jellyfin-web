@@ -27,6 +27,7 @@
 //                                   with its size at the right end, the list's rows, the Audio and Subtitles dropdowns against
 //                                   the item's streams, keys, a one-track field, the light theme and what Play sends; changes
 //                                   only the page's own selection (and, on desktop, starts and leaves playback once)
+//   [JELLYFINMOD_DD_VL=<item id>]   the Video list (P7.FU6, D166, D197–D199), see "The Video list, gate 2" below; runs only those checks
 //   [JELLYFINMOD_DD_UPGRADES=1]     with JELLYFINMOD_DD_PACK: search the Season scope again with episode upgrades switched the
 //                                   other way (Add alone when off, Add and Replace when on; user, 2026-10-09), then restore it
 //
@@ -56,20 +57,25 @@ const badges = (env('JELLYFINMOD_DD_BADGE') ?? '').split(',').filter(Boolean).ma
 // (18096's web root is read-only, so its Health reports the takeover as readOnly).
 const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web-mod/';
 const base = (path = WEB_PATH) => new URL(path, origin).href;
+const PHONE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
 const LAYOUTS = {
     desktop: { viewport: { width: 1440, height: 900 } },
-    mobile: {
-        viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
-        userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36'
-    },
+    mobile: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: PHONE_UA },
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
-    tv720: { viewport: { width: 1280, height: 720 }, tv: true }
+    tv720: { viewport: { width: 1280, height: 720 }, tv: true },
+    // The Video list's widths (JELLYFINMOD_DD_VL): around the stacking line (D199), and the small and large phones.
+    desktop1100: { viewport: { width: 1100, height: 900 } },
+    desktop1000: { viewport: { width: 1000, height: 900 } },
+    desktop980: { viewport: { width: 980, height: 900 } },
+    desktop800: { viewport: { width: 800, height: 900 } },
+    mobile360: { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true, userAgent: PHONE_UA },
+    mobile430: { viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true, userAgent: PHONE_UA }
 };
 
 /** A report label (`tv1080/user`) names the layout it ran in (`tv1080`). */
 const layoutOf = label => label.split('/')[0];
 const isTv = label => !!LAYOUTS[layoutOf(label)].tv;
-const isMobile = label => layoutOf(label) === 'mobile';
+const isMobile = label => layoutOf(label).startsWith('mobile');
 
 const results = [];
 const record = (layout, check, verdict, detail = '') => {
@@ -1299,6 +1305,592 @@ async function checkRemove(page, layout, itemId) {
     record(layout, 'the page moved on to the remaining copy, which plays', /details\?id=/.test(moved) && playable > 0, moved);
 }
 
+// ---- The Video list, gate 2 (P7.FU6, D166, D197–D199; design/guides/track-dropdown.md) ----
+//   JELLYFINMOD_DD_VL=<item id of a title with two files>   runs only these checks, in the layout's theme:
+//   [JELLYFINMOD_DD_VL_TRACKS=<item id with several audio tracks and subtitles>]  [JELLYFINMOD_DD_VL_PENDING=<item id with a pending Add>]
+//   [JELLYFINMOD_DD_VL_WRITES=1]  also Keep and Stop Keeping a file and press Play once (both undone or left at once)
+//   [JELLYFINMOD_DD_THEME=dark|light]  [JELLYFINMOD_DD_SHOTS=<folder>]
+// No removal is ever confirmed: Remove and the pending X stop at their dialog, which is closed with its safe choice.
+const STRIP = `${PAGE} .jfmod-strip`;
+const VIDEO = `${PAGE} .jfmod-videoTrigger`;
+const CELLS = { audio: 17.8, subtitles: 13.2 };
+
+const vlFacts = page => page.evaluate(sel => {
+    const root = document.querySelector(sel);
+    const box = el => {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height };
+    };
+    /** Marks are whole or dropped: a shown mark never crosses the container's edge. */
+    const marksWhole = container => {
+        if (!container) return true;
+        const c = container.getBoundingClientRect();
+        return [...container.children].every(mark => {
+            const r = mark.getBoundingClientRect();
+            const shown = r.top < c.bottom - 0.5 && r.bottom > c.top + 0.5;
+            return !shown || (r.right <= c.right + 0.5 && r.left >= c.left - 0.5);
+        });
+    };
+    const uncut = el => !el || el.scrollWidth <= el.clientWidth + 1;
+    const strip = root.querySelector('.jfmod-strip');
+    const below = root.querySelector('.jfmod-stripBelow');
+    const list = root.querySelector('.jfmod-fileList');
+    const clip = list?.querySelector('.jfmod-fileListBox');
+    const segment = name => root.querySelector(`.jfmod-stripSegment--${name}`);
+    const chevron = name => box(segment(name)?.querySelector('.jfmod-videoChevron'));
+    const pending = root.querySelector('.jfmod-pending');
+    return {
+        layout: document.documentElement.className.match(/layout-\w+/g)?.join(' ') ?? '',
+        theme: document.documentElement.getAttribute('data-theme'),
+        // The surface's own right edge against the window, and the window against the device's width: the cast's scroller makes the
+        // document wider on a title with cast, under a body that does not scroll sideways, on every build.
+        page: { right: Math.max(...[strip, list, below, pending, ...root.querySelectorAll('.jfmod-stripSegment, .jfmod-fileRow')].filter(Boolean).map(el => (el.getClientRects().length ? el.getBoundingClientRect().right : 0))),
+            inner: window.innerWidth, device: screen.width, viewport: window.visualViewport.width, bodyOverflow: getComputedStyle(document.body).overflowX },
+        em: parseFloat(getComputedStyle(strip).fontSize), belowEm: parseFloat(getComputedStyle(below).fontSize),
+        stripClient: strip.clientWidth, strip: box(strip), stacked: strip.classList.contains('jfmod-strip--stacked'),
+        video: box(segment('video')), audio: box(segment('audio')), subtitles: box(segment('subtitles')),
+        chevrons: { video: chevron('video'), audio: chevron('audio'), subtitles: chevron('subtitles') },
+        trigger: box(root.querySelector('.jfmod-videoTrigger')), triggerText: root.querySelector('.jfmod-videoTrigger')?.innerText.replace(/\s+/g, ' ').trim(),
+        expanded: root.querySelector('.jfmod-videoTrigger')?.getAttribute('aria-expanded'),
+        closedMarksWhole: marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks')),
+        valueSize: box(root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')), valueSizeText: root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')?.textContent ?? null,
+        open: !!list?.classList.contains('jfmod-fileList--open'), list: box(list), box: box(clip), two: !!list?.classList.contains('jfmod-fileList--two'),
+        inCard: !!list?.closest('.jfmod-strip'), position: list && getComputedStyle(list).position,
+        boxBackground: clip && getComputedStyle(clip).backgroundColor, boxBorder: clip && getComputedStyle(clip).borderBottomColor,
+        boxOverflow: clip ? clip.scrollWidth - clip.clientWidth : 0,
+        rows: [...root.querySelectorAll('.jfmod-fileList .jfmod-fileRow')].map(row => {
+            const lines = [...row.querySelectorAll('.jfmod-fileLine')];
+            const size = row.querySelector('.jfmod-fileSize');
+            return { box: box(row), text: row.innerText.replace(/\s+/g, ' ').trim(), selected: row.classList.contains('jfmod-fileRow--selected'),
+                bar: getComputedStyle(row).boxShadow, background: getComputedStyle(row).backgroundColor,
+                id: row.querySelector('.jfmod-fileChoose')?.getAttribute('data-jfmod-media-source-id'),
+                phoneMark: !!row.querySelector('.jfmod-phoneMark'), resolution: row.querySelector('.jfmod-fileResolution')?.textContent ?? '',
+                lines: lines.map(box), sizeLine: lines.findIndex(line => line.contains(size)), size: box(size), sizeUncut: uncut(size), sizeText: size?.textContent ?? null,
+                icons: [...row.querySelectorAll('.jfmod-fileIcon')].map(icon => ({ label: icon.getAttribute('aria-label'), glyphTop: box(icon.querySelector('.material-icons'))?.t, ...box(icon) })),
+                marksWhole: [...row.querySelectorAll('.jfmod-fileMarks')].every(marksWhole) };
+        }),
+        pending: pending && { box: box(pending), text: pending.innerText.replace(/\s+/g, ' ').trim(), inList: !!pending.closest('.jfmod-fileList'),
+            // What the entry says: its quality and its state, each drawn whole and inside the entry (D197; the marks go first).
+            sayings: (() => { const body = pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect(); return ['.jfmod-fileResolution', '.jfmod-dlMeta'].map(part => { const el = pending.querySelector(part); const r = el?.getBoundingClientRect(); return { part, whole: !!r && r.width > 0 && r.right <= body.right + 0.5 && el.scrollWidth <= el.clientWidth + 1, right: r?.right, width: r?.width }; }); })(),
+            bodyRight: pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect().right,
+            x: box(pending.querySelector('[data-jfmod-pending-remove]')), marksWhole: marksWhole(pending.querySelector('.jfmod-fileMarks')) },
+        // Where the page under the strip stands: it does not move for a floating list.
+        after: box(root.querySelector('.overview, .overview-container, .itemMiscInfo-secondary') ?? below.nextElementSibling)
+    };
+}, PAGE);
+
+const vlShot = async (page, name) => {
+    const folder = env('JELLYFINMOD_DD_SHOTS');
+    if (folder) await page.screenshot({ path: `${folder}/${name}.png`, fullPage: false });
+};
+const vlPress = async (page, key, wait = 280) => { await page.keyboard.press(key); await page.waitForTimeout(wait); };
+const vlToStrip = page => page.evaluate(sel => document.querySelector(sel)?.scrollIntoView({ block: 'center' }), STRIP);
+const vlOpenPage = async (page, id) => {
+    await openDetail(page, `id=${id}`, `${VIDEO}`);
+    await vlToStrip(page);
+    await page.waitForTimeout(300);
+};
+/** A press the way the layout does: a tap, a click, or the focus moved to it by keys alone (`vlWalk` reaches it first on the TV). */
+const vlHit = async (page, layout, selector) => {
+    const target = page.locator(selector).first();
+    if (isMobile(layout)) await target.tap({ timeout: 8000 });
+    else if (isTv(layout)) await vlPress(page, 'Enter', 450);
+    else await target.click({ timeout: 8000 });
+};
+const vlActive = page => page.evaluate(() => {
+    const a = document.activeElement;
+    const row = a?.closest?.('.jfmod-fileRow');
+    const rows = [...document.querySelectorAll('.jfmod-fileRow')];
+    return `${row ? `row${rows.indexOf(row) + 1} ` : ''}${a?.getAttribute?.('aria-label') ?? a?.className ?? 'none'}`.slice(0, 80);
+});
+const vlOpen = async (page, layout) => {
+    const facts = await vlFacts(page);
+    if (facts.open) return true;
+    if (isTv(layout)) {
+        if (!await reachByKeys(page, layout, '.jfmod-videoTrigger')) return false;
+        await vlPress(page, 'Enter', 700);
+    } else {
+        await vlHit(page, layout, VIDEO);
+        await page.waitForTimeout(700);
+    }
+    return (await vlFacts(page)).open;
+};
+/** Walks by keys from the Video value to a row's element; the TV's own walk (D199): Down to the row, Right along it. */
+const vlWalk = async (page, rowIndex, rights) => {
+    await page.locator(VIDEO).focus();
+    await page.waitForTimeout(250);
+    for (let down = 0; down <= rowIndex; down++) await vlPress(page, 'ArrowDown');
+    for (let right = 0; right < rights; right++) await vlPress(page, 'ArrowRight');
+};
+const vlClose = async (page, layout) => {
+    if ((await vlFacts(page)).open) {
+        if (isTv(layout)) await vlPress(page, 'Escape', 600);
+        else { await page.locator(VIDEO).click({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(500); }
+    }
+};
+
+const vlFits = (layout, facts) => facts.page.right <= facts.page.inner + 0.5 && facts.page.bodyOverflow === 'hidden'
+    && (!isMobile(layout) || (Math.abs(facts.page.viewport - facts.page.inner) <= 1));
+
+function vlGeometry(layout, facts, label, want = {}) {
+    const near = (a, b, within = 1) => Math.abs(a - b) <= within;
+    record(layout, `${label}: nothing overflows the page sideways`, vlFits(layout, facts), JSON.stringify(facts.page));
+    const shouldStack = isMobile(layout) || facts.stripClient < (31 + 11.09) * facts.em;
+    record(layout, `${label}: stacked exactly when the Video cell would be under 11.09em`, facts.stacked === shouldStack,
+        `stacked ${facts.stacked}, strip ${facts.stripClient}px, ${(facts.stripClient / facts.em - 31).toFixed(2)}em for Video`);
+    if (want.stacked !== undefined) record(layout, `${label}: this width is ${want.stacked ? 'stacked' : 'a row'}`, facts.stacked === want.stacked, `${facts.stripClient}px`);
+    if (facts.stacked) {
+        const c = facts.chevrons;
+        const columns = [c.video, c.audio, c.subtitles].filter(Boolean).map(one => one.r);
+        record(layout, `${label}: the three chevrons share one column`, columns.every(right => near(right, columns[0])), columns.map(right => right.toFixed(1)).join(', '));
+        record(layout, `${label}: every cell is the card's width`, [facts.video, facts.audio, facts.subtitles].every(cell => near(cell.w, facts.strip.w, 4)),
+            [facts.video.w, facts.audio.w, facts.subtitles.w, facts.strip.w].map(v => v.toFixed(1)).join(', '));
+    } else {
+        record(layout, `${label}: Audio is 17.8em and Subtitles 13.2em, on one line with Video`, near(facts.audio.w, CELLS.audio * facts.em, 2) && near(facts.subtitles.w, CELLS.subtitles * facts.em, 2)
+            && near(facts.video.t, facts.audio.t, 1), [facts.audio.w, facts.subtitles.w, facts.em].map(v => v.toFixed(1)).join(', '));
+    }
+    record(layout, `${label}: the closed value's marks are whole or dropped, its size inside the cell`, facts.closedMarksWhole && (!facts.valueSize || facts.valueSize.r <= facts.video.r + 0.5),
+        facts.triggerText);
+}
+
+function vlOpenGeometry(layout, facts, label, count) {
+    const near = (a, b, within = 1) => Math.abs(a - b) <= within;
+    record(layout, `${label}: one row per file, best first`, facts.rows.length === count && facts.rows[0]?.resolution.startsWith('2160'), facts.rows.map(row => row.resolution).join(', '));
+    const shouldTwo = isMobile(layout) || (facts.list?.w ?? 0) < 24 * facts.belowEm;
+    record(layout, `${label}: the rows are two lines exactly when the cell is under 24em (always on a phone)`, facts.two === shouldTwo,
+        `two ${facts.two}, list ${facts.list?.w.toFixed(1)}px = ${((facts.list?.w ?? 0) / facts.belowEm).toFixed(2)}em`);
+    if (facts.stacked) {
+        record(layout, `${label}: the list is in the card, in the Video segment, static, and pushes Audio down`, facts.inCard && facts.position === 'static'
+            && facts.audio.t >= facts.list.b - 1 && near(facts.list.w, facts.video.w, 3), JSON.stringify({ inCard: facts.inCard, position: facts.position, list: facts.list, audio: facts.audio.t }));
+    } else {
+        record(layout, `${label}: the list is exactly the Video cell: the strip's outer left to the Audio divider, flush under the strip`, !facts.inCard && facts.position === 'absolute'
+            && near(facts.list.l, facts.strip.l, 0.6) && near(facts.list.r, facts.video.r, 0.6) && near(facts.list.t, facts.strip.b, 1),
+        JSON.stringify({ list: facts.list, strip: facts.strip, video: facts.video }));
+    }
+    const em = facts.belowEm;
+    const action = isMobile(layout) ? 40 : null;
+    const rows = facts.rows;
+    record(layout, `${label}: every action is whole inside its row, inside the screen`, rows.every(row => row.icons.every(icon => icon.l >= row.box.l - 0.5 && icon.r <= row.box.r + 0.5
+        && icon.r <= facts.page.inner + 0.5 && icon.t >= row.box.t - 0.5 && icon.b <= row.box.b + 0.5)), JSON.stringify(rows.map(row => row.icons.map(icon => [icon.l, icon.r, icon.t, icon.b].map(Math.round)))));
+    if (action) {
+        record(layout, `${label}: the phone's actions are 40 px`, rows.every(row => row.icons.every(icon => near(icon.w, action, 0.7) && near(icon.h, action, 0.7))), JSON.stringify(rows[0]?.icons.map(icon => [icon.w, icon.h])));
+    } else {
+        record(layout, `${label}: the actions are the 2.5em buttons`, rows.every(row => row.icons.every(icon => icon.w >= 2.5 * em * 0.92 && icon.w <= 2.5 * em * 1.2)), `${em}px em, ${JSON.stringify(rows[0]?.icons.map(icon => icon.w))}`);
+    }
+    record(layout, `${label}: the marks are whole or dropped in every row`, rows.every(row => row.marksWhole), rows.map(row => row.text).join(' | '));
+    record(layout, `${label}: the size is never cut`, rows.every(row => row.size && row.sizeUncut && row.size.r <= row.box.r + 0.5), JSON.stringify(rows.map(row => [row.sizeText, row.sizeUncut, row.size?.r, row.box.r])));
+    if (facts.two) {
+        if (isMobile(layout)) {
+            record(layout, `${label}: the phone keeps the size on line 2, left of the actions`, rows.every(row => row.sizeLine === 1 && row.size.r <= row.icons[0].l + 0.5), JSON.stringify(rows.map(row => [row.sizeLine, row.size?.r, row.icons[0]?.l])));
+        } else {
+            record(layout, `${label}: a narrow cell puts the size at line 1's end, over the actions`, rows.every(row => row.sizeLine === 0 && row.size.b <= row.icons[0].glyphTop + 0.5), JSON.stringify(rows.map(row => [row.sizeLine, row.size?.b, row.icons[0]?.glyphTop])));
+        }
+    }
+    record(layout, `${label}: nothing overflows inside the list`, facts.boxOverflow <= 1, String(facts.boxOverflow));
+    const selected = rows.filter(row => row.selected);
+    record(layout, `${label}: the current file alone has the blue bar`, selected.length === 1 && selected[0].bar.includes('rgb(0, 164, 220)') && rows.filter(row => !row.selected).every(row => !row.bar.includes('rgb(0, 164, 220)')),
+        JSON.stringify(rows.map(row => [row.selected, row.bar])));
+    record(layout, `${label}: the selected row's size is the closed value's`, selected[0]?.sizeText === facts.valueSizeText, `${selected[0]?.sizeText} / ${facts.valueSizeText}`);
+}
+
+async function checkVideoListTheme(page, layout, theme) {
+    const facts = await vlFacts(page);
+    record(layout, `${theme} theme is the page's theme`, (theme === 'light') === (facts.theme === 'light'), String(facts.theme));
+    const dark = relativeLuminance(facts.boxBackground) < 0.3;
+    record(layout, `${theme}: the list's paper is the theme's`, theme === 'light' ? relativeLuminance(facts.boxBackground) > 0.6 : dark, facts.boxBackground);
+    if (!facts.stacked) {
+        record(layout, `${theme}: the floating list's border is the theme's divider`, facts.boxBorder === (theme === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)'), facts.boxBorder);
+    }
+}
+
+async function checkVideoListRows(page, layout, id, tag, want) {
+    await vlOpenPage(page, id);
+    if (!isMobile(layout)) await page.mouse.move(0, 0);
+    const closed = await vlFacts(page);
+    vlGeometry(layout, closed, `${tag} closed`, want);
+    await vlShot(page, `${layout}-${tag}-closed`);
+    const count = (await apiGet(page, `Users/${await page.evaluate(() => ApiClient.getCurrentUserId())}/Items/${id}`)).MediaSources.length;
+    if (!await vlOpen(page, layout)) { record(layout, `${tag}: the Video list opens`, false, await vlActive(page)); return; }
+    await page.waitForTimeout(350);
+    const open = await vlFacts(page);
+    record(layout, `${tag}: aria-expanded follows`, open.expanded === 'true');
+    vlOpenGeometry(layout, open, `${tag} open`, count);
+    await vlShot(page, `${layout}-${tag}-open`);
+    return { closed, open, count };
+}
+
+async function checkVideoListChoose(page, layout, id, tag) {
+    await vlOpenPage(page, id);
+    const value = () => page.evaluate(sel => document.querySelector(`${sel} .selectSource`)?.value, PAGE);
+    const before = await value();
+    if (!await vlOpen(page, layout)) { record(layout, `${tag} choose: the list opens`, false); return; }
+    await page.waitForTimeout(300);
+    const facts = await vlFacts(page);
+    const other = facts.rows.findIndex(row => !row.selected);
+    const otherRow = facts.rows[other];
+    if (isTv(layout)) await vlWalk(page, other, 0);
+    await vlHit(page, layout, `${PAGE} .jfmod-fileChoose[data-jfmod-media-source-id="${otherRow.id}"]`);
+    await page.waitForTimeout(1200);
+    const after = await vlFacts(page);
+    record(layout, `${tag} choose: a row sets the page's source, closes the list and is the value`, norm(await value()) === norm(otherRow.id) && !after.open && after.rows.length === 0
+        && after.valueSizeText === otherRow.sizeText, `${before} → ${await value()}; ${after.triggerText}`);
+    if (!isMobile(layout)) record(layout, `${tag} choose: focus returns to the Video value`, await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    vlGeometry(layout, after, `${tag} after choosing`);
+    if (env('JELLYFINMOD_DD_VL_WRITES')) {
+        const request = page.waitForRequest(req => /PlaybackInfo/.test(req.url()) && req.method() === 'POST', { timeout: 15000 }).catch(() => null);
+        await page.locator(`${PAGE} .btnPlay:not(.hide)`).first().click({ timeout: 5000 }).catch(() => {});
+        const sent = await request;
+        record(layout, `${tag} choose: Play asks for the chosen file`, !!sent && norm(`${sent.url()} ${sent.postData() ?? ''}`).includes(norm(otherRow.id)), sent ? 'PlaybackInfo sent' : 'no PlaybackInfo');
+        await page.evaluate(() => document.querySelector('video')?.pause());
+        await page.goto(base() + '#/home', { waitUntil: 'domcontentloaded' });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+        await page.waitForTimeout(2000);
+    }
+}
+
+async function checkVideoListClose(page, layout, id, tag) {
+    await vlOpenPage(page, id);
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(250);
+    if (isTv(layout)) {
+        await vlPress(page, 'ArrowDown');
+        await vlPress(page, 'Escape', 600);
+        record(layout, `${tag} close: Back closes the list and focus returns to the Video value`, !(await vlFacts(page)).open && await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+        return;
+    }
+    if (!isMobile(layout)) {
+        await vlPress(page, 'Escape', 600);
+        record(layout, `${tag} close: Escape closes the list`, !(await vlFacts(page)).open);
+        await vlOpen(page, layout);
+        await page.waitForTimeout(250);
+    }
+    // Outside the list and its cell: the page's margin on a computer, its overview text on a phone (a touch at the screen's left edge
+    // would swipe the app's drawer open).
+    const where = await page.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: Math.max(4, r.left - 4 > 8 ? 8 : 4), y: Math.max(70, r.top - 12) }; }, STRIP);
+    if (isMobile(layout)) await page.locator(`${PAGE} .overview`).first().tap({ timeout: 5000 });
+    else await page.mouse.click(where.x, where.y);
+    await page.waitForTimeout(600);
+    record(layout, `${tag} close: a ${isMobile(layout) ? 'tap' : 'click'} outside closes the list`, !(await vlFacts(page)).open, JSON.stringify(where));
+    // On a stacked strip a press on Audio closes the list at once and opens Audio's under its cell where it now is.
+    if ((await vlFacts(page)).stacked) {
+        const audio = `${PAGE} [data-jfmod-track-field="Audio"]`;
+        await vlOpen(page, layout);
+        await page.waitForTimeout(250);
+        if (await page.locator(`${audio}:not(.jfmod-trackStatic)`).count() && await page.locator(audio).evaluate(el => el.tagName === 'BUTTON')) {
+            await vlHit(page, layout, audio);
+            await page.waitForTimeout(700);
+            const paper = await page.evaluate(sel => {
+                const cell = document.querySelector(`${sel} .jfmod-stripSegment--audio`).getBoundingClientRect();
+                const r = document.querySelector('.jfmod-trackMenuPaper')?.getBoundingClientRect();
+                return { cellBottom: cell.bottom, top: r?.top ?? null, open: !!document.querySelector(`${sel} .jfmod-fileList--open`) };
+            }, PAGE);
+            record(layout, `${tag} close: a press on Audio closes the list and opens Audio's under its cell`, !paper.open && paper.top !== null && Math.abs(paper.top - paper.cellBottom) <= 1.5, JSON.stringify(paper));
+            await vlPress(page, 'Escape', 500);
+        }
+    }
+}
+
+async function checkVideoListActions(page, layout, id, tag) {
+    await vlOpenPage(page, id);
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(300);
+    const pressRow = async attribute => {
+        if (isTv(layout)) {
+            const rights = await page.evaluate(([sel, name]) => {
+                const row = document.querySelector(`${sel} .jfmod-fileList .jfmod-fileRow`);
+                return [...row.querySelectorAll('.jfmod-fileChoose, .jfmod-fileIcon')].findIndex(stop => stop.hasAttribute(name));
+            }, [PAGE, attribute]);
+            await vlWalk(page, 0, rights);
+            record(layout, `${tag} actions: the remote's walk reaches ${attribute}`, await activeMatches(page, `[${attribute}]`), await vlActive(page));
+        }
+        await vlHit(page, layout, `${PAGE} .jfmod-fileList .jfmod-fileRow [${attribute}]`);
+    };
+    // History.
+    await pressRow('data-jfmod-file-history');
+    const history = page.locator('.jfmod-fileHistory');
+    const opened = await history.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
+    record(layout, `${tag} actions: History opens the file's history`, opened);
+    await vlShot(page, `${layout}-${tag}-history`);
+    if (opened) {
+        const rect = await history.first().evaluate(node => { const r = node.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, vw: window.innerWidth }; });
+        record(layout, `${tag} actions: the history is whole on the screen`, rect.l >= -0.5 && rect.r <= rect.vw + 0.5, JSON.stringify(rect));
+        await vlPress(page, 'Escape', 700);
+        record(layout, `${tag} actions: Back closes the history and the list stays open`, await history.count() === 0 && (await vlFacts(page)).open);
+        if (!isMobile(layout)) record(layout, `${tag} actions: focus returns to History`, await activeMatches(page, '[data-jfmod-file-history]'), await vlActive(page));
+    }
+    // Keep and Stop Keeping, read back from the plugin.
+    if (env('JELLYFINMOD_DD_VL_WRITES')) {
+        const pin = `${PAGE} .jfmod-fileList .jfmod-fileRow [data-jfmod-file-pin]`;
+        const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
+        const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
+        const kept = async () => {
+            const detail = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
+            return [...detail.versions ?? [], ...(detail.episodes ?? []).flatMap(episode => episode.versions ?? [])].find(version => version.bindingId === bindingId)?.kept ?? null;
+        };
+        const start = await kept();
+        await pressRow('data-jfmod-file-pin');
+        await page.waitForTimeout(2500);
+        const on = await kept();
+        record(layout, `${tag} actions: Keep keeps the file, the list stays open`, start === false && on === true && (await vlFacts(page)).open && await page.locator(pin).first().getAttribute('aria-pressed') === 'true', `${start} → ${on}`);
+        await pressRow('data-jfmod-file-pin');
+        await page.waitForTimeout(2500);
+        record(layout, `${tag} actions: Stop Keeping undoes it`, await kept() === false);
+    }
+    // Remove: up to its dialog, closed with the safe choice; the file stays.
+    const before = (await vlFacts(page)).rows.length;
+    await pressRow('data-jfmod-file-remove');
+    const dialog = page.locator('.dialog').last();
+    const shown = await dialog.waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
+    const text = shown ? (await dialog.innerText()).replace(/\s+/g, ' ') : '';
+    record(layout, `${tag} actions: Remove opens its dialog saying what goes and what stays`, shown && /Only the/.test(text) && /Remove This Version/i.test(text), text.slice(0, 160));
+    await vlShot(page, `${layout}-${tag}-remove-dialog`);
+    if (shown) {
+        if (isTv(layout)) await vlPress(page, 'Escape', 800);
+        else await dialog.locator('button', { hasText: /^(Cancel|Keep)/i }).first().click({ timeout: 5000 });
+        await page.waitForTimeout(800);
+        const after = await vlFacts(page);
+        record(layout, `${tag} actions: closing the dialog removes nothing`, await page.locator('.dialog').count() === 0 && (after.rows.length === before || after.rows.length === 0), `${before} → ${after.rows.length} rows`);
+        const versions = (await page.evaluate(entrySel => document.querySelector(entrySel)?.getAttribute('data-jfmod-entry-id'), `${PAGE} [data-jfmod-entry-id]`));
+        if (versions) record(layout, `${tag} actions: the plugin still lists both files`, ((await apiGet(page, `JellyfinMod/Entries/${versions}`)).versions ?? []).length === before);
+    }
+}
+
+async function checkVideoListHover(page, layout, id, tag) {
+    if (isMobile(layout) || isTv(layout)) return;
+    await vlOpenPage(page, id);
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(250);
+    const other = page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--selected)`).first();
+    await other.locator('.jfmod-fileChoose').hover();
+    await page.waitForTimeout(250);
+    const hover = await other.evaluate(row => getComputedStyle(row).backgroundColor);
+    // Grey: the theme's action-hover, 8 % white over the dark paper, the same grey on the light one; never the current file's blue.
+    const channels = (hover.match(/[\d.]+/g) ?? []).map(Number);
+    record(layout, `${tag}: another row hovered is grey`, channels[0] === channels[1] && channels[1] === channels[2] && (channels.length === 3 || channels[3] > 0), hover);
+    await page.mouse.move(0, 0);
+    await vlClose(page, layout);
+}
+
+async function checkVideoListTracks(page, layout, id) {
+    const tag = 'tracks';
+    await vlOpenPage(page, id);
+    if (!isMobile(layout)) await page.mouse.move(0, 0);
+    await vlShot(page, `${layout}-${tag}-closed`);
+    const closed = await vlFacts(page);
+    vlGeometry(layout, closed, `${tag} closed`);
+    for (const [name, select] of [['Audio', 'selectAudio'], ['Subtitles', 'selectSubtitles']]) {
+        const field = `[data-jfmod-track-field="${name}"]`;
+        if (isTv(layout)) {
+            await page.locator(VIDEO).focus();
+            await page.waitForTimeout(200);
+            await vlPress(page, closed.stacked ? 'ArrowDown' : 'ArrowRight');
+            if (name === 'Subtitles') await vlPress(page, closed.stacked ? 'ArrowDown' : 'ArrowRight');
+            record(layout, `${name}: the remote walks to it from Video`, await activeMatches(page, field), await vlActive(page));
+        }
+        await vlHit(page, layout, `${PAGE} ${field}`);
+        const opened = await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 6000 }).then(() => true, () => false);
+        record(layout, `${name}: the list opens`, opened);
+        if (!opened) continue;
+        await page.waitForTimeout(450);
+        const place = await page.evaluate(([sel, cellName]) => {
+            const strip = document.querySelector(`${sel} .jfmod-strip`).getBoundingClientRect();
+            const cell = document.querySelector(`${sel} .jfmod-stripSegment--${cellName}`).getBoundingClientRect();
+            const paper = document.querySelector('.jfmod-trackMenuPaper').getBoundingClientRect();
+            return { stacked: document.querySelector(`${sel} .jfmod-strip`).classList.contains('jfmod-strip--stacked'), strip: [strip.left, strip.right, strip.bottom], cell: [cell.left, cell.right, cell.bottom], paper: [paper.left, paper.right, paper.top],
+                options: document.querySelectorAll('.jfmod-trackMenu [role="option"]').length, 
+                current: document.querySelector('.jfmod-trackMenu [aria-selected="true"]')?.getAttribute('data-jfmod-track') };
+        }, [PAGE, name.toLowerCase()]);
+        const close = (a, b, within = 1.5) => Math.abs(a - b) <= within;
+        record(layout, `${name}: the list is exactly its cell, flush under it`, place.stacked
+            ? close(place.paper[0], place.strip[0]) && close(place.paper[1], place.strip[1]) && close(place.paper[2], place.cell[2])
+            : close(place.paper[0], place.cell[0], 2) && close(place.paper[1], name === 'Subtitles' ? place.strip[1] : place.cell[1], 2) && close(place.paper[2], place.strip[2]), JSON.stringify(place));
+        await vlShot(page, `${layout}-${tag}-${name.toLowerCase()}-open`);
+        const options = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(node => node.getAttribute('data-jfmod-track')), `${LISTBOX} [role="option"]`);
+        const hidden = () => page.evaluate(([sel, cls]) => document.querySelector(`${sel} .${cls}`)?.value, [PAGE, select]);
+        const start = await hidden();
+        const target = options.find(value => value !== start && value !== '-1');
+        record(layout, `${name}: one entry per stock option${name === 'Subtitles' ? ', Off first' : ''}`, options.length >= 2 && (name !== 'Subtitles' || options[0] === '-1'), options.slice(0, 4).join(','));
+        if (isTv(layout)) {
+            const from = options.indexOf(place.current);
+            const steps = options.indexOf(target) - from;
+            for (let press = 0; press < Math.abs(steps); press++) await vlPress(page, steps > 0 ? 'ArrowDown' : 'ArrowUp', 200);
+            await vlPress(page, 'Enter', 700);
+        } else {
+            await vlHit(page, layout, `${LISTBOX} [data-jfmod-track="${target}"]`);
+            await page.waitForTimeout(700);
+        }
+        record(layout, `${name}: choosing sets the page's stock select and closes the list`, await hidden() === target && await page.locator(LISTBOX).count() === 0, `${start} → ${await hidden()}`);
+        if (!isMobile(layout)) record(layout, `${name}: focus returns to the cell`, await activeMatches(page, field), await vlActive(page));
+    }
+    await vlShot(page, `${layout}-${tag}-chosen`);
+    const after = await vlFacts(page);
+    record(layout, 'tracks: the cells keep their size after choosing', Math.abs(after.video.w - closed.video.w) <= 1 && Math.abs(after.audio.w - closed.audio.w) <= 1 && Math.abs(after.subtitles.w - closed.subtitles.w) <= 1,
+        JSON.stringify([closed.video.w, after.video.w, closed.audio.w, after.audio.w]));
+    record(layout, 'tracks: nothing overflows after choosing', vlFits(layout, after), JSON.stringify(after.page));
+}
+
+async function checkVideoListPending(page, layout, id) {
+    const tag = 'pending';
+    await vlOpenPage(page, id);
+    await page.waitForSelector(`${PAGE} .jfmod-pending`, { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(600);
+    if (!isMobile(layout)) await page.mouse.move(0, 0);
+    const closed = await vlFacts(page);
+    record(layout, 'pending: the entry is under the strip while the list is closed', !!closed.pending && !closed.pending.inList && closed.pending.box.t >= closed.strip.b - 1, closed.pending?.text ?? 'none');
+    if (!closed.pending) return;
+    record(layout, 'pending: reads its quality and flag', /1080p/i.test(closed.pending.text) && /another version/i.test(closed.pending.text), closed.pending.text);
+    record(layout, 'pending: its quality and state are whole, nothing overflows under the strip', closed.pending.sayings.every(one => one.whole) && (!closed.stacked || closed.pending.marksWhole) && closed.pending.box.r <= closed.page.inner + 0.5 && vlFits(layout, closed),
+        JSON.stringify({ sayings: closed.pending.sayings, marksWhole: closed.pending.marksWhole, box: closed.pending.box, page: closed.page }));
+    if (isMobile(layout)) record(layout, 'pending: the phone\'s X is 40 px', closed.pending.x && Math.abs(closed.pending.x.w - 40) <= 0.7 && Math.abs(closed.pending.x.h - 40) <= 0.7, JSON.stringify(closed.pending.x));
+    await vlShot(page, `${layout}-${tag}-closed`);
+    if (isTv(layout)) {
+        await page.locator(VIDEO).focus();
+        await page.waitForTimeout(250);
+        let walked = false;
+        for (let press = 0; press < 4 && !walked; press++) { await vlPress(page, 'ArrowDown'); walked = await activeMatches(page, '[data-jfmod-pending-remove]'); }
+        record(layout, 'pending: Down from the strip reaches the X', walked, await vlActive(page));
+    }
+    // The X: its dialog, closed with the safe choice; the row stays.
+    await vlHit(page, layout, `${PAGE} [data-jfmod-pending-remove]`);
+    const dialog = page.locator('.dialog').last();
+    const shown = await dialog.waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
+    record(layout, 'pending: the X opens its dialog', shown && await page.locator('.jfmod-removeChoice[data-choice="cancel"]').count() > 0, shown ? (await dialog.innerText()).replace(/\s+/g, ' ').slice(0, 140) : '');
+    await vlShot(page, `${layout}-${tag}-dialog`);
+    if (shown) {
+        if (isTv(layout)) await vlPress(page, 'Escape', 800);
+        else await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click({ timeout: 5000 });
+        await page.waitForTimeout(800);
+        record(layout, 'pending: the safe choice keeps the download', await page.locator('.dialog').count() === 0 && (await vlFacts(page)).pending !== null);
+    }
+    if (!await vlOpen(page, layout)) { record(layout, 'pending: the list opens', false); return; }
+    await page.waitForTimeout(400);
+    const open = await vlFacts(page);
+    record(layout, 'pending: while the list is open it is the list\'s row', !!open.pending?.inList, JSON.stringify(open.pending?.box));
+    if (open.pending) {
+        record(layout, 'pending: in the list its quality and state are whole, the X inside', open.pending.sayings.every(one => one.whole) && (!open.stacked || open.pending.marksWhole) && open.pending.box.r <= open.list.r + 0.5 && (!open.pending.x || open.pending.x.r <= open.list.r + 0.5),
+            JSON.stringify({ sayings: open.pending.sayings, marksWhole: open.pending.marksWhole, text: open.pending.text, box: open.pending.box, list: open.list }));
+        if (!open.stacked) record(layout, 'pending: a floating list keeps the page where it was', !closed.after || !open.after || Math.abs(open.after.t - closed.after.t) <= 1.5, JSON.stringify([closed.after?.t, open.after?.t]));
+    }
+    await vlShot(page, `${layout}-${tag}-open`);
+    await vlClose(page, layout);
+    await page.waitForTimeout(400);
+    record(layout, 'pending: closing the list puts it back under the strip', !!(await vlFacts(page)).pending && !(await vlFacts(page)).pending.inList);
+}
+
+/** The TV's remote along the list's rows (D199): every stop in order, no jump to the Video value, Back closes. */
+async function checkVideoListRemote(page, layout, id) {
+    await vlOpenPage(page, id);
+    const facts = await vlFacts(page);
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(300);
+    const open = await vlFacts(page);
+    const stops = open.rows.map(row => [undefined, ...row.icons.map(icon => icon.label)]);
+    await page.locator(VIDEO).focus();
+    await page.waitForTimeout(200);
+    for (const [index, row] of stops.entries()) {
+        await vlPress(page, 'ArrowDown');
+        const seen = [await vlActive(page)];
+        for (let right = 1; right < row.length; right++) { await vlPress(page, 'ArrowRight'); seen.push(await vlActive(page)); }
+        record(layout, `remote: row ${index + 1}: Right walks the row's button, then each action in order`, seen.length === row.length && seen.every((stop, at) => stop.startsWith(`row${index + 1} `) && (at === 0 ? /fileChoose/.test(stop) : stop.endsWith(row[at]))),
+            seen.join(' ; '));
+        const back = [];
+        const lefts = await page.evaluate(() => { const a = document.activeElement; const r = a?.closest?.('.jfmod-fileRow'); return r ? [...r.querySelectorAll('.jfmod-fileChoose, .jfmod-fileIcon')].indexOf(a) : -1; });
+        for (let left = 0; left < lefts; left++) { await vlPress(page, 'ArrowLeft'); back.push(await vlActive(page)); }
+        record(layout, `remote: row ${index + 1}: Left walks back to the row's button`, lefts > 0 && /fileChoose/.test(back.at(-1) ?? '') && (back.at(-1) ?? '').startsWith(`row${index + 1} `), back.join(' ; '));
+    }
+    await vlShot(page, `${layout}-remote-walked`);
+    // At a row's end the keys go on as the remote's own search takes them (the guide), but never up to the Video value (D199).
+    await vlWalk(page, 0, stops[0].length - 1);
+    await vlPress(page, 'ArrowRight');
+    record(layout, 'remote: Right at a row\'s end does not jump to the Video value', !await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    await page.locator(VIDEO).focus();
+    await page.waitForTimeout(200);
+    await vlPress(page, 'Escape', 700);
+    record(layout, 'remote: Back closes the list, focus on the Video value', !(await vlFacts(page)).open && await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    record(layout, 'remote: the strip is where it was', Math.abs((await vlFacts(page)).strip.w - facts.strip.w) <= 1);
+}
+
+/** A live resize with the list open: it stays open, under its cell or in the card, one way at each width, never flipping. */
+async function checkVideoListResize(page, layout, id) {
+    await vlOpenPage(page, id);
+    const start = page.viewportSize();
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(300);
+    const count = (await vlFacts(page)).rows.length;
+    const steps = isMobile(layout) ? [{ width: start.height, height: start.width }, start]
+        : [1100, 1040, 1000, 990, 985, 980, 975, 900, 800, 900, 975, 980, 985, 990, 1000, 1040, 1100, start.width].map(width => ({ width, height: start.height }));
+    const problems = [];
+    let last = null;
+    for (const size of steps) {
+        await page.setViewportSize(size);
+        await page.waitForTimeout(400);
+        const one = await vlFacts(page);
+        await page.waitForTimeout(350);
+        const two = await vlFacts(page);
+        const near = (a, b) => Math.abs(a - b) <= 1;
+        const fine = one.open && two.open && one.stacked === two.stacked && one.inCard === two.inCard && two.rows.length === count
+            && (isMobile(layout) || two.stacked === (two.stripClient < (31 + 11.09) * two.em))
+            && (two.stacked ? two.inCard && near(two.list.w, two.video.w) && two.audio.t >= two.list.b - 1
+                : !two.inCard && near(two.list.l, two.strip.l) && near(two.list.r, two.video.r) && near(two.list.t, two.strip.b))
+            && two.two === (isMobile(layout) || two.list.w < 24 * two.belowEm) && vlFits(layout, two);
+        if (!fine) problems.push(JSON.stringify({ size, open: two.open, stacked: [one.stacked, two.stacked], inCard: two.inCard, list: two.list, strip: two.strip, video: two.video, two: two.two, page: two.page }));
+        last = { width: size.width, stacked: two.stacked, two: two.two, list: Math.round(two.list?.w ?? 0), video: Math.round(two.video.w) };
+        if (!isMobile(layout) && [1000, 980, 900].includes(size.width)) await vlShot(page, `${layout}-resize-${size.width}-open`);
+        console.log(`    resize ${JSON.stringify(last)}`);
+    }
+    record(layout, 'resize: at every width the open list stays open, exact under its cell or in the card, rows by the width, no flip', problems.length === 0, problems.slice(0, 3).join(' || '));
+    await vlShot(page, `${layout}-resize-back`);
+    // Audio's list open across a resize: placed again under its cell (D166).
+    await vlClose(page, layout);
+    await page.setViewportSize(start);
+    await page.waitForTimeout(300);
+    const audio = `${PAGE} [data-jfmod-track-field="Audio"]`;
+    if (await page.locator(audio).evaluate(el => el.tagName === 'BUTTON')) {
+        await vlHit(page, layout, audio);
+        await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 6000 }).catch(() => {});
+        await page.waitForTimeout(400);
+        await page.setViewportSize(isMobile(layout) ? { width: start.height, height: start.width } : { width: 1100, height: start.height });
+        await page.waitForTimeout(700);
+        const place = await page.evaluate(sel => {
+            const cell = document.querySelector(`${sel} .jfmod-stripSegment--audio`).getBoundingClientRect();
+            const paper = document.querySelector('.jfmod-trackMenuPaper')?.getBoundingClientRect();
+            return { cell: [cell.left, cell.right, cell.bottom], paper: paper ? [paper.left, paper.right, paper.top] : null };
+        }, PAGE);
+        record(layout, 'resize: Audio\'s open list is placed again under its cell', !!place.paper && Math.abs(place.paper[2] - place.cell[2]) <= 1.5 && (isMobile(layout) || Math.abs(place.paper[0] - place.cell[0]) <= 2), JSON.stringify(place));
+        await page.keyboard.press('Escape');
+        await page.setViewportSize(start);
+        await page.waitForTimeout(400);
+    }
+}
+
+/** What each width is expected to be (the guide's measured table); a width not named here is left to the width rule alone. */
+const VL_EXPECT = { desktop: { stacked: false }, desktop1100: { stacked: false, twoLine: true }, desktop1000: { stacked: false, twoLine: true }, desktop980: { stacked: true },
+    desktop800: { stacked: true }, mobile360: { stacked: true, twoLine: true }, mobile: { stacked: true, twoLine: true }, mobile430: { stacked: true, twoLine: true },
+    tv1080: { stacked: false }, tv720: { stacked: true } };
+
+async function checkVideoListLayout(page, layout, theme) {
+    const id = env('JELLYFINMOD_DD_VL');
+    const step = async (name, run) => {
+        try { await run(); } catch (error) { await vlShot(page, `${layout}-aborted-${name}`); record(layout, `${name} (aborted)`, false, String(error.message).replace(/\s+/g, ' ').slice(-260)); }
+    };
+    const want = VL_EXPECT[layoutOf(layout)] ?? {};
+    await step('rows', async () => {
+        const seen = await checkVideoListRows(page, layout, id, 'two files', want);
+        if (seen && want.twoLine !== undefined) record(layout, `two files: the rows are ${want.twoLine ? 'two lines' : 'one line'} at this width`, seen.open.two === want.twoLine, String(seen.open.two));
+        if (seen) await checkVideoListTheme(page, layout, theme);
+    });
+    await step('hover', () => checkVideoListHover(page, layout, id, 'two files'));
+    await step('close', () => checkVideoListClose(page, layout, id, 'two files'));
+    await step('actions', () => checkVideoListActions(page, layout, id, 'two files'));
+    await step('choose', () => checkVideoListChoose(page, layout, id, 'two files'));
+    if (env('JELLYFINMOD_DD_VL_TRACKS')) await step('tracks', () => checkVideoListTracks(page, layout, env('JELLYFINMOD_DD_VL_TRACKS')));
+    if (env('JELLYFINMOD_DD_VL_PENDING')) await step('pending', () => checkVideoListPending(page, layout, env('JELLYFINMOD_DD_VL_PENDING')));
+    if (isTv(layout)) await step('remote', () => checkVideoListRemote(page, layout, id));
+    if (!isTv(layout) && ['desktop', 'mobile'].includes(layoutOf(layout))) await step('resize', () => checkVideoListResize(page, layout, id));
+}
+
 async function checkUserViews(page) {
     const views = await apiGet(page, `Users/${await page.evaluate(() => ApiClient.getCurrentUserId())}/Views`);
     const names = (views.Items ?? []).map(view => view.Name).sort();
@@ -1315,6 +1907,16 @@ async function checkLayout(browser, layout, user, admin) {
     try {
         await signIn(page, user);
         if (isTv(layout)) await setTvLayout(page);
+        if (env('JELLYFINMOD_DD_VL')) {
+            const theme = env('JELLYFINMOD_DD_THEME') ?? 'dark';
+            await page.evaluate(([key, value]) => localStorage.setItem(key, value), [`${await page.evaluate(() => ApiClient.getCurrentUserId())}-appTheme`, theme]);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+            await page.waitForTimeout(1500);
+            await checkVideoListLayout(page, label, theme);
+            record(label, 'no page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3).join(' | '));
+            return;
+        }
         const run = async (name, step) => {
             if (!wanted(name.split(' ')[0])) return;
             try { await step(); } catch (error) { record(label, name, false, String(error.message).split('\n')[0]); }
