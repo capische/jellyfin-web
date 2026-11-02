@@ -130,17 +130,6 @@ a.jfmod-browseParent {
     &[aria-busy='true'] { opacity: 0.7; }
 }
 
-.jfmod-browseNote {
-    line-height: 1.618;
-    margin: 0 0 1.618em;
-    opacity: 0.854;
-
-    .button-link {
-        color: var(--jf-palette-primary-main, #00a4dc);
-        font-weight: 600;
-    }
-}
-
 // A season's episode rows open their page from anywhere on the row.
 .jfmod-browseEpisode {
     color: inherit;
