@@ -29,7 +29,7 @@ const ONE_LINE_EMS = 24;
 const TRACK_CELLS_EMS = 31;
 /**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
- * until D238): it is where `AVC` beside a two-digit size and the pending entry's quality fit whole: a 996 px window keeps 11.74em
+ * until D238): it is where the pending entry's quality stays on its line: a 996 px window keeps 11.74em
  * and stays a row, 995 px stacks; the TV at 1280 has 9.9em and stacks.
  */
 const STACK_EMS = 11.7;
