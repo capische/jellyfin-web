@@ -90,24 +90,6 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
     </>;
 };
 
-/** The line that says a season or an episode is not in the library: first in the overview's column, above the overview. */
-const NoteSlot: FC<{ view: HTMLElement; children: ReactNode }> = ({ view, children }) => {
-    const [node, setNode] = useState<HTMLElement | null>(null);
-    useLayoutEffect(() => {
-        const column = view.querySelector('.detailSectionContent');
-        if (!column) return;
-        const element = document.createElement('p');
-        element.className = 'jfmod-browseNote';
-        column.insertBefore(element, column.firstChild);
-        setNode(element);
-        return () => {
-            element.remove();
-            setNode(null);
-        };
-    }, [view]);
-    return node && createPortal(children, node);
-};
-
 /** Upstream draws its header links in the text's colour inline (renderName). */
 const INHERIT = { color: 'inherit', textDecoration: 'none' };
 
@@ -143,10 +125,17 @@ const HeaderName: FC<HeaderProps> = ({ metadata, season, episode, episodeNumber,
     </>;
 };
 
-/** Upstream's first meta line: year, runtime, certification and TMDB's star; a season's year and episode count. */
+/**
+ * Upstream's first meta line: year, runtime, certification and TMDB's star; a season's year, episode count, certification and
+ * the show's star (TMDB rates the show, not each season; user, 2026-11-01: the rating in the meta line, as on the other pages);
+ * an episode's date, runtime, its own star and the certification.
+ */
 const HeaderMeta: FC<HeaderProps> = ({ metadata, season, episode, episodeNumber, episodeCount }) => {
     const certification = certificationOf(metadata);
     const certificationItem = certification ? <div className='mediaInfoItem mediaInfoText mediaInfoOfficialRating'>{certification}</div> : null;
+    const starItem = metadata.communityRating ? <div className='starRatingContainer mediaInfoItem'>
+        <span className='material-icons starIcon star' aria-hidden='true' />{metadata.communityRating.toFixed(1)}
+    </div> : null;
     if (episodeNumber !== undefined) {
         return episode ? <>{episodeMetaItems(episode, metadata.episodeRatings?.[episode.tmdbId], shortDate)}{certificationItem}</> : null;
     }
@@ -154,7 +143,9 @@ const HeaderMeta: FC<HeaderProps> = ({ metadata, season, episode, episodeNumber,
         const tmdbSeason = metadata.seasons.find(candidate => candidate.number === season);
         const year = yearOf(tmdbSeason?.airDate);
         return <>{year && <div className='mediaInfoItem'>{year}</div>}
-            <div className='mediaInfoItem'>{episodesWord(episodeCount || tmdbSeason?.episodeCount || 0)}</div></>;
+            <div className='mediaInfoItem'>{episodesWord(episodeCount || tmdbSeason?.episodeCount || 0)}</div>
+            {certificationItem}
+            {starItem}</>;
     }
     const year = yearOf(metadata.premiereDate);
     return <>
@@ -162,9 +153,7 @@ const HeaderMeta: FC<HeaderProps> = ({ metadata, season, episode, episodeNumber,
         {metadata.mediaType === 'movie' && !!metadata.runtimeMinutes
             && <div className='mediaInfoItem'>{datetime.getDisplayDuration(metadata.runtimeMinutes * 600000000)}</div>}
         {certificationItem}
-        {!!metadata.communityRating && <div className='starRatingContainer mediaInfoItem'>
-            <span className='material-icons starIcon star' aria-hidden='true' />{metadata.communityRating.toFixed(1)}
-        </div>}
+        {starItem}
     </>;
 };
 
@@ -217,20 +206,11 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
     </button>;
 };
 
-/** TMDB's page of the title, season or episode, and IMDb's of a movie or series. */
-const externalLinks = (metadata: TmdbMetadata, season?: number, episodeNumber?: number) => {
-    let path = (metadata.mediaType === 'movie' ? 'movie/' : 'tv/') + metadata.tmdbId;
-    if (season !== undefined) path += '/season/' + season;
-    if (episodeNumber !== undefined) path += '/episode/' + episodeNumber;
-    const imdb = season === undefined && metadata.imdbId && /^tt\d+$/.test(metadata.imdbId) ? 'https://www.imdb.com/title/' + metadata.imdbId : undefined;
-    return { tmdb: 'https://www.themoviedb.org/' + path, imdb };
-};
-
 /**
  * The page of a TMDB title that is not in the library (TM2; D196, D203), drawn into upstream's detail template as the
- * file-less entry pages are: a movie's or a series' page with its one action, **Add to Library**, and a season's or an
- * episode's page that says the title is not in the library and links to the series. Seasons, episodes, Cast & Crew, Guest Stars
- * and More from the season are rows of the search card's lit cell.
+ * file-less entry pages are, each page with its one action, **Add to Library**, which adds the whole movie or show (a season's
+ * and an episode's page too; user, 2026-11-01). The rating sits in the meta line; no external links (user, 2026-11-01). Seasons,
+ * episodes, Cast & Crew, Guest Stars and More from the season are rows of the search card's lit cell.
  */
 const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, season, episode: episodeNumber, focusOwnership }) => {
     const { metadata, crew, creators } = data;
@@ -245,7 +225,6 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
         const node = view.querySelector(selector);
         return node ? createPortal(content, node) : null;
     };
-    const seriesHref = '#' + getTmdbPath('series', metadata.tmdbId, serverId);
     const seasonHref = (number: number) => '#' + getTmdbPath('series', metadata.tmdbId, serverId, number);
     const episodeHref = (number: number) => '#' + getTmdbPath('series', metadata.tmdbId, serverId, season, number);
 
@@ -259,15 +238,6 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
             focusOwnership.placed(first);
         }
     });
-
-    // External links, as upstream's line under the overview: IMDb, then TMDB.
-    useLayoutEffect(() => {
-        const links = view.querySelector('.itemExternalLinks');
-        if (!links || layoutManager.tv) return;
-        links.classList.remove('hide');
-        return () => links.classList.add('hide');
-    }, [view]);
-    const links = externalLinks(metadata, season, episodeNumber);
 
     const namesOf = (people: typeof crew, type: string) => Array.from(new Set(people.filter(person => person.type === type).map(person => person.name)));
     const episodeCrew = episode?.credits?.crew ?? [];
@@ -305,16 +275,8 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
                 </div>
             </div> :
             <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={metadata.title} />}</div>, node, String(index)))}
-        {!isSeason && !isEpisode && mount('.mainDetailButtons', <AddToLibraryButton api={api} metadata={metadata} serverId={serverId} userId={userId} />)}
-        {(isSeason || isEpisode) && <NoteSlot view={view}>
-            Not in your library. <a className='button-link' href={seriesHref}>Add {metadata.title}</a>{' '}
-            {isEpisode ? 'to download it.' : 'to download its episodes.'}
-        </NoteSlot>}
+        {mount('.mainDetailButtons', <AddToLibraryButton api={api} metadata={metadata} serverId={serverId} userId={userId} />)}
         {overview && mount('.overview', overview)}
-        {mount('.itemExternalLinks', <>
-            {links.imdb && <><a className='button-link' href={links.imdb} target='_blank' rel='noopener noreferrer'>IMDb</a>, </>}
-            <a className='button-link' href={links.tmdb} target='_blank' rel='noopener noreferrer'>TMDB</a>
-        </>)}
         {mount('.itemDetailsGroup', <>
             <DetailsLine label={globalize.translate(directors.length > 1 ? 'Directors' : 'Director')} names={directors} />
             <DetailsLine label={globalize.translate(writers.length > 1 ? 'Writers' : 'Writer')} names={writers} />
