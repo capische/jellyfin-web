@@ -1182,6 +1182,17 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   on the one-file row), not this change. Not verified: a file with DTS-HD MA, TrueHD or Atmos (none in the local media), a
   file with two versions, Dolby Vision or HDR10 marks, an ordinary user, a physical TV, the next-release plugin, Codex review.
 
+  **P7.FU6 follow-up, built (not accepted) 2026-11-03: the Video list on every layout** (the user's "go", 2026-11-03; D166, D197-D199,
+  D232 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`; [track-dropdown.md](design/guides/track-dropdown.md)). The open list is
+  placed again on a resize; the phone's list sits in the track card with two-line rows and 40 px actions; on the computer and the TV it is
+  exactly the Video cell, two-line rows when narrow; a narrow strip stacks, with the narrow rows' size on line 1, and the TV walks a row
+  by itself. Web only, on `fix/video-list-resize` and `fix/video-list-resize-items`. Gate 1 passed; gate 2 ran `detail-design.mjs`
+  with `JELLYFINMOD_DD_VL` on both lines (items on charlie, Jellyfin 12.2; stubs on a 12.0 delta, restored after), desktop 1440, 1100,
+  1000, 980 and 800 and a live resize, phone 360, 390 and 430, TV 1920 and 1280 with keys, dark and light, Chromium and real Chrome: 664 of
+  667 dark and 630 of 633 light on each. **The three failures are open and need the user's call:** the pending entry inside the list has
+  its state, and at 1000 px its quality word, cut at 1000 and 1100 px (the list narrowed by D198), and its state ellipsised at 360 px.
+  The sections of `detail-design.mjs` older than the strip (one-file, tracks) still read upstream's rows and were not used. Not run: the
+  physical TV. Codex review, merge and push have not run.
   **P7.FU7, built (not accepted) 2026-10-19: an asterisk at the end of the required settings fields' labels, and no "(Optional)" anywhere** (user
   2026-10-19: "Go with asterisks everywhere", after [design/required-fields-audit.md](design/required-fields-audit.md) and
   [design/optional-field-marker.html](design/optional-field-marker.html); [UX.md](UX.md) §12.1, guide
