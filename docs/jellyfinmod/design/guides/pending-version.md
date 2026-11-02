@@ -7,7 +7,7 @@
 built 2026-10-30, gate 1; centred on the status's figures (D156), built 2026-10-30. On the phone the X at 40 px in the file
 rows' X column and the marks dropped whole (user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it."; D197, mockup
 workspace `reviews/video-dropdown-phone/mockup/`): built 2026-11-01, gate 1. **Stacked lines in a narrow Video list** (the user's
-pick 2026-11-03, D236; drawing workspace `reviews/design-system/questions/pending-narrow.html`): built 2026-11-03, gate 1. Code:
+pick 2026-11-03, D236; drawing workspace `reviews/design-system/questions/pending-narrow.html`): first look approved 2026-11-03 (D238). Code:
 `components/PendingVersion.tsx`, `components/pendingVersion.scss` (`.jfmod-pending`, `--<kind>`, `.jfmod-pendingBody`,
 `.jfmod-pendingLine`, `.jfmod-pendingMeta`), `constants/queue.ts` (`isNewVersion`, `isReplace`, `replacedWords`, `versionFlag`,
 `asNewVersion`).
@@ -62,8 +62,7 @@ inside the list stacks, so nothing is sliced or ellipsised (D236). Under the str
   quality in 600, the size and the marks after it when they fit, and the X at the end, in the file rows' X column. The line is the X's
   height (2.5em; phone 40 px) and its text keeps clear of the X's glyph (2em from the row's edge; phone 2.5em). The size is `.382em`
   (φ⁻²) off the X. **Size and marks drop whole:** the size goes when it does not fit beside the quality, and the marks go one by one
-  before it. A quality too long for the line wraps, never cuts (only the last few pixels above the stacking line: at 985 to about 994 px
-  `1080p WEB-DL` breaks after its hyphen, onto two lines).
+  before it. A quality too long for the line wraps, never cuts (`1080p WEB-DL` fits from the strip's first row width, 996 px, D238).
 - **Line 2:** the state in treatment B under the quality, `.382em` over line 1's foot.
 - **Line 3:** the flag under it, no dot, in the type above (uppercase, 600, `.06em` tracking, 62 %, `.62em` of the row).
 - A longer state wraps as well. The ring's padding keeps it where the rows' text starts.

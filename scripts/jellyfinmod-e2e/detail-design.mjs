@@ -64,8 +64,13 @@ const LAYOUTS = {
     tv1080: { viewport: { width: 1920, height: 1080 }, tv: true },
     tv720: { viewport: { width: 1280, height: 720 }, tv: true },
     // The Video list's widths (JELLYFINMOD_DD_VL): around the stacking line (D199), and the small and large phones.
+    desktop1280: { viewport: { width: 1280, height: 900 } },
     desktop1100: { viewport: { width: 1100, height: 900 } },
     desktop1000: { viewport: { width: 1000, height: 900 } },
+    desktop996: { viewport: { width: 996, height: 900 } },
+    desktop995: { viewport: { width: 995, height: 900 } },
+    desktop994: { viewport: { width: 994, height: 900 } },
+    desktop985: { viewport: { width: 985, height: 900 } },
     desktop980: { viewport: { width: 980, height: 900 } },
     desktop800: { viewport: { width: 800, height: 900 } },
     mobile360: { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true, userAgent: PHONE_UA },
@@ -1314,6 +1319,8 @@ async function checkRemove(page, layout, itemId) {
 const STRIP = `${PAGE} .jfmod-strip`;
 const VIDEO = `${PAGE} .jfmod-videoTrigger`;
 const CELLS = { audio: 17.8, subtitles: 13.2 };
+/** The Video cell width under which the strip stacks (STACK_EMS in FileChooser.tsx; D238). */
+const VL_STACK = 11.7;
 
 const vlFacts = page => page.evaluate(sel => {
     const root = document.querySelector(sel);
@@ -1323,9 +1330,9 @@ const vlFacts = page => page.evaluate(sel => {
         return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height };
     };
     /** Marks are whole or dropped: a shown mark never crosses the container's edge. */
-    const marksWhole = container => {
+    const marksWhole = (container, clip = container) => {
         if (!container) return true;
-        const c = container.getBoundingClientRect();
+        const c = clip.getBoundingClientRect();
         return [...container.children].every(mark => {
             const r = mark.getBoundingClientRect();
             const shown = r.top < c.bottom - 0.5 && r.bottom > c.top + 0.5;
@@ -1353,7 +1360,8 @@ const vlFacts = page => page.evaluate(sel => {
         chevrons: { video: chevron('video'), audio: chevron('audio'), subtitles: chevron('subtitles') },
         trigger: box(root.querySelector('.jfmod-videoTrigger')), triggerText: root.querySelector('.jfmod-videoTrigger')?.innerText.replace(/\s+/g, ' ').trim(),
         expanded: root.querySelector('.jfmod-videoTrigger')?.getAttribute('aria-expanded'),
-        closedMarksWhole: marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks')),
+        // Whole against the marks' box and against the value's clip, which cuts what runs past it, before the size.
+        closedMarksWhole: marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks')) && marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks'), root.querySelector('.jfmod-videoTriggerText')),
         valueSize: box(root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')), valueSizeText: root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')?.textContent ?? null,
         open: !!list?.classList.contains('jfmod-fileList--open'), list: box(list), box: box(clip), two: !!list?.classList.contains('jfmod-fileList--two'),
         inCard: !!list?.closest('.jfmod-strip'), position: list && getComputedStyle(list).position,
@@ -1368,7 +1376,7 @@ const vlFacts = page => page.evaluate(sel => {
                 phoneMark: !!row.querySelector('.jfmod-phoneMark'), resolution: row.querySelector('.jfmod-fileResolution')?.textContent ?? '',
                 lines: lines.map(box), sizeLine: lines.findIndex(line => line.contains(size)), size: box(size), sizeUncut: uncut(size), sizeText: size?.textContent ?? null,
                 icons: [...row.querySelectorAll('.jfmod-fileIcon')].map(icon => ({ label: icon.getAttribute('aria-label'), glyphTop: box(icon.querySelector('.material-icons'))?.t, ...box(icon) })),
-                marksWhole: [...row.querySelectorAll('.jfmod-fileMarks')].every(marksWhole) };
+                marksWhole: [...row.querySelectorAll('.jfmod-fileMarks')].every(marks => marksWhole(marks)) };
         }),
         pending: pending && { box: box(pending), text: pending.innerText.replace(/\s+/g, ' ').trim(), inList: !!pending.closest('.jfmod-fileList'),
             // In a list under 24em it stacks (D236): the lines, and the size and marks whole or dropped.
@@ -1446,8 +1454,8 @@ const vlFits = (layout, facts) => facts.page.right <= facts.page.inner + 0.5 && 
 function vlGeometry(layout, facts, label, want = {}) {
     const near = (a, b, within = 1) => Math.abs(a - b) <= within;
     record(layout, `${label}: nothing overflows the page sideways`, vlFits(layout, facts), JSON.stringify(facts.page));
-    const shouldStack = isMobile(layout) || facts.stripClient < (31 + 11.09) * facts.em;
-    record(layout, `${label}: stacked exactly when the Video cell would be under 11.09em`, facts.stacked === shouldStack,
+    const shouldStack = isMobile(layout) || facts.stripClient < (31 + VL_STACK) * facts.em;
+    record(layout, `${label}: stacked exactly when the Video cell would be under ${VL_STACK}em`, facts.stacked === shouldStack,
         `stacked ${facts.stacked}, strip ${facts.stripClient}px, ${(facts.stripClient / facts.em - 31).toFixed(2)}em for Video`);
     if (want.stacked !== undefined) record(layout, `${label}: this width is ${want.stacked ? 'stacked' : 'a row'}`, facts.stacked === want.stacked, `${facts.stripClient}px`);
     if (facts.stacked) {
@@ -1840,7 +1848,7 @@ async function checkVideoListResize(page, layout, id) {
     await page.waitForTimeout(300);
     const count = (await vlFacts(page)).rows.length;
     const steps = isMobile(layout) ? [{ width: start.height, height: start.width }, start]
-        : [1100, 1040, 1000, 990, 985, 980, 975, 900, 800, 900, 975, 980, 985, 990, 1000, 1040, 1100, start.width].map(width => ({ width, height: start.height }));
+        : [1280, 1100, 1040, 1000, 996, 995, 994, 985, 980, 900, 800, 900, 980, 985, 994, 995, 996, 1000, 1040, 1100, 1280, start.width].map(width => ({ width, height: start.height }));
     const problems = [];
     let last = null;
     for (const size of steps) {
@@ -1851,13 +1859,13 @@ async function checkVideoListResize(page, layout, id) {
         const two = await vlFacts(page);
         const near = (a, b) => Math.abs(a - b) <= 1;
         const fine = one.open && two.open && one.stacked === two.stacked && one.inCard === two.inCard && two.rows.length === count
-            && (isMobile(layout) || two.stacked === (two.stripClient < (31 + 11.09) * two.em))
+            && (isMobile(layout) || two.stacked === (two.stripClient < (31 + VL_STACK) * two.em))
             && (two.stacked ? two.inCard && near(two.list.w, two.video.w) && two.audio.t >= two.list.b - 1
                 : !two.inCard && near(two.list.l, two.strip.l) && near(two.list.r, two.video.r) && near(two.list.t, two.strip.b))
             && two.two === (isMobile(layout) || two.list.w < 24 * two.belowEm) && vlFits(layout, two);
         if (!fine) problems.push(JSON.stringify({ size, open: two.open, stacked: [one.stacked, two.stacked], inCard: two.inCard, list: two.list, strip: two.strip, video: two.video, two: two.two, page: two.page }));
         last = { width: size.width, stacked: two.stacked, two: two.two, list: Math.round(two.list?.w ?? 0), video: Math.round(two.video.w) };
-        if (!isMobile(layout) && [1000, 980, 900].includes(size.width)) await vlShot(page, `${layout}-resize-${size.width}-open`);
+        if (!isMobile(layout) && [1280, 1000, 996, 995].includes(size.width)) await vlShot(page, `${layout}-resize-${size.width}-open`);
         console.log(`    resize ${JSON.stringify(last)}`);
     }
     record(layout, 'resize: at every width the open list stays open, exact under its cell or in the card, rows by the width, no flip', problems.length === 0, problems.slice(0, 3).join(' || '));
@@ -1886,7 +1894,8 @@ async function checkVideoListResize(page, layout, id) {
 }
 
 /** What each width is expected to be (the guide's measured table); a width not named here is left to the width rule alone. */
-const VL_EXPECT = { desktop: { stacked: false }, desktop1100: { stacked: false, twoLine: true }, desktop1000: { stacked: false, twoLine: true }, desktop980: { stacked: true },
+const VL_EXPECT = { desktop: { stacked: false }, desktop1280: { stacked: false, twoLine: false }, desktop1100: { stacked: false, twoLine: true }, desktop1000: { stacked: false, twoLine: true },
+    desktop996: { stacked: false, twoLine: true }, desktop995: { stacked: true }, desktop994: { stacked: true }, desktop985: { stacked: true }, desktop980: { stacked: true },
     desktop800: { stacked: true }, mobile360: { stacked: true, twoLine: true }, mobile: { stacked: true, twoLine: true }, mobile430: { stacked: true, twoLine: true },
     tv1080: { stacked: false }, tv720: { stacked: true } };
 
