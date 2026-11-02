@@ -101,6 +101,14 @@
     --jfmod-paper: #fff;
 }
 
+// The X of a stacked entry (D236, below): line 1's end, in the file rows' X column.
+.jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+    position: absolute;
+    top: 0.2em;
+    right: 0;
+    margin-right: 0;
+}
+
 // In the card's list (inside its border, D197, D199) the ring sits where the rows' text starts (.6em, less the ring's .35em
 // inset) and the X in the file rows' X column: on the row's edge, on the phone 40px and .25em from it.
 .jfmod-strip .jfmod-fileListBox .jfmod-pending {
@@ -113,4 +121,114 @@
 
 .layout-mobile .jfmod-strip .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
     margin-right: -0.25em;
+}
+
+// In a Video list under 24em (`.jfmod-fileList--narrow`, the file rows' measure; D236, the user's pick 2026-11-03) the entry stacks, so
+// nothing is sliced: the ring (1.618em), the quality and the X centred on line 1, the state under the quality, the flag under that.
+// The size, then the marks, drop whole when line 1 has no room: its second flex line is hidden, and the marks' basis of 0 lets the
+// size stay ahead of them. Base 1em: the ring φ, the gap to it φ⁻³, line 2 over line 1's foot φ⁻², the size off the X φ⁻². Fixed by
+// the X: line 1 is the X's height (2.5em, the phone's 40px) and keeps clear of its glyph (2em, the phone's 2.5em, from the row's edge).
+.jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pending {
+    position: relative;
+    align-items: flex-start;
+    padding-right: 0;
+    padding-left: calc(0.735em - 1px - 0.226em);
+}
+
+.jfmod-fileList--narrow .jfmod-pending > .jfmod-dlmark {
+    // 2.5em × .6472 = 1.618em of the row, so the row-size ring keeps its proportions; centred on line 1.
+    margin-top: 0.681em;
+    margin-right: 0.365em;
+    font-size: 0.6472em;
+}
+
+.jfmod-fileList--narrow .jfmod-pendingLine {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: center;
+    height: 2.5em;
+    padding-right: 2em;
+    line-height: 1.2;
+}
+
+.jfmod-fileList--narrow .jfmod-pendingLine > .jfmod-fileResolution {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    min-height: 2.5em;
+    margin-right: 0;
+    white-space: normal;
+}
+
+.jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pendingLine > .jfmod-fileMarks {
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    min-width: 0;
+    height: 0.72em;
+    // The resolution's .8em gap, at the marks' 130 %.
+    margin-left: 0.615em;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        height: 0.72em;
+    }
+}
+
+.jfmod-fileList--narrow .jfmod-pendingLine > .jfmod-fileSize {
+    margin-right: 0.382em;
+}
+
+.jfmod-fileList--narrow .jfmod-pendingMeta {
+    display: block;
+    margin-top: -0.382em;
+    padding-right: 0.382em;
+    overflow: visible;
+    white-space: normal;
+}
+
+.jfmod-fileList--narrow .jfmod-pendingMeta > .jfmod-dlMeta {
+    display: block;
+    overflow: visible;
+    white-space: normal;
+}
+
+.jfmod-fileList--narrow .jfmod-pendingMeta > .jfmod-fileExtra {
+    position: static;
+    display: block;
+    margin-left: 0;
+
+    &::before {
+        content: none;
+    }
+}
+
+// In the card (a narrow phone, D197's insets): the ring where the rows' text starts (.6em), the X .25em from the edge at its 40px.
+.jfmod-strip .jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pending {
+    padding-right: 0;
+    padding-left: 0.374em;
+}
+
+.jfmod-strip .jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+    top: 0.35em;
+    margin-right: 0;
+}
+
+.layout-mobile .jfmod-strip .jfmod-fileList--narrow .jfmod-fileListBox .jfmod-pending > .jfmod-fileIcons {
+    right: 0.25em;
+    margin-right: 0;
+}
+
+.layout-mobile .jfmod-fileList--narrow .jfmod-pending > .jfmod-dlmark {
+    margin-top: 0.899em;
+}
+
+.layout-mobile .jfmod-fileList--narrow .jfmod-pendingLine {
+    height: 2.7816em;
+    padding-right: 2.5em;
+}
+
+.layout-mobile .jfmod-fileList--narrow .jfmod-pendingLine > .jfmod-fileResolution {
+    min-height: 2.7816em;
 }

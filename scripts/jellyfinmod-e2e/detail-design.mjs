@@ -1371,6 +1371,16 @@ const vlFacts = page => page.evaluate(sel => {
                 marksWhole: [...row.querySelectorAll('.jfmod-fileMarks')].every(marksWhole) };
         }),
         pending: pending && { box: box(pending), text: pending.innerText.replace(/\s+/g, ' ').trim(), inList: !!pending.closest('.jfmod-fileList'),
+            // In a list under 24em it stacks (D236): the lines, and the size and marks whole or dropped.
+            lines: (() => {
+                const part = selector => box(pending.querySelector(selector));
+                const line = pending.querySelector('.jfmod-pendingLine')?.getBoundingClientRect();
+                const dropped = el => !el || !line || el.getBoundingClientRect().top >= line.bottom - 0.5 || el.getBoundingClientRect().right <= line.right + 0.5;
+                const marks = pending.querySelector('.jfmod-fileMarks');
+                return { ring: part('.jfmod-dlmark'), quality: part('.jfmod-fileResolution'), state: part('.jfmod-dlMeta'), flag: part('.jfmod-fileExtra'),
+                    narrow: !!pending.closest('.jfmod-fileList--narrow'), sizeWhole: dropped(pending.querySelector('.jfmod-fileSize')),
+                    sizeText: pending.querySelector('.jfmod-fileSize')?.getBoundingClientRect().top < line?.bottom - 0.5, marksShown: marks ? [...marks.children].filter(mark => { const m = mark.getBoundingClientRect(); const c = marks.getBoundingClientRect(); return m.top < c.bottom - 0.5 && m.width > 0; }).length : 0 };
+            })(),
             // What the entry says: its quality and its state, each drawn whole and inside the entry (D197; the marks go first).
             sayings: (() => { const body = pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect(); return ['.jfmod-fileResolution', '.jfmod-dlMeta'].map(part => { const el = pending.querySelector(part); const r = el?.getBoundingClientRect(); return { part, whole: !!r && r.width > 0 && r.right <= body.right + 0.5 && el.scrollWidth <= el.clientWidth + 1, right: r?.right, width: r?.width }; }); })(),
             bodyRight: pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect().right,
@@ -1771,6 +1781,16 @@ async function checkVideoListPending(page, layout, id) {
     if (open.pending) {
         record(layout, 'pending: in the list its quality and state are whole, the X inside', open.pending.sayings.every(one => one.whole) && (!open.stacked || open.pending.marksWhole) && open.pending.box.r <= open.list.r + 0.5 && (!open.pending.x || open.pending.x.r <= open.list.r + 0.5),
             JSON.stringify({ sayings: open.pending.sayings, marksWhole: open.pending.marksWhole, text: open.pending.text, box: open.pending.box, list: open.list }));
+        const stack = open.pending.lines;
+        const under24 = open.list.w < 24 * open.belowEm;
+        record(layout, `pending: the entry ${under24 ? 'stacks' : 'keeps its one row'} in a list ${under24 ? 'under' : 'of at least'} 24em`, stack.narrow === under24, `${open.list.w.toFixed(1)}px = ${(open.list.w / open.belowEm).toFixed(2)}em`);
+        if (under24) {
+            const level = Math.abs(((stack.quality.t + stack.quality.b) / 2) - ((open.pending.x.t + open.pending.x.b) / 2));
+            record(layout, 'pending: stacked: the ring, the quality and the X on line 1, the state under the quality, the flag under that, each from the quality\'s left',
+                level <= 1 && stack.state.t >= stack.quality.t && stack.flag.t >= stack.state.b - 1 && Math.abs(stack.state.l - stack.quality.l) <= 1 && Math.abs(stack.flag.l - stack.quality.l) <= 1
+                && Math.abs(((stack.ring.t + stack.ring.b) / 2) - ((stack.quality.t + stack.quality.b) / 2)) <= 1 && stack.quality.r <= open.pending.x.r, JSON.stringify(stack));
+            record(layout, 'pending: stacked: the size is whole or dropped', stack.sizeWhole, `${open.pending.text}; shows size ${stack.sizeText}, ${stack.marksShown} mark(s)`);
+        }
         if (!open.stacked) record(layout, 'pending: a floating list keeps the page where it was', !closed.after || !open.after || Math.abs(open.after.t - closed.after.t) <= 1.5, JSON.stringify([closed.after?.t, open.after?.t]));
     }
     await vlShot(page, `${layout}-${tag}-open`);
@@ -1873,6 +1893,7 @@ const VL_EXPECT = { desktop: { stacked: false }, desktop1100: { stacked: false, 
 async function checkVideoListLayout(page, layout, theme) {
     const id = env('JELLYFINMOD_DD_VL');
     const step = async (name, run) => {
+        if (!wanted(name)) return;
         try { await run(); } catch (error) { await vlShot(page, `${layout}-aborted-${name}`); record(layout, `${name} (aborted)`, false, String(error.message).replace(/\s+/g, ' ').slice(-260)); }
     };
     const want = VL_EXPECT[layoutOf(layout)] ?? {};

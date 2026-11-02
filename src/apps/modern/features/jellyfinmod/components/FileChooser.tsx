@@ -612,7 +612,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // from the page's cloud icon, so the list has no row for it (D102).
     const twoLine = layoutManager.mobile || !!place?.narrow;
     const fileList = <div ref={list} id={listId}
-        className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open, 'jfmod-fileList--two': twoLine })}
+        className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open, 'jfmod-fileList--two': twoLine, 'jfmod-fileList--narrow': !!place?.narrow })}
         style={!inCard && place ? { top: place.top, left: place.left, width: place.width } : undefined}>
         <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
             {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
