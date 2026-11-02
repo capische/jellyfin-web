@@ -458,7 +458,7 @@ $text-inset: 0.735em;
     white-space: nowrap;
 }
 
-// One line in the closed value: the marks are cut at the field's end, before the size (P7.FU6).
+// One line in the closed value (P7.FU6). The Video value drops a mark that does not fit whole, below (D242).
 .jfmod-videoTriggerText .jfmod-fileMarks {
     flex-wrap: nowrap;
 }
@@ -709,10 +709,10 @@ $text-inset: 0.735em;
     margin: 0 var(--jfmod-actionEdge) 0.1em 0;
 }
 
-// On the phone a mark that does not fit is dropped whole, never sliced (D197), in the closed value and the rows, and in every
-// two-line row (D198): it wraps onto a second line that the one-mark-tall box hides (the Audio cell's trick, D78). The empty first
+// A mark that does not fit is dropped whole, never sliced, in the closed Video value (D197 on the phone, D242 everywhere), the phone's
+// rows and every two-line row (D198): it wraps onto a second line that the one-mark-tall box hides (the Audio cell's trick, D78). The empty first
 // item, a mark's height, sends even the first mark to that hidden line when it alone does not fit.
-.jfmod-strip--stacked .jfmod-videoTriggerText .jfmod-fileMarks,
+.jfmod-videoTrigger .jfmod-videoTriggerText .jfmod-fileMarks,
 .jfmod-fileList--two .jfmod-fileRow .jfmod-fileMarks,
 .layout-mobile .jfmod-pendingLine > .jfmod-fileMarks {
     flex: 0 1 auto;

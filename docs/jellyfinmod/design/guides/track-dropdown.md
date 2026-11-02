@@ -28,6 +28,7 @@ whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it
 itself** (the user, 2026-11-01: "move it, stack, check it"; D199): built 2026-11-01, gate 1.
 **The pending entry stacks in a narrow Video list** (the user's pick, 2026-11-03; D236; [pending-version.md](pending-version.md)): approved
 2026-11-03 (D238). **The strip stacks a little earlier, from a 995 px window** (the user, 2026-11-03; D238): built 2026-11-03, gate 2.
+**The closed Video value drops a mark whole on a row too** (the user, 2026-11-03; D242): built 2026-11-03, gate 1.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -60,10 +61,11 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **Segment:** a caption (`.jfmod-stripCaption`: .72em, 600, uppercase, letter-spacing .06em, 62 %) over the value line
   (`.jfmod-stripValue`): Video's resolution in **600**, its marks ([media-marks.md](media-marks.md), 130 %) and the **file size,
   muted, at the right end before the chevron**, in the media marks' type (78 %, 700, `.05em` tracking, 70 %; D132; also in
-  the list's rows and the pending entry); an Audio or Subtitles value is its track's run (below), the chevron at the
+  the list's rows and the pending entry). **A mark shows whole or not at all, and comes back when there is room** (D197 on the phone, D242
+  everywhere): one that does not fit before the size is dropped, never sliced, on a row and stacked; an Audio or Subtitles value is its track's run (below), the chevron at the
   cell's right end. Padding `.3em .5em .35em .6em`. Captions VIDEO · AUDIO · SUBTITLES stay (D8): there is no label column.
   **Phone** (D197): the Video chevron takes Audio's and Subtitles' `margin-right -.25em`, so the three chevrons share one column
-  (measured equal at 360, 390 and 430 px); a mark that does not fit the value is dropped whole (*Lists*, below), never sliced.
+  (measured equal at 360, 390 and 430 px).
 - **A track's run** (D59, D76): the language in 600 with its short modifier `(BR)` in 400 at 70 % (a fixed table only, D60),
   .6em, the format marks (audio: the media marks; subtitles: the format chip `SRT`, `PGS`), then **at most one role mark**
   ([media-marks.md](media-marks.md), *Role marks*). A track's own title is never drawn in the run; Default, Original, External
@@ -77,14 +79,11 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
 - **A narrow strip stacks the same way** (D199, D238; `.jfmod-strip--stacked`, set by `useTrackStrip` on the strip and again on a
   resize): where the Video cell would be narrower than **11.7em** beside Audio's 17.8em and Subtitles' 13.2em, measured from the
   strip's own width, which the stacking does not change, so it never flips back and forth. **11.7em is a named exception** to the
-  golden ratio (φ⁵ of the 1em base, 11.09em, until D238): it is where a closed value's shortest mark (`AVC`, beside a two-digit size
-  such as `55 MB`) and the pending entry's quality stay whole. A computer window stacks at 995 px and under (measured: 996 px a row at 11.74em, 995 px stacked at 11.67em) and the
+  golden ratio (φ⁵ of the 1em base, 11.09em, until D238): it is where the pending entry's quality stays on its line. (D242 then made the closed value's marks whole or dropped at any width:
+  `AVC` beside `55 MB` is dropped at 996 and 1000 px and shows from about 1008 px, beside `123 MB` from about 1024 px.) A computer window stacks at 995 px and under (measured: 996 px a row at 11.74em, 995 px stacked at 11.67em) and the
   TV at 1280 (its cell was 9.9em); the TV at 1920 stays a row. Stacked, the strip draws exactly as the phone's, the Video chevron in the
-  others' column and a closed value's marks dropped whole, and the Video list sits in the card (*Lists*), its rows one line or two by
+  others' column, and the Video list sits in the card (*Lists*), its rows one line or two by
   their width with the layout's own action size.
-  **Open (reported 2026-11-03, not decided):** on a row, a closed value still cuts a mark that does not fit before the size, because only
-  the stacked value drops marks whole. Measured first whole windows: `AVC` with `123 MB` or `12.3 GB` 1008 px, `HEVC` with `12.3 GB`
-  1024 px, `HEVC HDR10` 1096 px, three marks 1172 px.
 - Upstream's Video, Audio and Subtitles rows step aside (display none) only while their segment is drawn; a row whose
   dropdown cannot mount (its streams unread) stays as upstream draws it, under the strip.
 
