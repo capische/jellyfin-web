@@ -1197,8 +1197,9 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   by itself. Web only, on `fix/video-list-resize` and `fix/video-list-resize-items`. Gate 1 passed; gate 2 ran `detail-design.mjs`
   with `JELLYFINMOD_DD_VL` on both lines (items on charlie, Jellyfin 12.2; stubs on a 12.0 delta, restored after), desktop 1440, 1100,
   1000, 980 and 800 and a live resize, phone 360, 390 and 430, TV 1920 and 1280 with keys, dark and light, Chromium and real Chrome: 664 of
-  667 dark and 630 of 633 light on each. **The three failures are open and need the user's call:** the pending entry inside the list has
-  its state, and at 1000 px its quality word, cut at 1000 and 1100 px (the list narrowed by D198), and its state ellipsised at 360 px.
+  667 dark and 630 of 633 light on each. The three failures were the pending entry inside the list: its state, and at 1000 px its quality word, cut at 1000 and 1100
+  px (the list narrowed by D198), and its state ellipsised at 360 px. **The fix is at gate 1** (D236, the user's pick 2026-11-03): the entry
+  stacks under 24em, on `fix/video-list-resize-items` only; the stubs port and the full matrix come at the next gate.
   The sections of `detail-design.mjs` older than the strip (one-file, tracks) still read upstream's rows and were not used. Not run: the
   physical TV. Codex review, merge and push have not run.
   **P7.FU7, built (not accepted) 2026-10-19: an asterisk at the end of the required settings fields' labels, and no "(Optional)" anywhere** (user
