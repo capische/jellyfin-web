@@ -22,10 +22,12 @@ Gates as in the workspace rules: gate 1 is computer, dark theme, on one local en
   with square corners. The administrator's Undo line above the grid after an add, as before.
 - **Opening a card**: a library title opens its library page as before; a TMDB result opens its **browse page**.
 - **Browse pages** (`#/details?tmdbType=movie|series&tmdbId=N[&season=S[&episode=E]]`): upstream's detail page drawn from
-  TMDB — backdrop, poster, title, meta line, overview, external links, genres, director/writers or creators, Cast & Crew; a
-  series adds its Seasons, a season its episode rows, an episode its Guest Stars and More from the season. One action, **Add
-  to Library**, on the movie's and the series' page (never per season or episode); the season and episode pages say the title
-  is not in the library and link to the series. After Add, the title's own library page opens. Card rows use the search
+  TMDB — backdrop, poster, title, meta line, overview, genres, director/writers or creators, Cast & Crew; a series adds its
+  Seasons, a season its episode rows, an episode its Guest Stars and More from the season. The meta line carries the rating
+  as the other pages do: TMDB's ★ (a season shows the show's, with its certification; an episode its own), and no external
+  links line (user, 2026-11-01: "instead of TMDB link use ratings"). One action, **Add to Library**, on every page, the
+  season's and the episode's included (user, 2026-11-01), the same button, in the same place; it always adds the whole movie
+  or show (never a season or an episode alone). After Add, the title's own library page opens. Card rows use the search
   card's lit cell with left-aligned captions (D203).
 
 ## Tasks
