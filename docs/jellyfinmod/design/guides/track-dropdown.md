@@ -26,6 +26,8 @@ whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it
 2026-11-01: "I've asked it to be exact size as Video dropdown and I thought design was approved for it"; D198, withdrawing D101's
 24em minimum): built 2026-11-01, gate 1. **A narrow strip stacks, the narrow rows' size on line 1, and the TV walks a row by
 itself** (the user, 2026-11-01: "move it, stack, check it"; D199): built 2026-11-01, gate 1.
+**The pending entry stacks in a narrow Video list** (the user's pick, 2026-11-03; D236; [pending-version.md](pending-version.md)): built
+2026-11-03, gate 1.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
@@ -126,7 +128,7 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   grey**, as in the Audio and Subtitles lists (D145): hover `var(--jf-palette-action-hover)` (8 % white) over the whole row,
   keyboard and TV focus `var(--jf-palette-action-focus)` (12 %); the current file keeps its blue under the pointer; then the
   [pending download](pending-version.md) while one is on its way (its place under the strip is kept while it sits in the
-  list), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
+  list; in a list under 24em it stacks, D236, [pending-version.md](pending-version.md)), then the folder note. There is no *Get Another Quality* row (D102): the header's cloud icon opens the picker for
   another quality. The rows' text starts where the segment's does (.735em in). Sorted best first, whatever order the files came
   in (D114, a title can hold many files): the higher resolution (2160p, 1440p, 1080p, …), then Dolby Vision, HDR, SDR, then the
   larger file. The top file is the one TVs and computers play, and nothing names it (no "Best copy" or "Mobile copy" flag, D51).
