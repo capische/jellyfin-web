@@ -28,10 +28,11 @@ const ONE_LINE_EMS = 24;
 /** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `fileChooser.scss`), which the Video cell's width is left after. */
 const TRACK_CELLS_EMS = 31;
 /**
- * Under this Video cell width the strip stacks as on the phone (D199): φ⁵ of the 1em base (11.09em). A 1000 px window keeps about
- * 11.9em and stays a row; the TV at 1280 has 9.9em and stacks.
+ * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
+ * until D238): it is where `AVC` beside a two-digit size and the pending entry's quality fit whole: a 996 px window keeps 11.74em
+ * and stays a row, 995 px stacks; the TV at 1280 has 9.9em and stacks.
  */
-const STACK_EMS = 11.09;
+const STACK_EMS = 11.7;
 
 /** The pin on a file's row: per-file Keep, or the episode's or title's Keep where that is what the plugin offers. */
 export interface PinState {
