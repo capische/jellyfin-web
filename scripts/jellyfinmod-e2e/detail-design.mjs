@@ -65,6 +65,9 @@ const LAYOUTS = {
     tv720: { viewport: { width: 1280, height: 720 }, tv: true },
     // The Video list's widths (JELLYFINMOD_DD_VL): around the stacking line (D199), and the small and large phones.
     desktop1280: { viewport: { width: 1280, height: 900 } },
+    desktop1172: { viewport: { width: 1172, height: 900 } },
+    desktop1024: { viewport: { width: 1024, height: 900 } },
+    desktop1008: { viewport: { width: 1008, height: 900 } },
     desktop1100: { viewport: { width: 1100, height: 900 } },
     desktop1000: { viewport: { width: 1000, height: 900 } },
     desktop996: { viewport: { width: 996, height: 900 } },
@@ -1332,11 +1335,13 @@ const vlFacts = page => page.evaluate(sel => {
     /** Marks are whole or dropped: a shown mark never crosses the container's edge. */
     const marksWhole = (container, clip = container) => {
         if (!container) return true;
-        const c = clip.getBoundingClientRect();
+        // Shown: on the marks' own visible line (a dropped mark is on their hidden second line). Whole: inside the marks' box and the clip.
+        const c = container.getBoundingClientRect();
+        const edge = Math.min(c.right, clip.getBoundingClientRect().right);
         return [...container.children].every(mark => {
             const r = mark.getBoundingClientRect();
             const shown = r.top < c.bottom - 0.5 && r.bottom > c.top + 0.5;
-            return !shown || (r.right <= c.right + 0.5 && r.left >= c.left - 0.5);
+            return !shown || (r.right <= edge + 0.5 && r.left >= c.left - 0.5);
         });
     };
     const uncut = el => !el || el.scrollWidth <= el.clientWidth + 1;
