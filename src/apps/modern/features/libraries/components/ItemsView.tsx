@@ -23,6 +23,7 @@ import AlphabetPicker from './AlphabetPicker';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import EntryCards from '../../jellyfinmod/components/EntryCards';
 import EntryLists from '../../jellyfinmod/components/EntryLists';
+import LibraryCast from '../../jellyfinmod/components/LibraryCast';
 
 const ItemsView: FC = () => {
     const {
@@ -50,6 +51,10 @@ const ItemsView: FC = () => {
         // NOTE: Helper methods down/up add "@media" to the query string so use the value directly
         `(min-width: ${t.breakpoints.values.sm}px) and (min-height: 610px)`
     ].join(', '));
+
+    // The Movies and Shows grid of posters (D260): its own column count and the three-line caption.
+    const isPosterGrid = (viewType === LibraryTab.Movies || viewType === LibraryTab.Series)
+        && libraryViewSettings.ImageType === ImageType.Primary && libraryViewSettings.ViewMode !== ViewMode.ListView;
 
     const { api, serverId, user } = useApi();
     const dueWithinDays = libraryViewSettings.Filters?.RetentionDueWithinDays;
@@ -151,6 +156,12 @@ const ItemsView: FC = () => {
             cardOptions.overlayMoreButton = true;
         }
 
+        if (isPosterGrid) {
+            Object.assign(cardOptions, {
+                shape: CardShape.Portrait, showTitle: true, showYear: true, lines: 2, centerText: false, cardLayout: false, overlayText: false
+            });
+        }
+
         return cardOptions;
     }, [
         libraryViewSettings.ShowTitle,
@@ -162,14 +173,15 @@ const ItemsView: FC = () => {
         serverId,
         combined,
         combinedQueryKey,
-        viewType
+        viewType,
+        isPosterGrid
     ]);
 
     const getItems = useCallback(() => {
         if (combined) {
             if (!combined.items.length) return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
             return libraryViewSettings.ViewMode === ViewMode.ListView ?
-                <EntryLists rows={combined.items} listOptions={getListOptions()} serverId={__legacyApiClient__?.serverId()}
+                <EntryLists rows={combined.items} listOptions={getListOptions()} serverId={serverId}
                     alwaysShowCountdown={!!dueWithinDays} /> :
                 <EntryCards rows={combined.items} cardOptions={getCardOptions()} alwaysShowCountdown={!!dueWithinDays} />;
         }
@@ -199,7 +211,7 @@ const ItemsView: FC = () => {
         noItemsMessage,
         combined,
         dueWithinDays,
-        __legacyApiClient__
+        serverId
     ]);
 
     const handleAlphabetChange = useCallback((newValue: string | null | undefined) => {
@@ -216,7 +228,8 @@ const ItemsView: FC = () => {
         'padded-left padded-right',
         libraryViewSettings.ViewMode === ViewMode.ListView ?
             'vertical-list' :
-            'vertical-wrap'
+            'vertical-wrap',
+        { 'jfmod-libposters': isPosterGrid }
     );
 
     return (
@@ -238,6 +251,7 @@ const ItemsView: FC = () => {
                     queryKey={combined ? combinedQueryKey : allItemsQueryKey}
                 >
                     {getItems()}
+                    {isPosterGrid && <LibraryCast items={combined ? undefined : itemsResult?.data?.Items} rows={combined?.items} />}
                 </ItemsContainer>
             )}
         </Box>

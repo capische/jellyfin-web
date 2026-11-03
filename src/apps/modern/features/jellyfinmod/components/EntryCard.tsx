@@ -159,6 +159,8 @@ const FilelessEntryCard: FC<EntryCardProps> = ({ entry, cardOptions, retention, 
                 </div>}
                 {rating && !(cardOptions.showYear && entry.year) && <div className={'cardText cardTextCentered cardText-secondary ' + cardRatingClass(rating)}>
                     <CardRatingValue rating={rating} /></div>}
+                {/* The Movies and Shows grid holds its year line when there is no year (D260). */}
+                {cardOptions.lines === 2 && !entry.year && !rating && <div className='cardText cardText-secondary'>&nbsp;</div>}
             </div>}
         </div>
     );
