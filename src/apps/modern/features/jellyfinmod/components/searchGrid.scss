@@ -2,8 +2,8 @@
  *
  * Golden ratio (workspace CLAUDE.md, Design): base unit 1em, the surface's font size. Cell padding 1em (base; even on every
  * side, the named exception, as Jellyfin's own card), caption gap 0.382em (φ⁻²), caption line pitch 1.618 (φ), the kind
- * label's gap 0.618em (φ⁻¹), secondary ink 85.4 % (1 − φ⁻⁴), the TV ring 0.382em (φ⁻²), the grid's side padding 3.236em (2φ).
- * Exceptions: the 2:3 poster, and the + as upstream's own centre overlay button (user 2026-11-01: as the cloud or Play on a poster).
+ * label's gap 0.618em (φ⁻¹), secondary ink 85.4 % (1 − φ⁻⁴), the poster corners 0.618em (φ⁻¹), the TV ring 0.236em (φ⁻³), the grid's side padding 3.236em (2φ).
+ * Exceptions: the 2:3 poster, and the pointer's ring 0.135em (rulebook section 9).
  * No flex gap, min(), max() or :has (older webOS).
  */
 
@@ -18,9 +18,6 @@
     width: 20%;
     padding: 1em;
     position: relative;
-    // Square corners (D202: "hover should not [have] circled corners"); the poster keeps the card's 0.2em.
-    border-radius: 0;
-    transition: background-color 0.15s ease;
 }
 
 .jfmod-searchOpen {
@@ -33,9 +30,10 @@
 .jfmod-searchPoster {
     position: relative;
     padding-top: 150%;
-    border-radius: 0.2em;
+    border-radius: 0.618em;
     background: var(--jf-palette-background-paper, #202020);
     overflow: hidden;
+    transition: box-shadow 0.236s cubic-bezier(0.236, 0, 0, 1);
 
     > img {
         position: absolute;
@@ -90,9 +88,8 @@
 }
 
 // The + sits on the poster: a box over the poster (its padding gives the 2:3 height) holding upstream's hover overlay, so the
-// + is a library poster's centre button (`cardOverlayFab-primary`: black 70 %, 3em at 130 %, the poster dimmed to black 50 %,
-// shown on the cell's hover or focus in 0.2 s, 1.4 under the pointer). These rules only place the overlay and keep it shown
-// while adding.
+// + is a library poster's disc (cardDesign.scss: the glass disc, the dim and the growth). These rules only place the overlay and
+// keep it shown while adding.
 .jfmod-searchAddBox {
     position: absolute;
     left: 1em;
@@ -103,11 +100,6 @@
 
 .jfmod-searchAddPad {
     padding-top: 150%;
-}
-
-.jfmod-searchOverlay-adding,
-.jfmod-searchOverlay-adding .cardOverlayButton-hover {
-    opacity: 1;
 }
 
 .jfmod-searchAdd {
@@ -131,13 +123,18 @@
     pointer-events: none;
 }
 
-// Adding: the importing arc's turning 28 % segment (download-state-mark.md), white round the black disc.
+// Adding: the importing arc's turning 28 % segment (download-state-mark.md), in the glass's ink round the disc.
 .jfmod-searchAddSeg {
-    stroke: #fff;
+    stroke: var(--jfmod-card-ink, #fff);
     stroke-linecap: round;
     stroke-dasharray: 28 72;
     transform-origin: 50% 50%;
     animation: jfmod-searchAddSpin 1.2s linear infinite;
+}
+
+html .jfmod-searchOverlay-adding .jfmod-searchAdd {
+    visibility: visible;
+    opacity: 1;
 }
 
 @keyframes jfmod-searchAddSpin {
@@ -157,7 +154,7 @@
 
     > div {
         padding-top: 150%;
-        border-radius: 0.2em;
+        border-radius: 0.618em;
         background: var(--jf-palette-background-paper, #202020);
         opacity: 0.65;
     }
@@ -204,12 +201,16 @@
     .jfmod-searchNotice { padding: 0 1.618em; }
 }
 
-// The whole cell lit in paper under the TV focus, with the primary ring inside it, and under the pointer (not on the phone; D202).
-.layout-tv .jfmod-searchCell:focus-within {
-    background: var(--jf-palette-background-paper, #202020);
-    box-shadow: inset 0 0 0 0.382em var(--jf-palette-primary-main, #00a4dc);
+// The TV focus: the card's ring on the poster, instant (rulebook, Cards).
+.layout-tv .jfmod-searchPoster {
+    transition: none;
 }
 
-html:not(.layout-mobile) .jfmod-searchCell:hover {
-    background: var(--jf-palette-background-paper, #202020);
+.layout-tv .jfmod-searchCell:focus-within .jfmod-searchPoster {
+    box-shadow: 0 0 0 0.236em var(--jf-palette-primary-main, #00a4dc);
+}
+// Under the pointer: the card's ring, fading in and out, nothing else (rulebook, Cards). Not on the phone.
+html:not(.layout-mobile):not(.layout-tv) .jfmod-searchCell:hover .jfmod-searchPoster {
+    box-shadow: 0 0 0 0.135em var(--jf-palette-primary-main, #00a4dc);
+    transition-duration: 0.382s;
 }

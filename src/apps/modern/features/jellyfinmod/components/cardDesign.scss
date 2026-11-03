@@ -1,0 +1,359 @@
+/* JellyfinMod — the card's redesign in the mod shell (rd1, workspace rulebook section 5 Cards, D214, D229, D248, D260;
+ * guide docs/jellyfinmod/design/guides/card-glass.md).
+ *
+ * Additive: upstream's card.scss is not edited. Every rule outranks upstream's by specificity, because card.scss arrives in a later
+ * chunk. Base unit 1em. φ steps: poster corners 0.618em (φ⁻¹), the disc 3.236em (2φ¹) and its glyph 2em, the pill's offset 0.382em
+ * (φ⁻²), its padding 0.09em and 0.236em (φ⁻⁵, φ⁻³), its buttons 2em and their glyph 1.236em, the dim 23.6 % (φ⁻³), hover 0.382 s in and
+ * 0.236 s out, a press 0.146 s. Exceptions (rulebook section 9): the ring 0.135em, the disc's growth 1.146 and press 1.09 (D248).
+ *
+ * `!important` only where upstream's own `.cardOverlayButtonIcon` holds its size and fill with it.
+ */
+@use './cardGlass' as glass;
+
+/* stylelint-disable no-descending-specificity -- overrides of upstream's rules, grouped by surface */
+
+$ease: cubic-bezier(0.236, 0, 0, 1);
+$primary: var(--jf-palette-primary-main, #00a4dc);
+
+// Corners on every card; the ring follows them.
+.card .cardScalable,
+.card .cardContent,
+.card .cardImageContainer,
+.card .cardOverlayContainer,
+.card .blurhash-canvas {
+    border-radius: 0.618em;
+}
+
+// ---- A computer or tablet, under the pointer ----
+
+.card-hoverable .cardScalable {
+    transition: box-shadow 0.236s $ease;
+}
+
+.card-hoverable:hover .cardScalable {
+    box-shadow: 0 0 0 0.135em $primary;
+    transition-duration: 0.382s;
+}
+
+// Keyboard focus takes the thicker ring; under the pointer the pointer's wins, so a click on the pill does not thicken it.
+.card-hoverable:focus-within:not(:hover) .cardScalable {
+    box-shadow: 0 0 0 0.236em $primary;
+}
+
+// The overlay stays at full opacity: a parent fading its opacity cuts a child's backdrop-filter off from the poster. Its fill is
+// the dim, and the disc and the pill fade themselves.
+.card-hoverable .cardOverlayContainer,
+.jfmod-searchCell .cardOverlayContainer {
+    opacity: 1;
+    background: transparent;
+    transition: background-color 0.236s $ease;
+    border-radius: 0.618em;
+}
+
+.card-hoverable:hover .cardOverlayContainer,
+.card-hoverable:focus-within .cardOverlayContainer {
+    background: rgba(0, 0, 0, 0.236);
+    transition-duration: 0.382s;
+}
+
+// The disc and the pill share one entrance, and at rest they are hidden, so a grid of posters pays for no blur until one is hovered.
+.card-hoverable .cardOverlayContainer > .cardOverlayFab-primary,
+.card-hoverable .cardOverlayContainer > .cardOverlayButton-br {
+    @include glass.card-ink;
+    background: rgba(0, 0, 0, 0.66);
+    color: var(--jfmod-card-ink);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.236s $ease, transform 0.236s $ease, background-color 0.236s $ease, color 0.236s $ease, visibility 0s linear 0.236s;
+
+    @include glass.card-glass;
+}
+
+.card-hoverable:hover .cardOverlayContainer > .cardOverlayFab-primary,
+.card-hoverable:hover .cardOverlayContainer > .cardOverlayButton-br,
+.card-hoverable:focus-within .cardOverlayContainer > .cardOverlayFab-primary,
+.card-hoverable:focus-within .cardOverlayContainer > .cardOverlayButton-br {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.382s $ease, transform 0.236s $ease, background-color 0.236s $ease, color 0.236s $ease, visibility 0s;
+}
+
+// The disc: 48 px at a computer's root, 55 px under the pointer (D248).
+.card-hoverable .cardOverlayContainer > .cardOverlayFab-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 3.236em;
+    height: 3.236em;
+    margin: -1.618em 0 0 -1.618em;
+    padding: 0;
+    font-size: 1em;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+
+    > svg {
+        width: 2em;
+        height: 2em;
+        color: inherit;
+    }
+
+    > .cardOverlayButtonIcon {
+        width: 1em !important;
+        height: 1em !important;
+        font-size: 2em !important;
+        color: inherit;
+        background: transparent !important;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.854);
+        color: #101010;
+        transform: scale(1.146);
+    }
+
+    &:active {
+        transform: scale(1.09);
+        transition-duration: 0.146s;
+    }
+
+    [data-theme='light'] &:hover,
+    [data-theme='appletv'] &:hover {
+        background: rgba(16, 16, 16, 0.854);
+        color: #fff;
+    }
+}
+
+// The foot pill: Watched, Favourite, Get a Release and More, hugging its buttons and centred at the poster's foot.
+.card-hoverable .cardOverlayContainer > .cardOverlayButton-br {
+    display: flex;
+    left: 50%;
+    right: auto;
+    bottom: 0.382em;
+    padding: 0.09em 0.236em;
+    border-radius: 1.618em;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.card-hoverable .cardOverlayContainer > .cardOverlayButton-br > .cardOverlayButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex: none;
+    width: 2em;
+    min-width: 0;
+    height: 2em;
+    margin: 0;
+    padding: 0;
+    font-size: 1em;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--jfmod-card-ink);
+    opacity: 1;
+    cursor: pointer;
+    transition: background-color 0.236s $ease;
+
+    &[hidden] { display: none; }
+
+    > svg {
+        width: 1.236em;
+        height: 1.236em;
+    }
+
+    > .cardOverlayButtonIcon {
+        width: 1em !important;
+        height: 1em !important;
+        font-size: 1.236em !important;
+        background: transparent !important;
+    }
+
+    // Icons in a glass pill over art take the stronger tint.
+    &:hover { background: rgba(255, 255, 255, 0.236); }
+
+    [data-theme='light'] &:hover,
+    [data-theme='appletv'] &:hover { background: rgba(0, 0, 0, 0.146); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-hoverable .cardScalable,
+    .card-hoverable .cardOverlayContainer,
+    .card-hoverable .cardOverlayContainer > .cardOverlayFab-primary,
+    .card-hoverable .cardOverlayContainer > .cardOverlayButton-br,
+    .card-hoverable .cardOverlayContainer > .cardOverlayButton-br > .cardOverlayButton {
+        transition: none;
+    }
+
+    .card-hoverable .cardOverlayContainer > .cardOverlayFab-primary:hover,
+    .card-hoverable .cardOverlayContainer > .cardOverlayFab-primary:active {
+        transform: none;
+    }
+}
+
+// ---- The phone: no hover and no ring; a tap opens the title ----
+
+.layout-mobile .card .cardOverlayButton-br,
+.layout-mobile .card .cardOverlayButton-centered {
+    display: none;
+}
+
+// ---- The TV: the same shape, focus instead of the pointer, instant (webOS 6: transform and opacity only, no blur) ----
+
+// The ring replaces upstream's transparent border, so it sits on the poster; the margin keeps the row's spacing (0.4em + 0.5em).
+.layout-tv .card .cardBox {
+    margin: 0.9em;
+}
+
+.layout-tv .card.show-focus:not(.show-animation) .cardBox:not(.visualCardBox) .cardScalable,
+.layout-tv .card.show-focus:not(.show-animation) .cardBox.visualCardBox {
+    border: 0;
+    border-radius: 0.618em;
+}
+
+.layout-tv .card.show-animation:focus > .cardBox {
+    transform: none;
+}
+
+.layout-tv .jfmod-entryCard:focus {
+    box-shadow: none;
+}
+
+.layout-tv .card:focus .cardScalable {
+    box-shadow: 0 0 0 0.236em #00a4dc;
+    box-shadow: 0 0 0 0.236em $primary;
+}
+
+// Upstream's focus rule sets the card's old radius back.
+.layout-tv .card:focus .cardBox:not(.visualCardBox) .cardScalable {
+    border-radius: 0.618em;
+}
+
+// The focused title's disc. No overlay exists on a TV card, so it is drawn here, solid, from the icon font; a press is 0.96 at once.
+.layout-tv .card[data-type='Movie']:focus .cardScalable::after,
+.layout-tv .card[data-type='Series']:focus .cardScalable::after,
+.layout-tv .card[data-type='Season']:focus .cardScalable::after,
+.layout-tv .card[data-type='Episode']:focus .cardScalable::after,
+.layout-tv .card[data-jfmod-entry-id]:focus .cardScalable::after {
+    content: '\e037';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.618em;
+    height: 1.618em;
+    margin: -0.809em 0 0 -0.809em;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.66);
+    color: #fff;
+    font-family: 'Material Icons';
+    font-size: 2em;
+    font-weight: 400;
+    line-height: 1.618em;
+    text-align: center;
+    pointer-events: none;
+}
+
+.layout-tv .card[data-jfmod-entry-id]:focus .cardScalable::after,
+.layout-tv .card[data-jfmod-nofile]:focus .cardScalable::after,
+.layout-tv .card[data-jfmod-empty]:focus .cardScalable::after {
+    content: '\e2c0';
+}
+
+.layout-tv .card:active .cardScalable::after {
+    transform: scale(0.96);
+}
+
+// ---- The Movies and Shows grid (D260): a count per width, from a 16.18em target cell, stretched to fill the row ----
+// By media query (rulebook section 9: no auto-fill, grid, min() or max() on old webOS). The widths are where the count nearest the
+// target changes at a computer's 14.88 px root with the mockup's gutters: 5 at 1280, 6 at 1440, 8 at 1920, 10 at 2560.
+
+// Upstream's gutter, less the cell's own 1em, so a poster's edge sits on the gutter and the page does not scroll sideways.
+html:not(.layout-mobile) .jfmod-libposters.padded-left {
+    padding-left: calc(3.3% - 1em);
+}
+
+html:not(.layout-mobile) .jfmod-libposters.padded-right {
+    padding-right: calc(3.3% - 1em);
+}
+
+.jfmod-libposters > .card {
+    width: 50%;
+}
+
+@media all and (min-width: 600px) { .jfmod-libposters > .card { width: 33.333%; } }
+
+@media all and (min-width: 921px) { .jfmod-libposters > .card { width: 25%; } }
+
+@media all and (min-width: 1170px) { .jfmod-libposters > .card { width: 20%; } }
+
+@media all and (min-width: 1419px) { .jfmod-libposters > .card { width: 16.666%; } }
+
+@media all and (min-width: 1668px) { .jfmod-libposters > .card { width: 14.285%; } }
+
+@media all and (min-width: 1917px) { .jfmod-libposters > .card { width: 12.5%; } }
+
+@media all and (min-width: 2166px) { .jfmod-libposters > .card { width: 11.111%; } }
+
+@media all and (min-width: 2415px) { .jfmod-libposters > .card { width: 10%; } }
+
+@media all and (min-width: 2664px) { .jfmod-libposters > .card { width: 9.09%; } }
+
+@media all and (min-width: 2913px) { .jfmod-libposters > .card { width: 8.333%; } }
+
+// After the widths: a TV is 6 a row at any size.
+.layout-tv .jfmod-libposters > .card,
+.layout-tv .itemsContainer.jfmod-libposters > .card {
+    width: 16.666%;
+}
+
+.jfmod-libposters > .card > .cardBox {
+    margin: 1em;
+}
+
+// The phone: flush, 0.618em between cards.
+.layout-mobile .jfmod-libposters > .card > .cardBox {
+    margin: 0 0.618em 1em 0;
+}
+
+// Three lines, left-aligned, each holding its height: the title 700, the year 400, the two leads at 0.854em and 85.4 %.
+.jfmod-libposters .cardFooter {
+    padding: 0.382em 0 0;
+    margin: 0;
+}
+
+.jfmod-libposters .cardBox > .cardText:first-of-type {
+    margin-top: 0.382em;
+}
+
+.jfmod-libposters .cardText {
+    box-sizing: content-box;
+    min-height: 1.618em;
+    padding: 0;
+    font-size: 1em;
+    line-height: 1.618;
+    text-align: left;
+    color: var(--jf-palette-text-primary, #fff);
+    opacity: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jfmod-libposters .cardText:not(.cardText-secondary) {
+    font-weight: 700;
+}
+
+.jfmod-libposters .cardText.cardText-secondary {
+    font-weight: 400;
+}
+
+.jfmod-libposters .cardText.jfmod-cardCast {
+    font-size: 0.854em;
+    opacity: 0.854;
+}
+
+.layout-tv .jfmod-libposters .cardText.jfmod-cardCast {
+    font-size: 1em;
+}

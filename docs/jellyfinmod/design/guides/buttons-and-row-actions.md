@@ -11,7 +11,8 @@ D162; mockups `reviews/phase13/mockups-v4`); the rows' direction mark in place o
 phone's file-row and pending-entry actions at 40 px: user approval 2026-11-01 ("Phone Video Dropdown - accepted, go implement it."; D197,
 mockup `reviews/video-dropdown-phone/mockup/`), built 2026-11-01, gate 1. Record: [UX.md §12.1](../../UX.md) (the authoritative
 wording) and PHASE7 *Settings buttons: three kinds*. Code: `settings/settingsWidgets.tsx` (`IconAction`), `settings.scss`,
-the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`).
+the detail page's `fileChooser.scss`, the picker's `releasePicker.scss` (`.jfmod-releaseAction`). A poster's actions are not row actions: they sit in its
+foot pill, 2em each ([poster-card.md](poster-card.md)).
 
 ## Three kinds of button, all the size of Save
 

@@ -30,7 +30,6 @@
     text-align: left;
     text-decoration: none;
     outline: none;
-    transition: background-color 0.15s ease;
 }
 
 .jfmod-browseCell-wide {
@@ -63,16 +62,12 @@
     overflow: hidden;
 }
 
-.layout-tv .jfmod-browseCell:focus {
-    background: var(--jf-palette-background-paper, #202020);
-    box-shadow: inset 0 0 0 0.382em var(--jf-palette-primary-main, #00a4dc);
-}
-
 .jfmod-browseImage {
     position: relative;
     padding-top: 150%;
-    border-radius: 0.2em;
+    border-radius: 0.618em;
     overflow: hidden;
+    transition: box-shadow 0.236s cubic-bezier(0.236, 0, 0, 1);
 
     > img {
         position: absolute;
@@ -82,6 +77,14 @@
         height: 100%;
         object-fit: cover;
     }
+}
+
+.layout-tv .jfmod-browseImage {
+    transition: none;
+}
+
+.layout-tv .jfmod-browseCell:focus .jfmod-browseImage {
+    box-shadow: 0 0 0 0.236em var(--jf-palette-primary-main, #00a4dc);
 }
 
 .jfmod-browseImage-wide {
@@ -145,6 +148,7 @@ a.jfmod-browseParent {
     text-decoration: none;
 }
 
-html:not(.layout-mobile) .jfmod-browseCell:hover {
-    background: var(--jf-palette-background-paper, #202020);
+html:not(.layout-mobile):not(.layout-tv) .jfmod-browseCell:hover .jfmod-browseImage {
+    box-shadow: 0 0 0 0.135em var(--jf-palette-primary-main, #00a4dc);
+    transition-duration: 0.382s;
 }
