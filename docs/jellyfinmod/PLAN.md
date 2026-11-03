@@ -1190,7 +1190,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   on the one-file row), not this change. Not verified: a file with DTS-HD MA, TrueHD or Atmos (none in the local media), a
   file with two versions, Dolby Vision or HDR10 marks, an ordinary user, a physical TV, the next-release plugin, Codex review.
 
-  **P7.FU6 follow-up, built (not accepted) 2026-11-03: the Video list on every layout** (the user's "go", 2026-11-03; D166, D197-D199,
+  **P7.FU6 follow-up, accepted 2026-11-03: the Video list on every layout** (full matrix on both lines in Chromium and real Chrome, the user approved it, Codex approved the product code after one P2 fix round on resize focus) (the user's "go", 2026-11-03; D166, D197-D199,
   D232, D236, D238 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`; [track-dropdown.md](design/guides/track-dropdown.md)). The open
   list is placed again on a resize; the phone's list sits in the track card with two-line rows and 40 px actions; on the computer and the TV
   it is exactly the Video cell, two-line rows when narrow; a narrow strip stacks at 995 px and under (11.7em, a named exception), with the
