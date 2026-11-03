@@ -3,8 +3,10 @@
 **Status: built (not accepted).** Requested by the user 2026-11-01 ("Implement new browse cards and design, so I can test
 it", decision D204 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`). Approved designs: the search mockup
 `reviews/tmdb-search-design/mockup/` (D195, D200–D203) and the browse mockup `reviews/tmdb-browse-design/mockup/` (D196,
-D203). Built on `main-items` (branches `feat/tmdb-browse-items` in both repositories); `main-stubs` gets the port at gate 2.
-Gates as in the workspace rules: gate 1 is computer, dark theme, on one local environment.
+D203). Built on both lines: branches `feat/tmdb-browse-items` (from `main-items`) and `feat/tmdb-browse` (from `main-stubs`) in
+both repositories, the same source on each line. Gate 1 passed (D232: "go, finish Video list and TMDb first", its choices kept:
+the font, stock's sections under the grid, a series' first year only, no IMDb, RT or Trakt ratings outside the library). Gate 2
+ran 2026-11-02; the user's re-verify (gate 3) and the Codex review (gate 4) follow.
 
 ## What changes for the user
 
@@ -39,6 +41,9 @@ Gates as in the workspace rules: gate 1 is computer, dark theme, on one local en
 | tm2.b1 | web | The browse pages on upstream's detail template (`tmdbDetails.js`, `TmdbDetails.tsx`), Add to Library. |
 | tm2.p2 | plugin | Read the TMDB source once for a search's parallel detail calls; one title's failure skips only that title. |
 | tm2.d1 | web | This plan, the PLAN.md line, the search card guide. |
+| tm2.b3 | web | Found at gate 2, not visible in the first look's screenshots: the browse rows' › did nothing on a computer (the cells sat in a wrapper, and upstream's scroll buttons walk the slider's children), and the TV cut the first cell's lit panel and ring (its scroller clips to the frame). The cells are now the row's own children, drawn as a plain line so each keeps its width, and on the TV the frame takes the 1em pull-out. Same look. |
+| tm2.m1 | web | `scripts/jellyfinmod-e2e/tmdb-browse.mjs`, the gate 2 runner. |
+| tm2.p3 | plugin | `Discover/Title` over real HTTP in `tests/PhaseOneSmoke` (TMDB behind the suite's HTTP boundary): movie, series, season, refusals, access rules, nothing stored. |
 
 - **TMDB detail reads** (tm2.p2): the TMDB source (saved token or Jellyfin's connection) is read once per few seconds instead of
   per call, and one title's failed details skip that title only. Before, a search's parallel detail calls each read the
@@ -55,6 +60,21 @@ Gates as in the workspace rules: gate 1 is computer, dark theme, on one local en
 
 ## Checks
 
-Gate 1: typecheck, lint, the plugin build, a smoke run and screenshots in Playwright Chromium on one environment. The
-matrix (phone, TV 1280/1920, light theme, real Chrome), a plugin integration case for `Discover/Title` and the Codex review
-belong to the later gates.
+Gate 1: typecheck, lint, the plugin build, a smoke run and screenshots in Playwright Chromium on one environment.
+
+**Gate 2 (2026-11-02), both lines.** `main-items` on Jellyfin 12.2 (bravo), `main-stubs` on Jellyfin 12.0 (delta), the live TMDB
+through Jellyfin's own connection. Runner `scripts/jellyfinmod-e2e/tmdb-browse.mjs` with `JELLYFINMOD_TM2_ADD=1`: search and the four
+browse pages at computer 1440, phone 390, TV 1920 and TV 1280 (arrows, Enter and Back), dark and light. 939 of 939 per line and browser,
+in Playwright Chromium 153 and Google Chrome 156 (computer 130 dark and 108 light, phone 110 and 106, TV 1920 125 and 120, TV 1280
+120 and 120). With a saved token, a separate computer dark pass: 109 of 109, more results load and nothing shown moves.
+Plugin: PhaseZeroSmoke, PhaseOneSmoke (the new `Discover/Title` cases), PhaseTwo, PhaseThree, Q16 Trakt, Phase 9 and Phase 10 on the
+Mac and PhaseSevenSettings in the Linux container pass on both lines.
+
+Not run: a physical TV or phone (browser emulation only); the browser as an ordinary user (the API's access rules are in
+PhaseOneSmoke); a server with several libraries of one kind, where Add asks through the action sheet (the environments have one).
+Gate 4's Codex review has not run.
+
+## Open for the user
+
+- A long series on a computer: the Seasons row has no scroll buttons and no scrollbar, so a mouse without a sideways wheel reaches only
+  the first seasons (Tab, a trackpad and shift-wheel reach all). The first look's title had three seasons. Unchanged until decided.
