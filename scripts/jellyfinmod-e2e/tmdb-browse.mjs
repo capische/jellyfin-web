@@ -208,7 +208,7 @@ async function checkSearch(page, label, layoutName, theme) {
     record(label, 'search: the grid fits the page', facts.gridRight <= facts.viewport + 1 && facts.scrollWidth <= facts.viewport, `grid right ${facts.gridRight}, page ${facts.scrollWidth}, viewport ${facts.viewport}`);
     const wantPadding = phone ? [0, 1, 1.618, 0] : [1, 1, 1, 1];
     record(label, 'search: cell padding per the guide', facts.padding.every((value, index) => near(value, wantPadding[index], 0.02)), facts.padding.map(value => value.toFixed(3)).join(' '));
-    record(label, 'search: 2:3 poster with the card radius', near(facts.posterRatio, 1.5, 0.01) && near(facts.posterRadius, 0.2, 0.02), `${facts.posterRatio.toFixed(3)}, ${facts.posterRadius.toFixed(2)}em`);
+    record(label, 'search: 2:3 poster with the card radius', near(facts.posterRatio, 1.5, 0.01) && near(facts.posterRadius, 0.618, 0.02), `${facts.posterRatio.toFixed(3)}, ${facts.posterRadius.toFixed(2)}em`);
     record(label, 'search: three-line caption at pitch φ', facts.lineCount === 3 && near(facts.linePitch, 1.618, 0.02), `${facts.lineCount} lines at ${facts.linePitch.toFixed(3)}em`);
     record(label, 'search: title 700 in the theme\'s ink', facts.titleWeight === '700' && inkFits(facts.titleColour, theme), `${facts.titleWeight} ${facts.titleColour}`);
     record(label, 'search: lead actors and TV Series at 85.4 %', facts.castOpacity === '0.854' && facts.kindOpacity === '0.854' && facts.kindText === 'TV Series', `${facts.castOpacity}, ${facts.kindOpacity}, ${facts.kindText}`);
@@ -237,14 +237,14 @@ async function checkSearch(page, label, layoutName, theme) {
         const lit = await cell.evaluate(node => {
             const overlay = node.querySelector('.cardOverlayContainer');
             const button = node.querySelector('.jfmod-searchAdd');
-            return { background: getComputedStyle(node).backgroundColor, radius: getComputedStyle(node).borderTopLeftRadius,
-                ground: getComputedStyle(document.body).backgroundColor, overlay: overlay && getComputedStyle(overlay).opacity,
+            return { background: getComputedStyle(node).backgroundColor, ring: getComputedStyle(node.querySelector('.jfmod-searchPoster')).boxShadow,
+                overlay: overlay && getComputedStyle(overlay).opacity,
                 button: button && (({ width, height }) => [Math.round(width), Math.round(height)])(button.getBoundingClientRect()) };
         });
         if (phone) {
             record(label, 'search: no hover panel on the phone', lit.background === 'rgba(0, 0, 0, 0)', lit.background);
         } else {
-            record(label, 'search: hover lights the cell in paper, square corners', lit.background !== 'rgba(0, 0, 0, 0)' && lit.background !== lit.ground && lit.radius === '0px', `${lit.background} on ${lit.ground}, radius ${lit.radius}`);
+            record(label, 'search: hover rings the poster, no panel on the cell', lit.background === 'rgba(0, 0, 0, 0)' && /0px 0px 0px [\d.]+px/.test(lit.ring), `${lit.background}; ${lit.ring}`);
             record(label, 'search: hover shows the + as a poster button', lit.overlay === '1' && lit.button && lit.button[0] >= 40 && lit.button[1] >= 40, `overlay ${lit.overlay}, button ${lit.button}`);
             await shot(page, label, 'search-hover');
         }
@@ -273,9 +273,9 @@ async function checkSearch(page, label, layoutName, theme) {
             const ring = await page.evaluate(() => {
                 const cell = document.activeElement.closest('.jfmod-searchCell');
                 const style = getComputedStyle(cell);
-                return { key: cell.dataset.jfmodKey, shadow: style.boxShadow, background: style.backgroundColor, root: parseFloat(style.fontSize) };
+                return { key: cell.dataset.jfmodKey, shadow: getComputedStyle(cell.querySelector('.jfmod-searchPoster')).boxShadow, background: style.backgroundColor, root: parseFloat(style.fontSize) };
             });
-            record(label, 'search: TV focus lights the cell with the ring inside', /inset/.test(ring.shadow) && ring.background !== 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
+            record(label, 'search: TV focus rings the poster, no panel on the cell', /0px 0px 0px [\d.]+px/.test(ring.shadow) && ring.background === 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
             await shot(page, label, 'search-focus');
             await page.keyboard.press('ArrowRight');
             await page.waitForTimeout(350);
@@ -546,10 +546,10 @@ async function checkTvRow(page, label, name, sectionSelector) {
         const box = cell.getBoundingClientRect();
         const frame = cell.closest('.emby-scroller');
         const clip = frame && getComputedStyle(frame).overflowX === 'hidden' ? frame.getBoundingClientRect() : null;
-        return { shadow: style.boxShadow, background: style.backgroundColor, left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+        return { shadow: getComputedStyle(cell.querySelector('.jfmod-browseImage') ?? cell).boxShadow, background: style.backgroundColor, left: box.left, right: box.right, top: box.top, bottom: box.bottom,
             clipLeft: clip?.left ?? null, clipTop: clip?.top ?? null, clipBottom: clip?.bottom ?? null, clipRight: clip?.right ?? null, innerHeight: window.innerHeight, innerWidth: window.innerWidth };
     });
-    record(label, `${name}: ${sectionSelector} TV ring inside the lit cell`, /inset/.test(ring.shadow) && ring.background !== 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
+    record(label, `${name}: ${sectionSelector} TV ring on the image, no panel`, /0px 0px 0px [\d.]+px/.test(ring.shadow) && ring.background === 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
     record(label, `${name}: ${sectionSelector} ring not cut by the row`, ring.clipLeft === null || (ring.left >= ring.clipLeft - 0.5 && ring.top >= ring.clipTop - 0.5 && ring.bottom <= ring.clipBottom + 0.5), JSON.stringify(ring));
     record(label, `${name}: ${sectionSelector} focus in view`, ring.top >= 0 && ring.top < ring.innerHeight && ring.left >= 0 && ring.right <= ring.innerWidth + 1, JSON.stringify(ring));
     await shot(page, label, `${name}-focus`);
@@ -598,11 +598,11 @@ async function checkBrowsePages(page, label, layoutName, theme) {
         await cell.scrollIntoViewIfNeeded();
         await cell.hover();
         await page.waitForTimeout(350);
-        const lit = await cell.evaluate(node => [getComputedStyle(node).backgroundColor, getComputedStyle(document.body).backgroundColor]);
+        const lit = await cell.evaluate(node => [getComputedStyle(node).backgroundColor, getComputedStyle(node.querySelector('.jfmod-browseImage')).boxShadow]);
         if (phone) {
             record(label, 'movie: no hover panel on the phone', lit[0] === 'rgba(0, 0, 0, 0)', lit[0]);
         } else {
-            record(label, 'movie: hover lights the cell in paper', lit[0] !== 'rgba(0, 0, 0, 0)' && lit[0] !== lit[1], `${lit[0]} on ${lit[1]}`);
+            record(label, 'movie: hover rings the image, no panel', lit[0] === 'rgba(0, 0, 0, 0)' && /0px 0px 0px [\d.]+px/.test(lit[1]), `${lit[0]}; ${lit[1]}`);
             await shot(page, label, 'movie-hover');
         }
         await page.mouse.move(0, 0);
