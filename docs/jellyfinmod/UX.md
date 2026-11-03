@@ -758,6 +758,10 @@ The first zone is upstream's search, unchanged in shape and unchanged in heading
 today. The only difference is that the `Movies` and `Shows` sections now also contain entries with
 no file yet, because those are library entries like any other.
 
+> **Superseded for the search page by TM2 (user, 2026-11-01, D204, D206):** [TMDB-BROWSE.md](TMDB-BROWSE.md) replaces these two
+> zones' Movies, Shows and Add from TMDB rows with one vertical grid and the card of
+> [design/guides/search-card.md](design/guides/search-card.md). Stock's other sections stay under it.
+
 The second zone is **Add from TMDB**, appended at the end, and it is defined by subtraction:
 every TMDB result carrying an id you already have is removed from it server-side. A title is
 therefore in exactly one place, always, and the user never chooses an index or reads a heading to
