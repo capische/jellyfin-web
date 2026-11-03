@@ -192,4 +192,4 @@ var(--jf-palette-divider)`, radius `.2em .2em 0 0`; the entry's **name in 600** 
 
 - Use it where a stock select reads as well (plain words, no marks): the stock select is the default.
 - Give the dropdown a third look; a new host picks the skin of its neighbours' fields and keeps the list as it is.
-- Put the pending download inside a segment, or draw the strip's label column back.
+- Put the pending download inside a segment (except on a stacked strip with Video open: it is the row of the Video list, in the Video segment), or draw the strip's label column back.
