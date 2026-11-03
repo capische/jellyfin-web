@@ -1876,6 +1876,28 @@ async function checkVideoListResize(page, layout, id) {
     }
     record(layout, 'resize: at every width the open list stays open, exact under its cell or in the card, rows by the width, no flip', problems.length === 0, problems.slice(0, 3).join(' || '));
     await vlShot(page, `${layout}-resize-back`);
+    // Crossing the stacking line remounts the list: Keep and Remove keep the focus, both ways.
+    if (!isMobile(layout)) {
+        const row = (await vlFacts(page)).rows.length - 1;
+        const seen = { narrowing: [], widening: [] };
+        for (const control of ['data-jfmod-file-pin', 'data-jfmod-file-remove']) {
+            for (const [way, from, to] of [['narrowing', 996, 995], ['widening', 995, 996]]) {
+                await page.setViewportSize({ width: from, height: start.height });
+                await page.waitForTimeout(400);
+                const target = page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).nth(row).locator(`[${control}]`);
+                await target.focus();
+                const before = await vlActive(page);
+                await page.setViewportSize({ width: to, height: start.height });
+                await page.waitForTimeout(450);
+                seen[way].push({ before, after: await vlActive(page), on: await target.evaluate(node => node === document.activeElement) });
+            }
+        }
+        for (const way of ['narrowing', 'widening']) {
+            record(layout, `resize: Keep and Remove keep the focus across the stacking line, ${way}`, seen[way].every(one => one.on && one.after === one.before), JSON.stringify(seen[way]));
+        }
+        await page.setViewportSize(start);
+        await page.waitForTimeout(400);
+    }
     // Audio's list open across a resize: placed again under its cell (D166).
     await vlClose(page, layout);
     await page.setViewportSize(start);
