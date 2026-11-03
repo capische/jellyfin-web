@@ -3,10 +3,10 @@
 **Status:** approved by the user 2026-11-01 (D200–D203 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`: "C with 5
 per row", the three-line caption with the year not bold, "The hover should be border to border to other cell … Seemless",
 "hover should not [have] circled corners", "approved, apply it to the browse page too"). After the first look (user,
-2026-11-01): the order "full match", "the latest release", then "fuzzy match"; the + "similar design and hover effect as cloud
+2026-11-01): the + "similar design and hover effect as cloud
 or play on the poster". Mockups `reviews/tmdb-search-design/mockup/`
 (states default, hover, adding, added, focus, loading, end) and `reviews/tmdb-browse-design/mockup/`. Built on both
-lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232), the Seasons arrows D252; **built (not accepted)**. Code: `components/SearchCard.tsx`,
+lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232), the Seasons arrows D252, the order D253; **built (not accepted)**. Code: `components/SearchCard.tsx`,
 `components/searchGrid.scss` (`jfmod-search*`); the browse rows' cell `BrowseCell` in `components/TmdbDetails.tsx`,
 `components/tmdbDetails.scss` (`jfmod-browse*`).
 
@@ -60,11 +60,13 @@ poster, so its frame takes the 1em pull-out and clips, and a scrolled row never 
 
 ## Order
 
-Full matches first (the title equals the query, ignoring case, spaces and punctuation), library titles and TMDB results
-together, newest release first (by year, then by the full date where both have one). Then the rest: library titles by name,
-then TMDB's results, each page's movies and shows ranked together by popularity. The grid shows skeletons until the first
-library and TMDB answers are in; after that nothing shown moves: newly loaded results follow, sorted by the same rule, and a
-card added from the search keeps its place.
+D253 (user, 2026-11-03), revising D206. A full match is a title equal to the query, ignoring a leading The, A or An on both, case,
+spaces and punctuation. Full matches with 100 or more TMDB votes come first, newest first (by year, then by the full date where both
+have one). Everything else follows by votes, most first, full matches under 100 votes included. No language filter (the user declined
+one). A library title takes its votes from its entry, else from a TMDB card of it in this search; with none known it keeps its old place:
+a full match among the leaders by date, any other title first of the rest, by name. The grid shows skeletons until the first library and
+TMDB answers are in; after that nothing shown moves: newly loaded results follow, sorted by the same rule, and a card added from the search
+keeps its place.
 
 ## Rules
 
