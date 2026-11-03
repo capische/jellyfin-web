@@ -1,0 +1,176 @@
+@use "sass:selector";
+
+/* rd2: the existing track runs and measured stacking, with the approved glass cells and paper lists.
+ * The stacked Video list still expands in the flow (the guide's interaction wins).
+ */
+@use '../components/cardGlass' as glass;
+
+/* stylelint-disable no-descending-specificity -- theme/device overrides of the existing strip */
+$primary: var(--jf-palette-primary-main, #00a4dc);
+$ease: cubic-bezier(0.236, 0, 0, 1);
+
+html.jfmod-chrome {
+    .jfmod-strip {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        font-family: var(--jfmod-chrome-dense);
+    }
+
+    .jfmod-strip > .jfmod-stripSegment {
+        border: 0;
+        margin-left: 0.382em;
+        &:first-child { margin-left: 0; }
+    }
+
+    .jfmod-videoTrigger,
+    .jfmod-trackTrigger {
+        @include glass.card-ink;
+        background: rgba(0, 0, 0, 0.66);
+        color: var(--jfmod-card-ink);
+        border-radius: 1.618em;
+        transition: background-color 0.236s $ease;
+
+        @include glass.card-glass;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+            .jfmod-videoTrigger:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled),
+            .jfmod-trackTrigger:not(.jfmod-trackStatic):hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) {
+                box-shadow: none;
+                background: rgba(255, 255, 255, 0.12);
+            }
+        }
+    }
+
+    .jfmod-videoTrigger:focus,
+    .jfmod-trackTrigger:focus,
+    .jfmod-videoTrigger[aria-expanded='true'],
+    .jfmod-trackTrigger[aria-expanded='true'] { box-shadow: 0 0 0 0.135em $primary; }
+
+    .jfmod-trackStatic { cursor: default; }
+
+    .jfmod-strip--stacked > .jfmod-stripSegment {
+        margin-left: 0;
+        margin-top: 0.382em;
+        &:first-child { margin-top: 0; }
+    }
+
+    .jfmod-trackMenuPaper.MuiPopover-paper,
+    .jfmod-fileListBox,
+    .jfmod-strip .jfmod-fileListBox {
+        --jfmod-paper: var(--jfmod-chrome-paper);
+
+        box-sizing: border-box;
+        background: var(--jfmod-chrome-paper);
+        color: var(--jfmod-chrome-ink);
+        min-width: 0;
+        padding: 0.382em;
+        border: 0;
+        border-radius: 1em !important;
+        box-shadow: 0 0.382em 1.618em rgba(0, 0, 0, 0.45);
+    }
+
+    .jfmod-trackMenuPaper.MuiPopover-paper { margin-top: 0; }
+    .jfmod-trackMenuPaper .MuiList-root { padding: 0; }
+
+    .jfmod-fileList { margin-top: 0.382em; }
+    .jfmod-stripBelow .jfmod-fileList { margin-top: 0; }
+
+    .jfmod-fileListClip {
+        max-height: 20em;
+        overflow-y: auto;
+    }
+
+    .jfmod-trackItem.MuiMenuItem-root,
+    .jfmod-fileRow {
+        position: relative;
+        border: 0;
+        border-radius: 0.618em;
+        box-shadow: none;
+        transition: background-color 0.236s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-hover); }
+            }
+        }
+    }
+
+    .jfmod-trackItem.MuiMenuItem-root { padding-left: 1em; }
+
+    .jfmod-fileRow--selected {
+        background: transparent;
+        .jfmod-fileResolution { color: $primary; }
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0.236em;
+            top: 50%;
+            width: 0.618em;
+            height: 0.618em;
+            margin-top: -0.309em;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300a4dc' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
+    }
+
+    .jfmod-fileChoose,
+    .jfmod-strip .jfmod-fileChoose { padding-left: 1em; }
+
+    .jfmod-trackItem--on .jfmod-trackLanguage { color: $primary; }
+
+    .jfmod-trackItem--on .jfmod-fileMarks,
+    .jfmod-trackItem--on .jfmod-trackRoles,
+    .jfmod-trackItem--on .jfmod-trackMod,
+    .jfmod-trackItem--on .jfmod-trackExtra { color: var(--jfmod-chrome-ink); }
+
+    .jfmod-fileChoose:focus-visible {
+        box-shadow: inset 0 0 0 0.135em $primary;
+        border-radius: 0.618em;
+    }
+    .jfmod-fileIcon { --jfmod-row-ink: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7)); }
+    .jfmod-fileIcon--on { --jfmod-row-ink: #00a4dc; }
+    .jfmod-fileIcon--danger { --jfmod-row-ink: var(--jf-palette-error-main, #c62828); }
+
+    @media (hover: hover) and (pointer: fine) {
+        @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+            .jfmod-fileIcons > .jfmod-fileIcon:hover:not(:disabled):not([aria-disabled='true']) { color: var(--jfmod-row-ink); }
+        }
+    }
+}
+
+html.jfmod-chrome.layout-tv {
+    .jfmod-fileList {
+        display: none;
+        transition: none;
+    }
+    .jfmod-fileList.jfmod-fileList--open { display: block; }
+
+    .jfmod-videoTrigger:focus,
+    .jfmod-trackTrigger:focus { box-shadow: 0 0 0 0.236em $primary; }
+
+    .jfmod-fileChoose:focus {
+        box-shadow: inset 0 0 0 0.236em $primary;
+        border-radius: 0.618em;
+    }
+
+    .jfmod-videoTrigger,
+    .jfmod-trackTrigger,
+    .jfmod-trackItem.MuiMenuItem-root,
+    .jfmod-fileRow { transition: none; }
+
+    .jfmod-fileIcons > .jfmod-fileIcon:focus {
+        color: var(--jfmod-row-ink);
+        box-shadow: 0 0 0 0.12em var(--jfmod-chrome-paper), 0 0 0 0.28em #fff;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome .jfmod-videoTrigger,
+    html.jfmod-chrome .jfmod-trackTrigger,
+    html.jfmod-chrome .jfmod-trackItem.MuiMenuItem-root,
+    html.jfmod-chrome .jfmod-fileRow { transition: none; }
+}

@@ -1,0 +1,123 @@
+/* rd2 motion: preserve upstream animation lifecycle and focus handling. */
+/* stylelint-disable no-descending-specificity -- layout motion overrides */
+$ease: cubic-bezier(0.236, 0, 0, 1);
+
+// Keep upstream animationend and removal handling; only replace its visual keyframes and timing.
+@keyframes jfmod-chrome-in {
+    from {
+        opacity: 0;
+        transform: scale(0.964);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes jfmod-chrome-out {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.964);
+    }
+}
+
+@keyframes jfmod-sheet-in {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+}
+
+@keyframes jfmod-sheet-out {
+    from { transform: none; }
+    to { transform: translateY(100%); }
+}
+
+@keyframes jfmod-chrome-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes jfmod-chrome-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+html.jfmod-chrome {
+    .dialog[style*='scaleup'],
+    .dialog[style*='slideup'],
+    .dialog[style*='fadein'] {
+        animation: jfmod-chrome-in var(--jfmod-chrome-enter) $ease both !important;
+    }
+
+    .dialog[style*='scaledown'],
+    .dialog[style*='slidedown'],
+    .dialog[style*='fadeout'] {
+        animation: jfmod-chrome-out var(--jfmod-chrome-exit) $ease both !important;
+    }
+
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory) {
+        transform: none !important;
+        transition: opacity var(--jfmod-chrome-enter) $ease, transform var(--jfmod-chrome-enter) $ease !important;
+    }
+
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] {
+        transform: scale(0.964) !important;
+        transition-duration: var(--jfmod-chrome-exit) !important;
+    }
+}
+
+html.jfmod-chrome.layout-mobile {
+    .actionSheet[style*='scaleup'],
+    .actionSheet[style*='slideup'],
+    .actionSheet[style*='fadein'] {
+        animation-name: jfmod-sheet-in !important;
+        animation-duration: var(--jfmod-chrome-sheet-in) !important;
+    }
+
+    .actionSheet[style*='scaledown'],
+    .actionSheet[style*='slidedown'],
+    .actionSheet[style*='fadeout'] {
+        animation-name: jfmod-sheet-out !important;
+        animation-duration: var(--jfmod-chrome-sheet-out) !important;
+    }
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper) { transition-duration: var(--jfmod-chrome-sheet-in) !important; }
+
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper)[style*='opacity: 0'] {
+        transform: translateY(100%) !important;
+        transition-duration: var(--jfmod-chrome-sheet-out) !important;
+    }
+}
+
+html.jfmod-chrome.layout-tv {
+    .dialog[style*='scaleup'],
+    .dialog[style*='slideup'],
+    .dialog[style*='fadein'] { animation-name: jfmod-chrome-fade-in !important; }
+
+    .dialog[style*='scaledown'],
+    .dialog[style*='slidedown'],
+    .dialog[style*='fadeout'] { animation-name: jfmod-chrome-fade-out !important; }
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] { transform: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome {
+        .dialog[style*='scaleup'],
+        .dialog[style*='slideup'],
+        .dialog[style*='fadein'] { animation-name: jfmod-chrome-fade-in !important; }
+
+        .dialog[style*='scaledown'],
+        .dialog[style*='slidedown'],
+        .dialog[style*='fadeout'] { animation-name: jfmod-chrome-fade-out !important; }
+
+        .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory),
+        .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] {
+            transform: none !important;
+            transition-property: opacity !important;
+        }
+    }
+}

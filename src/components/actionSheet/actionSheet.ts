@@ -1,3 +1,4 @@
+import { chromeSheetPosition, decorateChromeSheet, hasChromeSheet } from 'apps/modern/features/jellyfinmod/shell/chromeActionSheet';
 import escapeHtml from 'escape-html';
 import dialogHelper from '../dialogHelper/dialogHelper';
 import layoutManager from '../layoutManager';
@@ -102,6 +103,8 @@ function getOffsets(elems: Element[]): Offset[] {
 }
 
 function getPosition(positionTo: Element, options: Options, dlg: HTMLElement) {
+    if (hasChromeSheet() && !layoutManager.mobile) return chromeSheetPosition(positionTo, dlg);
+
     const windowSize = dom.getWindowSize();
     const windowHeight = windowSize.innerHeight;
     const windowWidth = windowSize.innerWidth;
@@ -163,13 +166,15 @@ export function show(options: Options) {
         scrollY: false
     };
 
+    const modChrome = hasChromeSheet();
+    const positionTo = options.positionTo || (modChrome ? document.activeElement : null);
     const boxed = !!options.boxed;
     // On TV the box is centered on screen rather than anchored to the button,
     // which would otherwise push it into a corner.
-    const isCenteredBox = boxed && layoutManager.tv;
+    const isCenteredBox = boxed && layoutManager.tv && !modChrome;
     let isFullscreen;
 
-    if (layoutManager.tv && !boxed) {
+    if (layoutManager.tv && !boxed && !modChrome) {
         dialogOptions.size = 'fullscreen';
         isFullscreen = true;
         dialogOptions.autoFocus = true;
@@ -348,6 +353,7 @@ export function show(options: Options) {
     html += '</div>';
 
     dlg.innerHTML = html;
+    decorateChromeSheet(dlg, options.items);
 
     if (isCenteredBox) {
         appendPlayerOverlayFrost(dlg);
@@ -438,8 +444,8 @@ export function show(options: Options) {
             (dlg as HTMLElement & { backdrop?: HTMLElement }).backdrop?.classList.add('dialogBackdrop-clear');
         }
 
-        const pos = options.positionTo && !isCenteredBox && dialogOptions.size !== 'fullscreen' ?
-            getPosition(options.positionTo, options, dlg) :
+        const pos = positionTo && !isCenteredBox && dialogOptions.size !== 'fullscreen' ?
+            getPosition(positionTo, options, dlg) :
             null;
 
         if (pos) {

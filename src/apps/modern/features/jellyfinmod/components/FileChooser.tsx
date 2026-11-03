@@ -472,9 +472,10 @@ export const listPlace = (trigger: HTMLElement) => {
     const cell = trigger.closest<HTMLElement>('.jfmod-stripSegment') ?? trigger;
     const strip = cell.closest<HTMLElement>('.jfmod-strip');
     const box = cell.getBoundingClientRect();
-    if (!strip) return { top: box.bottom, left: box.left, width: box.width };
+    const gap = document.documentElement.classList.contains('jfmod-chrome') ? 0.382 * parseFloat(getComputedStyle(trigger).fontSize) : 0;
+    if (!strip) return { top: box.bottom + gap, left: box.left, width: box.width };
     const outer = strip.getBoundingClientRect();
-    if (strip.classList.contains('jfmod-strip--stacked')) return { top: box.bottom, left: outer.left, width: outer.width };
+    if (strip.classList.contains('jfmod-strip--stacked')) return { top: box.bottom + gap, left: outer.left, width: outer.width };
     const drawn = (start: Element | null, step: (element: Element) => Element | null) => {
         let element = start;
         while (element && !element.childElementCount) element = step(element);
@@ -482,7 +483,7 @@ export const listPlace = (trigger: HTMLElement) => {
     };
     const left = drawn(cell.previousElementSibling, element => element.previousElementSibling) ? box.left : outer.left;
     const right = drawn(cell.nextElementSibling, element => element.nextElementSibling) ? box.right : outer.right;
-    return { top: outer.bottom, left, width: right - left };
+    return { top: outer.bottom + gap, left, width: right - left };
 };
 
 /** Slides open and closed; the rows exist only while open or closing, so a closed list is never a D-pad stop. */

@@ -102,7 +102,8 @@ const isVisible = (element: HTMLElement) => (
  */
 const isEnabled = (element: HTMLElement) => (
     !(element as HTMLButtonElement).disabled
-    && (element.getAttribute('aria-disabled') !== 'true' || element.classList.contains('jfmod-iconbtn'))
+    && (element.getAttribute('aria-disabled') !== 'true' || element.classList.contains('jfmod-iconbtn')
+        || document.documentElement.classList.contains('jfmod-chrome'))
     && !element.classList.contains('Mui-disabled')
 );
 
