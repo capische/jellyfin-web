@@ -55,14 +55,17 @@ const identityOf = (mediaType: MediaType, tmdbId: number) => `${mediaType}:${tmd
 /** Library titles by name, as Jellyfin sorts them: a leading article does not count. */
 const sortKey = (title: string) => title.replace(/^(the|a|an)\s+/i, '').toLocaleLowerCase();
 
-/** A title as the full-match test compares it: case, spaces and punctuation do not count. */
-const normalTitle = (title: string) => title.toLocaleLowerCase().replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim();
+/** A title as the full-match test compares it: a leading article, case, spaces and punctuation do not count (D253). */
+const normalTitle = (title: string) => sortKey(title).replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim();
+
+/** Fewer votes than this and a full match is not famous enough to lead (D253). */
+const FAMOUS_VOTES = 100;
 
 interface RankedCard {
     card: SearchCardItem;
     /** The title equals the query. */
     full: boolean;
-    /** The fuzzy order: library titles by name, then TMDB's popularity order. */
+    /** The order among equals: library titles by name, then TMDB's order. */
     rank: number;
 }
 
@@ -73,15 +76,28 @@ const byDate = (left?: string | null, right?: string | null) => {
     return right.slice(0, 10).localeCompare(left.slice(0, 10));
 };
 
-const byMatchThenDate = (left: RankedCard, right: RankedCard) => {
-    if (left.full !== right.full) return left.full ? -1 : 1;
-    if (left.full) return byDate(left.card.date, right.card.date) || left.rank - right.rank;
-    return left.rank - right.rank;
+/** A library title whose votes nobody knows: its entry has none and the search holds no TMDB card of it. */
+const votesUnknown = ({ card }: RankedCard) => !card.add && card.votes == null;
+
+/** Leads the grid: a full match with enough votes, or a library title that is a full match and whose votes are unknown. */
+const leadsGrid = (item: RankedCard) => item.full && (votesUnknown(item) || (item.card.votes ?? 0) >= FAMOUS_VOTES);
+
+/**
+ * Full matches with 100 or more votes, newest first; then everything else by votes, most first (user, 2026-11-03, D253). A library
+ * title of unknown votes keeps its old place: a full match among the leaders by date, any other title first of the rest, by name.
+ */
+const byMatchThenVotes = (left: RankedCard, right: RankedCard) => {
+    const leftLeads = leadsGrid(left);
+    if (leftLeads !== leadsGrid(right)) return leftLeads ? -1 : 1;
+    if (leftLeads) return byDate(left.card.date, right.card.date) || left.rank - right.rank;
+    const leftUnknown = votesUnknown(left);
+    if (leftUnknown !== votesUnknown(right)) return leftUnknown ? -1 : 1;
+    return (right.card.votes ?? 0) - (left.card.votes ?? 0) || left.rank - right.rank;
 };
 
 /**
  * The candidates by key: TMDB's results, and library titles (a library title replaces TMDB's card of the same title, except a
- * title added from this search, which keeps its TMDB card in place). Among the fuzzy ones library titles come first, by name.
+ * title added from this search, which keeps its TMDB card in place), its votes from that card where its entry has none.
  */
 const rankCandidates = (library: SearchCardItem[], tmdb: SearchCardItem[], added: Map<string, Entry>, query: string) => {
     const wanted = normalTitle(query);
@@ -91,20 +107,20 @@ const rankCandidates = (library: SearchCardItem[], tmdb: SearchCardItem[], added
         candidates.set(card.key, { card, full: normalTitle(card.title) === wanted, rank: sorted.length + index });
     });
     sorted.forEach((card, index) => {
-        if (!added.has(card.key) || !candidates.has(card.key)) candidates.set(card.key, { card, full: normalTitle(card.title) === wanted, rank: index });
+        const tmdbCard = candidates.get(card.key)?.card;
+        if (!added.has(card.key) || !tmdbCard) candidates.set(card.key, { card: { ...card, votes: card.votes ?? tmdbCard?.votes }, full: normalTitle(card.title) === wanted, rank: index });
     });
     return candidates;
 };
 
 /**
- * The order (user, 2026-11-01: "full match", "the latest release" and then "fuzzy match"): full matches by release date, newest
- * first, then the fuzzy ones in the popularity order. Cards already shown keep their places; newly loaded ones follow them,
- * sorted by the same rule.
+ * The order: full matches with enough votes by release date, then the rest by votes (D253). Cards already shown keep their places;
+ * newly loaded ones follow them, sorted by the same rule.
  */
 const orderedKeys = (shown: string[], candidates: Map<string, RankedCard>) => {
     const kept = shown.filter(key => candidates.has(key));
     const keptKeys = new Set(kept);
-    return [...kept, ...Array.from(candidates.values()).filter(item => !keptKeys.has(item.card.key)).sort(byMatchThenDate)
+    return [...kept, ...Array.from(candidates.values()).filter(item => !keptKeys.has(item.card.key)).sort(byMatchThenVotes)
         .map(item => item.card.key)];
 };
 
@@ -120,7 +136,7 @@ const libraryCard = (row: BrowseRow, context: { serverId?: string; nativeLeads: 
         return {
             key: entry ? identityOf(entry.mediaType, entry.tmdbId) : 'native:' + item.Id,
             mediaType, tmdbId: entry?.tmdbId, title, year: item.ProductionYear ?? entry?.year,
-            date: item.PremiereDate ?? entry?.metadata?.premiereDate,
+            date: item.PremiereDate ?? entry?.metadata?.premiereDate, votes: entry?.metadata?.voteCount,
             cast: nativeLeads.get(item.Id ?? undefined) ?? leads(entry?.metadata?.cast),
             poster: imageOf(item) ?? getTmdbImage(entry?.posterPath, 'w342'),
             href: '#/details?id=' + encodeURIComponent(item.Id ?? '') + (serverId ? '&serverId=' + encodeURIComponent(serverId) : ''),
@@ -130,7 +146,7 @@ const libraryCard = (row: BrowseRow, context: { serverId?: string; nativeLeads: 
     if (!entry) return null;
     return {
         key: identityOf(entry.mediaType, entry.tmdbId), mediaType: entry.mediaType, tmdbId: entry.tmdbId, title: entry.title,
-        year: entry.year, date: entry.metadata?.premiereDate, cast: leads(entry.metadata?.cast), poster: getTmdbImage(entry.posterPath, 'w342'),
+        year: entry.year, date: entry.metadata?.premiereDate, votes: entry.metadata?.voteCount, cast: leads(entry.metadata?.cast), poster: getTmdbImage(entry.posterPath, 'w342'),
         href: '#' + getEntryPath(entry.id, serverId), entry, retention: row.retention
     };
 };
@@ -332,7 +348,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         });
     };
 
-    // TMDB's pages: page N of movies and page N of shows ranked together by TMDB's popularity, pages in order. A title that a
+    // TMDB's pages: page N of movies and page N of shows ranked together by TMDB's votes, pages in order. A title that a
     // refetch leaves out keeps its place during the search: the plugin's push refreshes every catalog query after an add, and
     // the card just added must stay where it was.
     const pageCount = Math.max(...discovery.map(result => result.data?.pages.length ?? 0));
@@ -341,7 +357,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     for (let page = 0; page < pageCount; page++) {
         const items = discovery.flatMap((result, index) => (result.data?.pages[page]?.items ?? [])
             .map(metadata => ({ ...metadata, mediaType: TYPES[index] })));
-        items.sort((left, right) => (right.popularity ?? 0) - (left.popularity ?? 0));
+        items.sort((left, right) => (right.voteCount ?? 0) - (left.voteCount ?? 0));
         for (const metadata of items) {
             const identity = identityOf(metadata.mediaType, metadata.tmdbId);
             if (seen.has(identity)) continue;
@@ -385,7 +401,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         const identity = identityOf(metadata.mediaType, metadata.tmdbId);
         const entry = added.get(identity);
         const base = { key: identity, mediaType: metadata.mediaType, tmdbId: metadata.tmdbId, title: metadata.title,
-            year: yearOf(metadata.premiereDate), date: metadata.premiereDate, cast: leads(metadata.cast),
+            year: yearOf(metadata.premiereDate), date: metadata.premiereDate, votes: metadata.voteCount, cast: leads(metadata.cast),
             poster: getTmdbImage(metadata.posterPath, 'w342') };
         if (entry) return { ...base, entry, href: '#' + getEntryPath(entry.id, serverId) };
         return { ...base,

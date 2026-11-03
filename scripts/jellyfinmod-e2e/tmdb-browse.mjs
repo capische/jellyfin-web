@@ -37,6 +37,7 @@ const LAYOUTS = {
 };
 const PAGE = '.mainAnimatedPage:not(.hide)';
 const QUERY = 'gentlemen';
+const ARTICLE_QUERY = 'the gentlemen';
 // The Gentlemen, the movie and the show: the mockups' titles. The adds use titles of their own, none of them in the library.
 const MOVIE = 522627;
 const SERIES = 236235;
@@ -159,6 +160,43 @@ const waitForSearch = async (page, query = QUERY) => {
     await page.waitForTimeout(600);
 };
 
+/** A title as the grid compares it (CatalogSearchResults, `normalTitle`). */
+const normalTitle = title => title.replace(/^(the|a|an)\s+/i, '').toLowerCase().replace(/[^0-9a-z\u00c0-\uffff]+/g, ' ').trim();
+
+/**
+ * D253 against what the plugin answers: full matches with 100 or more votes first, newest first; then the rest by votes. The cards of
+ * TMDB's first pages only: a later page follows them. A library title takes its entry's votes; with none it keeps its old place.
+ */
+async function checkOrder(page, label, query, cards) {
+    const votes = new Map();
+    for (const type of ['movie', 'series']) {
+        const answer = await apiJson(page, 'JellyfinMod/Discover/Search', { q: query, type });
+        for (const item of answer.items) votes.set(`${type}:${item.tmdbId}`, item.voteCount ?? 0);
+    }
+    const counted = [...votes.values()].filter(count => count > 0).length;
+    record(label, `search "${query}": TMDB's votes reach the page`, counted > votes.size / 2, `${counted} of ${votes.size} titles have votes`);
+    const entries = await apiJson(page, 'JellyfinMod/Entries');
+    const stored = new Map((entries.items ?? []).filter(entry => entry.metadata?.voteCount != null).map(entry => [`${entry.mediaType}:${entry.tmdbId}`, entry.metadata.voteCount]));
+    const wanted = normalTitle(query);
+    const firstBatch = cards.filter(card => !card.href.includes('tmdbType=') || votes.has(card.key));
+    const rows = firstBatch.map(card => {
+        const library = !card.href.includes('tmdbType=');
+        const count = votes.get(card.key) ?? stored.get(card.key) ?? null;
+        const unknown = library && count === null;
+        const full = normalTitle(card.title) === wanted;
+        return { ...card, count, unknown, leads: full && (unknown || (count ?? 0) >= 100) };
+    });
+    const leaders = rows.filter(row => row.leads);
+    const rest = rows.filter(row => !row.leads);
+    const order = [...leaders, ...rest];
+    record(label, `search "${query}": the leaders come first`, order.every((row, index) => row.key === rows[index].key), rows.slice(0, 6).map(row => `${row.title} ${row.year} (${row.count ?? 'unknown'})`).join(', '));
+    record(label, `search "${query}": the leaders newest first`, leaders.every((row, index) => index === 0 || leaders[index - 1].year >= row.year), leaders.map(row => `${row.title} ${row.year}`).join(', '));
+    const unknowns = rest.findLastIndex(row => row.unknown);
+    const ranked = rest.slice(unknowns + 1);
+    record(label, `search "${query}": the rest by votes, most first`, rest.slice(0, unknowns + 1).every(row => row.unknown)
+        && ranked.every((row, index) => index === 0 || (ranked[index - 1].count ?? 0) >= (row.count ?? 0)), ranked.slice(0, 8).map(row => `${row.title} (${row.count})`).join(', '));
+}
+
 async function checkSearch(page, label, layoutName, theme) {
     const layout = LAYOUTS[layoutName];
     const phone = layoutName === 'phone';
@@ -174,12 +212,15 @@ async function checkSearch(page, label, layoutName, theme) {
     record(label, 'search: three-line caption at pitch φ', facts.lineCount === 3 && near(facts.linePitch, 1.618, 0.02), `${facts.lineCount} lines at ${facts.linePitch.toFixed(3)}em`);
     record(label, 'search: title 700 in the theme\'s ink', facts.titleWeight === '700' && inkFits(facts.titleColour, theme), `${facts.titleWeight} ${facts.titleColour}`);
     record(label, 'search: lead actors and TV Series at 85.4 %', facts.castOpacity === '0.854' && facts.kindOpacity === '0.854' && facts.kindText === 'TV Series', `${facts.castOpacity}, ${facts.kindOpacity}, ${facts.kindText}`);
-    const fullMatches = facts.cards.filter(card => card.title.toLowerCase() === QUERY);
-    // With a saved token a later page may bring another full match; cards already shown keep their places, so it follows them.
-    const firstOther = facts.cards.findIndex(card => card.title.toLowerCase() !== QUERY);
-    const leading = facts.cards.slice(0, firstOther);
-    record(label, 'search: full matches first, newest first (D206)', leading.length > 0 && (TOKEN || leading.length === fullMatches.length)
-        && leading.every((card, index) => index === 0 || leading[index - 1].year >= card.year), leading.map(card => `${card.title} ${card.year}`).join(', '));
+    await checkOrder(page, label, QUERY, facts.cards);
+    const lead = facts.cards.slice(0, 2).map(card => card.title).join(', ');
+    record(label, 'search: the two The Gentlemen lead (D253)', lead === 'The Gentlemen, The Gentlemen', lead);
+    record(label, 'search: the first ten as they appear', true, facts.cards.slice(0, 10).map(card => `${card.title} ${card.year}${card.series ? ' series' : ''}`).join('; '));
+    await waitForSearch(page, ARTICLE_QUERY);
+    const withArticle = await searchFacts(page);
+    await checkOrder(page, label, ARTICLE_QUERY, withArticle.cards);
+    record(label, 'search: a query with an article matches the same way', withArticle.cards.slice(0, 2).every(card => card.title === 'The Gentlemen'), withArticle.cards.slice(0, 3).map(card => `${card.title} ${card.year}`).join(', '));
+    await waitForSearch(page);
     record(label, 'search: movies and shows together', facts.cards.some(card => card.series) && facts.cards.some(card => !card.series), `${facts.cards.filter(card => card.series).length} shows of ${facts.cards.length}`);
     const browseCard = facts.cards.find(card => card.href.includes('tmdbType='));
     record(label, 'search: a TMDb result links its browse page', !!browseCard, browseCard?.href ?? 'none');
@@ -773,6 +814,7 @@ async function checkPaging(page, label) {
     }
     record(label, 'search paging: more results load by themselves', after.count > before.count, `${before.count} → ${after.count}`);
     record(label, 'search paging: nothing shown moves', shown.every((key, index) => after.cards[index]?.key === key));
+    record(label, 'search paging: the new cards follow those shown', after.cards.slice(shown.length).every(card => !shown.includes(card.key)), after.cards.slice(shown.length, shown.length + 5).map(card => card.title).join(', '));
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
