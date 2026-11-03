@@ -6,7 +6,7 @@ per row", the three-line caption with the year not bold, "The hover should be bo
 2026-11-01): the + "similar design and hover effect as cloud
 or play on the poster". Mockups `reviews/tmdb-search-design/mockup/`
 (states default, hover, adding, added, focus, loading, end) and `reviews/tmdb-browse-design/mockup/`. Built on both
-lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232), the Seasons arrows D252, the order D253; **built (not accepted)**. Code: `components/SearchCard.tsx`,
+lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232), the Seasons arrows D252, the order D253; **built (not accepted)**. Rounded corners and the ring in place of the paper panel (departure 1, D214, D225–D226; the disc D248): redesign slice 1, built, not accepted. Code: `components/SearchCard.tsx`,
 `components/searchGrid.scss` (`jfmod-search*`); the browse rows' cell `BrowseCell` in `components/TmdbDetails.tsx`,
 `components/tmdbDetails.scss` (`jfmod-browse*`).
 
@@ -22,23 +22,23 @@ Base unit 1em (the surface's font size; TV 125 %, phone 90 %). φ steps named.
 | Part | Value |
 | --- | --- |
 | Grid | cells touch, no gap; 5 per row on computer and TV (20 %), 2 on the phone (50 %); grid side padding 3.236em (2φ) |
-| Cell | padded **1em** on every side (even padding is the named exception to vertical = horizontal × φ, as Jellyfin's card); square corners |
-| Poster | 2:3, radius 0.2em (the card's), paper behind it; the kind's icon at 35 % without artwork |
+| Cell | padded **1em** on every side (even padding is the named exception to vertical = horizontal × φ, as Jellyfin's card) |
+| Poster | 2:3, radius 0.618em (φ⁻¹, the card's), paper behind it; the kind's icon at 35 % without artwork |
 | Caption | 0.382em (φ⁻²) under the poster; three 1em lines at line-height 1.618 (φ), each one line with an ellipsis, kept when empty |
 | Line 1 | the title, weight 700, full ink (`text-primary`) |
 | Line 2 | the year, weight 400, full ink; for a show "TV Series" 0.618em (φ⁻¹) after it at 85.4 % (1 − φ⁻⁴); nothing for a movie |
 | Line 3 | the two lead actors, comma separated, at 85.4 % |
-| Hover | the whole cell paper (`--jf-palette-background-paper`, #202020), 0.15 s; not on the phone |
-| TV focus | the same paper plus the primary ring **inside** the cell, `inset 0 0 0 0.382em` (φ⁻²) |
+| Hover | the card's ring on the poster, 0.135em primary, fading in 0.382 s and out 0.236 s; not on the phone |
+| TV focus | the same ring at 0.236em (φ⁻³), instant |
 | Phone | cells flush (padding 0 1em 1.618em 0), no hover panel |
 
 ## Marks and the add disc
 
-- **TMDB result:** the + as a library poster's centre button, drawn with upstream's own hover overlay (`cardOverlayContainer`,
+- **TMDB result:** the + as a library poster's disc ([poster-card.md](poster-card.md)), on upstream's own hover overlay markup (`cardOverlayContainer`,
   `cardOverlayFab-primary`, the Material `add` glyph), as Play and the mod's cloud are on a library card: hidden at rest; on the
-  cell's hover or focus the poster dims to black 50 % and the round button appears (black 70 %, 3em at 130 % of the cell's
-  font, 0.2 s), growing to 1.4 under the pointer; keyboard ring `0 0 0 0.15em` primary. While adding, the overlay stays shown
-  and the importing arc's 28 % segment turns white round the button (1.2 s, linear; stopped by reduced motion). Desktop only,
+  cell's hover or focus the poster dims 23.6 % and the glass disc appears, growing 1.146 and filling under the pointer; keyboard ring
+  `0 0 0 0.15em` primary. While adding, the disc stays shown
+  and the importing arc's 28 % segment turns in the glass's ink round it (1.2 s, linear; stopped by reduced motion). Desktop only,
   as the library's overlay: on the phone and the TV a TMDB result is added from its browse page.
 - **Library title without a file:** the Not Downloaded cloud top right ([download-state-mark.md](download-state-mark.md)'s
   file-state mark), an indicator, never a button on the card.

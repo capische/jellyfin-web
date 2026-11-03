@@ -19,6 +19,8 @@ import { useApi } from 'hooks/useApi';
 import ModToolbar from './ModToolbar';
 import '../components/interFont.scss';
 import '../components/modFont.scss';
+import '../components/lightGlass.scss';
+import '../components/cardDesign.scss';
 
 /*
  * Upstream's modern overrides, for the modern layout only.
