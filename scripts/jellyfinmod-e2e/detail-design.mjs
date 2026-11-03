@@ -1478,9 +1478,30 @@ function vlGeometry(layout, facts, label, want = {}) {
         facts.triggerText);
 }
 
-function vlOpenGeometry(layout, facts, label, count) {
+/**
+ * The title's files as the list must order them (`bestFirst` in constants/versions.ts, D114): the higher resolution, then Dolby Vision,
+ * HDR, SDR, then the larger file; ties keep the plugin's order. Read from the plugin's versions; the file ids of this page's select.
+ */
+const vlBestFirst = async page => {
+    const [entryId, sources] = await page.evaluate(sel => [document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'),
+        [...document.querySelector(`${sel} .selectSource`)?.options ?? []].map(option => option.value)], PAGE);
+    const detail = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
+    const mine = [...detail.versions ?? [], ...(detail.episodes ?? []).flatMap(episode => episode.versions ?? [])]
+        .filter(version => sources.length === 0 || sources.some(id => norm(id) === norm(version.mediaSourceId)));
+    const range = version => {
+        const name = (version.videoRange ?? '').toLowerCase();
+        if (/dovi|dolby\s*vision/.test(name)) return 2;
+        return name && name !== 'sdr' && name !== 'unknown' ? 1 : 0;
+    };
+    const lines = version => parseInt(version.resolution, 10) || version.height || 0;
+    return mine.map((version, index) => ({ version, index })).sort((a, b) => lines(b.version) - lines(a.version) || range(b.version) - range(a.version)
+        || (b.version.sizeBytes ?? 0) - (a.version.sizeBytes ?? 0) || a.index - b.index).map(({ version }) => norm(version.mediaSourceId));
+};
+
+function vlOpenGeometry(layout, facts, label, expected) {
     const near = (a, b, within = 1) => Math.abs(a - b) <= within;
-    record(layout, `${label}: one row per file, best first`, facts.rows.length === count && facts.rows[0]?.resolution.startsWith('2160'), facts.rows.map(row => row.resolution).join(', '));
+    record(layout, `${label}: one row per file, best first`, JSON.stringify(facts.rows.map(row => norm(row.id))) === JSON.stringify(expected),
+        `${facts.rows.map(row => row.resolution).join(', ')}; want ${expected.join(', ')}`);
     const shouldTwo = isMobile(layout) || (facts.list?.w ?? 0) < 24 * facts.belowEm;
     record(layout, `${label}: the rows are two lines exactly when the cell is under 24em (always on a phone)`, facts.two === shouldTwo,
         `two ${facts.two}, list ${facts.list?.w.toFixed(1)}px = ${((facts.list?.w ?? 0) / facts.belowEm).toFixed(2)}em`);
@@ -1534,14 +1555,14 @@ async function checkVideoListRows(page, layout, id, tag, want) {
     const closed = await vlFacts(page);
     vlGeometry(layout, closed, `${tag} closed`, want);
     await vlShot(page, `${layout}-${tag}-closed`);
-    const count = (await apiGet(page, `Users/${await page.evaluate(() => ApiClient.getCurrentUserId())}/Items/${id}`)).MediaSources.length;
+    const expected = await vlBestFirst(page);
     if (!await vlOpen(page, layout)) { record(layout, `${tag}: the Video list opens`, false, await vlActive(page)); return; }
     await page.waitForTimeout(350);
     const open = await vlFacts(page);
     record(layout, `${tag}: aria-expanded follows`, open.expanded === 'true');
-    vlOpenGeometry(layout, open, `${tag} open`, count);
+    vlOpenGeometry(layout, open, `${tag} open`, expected);
     await vlShot(page, `${layout}-${tag}-open`);
-    return { closed, open, count };
+    return { closed, open };
 }
 
 async function checkVideoListChoose(page, layout, id, tag) {
