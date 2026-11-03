@@ -64,7 +64,7 @@ const luminance = colour => {
 /** Ink that belongs to the theme: light on the dark ground, dark on the light one. */
 const inkFits = (colour, theme) => (theme === 'dark' ? luminance(colour) > 0.6 : luminance(colour) < 0.4);
 
-async function signIn(page) {
+async function signIn(page, user = 'oleksii') {
     await page.goto(base(), { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
     await page.waitForFunction(() => {
@@ -79,7 +79,7 @@ async function signIn(page) {
         await field.waitFor({ state: 'visible', timeout: 15000 });
     }
     await page.waitForTimeout(1000);
-    await field.fill('oleksii');
+    await field.fill(user);
     await page.locator('#txtManualPassword').fill('');
     await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
     await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
@@ -800,6 +800,132 @@ async function checkAddFromCard(page, label) {
     record(label, 'the + on a card: the + is back after Undo', await cell.evaluate(node => !!node.querySelector('.jfmod-searchAdd')));
 }
 
+/**
+ * Back while an Add runs, with its answer landing where a guard cleared on unmount would miss it: after the page's viewbeforehide and
+ * before the unmount that hide defers with setTimeout (renderComponent). The answer is held and that timer widened to land there every
+ * time. The catalog still gets the title, and the page stays where the viewer went (tm2.r1).
+ */
+async function checkBackDuringAdd(page, label) {
+    if (await entryOf(page, 'series', LONG_SERIES)) { notVerified(label, 'Back during an Add', 'The Simpsons is already in the library'); return; }
+    await page.goto(base() + '#/home', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await page.goto(base() + browsePath('series', LONG_SERIES), { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(`${PAGE} .jfmod-browseAdd`, { timeout: 30000 });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+        const realTimeout = window.setTimeout;
+        const window_ = { hiding: false, hidden: false, unmountsWaiting: 0, hashChangedAt: 0, hiddenAt: 0 };
+        window.__backDuringAdd = window_;
+        window.addEventListener('hashchange', () => { window_.hashChangedAt ||= performance.now(); }, { once: true });
+        document.addEventListener('viewbeforehide', () => {
+            window_.hiding = true;
+            window_.hidden = true;
+            window_.hiddenAt ||= performance.now();
+            realTimeout(() => { window_.hiding = false; }, 0);
+        }, { capture: true });
+        window.setTimeout = (callback, delay, ...args) => {
+            if (!window_.hiding || delay) return realTimeout(callback, delay, ...args);
+            window_.unmountsWaiting += 1;
+            return realTimeout(() => { window_.unmountsWaiting -= 1; callback(...args); }, 8000);
+        };
+    });
+    let reached;
+    const atServer = new Promise(resolve => { reached = resolve; });
+    let release;
+    const released = new Promise(resolve => { release = resolve; });
+    const entriesPost = '**/JellyfinMod/Entries';
+    const hold = async route => {
+        if (route.request().method() !== 'POST') { await route.fallback(); return; }
+        const answer = await route.fetch();
+        reached();
+        await released;
+        await route.fulfill({ response: answer });
+    };
+    await page.route(entriesPost, hold);
+    await page.locator(`${PAGE} .jfmod-browseAdd`).click();
+    await Promise.race([atServer, page.waitForTimeout(90000)]);
+    const entry = await entryOf(page, 'series', LONG_SERIES);
+    if (entry) added.add(entry.id);
+    await page.goBack();
+    await page.waitForFunction(() => location.hash.startsWith('#/home') && window.__backDuringAdd.hidden, undefined, { timeout: 15000 });
+    const before = await page.evaluate(() => ({ ...window.__backDuringAdd }));
+    const answered = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname.endsWith('/JellyfinMod/Entries'), { timeout: 15000 });
+    release();
+    await answered;
+    await page.waitForTimeout(1500);
+    const after = await page.evaluate(() => ({ ...window.__backDuringAdd }));
+    await page.unroute(entriesPost, hold);
+    console.log(`note: viewbeforehide came ${Math.round(before.hiddenAt - before.hashChangedAt)} ms after Back changed the address`);
+    record(label, 'Back during an Add: the answer landed after hide and before the unmount', before.unmountsWaiting > 0 && after.unmountsWaiting > 0, `${before.unmountsWaiting} then ${after.unmountsWaiting} unmounts waiting`);
+    await page.waitForTimeout(8000);
+    const hash = await page.evaluate(() => location.hash);
+    record(label, 'Back during an Add: the title still joins the library', !!entry, entry?.id ?? 'no entry');
+    record(label, 'Back during an Add: the page stays where the viewer went', hash.startsWith('#/home'), hash);
+    // The title's placeholders may still be being written: its removal is refused or times out until they are done.
+    for (let wait = 0; entry && wait < 40; wait++) {
+        await apiDelete(page, `JellyfinMod/Entries/${entry.id}`).catch(() => {});
+        if (!await entryOf(page, 'series', LONG_SERIES)) break;
+        await page.waitForTimeout(3000);
+    }
+    if (entry) record(label, 'Back during an Add: removed again', !await entryOf(page, 'series', LONG_SERIES));
+    added.delete(entry?.id);
+}
+
+/**
+ * A user who may read no title makes every page of a search empty after filtering, with TMDB always offering another: three empty pages
+ * per kind and it stops, however long the end of the grid stays in view (tm2.r1). Needs a saved token, as only a token pages.
+ */
+async function checkEmptyPagesStop(browser, page, label) {
+    const name = 'tm2-empty-pages';
+    if ((await apiJson(page, 'Users')).some(user => user.Name === name)) { notVerified(label, 'empty pages stop', `user ${name} is already here`); return; }
+    const user = await page.evaluate(n => ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Users/New'), data: JSON.stringify({ Name: n, Password: '' }), contentType: 'application/json', dataType: 'json' }), name);
+    const context = await browser.newContext({ viewport: LAYOUTS.computer.viewport, serviceWorkers: 'block' });
+    try {
+        await page.evaluate(([id, policy]) => ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl(`Users/${id}/Policy`), data: JSON.stringify(policy), contentType: 'application/json' }),
+            [user.Id, { ...user.Policy, MaxParentalRating: -1, BlockUnratedItems: [] }]);
+        const viewer = await context.newPage();
+        const asked = [];
+        const pages = [];
+        // Counted when sent: a fourth page fails even if it never gets an answer.
+        viewer.on('request', request => {
+            if (!request.url().includes('JellyfinMod/Discover/Search')) return;
+            const params = new URL(request.url()).searchParams;
+            asked.push({ type: params.get('type'), page: Number(params.get('page') ?? 1) });
+        });
+        viewer.on('response', response => {
+            if (!response.url().includes('JellyfinMod/Discover/Search')) return;
+            const params = new URL(response.url()).searchParams;
+            pages.push(response.json().catch(() => null).then(body => ({ type: params.get('type'), page: Number(params.get('page') ?? 1), status: response.status(), body })));
+        });
+        await signIn(viewer, name);
+        await viewer.goto(base() + '#/search?query=love', { waitUntil: 'domcontentloaded' });
+        await viewer.waitForTimeout(25000);
+        await viewer.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        await viewer.waitForTimeout(5000);
+        const settled = asked.length;
+        await viewer.waitForTimeout(10000);
+        // Three successful pages per kind, each empty after filtering with TMDB offering another, and no fourth: a failed search stops too.
+        const answers = await Promise.all(pages);
+        for (const type of ['movie', 'series']) {
+            const kind = answers.filter(answer => answer.type === type);
+            // A library change while the grid is open refetches it: the three pages again from the first, never a fourth.
+            const order = kind.map(answer => answer.page).join();
+            record(label, `empty pages stop: ${type}: three pages, then none`, /^1,2,3(,1,2,3)*$/.test(order), `pages ${order}`);
+            const sent = asked.filter(request => request.type === type).map(request => request.page);
+            record(label, `empty pages stop: ${type}: no fourth page asked for`, sent.length > 0 && sent.every(number => number <= 3), `sent ${sent.join()}`);
+            record(label, `empty pages stop: ${type}: each one answered, empty, with another on offer`,
+                kind.length > 0 && kind.every(answer => answer.status === 200 && answer.body?.items?.length === 0 && answer.body?.nextPage === answer.page + 1 && answer.body?.skipped === 0),
+                kind.map(answer => `${answer.status}, ${answer.body?.items?.length} items, next ${answer.body?.nextPage}, skipped ${answer.body?.skipped}`).join('; '));
+        }
+        record(label, 'empty pages stop: it does not walk on', asked.length === settled, `${settled} then ${asked.length}`);
+        const shown = await viewer.evaluate(() => document.querySelectorAll('.jfmod-searchCell').length);
+        record(label, 'empty pages stop: the user is offered nothing', shown === 0, `${shown} cards`);
+    } finally {
+        await context.close();
+        await page.evaluate(id => ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl(`Users/${id}`) }), user.Id).catch(error => console.log(`note: removing the user: ${error}`));
+    }
+}
+
 async function checkPaging(page, label) {
     await waitForSearch(page, 'love');
     const before = await searchFacts(page);
@@ -849,6 +975,8 @@ async function checkLayout(browser, layoutName, theme) {
             if (layoutName === 'computer') await checkAddFromCard(page, label).catch(error => record(label, 'the + on a card: ran to the end', false, error.message.split('\n')[0]));
         }
         if (TOKEN && layoutName === 'computer' && theme === 'dark') await checkPaging(page, label).catch(error => record(label, 'search paging: ran to the end', false, error.message.split('\n')[0]));
+        if (TOKEN && layoutName === 'computer' && theme === 'dark') await checkEmptyPagesStop(browser, page, label).catch(error => record(label, 'empty pages stop: ran to the end', false, error.message.split('\n')[0]));
+        if (ADD && layoutName === 'computer' && theme === 'dark') await checkBackDuringAdd(page, label).catch(error => record(label, 'Back during an Add: ran to the end', false, error.message.split('\n')[0]));
         for (const id of [...added]) {
             await apiDelete(page, `JellyfinMod/Entries/${id}`).catch(() => {});
             added.delete(id);
