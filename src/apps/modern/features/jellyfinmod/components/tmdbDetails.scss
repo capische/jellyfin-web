@@ -50,18 +50,17 @@
 }
 
 // The TV's scroller clips to its frame (upstream sets overflow hidden there), so the frame takes the pull-out and the first cell's
-// lit panel and ring stay whole; the image still lines up with the heading.
-.layout-tv .jfmod-browseFrame {
+// lit panel and ring stay whole; the image still lines up with the heading. So does the computer's Seasons row, which sits beside the
+// poster and clips to its frame so that a scrolled row never slides over it (D252).
+.layout-tv .jfmod-browseFrame,
+.layout-desktop #listChildrenCollapsible .jfmod-browseFrame {
     margin-left: -1em;
 
     > .itemsContainer.jfmod-browseRow { margin: 0; }
 }
 
-#listChildrenCollapsible .jfmod-browseRow {
-    overflow-x: auto;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar { display: none; }
+.layout-desktop #listChildrenCollapsible .jfmod-browseFrame {
+    overflow: hidden;
 }
 
 .layout-tv .jfmod-browseCell:focus {
