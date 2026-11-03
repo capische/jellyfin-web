@@ -1,6 +1,6 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import actionsheet from 'components/actionSheet/actionSheet';
@@ -187,6 +187,7 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
     const addToLibrary = useCallback(async (event: MouseEvent<HTMLButtonElement>) => {
         if (adding) return;
         const button = event.currentTarget;
+        const openedAt = window.location.hash;
         const kind = mediaType === 'movie' ? CollectionType.Movies : CollectionType.Tvshows;
         const libraries = (views.data?.Items ?? []).filter(item => item.CollectionType === kind && item.Id);
         let targetLibraryId = libraries.length === 1 ? libraries[0].Id ?? undefined : undefined;
@@ -206,8 +207,9 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
         try {
             const result = await createEntry(api, { mediaType, tmdbId: metadata.tmdbId, targetLibraryId });
             invalidateCatalog(api);
-            // The title's own library page from here on; Back returns to where the browse page was opened from.
-            window.location.replace('#' + getEntryPath(result.entry.id, serverId));
+            // The title's own library page from here on; Back returns to where the browse page was opened from. A viewer who has left
+            // stays where they went, read from the address: it changes at once, and the page's unmount is deferred past its hide (tm2.r1).
+            if (window.location.hash === openedAt) window.location.replace('#' + getEntryPath(result.entry.id, serverId));
         } catch (error) {
             console.error('[JellyfinMod] add from the browse page failed', error);
             toast('Could not add this title');
