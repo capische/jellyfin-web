@@ -7,8 +7,11 @@ import SearchButton from 'apps/modern/components/AppToolbar/SearchButton';
 import SyncPlayButton from 'apps/modern/components/AppToolbar/SyncPlayButton';
 import UserViewNav from 'apps/modern/components/AppToolbar/userViews/UserViewNav';
 import { appRouter, PUBLIC_PATHS } from 'components/router/appRouter';
+import layoutManager from 'components/layoutManager';
 import BaseToolbar from 'components/toolbar/AppToolbar';
 import ServerButton from 'components/toolbar/ServerButton';
+
+import ChromeSearch from './ChromeSearch';
 
 import { useModToolbarClass } from './useModToolbarClass';
 
@@ -44,6 +47,7 @@ const ModToolbar: FC<ModToolbarProps> = ({
 
     const isBackButtonAvailable = window.NativeShell && appRouter.canGoBack(location.pathname);
     const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
+    const chromeEnabled = !isPublicPath && !location.pathname.startsWith('/catalog/settings');
 
     return (
         <BaseToolbar
@@ -51,7 +55,7 @@ const ModToolbar: FC<ModToolbarProps> = ({
                 <>
                     <SyncPlayButton />
                     <RemotePlayButton />
-                    <SearchButton />
+                    {chromeEnabled ? <span className='jfmod-phoneSearch'><SearchButton /></span> : <SearchButton />}
                 </>
             )}
             isDrawerAvailable={isDrawerAvailable}
@@ -61,12 +65,13 @@ const ModToolbar: FC<ModToolbarProps> = ({
             isUserMenuAvailable={!isPublicPath}
             className={'padded-left padded-right' + homeClass}
         >
+            {chromeEnabled && !layoutManager.mobile && <ChromeSearch />}
             {!isDrawerAvailable && (
                 <Stack
                     direction='row'
-                    spacing={0.5}
+                    spacing={chromeEnabled ? undefined : 0.5}
                 >
-                    <ServerButton />
+                    {chromeEnabled ? <span className='jfmod-serverWordmark'><ServerButton /></span> : <ServerButton />}
 
                     {!isPublicPath && (
                         <UserViewNav />

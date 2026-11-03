@@ -10,6 +10,10 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 
 | Guide | Component | Used by |
 | --- | --- | --- |
+| [shared-chrome.md](shared-chrome.md) | scoped type, colour, dialogs, switches, existing settings/list rows, motion and focus | signed-in mod shell, excluding admin and wizard |
+| [menus.md](menus.md) | paper menus, anchored lists and scrolling phone sheets | More, user, library and player menus |
+| [top-bar.md](top-bar.md) | glass top bar and its single URL-backed search | computer, tablet, phone and legacy TV header |
+| [spinner.md](spinner.md) | smaller upstream loading spinner and theme ink | loading in the mod shell |
 | [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block, the season and series headers |
 | [card-glass.md](card-glass.md) | the frosted-glass recipe and its ink colours | the scrolled top bar, every mark on a poster, the poster's disc and foot pill |
 | [poster-card.md](poster-card.md) | the poster: corners, the hover ring and dim, the centred glass disc, the foot pill, TV focus, the Movies and Shows grid and its three-line caption | every card in the mod shell |

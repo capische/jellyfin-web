@@ -78,7 +78,7 @@ const dialogState = () => page.evaluate(() => {
         notes: text('.jfmod-removeNote'),
         blocklist: !!dialog.querySelector('.jfmod-removeBlocklistBox'),
         choices: [...dialog.querySelectorAll('.jfmod-removeChoice')].map(button => ({ id: button.getAttribute('data-choice'), name: button.textContent,
-            red: button.classList.contains('button-delete'), background: getComputedStyle(button).backgroundColor })),
+            red: button.classList.contains('button-delete'), background: getComputedStyle(button).backgroundColor, ring: getComputedStyle(button).boxShadow })),
         focused: document.activeElement?.getAttribute?.('data-choice') ?? null,
         font: getComputedStyle(dialog.querySelector('.jfmod-removeTitle')).fontFamily.split(',')[0],
         paper: getComputedStyle(dialog).backgroundColor,
@@ -89,7 +89,7 @@ const dialogState = () => page.evaluate(() => {
             return x ? { size: Math.round(Math.min(x.width, x.height)), dy: Math.round(Math.abs(x.top + x.height / 2 - title.top - title.height / 2)),
                 right: x.right > title.right, label: dialog.querySelector('.jfmod-removeClose').getAttribute('aria-label') } : null;
         })(),
-        // The theme's own greys and focus blue, read through the same variables the stock button rules use.
+        // rd2: the outlined other button, its 12% hover tint, and TV focus blue.
         colours: (() => {
             const probe = value => {
                 const node = document.createElement('div');
@@ -99,7 +99,7 @@ const dialogState = () => page.evaluate(() => {
                 node.remove();
                 return colour;
             };
-            return { grey: probe('var(--jf-palette-Button-inheritContainedBg, #424242)'), hover: probe('var(--jf-palette-Button-inheritContainedHoverBg, #616161)'),
+            return { other: probe('transparent'), hover: probe('var(--jfmod-chrome-tint)'),
                 blue: probe('var(--jf-palette-secondary-main, #00a4dc)') };
         })()
     };
@@ -199,13 +199,13 @@ async function dialogStep() {
         record(step, `${key}: the close X is level with the title on its right, at least 40 px, labelled Close`,
             !!state.close && state.close.size >= 40 && state.close.dy <= 4 && state.close.right && state.close.label === 'Close', JSON.stringify(state.close));
         const safe = state.choices.find(choice => choice.id === 'cancel');
-        record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'grey'} as the dialog opens`,
-            safe?.background === (tv ? state.colours.blue : state.colours.grey), JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));
+        record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'outlined'} as the dialog opens`,
+            safe?.background === (tv ? state.colours.blue : state.colours.other) && safe?.ring !== 'none', JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));
         if (index === 0 && !tv && !phone) {
             await page.locator('.jfmod-removeChoice[data-choice="cancel"]').hover();
             await page.waitForTimeout(400);
             const hover = await page.locator('.jfmod-removeChoice[data-choice="cancel"]').evaluate(button => getComputedStyle(button).backgroundColor);
-            record(step, `${key}: the safe choice takes the stock hover grey under the pointer`, hover === state.colours.hover, hover);
+            record(step, `${key}: the safe choice takes the approved 12% hover tint under the pointer`, hover === state.colours.hover, hover);
             await page.mouse.move(5, 5);
             await page.waitForTimeout(300);
         }
@@ -352,7 +352,7 @@ async function openersStep() {
         checkPlan(step, 'pending Replace', state, expected(replace));
         record(step, 'pending Replace: says what stays', state.notes.some(note => / file stays\.$/.test(note)), JSON.stringify(state.notes));
         const safe = state.choices.find(choice => choice.id === 'cancel');
-        record(step, 'pending Replace: the safe choice is grey as the dialog opens', safe?.background === state.colours.grey, safe?.background);
+        record(step, 'pending Replace: the safe choice is outlined as the dialog opens', safe?.background === state.colours.other && safe?.ring !== 'none', safe?.background);
         await shot(page, 'opener-pending-replace');
         await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
         await waitClosed();

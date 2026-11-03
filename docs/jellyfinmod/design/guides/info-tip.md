@@ -1,5 +1,10 @@
 # Info tip: the (i) and its popover
 
+**rd2 shared chrome (built, not accepted):** the (i) reuses the round row action and its .236s pointer tint; the TV ring is
+white in both themes, as required by the redesign's row-action rule. Shared tooltip timing is .382s wait/.236s fade, no tooltip
+on phone/TV. The InfoPopover itself is explicitly excluded from menu paper/caps/phone sheets and retains the anchored
+popover, width, content and interactions below. Admin and wizard remain outside this scope.
+
 **Status:** approved 2026-10-26 (user, revision 2 of `reviews/picker-failure-info/` in the workspace, with the tooltip placed above
 the (i) and "drop the sources part" of the status line). Built on `feat/failure-info` (P4.FU25, built, not accepted). Code: web
 `components/InfoPopover.tsx`, `components/infoPopover.scss`; the picker's (i) in `components/ReleaseSources.tsx` (`FailureInfo`)

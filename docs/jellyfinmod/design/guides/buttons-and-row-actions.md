@@ -1,5 +1,15 @@
 # Buttons and row actions
 
+**rd2 current presentation (approved redesign D225–D227, built, not accepted):** outside Dashboard, `/catalog/settings` and
+its setup wizard, `shell/sharedChrome.scss` draws all labelled buttons as 2.7816em pills (1.3908em corners), side padding
+1.618em, 1em Title Case labels. Main: primary/white 700, hover #19b4ea. Other: transparent/.09em neutral outline/600,
+hover 12% tint. Destroy: #c62828/white 600, hover #d84343. Disabled labelled buttons: no fill, hairline, 61.8% ink.
+Keyboard focus: .15em primary ring .15em off the pill. TV: .16em ink ring, 1.08 growth, other filled primary; destroy stays red.
+Press .96/.146s, tint .236s; instant focus on TV and no press transform with reduced motion. Row actions retain their existing
+40px sizes and glyph state; TV uses the white double ring (.12em paper gap + .16em white = .28em outer shadow), no scaling,
+including the Video row's History/Keep/Remove. Refused actions keep their focus stop. The removal dialog's safe outcome is
+now outlined; its outcomes remain full-width. Other specialized content/layouts below remain. See [shared chrome](shared-chrome.md).
+
 **Status:** user rules 2026-10-07/08 (three button kinds, Title Case, round icon-only row actions), applied across the
 settings area, the Dashboard page, the detail page and the dialogs. Settings › Trakt's red Disconnect (`link_off`) and the
 group-title disclosure: user approval 2026-10-29 ("Round red icon is fine, go ahead with Trakt build"; decisions D67, D72,

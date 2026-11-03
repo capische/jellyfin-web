@@ -706,7 +706,9 @@ const trackList = page => page.evaluate(box => {
     if (!list) return null;
     const entries = [...list.querySelectorAll('[role="option"]')].map(node => ({ value: node.getAttribute('data-jfmod-track'),
         selected: node.getAttribute('aria-selected') === 'true', bar: getComputedStyle(node).borderLeftColor,
-        barWidth: parseFloat(getComputedStyle(node).borderLeftWidth), text: node.title, drawn: window.jfmodTrack(node) }));
+        barWidth: parseFloat(getComputedStyle(node).borderLeftWidth),
+        check: getComputedStyle(node, '::before').backgroundImage, checkWidth: parseFloat(getComputedStyle(node, '::before').width) / parseFloat(getComputedStyle(node).fontSize),
+        nameColour: getComputedStyle(node.querySelector('.jfmod-trackLanguage') || node).color, text: node.title, drawn: window.jfmodTrack(node) }));
     const paper = list.closest('.MuiPaper-root');
     return { entries, focused: document.activeElement?.getAttribute('data-jfmod-track') ?? null,
         paper: paper ? getComputedStyle(paper).backgroundColor : null };
@@ -748,9 +750,10 @@ async function checkTrackList(page, layout, name, streams, target) {
     record(layout, `${name}: one entry per upstream option, in its order`, JSON.stringify(list.entries.map(entry => entry.value))
         === JSON.stringify(before.options.map(option => option.value)), `${list.entries.length} entries, ${before.options.length} options`);
     const current = list.entries.filter(entry => entry.selected);
-    record(layout, `${name}: the current entry has the blue left bar, the others none`, current.length === 1 && current[0].value === before.value
-        && current[0].bar === 'rgb(0, 164, 220)' && current[0].barWidth > 0 && list.entries.filter(entry => !entry.selected).every(entry => entry.bar === 'rgba(0, 0, 0, 0)'),
-    JSON.stringify(current.map(entry => [entry.value, entry.bar, entry.barWidth])));
+    record(layout, `${name}: only the current entry has the blue check and name, with no left bar`, current.length === 1 && current[0].value === before.value
+        && current[0].nameColour === 'rgb(0, 164, 220)' && current[0].check.includes('%2300a4dc') && Math.abs(current[0].checkWidth - 0.618) < 0.01
+        && list.entries.every(entry => entry.barWidth === 0) && list.entries.filter(entry => !entry.selected).every(entry => entry.check === 'none'),
+    JSON.stringify(current.map(entry => [entry.value, entry.nameColour, entry.checkWidth])));
     if (!isMobile(layout)) record(layout, `${name}: the list opens on the current entry`, list.focused === before.value, `focused ${list.focused}`);
     const problems = [];
     for (const entry of list.entries) {
@@ -1372,12 +1375,14 @@ const vlFacts = page => page.evaluate(sel => {
         open: !!list?.classList.contains('jfmod-fileList--open'), list: box(list), box: box(clip), two: !!list?.classList.contains('jfmod-fileList--two'),
         inCard: !!list?.closest('.jfmod-strip'), position: list && getComputedStyle(list).position,
         boxBackground: clip && getComputedStyle(clip).backgroundColor, boxBorder: clip && getComputedStyle(clip).borderBottomColor,
+        boxBorderWidth: clip && parseFloat(getComputedStyle(clip).borderBottomWidth), boxRadius: clip && parseFloat(getComputedStyle(clip).borderTopLeftRadius) / parseFloat(getComputedStyle(clip).fontSize),
         boxOverflow: clip ? clip.scrollWidth - clip.clientWidth : 0,
         rows: [...root.querySelectorAll('.jfmod-fileList .jfmod-fileRow')].map(row => {
             const lines = [...row.querySelectorAll('.jfmod-fileLine')];
             const size = row.querySelector('.jfmod-fileSize');
             return { box: box(row), text: row.innerText.replace(/\s+/g, ' ').trim(), selected: row.classList.contains('jfmod-fileRow--selected'),
                 bar: getComputedStyle(row).boxShadow, background: getComputedStyle(row).backgroundColor,
+                check: getComputedStyle(row, '::before').backgroundImage, nameColour: getComputedStyle(row.querySelector('.jfmod-fileResolution')).color,
                 id: row.querySelector('.jfmod-fileChoose')?.getAttribute('data-jfmod-media-source-id'),
                 phoneMark: !!row.querySelector('.jfmod-phoneMark'), resolution: row.querySelector('.jfmod-fileResolution')?.textContent ?? '',
                 lines: lines.map(box), sizeLine: lines.findIndex(line => line.contains(size)), size: box(size), sizeUncut: uncut(size), sizeText: size?.textContent ?? null,
@@ -1509,8 +1514,8 @@ function vlOpenGeometry(layout, facts, label, expected) {
         record(layout, `${label}: the list is in the card, in the Video segment, static, and pushes Audio down`, facts.inCard && facts.position === 'static'
             && facts.audio.t >= facts.list.b - 1 && near(facts.list.w, facts.video.w, 3), JSON.stringify({ inCard: facts.inCard, position: facts.position, list: facts.list, audio: facts.audio.t }));
     } else {
-        record(layout, `${label}: the list is exactly the Video cell: the strip's outer left to the Audio divider, flush under the strip`, !facts.inCard && facts.position === 'absolute'
-            && near(facts.list.l, facts.strip.l, 0.6) && near(facts.list.r, facts.video.r, 0.6) && near(facts.list.t, facts.strip.b, 1),
+        record(layout, `${label}: the list is exactly the Video cell, 0.382em under the strip`, !facts.inCard && facts.position === 'absolute'
+            && near(facts.list.l, facts.strip.l, 0.6) && near(facts.list.r, facts.video.r, 0.6) && near(facts.list.t, facts.strip.b + 0.382 * facts.belowEm, 1),
         JSON.stringify({ list: facts.list, strip: facts.strip, video: facts.video }));
     }
     const em = facts.belowEm;
@@ -1534,8 +1539,10 @@ function vlOpenGeometry(layout, facts, label, expected) {
     }
     record(layout, `${label}: nothing overflows inside the list`, facts.boxOverflow <= 1, String(facts.boxOverflow));
     const selected = rows.filter(row => row.selected);
-    record(layout, `${label}: the current file alone has the blue bar`, selected.length === 1 && selected[0].bar.includes('rgb(0, 164, 220)') && rows.filter(row => !row.selected).every(row => !row.bar.includes('rgb(0, 164, 220)')),
-        JSON.stringify(rows.map(row => [row.selected, row.bar])));
+    record(layout, `${label}: only the current file has the blue check and name, with no bar or selected tint`, selected.length === 1
+        && selected[0].check.includes('%2300a4dc') && selected[0].nameColour === 'rgb(0, 164, 220)' && selected[0].background === 'rgba(0, 0, 0, 0)'
+        && rows.every(row => row.bar === 'none') && rows.filter(row => !row.selected).every(row => row.check === 'none'),
+        JSON.stringify(rows.map(row => [row.selected, row.check, row.nameColour, row.background])));
     record(layout, `${label}: the selected row's size is the closed value's`, selected[0]?.sizeText === facts.valueSizeText, `${selected[0]?.sizeText} / ${facts.valueSizeText}`);
 }
 
@@ -1545,7 +1552,7 @@ async function checkVideoListTheme(page, layout, theme) {
     const dark = relativeLuminance(facts.boxBackground) < 0.3;
     record(layout, `${theme}: the list's paper is the theme's`, theme === 'light' ? relativeLuminance(facts.boxBackground) > 0.6 : dark, facts.boxBackground);
     if (!facts.stacked) {
-        record(layout, `${theme}: the floating list's border is the theme's divider`, facts.boxBorder === (theme === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)'), facts.boxBorder);
+        record(layout, `${theme}: the floating list is borderless paper with 1em nested corners`, facts.boxBorderWidth === 0 && Math.abs(facts.boxRadius - 1) < 0.01, JSON.stringify({ border: facts.boxBorderWidth, radius: facts.boxRadius }));
     }
 }
 
@@ -1744,13 +1751,14 @@ async function checkVideoListTracks(page, layout, id) {
             const cell = document.querySelector(`${sel} .jfmod-stripSegment--${cellName}`).getBoundingClientRect();
             const paper = document.querySelector('.jfmod-trackMenuPaper').getBoundingClientRect();
             return { stacked: document.querySelector(`${sel} .jfmod-strip`).classList.contains('jfmod-strip--stacked'), strip: [strip.left, strip.right, strip.bottom], cell: [cell.left, cell.right, cell.bottom], paper: [paper.left, paper.right, paper.top],
+                em: parseFloat(getComputedStyle(document.querySelector('.jfmod-trackMenuPaper')).fontSize),
                 options: document.querySelectorAll('.jfmod-trackMenu [role="option"]').length, 
                 current: document.querySelector('.jfmod-trackMenu [aria-selected="true"]')?.getAttribute('data-jfmod-track') };
         }, [PAGE, name.toLowerCase()]);
         const close = (a, b, within = 1.5) => Math.abs(a - b) <= within;
-        record(layout, `${name}: the list is exactly its cell, flush under it`, place.stacked
-            ? close(place.paper[0], place.strip[0]) && close(place.paper[1], place.strip[1]) && close(place.paper[2], place.cell[2])
-            : close(place.paper[0], place.cell[0], 2) && close(place.paper[1], name === 'Subtitles' ? place.strip[1] : place.cell[1], 2) && close(place.paper[2], place.strip[2]), JSON.stringify(place));
+        record(layout, `${name}: the list is exactly its cell, 0.382em under it`, place.stacked
+            ? close(place.paper[0], place.strip[0]) && close(place.paper[1], place.strip[1]) && close(place.paper[2], place.cell[2] + 0.382 * place.em)
+            : close(place.paper[0], place.cell[0], 2) && close(place.paper[1], name === 'Subtitles' ? place.strip[1] : place.cell[1], 2) && close(place.paper[2], place.strip[2] + 0.382 * place.em), JSON.stringify(place));
         await vlShot(page, `${layout}-${tag}-${name.toLowerCase()}-open`);
         const options = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(node => node.getAttribute('data-jfmod-track')), `${LISTBOX} [role="option"]`);
         const hidden = () => page.evaluate(([sel, cls]) => document.querySelector(`${sel} .${cls}`)?.value, [PAGE, select]);
