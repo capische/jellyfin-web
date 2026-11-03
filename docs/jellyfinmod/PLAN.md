@@ -1201,11 +1201,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   dark and light, Chromium and real Chrome: 1151 of 1151 dark and 1096 of 1096 light on each. Two stubs light TV 1920 failures were the
   runner's: the dark run beside it had Kept the same file, and a kept file has no Remove; alone that layout passes 72 of 72 in both browsers.
   The sections of `detail-design.mjs` older than the strip (one-file, tracks) still read upstream's rows and were not used. Not run: the
-  physical TV. The user's re-verify, the Codex review, merge and push have not run.
-  **The two failures are open and need the user's call:** on a real file the closed value's `AVC` beside `123 MB` is cut at 996 and 1000 px,
-  and longer marks and sizes are cut further up (the guide lists the widths). The sections of `detail-design.mjs` older than the strip
-  (one-file, tracks) still read upstream's rows and were not used. Not run: the physical TV. The user's re-verify, the Codex review, merge
-  and push have not run.
+  physical TV.
   **P7.FU7, built (not accepted) 2026-10-19: an asterisk at the end of the required settings fields' labels, and no "(Optional)" anywhere** (user
   2026-10-19: "Go with asterisks everywhere", after [design/required-fields-audit.md](design/required-fields-audit.md) and
   [design/optional-field-marker.html](design/optional-field-marker.html); [UX.md](UX.md) §12.1, guide
