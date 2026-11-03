@@ -17,6 +17,8 @@ export interface SearchCardItem {
     year?: number | null;
     /** The release date (ISO) where known: full matches are ordered by it. */
     date?: string | null;
+    /** TMDB's votes where known: the grid's order (D253). */
+    votes?: number | null;
     /** The two lead actors, at most. */
     cast: string[];
     poster?: string;

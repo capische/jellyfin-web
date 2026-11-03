@@ -11,9 +11,8 @@ ran 2026-11-02; the user's re-verify (gate 3) and the Codex review (gate 4) foll
 ## What changes for the user
 
 - **Search** (`#/search`): one vertical grid, movies and shows together, library titles and TMDB results mixed. The order
-  (user, 2026-11-01, after the first look: "full match", "the latest release" and then "fuzzy match"): titles equal to the
-  query first, newest release first; then the rest, library titles by name, then TMDB's results with each page's movies and
-  shows ranked together by popularity. Cards already shown never move. Five cells per row on computer and TV, two on
+  (user, 2026-11-03, D253, revising D206): titles equal to the query, a leading The, A or An not counting, with 100 or more TMDB
+  votes first, newest first; then everything else by votes, most first. No language filter. Cards already shown never move. Five cells per row on computer and TV, two on
   the phone. More results load by themselves near the end (a row of skeleton cells while they load; "No more results for
   “…”" at the end). No "Add from TMDB" heading, no horizontal rows. The search ignores the library it was opened from
   (D201): Movies or Shows, it returns both. Stock's other sections (people, episodes, …) stay under the grid.
@@ -43,6 +42,7 @@ ran 2026-11-02; the user's re-verify (gate 3) and the Codex review (gate 4) foll
 | tm2.d1 | web | This plan, the PLAN.md line, the search card guide. |
 | tm2.b3 | web | Found at gate 2, not visible in the first look's screenshots: the browse rows' › did nothing on a computer (the cells sat in a wrapper, and upstream's scroll buttons walk the slider's children), and the TV cut the first cell's lit panel and ring (its scroller clips to the frame). The cells are now the row's own children, drawn as a plain line so each keeps its width, and on the TV the frame takes the 1em pull-out. Same look. |
 | tm2.m1 | web | `scripts/jellyfinmod-e2e/tmdb-browse.mjs`, the gate 2 runner. |
+| tm2.s2 | web, plugin | The order by votes (D253). Through Jellyfin's own TMDB connection the plugin did not map a title's votes (only a saved token did); it now does, so both sources order alike, and the same field feeds the rating's vote count. `popularity`, used only by the old order, is gone from the plugin and the web types. A library title usually has no votes, because the plugin removes titles it holds from TMDB's results and an entry stored before this has none: it keeps its old place (guide, *Order*). No migration. |
 | tm2.b4 | web | Arrows on the Seasons row (user, 2026-11-03, D252: "Add arrows"): a series with many seasons could not be reached with a mouse. Seasons gets the markup of the template's other rows, so the same ‹ and ›, hidden while the row fits, none on the phone or the TV. It was the only one of TM2's rows without them: Cast & Crew, Guest Stars and More from the season already have them; a season's episode rows and the search grid are vertical. No new values or components. |
 | tm2.p3 | plugin | `Discover/Title` over real HTTP in `tests/PhaseOneSmoke` (TMDB behind the suite's HTTP boundary): movie, series, season, refusals, access rules, nothing stored. |
 
@@ -70,6 +70,10 @@ in Playwright Chromium 153 and Google Chrome 156 (computer 130 dark and 108 ligh
 120 and 120). With a saved token, a separate computer dark pass: 109 of 109, more results load and nothing shown moves.
 Plugin: PhaseZeroSmoke, PhaseOneSmoke (the new `Discover/Title` cases), PhaseTwo, PhaseThree, Q16 Trakt, Phase 9 and Phase 10 on the
 Mac and PhaseSevenSettings in the Linux container pass on both lines.
+
+**The Seasons arrows and the new order (2026-11-03, D252, D253), both lines.** `tm2.b4` alone, the browse pages and their rows (`JELLYFINMOD_TM2_ROWS=1`): computer 96 of 96 dark and light in Chromium and Chrome, TV 1920 dark 103 of 103 and phone dark 92 of 92 in Chromium; › reaches Season 38 of The Simpsons, no arrows where a row fits, none on the phone or the TV. With `tm2.s2`, the whole runner with the adds, in Chromium and Chrome: computer 147 dark and 125 light, phone dark 124, TV 1920 dark 139, TV 1280 dark 134. One failure in that set: on `main-stubs` in Chromium, computer dark, "the + on a card: Undo removes it again", 147 of 147 when re-run; see below. With a saved token, computer dark 127 of 127 in both browsers, a second page following with nothing shown moving. Plugin suites as above pass on both lines. Skipped as untouched: light on the phone and the TV, because the order is logic and the arrows are absent there.
+
+**Found, not fixed (outside TM2):** on `main-stubs`, Undo about two seconds after an add can race the placeholder: the entry goes, the library still holds the stub for a moment, and reconciliation brings the title back as a discovered entry (`backfilled`, "Discovered in Jellyfin library"). It came up once in seven stubs runs of that check and in none of seven on `main-items`. The Undo and the placeholder code are older than TM2.
 
 Not run: a physical TV or phone (browser emulation only); the browser as an ordinary user (the API's access rules are in
 PhaseOneSmoke); a server with several libraries of one kind, where Add asks through the action sheet (the environments have one).

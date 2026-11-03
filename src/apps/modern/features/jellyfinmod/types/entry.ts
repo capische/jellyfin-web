@@ -105,8 +105,6 @@ export interface TmdbMetadata {
      * it, which makes opening the series load its list once more, and empty when TMDB names nobody.
      */
     cast?: TmdbCastCredit[] | null;
-    /** TMDB's popularity, which ranks movies and shows together on the search page (TM2); absent from older snapshots. */
-    popularity?: number | null;
 }
 
 /** A person TMDB credits as cast (P1.FU15): a series' regular, or an episode's guest star. */

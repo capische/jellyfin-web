@@ -482,7 +482,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
 - TM2 — TMDB search grid and browse pages (user, 2026-11-01, D204): **built (not accepted)** on both lines, branches
   `feat/tmdb-browse-items` (from `main-items`) and `feat/tmdb-browse` (from `main-stubs`) in both repositories; plan, tasks and
   checks in [`TMDB-BROWSE.md`](TMDB-BROWSE.md), the card in [`design/guides/search-card.md`](design/guides/search-card.md). One
-  vertical grid of movies and shows, full matches first (D206), a browse page for a TMDB title with one Add to Library. Gate 1
+  vertical grid of movies and shows, full matches with 100 or more votes first, then by votes (D253), a browse page for a TMDB title with one Add to Library. Gate 1
   approved (D232). Gate 2 ran 2026-11-02: 939 of 939 per line in Chromium and in Chrome, computer, phone, TV 1920 and 1280, dark and
   light, and the plugin's `Discover/Title` over real HTTP. The Seasons row got the other rows' arrows at the user's word (D252, `tm2.b4`),
   re-run on the rows it touches. The user's re-verify and the Codex review follow; not merged.
