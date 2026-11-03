@@ -37,7 +37,7 @@ SVG rotated −90° so the arc starts at the top. Everything in `em` (TV 125 %, 
 
 ## Colour
 
-- **Card:** glyph and arc in the glass ink `--jfmod-card-ink` (white; the light schemes' `text-primary`), track
+- **Card:** glyph and arc in the glass ink `--jfmod-card-ink` (white; the light theme's black 87 %, Apple TV's `text-primary`), track
   `--jfmod-card-track` (white 30 %; light black 25 %), failed `--jfmod-card-fail` (`#ff5a4f`; light `#c62828`).
 - **Row and page:** `currentColor` — the colour of upstream's round row icons beside it, the page's text on the episode
   page. Track white 12 % (dark); light black 18 % on rows, 14 % on the page. Failed `#ff5a4f`, light `#c62828`.

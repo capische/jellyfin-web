@@ -5,6 +5,7 @@ import layoutManager from 'components/layoutManager';
 import type { MarkKind, MarkProgress } from '../constants/queue';
 import type { QueueRow } from '../types/queue';
 
+import './lightGlass.scss';
 import './downloadStateMark.scss';
 
 /**
