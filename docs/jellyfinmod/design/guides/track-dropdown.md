@@ -101,7 +101,7 @@ three fields are **one strip** of three segments; the Predefined picker keeps it
   (`.jfmod-strip .jfmod-fileList`, `position: static`; the rows' text at the segment's `.6em`), so it pushes Audio,
   Subtitles and the page down with the same 0.18 s grid-row slide and covers nothing; no border, radius or shadow of its own, only
   the card's `.135em` line above it (the border's colour). A tap outside closes it at once, without the slide, so a tap on Audio or
-  Subtitles opens that list under the cell where it now is; it has no spacer for the pending entry. A resize that stacks or unstacks the strip while the list is open moves the list into the card or back under the cell, open, with the focus on the same file's same control.
+  Subtitles opens that list under the cell where it now is; it has no spacer for the pending entry. A resize that stacks or unstacks the strip while the list is open moves the list into the card or back under the cell, open, with the focus on the same file's same control, or on that file's row when the control has gone.
 - **Video list** (`.jfmod-fileList`, absolute in `.jfmod-stripBelow`, `z-index 5`): **exactly the Video cell** (D99), the
   strip's outer left edge to the Audio divider, **always, also after a resize, never wider** (D198: D101's 24em minimum is
   withdrawn; on the phone the list is the card's width inside its border, D197); on the paper with a 1px divider border and

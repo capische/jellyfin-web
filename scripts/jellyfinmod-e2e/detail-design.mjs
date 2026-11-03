@@ -1942,6 +1942,67 @@ async function checkVideoListResize(page, layout, id) {
     }
 }
 
+/**
+ * The focus across the stacking line follows the control, not its place (Codex re-review): Keep on file A while the focus moves to file
+ * B's Keep drops A's Remove from before B's; B's Keep must come back, never B's Remove. Then a focused Remove that goes away leaves the
+ * focus on its own file's row button. INTERCEPTED ANSWERS for this race only: the Keep request is answered here and the entry reads as
+ * kept, so nothing changes on the server. The page, its refetch and the resize are real.
+ */
+async function checkVideoListFocusIdentity(page, layout, id) {
+    await vlOpenPage(page, id);
+    const start = page.viewportSize();
+    await page.setViewportSize({ width: 996, height: start.height });
+    await page.waitForTimeout(400);
+    if (!await vlOpen(page, layout)) return;
+    await page.waitForTimeout(300);
+    const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
+    const row = index => page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).nth(index);
+    const kept = new Set();
+    await page.route(`**/JellyfinMod/Entries/${entryId}**`, async route => {
+        const request = route.request();
+        const binding = /\/Versions\/([^/]+)\//.exec(request.url())?.[1];
+        if (request.method() === 'POST' && binding) {
+            kept.add(binding);
+            await route.fulfill({ json: { bindingId: binding, kept: true } });
+        } else if (request.method() === 'GET' && !binding) {
+            // The refetch comes after the viewer has moved on, as a slow server's would.
+            await new Promise(resolve => { setTimeout(resolve, 500); });
+            const response = await route.fetch();
+            const body = await response.json();
+            for (const version of body.versions ?? []) if (kept.has(version.bindingId)) { version.kept = true; version.removable = false; }
+            await route.fulfill({ response, json: body });
+        } else {
+            await route.continue();
+        }
+    });
+    const keepB = row(1).locator('[data-jfmod-file-pin]');
+    const labelB = await keepB.getAttribute('aria-label');
+    await row(0).locator('[data-jfmod-file-pin]').focus();
+    await page.keyboard.press('Enter');
+    await keepB.focus();
+    const gone = await row(0).locator('[data-jfmod-file-remove]').waitFor({ state: 'detached', timeout: 8000 }).then(() => true, () => false);
+    record(layout, 'focus identity: Keep on file A took A\'s Remove away while the focus is on B\'s Keep', gone && await activeMatches(page, '[data-jfmod-file-pin]'), await vlActive(page));
+    const crossed = [];
+    for (const width of [995, 996]) {
+        await page.setViewportSize({ width, height: start.height });
+        await page.waitForTimeout(450);
+        crossed.push(await vlActive(page));
+    }
+    record(layout, 'focus identity: B\'s Keep comes back across the stacking line, not another action', crossed.every(one => one === `row2 ${labelB}`), crossed.join(' ; '));
+    // A focused Remove that goes away: the same file's row button, no other action.
+    await row(1).locator('[data-jfmod-file-pin]').focus();
+    await page.keyboard.press('Enter');
+    await row(1).locator('[data-jfmod-file-remove]').focus();
+    await row(1).locator('[data-jfmod-file-remove]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    await page.setViewportSize({ width: 995, height: start.height });
+    await page.waitForTimeout(450);
+    const left = await vlActive(page);
+    record(layout, 'focus identity: a Remove that went away leaves the focus on its own file\'s row button', /^row2 .*fileChoose/.test(left), left);
+    await page.unroute(`**/JellyfinMod/Entries/${entryId}**`);
+    await page.setViewportSize(start);
+    await page.waitForTimeout(300);
+}
+
 /** What each width is expected to be (the guide's measured table); a width not named here is left to the width rule alone. */
 const VL_EXPECT = { desktop: { stacked: false }, desktop1280: { stacked: false, twoLine: false }, desktop1100: { stacked: false, twoLine: true }, desktop1000: { stacked: false, twoLine: true },
     desktop996: { stacked: false, twoLine: true }, desktop995: { stacked: true }, desktop994: { stacked: true }, desktop985: { stacked: true }, desktop980: { stacked: true },
@@ -1968,6 +2029,7 @@ async function checkVideoListLayout(page, layout, theme) {
     if (env('JELLYFINMOD_DD_VL_PENDING')) await step('pending', () => checkVideoListPending(page, layout, env('JELLYFINMOD_DD_VL_PENDING')));
     if (isTv(layout)) await step('remote', () => checkVideoListRemote(page, layout, id));
     if (!isTv(layout) && ['desktop', 'mobile'].includes(layoutOf(layout))) await step('resize', () => checkVideoListResize(page, layout, id));
+    if (layoutOf(layout) === 'desktop') await step('resize', () => checkVideoListFocusIdentity(page, layout, id));
 }
 
 async function checkUserViews(page) {
