@@ -479,11 +479,12 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   followed (D125–D136, D153–D163, D182). Gate 2 passed 2026-10-31 on both lines (live list 103/103, matrix 134/134 in Chromium
   and Chrome); Codex reviewed the additions and re-reviewed their fixes, its last two P3s fixed (PHASE13). Accepted because
   the user's "finish everything" while away stood in for the gate 3 re-check (D184, workspace `reviews/overnight-2026-10-28/DECISIONS.md`); the merge follows.
-- TM2 — TMDB search grid and browse pages (user, 2026-11-01, D204): **built (not accepted)** on `main-items`, branches
-  `feat/tmdb-browse-items` in both repositories; plan and tasks in [`TMDB-BROWSE.md`](TMDB-BROWSE.md), the card in
-  [`design/guides/search-card.md`](design/guides/search-card.md). One vertical grid of movies and shows (library first, then
-  TMDB ranked together), a browse page for a TMDB title with one Add to Library. Gate 1 (computer, dark) on a local
-  environment; `main-stubs` port, the matrix and the Codex review follow the user's approvals.
+- TM2 — TMDB search grid and browse pages (user, 2026-11-01, D204): **built (not accepted)** on both lines, branches
+  `feat/tmdb-browse-items` (from `main-items`) and `feat/tmdb-browse` (from `main-stubs`) in both repositories; plan, tasks and
+  checks in [`TMDB-BROWSE.md`](TMDB-BROWSE.md), the card in [`design/guides/search-card.md`](design/guides/search-card.md). One
+  vertical grid of movies and shows, full matches first (D206), a browse page for a TMDB title with one Add to Library. Gate 1
+  approved (D232). Gate 2 ran 2026-11-02: 939 of 939 per line in Chromium and in Chrome, computer, phone, TV 1920 and 1280, dark and
+  light, and the plugin's `Discover/Title` over real HTTP. The user's re-verify and the Codex review follow; not merged.
 - **Planned new feature (user, 2026-10-12, to start after the current detail-page, picker and episode-list work): download the first episode and the next unwatched episode first, and import each episode as soon as it finishes.** For a season or series pack (or several torrents), the torrent client is told to download the files of the first episode and the person's next unwatched episode (per Jellyfin watch state, kept current as episodes are watched) with high priority, and the import (Phase 5) takes a finished file straight away instead of waiting for the whole torrent, so the person can start watching while the rest downloads. Owners to name when it is designed: Phase 4 (grab handoff, torrent file priority through the client) and Phase 5 (per-file import while a torrent is incomplete, its seed and hardlink rules), with Phase 6's queue states. Needs a design pass (client capabilities: Transmission file priority and sequential download; partial-pack import safety; what retention does with files still seeding); not started.
 - Phase 1 follow-up, **built (not accepted) (user, 2026-10-12): the full season and episode list for a library-discovered series.**
   Phase 1 (accepted 2026-09-06) tracks every TMDB season and episode, aired or not, but only for a series added through TMDB;
