@@ -1317,6 +1317,7 @@ async function checkRemove(page, layout, itemId) {
 //   JELLYFINMOD_DD_VL=<item id of a title with two files>   runs only these checks, in the layout's theme:
 //   [JELLYFINMOD_DD_VL_TRACKS=<item id with several audio tracks and subtitles>]  [JELLYFINMOD_DD_VL_PENDING=<item id with a pending Add>]
 //   [JELLYFINMOD_DD_VL_WRITES=1]  also Keep and Stop Keeping a file and press Play once (both undone or left at once)
+//                                 (run it alone on its instance: a kept file has no Remove, so a run beside it would miss that action)
 //   [JELLYFINMOD_DD_THEME=dark|light]  [JELLYFINMOD_DD_SHOTS=<folder>]
 // No removal is ever confirmed: Remove and the pending X stop at their dialog, which is closed with its safe choice.
 const STRIP = `${PAGE} .jfmod-strip`;
