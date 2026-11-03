@@ -45,10 +45,8 @@ const SHOW_EPISODE = process.env.JELLYFINMOD_HERO_SHOW_EPISODE;
 const out = path.join(required('JELLYFINMOD_HERO_OUT'), tier);
 const only = (process.env.JELLYFINMOD_HERO_STEPS ?? 'a,finish,b,nextup,c,sections,d,glass').split(',');
 
-// The approved scrolled bar (user, 2026-10-09; values in homeChrome.scss): the theme's bar colour at 12 % (light 20 %,
-// Apple TV 30 %) over the page, blurred 12px with contrast(0.7), brightness 0.85 (light 1.1, Apple TV 1.15), no text
-// halo on the labels and no hairline or shadow on the bar's lower edge.
-const GLASS_VALUES = { default: { tint: 0.12, brightness: 0.85 }, light: { tint: 0.2, brightness: 1.1 }, appletv: { tint: 0.3, brightness: 1.15 } };
+// rd2: dark and Apple TV keep the glass recipe; light reads D259 (white 61.8%, brightness 1.09, no contrast).
+const GLASS_VALUES = { default: { tint: 0.12, brightness: 0.85 }, light: { tint: 0.618, brightness: 1.09 }, appletv: { tint: 0.3, brightness: 1.15 } };
 function filterNumber(filter, name) {
     const found = new RegExp(`${name}\\((\\d+(?:\\.\\d+)?)(%|px)?\\)`).exec(filter ?? '');
     return found ? Number(found[1]) / (found[2] === '%' ? 100 : 1) : null;
@@ -56,7 +54,7 @@ function filterNumber(filter, name) {
 function glassValuesMatch(theme, bar) {
     const expected = GLASS_VALUES[theme] ?? GLASS_VALUES.default;
     const near = (value, target, margin) => value !== null && Math.abs(value - target) <= margin;
-    return near(filterNumber(bar.filter, 'blur'), 12, 0.01) && near(filterNumber(bar.filter, 'contrast'), 0.7, 0.01) &&
+    return near(filterNumber(bar.filter, 'blur'), 12, 0.01) && (theme === 'light' ? filterNumber(bar.filter, 'contrast') === null : near(filterNumber(bar.filter, 'contrast'), 0.7, 0.01)) &&
         near(filterNumber(bar.filter, 'brightness'), expected.brightness, 0.01) && near(bar.tintAlpha, expected.tint, 0.02) &&
         (bar.boxShadow === 'none' || bar.boxShadow === null) && parseFloat(bar.borderBottomWidth ?? '0') === 0 &&
         (!bar.labelTextShadow || bar.labelTextShadow === 'none');
@@ -948,6 +946,8 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
                 scrollY: Math.round(window.scrollY), bar: header?.classList.contains('jfmod-homeAppBar') ? 'app bar' : header ? 'legacy header' : null,
                 solidClass: !!header && (header.classList.contains('MuiAppBar-colorDefault') || header.classList.contains('jfmod-topbarSolid')),
                 background: style?.backgroundColor ?? null, image: style?.backgroundImage ?? null,
+                fade: header ? getComputedStyle(header, '::before').backgroundImage : null,
+                fadeHeight: header ? parseFloat(getComputedStyle(header, '::before').height) / parseFloat(getComputedStyle(header).fontSize) : null,
                 tintAlpha: style ? Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100 : null,
                 filter: style ? style.backdropFilter || style.webkitBackdropFilter || 'none' : null,
                 theme: document.documentElement.getAttribute('data-theme'),
@@ -957,7 +957,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         }, !!layout.tv);
         const glass = bar.solidClass && glassValuesMatch(bar.theme, bar);
         // Scrolled past the point where it used to turn solid, with no fill under the scrim and no filter.
-        const transparent = bar.bar === 'legacy header' && bar.solidClass && bar.filter === 'none' && bar.tintAlpha === 0 && /linear-gradient/.test(bar.image ?? '');
+        const transparent = bar.bar === 'legacy header' && bar.solidClass && bar.filter === 'none' && bar.tintAlpha === 0 && /linear-gradient/.test(bar.fade ?? '') && Math.abs(bar.fadeHeight - 6.854) < 0.01;
         record(`d ${layout.name}`, layout.tv ? 'Scrolled, the TV bar stays transparent (its gradient scrim only: no fill, no backdrop filter)' :
             'Scrolled, the bar is frosted glass with the approved values (tint, blur 12, contrast 0.7, brightness; no halo, no hairline)', layout.tv ? transparent : glass, bar);
         if (!layout.tv) await layoutPage.screenshot({ path: path.join(out, `d-${layout.name}-scrolled-bar.png`) });

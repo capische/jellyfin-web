@@ -1,0 +1,34 @@
+# Shared chrome
+
+**Status:** approved redesign D212–D231, D251, D254, D259/D262; rd2 built, not accepted. Rulebook sections 1–9 and Departures.
+
+`src/apps/modern/features/jellyfinmod/shell/sharedChrome.scss`, `chromeFont.scss`, `motionChrome.scss`, `ChromeTheme.tsx` and
+`useChromeScope.ts` provide the shared presentation. The root `html.jfmod-chrome` marker exists only inside the signed-in mod
+app layout, outside `/catalog/settings` (including setup); Dashboard, server wizard and public screens never acquire it.
+This also scopes body portals. The marker and observers are removed on leaving the layout or entering an excluded route.
+
+- Base 1em: Noto Sans, bundled real 400/600/700 under the isolated `jfmod-noto` family. Inter stays on dense controls and dialogs;
+  release names stay monospace. Body pitch 1.618; row headings 1.618em/400; page titles 1.618em/600; hero 2.618em/600 (phone 1.618em).
+- Paper and ink read upstream theme tokens; dark defaults #202020 and white, light #e8e8e8 and black 87%. Primary #00a4dc
+  means selection/focus or a form's main action; failure ink #ff7b72 (light #c62828). Sign Out remains neutral.
+- Dialogs: paper, 1.618em corners, faint 1px edge, soft shadow (0 by .382em by 1.618em, black 45%). Titles 1.618em/400,
+  Inter; existing close controls remain level with them. Footer buttons retain their actions/order and use the button guide.
+  Existing specialized dialog content and full-screen layouts stay; the remove dialog keeps full-width outcome buttons.
+- Existing settings menu rows: at least 4.236em, .618em by 1em padding, .618em corners; grey 2.618em tiles with .618em corners.
+  Existing words and controls are retained; no descriptions, page sections or settings are added in rd2. TV focus is a .236em ring.
+  List titles use 600, secondary lines .854em/400 at 1.618 pitch, stills .618em corners.
+- Independent on/off controls draw switches: 2.618em by 1.618em, white 1.236em knob centered with .191em offsets; its travel is 1em.
+  Off is white 18% (black on light); on primary 38.2% and .09em primary edge. Existing checkbox inputs and whole-line labels still
+  toggle them. MUI preferences' independent checkboxes draw the same switch. Multi-select lists, Sources and quality matrices
+  keep checkboxes. Disabled 45%; knob .236s, instant on TV/reduced motion.
+- MUI tooltips: paper, .618em corners, .854em type, .382s wait, .236s fade; none on phone/TV. Existing accessible names remain.
+- Motion easing cubic-bezier(.236,0,0,1): tint .236s, press .146s to .96; menus .382s in/.236s out with .964 scale;
+  phone sheets .618s up/.382s down. MUI lifetime timers match the CSS. Legacy dialog animationend/focus/history are preserved.
+  TV menus fade .146s, close immediately (1ms lifecycle minimum), focus/knob changes instant. Reduced motion: menu/sheet
+  .146s opacity only, other changed transitions instant, spinner stopped with its arc at 55%.
+
+Named exceptions to pure φ powers: upstream root sizes/gutters; 40px targets; half-height radii and centered geometry;
+1.236em knob and .854em secondary type; guide caption sizes/tracking; 1px paper hairlines; approved palette/alphas, glass filters,
+shadows and easing coordinates; button/press/menu scales and focus widths; the 1ms TV lifecycle minimum. The track guide retains
+its .18s desktop stacked-list slide; TV overrides that slide to an instant display change. See the linked button, field, menu,
+top-bar, spinner and track guides for their exact values. No backend contract changes.

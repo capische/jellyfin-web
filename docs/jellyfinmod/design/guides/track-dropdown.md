@@ -1,5 +1,16 @@
 # Track strip and dropdown (the custom dropdown)
 
+**rd2 presentation supersedes the old strip/list skin below (approved D220, D225–D227, D251, built, not accepted):** under
+`html.jfmod-chrome`, `shell/pickerChrome.scss` gives each closed cell its own borderless card-glass pill, 1.618em corners,
+.382em separation, no dividers. Static cells remain static; measured widths/stacking, whole-mark dropping, rich runs and every
+selection action stay. Open paper lists have 1em corners, .382em padding and a .382em gap (included in `listPlace` so available
+room remains accurate), rows .618em corners. Current entry: blue name plus .618em check .236em from the left, no bar/tint;
+marks, role, modifier, size and actions keep ink. Grey hover .236s, TV .236em inner ring and white double ring on row actions.
+The stacked Video list still expands in flow between Video and Audio, with its existing .18s desktop slide (guide interaction);
+TV switches its display instantly instead of using CSS grid. MUI track lists remain anchored on phones, not sheets. Lists
+scroll vertically at 20em. Text starts at 1em to reserve the check's padding. Admin Predefined is excluded and stays as below.
+The detailed content, widths, keyboard and source-of-truth rules below remain authoritative. See [menus](menus.md).
+
 **Status:** the Video value as a dropdown approved 2026-10-10; Audio and Subtitles drawn the same way 2026-10-17 ("Logos,
 A for size"); the same list for the profile dialog's Predefined picker 2026-10-16 ("use custom dropdown, we already got
 one on details page"). **Video, Audio and Subtitles as one strip** (option B, the user's pick 2026-10-28, with the tightened

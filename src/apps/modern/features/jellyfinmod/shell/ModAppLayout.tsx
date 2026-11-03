@@ -15,12 +15,21 @@ import OffsetAppBar from 'components/OffsetAppBar';
 import ThemeCss from 'components/ThemeCss';
 import layoutManager from 'components/layoutManager';
 import { useApi } from 'hooks/useApi';
+import { PUBLIC_PATHS } from 'components/router/appRouter';
 
 import ModToolbar from './ModToolbar';
+import ChromeTheme from './ChromeTheme';
 import '../components/interFont.scss';
 import '../components/modFont.scss';
 import '../components/lightGlass.scss';
 import '../components/cardDesign.scss';
+import './sharedChrome.scss';
+import './topbarChrome.scss';
+import './pickerChrome.scss';
+import './motionChrome.scss';
+import './chromeFont.scss';
+import { useChromeScope } from './useChromeScope';
+import { LegacyChromeSearch } from './ChromeSearch';
 
 /*
  * Upstream's modern overrides, for the modern layout only.
@@ -61,54 +70,64 @@ const ModAppLayout: FC = () => {
         setIsDrawerActive(current => !current);
     }, []);
 
-    if (!layoutManager.modern) return <LegacyAppLayout />;
+    const chromeEnabled = Boolean(user) && !PUBLIC_PATHS.includes(location.pathname) && !location.pathname.startsWith('/catalog/settings');
+    useChromeScope(chromeEnabled, ['/home', '/details'].includes(location.pathname), location.pathname === '/video');
+
+    if (!layoutManager.modern) {
+        return <ChromeTheme enabled={chromeEnabled}>
+            <LegacyAppLayout />
+            {chromeEnabled && !layoutManager.mobile && <LegacyChromeSearch />}
+        </ChromeTheme>;
+    }
 
     return (
-        <LibraryProvider>
-            <Box
-                sx={{
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%'
-                }}
-            >
-                <StrictMode>
-                    {/* On every page the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
-                    <OffsetAppBar dense className='jfmod-homeAppBar'>
-                        <ModToolbar
-                            isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
-                            isDrawerOpen={isDrawerOpen}
-                            onDrawerButtonClick={onToggleDrawer}
-                        />
-                        {isLibraryPath(location.pathname) && <LibraryToolbar />}
-                    </OffsetAppBar>
-
-                    {isDrawerAvailable && (
-                        <AppDrawer
-                            open={isDrawerOpen}
-                            onClose={onToggleDrawer}
-                            onOpen={onToggleDrawer}
-                        />
-                    )}
-                </StrictMode>
-
+        <ChromeTheme enabled={chromeEnabled}>
+            <LibraryProvider>
                 <Box
-                    component='main'
                     sx={{
                         position: 'relative',
-                        width: '100%',
-                        flexGrow: 1
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%'
                     }}
                 >
-                    <AppBody>
-                        <Outlet />
-                    </AppBody>
+                    <StrictMode>
+                        {/* On every page the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
+                        <OffsetAppBar dense className='jfmod-homeAppBar'>
+                            <ModToolbar
+                                isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
+                                isDrawerOpen={isDrawerOpen}
+                                onDrawerButtonClick={onToggleDrawer}
+                            />
+                            {isLibraryPath(location.pathname) && <LibraryToolbar />}
+                        </OffsetAppBar>
+
+                        {isDrawerAvailable && (
+                            <AppDrawer
+                                open={isDrawerOpen}
+                                onClose={onToggleDrawer}
+                                onOpen={onToggleDrawer}
+                            />
+                        )}
+                    </StrictMode>
+
+                    <Box
+                        component='main'
+                        sx={{
+                            position: 'relative',
+                            width: '100%',
+                            flexGrow: 1
+                        }}
+                    >
+                        <AppBody>
+                            <Outlet />
+                        </AppBody>
+                    </Box>
                 </Box>
-            </Box>
-            <ThemeCss />
-            <CustomCss />
-        </LibraryProvider>
+                <ThemeCss />
+                <CustomCss />
+            </LibraryProvider>
+        </ChromeTheme>
     );
 };
 

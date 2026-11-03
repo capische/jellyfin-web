@@ -1,5 +1,10 @@
 # Card glass
 
+**rd2 top-bar reuse (built, not accepted):** the redesigned scrolled bar reads the same five light-glass tokens as the card,
+behind the same two capability checks, with solid theme-paper fallback. TV bar stays transparent; its search field is paper
+on plain ground and black 66% on art. The track cells now use this mixin too. Dark and Apple TV recipes below stay unchanged.
+See [top-bar.md](top-bar.md) and [track-dropdown.md](track-dropdown.md); admin/wizard remain outside the new scope.
+
 **Status:** the top bar's recipe approved 2026-10-09 (flatten, no halo; [design note](../topbar-glass-readability.md)),
 reused for every mark on a poster 2026-10-13 ("switch from yellow to white card glyph, and use top bar's exact recipe";
 [ring family note, Revision 3](../download-state-ring-family.md)). Built on `next-release` (P7.S6, P4.FU7).

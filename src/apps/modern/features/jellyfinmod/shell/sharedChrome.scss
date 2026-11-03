@@ -1,0 +1,842 @@
+@use "sass:selector";
+
+/* rd2: additive shared chrome, mounted only on signed-in, non-admin mod routes.
+ * Base 1em; φ steps .09/.236/.382/.618/1/1.618/2.618/4.236/17.94/29.03.
+ * Approved exceptions: 40px targets (2.5/2.7816em), half-height pill radii, upstream icon sizes,
+ * neutral/hover/scrim alphas, glass recipes, type captions, button/focus/press scales and spinner geometry.
+ * !important only beats upstream !important, inline positioning/animation, and MUI transition inline styles.
+ */
+/* stylelint-disable no-descending-specificity -- overrides grouped by component, then device */
+$ease: cubic-bezier(0.236, 0, 0, 1);
+$primary: var(--jf-palette-primary-main, #00a4dc);
+
+html.jfmod-chrome {
+    --jfmod-chrome-paper: var(--jf-palette-background-paper, #202020);
+    --jfmod-chrome-ink: var(--jf-palette-text-primary, #fff);
+    --jfmod-chrome-hover: rgba(255, 255, 255, 0.08);
+    --jfmod-chrome-tint: rgba(255, 255, 255, 0.12);
+    --jfmod-chrome-line: rgba(255, 255, 255, 0.32);
+    --jfmod-chrome-hair: rgba(255, 255, 255, 0.09);
+    --jfmod-chrome-error: #ff7b72;
+    --jfmod-chrome-switch: rgba(255, 255, 255, 0.18);
+    --jfmod-chrome-font: 'jfmod-noto', 'Noto Sans', sans-serif;
+    --jfmod-chrome-dense: 'jfmod-inter', 'Noto Sans', sans-serif;
+    --jfmod-chrome-enter: 0.382s;
+    --jfmod-chrome-exit: 0.236s;
+    --jfmod-chrome-sheet-in: 0.618s;
+    --jfmod-chrome-sheet-out: 0.382s;
+
+    &[data-theme='light'],
+    &[data-theme='appletv'] {
+        --jfmod-chrome-hover: rgba(0, 0, 0, 0.08);
+        --jfmod-chrome-tint: rgba(0, 0, 0, 0.12);
+        --jfmod-chrome-line: rgba(0, 0, 0, 0.32);
+        --jfmod-chrome-hair: rgba(0, 0, 0, 0.1);
+        --jfmod-chrome-error: #c62828;
+        --jfmod-chrome-switch: rgba(0, 0, 0, 0.18);
+    }
+
+    body,
+    .MuiTypography-root,
+    .MuiButton-root,
+    .MuiMenuItem-root {
+        font-family: var(--jfmod-chrome-font);
+    }
+
+    .jfmod-homeHeroContent,
+    .jfmod-homeHeroContent h1,
+    .jfmod-homeHeroContent p,
+    .jfmod-searchResults .sectionTitle {
+        font-family: var(--jfmod-chrome-font);
+    }
+
+    .sectionTitle,
+    .MuiDialogTitle-root,
+    .dialog h1,
+    .jfmod-removeTitle {
+        font-size: 1.618em;
+        font-weight: 400;
+    }
+
+    .pageTitle { font-weight: 600; }
+
+    .fieldDescription,
+    .MuiFormHelperText-root { line-height: 1.618; }
+
+    .dialog,
+    .MuiDialog-paper,
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
+        box-sizing: border-box;
+        background: var(--jfmod-chrome-paper);
+        background-image: none;
+        color: var(--jfmod-chrome-ink);
+        border: 1px solid var(--jfmod-chrome-hair);
+        border-radius: 1.618em;
+        box-shadow: 0 0.382em 1.618em rgba(0, 0, 0, 0.45);
+        font-family: var(--jfmod-chrome-dense);
+    }
+
+    .dialog .MuiTypography-root,
+    .dialog .MuiButton-root,
+    .MuiDialog-paper .MuiTypography-root,
+    .MuiDialog-paper .MuiButton-root { font-family: var(--jfmod-chrome-dense); }
+
+    .jfmod-removeTitle { font-family: var(--jfmod-chrome-dense); }
+
+    .dialogBackdrop { transition: opacity 0.236s $ease; }
+
+    .MuiDialogContent-root { padding: 1em 1.618em; }
+
+    .MuiDialogActions-root {
+        padding: 1em 1.618em;
+        > * + * { margin-left: 0.618em; }
+    }
+
+    /* All labelled buttons; flat navigation and row icons remain their own controls. */
+    .emby-button.raised,
+    .emby-button.button-submit,
+    .emby-button.button-delete,
+    .MuiButton-contained,
+    .MuiButton-outlined,
+    .MuiDialogActions-root .MuiButton-root {
+        box-sizing: border-box;
+        min-width: 0;
+        height: 2.7816em;
+        padding: 0 1.618em;
+        border: 0;
+        border-radius: 1.3908em;
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        box-shadow: inset 0 0 0 0.09em var(--jfmod-chrome-line);
+        font-size: 1em;
+        font-weight: 600;
+        text-transform: none;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.236s $ease, transform 0.146s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-tint); }
+            }
+        }
+        &:active { transform: scale(0.96); }
+    }
+
+    .emby-button.button-submit,
+    .MuiButton-containedPrimary,
+    .MuiDialogActions-root .MuiButton-textPrimary {
+        background: $primary;
+        color: #fff;
+        box-shadow: none;
+        font-weight: 700;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: #19b4ea; }
+            }
+        }
+    }
+
+    .emby-button.button-delete,
+    .MuiButton-containedError,
+    .MuiDialogActions-root .MuiButton-textError {
+        background: #c62828;
+        color: #fff;
+        box-shadow: none;
+        font-weight: 600;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: #d84343; }
+            }
+        }
+    }
+
+    .emby-button.button-submit:disabled,
+    .emby-button.button-submit[aria-disabled='true'],
+    .emby-button.button-delete:disabled,
+    .emby-button.button-delete[aria-disabled='true'],
+    .emby-button.raised:disabled,
+    .emby-button.raised[aria-disabled='true'],
+    .MuiButton-root.Mui-disabled {
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        box-shadow: inset 0 0 0 0.09em var(--jfmod-chrome-hair);
+        opacity: 0.618;
+        transform: none;
+        cursor: default;
+    }
+
+    .emby-button.button-submit:focus-visible,
+    .emby-button.button-delete:focus-visible,
+    .emby-button.raised:focus-visible,
+    .MuiButton-root:focus-visible {
+        box-shadow: 0 0 0 0.15em var(--jfmod-chrome-paper), 0 0 0 0.3em $primary;
+    }
+
+    /* Round icons, including the upstream list's touch area. No scaling under the pointer. */
+    .MuiIconButton-root,
+    .paper-icon-button-light,
+    .jfmod-iconbtn,
+    .jfmod-fileIcon,
+    .jfmod-releaseAction {
+        border-radius: 50%;
+        cursor: pointer;
+        transition: background-color 0.236s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-tint); }
+            }
+        }
+        &:focus-visible { box-shadow: 0 0 0 0.135em $primary; }
+
+        &[aria-disabled='true'],
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    .listItem > .paper-icon-button-light {
+        width: 2.7816em;
+        height: 2.7816em;
+        padding: 0;
+    }
+
+    /* Menus and field lists share the nested corners, padding and current-entry mark. */
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper),
+    .actionSheet.dialog {
+        border-radius: 1em !important;
+        min-width: 17.94em;
+        max-height: 20em;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) { margin-top: 0.382em; }
+
+    .MuiMenu-list,
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) > .MuiList-root { padding: 0.382em; }
+
+    .MuiMenuItem-root,
+    .actionSheetMenuItem {
+        box-sizing: border-box;
+        position: relative;
+        min-height: 2.618em;
+        margin: 0;
+        padding: 0 1em;
+        border: 0;
+        border-radius: 0.618em;
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        font-size: 1em !important;
+        font-weight: 400;
+        text-align: left;
+        text-transform: none;
+        cursor: pointer;
+        transition: background-color 0.236s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-hover); }
+            }
+        }
+        &:focus-visible { box-shadow: inset 0 0 0 0.135em $primary; }
+
+        &[aria-disabled='true'] {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    .MuiMenuItem-root.Mui-selected,
+    .MuiMenuItem-root.jfmod-currentChoice,
+    .actionSheetMenuItem.jfmod-currentChoice {
+        background: transparent;
+        color: $primary;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-hover); }
+            }
+        }
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0.236em;
+            top: 50%;
+            width: 0.618em;
+            height: 0.618em;
+            margin-top: -0.309em;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300a4dc' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
+    }
+
+    .MuiMenuItem-root .MuiListItemIcon-root {
+        min-width: 0;
+        color: var(--jfmod-chrome-ink);
+        margin-right: 0.618em;
+        > .MuiSvgIcon-root { font-size: 1.4em; }
+        > [data-testid='CheckIcon'] { display: none; }
+    }
+
+    .MuiMenuItem-root .MuiTypography-root { font-size: 1em; }
+
+    .MuiListSubheader-root,
+    .actionSheet .actionSheetTitle {
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        font-size: 0.72em;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        line-height: 1.618;
+        opacity: 0.618;
+    }
+
+    .actionsheetDivider,
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) .MuiDivider-root {
+        height: 1px;
+        border: 0;
+        background: var(--jfmod-chrome-hair);
+        margin: 0.382em 0.618em;
+    }
+
+    .actionSheetContent {
+        min-height: 0;
+        width: 100%;
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 0.382em !important;
+        box-sizing: border-box;
+        text-align: left;
+    }
+
+    .actionSheetScroller {
+        min-height: 0;
+        width: 100%;
+        max-width: none;
+        max-height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .actionSheetMenuItem .actionsheetListItemBody {
+        padding: 0 !important;
+        min-width: 0;
+    }
+
+    .actionsheetMenuItemIcon {
+        width: 1em;
+        height: 1em;
+        font-size: 1.4em;
+        color: var(--jfmod-chrome-ink);
+        margin: 0 0.618em 0 0 !important;
+    }
+
+    .jfmod-menuCheck { display: none; }
+
+    .actionSheetItemAsideText {
+        color: var(--jfmod-chrome-ink);
+        font-size: 0.854em;
+        opacity: 0.7;
+        margin-left: 1em;
+    }
+
+    .actionSheetMenuItem.jfmod-menuDestroy { color: var(--jfmod-chrome-error); }
+
+    /* The field is neutral until used. Labels remain outside the pill. */
+    .emby-input,
+    .emby-textarea,
+    .emby-select,
+    .MuiInputBase-root {
+        box-sizing: border-box;
+        min-height: 2.7816em;
+        border: 0;
+        border-radius: 1.3908em;
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        box-shadow: inset 0 0 0 0.09em var(--jfmod-chrome-line);
+        font-size: 1em;
+        cursor: pointer;
+        transition: background-color 0.236s $ease, box-shadow 0.236s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) {
+                    background: rgba(0, 164, 220, 0.14);
+                    box-shadow: inset 0 0 0 0.09em $primary;
+                }
+            }
+        }
+
+        &:focus {
+            box-shadow: 0 0 0 0.135em $primary;
+            transform: none;
+        }
+
+        &[aria-invalid='true'],
+        &.Mui-error { box-shadow: inset 0 0 0 0.135em #c62828; }
+
+        &:disabled,
+        &.Mui-disabled {
+            opacity: 0.618;
+            background: transparent;
+            cursor: default;
+        }
+    }
+
+    .emby-input,
+    .emby-textarea,
+    .emby-select { padding: 0.618em 1em; }
+
+    .MuiInputBase-root::before,
+    .MuiInputBase-root::after,
+    .MuiOutlinedInput-notchedOutline { display: none; }
+
+    .MuiInputBase-root.Mui-focused:not(.Mui-error) { box-shadow: 0 0 0 0.135em $primary; }
+
+    .MuiInputBase-input { padding: 0.618em 1em; }
+
+    .inputLabel,
+    .selectLabel,
+    .MuiInputLabel-root {
+        font-size: 0.854em;
+        margin: 0 0 0.236em 1em;
+        transform: none;
+        position: static;
+        color: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
+    }
+
+    .inputLabelFocused,
+    .selectLabelFocused,
+    .MuiInputLabel-root.Mui-focused { color: $primary; }
+
+    .MuiSelect-icon { transition: transform 0.382s $ease; }
+    .MuiSelect-iconOpen { transform: rotate(180deg); }
+
+    /* MUI switches already have correct semantics. Preserve every multi-select checkbox. */
+    .MuiSwitch-root {
+        width: 2.618em;
+        height: 1.618em;
+        padding: 0;
+        overflow: visible;
+        font-size: 1em;
+        margin: 0 0.618em;
+    }
+
+    .MuiSwitch-track {
+        border-radius: 0.809em;
+        background: var(--jfmod-chrome-switch);
+        opacity: 1;
+    }
+
+    .MuiSwitch-switchBase {
+        padding: 0.191em;
+        color: #fff;
+        transition: transform 0.236s $ease;
+
+        @media (hover: hover) and (pointer: fine) {
+            @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+                &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-tint); }
+            }
+        }
+
+        &.Mui-checked {
+            transform: translateX(1em);
+            color: #fff;
+        }
+
+        &.Mui-checked + .MuiSwitch-track {
+            background: rgba(0, 164, 220, 0.382);
+            box-shadow: inset 0 0 0 0.09em $primary;
+            opacity: 1;
+        }
+        &.Mui-disabled { opacity: 0.45; }
+    }
+
+    .MuiSwitch-thumb {
+        width: 1.236em;
+        height: 1.236em;
+    }
+
+    /* On/off legacy fields keep their checkbox input and whole-line label, but draw a switch. */
+    .checkboxContainer:not(.checkboxListContainer):not(.checkboxList) > .emby-checkbox-label {
+        min-height: 2.7816em;
+        height: auto;
+        padding-left: 3.236em;
+
+        .checkboxOutline {
+            top: 50%;
+            margin-top: -0.809em;
+            width: 2.618em;
+            height: 1.618em;
+            border: 0;
+            border-radius: 0.809em;
+            background: var(--jfmod-chrome-switch);
+            overflow: visible;
+
+            &::after {
+                content: '';
+                position: absolute;
+                left: 0.191em;
+                top: 0.191em;
+                width: 1.236em;
+                height: 1.236em;
+                border-radius: 50%;
+                background: #fff;
+                transition: transform 0.236s $ease;
+            }
+        }
+        .checkboxIcon { display: none !important; }
+
+        .emby-checkbox:checked ~ .checkboxOutline {
+            background: rgba(0, 164, 220, 0.382);
+            box-shadow: inset 0 0 0 0.09em $primary;
+            &::after { transform: translateX(1em); }
+        }
+        .emby-checkbox:focus ~ .checkboxOutline { box-shadow: 0 0 0 0.135em $primary; }
+        .emby-checkbox:disabled ~ .checkboxOutline { opacity: 0.45; }
+    }
+
+    /* Upstream's arc and motion, one φ step smaller; the full circle stays behind it. */
+    .docspinner {
+        width: 6.18vh;
+        height: 6.18vh;
+        margin: -3.09vh 0 0 -3.09vh;
+        color: #fff;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            border: 0.21em solid currentColor;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+        .mdl-spinner__layer { border-color: currentColor; }
+    }
+
+    &[data-theme='light']:not(.jfmod-chromePlayer) .docspinner,
+    &[data-theme='appletv']:not(.jfmod-chromePlayer) .docspinner {
+        color: var(--jfmod-light-glass-ink);
+
+        &::before {
+            color: #000;
+            opacity: 0.25;
+        }
+    }
+
+    .MuiTooltip-popper:not(.jfmod-infoTipPopper) .MuiTooltip-tooltip {
+        background: var(--jfmod-chrome-paper);
+        color: var(--jfmod-chrome-ink);
+        border-radius: 0.618em;
+        padding: 0.382em 0.618em;
+        font-size: 0.854em;
+    }
+
+    .page h1 {
+        font-size: 1.618em;
+        font-weight: 600;
+    }
+
+    .jfmod-homeHeroContent h1 {
+        font-size: 2.618em;
+        font-weight: 600;
+    }
+    .jfmod-homeHeroContent p { line-height: 1.618; }
+    .jfmod-homeHeroContent .emby-button { font-family: var(--jfmod-chrome-font); }
+
+    /* Existing row contents and actions stay in place; settings pages gain no new copy in this slice. */
+    .userPreferencesPage .listItem {
+        box-sizing: border-box;
+        min-height: 4.236em;
+        padding: 0.618em 1em;
+        border-radius: 0.618em;
+        background: var(--jfmod-chrome-paper);
+    }
+
+    .userPreferencesPage .listItemIcon {
+        box-sizing: border-box;
+        width: 2.618em;
+        height: 2.618em;
+        margin: 0 1em 0 0;
+        border-radius: 0.618em;
+        background: var(--jfmod-chrome-hover);
+        color: var(--jfmod-chrome-ink);
+        font-size: 1em;
+    }
+
+    .listItemBodyText { font-weight: 600; }
+
+    .listItemBodyText.secondary {
+        font-size: 0.854em;
+        font-weight: 400;
+        line-height: 1.618;
+    }
+    .listItemImage { border-radius: 0.618em; }
+
+    @media (hover: hover) and (pointer: fine) {
+        @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+            .listItem:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) .listItemImage { box-shadow: 0 0 0 0.135em #00a4dc; }
+        }
+    }
+
+    .userPreferencesPage .MuiCheckbox-root {
+        box-sizing: border-box;
+        position: relative;
+        width: 2.618em;
+        height: 1.618em;
+        margin: 0 0.618em;
+        padding: 0;
+        border-radius: 0.809em;
+        background: var(--jfmod-chrome-switch);
+        > svg { visibility: hidden; }
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0.191em;
+            top: 0.191em;
+            width: 1.236em;
+            height: 1.236em;
+            border-radius: 50%;
+            background: #fff;
+            pointer-events: none;
+            transition: transform 0.236s $ease;
+        }
+
+        &.Mui-checked {
+            background: rgba(0, 164, 220, 0.382);
+            box-shadow: inset 0 0 0 0.09em $primary;
+            &::after { transform: translateX(1em); }
+        }
+        &.Mui-disabled { opacity: 0.45; }
+    }
+}
+
+/* Phone menus are sheets, while a field's own option list stays anchored. */
+html.jfmod-chrome.layout-mobile {
+    .MuiMenu-paper:not(.MuiSelect-paper):not(.jfmod-trackMenuPaper),
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper),
+    .actionSheet.dialog {
+        position: fixed !important;
+        top: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        max-height: 80vh;
+        margin: 0 !important;
+        border-radius: 1em 1em 0 0 !important;
+        transform-origin: bottom center !important;
+        padding-top: 1em;
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0.382em;
+            width: 2.618em;
+            height: 0.236em;
+            margin-left: -1.309em;
+            border-radius: 0.118em;
+            background: var(--jfmod-chrome-line);
+        }
+    }
+
+    .MuiMenuItem-root,
+    .actionSheetMenuItem { min-height: 2.7816em; }
+
+    .dialogBackdropOpened,
+    .MuiBackdrop-root {
+        background: rgba(0, 0, 0, 0.618);
+        opacity: 1;
+    }
+
+    .MuiTooltip-popper { display: none; }
+}
+
+/* Instant D-pad feedback. Only menus fade and presses transform on webOS 6. */
+html.jfmod-chrome.layout-tv {
+    --jfmod-chrome-enter: 0.146s;
+    --jfmod-chrome-exit: 0.001s;
+
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper),
+    .actionSheet.dialog {
+        width: auto;
+        max-height: 20em;
+        font-size: 1em;
+        backdrop-filter: none;
+    }
+
+    .actionSheet.dialog {
+        min-width: 17.94em;
+        height: auto;
+        bottom: auto;
+        right: auto;
+    }
+
+    .MuiMenuItem-root:focus,
+    .actionSheetMenuItem:focus {
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        box-shadow: inset 0 0 0 0.236em $primary;
+        transform: none !important;
+    }
+
+    .MuiMenuItem-root.Mui-selected:focus,
+    .MuiMenuItem-root.jfmod-currentChoice:focus,
+    .actionSheetMenuItem.jfmod-currentChoice:focus { color: $primary; }
+
+    .MuiButton-root:focus,
+    .emby-button.raised:focus,
+    .emby-button.button-submit:focus,
+    .emby-button.button-delete:focus {
+        background: $primary;
+        color: #fff;
+        box-shadow: 0 0 0 0.16em var(--jfmod-chrome-ink);
+        transform: scale(1.08);
+    }
+
+    .emby-button.button-delete:focus,
+    .MuiButton-containedError:focus { background: #c62828; }
+
+    .MuiIconButton-root:focus,
+    .listItem > .paper-icon-button-light:focus,
+    .jfmod-iconbtn:focus,
+    .jfmod-fileIcon:focus,
+    .jfmod-releaseAction:focus {
+        background: transparent;
+        color: var(--jfmod-chrome-ink);
+        box-shadow: 0 0 0 0.12em var(--jfmod-chrome-paper), 0 0 0 0.28em #fff;
+        transform: none;
+    }
+
+    .emby-input:focus,
+    .emby-select:focus,
+    .MuiInputBase-root.Mui-focused:not(.Mui-error) {
+        box-shadow: 0 0 0 0.236em $primary;
+        background: rgba(0, 164, 220, 0.14);
+    }
+
+    .emby-input[aria-invalid='true']:focus,
+    .emby-select[aria-invalid='true']:focus { box-shadow: inset 0 0 0 0.135em #c62828; }
+
+    .MuiSwitch-switchBase,
+    .userPreferencesPage .MuiCheckbox-root::after,
+    .checkboxOutline::after,
+    .MuiMenuItem-root,
+    .actionSheetMenuItem,
+    .MuiIconButton-root,
+    .paper-icon-button-light,
+    .emby-button,
+    .emby-input,
+    .emby-select,
+    .MuiButton-root { transition: none !important; }
+
+    .emby-button.button-submit:active,
+    .emby-button.button-delete:active,
+    .emby-button.raised:active,
+    .MuiButton-root:active {
+        transform: scale(0.96);
+        transition: transform 0.146s $ease !important;
+    }
+
+    .checkboxContainer:not(.checkboxListContainer):not(.checkboxList) > .emby-checkbox-label .emby-checkbox:focus ~ .checkboxOutline {
+        box-shadow: 0 0 0 0.236em $primary;
+    }
+
+    .userPreferencesPage .MuiCheckbox-root.Mui-focusVisible,
+    .MuiSwitch-switchBase.Mui-focusVisible { box-shadow: 0 0 0 0.236em $primary; }
+
+    .jfmod-releaseDialog .jfmod-releaseAction:focus {
+        color: var(--jfmod-btn, var(--jfmod-sec, rgba(255, 255, 255, 0.7)));
+    }
+
+    .dialogBackdrop { transition-duration: 0.146s; }
+
+    .MuiSelect-icon { transition-duration: 0.146s; }
+
+    .userPreferencesPage .emby-button:focus {
+        transform: none;
+        border-radius: 1.618em;
+        box-shadow: 0 0 0 0.236em $primary;
+    }
+
+    .MuiTooltip-popper { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome {
+        --jfmod-chrome-enter: 0.146s;
+        --jfmod-chrome-exit: 0.146s;
+        --jfmod-chrome-sheet-in: 0.146s;
+        --jfmod-chrome-sheet-out: 0.146s;
+
+        .emby-button,
+        .MuiButton-root,
+        .MuiIconButton-root,
+        .MuiSwitch-switchBase,
+        .userPreferencesPage .MuiCheckbox-root::after,
+        .checkboxOutline::after,
+        .MuiMenuItem-root,
+        .actionSheetMenuItem,
+        .MuiInputBase-root,
+        .emby-input,
+        .MuiSelect-icon { transition: none !important; }
+
+        .emby-button.button-submit:active,
+        .emby-button.button-delete:active,
+        .emby-button.raised:active,
+        .MuiButton-root:active { transform: none; }
+
+        &.layout-tv .emby-button.button-submit:active,
+        &.layout-tv .emby-button.button-delete:active,
+        &.layout-tv .emby-button.raised:active,
+        &.layout-tv .MuiButton-root:active {
+            transform: none;
+            transition: none !important;
+        }
+
+        .dialogBackdrop { transition: none; }
+
+        .docspinner,
+        .docspinner * { animation: none !important; }
+        .docspinner .mdl-spinner__layer-1 { opacity: 0.55; }
+    }
+}
+
+/* Outcome buttons retain their full width. The safe outcome is the outlined 'other' kind. */
+html.jfmod-chrome:not(.layout-tv) .jfmod-removeDialog .jfmod-removeChoice:not(.button-delete):focus:not(:focus-visible) {
+    background: transparent;
+
+    @media (hover: hover) and (pointer: fine) {
+        @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
+            &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-tint); }
+        }
+    }
+}
+
+html.jfmod-chrome.layout-mobile .jfmod-homeHeroContent h1 { font-size: 1.618em; }
+
+/* The player menus follow the same paper recipe in both themes. */
+html.jfmod-chrome.jfmod-chromePlayer {
+    --jfmod-chrome-paper: #202020;
+    --jfmod-chrome-ink: #fff;
+    --jfmod-chrome-hover: rgba(255, 255, 255, 0.08);
+    --jfmod-chrome-tint: rgba(255, 255, 255, 0.12);
+    --jfmod-chrome-line: rgba(255, 255, 255, 0.32);
+    --jfmod-chrome-hair: rgba(255, 255, 255, 0.09);
+    --jfmod-chrome-error: #ff7b72;
+}

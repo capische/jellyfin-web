@@ -1,5 +1,12 @@
 # Settings field (label, required asterisk, help line)
 
+**rd2 presentation (approved D225–D227, built, not accepted):** in the signed-in chrome outside Dashboard and the mod's
+admin settings/setup, `shell/sharedChrome.scss` gives fields a 2.7816em pill with a neutral .09em/32% outline at rest,
+primary outline/14% fill under the pointer, .135em focus ring (.236em on TV), and .135em red refused ring. Labels sit above
+at .854em, inset 1em, help retains its words and 1.618 pitch. Disabled ink 61.8%. Select chevrons turn on open. Required
+asterisks and validation keep the rules below. Admin/wizard fields retain the filled floating-label presentation below.
+No field contents, validation, secret handling or save behavior changes. See [shared chrome](shared-chrome.md).
+
 **Status:** approved 2026-10-19 ("Go with asterisks everywhere", after the audit and the mockup); the asterisk moved from first to the END of the label the same day (user: "Asterics at the end - please redo"). Built on `feat/required-asterisk`
 (P7.FU7, built, not accepted). Records: [audit](../required-fields-audit.md), [mockup](../optional-field-marker.html), [UX.md](../../UX.md)
 §12.1. Code: `settings/settingsWidgets.tsx` (`FieldSpec`, `FieldForm`, `FieldControl`, `ListField`, `SecretField`,
