@@ -7,7 +7,9 @@
  * the cells' widths mirror upstream's overflow cards (12.9em portrait, 20em for an episode still), the images' 2:3 and 16:9.
  */
 
-.jfmod-browseRow {
+// On upstream's row itself, whose flex would shrink the cells; a plain line of them keeps every cell its width.
+.itemsContainer.jfmod-browseRow {
+    display: block;
     margin: 0 -1em;
     white-space: nowrap;
 }
@@ -37,7 +39,7 @@
 
 // The phone: flush cells (and no hover panel, below).
 .layout-mobile {
-    .jfmod-browseRow { margin: 0; }
+    .itemsContainer.jfmod-browseRow { margin: 0; }
 
     .jfmod-browseCell {
         width: 9.6em;
@@ -45,6 +47,14 @@
     }
 
     .jfmod-browseCell-wide { width: 14em; }
+}
+
+// The TV's scroller clips to its frame (upstream sets overflow hidden there), so the frame takes the pull-out and the first cell's
+// lit panel and ring stay whole; the image still lines up with the heading.
+.layout-tv .jfmod-browseFrame {
+    margin-left: -1em;
+
+    > .itemsContainer.jfmod-browseRow { margin: 0; }
 }
 
 #listChildrenCollapsible .jfmod-browseRow {

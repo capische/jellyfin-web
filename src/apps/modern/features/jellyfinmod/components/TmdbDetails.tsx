@@ -61,7 +61,10 @@ const BrowseCell: FC<{ image?: string; wide?: boolean; icon: 'person' | 'tv'; li
         <div className={className}>{body}</div>;
 };
 
-/** A section of upstream's template, shown while it has content, with its row of cells and, when given, its title. */
+/**
+ * A section of upstream's template, shown while it has content, with its row of cells and, when given, its title. The cells are
+ * direct children of the row's container, as upstream's cards are, because its scroll buttons walk the slider's children.
+ */
 const TemplateSection: FC<{ view: HTMLElement; section: string; content: string; title?: ReactNode; children: ReactNode;
     shown: boolean }> = ({ view, section, content, title, children, shown }) => {
     const [node, setNode] = useState<Element | null>(null);
@@ -75,9 +78,15 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
             h2.classList.remove('hide');
             setHeading(h2);
         }
-        setNode(element.querySelector(content));
+        const row = element.querySelector(content);
+        const frame = row?.closest('.emby-scroller');
+        row?.classList.add('jfmod-browseRow');
+        frame?.classList.add('jfmod-browseFrame');
+        setNode(row);
         return () => {
             element.classList.add('hide');
+            row?.classList.remove('jfmod-browseRow');
+            frame?.classList.remove('jfmod-browseFrame');
             setNode(null);
             setHeading(null);
         };
@@ -86,7 +95,7 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
     }, [content, section, shown, view]);
     return <>
         {heading && createPortal(<span className='jfmod-browseHeading'>{title}</span>, heading)}
-        {node && createPortal(<div className='jfmod-browseRow'>{children}</div>, node)}
+        {node && createPortal(children, node)}
     </>;
 };
 
