@@ -1,6 +1,6 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import classNames from 'classnames';
-import React, { type CSSProperties, type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type CSSProperties, type FC, type FocusEvent, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 
 import focusManager from 'components/focusManager';
@@ -531,6 +531,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // in the list, so the page does not move.
     const inCard = strip.stacked;
     const list = useRef<HTMLDivElement>(null);
+    const focusedAt = useRef(-1);
     const [place, setPlace] = useState<{ top: number; left: number; width: number; narrow: boolean; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const measure = useCallback(() => {
@@ -556,7 +557,10 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // with the rows the width takes (D198), also when the strip stacks or unstacks under it (D199). A floating list is in the page,
     // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
     useEffect(() => {
-        if (!slide.open) return;
+        if (!slide.open) {
+            focusedAt.current = -1;
+            return;
+        }
         const again = () => {
             const at = measure();
             if (at) setPlace(previous => previous && { ...previous, ...at });
@@ -565,6 +569,15 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         window.addEventListener('resize', again);
         return () => window.removeEventListener('resize', again);
     }, [slide.open, measure, inCard]);
+    // Moving the list in or out of the card remounts it, and the focus falls to the page: it goes back to the same file's same control
+    // (Codex review of P7.FU6), which sits at the same place among the list's controls.
+    const noteFocus = useCallback((event: FocusEvent<HTMLDivElement>) => {
+        focusedAt.current = Array.from(event.currentTarget.querySelectorAll('button, a')).indexOf(event.target);
+    }, []);
+    useLayoutEffect(() => {
+        const control = list.current?.querySelectorAll<HTMLElement>('button, a')[focusedAt.current];
+        if (control && document.activeElement === document.body) focusManager.focus(control);
+    }, [inCard]);
     // A click outside the list and its cell closes it, as outside Audio's. In the card the list moves Audio and Subtitles, so a tap
     // on one closes it at once before that cell's own click places its list (a slide would leave that list where the cell was).
     useEffect(() => {
@@ -612,7 +625,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // in two frames opening and waited 140 ms closing). Floating, it is the Video cell's width (D99, D198); another quality is got
     // from the page's cloud icon, so the list has no row for it (D102).
     const twoLine = layoutManager.mobile || !!place?.narrow;
-    const fileList = <div ref={list} id={listId}
+    const fileList = <div ref={list} id={listId} onFocus={noteFocus}
         className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open, 'jfmod-fileList--two': twoLine, 'jfmod-fileList--narrow': !!place?.narrow })}
         style={!inCard && place ? { top: place.top, left: place.left, width: place.width } : undefined}>
         <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
