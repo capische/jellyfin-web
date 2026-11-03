@@ -6,7 +6,7 @@ per row", the three-line caption with the year not bold, "The hover should be bo
 2026-11-01): the order "full match", "the latest release", then "fuzzy match"; the + "similar design and hover effect as cloud
 or play on the poster". Mockups `reviews/tmdb-search-design/mockup/`
 (states default, hover, adding, added, focus, loading, end) and `reviews/tmdb-browse-design/mockup/`. Built on both
-lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232); **built (not accepted)**. Code: `components/SearchCard.tsx`,
+lines (TM2, [TMDB-BROWSE.md](../../TMDB-BROWSE.md)); first look approved (D232), the Seasons arrows D252; **built (not accepted)**. Code: `components/SearchCard.tsx`,
 `components/searchGrid.scss` (`jfmod-search*`); the browse rows' cell `BrowseCell` in `components/TmdbDetails.tsx`,
 `components/tmdbDetails.scss` (`jfmod-browse*`).
 
@@ -51,7 +51,12 @@ Base unit 1em (the surface's font size; TV 125 %, phone 90 %). φ steps named.
 The cell as above, with a two-line caption, left-aligned: line 1 700 at full ink, line 2 at 85.4 %. Portrait images 12.9em wide
 (upstream's overflow card), an episode's 16:9 still 20em; the row is pulled out by 1em so the first image lines up with the
 section heading (on the TV its scroller's frame is pulled instead, because that frame clips, so the first cell's panel and ring
-stay whole). The cells are direct children of upstream's row, so its scroll buttons and the TV's focus walk them. A person without a portrait shows the person icon on upstream's default card background.
+stay whole). The cells are direct children of upstream's row, so its scroll buttons and the TV's focus walk them.
+
+Every browse row is upstream's scroller with upstream's arrows, Seasons included (user, 2026-11-03, D252: "Add arrows"; Seasons is the
+one row the template gives none, so it gets the markup of the template's other rows): on a computer ‹ and › sit on the heading's line and
+are hidden while the row fits; the phone scrolls by touch and the TV by focus, with no arrows. The computer's Seasons row sits beside the
+poster, so its frame takes the 1em pull-out and clips, and a scrolled row never slides over the poster. A person without a portrait shows the person icon on upstream's default card background.
 
 ## Order
 

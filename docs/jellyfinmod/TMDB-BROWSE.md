@@ -43,6 +43,7 @@ ran 2026-11-02; the user's re-verify (gate 3) and the Codex review (gate 4) foll
 | tm2.d1 | web | This plan, the PLAN.md line, the search card guide. |
 | tm2.b3 | web | Found at gate 2, not visible in the first look's screenshots: the browse rows' › did nothing on a computer (the cells sat in a wrapper, and upstream's scroll buttons walk the slider's children), and the TV cut the first cell's lit panel and ring (its scroller clips to the frame). The cells are now the row's own children, drawn as a plain line so each keeps its width, and on the TV the frame takes the 1em pull-out. Same look. |
 | tm2.m1 | web | `scripts/jellyfinmod-e2e/tmdb-browse.mjs`, the gate 2 runner. |
+| tm2.b4 | web | Arrows on the Seasons row (user, 2026-11-03, D252: "Add arrows"): a series with many seasons could not be reached with a mouse. Seasons gets the markup of the template's other rows, so the same ‹ and ›, hidden while the row fits, none on the phone or the TV. It was the only one of TM2's rows without them: Cast & Crew, Guest Stars and More from the season already have them; a season's episode rows and the search grid are vertical. No new values or components. |
 | tm2.p3 | plugin | `Discover/Title` over real HTTP in `tests/PhaseOneSmoke` (TMDB behind the suite's HTTP boundary): movie, series, season, refusals, access rules, nothing stored. |
 
 - **TMDB detail reads** (tm2.p2): the TMDB source (saved token or Jellyfin's connection) is read once per few seconds instead of
@@ -73,8 +74,3 @@ Mac and PhaseSevenSettings in the Linux container pass on both lines.
 Not run: a physical TV or phone (browser emulation only); the browser as an ordinary user (the API's access rules are in
 PhaseOneSmoke); a server with several libraries of one kind, where Add asks through the action sheet (the environments have one).
 Gate 4's Codex review has not run.
-
-## Open for the user
-
-- A long series on a computer: the Seasons row has no scroll buttons and no scrollbar, so a mouse without a sideways wheel reaches only
-  the first seasons (Tab, a trackpad and shift-wheel reach all). The first look's title had three seasons. Unchanged until decided.
