@@ -84,4 +84,4 @@ The add, Undo, search and paging section with a saved token: 159 of 159 in each 
 
 Not run: a physical TV or phone (browser emulation only); the browser as an ordinary user (the API's access rules are in
 PhaseOneSmoke); a server with several libraries of one kind, where Add asks through the action sheet (the environments have one).
-Gate 4's Codex review has not run.
+Gate 4: Codex (gpt-6.1-sol, high) approved the product code on 2026-11-04 after fix rounds on Undo, paging and the Add redirect; the runner's last two checks took the items section to 161 of 161 in Chromium. The user approved the tested change (D256).

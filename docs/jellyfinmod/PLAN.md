@@ -479,7 +479,7 @@ breakdown in [`PHASE4.md`](PHASE4.md) (plan-ops#8, low, single-source). Current 
   followed (D125–D136, D153–D163, D182). Gate 2 passed 2026-10-31 on both lines (live list 103/103, matrix 134/134 in Chromium
   and Chrome); Codex reviewed the additions and re-reviewed their fixes, its last two P3s fixed (PHASE13). Accepted because
   the user's "finish everything" while away stood in for the gate 3 re-check (D184, workspace `reviews/overnight-2026-10-28/DECISIONS.md`); the merge follows.
-- TM2 — TMDB search grid and browse pages (user, 2026-11-01, D204): **built (not accepted)** on both lines, branches
+- TM2 — TMDB search grid and browse pages (user, 2026-11-01, D204): **accepted** 2026-11-04 on both lines, branches
   `feat/tmdb-browse-items` (from `main-items`) and `feat/tmdb-browse` (from `main-stubs`) in both repositories; plan, tasks and
   checks in [`TMDB-BROWSE.md`](TMDB-BROWSE.md), the card in [`design/guides/search-card.md`](design/guides/search-card.md). One
   vertical grid of movies and shows, full matches with 100 or more votes first, then by votes (D253), a browse page for a TMDB title with one Add to Library. Gate 1
