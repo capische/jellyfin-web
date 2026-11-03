@@ -1,7 +1,8 @@
 /* The card marks' glass (P4.FU7, user-approved 2026-10-13: "switch from yellow to white card glyph, and use top bar's exact
  * recipe"). One recipe for every mark on a poster (the download state disc, Not Downloaded, Unaired), with the top bar's values
  * from homeChrome.scss: the theme's bar colour at 12 % over a 12px blur, saturate 180 %, contrast 0.7, brightness 0.85; the
- * light scheme 20 % with saturate 170 % and brightness 1.1; Apple TV's lightened bar colour at 30 % with brightness 1.15. The
+ * light scheme white glass from the tokens in lightGlass.scss (D259, D262), no contrast step; Apple TV's lightened bar colour at
+ * 30 % with brightness 1.15. The
  * bar's colour is the theme's `--jf-palette-AppBar-defaultBg` (MUI's own `--AppBar-background` exists only on the bar itself).
  * The glyph and the arc take the bar's text colour: white, the light schemes' dark text on theirs; a failure stays red.
  *
@@ -27,11 +28,11 @@
         }
 
         [data-theme='light'] & {
-            --jfmod-card-ink: var(--jf-palette-text-primary, #000);
+            --jfmod-card-ink: var(--jfmod-light-glass-ink);
             --jfmod-card-track: rgba(0, 0, 0, 0.25);
             --jfmod-card-fail: #c62828;
-            background: color-mix(in srgb, var(--jf-palette-AppBar-defaultBg, #e8e8e8) 20%, transparent);
-            backdrop-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.1);
+            background: rgba(255, 255, 255, var(--jfmod-light-glass-fill));
+            backdrop-filter: blur(var(--jfmod-light-glass-blur)) saturate(var(--jfmod-light-glass-saturate)) brightness(var(--jfmod-light-glass-brightness));
         }
 
         [data-theme='appletv'] & {

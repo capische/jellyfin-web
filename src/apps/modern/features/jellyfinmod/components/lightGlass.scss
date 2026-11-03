@@ -1,0 +1,13 @@
+/* JellyfinMod — the light theme's glass, in one place (D259, D262; workspace rulebook section 2, guide card-glass.md).
+ *
+ * Change a value here and every control that reads it follows: `card-glass` in _cardGlass.scss, the poster's disc and foot pill.
+ * The dark themes and the TV do not read these. The ink carries its own 87 % and nothing stacks opacity over it, so a label
+ * meets 4.5:1 over black and white art.
+ */
+:root {
+    --jfmod-light-glass-fill: 0.618;
+    --jfmod-light-glass-blur: 12px;
+    --jfmod-light-glass-saturate: 170%;
+    --jfmod-light-glass-brightness: 1.09;
+    --jfmod-light-glass-ink: rgba(0, 0, 0, 0.87);
+}
