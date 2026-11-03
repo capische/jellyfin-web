@@ -28,7 +28,7 @@ whole** (the user, 2026-11-01: "Phone Video Dropdown - accepted, go implement it
 itself** (the user, 2026-11-01: "move it, stack, check it"; D199): built 2026-11-01, gate 1.
 **The pending entry stacks in a narrow Video list** (the user's pick, 2026-11-03; D236; [pending-version.md](pending-version.md)): approved
 2026-11-03 (D238). **The strip stacks a little earlier, from a 995 px window** (the user, 2026-11-03; D238): built 2026-11-03, gate 2.
-**The closed Video value drops a mark whole on a row too** (the user, 2026-11-03; D242): built 2026-11-03, gate 1.
+**The closed Video value drops a mark whole on a row too** (the user, 2026-11-03; D242; first look approved, D244): built 2026-11-03, gate 2.
 **The phone mark** (Phase 12, user-approved 2026-10-29: "Design for mobile icon looks good for me. Go ahead"; D51, D52; mockup
 `reviews/phase12/mockups/4-video-dropdown.html`): accepted 2026-10-30 (Phase 12, with the suffix D133). The mockup's *Get 1080p for Phones* row is
 dropped too (user, 2026-10-29: "I have already the cloud icon over there", D103, as D102 above): the page's cloud icon opens the picker.
