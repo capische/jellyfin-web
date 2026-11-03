@@ -1,0 +1,339 @@
+/* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function -- a Node acceptance runner, not shipped code */
+/* global window, document, ApiClient, location, indexedDB */
+// TM2 tm2.u1: Undo right after the search card's + must not bring the title back. Presses + and then Undo in a real browser against
+// a running Jellyfin and the live TMDb, waits past the plugin's reconciliation, and asserts no entry and no library item of the
+// title remains. Then a real file of a title that was just undone must still be discovered.
+//
+//   JELLYFINMOD_TEST_URL=http://127.0.0.1:<port>/ [JELLYFINMOD_BROWSER=chromium|chrome] [JELLYFINMOD_WEB_PATH=/web/]
+//   [JELLYFINMOD_UNDO_ROUNDS=1]        how many times to go through the titles
+//   [JELLYFINMOD_UNDO_DELAYS=1500,1750,2000,2250,2500]   ms between the Undo line appearing and pressing Undo, used in turn
+//   [JELLYFINMOD_UNDO_SETTLE=9000]     ms to wait after Undo before looking
+//   [JELLYFINMOD_UNDO_KINDS=movie,series]   which titles to use
+//   [JELLYFINMOD_UNDO_LOG=<host path of the environment's Jellyfin log folder>]   press Undo the moment Jellyfin starts reading the
+//                                      title's images, so the removal lands inside its metadata refresh: the race, every time
+//   [JELLYFINMOD_UNDO_MEDIA=<host path of the /test-media folder>]   runs the two checks below, which need the disk:
+//     the state the race leaves, every time: a title with an item in the library, its stub gone and no entry (main-stubs only;
+//     main-items writes no stub file). The race itself needs Undo to land inside Jellyfin's metadata refresh, about 1 in 15.
+//     a real file of a title just undone is still discovered: with
+//   [JELLYFINMOD_UNDO_SOURCE=<a small video file>]   the file to copy for it
+//
+// Every title it adds it removes again.
+import { closeSync, copyFileSync, existsSync, fstatSync, mkdirSync, openSync, readdirSync, readSync, rmSync } from 'node:fs';
+import { chromium } from 'playwright';
+
+const origin = new URL(process.env.JELLYFINMOD_TEST_URL ?? (() => { throw new Error('JELLYFINMOD_TEST_URL is required'); })());
+// The local pool without alpha and beta (the user's own environments, envs/pool.list); never production.
+if (!['9096', '10096', '11096', '12096'].includes(origin.port) || origin.hostname !== '127.0.0.1') {
+    throw new Error('Runs on the local pool environments bravo, charlie, delta and echo only');
+}
+const tier = process.env.JELLYFINMOD_BROWSER ?? 'chromium';
+const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web/';
+const ROUNDS = Number(process.env.JELLYFINMOD_UNDO_ROUNDS ?? 1);
+const DELAYS = (process.env.JELLYFINMOD_UNDO_DELAYS ?? '1500,1750,2000,2250,2500').split(',').map(Number);
+const SETTLE = Number(process.env.JELLYFINMOD_UNDO_SETTLE ?? 9000);
+const MEDIA = process.env.JELLYFINMOD_UNDO_MEDIA ?? null;
+const SOURCE = process.env.JELLYFINMOD_UNDO_SOURCE ?? null;
+const LOG_FOLDER = process.env.JELLYFINMOD_UNDO_LOG ?? null;
+const KINDS = process.env.JELLYFINMOD_UNDO_KINDS?.split(',') ?? null;
+const base = () => new URL(WEB_PATH, origin).href;
+const ALL_TITLES = [
+    { query: 'arrival', key: 'movie:329865', type: 'movie', id: 329865, title: 'Arrival' },
+    { query: 'chernobyl', key: 'series:87108', type: 'series', id: 87108, title: 'Chernobyl' },
+    { query: 'fight club', key: 'movie:550', type: 'movie', id: 550, title: 'Fight Club' },
+    { query: 'band of brothers', key: 'series:4613', type: 'series', id: 4613, title: 'Band of Brothers' },
+    { query: 'interstellar', key: 'movie:157336', type: 'movie', id: 157336, title: 'Interstellar' },
+    { query: 'the night of', key: 'series:66276', type: 'series', id: 66276, title: 'The Night Of' },
+    { query: 'inception', key: 'movie:27205', type: 'movie', id: 27205, title: 'Inception' },
+    { query: 'parasite', key: 'movie:496243', type: 'movie', id: 496243, title: 'Parasite' },
+    ...[['moon', 17431, 'Moon'], ['primer', 14337, 'Primer'], ['coherence', 220289, 'Coherence'], ['snowpiercer', 110415, 'Snowpiercer'],
+        ['ex machina', 264660, 'Ex Machina'], ['whiplash', 244786, 'Whiplash'], ['nightcrawler', 242582, 'Nightcrawler'], ['drive', 64690, 'Drive'],
+        ['locke', 210479, 'Locke'], ['sicario', 273481, 'Sicario'], ['prisoners', 146233, 'Prisoners']]
+        .map(([query, id, title]) => ({ query, key: `movie:${id}`, type: 'movie', id, title }))
+];
+const TITLES = ALL_TITLES.filter(title => !KINDS || KINDS.includes(title.type));
+
+const results = [];
+const record = (check, verdict, detail = '') => {
+    results.push({ check, verdict });
+    console.log(`${verdict ? 'PASS' : 'FAIL'} [${tier}] ${check}${detail ? ' — ' + String(detail).slice(0, 500) : ''}`);
+};
+
+async function signIn(page) {
+    await page.goto(base(), { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => {
+        try { return !!ApiClient.getCurrentUserId() || /login|selectuser|selectserver/.test(location.hash); } catch { return false; }
+    }, undefined, { timeout: 30000 });
+    if (await page.evaluate(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } })) return;
+    const field = page.locator('#txtManualName');
+    if (!await field.isVisible().catch(() => false)) {
+        const chooser = page.locator('.btnManual').first();
+        await chooser.waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
+        if (await chooser.count()) await chooser.evaluate(node => node.click());
+        await field.waitFor({ state: 'visible', timeout: 15000 });
+    }
+    await page.waitForTimeout(1000);
+    await field.fill('oleksii');
+    await page.locator('#txtManualPassword').fill('');
+    await page.locator('button:visible').filter({ hasText: 'Sign In' }).first().click();
+    await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+    await page.waitForTimeout(1500);
+}
+
+const apiJson = (page, path, query) => page.evaluate(([p, q]) => ApiClient.getJSON(ApiClient.getUrl(p, q)), [path, query]);
+const apiPost = (page, path) => page.evaluate(p => ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl(p) }).then(() => true), path);
+const apiDelete = (page, path) => page.evaluate(p => ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl(p) }).then(() => true), path);
+
+const entriesOf = async (page, { type, id }) => (await apiJson(page, 'JellyfinMod/Entries')).items.filter(entry => entry.mediaType === type && entry.tmdbId === id);
+
+/** The library's items of the title, as a viewer's own queries find them. */
+const itemsOf = async (page, { type, id, title }) => {
+    const userId = await page.evaluate(() => ApiClient.getCurrentUserId());
+    const answer = await apiJson(page, `Users/${userId}/Items`, { IncludeItemTypes: type === 'movie' ? 'Movie' : 'Series', Recursive: true, SearchTerm: title, Fields: 'ProviderIds,Path' });
+    return answer.Items.filter(item => item.ProviderIds?.Tmdb === String(id));
+};
+
+/** Leaves the environment without the title: a stray entry and its placeholder go through the plugin's own removal. */
+async function clean(page, title) {
+    for (const entry of await entriesOf(page, title)) await apiDelete(page, `JellyfinMod/Entries/${entry.id}`).catch(() => {});
+    // What a failed attempt leaves: an item of no file, and an entry bound to it, which is refused until the item has gone.
+    const left = await entriesOf(page, title);
+    for (const item of await itemsOf(page, title)) if (!item.Path?.endsWith('.mkv')) await apiDelete(page, `Items/${item.Id}`).catch(() => {});
+    for (let wait = 0; wait < 10 && left.length && (await entriesOf(page, title)).length; wait++) {
+        await page.waitForTimeout(1000);
+        for (const entry of await entriesOf(page, title)) await apiDelete(page, `JellyfinMod/Entries/${entry.id}`).catch(() => {});
+    }
+}
+
+const fstatFile = path => {
+    const fd = openSync(path, 'r');
+    try { return fstatSync(fd).size; } finally { closeSync(fd); }
+};
+const currentLog = () => `${LOG_FOLDER}/${readdirSync(LOG_FOLDER).filter(name => name.startsWith('log_')).sort().at(-1)}`;
+
+/** Waits until Jellyfin's log says it has started on this title's images (its refresh is then in flight); false if it never does. */
+async function refreshInFlight(page, title, path, from) {
+    const fd = openSync(path, 'r');
+    try {
+        let offset = from;
+        let text = '';
+        for (let wait = 0; wait < 300; wait++) {
+            const size = fstatSync(fd).size;
+            if (size > offset) {
+                const buffer = Buffer.alloc(size - offset);
+                readSync(fd, buffer, 0, buffer.length, offset);
+                offset = size;
+                text += buffer.toString('utf8');
+                if (text.split('\n').some(line => /Running "Tmdb\w*ImageProvider"/.test(line) && line.includes(title.title))) return true;
+            }
+            await page.waitForTimeout(50);
+        }
+        return false;
+    } finally {
+        closeSync(fd);
+    }
+}
+
+async function addThenUndo(page, title, delay) {
+    const logPath = LOG_FOLDER && currentLog();
+    const logStart = LOG_FOLDER ? fstatFile(logPath) : 0;
+    const undo = await pressAdd(page, title);
+    if (LOG_FOLDER) {
+        const inFlight = await refreshInFlight(page, title, logPath, logStart);
+        if (!inFlight) console.log(`note: no image refresh seen for ${title.title}`);
+    } else {
+        await page.waitForTimeout(delay);
+    }
+    await undo.click();
+    await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+}
+
+/** Opens the search and presses the card's +; returns its Undo button. */
+async function pressAdd(page, title) {
+    await page.goto(base() + `#/search?query=${encodeURIComponent(title.query)}`, { waitUntil: 'domcontentloaded' });
+    // A title this check removed through the API is still a library card for a minute in the page's own stored queries, as upstream
+    // keeps them (utils/query/queryClient): a fresh page with none each time.
+    await page.evaluate(() => { indexedDB.deleteDatabase('keyval-store'); });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('.jfmod-searchGrid')?.getAttribute('aria-busy') === 'false'
+        && document.querySelectorAll('.jfmod-searchCell').length > 0, undefined, { timeout: 45000 });
+    const cell = page.locator(`.jfmod-searchCell[data-jfmod-key="${title.key}"]`);
+    await cell.waitFor({ state: 'attached', timeout: 15000 });
+    await cell.scrollIntoViewIfNeeded();
+    await cell.hover();
+    await page.waitForTimeout(200);
+    await cell.locator('.jfmod-searchAdd').click();
+    const undo = page.locator('.jfmod-searchUndo button');
+    await undo.waitFor({ state: 'visible', timeout: 45000 });
+    return undo;
+}
+
+/**
+ * A title that stays in the catalog keeps its entry when its stub goes (a user's delete): only a title with no entry is dropped.
+ */
+async function checkEntryStays(page, title) {
+    const area = `${MEDIA}/movies`;
+    await pressAdd(page, title);
+    let items = [];
+    for (let wait = 0; wait < 30 && !items.length; wait++) {
+        await page.waitForTimeout(1000);
+        items = await itemsOf(page, title);
+    }
+    await page.waitForTimeout(4000);
+    const folder = readdirSync(area).find(name => name.includes(`[tmdbid-${title.id}]`));
+    if (!folder || !items.length) {
+        console.log(`note: ${title.title} has no stub on disk here, the entry-stays check does not apply`);
+        await clean(page, title);
+        return;
+    }
+    const before = (await entriesOf(page, title)).map(entry => entry.id).join();
+    rmSync(`${area}/${folder}`, { recursive: true, force: true });
+    const userId = await page.evaluate(() => ApiClient.getCurrentUserId());
+    await page.evaluate(async ([user, id]) => {
+        const item = await ApiClient.getItem(user, id);
+        item.Name += ' again';
+        return ApiClient.updateItem(item);
+    }, [userId, items[0].Id]).catch(() => {});
+    await page.waitForTimeout(SETTLE);
+    const after = (await entriesOf(page, title)).map(entry => entry.id).join();
+    record(`${title.title}, in the catalog with its stub gone: the entry stays`, before.length > 0 && before === after, `${before} and ${after}`);
+    await clean(page, title);
+}
+
+/**
+ * What the race leaves, built on purpose: the title's item in the library, its stub file gone and no entry; then Jellyfin saves the
+ * item with changed metadata, as its refresh does. Nothing may bring the entry back, and the empty item goes.
+ */
+async function checkLeftBehind(page, title) {
+    const area = `${MEDIA}/${title.type === 'movie' ? 'movies' : 'tv'}`;
+    const undo = await pressAdd(page, title);
+    let items = [];
+    for (let wait = 0; wait < 30 && !items.length; wait++) {
+        await page.waitForTimeout(1000);
+        items = await itemsOf(page, title);
+    }
+    await page.waitForTimeout(4000);
+    const folder = readdirSync(area).find(name => name.includes(`[tmdbid-${title.id}]`));
+    if (!folder || !items.length) {
+        console.log(`note: ${title.title} has no stub on disk or no item here: ${folder ?? 'no folder'}, ${items.length} items`);
+        await undo.click();
+        await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+        return false;
+    }
+    rmSync(`${area}/${folder}`, { recursive: true, force: true });
+    await undo.click();
+    await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+    await page.waitForTimeout(1000);
+    const left = await itemsOf(page, title);
+    record(`${title.title}, left behind: the item is there, its stub gone, no entry`, left.length === 1 && !(await entriesOf(page, title)).length, `${left.length} items`);
+    if (!left.length) return true;
+    const userId = await page.evaluate(() => ApiClient.getCurrentUserId());
+    const saved = await page.evaluate(async ([user, id]) => {
+        const item = await ApiClient.getItem(user, id);
+        item.Name += ' again';
+        return ApiClient.updateItem(item).then(() => true);
+    }, [userId, left[0].Id]).catch(error => String(error));
+    console.log(`note: ${title.title} saved with changed metadata: ${saved}`);
+    await page.waitForTimeout(SETTLE);
+    const entries = await entriesOf(page, title);
+    const items2 = await itemsOf(page, title);
+    record(`${title.title}, left behind: no entry comes back`, entries.length === 0, entries.map(entry => `${entry.id} state ${entry.state}`).join(', '));
+    record(`${title.title}, left behind: the item goes`, items2.length === 0, items2.map(item => `${item.Id} ${item.Path ?? ''}`).join(', '));
+    await clean(page, title);
+    return true;
+}
+
+const browser = await chromium.launch(tier === 'chrome' ? { headless: true, channel: 'chrome' } : { headless: true });
+console.log('browser', tier, browser.version());
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', error => errors.push(String(error.message).split('\n')[0]));
+let attempts = 0;
+let back = 0;
+let stray = 0;
+try {
+    await signIn(page);
+    await page.waitForTimeout(1000);
+    for (let round = 0; round < ROUNDS; round++) {
+        for (const title of TITLES) {
+            const delay = DELAYS[attempts % DELAYS.length];
+            attempts += 1;
+            if ((await entriesOf(page, title)).length) await clean(page, title);
+            let label = `${title.title}, Undo ${delay} ms after its line`;
+            try {
+                await addThenUndo(page, title, delay);
+            } catch (error) {
+                record(`${label}: the add and Undo ran`, false, error.message.split('\n')[0]);
+                await clean(page, title);
+                continue;
+            }
+            await page.waitForTimeout(SETTLE);
+            const entries = await entriesOf(page, title);
+            const items = await itemsOf(page, title);
+            label += ` (${round + 1}/${ROUNDS})`;
+            record(`${label}: no entry comes back`, entries.length === 0, entries.map(entry => `${entry.id} state ${entry.state}`).join(', '));
+            record(`${label}: no library item remains`, items.length === 0, items.map(item => `${item.Id} ${item.Path ?? ''}`).join(', '));
+            if (entries.length) back += 1;
+            if (items.length) stray += 1;
+            await clean(page, title);
+            if (items.length) await page.waitForTimeout(1500);
+        }
+    }
+
+    if (MEDIA) {
+        const movie = TITLES.find(title => title.type === 'movie');
+        const series = ALL_TITLES.find(title => title.type === 'series');
+        for (const title of [movie, series]) {
+            await clean(page, title);
+            await checkLeftBehind(page, title);
+            await clean(page, title);
+        }
+        await checkEntryStays(page, movie);
+    }
+
+    // A real file of a title just undone is a title the library holds: it is still discovered, and it binds.
+    if (MEDIA && SOURCE) {
+        const title = TITLES[0];
+        await clean(page, title);
+        await addThenUndo(page, title, 0);
+        await page.waitForTimeout(SETTLE);
+        const folder = `${MEDIA}/movies/Arrival (2016) [tmdbid-329865]`;
+        const leftover = existsSync(folder) ? readdirSync(folder) : [];
+        mkdirSync(folder, { recursive: true });
+        const file = `${folder}/Arrival (2016) [tmdbid-329865].mkv`;
+        copyFileSync(SOURCE, file);
+        try {
+            await apiPost(page, 'Library/Refresh');
+            let found = [];
+            for (let wait = 0; wait < 40 && !found.some(entry => entry.state === 'onDisk'); wait++) {
+                await page.waitForTimeout(3000);
+                found = await entriesOf(page, title);
+            }
+            record('a real file of the undone title is discovered and on disk', found.length === 1 && found[0].state === 'onDisk',
+                [found.map(entry => `${entry.id} state ${entry.state}`).join(', ') || 'no entry', `beside it before: ${leftover.join(', ') || 'nothing'}`].join('; '));
+            const items = await itemsOf(page, title);
+            record('the real file is the library\'s item', items.length === 1 && items[0].Path?.endsWith('.mkv'), items.map(item => item.Path).join(', '));
+            record('the file was not touched', existsSync(file));
+        } finally {
+            rmSync(folder, { recursive: true, force: true });
+            for (const item of await itemsOf(page, title)) await apiDelete(page, `Items/${item.Id}`).catch(() => {});
+            for (let wait = 0; wait < 10 && (await entriesOf(page, title)).length; wait++) {
+                await page.waitForTimeout(1500);
+                await clean(page, title);
+            }
+        }
+        const left = await entriesOf(page, title);
+        record('the real file check cleaned up', left.length === 0, left.map(entry => entry.state).join(', '));
+    }
+} finally {
+    for (const title of ALL_TITLES) await clean(page, title).catch(() => {});
+    record('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+    await browser.close();
+}
+const failed = results.filter(result => !result.verdict).length;
+console.log(`\n${attempts} undos: ${back} brought the title back, ${stray} left a library item`);
+console.log(`${results.length - failed} passed, ${failed} failed (${tier})`);
+process.exit(failed ? 1 : 0);
+/* eslint-enable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function */
