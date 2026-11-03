@@ -1958,6 +1958,7 @@ async function checkVideoListFocusIdentity(page, layout, id) {
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const row = index => page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).nth(index);
     const kept = new Set();
+    const refused = [];
     await page.route(`**/JellyfinMod/Entries/${entryId}**`, async route => {
         const request = route.request();
         const binding = /\/Versions\/([^/]+)\//.exec(request.url())?.[1];
@@ -1971,12 +1972,24 @@ async function checkVideoListFocusIdentity(page, layout, id) {
             const body = await response.json();
             for (const version of body.versions ?? []) if (kept.has(version.bindingId)) { version.kept = true; version.removable = false; }
             await route.fulfill({ response, json: body });
-        } else {
+        } else if (request.method() === 'GET') {
             await route.continue();
+        } else {
+            // Only the answered Keep may be pressed: a kept file's Enter would send a real DELETE.
+            refused.push(`${request.method()} ${new URL(request.url()).pathname}`);
+            await route.abort();
         }
     });
     const keepB = row(1).locator('[data-jfmod-file-pin]');
     const labelB = await keepB.getAttribute('aria-label');
+    const labelA = await row(0).locator('[data-jfmod-file-pin]').getAttribute('aria-label');
+    if (!labelA?.startsWith('Keep ') || !labelB?.startsWith('Keep ')) {
+        record(layout, 'focus identity: both files start not kept, so nothing real is pressed', false, `${labelA} / ${labelB}`);
+        await page.unroute(`**/JellyfinMod/Entries/${entryId}**`);
+        await page.setViewportSize(start);
+        await page.waitForTimeout(300);
+        return;
+    }
     await row(0).locator('[data-jfmod-file-pin]').focus();
     await page.keyboard.press('Enter');
     await keepB.focus();
@@ -1998,6 +2011,7 @@ async function checkVideoListFocusIdentity(page, layout, id) {
     await page.waitForTimeout(450);
     const left = await vlActive(page);
     record(layout, 'focus identity: a Remove that went away leaves the focus on its own file\'s row button', /^row2 .*fileChoose/.test(left), left);
+    record(layout, 'focus identity: no request but the answered Keep and the reads left the page', refused.length === 0, refused.join(', '));
     await page.unroute(`**/JellyfinMod/Entries/${entryId}**`);
     await page.setViewportSize(start);
     await page.waitForTimeout(300);
