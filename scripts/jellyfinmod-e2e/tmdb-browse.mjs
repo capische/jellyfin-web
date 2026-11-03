@@ -9,6 +9,7 @@
 //   [JELLYFINMOD_TM2_ADD=1]      add titles through the pages (computer, phone and TV in the dark theme), remove each afterwards
 //   [JELLYFINMOD_TM2_TOKEN=1]    the environment has a saved TMDb token: a long search pages further and nothing shown moves
 //   [JELLYFINMOD_TM2_SHOTS=DIR]  keep a screenshot of every page in every layout and theme there
+//   [JELLYFINMOD_TM2_ROWS=1]     only the browse pages and their rows: no search grid
 //
 // Every title it adds it removes again, and it proves the libraries it found are the libraries it leaves.
 import { mkdirSync } from 'node:fs';
@@ -24,6 +25,7 @@ const WEB_PATH = process.env.JELLYFINMOD_WEB_PATH ?? '/web/';
 const SHOTS = process.env.JELLYFINMOD_TM2_SHOTS ?? null;
 const ADD = process.env.JELLYFINMOD_TM2_ADD === '1';
 const TOKEN = process.env.JELLYFINMOD_TM2_TOKEN === '1';
+const ROWS = process.env.JELLYFINMOD_TM2_ROWS === '1';
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const base = () => new URL(WEB_PATH, origin).href;
 const PHONE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
@@ -435,6 +437,53 @@ async function checkRowScroll(page, label, name, sectionSelector, layoutName) {
     }
 }
 
+/** Computer: the Seasons row's › reaches the last season and ‹ returns; the row stays beside the poster, never over it (D252). */
+async function checkLongSeriesArrows(page, label, section, lastSeason) {
+    const next = page.locator(`${section} .emby-scrollbuttons-button[data-direction="right"]`);
+    const prev = page.locator(`${section} .emby-scrollbuttons-button[data-direction="left"]`);
+    record(label, 'long series: the arrows are on the Seasons row', await next.isVisible() && await prev.isVisible());
+    await next.scrollIntoViewIfNeeded();
+    const place = await page.evaluate(selector => {
+        const arrows = document.querySelector(selector + ' .emby-scrollbuttons').getBoundingClientRect();
+        const title = document.querySelector(selector + ' .sectionTitle').getBoundingClientRect();
+        const castArrows = document.querySelector('.mainAnimatedPage:not(.hide) #castCollapsible .emby-scrollbuttons');
+        return { sameLine: arrows.top < title.bottom && arrows.bottom > title.top, arrowsClass: document.querySelector(selector + ' .emby-scrollbuttons').className, castClass: castArrows?.className,
+            buttonWidth: document.querySelector(selector + ' .emby-scrollbuttons-button').getBoundingClientRect().width,
+            castWidth: castArrows?.querySelector('.emby-scrollbuttons-button').getBoundingClientRect().width };
+    }, section);
+    record(label, 'long series: the arrows sit on the heading\'s line, as the other rows\'', place.sameLine && place.arrowsClass === place.castClass && place.buttonWidth === place.castWidth, JSON.stringify(place));
+    const firstLeft = () => page.locator(`${section} .jfmod-browseCell`).first().evaluate(node => node.getBoundingClientRect().left);
+    const start = await firstLeft();
+    await next.click();
+    await page.waitForTimeout(700);
+    record(label, 'long series: › scrolls the row', await firstLeft() < start - 50, `${Math.round(start)} → ${Math.round(await firstLeft())}`);
+    await shot(page, label, 'long-series-scrolled');
+    const beside = await page.evaluate(selector => {
+        const frame = document.querySelector(selector + ' .emby-scroller');
+        const poster = [...document.querySelectorAll('.mainAnimatedPage:not(.hide) .jfmod-entryPoster')].find(node => node.getBoundingClientRect().width > 0)?.getBoundingClientRect();
+        return { overflow: getComputedStyle(frame).overflowX, frameLeft: frame.getBoundingClientRect().left, posterRight: poster?.right };
+    }, section);
+    record(label, 'long series: a scrolled row stays beside the poster', beside.overflow === 'hidden' && beside.frameLeft >= beside.posterRight, JSON.stringify(beside));
+    let presses = 0;
+    for (; presses < 40 && !await next.isDisabled(); presses++) {
+        await next.click();
+        await page.waitForTimeout(450);
+    }
+    const end = await page.evaluate(selector => {
+        const frame = document.querySelector(selector + ' .emby-scroller').getBoundingClientRect();
+        const cells = [...document.querySelectorAll(selector + ' .jfmod-browseCell')];
+        const last = cells.at(-1).getBoundingClientRect();
+        return { name: cells.at(-1).querySelector('.jfmod-browseLine1').textContent, right: last.right, left: last.left, frameRight: frame.right, viewport: document.documentElement.clientWidth };
+    }, section);
+    record(label, '› reaches the last season', await next.isDisabled() && end.name === lastSeason && end.left >= 0 && end.right <= end.frameRight + 1 && end.right <= end.viewport + 1, `${presses} presses; ${JSON.stringify(end)}; expected ${lastSeason}`);
+    await shot(page, label, 'long-series-end');
+    for (let press = 0; press < 40 && !await prev.isDisabled(); press++) {
+        await prev.click();
+        await page.waitForTimeout(350);
+    }
+    record(label, 'long series: ‹ returns to the first season', near(await firstLeft(), start, 4), `${Math.round(start)} and ${Math.round(await firstLeft())}`);
+}
+
 async function reachCell(page, sectionSelector) {
     for (let press = 0; press < 14; press++) {
         if (await page.evaluate(selector => !!document.activeElement?.closest(selector), `${PAGE} ${sectionSelector}`)) return true;
@@ -530,6 +579,8 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     if (phone) record(label, 'series: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
     if (phone || tv) record(label, 'series: no sideways page', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
     await checkCells(page, label, 'series', '#listChildrenCollapsible', layoutName, theme, 1.5);
+    record(label, 'series: no arrows where the Seasons row fits, as the other rows', await page.locator(`${PAGE} #listChildrenCollapsible .emby-scrollbuttons-button:visible`).count() === 0);
+    if (phone || tv) record(label, 'series: no arrows on any row here', await page.locator(`${PAGE} .emby-scrollbuttons-button:visible`).count() === 0);
     if (tv) {
         await checkTvRow(page, label, 'series', '#listChildrenCollapsible');
         await page.keyboard.press('ArrowLeft');
@@ -595,11 +646,18 @@ async function checkBrowsePages(page, label, layoutName, theme) {
         record(label, 'episode: the series name links the series', await page.evaluate(selector => !/season=/.test(location.hash) && document.querySelector(selector + ' #listChildrenCollapsible .jfmod-browseCell') !== null, PAGE), await page.evaluate(() => location.hash));
     }
 
-    // A long series: every season cell can be reached (the row has no buttons; the wheel, touch and focus scroll it).
+    // A long series: every season can be reached. The arrows on a computer, as the other rows (D252); focus on the TV; touch on the phone.
     await open(page, browsePath('series', LONG_SERIES), ready, 1500);
-    const seasonsRow = `${PAGE} #listChildrenCollapsible .jfmod-browseRow`;
+    const seasonsSection = `${PAGE} #listChildrenCollapsible`;
+    const seasonNames = (await apiJson(page, 'JellyfinMod/Discover/Title', { type: 'series', tmdbId: LONG_SERIES })).metadata.seasons.filter(item => item.number > 0);
+    const lastSeason = seasonNames.at(-1).name;
+    record(label, 'long series: every season has a cell', await page.locator(`${seasonsSection} .jfmod-browseCell`).count() === seasonNames.length, `${seasonNames.length} seasons`);
+    const shownArrows = () => page.locator(`${seasonsSection} .emby-scrollbuttons-button:visible`).count();
     if (tv) {
+        record(label, 'long series: no arrows on the TV', await shownArrows() === 0);
         await reachCell(page, '#listChildrenCollapsible .jfmod-browseCell');
+        const firstLeft = () => page.locator(`${seasonsSection} .jfmod-browseCell`).first().evaluate(node => node.getBoundingClientRect().left);
+        const start = await firstLeft();
         let inView = true;
         for (let press = 0; press < 10; press++) {
             await page.keyboard.press('ArrowRight');
@@ -609,17 +667,17 @@ async function checkBrowsePages(page, label, layoutName, theme) {
                 return box.left >= -1 && box.right <= window.innerWidth + 1;
             });
         }
-        record(label, 'long series: right walks the seasons in view', inView && await page.evaluate(selector => document.querySelector(selector).scrollLeft > 0, seasonsRow), await page.evaluate(() => document.activeElement.getAttribute('aria-label')));
+        await page.waitForTimeout(400);
+        record(label, 'long series: right walks the seasons in view', inView && await firstLeft() < start - 50, await page.evaluate(() => document.activeElement.getAttribute('aria-label')));
     } else if (phone) {
-        record(label, 'long series: the row scrolls sideways', await page.evaluate(selector => { const row = document.querySelector(selector); row.scrollLeft = 300; return row.scrollLeft > 0; }, seasonsRow));
+        record(label, 'long series: no arrows on the phone', await shownArrows() === 0);
+        record(label, 'long series: the row scrolls sideways', await page.evaluate(selector => {
+            const frame = document.querySelector(selector + ' .emby-scroller');
+            frame.scrollLeft = 300;
+            return frame.scrollLeft > 0;
+        }, seasonsSection));
     } else {
-        const row = page.locator(seasonsRow);
-        await row.scrollIntoViewIfNeeded();
-        await row.hover();
-        await page.mouse.wheel(600, 0);
-        await page.waitForTimeout(500);
-        record(label, 'long series: the sideways wheel scrolls the row', await row.evaluate(node => node.scrollLeft > 0));
-        await page.mouse.move(0, 0);
+        await checkLongSeriesArrows(page, label, seasonsSection, lastSeason);
     }
     await shot(page, label, 'long-series');
 
@@ -741,7 +799,7 @@ async function checkLayout(browser, layoutName, theme) {
         const wantLayout = { computer: 'layout-desktop', phone: 'layout-mobile' }[layoutName] ?? 'layout-tv';
         record(label, 'the theme and the layout took', set[0] === theme && set[1].includes(wantLayout), set.join(' / '));
         const viewsBefore = (await apiJson(page, `Users/${userId}/Views`)).Items.map(view => view.Name).sort().join();
-        await checkSearch(page, label, layoutName, theme).catch(error => record(label, 'search: ran to the end', false, error.message.split('\n')[0]));
+        if (!ROWS) await checkSearch(page, label, layoutName, theme).catch(error => record(label, 'search: ran to the end', false, error.message.split('\n')[0]));
         await checkBrowsePages(page, label, layoutName, theme).catch(error => record(label, 'browse pages: ran to the end', false, error.message.split('\n')[0]));
         if (ADD && theme === 'dark') {
             const kinds = { computer: ['movie', 'series', 'season', 'episode'], phone: ['movie'], tv1920: ['series'], tv1280: [] }[layoutName];

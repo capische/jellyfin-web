@@ -63,9 +63,11 @@ const BrowseCell: FC<{ image?: string; wide?: boolean; icon: 'person' | 'tv'; li
 
 /**
  * A section of upstream's template, shown while it has content, with its row of cells and, when given, its title. The cells are
- * direct children of the row's container, as upstream's cards are, because its scroll buttons walk the slider's children.
+ * direct children of the row's container, as upstream's cards are, because its scroll buttons walk the slider's children. Without
+ * `content` the section has no scroller of its own (Seasons sits where the template has a plain list), so it gets the markup of
+ * the template's other rows, and with it their arrows, their fit rule and their TV and phone behaviour (D252).
  */
-const TemplateSection: FC<{ view: HTMLElement; section: string; content: string; title?: ReactNode; children: ReactNode;
+const TemplateSection: FC<{ view: HTMLElement; section: string; content?: string; title?: ReactNode; children: ReactNode;
     shown: boolean }> = ({ view, section, content, title, children, shown }) => {
     const [node, setNode] = useState<Element | null>(null);
     const [heading, setHeading] = useState<Element | null>(null);
@@ -78,8 +80,10 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
             h2.classList.remove('hide');
             setHeading(h2);
         }
-        const row = element.querySelector(content);
-        const frame = row?.closest('.emby-scroller');
+        if (!content) element.insertAdjacentHTML('beforeend', SCROLLER_ROW);
+        const added = content ? null : element.lastElementChild;
+        const row = content ? element.querySelector(content) : added?.firstElementChild ?? null;
+        const frame = row?.parentElement;
         row?.classList.add('jfmod-browseRow');
         frame?.classList.add('jfmod-browseFrame');
         setNode(row);
@@ -87,6 +91,8 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
             element.classList.add('hide');
             row?.classList.remove('jfmod-browseRow');
             frame?.classList.remove('jfmod-browseFrame');
+            if (added?.previousElementSibling?.classList.contains('emby-scrollbuttons')) added.previousElementSibling.remove();
+            added?.remove();
             setNode(null);
             setHeading(null);
         };
@@ -98,6 +104,10 @@ const TemplateSection: FC<{ view: HTMLElement; section: string; content: string;
         {node && createPortal(children, node)}
     </>;
 };
+
+/** The row of upstream's detail template (itemDetails/index.html, e.g. `#castCollapsible`), for a section the template gives none. */
+const SCROLLER_ROW = '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale no-padding" data-centerfocus="true">'
+    + '<div is="emby-itemscontainer" class="scrollSlider focuscontainer-x itemsContainer"></div></div>';
 
 /** Upstream draws its header links in the text's colour inline (renderName). */
 const INHERIT = { color: 'inherit', textDecoration: 'none' };
@@ -293,7 +303,7 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
             {!isSeason && <DetailsLine label={globalize.translate(metadata.genres.length > 1 ? 'Genres' : 'Genre')} names={metadata.genres} />}
         </>)}
         {mediaType === 'series' && !isSeason && !isEpisode && <TemplateSection view={view} section='#listChildrenCollapsible'
-            content='.itemsContainer' title='Seasons' shown={seasons.length > 0}>
+            title='Seasons' shown={seasons.length > 0}>
             {seasons.map(item => <BrowseCell key={item.number} image={getTmdbImage(item.posterPath, 'w342')} icon='tv'
                 line1={item.name || 'Season ' + item.number}
                 line2={item.episodeCount ? episodesWord(item.episodeCount) : 'Not yet aired'} href={seasonHref(item.number)} />)}
