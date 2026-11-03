@@ -3,8 +3,9 @@
 **Status:** the top bar's recipe approved 2026-10-09 (flatten, no halo; [design note](../topbar-glass-readability.md)),
 reused for every mark on a poster 2026-10-13 ("switch from yellow to white card glyph, and use top bar's exact recipe";
 [ring family note, Revision 3](../download-state-ring-family.md)). Built on `next-release` (P7.S6, P4.FU7).
-Records: [UX.md §7.3 and §3.3](../../UX.md). Code: `home/homeChrome.scss` (the bar), `components/_cardGlass.scss`
-(mixins `card-ink`, `card-glass`), used by `downloadStateMark.scss` and `fileStateMark.scss`.
+The light theme's white glass: user 2026-11-04 (D259, D262; no rim D258), built in redesign slice 1, not accepted; the top bar keeps the old light
+recipe until the top bar's slice. Records: [UX.md §7.3 and §3.3](../../UX.md). Code: `home/homeChrome.scss` (the bar), `components/_cardGlass.scss`
+(mixins `card-ink`, `card-glass`), `components/lightGlass.scss` (the tokens), used by `downloadStateMark.scss`, `fileStateMark.scss`, `cardDesign.scss`.
 
 ## What it is
 
@@ -20,7 +21,7 @@ the `-webkit-` forms. The bar colour is the theme's `--jf-palette-AppBar-default
 | Theme | Background | Backdrop filter | Ink (glyph, arc, text) | Track | Failed |
 | --- | --- | --- | --- | --- | --- |
 | dark schemes (default) | bar colour at **12 %** | `blur(12px) saturate(180%) contrast(0.7) brightness(0.85)` | `#fff` | white 30 % | `#ff5a4f` |
-| `[data-theme='light']` | bar colour at **20 %** | `blur(12px) saturate(170%) contrast(0.7) brightness(1.1)` | `text-primary` (dark) | black 25 % | `#c62828` |
+| `[data-theme='light']` | white at **61.8 %** (`--jfmod-light-glass-fill`) | `blur(12px) saturate(170%) brightness(1.09)`, no contrast step (`--jfmod-light-glass-blur`, `-saturate`, `-brightness`) | black 87 % (`--jfmod-light-glass-ink`) | black 25 % | `#c62828` |
 | `[data-theme='appletv']` | bar colour lightened 70 % → white, at **30 %** | `blur(12px) saturate(170%) contrast(0.7) brightness(1.15)` | `text-primary` | black 25 % | `#c62828` |
 | **TV layout** (`.layout-tv`), any theme | solid `rgba(0,0,0,.66)` | none | `#fff` | white 30 % | `#ff5a4f` |
 | no `backdrop-filter` or `color-mix()` | solid `rgba(0,0,0,.66)` (discs); upstream's solid bar | none | `#fff` | white 30 % | `#ff5a4f` |
@@ -31,6 +32,8 @@ name a colour. No line, shadow or highlight ring marks the edge of a glass surfa
 
 ## Rules
 
+- The light values live in the five tokens of `lightGlass.scss`; change them there. Nothing stacks opacity over the light ink: a small label uses the
+  full ink, so it meets 4.5:1 over black and white art.
 - Every element over a poster uses this and nothing else: no second tint, no darker disc, no faux highlight. The one
   alternative is the solid fallback above.
 - Readability is the user's accepted trade: over a bright poster a 12 % disc reads about 1.4–1.7:1 for its white glyph

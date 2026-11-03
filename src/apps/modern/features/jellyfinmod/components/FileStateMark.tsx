@@ -14,6 +14,7 @@ import { openReleasePickerForEntry } from '../integration/releasePicker';
 import { restoreFocusTo } from '../integration/stockHeaderButton';
 import { type Entry, FileState, type RetentionSummary } from '../types/entry';
 
+import './lightGlass.scss';
 import './fileStateMark.scss';
 
 /**
