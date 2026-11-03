@@ -425,6 +425,9 @@ const useRowWalk = (open: boolean) => {
     }, [open]);
 };
 
+/** A list's controls that a remount has to find again: a file's actions and the pending entry's X. */
+const LIST_CONTROLS = ['data-jfmod-file-history', 'data-jfmod-file-pin', 'data-jfmod-file-remove', 'data-jfmod-pending-remove'];
+
 /** Something drawn over the page (an MUI pop-up, a stock dialog) takes Back before the list does. */
 const OVERLAY_SELECTOR = '.MuiModal-root:not(.MuiModal-hidden):not([aria-hidden="true"]), .dialogContainer .dialog';
 
@@ -531,7 +534,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // in the list, so the page does not move.
     const inCard = strip.stacked;
     const list = useRef<HTMLDivElement>(null);
-    const focusedAt = useRef(-1);
+    const focused = useRef<{ file: string | null; kind: string | null } | null>(null);
     const [place, setPlace] = useState<{ top: number; left: number; width: number; narrow: boolean; spacer: number } | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const measure = useCallback(() => {
@@ -558,7 +561,7 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
     // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
     useEffect(() => {
         if (!slide.open) {
-            focusedAt.current = -1;
+            focused.current = null;
             return;
         }
         const again = () => {
@@ -570,13 +573,22 @@ const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, on
         return () => window.removeEventListener('resize', again);
     }, [slide.open, measure, inCard]);
     // Moving the list in or out of the card remounts it, and the focus falls to the page: it goes back to the same file's same control
-    // (Codex review of P7.FU6), which sits at the same place among the list's controls.
+    // (Codex review of P7.FU6). A control that went away (a kept file has no Remove) leaves it on that file's row, else on the value.
     const noteFocus = useCallback((event: FocusEvent<HTMLDivElement>) => {
-        focusedAt.current = Array.from(event.currentTarget.querySelectorAll('button, a')).indexOf(event.target);
+        const control = event.target as Element;
+        focused.current = {
+            file: control.closest('.jfmod-fileRow')?.querySelector('.jfmod-fileChoose')?.getAttribute('data-jfmod-media-source-id') ?? null,
+            kind: LIST_CONTROLS.find(name => control.hasAttribute(name)) ?? null
+        };
     }, []);
     useLayoutEffect(() => {
-        const control = list.current?.querySelectorAll<HTMLElement>('button, a')[focusedAt.current];
-        if (control && document.activeElement === document.body) focusManager.focus(control);
+        const was = focused.current;
+        if (!was || document.activeElement !== document.body) return;
+        const choose = Array.from(list.current?.querySelectorAll('.jfmod-fileChoose') ?? [])
+            .find(button => button.getAttribute('data-jfmod-media-source-id') === was.file);
+        const home = choose?.closest('.jfmod-fileRow') ?? (was.file ? null : list.current);
+        const control = (was.kind && home?.querySelector(`[${was.kind}]`)) || choose || trigger.current;
+        if (control) focusManager.focus(control);
     }, [inCard]);
     // A click outside the list and its cell closes it, as outside Audio's. In the card the list moves Audio and Subtitles, so a tap
     // on one closes it at once before that cell's own click places its list (a slide would leave that list where the cell was).
