@@ -6,10 +6,13 @@ mockup, a brief or a build can reuse the component without re-deriving it. The h
 the user's words) stays in `UX.md` and in the design notes beside this folder; a guide links to them and repeats only the
 values.
 
+The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELINES.md).
+
 | Guide | Component | Used by |
 | --- | --- | --- |
 | [download-state-mark.md](download-state-mark.md) | the download state ring (disc, arc, glyph) in three sizes | cards, rows, the detail line, the Queue page, the picker's added row, the episode page block, the season and series headers |
-| [card-glass.md](card-glass.md) | the frosted-glass recipe and its ink colours | the scrolled top bar, every mark on a poster |
+| [card-glass.md](card-glass.md) | the frosted-glass recipe and its ink colours | the scrolled top bar, every mark on a poster, the poster's disc and foot pill |
+| [poster-card.md](poster-card.md) | the poster: corners, the hover ring and dim, the centred glass disc, the foot pill, TV focus, the Movies and Shows grid and its three-line caption | every card in the mod shell |
 | [media-marks.md](media-marks.md) | codec, HDR and audio marks (Dolby and DTS chips, channel tags) | the release picker, the Video / Audio / Subtitles dropdowns, the download block |
 | [track-dropdown.md](track-dropdown.md) | the track strip and the custom dropdown: one field of Video / Audio / Subtitles segments, paper lists, blue bar on the current entry; the phone mark on the phones' file (accepted 2026-10-30, Phase 12) | the detail page's strip, Predefined in the profile dialog; the phone mark also on every Plays Everywhere quality profile ([quality-profiles.md](quality-profiles.md), D180) |
 | [pending-version.md](pending-version.md) | another version on its way for a title that plays: ring, two lines, the Replace / Add flag, the admin's X | under the detail page's track strip, in its open Video list |
