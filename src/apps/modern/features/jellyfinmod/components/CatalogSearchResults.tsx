@@ -19,7 +19,7 @@ import { queryClient } from 'utils/query/queryClient';
 
 import { browseEntries, createEntry, DISCOVER_TITLE_CAPABILITY, removeEntry } from '../api/modApi';
 import { usePluginCapabilities } from '../hooks/useAcquisition';
-import { useDiscovery } from '../hooks/useDiscovery';
+import { isDiscoveryExhausted, useDiscovery } from '../hooks/useDiscovery';
 import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import type { Entry, TmdbMetadata } from '../types/entry';
@@ -376,7 +376,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const loadMore = useRef<() => void>();
     loadMore.current = () => {
         for (const result of discovery) {
-            if (result.hasNextPage && !result.isFetching && !result.isError) result.fetchNextPage().catch(console.error);
+            if (result.hasNextPage && !result.isFetching && !result.isError && !isDiscoveryExhausted(result.data?.pages)) result.fetchNextPage().catch(console.error);
         }
     };
     // More results load by themselves when the grid's end comes within a screen of the bottom.
