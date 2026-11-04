@@ -624,7 +624,7 @@
 .layout-tv .jfmod-legacyDs .page.jfmod-searchPage { padding-top: 3.85em !important; }
 .page.jfmod-signinPage { padding: 0 !important; }
 .page.jfmod-dsBrowse { padding-top: 0 !important; }
-.jfmod-dsBrowse > :not(.jfmod-entryDetailsRoot) { display: none; }
+.page.jfmod-dsBrowse > :not(.jfmod-entryDetailsRoot) { display: none; }
 .jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.226em !important; }
 .layout-tv .jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.85em !important; }
 
@@ -641,6 +641,12 @@
 .layout-tv .jfmod-dsBrowse .ground {
     margin-top: -3.85em;
     padding-top: 3.85em;
+}
+
+/* The phone's bar is a whole pixel taller than its em height; the art starts under the bar's top edge, leaving no seam. */
+.layout-mobile .jfmod-dsBrowse .ground {
+    margin-top: calc(-3.226em - 1px);
+    padding-top: calc(3.226em + 1px);
 }
 
 /* dsC: dialogHelper owns its invisible lifecycle host; the design owns every painted child. */
