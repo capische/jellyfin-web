@@ -4,7 +4,7 @@ import './design.scss';
 export type Device = 'computer' | 'tablet' | 'phone' | 'tv';
 
 /** Observe the app's actual theme/layout markers, including changes made without navigation. */
-const readEnvironment = () => {
+export const readEnvironment = () => {
     const html = document.documentElement;
     const tv = html.classList.contains('layout-tv');
     const mobile = html.classList.contains('layout-mobile');

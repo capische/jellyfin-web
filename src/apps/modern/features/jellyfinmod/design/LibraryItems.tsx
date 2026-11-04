@@ -37,7 +37,8 @@ export const LibraryItems: FC = () => {
         context: content?.collectionType ?? undefined, serverId: __legacyApiClient__?.serverId(),
         queryKey: combined ? ['JellyfinMod', api?.basePath, user?.Id, 'Browse'] : ['User', user?.Id, 'Items'] };
     setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
-    const count = Math.round((width - width * 0.033 - 5.236 * 14.88 + 2 * 14.88) / (16.18 * 14.88));
+    // A computer window narrowed to a phone's width keeps the phone's two posters a row.
+    const count = Math.max(2, Math.round((width - width * 0.033 - 5.236 * 14.88 + 2 * 14.88) / (16.18 * 14.88)));
     const emptyKind = content?.collectionType === 'tvshows' ? 'shows' : 'movies';
     let body;
     if (loading) {

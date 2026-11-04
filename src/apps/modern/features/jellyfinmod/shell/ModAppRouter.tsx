@@ -14,6 +14,8 @@ import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import ErrorBoundary from 'components/router/ErrorBoundary';
 import { history as sharedHistory } from 'RootAppRouter';
+import ViewManagerPage from 'components/viewManager/ViewManagerPage';
+import { PrefsMenu } from '../design/PrefsMenu';
 import type { RouterHistory } from 'components/router/routerHistory';
 import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
@@ -58,6 +60,8 @@ const HomeRoute = () => {
  * and breaks ties by declaration order, and these are declared first, so a mod path wins over the upstream route
  * of the same name.
  */
+const LegacyDisplayPreferences = () => <ViewManagerPage controller='user/display/index' view='user/display/index.html' />;
+
 const MOD_ROUTES: RouteObject[] = [
     // Every layout (P7 TV shell). The page is upstream's legacy Home shape — `mainTabsManager` tabs in the header,
     // `homesections` rows, `focusManager` autofocus — so the TV layout's d-pad rules apply to it unchanged, and the
@@ -78,6 +82,10 @@ const MOD_ROUTES: RouteObject[] = [
     // Every layout: Ratings display, every signed-in user's choice of rating sources (Phase 9, plan decision 8). A mod route,
     // so upstream's legacy display preferences page stays unedited.
     { path: 'catalog/preferences', Component: RatingsPreferencesPage },
+    // The approved Preferences pages. Display always loads the legacy controller, which both layouts share, because the painted
+    // page drives a controller's own native fields; every other page keeps its upstream route.
+    { path: 'mypreferencesmenu', Component: PrefsMenu },
+    { path: 'mypreferencesdisplay', Component: LegacyDisplayPreferences },
     // The legacy layouts — the TV above all — browse Movies and TV on the modern React grid, the same grid the
     // modern layout reaches through upstream's own routes (PHASE7 decision 13). One grid means every grid feature
     // is built once, and upstream's legacy `movies.js` and `tvshows.js` controllers stay unedited. The modern layout
