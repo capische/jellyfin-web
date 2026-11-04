@@ -39,6 +39,13 @@ const ComputerNavigation: FC = () => {
     const [more, setMore] = useState(false);
     const closeMore = useCallback(() => setMore(false), []);
     const favorites = isFavorites(pathname, search);
+    const [titleLibrary, setTitleLibrary] = useState('');
+    useEffect(() => {
+        setTitleLibrary('');
+        const onTitle = (event: Event) => setTitleLibrary((event as CustomEvent<string>).detail);
+        window.addEventListener('ds-bar-library', onTitle);
+        return () => window.removeEventListener('ds-bar-library', onTitle);
+    }, [pathname, search]);
     const sorted = [...views?.Items ?? []].sort((a, b) => {
         const order = (type?: string | null) => {
             if (type === 'tvshows') return 0;
@@ -56,7 +63,7 @@ const ComputerNavigation: FC = () => {
             {primary.map(view => {
                 const viewPath = view.CollectionType === 'tvshows' ? '/tv' : '/movies';
                 return <a key={view.Id} href={appRouter.getRouteUrl(view, { context: view.CollectionType })}>
-                    <span className={pathname === viewPath ? 'on' : ''}>
+                    <span className={pathname === viewPath || titleLibrary === viewPath ? 'on' : ''}>
                         <Icon name={view.CollectionType === 'tvshows' ? 'tv' : 'movie'} />{view.Name}</span></a>;
             })}
         </span>

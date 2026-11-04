@@ -931,7 +931,8 @@ function toggleLineClamp(clampTarget, e) {
 }
 
 function renderOverview(page, item) {
-    const overviewElements = page.querySelectorAll('.overview');
+    // JellyfinMod: only the template's own <p>; the page the mod paints has a div.overview as well.
+    const overviewElements = page.querySelectorAll('p.overview');
 
     if (overviewElements.length > 0) {
         // eslint-disable-next-line sonarjs/disabled-auto-escaping
