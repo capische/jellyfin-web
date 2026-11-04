@@ -175,8 +175,12 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
     useEffect(() => {
         // The TV starts on the first control, as the mockup's focus state does.
         if (!layoutManager.tv || !loaded) return;
-        const first = view.querySelector<HTMLElement>('.jfmod-dsPrefsHost .focusable');
-        if (first) focusManager.focus(first);
+        // A controller fills its rows in steps; wait for the first of them to be the page's first.
+        const timer = window.setTimeout(() => {
+            const first = view.querySelector<HTMLElement>('.jfmod-dsPrefsHost .focusable');
+            if (first) focusManager.focus(first);
+        }, 700);
+        return () => window.clearTimeout(timer);
     }, [view, loaded]);
     const isProfile = view.id === 'userProfilePage';
     const hasImage = isProfile && !view.querySelector('#btnDeleteImage')?.classList.contains('hide');
