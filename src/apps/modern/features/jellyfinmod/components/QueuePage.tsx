@@ -70,6 +70,14 @@ const describeRow = (row: QueueRow, generatedAt: string) => {
 
 type RowText = ReturnType<typeof describeRow>;
 
+/** ds2.js P.queue: `12.4 of 29.6 GB`, or the state's own word while nothing is moving. */
+const figuresOf = (row: QueueRow, text: RowText) => {
+    const kind = downloadProgress(row).kind;
+    if (kind === 'queued') return 'Queued';
+    if (kind === 'importing') return 'Importing…';
+    return text.size?.replace(/^(\S+) (\S+) of (\S+) \2$/, '$1 of $3 $2');
+};
+
 const thumbUrl = (api: Api, row: QueueRow) => {
     if (row.entry?.jellyfinItemId) {
         return api.basePath + '/Items/' + encodeURIComponent(row.entry.jellyfinItemId) + '/Images/Primary?fillHeight=180&quality=90';
@@ -97,7 +105,7 @@ const partsOf = (row: QueueRow, serverId: string | undefined): TitlePart[] => {
     const entry = row.entry;
     if (!entry) return [{ text: row.releaseTitle }];
     const server = serverId ?? '';
-    const series: TitlePart = { text: entry.year ? entry.title + ' (' + entry.year + ')' : entry.title, href: '#' + getEntryPath(entry.id, serverId) };
+    const series: TitlePart = { text: entry.title, href: '#' + getEntryPath(entry.id, serverId) };
     const season = (number: number): TitlePart => ({ text: 'Season ' + number, href: '#' + seasonPath(entry.id, number, server) });
     if (row.pack) {
         const number = row.pack.scope === 'season' ? row.pack.episodes[0]?.seasonNumber : undefined;
@@ -106,9 +114,9 @@ const partsOf = (row: QueueRow, serverId: string | undefined): TitlePart[] => {
         return [series, SEPARATOR, season(number!), { text: row.pack.label.slice(named.length) }];
     }
     if (!row.episode) return [series];
-    const { seasonNumber, episodeNumber, title } = row.episode;
-    return [series, SEPARATOR, season(seasonNumber), SEPARATOR, {
-        text: episodeCode(seasonNumber, episodeNumber) + (title ? ' ' + title : ''),
+    const { seasonNumber, episodeNumber } = row.episode;
+    return [series, SEPARATOR, {
+        text: episodeCode(seasonNumber, episodeNumber),
         href: '#' + episodePath(entry.id, seasonNumber, episodeNumber, server)
     }];
 };
@@ -299,15 +307,13 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
             const disc = rowDisc(row, text);
             const details = [...(disc.tip.summary && !disc.tip.figures ? [capitalise(disc.tip.summary)] : []), ...disc.tip.lines];
             return <QueueRowView key={row.id} id={row.id} image={thumbUrl(api, row)} tv={layout === 'tv'}
-                open={target => onMenu(row, target)} title={layout === 'tv' ? text.title : titleParts(row, serverId).map(part => part.href ?
+                open={target => onMenu(row, target)} title={layout === 'tv' ? titleParts(row, serverId).map(part => part.text).join('') : titleParts(row, serverId).map(part => part.href ?
                     <a key={part.key} className='focusable' href={part.href}>{part.text}</a> : <React.Fragment key={part.key}>{part.text}</React.Fragment>)}
                 release={row.releaseTitle} version={text.version} progress={text.percent} stale={staleAll || row.state === 'unknown'}
                 figures={<>{row.state === 'failed' || row.state === 'blocked' ? <span style={{ color: 'var(--err)' }}>{disc.tip.title}: {disc.tip.summary}</span> :
-                    [text.percent === null ? null : text.percent + '%', text.size, layout === 'mobile' ? text.speed : null, layout === 'mobile' && text.eta ? text.eta + ' left' : null].filter(Boolean).join(' · ')}
+                    figuresOf(row, text)}
                 {text.freshness && <> · {text.freshness}</>}</>} speed={text.speed} eta={text.eta}
-                details={<>{row.client && <div className='qsub'>{row.client.openUrl && layout !== 'tv' ?
-                    <a className='focusable' href={row.client.openUrl} target='_blank' rel='noopener noreferrer' title={'Open ' + row.client.name}>{row.client.name}</a> : row.client.name}</div>}
-                {layout === 'tv' && details.length > 0 && <div className='qdetail'>{details.map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</div>}</>}
+                details={<>{layout === 'tv' && details.length > 0 && <div className='qdetail'>{details.map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</div>}</>}
                 mark={<StateCell row={row} text={text} layout={layout} onInfo={setInfo} />}
                 more={layout !== 'tv' && queueRowActions(row, isAdmin).length > 0 ? <button type='button' className='ib focusable jfmod-queueFocus'
                     title='More' aria-label={'Actions for ' + text.title} aria-haspopup='menu' onClick={event => onMenu(row, event.currentTarget)}><Icon name='more' /></button> :
