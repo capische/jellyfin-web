@@ -1,13 +1,16 @@
-import React, { type FC, useCallback, useContext, useState } from 'react';
+import React, { type FC, useCallback, useContext, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLibrary } from 'apps/modern/features/libraries/hooks/useLibrary';
 import { LibraryRoutes } from 'apps/modern/features/libraries/constants/libraryRoutes';
+import NewCollectionButton from 'apps/modern/features/libraries/components/NewCollectionButton';
+import NewPlaylistButton from 'apps/modern/features/libraries/components/NewPlaylistButton';
 import PlayAllButton from 'apps/modern/features/libraries/components/PlayAllButton';
+import QueueButton from 'apps/modern/features/libraries/components/QueueButton';
+import { useApi } from 'hooks/useApi';
 import ShuffleButton from 'apps/modern/features/libraries/components/ShuffleButton';
 import SortButton from 'apps/modern/features/libraries/components/SortButton';
 import ViewSettingsButton from 'apps/modern/features/libraries/components/ViewSettingsButton';
 import FilterButton from 'apps/modern/features/libraries/components/filter/FilterButton';
-import UpstreamToolbar from 'apps/modern/features/libraries/components/LibraryToolbar';
 import { useItem } from 'hooks/useItem';
 import { useUserSettings } from 'hooks/useUserSettings';
 import useCurrentTab from 'hooks/useCurrentTab';
@@ -23,6 +26,9 @@ const shuffleButton = (props: ActionProps) => <Action {...props} icon='shuffle' 
 const filterButton = (props: ActionProps) => <Action {...props} icon='filter' />;
 const sortButton = (props: ActionProps) => <Action {...props} icon='sort' />;
 const viewButton = (props: ActionProps) => <Action {...props} icon='grid' />;
+const queueButton = (props: ActionProps) => <Action {...props} icon='add' />;
+const newCollectionButton = (props: ActionProps) => <Action {...props} icon='plus' label={props.title} />;
+const newPlaylistButton = (props: ActionProps) => <Action {...props} icon='plus' label={props.title} />;
 
 export const LibraryToolbar: FC = () => {
     const { pathname } = useLocation();
@@ -30,6 +36,8 @@ export const LibraryToolbar: FC = () => {
     const { activeTab } = useCurrentTab();
     const { id, content, collectionType, viewSettings, setViewSettings, itemsResult, browseResult } = useLibrary();
     const { data: item } = useItem(id || undefined);
+    const { user } = useApi();
+    const allItemsKey = useMemo(() => ['User', user?.Id, 'Items'], [user?.Id]);
     const { libraryPageSize } = useUserSettings();
     const [open, setOpen] = useState(false);
     const phone = useContext(DesignContext) === 'phone';
@@ -37,8 +45,6 @@ export const LibraryToolbar: FC = () => {
     const route = LibraryRoutes.find(candidate => candidate.path === pathname);
     const tab = route?.views.find(view => view.index === activeTab);
     if (!viewSettings || !setViewSettings || !content) return null;
-    // Collection/playlist creation and specialized tabs retain their existing toolbar commands.
-    if (content.isBtnNewCollectionEnabled || content.isBtnNewPlaylistEnabled || content.isBtnQueueEnabled) return <div className='upstream-toolbar'><UpstreamToolbar /></div>;
     const combined = browseResult?.data && (browseResult.data.hasCatalogEntries || viewSettings.Filters?.FileStates?.length || viewSettings.Filters?.RetentionDueWithinDays) ?
         browseResult.data : undefined;
     const total = combined?.totalRecordCount ?? itemsResult?.data?.TotalRecordCount ?? 0;
@@ -80,6 +86,9 @@ export const LibraryToolbar: FC = () => {
         <div className='acts'><div className='actbar glassy'>
             {content.isBtnPlayAllEnabled && <PlayAllButton {...fields} renderButton={playButton} />}
             {content.isBtnShuffleEnabled && <ShuffleButton {...fields} renderButton={shuffleButton} />}
+            {content.isBtnQueueEnabled && <QueueButton {...fields} renderButton={queueButton} />}
+            {content.isBtnNewCollectionEnabled && <NewCollectionButton isTextVisible queryKey={allItemsKey} renderButton={newCollectionButton} />}
+            {content.isBtnNewPlaylistEnabled && <NewPlaylistButton isTextVisible queryKey={allItemsKey} renderButton={newPlaylistButton} />}
             {!phone && <span className='sep' />}
             {content.isBtnFilterEnabled && <FilterButton parentId={id} itemType={content.itemType ?? []} viewType={content.viewType}
                 hasFilters={filters} fileFiltersAvailable={!!browseResult?.data} libraryViewSettings={viewSettings} setLibraryViewSettings={setViewSettings} renderButton={filterButton} />}

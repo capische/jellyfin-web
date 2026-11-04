@@ -3,6 +3,7 @@ import Add from '@mui/icons-material/Add';
 import Button from '@mui/material/Button';
 import type { QueryKey } from '@tanstack/react-query';
 
+import type { ActionRenderer } from 'apps/modern/features/jellyfinmod/design/Action';
 import globalize from 'lib/globalize';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
@@ -10,11 +11,13 @@ import { queryClient } from 'utils/query/queryClient';
 interface NewCollectionButtonProps {
     isTextVisible: boolean
     queryKey: QueryKey
+    renderButton?: ActionRenderer
 }
 
 const NewCollectionButton: FC<NewCollectionButtonProps> = ({
     isTextVisible,
-    queryKey
+    queryKey,
+    renderButton
 }) => {
     const { serverId } = useApi();
 
@@ -36,6 +39,8 @@ const NewCollectionButton: FC<NewCollectionButtonProps> = ({
                 console.error('[NewCollection] failed to load collection editor', err);
             });
     }, [ queryKey, serverId ]);
+
+    if (renderButton) return renderButton({ onClick: showCollectionEditor, title: globalize.translate('NewCollection') });
 
     return (
         <Button

@@ -1178,12 +1178,14 @@
 
     .ctrls.buttons { padding: 0; flex-wrap: nowrap; }
 
+    &.dev-phone .ctrls.buttons { flex-wrap: wrap; }
+
     .actbar.glassy {
         background: var(--player-glass-bg);
         backdrop-filter: var(--player-glass-filter);
     }
 
-    .jfmod-osdName { margin: 0; font-size: 1.618em; font-weight: 600; line-height: 1.2; }
+    .jfmod-osdName { margin: 0; font-family: inherit; font-size: 1.618em; font-weight: 600; line-height: 1.2; }
 
     .jfmod-osdFacts:not(:empty) + .osdTimeText > .endsAtText:not(:empty)::before { content: ' · '; }
 
@@ -1245,7 +1247,7 @@
     .upnext .st { min-height: 5em; }
 }
 
-html.jfmod-chromePlayer .osdHeader .pageTitle { display: none; }
+.osdHeader .pageTitle { display: none; }
 
 /* A real button in the mockup's icon span; phones have no hover, so a tapped disclosure must not stay lit. */
 .jfds .ib { padding: 0; }
