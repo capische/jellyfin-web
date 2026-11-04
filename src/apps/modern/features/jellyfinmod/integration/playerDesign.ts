@@ -28,7 +28,7 @@ export const paintPlayer = (view: HTMLElement) => {
     const title = () => {
         const ends = endsAt?.textContent ?? '';
         if (endsAt && ends !== ends.trim()) endsAt.textContent = ends.trim();
-        if (name) name.textContent = (pageTitle?.textContent ?? '').replace(/\s*\(\d{4}\)$/, '');
+        if (name) name.textContent = (pageTitle?.textContent ?? '').replace(/ \(\d{4}\)$/, '');
         const player = playbackManager.getCurrentPlayer();
         if (!player) return;
         const item = playbackManager.currentItem(player);

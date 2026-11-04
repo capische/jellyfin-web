@@ -1,5 +1,7 @@
 # Shared chrome
 
+**dsF sweep (2026-11-04), built, not accepted:** dialogs are top-aligned as in the mockup (`dscrim`), not centred, so a picker does not jump when results arrive. Focus rings are for keys and the TV, not clicks. The player and Preferences own their markup: see [dsF.md](../dsF.md).
+
 **dsD (2026-11-04), built, not accepted:** title/picker restyling and obsolete file-history/picker exclusions are
 removed; source markup owns those surfaces. Shared chrome still serves unported custom screens. Dashboard, mod admin settings
 and wizard retain their current markup/presentation. [Removed files and complete scope](../dsD.md).

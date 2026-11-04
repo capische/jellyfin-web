@@ -1,5 +1,7 @@
 # Top bar and search
 
+**dsF sweep (2026-11-04), built, not accepted:** a computer window under 600 px takes the phone's bar. The TV bar shows the page's title on Queue, Search and Preferences. On the TV the hero holds the page's top, so the bar stays on screen.
+
 **dsB (2026-11-04), built, not accepted:** The phone Search field is now the source `sfield > .in` with a real input. TV alphabet buttons and grid focus use the existing query/navigation path; the bar Down target follows native cells. The shell bar stays the one bar; Home art and browse ground reserve its exact source height. [Full CSS adapters](../dsB.md).
 
 **dsA (2026-11-04), built, not accepted:** `design/Bar.tsx` and `BarSearch.tsx` now own the mockup bar markup and SVGs. Existing account/SyncPlay/cast controllers use native menu presentation only in this bar. `ChromeSearch.tsx`, `topbarChrome.scss` and `useModToolbarClass.ts` are removed. The bar is scoped by `.jfds`, with live layout/theme markers. [CSS exceptions and validation](../dsA.md).

@@ -1,5 +1,7 @@
 # Download state mark
 
+**dsE (2026-11-04), built, not accepted:** the Queue's row uses the mockup's words: `3.1 of 7.4 GB`, `Queued`, `Importing…`, with the client's name in the state tooltip rather than on a line of its own. Title is `Name · S01E02`, without a year.
+
 **dsD (2026-11-04), built, not accepted:** title cells/rows and download/pending blocks now use `design/StateMark.tsx`
 source `dm/arc/glyph/pct` markup and copied source sizes. Existing queue projection, stale values, client-link permissions and
 state logic remain. A live download wins over an older cloud; watched/download bars and existing countdown/search marks remain

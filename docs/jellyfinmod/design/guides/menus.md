@@ -1,5 +1,7 @@
 # Menus and action sheets
 
+**dsF sweep (2026-11-04), built, not accepted:** menus stay inside the page's 3.3% gutter. The user menu has the caption and the mockup's order (Queue and Ratings Display first, JellyfinMod Settings with the admin links). Action sheet entries are Title Case. A click no longer leaves a keyboard ring; `ds-pointer` on `html` marks pointer input.
+
 **dsD (2026-11-04), built, not accepted:** title More and per-file history now use source `pmenu` and `hpop/hh/ol/li`
 with real painted anchors. File history keeps binding-specific data, scrolls at 80% viewport height and consumes key/remote Back
 before the list beneath it; focus returns to its original file icon. Monitor retains its menuitemcheckbox state. Card-menu

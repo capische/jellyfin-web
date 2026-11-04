@@ -313,7 +313,7 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
                 figures={<>{row.state === 'failed' || row.state === 'blocked' ? <span style={{ color: 'var(--err)' }}>{disc.tip.title}: {disc.tip.summary}</span> :
                     figuresOf(row, text)}
                 {text.freshness && <> · {text.freshness}</>}</>} speed={text.speed} eta={text.eta}
-                details={<>{layout === 'tv' && details.length > 0 && <div className='qdetail'>{details.map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</div>}</>}
+                details={layout === 'tv' && details.length > 0 && <div className='qdetail'>{details.map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</div>}
                 mark={<StateCell row={row} text={text} layout={layout} onInfo={setInfo} />}
                 more={layout !== 'tv' && queueRowActions(row, isAdmin).length > 0 ? <button type='button' className='ib focusable jfmod-queueFocus'
                     title='More' aria-label={'Actions for ' + text.title} aria-haspopup='menu' onClick={event => onMenu(row, event.currentTarget)}><Icon name='more' /></button> :
