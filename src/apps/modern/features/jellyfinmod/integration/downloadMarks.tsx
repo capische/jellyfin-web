@@ -1,3 +1,4 @@
+import { paintCellDownload } from '../design/downloadMark';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
@@ -38,7 +39,7 @@ import '../components/downloadProgress.scss';
 
 // A Scenes chapter card carries its title's `data-id`, but it is a moment of the title, not the title: it never takes the mark
 // (user, 2026-10-28; 40 rings on a downloading movie's page).
-const TARGETS = '.card[data-id]:not(.chapterCard), .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
+const TARGETS = '.cell[data-id], .cell[data-jfmod-entry-id], .card[data-id]:not(.chapterCard), .card[data-jfmod-entry-id], .listItem[data-id], .listItem[data-jfmod-entry-id]';
 const MEDIA_TYPES = new Set(['Movie', 'Series', 'Season', 'Episode']);
 
 /** What a card or row is drawn on at once for: itself, a mark in it (Not Downloaded, Unaired), or its entry's stamp. */
@@ -204,7 +205,7 @@ const READING_MS = 1500;
 const endReading = () => document.documentElement.classList.remove(READING_CLASS);
 const IMPORTED = describeDownload('importing', 100, false);
 const IMPORTED_DELAYED = { ...IMPORTED, tooltip: IMPORTED.tooltip + ' (taking longer than usual)' };
-const showsNoFile = (element: HTMLElement) => !!element.querySelector('.jfmod-mark--none, .jfmod-mark--unaired');
+const showsNoFile = (element: HTMLElement) => element.hasAttribute('data-jfmod-nofile') || !!element.querySelector('.jfmod-mark--none, .jfmod-mark--unaired');
 
 /**
  * A card's download: the mean of what is on its way (a failed, blocked or finished download is not). A row's: one episode's or
@@ -262,6 +263,10 @@ const clearCard = (frame: Element) => {
  * left of the played tick or the plain count pill (two icons, user 2026-10-13), or alone in the corner.
  */
 const drawCard = (card: HTMLElement, progress: DownloadProgress | null, link: DownloadMarkLink | null) => {
+    if (card.classList.contains('cell')) {
+        paintCellDownload(card, progress, link);
+        return;
+    }
     const frame = card.querySelector('.cardScalable') ?? card;
     if (!progress) {
         clearCard(frame);
@@ -395,6 +400,9 @@ const drawRowMeta = (row: HTMLElement, progress: DownloadProgress) => {
 
 /** Removes every mark this pass did not draw, once nothing on the page is on its way. */
 const clearAll = () => {
+    document.querySelectorAll<HTMLElement>('.cell.ds-downloading').forEach(cell => {
+        paintCellDownload(cell, null, null);
+    });
     document.querySelectorAll('.jfmod-dlCard').forEach(clearCard);
     document.querySelectorAll<HTMLElement>('.jfmod-dlRow').forEach(clearRow);
 };

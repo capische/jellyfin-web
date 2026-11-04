@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react';
+import { type RefObject, useEffect, useState } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 import autoFocuser from 'components/autoFocuser';
@@ -31,7 +31,7 @@ const cardIdentity = (card: Element) => {
 };
 
 const findCard = (container: Element, identity: string) => (
-    Array.from(container.querySelectorAll<HTMLElement>('.card')).find(card => cardIdentity(card) === identity) ?? null
+    Array.from(container.querySelectorAll<HTMLElement>('.card, .cell')).find(card => cardIdentity(card) === identity) ?? null
 );
 
 const isUsable = (element: HTMLElement | null) => (
@@ -46,13 +46,19 @@ const OTHER_PAGING_BUTTON: Record<string, string | undefined> = { Next: 'Previou
 const RESCUE_WAIT_MS = 4000;
 
 export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
+    const [tv, setTv] = useState(layoutManager.tv);
+    useEffect(() => {
+        const observer = new MutationObserver(() => setTv(document.documentElement.classList.contains('layout-tv')));
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
     const location = useLocation();
     const navigationType = useNavigationType();
     const viewKey = location.pathname + location.search;
 
     useEffect(() => {
         const page = pageRef.current;
-        if (!layoutManager.tv || !page) return;
+        if (!tv || !page) return;
 
         const restoreIdentity = navigationType === 'POP' ? lastFocusedCard.get(viewKey) : undefined;
         let placed = false;
@@ -72,18 +78,20 @@ export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
 
         const placeInitialFocus = () => {
             const grid = container();
-            if (placed || !grid?.querySelector('.card')) return;
+            if (placed || !grid?.querySelector('.card, .cell')) return;
             placed = true;
             const restore = restoreIdentity ? findCard(grid, restoreIdentity) : null;
             if (restore) {
                 focusManager.focus(restore);
                 restore.scrollIntoView?.({ block: 'center' });
             } else if (!focusIsOnPage()) {
-                autoFocuser.autoFocus(page);
+                const first = focusManager.getFocusableElements(grid, 1)[0];
+                if (first) focusManager.focus(first);
+                else autoFocuser.autoFocus(page);
             }
         };
 
-        const toolbarButton = (title: string) => page.querySelector<HTMLElement>(`.MuiToolbar-root button[title="${title}"]`);
+        const toolbarButton = (title: string) => page.querySelector<HTMLElement>(`.MuiToolbar-root button[title="${title}"], .libhead button[data-tip="${title}"]`);
 
         const tryRescue = () => {
             if (!rescue || !focusIsLost()) {
@@ -119,7 +127,7 @@ export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
 
         const startRescue = () => {
             if (rescue || !placed || !focusIsLost() || !page.isConnected) return;
-            rescue = { title: lastFocused?.getAttribute('title') ?? null, since: Date.now() };
+            rescue = { title: lastFocused?.getAttribute('title') ?? lastFocused?.getAttribute('data-tip') ?? null, since: Date.now() };
             tryRescue();
             clearTimeout(rescueTimer);
             rescueTimer = setTimeout(tryRescue, RESCUE_WAIT_MS + 50);
@@ -127,7 +135,7 @@ export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
 
         const onFocusIn = (e: FocusEvent) => {
             lastFocused = e.target as HTMLElement;
-            const card = lastFocused.closest?.('.card');
+            const card = lastFocused.closest?.('.card, .cell');
             const identity = card && page.contains(card) ? cardIdentity(card) : null;
             if (identity) lastFocusedCard.set(viewKey, identity);
         };
@@ -154,5 +162,5 @@ export const useTvGridFocus = (pageRef: RefObject<HTMLElement>) => {
             page.removeEventListener('focusin', onFocusIn);
             page.removeEventListener('focusout', onFocusOut);
         };
-    }, [viewKey, navigationType, pageRef]);
+    }, [viewKey, navigationType, pageRef, tv]);
 };

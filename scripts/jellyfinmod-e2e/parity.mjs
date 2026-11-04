@@ -458,7 +458,7 @@ function harness(page, base, label) {
      * grids (each left on a different page) and report dozens of "episode set" differences that were
      * really series ids. An element with no client rects is not rendered.
      */
-    const shownIds = () => page.evaluate(() => Array.from(document.querySelectorAll('.card[data-id], [data-id].listItem'))
+    const shownIds = () => page.evaluate(() => Array.from(document.querySelectorAll(":is(.card:not(.dm), .cell)[data-id], [data-id].listItem"))
         .filter(node => node.getClientRects().length > 0)
         .map(node => node.dataset.id.replace(/-/g, '').toLowerCase()));
     return {
@@ -820,7 +820,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         // `.btnNextPage` is the legacy pager's button; the modern route renders a MUI button whose only
         // stable identity is its accessible name. Accept either, or this walks nothing and silently
         // reports one page as if it were the whole library.
-        const nextButton = harnessSide.page.locator('.btnNextPage, button[title="Next"], button[aria-label="Next"]').first();
+        const nextButton = harnessSide.page.locator('.btnNextPage, button:is([title="Next"],[data-tip="Next"]), button[aria-label="Next"]').first();
         if (await nextButton.count().catch(() => 0)) {
             mode = 'paged';
             for (let guard = 0; guard < 50; guard++) {
@@ -833,7 +833,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             }
             // Walking the pager leaves the grid on its LAST page, and the route remembers that position,
             // so the next step to look at this tab would measure page N instead of the library. Walk back.
-            const previousButton = harnessSide.page.locator('.btnPreviousPage, button[title="Previous"], button[aria-label="Previous"]').first();
+            const previousButton = harnessSide.page.locator('.btnPreviousPage, button:is([title="Previous"],[data-tip="Previous"]), button[aria-label="Previous"]').first();
             if (await previousButton.count().catch(() => 0)) {
                 for (let guard = 0; guard < 50; guard++) {
                     const disabled = await previousButton.evaluate(node => node.disabled || node.classList.contains('hide') || node.hasAttribute('disabled')).catch(() => true);
@@ -998,7 +998,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     const collectRendered = async harnessSide => {
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + series.Id);
                         await harnessSide.networkIdle();
-                        const seasonIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll('.card[data-id][data-type="Season"]'))
+                        const seasonIds = await harnessSide.page.evaluate(() => Array.from(document.querySelectorAll(":is(.card:not(.dm), .cell)[data-id][data-type=\"Season\"]"))
                             .filter(node => node.getClientRects().length > 0)
                             .map(node => node.dataset.id.replace(/-/g, '').toLowerCase()));
                         let episodeIds = [];
@@ -1049,8 +1049,8 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 // MenuList of translated labels; clicking the already-selected label toggles asc/desc.
                 const applySort = async (harnessSide, label, desiredOrder) => {
                     const openMenuItem = async () => {
-                        await nativeClick(harnessSide.page.locator('button[title="Sort" i]').first());
-                        const item = harnessSide.page.locator('.MuiMenuItem-root', { hasText: label }).first();
+                        await nativeClick(harnessSide.page.locator('button:is([title="Sort" i],[data-tip="Sort" i])').first());
+                        const item = harnessSide.page.locator(":is(.MuiMenuItem-root, .pmenu .mi)", { hasText: label }).first();
                         await item.waitFor({ state: 'visible', timeout: 5000 });
                         return item;
                     };
@@ -1108,22 +1108,22 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
 
     // A5 — filters (FilterButton.tsx: a MUI popover of accordions; each section unmounts when collapsed).
     const openFilterAccordion = async (harnessSide, accordionId) => {
-        await nativeClick(harnessSide.page.locator('button[title="Filter" i]').first());
+        await nativeClick(harnessSide.page.locator('button:is([title="Filter" i],[data-tip="Filter" i])').first());
         const summary = harnessSide.page.locator('#' + accordionId);
         await summary.waitFor({ state: 'visible', timeout: 8000 });
-        const isExpanded = await summary.evaluate(el => el.closest('.MuiAccordion-root')?.classList.contains('Mui-expanded'));
+        const isExpanded = await summary.evaluate(el => el.closest(":is(.MuiAccordion-root, details)")?.matches('.Mui-expanded, details[open]'));
         if (!isExpanded) await nativeClick(summary);
     };
     const clickFilterCheckbox = async (harnessSide, checkboxText) => {
-        const label = harnessSide.page.locator('.MuiAccordionDetails-root label', { hasText: checkboxText }).first();
+        const label = harnessSide.page.locator(":is(.MuiAccordionDetails-root, details[open], .pmenu) label", { hasText: checkboxText }).first();
         await label.waitFor({ state: 'visible', timeout: 8000 });
         await nativeClick(label);
         await harnessSide.page.keyboard.press('Escape');
         await harnessSide.networkIdle();
     };
     const clearFilters = async harnessSide => {
-        await nativeClick(harnessSide.page.locator('button[title="Filter" i]').first());
-        const reset = harnessSide.page.locator('button, [role="button"]', { hasText: /reset filters/i }).first();
+        await nativeClick(harnessSide.page.locator('button:is([title="Filter" i],[data-tip="Filter" i])').first());
+        const reset = harnessSide.page.locator('button, [role="button"]', { hasText: /(?:reset|clear) filters?/i }).first();
         if (await reset.count().catch(() => 0)) await nativeClick(reset).catch(() => {});
         await harnessSide.page.keyboard.press('Escape');
         await harnessSide.networkIdle();
@@ -1231,7 +1231,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                     for (const item of candidates) {
                         const nfc = s => (s ?? '').normalize('NFC');
                         const readCardText = async harnessSide => harnessSide.page.evaluate(id => {
-                            const card = document.querySelector(`.card[data-id="${id}"], .card[data-id="${id.toLowerCase()}"]`);
+                            const card = document.querySelector(`:is(.card:not(.dm), .cell)[data-id="${id}"], :is(.card:not(.dm), .cell)[data-id="${id.toLowerCase()}"]`);
                             return card?.getAttribute('aria-label') ?? card?.textContent?.trim() ?? null;
                         }, item.Id);
                         const inGridS = normSet(a2.movies.ref.includes(item) ? a2.movies.s : a2.tv.s).has(normId(item.Id));
@@ -1309,11 +1309,11 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             writer: groupLinks('Writer'),
             tags: Array.from(root.querySelectorAll('.itemTags a')).map(a => a.textContent.trim()),
             overview: text(root.querySelector('.overview')),
-            castIds: Array.from(castContainer?.querySelectorAll('.card[data-id]') ?? [])
+            castIds: Array.from(castContainer?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? [])
                 .filter(node => node.getClientRects().length > 0)
                 .map(n => n.dataset.id),
             mediaInfoBadges: Array.from(root.querySelectorAll('.mediaInfoItem:not(.endsAt)')).map(text),
-            primarySrc: root.querySelector('.detailImageContainer .cardImageContainer, .detailImageContainer img')?.style?.backgroundImage
+            primarySrc: root.querySelector(".detailImageContainer :is(.cardImageContainer, .post > img), .detailImageContainer img")?.style?.backgroundImage
             ?? root.querySelector('.detailImageContainer img')?.getAttribute('src') ?? null,
             backdropSrc: root.querySelector('#itemBackdrop')?.style?.backgroundImage ?? null,
             logoSrc: root.querySelector('.detailLogo')?.style?.backgroundImage ?? null,
@@ -1558,7 +1558,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                                 const rowIds = label => {
                                     const title = Array.from(document.querySelectorAll('.page:not(.hide) .sectionTitle')).find(node => new RegExp('^' + label + '$', 'i').test(node.textContent.trim()));
                                     const section = title?.closest('.verticalSection') ?? title?.parentElement?.parentElement;
-                                    return Array.from(section?.querySelectorAll('.card[data-id]') ?? []).map(c => c.dataset.id);
+                                    return Array.from(section?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []).map(c => c.dataset.id);
                                 };
                                 return { continueWatching: rowIds('Continue Watching'), nextUp: rowIds('Next Up') };
                             });
@@ -2390,7 +2390,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 await pageM.route(pluginRoute, blockPlugin);
                 await M.navigate(baseM + '#/movies?topParentId=' + moviesViewId);
                 await M.networkIdle();
-                const rendersWithoutPlugin = await pageM.evaluate(() => document.querySelectorAll('.card[data-id]').length > 0);
+                const rendersWithoutPlugin = await pageM.evaluate(() => document.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]").length > 0);
                 let detailUsable = false;
                 if (b0Sample[0]) {
                     await M.navigate(baseM + '#/details?id=' + b0Sample[0].Id);
@@ -2435,7 +2435,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         await harnessSide.page.setViewportSize({ width: w, height: h });
                         await harnessSide.reload();
                         const rendered = await harnessSide.page.evaluate(() => document.body.textContent.trim().length > 20);
-                        const legacyHeader = await harnessSide.page.evaluate(() => !!document.querySelector('.skinHeader'));
+                        const legacyHeader = await harnessSide.page.evaluate(() => !!document.querySelector(":is(.skinHeader, .jfds .tvbar)"));
                         let navigable = false;
                         if (rendered) {
                             await harnessSide.pressKey('ArrowRight').catch(() => {});
@@ -2554,7 +2554,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         // Resume by keys from a freshly loaded detail page.
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
                         await harnessSide.networkIdle();
-                        result.resumeFocused = await focusByKeys(harnessSide, '.btnPlay[title*="esume"]', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
+                        result.resumeFocused = await focusByKeys(harnessSide, '.btnPlay:is([title*="esume"],[data-tip*="esume"])', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
                         if (result.resumeFocused) {
                             const resumeMarker = Date.now();
                             await harnessSide.enterFocused();

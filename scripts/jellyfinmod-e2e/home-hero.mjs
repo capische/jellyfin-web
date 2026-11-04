@@ -52,7 +52,7 @@ function filterNumber(filter, name) {
     return found ? Number(found[1]) / (found[2] === '%' ? 100 : 1) : null;
 }
 function glassValuesMatch(theme, bar) {
-    const expected = GLASS_VALUES[theme] ?? GLASS_VALUES.default;
+    const expected = GLASS_VALUES[bar.design && theme === 'appletv' ? 'default' : theme] ?? GLASS_VALUES.default;
     const near = (value, target, margin) => value !== null && Math.abs(value - target) <= margin;
     return near(filterNumber(bar.filter, 'blur'), 12, 0.01) && (theme === 'light' ? filterNumber(bar.filter, 'contrast') === null : near(filterNumber(bar.filter, 'contrast'), 0.7, 0.01)) &&
         near(filterNumber(bar.filter, 'brightness'), expected.brightness, 0.01) && near(bar.tintAlpha, expected.tint, 0.02) &&
@@ -358,7 +358,7 @@ const heroState = page => page.evaluate(() => {
     if (!hero) return null;
     const box = hero.getBoundingClientRect();
     const sections = [...document.querySelectorAll('.verticalSection')].filter(section => section.querySelector('.sectionTitle')?.textContent?.trim() === 'Continue Watching');
-    const cards = [...sections[0]?.querySelectorAll('.card[data-id]') ?? []].map(card => card.getAttribute('data-id'));
+    const cards = [...sections[0]?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []].map(card => card.getAttribute('data-id'));
     const url = /url\("?(.*?)"?\)/.exec(hero.style.backgroundImage)?.[1];
     return {
         title: hero.querySelector('h1')?.textContent ?? null,
@@ -732,7 +732,7 @@ try {
                 const hero = await waitHero(page, state => !!state.heroId && !!state.firstCardId, `the hero with ${hide} hidden`);
                 const rowIds = await page.evaluate(() => {
                     const section = [...document.querySelectorAll('.verticalSection')].find(node => node.querySelector('.sectionTitle')?.textContent?.trim() === 'Continue Watching');
-                    return [...section?.querySelectorAll('.card[data-id]') ?? []].map(card => card.getAttribute('data-id'));
+                    return [...section?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []].map(card => card.getAttribute('data-id'));
                 });
                 const foreign = rowIds.filter(id => !keptIds.has(id));
                 const leaked = rowIds.filter(id => sentinels.includes(id));
@@ -845,7 +845,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         if (layout.tv) {
             const focus = () => layoutPage.evaluate(() => {
                 const active = document.activeElement;
-                return { inHero: !!active?.closest('.jfmod-homeHero'), text: active?.textContent?.trim().slice(0, 30), card: active?.closest('.card')?.getAttribute('data-id') ?? null };
+                return { inHero: !!active?.closest('.jfmod-homeHero'), text: active?.textContent?.trim().slice(0, 30), card: active?.closest(":is(.card:not(.dm), .cell)")?.getAttribute('data-id') ?? null };
             });
             const first = await until(async () => { const value = await focus(); return value.inHero ? value : null; }, { timeout: 10000, label: 'TV first focus on the hero' }).catch(() => null);
             record(`d ${layout.name}`, 'TV: first focus is the hero\'s Play', first?.inHero === true && /Play/.test(first?.text ?? ''), first);
@@ -875,7 +875,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
             await layoutPage.waitForTimeout(1000);
             const barFocus = await layoutPage.evaluate(() => {
                 const active = document.activeElement;
-                const header = active?.closest('.skinHeader');
+                const header = active?.closest(":is(.skinHeader, .jfds .tvbar)");
                 if (!header) return { inBar: false, text: active?.textContent?.trim().slice(0, 30) ?? null };
                 const focused = getComputedStyle(active);
                 const sibling = [...header.querySelectorAll('button, a')].find(element => element !== active && element.getBoundingClientRect().width > 0);
@@ -928,7 +928,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
             // Desktop and mobile: Home's MUI app bar, which upstream turns to its solid default colour on scroll. TV: the
             // legacy header, which Home's integration marks solid past 40 px.
             // The one the user sees: the TV can keep a hidden React app bar off screen beside its header.
-            const header = [...document.querySelectorAll('.jfmod-homeAppBar, .skinHeader.jfmod-topbar')].find(element => {
+            const header = [...document.querySelectorAll(":is(.jfmod-homeAppBar, .jfds .bar, .jfds .tvbar), :is(.skinHeader, .jfds .tvbar).jfmod-topbar")].find(element => {
                 const rect = element.getBoundingClientRect();
                 return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && getComputedStyle(element).visibility !== 'hidden';
             }) ?? null;
@@ -944,10 +944,11 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
             }
             return {
                 scrollY: Math.round(window.scrollY), bar: header?.classList.contains('jfmod-homeAppBar') ? 'app bar' : header ? 'legacy header' : null,
-                solidClass: !!header && (header.classList.contains('MuiAppBar-colorDefault') || header.classList.contains('jfmod-topbarSolid')),
+                solidClass: !!header && (header.matches('.glassbar, .tvbar') || header.classList.contains('MuiAppBar-colorDefault') || header.classList.contains('jfmod-topbarSolid')),
+                design: !!header?.closest('.jfds'),
                 background: style?.backgroundColor ?? null, image: style?.backgroundImage ?? null,
-                fade: header ? getComputedStyle(header, '::before').backgroundImage : null,
-                fadeHeight: header ? parseFloat(getComputedStyle(header, '::before').height) / parseFloat(getComputedStyle(header).fontSize) : null,
+                fade: header ? getComputedStyle(header.closest('.jfds') || header, '::before').backgroundImage : null,
+                fadeHeight: header ? parseFloat(getComputedStyle(header.closest('.jfds') || header, '::before').height) / parseFloat(getComputedStyle(header).fontSize) : null,
                 tintAlpha: style ? Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100 : null,
                 filter: style ? style.backdropFilter || style.webkitBackdropFilter || 'none' : null,
                 theme: document.documentElement.getAttribute('data-theme'),
@@ -987,22 +988,22 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
 // Contrast is taken in the band the bar's labels occupy, across the whole width, since that is where text meets what
 // passes beneath. The TV draws the legacy header instead, with no glass (user, 2026-10-08: transparent, its gradient
 // scrim the only treatment), and is measured the same way.
-const BAR_SELECTOR = '.jfmod-homeAppBar, .skinHeader.jfmod-topbar';
+const BAR_SELECTOR = ":is(.jfmod-homeAppBar, .jfds .bar, .jfds .tvbar), :is(.skinHeader, .jfds .tvbar).jfmod-topbar";
 // The bar as first shipped on 2026-10-08 (commit 12322785b6), put back over the built one for the comparison: its
 // stricter bound, the page at 48 % brightness under a 35 % tint over a plain white panel, held what showed through
 // to about a quarter of the page in the dark themes. The built bar's halo behind the labels is switched off meanwhile.
-const OLD_GLASS_CSS = `.jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
+const OLD_GLASS_CSS = `:is(.jfmod-homeAppBar.MuiAppBar-colorDefault, .jfds .bar.glassbar) {
     background: color-mix(in srgb, color-mix(in srgb, var(--AppBar-background) 80%, var(--AppBar-color)) 35%, transparent) !important;
     -webkit-backdrop-filter: blur(14px) saturate(180%) brightness(0.48) !important; backdrop-filter: blur(14px) saturate(180%) brightness(0.48) !important;
     text-shadow: none !important; }
-    [data-theme='light'] .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
+    [data-theme='light'] :is(.jfmod-homeAppBar.MuiAppBar-colorDefault, .jfds .bar.glassbar) {
     background: color-mix(in srgb, var(--AppBar-background) 45%, transparent) !important;
     -webkit-backdrop-filter: blur(14px) saturate(170%) contrast(0.75) brightness(1.15) !important; backdrop-filter: blur(14px) saturate(170%) contrast(0.75) brightness(1.15) !important; }
-    [data-theme='appletv'] .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault {
+    [data-theme='appletv'] :is(.jfmod-homeAppBar.MuiAppBar-colorDefault, .jfds .bar.glassbar) {
     background: color-mix(in srgb, color-mix(in srgb, var(--AppBar-background) 70%, #fff) 55%, transparent) !important;
     -webkit-backdrop-filter: blur(14px) saturate(170%) contrast(0.7) brightness(1.25) !important; backdrop-filter: blur(14px) saturate(170%) contrast(0.7) brightness(1.25) !important; }
-    .jfmod-homeAppBar.jfmod-homeAppBar.MuiAppBar-colorDefault svg { filter: none !important; }
-    .layout-tv .skinHeader.jfmod-topbar.jfmod-topbarSolid { background: #101010 !important; }`;
+    :is(.jfmod-homeAppBar.MuiAppBar-colorDefault, .jfds .bar.glassbar) svg { filter: none !important; }
+    .layout-tv :is(.skinHeader.jfmod-topbar.jfmod-topbarSolid, .jfds .tvbar) { background: #101010 !important; }`;
 const GLASS_VARIANTS = process.env.JELLYFINMOD_GLASS_VARIANTS ?
     JSON.parse(readFileSync(process.env.JELLYFINMOD_GLASS_VARIANTS, 'utf8')) :
     [{ name: 'before', css: OLD_GLASS_CSS }, { name: 'after', css: '' }];
@@ -1128,7 +1129,7 @@ async function glyphContrast(page, textRgb) {
                 document.head.append(style);
             }
             const bar = document.querySelector('[data-jfmod-glass]');
-            return [...bar.querySelectorAll('a, button')].map(element => ({ element, rect: element.getBoundingClientRect() }))
+            return [...bar.querySelectorAll('a, button, [role="button"]')].map(element => ({ element, rect: element.getBoundingClientRect() }))
                 .filter(({ element, rect }) => rect.width > 0 && rect.bottom > 0 && rect.top < window.innerHeight
                     && getComputedStyle(element).visibility !== 'hidden' && !element.querySelector('a, button')
                     && ![element, ...element.querySelectorAll('*')].some(node =>
@@ -1243,7 +1244,7 @@ async function sampleGlass(page) {
     const beneath = (await barBlocks(page, 'bar')).map(block => block.rgb);
     const text = await page.evaluate(() => {
         const header = document.querySelector('[data-jfmod-glass]');
-        const controls = [...header.querySelectorAll('a, button')].filter(element => {
+        const controls = [...header.querySelectorAll('a, button, [role="button"]')].filter(element => {
             const rect = element.getBoundingClientRect();
             return rect.width > 0 && rect.bottom > 0 && rect.top < window.innerHeight && getComputedStyle(element).visibility !== 'hidden';
         });
@@ -1302,7 +1303,7 @@ async function placeBar(page, place, rowMiddle) {
     await page.evaluate(({ where, middle }) => {
         document.getElementById('jfmod-glass-panel')?.remove();
         // Measured where it is, scrolled or not: the TV's header can be off screen until this scroll brings it back.
-        const header = [...document.querySelectorAll('.jfmod-homeAppBar, .skinHeader.jfmod-topbar')].find(element => element.getBoundingClientRect().width > 0);
+        const header = [...document.querySelectorAll(":is(.jfmod-homeAppBar, .jfds .bar, .jfds .tvbar), :is(.skinHeader, .jfds .tvbar).jfmod-topbar")].find(element => element.getBoundingClientRect().width > 0);
         const bar = header.getBoundingClientRect();
         if (where === 'row') {
             window.scrollTo(0, middle - bar.height / 2);
@@ -1352,14 +1353,14 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
             const shown = await glassPage.evaluate(() => document.documentElement.getAttribute('data-theme'));
             if (shown !== theme) throw new Error(`theme ${theme} did not apply (data-theme ${shown})`);
             // The rows' images, which the poster-row case needs, arrive after the hero.
-            await glassPage.waitForFunction(() => [...document.querySelectorAll('.cardImageContainer')]
-                .filter(image => !image.closest('.jfmod-homeHero') && getComputedStyle(image).backgroundImage.startsWith('url(')).length >= 6,
+            await glassPage.waitForFunction(() => [...document.querySelectorAll(":is(.cardImageContainer, .post > img)")]
+                .filter(image => !image.closest('.jfmod-homeHero') && (image.tagName === 'IMG' ? image.complete && image.naturalWidth > 0 : getComputedStyle(image).backgroundImage.startsWith('url('))).length >= 6,
             undefined, { timeout: 30000 }).catch(() => {});
             // The first poster rows, by the middle of their card images. Each is measured under the bar and the one where
             // the text reads worst counts: a row's average says nothing about the poster under one label.
             const rowMiddles = await glassPage.evaluate(() => {
                 const middles = [];
-                for (const image of document.querySelectorAll('.cardImageContainer')) {
+                for (const image of document.querySelectorAll(":is(.cardImageContainer, .post > img)")) {
                     const rect = image.getBoundingClientRect();
                     if (rect.height < 40 || image.closest('.jfmod-homeHero')) continue;
                     const middle = Math.round(rect.top + window.scrollY + rect.height / 2);
@@ -1426,7 +1427,7 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                 const offScreen = [];
                 for (const middle of rowMiddles) {
                     offScreen.push(await glassPage.evaluate(async rowMiddle => {
-                        const header = document.querySelector('.skinHeader.jfmod-topbar');
+                        const header = document.querySelector('.jfds .tvbar, .skinHeader.jfmod-topbar');
                         window.scrollTo(0, rowMiddle - header.getBoundingClientRect().height / 2);
                         await new Promise(resolve => setTimeout(resolve, 600));
                         return Math.round(header.getBoundingClientRect().bottom);
@@ -1461,7 +1462,7 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                     return { filter: computed.backdropFilter || computed.webkitBackdropFilter || 'none',
                         tintAlpha: Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100,
                         boxShadow: computed.boxShadow, borderBottomWidth: computed.borderBottomWidth,
-                        labelTextShadow: label ? getComputedStyle(label).textShadow : null };
+                        labelTextShadow: label ? getComputedStyle(label).textShadow : null, design: !!header.closest('.jfds') };
                 });
                 record(step, 'The bar has the approved values (tint, blur 12, contrast 0.7, brightness; no text halo, no hairline)', glassValuesMatch(theme, style), style);
                 // Readability is a measurement, not a bound (user, 2026-10-09: see-through over the old 4.5:1 floor): the

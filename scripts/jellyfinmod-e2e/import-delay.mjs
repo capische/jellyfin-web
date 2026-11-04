@@ -144,11 +144,11 @@ try {
         // The library grid's card of the title too (P2-6 of the 2026-10-22 review): a page that never reads the title's detail.
         // It is found by its name, because a movie's card is a new item once the file is in.
         const grid = fx.case === 'movie'
-            ? { name: 'grid-movie-card', url: `#/movies?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=movies`, target: '.page:not(.hide) .card', text: fx.title }
-            : { name: 'grid-series-card', url: `#/tv?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=tvshows`, target: '.page:not(.hide) .card', text: fx.title };
+            ? { name: 'grid-movie-card', url: `#/movies?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=movies`, target: ".page:not(.hide) :is(.card:not(.dm), .cell)", text: fx.title }
+            : { name: 'grid-series-card', url: `#/tv?topParentId=${fx.library.replaceAll('-', '').toLowerCase()}&collectionType=tvshows`, target: ".page:not(.hide) :is(.card:not(.dm), .cell)", text: fx.title };
         const surfaces = fx.case === 'movie' ? [{ name: 'movie', id: stubs[0].Id, target: '.page:not(.hide)' }, grid]
             : [{ name: 'season-rows', id: season.Id, target: '.page:not(.hide) #listChildrenCollapsible' },
-                { name: 'series-season-card', id: series.Id, target: `.page:not(.hide) .card[data-id="${season.Id}"]` }, grid,
+                { name: 'series-season-card', id: series.Id, target: `.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${season.Id}"]` }, grid,
                 ...(ordinaryMode && fx.case === 'episode' ? [{ name: 'ordinary-season-rows', id: season.Id, target: '.page:not(.hide) #listChildrenCollapsible', user: 'ordinary', block: ordinaryMode === 'blocked' }] : [])];
         const dotted = fx.title.replaceAll(' ', '.');
         const releaseTitle = `${dotted}.${fx.case === 'movie' ? '2025' : fx.case === 'pack' ? 'S01' : 'S01E01'}.1080p.WEB-DL.H264-JFMOD`;
@@ -213,9 +213,9 @@ try {
                     if (!n) { window.importSamples.push({ at: Date.now(), missing: true }); return; }
                     const rows = name.endsWith('season-rows') ? [...n.querySelectorAll('.listItem')] : [n];
                     window.importSamples.push({ at: Date.now(), rows: rows.map(r => ({ id: r.getAttribute('data-id'),
-                        ring: [...r.querySelectorAll('.jfmod-dlmark:not(.jfmod-dlblock-none):not(.jfmod-dlblock-unaired)')].filter(shown).length,
-                        cloud: [...r.querySelectorAll('.jfmod-mark--none,.jfmod-dlblock-none')].filter(shown).length,
-                        importing: [...r.querySelectorAll('.jfmod-dlmark')].some(d => d.getAttribute('data-jfmod-kind') === 'importing'),
+                        ring: [...r.querySelectorAll(":is(.jfmod-dlmark, [data-ds-download]):not(.jfmod-dlblock-none):not(.jfmod-dlblock-unaired)")].filter(shown).length,
+                        cloud: [...r.querySelectorAll(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"])),.jfmod-dlblock-none")].filter(shown).length,
+                        importing: [...r.querySelectorAll(":is(.jfmod-dlmark, [data-ds-download])")].some(d => d.getAttribute('data-jfmod-kind') === 'importing'),
                         play: [...r.querySelectorAll('.listItemImageButton,[data-action="play"],[data-action="resume"],.btnPlay')].filter(shown).length,
                         placeholder: r.hasAttribute('data-jfmod-placeholder'), word: r.querySelector('.jfmod-dlMeta,.jfmod-dlblock-word')?.textContent })) });
                 }, 100);

@@ -285,7 +285,7 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
         // The stub's row on its season page.
         await go(page, `#/details?id=${stub.SeasonId}`);
         const rowSelector = `.page:not(.hide) #listChildrenCollapsible .listItem[data-id="${stub.Id}"]`;
-        await page.waitForSelector(`${rowSelector}[data-jfmod-placeholder] .jfmod-mark--none`, { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector(`${rowSelector}[data-jfmod-placeholder] :is(.jfmod-mark--none, .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`, { timeout: 30000 }).catch(() => {});
         await page.evaluate(`window.isShown = ${visible}`);
         // Upstream's own row buttons differ by layout (the phone and the TV draw fewer): the placeholder's row has the ones a
         // real episode's row has.
@@ -299,7 +299,7 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
         const row = await page.evaluate(selector => {
             const node = document.querySelector(selector);
             if (!node) return null;
-            const mark = node.querySelector('.jfmod-mark--none');
+            const mark = node.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
             return {
                 placeholder: node.hasAttribute('data-jfmod-placeholder'),
                 mark: !!mark && window.isShown(mark), button: mark?.tagName === 'BUTTON', label: mark?.getAttribute('aria-label'),
@@ -329,10 +329,10 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
         const allStub = seasons.find(season => season.ChildCount > 0 && episodes.filter(item => item.SeasonId === season.Id).every(item => item.IsPlaceHolder));
         if (allStub) {
             await go(page, `#/details?id=${seriesId}`);
-            const card = `.page:not(.hide) #listChildrenCollapsible .card[data-id="${allStub.Id}"]`;
+            const card = `.page:not(.hide) #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id="${allStub.Id}"]`;
             await page.waitForSelector(card, { timeout: 30000 }).catch(() => {});
             await page.waitForTimeout(1500);
-            if (layout === 'desktop') await page.locator(`${card} .cardImageContainer`).first().hover().catch(() => {});
+            if (layout === 'desktop') await page.locator(`${card} :is(.cardImageContainer, .post > img)`).first().hover().catch(() => {});
             await page.waitForTimeout(600);
             await page.evaluate(`window.isShown = ${visible}`);
             const look = await page.evaluate(selector => {
@@ -340,9 +340,9 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
                 if (!node) return null;
                 return {
                     noFile: node.hasAttribute('data-jfmod-nofile') || node.hasAttribute('data-jfmod-empty'),
-                    mark: !!node.querySelector('.jfmod-mark--none'),
-                    play: [...node.querySelectorAll('.cardOverlayButton[data-action="play"], .cardOverlayButton[data-action="resume"]')].some(window.isShown),
-                    centre: [...node.querySelectorAll('.jfmod-cardGet.cardOverlayFab-primary')].some(window.isShown)
+                    mark: !!node.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"),
+                    play: [...node.querySelectorAll(":is(.cardOverlayButton, .pi, .disc)[data-action=\"play\"], :is(.cardOverlayButton, .pi, .disc)[data-action=\"resume\"]")].some(window.isShown),
+                    centre: [...node.querySelectorAll(":is(.jfmod-cardGet, [data-ds-action=\"get\"]):is(.cardOverlayFab-primary, .disc)")].some(window.isShown)
                 };
             }, card);
             record(label, `${allStub.Name} (only placeholders): Not Downloaded, no Play${layout === 'desktop' && isAdmin ? ', Get a Release in the centre on hover' : ''}`,
@@ -367,8 +367,8 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
                 played: window.isShown(buttons?.querySelector('.btnPlaystate')),
                 favourite: window.isShown(buttons?.querySelector('.btnUserRating')),
                 getRelease: window.isShown(buttons?.querySelector('.jfmod-getRelease')),
-                stubCards: view?.querySelectorAll('.card[data-type="Episode"] [data-jfmod-stubmark]').length ?? 0,
-                stubCardsPlay: [...(view?.querySelectorAll('.card[data-jfmod-empty] .cardOverlayButton[data-action="play"]') ?? [])].some(window.isShown)
+                stubCards: view?.querySelectorAll(":is(.card:not(.dm), .cell)[data-type=\"Episode\"] [data-jfmod-stubmark]").length ?? 0,
+                stubCardsPlay: [...(view?.querySelectorAll(":is(.card:not(.dm), .cell)[data-jfmod-empty] :is(.cardOverlayButton, .pi, .disc)[data-action=\"play\"]") ?? [])].some(window.isShown)
             };
         });
         record(label, `the placeholder's page: no Play, no "Ends at", ✓ and ♥${isAdmin ? ', Get a Release' : ''}; its season's placeholder cards marked`,

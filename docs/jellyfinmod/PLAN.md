@@ -2458,3 +2458,13 @@ Offline component checks exercise real template/components/styles with browser r
 live acceptance. TypeScript/stylelint/ESLint checks supplement them. Real Google Chrome acceptance, physical webOS
 D-pad/performance and existing live runners remain unrun under that restriction. Discovery/file-less child responses
 need per-source ratings from the backend to display the mockup's IMDb/Rotten Tomatoes values; no values are fabricated.
+
+## dsA — mockup markup foundation (2026-11-04)
+
+**Built (not accepted).** The user's dsA slice ports the approved bar, Cell, Movies/Shows grid and controls,
+Favorites, loading/empty states and scoped CSS into `features/jellyfinmod/design`. Existing hooks and command
+controllers own behavior. Live theme/layout markers update the port without reloading. Admin, settings and setup
+keep their current presentation. Source CSS adaptations, remaining upstream markup, runner changes and verification
+limits are recorded in [dsA.md](design/dsA.md). No deployment or server-backed acceptance was performed; those remain
+unverified under this task's prohibition on touching other environments. Home, detail pages, picker, Queue, player
+and Preferences are outside this slice.

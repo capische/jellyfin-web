@@ -1,12 +1,13 @@
 import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
-import { Outlet, RouterProvider, createHashRouter, useLocation, type RouteObject } from 'react-router-dom';
+import { Outlet, RouterProvider, createHashRouter, useLocation, type RouteObject, useSearchParams } from 'react-router-dom';
 
 import { DASHBOARD_APP_PATHS, DASHBOARD_APP_ROUTES } from 'apps/dashboard/routes/routes';
 import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
 import { APP_ROUTES as MODERN_APP_ROUTES } from 'apps/modern/routes/routes';
 import { WIZARD_APP_ROUTES } from 'apps/wizard/routes/routes';
 import AppHeader from 'components/AppHeader';
+import { PUBLIC_PATHS } from 'components/router/appRouter';
 import ConnectionRequired from 'components/ConnectionRequired';
 import Backdrop from 'components/Backdrop';
 import layoutManager from 'components/layoutManager';
@@ -26,6 +27,12 @@ import SettingsPage from '../settings/SettingsPage';
 import SetupWizardPage from '../settings/SetupWizardPage';
 
 import ModAppLayout from './ModAppLayout';
+import { FavoritesPage } from '../design/FavoritesPage';
+
+const HomeRoute = () => {
+    const [params] = useSearchParams();
+    return params.get('tab') === '1' ? <FavoritesPage /> : <HomePage />;
+};
 
 /**
  * The JellyfinMod interface's router (P7.S2, §2.1).
@@ -55,7 +62,7 @@ const MOD_ROUTES: RouteObject[] = [
     // `homesections` rows, `focusManager` autofocus — so the TV layout's d-pad rules apply to it unchanged, and the
     // TV's legacy header gets Home's transparent bar from the mod's Home tab rather than from upstream's
     // `hometab.js`, which is back to its upstream text.
-    { path: 'home', Component: HomePage },
+    { path: 'home', Component: HomeRoute },
     // Every layout: both upstream route tables resolve `search` to the same React component, so there is no
     // legacy-view or focus difference to hold this one back (P7.S6).
     { path: 'search', Component: SearchPage },
@@ -74,10 +81,10 @@ const MOD_ROUTES: RouteObject[] = [
     // modern layout reaches through upstream's own routes (PHASE7 decision 13). One grid means every grid feature
     // is built once, and upstream's legacy `movies.js` and `tvshows.js` controllers stay unedited. The modern layout
     // keeps upstream's routes, whose app bar already carries the toolbar this page renders itself.
-    ...(layoutManager.modern ? [] : [
+    ...[
         { path: 'movies', Component: LibraryGridPage },
         { path: 'tv', Component: LibraryGridPage }
-    ])
+    ]
 ];
 
 /**
@@ -162,7 +169,11 @@ function ModRootLayout() {
             storageManager={ThemeStorageManager}
         >
             <Backdrop />
-            <AppHeader isHidden={layoutManager.modern || isNewLayoutPath} />
+            <AppHeader
+                isHidden={layoutManager.modern || isNewLayoutPath}
+                isToolbarHidden={!PUBLIC_PATHS.includes(location.pathname) && !location.pathname.startsWith('/catalog/settings')
+                    && !(location.pathname === '/home' && !location.search.includes('tab=1'))}
+            />
 
             <Outlet />
         </ThemeProvider>

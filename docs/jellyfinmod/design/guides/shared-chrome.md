@@ -1,5 +1,7 @@
 # Shared chrome
 
+**dsA (2026-11-04), built, not accepted:** Ported bar/cards/library controls use `.jfds` on their own roots and portals, with copied mockup CSS in `design/`. The older `html.jfmod-chrome` rules below still serve the out-of-slice surfaces. Admin Dashboard and mod settings/setup remain excluded. [Complete scope and CSS exceptions](../dsA.md).
+
 **Status:** approved redesign D212–D231, D251, D254, D259/D262; rd2 built, not accepted. Rulebook sections 1–9 and Departures.
 
 `src/apps/modern/features/jellyfinmod/shell/sharedChrome.scss`, `chromeFont.scss`, `motionChrome.scss`, `ChromeTheme.tsx` and

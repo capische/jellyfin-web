@@ -1,6 +1,4 @@
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormGroup from '@mui/material/FormGroup';
+import { Checkbox, FormControlLabel, FormGroup } from '../../../jellyfinmod/design/FilterFields';
 import React, { FC, useCallback } from 'react';
 import { LibraryViewSettings } from 'types/library';
 

@@ -2,10 +2,12 @@ import React, { FC, useEffect } from 'react';
 
 interface AppHeaderParams {
     isHidden?: boolean
+    isToolbarHidden?: boolean
 }
 
 const AppHeader: FC<AppHeaderParams> = ({
-    isHidden = false
+    isHidden = false,
+    isToolbarHidden = false
 }) => {
     useEffect(() => {
         // Initialize the UI components after first render
@@ -21,7 +23,7 @@ const AppHeader: FC<AppHeaderParams> = ({
             <div className='mainDrawer hide'>
                 <div className='mainDrawer-scrollContainer scrollContainer focuscontainer-y' />
             </div>
-            <div className='skinHeader focuscontainer-x' />
+            <div className='skinHeader focuscontainer-x' style={isToolbarHidden ? { display: 'none' } : undefined} />
             <div className='mainDrawerHandle' />
         </div>
     );

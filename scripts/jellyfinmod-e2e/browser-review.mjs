@@ -322,7 +322,7 @@ const enterFocused = async () => {
 /** Controls that a screen reader could not name through text, aria-label or title. */
 const unnamedControls = scope => page.evaluate(within => Array.from(document.querySelectorAll(within))
     .filter(node => node.offsetParent !== null)
-    .filter(node => !node.textContent.trim() && !node.getAttribute('aria-label') && !node.getAttribute('title'))
+    .filter(node => !node.textContent.trim() && !node.getAttribute('aria-label') && !(node.getAttribute('title') ?? node.getAttribute('data-tip')))
     .map(node => node.outerHTML.slice(0, 120)), scope);
 const clearQueryCache = () => page.evaluate(() => new Promise((resolve, reject) => {
     const request = indexedDB.open('keyval-store');
@@ -353,7 +353,7 @@ const setSearch = query => discoveryWait(async () => {
 });
 const snapshot = () => page.evaluate(() => ({
     headings: Array.from(document.querySelectorAll('#searchPage .sectionTitle')).map(node => node.textContent.trim()),
-    cards: Array.from(document.querySelectorAll('#searchPage .card')).map(node => node.getAttribute('aria-label') || node.textContent.trim()).filter(Boolean).slice(0, 30),
+    cards: Array.from(document.querySelectorAll("#searchPage :is(.card:not(.dm), .cell)")).map(node => node.getAttribute('aria-label') || node.textContent.trim()).filter(Boolean).slice(0, 30),
     notice: document.querySelector('.jfmod-searchNotice')?.textContent.trim() ?? null,
     discovery: !!document.querySelector('.jfmod-discovery'),
     addButtons: document.querySelectorAll('.jfmod-discoveryCard button:not(:disabled)').length,
@@ -488,7 +488,7 @@ try {
         const browsed = await poll(
             () => page.evaluate(() => ({
                 hash: window.location.hash,
-                cards: document.querySelectorAll('.card, .listItem').length
+                cards: document.querySelectorAll(":is(.card:not(.dm), .cell), .listItem").length
             })),
             state => state.hash.includes('/movies') && state.cards > 0,
             { timeout: 25000 }
@@ -504,27 +504,27 @@ try {
     });
     await step('library countdown and due filter', async () => {
         await navigate(server + '#/movies?topParentId=' + encodeURIComponent(libraryId) + '&collectionType=movies');
-        await page.locator('.jfmod-entryCard:visible').first().waitFor();
+        await page.locator(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id]):visible").first().waitFor();
         if (expectedNormalCountdown) {
             const expected = expectedNormalCountdown === 'none' ? null : expectedNormalCountdown;
             const readCountdown = () => page.evaluate(title => {
-                const card = Array.from(document.querySelectorAll('.jfmod-entryCard')).find(candidate =>
+                const card = Array.from(document.querySelectorAll(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id])")).find(candidate =>
                     candidate.offsetParent !== null && candidate.getAttribute('aria-label') === title);
-                return card?.querySelector('.jfmod-countdown')?.textContent.trim() ?? null;
+                return card?.querySelector('.jfmod-countdown, [data-ds-countdown]')?.textContent.trim() ?? null;
             }, retentionEntryTitle);
             const normalCountdown = await poll(readCountdown, actual => actual === expected, { timeout: 10000 });
             if (normalCountdown !== expected) {
                 throw new Error('Normal library countdown mismatch: ' + JSON.stringify({ expected, actual: normalCountdown }));
             }
         }
-        const filterButton = page.locator('button[aria-label="Filter"]:visible, button[title="Filter"]:visible').first();
+        const filterButton = page.locator('button[aria-label="Filter"]:visible, button:is([title="Filter"],[data-tip="Filter"]):visible').first();
         if (!await filterButton.waitFor().then(() => true, () => false)) throw new Error('Library filter button is unavailable');
         await filterButton.click();
-        const fileGroup = page.locator('button:visible').filter({ hasText: /^\s*File\s*$/ }).first();
+        const fileGroup = page.locator('button:visible, summary:visible').filter({ hasText: /^\s*File\s*$/ }).first();
         if (!await fileGroup.waitFor({ timeout: 10000 }).then(() => true, () => false)) {
             const fileFilterState = await page.evaluate(() => ({
                 opened: false,
-                cards: document.querySelectorAll('.jfmod-entryCard').length,
+                cards: document.querySelectorAll(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id])").length,
                 filterHeadings: Array.from(document.querySelectorAll('[role="presentation"] h3')).map(candidate => candidate.textContent.trim())
             }));
             throw new Error('File filter group is unavailable after the combined browse response: ' + JSON.stringify(fileFilterState));
@@ -542,12 +542,12 @@ try {
             await browsed;
         }
         const readDue = () => page.evaluate(() => {
-            const visible = Array.from(document.querySelectorAll('.jfmod-entryCard')).filter(candidate => candidate.offsetParent !== null);
+            const visible = Array.from(document.querySelectorAll(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id])")).filter(candidate => candidate.offsetParent !== null);
             return {
                 dueChecked: Array.from(document.querySelectorAll('label')).find(candidate => candidate.textContent.includes('Due within 7 days'))
                     ?.querySelector('input[type="checkbox"]')?.checked ?? false,
                 cards: visible.length,
-                countdowns: visible.map(candidate => candidate.querySelector('.jfmod-countdown')?.textContent.trim()).filter(Boolean)
+                countdowns: visible.map(candidate => candidate.querySelector('.jfmod-countdown, [data-ds-countdown]')?.textContent.trim()).filter(Boolean)
             };
         });
         const dueMatches = result => result.dueChecked && result.cards === expectedDueCards
@@ -557,7 +557,7 @@ try {
             throw new Error('Due filter did not render the expected eligible set: ' + JSON.stringify(dueResult));
         }
         await dueCheckbox.uncheck();
-        const restored = await poll(() => page.evaluate(() => Array.from(document.querySelectorAll('.jfmod-entryCard'))
+        const restored = await poll(() => page.evaluate(() => Array.from(document.querySelectorAll(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id])"))
             .some(candidate => candidate.offsetParent !== null)), Boolean);
         if (!restored) throw new Error('Clearing the Due filter did not restore the isolated library');
         checks.push({ dueFilter: 'passed', eligibleSet: 'passed' });
@@ -570,7 +570,7 @@ try {
     const playbackPattern = /^(play|resume|continue)/i;
     const detailControls = () => page.evaluate(() => Array.from(document.querySelectorAll('#itemDetailPage:not(.hide) button, #itemDetailPage:not(.hide) a'))
         .filter(candidate => candidate.offsetParent !== null)
-        .map(candidate => ({ text: candidate.textContent.trim(), title: candidate.getAttribute('title'), aria: candidate.getAttribute('aria-label'), classes: candidate.className })));
+        .map(candidate => ({ text: candidate.textContent.trim(), title: (candidate.getAttribute('title') ?? candidate.getAttribute('data-tip')), aria: candidate.getAttribute('aria-label'), classes: candidate.className })));
     const isPlayback = control => [control.text, control.title ?? '', control.aria ?? ''].some(value => playbackPattern.test(value));
     if (reclaimedEntryId) {
         await step('reclaimed details without playback', async () => {
@@ -664,7 +664,7 @@ try {
                 layoutApplied: document.documentElement.classList.contains('layout-' + expectedLayout),
                 nativeRoute: window.location.hash.includes('id=') && !window.location.hash.includes('entryId='),
                 seasons: Array.from(document.querySelectorAll('#itemDetailPage:not(.hide) .sectionTitle')).some(title =>
-                    title.textContent.trim() === 'Seasons' && !!title.parentElement?.querySelector('.card, .listItem')),
+                    title.textContent.trim() === 'Seasons' && !!title.parentElement?.querySelector(":is(.card:not(.dm), .cell), .listItem")),
                 history: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-entryHistory'),
                 filelessRoot: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-entryDetailsRoot')
             }), layout);
@@ -1052,7 +1052,7 @@ try {
         await navigate(server + '#/search?query=' + encodeURIComponent(boundEntry.title));
         const nativeSearchWithoutPlugin = await poll(() => page.evaluate(() => ({
             sections: Array.from(document.querySelectorAll('#searchPage .sectionTitle')).map(node => node.textContent.trim()),
-            cards: document.querySelectorAll('#searchPage .card').length,
+            cards: document.querySelectorAll("#searchPage :is(.card:not(.dm), .cell)").length,
             discovery: !!document.querySelector('#searchPage .jfmod-discovery')
         })), result => result.cards > 0);
         if (!nativeSearchWithoutPlugin.cards) {
@@ -1075,7 +1075,7 @@ try {
             const row = await poll(() => page.evaluate(() => {
                 const title = Array.from(document.querySelectorAll('.sectionTitle')).find(node => /^continue watching$/i.test(node.textContent.trim()));
                 const section = title?.closest('.verticalSection') ?? title?.parentElement?.parentElement;
-                return { present: !!title, ids: Array.from(section?.querySelectorAll('.card[data-id]') ?? []).map(card => card.dataset.id.replace(/-/g, '').toLowerCase()) };
+                return { present: !!title, ids: Array.from(section?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []).map(card => card.dataset.id.replace(/-/g, '').toLowerCase()) };
             }), result => result.present && result.ids.some(id => resumeIds.includes(id)));
             if (!row.present || !row.ids.some(id => resumeIds.includes(id))) {
                 throw new Error('Home Continue watching row is missing resumable items: ' + JSON.stringify({ row, resumeIds }));

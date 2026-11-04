@@ -1,3 +1,5 @@
+import { FilterMenu } from '../../../jellyfinmod/design/FilterMenu';
+import type { ActionRenderer } from '../../../jellyfinmod/design/Action';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import React, { FC, useCallback } from 'react';
 import ArrowForwardIosSharpIcon from '@mui/icons-material/ArrowForwardIosSharp';
@@ -81,6 +83,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(({ theme }) => ({
 }));
 
 interface FilterButtonProps {
+    renderButton?: ActionRenderer;
     parentId: ParentId;
     itemType: BaseItemKind[];
     viewType: LibraryTab;
@@ -93,6 +96,7 @@ interface FilterButtonProps {
 }
 
 const FilterButton: FC<FilterButtonProps> = ({
+    renderButton,
     parentId,
     itemType,
     viewType,
@@ -181,6 +185,14 @@ const FilterButton: FC<FilterButtonProps> = ({
     const isFiltersPersonKindsEnabled = () => {
         return viewType === LibraryTab.Persons;
     };
+
+    if (renderButton) {
+        return <div className='menuhost'>
+            {renderButton({ onClick: handleClick, title: globalize.translate('Filter') })}
+            {open && <FilterMenu close={handleClose} parentId={parentId} itemType={itemType} viewType={viewType}
+                fileFiltersAvailable={fileFiltersAvailable} libraryViewSettings={libraryViewSettings} setLibraryViewSettings={setLibraryViewSettings} />}
+        </div>;
+    }
 
     return (
         <>

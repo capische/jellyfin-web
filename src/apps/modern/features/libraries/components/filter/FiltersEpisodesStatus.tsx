@@ -1,7 +1,5 @@
+import { FormGroup, FormControlLabel, Checkbox } from '../../../jellyfinmod/design/FilterFields';
 import React, { FC, useCallback } from 'react';
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import globalize from 'lib/globalize';
 import { EpisodeFilter, LibraryViewSettings } from 'types/library';
 

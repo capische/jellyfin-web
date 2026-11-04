@@ -21,7 +21,7 @@ function enableScrollX() {
     return true;
 }
 
-function getSections() {
+export function getSections() {
     return [{
         name: 'Movies',
         types: 'Movie',
@@ -186,7 +186,7 @@ function getSections() {
     }];
 }
 
-function getFetchDataFn(section) {
+export function getFetchDataFn(section) {
     return function () {
         const apiClient = this.apiClient;
         const options = {
@@ -234,7 +234,7 @@ function getFetchDataFn(section) {
     };
 }
 
-function getRouteUrl(section, serverId) {
+export function getRouteUrl(section, serverId) {
     return appRouter.getRouteUrl('list', {
         serverId: serverId,
         itemTypes: section.types,

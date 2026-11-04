@@ -57,8 +57,8 @@ const describeFocus = page => page.evaluate(() => {
     const cls = typeof el.className === 'string' ?
         el.className.split(/\s+/).filter(c => /jfmod|card|btn|emby-tab|headerButton|Hero|listItem|Mui(Button|MenuItem|Accordion|Checkbox|IconButton)/i.test(c)).slice(0, 4).join('.') :
         '';
-    const text = (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    const section = el.closest('.MuiModal-root, .MuiToolbar-root, .verticalSection, .jfmod-homeHero, .skinHeader, .detailPagePrimaryContainer, .detailPageContent, .jfmod-nativeActions, .itemsContainer, .dialog');
+    const text = (el.getAttribute('aria-label') || (el.getAttribute('title') ?? el.getAttribute('data-tip')) || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    const section = el.closest(":is(.MuiModal-root, .pmenu), :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar), .verticalSection, .jfmod-homeHero, :is(.skinHeader, .jfds .tvbar), .detailPagePrimaryContainer, .detailPageContent, .jfmod-nativeActions, .itemsContainer, .dialog");
     let where = '';
     if (section) {
         const names = section.className.split(/\s+/);
@@ -91,7 +91,7 @@ const pressBack = (page, how) => (how === 'remote' ? pressRemoteBack(page) : pre
 
 const waitHash = (page, fragment, timeout = 20000) => page.waitForFunction(f => location.hash.includes(f), fragment, { timeout });
 const currentRoute = page => page.evaluate(() => location.hash.split('?')[0]);
-const openModalCount = page => page.evaluate(() => document.querySelectorAll('.MuiModal-root:not(.MuiModal-hidden):not([aria-hidden="true"])').length);
+const openModalCount = page => page.evaluate(() => document.querySelectorAll(":is(.MuiModal-root, .pmenu):not(.MuiModal-hidden):not([aria-hidden=\"true\"])").length);
 
 async function signIn(page) {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -130,19 +130,19 @@ const libraries = page => page.evaluate(async () => {
 });
 
 /** Which grid is on screen: the modern React grid (MUI toolbar, in the page or the app bar) or the legacy controller. */
-const gridKind = page => page.evaluate(() => (document.querySelector('.MuiToolbar-root button[title="Filter"]') ? 'modern' : 'legacy'));
+const gridKind = page => page.evaluate(() => (document.querySelector(":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar) button:is([title=\"Filter\"],[data-tip=\"Filter\"])") ? 'modern' : 'legacy'));
 
 const gridStats = page => page.evaluate(() => {
     const scope = [...document.querySelectorAll('.page:not(.hide)')].find(el => el.querySelector('.itemsContainer')) || document;
     const container = scope.querySelector('.itemsContainer');
     // The modern layout's toolbar lives in its app bar; the legacy layouts' is inside the page.
-    const toolbar = [...document.querySelectorAll('.MuiToolbar-root')].find(t => t.querySelector('button[title="Filter"]'));
+    const toolbar = [...document.querySelectorAll(":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar)")].find(t => t.querySelector('button:is([title="Filter"],[data-tip="Filter"])'));
     return {
-        cards: container?.querySelectorAll('.card').length ?? 0,
-        modCards: container?.querySelectorAll('.jfmod-entryCard, [data-jfmod-tmdb]').length ?? 0,
-        marks: container?.querySelectorAll('.jfmod-mark').length ?? 0,
-        filterButton: !!(scope.querySelector('.btnFilter') || toolbar?.querySelector('button[title="Filter"]')),
-        paging: ((toolbar?.querySelector('.MuiChip-label') || scope.querySelector('.paging'))?.textContent || '').trim().replace(/\s+/g, ' ')
+        cards: container?.querySelectorAll(":is(.card:not(.dm), .cell)").length ?? 0,
+        modCards: container?.querySelectorAll(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id]), [data-jfmod-tmdb]").length ?? 0,
+        marks: container?.querySelectorAll(":is(.jfmod-mark, .mark)").length ?? 0,
+        filterButton: !!(scope.querySelector('.btnFilter') || toolbar?.querySelector('button:is([title="Filter"],[data-tip="Filter"])')),
+        paging: ((toolbar?.querySelector(":is(.MuiChip-label, .libhead > .count)") || scope.querySelector('.paging'))?.textContent || '').trim().replace(/\s+/g, ' ')
     };
 });
 
@@ -161,7 +161,7 @@ async function checkHome(page, name, cfg) {
         const home = await page.evaluate(() => ({
             hero: !!document.querySelector('.jfmod-homeHero'),
             sections: [...document.querySelectorAll('#homeTab .sections .verticalSection .sectionTitle')].map(e => e.textContent.trim()).slice(0, 8),
-            topbar: document.querySelector('.skinHeader')?.className.includes('jfmod-topbar') ?? false
+            topbar: !!document.querySelector('.jfds .tvbar') || (document.querySelector('.skinHeader')?.className.includes('jfmod-topbar') ?? false)
         }));
         record(name, 'mod Home rendered (hero + sections)', home.hero && home.sections.length > 0, home);
         if (cfg.tv) record(name, 'TV header wears Home topbar', home.topbar, { topbar: home.topbar });
@@ -176,7 +176,7 @@ async function checkHome(page, name, cfg) {
         await press(page, 'ArrowUp');
         await press(page, 'ArrowUp');
         const before = await describeFocus(page);
-        const onCard = await page.evaluate(() => !!document.activeElement?.closest('.card, .jfmod-entryCard'));
+        const onCard = await page.evaluate(() => !!document.activeElement?.closest(":is(.card:not(.dm), .cell), :is(.jfmod-entryCard, .cell[data-jfmod-entry-id])"));
         if (!onCard) { record(name, 'merged-row card reachable', false, before); return; }
         await press(page, 'Enter');
         await waitHash(page, 'details', 15000);
@@ -215,12 +215,12 @@ async function checkSearch(page, name, cfg) {
             await freshHome(page);
             for (let i = 0; i < 4; i++) {
                 await press(page, 'ArrowUp');
-                if (/skinHeader/.test(await describeFocus(page))) break;
+                if (/skinHeader|tvbar/.test(await describeFocus(page))) break;
             }
             await press(page, 'ArrowLeft', 8);
             let found = false;
             for (let i = 0; i < 14 && !found; i++) {
-                found = /headerSearchButton|"Search"/.test(await describeFocus(page));
+                found = /headerSearchButton|jfmod-chromeSearchInput|"Search"/.test(await describeFocus(page));
                 if (!found) await press(page, 'ArrowRight');
             }
             if (!found) { record(name, 'Search button reachable in header', false, await describeFocus(page)); return; }
@@ -238,13 +238,13 @@ async function checkSearch(page, name, cfg) {
         await page.waitForSelector('.page:not(.hide) .jfmod-discovery', { timeout: 20000 });
         // The discovery zone shows skeletons from the first keystroke; wait (bounded) for real, focusable results in
         // either zone before driving the D-pad, or Down has nothing to land on while TMDB is still answering.
-        await page.waitForSelector('.page:not(.hide) .jfmod-discovery button, .page:not(.hide) .verticalSection:not(.jfmod-discovery) .card', { timeout: 20000 });
+        await page.waitForSelector(".page:not(.hide) .jfmod-discovery button, .page:not(.hide) .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell)", { timeout: 20000 });
         await page.waitForTimeout(3000);
         const s = await page.evaluate(() => {
             const pg = document.querySelector('.page:not(.hide)') || document;
             return {
                 zones: [...pg.querySelectorAll('.verticalSection .sectionTitle, .jfmod-discoveryHeading')].map(e => e.textContent.trim()).slice(0, 8),
-                marks: pg.querySelectorAll('.jfmod-mark').length,
+                marks: pg.querySelectorAll(":is(.jfmod-mark, .mark)").length,
                 focusInField: document.activeElement?.id === 'searchTextInput'
             };
         });
@@ -360,7 +360,7 @@ const gridUrl = lib => `${base}#/${gridRoute(lib)}?topParentId=${lib.id}&collect
 async function openGrid(page, lib) {
     await page.goto(gridUrl(lib), { waitUntil: 'domcontentloaded' });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('.page:not(.hide) .itemsContainer .jfmod-entryCard, .page:not(.hide) .itemsContainer [data-jfmod-tmdb]', { timeout: 30000 });
+    await page.waitForSelector(".page:not(.hide) .itemsContainer :is(.jfmod-entryCard, .cell[data-jfmod-entry-id]), .page:not(.hide) .itemsContainer [data-jfmod-tmdb]", { timeout: 30000 });
     await page.waitForTimeout(2500);
 }
 
@@ -368,14 +368,14 @@ async function openGrid(page, lib) {
 async function focusToolbarControl(page, title) {
     const trail = [await describeFocus(page)];
     for (let i = 0; i < 6; i++) {
-        if (await page.evaluate(() => !!document.activeElement?.closest('.MuiToolbar-root'))) break;
+        if (await page.evaluate(() => !!document.activeElement?.closest(":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar)"))) break;
         await press(page, 'ArrowUp');
         trail.push(await describeFocus(page));
     }
     for (let step = 0; step < 16; step++) {
         const where = await page.evaluate(t => {
-            const controls = [...document.querySelectorAll('.page:not(.hide) .MuiToolbar-root button')].filter(b => b.offsetParent && !b.disabled);
-            return { current: controls.indexOf(document.activeElement), target: controls.findIndex(b => (b.getAttribute('title') || b.textContent).trim() === t) };
+            const controls = [...document.querySelectorAll(".page:not(.hide) :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar) button")].filter(b => b.offsetParent && !b.disabled);
+            return { current: controls.indexOf(document.activeElement), target: controls.findIndex(b => ((b.getAttribute('title') ?? b.getAttribute('data-tip')) || b.textContent).trim() === t) };
         }, title);
         if (where.target < 0 || where.current < 0) return { ok: false, trail };
         if (where.current === where.target) return { ok: true, trail };
@@ -391,7 +391,7 @@ async function checkPopoverBack(page, name, route, title, how, exercise) {
     await press(page, 'Enter');
     await page.waitForTimeout(700);
     const opened = await page.evaluate(() => {
-        const modals = [...document.querySelectorAll('.MuiModal-root:not(.MuiModal-hidden):not([aria-hidden="true"])')];
+        const modals = [...document.querySelectorAll(":is(.MuiModal-root, .pmenu):not(.MuiModal-hidden):not([aria-hidden=\"true\"])")];
         const top = modals.at(-1);
         return { open: modals.length, focusInside: !!top && top.contains(document.activeElement) };
     });
@@ -404,7 +404,7 @@ async function checkPopoverBack(page, name, route, title, how, exercise) {
         after.open === 0 && after.route === '#/' + route && after.focus.includes(`"${title}"`), after);
 }
 
-const visibleCards = page => page.evaluate(() => document.querySelectorAll('.page:not(.hide) .itemsContainer .card').length);
+const visibleCards = page => page.evaluate(() => document.querySelectorAll(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)").length);
 
 async function exerciseFilter(page) {
     // Down to the File group, open it, and filter the grid by remote: Enter on "Not downloaded", then Enter again.
@@ -417,7 +417,7 @@ async function exerciseFilter(page) {
     if (!onFile) return { fileGroup: false, trail };
     await press(page, 'Enter');
     await page.waitForTimeout(600);
-    const options = await page.evaluate(() => [...document.querySelectorAll('.MuiPopover-root [aria-labelledby="jfmodFileFilters-header"] input, .MuiPopover-root #jfmodFileFilters-content input')].map(i => i.closest('label')?.textContent?.trim()));
+    const options = await page.evaluate(() => [...document.querySelectorAll(":is(.MuiPopover-root, .pmenu) [aria-labelledby=\"jfmodFileFilters-header\"] input, :is(.MuiPopover-root, .pmenu) #jfmodFileFilters-content input")].map(i => i.closest('label')?.textContent?.trim()));
     const focusedLabel = () => page.evaluate(() => document.activeElement?.closest('label')?.textContent?.trim() ?? document.activeElement?.textContent?.trim());
     const checked = () => page.evaluate(() => !!document.activeElement?.checked);
     for (let i = 0; i < 4 && await focusedLabel() !== 'Not downloaded'; i++) await press(page, 'ArrowDown');
@@ -470,7 +470,7 @@ async function checkModernGrid(page, name, lib) {
         await press(page, 'Enter');
         // Suggestions are computed by the server on first open and can take longer than a fixed pause; wait for the
         // tab's cards (bounded), so a slow first load is not read as an empty tab.
-        const readTab = () => page.evaluate(() => ({ hash: location.hash, sections: document.querySelectorAll('.page:not(.hide) .verticalSection, .page:not(.hide) .sectionTitle').length, cards: document.querySelectorAll('.page:not(.hide) .card').length }));
+        const readTab = () => page.evaluate(() => ({ hash: location.hash, sections: document.querySelectorAll('.page:not(.hide) .verticalSection, .page:not(.hide) .sectionTitle').length, cards: document.querySelectorAll(".page:not(.hide) :is(.card:not(.dm), .cell)").length }));
         let tab = await readTab();
         for (let waited = 0; waited < 15000 && !(/tab=1/.test(tab.hash) && tab.cards > 0); waited += 500) {
             await page.waitForTimeout(500);
@@ -479,7 +479,7 @@ async function checkModernGrid(page, name, lib) {
         record(name, `${route} grid: view menu switches to Suggestions by remote`, /tab=1/.test(tab.hash) && tab.cards > 0, { menu, tab });
         await pressRemoteBack(page);
         await page.waitForTimeout(2500);
-        const back = await page.evaluate(() => ({ hash: location.hash, cards: document.querySelectorAll('.page:not(.hide) .itemsContainer .card').length }));
+        const back = await page.evaluate(() => ({ hash: location.hash, cards: document.querySelectorAll(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)").length }));
         record(name, `${route} grid: remote Back returns to the grid tab`, !/tab=1/.test(back.hash) && back.hash.includes(route) && back.cards > 0, back);
     } else {
         record(name, `${route} grid: view menu reachable by d-pad`, false, reachView.trail);
@@ -488,10 +488,10 @@ async function checkModernGrid(page, name, lib) {
     const paging = await gridStats(page);
     const reachNext = await focusToolbarControl(page, 'Next');
     if (reachNext.ok) {
-        const firstBefore = await page.evaluate(() => document.querySelector('.page:not(.hide) .itemsContainer .card')?.getAttribute('data-id'));
+        const firstBefore = await page.evaluate(() => document.querySelector(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)")?.getAttribute('data-id'));
         await press(page, 'Enter');
         await page.waitForFunction(id => {
-            const c = document.querySelector('.page:not(.hide) .itemsContainer .card');
+            const c = document.querySelector(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)");
             return c && c.getAttribute('data-id') !== id;
         }, firstBefore, { timeout: 15000 });
         await page.waitForTimeout(1500);
@@ -508,7 +508,7 @@ async function checkModernGrid(page, name, lib) {
     await press(page, 'ArrowDown', 2);
     await press(page, 'ArrowRight', 2);
     const before = await describeFocus(page);
-    const cardId = await page.evaluate(() => document.activeElement?.closest('.card')?.getAttribute('data-id'));
+    const cardId = await page.evaluate(() => document.activeElement?.closest(":is(.card:not(.dm), .cell)")?.getAttribute('data-id'));
     if (cardId) {
         await press(page, 'Enter');
         await waitHash(page, 'details', 15000);
@@ -516,7 +516,7 @@ async function checkModernGrid(page, name, lib) {
         await press(page, 'Escape');
         await waitHash(page, route, 15000);
         await page.waitForTimeout(2500);
-        const restored = await page.evaluate(() => document.activeElement?.closest('.card')?.getAttribute('data-id'));
+        const restored = await page.evaluate(() => document.activeElement?.closest(":is(.card:not(.dm), .cell)")?.getAttribute('data-id'));
         record(name, `${route} grid: Enter opens a card, Back returns with focus on it`, restored === cardId, { before, after: await describeFocus(page) });
     } else {
         record(name, `${route} grid: card focused for Enter`, false, before);
@@ -585,8 +585,8 @@ const timeNavigation = (page, hash) => page.evaluate(target => new Promise(resol
     let lastCount = -1;
     let stableSince = null;
     const cards = () => {
-        const pg = [...document.querySelectorAll('.page:not(.hide)')].find(el => el.querySelector('.itemsContainer .card'));
-        return pg ? pg.querySelectorAll('.itemsContainer .card').length : 0;
+        const pg = [...document.querySelectorAll('.page:not(.hide)')].find(el => el.querySelector(".itemsContainer :is(.card:not(.dm), .cell)"));
+        return pg ? pg.querySelectorAll(".itemsContainer :is(.card:not(.dm), .cell)").length : 0;
     };
     const tick = () => {
         const now = performance.now();
@@ -602,7 +602,7 @@ const timeNavigation = (page, hash) => page.evaluate(target => new Promise(resol
 }), hash);
 
 const timePageChange = (page, clickSelector) => page.evaluate(sel => new Promise(resolve => {
-    const firstId = () => document.querySelector('.page:not(.hide) .itemsContainer .card')?.getAttribute('data-id');
+    const firstId = () => document.querySelector(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)")?.getAttribute('data-id');
     const before = firstId();
     const button = [...document.querySelectorAll(sel)].find(b => b.offsetParent && !b.disabled);
     if (!button) { resolve({ error: 'no next-page control' }); return; }
@@ -616,7 +616,7 @@ const timePageChange = (page, clickSelector) => page.evaluate(sel => new Promise
     observer.observe(document.body, { childList: true, subtree: true });
     const tick = () => {
         const now = performance.now();
-        const count = document.querySelectorAll('.page:not(.hide) .itemsContainer .card').length;
+        const count = document.querySelectorAll(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)").length;
         if (count !== lastCount) { lastCount = count; stableSince = now; }
         if (changed !== null && now - stableSince > 1500) { observer.disconnect(); resolve({ firstCardChanged: changed, settled: stableSince - start, cards: count }); return; }
         if (now - start > 30000) { observer.disconnect(); resolve({ firstCardChanged: changed, timedOut: true }); return; }
@@ -652,7 +652,7 @@ async function measurePerf(page, name, libs) {
             await page.waitForTimeout(1500);
             await installPerfProbe(page);
             await page.evaluate(() => {
-                const card = document.querySelector('.page:not(.hide) .itemsContainer .card');
+                const card = document.querySelector(".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell)");
                 card?.focus();
                 window.jfmodPerf.focusLatencies.length = 0;
                 window.jfmodPerf.frameLatencies.length = 0;
@@ -664,7 +664,7 @@ async function measurePerf(page, name, libs) {
             record(name, `perf ${route} (${kind}): key -> focus / key -> painted frame, ms (median, p95, n)`, undefined, {
                 focus: [median(lat.focus), p95(lat.focus), lat.focus.length], frame: [median(lat.frame), p95(lat.frame), lat.frame.length]
             });
-            const pageChange = await timePageChange(page, kind === 'modern' ? '.page:not(.hide) .MuiToolbar-root button[title="Next"]' : '.page:not(.hide) .btnNextPage');
+            const pageChange = await timePageChange(page, kind === 'modern' ? ".page:not(.hide) :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar) button:is([title=\"Next\"],[data-tip=\"Next\"])" : '.page:not(.hide) .btnNextPage');
             record(name, `perf ${route} (${kind}): next page, ms to first new card / settled`, undefined, pageChange);
         } catch (e) { record(name, `perf ${route}`, false, notVerified(e)); }
     }
