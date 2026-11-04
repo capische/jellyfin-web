@@ -1,3 +1,4 @@
+import { showDesignLoading, hideDesignLoading } from 'apps/modern/features/jellyfinmod/design/Spinner';
 import './loading.scss';
 
 let loader: HTMLDivElement | undefined;
@@ -15,6 +16,11 @@ function createLoader(): HTMLDivElement {
 }
 
 export function show() {
+    if (showDesignLoading(show)) {
+        loader?.classList.remove('mdlSpinnerActive');
+        return;
+    }
+    hideDesignLoading();
     if (!loader) {
         loader = createLoader();
     }
@@ -22,6 +28,7 @@ export function show() {
 }
 
 export function hide() {
+    hideDesignLoading();
     if (loader) {
         loader.classList.remove('mdlSpinnerActive');
     }

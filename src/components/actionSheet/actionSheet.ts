@@ -1,4 +1,5 @@
-import { chromeSheetPosition, decorateChromeSheet, hasChromeSheet } from 'apps/modern/features/jellyfinmod/shell/chromeActionSheet';
+import { hasDesignPage } from 'apps/modern/features/jellyfinmod/design/dialogHost';
+import { showDesignSheet } from 'apps/modern/features/jellyfinmod/design/ActionSheet';
 import escapeHtml from 'escape-html';
 import dialogHelper from '../dialogHelper/dialogHelper';
 import layoutManager from '../layoutManager';
@@ -13,6 +14,8 @@ import '../../styles/scrollstyles.scss';
 import '../../components/listview/listview.scss';
 
 interface OptionItem {
+    disabled?: boolean;
+    title?: string;
     asideText?: string;
     divider?: boolean;
     icon?: string;
@@ -31,7 +34,7 @@ interface TitleButton {
     title: string;
 }
 
-interface Options {
+export interface Options {
     items: OptionItem[];
     /**
      * Render as a compact translucent box instead of taking over the whole
@@ -103,8 +106,6 @@ function getOffsets(elems: Element[]): Offset[] {
 }
 
 function getPosition(positionTo: Element, options: Options, dlg: HTMLElement) {
-    if (hasChromeSheet() && !layoutManager.mobile) return chromeSheetPosition(positionTo, dlg);
-
     const windowSize = dom.getWindowSize();
     const windowHeight = windowSize.innerHeight;
     const windowWidth = windowSize.innerWidth;
@@ -156,6 +157,7 @@ function centerFocus(elem: Element, horiz: boolean, on: boolean) {
 
 /* eslint-disable-next-line sonarjs/cognitive-complexity */
 export function show(options: Options) {
+    if (hasDesignPage()) return showDesignSheet(options);
     // items
     // positionTo
     // showCancel
@@ -166,15 +168,14 @@ export function show(options: Options) {
         scrollY: false
     };
 
-    const modChrome = hasChromeSheet();
-    const positionTo = options.positionTo || (modChrome ? document.activeElement : null);
+    const positionTo = options.positionTo;
     const boxed = !!options.boxed;
     // On TV the box is centered on screen rather than anchored to the button,
     // which would otherwise push it into a corner.
-    const isCenteredBox = boxed && layoutManager.tv && !modChrome;
+    const isCenteredBox = boxed && layoutManager.tv;
     let isFullscreen;
 
-    if (layoutManager.tv && !boxed && !modChrome) {
+    if (layoutManager.tv && !boxed) {
         dialogOptions.size = 'fullscreen';
         isFullscreen = true;
         dialogOptions.autoFocus = true;
@@ -353,7 +354,6 @@ export function show(options: Options) {
     html += '</div>';
 
     dlg.innerHTML = html;
-    decorateChromeSheet(dlg, options.items);
 
     if (isCenteredBox) {
         appendPlayerOverlayFrost(dlg);

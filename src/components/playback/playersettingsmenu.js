@@ -1,10 +1,11 @@
 import actionsheet from '../actionSheet/actionSheet';
+import { playerSubmenu } from 'apps/modern/features/jellyfinmod/design/playerMenu';
 import { playbackManager } from '../playback/playbackmanager';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import qualityoptions from '../qualityOptions';
 
-function showQualityMenu(player, btn, boxed) {
+function showQualityMenu(player, btn, boxed, parent) {
     const videoStream = playbackManager.currentMediaSource(player).MediaStreams.filter(function (stream) {
         return stream.Type === 'Video';
     })[0];
@@ -40,11 +41,11 @@ function showQualityMenu(player, btn, boxed) {
 
     const selectedBitrate = selectedId.length ? selectedId[0].bitrate : null;
 
-    return actionsheet.show({
+    return playerSubmenu({
         items: menuItems,
         positionTo: btn,
         boxed
-    }).then(function (id) {
+    }, globalize.translate('Quality'), parent).then(function (id) {
         const bitrate = parseInt(id, 10);
         if (bitrate !== selectedBitrate) {
             playbackManager.setMaxStreamingBitrate({
@@ -55,7 +56,7 @@ function showQualityMenu(player, btn, boxed) {
     });
 }
 
-function showRepeatModeMenu(player, btn, boxed) {
+function showRepeatModeMenu(player, btn, boxed, parent) {
     const menuItems = [];
     const currentValue = playbackManager.getRepeatMode(player);
 
@@ -77,11 +78,11 @@ function showRepeatModeMenu(player, btn, boxed) {
         selected: currentValue === 'RepeatNone'
     });
 
-    return actionsheet.show({
+    return playerSubmenu({
         items: menuItems,
         positionTo: btn,
         boxed
-    }).then(function (mode) {
+    }, globalize.translate('RepeatMode'), parent).then(function (mode) {
         if (mode) {
             playbackManager.setRepeatMode(mode, player);
         }
@@ -132,7 +133,7 @@ function getQualitySecondaryText(player) {
     return text;
 }
 
-function showAspectRatioMenu(player, btn, boxed) {
+function showAspectRatioMenu(player, btn, boxed, parent) {
     // each has a name and id
     const currentId = playbackManager.getAspectRatio(player);
     const menuItems = playbackManager.getSupportedAspectRatios(player)
@@ -142,11 +143,11 @@ function showAspectRatioMenu(player, btn, boxed) {
             selected: id === currentId
         }));
 
-    return actionsheet.show({
+    return playerSubmenu({
         items: menuItems,
         positionTo: btn,
         boxed
-    }).then(function (id) {
+    }, globalize.translate('AspectRatio'), parent).then(function (id) {
         if (id) {
             playbackManager.setAspectRatio(id, player);
             return Promise.resolve();
@@ -156,7 +157,7 @@ function showAspectRatioMenu(player, btn, boxed) {
     });
 }
 
-function showPlaybackRateMenu(player, btn, boxed) {
+function showPlaybackRateMenu(player, btn, boxed, parent) {
     // each has a name and id
     const currentId = playbackManager.getPlaybackRate(player);
     const menuItems = playbackManager.getSupportedPlaybackRates(player).map(i => ({
@@ -165,11 +166,11 @@ function showPlaybackRateMenu(player, btn, boxed) {
         selected: i.id === currentId
     }));
 
-    return actionsheet.show({
+    return playerSubmenu({
         items: menuItems,
         positionTo: btn,
         boxed
-    }).then(function (id) {
+    }, globalize.translate('PlaybackRate'), parent).then(function (id) {
         if (id) {
             playbackManager.setPlaybackRate(id, player);
             return Promise.resolve();
@@ -276,15 +277,16 @@ export function show(options) {
 }
 
 function handleSelectedOption(id, options, player) {
+    const parent = () => show(options);
     switch (id) {
         case 'quality':
-            return showQualityMenu(player, options.positionTo, options.boxed);
+            return showQualityMenu(player, options.positionTo, options.boxed, parent);
         case 'aspectratio':
-            return showAspectRatioMenu(player, options.positionTo, options.boxed);
+            return showAspectRatioMenu(player, options.positionTo, options.boxed, parent);
         case 'playbackrate':
-            return showPlaybackRateMenu(player, options.positionTo, options.boxed);
+            return showPlaybackRateMenu(player, options.positionTo, options.boxed, parent);
         case 'repeatmode':
-            return showRepeatModeMenu(player, options.positionTo, options.boxed);
+            return showRepeatModeMenu(player, options.positionTo, options.boxed, parent);
         case 'stats':
             if (options.onOption) {
                 options.onOption('stats');

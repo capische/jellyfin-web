@@ -6,8 +6,8 @@ import globalize from 'lib/globalize';
 type Stage = 'idle' | 'menuPending' | 'menuOpen' | 'deleteChosen' | 'confirmOpen';
 
 const isDeleteConfirmation = (dialog: Element) => {
-    const heading = dialog.querySelector('.formDialogHeaderTitle')?.textContent?.trim();
-    return !!dialog.querySelector('.formDialogFooter .button-delete') || heading === globalize.translate('HeaderDeleteItem');
+    const heading = dialog.querySelector('.formDialogHeaderTitle, .dlghead h3')?.textContent?.trim();
+    return !!dialog.querySelector('.formDialogFooter .button-delete, .dlgfoot .destroy') || heading === globalize.translate('HeaderDeleteItem');
 };
 
 /**
@@ -29,7 +29,8 @@ export const useDeleteWarning = (view: HTMLElement, warning: string | null) => {
         // The dialogs already open when Delete was chosen; the confirmation is the first one that is not among them.
         let before = new Set<Element>();
 
-        const openDialogs = () => Array.from(document.querySelectorAll('.dialog'));
+        const openDialogs = () => Array.from(document.querySelectorAll('.dialog, [data-ds-actionsheet]'));
+        const isMenu = (element: Element) => element.classList.contains('actionSheet') || element.hasAttribute('data-ds-actionsheet');
         const reset = () => {
             stage = 'idle';
             menu = null;
@@ -38,7 +39,7 @@ export const useDeleteWarning = (view: HTMLElement, warning: string | null) => {
             observer.disconnect();
         };
         const annotate = (dialog: Element) => {
-            const body = dialog.querySelector('.text');
+            const body = dialog.querySelector('.text, [data-ds-text]');
             if (!body || dialog.querySelector('.jfmod-deleteWarning') || !isDeleteConfirmation(dialog)) return;
             const line = document.createElement('p');
             line.className = 'jfmod-deleteWarning';
@@ -49,12 +50,12 @@ export const useDeleteWarning = (view: HTMLElement, warning: string | null) => {
         // Upstream inserts a dialog before it fills in its title and text, so every change looks again.
         const observer = new MutationObserver(() => {
             if (stage === 'menuPending') {
-                menu = openDialogs().find(dialog => dialog.classList.contains('actionSheet')) ?? null;
+                menu = openDialogs().find(isMenu) ?? null;
                 if (menu) stage = 'menuOpen';
             } else if (stage === 'menuOpen') {
                 if (!menu?.isConnected) reset();
             } else if (stage === 'deleteChosen') {
-                confirmation = openDialogs().find(dialog => !before.has(dialog) && !dialog.classList.contains('actionSheet')) ?? null;
+                confirmation = openDialogs().find(dialog => !before.has(dialog) && !isMenu(dialog)) ?? null;
                 if (confirmation) {
                     stage = 'confirmOpen';
                     annotate(confirmation);
@@ -76,7 +77,7 @@ export const useDeleteWarning = (view: HTMLElement, warning: string | null) => {
                 return;
             }
             if (stage === 'menuOpen' && menu && target && menu.contains(target)) {
-                const item = target.closest('.actionSheetMenuItem');
+                const item = target.closest('.actionSheetMenuItem, .mi[data-id]');
                 if (!item) return;
                 if (item.getAttribute('data-id') === 'delete') {
                     stage = 'deleteChosen';

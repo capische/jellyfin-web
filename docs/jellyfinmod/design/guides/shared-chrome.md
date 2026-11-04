@@ -1,5 +1,7 @@
 # Shared chrome
 
+**dsC (2026-11-04), built, not accepted:** shared action sheets, confirmations/prompts, removal and retention-window dialogs, fields, switches, buttons and spinner now draw native design components. Their replaced rd2 overrides are removed/excluded; custom page/dialog content and admin keep the existing rules. [Complete scope, CSS delta and verification](../dsC.md).
+
 **dsB (2026-11-04), built, not accepted:** Home, Search, TMDB browse and sign-in now own their mockup markup under `.jfds`. Their replaced restyling is removed. Native controls reuse the source CSS; lifecycle/command hosts and unmodeled actions remain. [Full scope, CSS inventory and validation](../dsB.md).
 
 **dsA (2026-11-04), built, not accepted:** Ported bar/cards/library controls use `.jfds` on their own roots and portals, with copied mockup CSS in `design/`. The older `html.jfmod-chrome` rules below still serve the out-of-slice surfaces. Admin Dashboard and mod settings/setup remain excluded. [Complete scope and CSS exceptions](../dsA.md).

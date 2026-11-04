@@ -458,7 +458,7 @@ async function browserChecks(browser, layout, world, flow) {
                 return;
             }
             await menu.click();
-            const item = page.locator('.actionSheet button[data-id="playallfromhere"]').first();
+            const item = page.locator(':is(.actionSheet button, [data-ds-actionsheet] .mi)[data-id="playallfromhere"]').first();
             await item.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
             if (!await item.isVisible().catch(() => false)) {
                 record(label, `Play All From Here on ${name(from)}'s row`, 'NOT VERIFIED', 'the menu offers no Play All From Here');

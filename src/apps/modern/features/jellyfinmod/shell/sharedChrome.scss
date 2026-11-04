@@ -45,8 +45,7 @@ html.jfmod-chrome {
 
     .sectionTitle,
     .MuiDialogTitle-root,
-    .dialog h1,
-    .jfmod-removeTitle {
+    .dialog:not([data-ds-dialog]) h1 {
         font-size: 1.618em;
         font-weight: 400;
     }
@@ -56,7 +55,7 @@ html.jfmod-chrome {
     .fieldDescription,
     .MuiFormHelperText-root { line-height: 1.618; }
 
-    .dialog,
+    .dialog:not([data-ds-dialog]),
     .MuiDialog-paper,
     .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
         box-sizing: border-box;
@@ -69,12 +68,10 @@ html.jfmod-chrome {
         font-family: var(--jfmod-chrome-dense);
     }
 
-    .dialog .MuiTypography-root,
-    .dialog .MuiButton-root,
+    .dialog:not([data-ds-dialog]) .MuiTypography-root,
+    .dialog:not([data-ds-dialog]) .MuiButton-root,
     .MuiDialog-paper .MuiTypography-root,
     .MuiDialog-paper .MuiButton-root { font-family: var(--jfmod-chrome-dense); }
-
-    .jfmod-removeTitle { font-family: var(--jfmod-chrome-dense); }
 
     .dialogBackdrop { transition: opacity 0.236s $ease; }
 
@@ -200,22 +197,19 @@ html.jfmod-chrome {
     }
 
     /* Menus and field lists share the nested corners, padding and current-entry mark. */
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper),
-    .actionSheet.dialog {
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
         border-radius: 1em !important;
         min-width: 17.94em;
         max-height: 20em;
         overflow-y: auto;
         overflow-x: hidden;
+        margin-top: 0.382em;
     }
-
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) { margin-top: 0.382em; }
 
     .MuiMenu-list,
     .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) > .MuiList-root { padding: 0.382em; }
 
-    .MuiMenuItem-root,
-    .actionSheetMenuItem {
+    .MuiMenuItem-root {
         box-sizing: border-box;
         position: relative;
         min-height: 2.618em;
@@ -246,8 +240,7 @@ html.jfmod-chrome {
     }
 
     .MuiMenuItem-root.Mui-selected,
-    .MuiMenuItem-root.jfmod-currentChoice,
-    .actionSheetMenuItem.jfmod-currentChoice {
+    .MuiMenuItem-root.jfmod-currentChoice {
         background: transparent;
         color: $primary;
 
@@ -279,8 +272,7 @@ html.jfmod-chrome {
 
     .MuiMenuItem-root .MuiTypography-root { font-size: 1em; }
 
-    .MuiListSubheader-root,
-    .actionSheet .actionSheetTitle {
+    .MuiListSubheader-root {
         background: transparent;
         color: var(--jfmod-chrome-ink);
         font-size: 0.72em;
@@ -291,56 +283,12 @@ html.jfmod-chrome {
         opacity: 0.618;
     }
 
-    .actionsheetDivider,
     .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) .MuiDivider-root {
         height: 1px;
         border: 0;
         background: var(--jfmod-chrome-hair);
         margin: 0.382em 0.618em;
     }
-
-    .actionSheetContent {
-        min-height: 0;
-        width: 100%;
-        align-items: stretch;
-        justify-content: flex-start;
-        padding: 0.382em !important;
-        box-sizing: border-box;
-        text-align: left;
-    }
-
-    .actionSheetScroller {
-        min-height: 0;
-        width: 100%;
-        max-width: none;
-        max-height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    .actionSheetMenuItem .actionsheetListItemBody {
-        padding: 0 !important;
-        min-width: 0;
-    }
-
-    .actionsheetMenuItemIcon {
-        width: 1em;
-        height: 1em;
-        font-size: 1.4em;
-        color: var(--jfmod-chrome-ink);
-        margin: 0 0.618em 0 0 !important;
-    }
-
-    .jfmod-menuCheck { display: none; }
-
-    .actionSheetItemAsideText {
-        color: var(--jfmod-chrome-ink);
-        font-size: 0.854em;
-        opacity: 0.7;
-        margin-left: 1em;
-    }
-
-    .actionSheetMenuItem.jfmod-menuDestroy { color: var(--jfmod-chrome-error); }
 
     /* The field is neutral until used. Labels remain outside the pill. */
     .emby-input,
@@ -496,38 +444,6 @@ html.jfmod-chrome {
         .emby-checkbox:disabled ~ .checkboxOutline { opacity: 0.45; }
     }
 
-    /* Upstream's arc and motion, one φ step smaller; the full circle stays behind it. */
-    .docspinner {
-        width: 6.18vh;
-        height: 6.18vh;
-        margin: -3.09vh 0 0 -3.09vh;
-        color: #fff;
-
-        &::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            border: 0.21em solid currentColor;
-            border-radius: 50%;
-            opacity: 0.3;
-        }
-        .mdl-spinner__layer { border-color: currentColor; }
-    }
-
-    &[data-theme='light']:not(.jfmod-chromePlayer) .docspinner,
-    &[data-theme='appletv']:not(.jfmod-chromePlayer) .docspinner {
-        color: var(--jfmod-light-glass-ink);
-
-        &::before {
-            color: #000;
-            opacity: 0.25;
-        }
-    }
-
     .MuiTooltip-popper:not(.jfmod-infoTipPopper) .MuiTooltip-tooltip {
         background: var(--jfmod-chrome-paper);
         color: var(--jfmod-chrome-ink);
@@ -612,8 +528,7 @@ html.jfmod-chrome {
 /* Phone menus are sheets, while a field's own option list stays anchored. */
 html.jfmod-chrome.layout-mobile {
     .MuiMenu-paper:not(.MuiSelect-paper):not(.jfmod-trackMenuPaper),
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper),
-    .actionSheet.dialog {
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper) {
         position: fixed !important;
         top: auto !important;
         left: 0 !important;
@@ -641,8 +556,7 @@ html.jfmod-chrome.layout-mobile {
         }
     }
 
-    .MuiMenuItem-root,
-    .actionSheetMenuItem { min-height: 2.7816em; }
+    .MuiMenuItem-root { min-height: 2.7816em; }
 
     .dialogBackdropOpened,
     .MuiBackdrop-root {
@@ -658,23 +572,14 @@ html.jfmod-chrome.layout-tv {
     --jfmod-chrome-enter: 0.146s;
     --jfmod-chrome-exit: 0.001s;
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper),
-    .actionSheet.dialog {
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
         width: auto;
         max-height: 20em;
         font-size: 1em;
         backdrop-filter: none;
     }
 
-    .actionSheet.dialog {
-        min-width: 17.94em;
-        height: auto;
-        bottom: auto;
-        right: auto;
-    }
-
-    .MuiMenuItem-root:focus,
-    .actionSheetMenuItem:focus {
+    .MuiMenuItem-root:focus {
         background: transparent;
         color: var(--jfmod-chrome-ink);
         box-shadow: inset 0 0 0 0.236em $primary;
@@ -682,8 +587,7 @@ html.jfmod-chrome.layout-tv {
     }
 
     .MuiMenuItem-root.Mui-selected:focus,
-    .MuiMenuItem-root.jfmod-currentChoice:focus,
-    .actionSheetMenuItem.jfmod-currentChoice:focus { color: $primary; }
+    .MuiMenuItem-root.jfmod-currentChoice:focus { color: $primary; }
 
     .MuiButton-root:focus,
     .emby-button.raised:focus,
@@ -723,7 +627,6 @@ html.jfmod-chrome.layout-tv {
     .userPreferencesPage .MuiCheckbox-root::after,
     .checkboxOutline::after,
     .MuiMenuItem-root,
-    .actionSheetMenuItem,
     .MuiIconButton-root,
     .paper-icon-button-light,
     .emby-button,
@@ -777,7 +680,6 @@ html.jfmod-chrome.layout-tv {
         .userPreferencesPage .MuiCheckbox-root::after,
         .checkboxOutline::after,
         .MuiMenuItem-root,
-        .actionSheetMenuItem,
         .MuiInputBase-root,
         .emby-input,
         .MuiSelect-icon { transition: none !important; }
@@ -796,21 +698,6 @@ html.jfmod-chrome.layout-tv {
         }
 
         .dialogBackdrop { transition: none; }
-
-        .docspinner,
-        .docspinner * { animation: none !important; }
-        .docspinner .mdl-spinner__layer-1 { opacity: 0.55; }
-    }
-}
-
-/* Outcome buttons retain their full width. The safe outcome is the outlined 'other' kind. */
-html.jfmod-chrome:not(.layout-tv) .jfmod-removeDialog .jfmod-removeChoice:not(.button-delete):focus:not(:focus-visible) {
-    background: transparent;
-
-    @media (hover: hover) and (pointer: fine) {
-        @at-root #{selector.replace(&, 'html.jfmod-chrome', 'html.jfmod-chrome:not(.layout-mobile):not(.layout-tv)')} {
-            &:hover:not(:disabled):not([aria-disabled='true']):not(.Mui-disabled) { background: var(--jfmod-chrome-tint); }
-        }
     }
 }
 

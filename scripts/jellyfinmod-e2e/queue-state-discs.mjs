@@ -214,7 +214,7 @@ async function checkTvSheet(name, release) {
     const row = rowOf(release);
     await row.focus();
     await page.keyboard.press('Enter');
-    const sheet = page.locator('.actionSheet');
+    const sheet = page.locator(':is(.actionSheet, [data-ds-actionsheet])');
     const open = await sheet.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     const items = open ? await sheet.first().locator('[data-id]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-id'))) : [];
     record(label, `${name}: Enter on the TV row still opens its action sheet`, open && items.length > 0, items);

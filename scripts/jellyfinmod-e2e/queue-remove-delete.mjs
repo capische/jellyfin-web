@@ -223,10 +223,10 @@ async function matrix() {
     await page.waitForTimeout(500);
     const confirmState = async () => page.evaluate(() => {
         const dlg = document.querySelector('#jfmodTorrentRemoval');
-        const text = dlg.querySelector('.text');
+        const text = dlg.querySelector('.text, [data-ds-text]');
         const name = text?.querySelector('.jfmod-confirmName')?.textContent ?? null;
-        const remove = dlg.querySelector('.btnOption[data-id="ok"]');
-        return { title: dlg.querySelector('.formDialogHeaderTitle')?.textContent ?? null, text: text ? text.textContent.replace(name ?? '', '') : null, name,
+        const remove = dlg.querySelector(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]');
+        return { title: dlg.querySelector(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)')?.textContent ?? null, text: text ? text.textContent.replace(name ?? '', '') : null, name,
             removeLabel: remove?.textContent ?? null, removeBackground: remove ? getComputedStyle(remove).backgroundColor : null };
     });
     const asked = await confirmState();
@@ -234,7 +234,7 @@ async function matrix() {
         asked.title === 'Remove the Torrent' && asked.text === CONFIRM_TEXT && asked.name === EPISODE, asked);
     record(label, 'Remove the Torrent\'s Remove is red at rest', asked.removeLabel === 'Remove' && asked.removeBackground === RED, asked.removeBackground);
     if (!tv) {
-        await dialog.locator('.btnOption[data-id="ok"]').hover();
+        await dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]').hover();
         await page.waitForTimeout(300);
         const hovered = await confirmState();
         record(label, 'Remove the Torrent\'s Remove stays red under the pointer', hovered.removeBackground === RED, hovered.removeBackground);
@@ -244,7 +244,7 @@ async function matrix() {
     // Back on the TV and the phone; on the computer Escape, or Cancel when the page keeps Escape for itself.
     await page.keyboard.press(tv ? 'Backspace' : 'Escape');
     if (!await dialog.waitFor({ state: 'hidden', timeout: 2000 }).then(() => true, () => false)) {
-        await dialog.locator('.btnOption[data-id="cancel"]').click();
+        await dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="cancel"]').click();
         await dialog.waitFor({ state: 'hidden', timeout: 10000 });
     }
     record(label, 'Back left every dialog and no queue removal left the browser', deletes.length === 0, deletes);
@@ -293,7 +293,7 @@ async function live() {
         const dialog = page.locator('#jfmodTorrentRemoval');
         await dialog.waitFor({ state: 'visible', timeout: 10000 });
         await page.waitForTimeout(400);
-        const remove = dialog.locator('.btnOption[data-id="ok"]');
+        const remove = dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]');
         const text = await dialog.locator('.text').textContent();
         const background = await remove.evaluate(node => getComputedStyle(node).backgroundColor);
         record(label, 'Live: the picker\'s X asks Remove the Torrent with the new text, Remove red', text.startsWith(CONFIRM_TEXT) && background === RED,

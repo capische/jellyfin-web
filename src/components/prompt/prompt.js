@@ -1,3 +1,5 @@
+import { hasDesignPage } from 'apps/modern/features/jellyfinmod/design/dialogHost';
+import { showDesignPrompt } from 'apps/modern/features/jellyfinmod/design/Dialogs';
 import dialogHelper from '../dialogHelper/dialogHelper';
 import layoutManager from '../layoutManager';
 import scrollHelper from '../../scripts/scrollHelper';
@@ -23,6 +25,7 @@ export default (() => {
     }
 
     function showDialog(options) {
+        if (hasDesignPage()) return showDesignPrompt(options);
         const dialogOptions = {
             removeOnClose: true,
             scrollY: false

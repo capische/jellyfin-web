@@ -6,15 +6,27 @@ import { getKeyName } from 'scripts/keyboardNavigation';
 import { DesignContext, Root } from './Root';
 
 /** Mockup pmenu, with outside dismissal and the app's focus manager. */
-export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string }>> = ({ children, close, label, id }) => {
+export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string; anchored?: boolean }>> = ({ children, close, label, id, anchored }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const phone = useContext(DesignContext) === 'phone';
+    const phone = useContext(DesignContext) === 'phone' && !anchored;
     useLayoutEffect(() => {
         const previous = document.activeElement as HTMLElement | null;
+        let closing = false;
+        let timer: ReturnType<typeof setTimeout>;
+        const dismiss = () => {
+            if (closing) return;
+            closing = true;
+            ref.current?.classList.remove('open');
+            const durations = ref.current ? getComputedStyle(ref.current).transitionDuration.split(',') : [];
+            timer = setTimeout(close, Math.max(0, ...durations.map(value => parseFloat(value) * 1000)));
+        };
+        ref.current?.getBoundingClientRect();
+        ref.current?.classList.add('open');
         const outside = (event: Event) => {
-            if (!ref.current?.contains(event.target as Node) && !previous?.contains(event.target as Node)) close();
+            if (!ref.current?.contains(event.target as Node) && !previous?.contains(event.target as Node)) dismiss();
         };
         const key = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || closing) return;
             const name = getKeyName(event);
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(name) && ref.current) {
                 const items = focusManager.getFocusableElements(ref.current);
@@ -31,23 +43,23 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
             if (isBackKey(name)) {
                 event.preventDefault();
                 event.stopPropagation();
-                close();
+                dismiss();
             }
         };
         ref.current?.querySelectorAll('button.mi, a.mi').forEach(row => {
             row.setAttribute('role', 'menuitem');
         });
-        const first = ref.current && focusManager.getFocusableElements(ref.current, 1)[0];
-        if (first) focusManager.focus(first);
+        if (ref.current) focusManager.autoFocus(ref.current);
         document.addEventListener('pointerdown', outside);
         document.addEventListener('keydown', key, true);
         return () => {
             document.removeEventListener('pointerdown', outside);
             document.removeEventListener('keydown', key, true);
+            clearTimeout(timer);
             if (previous?.isConnected) focusManager.focus(previous);
         };
-    }, [close]);
-    const menu = <div ref={ref} className={'pmenu open focuscontainer-y' + (phone ? ' sheet bottom' : '')} id={id} role='menu' aria-label={label}>
+    }, [close, phone]);
+    const menu = <div ref={ref} className={'pmenu focuscontainer-y' + (phone ? ' sheet bottom msheet' : ' mn from-top')} id={id} role='menu' aria-label={label}>
         {phone && <span className='sgrab' />}{children}</div>;
-    return phone ? createPortal(<Root className='menuportal'><div className='sdim' />{menu}</Root>, document.body) : menu;
+    return phone ? createPortal(<Root className='menuportal phonesheet'><div className='sdim' />{menu}</Root>, document.body) : menu;
 };

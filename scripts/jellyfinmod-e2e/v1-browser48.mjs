@@ -84,7 +84,7 @@ async function adminLayout(page, layout) {
     await page.keyboard.press('Enter');
     const dialog = page.locator('.jfmod-releaseDialog');
     await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
-    const heading = await dialog.locator('.formDialogHeaderTitle').textContent().catch(() => null);
+    const heading = await dialog.locator(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)').textContent().catch(() => null);
     record(layout, 'Enter opens the picker for another quality', !!heading && heading === 'Get Another Quality', heading ?? 'no dialog');
     await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').first().waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
     const held = await page.locator('.jfmod-releaseDialog .jfmod-releaseHeld').count();
@@ -127,7 +127,7 @@ async function oldPluginLayout(page, layout) {
     const sources = await page.evaluate(() => document.querySelectorAll('.mainAnimatedPage:not(.hide) .selectSource option').length);
     record(layout, 'the stock version select still lists the versions', sources >= 2, `${sources} options`);
     await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
-    await page.locator('.actionSheetMenuItem[data-id="delete"]').first().click({ timeout: 5000 });
+    await page.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="delete"]').first().click({ timeout: 5000 });
     await page.locator('.dialog').last().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(1500);
     const confirmation = await page.locator('.dialog').last().textContent().catch(() => '');

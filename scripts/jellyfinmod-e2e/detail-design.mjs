@@ -278,7 +278,7 @@ async function checkPickerOpens(page, layout, selector, label) {
     const shape = await page.evaluate(() => {
         const dlg = document.querySelector('.jfmod-releaseDialog');
         const box = dlg.getBoundingClientRect();
-        const title = dlg.querySelector('.formDialogHeaderTitle')?.getBoundingClientRect();
+        const title = dlg.querySelector(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)')?.getBoundingClientRect();
         const cross = dlg.querySelector('.jfmod-releaseDialogClose');
         const content = dlg.querySelector('.formDialogContent');
         const lines = new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')].map(node => Math.round(node.getBoundingClientRect().top)));
@@ -468,11 +468,11 @@ async function checkMoreMenuItem(page, layout, admin, change = false, why = admi
     const more = `${PAGE} .btnMoreCommands:not(.hide)`;
     if (!await page.locator(more).count()) { notVerified(layout, 'More menu item', 'no stock More button on this page'); return; }
     await page.locator(more).first().click({ timeout: 5000 });
-    const sheet = page.locator('.actionSheet');
+    const sheet = page.locator(':is(.actionSheet, [data-ds-actionsheet])');
     const sheetOpened = await sheet.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, 'the stock More sheet opens', sheetOpened);
     if (!sheetOpened) return;
-    const item = sheet.locator('.actionSheetMenuItem[data-id="jfmod-more-item"]');
+    const item = sheet.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-item"]');
     const has = await item.count() > 0;
     record(layout, admin ? `More menu shows "Remove after watching…" ${why}` : `More menu shows nothing extra ${why}`, has === admin,
         has ? await item.first().innerText() : 'absent');
@@ -496,7 +496,7 @@ async function changeWindow(page, layout) {
     const before = await read();
     const pick = async label => {
         await page.locator('#jfmod-episode-window').click();
-        await page.locator('.MuiMenuItem-root', { hasText: label }).first().click();
+        await page.locator('.MuiMenuItem-root, #jfmod-episode-window-list [role="option"]', { hasText: label }).first().click();
         await page.waitForTimeout(2500);
     };
     await pick('3 days after watching');
@@ -1808,11 +1808,11 @@ async function checkVideoListPending(page, layout, id) {
     await vlHit(page, layout, `${PAGE} [data-jfmod-pending-remove]`);
     const dialog = page.locator('.dialog').last();
     const shown = await dialog.waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
-    record(layout, 'pending: the X opens its dialog', shown && await page.locator('.jfmod-removeChoice[data-choice="cancel"]').count() > 0, shown ? (await dialog.innerText()).replace(/\s+/g, ' ').slice(0, 140) : '');
+    record(layout, 'pending: the X opens its dialog', shown && await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').count() > 0, shown ? (await dialog.innerText()).replace(/\s+/g, ' ').slice(0, 140) : '');
     await vlShot(page, `${layout}-${tag}-dialog`);
     if (shown) {
         if (isTv(layout)) await vlPress(page, 'Escape', 800);
-        else await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click({ timeout: 5000 });
+        else await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click({ timeout: 5000 });
         await page.waitForTimeout(800);
         record(layout, 'pending: the safe choice keeps the download', await page.locator('.dialog').count() === 0 && (await vlFacts(page)).pending !== null);
     }

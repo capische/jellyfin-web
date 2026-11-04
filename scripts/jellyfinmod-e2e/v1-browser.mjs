@@ -163,7 +163,7 @@ async function chooseControl(page, layout, exact) {
 async function checkDeleteWarning(page, layout, label, count) {
     // Stock Delete media: the warning is inside upstream's own confirmation; Cancel, nothing deleted.
     await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
-    await page.locator('.actionSheetMenuItem[data-id="delete"]').first().click({ timeout: 5000 });
+    await page.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="delete"]').first().click({ timeout: 5000 });
     const warning = page.locator('.dialog .jfmod-deleteWarning');
     await warning.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     const text = await warning.textContent().catch(() => null);
@@ -176,10 +176,10 @@ async function checkDeleteWarning(page, layout, label, count) {
 /** Opens the More menu and closes it without choosing anything, then opens Remove: Remove's dialog has no Delete warning. */
 async function checkRemoveHasNoDeleteWarning(page, layout) {
     await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
-    await page.locator('.actionSheet').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await page.locator(':is(.actionSheet, [data-ds-actionsheet])').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     // Desktop Back is the browser's Back (stock maps Escape to Back only in the TV layout).
     await page.goBack();
-    await page.locator('.actionSheet').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await page.locator(':is(.actionSheet, [data-ds-actionsheet])').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
     await page.locator('[data-jfmod-remove-version]').first().click({ timeout: 5000 });
     const dialog = page.locator('.dialog', { hasText: 'Only the' });
     await dialog.first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
@@ -357,7 +357,7 @@ async function checkRemove(browser) {
         await confirmation.first().waitFor({ state: 'visible', timeout: 8000 });
         await page.waitForTimeout(500);
         const dialogs = await confirmation.count();
-        await page.locator('.dialog .formDialogFooter .button-delete').first().evaluate(button => { button.click(); button.click(); });
+        await page.locator(':is(.dialog .formDialogFooter .button-delete, [data-ds-dialog] .dlgfoot .destroy)').first().evaluate(button => { button.click(); button.click(); });
         await page.waitForFunction(id => !Array.from(document.querySelector('.mainAnimatedPage:not(.hide) .selectSource')?.options ?? [])
             .some(option => option.value.replace(/-/g, '') === id), norm(removed.mediaSourceId), { timeout: 30000 }).catch(() => {});
         await page.waitForSelector('.jfmod-versions .jfmod-versionRow', { timeout: 30000 }).catch(() => {});
@@ -390,7 +390,7 @@ async function checkRemove(browser) {
             await page.waitForTimeout(1500);
             await removeButton(page, '1080p').click();
             await confirmation.first().waitFor({ state: 'visible', timeout: 8000 });
-            await page.locator('.dialog .formDialogFooter .button-delete').first().click();
+            await page.locator(':is(.dialog .formDialogFooter .button-delete, [data-ds-dialog] .dlgfoot .destroy)').first().click();
             await page.waitForFunction(() => /playing/i.test(document.querySelector('[aria-label="JellyfinMod"] p[role="status"]')?.textContent ?? ''),
                 undefined, { timeout: 15000 }).catch(() => {});
             const message = await page.locator('[aria-label="JellyfinMod"] p[role="status"]').first().textContent().catch(() => '');
@@ -405,7 +405,7 @@ async function checkRemove(browser) {
         await page.waitForTimeout(2000);
         await removeButton(page, '1080p').click();
         await confirmation.first().waitFor({ state: 'visible', timeout: 8000 });
-        await page.locator('.dialog .formDialogFooter .button-delete').first().click();
+        await page.locator(':is(.dialog .formDialogFooter .button-delete, [data-ds-dialog] .dlgfoot .destroy)').first().click();
         await page.waitForSelector('.jfmod-versions .jfmod-versionRow', { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(3000);
         state = await fixtureVersions(page, fixture.Id).catch(() => null);
@@ -414,10 +414,10 @@ async function checkRemove(browser) {
         await last.click();
         const lastDialog = page.locator('.dialog', { hasText: 'This removes the last copy and stops monitoring' });
         await lastDialog.first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
-        const lastButton = await page.locator('.dialog .formDialogFooter .button-delete').first().textContent().catch(() => '');
+        const lastButton = await page.locator(':is(.dialog .formDialogFooter .button-delete, [data-ds-dialog] .dlgfoot .destroy)').first().textContent().catch(() => '');
         record(layout, 'the last copy: the confirmation says it stops monitoring', await lastDialog.count() > 0
             && /last copy/i.test(lastButton ?? ''), (lastButton ?? '').trim());
-        await page.locator('.dialog .formDialogFooter .button-delete').first().click();
+        await page.locator(':is(.dialog .formDialogFooter .button-delete, [data-ds-dialog] .dlgfoot .destroy)').first().click();
         await page.waitForFunction(() => location.hash.includes('entryId='), undefined, { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(3000);
         const hash = await page.evaluate(() => location.hash);
