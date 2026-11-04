@@ -375,6 +375,7 @@ const browseFacts = page => page.evaluate(selector => {
         // The template has one image container per layout; one of them shows.
         still: [...scope.querySelectorAll('.poster.wide img')].some(shown),
         poster: [...scope.querySelectorAll('.poster img')].some(shown),
+        by: text('.jfds .by'),
         details: text('.jfds .overview'),
         scrollWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
@@ -410,7 +411,7 @@ const cellFacts = (page, row) => page.evaluate(([selector, rowSelector]) => {
         headingLeft: heading?.getBoundingClientRect().left,
         line1: line1 && { weight: getComputedStyle(line1).fontWeight, colour: getComputedStyle(line1).color, align: getComputedStyle(line1).textAlign },
         line2: line2 && { opacity: getComputedStyle(line2).opacity },
-        direct: cell.parentElement.classList.contains('itemsContainer'),
+        direct: cell.parentElement.classList.contains('rowx'),
         widths: [...new Set([...cell.parentElement.querySelectorAll(':scope > .cell')].map(node => Math.round(node.getBoundingClientRect().width)))]
     };
 }, [PAGE, row]);
@@ -583,9 +584,9 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     record(label, 'movie: poster', facts.poster);
     checkHeader(label, 'movie', facts, theme, '2020');
     record(label, 'movie: certification and runtime in the meta line', /\d+h|\d+m/.test(facts.misc) && /\bR\b/.test(facts.misc), facts.misc);
-    record(label, 'movie: director, writers, genres', /Director/.test(facts.details) && /Writer/.test(facts.details) && /Genre/.test(facts.details), facts.details.slice(0, 120));
+    record(label, 'movie: director, writers, genres', /Directed by/.test(facts.by) && /Writer/.test(facts.details) && /Genre/.test(facts.details), `${facts.by}; ${facts.details.slice(-120)}`);
     record(label, 'movie: Cast & Crew, no seasons', facts.cast > 2 && facts.seasons === -1 && facts.episodes === 0, `cast ${facts.cast}, seasons ${facts.seasons}`);
-    if (phone) record(label, 'movie: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
+    record(label, 'movie: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
     if (!layout.tv) record(label, 'movie: no sideways page on the phone', !phone || facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
     else record(label, 'movie: no sideways page on the TV', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
     if (tv) record(label, 'movie: TV focus starts on Add', await page.evaluate(() => !!document.activeElement?.matches('.jfds .actbar .play')), await page.evaluate(() => document.activeElement?.className));
@@ -615,9 +616,9 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     record(label, 'series: title', facts.name.includes('The Gentlemen'), facts.name);
     checkHeader(label, 'series', facts, theme, '2024');
     record(label, 'series: first year only, no range', !/2024\s*[-–]/.test(facts.misc), facts.misc);
-    record(label, 'series: created by', /Created By/.test(facts.details), facts.details.slice(0, 120));
+    record(label, 'series: created by', /Created by/.test(facts.by), facts.by);
     record(label, 'series: Seasons and Cast & Crew', facts.seasons >= 1 && facts.seasonsHeading === 'Seasons' && facts.cast > 2, `seasons ${facts.seasons} "${facts.seasonsHeading}", cast ${facts.cast}`);
-    if (phone) record(label, 'series: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
+    record(label, 'series: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
     if (phone || tv) record(label, 'series: no sideways page', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
     await checkCells(page, label, 'series', '[data-ds-section=children]', layoutName, theme, 1.5);
     record(label, 'series: no arrows where the Seasons row fits, as the other rows', await page.locator(`${PAGE} [data-ds-section=children] .emby-scrollbuttons .dbtn:visible`).count() === 0);
@@ -631,6 +632,12 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     if (tv) {
         await open(page, browsePath('series', SERIES), ready, 1200);
         await reachCell(page, '[data-ds-section=children] .cell');
+        // Down lands on the cell under Add; Left walks to the series' first cell.
+        for (let press = 0; press < 6; press++) {
+            if (await page.evaluate(selector => document.activeElement === document.querySelector(selector), `${PAGE} [data-ds-section=children] .cell`)) break;
+            await page.keyboard.press('ArrowLeft');
+            await page.waitForTimeout(300);
+        }
         await page.keyboard.press('Enter');
     } else {
         await page.locator(`${PAGE} [data-ds-section=children] a.cell`).first().click();
