@@ -51,13 +51,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
         itemMediaType: item.MediaType, itemIsFolder: item.IsFolder, itemUserData: item.UserData });
     const title = item.Type === 'Episode' ? item.SeriesName || item.Name : item.Name;
     // The TV's focus scrolling would centre Play and take the bar off the top of the page: the hero stays at the page's top.
-    const holdTop = device === 'tv' ? {
-        onFocusCapture: () => {
-            document.scrollingElement?.setAttribute('data-scroll-mode-y', 'custom');
-            window.scrollTo(0, 0);
-        },
-        onBlurCapture: () => document.scrollingElement?.removeAttribute('data-scroll-mode-y')
-    } : {};
+    const holdTop = device === 'tv' ? { 'data-scroll-mode-y': 'custom', onFocusCapture: () => window.scrollTo(0, 0) } : {};
     return <div className='hero2 onart' data-jfmod-hero-id={item.Id} data-jfmod-detail-href={details} {...holdTop} style={{ height: Math.round(height * (height <= 720 ? 0.764 : 0.618)) }}>
         <div className='pic' style={{ backgroundImage: `url("${backdrop}")` }} /><div className='scrim' /><div className='foot' />
         <div className='herotext'>
