@@ -6,11 +6,16 @@ import { getKeyName } from 'scripts/keyboardNavigation';
 import { DesignContext, Root } from './Root';
 import { menuPosition } from './menuPosition';
 
+const layers: Array<HTMLElement | null> = [];
+
 /** Mockup pmenu, with outside dismissal and the app's focus manager. */
-export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string; anchored?: boolean; anchor?: HTMLElement }>> = ({ children, close, label, id, anchored, anchor }) => {
+export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string; anchored?: boolean; anchor?: HTMLElement; className?: string; surface?: string }>> = ({ children, close, label, id, anchored, anchor, className = '', surface = 'pmenu' }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const phone = useContext(DesignContext) === 'phone' && !anchored;
+    const device = useContext(DesignContext);
+    const phone = device === 'phone' && !anchored;
     useLayoutEffect(() => {
+        const layer = ref.current;
+        if (layer) layers.push(layer);
         const previous = document.activeElement as HTMLElement | null;
         let closing = false;
         let timer: ReturnType<typeof setTimeout>;
@@ -24,10 +29,11 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
         ref.current?.getBoundingClientRect();
         ref.current?.classList.add('open');
         const outside = (event: Event) => {
+            if (layers.slice(-1)[0] !== layer) return;
             if (!ref.current?.contains(event.target as Node) && !previous?.contains(event.target as Node)) dismiss();
         };
         const key = (event: KeyboardEvent) => {
-            if (event.defaultPrevented || closing) return;
+            if (event.defaultPrevented || closing || layers.slice(-1)[0] !== layer) return;
             const name = getKeyName(event);
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(name) && ref.current) {
                 const items = focusManager.getFocusableElements(ref.current);
@@ -53,7 +59,8 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
         const place = () => {
             if (!anchor || phone || !ref.current) return;
             const at = menuPosition(anchor, ref.current);
-            Object.assign(ref.current.style, { position: 'fixed', top: at.top + 'px', left: at.left + 'px' });
+            const phoneSurface = device === 'phone' && (surface === 'ipop' || className === 'srcmenu');
+            Object.assign(ref.current.style, { position: 'fixed', top: at.top + 'px', left: phoneSurface ? '' : at.left + 'px' });
         };
         place();
         window.addEventListener('resize', place);
@@ -61,14 +68,15 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
         document.addEventListener('pointerdown', outside);
         document.addEventListener('keydown', key, true);
         return () => {
+            if (layer) layers.splice(layers.indexOf(layer), 1);
             window.removeEventListener('resize', place);
             document.removeEventListener('pointerdown', outside);
             document.removeEventListener('keydown', key, true);
             clearTimeout(timer);
             if (previous?.isConnected) focusManager.focus(previous);
         };
-    }, [close, phone, anchor]);
-    const menu = <div ref={ref} className={'pmenu focuscontainer-y' + (phone ? ' sheet bottom msheet' : ' mn from-top')} id={id} role='menu' aria-label={label}>
+    }, [close, phone, anchor, device, surface, className]);
+    const menu = <div ref={ref} className={surface + ' ' + className + ' focuscontainer-y' + (phone ? ' sheet bottom msheet' : ' mn from-top')} id={id} role='menu' aria-label={label}>
         {phone && <span className='sgrab' />}{children}</div>;
     if (phone) return createPortal(<Root className='menuportal phonesheet'><div className='sdim' />{menu}</Root>, document.body);
     return anchor ? createPortal(<Root className='menuportal'>{menu}</Root>, document.body) : menu;

@@ -928,3 +928,175 @@
 
 /* Still art owns its corners; the row's focus ring must remain outside its box. */
 .jfds .ep .still { overflow: visible; }
+
+/* dsE: source spans are semantic controls; poster thumbnails keep their box on image failure. */
+.jfds {
+    .qrow .ib,
+    .srow .inf {
+        font: inherit;
+        border: 0;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+    }
+
+    .rejt {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+    }
+
+    .qrow .th {
+        position: relative;
+    }
+
+    .qrow .th > img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit;
+    }
+
+    .qrow .th > .fallback {
+        position: absolute;
+        width: 1.4em;
+        height: 1.4em;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .qdisc {
+        position: relative;
+        display: block;
+    }
+
+    .qtip {
+        display: none;
+        white-space: pre-line;
+    }
+
+    .qdisc:hover .qtip,
+    .qdisc:focus .qtip,
+    .qdisc > .dm:focus + .qtip {
+        display: block;
+    }
+
+    .qrow:focus,
+    .rel:focus,
+    .srow:focus {
+        outline: none;
+    }
+
+    .srow:focus {
+        box-shadow: inset 0 0 0 0.236em var(--primary);
+    }
+
+    .ract [aria-disabled='true'] {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    .rels.dim {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .sourcesSlot {
+        flex: none;
+    }
+
+    .pickerDialog {
+        position: relative;
+    }
+
+    .pickerDialog .fld .pm {
+        position: static;
+        display: inline-flex;
+        margin-left: 0.3em;
+    }
+
+    .pickerDialog .fld .pm svg {
+        width: 0.62em;
+        height: 0.62em;
+    }
+
+    .pickerDialog .mi {
+        height: auto;
+        min-height: 2.7816em;
+    }
+
+    .pickerDialog .mi small {
+        display: block;
+        white-space: normal;
+    }
+
+    .pickerDialog .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .ract .working svg {
+        animation: jfds-dmspin 1.2s linear infinite;
+    }
+
+    .dm.stale {
+        opacity: 0.55;
+    }
+
+    .dm.linked {
+        cursor: pointer;
+    }
+
+    .dm.linked:focus-visible {
+        box-shadow: 0 0 0 0.135em var(--primary);
+    }
+
+    .ipop {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .ipop > .rb {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+
+    .ipop > b {
+        padding-right: 2.5em;
+    }
+
+    &.menuportal .srcmenu {
+        max-width: calc(100% - 2em);
+    }
+
+    &.menuportal .ipop {
+        margin-top: 0;
+    }
+
+    &.dev-phone {
+        .rel .rl .ract {
+            margin-left: auto;
+        }
+
+        .srcmenu .srow {
+            flex-wrap: wrap;
+        }
+
+        .srcmenu .srow .st {
+            white-space: normal;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jfds .ract .working svg {
+        animation: none;
+        opacity: 0.5;
+    }
+}

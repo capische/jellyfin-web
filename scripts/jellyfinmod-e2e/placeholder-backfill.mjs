@@ -160,7 +160,7 @@ const blockState = page => page.evaluate(() => {
         state: block.getAttribute('data-jfmod-state'), word: text('.ln1 b'), figure: text('.ln1 .q'),
         release: text('.rls'), pack: text('.pack > span'), dots: visible('.pack i'),
         get: visible('.act .btn.main'), search: visible('.act .btn.destroy'), cancel: visible('.act .btn:not(.main):not(.destroy)'),
-        queue: visible('.act .lnk'), ring: visible('.jfmod-dlmark'), play,
+        queue: visible('.act .lnk'), ring: visible('.dm'), play,
         beforeTracks: !!tracks && !!block.closest('.dlbSlot') && block.closest('.dlbSlot').nextElementSibling === tracks
     };
 });
@@ -250,7 +250,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         await page.waitForSelector(`${PAGE} .listItem[data-id="${stub.Id}"]`, { timeout: 30000 }).catch(() => {});
         const ring = await waitForValue(page, () => page.evaluate(id => {
             const row = document.querySelector(`.page:not(.hide) .listItem[data-id="${id}"]`);
-            return row && row.classList.contains('jfmod-dlRow') && row.querySelector('.jfmod-dlmark') ? { meta: row.querySelector('.jfmod-dlMeta')?.textContent } : null;
+            return row && row.classList.contains('jfmod-dlRow') && row.querySelector('.dm') ? { meta: row.querySelector('.jfmod-dlMeta')?.textContent } : null;
         }, stub.Id), 20000);
         record(label, 'Season page: the placeholder\'s own row shows its pack episode\'s download (ring and figure)', !!ring && /30%/.test(ring.meta ?? ''), ring);
 

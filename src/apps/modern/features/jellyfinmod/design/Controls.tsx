@@ -45,7 +45,7 @@ export const Input: FC<InputHTMLAttributes<HTMLInputElement> & { label: string;
 export const Select: FC<{ label: string;
     value: string;
     options: { value: string;
-        label: string }[];
+        label: string; detail?: string; phone?: boolean; disabled?: boolean }[];
     onChange: (value: string) => void;
     busy?: boolean;
     id?: string }> = ({ label, value, options, onChange, busy, id }) => {
@@ -56,26 +56,27 @@ export const Select: FC<{ label: string;
             if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('foc');
         }}>
         <span className='lb' id={id && `${id}-label`}>{label}</span>
-        <div className='box focusable' id={id} role='combobox' aria-label={label} aria-expanded={open} aria-busy={busy}
+        <div className='box focusable' data-value={value} id={id} role='combobox' aria-label={label} aria-expanded={open} aria-busy={busy}
             aria-controls={id && `${id}-list`} tabIndex={0} onClick={() => setOpen(!open)} onKeyDown={event => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setOpen(!open);
                 }
-            }}><span className='v'>{options.find(option => option.value === value)?.label}</span><Icon name={open ? 'up' : 'down'} className='chev' /></div>
+            }}><span className='v'>{options.find(option => option.value === value)?.label}{options.find(option => option.value === value)?.phone && <span className='pm' title='Plays on phones'><Icon name='phone' /></span>}</span><Icon name={open ? 'up' : 'down'} className='chev' /></div>
         {open && <Menu close={close} label={label} id={id && `${id}-list`} anchored>{options.map(option =>
-            <div key={option.value} className={'mi focusable' + (option.value === value ? ' sel' : '')} role='option' aria-selected={option.value === value}
+            <div key={option.value} data-value={option.value} className={'mi focusable' + (option.value === value ? ' sel' : '')} role='option' aria-selected={option.value === value} aria-disabled={option.disabled}
                 tabIndex={0} ref={node => {
                     if (option.value === value) node?.setAttribute('autofocus', '');
                 }} onClick={() => {
-                    if (!busy) onChange(option.value);
+                    if (busy || option.disabled) return;
+                    onChange(option.value);
                     close();
                 }} onKeyDown={event => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         event.currentTarget.click();
                     }
-                }}><span className='tx0'>{option.label}</span></div>)}</Menu>}
+                }}><span className='tx0'>{option.label}{option.phone && <span className='pm' title='Plays on phones'><Icon name='phone' /></span>}{option.detail && <small>{option.detail}</small>}</span></div>)}</Menu>}
     </div>;
 };
 

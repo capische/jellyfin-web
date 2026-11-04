@@ -5,9 +5,6 @@ import layoutManager from 'components/layoutManager';
 import type { MarkKind, MarkProgress } from '../constants/queue';
 import type { QueueRow } from '../types/queue';
 
-import './lightGlass.scss';
-import './downloadStateMark.scss';
-
 /**
  * The download state ring family (P4.FU6, user-approved design 2026-10-13, `design/download-state-ring-family.html`): one disc,
  * one arc, a glyph per state. Downloading is the arrow with the icon-colour arc at its percent, stalled the pause glyph with the arc
@@ -27,35 +24,40 @@ export type DownloadMarkSize = 'card' | 'row' | 'page';
 const SEEDING = '<path d="M12 20V7"/><path d="M6.5 12.5L12 7L17.5 12.5"/>';
 
 const GLYPHS: Record<MarkKind, string> = {
-    downloading: '<path d="M12 4V17"/><path d="M6.5 11.5L12 17L17.5 11.5"/>',
+    downloading: '<path d="M12 4V20M6 14L12 20L18 14"/>',
     // Sending, not receiving: the download arrow turned over, still while it seeds and while it is released.
     seeding: SEEDING,
     releasing: SEEDING,
     queued: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12L15 14"/>',
-    stalled: '<path d="M9 6V18M15 6V18" stroke-width="2.8"/>',
-    importing: '<path d="M4 12A8 8 0 0 1 17.5 6.3"/><path d="M17.5 2.5V6.5H13.5"/>',
-    failed: '<path d="M12 5V14"/><circle cx="12" cy="18.6" r="1.4" fill="currentColor" stroke="none"/>'
+    stalled: '<path d="M9 6V18M15 6V18"/>',
+    importing: '<path d="M12 4V20M6 14L12 20L18 14"/>',
+    failed: '<path d="M12 4.6V12.6" stroke-width="4.4"/><circle cx="12" cy="19" r="2.2" fill="currentColor" stroke="none"/>'
 };
 
 /** Another version of a title that already plays (D12): the picker's +, drawn while it downloads in place of the arrow. */
 const PLUS = '<path d="M12 5.5V18.5M5.5 12H18.5"/>';
 
-/** The arc: a track and the fill; downloading, stalled, seeding, and importing and releasing (a turning 28 % segment) draw one. */
-const ARC = '<svg class="jfmod-dlmark-arc" viewBox="0 0 36 36" aria-hidden="true" focusable="false">'
-    + '<circle class="jfmod-dlmark-track" cx="18" cy="18" r="15.9"/>'
-    + '<circle class="jfmod-dlmark-fill" cx="18" cy="18" r="15.9" pathLength="100"/></svg>';
-
 const ARCS = new Set<MarkKind>(['downloading', 'stalled', 'importing', 'seeding', 'releasing']);
-
 const turning = (kind: MarkKind) => kind === 'importing' || kind === 'releasing';
 
-const inner = (kind: MarkKind, plus: boolean) => (ARCS.has(kind) ? ARC : '')
-    + '<svg class="jfmod-dlmark-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'
-    + (kind === 'failed' ? '2.8' : '2.4') + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
-    + (plus ? PLUS : GLYPHS[kind]) + '</svg>';
-
-/** The page ring's figure in place of the glyph: `42` and a small `%`. */
-const NUMBER = '<b class="jfmod-dlmark-num" aria-hidden="true"><span class="jfmod-dlmark-numValue"></span><i>%</i></b>';
+/** The exact dm structure and geometry from ds2.js, also used by imperative source-card controllers. */
+const inner = (progress: MarkProgress, size: DownloadMarkSize) => {
+    const { kind } = progress;
+    const sw = { card: 2.6, row: 2.2, page: 2.4 }[size];
+    const track = size === 'card' ? 'var(--card-track)' : 'var(--ring-track)';
+    let arc = '';
+    if (ARCS.has(kind)) {
+        const segment = turning(kind) ? '28 72' : (progress.percent ?? 0) + ' 100';
+        const arcClass = turning(kind) ? 'turn' : 'val';
+        arc = `<svg class="arc" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="${track}" stroke-width="${sw}"/>`
+            + `<circle class="${arcClass}" cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" pathLength="100" stroke-dasharray="${segment}"/></svg>`;
+    }
+    const drawing = progress.plus && kind === 'downloading' ? PLUS : GLYPHS[kind];
+    const bob = kind === 'downloading' && !progress?.plus ? ' bob' : '';
+    const glyph = numbered(kind, size) ? `<span class="pct">${progress.percent ?? 0}<small>%</small></span>` :
+        `<svg class="glyph${bob}" viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawing}</svg>`;
+    return arc + glyph;
+};
 
 /** Whether the ring holds its percent instead of the glyph: the page size while a figure moves. */
 const numbered = (kind: MarkKind, size: DownloadMarkSize) =>
@@ -113,7 +115,8 @@ export const paintLink = (element: HTMLElement, title: string, link: DownloadMar
         if (hostTip) removeAttribute(element, 'title');
         else if (element.title !== text) element.title = text;
     };
-    element.classList.toggle('jfmod-dlmark--link', !!link);
+    element.classList.toggle('linked', !!link);
+    element.classList.toggle('focusable', !!link);
     if (!link) {
         removeAttribute(element, 'data-jfmod-open');
         removeAttribute(element, 'tabindex');
@@ -136,37 +139,21 @@ export const paintLink = (element: HTMLElement, title: string, link: DownloadMar
     }
 };
 
-/** The arc's length: the percent, or importing's and releasing's turning 28 % segment. */
-const paintArc = (element: HTMLElement, progress: MarkProgress) => {
-    const fill = element.querySelector<SVGElement>('.jfmod-dlmark-fill');
-    if (!fill) return;
-    const turns = turning(progress.kind);
-    setAttribute(fill, 'stroke-dasharray', turns ? '28 72' : '100');
-    const offset = turns ? '0' : String(100 - (progress.percent ?? 0));
-    if (fill.style.strokeDashoffset !== offset) fill.style.strokeDashoffset = offset;
-};
-
-/**
- * Draws the disc into `element` (a `span`), changing only what differs, so the arc's 0.35 s move from one poll's percent to
- * the next is kept. `extra` adds placement classes (a card's lone corner disc). `title` replaces the tooltip. `link` makes it
- * open the download client (`ringLink`). `hostTip`: no native tooltip, the host draws its own (`paintLink`).
- */
 export const paintDownloadMark = (element: HTMLElement, progress: MarkProgress, size: DownloadMarkSize, extra = '',
     title = progress.tooltip, link: DownloadMarkLink | null = null, hostTip = false) => {
-    const plus = !!progress.plus && progress.kind === 'downloading';
-    const className = ['jfmod-dlmark', 'jfmod-dlmark--' + size, 'jfmod-dlmark--' + progress.kind, plus ? 'jfmod-dlmark--plus' : '',
-        progress.stale ? 'jfmod-dlmark--stale' : '', link ? 'jfmod-dlmark--link' : '', extra].filter(Boolean).join(' ');
-    if (element.className !== className) element.className = className;
-    const withNumber = numbered(progress.kind, size);
-    const drawn = progress.kind + (withNumber ? ' number' : '') + (plus ? ' plus' : '');
-    if (element.getAttribute('data-jfmod-kind') !== progress.kind || element.getAttribute('data-jfmod-drawn') !== drawn) {
-        element.setAttribute('data-jfmod-kind', progress.kind);
-        element.setAttribute('data-jfmod-drawn', drawn);
-        element.innerHTML = withNumber ? ARC + NUMBER : inner(progress.kind, plus);
+    let state: string = progress.kind === 'releasing' ? 'importing' : progress.kind;
+    if (progress.plus && progress.kind === 'downloading') state = 'new-version';
+    element.className = ['dm', size, state, size === 'card' ? 'cmark glassy' : '', progress.stale ? 'stale' : '', extra].filter(Boolean).join(' ');
+    const drawn = [progress.kind, size, !!progress.plus].join(':');
+    if (element.dataset.jfmodDrawn !== drawn) {
+        element.innerHTML = inner(progress, size);
+        element.dataset.jfmodDrawn = drawn;
     }
-    const value = element.querySelector('.jfmod-dlmark-numValue');
-    if (value && value.textContent !== String(progress.percent ?? 0)) value.textContent = String(progress.percent ?? 0);
-    paintArc(element, progress);
+    const value = element.querySelector('.arc .val');
+    if (value) setAttribute(value, 'stroke-dasharray', (progress.percent ?? 0) + ' 100');
+    const number = element.querySelector('.pct')?.firstChild;
+    if (number && number.nodeValue !== String(progress.percent ?? 0)) number.nodeValue = String(progress.percent ?? 0);
+    element.dataset.jfmodKind = progress.kind;
     paintLink(element, title, link, hostTip);
 };
 

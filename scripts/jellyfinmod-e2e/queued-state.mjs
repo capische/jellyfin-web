@@ -1,3 +1,4 @@
+import { chooseScopeValue, readScopeOptions } from './ds-controls.mjs';
 /* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity, max-statements-per-line -- a Node acceptance runner, not shipped code */
 /* global window, document, location, localStorage, sessionStorage, getComputedStyle, MutationObserver, ApiClient, requestAnimationFrame */
 // The queued state from the moment a grab is made until its file is on disk (P4.FU10, user 2026-10-17: "it is better to show
@@ -130,7 +131,7 @@ function sampler() {
         && getComputedStyle(element).display !== 'none' && !element.closest('.hide');
     const first = (root, selector) => Array.from(root.querySelectorAll(selector)).find(visible) ?? null;
     const markOf = element => {
-        const disc = first(element, ":is(.jfmod-dlmark, [data-ds-download])");
+        const disc = first(element, ":is(.dm, [data-ds-download])");
         if (disc) return { state: KINDS.find(kind => disc.dataset.jfmodKind === kind || disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc', tip: disc.title };
         if (first(element, ":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))")) return { state: element.classList.contains('jfmod-dlRow--failed') ? 'failed' : 'cloud' };
         if (first(element, '.jfmod-mark--unaired')) return { state: 'unaired' };
@@ -150,17 +151,17 @@ function sampler() {
         for (const card of document.querySelectorAll(":is(.card:not(.dm), .cell)")) {
             if (!visible(card)) continue;
             const name = (card.querySelector(":is(.cardText, .capt > .ln)")?.textContent ?? '').trim();
-            if (!name || card.closest('.jfmod-releaseDialog')) continue;
+            if (!name || card.closest('.pickerDialog')) continue;
             out['card:' + name] = markOf(card).state;
         }
         const block = first(document, '.dlb');
         if (block) out.block = block.getAttribute('data-jfmod-state');
-        for (const row of document.querySelectorAll('.jfmod-queueTableRow, .jfmod-queueRow')) {
+        for (const row of document.querySelectorAll('.qrow, .qrow')) {
             if (!visible(row)) continue;
-            const title = (row.querySelector('.jfmod-queueTitle')?.textContent ?? '').trim();
-            const disc = first(row, ":is(.jfmod-dlmark, [data-ds-download])");
+            const title = (row.querySelector('.q-t .a')?.textContent ?? '').trim();
+            const disc = first(row, ":is(.dm, [data-ds-download])");
             out['queue:' + title] = disc ? KINDS.find(kind => disc.dataset.jfmodKind === kind || disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc'
-                : (row.querySelector('.jfmod-queueState')?.textContent ?? '').trim();
+                : (row.querySelector('.q-s')?.textContent ?? '').trim();
         }
         return out;
     };
@@ -404,24 +405,23 @@ async function removeGrab(grabId) {
 /** The picker on the page, its scope chosen when given, a release's Add pressed. Returns the time of the press. */
 async function pickerGrab(page, opener, scope, title) {
     await opener.click();
-    const dialog = page.locator('.jfmod-releaseDialog');
+    const dialog = page.locator('.pickerDialog');
     await dialog.waitFor({ state: 'visible', timeout: 20000 });
     if (scope) {
-        const select = dialog.locator('select#jfmod-releaseEpisode, #jfmod-releaseEpisode select, select').first();
-        await until(async () => (await select.locator(`option[value="${scope}"]`).count()) > 0, { timeout: 30000, label: 'the scope ' + scope });
-        await select.selectOption(scope);
+        await until(async () => (await readScopeOptions(page)).some(option => option.value === scope), { timeout: 30000, every: 1000, label: 'the scope' });
+        await chooseScopeValue(page, scope);
     }
-    const row = dialog.locator('.jfmod-releaseItem').filter({ hasText: title }).first();
+    const row = dialog.locator(`.rel[data-ds-release-title*=${JSON.stringify(title)}]`).first();
     await row.waitFor({ state: 'visible', timeout: 45000 });
     const add = row.locator('[data-jfmod-release-add]').first();
     const at = Date.now();
     await add.click();
-    await until(async () => (await dialog.locator('.jfmod-releaseItem--added').count()) > 0, { timeout: 10000, every: 100, label: 'the added row' });
+    await until(async () => (await dialog.locator('.rel[data-ds-added]').count()) > 0, { timeout: 10000, every: 100, label: 'the added row' });
     return at;
 }
 const closePicker = async page => {
-    await page.locator('.jfmod-releaseDialog .jfmod-releaseDialogClose').first().click().catch(() => page.keyboard.press('Escape'));
-    await page.locator('.jfmod-releaseDialog').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    await page.locator('.pickerDialog .pickerDialog .dlghead [aria-label="Close"]').first().click().catch(() => page.keyboard.press('Escape'));
+    await page.locator('.pickerDialog').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
 };
 
 const seasonHash = (season = 1) => `#/details?id=${ids.seasons[season]}`;
@@ -566,12 +566,12 @@ async function stepHeldPack(step, layout, { cancelInUi = false } = {}) {
     let cancelled = false;
     if (queuePage) {
         // The Queue page's held row offers Cancel; the hold is short, so it is pressed as soon as the row is there.
-        const row = queuePage.locator('.jfmod-queueTableRow, .jfmod-queueRow').filter({ hasText: 'Season 1 pack' }).first();
+        const row = queuePage.locator('.qrow, .qrow').filter({ hasText: 'Season 1 pack' }).first();
         try {
             await row.waitFor({ state: 'visible', timeout: Math.max(500, grab.holdUntil ? Date.parse(grab.holdUntil) - Date.now() : 4000) });
-            await row.locator('.jfmod-queueMenu').click();
+            await row.locator('.qrow .ib').click();
             // The desktop table's popover (2026-10-19) or the action sheet.
-            const item = queuePage.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="cancel"], .jfmod-queueMenuPopover [data-id="cancel"]').first();
+            const item = queuePage.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="cancel"], [data-ds-actionsheet] [data-id="cancel"]').first();
             await item.click({ timeout: 2000 });
             cancelled = true;
         } catch (error) {
@@ -782,7 +782,7 @@ async function checkTooltips(page, what, title, meta) {
     const seen = await page.evaluate(() => {
         const row = Array.from(document.querySelectorAll('.listItem')).find(item => /^3\.\s/.test((item.querySelector('.listItemBodyText')?.textContent ?? '').trim())
             && item.getClientRects().length);
-        const disc = row?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
+        const disc = row?.querySelector(":is(.dm, [data-ds-download])");
         if (!disc) return null;
         disc.scrollIntoView({ block: 'center' });
         const box = disc.getBoundingClientRect();
@@ -796,7 +796,7 @@ async function checkTooltips(page, what, title, meta) {
         !!seen && seen.reached && seen.events !== 'none' && title.test(seen.title) && seen.metaShown && meta.test(seen.meta ?? ''), seen);
     // The browser's own tooltip is not in the DOM; hovering is checked to land on the disc, and the shot shows the state words.
     if (seen?.reached) {
-        const box = await page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator(":is(.jfmod-dlmark, [data-ds-download])").first().boundingBox();
+        const box = await page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator(":is(.dm, [data-ds-download])").first().boundingBox();
         if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.waitForTimeout(300);
         await shot(page, `a5-${what.replace(/\s+/g, '-')}-hover`);

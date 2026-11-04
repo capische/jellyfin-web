@@ -82,13 +82,13 @@ async function adminLayout(page, layout) {
     record(layout, `Get another quality reached by ${LAYOUTS[layout].tv ? 'arrow keys' : 'Tab'}`, reached);
     if (!reached) await page.locator('.jfmod-versionRow--add').focus();
     await page.keyboard.press('Enter');
-    const dialog = page.locator('.jfmod-releaseDialog');
+    const dialog = page.locator('.pickerDialog');
     await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
-    const heading = await dialog.locator(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)').textContent().catch(() => null);
+    const heading = await dialog.locator('.dlghead h3').evaluate(node => node.firstChild.textContent).catch(() => null);
     record(layout, 'Enter opens the picker for another quality', !!heading && heading === 'Get Another Quality', heading ?? 'no dialog');
-    await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').first().waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
-    const held = await page.locator('.jfmod-releaseDialog .jfmod-releaseHeld').count();
-    const releases = await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').count();
+    await page.locator('.pickerDialog .rel').first().waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
+    const held = await page.locator('.pickerDialog .incheck').count();
+    const releases = await page.locator('.pickerDialog .rel').count();
     record(layout, 'the picker marks the held quality', held >= 1, `${held} held of ${releases} rows`);
     // Back: on TV the remote's Back arrives as Escape (stock keyboardNavigation maps it to 'back' in the TV layout only);
     // on desktop Back is the browser's own Back, which the stock dialog helper follows through its history entry.
