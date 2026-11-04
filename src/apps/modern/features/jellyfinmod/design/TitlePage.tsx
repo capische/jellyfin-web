@@ -1,3 +1,4 @@
+import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import React, { type FC, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import focusManager from 'components/focusManager';
 import { Head } from './Head';
@@ -47,6 +48,12 @@ const Inline: FC<{ parts: InlinePart[]; underline?: boolean }> = ({ parts, under
                 part.command.click();
             }
         }}>{underline ? <u>{part.text}</u> : part.text}</a> : <React.Fragment key={part.key}>{part.text}</React.Fragment>)}</>;
+
+/** ds.js's `Genres: <b>Comedy</b>`: the label is the source's first part when it ends in a colon. */
+const Labelled: FC<{ parts: InlinePart[] }> = ({ parts }) => {
+    const labelled = parts[0]?.text.endsWith(': ');
+    return <>{labelled && parts[0].text}<b><Inline parts={labelled ? parts.slice(1) : parts} /></b></>;
+};
 
 const commandClass = (command: TitleCommand) => command.play ? 'play' : 'dbtn';
 const factClass = (fact: { badge: boolean; star: boolean; critic: boolean }) => {
@@ -164,8 +171,8 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
 };
 
 /** ds.js head/actbar/sect/season and ds2.js title pages. No controller-owned element is painted here. */
-const Content: FC<{ view: HTMLElement; type: string; art: string }> = ({ view, type: initialType, art: initialArt }) => {
-    const [environment, setEnvironment] = useState({ type: initialType, art: initialArt });
+const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseItemDto }> = ({ view, type: initialType, art: initialArt, item: initialItem }) => {
+    const [environment, setEnvironment] = useState<{ type: string; art: string; item?: BaseItemDto }>({ type: initialType, art: initialArt, item: initialItem });
     const [model, setModel] = useState(() => readTitle(view));
     const ref = useRef<HTMLDivElement>(null);
     const focused = useRef(false);
@@ -179,7 +186,7 @@ const Content: FC<{ view: HTMLElement; type: string; art: string }> = ({ view, t
         if (source) observer.observe(source, { childList: true, subtree: true, attributes: true, characterData: true });
         observer.observe(view, { attributes: true, attributeFilter: ['class', 'data-jfmod-placeholder', 'data-ds-tracks-mounted'] });
         const update = (event: Event) => {
-            setEnvironment((event as CustomEvent<{ type: string; art: string }>).detail);
+            setEnvironment((event as CustomEvent<{ type: string; art: string; item?: BaseItemDto }>).detail);
             read();
         };
         view.addEventListener('ds-title-update', update);
@@ -198,18 +205,24 @@ const Content: FC<{ view: HTMLElement; type: string; art: string }> = ({ view, t
         if (first) focusManager.focus(first);
         focused.current = true;
     }, [device, model.commands.length, view]);
+    const item = environment.item;
+    let here = '';
+    if (environment.type === 'Season') here = model.title;
+    else if (environment.type === 'Episode' && item?.IndexNumber != null) here = 'Episode ' + item.IndexNumber;
     const lines = <>{model.parents.length > 0 && <div className='by'>{model.parents.map((parent, index) => <React.Fragment key={parent.href}>
         {index > 0 && ' › '}<a className='focusable' href={parent.href} onClick={event => {
             if (parent.command) {
                 event.preventDefault();
                 parent.command.click();
             }
-        }}><u>{parent.label}</u></a></React.Fragment>)}</div>}
-    {!model.parents.length && model.by.length > 0 && <div className='by'><Inline parts={model.by} underline /></div>}
-    <div className='meta'>{model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
+        }}><u>{parent.label}</u></a></React.Fragment>)}{here && ' › ' + here}</div>}
+    {!model.parents.length && model.by.length > 0 && <div className='by'>{model.byWords} <Inline parts={model.by} underline /></div>}
+    <div className='meta'>{environment.type === 'Season' && item?.ProductionYear && <span>{item.ProductionYear}</span>}{environment.type === 'Season' && !!item?.ChildCount && <span>{item.ChildCount} episodes</span>}
+    {model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
         {fact.star && <Icon name='star' />}{fact.critic && <RatingIcon className='rm rt' rating={{ source: 'tomatoes_critic', value: parseFloat(fact.text), scale: 'percent' }} />}{fact.parts.length ? <Inline parts={fact.parts} /> : fact.text}</span>)}
     {model.facts.map(fact => <span key={fact.text}>{fact.href ? <a href={fact.href} target='_blank' rel='noreferrer'>{fact.text}</a> : fact.text}</span>)}
     <Slot view={view} name='ratings' />
+    {environment.type === 'Series' && !!item?.RecursiveItemCount && <span>{item.RecursiveItemCount} episodes · {item.ChildCount} seasons</span>}
     {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
     </div></>;
     const pill = model.commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (model.commands.some(command => command.play) ? '' : ' short')}>
@@ -229,10 +242,9 @@ const Content: FC<{ view: HTMLElement; type: string; art: string }> = ({ view, t
             </div>}
             <Slot view={view} name='download' />
             {model.originalTitle && <div className='tags'>{model.originalTitle}</div>}
-            <div className='overview'>{model.tagline && <p>{model.tagline}</p>}{model.overview.length > 0 && <p data-ds-overview=''><Inline parts={model.overview} /></p>}{model.details.map(parts => <p data-ds-detail='' key={parts.map(part => part.text).join('')}><Inline parts={parts} /></p>)}</div>
-            {model.genres.length > 0 && <div className='tags' data-ds-genres=''><Inline parts={model.genres} /></div>}
-            {model.tags.length > 0 && <div className='tags'><Inline parts={model.tags} /></div>}
-            <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'>{link.label}</a></React.Fragment>)}</div>
+            <div className='overview'>{model.tagline && <p>{model.tagline}</p>}{model.overview.length > 0 && <p data-ds-overview=''><Inline parts={model.overview} /></p>}</div>
+            {[...model.details, model.genres, model.tags].filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
+            <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>
             <Slot view={view} name='augment' />
         </Head>
         <div className='plain titlefoot'><Slot view={view} name='sections' />{model.sections.map(section => section.cards.some(card => card.row) ?
@@ -240,6 +252,6 @@ const Content: FC<{ view: HTMLElement; type: string; art: string }> = ({ view, t
             <Section key={section.key} title={section.title} name={section.key}>{section.cards.map(card => <Card key={card.key} card={card} view={view} />)}</Section>)}</div>
     </div>;
 };
-export const TitlePage: FC<{ view: HTMLElement; type: string; art: string }> = props => <Root><Content {...props} /></Root>;
+export const TitlePage: FC<{ view: HTMLElement; type: string; art: string; item?: BaseItemDto }> = props => <Root><Content {...props} /></Root>;
 
 export const clearTitleSlots = (view: HTMLElement) => slots.delete(view);
