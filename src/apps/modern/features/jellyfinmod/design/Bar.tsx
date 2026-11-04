@@ -151,6 +151,7 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
         leading = <>
             <button className='focusable' title='Back' onClick={() => { void appRouter.back(); }}><Icon name='back' /></button>
             <button className='focusable' title='Home' onClick={() => { window.location.hash = '#/home'; }}><Icon name='home' /></button>
+            <button className='focusable' title='Favorites' onClick={() => { window.location.hash = '#/home?tab=1'; }}><Icon name='heart' /></button>
             {title && <span className='ttl'>{title}</span>}
         </>;
     } else if (phone) {

@@ -615,7 +615,8 @@
 }
 
 /* Modern AppBar already reserves these heights; art starts under it as in the mockup. */
-.page.jfmod-dsHomePage { padding-top: 0 !important; }
+.page.jfmod-dsHomePage,
+.layout-tv .page.jfmod-dsHomePage { padding-top: 0 !important; }
 .jfmod-dsHomePage .homeSectionsContainer { padding-bottom: 2.618em; }
 .jfmod-dsHomeShell > [aria-hidden='true'] { display: none; }
 .page.jfmod-searchPage { padding-top: 0 !important; }
@@ -1114,6 +1115,7 @@
     .bar [tabindex]:focus,
     .rail button:focus,
     .pmenu .mi:focus,
+    .pmenu .mi.foc,
     .rgroup:focus { box-shadow: none; }
 }
 
@@ -1291,3 +1293,15 @@
     .srow2 .ctl .focusable:focus,
     .srow2 .fld.foc .box { box-shadow: none; }
 }
+
+/* The phone's bar on a computer window at a phone's width: the source rule only names the mobile layout. */
+.jfds.dev-phone .bar .menu {
+    display: block;
+    width: 1.6em;
+    height: 1.6em;
+    fill: currentColor;
+    margin-right: 0.3em;
+}
+
+/* The TV reaches Favorites from its bar; the header's retained Home and Favorites tabs have no place in the mockup. */
+.layout-tv .skinHeader .headerTabs { display: none; }
