@@ -67,10 +67,10 @@ for (const layout of layouts) {
             // Enter opens the action sheet with the two actions; Back closes it and focus returns to the row.
             await page.keyboard.press('Enter');
             await page.waitForTimeout(1200);
-            const sheet = await page.evaluate(() => [...document.querySelectorAll('.actionSheet button, .actionsheetMenuItem')].map(node => node.textContent?.trim()).filter(Boolean));
+            const sheet = await page.evaluate(() => [...document.querySelectorAll(':is(.actionSheet button, [data-ds-actionsheet] .mi), :is(.actionsheetMenuItem, [data-ds-actionsheet] .mi[data-id])')].map(node => node.textContent?.trim()).filter(Boolean));
             await page.keyboard.press('Escape'); // the remote's Back on the TV layout
             await page.waitForTimeout(1200);
-            const after = await page.evaluate(() => ({ focused: document.activeElement?.className ?? '', sheet: !!document.querySelector('.actionSheet') }));
+            const after = await page.evaluate(() => ({ focused: document.activeElement?.className ?? '', sheet: !!document.querySelector(':is(.actionSheet, [data-ds-actionsheet])') }));
             record(label, 'TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row',
                 sheet.some(text => /Remove/.test(text)) && !after.sheet && /jfmod-queueRow/.test(after.focused), { sheet, after });
         }

@@ -678,10 +678,10 @@ try {
                 .filter({ hasText: 'Search releases' }).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
             if (!hasSearchButton) throw new Error('Search releases missing from the mod action row in ' + layout);
             await page.locator('#itemDetailPage:not(.hide) .btnMoreCommands:not(.hide)').first().click();
-            const stockMenuOpened = await page.locator('.actionSheet [data-id]').first()
+            const stockMenuOpened = await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id]').first()
                 .waitFor({ timeout: 10000 }).then(() => true, () => false);
             if (!stockMenuOpened) throw new Error('The stock More menu did not open in ' + layout);
-            if (await page.locator('.actionSheet [data-id^="jfmod-"]').count()) {
+            if (await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id^="jfmod-"]').count()) {
                 throw new Error('The stock More menu still carries a mod command in ' + layout);
             }
             checks.push({ layout, width, height, nativeDetails: 'passed', searchReleases: 'mod action row', stockMoreMenu: 'upstream' });
@@ -689,7 +689,7 @@ try {
             // sheet open, so waiting there only ran out its timeout; the reload that follows discards the sheet.
             await page.keyboard.press('Escape');
             if (layout === 'tv') {
-                await page.locator('.actionSheet [data-id]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
+                await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id]').first().waitFor({ state: 'hidden', timeout: 10000 }).catch(ignore);
             }
         });
         await step(`keep by keyboard ${layout} ${width}x${height}`, async () => {

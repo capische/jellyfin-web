@@ -2475,3 +2475,13 @@ and Preferences are outside this slice.
 draw the approved mockup markup under `.jfds`, keeping existing data/actions. Replaced restyling is removed. [Complete CSS delta,
 retained behaviors, runners and validation](design/dsB.md). No instance/deployment/commit was changed; server-backed and physical-device
 acceptance remain unrun under the user's environment restriction.
+
+
+## dsC — native shared menus, controls and dialogs (2026-11-04)
+
+**Built (not accepted).** Shared actionSheet/dialog/prompt/loading APIs now dispatch to the approved native design markup
+in the signed-in design shell. Queue removal and Remove After Watching use native dialogs/controls. Existing action,
+permission, result and focus/history logic remain. Player sublists retain their controllers and gain source Back rows.
+[Scope, retained custom markup, complete CSS delta, runner list and validation](design/dsC.md). No deployment, server,
+plugin, setting, dependency, branch or commit changed. Bespoke editor/picker/preferences/track content ports and live/physical
+device acceptance remain outside the completed shared-API conversion and are explicitly listed in that report.

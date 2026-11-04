@@ -1117,7 +1117,7 @@ async function queueBanners() {
             off.rows >= 1 && off.notices.some(text => /Automation is off\.|Automation paused: Automation is turned off\./.test(text)), off);
         await page.locator('.jfmod-queueMenu').first().click();
         await page.waitForTimeout(1200);
-        const menu = await page.locator('.actionSheet .actionSheetMenuItem, [role="menu"] [role="menuitem"]').allInnerTexts();
+        const menu = await page.locator(':is(.actionSheet, [data-ds-actionsheet]) :is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id]), [role="menu"] [role="menuitem"]').allInnerTexts();
         record('queue', 'The row menu opens its actions', menu.length > 0, menu.map(text => text.trim()).slice(0, 5));
         await page.keyboard.press('Escape');
         await saveAutomation(page, { 'Search and grab on a schedule': true, 'Keep this much of the library disk free (%)': 90 });

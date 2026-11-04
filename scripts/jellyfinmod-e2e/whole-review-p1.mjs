@@ -69,19 +69,19 @@ try {
     const target = page.locator('[data-jfmod-remove-version]', { hasText: 'btnOption' }).first();
     record('the injected copy is listed by its label as text', await target.count() === 1);
     await target.click();
-    const dialog = page.locator('.dialog').filter({ has: page.locator('.formDialogFooter') }).last();
+    const dialog = page.locator('.dialog').filter({ has: page.locator('.formDialogFooter, .dlgfoot') }).last();
     await dialog.waitFor({ state: 'visible', timeout: 8000 });
     const shape = await dialog.evaluate((node, payload) => ({
-        text: node.querySelector('.text')?.textContent ?? '',
-        injected: node.querySelectorAll('.text input, .text .btnOption, .text button').length,
-        options: Array.from(node.querySelectorAll('.btnOption')).map(option => `${option.getAttribute('data-id')}:${option.textContent?.trim() || option.value}`),
-        literal: (node.querySelector('.text')?.textContent ?? '').includes(payload)
+        text: node.querySelector('.text, [data-ds-text]')?.textContent ?? '',
+        injected: node.querySelectorAll(':is(.text, [data-ds-text]) input, :is(.text, [data-ds-text]) :is(.btnOption, .dlgfoot .btn[data-id]), :is(.text, [data-ds-text]) button').length,
+        options: Array.from(node.querySelectorAll(':is(.btnOption, .dlgfoot .btn[data-id])')).map(option => `${option.getAttribute('data-id')}:${option.textContent?.trim() || option.value}`),
+        literal: (node.querySelector('.text, [data-ds-text]')?.textContent ?? '').includes(payload)
     }), PAYLOAD);
     record('the label shows as text in the confirmation', shape.literal, shape.text.slice(0, 160));
     record('nothing from the label becomes an element of the dialog', shape.injected === 0, `${shape.injected} injected`);
     record('the dialog has only its own two answers', shape.options.length === 2, shape.options.join(', '));
 
-    await dialog.locator('.formDialogFooter button', { hasText: /^Cancel$/ }).first().click();
+    await dialog.locator(':is(.formDialogFooter, .dlgfoot) button', { hasText: /^Cancel$/ }).first().click();
     await page.waitForTimeout(2000);
     record('Cancel sends no removal', removals.length === 0, `${removals.length} requests`);
     record('no page errors', errors.length === 0, errors.slice(0, 2).join(' | '));

@@ -99,9 +99,9 @@ const STAMPS = () => {
         const card = node.closest(":is(.card:not(.dm), .cell)");
         if (card) scanCard(card);
         node.querySelectorAll(":is(.card:not(.dm), .cell)").forEach(scanCard);
-        if (node.matches('.actionSheet') || node.querySelector('.actionSheet')) {
-            const sheet = node.matches('.actionSheet') ? node : node.querySelector('.actionSheet');
-            T.sheets.push({ ...stamp(), getRelease: !!sheet.querySelector('.actionSheetMenuItem[data-id="jfmod-more-getRelease"]') });
+        if (node.matches(':is(.actionSheet, [data-ds-actionsheet])') || node.querySelector(':is(.actionSheet, [data-ds-actionsheet])')) {
+            const sheet = node.matches(':is(.actionSheet, [data-ds-actionsheet])') ? node : node.querySelector(':is(.actionSheet, [data-ds-actionsheet])');
+            T.sheets.push({ ...stamp(), getRelease: !!sheet.querySelector(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-getRelease"]') });
         }
     };
     new MutationObserver(records => {

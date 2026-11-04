@@ -72,22 +72,22 @@ const dialogState = () => page.evaluate(() => {
     if (!dialog) return null;
     const text = selector => [...dialog.querySelectorAll(selector)].map(node => node.textContent);
     return {
-        title: dialog.querySelector('.jfmod-removeTitle')?.textContent,
-        question: dialog.querySelector('.jfmod-removeQuestion')?.textContent,
-        facts: text('.jfmod-removeFacts'),
-        notes: text('.jfmod-removeNote'),
-        blocklist: !!dialog.querySelector('.jfmod-removeBlocklistBox'),
-        choices: [...dialog.querySelectorAll('.jfmod-removeChoice')].map(button => ({ id: button.getAttribute('data-choice'), name: button.textContent,
-            red: button.classList.contains('button-delete'), background: getComputedStyle(button).backgroundColor, ring: getComputedStyle(button).boxShadow })),
+        title: dialog.querySelector(':is(.jfmod-removeTitle, [data-ds-dialog] .dlghead h3)')?.textContent,
+        question: dialog.querySelector(':is(.jfmod-removeQuestion, [data-ds-question])')?.textContent,
+        facts: text(':is(.jfmod-removeFacts, [data-ds-fact])'),
+        notes: text(':is(.jfmod-removeNote, [data-ds-note])'),
+        blocklist: !!dialog.querySelector(':is(.jfmod-removeBlocklistBox, [role="switch"])'),
+        choices: [...dialog.querySelectorAll(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])')].map(button => ({ id: button.getAttribute('data-choice'), name: button.textContent,
+            red: button.matches('.button-delete, .destroy'), background: getComputedStyle(button).backgroundColor, ring: getComputedStyle(button).boxShadow })),
         focused: document.activeElement?.getAttribute?.('data-choice') ?? null,
-        font: getComputedStyle(dialog.querySelector('.jfmod-removeTitle')).fontFamily.split(',')[0],
+        font: getComputedStyle(dialog.querySelector(':is(.jfmod-removeTitle, [data-ds-dialog] .dlghead h3)')).fontFamily.split(',')[0],
         paper: getComputedStyle(dialog).backgroundColor,
         focusVisible: document.activeElement?.matches?.(':focus-visible') ?? null,
         close: (() => {
-            const x = dialog.querySelector('.jfmod-removeClose')?.getBoundingClientRect();
-            const title = dialog.querySelector('.jfmod-removeTitle').getBoundingClientRect();
+            const x = dialog.querySelector(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)')?.getBoundingClientRect();
+            const title = dialog.querySelector(':is(.jfmod-removeTitle, [data-ds-dialog] .dlghead h3)').getBoundingClientRect();
             return x ? { size: Math.round(Math.min(x.width, x.height)), dy: Math.round(Math.abs(x.top + x.height / 2 - title.top - title.height / 2)),
-                right: x.right > title.right, label: dialog.querySelector('.jfmod-removeClose').getAttribute('aria-label') } : null;
+                right: x.right > title.right, label: dialog.querySelector(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)').getAttribute('aria-label') } : null;
         })(),
         // rd2: the outlined other button, its 12% hover tint, and TV focus blue.
         colours: (() => {
@@ -99,12 +99,12 @@ const dialogState = () => page.evaluate(() => {
                 node.remove();
                 return colour;
             };
-            return { other: probe('transparent'), hover: probe('var(--jfmod-chrome-tint)'),
+            return { other: probe('transparent'), hover: probe('var(--tint, var(--jfmod-chrome-tint))'),
                 blue: probe('var(--jf-palette-secondary-main, #00a4dc)') };
         })()
     };
 });
-const waitDialog = () => page.waitForSelector('.jfmod-removeDialog .jfmod-removeChoice', { timeout: 15000 }).then(() => page.waitForTimeout(500));
+const waitDialog = () => page.waitForSelector('.jfmod-removeDialog :is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])', { timeout: 15000 }).then(() => page.waitForTimeout(500));
 const waitClosed = () => page.waitForSelector('.jfmod-removeDialog', { state: 'detached', timeout: 15000 }).then(() => page.waitForTimeout(600));
 const active = () => page.evaluate(() => {
     const element = document.activeElement;
@@ -172,10 +172,10 @@ async function dialogStep() {
             await row.locator('.jfmod-queueMenu').click();
         }
         if (phone || tv) {
-            await page.waitForSelector('.actionSheet [data-id="remove"]', { timeout: 10000 });
+            await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]', { timeout: 10000 });
             if (tv) {
                 // The D-pad to the item by its data-id, never by position, once the sheet has taken focus.
-                await page.waitForFunction(() => !!document.activeElement?.closest('.actionSheet'), undefined, { timeout: 10000 });
+                await page.waitForFunction(() => !!document.activeElement?.closest(':is(.actionSheet, [data-ds-actionsheet])'), undefined, { timeout: 10000 });
                 await page.waitForTimeout(400);
                 for (let i = 0; i < 4 && await page.evaluate(() => document.activeElement?.closest('[data-id]')?.getAttribute('data-id')) !== 'remove'; i++) {
                     await page.keyboard.press('ArrowDown');
@@ -186,7 +186,7 @@ async function dialogStep() {
                     await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 160)));
                 await page.keyboard.press('Enter');
             } else {
-                await page.locator('.actionSheet [data-id="remove"]').click();
+                await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]').click();
             }
         } else {
             await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
@@ -202,9 +202,9 @@ async function dialogStep() {
         record(step, `${key}: the safe choice is ${tv ? 'blue (the TV\'s focus fill)' : 'outlined'} as the dialog opens`,
             safe?.background === (tv ? state.colours.blue : state.colours.other) && safe?.ring !== 'none', JSON.stringify({ safe: safe?.background, ...state.colours, focusVisible: state.focusVisible }));
         if (index === 0 && !tv && !phone) {
-            await page.locator('.jfmod-removeChoice[data-choice="cancel"]').hover();
+            await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').hover();
             await page.waitForTimeout(400);
-            const hover = await page.locator('.jfmod-removeChoice[data-choice="cancel"]').evaluate(button => getComputedStyle(button).backgroundColor);
+            const hover = await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').evaluate(button => getComputedStyle(button).backgroundColor);
             record(step, `${key}: the safe choice takes the approved 12% hover tint under the pointer`, hover === state.colours.hover, hover);
             await page.mouse.move(5, 5);
             await page.waitForTimeout(300);
@@ -220,11 +220,11 @@ async function dialogStep() {
             record(step, `${key}: Up moves to the choice above the safe one, Down back to it`, walk[0] === ids[ids.length - 2] && walk[1] === 'cancel', walk.join(' → '));
             if (closer === 'x') {
                 // The X by the D-pad: Up from the safe choice until it has focus, then OK.
-                for (let i = 0; i < 8 && !await page.evaluate(() => document.activeElement?.classList.contains('jfmod-removeClose')); i++) {
+                for (let i = 0; i < 8 && !await page.evaluate(() => document.activeElement?.matches('.jfmod-removeClose, [data-ds-dialog] .dlghead .rb')); i++) {
                     await page.keyboard.press('ArrowUp');
                     await page.waitForTimeout(250);
                 }
-                const onX = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-removeClose'));
+                const onX = await page.evaluate(() => document.activeElement?.matches('.jfmod-removeClose, [data-ds-dialog] .dlghead .rb'));
                 record(step, `${key}: the D-pad reaches the close X`, onX, await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
                 if (onX) await shot(page, `dialog-${key}-x-focused`);
                 await page.keyboard.press(onX ? 'Enter' : 'Escape');
@@ -232,11 +232,11 @@ async function dialogStep() {
                 await page.keyboard.press(closer === 'ok' ? 'Enter' : 'Escape');
             }
         } else if (closer === 'x') {
-            await page.locator('.jfmod-removeClose').click();
+            await page.locator(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)').click();
         } else if (closer === 'escape') {
             await page.keyboard.press('Escape');
         } else {
-            await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+            await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         }
         await waitClosed();
         const focus = await active();
@@ -263,8 +263,8 @@ async function openFromQueue(title) {
     if (tv) {
         await row.focus();
         await page.keyboard.press('Enter');
-        await page.waitForSelector('.actionSheet [data-id="remove"]', { timeout: 10000 });
-        await page.waitForFunction(() => !!document.activeElement?.closest('.actionSheet'), undefined, { timeout: 10000 });
+        await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]', { timeout: 10000 });
+        await page.waitForFunction(() => !!document.activeElement?.closest(':is(.actionSheet, [data-ds-actionsheet])'), undefined, { timeout: 10000 });
         await page.waitForTimeout(400);
         for (let i = 0; i < 4 && await page.evaluate(() => document.activeElement?.closest('[data-id]')?.getAttribute('data-id')) !== 'remove'; i++) {
             await page.keyboard.press('ArrowDown');
@@ -273,7 +273,7 @@ async function openFromQueue(title) {
         await page.keyboard.press('Enter');
     } else {
         await row.locator('.jfmod-queueMenu').click();
-        if (phone) await page.locator('.actionSheet [data-id="remove"]').click();
+        if (phone) await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]').click();
         else await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
     }
     await waitDialog();
@@ -297,8 +297,8 @@ async function doubleStep() {
         await openFromQueue(data.releaseTitle);
         if (closer === 'the X twice') {
             // Two clicks 30 ms apart: the second lands while the close animation (120 ms) runs.
-            await page.locator('.jfmod-removeClose').click();
-            await page.locator('.jfmod-removeClose').click({ force: true, timeout: 1000 }).catch(() => undefined);
+            await page.locator(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)').click();
+            await page.locator(':is(.jfmod-removeClose, [data-ds-dialog] .dlghead .rb)').click({ force: true, timeout: 1000 }).catch(() => undefined);
         } else if (closer === 'a click outside twice') {
             // Beside the dialog, on its container (the dimmed page).
             await page.mouse.click(4, 300);
@@ -329,7 +329,7 @@ async function doubleStep() {
     const state = await dialogState();
     record(step, 'the next dialog opens with the safe choice focused', state?.focused === 'cancel', JSON.stringify({ focused: state?.focused }));
     if (tv) await page.keyboard.press('Enter');
-    else await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+    else await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
     await waitClosed();
     const where = await page.evaluate(() => location.hash);
     const after = (await queueRows()).map(row => row.id).sort().join();
@@ -354,7 +354,7 @@ async function openersStep() {
         const safe = state.choices.find(choice => choice.id === 'cancel');
         record(step, 'pending Replace: the safe choice is outlined as the dialog opens', safe?.background === state.colours.other && safe?.ring !== 'none', safe?.background);
         await shot(page, 'opener-pending-replace');
-        await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
         record(step, 'pending Replace: Keep Downloading returns focus to the X', focus.pending === replace.id, JSON.stringify(focus));
@@ -375,7 +375,7 @@ async function openersStep() {
         const state = await dialogState();
         checkPlan(step, 'episode page Cancel Download (pack)', state, expected(pack));
         await shot(page, 'opener-episode-cancel');
-        await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
         record(step, 'episode page: Keep Downloading returns focus to Cancel Download', focus.cls.includes('jfmod-dlblock-cancel'), JSON.stringify(focus));
@@ -405,7 +405,7 @@ async function openersStep() {
         const data = (await queueRows()).find(entryRow => entryRow.entry?.id === res.id);
         checkPlan(step, 'picker X', state, expected(data));
         await shot(page, 'opener-picker-x');
-        await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
         record(step, 'picker X: Keep Downloading returns focus to the X', focus.label.startsWith('Remove ') && focus.cls.includes('jfmod-releaseAction--x'), JSON.stringify(focus));
@@ -422,7 +422,7 @@ async function openersStep() {
         record(step, 'picker X: the download\'s files are on disk before the delete', files.length > 0 && before.every(Boolean), JSON.stringify(files));
         await x.click();
         await waitDialog();
-        await page.locator('.jfmod-removeChoice[data-choice="delete"]').click();
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="delete"]').click();
         await waitClosed();
         await page.waitForTimeout(2000);
         const left = (await queueRows()).some(entryRow => entryRow.entry?.id === res.id);
@@ -464,7 +464,7 @@ async function postLinkStep() {
     record(step, 'a pack episode blocked after its link (binding_not_observed) counts as in the library: "2 of 4"',
         state.facts.some(fact => fact.startsWith('2 of 4 episodes are in your library')), JSON.stringify(state.facts));
     await shot(page, 'postlink-pack');
-    await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+    await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
     await waitClosed();
     await page.unroute(/\/JellyfinMod\/Queue(\?.*)?$/);
 }
@@ -484,14 +484,14 @@ async function addStep() {
         const first = await dialogState();
         checkPlan(step, 'pending Add (blocked)', first, expected(add));
         await shot(page, 'opener-pending-add');
-        await page.locator('.jfmod-removeChoice[data-choice="delete"]').click();
-        await page.waitForFunction(() => [...document.querySelectorAll('.jfmod-removeNote')].some(note => note.textContent.includes('linked elsewhere')), undefined, { timeout: 15000 });
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="delete"]').click();
+        await page.waitForFunction(() => [...document.querySelectorAll(':is(.jfmod-removeNote, [data-ds-note])')].some(note => note.textContent.includes('linked elsewhere')), undefined, { timeout: 15000 });
         await page.waitForTimeout(500);
         const again = await dialogState();
         record(step, 'pending Add: the refused delete asks again without it, with the plugin\'s sentence, the safe choice focused',
             again.choices.every(choice => choice.id !== 'delete') && again.focused === 'cancel', JSON.stringify(again));
         await shot(page, 'opener-pending-add-refused');
-        await page.locator('.jfmod-removeChoice[data-choice="cancel"]').click();
+        await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
         const disabled = await x.getAttribute('aria-disabled');

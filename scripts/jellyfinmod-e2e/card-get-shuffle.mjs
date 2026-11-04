@@ -176,7 +176,7 @@ async function checkPicker(page, label, what, open, { heading, scope }) {
     await open();
     const opened = await page.waitForSelector('.jfmod-releaseDialog', { timeout: 15000 }).then(() => true, () => false);
     await page.waitForTimeout(1500);
-    const title = opened ? await page.locator('.jfmod-releaseDialog .formDialogHeaderTitle').innerText().catch(() => null) : null;
+    const title = opened ? await page.locator('.jfmod-releaseDialog :is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)').innerText().catch(() => null) : null;
     const options = opened ? await scopeOptions(page) : [];
     const after = await page.evaluate(() => location.hash);
     const selected = options.find(option => option.selected)?.text ?? null;
@@ -230,9 +230,9 @@ async function openCardMenu(page, cardSelector, tv) {
         if (tv) await card.focus();
         await card.dispatchEvent('contextmenu');
     }
-    const opened = await page.waitForSelector('.actionSheet', { timeout: 10000 }).then(() => true, () => false);
+    const opened = await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet])', { timeout: 10000 }).then(() => true, () => false);
     await page.waitForTimeout(300);
-    const item = page.locator('.actionSheet .actionSheetMenuItem[data-id="jfmod-more-getRelease"]');
+    const item = page.locator(':is(.actionSheet, [data-ds-actionsheet]) :is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-getRelease"]');
     return { opened, item, text: await item.count() ? (await item.first().innerText()).trim() : null };
 }
 
@@ -249,13 +249,13 @@ async function checkShuffle(page, label, what, itemId, inHeader) {
     }, PAGE);
     record(label, `${what}: the header Shuffle is ${inHeader ? 'shown' : 'hidden'}`, header.upstreamShown && header.visible === inHeader, header);
     await page.locator(`${PAGE} .mainDetailButtons .btnMoreCommands:not(.hide)`).first().click();
-    const opened = await page.waitForSelector('.actionSheet', { timeout: 10000 }).then(() => true, () => false);
+    const opened = await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet])', { timeout: 10000 }).then(() => true, () => false);
     await page.waitForTimeout(300);
-    const item = page.locator('.actionSheet .actionSheetMenuItem[data-id="jfmod-more-shuffle"]');
+    const item = page.locator(':is(.actionSheet, [data-ds-actionsheet]) :is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-shuffle"]');
     const text = await item.count() ? (await item.first().innerText()).trim() : null;
     record(label, `${what}: More ${inHeader ? 'has no Shuffle item' : 'offers Shuffle'}`, opened && (inHeader ? text === null : text === 'Shuffle'), text);
     if (!opened) return;
-    if (inHeader || text === null) { await closeDialog(page, '.actionSheet'); return; }
+    if (inHeader || text === null) { await closeDialog(page, ':is(.actionSheet, [data-ds-actionsheet])'); return; }
     // Catch the click on upstream's Shuffle before its own listener, so the check proves the item presses it and nothing plays.
     await page.evaluate(() => {
         window.jfmodShuffleClicks = 0;
@@ -341,7 +341,7 @@ async function run(browser, layout, user, admin) {
                 await page.locator(seasonCard).hover();
                 const menu = await openCardMenu(page, seasonCard, false);
                 record(label, `Season ${season.number} card's More menu offers Get a Release`, menu.opened && menu.text === 'Get a Release', menu.text);
-                if (menu.opened) await closeDialog(page, '.actionSheet');
+                if (menu.opened) await closeDialog(page, ':is(.actionSheet, [data-ds-actionsheet])');
             }
         } else {
             const icons = await page.locator(`${PAGE} :is(.jfmod-cardGet, [data-ds-action="get"])`).count();
@@ -375,7 +375,7 @@ async function run(browser, layout, user, admin) {
                 if (admin && menu.text) {
                     await checkPicker(page, label, `${what}'s menu item`, () => menu.item.first().click(), { heading: expected, scope });
                 } else if (menu.opened) {
-                    await closeDialog(page, '.actionSheet');
+                    await closeDialog(page, ':is(.actionSheet, [data-ds-actionsheet])');
                 }
             } else {
                 record(label, 'a card\'s item menu on this layout', 'NOT VERIFIED', 'upstream draws no More on these cards (a long press is multi-select)');
