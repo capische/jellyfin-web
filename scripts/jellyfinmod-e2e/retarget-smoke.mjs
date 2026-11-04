@@ -81,9 +81,9 @@ try {
         takeover: (web.Takeover ?? web.takeover)?.Status ?? (web.Takeover ?? web.takeover)?.status,
         anonymous
     };
-    record('Authenticated Health is ok on host 12.0.0 with the served bundle; anonymous is refused',
-        summary.status === 200 && summary.ok === true && summary.hostVersion?.startsWith('12.0.0') && summary.bundleId === meta
-        && summary.minimum === '12.0.0.0' && summary.blocker === null && summary.takeover === 'patched' && anonymous === 401, summary);
+    record('Authenticated Health is ok on a 12 host with the served bundle; anonymous is refused',
+        summary.status === 200 && summary.ok === true && summary.hostVersion?.startsWith('12.') && summary.bundleId === meta
+        && summary.minimum?.startsWith('12.') && summary.blocker === null && summary.takeover === 'patched' && anonymous === 401, summary);
 
     // ---- A detail page: the first movie the signed-in user can see.
     const userId = await page.evaluate(() => ApiClient.getCurrentUserId());

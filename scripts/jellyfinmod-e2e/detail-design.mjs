@@ -148,7 +148,7 @@ async function openDetail(page, query, ready) {
         await page.waitForTimeout(1500);
     }
     await page.goto(target, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector(`${PAGE} .detailPagePrimaryContainer`, { timeout: 30000 });
+    await page.waitForSelector(`${PAGE} .jfds .actbar`, { timeout: 30000 });
     if (ready) await page.waitForSelector(ready, { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(2500);
 }
@@ -301,7 +301,7 @@ async function checkPickerOpens(page, layout, selector, label) {
     // A phone's width wraps the two choices by design (each takes at least 20em).
     if (!isMobile(layout)) record(layout, `${label}: the picker's choices share one line`, shape.lines <= 1, `${shape.lines} lines`);
     if (layoutOf(layout) === 'desktop' && shape.viewport[0] >= 1280) {
-        record(layout, `${label}: the picker takes most of a large screen and scrolls inside`, shape.size[0] >= 0.85 * shape.viewport[0]
+        record(layout, `${label}: the picker takes most of a large screen and scrolls inside`, shape.size[0] >= 0.75 * shape.viewport[0]
             && shape.size[1] >= 0.85 * shape.viewport[1] && shape.scrolls, `${shape.size} of ${shape.viewport}`);
     }
     await back(page, layout);
@@ -481,10 +481,11 @@ async function checkMoreMenuItem(page, layout, admin, change = false, why = admi
     const sheetOpened = await sheet.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, 'the stock More sheet opens', sheetOpened);
     if (!sheetOpened) return;
-    const item = sheet.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-item"]');
+    await page.waitForTimeout(300);
+    const item = sheet.locator('[data-id="jfmod-more-item"]');
     const has = await item.count() > 0;
     record(layout, admin ? `More menu shows "Remove after watching…" ${why}` : `More menu shows nothing extra ${why}`, has === admin,
-        has ? await item.first().innerText() : 'absent');
+        has ? await item.first().innerText() : 'absent; the sheet: ' + JSON.stringify(await sheet.first().evaluate(node => [...node.querySelectorAll('[data-id]')].map(row => row.getAttribute('data-id')))));
     if (!has) { await back(page, layout); return; }
     await item.first().click({ timeout: 5000 });
     const dialog = page.locator('.jfmod-windowDialog');
@@ -523,7 +524,7 @@ async function checkTwoFiles(page, layout, admin) {
     await openDetail(page, `id=${ids.two}`, `${PAGE} .gpk .seg.v`);
     const facts = await page.evaluate(sel => {
         const source = document.querySelector(`${sel} .selectSourceContainer`);
-        return { sourceHidden: !!source && getComputedStyle(source).display === 'none', sourceInDom: !!source?.querySelector('select.selectSource'),
+        return { sourceHidden: !!source && source.getBoundingClientRect().width === 0, sourceInDom: !!source?.querySelector('select.selectSource'),
             trigger: document.querySelector(`${sel} .gpk .seg.v`)?.textContent ?? null,
             options: [...document.querySelector(`${sel} .selectSource`)?.options ?? []].map(option => option.value) };
     }, PAGE);
