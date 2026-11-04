@@ -1,5 +1,7 @@
 # Poster card
 
+**dsF sweep (2026-11-04), built, not accepted:** every user page now draws `cell`, so `cardDesign.scss` is deleted. A computer window under 600 px takes the phone's page (2 posters a row). `SectionContainer` draws `sect/rowt/rowx` on painted pages, so Suggestions, Genres and Upcoming rows match. Row and pill have no Info: the card or row itself opens the title.
+
 **dsD (2026-11-04), built, not accepted:** title-page cards and person rows now draw source `cell > tile > post`,
 `capt` with three fixed-height lines, and lazy images/fallback SVGs through `design/TitlePage.tsx`/`BrowsePage.tsx`. Original native
 card nodes remain hidden data/command hosts. Hover/focus forwards the existing release lookup; body, Play and More keep existing

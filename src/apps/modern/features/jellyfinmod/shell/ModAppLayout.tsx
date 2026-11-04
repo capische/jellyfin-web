@@ -22,7 +22,6 @@ import ChromeTheme from './ChromeTheme';
 import '../components/interFont.scss';
 import '../components/modFont.scss';
 import '../components/lightGlass.scss';
-import '../components/cardDesign.scss';
 import './sharedChrome.scss';
 import './motionChrome.scss';
 import './chromeFont.scss';

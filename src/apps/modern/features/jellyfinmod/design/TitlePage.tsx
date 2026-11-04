@@ -222,12 +222,12 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         }}><u>{parent.label}</u></a></React.Fragment>)}{here && ' › ' + here}</div>}
     {!model.parents.length && model.by.length > 0 && <div className='by'>{model.byWords} <Inline parts={model.by} underline /></div>}
     <div className='meta'>{environment.type === 'Season' && item?.ProductionYear && <span>{item.ProductionYear}</span>}{environment.type === 'Season' && !!item?.ChildCount && <span>{item.ChildCount} episodes</span>}
-    {model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
-        {fact.star && <Icon name='star' />}{fact.critic && <RatingIcon className='rm rt' rating={{ source: 'tomatoes_critic', value: parseFloat(fact.text), scale: 'percent' }} />}{fact.parts.length ? <Inline parts={fact.parts} /> : fact.text}</span>)}
-    {model.facts.map(fact => <span key={fact.text}>{fact.href ? <a href={fact.href} target='_blank' rel='noreferrer'>{fact.text}</a> : fact.text}</span>)}
-    <Slot view={view} name='ratings' />
-    {environment.type === 'Series' && !!item?.RecursiveItemCount && <span>{item.RecursiveItemCount} episodes · {item.ChildCount} seasons</span>}
-    {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
+        {model.meta.filter(fact => !fact.endsAt).map(fact => <span key={fact.text} className={factClass(fact)}>
+            {fact.star && <Icon name='star' />}{fact.critic && <RatingIcon className='rm rt' rating={{ source: 'tomatoes_critic', value: parseFloat(fact.text), scale: 'percent' }} />}{fact.parts.length ? <Inline parts={fact.parts} /> : fact.text}</span>)}
+        {model.facts.map(fact => <span key={fact.text}>{fact.href ? <a href={fact.href} target='_blank' rel='noreferrer'>{fact.text}</a> : fact.text}</span>)}
+        <Slot view={view} name='ratings' />
+        {environment.type === 'Series' && !!item?.RecursiveItemCount && <span>{item.RecursiveItemCount} episodes · {item.ChildCount} seasons</span>}
+        {model.meta.filter(fact => fact.endsAt).map(fact => <span key={fact.text} data-ds-endsat=''><Inline parts={fact.parts} /></span>)}
     </div></>;
     const pill = model.commands.length > 0 && <div className={'actbar glassy focuscontainer-x' + (model.commands.some(command => command.play) ? '' : ' short')}>
         {model.commands.map(command => <Command key={command.key} view={view} command={command} />)}</div>;

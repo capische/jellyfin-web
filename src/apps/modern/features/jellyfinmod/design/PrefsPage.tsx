@@ -26,8 +26,10 @@ const iconFor = (text: string): IconName => ICONS.find(([pattern]) => pattern.te
 const clean = (node: Element | null | undefined) => node?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 const shownIn = (node: Element, root: Element) => {
     // The page's direct children are hidden on purpose: this asks whether the controller shows the field.
-    for (let at: Element | null = node; at && at.parentElement !== root; at = at.parentElement) {
+    let at: Element | null = node;
+    while (at && !root.isSameNode(at.parentElement)) {
         if (at.classList.contains('hide') || at.hasAttribute('hidden') || getComputedStyle(at).display === 'none') return false;
+        at = at.parentElement;
     }
     return true;
 };
@@ -51,39 +53,43 @@ const keyOf = (node: Element) => {
     return keys.get(node)!;
 };
 
-/** Everything the page's controller shows, in order. Nothing is read twice or kept: the form stays the only state. */
-const readParts = (view: HTMLElement): Part[] => {
-    const parts: Part[] = [];
-    const source = Array.from(view.children).filter(child => !child.classList.contains('jfmod-dsPrefsHost'));
-    for (const top of source) {
-        for (const node of Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, .listItem'))) {
-            const inItem = node.parentElement?.closest('.listItem');
-            if (inItem || !shownIn(node, view)) continue;
-            const key = keyOf(node);
-            if (node.matches('.listItem')) {
-                parts.push({ kind: 'item', key, text: clean(node), controls: Array.from(node.querySelectorAll<HTMLElement>('button, input[type=checkbox]')).filter(control => shownIn(control, view)).map(control => (
-                    { key: keyOf(control), node: control, icon: controlIcon(control), title: control.title || labelOf(control), check: control.matches('input'), checked: (control as HTMLInputElement).checked }
-                )) });
-            } else if (node.matches('h1, h2, h3, legend')) {
-                if (clean(node) && !node.closest('.selectContainer, .inputContainer, .checkboxContainer')) parts.push({ kind: 'heading', key, text: clean(node) });
-            } else if (node.matches('p')) {
-                if (clean(node) && !node.closest('.selectContainer, .inputContainer, .checkboxContainer, .fieldDescription')) parts.push({ kind: 'lead', key, text: clean(node) });
-            } else if (node instanceof HTMLSelectElement) {
-                parts.push({ kind: 'select', key, node, label: labelOf(node), desc: descOf(node), value: node.value, disabled: node.disabled,
-                    options: Array.from(node.options).map(option => ({ value: option.value, label: option.textContent ?? '' })) });
-            } else if (node instanceof HTMLInputElement && node.type === 'checkbox') {
-                parts.push({ kind: 'check', key, node, label: labelOf(node), desc: descOf(node), checked: node.checked, disabled: node.disabled });
-            } else if (node instanceof HTMLInputElement && (node.type === 'file' || node.type === 'hidden')) {
-                continue;
-            } else if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
-                parts.push({ kind: 'input', key, node, label: labelOf(node), desc: descOf(node), value: node.value, type: node.type, disabled: node.disabled });
-            } else if (clean(node)) {
-                parts.push({ kind: 'button', key, node, label: clean(node), main: node.matches('[type=submit], .button-submit') });
-            }
-        }
-    }
-    return parts;
+const CONTAINER = '.selectContainer, .inputContainer, .checkboxContainer';
+
+const itemPart = (node: HTMLElement, view: HTMLElement): Part => ({ kind: 'item', key: keyOf(node), text: clean(node),
+    controls: Array.from(node.querySelectorAll<HTMLElement>('button, input[type=checkbox]')).filter(control => shownIn(control, view)).map(control => (
+        { key: keyOf(control), node: control, icon: controlIcon(control), title: control.title || labelOf(control), check: control.matches('input'), checked: (control as HTMLInputElement).checked }
+    )) });
+
+const textPart = (node: HTMLElement): Part | null => {
+    if (!clean(node)) return null;
+    if (node.matches('p')) return node.closest(CONTAINER + ', .fieldDescription') ? null : { kind: 'lead', key: keyOf(node), text: clean(node) };
+    return node.closest(CONTAINER) ? null : { kind: 'heading', key: keyOf(node), text: clean(node) };
 };
+
+const fieldPart = (node: HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement): Part | null => {
+    const base = { key: keyOf(node), label: labelOf(node), desc: descOf(node), disabled: node.disabled };
+    if (node instanceof HTMLSelectElement) {
+        return { ...base, kind: 'select', node, value: node.value, options: Array.from(node.options).map(option => ({ value: option.value, label: option.textContent ?? '' })) };
+    }
+    if (node.type === 'checkbox') return { ...base, kind: 'check', node: node as HTMLInputElement, checked: (node as HTMLInputElement).checked };
+    if (node.type === 'file' || node.type === 'hidden') return null;
+    return { ...base, kind: 'input', node, value: node.value, type: node.type };
+};
+
+const partOf = (node: HTMLElement, view: HTMLElement): Part | null => {
+    if (node.parentElement?.closest('.listItem') || !shownIn(node, view)) return null;
+    if (node.matches('.listItem')) return itemPart(node, view);
+    if (node.matches('h1, h2, h3, legend, p')) return textPart(node);
+    if (node.matches('select, input, textarea')) return fieldPart(node as HTMLSelectElement);
+    return clean(node) ? { kind: 'button', key: keyOf(node), node, label: clean(node), main: node.matches('[type=submit], .button-submit') } : null;
+};
+
+/** Everything the page's controller shows, in order. Nothing is read twice or kept: the form stays the only state. */
+const readParts = (view: HTMLElement): Part[] => Array.from(view.children)
+    .filter(child => !child.classList.contains('jfmod-dsPrefsHost'))
+    .flatMap(top => Array.from(top.querySelectorAll<HTMLElement>('h1, h2, h3, legend, p, select, input, textarea, button, .listItem')))
+    .map(node => partOf(node, view))
+    .filter((part): part is Part => !!part);
 
 /** The value goes through the element's own setter, so a React-controlled input and a legacy one both see the event. */
 const setValue = (node: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value: string) => {
@@ -108,6 +114,50 @@ const SwitchButton: FC<{ label: string; checked: boolean; disabled?: boolean; on
         }
     }}><i /></span>;
 
+const FieldRow: FC<{ part: Part; refresh: () => void }> = ({ part, refresh }) => {
+    const change = (node: Parameters<typeof setValue>[0], value: string) => {
+        setValue(node, value);
+        refresh();
+    };
+    const click = (node: HTMLElement) => {
+        node.click();
+        refresh();
+    };
+    if (part.kind === 'select') {
+        return <Row title={part.label} desc={part.desc} dd><Select label='' value={part.value} options={part.options} busy={part.disabled} onChange={value => change(part.node, value)} /></Row>;
+    }
+    if (part.kind === 'check') {
+        return <Row title={part.label} desc={part.desc}><SwitchButton label={part.label} checked={part.checked} disabled={part.disabled} onClick={() => {
+            if (!part.disabled) click(part.node);
+        }} /></Row>;
+    }
+    if (part.kind === 'input') {
+        return <Row title={part.label} desc={part.desc} dd><div className='fld' onFocus={event => event.currentTarget.classList.add('foc')} onBlur={event => event.currentTarget.classList.remove('foc')}>
+            <div className='box'><input className='v focusable' aria-label={part.label} type={part.type} disabled={part.disabled} value={part.value} onChange={event => change(part.node, event.target.value)} /></div></div></Row>;
+    }
+    if (part.kind === 'item') {
+        return <Row title={part.text}>{part.controls.map(control => (control.check ?
+            <SwitchButton key={control.key} label={part.text} checked={!!control.checked} onClick={() => click(control.node)} /> :
+            <button type='button' key={control.key} className='ib focusable' title={control.title} aria-label={control.title} onClick={() => click(control.node)}><Icon name={control.icon} /></button>))}</Row>;
+    }
+    return null;
+};
+
+type Card = { key: string; title: string; rows: Part[]; leads: string[] };
+
+const cardsOf = (parts: Part[], skipHeading: string): Card[] => {
+    const cards: Card[] = [];
+    for (const part of parts) {
+        if (part.kind === 'heading' && part.text !== skipHeading) cards.push({ key: part.key, title: part.text, rows: [], leads: [] });
+        if (part.kind === 'heading' || part.kind === 'button') continue;
+        if (!cards.length) cards.push({ key: 'first', title: '', rows: [], leads: [] });
+        const card = cards[cards.length - 1];
+        if (part.kind === 'lead') card.leads.push(part.text);
+        else card.rows.push(part);
+    }
+    return cards;
+};
+
 /** ds.js prefs-form, prefs-profile and prefs-quick, painted from the page's own hidden form (Preferences' controllers stay as they are). */
 export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
     const [parts, setParts] = useState<Part[]>(() => readParts(view));
@@ -121,73 +171,30 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
         const timer = window.setInterval(refresh, 500);
         return () => window.clearInterval(timer);
     }, [refresh]);
+    const loaded = parts.length > 0;
     useEffect(() => {
         // The TV starts on the first control, as the mockup's focus state does.
-        if (!layoutManager.tv) return;
+        if (!layoutManager.tv || !loaded) return;
         const first = view.querySelector<HTMLElement>('.jfmod-dsPrefsHost .focusable');
         if (first) focusManager.focus(first);
-    }, [view, parts.length > 0]);
+    }, [view, loaded]);
     const isProfile = view.id === 'userProfilePage';
     const hasImage = isProfile && !view.querySelector('#btnDeleteImage')?.classList.contains('hide');
     const image = hasImage ? /url\(["']?(.*?)["']?\)/.exec((view.querySelector<HTMLElement>('#image')?.style.backgroundImage) ?? '')?.[1] : undefined;
-    const headButtons = isProfile ? parts.filter(part => part.kind === 'button' && part.node.matches('#btnAddImage, #btnDeleteImage')) : [];
-    const buttons = parts.filter(part => part.kind === 'button' && !headButtons.includes(part));
+    const buttons = parts.filter((part): part is Extract<Part, { kind: 'button' }> => part.kind === 'button');
+    const headButtons = isProfile ? buttons.filter(part => part.node.matches('#btnAddImage, #btnDeleteImage')) : [];
     const title = view.getAttribute('data-title') ?? '';
-    const cards: { key: string; title: string; rows: Part[]; leads: string[] }[] = [];
-    for (const part of parts) {
-        if (part.kind === 'button') continue;
-        if (part.kind === 'heading') {
-            if (isProfile && part.text === clean(view.querySelector('.username'))) continue;
-            cards.push({ key: part.key, title: part.text, rows: [], leads: [] });
-            continue;
-        }
-        if (!cards.length) cards.push({ key: 'first', title: '', rows: [], leads: [] });
-        const card = cards[cards.length - 1];
-        if (part.kind === 'lead') card.leads.push(part.text);
-        else card.rows.push(part);
-    }
+    const name = clean(view.querySelector('.username'));
+    const cards = cardsOf(parts, isProfile ? name : '');
     return <Root><div className='pcol plain'>
-        {isProfile ? <div className='mhead'><span className='avatar2'>{image ? <img src={image} alt='' /> : <Icon name='person' />}</span><span className='nm'>{clean(view.querySelector('.username'))}</span>
-            <span style={{ flex: '1 1 auto' }} />{headButtons.map(part => part.kind === 'button' && <Button key={part.key} onClick={() => part.node.click()}>{part.label}</Button>)}</div> :
+        {isProfile ? <div className='mhead'><span className='avatar2'>{image ? <img src={image} alt='' /> : <Icon name='person' />}</span><span className='nm'>{name}</span>
+            <span style={{ flex: '1 1 auto' }} />{headButtons.map(part => <Button key={part.key} onClick={() => part.node.click()}>{part.label}</Button>)}</div> :
             title && <h1 className='ptitle'>{title}</h1>}
         {cards.map(card => <React.Fragment key={card.key}>
             {card.title && (card !== cards[0] || card.title !== title) && <h2 className='sect2'>{card.title}</h2>}
             {card.leads.map(lead => <p className='lead2' key={lead}>{lead}</p>)}
-            {card.rows.length > 0 && <div className='scard'>{card.rows.map(part => {
-                if (part.kind === 'select') {
-                    return <Row key={part.key} title={part.label} desc={part.desc} dd><Select label='' value={part.value} options={part.options} busy={part.disabled} onChange={value => {
-                        setValue(part.node, value);
-                        refresh();
-                    }} /></Row>;
-                }
-                if (part.kind === 'check') {
-                    return <Row key={part.key} title={part.label} desc={part.desc}><SwitchButton label={part.label} checked={part.checked} disabled={part.disabled} onClick={() => {
-                        if (part.disabled) return;
-                        part.node.click();
-                        refresh();
-                    }} /></Row>;
-                }
-                if (part.kind === 'input') {
-                    return <Row key={part.key} title={part.label} desc={part.desc} dd><div className='fld' onFocus={event => event.currentTarget.classList.add('foc')} onBlur={event => event.currentTarget.classList.remove('foc')}>
-                        <div className='box'><input className='v focusable' aria-label={part.label} type={part.type} disabled={part.disabled} value={part.value} onChange={event => {
-                            setValue(part.node, event.target.value);
-                            refresh();
-                        }} /></div></div></Row>;
-                }
-                if (part.kind === 'item') {
-                    return <Row key={part.key} title={part.text}>{part.controls.map(control => (control.check ?
-                        <SwitchButton key={control.key} label={part.text} checked={!!control.checked} onClick={() => {
-                            control.node.click();
-                            refresh();
-                        }} /> :
-                        <button type='button' key={control.key} className='ib focusable' title={control.title} aria-label={control.title} onClick={() => {
-                            control.node.click();
-                            refresh();
-                        }}><Icon name={control.icon} /></button>))}</Row>;
-                }
-                return null;
-            })}</div>}
+            {card.rows.length > 0 && <div className='scard'>{card.rows.map(part => <FieldRow key={part.key} part={part} refresh={refresh} />)}</div>}
         </React.Fragment>)}
-        {buttons.length > 0 && <div className='btnrow'>{buttons.map(part => part.kind === 'button' && <Button key={part.key} kind={part.main ? 'main' : undefined} onClick={() => part.node.click()}>{part.label}</Button>)}</div>}
+        {buttons.length > headButtons.length && <div className='btnrow'>{buttons.filter(part => !headButtons.includes(part)).map(part => <Button key={part.key} kind={part.main ? 'main' : undefined} onClick={() => part.node.click()}>{part.label}</Button>)}</div>}
     </div></Root>;
 };
