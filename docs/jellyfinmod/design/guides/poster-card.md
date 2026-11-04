@@ -39,3 +39,5 @@ settings for that view: 2:3 shape, title and year always on, no card layout.
 - `!important` only against upstream's own on `.cardOverlayButtonIcon`.
 
 **The ring needs room:** the ring is drawn outside the poster, so a card must not contain paint. `cardDesign.scss` takes `paint` out of upstream's `.card:not(.show-animation)` containment; with it, a row's cards lose the ring's left side (the user's report, 2026-11-04).
+
+**Icon sizes:** the foot pill's glyphs are 1.236em (18.4 px on a computer) in 2em buttons, the disc's 2em. Each rule also sets `font-size: 1em` on the svg, because MUI's SvgIcon sets 1.5rem and an em width would count from that (the user's report, 2026-11-04).
