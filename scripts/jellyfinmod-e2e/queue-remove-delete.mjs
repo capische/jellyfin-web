@@ -210,7 +210,7 @@ async function matrix() {
     await page.evaluate(({ item, entry, season, number }) => {
         location.hash = item ? '#/details?id=' + item : `#/details?entryId=${entry}&season=${season}&episode=${number}`;
     }, { item: episode.jellyfinItemId, entry: show.id, season: episode.seasonNumber, number: episode.episodeNumber });
-    const cancel = page.locator('.page:not(.hide) .jfmod-dlblock-cancel').first();
+    const cancel = page.locator('.page:not(.hide) .act .btn:not(.main):not(.destroy)').first();
     await cancel.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         await cancel.focus();
@@ -274,7 +274,7 @@ async function live() {
         await page.evaluate(id => {
             location.hash = '#/details?entryId=' + id;
         }, entryId);
-        const opener = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first();
+        const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
         await opener.waitFor({ state: 'visible', timeout: 30000 });
         await opener.click();
         await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem', { timeout: 120000 });

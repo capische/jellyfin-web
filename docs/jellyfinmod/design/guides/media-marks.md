@@ -1,5 +1,10 @@
 # Media marks
 
+**dsD (2026-11-04), built, not accepted:** the title pickers, pending entry and download block now draw the source
+SVG/chip markup with `design/MediaMarks.tsx` (`mk/codec/hdr/tag/join/ch/chs`). Existing stream/release parsers supply values;
+Video and pending receive only video facts, Audio receives its own stream facts. Release-picker/admin renderers remain in place.
+No mark is inferred from sample mockup content. [Port and CSS inventory](../dsD.md).
+
 **Status:** brand-style marks approved 2026-10-10 (release picker row design), format chips 2026-10-11, reused verbatim
 on the detail page's dropdowns 2026-10-17 ("are you using the same logos/icons as in torrent search?" — yes, by rule).
 Built on `next-release`. Records: [release picker note](../release-picker-design.md), [Video row note](../video-row-file-size.md),

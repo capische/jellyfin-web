@@ -1,5 +1,10 @@
 # Download state mark
 
+**dsD (2026-11-04), built, not accepted:** title cells/rows and download/pending blocks now use `design/StateMark.tsx`
+source `dm/arc/glyph/pct` markup and copied source sizes. Existing queue projection, stale values, client-link permissions and
+state logic remain. A live download wins over an older cloud; watched/download bars and existing countdown/search marks remain
+on native title cells. Queue/release-picker renderers retain their current implementation. [Port and validation](../dsD.md).
+
 **Status:** approved 2026-10-13 (ring family, artifact v3: "ring only, arrow, time left: meta line + tooltip"), glass disc
 2026-10-13 (v11: "use top bar's exact recipe"), icon colour 2026-10-15 (v12: "replace yellow … to the color of icons"), importing until
 the file is drawn 2026-10-18 (P4.FU12, "Go with what Codex proposed"; [no-delay design](../no-delay-codex-design.md) section 4), state text

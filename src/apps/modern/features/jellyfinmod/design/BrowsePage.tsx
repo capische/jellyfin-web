@@ -8,13 +8,13 @@ import type { EntryEpisode } from '../types/entry';
 import { Root, DesignContext } from './Root';
 import { Head } from './Head';
 import { Icon } from './Icon';
-import { Section } from './Section';
+import { TitleRow as Section } from './TitleRow';
 import { Poster } from './Poster';
 
 const yearOf = (date?: string | null) => date?.slice(0, 4);
 const shortDate = (date: string) => datetime.toLocaleDateString(datetime.parseISO8601Date(date, false));
 
-const BrowseCell: FC<{ image?: string; wide?: boolean; person?: boolean; title: string; second?: string; href?: string }> = ({ image, wide, person, title, second, href }) => {
+export const BrowseCell: FC<{ image?: string; wide?: boolean; person?: boolean; title: string; second?: string; href?: string }> = ({ image, wide, person, title, second, href }) => {
     const device = useContext(DesignContext);
     const [focused, setFocused] = useState(false);
     const shape = wide ? 'w' : 'p';

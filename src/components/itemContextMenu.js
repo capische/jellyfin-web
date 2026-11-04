@@ -1,3 +1,4 @@
+import { commandOpener } from 'apps/modern/features/jellyfinmod/integration/commandOpener';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 
@@ -767,7 +768,7 @@ export async function show(options) {
 
     const id = await actionsheet.show({
         items: commands,
-        positionTo: options.positionTo,
+        positionTo: commandOpener(options.positionTo),
         resolveOnClick: ['share']
     });
 

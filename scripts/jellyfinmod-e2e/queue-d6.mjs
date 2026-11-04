@@ -155,7 +155,7 @@ for (const name of only) {
             let stockVerdict = null;
             try {
                 await stock.goto(new URL(`/web-mod/${bundleId}/index.html#/details?id=${itemId}`, testUrl).href, { waitUntil: 'domcontentloaded' });
-                const more = stock.locator('.btnMoreCommands:visible').first();
+                const more = stock.locator('[data-ds-command~=btnMoreCommands]:visible').first();
                 await more.waitFor({ state: 'visible', timeout: 30000 });
                 await stock.waitForTimeout(1500);
                 if (name === 'mobile') await more.tap(); else await more.click();

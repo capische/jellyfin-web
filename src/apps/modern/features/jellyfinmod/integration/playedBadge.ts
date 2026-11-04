@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 
 import type { PlayedBadge } from '../constants/detailPage';
 
-import './playedBadge.scss';
-
 /**
  * The countdown on upstream's Played tick (design step 4, user 2026-10-07; UX §1.1 exception 1): one `span` inserted as the
  * second child of the stock `btnPlaystate` button's `.detailButton-content`, absolutely placed over the tick's lower-right

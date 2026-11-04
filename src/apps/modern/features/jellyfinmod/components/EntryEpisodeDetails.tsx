@@ -26,8 +26,6 @@ import type { FocusOwnership } from '../utils/focusOwnership';
 import DownloadBlock from './DownloadBlock';
 import { episodeMetaItems, seasonPath, useTmdbCover } from './MissingChildren';
 
-import './downloadBlock.scss';
-import './entryDetails.scss';
 import './missingChildren.scss';
 
 interface EntryEpisodeDetailsProps {
@@ -189,8 +187,8 @@ const EntryEpisodeDetails: FC<EntryEpisodeDetailsProps> = ({ api, userId, server
     // On the TV the page places focus on its first action while it owns focus, as the season page does.
     useEffect(() => {
         if (!layoutManager.tv || !focusOwnership) return;
-        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease')
-            ?? view.querySelector<HTMLElement>('.nameContainer a');
+        const first = view.querySelector<HTMLElement>('.jfmod-dsTitleHost .actbar button')
+            ?? view.querySelector<HTMLElement>('.jfmod-dsTitleHost .by a');
         if (first && focusOwnership.mayFocus(first)) {
             focusManager.focus(first);
             focusOwnership.placed(first);

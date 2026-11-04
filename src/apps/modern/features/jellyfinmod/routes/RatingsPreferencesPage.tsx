@@ -8,17 +8,19 @@ import { useApi } from 'hooks/useApi';
 import { ALL_SOURCES, SOURCE_LONG, SOURCE_SHORT } from '../constants/ratings';
 import { useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import type { RatingSource } from '../types/ratings';
-import { raisedButtonClass } from '../utils/flatButton';
+import { Root } from '../design/Root';
+import { Icon } from '../design/Icon';
+import { Select } from '../design/Controls';
+import RatingIcon from '../components/RatingIcon';
 import '../components/ratings.scss';
-import './ratingsPreferences.scss';
 
 /** The route the user menu and the TV's Home link open (Phase 9, plan decision 8). */
 export const RATINGS_PREFERENCES_ROUTE = '/catalog/preferences';
 
 /**
  * Ratings display, for every signed-in user (P9.R6, R7): which sources the detail page shows and in which order, and the
- * one source a card may show (off by default). Plain buttons with upstream's button classes, so upstream's focus manager and
- * TV focus ring apply unchanged; every change is saved at once to the user's own display preferences.
+ * one source a card may show (off by default). Source scard/srow2, switches and fields supply the markup; focusable controls
+ * still participate in the app's TV navigation. Every change is saved at once to the user's own display preferences.
  */
 const RatingsPreferencesPage: FC = () => {
     const { api, user } = useApi();
@@ -80,68 +82,66 @@ const RatingsPreferencesPage: FC = () => {
         setRefocus('#jfmodRatingsPreferencesPage [data-jfmod-source-toggle]');
     }, [cardSource, preferences.defaultSources, setCardSource, setSources]);
 
-    const chooseCard = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-        const value = event.currentTarget.dataset.jfmodCardSource as RatingSource | '';
-        setCardSource(value || null);
-        setStatus(value ? `Cards show ${SOURCE_SHORT[value]}. Saved.` : 'Cards show no rating. Saved.');
+    const chooseCard = useCallback((value: string) => {
+        setCardSource((value || null) as RatingSource | null);
+        setStatus(value ? `Cards show ${SOURCE_SHORT[value as RatingSource]}. Saved.` : 'Cards show no rating. Saved.');
     }, [setCardSource]);
 
     let content: React.ReactNode;
     if (!user || !preferences.loaded) {
-        content = <p className='jfmod-lead'>Loading…</p>;
+        content = <p className='help'>Loading…</p>;
     } else if (preferences.unanswered) {
-        content = <p className='jfmod-lead' role='status' data-jfmod-ratings-unanswered=''>
+        content = <p className='help' role='status' data-jfmod-ratings-unanswered=''>
             Ratings are unavailable for now: this server&apos;s JellyfinMod plugin has not answered. This page updates by itself when it does.
         </p>;
     } else if (!preferences.enabled) {
-        content = <p className='jfmod-lead'>Ratings are not available on this server: its JellyfinMod plugin does not offer them, or an administrator turned them off.</p>;
+        content = <p className='help'>Ratings are not available on this server: its JellyfinMod plugin does not offer them, or an administrator turned them off.</p>;
     } else {
         content = <>
-            <p className='jfmod-lead'>
+            <p className='help'>
                 Choose which ratings a title page shows, and in what order. Each value stays in its own scale. Values come through MDBList and
                 TMDB, or from this server&apos;s own metadata, and can differ from what each site shows today.
             </p>
-            <h2 className='jfmod-prefHeading'>On title pages</h2>
-            <ol className='jfmod-prefList' aria-label='Rating sources'>
+            <h2 className='sect2'>On title pages</h2>
+            <div className='scard' aria-label='Rating sources'>
                 {rows.map(({ source, on }) => {
                     const index = sources.indexOf(source);
-                    return <li key={source} className='jfmod-prefRow'>
-                        <button className={raisedButtonClass()} type='button' role='switch' aria-checked={on} data-jfmod-source-toggle={source}
-                            onClick={toggle} title={SOURCE_LONG[source]}>
-                            {on ? '☑' : '☐'} {SOURCE_LONG[source]}
-                        </button>
-                        {on && <>
-                            <button className={raisedButtonClass()} type='button' data-jfmod-source={source} data-jfmod-move='up'
-                                aria-disabled={index === 0} aria-label={`Move ${SOURCE_SHORT[source]} up`} onClick={move}>▲</button>
-                            <button className={raisedButtonClass()} type='button' data-jfmod-source={source} data-jfmod-move='down'
-                                aria-disabled={index === sources.length - 1} aria-label={`Move ${SOURCE_SHORT[source]} down`} onClick={move}>▼</button>
-                        </>}
-                    </li>;
+                    return <div key={source} className='srow2'>
+                        <span className='tilei plain'><RatingIcon rating={{ source, value: 100, scale: 'percent' }} /></span>
+                        <span className='tx'><b>{SOURCE_LONG[source]}</b><small>{on ? 'Shown in the first metadata row.' : 'Not shown.'}</small></span>
+                        <span className='ctl'>
+                            {on && <>
+                                <button className='rb focusable' type='button' data-jfmod-source={source} data-jfmod-move='up'
+                                    aria-disabled={index === 0} aria-label={`Move ${SOURCE_SHORT[source]} up`} onClick={move}><Icon name='up' /></button>
+                                <button className='rb focusable' type='button' data-jfmod-source={source} data-jfmod-move='down'
+                                    aria-disabled={index === sources.length - 1} aria-label={`Move ${SOURCE_SHORT[source]} down`} onClick={move}><Icon name='down' /></button>
+                            </>}
+                            <button type='button' className={'sw focusable' + (on ? ' on' : '')} role='switch' aria-checked={on} data-jfmod-source-toggle={source}
+                                onClick={toggle} title={SOURCE_LONG[source]} aria-label={SOURCE_LONG[source]}><i /></button>
+                        </span>
+                    </div>;
                 })}
-            </ol>
-            {preferences.ownChoice && <div className='jfmod-prefRow'>
-                <button className={raisedButtonClass()} type='button' onClick={reset} data-jfmod-ratings-reset=''>Use the server’s default</button>
-            </div>}
-            <h2 className='jfmod-prefHeading'>On cards</h2>
-            <p className='fieldDescription'>Show one rating in the card&apos;s text line in Movies and TV. Off by default.</p>
-            <div className='jfmod-prefRow jfmod-prefCards' role='radiogroup' aria-label='Rating on cards'>
-                <button className={raisedButtonClass()} type='button' role='radio' aria-checked={!cardSource} data-jfmod-card-source=''
-                    onClick={chooseCard}>{cardSource ? '○' : '●'} Off</button>
-                {sources.map(source => <button key={source} className={raisedButtonClass()} type='button' role='radio'
-                    aria-checked={cardSource === source} data-jfmod-card-source={source} onClick={chooseCard}>
-                    {cardSource === source ? '●' : '○'} {SOURCE_SHORT[source]}
-                </button>)}
             </div>
-            <p role='status' className='jfmod-prefStatus'>{status}</p>
+            {preferences.ownChoice && <div className='btnrow'>
+                <button className='btn focusable' type='button' onClick={reset} data-jfmod-ratings-reset=''>Use the server’s default</button>
+            </div>}
+            <h2 className='sect2'>On cards</h2>
+            <div className='scard'><div className='srow2 dd'>
+                <span className='tilei'><Icon name='star' /></span>
+                <span className='tx'><b>Rating on cards</b><small>One rating in the card’s text line in Movies and TV.</small></span>
+                <span className='ctl'><Select label='Rating on cards' value={cardSource ?? ''} options={[{ value: '', label: 'None' },
+                    ...sources.map(source => ({ value: source, label: SOURCE_SHORT[source] }))]} onChange={chooseCard} /></span>
+            </div></div>
+            <p role='status' className='help' data-jfmod-ratings-status=''>{status}</p>
         </>;
     }
 
     return (
         <Page id='jfmodRatingsPreferencesPage' title='Ratings Display' className='mainAnimatedPage libraryPage noSecondaryNavPage'>
-            <div className='padded-left padded-right padded-top padded-bottom-page jfmod-ratingsPreferences'>
-                <h1>Ratings Display</h1>
+            <Root><div className='pcol plain'>
+                <h1 className='ptitle'>Ratings Display</h1>
                 {content}
-            </div>
+            </div></Root>
         </Page>
     );
 };

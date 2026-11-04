@@ -1320,7 +1320,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             sourceOptions: Array.from(root.querySelectorAll('select.selectSource option')).map(o => ({ value: o.value, label: o.textContent.trim() })),
             sourceSelected: root.querySelector('select.selectSource')?.value ?? null,
             resumeOffered: !!root.querySelector('.btnResume, [data-action="resume"]'),
-            playButtonPresent: !!root.querySelector('.btnPlay, .detailButton-icon.btnPlay, [data-action="play"]')
+            playButtonPresent: !!root.querySelector('[data-ds-command~=btnPlay], .detailButton-icon[data-ds-command~=btnPlay], [data-action="play"]')
         };
     });
 
@@ -1906,9 +1906,9 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 await sleep(300);
             }
         }
-        capture.detailBefore = { playTitle: await harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first().getAttribute('title').catch(() => null) };
+        capture.detailBefore = { playTitle: await harnessSide.page.locator('.page:not(.hide) [data-ds-command~=btnPlay]:visible').first().getAttribute('title').catch(() => null) };
         const playMarker = Date.now();
-        await nativeClick(harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first());
+        await nativeClick(harnessSide.page.locator('.page:not(.hide) [data-ds-command~=btnPlay]:visible').first());
         await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(ignore);
         const playingReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing', { since: playMarker, timeout: startLimitMs });
         const playingBody = playingReq ? parsePostData(playingReq) : null;
@@ -2063,11 +2063,11 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         // Resume: reload the detail page so it reflects the written UserData, then press Resume.
         await harnessSide.navigate(harnessSide.base + '#/details?id=' + itemId);
         await harnessSide.networkIdle();
-        const resumeTitle = await harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first().getAttribute('title').catch(() => null);
+        const resumeTitle = await harnessSide.page.locator('.page:not(.hide) [data-ds-command~=btnPlay]:visible').first().getAttribute('title').catch(() => null);
         capture.resumeOffered = /resume/i.test(resumeTitle ?? '');
         if (capture.resumeOffered) {
             const resumeMarker = Date.now();
-            await nativeClick(harnessSide.page.locator('.page:not(.hide) .btnPlay:visible').first());
+            await nativeClick(harnessSide.page.locator('.page:not(.hide) [data-ds-command~=btnPlay]:visible').first());
             await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(ignore);
             const resumePlaying = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && pathOf(e) === '/Sessions/Playing', { since: resumeMarker, timeout: startLimitMs });
             capture.resumePositionTicks = resumePlaying ? parsePostData(resumePlaying)?.PositionTicks ?? null : null;
@@ -2209,7 +2209,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                             if (tvFixture.nextEpisodeId) await snapshotUserData(tvFixture.nextEpisodeId);
                             await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvFixture.id);
                             await harnessSide.networkIdle();
-                            await nativeClick(harnessSide.page.locator('.btnPlay:visible').first());
+                            await nativeClick(harnessSide.page.locator('[data-ds-command~=btnPlay]:visible').first());
                             await harnessSide.page.waitForSelector('video', { timeout: 30000 });
                             const hashDuringPlayback = await harnessSide.page.evaluate(() => window.location.hash);
                             await harnessSide.page.evaluate(seconds_ => {
@@ -2267,7 +2267,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                             await select.selectOption(source.id).catch(() => {});
                             await sleep(300);
                             const marker = Date.now();
-                            await nativeClick(harnessSide.page.locator('.btnPlay:visible').first());
+                            await nativeClick(harnessSide.page.locator('[data-ds-command~=btnPlay]:visible').first());
                             await harnessSide.page.waitForSelector('video', { timeout: 30000 }).catch(() => {});
                             const playingReq = await waitForRequestMatching(harnessSide, e => e.method === 'POST' && new URL(e.url).pathname === '/Sessions/Playing', { since: marker, timeout: 15000 });
                             result[source.id] = playingReq ? parsePostData(playingReq)?.MediaSourceId ?? null : null;
@@ -2395,7 +2395,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                 if (b0Sample[0]) {
                     await M.navigate(baseM + '#/details?id=' + b0Sample[0].Id);
                     await M.networkIdle();
-                    detailUsable = await pageM.evaluate(() => !!document.querySelector('.page:not(.hide) .itemName') && !!document.querySelector('.page:not(.hide) .btnPlay'));
+                    detailUsable = await pageM.evaluate(() => !!document.querySelector('.page:not(.hide) .itemName') && !!document.querySelector('.page:not(.hide) [data-ds-command~=btnPlay]'));
                 }
                 await pageM.unroute(pluginRoute, blockPlugin);
                 pushRow('E-6', 'Mod-only', 'Degrades cleanly with plugin transport blocked (UX §14)', 'n/a', `grid:${rendersWithoutPlugin} detail:${detailUsable}`, rendersWithoutPlugin && detailUsable ? 'PASS' : 'FAIL');
@@ -2516,7 +2516,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         const result = { side: harnessSide.label, evidence: {} };
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
                         await harnessSide.networkIdle();
-                        result.playFocused = await focusByKeys(harnessSide, '.btnPlay', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
+                        result.playFocused = await focusByKeys(harnessSide, '[data-ds-command~=btnPlay]', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
                         const marker = Date.now();
                         await harnessSide.enterFocused();
                         const started = await waitPlaying(harnessSide, startLimitMs);
@@ -2554,7 +2554,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
                         // Resume by keys from a freshly loaded detail page.
                         await harnessSide.navigate(harnessSide.base + '#/details?id=' + tvItem.Id);
                         await harnessSide.networkIdle();
-                        result.resumeFocused = await focusByKeys(harnessSide, '.btnPlay:is([title*="esume"],[data-tip*="esume"])', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
+                        result.resumeFocused = await focusByKeys(harnessSide, '[data-ds-command~=btnPlay]:is([title*="esume"],[data-tip*="esume"])', ['ArrowUp', 'ArrowLeft', 'ArrowDown'], 8);
                         if (result.resumeFocused) {
                             const resumeMarker = Date.now();
                             await harnessSide.enterFocused();

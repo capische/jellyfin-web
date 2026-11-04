@@ -1,4 +1,4 @@
-/* stylelint-disable no-descending-specificity -- runtime adapters follow the source surface order. */
+/* stylelint-disable no-duplicate-selectors, no-descending-specificity -- runtime adapters follow the source surface order. */
 
 /* Runtime adaptations only; the source recipes stay in the three imported copies. */
 
@@ -28,7 +28,6 @@
     .tvbar button,
     .pi,
     .disc,
-    .rb,
     .mi,
     .rail button {
         font: inherit;
@@ -713,3 +712,219 @@
     --spin-arc: #fff;
     --spin-track: rgba(255, 255, 255, 0.3);
 }
+
+/* dsD: the native surface owns paint; the legacy template is a private controller host. */
+.page.jfmod-dsTitle { padding-top: 0 !important; }
+.jfmod-dsTitle > :not(.jfmod-dsTitleHost):not(.jfmod-entryDetailsRoot) { display: none; }
+.jfmod-dsTitle > .jfmod-entryDetailsRoot { display: none; }
+.jfmod-legacyDs .page.jfmod-dsTitle { padding-top: 3.226em !important; }
+.layout-tv .jfmod-legacyDs .page.jfmod-dsTitle { padding-top: 3.85em !important; }
+
+.jfmod-dsTitle .ground {
+    margin-top: -3.226em;
+    padding-top: 3.226em;
+}
+
+.layout-tv .jfmod-dsTitle .ground {
+    margin-top: -3.85em;
+    padding-top: 3.85em;
+}
+
+.jfds {
+    .titlefoot { padding-bottom: 2.618em; }
+
+    .stillimage > img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit;
+    }
+
+    .stillimage .fallback {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 2em;
+        height: 2em;
+        transform: translate(-50%, -50%);
+    }
+
+    .ep .ib {
+        font: inherit;
+        border: 0;
+        background: none;
+        color: inherit;
+    }
+
+    .rb,
+    .dsc {
+        font: inherit;
+        border: 0;
+        padding: 0;
+        background: none;
+    }
+
+    .dsc { padding: 0.382em 0.618em; }
+
+    .seg:focus,
+    .vrow:focus,
+    .dsc:focus { outline: none; }
+
+    .vrow:focus,
+    .dsc:focus { box-shadow: inset 0 0 0 0.236em var(--primary); }
+
+    .trackextra {
+        flex: 1 1 100%;
+        font-size: 0.854em;
+        opacity: 0.7;
+    }
+
+    .packdots { display: inline-flex; }
+
+    .packdots i { flex: none; }
+
+    .historyportal {
+        position: fixed;
+        max-height: 80%;
+        overflow-y: auto;
+    }
+
+    .meta .jfmod-ratingsMount { display: contents; }
+
+    .jfmod-ratings-hideStar > .star,
+    .jfmod-ratings-hideCritic > .critic { display: none; }
+}
+
+/* Survivor D236: the guide's original narrow pending-entry measures, on source markup. */
+.jfds .pend.narrow {
+    position: relative;
+    align-items: flex-start;
+    padding-right: 0;
+    padding-left: 0.374em;
+
+    > .dm {
+        margin-top: 0.681em;
+        margin-right: 0.365em;
+        font-size: 0.6472em;
+    }
+
+    .l1 {
+        flex-wrap: wrap;
+        align-content: flex-start;
+        align-items: center;
+        height: 2.5em;
+        padding-right: 2em;
+        line-height: 1.2;
+    }
+
+    .l1 > .r {
+        display: flex;
+        flex: 0 1 auto;
+        align-items: center;
+        min-height: 2.5em;
+        margin-right: 0;
+        white-space: normal;
+    }
+
+    .marks {
+        flex: 1 1 0;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        min-width: 0;
+        height: 0.72em;
+        margin-left: 0.615em;
+        overflow: hidden;
+
+        &::before {
+            content: '';
+            height: 0.72em;
+        }
+    }
+
+    .sz2 { margin-right: 0.382em; }
+
+    .l2 {
+        display: block;
+        margin-top: -0.382em;
+        padding-right: 0.382em;
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .dlf,
+    .flag { display: block; }
+
+    .flag {
+        position: static;
+        margin-left: 0;
+    }
+
+    > .rb {
+        position: absolute;
+        top: 0.35em;
+        right: 0;
+    }
+}
+
+.jfds.dev-phone .pend.narrow {
+    > .dm { margin-top: 0.899em; }
+
+    .l1 {
+        height: 2.7816em;
+        padding-right: 2.5em;
+    }
+
+    > .rb { right: 0.25em; }
+}
+
+.jfds .gpk .vlist {
+    max-height: 20em;
+    overflow-y: auto;
+}
+
+.jfds button.sw {
+    font: inherit;
+    border: 0;
+    padding: 0;
+}
+
+/* Controller mounts carry no typography: source components choose Noto or Inter themselves. */
+.jfds .jfmod-nativeEntryDetails,
+.jfds .jfmod-traktMount,
+.jfds .jfmod-ratingsMount {
+    font-family: inherit;
+    -webkit-font-smoothing: inherit;
+}
+
+/* The specimens are inert; real Played/Favourite controls retain their active-state cue. */
+.jfds .dbtn[aria-pressed='true'],
+.jfds .ib[aria-pressed='true'] { color: var(--primary); }
+
+/* Keep the existing rating reserve and stale-data cues on the source elements. */
+.jfds .rgroup[data-ds-reserve-stack] {
+    display: inline-grid;
+
+    .ritem {
+        grid-area: 1 / 1;
+        margin-right: 0;
+        margin-left: 0;
+    }
+}
+
+.jfds .ritem[data-ds-stale],
+.jfds .rrow[data-ds-stale] > :not(.jfmod-ratingsHidden) { opacity: 0.55; }
+
+/* The shared itemName token must not inherit Jellyfin's one-line ellipsis. */
+.jfds .itemName {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.jfds.dev-phone .itemName { font-size: 1.618em; }
+
+/* Still art owns its corners; the row's focus ring must remain outside its box. */
+.jfds .ep .still { overflow: visible; }

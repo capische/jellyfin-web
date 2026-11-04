@@ -2485,3 +2485,13 @@ permission, result and focus/history logic remain. Player sublists retain their 
 [Scope, retained custom markup, complete CSS delta, runner list and validation](design/dsC.md). No deployment, server,
 plugin, setting, dependency, branch or commit changed. Bespoke editor/picker/preferences/track content ports and live/physical
 device acceptance remain outside the completed shared-API conversion and are explicitly listed in that report.
+
+
+## dsD — native title pages, versions, download block and ratings (2026-11-04)
+
+**Built (not accepted).** Movie/series/season/episode/person and TMDB browse pages draw source heads, action pills, cells,
+rows, tracks/version lists, download/pending blocks, disclosures/history and ratings settings under `.jfds`. The original
+legacy template is hidden controller state; Play/More/shortcuts, original selects, API/hooks, permissions, ratings reservation
+and playback-start cleanup remain authoritative. Replaced title/picker styles are removed. [Complete CSS and behavior inventory,
+runner list and verification limits](design/dsD.md). No server, environment, plugin, setting, dependency, branch or commit changed.
+Live API/playback/acquisition and physical-device acceptance remain unrun under this task's explicit environment restriction.

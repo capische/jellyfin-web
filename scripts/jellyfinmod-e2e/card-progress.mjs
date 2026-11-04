@@ -555,18 +555,18 @@ async function run(browser, layout) {
         const packedItem = inSeason[1] && itemOf.get(inSeason[1].episodeNumber);
         if (packedItem) {
             await go(page, `#/details?id=${packedItem}`);
-            await page.waitForSelector('.page:not(.hide) .jfmod-queueStatusLine', { timeout: 20000 }).catch(() => {});
+            await page.waitForSelector('.page:not(.hide) [data-jfmod-queue-status]', { timeout: 20000 }).catch(() => {});
             await page.waitForTimeout(800);
             const line = await page.evaluate(() => {
-                const node = document.querySelector('.page:not(.hide) .jfmod-queueStatusLine');
+                const node = document.querySelector('.page:not(.hide) [data-jfmod-queue-status]');
                 const disc = node?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
                 return node ? { text: node.textContent.replace(/\s+/g, ' ').trim(), disc: disc?.getAttribute('data-jfmod-kind') ?? null,
                     discFirst: node.firstElementChild === disc, title: disc?.title ?? null, link: !!node.querySelector('a[href="#/catalog/queue"]') } : null;
             });
             record(label, 'episode detail line: the disc, then "In the download queue · 42% · 6 min left · View queue"',
                 line?.disc === 'downloading' && line.discFirst && line.text === 'In the download queue · 42% · 6 min left · View queue' && line.link, line);
-            await page.locator('.page:not(.hide) .jfmod-queueStatusLine').scrollIntoViewIfNeeded().catch(() => {});
-            await shotOf(page.locator('.page:not(.hide) .jfmod-queueStatusLine'), 'detail-line');
+            await page.locator('.page:not(.hide) [data-jfmod-queue-status]').scrollIntoViewIfNeeded().catch(() => {});
+            await shotOf(page.locator('.page:not(.hide) [data-jfmod-queue-status]'), 'detail-line');
         } else {
             record(label, 'the episode detail line', 'NOT VERIFIED', 'the season\'s second episode has no Jellyfin item');
         }
@@ -593,7 +593,7 @@ async function run(browser, layout) {
             setItems([...seasonItems, ...packItems, ...movieDownloading(), queueRow(entry, { episode: episodeRef(inSeason[0]), state: 'downloading',
                 progress: 0.42, etaSeconds: 720, downloadRateBytes: 3100000, grabId: opId })]);
             await go(page, `#/details?id=${pickerItem}`);
-            await page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first().click({ timeout: 20000 });
+            await page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first().click({ timeout: 20000 });
             await page.waitForSelector(".jfmod-releaseDialog .jfmod-releaseItem--added :is(.jfmod-dlmark, [data-ds-download])", { timeout: 20000 }).catch(() => {});
             await page.waitForTimeout(800);
             const added = await page.evaluate(() => {

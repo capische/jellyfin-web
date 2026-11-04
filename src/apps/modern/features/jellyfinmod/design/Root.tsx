@@ -27,6 +27,10 @@ export const DesignContext = createContext<Device | false>(false);
 
 const buttonFocus = (target: EventTarget | null, device?: Device) => {
     if (!(target instanceof HTMLElement)) return;
+    if (target.classList.contains('sw')) {
+        target.classList.toggle('tvf', device === 'tv');
+        return;
+    }
     if (target.classList.contains('rb')) {
         target.classList.toggle('foc', !!device);
         return;
@@ -40,6 +44,22 @@ const clearPhoneFocus = (root: HTMLElement | null) => {
     root?.querySelectorAll('.cell.focus, .cell.lit').forEach(cell => {
         cell.classList.remove('focus', 'lit');
     });
+};
+
+/** Context for controllers whose React content is portaled into the painted design root. */
+export const DesignEnvironment: FC<PropsWithChildren> = ({ children }) => {
+    const [env, setEnv] = useState(readEnvironment);
+    useLayoutEffect(() => {
+        const update = () => setEnv(readEnvironment());
+        const observer = new MutationObserver(update);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+        window.addEventListener('resize', update);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', update);
+        };
+    }, []);
+    return <DesignContext.Provider value={env.device}>{children}</DesignContext.Provider>;
 };
 
 export const Root: FC<PropsWithChildren<{ className?: string }>> = ({ children, className = '' }) => {

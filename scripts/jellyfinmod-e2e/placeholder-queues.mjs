@@ -408,7 +408,7 @@ async function browserChecks(browser, layout, world, flow) {
     // The series' Play starts at the next real episode (upstream asks Next Up where to start).
     await withPage(browser, layout, async (page, seen) => {
         await go(page, `#/details?id=${seriesA}`);
-        await clickButton(page, `${PAGE} .mainDetailButtons .btnPlay`);
+        await clickButton(page, `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]`);
         const { first, start } = await playback(seen);
         await page.screenshot({ path: `${SHOTS}/pq-${layout}-series-play.png` });
         record(label, `the series' Play starts at ${name(expectA)} (the next real episode) and queues no placeholder`,
@@ -418,7 +418,7 @@ async function browserChecks(browser, layout, world, flow) {
     // The season's Play: upstream starts at the first unplayed episode, a placeholder; the queue starts at the next real one.
     await withPage(browser, layout, async (page, seen) => {
         await go(page, `#/details?id=${aStub.SeasonId}`);
-        await clickButton(page, `${PAGE} .mainDetailButtons .btnPlay`);
+        await clickButton(page, `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]`);
         const { first, start } = await playback(seen);
         const season = realA.filter(id => a.find(item => norm(item.Id) === id)?.SeasonId === aStub.SeasonId);
         record(label, `the season's Play starts at ${name(expectA)} and queues the season's real episodes only`,
@@ -429,7 +429,7 @@ async function browserChecks(browser, layout, world, flow) {
     // The series' Shuffle.
     await withPage(browser, layout, async (page, seen) => {
         await go(page, `#/details?id=${seriesA}`);
-        await clickButton(page, `${PAGE} .mainDetailButtons .btnShuffle`);
+        await clickButton(page, `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnShuffle]`);
         const { first, start } = await playback(seen);
         record(label, 'the series\' Shuffle starts on a real episode and queues no placeholder',
             !!first && !stubIds.has(first) && queueClean(start) && start.queue.length === realA.length, { first, start });
@@ -438,7 +438,7 @@ async function browserChecks(browser, layout, world, flow) {
     // An episode's Play: the queue that plays on after it (auto-play of the next episode) jumps the gap.
     await withPage(browser, layout, async (page, seen) => {
         await go(page, `#/details?id=${aSecond.Id}`);
-        await clickButton(page, `${PAGE} .mainDetailButtons .btnPlay`);
+        await clickButton(page, `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]`);
         const { first, start } = await playback(seen);
         const after = realA.slice(realA.indexOf(norm(aSecond.Id)));
         record(label, `${name(aSecond)}'s Play queues the real episodes after it (${name(expectA)} next), no placeholder`,

@@ -126,7 +126,7 @@ async function oldPluginLayout(page, layout) {
     record(layout, 'no Remove this version', removeCount === 0, `${removeCount}`);
     const sources = await page.evaluate(() => document.querySelectorAll('.mainAnimatedPage:not(.hide) .selectSource option').length);
     record(layout, 'the stock version select still lists the versions', sources >= 2, `${sources} options`);
-    await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
+    await page.locator('[data-ds-command~=btnMoreCommands]:visible').first().click({ timeout: 5000 });
     await page.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="delete"]').first().click({ timeout: 5000 });
     await page.locator('.dialog').last().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(1500);

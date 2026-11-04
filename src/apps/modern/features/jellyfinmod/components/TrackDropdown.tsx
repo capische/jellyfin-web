@@ -1,21 +1,18 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/media-stream';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
 import { useQuery } from '@tanstack/react-query';
-import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type FC, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { getLanguageNames } from '../api/modApi';
 import { TRACK_ROLE_NAME, trackExtraWords, trackModifier, trackRole, type TrackRole } from '../constants/tracks';
 import { findSource, streamMarks, subtitleFormat } from '../constants/versions';
-import { listPlace, type StripHosts } from './FileChooser';
-import { MediaMarks } from './ReleaseRowParts';
+import { type StripHosts } from './FileChooser';
+import { DesignMediaMarks } from '../design/MediaMarks';
+import { TrackField, ChooseRow } from '../design/TrackField';
 
-import './fileChooser.scss';
 // The media marks' own styles.
-import './releasePicker.scss';
 
 /**
  * The Audio and Subtitles rows as dropdowns drawn like the Video one (P7.FU6, user-approved design 2026-10-17, UX §11.2): the
@@ -94,19 +91,17 @@ const CommentaryGlyph: FC = () => <svg viewBox='0 0 16 14' aria-hidden='true' fo
 </svg>;
 
 /** The row's one role mark (D61, D63, D79, D80): outlined like the channel tag, the commentary bubble as a glyph. */
-const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className='jfmod-trackRoles'>
-    {role === 'comm' ?
-        <span className='jfmod-trackRole jfmod-trackRole--glyph' title={TRACK_ROLE_NAME[role]}><CommentaryGlyph /></span> :
-        <span className='jfmod-trackRole' title={TRACK_ROLE_NAME[role]}>{role}</span>}
+const RoleMark: FC<{ role: TrackRole }> = ({ role }) => <span className='rflag' title={TRACK_ROLE_NAME[role]}>
+    {role === 'comm' ? <CommentaryGlyph /> : role}
 </span>;
 
 /**
  * The language in 600 and its short modifier (D60), which wraps out of sight first when the cell is narrow (D78); a language
  * still too long is cut with an ellipsis.
  */
-const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='jfmod-trackLang'>
-    <span className='jfmod-trackLanguage'>{language}</span>
-    {modifier && <span className='jfmod-trackMod'>({modifier})</span>}
+const TrackLanguage: FC<{ language: string; modifier?: string | null }> = ({ language, modifier }) => <span className='r'>
+    <span className='language'>{language}</span>
+    {modifier && <span className='modifier'>({modifier})</span>}
 </span>;
 
 /**
@@ -120,9 +115,9 @@ const TrackText: FC<{ stream: MediaStream; names: Record<string, string> | undef
     const role = trackRole(stream);
     return <>
         <TrackLanguage language={language} modifier={trackModifier(stream)} />
-        <span className='jfmod-fileMarks'>
-            {stream.Type === 'Audio' && <MediaMarks parsed={streamMarks(stream)} />}
-            {format && <span className='jfmod-releaseMark'>{format}</span>}
+        <span className='marks'>
+            {stream.Type === 'Audio' && <DesignMediaMarks parsed={streamMarks(stream)} />}
+            {format && <span className='mk tag'>{format}</span>}
         </span>
         {role && <RoleMark role={role} />}
     </>;
@@ -136,96 +131,15 @@ interface TrackDropdownProps {
     onChoose: (value: string) => void;
 }
 
-/** MUI's popover keeps this far from the window's edge (its `marginThreshold`). */
-const LIST_MARGIN = 16;
-/** One list row's height: .45em padding above and below a 1.5 line (`.jfmod-trackItem`). */
-const ROW_EMS = 2.4;
-
-/**
- * Where a cell's list opens and how tall it may be. The list hangs from the strip and never moves up over it (MUI shifts a
- * popover that does not fit below, D149): when opening with less than 10em under the strip the page scrolls first, and the list
- * is no taller than the room left (TV at 1280x720). In px: no min() for older TV engines; the paper's em is the strip's.
- */
-const placeUnder = (trigger: HTMLElement, scroll: boolean) => {
-    const em = parseFloat(getComputedStyle(trigger).fontSize);
-    let at = listPlace(trigger);
-    const short = 10 * em - (window.innerHeight - LIST_MARGIN - at.top);
-    if (scroll && short > 0) {
-        window.scrollBy(0, short);
-        at = listPlace(trigger);
-    }
-    return { ...at, room: Math.min(20 * em, Math.max(0, window.innerHeight - LIST_MARGIN - at.top)) };
-};
-
-/**
- * The field and its list. MUI's menu gives the list its keys (arrows, Enter, Escape back to the field) and `shell/dpadModals`
- * the TV's remote; it opens on the current entry.
- */
-const TrackDropdown: FC<TrackDropdownProps> = ({ name, entries, value, enabled, onChoose }) => {
-    const [place, setPlace] = useState<{ top: number; left: number; width: number; room: number } | null>(null);
-    const trigger = useRef<HTMLElement | null>(null);
-    const open = useCallback((event: MouseEvent<HTMLElement>) => {
-        trigger.current = event.currentTarget;
-        setPlace(placeUnder(event.currentTarget, true));
-    }, []);
-    // A resize (a window, a rotated phone) places the open list again, so it stays under its cell (Codex review, P2 2).
-    useEffect(() => {
-        if (!place) return;
-        // With less than a row of room left under the strip the list closes instead (Codex re-review, P2 2): MUI's own 16px
-        // minimum would put it over the strip (D168).
-        const again = () => {
-            const cell = trigger.current;
-            if (!cell?.isConnected) return;
-            const at = placeUnder(cell, false);
-            setPlace(at.room < ROW_EMS * parseFloat(getComputedStyle(cell).fontSize) ? null : at);
-        };
-        window.addEventListener('resize', again);
-        return () => window.removeEventListener('resize', again);
-    }, [place]);
-    const close = useCallback(() => setPlace(null), []);
-    const pick = useCallback((event: MouseEvent<HTMLElement>) => {
-        setPlace(null);
-        onChoose(event.currentTarget.getAttribute('data-jfmod-track') ?? '');
-    }, [onChoose]);
+/** The list mutates the same upstream select; only the source seg/vlist/vrow draw it. */
+const TrackDropdown: FC<TrackDropdownProps & { stacked: boolean }> = ({ name, entries, value, enabled, onChoose, stacked }) => {
     const current = entries.find(entry => entry.value === value) ?? entries[0];
     if (!current) return null;
-    // The segment's caption over its value (D8: VIDEO · AUDIO · SUBTITLES are kept, the labels column goes); the chosen track's
-    // extra words share its line after a dot (D147), so the cell keeps its height. The label and tooltip carry the full text.
-    const caption = <span className='jfmod-stripCaption' aria-hidden='true'>
-        {name}{current.extra && <span className='jfmod-stripCaptionExtra'> · {current.extra}</span>}
-    </span>;
-    const text = <span className='jfmod-videoTriggerText'>{current.content}</span>;
-    if (!enabled || entries.length < 2) {
-        return <div className='jfmod-trackTrigger jfmod-trackStatic' title={current.title} data-jfmod-track-field={name}>
-            {caption}<span className='jfmod-stripValue'>{text}</span>
-        </div>;
-    }
-    return <>
-        <button type='button' className='jfmod-trackTrigger' aria-haspopup='listbox' aria-expanded={!!place}
-            aria-label={`${name}: ${current.title}`} title={current.title} onClick={open} data-jfmod-track-field={name}>
-            {caption}
-            <span className='jfmod-stripValue'>
-                {text}
-                <span className={'material-icons jfmod-videoChevron ' + (place ? 'expand_less' : 'expand_more')} aria-hidden='true' />
-            </span>
-        </button>
-        {/* Each list is exactly its cell (D75), so it is placed by position, not by the button. */}
-        <Menu open={!!place} onClose={close} className='jfmod-trackMenu' anchorReference='anchorPosition'
-            anchorPosition={place ? { top: place.top, left: place.left } : undefined}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ list: { role: 'listbox', 'aria-label': name },
-                paper: { className: 'jfmod-trackMenuPaper', style: place ? { width: place.width, maxHeight: place.room } : undefined } }}>
-            {/* Menu items as the menu's own children, so it opens on the current one (it focuses the child marked selected). */}
-            {entries.map(entry => <MenuItem key={entry.value} role='option' aria-selected={entry === current} selected={entry === current}
-                title={entry.title} onClick={pick} data-jfmod-track={entry.value}
-                className={'jfmod-trackItem' + (entry === current ? ' jfmod-trackItem--on' : '') + (entry.extra ? ' jfmod-trackItem--two' : '')}>
-                {entry.extra ? <>
-                    <span className='jfmod-trackRun'>{entry.content}</span>
-                    <span className='jfmod-trackExtra'>{entry.extra}</span>
-                </> : entry.content}
-            </MenuItem>)}
-        </Menu>
-    </>;
+    return <TrackField kind={name === 'Audio' ? 'a' : 's'} name={name} value={current.content} title={current.title} extra={current.extra} enabled={enabled && entries.length > 1} stacked={stacked}>
+        {entries.map(entry => <ChooseRow key={entry.value} trackValue={entry.value} selected={entry === current} title={entry.title} onChoose={() => onChoose(entry.value)}>
+            {entry.content}{entry.extra && <span className='trackextra'>{entry.extra}</span>}
+        </ChooseRow>)}
+    </TrackField>;
 };
 
 interface TrackRowProps {
@@ -237,17 +151,18 @@ interface TrackRowProps {
     type: 'Audio' | 'Subtitle';
     sources: MediaSourceInfo[];
     names: Record<string, string> | undefined;
+    stacked: boolean;
 }
 
 /** One of upstream's track rows with its dropdown, its entries built from the select's options and the selected file's streams. */
-const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources, names }) => {
+const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources, names, stacked }) => {
     const { state, choose } = useTrackHost(view, selector);
     if (!state) return null;
     // A file without such tracks keeps its cell, at its fixed width, reading None, so switching the file never resizes the
     // strip or its lists (user, 2026-10-29; D131, replacing D30's hidden segment).
     if (state.hidden) {
         const none = [{ value: '', title: `No ${name.toLowerCase()}`, content: <TrackLanguage language='None' />, extra: undefined }];
-        return createPortal(<TrackDropdown name={name} entries={none} value='' enabled={false} onChoose={choose} />, host);
+        return createPortal(<TrackDropdown stacked={stacked} name={name} entries={none} value='' enabled={false} onChoose={choose} />, host);
     }
     const streams = (findSource(sources, state.sourceId) ?? sources[0])?.MediaStreams ?? [];
     const entries = state.options.map(option => {
@@ -257,7 +172,7 @@ const TrackRow: FC<TrackRowProps> = ({ view, host, selector, name, type, sources
         else if (type === 'Subtitle' && option.value === '-1') content = <TrackLanguage language='Off' />;
         return { value: option.value, title: option.text, content, extra: stream ? trackExtraWords(stream) || undefined : undefined };
     });
-    return createPortal(<TrackDropdown name={name} entries={entries} value={state.value} enabled={!state.disabled} onChoose={choose} />,
+    return createPortal(<TrackDropdown stacked={stacked} name={name} entries={entries} value={state.value} enabled={!state.disabled} onChoose={choose} />,
         host);
 };
 
@@ -276,13 +191,12 @@ const TrackDropdowns: FC<TrackDropdownsProps> = ({ api, view, sources, strip }) 
         staleTime: Infinity,
         retry: false
     });
-    // Without the server's names (a failed read) a language reads as its code.
-    if (!sources || languages.isPending) return null;
+    // Native option text remains usable while stream facts/names load, and after a failed names read.
     return <>
-        <TrackRow view={view} host={strip.audio} selector='.selectAudioContainer' name='Audio' type='Audio' sources={sources}
-            names={languages.data} />
+        <TrackRow view={view} host={strip.audio} selector='.selectAudioContainer' name='Audio' type='Audio' sources={sources ?? []}
+            names={languages.data} stacked={strip.stacked} />
         <TrackRow view={view} host={strip.subtitles} selector='.selectSubtitlesContainer' name='Subtitles' type='Subtitle'
-            sources={sources} names={languages.data} />
+            sources={sources ?? []} names={languages.data} stacked={strip.stacked} />
     </>;
 };
 

@@ -4,7 +4,7 @@
 // Signed in as oleksii with an empty password (and, when given, an ordinary user with an empty password), in a real browser
 // against a running mod instance, it checks for one series entry:
 //   - the native series page shows one mod card per plugin season (other than specials) with no Jellyfin season item, in season
-//     order among upstream's cards, with the dashed placeholder, "Season N", "K episodes" and the right mark top right; the
+//     order among upstream's cards, with the ratio-box fallback icon, "Season N", "K episodes" and the right mark top right; the
 //     cards come back in place when the list is redrawn;
 //   - P1.FU17: upstream's own season cards carry the mark when none of the season's episodes is on disk (Not Downloaded, or the
 //     Unaired clock), whatever the watched state, just left of upstream's tick or count with neither covering the other, and no
@@ -33,7 +33,7 @@
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
 //   - TV: the D-pad stops on the mod rows and on no mark; phone: overview below the row;
 //   - optionally a file-less movie's search card: the Not Downloaded indicator, and the centre Get a Release on hover;
-//   - P1.FU14: a missing season's card shows TMDB's season poster (w342) in upstream's image box, the dashed placeholder only
+//   - P1.FU14: a missing season's card shows TMDB's season poster (w342) in upstream's image box, the ratio-box fallback icon only
 //     without one; the mod's season page the season's overview and "Season N · K episodes · YYYY"; every mod episode row the
 //     still (w300, w500 on the TV), "N. Title", the meta line (air date, upstream's runtime "42m", TMDB's rating) and the
 //     overview. Images come from image.tmdb.org: the img's src and a request to it are checked; one that did not load
@@ -161,7 +161,7 @@ const go = async (page, hash) => {
 
 /** A mod image box's TMDB image: its src, whether it loaded, whether it fills the box; null when the placeholder shows. */
 const COVER_OF = `box => {
-    const img = box?.querySelector('img.jfmod-missingImage');
+    const img = box?.querySelector('img');
     if (!img) return null;
     const own = box.getBoundingClientRect();
     const drawn = img.getBoundingClientRect();
@@ -175,12 +175,12 @@ const seasonRow = async (page, numbers) => {
     await withCover(page);
     return page.evaluate(byId => {
         const view = document.querySelector('.page:not(.hide)');
-        const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
-        return [...(list?.children ?? [])].filter(child => child.classList.contains('card')).map(card => {
-            const mod = card.classList.contains('jfmod-missingSlot');
-            const mark = card.querySelector('.jfmod-mark');
+        const list = view?.querySelector('[data-ds-section=listChildrenCollapsible] .rowx, [data-ds-section=listChildrenCollapsible].eps');
+        return [...(list?.children ?? [])].filter(child => child.classList.contains('cell')).map(card => {
+            const mod = card.dataset.dsSourceClasses?.split(' ').includes('jfmod-missingSlot');
+            const mark = card.querySelector('[data-ds-state-kind]');
             // Upstream's season cards hold their text lines straight in the card box; the mod's cards in a footer.
-            const lines = [...card.querySelectorAll('.cardBox > .cardText, .cardFooter > .cardText')];
+            const lines = [...card.querySelectorAll('.tile > .ln, .capt > .ln')];
             const texts = lines.map(node => node.textContent.trim());
             const look = node => {
                 if (!node) return null;
@@ -192,8 +192,8 @@ const seasonRow = async (page, numbers) => {
                     padding: style.padding, top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height) };
             };
             const box = mark?.getBoundingClientRect();
-            const cover = card.querySelector('.cardScalable')?.getBoundingClientRect();
-            const indicators = card.querySelector('.cardIndicators');
+            const cover = card.querySelector('.post')?.getBoundingClientRect();
+            const indicators = card.querySelector('.pill2');
             const cluster = indicators && indicators.offsetWidth > 0 ? indicators.getBoundingClientRect() : null;
             return {
                 mod,
@@ -205,15 +205,15 @@ const seasonRow = async (page, numbers) => {
                 titleLook: look(lines[0]),
                 line2Look: look(lines[1]),
                 coverHeight: cover ? Math.round(cover.height) : null,
-                dashed: mod ? getComputedStyle(card.querySelector('.jfmod-missingPoster')).outlineStyle : null,
-                cover: mod ? coverOf(card.querySelector('.jfmod-missingPoster')) : null,
-                played: !!card.querySelector('.cardIndicators .playedIndicator'),
+                dashed: mod ? getComputedStyle(card.querySelector('.post')).outlineStyle : null, fallback: !!card.querySelector('.post .fallback'),
+                cover: mod ? coverOf(card.querySelector('.post')) : null,
+                played: !!card.querySelector('.pill2.tick'),
                 cluster: cluster ? { left: Math.round(cluster.left), right: Math.round(cluster.right), top: Math.round(cluster.top), bottom: Math.round(cluster.bottom) } : null,
                 mark: mark ? {
-                    kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
+                    kind: mark.dataset.dsStateKind === 'not-downloaded' ? 'none' : mark.dataset.dsStateKind,
                     tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
                     cursor: getComputedStyle(mark).cursor, tabIndex: mark.tabIndex,
-                    glyph: !!mark.querySelector('svg.jfmod-markGlyph') && mark.querySelectorAll('svg.jfmod-markGlyph path').length === 3,
+                    glyph: !!mark.querySelector('svg') && mark.querySelectorAll('svg path').length === 3,
                     visible: !!box && box.width > 0 && getComputedStyle(mark).display !== 'none',
                     box: box ? { left: Math.round(box.left), right: Math.round(box.right), top: Math.round(box.top), bottom: Math.round(box.bottom) } : null,
                     topRight: !!box && !!cover && box.right > cover.left + cover.width * 0.6 && box.top < cover.top + cover.height * 0.25
@@ -228,32 +228,32 @@ const episodeList = async (page, numbers) => {
     await withCover(page);
     return page.evaluate(byId => {
         const view = document.querySelector('.page:not(.hide)');
-        const list = view?.querySelector('#listChildrenCollapsible .itemsContainer');
-        return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
-            const mod = row.classList.contains('jfmod-missingRow');
-            const mark = row.querySelector('.jfmod-mark');
-            const overview = row.querySelector('.jfmod-episodeSummary') ?? row.querySelector('.listItem-overview');
-            const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
+        const list = view?.querySelector('[data-ds-section=listChildrenCollapsible] .rowx, [data-ds-section=listChildrenCollapsible].eps');
+        return [...(list?.children ?? [])].filter(child => child.classList.contains('ep')).map(row => {
+            const mod = row.dataset.dsSourceClasses?.split(' ').includes('jfmod-missingRow');
+            const mark = row.querySelector('[data-ds-state-kind]');
+            const overview = row.querySelector('.ov');
+            const title = row.querySelector('.nm')?.textContent.trim() ?? '';
             return {
                 mod,
                 tag: row.tagName,
-                link: mod ? row.querySelector('a.jfmod-missingRowLink')?.getAttribute('href') ?? null : null,
+                link: mod ? row.getAttribute('data-ds-href') ?? null : null,
                 id: mod ? row.dataset.jfmodEpisodeId : null,
                 number: mod ? Number(title.split('.')[0]) : byId[(row.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase()] ?? null,
                 title,
-                meta: mod ? [...row.querySelectorAll('.jfmod-missingMeta .mediaInfoItem')].map(item => item.textContent.trim()) : null,
-                cover: mod ? coverOf(row.querySelector('.jfmod-missingStill')) : null,
-                dashed: mod ? getComputedStyle(row.querySelector('.jfmod-missingStill')).outlineStyle : null,
+                meta: mod ? [...row.querySelectorAll('.ln2 > span')].map(item => item.textContent.trim()) : null,
+                cover: mod ? coverOf(row.querySelector('.still')) : null,
+                dashed: mod ? getComputedStyle(row.querySelector('.still')).outlineStyle : null, fallback: !!row.querySelector('.still .fallback'),
                 overview: mod ? overview?.textContent.trim() ?? null : null,
                 overviewShown: !!overview && getComputedStyle(overview).display !== 'none',
                 focusables: mod ? [...row.querySelectorAll('button, a, input, select, [tabindex]')].map(node => node.className) : [],
                 mark: mark ? {
-                    kind: ['unaired', 'none'].find(name => mark.classList.contains('jfmod-mark--' + name)) ?? 'other',
+                    kind: mark.dataset.dsStateKind === 'not-downloaded' ? 'none' : mark.dataset.dsStateKind,
                     tag: mark.tagName, title: mark.getAttribute('title'), text: mark.textContent.trim(),
                     cursor: getComputedStyle(mark).cursor, tabIndex: mark.tabIndex, name: mark.getAttribute('aria-label'),
                     // P1.FU22: the colour of upstream's round row icons, which take the row's own (`color: inherit`).
                     colour: getComputedStyle(mark).color, rowColour: getComputedStyle(row).color,
-                    glyph: !!mark.querySelector('svg.jfmod-markGlyph') && mark.querySelectorAll('svg.jfmod-markGlyph path').length === 3
+                    glyph: !!mark.querySelector('svg') && mark.querySelectorAll('svg path').length === 3
                 } : null
             };
         });
@@ -344,10 +344,10 @@ async function checkRowSize(page, label, what, rowSelector, markSelector) {
         const box = node => { const rect = node.getBoundingClientRect(); return { w: rect.width, h: rect.height, cy: rect.top + rect.height / 2 }; };
         const marked = [...document.querySelectorAll(rowSel)].find(row => row.querySelector(markSel));
         const mark = marked?.querySelector(markSel);
-        const glyph = mark?.querySelector('svg.jfmod-markGlyph, svg.jfmod-dlmark-glyph, svg');
+        const glyph = mark?.querySelector('svg.glyph, svg');
         const failedBang = mark && getComputedStyle(mark, '::before').content !== 'none' && getComputedStyle(mark, '::before').width !== 'auto';
         const glyphBox = failedBang ? { w: parseFloat(getComputedStyle(mark, '::before').width), h: parseFloat(getComputedStyle(mark, '::before').height) } : glyph && box(glyph);
-        const upstream = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem button.listItemButton')]
+        const upstream = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .ep button[data-ds-command]')]
             .find(button => button.getBoundingClientRect().width > 0);
         const upstreamGlyph = upstream?.querySelector('.material-icons, svg');
         const font = mark ? parseFloat(getComputedStyle(mark).fontSize) : 0;
@@ -375,7 +375,7 @@ const imageRequests = new Set();
  */
 function checkCover(label, what, shown, path, size) {
     if (!path) {
-        record(label, `${what}: no TMDB image, the dashed placeholder`, !shown.cover && shown.dashed === 'dashed', shown.cover);
+        record(label, `${what}: no TMDB image, the ratio-box fallback icon`, !shown.cover && shown.fallback === true, shown.cover);
         return;
     }
     const src = `https://image.tmdb.org/t/p/${size}${path}`;
@@ -388,7 +388,7 @@ function checkCover(label, what, shown, path, size) {
         record(label, `${what}: the image loaded`, shown.cover.loaded ? 'PASS' : 'NOT VERIFIED', shown.cover.loaded ? undefined : 'not loaded yet (lazy below the fold, or slow)');
     } else {
         // An image that failed to load leaves the placeholder, without an error on the page.
-        record(label, `${what}: the image did not load; the placeholder shows instead`, shown.dashed === 'dashed', { src, requested: imageRequests.has(src) });
+        record(label, `${what}: the image did not load; the placeholder shows instead`, shown.fallback === true, { src, requested: imageRequests.has(src) });
         record(label, `${what}: TMDB's image ${size}${path}`, 'NOT VERIFIED', 'image.tmdb.org unreachable from the browser');
     }
 }
@@ -438,9 +438,9 @@ async function dpadTrail(page, steps) {
         trail.push(await page.evaluate(() => {
             const active = document.activeElement;
             if (!active || active === document.body) return 'BODY';
-            if (active.closest('.jfmod-missingRow')) return active.classList.contains('jfmod-markButton') ? 'modIcon' : 'modRow';
-            if (active.closest('.jfmod-missingCard')) return active.classList.contains('jfmod-markButton') ? 'modIcon' : 'modCard';
-            return active.closest('.listItem, .card') ? 'upstream' : 'other';
+            if (active.closest('[data-ds-source-classes~=jfmod-missingRow]')) return active.hasAttribute('data-ds-state-kind') ? 'modIcon' : 'modRow';
+            if (active.closest('[data-ds-source-classes~=jfmod-missingCard]')) return active.hasAttribute('data-ds-state-kind') ? 'modIcon' : 'modCard';
+            return active.closest('.ep, .cell') ? 'upstream' : 'other';
         }));
     }
     return trail;
@@ -468,8 +468,8 @@ const markLook = locator => locator.evaluate(node => {
  */
 async function checkRowButton(page, label, what, episode, layout) {
     const tv = !!LAYOUTS[layout].tv;
-    const row = page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${episode.id}"]`);
-    const mark = row.locator('.jfmod-markButton');
+    const row = page.locator(`.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow][data-jfmod-episode-id="${episode.id}"]`);
+    const mark = row.locator('[data-ds-state-kind=not-downloaded][data-ds-command]');
     const where = `${what} E${episode.episodeNumber}'s Not Downloaded`;
     if (!await mark.count()) { record(label, `${where}: an administrator's button`, false); return; }
     await row.scrollIntoViewIfNeeded().catch(() => {});
@@ -508,7 +508,7 @@ async function checkRowButton(page, label, what, episode, layout) {
         await row.focus();
         await page.keyboard.press('ArrowRight');
         await page.waitForTimeout(300);
-        const onMark = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-markButton') ?? false);
+        const onMark = await page.evaluate(() => document.activeElement?.matches('[data-ds-state-kind=not-downloaded][data-ds-command]') ?? false);
         const look = onMark ? await markLook(mark) : null;
         const ring = onMark ? await mark.evaluate(node => getComputedStyle(node).boxShadow) : null;
         if (onMark) await row.screenshot({ path: `${SHOTS}/mse-${tier}-tv-row-mark-focus.png` }).catch(() => {});
@@ -537,7 +537,7 @@ async function checkRowButton(page, label, what, episode, layout) {
         // The keyboard: a focus stop, Enter opens the picker.
         const before = await page.evaluate(() => location.hash);
         await mark.focus();
-        const focused = await page.evaluate(() => document.activeElement?.classList.contains('jfmod-markButton') ?? false);
+        const focused = await page.evaluate(() => document.activeElement?.matches('[data-ds-state-kind=not-downloaded][data-ds-command]') ?? false);
         await page.keyboard.press('Enter');
         const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
         await page.waitForTimeout(1000);
@@ -554,7 +554,7 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, 
     // P1.FU22: an administrator's Not Downloaded on a row is a button; everyone else's an indicator.
     const button = admin && canDownload;
     const expected = episodes.filter(episode => episode.availability !== 'onDisk').sort((a, b) => a.episodeNumber - b.episodeNumber);
-    await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-missingRow').length >= count,
+    await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow]').length >= count,
         expected.length, { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(1000);
     const rows = await episodeList(page, numbers);
@@ -608,22 +608,22 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, 
         record(label, `${what}: Down stops on the mod rows (P1.FU15), never on a mark`, trail.includes('modRow') && !trail.includes('modIcon'), trail);
         // An ordinary user's mark (and an unaired one) is no stop: Right on its row stays off it (P1.FU19).
         const plain = mod.find(row => row.mark && !(button && row.mark.kind === 'none'));
-        const first = plain && page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${plain.id}"]`);
+        const first = plain && page.locator(`.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow][data-jfmod-episode-id="${plain.id}"]`);
         if (first) {
             await first.focus();
             await page.keyboard.press('ArrowRight');
             await page.waitForTimeout(300);
-            const right = await page.evaluate(() => (document.activeElement?.closest('.jfmod-mark') ? 'mark' : 'elsewhere'));
+            const right = await page.evaluate(() => (document.activeElement?.closest('[data-ds-state-kind]') ? 'mark' : 'elsewhere'));
             record(label, `${what}: Right on a row with ${button ? 'the Unaired clock' : 'an indicator'} reaches no mark`, right !== 'mark', right);
         }
     } else if (!button) {
         const inert = mod.find(row => row.mark?.kind === 'none');
         if (inert && layout === 'desktop') {
             await checkInert(page, label, `${what} E${inert.number}'s Not Downloaded`,
-                page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${inert.id}"] .jfmod-mark--none`));
+                page.locator(`.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow][data-jfmod-episode-id="${inert.id}"] [data-ds-state-kind=not-downloaded]`));
         }
     }
-    await checkRowSize(page, label, `${what}: a missing episode row's Not Downloaded`, '.page:not(.hide) .jfmod-missingRow', '.jfmod-mark--none');
+    await checkRowSize(page, label, `${what}: a missing episode row's Not Downloaded`, '.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow]', '[data-ds-state-kind=not-downloaded]');
     const pressable = button && mod.find(row => row.mark?.kind === 'none');
     const target = pressable && expected.find(candidate => candidate.id === pressable.id);
     if (target) await checkRowButton(page, label, what, target, layout);
@@ -640,32 +640,32 @@ const episodePageView = async page => {
             const section = view.querySelector(selector);
             return {
                 shown: !!section && !section.classList.contains('hide'),
-                cards: [...(section?.querySelectorAll('.itemsContainer .card') ?? [])].map(card => ({
+                cards: [...(section?.querySelectorAll('.cell') ?? [])].map(card => ({
                     tag: card.tagName,
-                    name: card.querySelector('.cardText-first')?.textContent.trim() ?? null,
-                    role: card.querySelector('.cardText-secondary')?.textContent.trim() ?? null,
-                    portrait: card.querySelector('img.jfmod-missingImage')?.getAttribute('src') ?? null,
-                    icon: !!card.querySelector('.cardImageIcon.person'),
+                    name: card.querySelector('.ln.t')?.textContent.trim() ?? null,
+                    role: card.querySelector('.ln.d')?.textContent.trim() ?? null,
+                    portrait: card.querySelector('img')?.getAttribute('src') ?? null,
+                    icon: !!card.querySelector('.fallback'), focusable: card.classList.contains('focusable') && card.tabIndex === 0,
                     links: card.querySelectorAll('a').length
                 }))
             };
         };
-        const still = view.querySelector('.detailImageContainer .jfmod-episodeStill .cardImageContainer');
+        const still = view.querySelector('.jfmod-dsTitleHost .poster');
         return {
-            series: view.querySelector('.nameContainer .parentName')?.textContent.trim() ?? null,
-            subtitle: view.querySelector('.nameContainer .itemName')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
-            meta: [...view.querySelectorAll('.itemMiscInfo-primary .mediaInfoItem:not(.mediaInfoOfficialRating)')].map(item => item.textContent.trim()),
-            certification: view.querySelector('.itemMiscInfo-primary .mediaInfoOfficialRating')?.textContent.trim() ?? null,
-            genres: view.querySelector('.detailSectionContent .itemGenres')?.textContent.trim() || null,
+            series: view.querySelector('.jfmod-dsTitleHost .by a:first-child')?.textContent.trim() ?? null,
+            season: view.querySelector('.jfmod-dsTitleHost .by a:nth-child(2)')?.textContent.trim() ?? null,
+            subtitle: view.querySelector('.jfmod-dsTitleHost .itemName')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+            meta: [...view.querySelectorAll('.jfmod-dsTitleHost .meta > span:not(.badge)')].map(item => item.textContent.trim()),
+            certification: view.querySelector('.jfmod-dsTitleHost .meta .badge')?.textContent.trim() ?? null,
+            genres: view.querySelector('.jfmod-dsTitleHost [data-ds-genres]')?.textContent.trim() || null,
             cover: coverOf(still),
-            dashed: still ? getComputedStyle(still).outlineStyle : null,
-            mark: view.querySelectorAll('.detailImageContainer .jfmod-mark, .detailImageContainer .jfmod-dlmark').length,
-            overview: view.querySelector('.detailSectionContent .overview')?.textContent.trim() || null,
-            details: [...view.querySelectorAll('.itemDetailsGroup .detailsGroupItem')].map(item =>
-                [...item.children].map(child => child.textContent.trim()).join(': ')),
-            cast: people('#castCollapsible'),
-            guests: people('#guestCastCollapsible'),
-            getRelease: !!view.querySelector('.mainDetailButtons .jfmod-getRelease')
+            dashed: still ? getComputedStyle(still).outlineStyle : null, fallback: !!still?.querySelector('.fallback'),
+            mark: view.querySelectorAll('.jfmod-dsTitleHost .poster [data-ds-state-kind], .jfmod-dsTitleHost .poster .dm').length,
+            overview: view.querySelector('.jfmod-dsTitleHost [data-ds-overview]')?.textContent.trim() || null,
+            details: [...view.querySelectorAll('.jfmod-dsTitleHost [data-ds-detail]')].map(item => item.textContent.trim()),
+            cast: people(':is([data-ds-section=castCollapsible],[data-ds-section=cast])'),
+            guests: people(':is([data-ds-section=guestCastCollapsible],[data-ds-section=guests])'),
+            getRelease: !!view.querySelector('.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]')
         };
     });
 };
@@ -676,19 +676,19 @@ const episodePageView = async page => {
  */
 async function checkEpisodePage(page, label, detail, episode, { admin, canDownload, tv, what, full }) {
     const before = await page.evaluate(() => location.hash);
-    const row = page.locator(`.page:not(.hide) .jfmod-missingRow[data-jfmod-episode-id="${episode.id}"]`);
+    const row = page.locator(`.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow][data-jfmod-episode-id="${episode.id}"]`);
     if (tv) await press(page, row, true);
-    else await row.locator('.jfmod-missingStill').click();
+    else await row.locator('.still').click();
     const opened = await page.waitForFunction(([season, number]) => location.hash.includes(`&season=${season}&episode=${number}`),
         [episode.seasonNumber, episode.episodeNumber], { timeout: 15000 }).then(() => true, () => false);
     record(label, `${what}: E${episode.episodeNumber}'s row opens its page`, opened, await page.evaluate(() => location.hash));
     if (!opened) return;
-    await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .nameContainer .parentName'), undefined, { timeout: 20000 }).catch(() => {});
+    await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .by a'), undefined, { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(2500);
     if (full) {
         const shown = await episodePageView(page);
         record(label, `episode page: "${detail.entry.title}" / "Season ${episode.seasonNumber} - ${episode.episodeNumber}. ${episode.title}"`,
-            shown.series === detail.entry.title && shown.subtitle === `Season ${episode.seasonNumber} - ${episode.episodeNumber}. ${episode.title}`, shown);
+            shown.series === detail.entry.title && shown.season === `Season ${episode.seasonNumber}` && shown.subtitle === `${episode.episodeNumber}. ${episode.title}`, shown);
         const rating = detail.entry.metadata?.episodeRatings?.[episode.tmdbId];
         const tail = [episode.runtimeMinutes ? duration(episode.runtimeMinutes) : null, rating ? rating.toFixed(1) : null].filter(Boolean);
         record(label, `episode page: the meta line (air date, then ${JSON.stringify(tail)})`,
@@ -721,8 +721,8 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
                 && JSON.stringify(shown.guests.cards.map(card => card.name)) === JSON.stringify(credits.guestStars.map(person => person.name)), shown.guests.cards.slice(0, 4));
             const cards = [...shown.cast.cards, ...shown.guests.cards];
             const people = [...regulars, ...credits.guestStars];
-            record(label, 'episode page: person cards link nowhere' + (tv ? ' and are focus stops (buttons)' : ''),
-                cards.every(card => card.links === 0 && (tv ? card.tag === 'BUTTON' : card.tag === 'DIV')), cards.filter(card => card.links || (tv !== (card.tag === 'BUTTON'))).slice(0, 3));
+            record(label, 'episode page: person cards link nowhere' + (tv ? ' and are focus stops' : ''),
+                cards.every(card => card.links === 0 && (card.tag === 'DIV' && (!tv || card.focusable))), cards.filter(card => card.links || (tv && !card.focusable)).slice(0, 3));
             const withPortrait = people.find(person => person.profilePath);
             const withoutPortrait = cards.find(card => !card.portrait);
             if (withPortrait) {
@@ -738,7 +738,7 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
             record(label, 'episode page: the administrator\'s Get a Release in the header', shown.getRelease);
             const code = 'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0');
             if (shown.getRelease) {
-                await pickerFrom(page, label, 'episode page Get a Release', page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease'), tv,
+                await pickerFrom(page, label, 'episode page Get a Release', page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]'), tv,
                     [`Episode: ${code} · ${episode.title}`, `Season ${episode.seasonNumber}`, 'All Seasons']);
             }
         } else {
@@ -746,7 +746,7 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
         }
         if (tv && shown.cast.cards.length) {
             // A person card is a stop that only scrolls its row: Enter on it leaves the page where it is.
-            const card = page.locator('.page:not(.hide) #castContent .card').first();
+            const card = page.locator('.page:not(.hide) [data-ds-section=castCollapsible] .cell').first();
             await card.focus();
             await page.keyboard.press('Enter');
             await page.waitForTimeout(800);
@@ -759,7 +759,7 @@ async function checkEpisodePage(page, label, detail, episode, { admin, canDownlo
     else await page.goBack();
     const back = await page.waitForFunction(target => location.hash === target, before, { timeout: 15000 }).then(() => true, () => false);
     record(label, `${what}: Back returns to the season page`, back, { before, now: await page.evaluate(() => location.hash) });
-    await page.waitForSelector('.page:not(.hide) .jfmod-missingRow', { timeout: 20000 }).catch(() => {});
+    await page.waitForSelector('.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow]', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(800);
     return pageHash;
 }
@@ -782,22 +782,22 @@ const queueRow = (entry, { episode = null, pack = null, progress }) => ({
  * plain count pill, which carries no arrow) and whether a mark is visible.
  */
 const seasonDownloadView = (page, itemId) => page.evaluate(id => {
-    const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+    const card = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')]
         .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
     if (!card) return null;
-    const frame = card.querySelector('.cardScalable');
-    const bar = frame?.querySelector('.jfmod-dlCardBar');
-    const disc = frame?.querySelector('.jfmod-dlmark');
-    const pill = frame?.querySelector('.countIndicator');
-    const none = frame?.querySelector('.jfmod-mark--none');
+    const frame = card.querySelector('.post');
+    const bar = frame?.querySelector('.prog[data-ds-progress]');
+    const disc = frame?.querySelector('.dm');
+    const pill = frame?.querySelector('.pill2:not(.tick)');
+    const none = frame?.querySelector('[data-ds-state-kind=not-downloaded]');
     const pillBox = pill?.getBoundingClientRect();
     const discBox = disc?.getBoundingClientRect();
     return {
         bar: !!bar && bar.getBoundingClientRect().height > 0,
-        percent: bar ? parseFloat(bar.querySelector('.jfmod-dlBar-fill')?.style.width ?? '') : null,
-        arrow: disc && discBox.width > 0 && disc.classList.contains('jfmod-dlmark--downloading') ? 'disc' : null,
+        percent: bar ? parseFloat(bar.querySelector('i')?.style.width ?? '') : null,
+        arrow: disc && discBox.width > 0 && disc.classList.contains('downloading') ? 'disc' : null,
         // Two icons: the disc left of the count pill, never inside it.
-        twoIcons: !pill || (!!discBox && discBox.right <= pillBox.left + 1 && !pill.querySelector('.jfmod-dlmark')),
+        twoIcons: !pill || (!!discBox && discBox.right <= pillBox.left + 1 && !pill.querySelector('.dm')),
         noneVisible: !!none && getComputedStyle(none).display !== 'none'
     };
 }, itemId);
@@ -836,8 +836,8 @@ async function checkSeasonDownloads(page, label, detail, seriesId, seasons, layo
     try {
         await go(page, '#/home');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
-        await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .jfmod-dlCard'), undefined, { timeout: 15000 }).catch(() => {});
+        await page.waitForSelector('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell', { timeout: 30000 });
+        await page.waitForFunction(() => !!document.querySelector('.page:not(.hide) .cell.ds-downloading'), undefined, { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(1500);
         for (const season of seasons.filter(candidate => candidate.number > 0)) {
             const view = await seasonDownloadView(page, season.id.replace(/-/g, '').toLowerCase());
@@ -851,9 +851,9 @@ async function checkSeasonDownloads(page, label, detail, seriesId, seasons, layo
                 record(label, `upstream Season ${season.number} card: no download`, !!view && !view.bar && !view.arrow, view);
             }
         }
-        if (layout === 'desktop') await checkInert(page, label, 'a season card\'s download disc', page.locator('.page:not(.hide) .jfmod-dlCard .jfmod-dlmark'));
-        const modCards = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) .jfmod-missingCard')]
-            .filter(card => card.querySelector('.jfmod-dlCardBar')).map(card => card.dataset.jfmodSeason));
+        if (layout === 'desktop') await checkInert(page, label, 'a season card\'s download disc', page.locator('.page:not(.hide) .cell.ds-downloading .dm'));
+        const modCards = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) [data-ds-source-classes~=jfmod-missingCard]')]
+            .filter(card => card.querySelector('.prog[data-ds-progress]')).map(card => card.dataset.jfmodSeason));
         record(label, 'the missing season cards show no download (none of theirs is on its way)', modCards.length === 0, modCards);
         if (!empty) record(label, 'an empty native season with a season pack', 'NOT VERIFIED', 'no native season without files');
         else if (empty.seriesId === seriesId) record(label, 'a season under another Jellyfin series item (the 1923 case)', 'NOT VERIFIED', 'every season is under the page\'s series item');
@@ -862,14 +862,14 @@ async function checkSeasonDownloads(page, label, detail, seriesId, seasons, layo
         await page.unroute(matcher, handler);
         await go(page, '#/home');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+        await page.waitForSelector('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell', { timeout: 30000 });
         await page.waitForTimeout(1500);
     }
 }
 
 /**
  * Hovers a card on the desktop and reads its overlay (P1.FU19): whether upstream's Play shows, whether Get a Release sits in
- * the centre (on upstream's overlay the icon in Play's round classes, on the mod's own cards `.jfmod-cardGetCentre`), and
+ * the centre (on upstream's overlay the icon in Play's round classes, on the mod's own cards `.disc[data-ds-primary-action=get]`), and
  * whether a cloud shows in the bottom row. `waitForCentre` waits for an administrator's icon, which is asked for once.
  */
 async function hoverCard(page, selector, waitForCentre) {
@@ -878,28 +878,28 @@ async function hoverCard(page, selector, waitForCentre) {
     await card.scrollIntoViewIfNeeded().catch(() => {});
     await page.mouse.move(1, 1);
     await page.waitForTimeout(300);
-    const box = await card.locator('.cardScalable').first().boundingBox();
+    const box = await card.locator('.post').first().boundingBox();
     if (!box) return null;
     // Inside the cover, away from the centre's icon and the corner's mark.
     await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3);
     if (waitForCentre) {
-        await page.waitForSelector(`${selector} .cardOverlayContainer > .cardOverlayFab-primary.jfmod-cardGet:not([hidden]), ${selector} .jfmod-cardGetCentre`,
+        await page.waitForSelector(`${selector} .disc[data-ds-primary-action=get], ${selector} .disc[data-ds-primary-action=get]`,
             { timeout: 10000 }).catch(() => {});
     }
     await page.waitForTimeout(waitForCentre ? 600 : 2500);
     return page.evaluate(sel => {
         const node = document.querySelector(sel);
         const shown = el => !!el && !el.hidden && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0
-            && Number(getComputedStyle(el.closest('.cardOverlayContainer') ?? el).opacity) > 0.5;
-        const play = [...node.querySelectorAll('.cardOverlayButton[data-action="play"], .cardOverlayButton[data-action="resume"]')].some(shown);
-        const centre = [...node.querySelectorAll('.cardOverlayContainer > .cardOverlayFab-primary.jfmod-cardGet, .jfmod-cardGetCentre')].find(shown);
-        const frame = node.querySelector('.cardScalable').getBoundingClientRect();
+            && Number(getComputedStyle(el.closest('.post') ?? el).opacity) > 0.5;
+        const play = [...node.querySelectorAll('.disc[data-ds-primary-action=play]')].some(shown);
+        const centre = [...node.querySelectorAll('.disc[data-ds-primary-action=get], .disc[data-ds-primary-action=get]')].find(shown);
+        const frame = node.querySelector('.post').getBoundingClientRect();
         const at = centre?.getBoundingClientRect();
         return {
             play, centre: !!centre, title: centre?.getAttribute('title') ?? null, icon: !!centre?.querySelector('.cloud_download'),
             centred: !!at && Math.abs(at.left + at.width / 2 - (frame.left + frame.width / 2)) <= 3
                 && Math.abs(at.top + at.height / 2 - (frame.top + frame.height / 2)) <= 3,
-            bottom: [...node.querySelectorAll('.cardOverlayButton-br .jfmod-cardGet')].some(shown)
+            bottom: [...node.querySelectorAll('.hmenu [data-ds-command~=jfmod-getRelease]')].some(shown)
         };
     }, selector);
 }
@@ -916,7 +916,7 @@ async function tabTrail(page, selector) {
         const kind = await page.evaluate(sel => {
             const active = document.activeElement;
             if (!active?.closest(sel)) return null;
-            if (active.matches('.jfmod-cardGet, .jfmod-cardGetCentre')) return active.matches('.cardOverlayFab-primary') ? 'centreGet' : 'get';
+            if (active.matches('.jfmod-cardGet, .disc[data-ds-primary-action=get]')) return active.matches('.disc') ? 'centreGet' : 'get';
             if (active.matches('[data-action="play"], [data-action="resume"]')) return 'play';
             return 'other';
         }, selector);
@@ -946,16 +946,16 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
     const idOf = season => Object.keys(seasonNumbers).find(id => seasonNumbers[id] === season);
     const empty = upstreamCards.find(card => card.mark?.kind === 'none');
     const withFiles = upstreamCards.find(card => card.season > 0 && !card.mark);
-    const modSelector = target && `.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${target.season}"]`;
+    const modSelector = target && `.page:not(.hide) [data-ds-source-classes~=jfmod-missingCard][data-jfmod-season="${target.season}"]`;
     if (layout === 'desktop') {
         if (empty) {
             // Upstream writes the id dashed or plain: the card is found by its normalised id and tagged for the selectors below.
             await page.evaluate(([id, mark]) => {
-                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                const card = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')]
                     .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
                 card?.setAttribute('data-jfmod-test', mark);
             }, [idOf(empty.season), 'empty']);
-            const sel = '.page:not(.hide) .card[data-jfmod-test="empty"]';
+            const sel = '.page:not(.hide) .cell[data-jfmod-test="empty"]';
             const hover = await hoverCard(page, sel, canDownload);
             record(label, `upstream Season ${empty.season} card (no episode on disk): ${canDownload ? 'hovering shows Get a Release in the centre where Play was (cloud_download), no second cloud in the bottom row' : 'hovering shows neither Play nor Get a Release'}, no Play`,
                 !!hover && !hover.play && hover.centre === canDownload && !hover.bottom && (!canDownload || (hover.centred && hover.icon && hover.title === 'Get a Release')), hover);
@@ -965,26 +965,26 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
                 record(label, `upstream Season ${empty.season} card: Tab reaches the centre Get a Release and never a Play`, trail.includes('centreGet') && !trail.includes('play'), trail);
                 await hoverCard(page, sel, true);
                 await pickerFrom(page, label, `upstream Season ${empty.season} card's centre Get a Release`,
-                    page.locator(`${sel} .cardOverlayContainer > .jfmod-cardGet`), false, [`Season ${empty.season}`, 'All Seasons']);
+                    page.locator(`${sel} .disc[data-ds-primary-action=get]`), false, [`Season ${empty.season}`, 'All Seasons']);
             }
-            await checkInert(page, label, `upstream Season ${empty.season} card's Not Downloaded`, page.locator(`${sel} .jfmod-mark--none`));
-            await page.evaluate(() => document.querySelector('.card[data-jfmod-test]')?.removeAttribute('data-jfmod-test'));
+            await checkInert(page, label, `upstream Season ${empty.season} card's Not Downloaded`, page.locator(`${sel} [data-ds-state-kind=not-downloaded]`));
+            await page.evaluate(() => document.querySelector('.cell[data-jfmod-test]')?.removeAttribute('data-jfmod-test'));
         } else {
             record(label, 'an upstream season card with nothing on disk', 'NOT VERIFIED', 'no native season without a file on this entry');
         }
         if (withFiles) {
             await page.evaluate(id => {
-                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                const card = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')]
                     .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
                 card?.setAttribute('data-jfmod-test', 'files');
             }, idOf(withFiles.season));
-            const sel = '.page:not(.hide) .card[data-jfmod-test="files"]';
+            const sel = '.page:not(.hide) .cell[data-jfmod-test="files"]';
             const hover = await hoverCard(page, sel, false);
             // An administrator's bottom-row icon shows once its card's answer arrives (asked on the first hover).
             record(label, `upstream Season ${withFiles.season} card (files): upstream's Play kept in the centre${canDownload ? ', Get a Release in the bottom row, not the centre' : ''}`,
                 !!hover && hover.play && !hover.centre && hover.bottom === canDownload, hover);
             await page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/mse-${tier}-${label.split(',')[0]}-${admin ? 'admin' : 'user'}-files-season-hover.png` }).catch(() => {});
-            await page.evaluate(() => document.querySelector('.card[data-jfmod-test]')?.removeAttribute('data-jfmod-test'));
+            await page.evaluate(() => document.querySelector('.cell[data-jfmod-test]')?.removeAttribute('data-jfmod-test'));
         } else {
             record(label, 'an upstream season card with files keeps Play', 'NOT VERIFIED', 'no native season with a file on disk');
         }
@@ -993,18 +993,18 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
             record(label, `missing Season ${target.season} card: ${canDownload ? 'hovering shows Get a Release in the centre' : 'hovering shows no Get a Release'}, no Play`,
                 !!hover && !hover.play && hover.centre === canDownload && (!canDownload || (hover.centred && hover.icon && hover.title === 'Get a Release')), hover);
             if (canDownload && hover?.centre) {
-                await pickerFrom(page, label, `missing Season ${target.season} card's centre Get a Release`, page.locator(`${modSelector} .jfmod-cardGetCentre`), false,
+                await pickerFrom(page, label, `missing Season ${target.season} card's centre Get a Release`, page.locator(`${modSelector} .disc[data-ds-primary-action=get]`), false,
                     [`Season ${target.season}`, 'All Seasons']);
             }
-            if (target.mark?.kind === 'none') await checkInert(page, label, `missing Season ${target.season} card's Not Downloaded`, page.locator(`${modSelector} .jfmod-mark--none`));
+            if (target.mark?.kind === 'none') await checkInert(page, label, `missing Season ${target.season} card's Not Downloaded`, page.locator(`${modSelector} [data-ds-state-kind=not-downloaded]`));
         }
     } else {
         // The phone and the TV have no hover overlay: no centre icon, and no Play on a card with nothing on disk.
-        const facts = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')].map(card => ({
+        const facts = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')].map(card => ({
             nofile: card.hasAttribute('data-jfmod-nofile'),
-            play: [...card.querySelectorAll('.cardOverlayButton[data-action="play"], .cardOverlayButton[data-action="resume"]')]
+            play: [...card.querySelectorAll('.disc[data-ds-primary-action=play]')]
                 .some(el => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0),
-            centre: !!card.querySelector('.jfmod-cardGetCentre, .cardOverlayContainer > .jfmod-cardGet'),
+            centre: !!card.querySelector('.disc[data-ds-primary-action=get], .disc[data-ds-primary-action=get]'),
             stops: [...card.querySelectorAll('button, a, [tabindex]')].filter(el => el.tabIndex >= 0 && el.getBoundingClientRect().width > 0).length
         })));
         const flagged = facts.filter(fact => fact.nofile);
@@ -1014,13 +1014,13 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
             record(label, 'TV: no season card holds a second stop (the marks are no stops)', facts.every(fact => fact.stops === 0), facts);
             if (empty) {
                 await page.evaluate(id => {
-                    const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                    const card = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')]
                         .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
                     card?.focus();
                 }, idOf(empty.season));
                 await page.keyboard.press('ArrowUp');
                 await page.waitForTimeout(300);
-                const where = await page.evaluate(() => (document.activeElement?.closest('.jfmod-mark') ? 'mark' : document.activeElement?.className?.slice(0, 60) ?? 'none'));
+                const where = await page.evaluate(() => (document.activeElement?.closest('[data-ds-state-kind]') ? 'mark' : document.activeElement?.className?.slice(0, 60) ?? 'none'));
                 record(label, `TV: Up on upstream Season ${empty.season}'s card reaches no mark`, where !== 'mark', where);
                 await page.screenshot({ path: `${process.env.JELLYFINMOD_SHOTS ?? '.'}/mse-${tier}-tv-${admin ? 'admin' : 'user'}-season-focus.png` }).catch(() => {});
             }
@@ -1031,54 +1031,54 @@ async function checkCardHovers(page, label, { layout, tv, admin, canDownload, up
 /** What the download block of a missing episode's page shows (P1.FU20), and what is on the still and the old detail line. */
 const blockView = page => page.evaluate(() => {
     const view = document.querySelector('.page:not(.hide)');
-    const block = view?.querySelector('.jfmod-dlblockSlot .jfmod-dlblock');
-    const stills = [...(view?.querySelectorAll('.jfmod-episodeStill') ?? [])];
+    const block = view?.querySelector('.jfmod-dlblockSlot .dlb');
+    const stills = [...(view?.querySelectorAll('.jfmod-dsTitleHost .poster') ?? [])];
     const common = {
-        stillMarks: stills.reduce((count, still) => count + still.querySelectorAll('.jfmod-mark, .jfmod-dlmark').length, 0),
-        statusLine: !!view?.querySelector('.jfmod-queueStatusLine')
+        stillMarks: stills.reduce((count, still) => count + still.querySelectorAll('[data-ds-state-kind], .dm').length, 0),
+        statusLine: !!view?.querySelector('[data-jfmod-queue-status]')
     };
     if (!block) return { ...common, block: false };
-    const ring = block.querySelector('.jfmod-dlblock-ring > *');
-    const figure = block.querySelector('.jfmod-dlblock-figure');
-    const fill = block.querySelector('.jfmod-dlblock-barFill');
+    const ring = block.querySelector('.dm.page');
+    const figure = block.querySelector('.ln1 > b:only-child, .ln1 .q, .ln1 .figs.fail');
+    const fill = block.querySelector('.br i');
     const shown = node => !!node && node.getBoundingClientRect().width > 0;
     let ringKind = ring?.getAttribute('data-jfmod-kind') ?? null;
-    if (!ringKind && ring?.classList.contains('jfmod-dlblock-none')) ringKind = 'none';
-    if (!ringKind && ring?.classList.contains('jfmod-dlblock-unaired')) ringKind = 'unaired';
+    if (ringKind === 'not-downloaded') ringKind = 'none';
     const font = ring ? parseFloat(getComputedStyle(ring).fontSize) : 0;
     return {
         ...common,
         block: true,
         state: block.getAttribute('data-jfmod-state'),
         ringKind,
-        number: ring?.querySelector('.jfmod-dlmark-numValue')?.textContent ?? null,
-        glyph: !!ring?.querySelector('.jfmod-dlmark-glyph, .jfmod-markGlyph'),
+        number: ring?.querySelector('.pct')?.firstChild?.textContent ?? null,
+        glyph: !!ring?.querySelector('.glyph'),
         ringEm: ring && font ? Math.round(ring.getBoundingClientRect().width / font * 100) / 100 : null,
-        word: block.querySelector('.jfmod-dlblock-word')?.textContent ?? null,
+        word: block.querySelector('.ln1 b')?.textContent ?? null,
+        ariaState: block.querySelector('.ln1 b')?.getAttribute('aria-label') ?? null,
         figure: figure?.textContent ?? null,
         // P4.FU15 (treatment B): the whole state line at 600 in Inter, waiting states at 75 %; downloading's word is visually hidden.
-        stateLine: (node => node ? { weight: getComputedStyle(node).fontWeight, opacity: getComputedStyle(node).opacity, colour: getComputedStyle(node).color,
-            family: getComputedStyle(node).fontFamily, wordVisible: shown(block.querySelector('.jfmod-dlblock-word')) && block.querySelector('.jfmod-dlblock-word').getBoundingClientRect().width > 2 } : null)(block.querySelector('.jfmod-dlblock-state')),
+        stateLine: (node => node ? { weight: getComputedStyle(node.querySelector('b')).fontWeight, opacity: figure ? getComputedStyle(figure).opacity : null, colour: getComputedStyle(node).color,
+            family: getComputedStyle(node).fontFamily, wordVisible: /Downloading/.test(node.textContent) } : null)(block.querySelector('.ln1')),
         // P4.FU8: the ring (its glyph, number and arc), the figure, the bar and the not-finished dots are the block's own text colour.
         colours: { block: getComputedStyle(block).color, ring: ring ? getComputedStyle(ring).color : null,
-            arc: ring?.querySelector('.jfmod-dlmark-fill') ? getComputedStyle(ring.querySelector('.jfmod-dlmark-fill')).stroke : null,
+            arc: ring?.querySelector('.arc .val, .arc .turn') ? getComputedStyle(ring.querySelector('.arc .val, .arc .turn')).stroke : null,
             figure: figure ? getComputedStyle(figure).color : null, bar: fill ? getComputedStyle(fill).backgroundColor : null },
-        tone: [...(figure?.classList ?? [])].find(name => name.startsWith('jfmod-dlblock-figure--'))?.slice(22) ?? null,
-        release: block.querySelector('.jfmod-dlblock-release')?.textContent ?? null,
-        marks: [...(block.querySelector('.jfmod-dlblock-marks')?.children ?? [])].map(node => node.textContent.trim()).filter(Boolean).join(' ') || null,
-        mediaMarks: [...block.querySelectorAll('.jfmod-dlblock-marks .jfmod-releaseMark')].map(mark => mark.getAttribute('aria-label') || mark.textContent.trim()),
-        client: block.querySelector('.jfmod-dlblock-client')?.getAttribute('href') ?? null,
-        clientLabel: block.querySelector('.jfmod-dlblock-client')?.getAttribute('aria-label') ?? null,
-        pack: block.querySelector('.jfmod-dlblock-pack > span')?.textContent ?? null,
-        dots: [...block.querySelectorAll('.jfmod-dlblock-dot')].map(dot => dot.getAttribute('data-jfmod-dot')
-            + (dot.classList.contains('jfmod-dlblock-dot--current') ? '*' : '')),
-        bar: fill ? { width: fill.style.width, kind: [...fill.classList].find(name => name.startsWith('jfmod-dlblock-barFill--'))?.slice(23) ?? null,
+        tone: figure ? (figure.classList.contains('fail') ? 'error' : 'plain') : null,
+        release: block.querySelector('.rls')?.textContent ?? null,
+        marks: [...(block.querySelector('.mline')?.children ?? [])].map(node => node.textContent.trim()).filter(Boolean).join(' ') || null,
+        mediaMarks: [...block.querySelectorAll('.mline .mk')].map(mark => mark.getAttribute('aria-label') || mark.textContent.trim()),
+        client: block.querySelector('.mline a.rb')?.getAttribute('href') ?? null,
+        clientLabel: block.querySelector('.mline a.rb')?.getAttribute('aria-label') ?? null,
+        pack: block.querySelector('.pack > span')?.textContent ?? null,
+        dots: [...block.querySelectorAll('.pack i')].map(dot => dot.getAttribute('data-jfmod-dot')
+            + (dot.hasAttribute('data-jfmod-current') ? '*' : '')),
+        bar: fill ? { width: fill.style.width, kind: block.dataset.jfmodState,
             animation: getComputedStyle(fill).animationName, height: Math.round(fill.parentElement.getBoundingClientRect().height / font * 100) / 100 } : null,
-        arcAnimation: ring?.querySelector('.jfmod-dlmark-arc') ? getComputedStyle(ring.querySelector('.jfmod-dlmark-arc')).animationName : null,
-        actions: [...block.querySelectorAll('.jfmod-dlblock-actions > *')].filter(shown).map(node => node.textContent.trim()),
+        arcAnimation: ring?.querySelector('.turn') ? getComputedStyle(ring.querySelector('.turn')).animationName : null,
+        actions: [...block.querySelectorAll('.act > *')].filter(shown).map(node => node.textContent.trim()),
         // Everything in the block a keyboard or the D-pad can stop on.
         stops: [...block.querySelectorAll('a[href], button, [tabindex]')].filter(shown).map(node => node.textContent.trim() || node.getAttribute('aria-label')),
-        beforeTracks: block.parentElement.nextElementSibling?.classList.contains('trackSelections') ?? false,
+        beforeTracks: !!block.closest('[data-ds-slot=download]') && !view.querySelector('.jfmod-dsTitleHost .gpk'),
         panel: getComputedStyle(block).backgroundColor
     };
 });
@@ -1154,7 +1154,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         entryPatch = patch;
         await go(page, '#/home');
         await go(page, hash);
-        const ok = await page.waitForSelector(`.page:not(.hide) .jfmod-dlblock[data-jfmod-state="${state}"]`, { timeout: 20000 }).then(() => true, () => false);
+        const ok = await page.waitForSelector(`.page:not(.hide) .dlb[data-jfmod-state="${state}"]`, { timeout: 20000 }).then(() => true, () => false);
         await page.waitForTimeout(700);
         return ok;
     };
@@ -1178,8 +1178,8 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         const strip = season.map(item => dotOf(item) + (item.id === episode.id ? '*' : ''));
         record(label, 'download block, downloading: in the track selectors\' place, the 4em ring (3.2em on the phone) with "42" inside and no glyph',
             ok && shown.beforeTracks && shown.ringKind === 'downloading' && shown.number === '42' && !shown.glyph && Math.abs(shown.ringEm - (layout === 'mobile' ? 3.2 : 4)) < 0.05, shown);
-        record(label, `download block, downloading: "42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" alone (no "Downloading" word on screen, kept hidden for assistive technology) in the page's text colour at 600, no amber`,
-            shown.word === 'Downloading' && shown.stateLine?.wordVisible === false && shown.stateLine.weight === '600' && /inter/i.test(shown.stateLine.family)
+        record(label, `download block, downloading: "42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB" alone (no "Downloading" word on screen, included in its accessible label) in the page's text colour at 600, no amber`,
+            shown.ariaState === 'Downloading ' + shown.figure && shown.stateLine?.wordVisible === false && shown.stateLine.weight === '600' && /inter/i.test(shown.stateLine.family)
             && shown.stateLine.opacity === '1' && shown.figure === `42% · ${eta} min left · 3.1 MB/s · 1.9 of 4.6 GB` && shown.tone === 'plain'
             && shown.colours.figure === shown.colours.block && shown.colours.ring === shown.colours.block && shown.colours.arc === shown.colours.block
             && shown.colours.bar === shown.colours.block, { figure: shown.figure, colours: shown.colours });
@@ -1204,7 +1204,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         await shoot('downloading');
         if (tv && admin) {
             // The D-pad: from the header's Get a Release down into the block's links and buttons, then on to Cast & Crew.
-            const get = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease');
+            const get = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]');
             if (await get.count()) {
                 await get.focus();
                 const trail = [];
@@ -1213,8 +1213,8 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
                     await page.waitForTimeout(300);
                     trail.push(await page.evaluate(() => {
                         const active = document.activeElement;
-                        if (active?.closest('.jfmod-dlblock')) return active.textContent.trim();
-                        if (active?.closest('#castContent, #guestCastContent')) return 'person card';
+                        if (active?.closest('.dlb')) return active.textContent.trim();
+                        if (active?.closest('[data-ds-section=castCollapsible], [data-ds-section=guestCastCollapsible]')) return 'person card';
                         return active?.className?.toString().slice(0, 40) ?? 'none';
                     }));
                 }
@@ -1242,9 +1242,9 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         // ---- Importing: the spinner, the step, a full bar breathing, no Cancel.
         ok = await open([single({ state: 'linking', importState: 'linking', progress: 1 })], 'importing');
         shown = await blockView(page);
-        record(label, 'download block, importing: the spinner, "Importing linking into the library…", the full bar breathing, View Queue only',
+        record(label, 'download block, importing: the spinner, "Importing linking into the library…", the full still bar and turning ring, View Queue only',
             ok && shown.ringKind === 'importing' && shown.word === 'Importing' && shown.figure === 'linking into the library…'
-            && shown.bar?.width === '100%' && shown.bar.animation !== 'none' && JSON.stringify(shown.actions) === actions('View Queue'), shown);
+            && shown.bar?.width === '100%' && shown.bar.animation === 'none' && (tv || shown.arcAnimation !== 'none') && JSON.stringify(shown.actions) === actions('View Queue'), shown);
         await shoot('importing');
         if (layout === 'desktop' && admin) {
             await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -1265,7 +1265,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
             && !shown.bar && JSON.stringify(shown.actions) === (searchAgain ? actions('Search Again', 'View Queue') : actions('View Queue')), shown);
         await shoot('failed');
         if (searchAgain) {
-            await pickerFrom(page, label, 'download block Search Again', page.locator('.page:not(.hide) .jfmod-dlblock-search'), tv,
+            await pickerFrom(page, label, 'download block Search Again', page.locator('.page:not(.hide) .act .btn.destroy'), tv,
                 [`Episode: ${'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0')} · ${episode.title}`,
                     `Season ${episode.seasonNumber}`, 'All Seasons']);
         }
@@ -1279,7 +1279,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
                 shown.figure === 'no release chosen yet' && shown.actions.length === 0), shown);
         await shoot('not-downloaded');
         if (admin && canDownload) {
-            await pickerFrom(page, label, 'download block Get a Release', page.locator('.page:not(.hide) .jfmod-dlblock-get'), tv,
+            await pickerFrom(page, label, 'download block Get a Release', page.locator('.page:not(.hide) .act .btn.main'), tv,
                 [`Episode: ${'S' + String(episode.seasonNumber).padStart(2, '0') + 'E' + String(episode.episodeNumber).padStart(2, '0')} · ${episode.title}`,
                     `Season ${episode.seasonNumber}`, 'All Seasons']);
         }
@@ -1298,7 +1298,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
         if (admin) {
             const cancelled = single({});
             ok = await open([cancelled], 'downloading');
-            await press(page, page.locator('.page:not(.hide) .jfmod-dlblock-cancel'), tv);
+            await press(page, page.locator('.page:not(.hide) .act .btn:not(.main):not(.destroy)'), tv);
             const dialog = await page.waitForSelector('.dialog:not(.hide) .confirmationDialog, .dialogContainer .dialog', { timeout: 10000 }).then(() => true, () => false);
             const text = await page.evaluate(() => document.querySelector('.dialogContainer .dialog')?.textContent.replace(/\s+/g, ' ').trim() ?? null);
             record(label, 'Cancel Download asks "Remove the Torrent" and names the release', ok && dialog && text?.includes('Remove the Torrent') && text.includes(release), text);
@@ -1308,7 +1308,7 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
             const sent = removals.at(-1);
             record(label, 'Remove sends DELETE /JellyfinMod/Queue/{id} with removeFromClient and no blocklist, and the block reads Not Downloaded',
                 !!sent && sent.url.endsWith('/JellyfinMod/Queue/' + cancelled.id) && sent.body?.removeFromClient === true && sent.body?.blocklist === false
-                && await page.waitForSelector('.page:not(.hide) .jfmod-dlblock[data-jfmod-state="none"]', { timeout: 10000 }).then(() => true, () => false), sent);
+                && await page.waitForSelector('.page:not(.hide) .dlb[data-jfmod-state="none"]', { timeout: 10000 }).then(() => true, () => false), sent);
         } else {
             ok = await open([single({})], 'downloading');
             shown = await blockView(page);
@@ -1323,13 +1323,13 @@ async function checkDownloadBlock(page, label, detail, episode, hash, { admin, c
                     goalSeconds: null, waitingFor: ['ratio'], goalMetAt: null, libraryLinkPresent: true, releaseEnabled: true } })];
             entryPatch = { availability: 'onDisk', state: 'onDisk', jellyfinItemId: native.jellyfinItemId };
             const moved = await page.waitForFunction(id => location.hash.includes('id=' + id), native.jellyfinItemId, { timeout: 20000 }).then(() => true, () => false);
-            const upstream = moved && await page.waitForSelector('.page:not(.hide) .trackSelections:not(.hide)', { timeout: 20000 }).then(() => true, () => false);
+            const upstream = moved && await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .gpk', { timeout: 20000 }).then(() => true, () => false);
             await page.waitForTimeout(800);
             const after = await page.evaluate(() => {
                 const view = document.querySelector('.page:not(.hide)');
-                const play = view?.querySelector('.mainDetailButtons .btnPlay');
-                return { hash: location.hash, block: !!view?.querySelector('.jfmod-dlblock'), play: !!play && !play.classList.contains('hide'),
-                    selects: [...(view?.querySelectorAll('.trackSelections .selectContainer:not(.hide)') ?? [])].length };
+                const play = view?.querySelector('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]');
+                return { hash: location.hash, block: !!view?.querySelector('.dlb'), play: !!play && !play.classList.contains('hide'),
+                    selects: [...(view?.querySelectorAll('.jfmod-dsTitleHost .gpk .seg') ?? [])].length };
             });
             record(label, 'imported: the page becomes Jellyfin\'s own episode page, its Video / Audio / Subtitle selectors and Play in place of the block',
                 ok && moved && upstream && !after.block && after.play && after.selects > 0, after);
@@ -1387,7 +1387,7 @@ async function run(browser, layout, user, admin) {
         }, [first.entry.title, entryId]);
         if (!seriesId) throw new Error('no Jellyfin series item looks up this entry');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+        await page.waitForSelector('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell', { timeout: 30000 });
         await page.waitForTimeout(3000);
         const detail = await apiGet(page, 'JellyfinMod/Entries/' + entryId);
         const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId(), Fields: 'ChildCount' })).Items
@@ -1396,7 +1396,7 @@ async function run(browser, layout, user, admin) {
         const held = new Set(seasons.map(season => season.number));
         const missing = [...new Set(detail.episodes.map(episode => episode.seasonNumber))]
             .filter(season => season > 0 && !held.has(season)).sort((a, b) => a - b);
-        await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) .jfmod-missingCard').length >= count,
+        await page.waitForFunction(count => document.querySelectorAll('.page:not(.hide) [data-ds-source-classes~=jfmod-missingCard]').length >= count,
             missing.length, { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(1000);
         const row = await seasonRow(page, seasonNumbers);
@@ -1439,11 +1439,11 @@ async function run(browser, layout, user, admin) {
             const what = `upstream Season ${card.season} card (Jellyfin ${childCount}, list ${listed})`;
             const expectation = words ? '"' + words + '" under "Season ' + card.season + '", once' : 'no count line';
             record(label, `${what}: ${expectation}`,
-                words ? card.line2 === words && card.countLines === 1 && card.lineCount === 2 : card.countLines === 0,
+                words ? card.line2 === words && card.countLines === 1 && card.lineCount === 3 : card.countLines === 0,
                 { title: card.title, line2: card.line2, lines: card.lineCount, countLines: card.countLines });
             if (!words || !card.line2Look) continue;
             const line = card.line2Look;
-            record(label, `${what}: the line is a DIV.cardText.cardText-secondary.cardTextCentered holding a BDI, right under the title`,
+            record(label, `${what}: the line is a DIV.ln.ln.d.lnCentered holding a BDI, right under the title`,
                 line.tag === 'DIV' && line.classes === 'cardText cardText-secondary cardTextCentered' && line.child === 'BDI'
                     && Math.abs(line.top - card.titleLook.bottom) <= 2, { line, title: card.titleLook });
             if (modLook) {
@@ -1462,11 +1462,10 @@ async function run(browser, layout, user, admin) {
         if (withCount) {
             // Upstream redraws a card by replacing it with fresh HTML: the line comes back, once.
             await page.evaluate(id => {
-                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
-                    .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
-                const fresh = card?.cloneNode(true);
+                const original = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')].find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
+                const fresh = original?.cloneNode(true);
                 fresh?.querySelectorAll('.jfmod-markSlot, [data-jfmod-count]').forEach(node => { node.remove(); });
-                if (fresh) card.replaceWith(fresh);
+                if (fresh) original.replaceWith(fresh);
             }, Object.keys(seasonNumbers).find(id => seasonNumbers[id] === withCount.season));
             await page.waitForTimeout(800);
             const again = (await seasonRow(page, seasonNumbers)).find(card => !card.mod && card.season === withCount.season);
@@ -1484,12 +1483,13 @@ async function run(browser, layout, user, admin) {
         const marked = upstreamCards.find(card => card.mark);
         if (marked) {
             await page.evaluate(id => {
-                const card = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')]
+                const card = [...document.querySelectorAll('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .rowx > .cell')]
                     .find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
                 // Upstream draws a fresh card from its HTML: a copy without the mod's slot.
-                const fresh = card?.cloneNode(true);
+                const original = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .card')].find(node => (node.getAttribute('data-id') ?? '').replace(/-/g, '').toLowerCase() === id);
+                const fresh = original?.cloneNode(true);
                 fresh?.querySelectorAll('.jfmod-markSlot, [data-jfmod-count]').forEach(node => { node.remove(); });
-                if (fresh) card.replaceWith(fresh);
+                if (fresh) original.replaceWith(fresh);
             }, Object.keys(seasonNumbers).find(id => seasonNumbers[id] === marked.season));
             await page.waitForTimeout(800);
             const again = (await seasonRow(page, seasonNumbers)).find(card => !card.mod && card.season === marked.season);
@@ -1499,15 +1499,15 @@ async function run(browser, layout, user, admin) {
         for (const card of modCards) {
             const episodes = detail.episodes.filter(episode => episode.seasonNumber === card.season);
             const words = episodes.length + (episodes.length === 1 ? ' episode' : ' episodes');
-            record(label, `Season ${card.season} card: "Season ${card.season}", "${words}", a poster or the dashed placeholder, the mark top right`,
-                card.title === `Season ${card.season}` && card.line2 === words && (card.cover ? true : card.dashed === 'dashed') && !!card.mark?.topRight, card);
+            record(label, `Season ${card.season} card: "Season ${card.season}", "${words}", a poster or the ratio-box fallback icon, the mark top right`,
+                card.title === `Season ${card.season}` && card.line2 === words && (card.cover ? true : card.fallback === true) && !!card.mark?.topRight, card);
             await checkAnyMark(page, label, `Season ${card.season} card`, card.mark, expectedMark(episodes));
             const tmdbSeason = detail.entry.metadata?.seasons.find(candidate => candidate.number === card.season);
             checkCover(label, `Season ${card.season} card poster`, card, tmdbSeason?.posterPath, 'w342');
         }
         // Upstream redraws its list by replacing its children: the mod's cards come back, in place.
         if (modCards.length) {
-            await page.evaluate(() => { for (const card of document.querySelectorAll('.page:not(.hide) .jfmod-missingCard')) card.remove(); });
+            await page.evaluate(() => { for (const card of document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .itemsContainer > .jfmod-missingCard')) card.remove(); });
             await page.waitForTimeout(800);
             const again = await seasonRow(page, seasonNumbers);
             record(label, 'series page: the mod cards return in order when the list is redrawn',
@@ -1517,23 +1517,23 @@ async function run(browser, layout, user, admin) {
         await checkCardHovers(page, label, { layout, tv, admin, canDownload: canDownload && packs, upstreamCards, target, seasonNumbers });
         if (admin) await checkSeasonDownloads(page, label, detail, seriesId, seasons, layout);
         if (target) {
-            const card = page.locator(`.page:not(.hide) .jfmod-missingCard[data-jfmod-season="${target.season}"]`);
+            const card = page.locator(`.page:not(.hide) [data-ds-source-classes~=jfmod-missingCard][data-jfmod-season="${target.season}"]`);
             if (tv) await press(page, card, true);
             // Off centre: on the desktop the centre holds an administrator's Get a Release while the card is hovered (P1.FU19).
-            else await card.locator('.jfmod-missingPoster').click({ position: { x: 12, y: 12 } });
+            else await card.locator('.post').click({ position: { x: 12, y: 12 } });
             const opened = await page.waitForFunction(season => location.hash.includes('entryId=') && location.hash.includes('season=' + season),
                 target.season, { timeout: 15000 }).then(() => true, () => false);
             record(label, `Season ${target.season} card opens the mod's season page`, opened, await page.evaluate(() => location.hash));
             if (opened) {
-                await page.waitForSelector('.page:not(.hide) .jfmod-missingRow', { timeout: 20000 }).catch(() => {});
-                const heading = await page.evaluate(() => document.querySelector('.page:not(.hide) .itemMiscInfo-primary')?.textContent.trim());
+                await page.waitForSelector('.page:not(.hide) [data-ds-source-classes~=jfmod-missingRow]', { timeout: 20000 }).catch(() => {});
+                const heading = await page.evaluate(() => document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .meta')?.textContent.trim());
                 const tmdbSeason = detail.entry.metadata?.seasons.find(candidate => candidate.number === target.season);
                 const count = detail.episodes.filter(episode => episode.seasonNumber === target.season).length;
                 const expectedHeading = [`Season ${target.season}`, `${count} episode${count === 1 ? '' : 's'}`, /^\d{4}/.exec(tmdbSeason?.airDate ?? '')?.[0]]
                     .filter(Boolean).join(' · ');
                 record(label, `the mod's season page reads "${expectedHeading}"`, heading === expectedHeading, heading);
                 const overview = await page.evaluate(() => {
-                    const node = document.querySelector('.page:not(.hide) .detailSectionContent .overview');
+                    const node = document.querySelector('.page:not(.hide) .jfmod-dsTitleHost [data-ds-overview]');
                     return node && node.offsetParent !== null ? node.textContent.trim() : null;
                 });
                 if (tmdbSeason?.overview) {
@@ -1541,7 +1541,7 @@ async function run(browser, layout, user, admin) {
                 } else {
                     record(label, 'the mod\'s season page shows TMDB\'s season overview', 'NOT VERIFIED', 'the season has no overview in the entry (refresh pending, or TMDB has none)');
                 }
-                const pagePoster = await page.evaluate(() => document.querySelector('.page:not(.hide) .detailImageContainer .jfmod-entryPoster img')?.getAttribute('src') ?? null);
+                const pagePoster = await page.evaluate(() => document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .poster img')?.getAttribute('src') ?? null);
                 record(label, 'the mod\'s season page shows the season\'s poster', pagePoster === `https://image.tmdb.org/t/p/w500${tmdbSeason?.posterPath ?? detail.entry.posterPath}`, pagePoster);
                 const shown = await checkSeasonRows(page, label, detail, detail.episodes.filter(episode => episode.seasonNumber === target.season), {},
                     { admin, canDownload, layout, what: `mod Season ${target.season} page` });
@@ -1561,7 +1561,7 @@ async function run(browser, layout, user, admin) {
             const plugin = detail.episodes.filter(episode => episode.seasonNumber === season.number && !heldNumbers.has(episode.episodeNumber));
             if (!plugin.some(episode => episode.availability !== 'onDisk')) continue;
             await go(page, `#/details?id=${season.id}`);
-            await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible:not(.hide)', { timeout: 20000 }).catch(() => {});
+            await page.waitForSelector('.page:not(.hide) [data-ds-section=listChildrenCollapsible]:not(.hide)', { timeout: 20000 }).catch(() => {});
             const numbers = Object.fromEntries(native.map(item => [item.id.replace(/-/g, '').toLowerCase(), item.number]));
             const shownRows = await checkSeasonRows(page, label, detail, plugin, numbers, { admin, canDownload, layout, what: `native Season ${season.number} page` });
             const stray = await page.evaluate(() => document.querySelectorAll('.page:not(.hide) [data-jfmod-count]').length);
@@ -1571,7 +1571,7 @@ async function run(browser, layout, user, admin) {
             break;
         }
         if (!admin) {
-            const buttons = await page.evaluate(() => document.querySelectorAll('.page:not(.hide) .jfmod-markButton').length);
+            const buttons = await page.evaluate(() => document.querySelectorAll('.page:not(.hide) [data-ds-state-kind=not-downloaded][data-ds-command]').length);
             record(label, 'an ordinary user sees no Download button on this page', buttons === 0, buttons);
         }
         // A file-less movie on the search page.
@@ -1581,8 +1581,8 @@ async function run(browser, layout, user, admin) {
             const card = page.locator(`.page:not(.hide) [data-jfmod-tmdb-id="${movie.entry.tmdbId}"]`).first();
             await card.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
             const mark = await card.evaluate(node => {
-                const found = node.querySelector('.jfmod-mark');
-                return found ? { kind: found.classList.contains('jfmod-mark--none') ? 'none' : 'other', tag: found.tagName, title: found.getAttribute('title'),
+                const found = node.querySelector('[data-ds-state-kind]');
+                return found ? { kind: found.dataset.dsStateKind === 'not-downloaded' ? 'none' : found.dataset.dsStateKind, tag: found.tagName, title: found.getAttribute('title'),
                     cursor: getComputedStyle(found).cursor, tabIndex: found.tabIndex } : null;
             }).catch(() => null);
             await checkMark(page, label, `${movie.entry.title} search card`, mark);
@@ -1592,7 +1592,7 @@ async function run(browser, layout, user, admin) {
                 record(label, `${movie.entry.title} search card (no file): ${canDownload ? 'hovering shows Get a Release in the centre' : 'hovering shows no Get a Release'}, no Play`,
                     !!hover && !hover.play && hover.centre === canDownload && !hover.bottom, hover);
                 if (canDownload && hover?.centre) {
-                    await pickerOpens(page, label, `${movie.entry.title} search card's centre Get a Release`, page.locator(`${selector} .jfmod-cardGetCentre`));
+                    await pickerOpens(page, label, `${movie.entry.title} search card's centre Get a Release`, page.locator(`${selector} .disc[data-ds-primary-action=get]`));
                 }
             }
         }

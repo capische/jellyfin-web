@@ -6,7 +6,6 @@ import { useApi } from 'hooks/useApi';
 
 import { removeEntry } from '../api/modApi';
 import { invalidateCatalog } from '../integration/invalidateCatalog';
-import { raisedButtonClass } from '../utils/flatButton';
 
 interface Addition { basePath: string; userId: string; entryId: string; returnHash: string }
 let addition: Addition | undefined;
@@ -24,7 +23,7 @@ const LibraryUndo: FC<{ entryId: string; view: HTMLElement }> = ({ entryId, view
     useEffect(() => () => {
         if (eligible && addition === current) addition = undefined;
     }, [current, eligible]);
-    const slot = view.querySelector('.jfmod-titleNotice');
+    const slot = view.querySelector('[data-ds-slot="notice"]');
     if (!eligible || !slot || !api) return null;
     const undo = async () => {
         if (busy) return;
@@ -40,9 +39,9 @@ const LibraryUndo: FC<{ entryId: string; view: HTMLElement }> = ({ entryId, view
             setBusy(false);
         }
     };
-    return createPortal(<div className='jfmod-libraryUndo' role='status'>
+    return createPortal(<div className='undo2' role='status'>
         Added to Library
-        <button type='button' className={raisedButtonClass()} aria-disabled={busy} onClick={undo}>Undo</button>
+        <button type='button' className='btn focusable' aria-disabled={busy} onClick={undo}>Undo</button>
     </div>, slot);
 };
 

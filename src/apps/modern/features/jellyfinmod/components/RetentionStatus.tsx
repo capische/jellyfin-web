@@ -9,9 +9,7 @@ import type { RetentionSummary } from '../types/entry';
  */
 const RetentionStatus: FC<{ retention?: RetentionSummary | null; compact?: boolean }> = ({ retention, compact = false }) => {
     if (retention?.reason !== 'kept' && (!retention?.enabled || retention.state === 'disabled')) return null;
-    return <p className={compact ? 'jfmod-retentionStatus jfmod-retentionStatus--compact' : 'jfmod-retentionStatus'}>
-        {retentionMessage(retention)}
-    </p>;
+    return compact ? <span data-jfmod-retention-status=''>{retentionMessage(retention)}</span> : <div className='tags' data-jfmod-retention-status=''>{retentionMessage(retention)}</div>;
 };
 
 export default RetentionStatus;

@@ -242,25 +242,25 @@ const pageText = page => page.evaluate(sel => document.querySelector(sel)?.inner
 async function checkHeaderIcon(page, layout, label, admin) {
     await unfocus(page);
     const facts = await page.evaluate(sel => {
-        const row = document.querySelector(`${sel} .mainDetailButtons`);
-        const icon = row?.querySelector(':scope > .jfmod-getRelease');
+        const row = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar`);
+        const icon = row?.querySelector(':scope > [data-ds-command~=jfmod-getRelease]');
         if (!icon) return { present: false };
         const next = icon.nextElementSibling;
         const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
-        const visibleStock = [...row.querySelectorAll(':scope > .detailButton:not(.hide):not(.btnPlay):not(.jfmod-getRelease):not(.jfmod-entryMore)')]
+        const visibleStock = [...row.querySelectorAll(':scope > .dbtn:not([data-ds-command~=btnPlay]):not([data-ds-command~=jfmod-getRelease]):not([data-ds-command~=jfmod-entryMore])')]
             .filter(el => el.getBoundingClientRect().width > 0);
         const pad = el => getComputedStyle(el).padding;
-        return { present: true, beforeFavorite: !!next && (next.classList.contains('btnUserRating') || next.classList.contains('jfmod-entryMore')),
-            labelled: !!icon.closest('.jfmod-titleMissing, [data-jfmod-placeholder]'), classes: icon.className, title: icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
-            stockPadding: visibleStock.map(pad), icon: icon.querySelector('.detailButton-icon')?.className ?? '' };
+        return { present: true, beforeFavorite: !!next && (next.matches('[data-ds-command~=btnUserRating], [data-ds-command~=jfmod-entryMore]')),
+            labelled: false, classes: icon.className, title: icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
+            stockPadding: visibleStock.map(pad), icon: icon.querySelector('[data-ds-icon]')?.getAttribute('data-ds-icon') ?? '' };
     }, PAGE);
     if (!admin) { record(layout, `${label}: no Get a release icon for an ordinary user`, !facts.present); return; }
     record(layout, `${label}: Get a release icon in the header row`, facts.present, JSON.stringify(facts));
     if (!facts.present) return;
     record(layout, `${label}: icon sits before Favorite`, facts.beforeFavorite);
-    record(layout, `${label}: icon is a stock detailButton with cloud_download, titled "Get a Release"`,
-        /\bbutton-flat\b/.test(facts.classes) && /\bdetailButton\b/.test(facts.classes) && /cloud_download/.test(facts.icon)
-        && facts.title === 'Get a Release' && (!isTv(layout) || /show-focus/.test(facts.classes)), facts.classes);
+    record(layout, `${label}: icon is a native dbtn with the mockup cloud SVG, titled "Get a Release"`,
+        /\bdbtn\b/.test(facts.classes) && /\bfocusable\b/.test(facts.classes) && facts.icon === 'cloud'
+        && facts.title === 'Get a Release' && (!isTv(layout) || /focusable/.test(facts.classes)), facts.classes);
     const sameSize = facts.stock.length === 0 || facts.stock.every(([w, h]) => (facts.labelled ? facts.size[0] > w : Math.abs(w - facts.size[0]) <= 1) && Math.abs(h - facts.size[1]) <= 1);
     record(layout, `${label}: ${facts.labelled ? 'labelled action shares its neighbours height and grows for its label' : 'icon is exactly as big as its stock neighbours'}`, sameSize, `${facts.size} vs ${JSON.stringify(facts.stock)}`);
 }
@@ -351,13 +351,13 @@ async function settled(page, selector) {
 
 /** Opens the Video row's list of files (the chooser is a dropdown also with one file, user 2026-10-08). */
 async function openFileList(page, layout) {
-    if (await page.locator(`${PAGE} .jfmod-fileList--open`).count()) return true;
-    if (!await activate(page, layout, '.jfmod-videoTrigger', 'Video dropdown')) return false;
-    return page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
+    if (await page.locator(`${PAGE} .gpk .vlist`).count()) return true;
+    if (!await activate(page, layout, '.gpk .seg.v', 'Video dropdown')) return false;
+    return page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
 }
 
 async function checkOneFile(page, layout, admin) {
-    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
+    await openDetail(page, `id=${ids.one}`, `${PAGE} .gpk .seg.v`);
     // Colours are read at rest: no pointer over the row (stock icon buttons turn primary on hover).
     await page.mouse.move(0, 0);
     await checkHeaderIcon(page, layout, 'one-file episode', admin);
@@ -365,32 +365,32 @@ async function checkOneFile(page, layout, admin) {
     // User, 2026-10-08: the Video row keeps upstream's track-row height and its label stays level with the value.
     const row = await page.evaluate(sel => {
         const box = el => el?.getBoundingClientRect();
-        const video = document.querySelector(`${sel} .selectVideoContainer`);
-        const audio = document.querySelector(`${sel} .selectAudioContainer`);
-        const label = box(video?.querySelector('label, .selectLabel'));
-        const trigger = box(document.querySelector(`${sel} .jfmod-videoTrigger`));
+        const video = document.querySelector(`${sel} .seg.v`);
+        const audio = document.querySelector(`${sel} .seg.a`);
+        const label = box(video?.querySelector('.cap'));
+        const trigger = box(video?.querySelector('.val'));
         return { video: Math.round(box(video)?.height ?? 0), audio: Math.round(box(audio)?.height ?? 0),
-            labelTop: Math.round(label?.top ?? -1), valueTop: Math.round(trigger?.top ?? -2) };
+            labelBottom: Math.round(label?.bottom ?? -1), valueTop: Math.round(trigger?.top ?? -2) };
     }, PAGE);
-    record(layout, 'one-file episode: the Video value is a dropdown, the row as tall as Audio, its label level',
-        row.video > 0 && Math.abs(row.video - row.audio) <= 1 && Math.abs(row.labelTop - row.valueTop) <= 1, JSON.stringify(row));
+    record(layout, 'one-file episode: the Video value is a dropdown, the row as tall as Audio, its caption above the value',
+        row.video > 0 && Math.abs(row.video - row.audio) <= 1 && row.labelBottom > 0 && row.labelBottom <= row.valueTop + 1, JSON.stringify(row));
     if (!await openFileList(page, layout)) { record(layout, 'one-file episode: the dropdown opens its one file', false); return; }
     await page.mouse.move(0, 0);
     await page.waitForTimeout(300);
     const icons = await page.evaluate(sel => {
-        const rows = document.querySelectorAll(`${sel} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--add)`);
-        const host = rows[0]?.querySelector('.jfmod-fileIcons');
+        const rows = document.querySelectorAll(`${sel} .vlist .vrow[data-jfmod-media-source-id]`);
+        const host = rows[0]?.querySelector('.icons');
         if (!host) return null;
-        const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const root = parseFloat(getComputedStyle(host.closest('.jfds')).fontSize);
         const buttons = [...host.querySelectorAll('button')];
         const shape = buttons.map(button => {
-            const glyph = button.querySelector('.material-icons');
+            const glyph = button.querySelector('[data-ds-icon]');
             const hit = getComputedStyle(button, '::before');
             return { w: Math.round(button.getBoundingClientRect().width), h: Math.round(button.getBoundingClientRect().height),
-                hitW: parseFloat(hit.width) || 0, hitH: parseFloat(hit.height) || 0, min: Math.floor(2.5 * root) - 1,
+                hitW: button.getBoundingClientRect().width, hitH: button.getBoundingClientRect().height, min: Math.floor(2.5 * root) - 1,
                 round: getComputedStyle(button).borderRadius === '50%', color: getComputedStyle(button).color, opacity: getComputedStyle(button).opacity,
                 label: button.getAttribute('aria-label'), title: button.title, pressed: button.getAttribute('aria-pressed'),
-                icon: glyph?.className.replace('material-icons', '').trim(), tilt: glyph ? getComputedStyle(glyph).transform : 'none',
+                icon: ({pin:'push_pin',x:'close'})[glyph?.getAttribute('data-ds-icon')] ?? glyph?.getAttribute('data-ds-icon'), tilt: glyph ? getComputedStyle(glyph).transform : 'none',
                 background: getComputedStyle(button).backgroundColor };
         });
         return { rows: rows.length, add: !!document.querySelector(`${sel} [data-jfmod-add-version]`), names: shape.map(button => button.icon), shape };
@@ -418,12 +418,12 @@ async function checkOneFile(page, layout, admin) {
         if (pin) {
             // The pin looks pinned: tilted while loose, upright on the primary tint while kept.
             const pinned = pin.pressed === 'true';
-            record(layout, 'one-file episode: the pin is tilted when loose and upright on a tint when kept',
-                pinned ? pin.tilt === 'none' && pin.background !== 'rgba(0, 0, 0, 0)' : pin.tilt !== 'none',
+            record(layout, 'one-file episode: the native pin stays tilted and turns primary when kept',
+                pin.tilt !== 'none' && (!pinned || pin.color === ROW_PRIMARY),
                 `${pin.pressed} ${pin.tilt} ${pin.background}`);
         }
     }
-    await checkHistoryPopover(page, layout, '.jfmod-fileList [data-jfmod-file-history]');
+    await checkHistoryPopover(page, layout, '.vlist [data-jfmod-file-history]');
     if (admin) await checkMoreMenuItem(page, layout, true);
     else await checkMoreMenuItem(page, layout, false);
 }
@@ -434,11 +434,11 @@ async function checkHistoryPopover(page, layout, selector) {
     if (!await page.locator(`${PAGE} ${opener}`).count()) { notVerified(layout, 'history popover', 'no history icon (plugin without history.files?)'); return; }
     const bindingId = await page.locator(`${PAGE} ${opener}`).first().getAttribute('data-jfmod-file-history');
     if (!await activate(page, layout, opener, 'history icon')) return;
-    const popover = page.locator('.jfmod-fileHistory');
+    const popover = page.locator('.historyportal');
     const opened = await popover.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, 'history popover opens', opened);
     if (!opened) return;
-    const shown = await popover.first().evaluate(node => ({ title: node.querySelector('.jfmod-fileHistoryTitle')?.textContent ?? '',
+    const shown = await popover.first().evaluate(node => ({ title: node.querySelector('.hh')?.textContent ?? '',
         lines: [...node.querySelectorAll('li')].map(li => li.textContent) }));
     // The plugin's own list for this file, from the entry detail API.
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
@@ -451,7 +451,7 @@ async function checkHistoryPopover(page, layout, selector) {
     const expected = [...own].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
         .map(event => `${Date.parse(event.createdAt)} ${WORDS[event.eventType] ?? event.eventType}`);
     const actions = await popover.first().evaluate(node => [...node.querySelectorAll('li')].map(li =>
-        `${Date.parse(li.querySelector('time')?.getAttribute('datetime') ?? '')} ${li.querySelector('.jfmod-fileHistoryAction')?.textContent ?? ''}`));
+        `${Date.parse(li.querySelector('time')?.getAttribute('datetime') ?? '')} ${li.querySelector('[data-ds-history-action]')?.textContent ?? ''}`));
     if (own.length === 0) { notVerified(layout, 'history popover lists exactly that file\'s events, newest first', 'this file has no events yet'); } else {
         record(layout, 'history popover lists exactly that file\'s events, newest first', JSON.stringify(actions) === JSON.stringify(expected),
             `shown ${actions.join(', ')} / plugin ${expected.join(', ')} :: ${shown.lines.join(' | ')}`);
@@ -465,7 +465,7 @@ async function checkHistoryPopover(page, layout, selector) {
 
 /** "Remove after watching…" in the stock More menu: an admin's item opens the window dialog; a user's menu has no extra item. */
 async function checkMoreMenuItem(page, layout, admin, change = false, why = admin ? 'to an admin' : 'to an ordinary user') {
-    const more = `${PAGE} .btnMoreCommands:not(.hide)`;
+    const more = `${PAGE} [data-ds-command~=btnMoreCommands]:not(.hide)`;
     if (!await page.locator(more).count()) { notVerified(layout, 'More menu item', 'no stock More button on this page'); return; }
     await page.locator(more).first().click({ timeout: 5000 });
     const sheet = page.locator(':is(.actionSheet, [data-ds-actionsheet])');
@@ -511,11 +511,11 @@ async function changeWindow(page, layout) {
 
 /** Two files: the stock Version select hidden, the chooser drives `.selectSource`, Play uses that copy. */
 async function checkTwoFiles(page, layout, admin) {
-    await openDetail(page, `id=${ids.two}`, `${PAGE} .jfmod-videoTrigger`);
+    await openDetail(page, `id=${ids.two}`, `${PAGE} .gpk .seg.v`);
     const facts = await page.evaluate(sel => {
         const source = document.querySelector(`${sel} .selectSourceContainer`);
         return { sourceHidden: !!source && getComputedStyle(source).display === 'none', sourceInDom: !!source?.querySelector('select.selectSource'),
-            trigger: document.querySelector(`${sel} .jfmod-videoTrigger`)?.textContent ?? null,
+            trigger: document.querySelector(`${sel} .gpk .seg.v`)?.textContent ?? null,
             options: [...document.querySelector(`${sel} .selectSource`)?.options ?? []].map(option => option.value) };
     }, PAGE);
     record(layout, 'two files: stock Version select hidden but still in the page', facts.sourceHidden && facts.sourceInDom, JSON.stringify(facts));
@@ -524,13 +524,13 @@ async function checkTwoFiles(page, layout, admin) {
     const audio = () => page.evaluate(sel => document.querySelector(`${sel} .selectAudio`)?.innerHTML ?? '', PAGE);
     const before = await value();
     const audioBefore = await audio();
-    if (!await activate(page, layout, '.jfmod-videoTrigger', 'chooser trigger')) return;
-    const rows = page.locator(`${PAGE} .jfmod-fileRow:not(.jfmod-fileRow--add)`);
+    if (!await activate(page, layout, '.gpk .seg.v', 'chooser trigger')) return;
+    const rows = page.locator(`${PAGE} .vrow[data-jfmod-media-source-id]`);
     await rows.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     record(layout, 'chooser opens with one row per file', await rows.count() === facts.options.length, `${await rows.count()} rows`);
     record(layout, 'no Get another quality row', await page.locator(`${PAGE} [data-jfmod-add-version]`).count() === 0);
     const other = facts.options.find(option => option !== before);
-    const target = `.jfmod-fileChoose[data-jfmod-media-source-id="${other}"]`;
+    const target = `.vrow[data-jfmod-media-source-id][data-jfmod-media-source-id="${other}"]`;
     if (!other || !await activate(page, layout, target, 'the other file\'s row')) return;
     await page.waitForTimeout(1200);
     const after = await value();
@@ -541,7 +541,7 @@ async function checkTwoFiles(page, layout, admin) {
     else record(layout, 'audio select follows the chosen file', true, 'upstream re-rendered the audio tracks for that file');
     // Play sends that copy's MediaSourceId.
     const request = page.waitForRequest(req => /PlaybackInfo/.test(req.url()) && req.method() === 'POST', { timeout: 15000 }).catch(() => null);
-    await page.locator(`${PAGE} .btnPlay:not(.hide)`).first().click({ timeout: 5000 }).catch(() => {});
+    await page.locator(`${PAGE} [data-ds-command~=btnPlay]`).first().click({ timeout: 5000 }).catch(() => {});
     const sent = await request;
     const body = sent ? `${sent.url()} ${sent.postData() ?? ''}` : '';
     record(layout, 'Play uses the chosen MediaSourceId', !!sent && norm(body).includes(norm(other)), sent ? 'PlaybackInfo sent' : 'no PlaybackInfo');
@@ -552,15 +552,15 @@ async function checkTwoFiles(page, layout, admin) {
     await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
     await page.waitForTimeout(2500);
     if (admin && layout === 'desktop') {
-        await openDetail(page, `id=${ids.two}`, `${PAGE} .jfmod-getRelease`);
-        await checkPickerOpens(page, layout, '.jfmod-getRelease', 'the cloud icon on a title with files');
+        await openDetail(page, `id=${ids.two}`, `${PAGE} [data-ds-command~=jfmod-getRelease]`);
+        await checkPickerOpens(page, layout, '[data-ds-command~=jfmod-getRelease]', 'the cloud icon on a title with files');
     }
 }
 
 /** The device's copy (V1 decision 4) is still chosen through the chooser's select on TV and mobile. */
 async function checkDevicePreference(page, layout) {
     if (layoutOf(layout) === 'desktop') return;
-    await openDetail(page, `id=${ids.two}`, `${PAGE} .jfmod-videoTrigger`);
+    await openDetail(page, `id=${ids.two}`, `${PAGE} .gpk .seg.v`);
     const detail = await page.evaluate(sel => document.querySelector(`${sel} .selectSource`)?.value ?? null, PAGE);
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const entry = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
@@ -581,7 +581,7 @@ async function checkDevicePreference(page, layout) {
  * whatever default Jellyfin gave it (decision 5), so only that is checked there.
  */
 async function checkDefaultVersion(page, layout, itemId, postFix) {
-    await openDetail(page, `id=${itemId}`, `${PAGE} .jfmod-videoTrigger`);
+    await openDetail(page, `id=${itemId}`, `${PAGE} .gpk .seg.v`);
     const selected = await page.evaluate(sel => document.querySelector(`${sel} .selectSource`)?.value ?? null, PAGE);
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
     const entry = await apiGet(page, `JellyfinMod/Entries/${entryId}`);
@@ -651,11 +651,11 @@ const plainWord = text => (text ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').
 /** Installs `window.jfmodTrack(el)`: what one field or list entry draws. */
 const installTrackReader = page => page.evaluate(() => {
     window.jfmodTrack = el => ({
-        language: el.querySelector('.jfmod-trackLanguage')?.textContent.trim() ?? null,
-        labels: [...el.querySelectorAll('.jfmod-releaseTag[aria-label]')].map(node => node.getAttribute('aria-label')).filter(label => label !== 'Dolby Vision'),
-        channels: el.querySelector('.jfmod-releaseMark--channels')?.textContent.trim() ?? null,
-        words: [...el.querySelectorAll('.jfmod-fileMarks > .jfmod-releaseMark')].map(node => node.textContent.trim()),
-        flags: [...el.querySelectorAll('.jfmod-fileExtra')].map(node => node.textContent.replace(/^·\s*/, '').trim())
+        language: el.querySelector('.language')?.textContent.trim() ?? null,
+        labels: [...el.querySelectorAll('.mk[aria-label]')].map(node => node.getAttribute('aria-label')).filter(label => label !== 'Dolby Vision'),
+        channels: el.querySelector('.chs, .mk.ch')?.textContent.trim() ?? null,
+        words: [...el.querySelectorAll('.marks > .mk')].map(node => node.textContent.trim()),
+        flags: [...el.querySelectorAll('.trackextra')].map(node => node.textContent.replace(/^·\s*/, '').trim())
     });
 });
 
@@ -683,22 +683,22 @@ function trackDifferences(drawn, stream, optionText) {
 const trackField = (page, name) => page.evaluate(([sel, fieldName]) => {
     const el = document.querySelector(`${sel} [data-jfmod-track-field="${fieldName}"]`);
     if (!el) return null;
-    const select = el.closest('.selectContainer')?.querySelector('select');
-    const video = document.querySelector(`${sel} .selectVideoContainer .jfmod-videoTrigger`);
+    const select = document.querySelector(`${sel} ${fieldName === 'Audio' ? '.selectAudio' : '.selectSubtitles'}`);
+    const video = document.querySelector(`${sel} .gpk .seg.v`);
     // Whether the field takes the focus; the focus then goes back where it was.
     const previous = document.activeElement;
     el.focus?.();
     const focusable = document.activeElement === el;
     if (previous instanceof HTMLElement && previous !== document.body) previous.focus();
     else el.blur?.();
-    return { tag: el.tagName, chevron: !!el.querySelector('.jfmod-videoChevron'), focusable, title: el.title,
+    return { tag: el.tagName, chevron: !!el.querySelector('.chev'), focusable, title: el.title,
         height: Math.round(el.getBoundingClientRect().height), videoHeight: Math.round(video?.getBoundingClientRect().height ?? 0),
-        selectInDom: !!select, selectHidden: !!select && getComputedStyle(select).display === 'none', value: select?.value ?? null,
+        selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.value ?? null,
         options: [...select?.options ?? []].map(option => ({ value: option.value, text: option.textContent })), drawn: window.jfmodTrack(el),
         background: getComputedStyle(el).backgroundColor };
 }, [PAGE, name]);
 
-const LISTBOX = '.jfmod-trackMenu [role="listbox"]';
+const LISTBOX = '.gpk [role="listbox"]';
 
 /** The open list's entries: value, selected, its bar, what it draws; and which entry has the focus. */
 const trackList = page => page.evaluate(box => {
@@ -708,8 +708,8 @@ const trackList = page => page.evaluate(box => {
         selected: node.getAttribute('aria-selected') === 'true', bar: getComputedStyle(node).borderLeftColor,
         barWidth: parseFloat(getComputedStyle(node).borderLeftWidth),
         check: getComputedStyle(node, '::before').backgroundImage, checkWidth: parseFloat(getComputedStyle(node, '::before').width) / parseFloat(getComputedStyle(node).fontSize),
-        nameColour: getComputedStyle(node.querySelector('.jfmod-trackLanguage') || node).color, text: node.title, drawn: window.jfmodTrack(node) }));
-    const paper = list.closest('.MuiPaper-root');
+        nameColour: getComputedStyle(node.querySelector('.language') || node).color, text: node.title, drawn: window.jfmodTrack(node) }));
+    const paper = list.closest('.vlist');
     return { entries, focused: document.activeElement?.getAttribute('data-jfmod-track') ?? null,
         paper: paper ? getComputedStyle(paper).backgroundColor : null };
 }, LISTBOX);
@@ -778,7 +778,7 @@ async function checkTrackList(page, layout, name, streams, target) {
 }
 
 async function checkTracks(page, layout, itemId) {
-    await openDetail(page, `id=${itemId}`, `${PAGE} .jfmod-trackChooser`);
+    await openDetail(page, `id=${itemId}`, `${PAGE} .gpk .seg.a`);
     await page.mouse.move(0, 0);
     await installTrackReader(page);
     const item = await page.evaluate(id => ApiClient.getItem(ApiClient.getCurrentUserId(), id), itemId);
@@ -791,12 +791,12 @@ async function checkTracks(page, layout, itemId) {
 
     // The Video value: video only, the size at its right end before the chevron, in the secondary colour.
     const video = await page.evaluate(sel => {
-        const trigger = document.querySelector(`${sel} .selectVideoContainer .jfmod-videoTrigger`);
+        const trigger = document.querySelector(`${sel} .gpk .seg.v`);
         if (!trigger) return null;
         const box = el => el?.getBoundingClientRect();
-        const size = trigger.querySelector(':scope > .jfmod-fileSize');
-        const chevron = trigger.querySelector(':scope > .jfmod-videoChevron');
-        const text = trigger.querySelector(':scope > .jfmod-videoTriggerText');
+        const size = trigger.querySelector('.val > .size2');
+        const chevron = trigger.querySelector('.val > .chev');
+        const text = trigger.querySelector('.val > .marks');
         return { audio: window.jfmodTrack(trigger), size: size?.textContent ?? null, sizeBeforeChevron: !!size && size.nextElementSibling === chevron,
             gap: Math.round((box(chevron)?.left ?? 0) - (box(size)?.right ?? 0)), clear: Math.round((box(size)?.left ?? 0) - (box(text)?.right ?? 0)),
             em: parseFloat(getComputedStyle(trigger).fontSize), sizeColour: size ? `${getComputedStyle(size).color} × ${getComputedStyle(size).opacity}` : null,
@@ -812,14 +812,14 @@ async function checkTracks(page, layout, itemId) {
     if (await openFileList(page, layout)) {
         await page.mouse.move(0, 0);
         await page.waitForTimeout(400);
-        const rows = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--add)`)].map(row => {
-            const button = row.querySelector('.jfmod-fileChoose');
-            const size = button.querySelector(':scope > .jfmod-fileSize');
-            const videoLine = row.querySelector('.jfmod-fileLine:not(.jfmod-fileLine--extra)');
+        const rows = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .vlist .vrow[data-jfmod-media-source-id]`)].map(row => {
+            const button = row;
+            const size = button.querySelector(':scope > :is(.size2,.sz2)');
+            const videoLine = row;
             const box = el => el?.getBoundingClientRect() ?? { top: 0, bottom: 0, right: 0 };
-            return { selected: row.classList.contains('jfmod-fileRow--selected'), id: button.getAttribute('data-jfmod-media-source-id'),
+            return { selected: row.classList.contains('sel'), id: button.getAttribute('data-jfmod-media-source-id'),
                 size: size?.textContent ?? null, sizeRight: Math.round(box(size).right),
-                end: Math.round(box(button).right - parseFloat(getComputedStyle(button).paddingRight)),
+                end: Math.round(box(row.querySelector('.icons')).left - parseFloat(getComputedStyle(row.querySelector('.icons')).marginLeft)),
                 video: window.jfmodTrack(videoLine), whole: window.jfmodTrack(button),
                 divider: !!row.querySelector('.jfmod-fileDivider, .jfmod-releaseDivider') };
         }), PAGE);
@@ -831,7 +831,7 @@ async function checkTracks(page, layout, itemId) {
         record(layout, `${tag}: every row shows the video part only: no audio marks, no channels, no hairline`, rows.length > 0
             && rows.every(row => row.whole.labels.length === 0 && !row.whole.channels && !row.divider),
         JSON.stringify(rows.map(row => ({ whole: row.whole, divider: row.divider }))));
-        await activate(page, layout, '.selectVideoContainer .jfmod-videoTrigger', 'Video dropdown (close)');
+        await activate(page, layout, '.gpk .seg.v', 'Video dropdown (close)');
         await page.waitForTimeout(500);
     } else {
         record(layout, `${tag}: the Video dropdown opens`, false);
@@ -845,7 +845,7 @@ async function checkTracks(page, layout, itemId) {
         const currentStream = audioStreams.find(stream => String(stream.Index) === audio.value);
         record(layout, `${tag}: the Audio field reads its current track's language, marks and flags`, !!currentStream
             && trackDifferences(audio.drawn, currentStream, audio.title).length === 0, currentStream ? trackDifferences(audio.drawn, currentStream, audio.title).join('; ') : 'no stream');
-        record(layout, `${tag}: with several tracks Audio is a focusable dropdown with a chevron`, audio.tag === 'BUTTON' && audio.chevron && audio.focusable);
+        record(layout, `${tag}: with several tracks Audio is a focusable dropdown with a chevron`, audio.focusable && audio.chevron && audio.chevron && audio.focusable);
         const target = audio.options.find(option => option.value !== audio.value)?.value;
         const chosen = await checkTrackList(page, layout, 'Audio', audioStreams, target);
         if (chosen && !isMobile(layout)) {
@@ -860,7 +860,7 @@ async function checkTracks(page, layout, itemId) {
         page.jfmodChosenAudio = chosen ? target : null;
     } else if (audio) {
         record(layout, `${tag}: one audio track is the same field without a chevron, not clickable and not a focus stop`,
-            audio.tag !== 'BUTTON' && !audio.chevron && !audio.focusable, JSON.stringify({ tag: audio.tag, chevron: audio.chevron, focusable: audio.focusable }));
+            !audio.focusable && !audio.chevron && !audio.focusable, JSON.stringify({ tag: audio.tag, chevron: audio.chevron, focusable: audio.focusable }));
         const one = audioStreams[0];
         record(layout, `${tag}: the one track's field reads its language, marks and flags`, !!one && trackDifferences(audio.drawn, one, audio.title).length === 0,
             one ? trackDifferences(audio.drawn, one, audio.title).join('; ') : 'no stream');
@@ -889,7 +889,7 @@ async function checkTracks(page, layout, itemId) {
     let lightPaper = null;
     try {
         light = await trackField(page, 'Subtitles') ?? await trackField(page, 'Audio');
-        if (light?.tag === 'BUTTON') {
+        if (light?.focusable) {
             await page.locator(`${PAGE} [data-jfmod-track-field="${light.options[0]?.value === '-1' ? 'Subtitles' : 'Audio'}"]`).click({ timeout: 5000 });
             await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
             lightPaper = (await trackList(page))?.paper ?? null;
@@ -906,7 +906,7 @@ async function checkTracks(page, layout, itemId) {
     if (layoutOf(layout) === 'desktop' && (page.jfmodChosenAudio || page.jfmodChosenSubtitle)) {
         const values = await page.evaluate(sel => ({ audio: document.querySelector(`${sel} .selectAudio`)?.value, subtitles: document.querySelector(`${sel} .selectSubtitles`)?.value }), PAGE);
         const request = page.waitForRequest(req => /PlaybackInfo/.test(req.url()) && req.method() === 'POST', { timeout: 15000 }).catch(() => null);
-        await page.locator(`${PAGE} .btnPlay:not(.hide)`).first().click({ timeout: 5000 }).catch(() => {});
+        await page.locator(`${PAGE} [data-ds-command~=btnPlay]`).first().click({ timeout: 5000 }).catch(() => {});
         const sent = await request;
         const text = sent ? `${sent.url()} ${sent.postData() ?? ''}` : '';
         const has = (key, value) => new RegExp(`${key}"?[=:]\\s*"?${value}\\b`, 'i').test(text);
@@ -923,25 +923,25 @@ async function checkTracks(page, layout, itemId) {
 }
 
 async function checkFileless(page, layout, admin) {
-    await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} .jfmod-getRelease` : null);
+    await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} [data-ds-command~=jfmod-getRelease]` : null);
     await checkHeaderIcon(page, layout, 'file-less movie', admin);
     await checkNoOldControls(page, layout, 'file-less movie');
     const raised = await page.evaluate(sel => {
-        const button = document.querySelector(`${sel} .mainDetailButtons .jfmod-getRelease`);
+        const button = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]`);
         return button ? { classes: button.className, text: getComputedStyle(button, '::after').content.replace(/^"|"$/g, ''), background: getComputedStyle(button).backgroundColor, icon: !!button.querySelector('.cloud_download') } : null;
     }, PAGE);
     if (!admin) {
         record(layout, 'file-less movie: no raised button and no More for an ordinary user',
-            !raised && await page.locator(`${PAGE} .jfmod-entryMore`).count() === 0);
+            !raised && await page.locator(`${PAGE} [data-ds-command~=jfmod-entryMore]`).count() === 0);
         return;
     }
     record(layout, 'file-less movie: blue labelled Get a Release inside the action pill',
         !!raised && raised.background === 'rgb(0, 164, 220)' && raised.icon && raised.text === 'Get a Release',
         JSON.stringify(raised));
-    await checkPickerOpens(page, layout, '.jfmod-getRelease', 'header Get a release');
+    await checkPickerOpens(page, layout, '[data-ds-command~=jfmod-getRelease]', 'header Get a release');
     // The More menu: Monitor (with its state) and Remove entry; Back closes it and focus returns to ⋯.
-    if (await activate(page, layout, '.jfmod-entryMore', 'file-less More')) {
-        const menu = page.locator('.jfmod-entryMenu .MuiMenu-list');
+    if (await activate(page, layout, '[data-ds-command~=jfmod-entryMore]', 'file-less More')) {
+        const menu = page.locator('.menuportal [role=menu][aria-label=More]');
         const opened = await menu.first().waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
         const items = opened ? await menu.first().evaluate(node => [...node.querySelectorAll('[role^="menuitem"]')].map(item =>
             `${item.textContent.trim()}${item.hasAttribute('aria-checked') ? ':' + item.getAttribute('aria-checked') : ''}`)) : [];
@@ -949,12 +949,12 @@ async function checkFileless(page, layout, admin) {
             items.length === 2 && /^(Monitor:false|Stop Monitoring:true)$/.test(items[0]) && items[1] === 'Remove Entry', items.join(' | '));
         await page.keyboard.press('Escape');
         await menu.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
-        if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '.jfmod-entryMore'), await activeName(page));
+        if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '[data-ds-command~=jfmod-entryMore]'), await activeName(page));
     }
     if (!ids.grabbed) { notVerified(layout, 'queue line stays below the action pill during a grab', 'JELLYFINMOD_DD_GRABBED not set'); return; }
-    await openDetail(page, `entryId=${ids.grabbed}`, `${PAGE} .jfmod-trackBlock`);
-    const inFlight = await page.evaluate(sel => ({ line: document.querySelector(`${sel} .jfmod-trackBlock .jfmod-queueStatusLine`)?.textContent ?? null,
-        raised: !!document.querySelector(`${sel} .jfmod-getReleaseRaised`) }), PAGE);
+    await openDetail(page, `entryId=${ids.grabbed}`, `${PAGE} .dlb`);
+    const inFlight = await page.evaluate(sel => ({ line: document.querySelector(`${sel} .dlb .ln1`)?.textContent ?? null,
+        raised: !!document.querySelector(`${sel} .dlb .btn.main`) }), PAGE);
     record(layout, 'during a grab the queue line stays below the action pill without a second Get a Release', !!inFlight.line && !inFlight.raised, inFlight.line ?? 'no line');
 }
 
@@ -1105,9 +1105,9 @@ async function checkPacks(page, layout) {
         for (const check of PACK_CHECKS) notVerified(layout, check, 'the plugin does not advertise acquisition.packs');
         return;
     }
-    await openDetail(page, `id=${ids.pack}`, `${PAGE} .mainDetailButtons .jfmod-getRelease`);
+    await openDetail(page, `id=${ids.pack}`, `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]`);
     const first = searchAnswer(page);
-    if (!await activate(page, layout, '.mainDetailButtons .jfmod-getRelease', 'packs: header Get a release')) {
+    if (!await activate(page, layout, '.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]', 'packs: header Get a release')) {
         record(layout, 'packs: the picker opens', false, 'not reached');
         return;
     }
@@ -1218,28 +1218,28 @@ async function checkActionStops(page, layout, state) {
 
 /** The Played badge: expected text, inside the stock button, the button no bigger than its neighbours, survives a toggle. */
 async function checkBadge(page, layout, { id, text }) {
-    await openDetail(page, `id=${id}`, `${PAGE} .btnPlaystate .jfmod-playedBadge`);
+    await openDetail(page, `id=${id}`, `${PAGE} [data-ds-command~=btnPlaystate] .tickb`);
     await unfocus(page);
     const facts = await page.evaluate(sel => {
-        const button = document.querySelector(`${sel} .mainDetailButtons .btnPlaystate`);
-        const badge = button?.querySelector('.detailButton-content > .jfmod-playedBadge');
+        const button = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlaystate]`);
+        const badge = button?.querySelector('.tickb');
         const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
-        const play = [...document.querySelectorAll(`${sel} .mainDetailButtons > .detailButton:not(.hide):not(.btnPlaystate)`)]
+        const play = [...document.querySelectorAll(`${sel} .jfmod-dsTitleHost .actbar > .dbtn:not([data-ds-command~=btnPlaystate])`)]
             .find(el => el.getBoundingClientRect().width > 0);
         return { text: badge?.textContent ?? null, title: badge?.title ?? null, color: badge ? getComputedStyle(badge).color : null,
             size: button ? box(button) : null, neighbour: play ? box(play) : null,
-            played: button?.querySelector('.detailButton-icon')?.className ?? '', second: badge === button?.querySelector('.detailButton-content')?.children[1] };
+            played: button?.getAttribute('aria-pressed') ?? '', second: badge === button?.children[1] };
     }, PAGE);
     record(layout, `badge on the Played tick reads "${text}"`, facts.text === text, JSON.stringify(facts));
-    record(layout, 'badge is the second child of the stock button\'s content', !!facts.second);
+    record(layout, 'badge is the second child of the native Played button', !!facts.second);
     record(layout, 'badge tooltip gives the date and cause, or Kept', !!facts.title && (/Removed on|Was due on|Kept/.test(facts.title)), facts.title ?? '');
     if (text === '∞') record(layout, '∞ is drawn in primary #00a4dc', facts.color === 'rgb(0, 164, 220)', facts.color);
     record(layout, 'the Played button stays as big as its neighbour', !!facts.size && !!facts.neighbour
         && Math.abs(facts.size[0] - facts.neighbour[0]) <= 1 && Math.abs(facts.size[1] - facts.neighbour[1]) <= 1, `${facts.size} vs ${facts.neighbour}`);
     record(layout, 'no retention warning box', await page.locator(`${PAGE} .jfmod-retentionWarning`).count() === 0);
     // The stock click still toggles played, and the badge survives both toggles.
-    const playstate = `${PAGE} .mainDetailButtons .btnPlaystate`;
-    const iconClass = () => page.evaluate(sel => document.querySelector(sel)?.querySelector('.detailButton-icon')?.className ?? '', playstate);
+    const playstate = `${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlaystate]`;
+    const iconClass = () => page.evaluate(sel => document.querySelector(sel)?.getAttribute('aria-pressed') ?? '', playstate);
     const start = await iconClass();
     await page.locator(playstate).click();
     await page.waitForTimeout(2500);
@@ -1249,18 +1249,18 @@ async function checkBadge(page, layout, { id, text }) {
     const restored = await iconClass();
     record(layout, 'the stock Played click still toggles played (and back)', toggled !== start && restored === start, `${start} → ${toggled} → ${restored}`);
     await page.waitForTimeout(4000);
-    const after = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .jfmod-playedBadge`)].map(span => span.textContent), playstate);
+    const after = await page.evaluate(sel => [...document.querySelectorAll(`${sel} .tickb`)].map(span => span.textContent), playstate);
     record(layout, 'after the toggles there is exactly one badge again', after.length === 1, after.join(','));
 }
 
 /** Pin on the one-file episode: the plugin reports the file kept; pressing it again stops keeping it. */
 async function checkPin(page, layout) {
-    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
+    await openDetail(page, `id=${ids.one}`, `${PAGE} .gpk .seg.v`);
     if (!await openFileList(page, layout)) { record(layout, 'pin: the Video dropdown opens', false); return; }
     const pin = `${PAGE} [data-jfmod-file-pin]`;
     // User, 2026-10-08: keeping a file must not push the page down; the confirmation is upstream's toast.
     const layoutTop = () => page.evaluate(sel => Math.round(document.querySelector(`${sel} .itemDetailsGroup`)?.getBoundingClientRect().top ?? -1), PAGE);
-    await settled(page, `${PAGE} .jfmod-fileList`);
+    await settled(page, `${PAGE} .vlist`);
     const topBefore = await layoutTop();
     const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
@@ -1286,9 +1286,9 @@ async function checkPin(page, layout) {
 
 /** The cross on a disposable two-file episode: the stock confirmation, one copy removed, the page moves on. */
 async function checkRemove(page, layout, itemId) {
-    await openDetail(page, `id=${itemId}`, `${PAGE} .jfmod-videoTrigger`);
-    await page.locator(`${PAGE} .jfmod-videoTrigger`).click();
-    const cross = page.locator(`${PAGE} .jfmod-fileRow [data-jfmod-file-remove]`);
+    await openDetail(page, `id=${itemId}`, `${PAGE} .gpk .seg.v`);
+    await page.locator(`${PAGE} .gpk .seg.v`).click();
+    const cross = page.locator(`${PAGE} .vrow[data-jfmod-media-source-id] [data-jfmod-file-remove]`);
     await cross.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     const bindingId = await cross.last().getAttribute('data-jfmod-file-remove');
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
@@ -1311,7 +1311,7 @@ async function checkRemove(page, layout, itemId) {
     record(layout, 'exactly that copy removed; every other copy kept', !remaining.includes(bindingId)
         && others.every(id => remaining.includes(id)) && remaining.length === before.length - 1, `${before.length} → ${remaining.length}`);
     const moved = await page.evaluate(() => location.hash);
-    const playable = await page.locator(`${PAGE} .btnPlay:not(.hide)`).count();
+    const playable = await page.locator(`${PAGE} [data-ds-command~=btnPlay]`).count();
     record(layout, 'the page moved on to the remaining copy, which plays', /details\?id=/.test(moved) && playable > 0, moved);
 }
 
@@ -1322,8 +1322,8 @@ async function checkRemove(page, layout, itemId) {
 //                                 (run it alone on its instance: a kept file has no Remove, so a run beside it would miss that action)
 //   [JELLYFINMOD_DD_THEME=dark|light]  [JELLYFINMOD_DD_SHOTS=<folder>]
 // No removal is ever confirmed: Remove and the pending X stop at their dialog, which is closed with its safe choice.
-const STRIP = `${PAGE} .jfmod-strip`;
-const VIDEO = `${PAGE} .jfmod-videoTrigger`;
+const STRIP = `${PAGE} .gpk`;
+const VIDEO = `${PAGE} .gpk .seg.v`;
 const CELLS = { audio: 17.8, subtitles: 13.2 };
 /** The Video cell width under which the strip stacks (STACK_EMS in FileChooser.tsx; D238). */
 const VL_STACK = 11.7;
@@ -1348,61 +1348,61 @@ const vlFacts = page => page.evaluate(sel => {
         });
     };
     const uncut = el => !el || el.scrollWidth <= el.clientWidth + 1;
-    const strip = root.querySelector('.jfmod-strip');
-    const below = root.querySelector('.jfmod-stripBelow');
-    const list = root.querySelector('.jfmod-fileList');
-    const clip = list?.querySelector('.jfmod-fileListBox');
-    const segment = name => root.querySelector(`.jfmod-stripSegment--${name}`);
-    const chevron = name => box(segment(name)?.querySelector('.jfmod-videoChevron'));
-    const pending = root.querySelector('.jfmod-pending');
+    const strip = root.querySelector('.gpk');
+    const below = root.querySelector('[data-ds-track-below]');
+    const list = root.querySelector('.vlist');
+    const clip = list;
+    const segment = name => root.querySelector('.seg.'+({video:'v',audio:'a',subtitles:'s'})[name]);
+    const chevron = name => box(segment(name)?.querySelector('.chev'));
+    const pending = root.querySelector('.pend');
     return {
         layout: document.documentElement.className.match(/layout-\w+/g)?.join(' ') ?? '',
         theme: document.documentElement.getAttribute('data-theme'),
         // The surface's own right edge against the window, and the window against the device's width: the cast's scroller makes the
         // document wider on a title with cast, under a body that does not scroll sideways, on every build.
-        page: { right: Math.max(...[strip, list, below, pending, ...root.querySelectorAll('.jfmod-stripSegment, .jfmod-fileRow')].filter(Boolean).map(el => (el.getClientRects().length ? el.getBoundingClientRect().right : 0))),
+        page: { right: Math.max(...[strip, list, below, pending, ...root.querySelectorAll('.seg, .vrow[data-jfmod-media-source-id]')].filter(Boolean).map(el => (el.getClientRects().length ? el.getBoundingClientRect().right : 0))),
             inner: window.innerWidth, device: screen.width, viewport: window.visualViewport.width, bodyOverflow: getComputedStyle(document.body).overflowX },
         em: parseFloat(getComputedStyle(strip).fontSize), belowEm: parseFloat(getComputedStyle(below).fontSize),
-        stripClient: strip.clientWidth, strip: box(strip), stacked: strip.classList.contains('jfmod-strip--stacked'),
+        stripClient: strip.clientWidth, strip: box(strip), stacked: strip.classList.contains('stacked'),
         video: box(segment('video')), audio: box(segment('audio')), subtitles: box(segment('subtitles')),
         chevrons: { video: chevron('video'), audio: chevron('audio'), subtitles: chevron('subtitles') },
-        trigger: box(root.querySelector('.jfmod-videoTrigger')), triggerText: root.querySelector('.jfmod-videoTrigger')?.innerText.replace(/\s+/g, ' ').trim(),
-        expanded: root.querySelector('.jfmod-videoTrigger')?.getAttribute('aria-expanded'),
+        trigger: box(root.querySelector('.gpk .seg.v')), triggerText: root.querySelector('.gpk .seg.v')?.innerText.replace(/\s+/g, ' ').trim(),
+        expanded: root.querySelector('.gpk .seg.v')?.getAttribute('aria-expanded'),
         // Whole against the marks' box and against the value's clip, which cuts what runs past it, before the size.
-        closedMarksWhole: marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks')) && marksWhole(root.querySelector('.jfmod-videoTriggerText .jfmod-fileMarks'), root.querySelector('.jfmod-videoTriggerText')),
-        valueSize: box(root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')), valueSizeText: root.querySelector('.jfmod-videoTrigger .jfmod-fileSize')?.textContent ?? null,
-        open: !!list?.classList.contains('jfmod-fileList--open'), list: box(list), box: box(clip), two: !!list?.classList.contains('jfmod-fileList--two'),
-        inCard: !!list?.closest('.jfmod-strip'), position: list && getComputedStyle(list).position,
+        closedMarksWhole: marksWhole(root.querySelector('.val .marks')) && marksWhole(root.querySelector('.val .marks'), root.querySelector('.val')),
+        valueSize: box(root.querySelector('.gpk .seg.v :is(.size2,.sz2)')), valueSizeText: root.querySelector('.gpk .seg.v :is(.size2,.sz2)')?.textContent ?? null,
+        open: !!list, list: box(list), box: box(clip), two: !!list && (strip.classList.contains('stacked') || list.clientWidth < 24 * parseFloat(getComputedStyle(list).fontSize)),
+        inCard: !!list?.closest('.gpk'), position: list && getComputedStyle(list).position,
         boxBackground: clip && getComputedStyle(clip).backgroundColor, boxBorder: clip && getComputedStyle(clip).borderBottomColor,
         boxBorderWidth: clip && parseFloat(getComputedStyle(clip).borderBottomWidth), boxRadius: clip && parseFloat(getComputedStyle(clip).borderTopLeftRadius) / parseFloat(getComputedStyle(clip).fontSize),
         boxOverflow: clip ? clip.scrollWidth - clip.clientWidth : 0,
-        rows: [...root.querySelectorAll('.jfmod-fileList .jfmod-fileRow')].map(row => {
-            const lines = [...row.querySelectorAll('.jfmod-fileLine')];
-            const size = row.querySelector('.jfmod-fileSize');
-            return { box: box(row), text: row.innerText.replace(/\s+/g, ' ').trim(), selected: row.classList.contains('jfmod-fileRow--selected'),
+        rows: [...root.querySelectorAll('.vlist .vrow[data-jfmod-media-source-id]')].map(row => {
+            const lines = [...row.querySelectorAll(':scope > .r, :scope > .trackextra')];
+            const size = row.querySelector(':is(.size2,.sz2)');
+            return { box: box(row), text: row.innerText.replace(/\s+/g, ' ').trim(), selected: row.classList.contains('sel'),
                 bar: getComputedStyle(row).boxShadow, background: getComputedStyle(row).backgroundColor,
-                check: getComputedStyle(row, '::before').backgroundImage, nameColour: getComputedStyle(row.querySelector('.jfmod-fileResolution')).color,
-                id: row.querySelector('.jfmod-fileChoose')?.getAttribute('data-jfmod-media-source-id'),
-                phoneMark: !!row.querySelector('.jfmod-phoneMark'), resolution: row.querySelector('.jfmod-fileResolution')?.textContent ?? '',
+                check: getComputedStyle(row, '::before').backgroundImage, nameColour: getComputedStyle(row.querySelector('.r')).color,
+                id: row?.getAttribute('data-jfmod-media-source-id'),
+                phoneMark: !!row.querySelector('.pm'), resolution: row.querySelector('.r')?.textContent ?? '',
                 lines: lines.map(box), sizeLine: lines.findIndex(line => line.contains(size)), size: box(size), sizeUncut: uncut(size), sizeText: size?.textContent ?? null,
-                icons: [...row.querySelectorAll('.jfmod-fileIcon')].map(icon => ({ label: icon.getAttribute('aria-label'), glyphTop: box(icon.querySelector('.material-icons'))?.t, ...box(icon) })),
-                marksWhole: [...row.querySelectorAll('.jfmod-fileMarks')].every(marks => marksWhole(marks)) };
+                icons: [...row.querySelectorAll('.rb')].map(icon => ({ label: icon.getAttribute('aria-label'), glyphTop: box(icon.querySelector('svg'))?.t, ...box(icon) })),
+                marksWhole: [...row.querySelectorAll('.marks')].every(marks => marksWhole(marks)) };
         }),
-        pending: pending && { box: box(pending), text: pending.innerText.replace(/\s+/g, ' ').trim(), inList: !!pending.closest('.jfmod-fileList'),
+        pending: pending && { box: box(pending), text: pending.innerText.replace(/\s+/g, ' ').trim(), inList: !!pending.closest('.vlist'),
             // In a list under 24em it stacks (D236): the lines, and the size and marks whole or dropped.
             lines: (() => {
                 const part = selector => box(pending.querySelector(selector));
-                const line = pending.querySelector('.jfmod-pendingLine')?.getBoundingClientRect();
+                const line = pending.querySelector('.l1')?.getBoundingClientRect();
                 const dropped = el => !el || !line || el.getBoundingClientRect().top >= line.bottom - 0.5 || el.getBoundingClientRect().right <= line.right + 0.5;
-                const marks = pending.querySelector('.jfmod-fileMarks');
-                return { ring: part('.jfmod-dlmark'), quality: part('.jfmod-fileResolution'), state: part('.jfmod-dlMeta'), flag: part('.jfmod-fileExtra'),
-                    narrow: !!pending.closest('.jfmod-fileList--narrow'), sizeWhole: dropped(pending.querySelector('.jfmod-fileSize')),
-                    sizeText: pending.querySelector('.jfmod-fileSize')?.getBoundingClientRect().top < line?.bottom - 0.5, marksShown: marks ? [...marks.children].filter(mark => { const m = mark.getBoundingClientRect(); const c = marks.getBoundingClientRect(); return m.top < c.bottom - 0.5 && m.width > 0; }).length : 0 };
+                const marks = pending.querySelector('.marks');
+                return { ring: part('.dm'), quality: part('.r'), state: part('.dlf'), flag: part('.flag'),
+                    narrow: pending.classList.contains('narrow'), sizeWhole: dropped(pending.querySelector(':is(.size2,.sz2)')),
+                    sizeText: pending.querySelector(':is(.size2,.sz2)')?.getBoundingClientRect().top < line?.bottom - 0.5, marksShown: marks ? [...marks.children].filter(mark => { const m = mark.getBoundingClientRect(); const c = marks.getBoundingClientRect(); return m.top < c.bottom - 0.5 && m.width > 0; }).length : 0 };
             })(),
             // What the entry says: its quality and its state, each drawn whole and inside the entry (D197; the marks go first).
-            sayings: (() => { const body = pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect(); return ['.jfmod-fileResolution', '.jfmod-dlMeta'].map(part => { const el = pending.querySelector(part); const r = el?.getBoundingClientRect(); return { part, whole: !!r && r.width > 0 && r.right <= body.right + 0.5 && el.scrollWidth <= el.clientWidth + 1, right: r?.right, width: r?.width }; }); })(),
-            bodyRight: pending.querySelector('.jfmod-pendingBody')?.getBoundingClientRect().right,
-            x: box(pending.querySelector('[data-jfmod-pending-remove]')), marksWhole: marksWhole(pending.querySelector('.jfmod-fileMarks')) },
+            sayings: (() => { const body = pending.querySelector('.pb')?.getBoundingClientRect(); return ['.r', '.dlf'].map(part => { const el = pending.querySelector(part); const r = el?.getBoundingClientRect(); return { part, whole: !!r && r.width > 0 && r.right <= body.right + 0.5 && el.scrollWidth <= el.clientWidth + 1, right: r?.right, width: r?.width }; }); })(),
+            bodyRight: pending.querySelector('.pb')?.getBoundingClientRect().right,
+            x: box(pending.querySelector('[data-jfmod-pending-remove]')), marksWhole: marksWhole(pending.querySelector('.marks')) },
         // Where the page under the strip stands: it does not move for a floating list.
         after: box(root.querySelector('.overview, .overview-container, .itemMiscInfo-secondary') ?? below.nextElementSibling)
     };
@@ -1428,15 +1428,15 @@ const vlHit = async (page, layout, selector) => {
 };
 const vlActive = page => page.evaluate(() => {
     const a = document.activeElement;
-    const row = a?.closest?.('.jfmod-fileRow');
-    const rows = [...document.querySelectorAll('.jfmod-fileRow')];
+    const row = a?.closest?.('.vrow[data-jfmod-media-source-id]');
+    const rows = [...document.querySelectorAll('.vrow[data-jfmod-media-source-id]')];
     return `${row ? `row${rows.indexOf(row) + 1} ` : ''}${a?.getAttribute?.('aria-label') ?? a?.className ?? 'none'}`.slice(0, 80);
 });
 const vlOpen = async (page, layout) => {
     const facts = await vlFacts(page);
     if (facts.open) return true;
     if (isTv(layout)) {
-        if (!await reachByKeys(page, layout, '.jfmod-videoTrigger')) return false;
+        if (!await reachByKeys(page, layout, '.gpk .seg.v')) return false;
         await vlPress(page, 'Enter', 700);
     } else {
         await vlHit(page, layout, VIDEO);
@@ -1581,16 +1581,16 @@ async function checkVideoListChoose(page, layout, id, tag) {
     const other = facts.rows.findIndex(row => !row.selected);
     const otherRow = facts.rows[other];
     if (isTv(layout)) await vlWalk(page, other, 0);
-    await vlHit(page, layout, `${PAGE} .jfmod-fileChoose[data-jfmod-media-source-id="${otherRow.id}"]`);
+    await vlHit(page, layout, `${PAGE} .vrow[data-jfmod-media-source-id][data-jfmod-media-source-id="${otherRow.id}"]`);
     await page.waitForTimeout(1200);
     const after = await vlFacts(page);
     record(layout, `${tag} choose: a row sets the page's source, closes the list and is the value`, norm(await value()) === norm(otherRow.id) && !after.open && after.rows.length === 0
         && after.valueSizeText === otherRow.sizeText, `${before} → ${await value()}; ${after.triggerText}`);
-    if (!isMobile(layout)) record(layout, `${tag} choose: focus returns to the Video value`, await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    if (!isMobile(layout)) record(layout, `${tag} choose: focus returns to the Video value`, await activeMatches(page, '.gpk .seg.v'), await vlActive(page));
     vlGeometry(layout, after, `${tag} after choosing`);
     if (env('JELLYFINMOD_DD_VL_WRITES')) {
         const request = page.waitForRequest(req => /PlaybackInfo/.test(req.url()) && req.method() === 'POST', { timeout: 15000 }).catch(() => null);
-        await page.locator(`${PAGE} .btnPlay:not(.hide)`).first().click({ timeout: 5000 }).catch(() => {});
+        await page.locator(`${PAGE} [data-ds-command~=btnPlay]`).first().click({ timeout: 5000 }).catch(() => {});
         const sent = await request;
         record(layout, `${tag} choose: Play asks for the chosen file`, !!sent && norm(`${sent.url()} ${sent.postData() ?? ''}`).includes(norm(otherRow.id)), sent ? 'PlaybackInfo sent' : 'no PlaybackInfo');
         await page.evaluate(() => document.querySelector('video')?.pause());
@@ -1608,7 +1608,7 @@ async function checkVideoListClose(page, layout, id, tag) {
     if (isTv(layout)) {
         await vlPress(page, 'ArrowDown');
         await vlPress(page, 'Escape', 600);
-        record(layout, `${tag} close: Back closes the list and focus returns to the Video value`, !(await vlFacts(page)).open && await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+        record(layout, `${tag} close: Back closes the list and focus returns to the Video value`, !(await vlFacts(page)).open && await activeMatches(page, '.gpk .seg.v'), await vlActive(page));
         return;
     }
     if (!isMobile(layout)) {
@@ -1629,13 +1629,13 @@ async function checkVideoListClose(page, layout, id, tag) {
         const audio = `${PAGE} [data-jfmod-track-field="Audio"]`;
         await vlOpen(page, layout);
         await page.waitForTimeout(250);
-        if (await page.locator(`${audio}:not(.jfmod-trackStatic)`).count() && await page.locator(audio).evaluate(el => el.tagName === 'BUTTON')) {
+        if (await page.locator(`${audio}[role=button]`).count() && await page.locator(audio).evaluate(el => el.getAttribute('role') === 'button')) {
             await vlHit(page, layout, audio);
             await page.waitForTimeout(700);
             const paper = await page.evaluate(sel => {
-                const cell = document.querySelector(`${sel} .jfmod-stripSegment--audio`).getBoundingClientRect();
-                const r = document.querySelector('.jfmod-trackMenuPaper')?.getBoundingClientRect();
-                return { cellBottom: cell.bottom, top: r?.top ?? null, open: !!document.querySelector(`${sel} .jfmod-fileList--open`) };
+                const cell = document.querySelector(`${sel} .seg.a`).getBoundingClientRect();
+                const r = document.querySelector('.vlist')?.getBoundingClientRect();
+                return { cellBottom: cell.bottom, top: r?.top ?? null, open: !!document.querySelector(`${sel} .gpk .vlist`) };
             }, PAGE);
             record(layout, `${tag} close: a press on Audio closes the list and opens Audio's under its cell`, !paper.open && paper.top !== null && Math.abs(paper.top - paper.cellBottom) <= 1.5, JSON.stringify(paper));
             await vlPress(page, 'Escape', 500);
@@ -1650,17 +1650,17 @@ async function checkVideoListActions(page, layout, id, tag) {
     const pressRow = async attribute => {
         if (isTv(layout)) {
             const rights = await page.evaluate(([sel, name]) => {
-                const row = document.querySelector(`${sel} .jfmod-fileList .jfmod-fileRow`);
-                return [...row.querySelectorAll('.jfmod-fileChoose, .jfmod-fileIcon')].findIndex(stop => stop.hasAttribute(name));
+                const row = document.querySelector(`${sel} .vlist .vrow[data-jfmod-media-source-id]`);
+                return [...row.querySelectorAll('.vrow[data-jfmod-media-source-id], .rb')].findIndex(stop => stop.hasAttribute(name));
             }, [PAGE, attribute]);
             await vlWalk(page, 0, rights);
             record(layout, `${tag} actions: the remote's walk reaches ${attribute}`, await activeMatches(page, `[${attribute}]`), await vlActive(page));
         }
-        await vlHit(page, layout, `${PAGE} .jfmod-fileList .jfmod-fileRow [${attribute}]`);
+        await vlHit(page, layout, `${PAGE} .vlist .vrow[data-jfmod-media-source-id] [${attribute}]`);
     };
     // History.
     await pressRow('data-jfmod-file-history');
-    const history = page.locator('.jfmod-fileHistory');
+    const history = page.locator('.historyportal');
     const opened = await history.first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false);
     record(layout, `${tag} actions: History opens the file's history`, opened);
     await vlShot(page, `${layout}-${tag}-history`);
@@ -1673,7 +1673,7 @@ async function checkVideoListActions(page, layout, id, tag) {
     }
     // Keep and Stop Keeping, read back from the plugin.
     if (env('JELLYFINMOD_DD_VL_WRITES')) {
-        const pin = `${PAGE} .jfmod-fileList .jfmod-fileRow [data-jfmod-file-pin]`;
+        const pin = `${PAGE} .vlist .vrow[data-jfmod-media-source-id] [data-jfmod-file-pin]`;
         const bindingId = await page.locator(pin).first().getAttribute('data-jfmod-file-pin');
         const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
         const kept = async () => {
@@ -1713,8 +1713,8 @@ async function checkVideoListHover(page, layout, id, tag) {
     await vlOpenPage(page, id);
     if (!await vlOpen(page, layout)) return;
     await page.waitForTimeout(250);
-    const other = page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow:not(.jfmod-fileRow--selected)`).first();
-    await other.locator('.jfmod-fileChoose').hover();
+    const other = page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]:not(.vrow.sel)`).first();
+    await other.locator('.vrow[data-jfmod-media-source-id]').hover();
     await page.waitForTimeout(250);
     const hover = await other.evaluate(row => getComputedStyle(row).backgroundColor);
     // Grey: the theme's action-hover, 8 % white over the dark paper, the same grey on the light one; never the current file's blue.
@@ -1746,13 +1746,13 @@ async function checkVideoListTracks(page, layout, id) {
         if (!opened) continue;
         await page.waitForTimeout(450);
         const place = await page.evaluate(([sel, cellName]) => {
-            const strip = document.querySelector(`${sel} .jfmod-strip`).getBoundingClientRect();
-            const cell = document.querySelector(`${sel} .jfmod-stripSegment--${cellName}`).getBoundingClientRect();
-            const paper = document.querySelector('.jfmod-trackMenuPaper').getBoundingClientRect();
-            return { stacked: document.querySelector(`${sel} .jfmod-strip`).classList.contains('jfmod-strip--stacked'), strip: [strip.left, strip.right, strip.bottom], cell: [cell.left, cell.right, cell.bottom], paper: [paper.left, paper.right, paper.top],
-                em: parseFloat(getComputedStyle(document.querySelector('.jfmod-trackMenuPaper')).fontSize),
-                options: document.querySelectorAll('.jfmod-trackMenu [role="option"]').length, 
-                current: document.querySelector('.jfmod-trackMenu [aria-selected="true"]')?.getAttribute('data-jfmod-track') };
+            const strip = document.querySelector(`${sel} .gpk`).getBoundingClientRect();
+            const cell = document.querySelector(`${sel} .seg.${({audio:'a',subtitles:'s',video:'v'})[cellName]}`).getBoundingClientRect();
+            const paper = document.querySelector('.vlist').getBoundingClientRect();
+            return { stacked: document.querySelector(`${sel} .gpk`).classList.contains('stacked'), strip: [strip.left, strip.right, strip.bottom], cell: [cell.left, cell.right, cell.bottom], paper: [paper.left, paper.right, paper.top],
+                em: parseFloat(getComputedStyle(document.querySelector('.vlist')).fontSize),
+                options: document.querySelectorAll('.gpk [role="option"]').length,
+                current: document.querySelector('.gpk [aria-selected="true"]')?.getAttribute('data-jfmod-track') };
         }, [PAGE, name.toLowerCase()]);
         const close = (a, b, within = 1.5) => Math.abs(a - b) <= within;
         record(layout, `${name}: the list is exactly its cell, 0.382em under it`, place.stacked
@@ -1786,7 +1786,7 @@ async function checkVideoListTracks(page, layout, id) {
 async function checkVideoListPending(page, layout, id) {
     const tag = 'pending';
     await vlOpenPage(page, id);
-    await page.waitForSelector(`${PAGE} .jfmod-pending`, { timeout: 30000 }).catch(() => {});
+    await page.waitForSelector(`${PAGE} .pend`, { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(600);
     if (!isMobile(layout)) await page.mouse.move(0, 0);
     const closed = await vlFacts(page);
@@ -1858,7 +1858,7 @@ async function checkVideoListRemote(page, layout, id) {
         record(layout, `remote: row ${index + 1}: Right walks the row's button, then each action in order`, seen.length === row.length && seen.every((stop, at) => stop.startsWith(`row${index + 1} `) && (at === 0 ? /fileChoose/.test(stop) : stop.endsWith(row[at]))),
             seen.join(' ; '));
         const back = [];
-        const lefts = await page.evaluate(() => { const a = document.activeElement; const r = a?.closest?.('.jfmod-fileRow'); return r ? [...r.querySelectorAll('.jfmod-fileChoose, .jfmod-fileIcon')].indexOf(a) : -1; });
+        const lefts = await page.evaluate(() => { const a = document.activeElement; const r = a?.closest?.('.vrow[data-jfmod-media-source-id]'); return r ? [...r.querySelectorAll('.vrow[data-jfmod-media-source-id], .rb')].indexOf(a) : -1; });
         for (let left = 0; left < lefts; left++) { await vlPress(page, 'ArrowLeft'); back.push(await vlActive(page)); }
         record(layout, `remote: row ${index + 1}: Left walks back to the row's button`, lefts > 0 && /fileChoose/.test(back.at(-1) ?? '') && (back.at(-1) ?? '').startsWith(`row${index + 1} `), back.join(' ; '));
     }
@@ -1866,11 +1866,11 @@ async function checkVideoListRemote(page, layout, id) {
     // At a row's end the keys go on as the remote's own search takes them (the guide), but never up to the Video value (D199).
     await vlWalk(page, 0, stops[0].length - 1);
     await vlPress(page, 'ArrowRight');
-    record(layout, 'remote: Right at a row\'s end does not jump to the Video value', !await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    record(layout, 'remote: Right at a row\'s end does not jump to the Video value', !await activeMatches(page, '.gpk .seg.v'), await vlActive(page));
     await page.locator(VIDEO).focus();
     await page.waitForTimeout(200);
     await vlPress(page, 'Escape', 700);
-    record(layout, 'remote: Back closes the list, focus on the Video value', !(await vlFacts(page)).open && await activeMatches(page, '.jfmod-videoTrigger'), await vlActive(page));
+    record(layout, 'remote: Back closes the list, focus on the Video value', !(await vlFacts(page)).open && await activeMatches(page, '.gpk .seg.v'), await vlActive(page));
     record(layout, 'remote: the strip is where it was', Math.abs((await vlFacts(page)).strip.w - facts.strip.w) <= 1);
 }
 
@@ -1912,7 +1912,7 @@ async function checkVideoListResize(page, layout, id) {
             for (const [way, from, to] of [['narrowing', 996, 995], ['widening', 995, 996]]) {
                 await page.setViewportSize({ width: from, height: start.height });
                 await page.waitForTimeout(400);
-                const target = page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).nth(row).locator(`[${control}]`);
+                const target = page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).nth(row).locator(`[${control}]`);
                 await target.focus();
                 const before = await vlActive(page);
                 await page.setViewportSize({ width: to, height: start.height });
@@ -1931,15 +1931,15 @@ async function checkVideoListResize(page, layout, id) {
     await page.setViewportSize(start);
     await page.waitForTimeout(300);
     const audio = `${PAGE} [data-jfmod-track-field="Audio"]`;
-    if (await page.locator(audio).evaluate(el => el.tagName === 'BUTTON')) {
+    if (await page.locator(audio).evaluate(el => el.getAttribute('role') === 'button')) {
         await vlHit(page, layout, audio);
         await page.locator(LISTBOX).first().waitFor({ state: 'visible', timeout: 6000 }).catch(() => {});
         await page.waitForTimeout(400);
         await page.setViewportSize(isMobile(layout) ? { width: start.height, height: start.width } : { width: 1100, height: start.height });
         await page.waitForTimeout(700);
         const place = await page.evaluate(sel => {
-            const cell = document.querySelector(`${sel} .jfmod-stripSegment--audio`).getBoundingClientRect();
-            const paper = document.querySelector('.jfmod-trackMenuPaper')?.getBoundingClientRect();
+            const cell = document.querySelector(`${sel} .seg.a`).getBoundingClientRect();
+            const paper = document.querySelector('.vlist')?.getBoundingClientRect();
             return { cell: [cell.left, cell.right, cell.bottom], paper: paper ? [paper.left, paper.right, paper.top] : null };
         }, PAGE);
         record(layout, 'resize: Audio\'s open list is placed again under its cell', !!place.paper && Math.abs(place.paper[2] - place.cell[2]) <= 1.5 && (isMobile(layout) || Math.abs(place.paper[0] - place.cell[0]) <= 2), JSON.stringify(place));
@@ -1963,7 +1963,7 @@ async function checkVideoListFocusIdentity(page, layout, id) {
     if (!await vlOpen(page, layout)) return;
     await page.waitForTimeout(300);
     const entryId = await page.evaluate(sel => document.querySelector(`${sel} [data-jfmod-entry-id]`)?.getAttribute('data-jfmod-entry-id'), PAGE);
-    const row = index => page.locator(`${PAGE} .jfmod-fileList .jfmod-fileRow`).nth(index);
+    const row = index => page.locator(`${PAGE} .vlist .vrow[data-jfmod-media-source-id]`).nth(index);
     const kept = new Set();
     const refused = [];
     await page.route(`**/JellyfinMod/Entries/${entryId}**`, async route => {
@@ -2100,10 +2100,10 @@ async function checkLayout(browser, layout, user, admin) {
         }
         if (ids.movie) {
             await run('movie page', async () => {
-                await openDetail(page, `id=${ids.movie}`, `${PAGE} .jfmod-videoTrigger`);
+                await openDetail(page, `id=${ids.movie}`, `${PAGE} .gpk .seg.v`);
                 await checkHeaderIcon(page, label, 'movie', admin);
                 await checkNoOldControls(page, label, 'movie');
-                if (await openFileList(page, label)) await checkHistoryPopover(page, label, '.jfmod-fileList [data-jfmod-file-history]');
+                if (await openFileList(page, label)) await checkHistoryPopover(page, label, '.vlist [data-jfmod-file-history]');
                 else record(label, 'movie: the Video dropdown opens', false);
                 // Movies have no per-title window, so their menu is upstream's for everyone (implementation choice 8).
                 await checkMoreMenuItem(page, label, false, false, 'on a movie page');
@@ -2122,7 +2122,7 @@ async function checkLayout(browser, layout, user, admin) {
         if (admin && layout === 'desktop') {
             if (process.env.JELLYFINMOD_DD_WINDOW === '1' && ids.one) {
                 await run('window dialog', async () => {
-                    await openDetail(page, `id=${ids.one}`, `${PAGE} .jfmod-videoTrigger`);
+                    await openDetail(page, `id=${ids.one}`, `${PAGE} .gpk .seg.v`);
                     await checkMoreMenuItem(page, label, true, true);
                 });
             } else { notVerified(label, 'the window dialog changes the episode window', 'JELLYFINMOD_DD_WINDOW not set'); }

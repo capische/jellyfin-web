@@ -18,7 +18,7 @@ for (const layout of layouts) {
         await signIn(page);
         if (layout.startsWith('tv')) await setTvLayout(page);
         await page.evaluate(id => { location.hash = '#/details?id=' + id; }, itemId);
-        const play = page.locator('.mainDetailButtons .btnPlay:not(.hide)').first();
+        const play = page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]').first();
         await play.waitFor({ state: 'visible', timeout: 30000 });
         await page.waitForTimeout(1500);
         if (layout.startsWith('tv')) {
