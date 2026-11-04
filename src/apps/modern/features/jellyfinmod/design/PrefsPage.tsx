@@ -151,7 +151,7 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
             <span style={{ flex: '1 1 auto' }} />{headButtons.map(part => part.kind === 'button' && <Button key={part.key} onClick={() => part.node.click()}>{part.label}</Button>)}</div> :
             title && <h1 className='ptitle'>{title}</h1>}
         {cards.map(card => <React.Fragment key={card.key}>
-            {card.title && card.title !== title && <h2 className='sect2'>{card.title}</h2>}
+            {card.title && (card !== cards[0] || card.title !== title) && <h2 className='sect2'>{card.title}</h2>}
             {card.leads.map(lead => <p className='lead2' key={lead}>{lead}</p>)}
             {card.rows.length > 0 && <div className='scard'>{card.rows.map(part => {
                 if (part.kind === 'select') {

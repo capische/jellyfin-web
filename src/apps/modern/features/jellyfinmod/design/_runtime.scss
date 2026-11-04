@@ -1253,3 +1253,16 @@ html.jfmod-chromePlayer .osdHeader .pageTitle { display: none; }
 .jfds .dsc i { text-align: left; }
 
 .jfds.dev-phone .dsc:hover { background: none; }
+
+/* The mockup's TV focus is the row's ring (srow2.foc), around whichever control in it has focus. */
+.jfds.layout-tv {
+    .srow2:focus-within {
+        z-index: 1;
+        border-top-color: transparent;
+        border-radius: 1.618em;
+        box-shadow: inset 0 0 0 0.236em var(--primary);
+    }
+
+    .srow2 .ctl .focusable:focus,
+    .srow2 .fld.foc .box { box-shadow: none; }
+}
