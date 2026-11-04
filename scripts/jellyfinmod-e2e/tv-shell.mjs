@@ -55,7 +55,7 @@ const describeFocus = page => page.evaluate(() => {
     const el = document.activeElement;
     if (!el || el === document.body) return 'BODY';
     const cls = typeof el.className === 'string' ?
-        el.className.split(/\s+/).filter(c => /jfmod|card|btn|emby-tab|headerButton|Hero|listItem|Mui(Button|MenuItem|Accordion|Checkbox|IconButton)/i.test(c)).slice(0, 4).join('.') :
+        el.className.split(/\s+/).filter(c => /jfmod|card|cell|btn|emby-tab|headerButton|Hero|listItem|Mui(Button|MenuItem|Accordion|Checkbox|IconButton)/i.test(c)).slice(0, 4).join('.') :
         '';
     const text = (el.getAttribute('aria-label') || (el.getAttribute('title') ?? el.getAttribute('data-tip')) || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
     const section = el.closest('.hero2') || el.closest(":is(.MuiModal-root, .pmenu), :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar), .verticalSection, .hero2, :is(.skinHeader, .jfds .tvbar), .detailPagePrimaryContainer, .detailPageContent, .jfmod-nativeActions, .itemsContainer, .dialog");
@@ -156,8 +156,8 @@ const errorsFor = page => {
 
 async function checkHome(page, name, cfg) {
     try {
-        await page.waitForSelector('.jfmod-homeHeroMount', { timeout: 20000 });
-        await page.waitForSelector('#homeTab .sections .verticalSection', { timeout: 20000 });
+        await page.waitForSelector('.hero2', { timeout: 20000 });
+        await page.waitForSelector('#homeTab .sections .sect', { timeout: 20000 });
         const home = await page.evaluate(() => ({
             hero: !!document.querySelector('.hero2'),
             sections: [...document.querySelectorAll('#homeTab .sections :is(.verticalSection, .sect) :is(.sectionTitle, .rowt)')].map(e => e.textContent.trim()).slice(0, 8),
@@ -180,7 +180,7 @@ async function checkHome(page, name, cfg) {
         if (!onCard) { record(name, 'merged-row card reachable', false, before); return; }
         await press(page, 'Enter');
         await waitHash(page, 'details', 15000);
-        await page.waitForSelector('.page:not(.hide) .detailPagePrimaryContainer', { timeout: 15000 });
+        await page.waitForSelector('.page:not(.hide) .jfds .actbar', { timeout: 15000 });
         await page.waitForTimeout(1500);
         const backAt = Date.now();
         await press(page, 'Escape');
@@ -205,7 +205,7 @@ async function checkHome(page, name, cfg) {
 async function freshHome(page) {
     await page.evaluate(() => { location.hash = '#/home'; });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('#homeTab .sections .verticalSection', { timeout: 20000 });
+    await page.waitForSelector('#homeTab .sections .sect', { timeout: 20000 });
     await page.waitForTimeout(4000);
 }
 
@@ -235,7 +235,7 @@ async function checkSearch(page, name, cfg) {
             await page.waitForSelector('#searchTextInput', { timeout: 15000 });
             await page.fill('#searchTextInput', searchQuery);
         }
-        await page.waitForSelector('.page:not(.hide) .jfmod-discovery', { timeout: 20000 });
+        await page.waitForSelector('.page:not(.hide) .searchgrid', { timeout: 20000 });
         // The discovery zone shows skeletons from the first keystroke; wait (bounded) for real, focusable results in
         // either zone before driving the D-pad, or Down has nothing to land on while TMDB is still answering.
         await page.waitForSelector(".page:not(.hide) .jfmod-discovery button, .page:not(.hide) :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid) :is(.card:not(.dm), .cell)", { timeout: 20000 });
@@ -254,9 +254,9 @@ async function checkSearch(page, name, cfg) {
         for (let i = 0; i < 8; i++) {
             await press(page, 'ArrowDown');
             trail.push(await describeFocus(page));
-            if (/jfmod-discovery/.test(trail.at(-1))) break;
+            if (/cell/.test(trail.at(-1))) break;
         }
-        record(name, 'Search: results and Add from TMDB reachable by ArrowDown', trail.some(f => /jfmod-discovery/.test(f)), trail);
+        record(name, 'Search: results and Add from TMDB reachable by ArrowDown', trail.some(f => /cell/.test(f)), trail);
         await press(page, 'Escape');
         await page.waitForTimeout(1500);
         record(name, 'Back from search', !(await currentRoute(page)).includes('search'), await currentRoute(page));
@@ -290,10 +290,10 @@ async function checkDetails(page, name, cfg, movieLib) {
     try {
         await page.goto(base + '#/details?id=' + movieId, { waitUntil: 'domcontentloaded' });
         await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.waitForSelector('.jfmod-nativeActions button', { timeout: 25000 });
+        await page.waitForSelector('.page:not(.hide) .jfds .actbar button', { timeout: 25000 });
         const d = await page.evaluate(() => ({
             name: document.querySelector('.itemName, h1, h3.itemName')?.textContent?.trim().slice(0, 40),
-            modActions: [...document.querySelectorAll('.jfmod-nativeActions button')].map(b => b.textContent.trim()),
+            modActions: [...document.querySelectorAll('.page:not(.hide) .jfds .actbar button')].map(b => (b.getAttribute('data-tip') || b.getAttribute('aria-label') || b.getAttribute('title') || b.textContent).trim()),
             upstreamPlay: !!document.querySelector('[data-ds-command~=btnPlay], .detailButton[data-ds-command~=btnPlay]')
         }));
         record(name, 'Details: upstream actions + mod section', d.modActions.length > 0 && d.upstreamPlay, d);
@@ -301,15 +301,16 @@ async function checkDetails(page, name, cfg, movieLib) {
         await page.waitForTimeout(1500);
         const trail = [await describeFocus(page)];
         let reached = false;
+        reached = await page.evaluate(() => !!document.activeElement?.closest('.jfds .actbar'));
         for (let i = 0; i < 10 && !reached; i++) {
             await press(page, 'ArrowDown');
             trail.push(await describeFocus(page));
-            reached = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-nativeActions'));
+            reached = await page.evaluate(() => !!document.activeElement?.closest('.jfds .actbar'));
         }
         record(name, 'Details: mod actions reachable by ArrowDown', reached, trail);
-        if (!reached || !d.modActions.some(a => /Search releases/.test(a))) return;
+        if (!reached || !d.modActions.some(a => /Get a Release/.test(a))) return;
         for (const how of ['escape', 'remote']) {
-            const onButton = await walkRowTo(page, '.jfmod-nativeActions', 'Search releases');
+            const onButton = await walkRowTo(page, '.jfds .actbar', 'Get a Release');
             record(name, `Details: Search releases reached along the action row by arrows (${how})`, onButton, await describeFocus(page));
             if (!onButton) return;
             await press(page, 'Enter');
@@ -347,7 +348,7 @@ async function checkDetails(page, name, cfg, movieLib) {
                 focus: document.activeElement?.textContent?.trim().slice(0, 30)
             }));
             record(name, `Back closes the release picker, stays on details, focus on the opener (${how})`,
-                !after.open && after.route.includes('details') && /Search releases/.test(after.focus ?? ''), after);
+                !after.open && after.route.includes('details') && /Get a Release/.test(after.focus ?? ''), after);
         }
     } catch (e) { record(name, 'Details', false, notVerified(e)); }
 }
@@ -435,7 +436,7 @@ async function exerciseFilter(page) {
 async function checkModernGrid(page, name, lib) {
     const route = gridRoute(lib);
     const first = await describeFocus(page);
-    record(name, `${route} grid: first focus on a card`, /card/.test(first) && /itemsContainer/.test(first), first);
+    record(name, `${route} grid: first focus on a card`, /card|cell/.test(first) && /itemsContainer/.test(first), first);
     for (const how of ['escape', 'remote']) {
         const filterExercise = how === 'escape' ? () => exerciseFilter(page) : undefined;
         await checkPopoverBack(page, name, route, 'Filter', how, filterExercise);

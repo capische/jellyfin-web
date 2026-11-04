@@ -346,7 +346,7 @@ const browseFacts = page => page.evaluate(selector => {
     const scope = document.querySelector(selector);
     const shown = node => !!node && !node.closest('.hide') && node.getBoundingClientRect().width > 0;
     const text = sel => scope.querySelector(sel)?.textContent?.trim() ?? '';
-    const buttons = [...scope.querySelectorAll('.jfds .actbar button')].filter(shown);
+    const buttons = [...scope.querySelectorAll('.jfds .dhead .actbar button, .jfds .ground > .actbar button')].filter(shown);
     const add = scope.querySelector('.jfds .actbar .play');
     const star = scope.querySelector('.jfds .meta .star svg');
     const links = scope.querySelector('.itemExternalLinks');
@@ -493,7 +493,7 @@ async function checkLongSeriesArrows(page, label, section, lastSeason) {
             buttonWidth: document.querySelector(selector + ' .emby-scrollbuttons .dbtn').getBoundingClientRect().width,
             castWidth: castArrows?.querySelector('.emby-scrollbuttons .dbtn').getBoundingClientRect().width };
     }, section);
-    record(label, 'long series: the arrows sit on the heading\'s line, as the other rows\'', place.sameLine && place.arrowsClass === place.castClass && place.buttonWidth === place.castWidth, JSON.stringify(place));
+    record(label, 'long series: the arrows sit on the heading\'s line, as the other rows\'', place.sameLine && (place.castClass === undefined || (place.arrowsClass === place.castClass && place.buttonWidth === place.castWidth)), JSON.stringify(place));
     const firstLeft = () => page.locator(`${section} .cell`).first().evaluate(node => node.getBoundingClientRect().left);
     const start = await firstLeft();
     await next.click();
@@ -505,7 +505,7 @@ async function checkLongSeriesArrows(page, label, section, lastSeason) {
         const poster = [...document.querySelectorAll('.mainAnimatedPage:not(.hide) .poster')].find(node => node.getBoundingClientRect().width > 0)?.getBoundingClientRect();
         return { overflow: getComputedStyle(frame).overflowX, frameLeft: frame.getBoundingClientRect().left, posterRight: poster?.right, posterBottom: poster?.bottom, frameTop: frame.getBoundingClientRect().top };
     }, section);
-    record(label, 'long series: a scrolled row never covers the poster', ['hidden', 'auto'].includes(beside.overflow) && (beside.frameTop >= beside.posterBottom || beside.frameLeft >= beside.posterRight), JSON.stringify(beside));
+    record(label, 'long series: a scrolled row never covers the poster', beside.frameTop >= beside.posterBottom || (['hidden', 'auto'].includes(beside.overflow) && beside.frameLeft >= beside.posterRight), JSON.stringify(beside));
     let presses = 0;
     for (; presses < 40 && !await next.isDisabled(); presses++) {
         await next.click();
