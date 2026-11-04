@@ -9,6 +9,8 @@ export const readEnvironment = () => {
     const tv = html.classList.contains('layout-tv');
     const mobile = html.classList.contains('layout-mobile');
     let device: Device = window.innerWidth < 900 ? 'tablet' : 'computer';
+    // A computer window narrowed to a phone's width takes the phone's page, or the bar runs off the side.
+    if (window.innerWidth < 600) device = 'phone';
     let layout = 'desktop';
     if (mobile) {
         device = 'phone';
