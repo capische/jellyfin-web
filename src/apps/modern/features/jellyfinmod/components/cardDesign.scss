@@ -24,6 +24,12 @@ $primary: var(--jf-palette-primary-main, #00a4dc);
     border-radius: 0.618em;
 }
 
+// Upstream's paint containment cuts off what a card draws outside itself: in a row the poster sits flush
+// with the card's left edge, so the ring lost its left side.
+html .card:not(.show-animation) {
+    contain: layout style;
+}
+
 // ---- A computer or tablet, under the pointer ----
 
 .card-hoverable .cardScalable {
