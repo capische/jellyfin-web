@@ -1,4 +1,4 @@
-import { Menu, MenuItem, ListItemIcon, ListItemText, Divider } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
+import { Menu, MenuCaption, MenuItem, ListItemIcon, ListItemText, Divider } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppSettingsAlt from '@mui/icons-material/AppSettingsAlt';
 import Close from '@mui/icons-material/Close';
@@ -87,6 +87,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
             open={open}
             onClose={onMenuClose}
         >
+            <MenuCaption>{user?.Name}</MenuCaption>
             <MenuItem
                 component={Link}
                 to={`/userprofile?userId=${user?.Id}`}
@@ -117,25 +118,11 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/catalog/queue'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon icon='arrow'>
+                    <ListItemIcon icon='client'>
                         <Downloading />
                     </ListItemIcon>
                     <ListItemText>
                         Queue
-                    </ListItemText>
-                </MenuItem>
-            )}
-            {isSettingsVisible && (
-                <MenuItem
-                    component={Link}
-                    to='/catalog/settings'
-                    onClick={onMenuClose}
-                >
-                    <ListItemIcon icon='gear'>
-                        <Tune />
-                    </ListItemIcon>
-                    <ListItemText>
-                        JellyfinMod Settings
                     </ListItemText>
                 </MenuItem>
             )}
@@ -212,6 +199,20 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 </MenuItem>
             ])}
 
+            {isSettingsVisible && (
+                <MenuItem
+                    component={Link}
+                    to='/catalog/settings'
+                    onClick={onMenuClose}
+                >
+                    <ListItemIcon icon='gear'>
+                        <Tune />
+                    </ListItemIcon>
+                    <ListItemText>
+                        JellyfinMod Settings
+                    </ListItemText>
+                </MenuItem>
+            )}
             <Divider />
             {isQuickConnectEnabled && (
                 <MenuItem

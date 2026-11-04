@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type FC } from 'react';
+import React, { type PropsWithChildren, createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type FC } from 'react';
 import { createPortal } from 'react-dom';
 import MuiMenu, { type MenuProps } from '@mui/material/Menu';
 import MuiMenuItem, { type MenuItemProps } from '@mui/material/MenuItem';
@@ -44,6 +44,9 @@ export const Menu: FC<MenuProps> = props => {
 };
 
 type RowProps = Omit<MenuItemProps, 'onClick'> & { to?: string; onClick?: React.MouseEventHandler<HTMLElement> };
+/** ds3.js's group caption; the upstream menu outside this design has none. */
+export const MenuCaption: FC<PropsWithChildren> = ({ children }) => (useContext(DesignMenus) ? <span className='cap0'>{children}</span> : null);
+
 export const MenuItem: FC<RowProps> = props => {
     const design = useContext(DesignMenus);
     if (!design) return <MuiMenuItem {...props} />;
