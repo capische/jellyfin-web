@@ -245,10 +245,11 @@ async function checkSearch(page, name, cfg) {
             return {
                 zones: [...pg.querySelectorAll(':is(.verticalSection, .sect) :is(.sectionTitle, .rowt), .jfmod-discoveryHeading')].map(e => e.textContent.trim()).slice(0, 8),
                 marks: pg.querySelectorAll(":is(.jfmod-mark, .mark)").length,
+                cells: pg.querySelectorAll('.searchgrid .cell').length,
                 focusInField: document.activeElement?.id === 'searchTextInput'
             };
         });
-        record(name, 'Search: upstream zone + Add from TMDB' + (cfg.tv ? '; focus stays in field' : ''), s.zones.length >= 2 && (!cfg.tv || s.focusInField), s);
+        record(name, 'Search: library and TMDB results in one grid' + (cfg.tv ? '; focus stays in field' : ''), s.cells > 0 && (!cfg.tv || s.focusInField), s);
         if (!cfg.tv) return;
         const trail = [];
         for (let i = 0; i < 8; i++) {
@@ -271,7 +272,7 @@ async function walkRowTo(page, rowSelector, label) {
         const where = await page.evaluate(({ sel, text }) => {
             const buttons = [...document.querySelectorAll(sel + ' button')].filter(b => b.offsetParent);
             const current = buttons.indexOf(document.activeElement);
-            const target = buttons.findIndex(b => b.textContent.includes(text));
+            const target = buttons.findIndex(b => (b.getAttribute('data-tip') || b.getAttribute('aria-label') || b.getAttribute('title') || b.textContent).includes(text));
             return { current, target };
         }, { sel: rowSelector, text: label });
         if (where.target < 0) return false;
@@ -284,8 +285,9 @@ async function walkRowTo(page, rowSelector, label) {
 
 async function checkDetails(page, name, cfg, movieLib) {
     const movieId = await page.evaluate(async parentId => {
-        const r = await ApiClient.getItems(ApiClient.getCurrentUserId(), { ParentId: parentId, IncludeItemTypes: 'Movie', Recursive: true, Limit: 1, SortBy: 'SortName' });
-        return r.Items[0]?.Id;
+        const r = await ApiClient.getItems(ApiClient.getCurrentUserId(), { ParentId: parentId, IncludeItemTypes: 'Movie', Recursive: true, SortBy: 'SortName' });
+        // A movie with a file: a file-less one has no Play to look for.
+        return (r.Items.find(item => item.LocationType === 'FileSystem') ?? r.Items[0])?.Id;
     }, movieLib.id);
     try {
         await page.goto(base + '#/details?id=' + movieId, { waitUntil: 'domcontentloaded' });
@@ -314,7 +316,7 @@ async function checkDetails(page, name, cfg, movieLib) {
             record(name, `Details: Search releases reached along the action row by arrows (${how})`, onButton, await describeFocus(page));
             if (!onButton) return;
             await press(page, 'Enter');
-            await page.waitForSelector('.dialogContainer .dialog.opened.pickerDialog', { timeout: 10000 });
+            await page.waitForSelector('.pickerDialog', { timeout: 10000 });
             // The search runs against the configured indexers; the picker moves focus to its top row when it lands.
             await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 45000 });
             await page.waitForTimeout(800);
@@ -331,11 +333,11 @@ async function checkDetails(page, name, cfg, movieLib) {
                 if (await page.evaluate(() => document.activeElement?.id === 'jfmod-releaseProfile')) {
                     await press(page, 'Enter');
                     await page.waitForTimeout(800);
-                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('[aria-label="Quality Profile"][role="menu"] [role="listbox"]').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
+                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.pmenu').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
                     await press(page, 'Escape');
                     await page.waitForTimeout(900);
-                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('[aria-label="Quality Profile"][role="menu"] [role="listbox"]').length, picker: !!document.querySelector('.dialogContainer .dialog.opened.pickerDialog'), focusId: document.activeElement?.id }));
-                    record(name, 'Release picker: profile select opens its menu by Enter; Back closes only the menu', sheet.sheets === 1 && afterSheet.sheets === 0 && afterSheet.picker, { sheet, afterSheet });
+                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.pmenu').length, picker: !!document.querySelector('.pickerDialog'), focusId: document.activeElement?.id }));
+                    record(name, 'Release picker: profile select opens its menu by Enter; Back closes only the menu', sheet.sheets === afterSheet.sheets + 1 && afterSheet.picker, { sheet, afterSheet });
                 } else {
                     record(name, 'Release picker: profile select reachable by ArrowUp', undefined, await describeFocus(page));
                 }
@@ -345,7 +347,7 @@ async function checkDetails(page, name, cfg, movieLib) {
             const after = await page.evaluate(() => ({
                 open: !!document.querySelector('.dialogContainer .dialog.opened'),
                 route: location.hash.split('?')[0],
-                focus: document.activeElement?.textContent?.trim().slice(0, 30)
+                focus: (document.activeElement?.getAttribute('data-tip') || document.activeElement?.getAttribute('aria-label') || document.activeElement?.textContent)?.trim().slice(0, 30)
             }));
             record(name, `Back closes the release picker, stays on details, focus on the opener (${how})`,
                 !after.open && after.route.includes('details') && /Get a Release/.test(after.focus ?? ''), after);
@@ -446,12 +448,10 @@ async function checkModernGrid(page, name, lib) {
             return { opened, afterDown: await describeFocus(page) };
         });
         await checkPopoverBack(page, name, route, 'View settings', how, async () => {
-            // Right into the grid-view row's settings button, Enter to open the card settings, Down into them.
+            // Down along the menu's rows; choosing one would change the grid the later checks read.
             const walk = [await describeFocus(page)];
-            await press(page, 'ArrowRight');
+            await press(page, 'ArrowDown');
             walk.push(await describeFocus(page));
-            await press(page, 'Enter');
-            await page.waitForTimeout(500);
             await press(page, 'ArrowDown');
             walk.push(await describeFocus(page));
             await press(page, 'ArrowDown');

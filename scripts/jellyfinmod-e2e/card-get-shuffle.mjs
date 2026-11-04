@@ -244,7 +244,8 @@ async function checkShuffle(page, label, what, itemId, inHeader) {
     await page.waitForTimeout(2000);
     const header = await page.evaluate(sel => {
         const button = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=btnShuffle]`);
-        return { present: !!button, upstreamShown: !!button && !button.classList.contains('hide'),
+        const upstream = document.querySelector(`${sel} .mainDetailButtons .btnShuffle`);
+        return { present: !!button, upstreamShown: !!upstream && !upstream.classList.contains('hide'),
             visible: !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0 };
     }, PAGE);
     record(label, `${what}: the header Shuffle is ${inHeader ? 'shown' : 'hidden'}`, header.upstreamShown && header.visible === inHeader, header);
@@ -260,7 +261,7 @@ async function checkShuffle(page, label, what, itemId, inHeader) {
     await page.evaluate(() => {
         window.jfmodShuffleClicks = 0;
         window.jfmodShuffleCatch = event => {
-            if (!event.target.closest?.('[data-ds-command~=btnShuffle]')) return;
+            if (!event.target.closest?.('.btnShuffle, [data-ds-command~=btnShuffle]')) return;
             window.jfmodShuffleClicks++;
             event.stopPropagation();
             event.preventDefault();
@@ -312,10 +313,10 @@ async function run(browser, layout, user, admin) {
 
         // Get a Release on cards: the drama's series page lists its seasons as upstream's cards.
         await go(page, `#/details?id=${facts.drama.id}`);
-        await page.waitForSelector(`${PAGE} #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-type="Season"]`, { timeout: 30000 });
+        await page.waitForSelector(`${PAGE} .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-type="Season"]`, { timeout: 30000 });
         await page.waitForTimeout(1500);
         const season = dramaSeasons[0];
-        const seasonCard = `${PAGE} #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id="${season.id}"]`;
+        const seasonCard = `${PAGE} .jfmod-dsTitleHost :is(.card:not(.dm), .cell)[data-id="${season.id}"]`;
         const seasonScope = (choices, selected) => selected === `Season ${season.number}`;
         if (layout === 'desktop') {
             if (!admin) {
