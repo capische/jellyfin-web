@@ -377,7 +377,7 @@ const groupState = page => page.evaluate(selector => {
         links: row.querySelectorAll('a').length, playMiddle: play ? Math.round((play.top + play.height / 2) * 10) / 10 : null,
         focus: document.activeElement?.hasAttribute('data-jfmod-ratings-group') ? 'group' : (document.activeElement?.className ?? '').toString().slice(0, 60),
         buttonHeight: button.getBoundingClientRect().height,
-        // The group's width with all its ticked inline sources (Trakt too), as measured at its first paint: the popup's width.
+        // The group's width with all its ticked inline sources (Trakt too), as measured at its first paint: used to decide whether Trakt fits.
         fullWidth: Number(group.getAttribute('data-jfmod-full-width')) || null,
         // The group inside its row's box (on a phone the row is narrow and the poster sits beside it).
         inRow: (() => {
@@ -413,6 +413,7 @@ const popupState = async page => {
             open: true, sources: rows.map(row => row.getAttribute('data-jfmod-rating')), text: copy.textContent.replace(/\s+/g, ' ').trim(),
             titles: rows.map(row => row.getAttribute('title') ?? ''), hiddenText: [...node.querySelectorAll('.jfmod-ratingsHidden')].map(hidden => hidden.textContent),
             links: node.querySelectorAll('a').length, width: Math.round(rect.width),
+            intrinsic: Math.abs(rect.width - ([...rows[0].children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1,
             // One line per row: every value and votes cell one line high, nothing wider than the popup.
             oneLine: valueHeights.every(height => height < 2 * Math.min(...valueHeights)) && node.scrollWidth <= node.clientWidth + 1,
             stale: rows.filter(row => row.classList.contains('jfmod-pop-stale')).map(row => row.getAttribute('data-jfmod-rating')),
@@ -427,10 +428,9 @@ const popupState = async page => {
  * no row wrapping, the provenance in each row's title and hidden text.
  */
 const popupOk = (pop, state, expected, viewportWidth) => {
-    const width = Math.min(state.fullWidth ?? 0, viewportWidth - 16);
     return pop.open && pop.inside && pop.oneLine && pop.links === 0 && pop.sources.join(',') === expected.join(',')
         && !/via|as of|MDBList|differ|Source|Votes/.test(pop.text) && pop.titles.every(title => /via (MDBList, as of|TMDB)/i.test(title))
-        && pop.hiddenText.every(text => /via (MDBList|TMDB)/.test(text)) && Math.abs(pop.width - width) <= 1;
+        && pop.hiddenText.every(text => /via (MDBList|TMDB)/.test(text)) && pop.intrinsic && !/votes/i.test(pop.text);
 };
 
 /** The title's header (name, rows, buttons) and the popup, cropped from the page, for the contact sheet. */
@@ -551,7 +551,7 @@ const groupRun = async () => {
                     await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(() => undefined);
                     const pop = await popupState(page);
                     if (name === 'movie') await headerShot(page, `movie-${layoutName}-ok`);
-                    check(`${layoutName} ${name}: OK opens the popup: one row per ticked rating (mark, value, votes), the group's full width, no row wrapping, provenance only in titles`,
+                    check(`${layoutName} ${name}: OK opens the popup: one row per ticked rating (mark, value, votes), the content width, no row wrapping, provenance only in titles`,
                         popupOk(pop, state, expectedPopup, viewportWidth) && (name === 'series' ? /108K/ : /250K/).test(pop.text)
                             && (name === 'series' || pop.stale.join(',') === 'trakt'),
                         { pop, fullWidth: state.fullWidth });
@@ -617,7 +617,7 @@ const groupRun = async () => {
                     const pop = await popupState(page);
                     if (name === 'movie') await headerShot(page, 'movie-desktop-hover');
                     if (name === 'series') await headerShot(page, 'series-desktop-hover');
-                    check(`desktop ${name}: hovering the group opens the popup: rows of mark, value and votes, as wide as the group with all its sources`,
+                    check(`desktop ${name}: hovering the group opens the popup: rows of mark, value and votes, hugging its mark/value/count columns`,
                         popupOk(pop, state, expectedPopup, viewportWidth), { pop, fullWidth: state.fullWidth });
                     const box = await page.locator(POPUP).boundingBox();
                     if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 });
@@ -631,7 +631,7 @@ const groupRun = async () => {
                     await page.waitForTimeout(200);
                     const byKeyboard = (await popupState(page)).open;
                     await page.keyboard.press('Escape');
-                    await page.waitForTimeout(200);
+                    await page.locator(POPUP).waitFor({ state: 'detached', timeout: 1000 });
                     check(`desktop ${name}: keyboard focus opens it, Escape closes it`, byKeyboard && !(await popupState(page)).open, { byKeyboard });
                     await page.locator('.nameContainer:visible').first().click();
                 } else {

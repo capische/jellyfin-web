@@ -223,12 +223,12 @@ const popup = page => page.evaluate(selector => {
     return { rows: [...node.querySelectorAll('[data-jfmod-rating]')].map(row => ({ source: row.dataset.jfmodRating,
         value: row.querySelector('.jfmod-popValue')?.textContent ?? '', votes: row.querySelector('.jfmod-popVotes')?.textContent ?? '',
         title: row.getAttribute('title') ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
-    links: node.querySelectorAll('a').length };
+    links: node.querySelectorAll('a').length, intrinsic: Math.abs(node.getBoundingClientRect().width - ([...node.querySelector('.jfmod-popRow').children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1 };
 }, POPUP);
-/** Rows only (no "via …" line, no caveat), the provenance in each row's title, the group's full width, no links. */
+/** Rows only (no "via …" line, no caveat), the provenance in each row's title, the content width, no links. */
 const popupOk = (shown, found, expected) => !!shown && JSON.stringify(shown.rows.map(row => row.source)) === JSON.stringify(expected)
     && !/via|as of|differ/i.test(shown.text) && shown.rows.every(row => /via (MDBList, as of|TMDB)|server/i.test(row.title)) && shown.links === 0
-    && (!found?.fullWidth || Math.abs(shown.width - found.fullWidth) <= 1);
+    && shown.intrinsic && !/votes/i.test(shown.text);
 async function preferencesPage(page, layout) {
     await go(page, '#/catalog/preferences');
     await page.waitForSelector('[data-jfmod-source-toggle="imdb"]', { timeout: 20000 });
@@ -274,8 +274,8 @@ async function nativeGroup(page, layout) {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     const closed = await page.locator(POPUP).count();
-    record(layout, 'Hover and keyboard focus open the popup: rows of mark, value and votes, as wide as the group with all its sources; leaving or Escape closes it',
-        popupOk(hovered, found, DEFAULT_ORDER) && hovered.rows[0].votes === '250K votes' && /via MDBList, as of/i.test(hovered.rows[0].title)
+    record(layout, 'Hover and keyboard focus open the popup: rows of mark, value and votes, hugging its mark/value/count columns; leaving or Escape closes it',
+        popupOk(hovered, found, DEFAULT_ORDER) && hovered.rows[0].votes === '250K' && /via MDBList, as of/i.test(hovered.rows[0].title)
         && goneAfterHover === 0 && popupOk(focusedPopup, found, DEFAULT_ORDER) && closed === 0, { hovered, goneAfterHover, closed });
     const order = await page.evaluate(() => {
         const row = [...document.querySelectorAll('.itemMiscInfo-primary')].find(node => node.offsetParent !== null);

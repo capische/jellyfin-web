@@ -30,6 +30,7 @@ import EpisodeWindowDialog, { windowDays } from './EpisodeWindowDialog';
 import FileChooser, { type PinState, useStockSourceIds, useTrackStrip } from './FileChooser';
 import FileHistoryPopover from './FileHistoryPopover';
 import HistoryToggle from './HistoryToggle';
+import LibraryUndo from './LibraryUndo';
 import { MissingEpisodeRows, MissingSeasonCards } from './MissingChildren';
 import PendingVersion from './PendingVersion';
 import QueueStatusLine from './QueueStatusLine';
@@ -739,6 +740,7 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
 
     if (isSeriesPage) {
         return <>
+            <LibraryUndo entryId={entry.id} view={view} />
             <SeriesSection detail={detail.data} />
             <SeasonTotal view={view} entryId={detail.data.entry.id} season={null} />
             <MissingSeasonCards api={api} userId={userId} serverId={serverId} view={view} seriesItemId={itemId} detail={detail.data}
@@ -750,10 +752,14 @@ const NativeEntryDetails: FC<NativeEntryDetailsProps> = ({ api, userId, serverId
     const history = detail.data.history;
     const placeholder = placeholderTarget(detail.data, episode, itemId);
     if (placeholder) {
-        return <PlaceholderSection view={view} entryId={entry.id} episodeId={episode?.id} target={placeholder} isAdmin={isAdmin}
-            canAcquire={canAcquire} onGetRelease={openPicker} onChanged={refreshAfterPlayed} />;
+        return <>
+            <LibraryUndo entryId={entry.id} view={view} />
+            <PlaceholderSection view={view} entryId={entry.id} episodeId={episode?.id} target={placeholder} isAdmin={isAdmin}
+                canAcquire={canAcquire} onGetRelease={openPicker} onChanged={refreshAfterPlayed} />
+        </>;
     }
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={entry.id} data-jfmod-episode-id={episode?.id}>
+        <LibraryUndo entryId={entry.id} view={view} />
         {strip && <FileChooser view={view} versions={versions} preferred={preferred} busy={busy}
             onHistory={capabilities.includes(HISTORY_FILES_CAPABILITY) ? showHistory : undefined}
             pin={pin} onPin={onPin} canRemove={canRemove} onRemove={remove} removeDate={removeDate}

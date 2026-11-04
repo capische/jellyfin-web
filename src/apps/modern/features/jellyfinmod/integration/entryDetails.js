@@ -15,6 +15,7 @@ import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
 import { getTmdbImage, preconnectTmdbImages } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
+import { titlePage } from './titlePage';
 
 /** Owns the file-less lifecycle before the native detail controller binds native-only actions. */
 export default function initializeEntryDetails(view, params) {
@@ -123,6 +124,12 @@ export default function initializeEntryDetails(view, params) {
             const backdrop = view.querySelector('#itemBackdrop');
             const image = getTmdbImage(detail.entry.metadata?.backdropPath, 'w1280');
             if (backdrop && image && userSettings.detailsBanner()) backdrop.style.backgroundImage = `url("${image}")`;
+            let type = detail.entry.mediaType === 'movie' ? 'Movie' : 'Series';
+            if (isSeason) type = 'Season';
+            if (isEpisode) type = 'Episode';
+            titlePage(view, type, image);
+            view.classList.add('jfmod-titleMissing');
+            view.classList.toggle('jfmod-titleNoActions', !user.Policy?.IsAdministrator);
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
             const seasonProps = { api, userId: client.getCurrentUserId(), serverId: client.serverId(), detail, season, view,

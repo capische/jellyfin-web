@@ -1,5 +1,11 @@
 # Download block (missing episode page)
 
+**rd3 presentation (approved rulebook §5, built, not accepted):** inside `.jfmod-titlePage` the panel is
+paper with **1.618em corners**, **1em even padding**, a 1px divider outline, no raised shadow, a **1em**
+ring-to-body gap and **1.618em** after the slot. It fills the title's text column. All content, 4em ring,
+phone ring scale, .28em bar, state typography and actions below remain the guide's approved exceptions.
+Failed marks follow the rulebook's grey-glass bang; failure text remains red. Admin/wizard are outside the scope.
+
 **Status:** approved 2026-10-13 (artifact v2: "no download cloud over the episode card"), colours to the icon colour
 2026-10-15, state-line text treatment B 2026-10-19 (P4.FU15, user: "I'd go with B, 600, Inter, but no need for Downloading ... just put % and time"; design session's playground, artifact <https://claude.ai/artifact/G2NS7itUD3zTFSeoBdW2i4>). Built on `next-release` (P1.FU20, P4.FU8, P4.FU15 not accepted). Records: [design note](../missing-episode-page-download-block.md),
 [interactive page](../missing-episode-page-download-block.html), artifact <https://claude.ai/artifact/1Fu8eWkkNgzobkRimgHfHS>,

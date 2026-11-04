@@ -1,0 +1,683 @@
+/* rd3 · approved title heads, ds.css / GUIDELINES §§2,5,7–9.
+ * Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V4.
+ * φ spacing; exceptions: art filters/overscan, content ratios, upstream gutters/icon boxes,
+ * picker/mark/ratings typography and touch minima retained from their guides. See title-pages.md.
+ */
+@use '../components/cardGlass' as glass;
+
+/* stylelint-disable no-descending-specificity -- additive overrides of later upstream chunks, grouped by surface */
+$primary: var(--jf-palette-primary-main, #00a4dc);
+$ease: cubic-bezier(0.236, 0, 0, 1);
+
+html.jfmod-chrome .jfmod-titlePage {
+    --jfmod-title-ground: #101010;
+    --jfmod-title-clear: rgba(16, 16, 16, 0);
+
+    background: var(--jfmod-title-ground);
+    color: var(--jfmod-chrome-ink);
+
+    .itemBackdrop,
+    .detailLogo { display: none; }
+
+    .detailPageWrapperContainer {
+        display: block;
+        margin-top: 0;
+        min-height: 0;
+    }
+
+    .detailPagePrimaryContainer {
+        display: flex;
+        align-items: flex-start;
+        padding: 1.618em 3.3%;
+    }
+
+    .jfmod-titleArt {
+        position: absolute;
+        top: -6.854em;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        pointer-events: none;
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: -8%;
+            top: -8%;
+            width: 116%;
+            height: 116%;
+            background: var(--jfmod-title-image, none) center / cover no-repeat;
+            filter: blur(40px) brightness(0.4) saturate(1.1);
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 38.2%;
+            background: linear-gradient(var(--jfmod-title-clear), var(--jfmod-title-ground));
+        }
+    }
+
+    .jfmod-titleColumn {
+        position: relative;
+        z-index: 1;
+        flex: 1 1 0;
+        min-width: 0;
+        margin-left: 1em;
+    }
+
+    .detailRibbon {
+        position: relative;
+        display: block;
+        padding: 0;
+        margin: 0;
+        height: auto;
+        background: none;
+        box-shadow: none;
+    }
+
+    .infoWrapper { padding: 0; }
+    .nameContainer { margin: 0; }
+
+    .nameContainer h1 {
+        margin: 0;
+        font-size: 2.618em;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: normal;
+        overflow: visible;
+        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .nameContainer .subtitle {
+        margin: 0.382em 0 0;
+        padding: 0;
+        font-size: 1em;
+        line-height: 1.618;
+    }
+
+    .detailPagePrimaryContent {
+        padding: 0;
+        margin-top: 1.618em;
+    }
+
+    .detailSectionContent,
+    .overview { line-height: 1.618; }
+
+    .detailPageSecondaryContainer {
+        padding-top: 0;
+        padding-bottom: 2.618em;
+        background: var(--jfmod-title-ground);
+    }
+
+    .detailImageContainer {
+        position: relative;
+        z-index: 1;
+        flex: 0 0 27.6%;
+        width: 27.6%;
+        border-radius: 0.618em;
+        background: var(--jfmod-chrome-paper);
+        box-shadow: 0 0.618em 1.618em rgba(0, 0, 0, 0.6);
+
+        &::before {
+            content: '';
+            display: block;
+            padding-top: 150%;
+        }
+
+        // An empty native image slot has the same footprint and icon as a failed poster.
+        &:empty::after {
+            content: '\e02c';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Material Icons';
+            font-size: 4.236em;
+            opacity: 0.618;
+        }
+    }
+
+    .detailImageContainer .card {
+        position: absolute;
+        float: none;
+        top: 0;
+        left: 0;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        border-radius: 0.618em;
+        overflow: hidden;
+        filter: none;
+    }
+
+    .detailImageContainer .cardBox { margin: 0; }
+    .detailImageContainer .cardPadder { padding-bottom: 150%; }
+
+    .detailImageContainer .jfmod-entryPoster {
+        min-height: 0;
+        padding-top: 150%;
+        background: var(--jfmod-chrome-paper);
+    }
+
+    .jfmod-entryPoster img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit;
+    }
+
+    .jfmod-entryPoster > .cardImageIcon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin: 0;
+        transform: translate(-50%, -50%);
+        font-size: 4.236em;
+    }
+
+    .itemMiscInfo-primary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        margin-top: 0.382em;
+        font-size: 1em;
+    }
+    .itemMiscInfo-primary > * { margin: 0.382em 1em 0 0; }
+    .itemMiscInfo-primary .endsAt { display: block; }
+
+    .jfmod-personFacts {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .jfmod-personFacts > p { margin: 0.382em 1em 0 0; }
+
+    // Preserve every stock action, including rare ones; a crowded pill wraps without hiding a control.
+    .mainDetailButtons {
+        @include glass.card-ink;
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        box-sizing: border-box;
+        max-width: 100%;
+        margin: 1.618em 0 0;
+        padding: 0.382em;
+        border-radius: 3em;
+        background: rgba(0, 0, 0, 0.66);
+        color: var(--jfmod-card-ink);
+
+        @include glass.card-glass;
+    }
+
+    .mainDetailButtons > .detailButton {
+        flex: none;
+        box-sizing: border-box;
+        width: 3em;
+        min-width: 0;
+        height: 3em;
+        // Upstream detailButton fixes both with !important.
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0;
+        border-radius: 50%;
+        background: none;
+        color: inherit;
+        font-size: 1em;
+        box-shadow: none;
+        transition: background-color 0.236s $ease, transform 0.146s $ease;
+
+        &:hover { background: rgba(255, 255, 255, 0.12); }
+        &:focus-visible { box-shadow: 0 0 0 0.135em $primary; }
+    }
+    .detailButton .detailButton-content { padding: 0; }
+    .detailButton .detailButton-icon { font-size: 1.6em; }
+
+    .mainDetailButtons > .btnPlay {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 6.854em;
+        padding: 0 1em !important;
+        margin-right: 0.382em !important;
+        border-radius: 3em;
+        background: rgba(255, 255, 255, 0.854);
+        color: #101010;
+        font-weight: 700;
+
+        &::after {
+            content: attr(title);
+            margin-left: 0.382em;
+        }
+        &:hover { background: #fff; }
+    }
+    .mainDetailButtons > .btnPlay:active { transform: scale(0.96); }
+    .jfmod-browseAdd { margin: 0; }
+    .jfmod-entryActions { margin: 0; }
+    .jfmod-libraryUndo { margin-bottom: 0.618em; }
+    .jfmod-libraryUndo button { margin-left: 0.618em; }
+    .jfmod-entryActions > * { margin: 0.236em; }
+
+    .jfmod-strip,
+    .jfmod-stripBelow,
+    .trackSelections { max-width: none; }
+
+    .jfmod-videoTrigger,
+    .jfmod-trackTrigger { padding: 0.382em 1em 0.382em 1.236em; }
+    .jfmod-stripCaption { opacity: 0.618; }
+
+    .jfmod-dlblockSlot {
+        max-width: none;
+
+        margin-bottom: 1.618em;
+    }
+
+    .jfmod-dlblock {
+        padding: 1em;
+        border-radius: 1.618em;
+        background: var(--jfmod-chrome-paper);
+        box-shadow: 0 0 0 1px var(--jf-palette-divider);
+    }
+    .jfmod-dlblock-ring { margin-right: 1em; }
+    .jfmod-entryHistory { margin: 0.236em 0 0; }
+
+    .jfmod-historyToggle {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.618em 0;
+        font-size: 0.8em;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: none;
+    }
+
+    .jfmod-historyChevron {
+        margin-right: 0.236em;
+        font-size: 1.618em;
+        transition: transform 0.382s $ease;
+    }
+    .jfmod-historyToggle[aria-expanded='true'] .jfmod-historyChevron { transform: rotate(90deg); }
+
+    .jfmod-playedBadge {
+        right: 0;
+        bottom: 0;
+        font-size: 0.618em;
+    }
+    .jfmod-playedBadge--kept { color: $primary; }
+
+    .sectionTitle {
+        font-size: 1.618em;
+
+        font-weight: 400;
+    }
+
+    .personCard,
+    .jfmod-browseCell-person { width: 8.854em; }
+
+    #listChildrenCollapsible .listItem {
+        align-items: flex-start;
+        padding: 1em;
+        border-radius: 0.618em;
+    }
+
+    #listChildrenCollapsible .listItemImage {
+        width: 17.94em;
+        height: 10.09125em; // 17.94 × 9/16: content's ratio.
+        min-width: 0;
+        min-height: 0;
+        margin-right: 1em;
+        border-radius: 0.618em;
+        overflow: hidden;
+    }
+
+    #listChildrenCollapsible .listItemBody {
+        min-width: 0;
+        padding: 0;
+    }
+    #listChildrenCollapsible .listItemBodyText:first-child { font-weight: 600; }
+
+    #listChildrenCollapsible .listItem-overview {
+        display: -webkit-box;
+        margin-top: 0.382em;
+        overflow: hidden;
+        line-height: 1.618;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+}
+
+html.jfmod-chrome .jfmod-titleEpisode .detailImageContainer::before { padding-top: 56.25%; }
+html.jfmod-chrome .jfmod-titleEpisode .detailImageContainer .cardPadder { padding-bottom: 56.25%; }
+html.jfmod-chrome .jfmod-titlePerson .detailImageContainer:empty::after { content: '\e7fd'; }
+html.jfmod-chrome .jfmod-titleNoActions .mainDetailButtons { display: none; }
+
+html.jfmod-chrome .jfmod-titlePage.jfmod-titleMissing .mainDetailButtons > .jfmod-getRelease,
+html.jfmod-chrome .jfmod-titlePage[data-jfmod-placeholder] .mainDetailButtons > .jfmod-getRelease {
+    order: -1;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    padding: 0 1.618em !important;
+    border-radius: 3em;
+    background: $primary;
+    color: #fff;
+    font-weight: 700;
+
+    &::after {
+        content: attr(title);
+        margin-left: 0.382em;
+    }
+    &:hover { background: #19b4ea; }
+}
+
+html.jfmod-chrome[data-theme='light'] .jfmod-titlePage,
+html.jfmod-chrome[data-theme='appletv'] .jfmod-titlePage {
+    --jfmod-title-ground: #f2f2f2;
+    --jfmod-title-clear: rgba(242, 242, 242, 0);
+
+    .jfmod-titleArt::before {
+        filter: blur(40px) brightness(1.25) saturate(0.8);
+
+        opacity: 0.55;
+    }
+    .detailImageContainer { box-shadow: 0 0.618em 1.618em rgba(0, 0, 0, 0.3); }
+}
+
+html.jfmod-chrome[data-theme='light']:not(.layout-tv) .jfmod-titlePage .mainDetailButtons > .btnPlay,
+html.jfmod-chrome[data-theme='appletv']:not(.layout-tv) .jfmod-titlePage .mainDetailButtons > .btnPlay {
+    background: rgba(16, 16, 16, 0.854);
+    color: #fff;
+    &:hover { background: #101010; }
+}
+
+html.jfmod-chrome.layout-mobile .jfmod-titlePage {
+    .detailPagePrimaryContainer {
+        display: block;
+        padding: 1em 5% 1.618em;
+    }
+
+    .detailPagePrimaryContainer > .detailImageContainer {
+        display: block !important;
+        width: 61.8%;
+        margin: 0 auto;
+    }
+    .infoWrapper > .detailImageContainer { display: none !important; }
+
+    .jfmod-titleColumn {
+        margin: 1em 0 0;
+        text-align: center;
+    }
+    .nameContainer h1 { font-size: 1.618em; }
+
+    .detailPagePrimaryContent {
+        padding: 0 !important;
+        margin-top: 1em;
+    }
+    .jfmod-titleArt::before { filter: blur(22px) brightness(0.45) saturate(1.1); }
+    .itemMiscInfo-primary { justify-content: center; }
+    .jfmod-personFacts { justify-content: center; }
+    .itemMiscInfo-primary > * { margin: 0.382em 0.382em 0; }
+
+    .mainDetailButtons {
+        display: flex;
+        margin-top: 1em;
+    }
+
+    .mainDetailButtons > .btnPlay {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .jfmod-strip,
+    .jfmod-dlblock,
+    .jfmod-pending,
+    .jfmod-entryHistory { text-align: left; }
+    #listChildrenCollapsible .listItem { padding: 0.618em 0; }
+
+    #listChildrenCollapsible .listItem,
+    #listChildrenCollapsible .listItem-content { flex-wrap: wrap; }
+
+    #listChildrenCollapsible .listItemImage {
+        width: 38.2%;
+        height: auto;
+        margin-right: 0.618em;
+    }
+
+    #listChildrenCollapsible .listItemImage::before {
+        content: '';
+        display: block;
+        padding-top: 56.25%;
+    }
+    #listChildrenCollapsible .listItemBody { flex: 1 1 0; }
+    #listChildrenCollapsible .listItemBody .listItem-overview { display: none; }
+
+    #listChildrenCollapsible .jfmod-episodeSummary {
+        display: -webkit-box;
+        flex: 1 0 100%;
+        margin-top: 0.618em;
+        overflow: hidden;
+        line-height: 1.618;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+}
+
+html.jfmod-chrome.layout-mobile[data-theme='light'] .jfmod-titlePage .jfmod-titleArt::before,
+html.jfmod-chrome.layout-mobile[data-theme='appletv'] .jfmod-titlePage .jfmod-titleArt::before {
+    filter: blur(22px) brightness(1.25) saturate(0.8);
+}
+
+html.jfmod-chrome.layout-tv .jfmod-titlePage {
+    .jfmod-historyChevron { transition-duration: 0.146s; }
+    // Upstream fixes the large TV thumb's width with !important.
+    #listChildrenCollapsible .listItemImage-large-tv { width: 17.94em !important; }
+
+    .mainDetailButtons,
+    .jfmod-videoTrigger,
+    .jfmod-trackTrigger {
+        --jfmod-card-ink: #fff;
+
+        background: rgba(0, 0, 0, 0.66);
+        backdrop-filter: none;
+        color: #fff;
+    }
+    .mainDetailButtons > .detailButton { transition: none; }
+
+    .mainDetailButtons > .detailButton:focus {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 0.236em $primary;
+    }
+
+    .mainDetailButtons > .detailButton:not(.btnPlay):focus {
+        background: $primary;
+        color: #fff;
+    }
+
+    .mainDetailButtons > .btnPlay:active {
+        transform: scale(0.96);
+        transition: transform 0.146s $ease;
+    }
+
+    #listChildrenCollapsible .listItem:focus {
+        transform: none;
+        box-shadow: inset 0 0 0 0.236em $primary;
+    }
+}
+
+@supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+    html.jfmod-chrome[data-theme='light']:not(.layout-tv) .jfmod-titlePage {
+        .mainDetailButtons,
+        .jfmod-videoTrigger,
+        .jfmod-trackTrigger {
+            --jfmod-card-ink: var(--jfmod-light-glass-ink);
+
+            background: rgba(255, 255, 255, var(--jfmod-light-glass-fill));
+            backdrop-filter: blur(var(--jfmod-light-glass-blur)) saturate(var(--jfmod-light-glass-saturate)) brightness(var(--jfmod-light-glass-brightness));
+            color: var(--jfmod-card-ink);
+        }
+        .mainDetailButtons > .detailButton:not(.btnPlay):hover { background: rgba(0, 0, 0, 0.146); }
+    }
+}
+
+// Ratings are the one readable list approved on glass. A table keeps intrinsic aligned columns on webOS 6.
+html.jfmod-chrome {
+    .jfmod-ratingsPopover {
+        --jfmod-ratings-fill: var(--jfmod-chrome-paper);
+        --jfmod-ratings-filter: none;
+        --jfmod-ratings-ink: var(--jfmod-chrome-ink);
+
+        position: fixed;
+        z-index: 1100;
+        font-size: 1em;
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: var(--jfmod-caret-left, 50%);
+            top: -0.382em;
+            width: 0.944em;
+            height: 0.382em;
+            margin-left: -0.472em;
+            background: var(--jfmod-ratings-fill);
+            backdrop-filter: var(--jfmod-ratings-filter);
+            clip-path: polygon(50% 0, 100% 100%, 0 100%);
+            pointer-events: none;
+            animation: jfmod-chrome-in 0.382s $ease both;
+        }
+
+        &[data-above='true']::before {
+            top: 100%;
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+        }
+    }
+
+    .jfmod-ratingsPopover .jfmod-groupPopup {
+        position: static;
+        display: table;
+        width: auto;
+        min-width: 0;
+        max-width: calc(100vw - 1em);
+        padding: 0.382em 0.618em;
+        border-radius: 0.618em;
+        background: var(--jfmod-ratings-fill);
+        backdrop-filter: var(--jfmod-ratings-filter);
+        color: var(--jfmod-ratings-ink);
+        box-shadow: 0 0.236em 1em rgba(0, 0, 0, 0.382);
+        font-size: 1em;
+        line-height: 1;
+        animation: jfmod-chrome-in 0.382s $ease both;
+    }
+    .jfmod-popRow { display: table-row; }
+
+    .jfmod-popMark,
+    .jfmod-popValue,
+    .jfmod-popVotes {
+        display: table-cell;
+        vertical-align: middle;
+    }
+
+    .jfmod-popMark {
+        height: 1.382em;
+        padding: 0;
+    }
+
+    .jfmod-popMark .jfmod-ratingIcon {
+        display: block;
+        height: 1em;
+        margin: 0 auto;
+    }
+
+    .jfmod-popValue {
+        padding: 0 0.809em;
+        font-size: 0.764em;
+    }
+
+    .jfmod-popVotes {
+        text-align: right;
+        font-size: 0.764em;
+        font-variant-numeric: tabular-nums;
+    }
+    .jfmod-ratingsGroup-open .jfmod-groupButton { background: var(--jfmod-chrome-hover); }
+
+    .jfmod-ratingsPopover-closing {
+        pointer-events: none;
+
+        &::before,
+        .jfmod-groupPopup { animation: jfmod-chrome-out 0.236s $ease both; }
+    }
+}
+
+@supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+    html.jfmod-chrome:not(.layout-tv) .jfmod-ratingsPopover {
+        --jfmod-ratings-fill: rgba(32, 32, 32, 0.382);
+        --jfmod-ratings-filter: blur(1.618em) saturate(180%) contrast(0.7) brightness(0.85);
+        --jfmod-ratings-ink: #fff;
+    }
+
+    html.jfmod-chrome[data-theme='light']:not(.layout-tv) .jfmod-ratingsPopover {
+        --jfmod-ratings-fill: rgba(255, 255, 255, var(--jfmod-light-glass-fill));
+        --jfmod-ratings-filter: blur(1.618em) saturate(var(--jfmod-light-glass-saturate)) brightness(var(--jfmod-light-glass-brightness));
+        --jfmod-ratings-ink: var(--jfmod-light-glass-ink);
+    }
+}
+html.jfmod-chrome[data-theme='light'] .jfmod-popVotes { opacity: 0.854; }
+
+html.jfmod-chrome.layout-tv .jfmod-ratingsPopover {
+    &::before,
+    .jfmod-groupPopup { animation: jfmod-chrome-fade-in 0.146s linear both; }
+}
+
+@keyframes jfmod-playback-black {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+html.jfmod-chrome .jfmod-playbackStart {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999998; // Immediately below upstream's docspinner (9999999).
+    background: #000;
+    animation: jfmod-playback-black 0.236s 0.146s $ease both;
+}
+
+html.jfmod-chrome.jfmod-startingPlayback[data-theme] .docspinner {
+    color: #fff;
+
+    &::before {
+        color: #fff;
+        opacity: 0.3;
+    }
+}
+html.jfmod-chrome.layout-tv .jfmod-playbackStart { animation-duration: 0.146s; }
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome .jfmod-playbackStart { animation: none; }
+    html.jfmod-chrome .jfmod-titlePage .mainDetailButtons > .detailButton { transition: none; }
+    html.jfmod-chrome .jfmod-titlePage .jfmod-historyChevron { transition: none; }
+    html.jfmod-chrome .jfmod-titlePage .mainDetailButtons > .btnPlay:active { transform: none; }
+
+    html.jfmod-chrome .jfmod-ratingsPopover::before,
+    html.jfmod-chrome .jfmod-ratingsPopover .jfmod-groupPopup { animation: jfmod-chrome-fade-in 0.146s linear both; }
+
+    html.jfmod-chrome .jfmod-ratingsPopover-closing::before,
+    html.jfmod-chrome .jfmod-ratingsPopover-closing .jfmod-groupPopup { animation-name: jfmod-chrome-fade-out; }
+}

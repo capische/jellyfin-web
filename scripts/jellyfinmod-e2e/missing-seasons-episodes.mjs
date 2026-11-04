@@ -31,7 +31,7 @@
 //   - a missing season card opens the mod's season page (#/details?entryId=…&season=N), which lists that season's episodes as
 //     mod rows in episode order with their marks; an administrator's Not Downloaded on an episode's row opens the picker for that episode (P1.FU22);
 //   - a native season page with missing episodes shows mod rows in episode order among upstream's rows;
-//   - TV: the D-pad stops on the mod rows and on no mark; phone: no overview on the rows;
+//   - TV: the D-pad stops on the mod rows and on no mark; phone: overview below the row;
 //   - optionally a file-less movie's search card: the Not Downloaded indicator, and the centre Get a Release on hover;
 //   - P1.FU14: a missing season's card shows TMDB's season poster (w342) in upstream's image box, the dashed placeholder only
 //     without one; the mod's season page the season's overview and "Season N · K episodes · YYYY"; every mod episode row the
@@ -232,7 +232,7 @@ const episodeList = async (page, numbers) => {
         return [...(list?.children ?? [])].filter(child => child.classList.contains('listItem')).map(row => {
             const mod = row.classList.contains('jfmod-missingRow');
             const mark = row.querySelector('.jfmod-mark');
-            const overview = row.querySelector('.listItem-overview');
+            const overview = row.querySelector('.jfmod-episodeSummary') ?? row.querySelector('.listItem-overview');
             const title = row.querySelector('.listItemBodyText')?.textContent.trim() ?? '';
             return {
                 mod,
@@ -244,7 +244,7 @@ const episodeList = async (page, numbers) => {
                 meta: mod ? [...row.querySelectorAll('.jfmod-missingMeta .mediaInfoItem')].map(item => item.textContent.trim()) : null,
                 cover: mod ? coverOf(row.querySelector('.jfmod-missingStill')) : null,
                 dashed: mod ? getComputedStyle(row.querySelector('.jfmod-missingStill')).outlineStyle : null,
-                overview: mod ? row.querySelector('.listItem-overview')?.textContent.trim() ?? null : null,
+                overview: mod ? overview?.textContent.trim() ?? null : null,
                 overviewShown: !!overview && getComputedStyle(overview).display !== 'none',
                 focusables: mod ? [...row.querySelectorAll('button, a, input, select, [tabindex]')].map(node => node.className) : [],
                 mark: mark ? {
@@ -599,7 +599,7 @@ async function checkSeasonRows(page, label, detail, episodes, numbers, { admin, 
         record(label, `${what} E${episode.episodeNumber}: ${tv ? 'the row is a button stop' : 'the title links to the episode\'s page'}, ${rowButton ? 'the mark a second stop' : 'the mark no second stop'}`,
             tv ? row.tag === 'BUTTON' && row.focusables.length === stops : row.link?.startsWith(href) && row.link.endsWith(`&season=${episode.seasonNumber}&episode=${episode.episodeNumber}`)
                 && row.focusables.length === 1 + stops, { tag: row.tag, link: row.link, focusables: row.focusables });
-        if (layout === 'mobile') record(label, `${what} E${episode.episodeNumber}: no overview on the phone`, !row.overviewShown);
+        if (layout === 'mobile') record(label, `${what} E${episode.episodeNumber}: the phone shows its overview below the row`, episode.overview ? row.overviewShown && row.overview === episode.overview : !row.overviewShown);
     }
     if (tv) {
         await page.evaluate(() => document.activeElement?.blur());

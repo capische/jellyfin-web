@@ -15,6 +15,7 @@ import { getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import { episodesWord, MissingEpisodeRows } from './MissingChildren';
 import SeasonTotal from './SeasonTotal';
+import TitlePoster from './TitlePoster';
 
 import './entryDetails.scss';
 
@@ -109,7 +110,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
         {/* TMDB's season overview where upstream's page puts an item's overview; none until the series' list is refreshed. */}
         {tmdbSeason?.overview && mount('.overview', tmdbSeason.overview)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={detail.entry.title + ', Season ' + season} />}</div>,
+            <TitlePoster src={poster} title={detail.entry.title + ', Season ' + season} />,
             node, String(index)))}
         <SeasonTotal view={view} entryId={detail.entry.id} season={season} />
         <MissingEpisodeRows api={api} userId={userId} serverId={serverId} view={view} detail={detail} season={season} canAcquire={canAcquire}
