@@ -1,5 +1,18 @@
 # Ratings: the group, its popup and the card rating
 
+**rd3 presentation (approved D243 and rulebook §5, built, not accepted):** `shell/titlePages.scss` draws the
+popup as an intrinsic-width table of mark/value/count columns, centered on its group and clamped to the viewport.
+It is glass with .618em corners, .382em/.618em padding, a .382em caret gap and .236em/1em shadow. Dark: #202020
+at .382 with blur(1.618em) saturate(180%) contrast(.7) brightness(.85); light reads the shared light-glass tokens
+with its own 1.618em blur. Recipes are behind @supports; TV and unsupported engines use solid paper and its ink.
+Rows are **1.382em**, marks **1em**, numbers and counts **.764em**, counts right aligned/tabular at 70% (light 85.4%).
+The source name and “votes” are in title/accessible text only. No row is interactive. An open group is lit.
+Entrance .382s, exit .236s; TV .146s entrance/instant exit; reduced motion .146s fade. Existing hover/tap/OK,
+Back/Escape/outside dismissal and focus reservation remain. The old fixed group-width/11em minimum below is superseded.
+File-less movie ratings now share the **first** metadata row with year/runtime. Native season/episode heads may
+show returned sources too. Missing values are never fabricated: Discover/Title currently supplies only TMDB metadata,
+and file-less season/episode responses have no per-source ratings; those retain available stock scores pending backend support.
+
 **Status:** built, awaiting the user's approval. The design follows user decisions 9, 10 and 13 (2026-10-08, `PHASE9.md`
 *Final design*), ported onto both lines on 2026-10-28 (`PHASE9.md` *Port onto the main lines*); each item stacked, mark over
 number (design A2, approved by the user 2026-10-30, with a percent number's mark centred on the number as a unit and the popup's

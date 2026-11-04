@@ -2355,3 +2355,18 @@ consumes the answer. Accepted decisions above and in the phase documents stay un
 21. **Overlapping libraries.** When libraries share a path, should each library get its own
     entry and binding for the same native item, or should one library own it with the overlap
     documented? Consumed by R7 (plugin-reconciliation-data#3, high, verified).
+
+
+## Approved redesign — rd3 title pages (2026-11-03)
+
+**Built (not accepted).** The approved rulebook in [design/GUIDELINES.md](design/GUIDELINES.md) governs the art-ground
+heads, action pill, Video/Audio/Subtitles and Ratings pickers, download panel, versions, retention disclosures,
+season/episode rows and person pages. The implementation and named scale exceptions are recorded in
+[title-pages.md](design/guides/title-pages.md); every affected component guide is updated. Local playback startup
+owns its black loading screen and clears it on start/error/cancel/stop, settled or rejected start, and navigation.
+
+Scope: this worktree only, no branch/staging/commit operations, plugin changes, deployment, server or network access.
+Offline component checks exercise real template/components/styles with browser requests blocked; they do not claim
+live acceptance. TypeScript/stylelint/ESLint checks supplement them. Real Google Chrome acceptance, physical webOS
+D-pad/performance and existing live runners remain unrun under that restriction. Discovery/file-less child responses
+need per-source ratings from the backend to display the mockup's IMDb/Rotten Tomatoes values; no values are fabricated.

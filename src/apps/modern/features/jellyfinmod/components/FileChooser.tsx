@@ -186,8 +186,11 @@ export interface StripHosts {
  * Whether the strip stacks: on the phone (D4), and where the Video cell would be narrower than `STACK_EMS` (D199). It reads the
  * strip's own width, which does not depend on the stacking, so the strip never flips back and forth at the switch.
  */
-const stacks = (strip: HTMLElement) => layoutManager.mobile
-    || strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS) * parseFloat(getComputedStyle(strip).fontSize);
+const stacks = (strip: HTMLElement) => {
+    const separation = document.documentElement.classList.contains('jfmod-chrome') ? 2 * 0.382 : 0;
+    return layoutManager.mobile
+        || strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + separation) * parseFloat(getComputedStyle(strip).fontSize);
+};
 
 /**
  * The track strip (D4–D9, user-approved 2026-10-28, `reviews/upgrade-status-options/all-in-one`): Video, Audio and Subtitles as

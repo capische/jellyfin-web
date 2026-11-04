@@ -247,11 +247,11 @@ async function checkHeaderIcon(page, layout, label, admin) {
         if (!icon) return { present: false };
         const next = icon.nextElementSibling;
         const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
-        const visibleStock = [...row.querySelectorAll(':scope > .detailButton:not(.hide):not(.jfmod-getRelease):not(.jfmod-entryMore)')]
+        const visibleStock = [...row.querySelectorAll(':scope > .detailButton:not(.hide):not(.btnPlay):not(.jfmod-getRelease):not(.jfmod-entryMore)')]
             .filter(el => el.getBoundingClientRect().width > 0);
         const pad = el => getComputedStyle(el).padding;
         return { present: true, beforeFavorite: !!next && (next.classList.contains('btnUserRating') || next.classList.contains('jfmod-entryMore')),
-            classes: icon.className, title: icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
+            labelled: !!icon.closest('.jfmod-titleMissing, [data-jfmod-placeholder]'), classes: icon.className, title: icon.title, size: box(icon), stock: visibleStock.map(box), padding: pad(icon),
             stockPadding: visibleStock.map(pad), icon: icon.querySelector('.detailButton-icon')?.className ?? '' };
     }, PAGE);
     if (!admin) { record(layout, `${label}: no Get a release icon for an ordinary user`, !facts.present); return; }
@@ -261,8 +261,8 @@ async function checkHeaderIcon(page, layout, label, admin) {
     record(layout, `${label}: icon is a stock detailButton with cloud_download, titled "Get a Release"`,
         /\bbutton-flat\b/.test(facts.classes) && /\bdetailButton\b/.test(facts.classes) && /cloud_download/.test(facts.icon)
         && facts.title === 'Get a Release' && (!isTv(layout) || /show-focus/.test(facts.classes)), facts.classes);
-    const sameSize = facts.stock.length === 0 || facts.stock.every(([w, h]) => Math.abs(w - facts.size[0]) <= 1 && Math.abs(h - facts.size[1]) <= 1);
-    record(layout, `${label}: icon is exactly as big as its stock neighbours`, sameSize, `${facts.size} vs ${JSON.stringify(facts.stock)}`);
+    const sameSize = facts.stock.length === 0 || facts.stock.every(([w, h]) => (facts.labelled ? facts.size[0] > w : Math.abs(w - facts.size[0]) <= 1) && Math.abs(h - facts.size[1]) <= 1);
+    record(layout, `${label}: ${facts.labelled ? 'labelled action shares its neighbours height and grows for its label' : 'icon is exactly as big as its stock neighbours'}`, sameSize, `${facts.size} vs ${JSON.stringify(facts.stock)}`);
 }
 
 /** The release picker opens from `selector` and closes with Back; focus returns to the opener. */
@@ -923,22 +923,21 @@ async function checkTracks(page, layout, itemId) {
 }
 
 async function checkFileless(page, layout, admin) {
-    await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} .jfmod-getReleaseRaised` : null);
+    await openDetail(page, `entryId=${ids.fileless}`, admin ? `${PAGE} .jfmod-getRelease` : null);
     await checkHeaderIcon(page, layout, 'file-less movie', admin);
     await checkNoOldControls(page, layout, 'file-less movie');
     const raised = await page.evaluate(sel => {
-        const button = document.querySelector(`${sel} .jfmod-trackBlock .jfmod-getReleaseRaised`);
-        return button ? { classes: button.className, text: button.textContent.trim(), icon: !!button.querySelector('.cloud_download') } : null;
+        const button = document.querySelector(`${sel} .mainDetailButtons .jfmod-getRelease`);
+        return button ? { classes: button.className, text: getComputedStyle(button, '::after').content.replace(/^"|"$/g, ''), background: getComputedStyle(button).backgroundColor, icon: !!button.querySelector('.cloud_download') } : null;
     }, PAGE);
     if (!admin) {
         record(layout, 'file-less movie: no raised button and no More for an ordinary user',
             !raised && await page.locator(`${PAGE} .jfmod-entryMore`).count() === 0);
         return;
     }
-    record(layout, 'file-less movie: raised blue "Get a Release" where the track block would be',
-        !!raised && /\braised\b/.test(raised.classes) && /\bbutton-submit\b/.test(raised.classes) && raised.icon && raised.text === 'Get a Release',
+    record(layout, 'file-less movie: blue labelled Get a Release inside the action pill',
+        !!raised && raised.background === 'rgb(0, 164, 220)' && raised.icon && raised.text === 'Get a Release',
         JSON.stringify(raised));
-    await checkPickerOpens(page, layout, '.jfmod-getReleaseRaised', 'raised Get a release');
     await checkPickerOpens(page, layout, '.jfmod-getRelease', 'header Get a release');
     // The More menu: Monitor (with its state) and Remove entry; Back closes it and focus returns to ⋯.
     if (await activate(page, layout, '.jfmod-entryMore', 'file-less More')) {
@@ -952,11 +951,11 @@ async function checkFileless(page, layout, admin) {
         await menu.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
         if (!isMobile(layout)) record(layout, 'Back closes the file-less More; focus returns to ⋯', await activeMatches(page, '.jfmod-entryMore'), await activeName(page));
     }
-    if (!ids.grabbed) { notVerified(layout, 'queue line replaces the raised button during a grab', 'JELLYFINMOD_DD_GRABBED not set'); return; }
+    if (!ids.grabbed) { notVerified(layout, 'queue line stays below the action pill during a grab', 'JELLYFINMOD_DD_GRABBED not set'); return; }
     await openDetail(page, `entryId=${ids.grabbed}`, `${PAGE} .jfmod-trackBlock`);
     const inFlight = await page.evaluate(sel => ({ line: document.querySelector(`${sel} .jfmod-trackBlock .jfmod-queueStatusLine`)?.textContent ?? null,
         raised: !!document.querySelector(`${sel} .jfmod-getReleaseRaised`) }), PAGE);
-    record(layout, 'during a grab the queue line takes the raised button\'s place', !!inFlight.line && !inFlight.raised, inFlight.line ?? 'no line');
+    record(layout, 'during a grab the queue line stays below the action pill without a second Get a Release', !!inFlight.line && !inFlight.raised, inFlight.line ?? 'no line');
 }
 
 const PACK_CHECKS = [
@@ -1465,7 +1464,7 @@ const vlFits = (layout, facts) => facts.page.right <= facts.page.inner + 0.5 && 
 function vlGeometry(layout, facts, label, want = {}) {
     const near = (a, b, within = 1) => Math.abs(a - b) <= within;
     record(layout, `${label}: nothing overflows the page sideways`, vlFits(layout, facts), JSON.stringify(facts.page));
-    const shouldStack = isMobile(layout) || facts.stripClient < (31 + VL_STACK) * facts.em;
+    const shouldStack = isMobile(layout) || facts.stripClient < (31 + VL_STACK + 2 * 0.382) * facts.em;
     record(layout, `${label}: stacked exactly when the Video cell would be under ${VL_STACK}em`, facts.stacked === shouldStack,
         `stacked ${facts.stacked}, strip ${facts.stripClient}px, ${(facts.stripClient / facts.em - 31).toFixed(2)}em for Video`);
     if (want.stacked !== undefined) record(layout, `${label}: this width is ${want.stacked ? 'stacked' : 'a row'}`, facts.stacked === want.stacked, `${facts.stripClient}px`);

@@ -10,6 +10,7 @@ import { getDiscoverTitle } from '../api/modApi';
 import TmdbDetails from '../components/TmdbDetails';
 import { getTmdbImage, preconnectTmdbImages } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
+import { titlePage } from './titlePage';
 
 /** The template's slots this page fills or hides, as the file-less entry page does (entryDetails.js). */
 const FILLED = '.detailLogo, .nameContainer, .itemMiscInfo, .detailImageContainer, .itemGenres, .tagline, .overview, .itemDetailsGroup, .itemExternalLinks';
@@ -79,6 +80,10 @@ export default function initializeTmdbDetails(view, params) {
             libraryMenu.setTitle('');
             const backdrop = view.querySelector('#itemBackdrop');
             const image = getTmdbImage(data.metadata.backdropPath, 'w1280');
+            let type = mediaType === 'movie' ? 'Movie' : 'Series';
+            if (season !== undefined) type = 'Season';
+            if (episode !== undefined) type = 'Episode';
+            titlePage(view, type, image);
             if (backdrop && image && userSettings.detailsBanner()) backdrop.style.backgroundImage = `url("${image}")`;
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);

@@ -1,5 +1,14 @@
 # Buttons and row actions
 
+**rd3 title action pill (approved rulebook §§5/7, built, not accepted):** `.jfmod-titlePage .mainDetailButtons`
+is card glass, 3em corners and .382em padding, icon boxes 3em/glyphs 1.6em. Play carries its existing localized
+Play/Resume title as a visible label, minimum width 6.854em, white 85.4%/dark ink (light: dark 85.4%/white),
+and grows across the phone. Press .96 in .146s; no scale with reduced motion. Every existing action remains;
+rare extra actions wrap. Missing movies' existing Get a Release becomes the blue labelled main action in this
+pill; its duplicate raised button under the head is removed, and queue status stays there. Add to Library stays
+blue. The Played countdown and primary kept infinity remain on the tick. History/Episode Retention keep their real
+closed disclosure buttons, with a decorative Material chevron rotating .382s (.146s TV, instant reduced motion). See [title pages](title-pages.md).
+
 **rd2 current presentation (approved redesign D225–D227, built, not accepted):** outside Dashboard, `/catalog/settings` and
 its setup wizard, `shell/sharedChrome.scss` draws all labelled buttons as 2.7816em pills (1.3908em corners), side padding
 1.618em, 1em Title Case labels. Main: primary/white 700, hover #19b4ea. Other: transparent/.09em neutral outline/600,

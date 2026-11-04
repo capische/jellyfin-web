@@ -1,5 +1,12 @@
 # Search card
 
+**rd3 browse heads (built, not accepted):** the browse title uses the shared art-ground head and blue
+Add to Library pill; original data, routes and Add handler remain. A newly created entry, for an administrator
+only, offers Undo beside the destination head; duplicate/racing adds never arm Undo. It uses the existing
+Remove Entry API and invalidation, returns to the original browse address on success, and keeps the title on
+failure. The notice is visit-local and scoped to server/user/entry. Person cells in these title rows are 8.854em
+including their existing 1em padding (6.854em portrait); image failures keep the ratio/fallback. See [title pages](title-pages.md).
+
 **Status:** approved by the user 2026-11-01 (D200–D203 in workspace `reviews/overnight-2026-10-28/DECISIONS.md`: "C with 5
 per row", the three-line caption with the year not bold, "The hover should be border to border to other cell … Seemless",
 "hover should not [have] circled corners", "approved, apply it to the browse page too"). After the first look (user,

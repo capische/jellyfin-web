@@ -65,7 +65,7 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, it
     });
     const typeKnown = type !== undefined;
     let wanted: boolean | undefined;
-    if ((typeKnown && type !== 'Movie' && type !== 'Series') || health.isError || (health.isSuccess && !supported)
+    if ((typeKnown && !['Movie', 'Series', 'Season', 'Episode'].includes(type ?? '')) || health.isError || (health.isSuccess && !supported)
         || (preferences.loaded && !preferences.enabled)) wanted = false;
     else if (typeKnown && supported && preferences.loaded) wanted = true;
     // A failed minute's read keeps the last answer (react-query keeps its data): only a first answer that failed is "none".

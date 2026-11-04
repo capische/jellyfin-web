@@ -10,6 +10,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 
 | Guide | Component | Used by |
 | --- | --- | --- |
+| [title-pages.md](title-pages.md) | art-ground title head, stable poster/still boxes, action pill, person facts and Add/Undo notice | movie, series, season, episode, person and TMDB browse pages |
 | [shared-chrome.md](shared-chrome.md) | scoped type, colour, dialogs, switches, existing settings/list rows, motion and focus | signed-in mod shell, excluding admin and wizard |
 | [menus.md](menus.md) | paper menus, anchored lists and scrolling phone sheets | More, user, library and player menus |
 | [top-bar.md](top-bar.md) | glass top bar and its single URL-backed search | computer, tablet, phone and legacy TV header |

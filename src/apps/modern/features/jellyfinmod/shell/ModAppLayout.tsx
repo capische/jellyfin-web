@@ -28,6 +28,7 @@ import './topbarChrome.scss';
 import './pickerChrome.scss';
 import './motionChrome.scss';
 import './chromeFont.scss';
+import './titlePages.scss';
 import { useChromeScope } from './useChromeScope';
 import { LegacyChromeSearch } from './ChromeSearch';
 

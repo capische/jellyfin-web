@@ -1,5 +1,10 @@
 # Pending version (another copy on its way for a title that plays)
 
+**rd3 integration (built, not accepted):** the entry lives in the new art-ground title column. Its existing
+**three-line** arrangement in a Video list under 24em remains authoritative: ring/quality/X, wrapping state,
+then the flag without a dot. The mockup's two-line arrangement is not used. Whole-mark dropping, sizes and
+row-action geometry below are retained guide exceptions; no state, queue or cancellation behavior changes.
+
 **Status:** option 3 of workspace `reviews/upgrade-status-options/` (the user's pick 2026-10-28), placed under the track strip
 (D9), with the admin's X (D10) and the Replace wording (D11, user: "use profile and I don't think you need `the`") of
 `reviews/overnight-2026-10-28/DECISIONS.md`: **built overnight 2026-10-28, awaiting the user's approval**. Video marks only
