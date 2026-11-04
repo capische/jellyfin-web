@@ -18,7 +18,7 @@ import RemotePlayActiveMenu from 'apps/modern/components/AppToolbar/menus/Remote
 import SyncPlayMenu from 'apps/modern/components/AppToolbar/menus/SyncPlayMenu';
 import AppUserMenu from 'components/toolbar/AppUserMenu';
 import BarSearch from './BarSearch';
-import { Root } from './Root';
+import { readEnvironment, Root } from './Root';
 import { Icon, type IconName } from './Icon';
 import { Menu } from './Menu';
 
@@ -86,7 +86,7 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
     const [playerInfo, setPlayerInfo] = useState(playbackManager.getPlayerInfo());
     const [clock, setClock] = useState(new Date());
     const [tv, setTv] = useState(document.documentElement.classList.contains('layout-tv'));
-    const [phone, setPhone] = useState(document.documentElement.classList.contains('layout-mobile'));
+    const [phone, setPhone] = useState(readEnvironment().device === 'phone');
     const [scrolled, setScrolled] = useState(false);
     const { data: groups } = useSyncPlayGroups();
     useLayoutEffect(() => {
@@ -111,8 +111,10 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
         const timer = window.setInterval(() => setClock(new Date()), 30000);
         const layout = new MutationObserver(() => {
             setTv(document.documentElement.classList.contains('layout-tv'));
-            setPhone(document.documentElement.classList.contains('layout-mobile'));
+            setPhone(readEnvironment().device === 'phone');
         });
+        const resized = () => setPhone(readEnvironment().device === 'phone');
+        window.addEventListener('resize', resized);
         layout.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         const scroll = (event: Event) => {
             const target = event.target;
@@ -125,6 +127,7 @@ export const Bar: FC<{ onDrawer?: React.MouseEventHandler<HTMLElement> }> = ({ o
             Events.off(playbackManager, 'playerchange', update);
             clearInterval(timer);
             layout.disconnect();
+            window.removeEventListener('resize', resized);
             document.removeEventListener('scroll', scroll, true);
         };
     }, []);
