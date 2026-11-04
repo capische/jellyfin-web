@@ -1,4 +1,6 @@
-import React, { type FC, type PropsWithChildren } from 'react';
+import React, { type FC, type PropsWithChildren, useContext } from 'react';
+import { DesignContext } from 'apps/modern/features/jellyfinmod/design/Root';
+import { Section } from 'apps/modern/features/jellyfinmod/design/Section';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
@@ -87,6 +89,7 @@ const SectionContainer: FC<PropsWithChildren<SectionContainerProps>> = ({
     listOptions = {},
     children
 }) => {
+    const design = useContext(DesignContext);
     const sectionClass = classNames('verticalSection', className);
 
     const renderItems = () => {
@@ -100,6 +103,13 @@ const SectionContainer: FC<PropsWithChildren<SectionContainerProps>> = ({
             return <Cards items={items} cardOptions={cardOptions} />;
         }
     };
+
+    // JellyfinMod: on the mod's painted pages a row is the mockup's section; its items are already the mockup's cells.
+    if (design && isScrollerMode) {
+        const title = sectionHeaderProps?.title ?? '';
+        return <Section title={sectionHeaderProps?.url && items.length > 1 ? <a href={sectionHeaderProps.url}>{title}</a> : title}
+            queryKey={itemsContainerProps?.queryKey} reload={itemsContainerProps?.reloadItems}>{renderItems()}</Section>;
+    }
 
     const content = (
         <ItemsContainer
