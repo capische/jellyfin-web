@@ -23,7 +23,9 @@ import { Icon, type IconName } from './Icon';
 import { Menu } from './Menu';
 
 const isFavorites = (pathname: string, search: string) => pathname === '/favorites' || pathname === '/home' && new URLSearchParams(search).get('tab') === '1';
-const pageTitles = new Map([['/tv', 'Shows'], ['/movies', 'Movies']]);
+const pageTitles = new Map([['/tv', 'Shows'], ['/movies', 'Movies'], ['/search', 'Search'], ['/catalog/queue', 'Queue'], ['/mypreferencesmenu', 'Settings'],
+    ['/mypreferencesdisplay', 'Display'], ['/mypreferenceshome', 'Home'], ['/mypreferencesplayback', 'Playback'], ['/mypreferencessubtitles', 'Subtitles'],
+    ['/mypreferencescontrols', 'Controls'], ['/userprofile', 'Profile'], ['/quickconnect', 'Quick Connect']]);
 
 const activate = (event: KeyboardEvent<HTMLElement>) => {
     if (getKeyName(event.nativeEvent) !== 'Enter') return;

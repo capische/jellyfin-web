@@ -8,7 +8,7 @@ export const menuPosition = (anchor: Element, dialog: HTMLElement, gapEms = 0.38
     const below = box.bottom + gap;
     const above = box.top - gap - height;
     const top = below + height <= window.innerHeight - em ? below : above;
-    const left = Math.max(em, Math.min(box.left, window.innerWidth - em - width));
+    const left = Math.max(em, Math.min(box.left, window.innerWidth - Math.max(em, window.innerWidth * 0.033) - width));
     dialog.style.transformOrigin = `${top >= box.bottom ? 'top' : 'bottom'} left`;
     return { top: Math.max(em, top), left };
 };
