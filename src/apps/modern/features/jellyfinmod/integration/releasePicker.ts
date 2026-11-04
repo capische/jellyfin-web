@@ -5,16 +5,15 @@ import dialogHelper from 'components/dialogHelper/dialogHelper';
 import layoutManager from 'components/layoutManager';
 import { renderComponent } from 'utils/reactUtils';
 
-import { type EntryDetail, getDownloadClientLink, getEntry, loadEntryEpisodeList } from '../api/modApi';
-import ReleasePickerDialog, { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
+import { type EntryDetail, getEntry, loadEntryEpisodeList } from '../api/modApi';
+import { type ReleasePickerEpisode } from '../components/ReleasePickerDialog';
+import { ReleasePicker } from '../design/ReleasePicker';
+import { isTopDialog } from '../design/dialogHost';
+import { getKeyName } from 'scripts/keyboardNavigation';
+import { isBackKey } from '../shell/dpadModals';
+import focusManager from 'components/focusManager';
 import type { ReleaseIntent } from '../types/acquisition';
 import type { EntryEpisode } from '../types/entry';
-
-// webpack's `?raw` rule (webpack.common.js) hands the drawing over as text; the eslint resolver does not know the query.
-// eslint-disable-next-line import/no-unresolved
-import namesToggleGlyph from '../assets/names-toggle.svg?raw';
-// eslint-disable-next-line import/no-unresolved
-import clientOpenGlyph from '../assets/client-open.svg?raw';
 
 interface OpenOptions {
     api: Api;
@@ -34,51 +33,6 @@ interface OpenOptions {
     episodeListLoaded?: boolean;
     onChanged?: () => void;
 }
-
-/** Show Names (user, 2026-10-11): every row shows its file name while it is on. Off by default, remembered per browser. */
-const NAMES_KEY = 'jfmod-releaseNames';
-
-const readNames = () => {
-    try {
-        return localStorage.getItem(NAMES_KEY) === '1';
-    } catch {
-        return false;
-    }
-};
-
-const saveNames = (on: boolean) => {
-    try {
-        localStorage.setItem(NAMES_KEY, on ? '1' : '0');
-    } catch {
-        // A browser without storage just forgets the choice.
-    }
-};
-
-/** Puts the state on the dialog (its class shows the names), on the button (pressed, label, tooltip) and in storage. */
-const applyNames = (dlg: HTMLElement, toggle: HTMLElement, on: boolean) => {
-    const label = on ? 'Hide Names' : 'Show Names';
-    dlg.classList.toggle('jfmod-releaseDialog--names', on);
-    toggle.setAttribute('aria-pressed', String(on));
-    toggle.setAttribute('aria-label', label);
-    toggle.setAttribute('title', label);
-};
-
-/**
- * Open Transmission (user, 2026-10-12): a round icon in the title row that opens the download client's web page in a new tab,
- * named after the client ("Open Transmission"). Administrators only, as the settings it reads are theirs (anyone else gets 403
- * and the icon stays hidden), and never on the TV, where nothing can open a tab.
- */
-const showClientLink = (api: Api, link: HTMLAnchorElement) => {
-    if (layoutManager.tv) return;
-    getDownloadClientLink(api).then(client => {
-        if (!client) return;
-        const label = 'Open ' + client.name;
-        link.href = client.openUrl;
-        link.title = label;
-        link.setAttribute('aria-label', label);
-        link.hidden = false;
-    }).catch(() => undefined);
-};
 
 const pad = (value: number) => (value < 10 ? '0' : '') + value;
 
@@ -145,40 +99,29 @@ export const pickerEpisodes = (episodes: EntryEpisode[]): ReleasePickerEpisode[]
  */
 export const openReleasePicker = (options: OpenOptions): Promise<void> => {
     const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : 'medium' });
-    dlg.classList.add('formDialog', 'jfmod-releaseDialog');
-    // The title first and a close cross at the right, in place of upstream's back arrow; Back and Escape still close it
-    // through the dialog helper (user, 2026-10-08).
-    dlg.innerHTML = '<div class="formDialogHeader">'
-        + '<h3 class="formDialogHeaderTitle"></h3>'
-        // Sources (P4.FU25): first of the title row's icons; the picker draws its icon and checklist here.
-        + '<span class="jfmod-sourcesSlot"></span>'
-        + '<button is="paper-icon-button-light" type="button" class="autoSize jfmod-releaseAction jfmod-namesToggle"'
-        + ' title="Show Names" aria-label="Show Names" aria-pressed="false">'
-        + namesToggleGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</button>'
-        // Open Transmission (user, 2026-10-12): after Show Names, before Close; shown only once an administrator's settings read
-        // names the client and its web link.
-        + '<a class="paper-icon-button-light autoSize jfmod-releaseAction jfmod-clientOpen" target="_blank" rel="noopener noreferrer"'
-        + ' hidden>' + clientOpenGlyph.replace('<svg ', '<svg class="jfmod-releaseGlyph" ') + '</a>'
-        + '<button is="paper-icon-button-light" class="btnCancel autoSize jfmod-releaseAction jfmod-releaseDialogClose" tabindex="-1"'
-        + ' title="Close"'
-        + ' aria-label="Close"><svg class="jfmod-releaseGlyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"'
-        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></div>'
-        + '<div class="formDialogContent smoothScrollY"><div class="jfmod-releaseDialogContent"></div></div>';
-    const heading = dlg.querySelector('.formDialogHeaderTitle');
-    // The title the design draws: what the dialog does, in Title Case; the choices below name the episode or season.
-    if (heading) heading.textContent = options.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release';
-    const toggle = dlg.querySelector<HTMLElement>('.jfmod-namesToggle')!;
-    applyNames(dlg, toggle, readNames());
-    toggle.addEventListener('click', () => {
-        const on = toggle.getAttribute('aria-pressed') !== 'true';
-        applyNames(dlg, toggle, on);
-        saveNames(on);
+    dlg.className = 'focuscontainer hide jfmod-designDialogHost';
+    dlg.dataset.designDialog = 'true';
+    dlg.style.animation = 'none';
+    const opener = document.activeElement as HTMLElement | null;
+    let closing = false;
+    dlg.addEventListener('closing', () => {
+        closing = true;
     });
-    showClientLink(options.api, dlg.querySelector<HTMLAnchorElement>('.jfmod-clientOpen')!);
-    const close = () => dialogHelper.close(dlg);
-    dlg.querySelector('.btnCancel')?.addEventListener('click', close);
-    const content = dlg.querySelector<HTMLElement>('.jfmod-releaseDialogContent')!;
-    const unmount = renderComponent(ReleasePickerDialog, {
+    const close = () => {
+        if (!closing) dialogHelper.close(dlg);
+    };
+    const key = (event: KeyboardEvent) => {
+        if (!event.defaultPrevented && isTopDialog(dlg) && isBackKey(getKeyName(event))) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            close();
+        }
+    };
+    document.addEventListener('keydown', key);
+    const unmount = renderComponent(ReleasePicker, {
+        title: options.title,
+        close,
         api: options.api,
         entryId: options.entryId,
         mediaType: options.mediaType,
@@ -187,13 +130,14 @@ export const openReleasePicker = (options: OpenOptions): Promise<void> => {
         episodePage: options.episodePage,
         seasonPage: options.seasonNumber,
         intent: options.intent,
-        sourcesSlot: dlg.querySelector<HTMLElement>('.jfmod-sourcesSlot') ?? undefined,
         loadEpisodes: options.mediaType === 'series' && options.episodeListLoaded === false ?
             () => loadEpisodeList(options.api, options.entryId).then(detail => pickerEpisodes(detail.episodes)) : undefined,
         onChanged: options.onChanged
-    }, content);
+    }, dlg);
     const release = () => {
+        document.removeEventListener('keydown', key);
         unmount();
+        if (opener?.isConnected) focusManager.focus(opener);
     };
     return dialogHelper.open(dlg).then(release, release);
 };

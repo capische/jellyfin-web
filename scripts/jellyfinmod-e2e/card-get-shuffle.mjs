@@ -1,3 +1,4 @@
+import { readScopeOptions } from './ds-controls.mjs';
 /* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage, location, getComputedStyle */
 // Get a Release on cards and Shuffle only where it makes sense (P1.FU12, user-approved 2026-10-12; UX §5.7 and §1.1).
@@ -157,8 +158,7 @@ const overlayFacts = (page, cardSelector) => page.evaluate(selector => {
     };
 }, cardSelector);
 
-const scopeOptions = page => page.evaluate(() => [...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
-    .map(option => ({ text: option.textContent, selected: option.selected })));
+const scopeOptions = readScopeOptions;
 
 async function closeDialog(page, selector) {
     await page.keyboard.press('Escape');
@@ -174,16 +174,16 @@ async function closeDialog(page, selector) {
 async function checkPicker(page, label, what, open, { heading, scope }) {
     const before = await page.evaluate(() => location.hash);
     await open();
-    const opened = await page.waitForSelector('.jfmod-releaseDialog', { timeout: 15000 }).then(() => true, () => false);
+    const opened = await page.waitForSelector('.pickerDialog', { timeout: 15000 }).then(() => true, () => false);
     await page.waitForTimeout(1500);
-    const title = opened ? await page.locator('.jfmod-releaseDialog :is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)').innerText().catch(() => null) : null;
+    const title = opened ? await page.locator('.pickerDialog :is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)').innerText().catch(() => null) : null;
     const options = opened ? await scopeOptions(page) : [];
     const after = await page.evaluate(() => location.hash);
     const selected = options.find(option => option.selected)?.text ?? null;
     const scopeOk = scope ? scope(options, selected) : true;
     record(label, `${what}: opens the picker "${heading}" on the page${scope ? ', in the card\'s scope' : ''}`,
         opened && title === heading && after === before && scopeOk, { title, selected, options: options.map(option => option.text).slice(0, 6), before, after });
-    if (opened) record(label, `${what}: the picker closes`, await closeDialog(page, '.jfmod-releaseDialog'));
+    if (opened) record(label, `${what}: the picker closes`, await closeDialog(page, '.pickerDialog'));
 }
 
 /** Hovers a card and checks its overlay; returns whether the icon showed. */

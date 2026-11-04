@@ -170,8 +170,7 @@ html.jfmod-chrome {
     .MuiIconButton-root,
     .paper-icon-button-light,
     .jfmod-iconbtn,
-    .jfmod-fileIcon,
-    .jfmod-releaseAction {
+    .jfmod-fileIcon {
         border-radius: 50%;
         cursor: pointer;
         transition: background-color 0.236s $ease;
@@ -605,8 +604,7 @@ html.jfmod-chrome.layout-tv {
     .MuiIconButton-root:focus,
     .listItem > .paper-icon-button-light:focus,
     .jfmod-iconbtn:focus,
-    .jfmod-fileIcon:focus,
-    .jfmod-releaseAction:focus {
+    .jfmod-fileIcon:focus {
         background: transparent;
         color: var(--jfmod-chrome-ink);
         box-shadow: 0 0 0 0.12em var(--jfmod-chrome-paper), 0 0 0 0.28em #fff;
@@ -648,10 +646,6 @@ html.jfmod-chrome.layout-tv {
 
     .userPreferencesPage .MuiCheckbox-root.Mui-focusVisible,
     .MuiSwitch-switchBase.Mui-focusVisible { box-shadow: 0 0 0 0.236em $primary; }
-
-    .jfmod-releaseDialog .jfmod-releaseAction:focus {
-        color: var(--jfmod-btn, var(--jfmod-sec, rgba(255, 255, 255, 0.7)));
-    }
 
     .dialogBackdrop { transition-duration: 0.146s; }
 

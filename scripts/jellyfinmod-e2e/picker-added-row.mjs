@@ -95,28 +95,28 @@ try {
     } else {
         await opener.click();
     }
-    await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem', { timeout: 20000 });
+    await page.waitForSelector('.pickerDialog .rels .rel', { timeout: 20000 });
     await page.waitForTimeout(800);
 
     // Every row: its link (href, new tab, over the name's box) or its plain name; the added row also whether the pointer reaches it.
-    const rows = () => page.evaluate(() => [...document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem')].map(item => {
-        const id = item.querySelector('[data-jfmod-release-row]')?.getAttribute('data-jfmod-release-row') ?? null;
-        const added = item.classList.contains('jfmod-releaseItem--added');
-        const name = item.querySelector('.jfmod-releaseCol--indexer');
-        const link = item.querySelector(':scope > .jfmod-releaseIndexerLink');
+    const rows = () => page.evaluate(() => [...document.querySelectorAll('.pickerDialog .rels .rel')].map(item => {
+        const id = item.getAttribute('data-jfmod-release-row') ?? null;
+        const added = item.classList.hasAttribute('data-ds-added');
+        const name = item.querySelector('[data-ds-indexer]');
+        const link = item.querySelector('a[data-ds-indexer]');
         if (!link) return { id, added, link: null, nameShown: !!name && getComputedStyle(name).visibility === 'visible' };
         if (added) item.scrollIntoView({ block: 'center' });
         const a = link.getBoundingClientRect();
         const b = name.getBoundingClientRect();
         const hit = document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
-        return { id, added, link: link.getAttribute('href'), last: item.lastElementChild === link, target: link.target, rel: link.rel, title: link.title,
+        return { id, added, link: link.getAttribute('href'), last: link.parentElement.classList.contains('rcols'), target: link.target, rel: link.rel, title: link.title,
             shown: getComputedStyle(link).visibility === 'visible', dx: Math.round(a.left - b.left), dy: Math.round(a.top - b.top),
             over: Math.abs(a.left - b.left) <= 1 && Math.abs(a.top - b.top) <= 1 && Math.abs(a.width - b.width) <= 1, reached: !!hit && link.contains(hit),
             text: link.textContent === name.textContent };
     }));
     const linkRight = (row, href) => row.link === href && row.last && row.target === '_blank' && /noopener/.test(row.rel) && /^Open on /.test(row.title)
         && row.shown && row.over && row.text;
-    const shot = name => page.locator('.jfmod-releaseDialog').screenshot({ path: `${shots}/added-row-${tier}-${layout}-${name}.png` }).catch(() => undefined);
+    const shot = name => page.locator('.pickerDialog').screenshot({ path: `${shots}/added-row-${tier}-${layout}-${name}.png` }).catch(() => undefined);
 
     const before = await rows();
     if (tv) {
@@ -128,9 +128,8 @@ try {
 
     // Open Transmission: administrators only (oleksii is one), never on the TV.
     const client = await page.evaluate(() => {
-        const link = document.querySelector('.jfmod-releaseDialog .jfmod-clientOpen');
-        const header = [...document.querySelectorAll('.jfmod-releaseDialog .formDialogHeader > *')].map(node => node.className.split(' ').find(name =>
-            /jfmod-(namesToggle|clientOpen|releaseDialogClose)$/.test(name)) ?? node.tagName);
+        const link = document.querySelector('.pickerDialog .dlghead a.rb');
+        const header = [...document.querySelectorAll('.pickerDialog .dlghead > button, .pickerDialog .dlghead > a')].map(node => node.hasAttribute('aria-pressed') ? 'names' : node.tagName === 'A' ? 'client' : 'close');
         return { shown: !!link && !link.hidden && link.getBoundingClientRect().width > 0, href: link?.getAttribute('href') ?? null, title: link?.title ?? null,
             target: link?.target ?? null, header };
     });
@@ -139,12 +138,12 @@ try {
     } else {
         record(label, 'Open Transmission (administrator, the client has a web link): between Show Names and Close, the client\'s link, its name, a new tab',
             client.shown && client.href === CLIENT.openUrl && client.title === 'Open ' + CLIENT.name && client.target === '_blank'
-                && client.header.indexOf('jfmod-clientOpen') === client.header.indexOf('jfmod-namesToggle') + 1
-                && client.header.indexOf('jfmod-releaseDialogClose') === client.header.indexOf('jfmod-clientOpen') + 1, client);
+                && client.header.indexOf('client') === client.header.indexOf('names') + 1
+                && client.header.indexOf('close') === client.header.indexOf('client') + 1, client);
     }
 
     // Add on the wanted row: a click, or Enter on its Add on the TV.
-    const add = page.locator(`.jfmod-releaseDialog [data-jfmod-release-add="${WANTED}"]`);
+    const add = page.locator(`.pickerDialog [data-jfmod-release-add="${WANTED}"]`);
     if (tv) {
         await add.focus();
         await page.keyboard.press('Enter');
@@ -161,7 +160,7 @@ try {
     await page.waitForTimeout(400);
     const heldRow = (await rows()).find(item => item.added);
     await shot('held');
-    const accepted = await until(async () => (await page.locator('.jfmod-releaseDialog .jfmod-releaseItem--added .jfmod-addedFigure').count() ? addedNow('accepted') : null),
+    const accepted = await until(async () => (await page.locator('.pickerDialog .rel[data-ds-added] .dlf').count() ? addedNow('accepted') : null),
         { timeout: 20000, every: 300, label: 'the accepted added row with its download figure' });
     await page.waitForTimeout(400);
     const acceptedRow = (await rows()).find(item => item.added);

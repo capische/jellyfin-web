@@ -2,6 +2,8 @@ import type { DownloadProgress } from '../constants/queue';
 import { paintLink, type DownloadMarkLink } from '../components/DownloadStateMark';
 
 // ds2.js dm, card size. Progress, state, client URL and permission all come from the existing integration.
+const painted = new WeakMap<HTMLElement, string>();
+
 const glyphs: Record<string, string> = {
     downloading: '<path d="M12 4V20M6 14L12 20L18 14"/>',
     plus: '<path d="M12 5.5V18.5M5.5 12H18.5"/>',
@@ -38,8 +40,12 @@ export const paintCellDownload = (cell: HTMLElement, progress: DownloadProgress 
             + `<circle class="${turning ? 'turn' : 'val'}" cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" pathLength="100" stroke-dasharray="${segment}"/></svg>`;
     }
     const glyph = progress.plus ? glyphs.plus : glyphs[kind] || glyphs.downloading;
-    const html = `<span class="dm card ${kind}">${arc}<svg class="glyph${kind === 'downloading' ? ' bob' : ''}" viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg></span>`;
-    if (mark.innerHTML !== html) mark.innerHTML = html;
+    const state = progress.plus && kind === 'downloading' ? 'new-version' : kind;
+    const html = `<span class="dm card ${state}">${arc}<svg class="glyph${kind === 'downloading' && !progress.plus ? ' bob' : ''}" viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg></span>`;
+    if (painted.get(mark) !== html) {
+        mark.innerHTML = html;
+        painted.set(mark, html);
+    }
     mark.dataset.jfmodKind = kind;
     paintLink(mark, progress.tooltip, link);
     if (!bar) {

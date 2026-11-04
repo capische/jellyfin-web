@@ -1,3 +1,4 @@
+import { chooseScopeValue, readScopeOptions } from './ds-controls.mjs';
 /* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity, @stylistic/max-statements-per-line, no-empty-function -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage, location, getComputedStyle */
 // Detail page design fix acceptance (fix/detail-page-design, 2026-10-07; docs/jellyfinmod/design/episode-page-design-spec.md,
@@ -268,24 +269,32 @@ async function checkHeaderIcon(page, layout, label, admin) {
 /** The release picker opens from `selector` and closes with Back; focus returns to the opener. */
 async function checkPickerOpens(page, layout, selector, label) {
     if (!await activate(page, layout, selector, label)) { record(layout, `${label} opens the release picker`, false, 'not reached'); return; }
-    const dialog = page.locator('.jfmod-releaseDialog');
+    const dialog = page.locator('.pickerDialog');
     const opened = await dialog.first().waitFor({ state: 'visible', timeout: 10000 }).then(() => true, () => false);
     record(layout, `${label} opens the release picker`, opened);
     if (!opened) return;
     // User, 2026-10-08: a cross at the right closes it (no back arrow, no Close button); its choices share one line; on a
     // large screen it takes most of the screen and its content scrolls inside.
-    await settled(page, '.jfmod-releaseDialog');
+    await settled(page, '.pickerDialog');
     const shape = await page.evaluate(() => {
-        const dlg = document.querySelector('.jfmod-releaseDialog');
+        const dlg = document.querySelector('.pickerDialog');
         const box = dlg.getBoundingClientRect();
-        const title = dlg.querySelector(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)')?.getBoundingClientRect();
-        const cross = dlg.querySelector('.jfmod-releaseDialogClose');
-        const content = dlg.querySelector('.formDialogContent');
-        const lines = new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')].map(node => Math.round(node.getBoundingClientRect().top)));
-        return { cross: !!cross && cross.querySelector('.material-icons')?.classList.contains('close') && cross.getBoundingClientRect().left > (title?.right ?? 0),
+        const title = dlg.querySelector('.dlghead h3')?.getBoundingClientRect();
+        const cross = dlg.querySelector('.pickerDialog .dlghead [aria-label="Close"]');
+        const content = dlg;
+        const spacer = document.createElement('div');
+        spacer.style.height = dlg.clientHeight + 'px';
+        dlg.querySelector('.dlgbody').appendChild(spacer);
+        const previousScroll = dlg.scrollTop;
+        dlg.scrollTop = 1;
+        const scrolls = dlg.scrollTop === 1;
+        spacer.remove();
+        dlg.scrollTop = previousScroll;
+        const lines = new Set([...dlg.querySelectorAll('.pmchoices > .fld')].map(node => Math.round(node.getBoundingClientRect().top)));
+        return { cross: !!cross && !!cross.querySelector('[data-ds-glyph=close]') && cross.getBoundingClientRect().left > (title?.right ?? 0),
             back: !!dlg.querySelector('.material-icons.arrow_back'), closeButton: [...dlg.querySelectorAll('button')].some(button => button.textContent.trim() === 'Close'),
             lines: lines.size, size: [Math.round(box.width), Math.round(box.height)], viewport: [innerWidth, innerHeight],
-            scrolls: !!content && ['auto', 'scroll'].includes(getComputedStyle(content).overflowY) && content.clientHeight < box.height };
+            scrolls: scrolls && ['auto', 'scroll'].includes(getComputedStyle(content).overflowY) };
     });
     record(layout, `${label}: the picker closes with a cross at the right; no back arrow, no Close button`, shape.cross && !shape.back && !shape.closeButton,
         JSON.stringify(shape));
@@ -296,7 +305,7 @@ async function checkPickerOpens(page, layout, selector, label) {
             && shape.size[1] >= 0.85 * shape.viewport[1] && shape.scrolls, `${shape.size} of ${shape.viewport}`);
     }
     await back(page, layout);
-    if (await dialog.count()) await page.locator('.jfmod-releaseDialog .jfmod-releaseDialogClose').first().click().catch(() => {});
+    if (await dialog.count()) await page.locator('.pickerDialog .pickerDialog .dlghead [aria-label="Close"]').first().click().catch(() => {});
     await dialog.first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     if (!isMobile(layout)) record(layout, `${label}: focus returns to the opener after the picker`, await activeMatches(page, selector), await activeName(page));
 }
@@ -693,7 +702,7 @@ const trackField = (page, name) => page.evaluate(([sel, fieldName]) => {
     else el.blur?.();
     return { tag: el.tagName, chevron: !!el.querySelector('.chev'), focusable, title: el.title,
         height: Math.round(el.getBoundingClientRect().height), videoHeight: Math.round(video?.getBoundingClientRect().height ?? 0),
-        selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.value ?? null,
+        selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.dataset.value ?? null,
         options: [...select?.options ?? []].map(option => ({ value: option.value, text: option.textContent })), drawn: window.jfmodTrack(el),
         background: getComputedStyle(el).backgroundColor };
 }, [PAGE, name]);
@@ -821,7 +830,7 @@ async function checkTracks(page, layout, itemId) {
                 size: size?.textContent ?? null, sizeRight: Math.round(box(size).right),
                 end: Math.round(box(row.querySelector('.icons')).left - parseFloat(getComputedStyle(row.querySelector('.icons')).marginLeft)),
                 video: window.jfmodTrack(videoLine), whole: window.jfmodTrack(button),
-                divider: !!row.querySelector('.jfmod-fileDivider, .jfmod-releaseDivider') };
+                divider: !!row.querySelector('.jfmod-fileDivider, .marks') };
         }), PAGE);
         const selected = rows.find(row => row.selected) ?? rows[0];
         record(layout, `${tag}: each file's size is right-aligned at its row's end, one column for every row`, rows.length > 0
@@ -979,44 +988,45 @@ const searchAnswer = page => page.waitForResponse(response => /\/JellyfinMod\/Re
 
 /** The picker's settled state: no search block running, its status, the scope switch and every eligible row with its chips and actions. */
 async function pickerState(page) {
-    await page.waitForFunction(() => !document.querySelector('.jfmod-releaseDialog .jfmod-searchBlock--searching'), undefined, { timeout: 120000 })
+    await page.waitForFunction(() => !document.querySelector('.pickerDialog .sblock:not(.dimmed):not(.err)'), undefined, { timeout: 120000 })
         .catch(() => {});
     await page.waitForTimeout(600);
-    return page.evaluate(() => {
-        const dlg = document.querySelector('.jfmod-releaseDialog');
+    const scope = await readScopeOptions(page);
+    return page.evaluate(scope => {
+        const dlg = document.querySelector('.pickerDialog');
         const select = dlg?.querySelector('#jfmod-releaseEpisode');
         const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
         const icon = button => {
             if (!button) return null;
             const box = button.getBoundingClientRect();
-            return { title: button.title, label: button.getAttribute('aria-label') ?? '', icon: button.querySelector('.jfmod-releaseGlyph-plus') ? 'add' : button.querySelector('.jfmod-releaseGlyph-swap') ? 'swap_horiz' : '',
+            return { title: button.title, label: button.getAttribute('aria-label') ?? '', icon: button.querySelector('[data-ds-glyph="plus"]') ? 'add' : button.querySelector('[data-ds-glyph="swap"]') ? 'swap_horiz' : '',
                 size: [Math.round(box.width), Math.round(box.height)], color: getComputedStyle(button).color,
                 classes: button.className };
         };
         return {
             root,
-            status: dlg?.querySelector('.jfmod-releaseStatus')?.textContent.trim() ?? '',
-            scopeLabel: select?.closest('.selectContainer')?.querySelector('label')?.textContent.trim() ?? '',
-            options: select ? [...select.options].map(option => ({ value: option.value, text: option.textContent })) : [],
-            value: select?.value ?? null,
-            selects: dlg ? dlg.querySelectorAll('.jfmod-releaseControls select').length : 0,
-            lines: dlg ? new Set([...dlg.querySelectorAll('.jfmod-releaseControls > .selectContainer')]
+            status: dlg?.querySelector('.pstatus')?.textContent.trim() ?? '',
+            scopeLabel: select?.closest('.fld')?.querySelector('.lb')?.textContent.trim() ?? '',
+            options: scope,
+            value: select?.dataset.value ?? null,
+            selects: dlg ? dlg.querySelectorAll('.pmchoices [role=combobox]').length : 0,
+            lines: dlg ? new Set([...dlg.querySelectorAll('.pmchoices > .fld')]
                 .map(node => Math.round(node.getBoundingClientRect().top))).size : 0,
-            rows: dlg ? [...dlg.querySelectorAll('.jfmod-releaseList .jfmod-releaseItem')].map(item => ({
-                title: (item.querySelector('.jfmod-releaseTitle')?.textContent ?? '').replace(/ · score -?\d+$/, ''),
-                coverage: item.querySelector('.jfmod-releaseChip--coverage')?.textContent ?? null,
-                held: [...item.querySelectorAll('.jfmod-releaseChip--held')].map(chip => chip.textContent),
+            rows: dlg ? [...dlg.querySelectorAll('.rels .rel')].map(item => ({
+                title: item.dataset.dsReleaseTitle ?? '',
+                coverage: item.querySelector('.rflag:not(.pr):not(.fl)')?.textContent ?? null,
+                held: [...item.querySelectorAll('.incheck')].map(chip => chip.textContent),
                 add: icon(item.querySelector('[data-jfmod-release-add]')),
                 replace: icon(item.querySelector('[data-jfmod-release-replace]'))
             })) : []
         };
-    });
+    }, scope);
 }
 
 /** Changes the scope through the switch's own select, then reads the search it started and the settled picker. */
 async function chooseScope(page, value) {
     const answer = searchAnswer(page);
-    await page.locator('.jfmod-releaseDialog #jfmod-releaseEpisode').selectOption(value);
+    await chooseScopeValue(page, value);
     return { body: await answer, state: await pickerState(page) };
 }
 
@@ -1027,13 +1037,13 @@ const actionsShaped = (row, root) => !!row.add && !!row.replace && row.add.title
     && row.add.label.includes(row.title) && row.replace.label.includes(row.title)
     && /\badd\b/.test(row.add.icon) && /\bswap_horiz\b/.test(row.replace.icon)
     && [row.add, row.replace].every(button => button.size[0] >= 2.5 * root - 1 && button.size[1] >= 2.5 * root - 1
-        && /paper-icon-button-light/.test(button.classes))
+        && /\brb\b/.test(button.classes))
     && row.replace.color === 'rgb(198, 40, 40)';
 
 /** Add alone on one row: the Add icon shaped as above, and no Replace (episode upgrades off, user 2026-10-09). */
 const addAloneShaped = (row, root) => !!row.add && !row.replace && row.add.title === 'Add' && row.add.label.includes(row.title)
     && /\badd\b/.test(row.add.icon) && row.add.size[0] >= 2.5 * root - 1 && row.add.size[1] >= 2.5 * root - 1
-    && /paper-icon-button-light/.test(row.add.classes);
+    && /\brb\b/.test(row.add.classes);
 
 /**
  * Records one held row against the episode upgrades switch as the plugin's settings read it when the search ran (user,
@@ -1111,7 +1121,7 @@ async function checkPacks(page, layout) {
         record(layout, 'packs: the picker opens', false, 'not reached');
         return;
     }
-    await page.locator('.jfmod-releaseDialog').first().waitFor({ state: 'visible', timeout: 10000 });
+    await page.locator('.pickerDialog').first().waitFor({ state: 'visible', timeout: 10000 });
     const seen = { held: false, empty: false, unavailable: false, modes: false, replaceOn: false, replaceOff: false };
     const upgrades = await episodeUpgradesNow(page);
     const episode = { body: await first, state: await pickerState(page) };
@@ -1169,8 +1179,8 @@ async function checkPacks(page, layout) {
     if (!seen.empty) notVerified(layout, PACK_CHECKS[4], 'no eligible row without held files');
     if (!seen.unavailable) notVerified(layout, PACK_CHECKS[6], 'some indexer answered every search');
     await back(page, layout);
-    if (await page.locator('.jfmod-releaseDialog').count()) await page.locator('.jfmod-releaseDialog .jfmod-releaseDialogClose').first().click().catch(() => {});
-    await page.locator('.jfmod-releaseDialog').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    if (await page.locator('.pickerDialog').count()) await page.locator('.pickerDialog .pickerDialog .dlghead [aria-label="Close"]').first().click().catch(() => {});
+    await page.locator('.pickerDialog').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
 }
 
 /** JELLYFINMOD_DD_UPGRADES=1: the pack checks also search with episode upgrades switched the other way, then restore it. */
@@ -1206,7 +1216,7 @@ async function checkActionStops(page, layout, state) {
         notVerified(layout, PACK_CHECKS[5], why);
         return;
     }
-    await page.locator('.jfmod-releaseList .jfmod-releaseItem').nth(index).locator('.jfmod-releaseRow').focus();
+    await page.locator('.rels .rel').nth(index).locator('.rel').focus();
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(300);
     const add = await activeMatches(page, '[data-jfmod-release-add]');

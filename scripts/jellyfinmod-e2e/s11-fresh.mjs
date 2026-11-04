@@ -667,13 +667,13 @@ async function grabTitle(page, entry) {
     const search = page.locator('button', { hasText: 'Search releases' }).first();
     await search.waitFor({ state: 'visible', timeout: 30000 });
     await search.click();
-    await page.waitForSelector('.jfmod-releaseDialog', { timeout: 15000 });
-    await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 60000 });
-    const rows = await page.locator('.jfmod-releaseDialog .jfmod-releaseRow').allInnerTexts();
-    const row = page.locator('.jfmod-releaseDialog .jfmod-releaseRow:not([aria-disabled="true"])').first();
+    await page.waitForSelector('.pickerDialog', { timeout: 15000 });
+    await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 60000 });
+    const rows = await page.locator('.pickerDialog .rel').allInnerTexts();
+    const row = page.locator('.pickerDialog .rel:not([aria-disabled="true"])').first();
     await row.click();
     const status = await until(async () => {
-        const text = await page.locator('.jfmod-releaseDialog').innerText().catch(() => '');
+        const text = await page.locator('.pickerDialog').innerText().catch(() => '');
         return /Sent to the download client|accepted|Grabbed/i.test(text) ? text : null;
     }, { timeout: 60000, label: 'the grab to be accepted' });
     return { rows: rows.map(text => text.replace(/\s+/g, ' ').slice(0, 160)), status: status.replace(/\s+/g, ' ').slice(0, 200) };
@@ -1103,10 +1103,10 @@ async function queueBanners() {
     await signIn(page);
     const read = async () => {
         await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-        await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
         await page.waitForTimeout(2500);
-        return { rows: await page.locator('.jfmod-queueTableRow, .jfmod-queueRow').count(),
-            notices: (await page.locator('.jfmod-queueBanner, .jfmod-queueNotice').allInnerTexts()).map(text => text.replace(/\s+/g, ' ')) };
+        return { rows: await page.locator('.qrow, .qrow').count(),
+            notices: (await page.locator('.banner, .tags').allInnerTexts()).map(text => text.replace(/\s+/g, ' ')) };
     };
     try {
         const off = await read();
@@ -1115,7 +1115,7 @@ async function queueBanners() {
         // "Automation paused: Automation is turned off. Free space …" (constants/queue.ts). Both say it is off.
         record('queue', 'The queue renders for an administrator with rows and the row menu (was a crash); automation off shows its notice',
             off.rows >= 1 && off.notices.some(text => /Automation is off\.|Automation paused: Automation is turned off\./.test(text)), off);
-        await page.locator('.jfmod-queueMenu').first().click();
+        await page.locator('.qrow .ib').first().click();
         await page.waitForTimeout(1200);
         const menu = await page.locator(':is(.actionSheet, [data-ds-actionsheet]) :is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id]), [role="menu"] [role="menuitem"]').allInnerTexts();
         record('queue', 'The row menu opens its actions', menu.length > 0, menu.map(text => text.trim()).slice(0, 5));
@@ -1152,9 +1152,9 @@ async function breaker() {
         record('breaker', 'The status names the open breaker and lists breaker_open among the paused reasons',
             !!status.indexers[0]?.breakerOpenUntil && status.pausedReasons.includes('breaker_open'), { pausedReasons: status.pausedReasons, open: !!status.indexers[0]?.breakerOpenUntil });
         await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-        await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
         await page.waitForTimeout(2500);
-        const notices = (await page.locator('.jfmod-queueBanner, .jfmod-queueNotice').allInnerTexts()).map(text => text.replace(/\s+/g, ' '));
+        const notices = (await page.locator('.banner, .tags').allInnerTexts()).map(text => text.replace(/\s+/g, ' '));
         record('breaker', 'The queue banner says every indexer is paused by its circuit breaker', notices.some(text => /circuit breaker/i.test(text)), notices);
         record('breaker', 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
     } catch (error) {

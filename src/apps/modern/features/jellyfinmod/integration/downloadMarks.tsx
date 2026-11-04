@@ -255,7 +255,7 @@ const clearCard = (frame: Element) => {
     if (!frame.classList.contains('jfmod-dlCard')) return;
     frame.classList.remove('jfmod-dlCard');
     ownChild(frame, 'jfmod-dlCardBar')?.remove();
-    frame.querySelector('.jfmod-dlmark')?.remove();
+    frame.querySelector('.dm')?.remove();
 };
 
 /**
@@ -287,7 +287,7 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null, link: Do
 
     // The disc lives on the card's frame, not in upstream's indicator cluster: the cluster sits in the image container, whose
     // `contain: strict` puts it under the hover veil (white at half, user 2026-10-17). It is placed just left of the cluster.
-    let disc = frame.querySelector<HTMLElement>('.jfmod-dlmark');
+    let disc = frame.querySelector<HTMLElement>('.dm');
     if (!disc) {
         const created = document.createElement('span');
         // A click on it is a click on the card, as it was under the veil, unless it opens the download client (an administrator's).
@@ -296,7 +296,7 @@ const drawCard = (card: HTMLElement, progress: DownloadProgress | null, link: Do
         });
         disc = created;
     }
-    paintDownloadMark(disc, progress, 'card', 'jfmod-dlmark--corner', progress.tooltip, link);
+    paintDownloadMark(disc, progress, 'card', '', progress.tooltip, link);
     if (disc.parentNode !== frame) frame.appendChild(disc);
     const indicators = frame.querySelector('.cardIndicators');
     const size = parseFloat(getComputedStyle(disc).fontSize) || 16;
@@ -341,7 +341,7 @@ const borrowTitle = (mark: HTMLElement, title: string | null) => {
 const clearRow = (row: HTMLElement) => {
     if (!row.classList.contains('jfmod-dlRow')) return;
     row.classList.remove('jfmod-dlRow', 'jfmod-dlRow--failed');
-    row.querySelector('.jfmod-dlmark')?.remove();
+    row.querySelector('.dm')?.remove();
     row.querySelector('.jfmod-dlMeta')?.remove();
     const mark = row.querySelector<HTMLElement>('.jfmod-mark--none');
     if (mark) borrowTitle(mark, null);
@@ -373,7 +373,7 @@ const drawRowDisc = (row: HTMLElement, progress: DownloadProgress, link: Downloa
     // Upstream's React list rows wrap their content once (`.listItem-content`); the legacy rows and the mod's do not.
     const line: HTMLElement = ownChild(row, 'listItem-content') ?? row;
     const mark = row.querySelector<HTMLElement>('.jfmod-mark--none');
-    const existing = row.querySelector<HTMLElement>('.jfmod-dlmark');
+    const existing = row.querySelector<HTMLElement>('.dm');
     if (progress.kind === 'failed' && mark) {
         existing?.remove();
         borrowTitle(mark, progress.tooltip);
@@ -382,7 +382,7 @@ const drawRowDisc = (row: HTMLElement, progress: DownloadProgress, link: Downloa
     if (mark) borrowTitle(mark, null);
     const disc = existing ?? document.createElement('span');
     paintDownloadMark(disc, progress, 'row', '', progress.tooltip, link);
-    const anchor = Array.from(line.children).find(child => !child.classList.contains('jfmod-dlmark') && child.matches(END_SLOT)) ?? null;
+    const anchor = Array.from(line.children).find(child => !child.classList.contains('dm') && child.matches(END_SLOT)) ?? null;
     if (anchor ? disc.nextElementSibling !== anchor : disc.parentElement !== line) line.insertBefore(disc, anchor);
 };
 

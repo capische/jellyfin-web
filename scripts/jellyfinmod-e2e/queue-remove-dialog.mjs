@@ -135,12 +135,12 @@ const checkPlan = (step, name, state, want) => {
 async function dialogStep() {
     const step = `dialog ${tag}`;
     await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-    await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(2000);
     const before = (await queueRows()).map(row => row.id).sort().join();
-    let rowSelector = '.jfmod-queueTableRow';
-    if (tv) rowSelector = '.jfmod-queueRow--tv';
-    else if (phone) rowSelector = '.jfmod-queueRow--stacked';
+    let rowSelector = '.qrow';
+    if (tv) rowSelector = '.qrow';
+    else if (phone) rowSelector = '.qrow';
     const titles = [['seeding', 'Inception.2010.1080p'], ['blocked', 'The.Matrix.Reloaded'], ['downloading', 'The.Matrix.1999'], ['pack', 'Adolescence.S01']];
     // A pack whose episodes all failed (Codex review P2 1): its files may be deleted, so it must not promise they stay.
     if ((await queueRows()).some(row => row.releaseTitle.startsWith('Peep.Show.S02'))) titles.push(['packfailed', 'Peep.Show.S02']);
@@ -169,7 +169,7 @@ async function dialogStep() {
             await row.focus();
             await page.keyboard.press('Enter');
         } else {
-            await row.locator('.jfmod-queueMenu').click();
+            await row.locator('.qrow .ib').click();
         }
         if (phone || tv) {
             await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]', { timeout: 10000 });
@@ -189,7 +189,7 @@ async function dialogStep() {
                 await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]').click();
             }
         } else {
-            await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
+            await page.locator('[data-ds-actionsheet] [data-id][data-id="remove"]').click();
         }
         await waitDialog();
         const state = await dialogState();
@@ -241,7 +241,7 @@ async function dialogStep() {
         await waitClosed();
         const focus = await active();
         const name = data.entry.title;
-        const back = tv ? focus.cls.includes('jfmod-queueRow--tv') && focus.text.includes(name) : focus.cls.includes('jfmod-queueMenu') && focus.label.includes(name);
+        const back = tv ? focus.cls.includes('qrow') && focus.text.includes(name) : focus.cls.includes('ib') && focus.label.includes(name);
         const how = { keep: 'the safe choice', ok: 'OK on the safe choice', back: 'Back', x: 'the close X', escape: 'Escape' }[closer];
         record(step, `${key}: ${how} closes it and focus returns to ${tv ? 'the row' : 'its ⋮'}`, back, JSON.stringify(focus));
         // The row and its grab are still there and nothing asked to remove it; its state may move on by itself (downloading to
@@ -256,9 +256,9 @@ async function dialogStep() {
 
 /** Opens the first row's dialog from the Queue page (the row menu, or the action sheet by its data-id on the phone and the TV). */
 async function openFromQueue(title) {
-    let rowSelector = '.jfmod-queueTableRow';
-    if (tv) rowSelector = '.jfmod-queueRow--tv';
-    else if (phone) rowSelector = '.jfmod-queueRow--stacked';
+    let rowSelector = '.qrow';
+    if (tv) rowSelector = '.qrow';
+    else if (phone) rowSelector = '.qrow';
     const row = page.locator(rowSelector).filter({ hasText: title }).first();
     if (tv) {
         await row.focus();
@@ -272,9 +272,9 @@ async function openFromQueue(title) {
         }
         await page.keyboard.press('Enter');
     } else {
-        await row.locator('.jfmod-queueMenu').click();
+        await row.locator('.qrow .ib').click();
         if (phone) await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="remove"]').click();
-        else await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
+        else await page.locator('[data-ds-actionsheet] [data-id][data-id="remove"]').click();
     }
     await waitDialog();
 }
@@ -282,7 +282,7 @@ async function openFromQueue(title) {
 async function doubleStep() {
     const step = `double ${tag}`;
     await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-    await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(2000);
     const rows = await queueRows();
     const data = rows.find(opensDialog);
@@ -320,7 +320,7 @@ async function doubleStep() {
         await shot(page, `double-${closer.replace(/\W+/g, '-')}`);
         if (!where.hash.startsWith('#/catalog/queue')) {
             await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-            await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+            await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
             await page.waitForTimeout(2000);
         }
     }
@@ -389,14 +389,14 @@ async function openersStep() {
         const get = page.locator('[data-ds-command~=jfmod-getRelease]:visible').first();
         await get.waitFor({ state: 'visible', timeout: 30000 });
         await get.click();
-        const add = page.locator('.jfmod-releaseRow').filter({ hasText: 'QRS' }).first().locator('xpath=..').locator('.jfmod-releaseAction--add');
-        const row = page.locator('.jfmod-releaseRow').filter({ hasText: 'QRS' }).first();
+        const add = page.locator('.rel[data-ds-release-title*="QRS"]').first().locator('[data-jfmod-release-add]');
+        const row = page.locator('.rel[data-ds-release-title*="QRS"]').first();
         await row.waitFor({ state: 'visible', timeout: 60000 });
         await (await add.count() ? add : row).click();
-        const x = page.locator('.jfmod-releaseAction--x[aria-label^="Remove "]');
+        const x = page.locator('[data-jfmod-release-x][aria-label^="Remove "]');
         await x.waitFor({ state: 'visible', timeout: 60000 });
         await page.waitForFunction(() => {
-            const button = document.querySelector('.jfmod-releaseAction--x[aria-label^="Remove "]');
+            const button = document.querySelector('[data-jfmod-release-x][aria-label^="Remove "]');
             return button && button.getAttribute('aria-disabled') !== 'true' && !button.disabled;
         }, undefined, { timeout: 60000 });
         await x.click();
@@ -408,7 +408,7 @@ async function openersStep() {
         await page.locator(':is(.jfmod-removeChoice, [data-ds-dialog] .btn[data-choice])[data-choice="cancel"]').click();
         await waitClosed();
         const focus = await active();
-        record(step, 'picker X: Keep Downloading returns focus to the X', focus.label.startsWith('Remove ') && focus.cls.includes('jfmod-releaseAction--x'), JSON.stringify(focus));
+        record(step, 'picker X: Keep Downloading returns focus to the X', focus.label.startsWith('Remove ') && focus.cls.includes('rb'), JSON.stringify(focus));
         // The X once more, and Delete the Download: the row, the torrent and its files go (Codex review P2 2). The stand-in
         // writes a file only when it completes, so the half-downloaded file is written here where the client keeps it.
         const torrent = (await (await fetch(CONTROL + '/state')).json()).torrents.find(candidate => candidate.name.includes('QRS'));
@@ -454,11 +454,11 @@ async function postLinkStep() {
         return route.fulfill({ response, json: body });
     });
     await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-    await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(2000);
-    const row = page.locator('.jfmod-queueTableRow').filter({ hasText: 'Adolescence.S01' }).first();
-    await row.locator('.jfmod-queueMenu').click();
-    await page.locator('.jfmod-queueMenuItem[data-id="remove"]').click();
+    const row = page.locator('.qrow').filter({ hasText: 'Adolescence.S01' }).first();
+    await row.locator('.qrow .ib').click();
+    await page.locator('[data-ds-actionsheet] [data-id][data-id="remove"]').click();
     await waitDialog();
     const state = await dialogState();
     record(step, 'a pack episode blocked after its link (binding_not_observed) counts as in the library: "2 of 4"',

@@ -33,11 +33,11 @@ import { mkdirSync } from 'node:fs';
  */
 async function pickProfile(page, { name, index }) {
     await page.locator('#jfmod-releaseProfile').click();
-    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    const options = page.locator('[aria-label="Quality Profile"][role="menu"] [role="option"]');
     await options.first().waitFor({ state: 'visible', timeout: 10000 });
-    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    const names = await options.evaluateAll(nodes => nodes.map(node => node.querySelector('.tx0')?.firstChild?.textContent ?? (node.querySelector('strong') ?? node).textContent));
     await options.nth(name === undefined ? index : names.indexOf(name)).click();
-    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    await page.locator('[aria-label="Quality Profile"][role="menu"]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
     return names;
 }
 
@@ -399,25 +399,25 @@ async function pickerChecks(page, layout) {
     const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     await opener.waitFor({ state: 'visible', timeout: 30000 });
     await opener.click();
-    await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem', { timeout: 30000 });
+    await page.waitForSelector('.pickerDialog .rels .rel', { timeout: 30000 });
     await page.waitForTimeout(1200);
     const listed = () => page.evaluate(() => ({
-        rows: [...document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseItem')].map(item => item.textContent),
+        rows: [...document.querySelectorAll('.pickerDialog .rel')].map(item => item.textContent),
         profile: document.querySelector('#jfmod-releaseProfile')?.textContent ?? null,
-        rejected: /(\d+) Rejected/.exec(document.querySelector('.jfmod-releaseDialog')?.textContent ?? '')?.[1] ?? null
+        rejected: /(\d+) Rejected/.exec(document.querySelector('.pickerDialog')?.textContent ?? '')?.[1] ?? null
     }));
     const first = await listed();
-    const firstQuality = await page.locator('.jfmod-releaseDialog .jfmod-releaseItem .jfmod-releaseQuality').first().textContent();
+    const firstQuality = await page.locator('.pickerDialog .rel .rq').first().textContent();
     record(layout, '7 the picker names the quality as everywhere: 4K WEB-DL', firstQuality?.trim() === '4K WEB-DL', firstQuality);
     const at = (list, token) => list.rows.findIndex(text => text.includes(token));
     record(layout, '7 the picker searches with "4K (Default)" and lists both 4K rows, then 1080p, then 720p, with no Rejected group',
         first.profile === '4K (Default)' && at(first, '2160p') < 2 && first.rows.filter(text => text.includes('2160p')).length === 2
             && at(first, '1080p.WEB-DL') === 2 && at(first, '720p.WEB-DL') === 3 && first.rows.length === 4 && first.rejected === null, first);
-    console.log('  shot', await shot(page, `${layout}-picker`, page.locator('.jfmod-releaseDialog')));
+    console.log('  shot', await shot(page, `${layout}-picker`, page.locator('.pickerDialog')));
     first.options = await pickProfile(page, { name: '1080p' });
     record(layout, '7 the picker\'s profile menu lists "4K (Default)" first and no "Title default"', first.options[0] === '4K (Default)'
         && !first.options.includes('Title default'), first.options);
-    await page.waitForFunction(() => document.querySelector('.jfmod-releaseDialog .jfmod-releaseItem')?.textContent.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })
+    await page.waitForFunction(() => document.querySelector('.pickerDialog .rel')?.textContent.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })
         .catch(() => undefined);
     const second = await listed();
     record(layout, '7 with the 1080p profile chosen, the 1080p row is first and both 4K rows are rejected', at(second, '1080p.WEB-DL') === 0 && second.rows.length === 2 && second.rejected === '2', second);

@@ -68,14 +68,14 @@ async function openRemove(releaseTitle) {
         location.hash = '#/catalog/queue';
     });
     if (tv) {
-        const row = page.locator('.jfmod-queueRow--tv').filter({ hasText: releaseTitle }).first();
+        const row = page.locator('.qrow').filter({ hasText: releaseTitle }).first();
         await row.waitFor({ state: 'visible', timeout: 30000 });
         await row.focus();
         await page.keyboard.press('Enter');
     } else {
-        const row = page.locator(layout === 'desktop' ? '.jfmod-queueTableRow' : '.jfmod-queueRow--stacked').filter({ hasText: releaseTitle }).first();
+        const row = page.locator(layout === 'desktop' ? '.qrow' : '.qrow').filter({ hasText: releaseTitle }).first();
         await row.waitFor({ state: 'visible', timeout: 30000 });
-        await row.locator('.jfmod-queueMenu').click();
+        await row.locator('.qrow .ib').click();
     }
     const item = page.locator('[data-id="remove"]:visible').first();
     await item.waitFor({ state: 'visible', timeout: 10000 });
@@ -265,7 +265,7 @@ async function live() {
         const body = JSON.parse(response.request().postData() ?? '{}');
         record(label, 'Live: Remove sends removeFromClient and deleteFiles, and the plugin answers 200',
             body.removeFromClient === true && body.deleteFiles === true && response.status() === 200, { body, status: response.status() });
-        await until(async () => !(await page.locator('.jfmod-queue').filter({ hasText: release }).count()), { timeout: 20000, every: 500, label: 'the row to leave' });
+        await until(async () => !(await page.locator('.queue').filter({ hasText: release }).count()), { timeout: 20000, every: 500, label: 'the row to leave' });
         record(label, 'Live: the row left the queue', true);
     }
     const entryId = process.env.JELLYFINMOD_RD_PICK_ENTRY;
@@ -277,15 +277,15 @@ async function live() {
         const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
         await opener.waitFor({ state: 'visible', timeout: 30000 });
         await opener.click();
-        await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem', { timeout: 120000 });
+        await page.waitForSelector('.pickerDialog .rels .rel', { timeout: 120000 });
         // The search answers indexer by indexer: wait for the wanted row.
         const id = await until(() => page.evaluate(raw => {
-            const item = [...document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseItem')].find(node => node.textContent.includes(raw));
+            const item = [...document.querySelectorAll('.pickerDialog .rel')].find(node => node.textContent.includes(raw));
             return item?.querySelector('[data-jfmod-release-add]')?.getAttribute('data-jfmod-release-add') ?? null;
         }, title), { timeout: 150000, every: 1000, label: 'the picker row ' + title }).catch(() => null);
         if (!id) throw new Error('the picker lists no row named ' + title);
-        await page.locator(`.jfmod-releaseDialog [data-jfmod-release-add="${id}"]`).click();
-        const x = page.locator(`.jfmod-releaseDialog [data-jfmod-release-x="${id}"][title="Remove from Queue"]`);
+        await page.locator(`.pickerDialog [data-jfmod-release-add="${id}"]`).click();
+        const x = page.locator(`.pickerDialog [data-jfmod-release-x="${id}"][title="Remove from Queue"]`);
         await x.waitFor({ state: 'visible', timeout: 90000 });
         // Let it download a little first, so there are files to delete (JELLYFINMOD_RD_PICK_WAIT seconds, default 10).
         await page.waitForTimeout(Number(process.env.JELLYFINMOD_RD_PICK_WAIT ?? 10) * 1000);
