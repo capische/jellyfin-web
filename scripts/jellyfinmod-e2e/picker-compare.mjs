@@ -1,6 +1,6 @@
 /* eslint-disable compat/compat, no-restricted-globals, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global document, getComputedStyle */
-// Release picker: the built dialog against the approved mock (docs/jellyfinmod/design/release-picker-design.html), landmark by
+// Release picker: the built dialog against the approved design-system source CSS and dialog/row skeleton, landmark by
 // landmark. Renders the mock's cell and the real dialog (routes answer the search, progress and grab with the mock's own data)
 // at the same width and base size, forces one font on both so glyph widths do not hide layout, and lists every landmark whose
 // box moves by more than 1 px or whose font size, weight, colour, spacing, opacity, border or radius differ.
@@ -8,7 +8,7 @@
 //   STATE=results|searching|hold|accepted|refused|noresults|allfailed|over  [LIGHT=1]  [REALFONT=1]  [NAMES=1: Show Names on]
 import { launch, newPage, signIn, setTvLayout, api } from './live-lib.mjs';
 import { search, progress } from './picker-compare-fixture.mjs';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -17,14 +17,14 @@ import { fileURLToPath } from 'node:url';
  */
 async function pickProfile(page, { name, index }) {
     await page.locator('#jfmod-releaseProfile').click();
-    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    const options = page.locator('[aria-label="Quality Profile"][role="menu"] [role="option"]');
     await options.first().waitFor({ state: 'visible', timeout: 10000 });
-    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    const names = await options.evaluateAll(nodes => nodes.map(node => node.querySelector('.tx0')?.firstChild?.textContent ?? (node.querySelector('strong') ?? node).textContent));
     await options.nth(name === undefined ? index : names.indexOf(name)).click();
-    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    await page.locator('[aria-label="Quality Profile"][role="menu"]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
     return names;
 }
-const MOCK = fileURLToPath(new URL('../../docs/jellyfinmod/design/release-picker-design.html', import.meta.url));
+const MOCK = process.env.DS_MOCKUP || fileURLToPath(new URL('../../../../../../reviews/design-system/', import.meta.url));
 const OUT = process.env.JELLYFINMOD_COMPARE_OUT ?? 'picker-compare-out';
 mkdirSync(OUT, { recursive: true });
 const layout = process.env.LAYOUT ?? 'desktop';
@@ -69,51 +69,66 @@ if (!process.env.REALFONT) await page.addStyleTag({ content: FONT });
 if (light) await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
 await page.evaluate(id => { location.hash = '#/details?id=' + id; }, ep.jellyfinItemId);
 await page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first().click();
-await page.waitForSelector('.jfmod-releaseDialog .jfmod-releasePicker');
+await page.waitForSelector('.pickerDialog .picker');
 if (state === 'searching') await page.waitForTimeout(6300);
 else if (state === 'over') {
-    await page.waitForSelector('.jfmod-releaseList .jfmod-releaseItem'); await page.waitForTimeout(700);
+    await page.waitForSelector('.rels .rel'); await page.waitForTimeout(700);
     gateOn = true; await pickProfile(page, { index: 1 }); await page.waitForTimeout(6300);
 }
-else if (state === 'noresults' || state === 'allfailed') { await page.waitForSelector('.jfmod-searchBlock--quiet, .jfmod-searchBlock--error'); await page.waitForTimeout(700); }
+else if (state === 'noresults' || state === 'allfailed') { await page.waitForSelector('.sblock.dimmed, .sblock.err'); await page.waitForTimeout(700); }
 else {
-    await page.waitForSelector('.jfmod-releaseList .jfmod-releaseItem'); await page.waitForTimeout(700);
-    if (GRAB) { await page.locator('.jfmod-releaseList .jfmod-releaseItem').nth(GRAB[1]).locator('[data-jfmod-release-add]').click(); await page.mouse.move(5, 5); await page.evaluate(() => document.activeElement?.blur()); await page.waitForTimeout(700); }
-    else { await page.locator('.jfmod-rejectedToggle').click(); await page.waitForTimeout(300); }
+    await page.waitForSelector('.rels .rel'); await page.waitForTimeout(700);
+    if (GRAB) { await page.locator('.rels .rel').nth(GRAB[1]).locator('[data-jfmod-release-add]').click(); await page.mouse.move(5, 5); await page.evaluate(() => document.activeElement?.blur()); await page.waitForTimeout(700); }
+    else { await page.locator('.rejt').click(); await page.waitForTimeout(300); }
     // Show Names is off by default (user, 2026-10-11); NAMES=1 turns it on through the toggle, as a person would.
-    if (names) await page.locator('.jfmod-namesToggle').click();
+    if (names) await page.locator('.pickerDialog .dlghead [aria-pressed]').click();
     await page.waitForTimeout(400);
 }
 const real = await collect(page, 'real');
 
-const dlgBox = await page.locator('.jfmod-releaseDialog').boundingBox();
-const rootFs = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+const dlgBox = await page.locator('.pickerDialog').boundingBox();
+const rootFs = await page.locator('.pickerDialog').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
 await page.screenshot({ path: `${OUT}/real-${tag}.png`, clip: dlgBox });
-// ---- the mock, at the real dialog's width and base size
+// ---- the approved source CSS, with identical content at the same width and root size.
+// Native control tags are reduced to the mockup's inert spans/divs. The source renderers are loaded independently to check
+// the shared dialog/row skeleton, so the CSS comparison does not accidentally bless an upstream row structure.
 const mp = await (await browser.newContext({ viewport: { width: vw, height: vh } })).newPage();
-await mp.goto('file://' + MOCK);
-if (!process.env.REALFONT) await mp.addStyleTag({ content: FONT });
-const mockCell = { desktop: { results: [0, 1], searching: [0, 0], hold: [0, 3], accepted: [0, 4], refused: [0, 6], noresults: [1, 0], allfailed: [1, 1], over: [1, 2] }, tv: { results: [2, 0], searching: [0, 0] }, mobile: { results: [2, 1], searching: [2, 2] } }[layout][state];
-await mp.evaluate(({ mockCell, width, rootFs, state, light, names }) => {
-    const all = [...document.querySelectorAll('.dlg')];
-    let d;
-    if (Array.isArray(mockCell)) d = document.querySelectorAll('section')[mockCell[0]].querySelectorAll('.dlg')[mockCell[1]];
-    else d = all.filter(x => x.classList.contains(mockCell))[state === 'searching' ? 0 : 0];
-    document.querySelectorAll('body > *').forEach(n => { n.style.display = 'none'; });
-    const clone = d.cloneNode(true);
+await mp.route('**/*', route => route.abort());
+await mp.setContent('<html><body></body></html>');
+const sourceCss = [new URL('../tmdb-search-design/mockup/chrome.css', 'file://' + MOCK + '/').pathname, MOCK + '/spinner.css', MOCK + '/ds.css']
+    .map(file => readFileSync(file, 'utf8')).join('\n');
+await mp.addStyleTag({ content: sourceCss });
+for (const file of ['data.js', 'ds.js', 'ds2.js']) await mp.addScriptTag({ content: readFileSync(MOCK + '/' + file, 'utf8') });
+const specimen = await page.locator('.pickerDialog').evaluate(node => ({ html: node.outerHTML, classes: node.closest('.jfds').className,
+    theme: node.closest('.jfds').dataset.theme, root: getComputedStyle(node.closest('.jfds')).fontSize, height: node.clientHeight }));
+await mp.evaluate(({ specimen, width, layout }) => {
+    document.documentElement.className = specimen.classes.replace(/jfds|dialogportal/g, '');
+    document.documentElement.dataset.theme = specimen.theme;
+    document.documentElement.style.fontSize = specimen.root;
+    DS.ctx.kind = layout === 'mobile' ? 'phone' : layout === 'tv' ? 'tv' : 'computer';
+    const source = document.createElement('div');
+    source.innerHTML = DS.pages.picker('replace');
+    const approved = source.querySelector('.dialog.wide');
+    if (!approved?.querySelector('.dlghead + .dlgbody .rels .rel > .rl > .rq')) throw new Error('Approved picker skeleton not found');
+    const template = document.createElement('div');
+    template.innerHTML = specimen.html;
+    const clone = template.firstElementChild;
+    if (!clone.querySelector('.dlghead + .dlgbody .rels .rel > .rl > .rq') && clone.querySelector('.rel')) throw new Error('Built picker does not use the approved skeleton');
     clone.id = 'mockdlg';
-    if (light) clone.classList.add('light');
-    const fontPx = clone.classList.contains('tv') ? 20 : clone.classList.contains('mob') ? 14.4 : 16;
-
-    clone.style.width = width + 'px'; clone.style.fontSize = fontPx + 'px';
-    document.body.style.padding = '0'; document.body.appendChild(clone);
-    const q4 = clone.querySelectorAll('.item')[4]?.querySelector('.q'); if (q4 && q4.textContent === '720p WEB') q4.textContent = '720p WEB-DL';
-    // the DTS wordmark is replaced by this fork's own family mark + text, so the mock's dts/variant pair becomes one text mark
-    for (const d of clone.querySelectorAll('.mk.dts')) { const sub = d.nextElementSibling; d.className = 'mk txt'; d.textContent = 'DTS-HD MA'; sub?.remove(); }
-    // The mock's hover/focus reveal was rejected; its `.hov` class is only the way to draw the names-on third line.
-    for (const item of clone.querySelectorAll('.item')) { item.classList.remove('hov', 'foc'); if (names) item.classList.add('hov'); }
-    clone.style.position = 'absolute'; clone.style.left = '0'; clone.style.top = '0';
-}, { mockCell, width: dlgBox.width, rootFs, state, light, names });
+    clone.style.width = width + 'px';
+    clone.style.maxWidth = 'none';
+    clone.style.maxHeight = specimen.height + 'px';
+    clone.style.overflowY = 'auto';
+    clone.querySelectorAll('button.rb, button.rejt').forEach(button => {
+        const inert = document.createElement(button.classList.contains('rejt') ? 'div' : 'span');
+        for (const attr of button.attributes) inert.setAttribute(attr.name, attr.value);
+        inert.innerHTML = button.innerHTML;
+        button.replaceWith(inert);
+    });
+    document.body.style.margin = '0';
+    document.body.append(clone);
+}, { specimen, width: dlgBox.width, layout });
+if (!process.env.REALFONT) await mp.addStyleTag({ content: FONT });
 const mock = await collect(mp, 'mock');
 await mp.screenshot({ path: `${OUT}/mock-${tag}.png`, clip: { x: 0, y: 0, width: dlgBox.width, height: Math.min(Math.ceil(mock.dialog.h), vh) } });
 // ---- compare
@@ -140,7 +155,7 @@ await browser.close();
 
 async function collect(pg, side) {
     return pg.evaluate(side => {
-        const root = side === 'mock' ? document.querySelector('#mockdlg') : document.querySelector('.jfmod-releaseDialog');
+        const root = side === 'mock' ? document.querySelector('#mockdlg') : document.querySelector('.pickerDialog');
         const o = root.getBoundingClientRect();
         const rgb = c => c;
         const metrics = el => {
@@ -155,48 +170,26 @@ async function collect(pg, side) {
         const out = {};
         const add = (name, mockSel, realSel, i = 0, within) => { out[name] = metrics(q(M ? mockSel : realSel, i, within ?? root)); };
         out.dialog = metrics(root);
-        add('title', '.ttl', '.formDialogHeaderTitle');
-        add('close', '.act.close', '.btnCancel');
-        add('closeIcon', '.act.close svg', '.btnCancel svg');
-        add('selLabel1', '.sel > span', '.jfmod-releaseControls .selectContainer label');
-        add('selValue1', '.sel b', '.jfmod-releaseControls .selectContainer select');
-        add('selLabel2', '.sel > span', '.jfmod-releaseControls .selectContainer label', 1);
-        add('selValue2', '.sel b', '.jfmod-releaseControls .selectContainer select', 1);
-        add('notice', '.notice', '.jfmod-releaseNotice--info');
-        add('status', '.stat', '.jfmod-releaseStatus');
-        add('partial', '.partial', '.jfmod-releaseNotice:not(.jfmod-releaseNotice--info)');
-        add('ring', '.big', '.jfmod-searchGlyph');
-        add('ringCaption', '.cap', '.jfmod-searchCaption');
-        add('indexerLines', '.ixs', '.jfmod-searchIndexers');
-        for (let i = 0; i < 4; i++) { add('ixLine' + i, '.ix', '.jfmod-searchIndexer', i); add('ixDot' + i, '.ix .dot', '.jfmod-searchIndexer-dot', i, q(M ? '.ix' : '.jfmod-searchIndexer', i)); add('ixName' + i, '.ix .nm', '.jfmod-searchIndexer-name', i); add('ixState' + i, '.ix .st', '.jfmod-searchIndexer-state', i); }
-        const items = M ? [...root.querySelectorAll('.item')] : [...root.querySelectorAll('.jfmod-releaseItem')];
-        items.slice(0, 7).forEach((it, i) => {
+        const selectors = {
+            title: '.dlghead h3', close: '.dlghead [aria-label="Close"]', closeIcon: '.dlghead [aria-label="Close"] svg',
+            selLabel1: '.pmchoices .fld:first-child .lb', selValue1: '.pmchoices .fld:first-child .v',
+            selLabel2: '.pmchoices .fld:nth-child(2) .lb', selValue2: '.pmchoices .fld:nth-child(2) .v',
+            notice: '.pnotice', status: '.pstatus', ring: '.gl', ringCaption: '.cap1', indexerLines: '.sblock',
+            rejectedToggle: '.rejt', grab: '.grab', grabSentence: '.grab .s', grabButton: '.grab .flat', grabFile: '.grab .rname'
+        };
+        for (const [name, selector] of Object.entries(selectors)) add(name, selector, selector);
+        for (let i = 0; i < 4; i++) {
+            for (const [name, selector] of Object.entries({ ixLine: '.sl', ixDot: '.sl i', ixName: '.sl > span:first-child', ixState: '.sl > span:last-child' })) add(name+i, selector, selector, i);
+        }
+        [...root.querySelectorAll('.rel')].forEach((it, i) => {
             const n = 'row' + i;
             out[n] = metrics(it);
-            const s = (a, b, idx = 0) => metrics(it.querySelectorAll(M ? a : b)[idx] ?? null);
-            out[n + '.rowbtn'] = s('.rowbtn', '.jfmod-releaseRow');
-            out[n + '.l1'] = s('.l1', '.jfmod-releaseLine');
-            out[n + '.q'] = s('.q', '.jfmod-releaseQuality');
-            out[n + '.fl'] = s('.flag.fl', '.jfmod-releaseFlag--freeleech');
-            out[n + '.proper'] = s('.bd.note', '.jfmod-releaseBadge--note');
-            out[n + '.held'] = s('.flag.lib', '.jfmod-releaseFlag--held');
-            out[n + '.lg0'] = s('.lg', '.jfmod-releaseLang', 0);
-            out[n + '.lg1'] = s('.lg', '.jfmod-releaseLang', 1);
-            out[n + '.right'] = s('.ixr', '.jfmod-releaseRight');
-            out[n + '.size'] = s('.col.sz', '.jfmod-releaseCol--size');
-            out[n + '.seeds'] = s('.col.seeds', '.jfmod-releaseCol--seeds');
-            out[n + '.indexer'] = s('.col.ixn', '.jfmod-releaseCol--indexer');
-            out[n + '.l2'] = s('.l2', '.jfmod-releaseLine2');
-            out[n + '.mk0'] = s('.mk', '.jfmod-releaseMark', 0);
-            out[n + '.mk1'] = s('.mk', '.jfmod-releaseMark', 1);
-            out[n + '.raw'] = s('.raw', '.jfmod-releaseTitle');
-            out[n + '.reasons'] = s('.reasons', '.jfmod-releaseReasons');
-            out[n + '.acts'] = s('.acts', '.jfmod-releaseActions');
-            out[n + '.add'] = s('.act', '.jfmod-releaseAction', 0);
-            out[n + '.replace'] = s('.act', '.jfmod-releaseAction', 1);
+            out[n + '.rowbtn'] = metrics(it);
+            const parts = { l1: '.rl', q: '.rq', fl: '.rflag.fl', proper: '.rflag.pr', held: '.incheck',
+                right: '.rcols', size: '.sz', seeds: '.sd', indexer: '[data-ds-indexer]', l2: '.rl + .rl', raw: '.rname', reasons: '.rreason', acts: '.ract' };
+            for (const [name, selector] of Object.entries(parts)) out[n+'.'+name] = metrics(it.querySelector(selector));
+            for (const [name, selector] of [['lg','.rlang'],['mk','.mk'],['action','.ract .rb']]) for (let index=0;index<2;index++) out[n+'.'+name+index] = metrics(it.querySelectorAll(selector)[index]);
         });
-        add('rejectedToggle', '.rejt .btn', '.jfmod-rejectedToggle');
-        add('grab', '.gs', '.jfmod-grabStatus'); add('grabSentence', '.gs > span', '.jfmod-grabStatus > span'); add('grabButton', '.gs .btn', '.jfmod-grabOpen'); // the hold's Cancel moved to the row's X (2026-10-12); this mock still draws it add('grabFile', '.gs .gsraw', '.jfmod-grabStatus-title');
         for (const k of Object.keys(out)) if (out[k] === null) delete out[k];
         return out;
     }, side);

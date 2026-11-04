@@ -18,12 +18,12 @@ const browser = await launch();
 const cardPercent = page => page.evaluate(name => {
     const card = [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].find(node => (node.textContent ?? '').includes(name));
     const fill = card?.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]) :is(.jfmod-dlBar-fill, [data-ds-progress] > i)");
-    const arrow = card?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
+    const arrow = card?.querySelector(":is(.dm, [data-ds-download])");
     return { found: !!card, inFlight: !!fill && !!arrow, text: fill ? Math.floor(parseFloat(fill.style.width)) + '%' : null,
         cards: document.querySelectorAll(":is(.card:not(.dm), .cell)").length };
 }, title);
 const queuePercent = page => page.evaluate(name => {
-    const rows = [...document.querySelectorAll('.jfmod-queueRow, .jfmod-queueTableRow')];
+    const rows = [...document.querySelectorAll('.qrow, .qrow')];
     const row = rows.find(node => (node.textContent ?? '').includes(name));
     const bar = row?.querySelector('[role="progressbar"]');
     return { found: !!row, percent: bar ? Number(bar.getAttribute('aria-valuenow')) : null, text: row?.textContent?.replace(/\s+/g, ' ').slice(0, 200) ?? null };
@@ -49,21 +49,21 @@ for (const layout of layouts) {
         const cardValue = Number(/(\d+)%/.exec(samples.at(-1).text ?? '')?.[1]);
         // Queue route: the row's progress bar agrees with the card within one poll.
         await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-        await page.waitForFunction(name => [...document.querySelectorAll('.jfmod-queueRow, .jfmod-queueTableRow')].some(node => (node.textContent ?? '').includes(name)), title, { timeout: 30000 });
+        await page.waitForFunction(name => [...document.querySelectorAll('.qrow, .qrow')].some(node => (node.textContent ?? '').includes(name)), title, { timeout: 30000 });
         const row = await queuePercent(page);
         record(label, 'The queue row shows the same progress as the card (within one poll)', row.found && Math.abs(row.percent - cardValue) <= 2, { card: cardValue, row });
         if (layout.startsWith('tv')) {
             const focused = await page.evaluate(() => document.activeElement?.className ?? '');
             // Ten polls (3 s each): the same element keeps focus and the list is never replaced.
-            await page.evaluate(() => { window.jfmodListNode = document.querySelector('.jfmod-queueList'); window.jfmodFocusNode = document.activeElement; });
+            await page.evaluate(() => { window.jfmodListNode = document.querySelector('.queue'); window.jfmodFocusNode = document.activeElement; });
             const checks = [];
             for (let i = 0; i < 10; i++) {
                 await page.waitForTimeout(3100);
-                checks.push(await page.evaluate(() => ({ sameFocus: document.activeElement === window.jfmodFocusNode, sameList: document.querySelector('.jfmod-queueList') === window.jfmodListNode,
+                checks.push(await page.evaluate(() => ({ sameFocus: document.activeElement === window.jfmodFocusNode, sameList: document.querySelector('.queue') === window.jfmodListNode,
                     percent: Number(document.activeElement?.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')) })));
             }
             record(label, 'TV: the first row is focused on open, keeps focus across ten polls and the list never unmounts',
-                /jfmod-queueRow/.test(focused) && checks.every(check => check.sameFocus && check.sameList), { focused, percents: checks.map(check => check.percent) });
+                /\bqrow\b/.test(focused) && checks.every(check => check.sameFocus && check.sameList), { focused, percents: checks.map(check => check.percent) });
             // Enter opens the action sheet with the two actions; Back closes it and focus returns to the row.
             await page.keyboard.press('Enter');
             await page.waitForTimeout(1200);
@@ -72,7 +72,7 @@ for (const layout of layouts) {
             await page.waitForTimeout(1200);
             const after = await page.evaluate(() => ({ focused: document.activeElement?.className ?? '', sheet: !!document.querySelector(':is(.actionSheet, [data-ds-actionsheet])') }));
             record(label, 'TV: Enter opens the row actions (Remove; Open in client only when configured); Back closes them and focus returns to the row',
-                sheet.some(text => /Remove/.test(text)) && !after.sheet && /jfmod-queueRow/.test(after.focused), { sheet, after });
+                sheet.some(text => /Remove/.test(text)) && !after.sheet && /\bqrow\b/.test(after.focused), { sheet, after });
         }
         record(label, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
     } catch (error) {

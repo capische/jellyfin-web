@@ -511,9 +511,9 @@ async function sweepLayout(name) {
     // ---- Queue
     if (cfg.tv) {
         await row('Queue', 'address typed: on the TV the shell links the Queue only from a title with an open import (QueueStatusLine), and nothing is queued',
-            async () => { await page.evaluate(() => { location.hash = '#/catalog/queue'; }); }, { hash: '^#/catalog/queue', selector: '.jfmod-queue, .jfmod-queueEmpty' });
+            async () => { await page.evaluate(() => { location.hash = '#/catalog/queue'; }); }, { hash: '^#/catalog/queue', selector: '.queue, .empty' });
     } else {
-        await row('Queue', shell + ': user menu', () => userMenu('Queue'), { hash: '^#/catalog/queue', selector: '.jfmod-queue, .jfmod-queueEmpty' });
+        await row('Queue', shell + ': user menu', () => userMenu('Queue'), { hash: '^#/catalog/queue', selector: '.queue, .empty' });
     }
 
     // ---- JellyfinMod settings and the setup wizard

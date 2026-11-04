@@ -1,3 +1,4 @@
+import { readScopeOptions } from './ds-controls.mjs';
 /* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage, location */
 // The full episode list of a discovered series (Phase 1 follow-up, 2026-10-12; docs/jellyfinmod/design/p1-full-episode-list.md).
@@ -85,8 +86,7 @@ const getEntry = page => page.evaluate(async id => {
 }, entryId);
 
 /** The scope switch as the picker shows it. */
-const scopeOptions = page => page.evaluate(() => [...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
-    .map(option => ({ value: option.value, text: option.textContent, disabled: option.disabled })));
+const scopeOptions = readScopeOptions;
 
 /** The series page's scope list: All Seasons, then each season with aired episodes other than specials; no episodes. */
 const expectedScope = episodes => {
@@ -104,7 +104,7 @@ async function openPicker(page, layout) {
     } else {
         await button.click();
     }
-    await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 });
+    await page.waitForSelector('.pickerDialog #jfmod-releaseEpisode', { timeout: 15000 });
 }
 
 /**
@@ -114,7 +114,7 @@ async function openPicker(page, layout) {
 async function closePicker(page, layout) {
     if (LAYOUTS[layout].tv) await page.keyboard.press('Escape');
     else await page.goBack();
-    return page.waitForSelector('.jfmod-releaseDialog', { state: 'detached', timeout: 10000 }).then(() => true, () => false);
+    return page.waitForSelector('.pickerDialog', { state: 'detached', timeout: 10000 }).then(() => true, () => false);
 }
 
 /** Waits until every EpisodeList request so far has its answer, then a moment for the page's refetch. */
@@ -126,7 +126,7 @@ async function settle(page, loads, answered, atLeast) {
 
 /** Lines the page itself (not the picker) shows about the load: there must be none. */
 const pageLoadLines = page => page.evaluate(() => [...document.querySelectorAll('.page:not(.hide)')].flatMap(view =>
-    [...view.querySelectorAll('.jfmod-episodeListFailure')].map(node => node.textContent)
+    [...view.querySelectorAll('[data-ds-episode-list-failure]')].map(node => node.textContent)
         .concat(/Loading (Seasons|every season)/.test(view.textContent ?? '') ? ['loading text'] : [])));
 
 async function run(browser, layout) {
@@ -208,24 +208,25 @@ async function run(browser, layout) {
         const loadingLine = early.find(option => option.text === 'Loading Seasons…');
         if (loadingLine) {
             record(layout, 'the scope switch shows a disabled Loading Seasons line while the list loads', loadingLine.disabled, early.slice(0, 4));
-            const status = await page.locator('.jfmod-releaseStatus').innerText();
+            const status = await page.locator('.pstatus').innerText();
             record(layout, 'no search runs while the list loads; the status says it is loading', /Loading every season from TMDB/.test(status), status);
         } else {
             record(layout, 'the scope switch shows a disabled Loading Seasons line while the list loads', 'NOT VERIFIED',
                 stub || failStatus ? 'the list had loaded before the switch could be read' : 'live: the page had loaded the list already');
         }
-        await page.waitForFunction(() => ![...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
-            .some(option => option.textContent === 'Loading Seasons…'), undefined, { timeout: 70000 });
+        const loadedUntil = Date.now() + 70000;
+        while ((await scopeOptions(page)).some(option => option.text === 'Loading Seasons…') && Date.now() < loadedUntil) await page.waitForTimeout(500);
+        if ((await scopeOptions(page)).some(option => option.text === 'Loading Seasons…')) throw new Error('Season loading did not finish');
         await settle(page, loads, answered, loadsBefore);
         const after = await scopeOptions(page);
         const texts = after.map(option => option.text);
-        const value = await page.locator('.jfmod-releaseDialog #jfmod-releaseEpisode').inputValue().catch(() => null);
+        const value = await page.locator('.pickerDialog #jfmod-releaseEpisode').getAttribute('data-value').catch(() => null);
         record(layout, 'the switch starts on All Seasons (user, 2026-10-24)', texts[0] === 'All Seasons' && value === 'series', { first: texts.slice(0, 2), value });
         const choices = texts.filter(text => text !== 'Choose what to search for');
         record(layout, 'the picker made no request of its own: the page and the picker share one load per visit',
             loads.length === loadsBefore + (stub || failStatus ? 1 : 0) && refreshes.length === 0, { loads, refreshes });
         if (failStatus) {
-            const line = await page.locator('.jfmod-episodeListFailure').innerText().catch(() => '');
+            const line = await page.locator('[data-ds-episode-list-failure]').innerText().catch(() => '');
             const reason = FAILURES.get(failStatus) ?? 'TMDB could not be reached.';
             record(layout, 'a failed load keeps the list and says why in one quiet line in the picker',
                 line === `Could not load every season from TMDB. ${reason} Only the episodes in the library are listed.`, line);

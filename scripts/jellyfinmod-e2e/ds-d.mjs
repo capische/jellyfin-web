@@ -177,11 +177,11 @@ try {
     assert.equal(await page.evaluate(()=>window.cardSortKey),'items-folder-Folder');
     assert.equal(await page.evaluate(()=>window.preparedCard),true);
     await page.evaluate(()=>document.querySelector('#similarCollapsible .card').insertAdjacentHTML('beforeend',
-        '<span class="jfmod-mark--none" title="Not Downloaded"></span><span class="jfmod-dlmark" data-jfmod-kind="downloading" title="40%"><svg class="jfmod-dlmark-fill" style="stroke-dashoffset:60"></svg></span><span class="jfmod-dlBar-fill" style="width:40%"></span>'));
+        '<span class="jfmod-mark--none" title="Not Downloaded"></span><span class="dm row downloading" data-jfmod-kind="downloading" title="40%"><svg class="arc"><circle class="val" stroke-dasharray="40 100"></circle></svg></span><span class="jfmod-dlBar-fill" style="width:40%"></span>'));
     await nativeCard.locator('.cmark .dm.downloading').waitFor();
     assert.equal(await nativeCard.locator('[data-ds-progress] i').evaluate(node=>node.style.width),'40%','live download wins over the old cloud and keeps its bar');
     await page.evaluate(()=>{
-        const card=document.querySelector('#similarCollapsible .card');card.querySelector('.jfmod-dlmark').remove();card.querySelector('.jfmod-dlBar-fill').remove();
+        const card=document.querySelector('#similarCollapsible .card');card.querySelector('.dm').remove();card.querySelector('.jfmod-dlBar-fill').remove();
         const mark=card.querySelector('.jfmod-mark--none');mark.className='jfmod-mark--countdown';mark.innerHTML='<span class="jfmod-countdown">2d</span>';
     });
     await page.waitForFunction(()=>document.querySelector('.jfmod-dsTitleHost .cell[data-id=movie2] .mark .num')?.textContent==='2d');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { hasDesignPage, mountDialog } from '../design/dialogHost';
+import { mountDialog } from '../design/dialogHost';
 import { RemovalDialog } from '../design/RemovalDialog';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import escapeHtml from 'escape-html';
@@ -14,12 +14,6 @@ import { cancelGrab, removeQueueRow, retryImport } from '../api/modApi';
 import { actionErrorMessage, formatBytes, isReplace, isRetryable, progressPercent, QUEUE_ROUTE, QUEUE_STATE_LABEL, queueRowTitle, reasonMessage,
     replacedWords, seedingFacts } from '../constants/queue';
 import type { QueueRow, QueueState, RemoveQueueRequest } from '../types/queue';
-
-import 'elements/emby-button/emby-button';
-import 'elements/emby-button/paper-icon-button-light';
-import 'elements/emby-checkbox/emby-checkbox';
-import 'material-design-icons-iconfont';
-import '../components/removeDialog.scss';
 
 /** A choice of the removal dialog: one button, its result under it (queue Remove dialog, D118, user-approved 2026-10-29). */
 interface RemovalChoice {
@@ -215,31 +209,9 @@ const removalPlan = (row: QueueRow, refused: string | null): RemovalPlan => {
  * one checkbox, independent of the choice. The close X in the header, Back on the TV and Escape on a computer are the safe choice
  * too; the dialog helper returns focus to the opener.
  */
-// eslint-disable-next-line sonarjs/cognitive-complexity -- retains the existing legacy lifecycle while dispatching native presentation.
 const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQueueRequest | null> => {
     const plan = removalPlan(row, refused);
     const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : undefined });
-    dlg.classList.add('formDialog', 'jfmod-removeDialog', 'align-items-center', 'justify-content-center');
-    if (!layoutManager.tv) dlg.classList.add('dialog-fullscreen-lowres');
-    let html = '<div class="formDialogContent smoothScrollY no-grow jfmod-removeContent"><div class="jfmod-remove">'
-        + '<div class="jfmod-removeHead"><h1 class="jfmod-removeTitle">' + escapeHtml(plan.title) + '</h1>'
-        + '<button is="paper-icon-button-light" type="button" class="jfmod-removeClose" title="Close" aria-label="Close">'
-        + '<span class="material-icons close" aria-hidden="true"></span></button></div>'
-        + '<p class="jfmod-removeQuestion">' + escapeHtml(plan.question) + '</p>';
-    for (const fact of plan.facts) html += '<p class="jfmod-removeFacts' + (fact.fail ? ' jfmod-removeFacts--fail' : '') + '">' + fact.html + '</p>';
-    for (const note of plan.notes) html += '<p class="jfmod-removeNote">' + escapeHtml(note) + '</p>';
-    html += '<p class="jfmod-removeRelease jfmod-mono">' + escapeHtml(row.releaseTitle) + '</p>';
-    if (plan.blocklist) {
-        html += '<div class="checkboxContainer checkboxContainer-withDescription jfmod-removeBlocklist"><label>'
-            + '<input type="checkbox" is="emby-checkbox" class="jfmod-removeBlocklistBox" /><span>Blocklist this release</span></label>'
-            + '<div class="fieldDescription checkboxFieldDescription">Later searches skip it.</div></div>';
-    }
-    for (const choice of plan.choices) {
-        html += '<button is="emby-button" type="button" class="raised block jfmod-removeChoice' + (choice.red ? ' button-delete' : '') + '" data-choice="'
-            + choice.id + '"' + (choice.id === 'cancel' ? ' autofocus' : '') + '>' + escapeHtml(choice.name) + '</button>';
-        if (choice.text) html += '<div class="fieldDescription jfmod-removeChoiceText">' + escapeHtml(choice.text) + '</div>';
-    }
-    dlg.innerHTML = html + '</div></div>';
     let result: RemoveQueueRequest | null = null;
     // It closes once. The helper starts its close at once but marks the dialog closed only after the 120 ms animation, so a
     // second Escape, X, Back, choice, click or right-click outside in between closed it again: the focus scope was popped and history went
@@ -260,38 +232,19 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     };
     // The TV's Back and a click or right-click outside reach the helper's own handlers; they are held here first.
     dlg.addEventListener('command', holdWhileClosing, true);
-    const design = hasDesignPage();
-    if (design) {
-        mountDialog(dlg, React.createElement(RemovalDialog, { plan, release: row.releaseTitle, close, choose: (id: string, blocklist: boolean) => {
-            if (closing || id === 'cancel') {
-                close();
-                return;
-            }
-            result = { removeFromClient: true, deleteFiles: id === 'delete', blocklist };
+    mountDialog(dlg, React.createElement(RemovalDialog, { plan, release: row.releaseTitle, close, choose: (id: string, blocklist: boolean) => {
+        if (closing || id === 'cancel') {
             close();
-        } }), close);
-    } else {
-        dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', close);
-    }
+            return;
+        }
+        result = { removeFromClient: true, deleteFiles: id === 'delete', blocklist };
+        close();
+    } }), close);
     // Escape closes it on a computer too (the TV already maps Escape to Back), wherever focus is.
     const onKey = (event: KeyboardEvent) => {
         if (event.key === 'Escape' && !layoutManager.tv) close();
     };
     document.addEventListener('keydown', onKey);
-    dlg.querySelectorAll<HTMLButtonElement>('.jfmod-removeChoice').forEach(button => {
-        button.addEventListener('click', () => {
-            if (closing) return;
-            const id = button.getAttribute('data-choice');
-            if (id === 'delete' || id === 'keep') {
-                result = {
-                    removeFromClient: true,
-                    deleteFiles: id === 'delete',
-                    blocklist: !!dlg.querySelector<HTMLInputElement>('.jfmod-removeBlocklistBox')?.checked
-                };
-            }
-            close();
-        });
-    });
     // The dialog helper gives focus back on the TV only; on a computer and a phone the opener gets it here, so the keyboard keeps
     // its place in the list.
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;

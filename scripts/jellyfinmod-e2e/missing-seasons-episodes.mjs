@@ -1,3 +1,4 @@
+import { readScopeOptions } from './ds-controls.mjs';
 /* eslint-disable compat/compat, no-restricted-globals, @stylistic/max-statements-per-line, no-empty-function, sonarjs/cognitive-complexity -- a Node acceptance runner, not shipped code */
 /* global window, document, ApiClient, localStorage, location, getComputedStyle, coverOf */
 // Every season and every episode on the native pages (P1.FU11, design approved 2026-10-12; UX §3.1 and §7.4).
@@ -393,8 +394,7 @@ function checkCover(label, what, shown, path, size) {
     }
 }
 
-const scopeOptions = page => page.evaluate(() => [...document.querySelectorAll('.jfmod-releaseDialog #jfmod-releaseEpisode option')]
-    .map(option => ({ text: option.textContent, selected: option.selected })));
+const scopeOptions = readScopeOptions;
 
 /** Presses a mark the way the layout does: a click, or focus and Enter on the TV. */
 async function press(page, locator, tv) {
@@ -409,14 +409,14 @@ async function press(page, locator, tv) {
 async function closePicker(page, tv) {
     if (tv) await page.keyboard.press('Escape');
     else await page.goBack();
-    return page.waitForSelector('.jfmod-releaseDialog', { state: 'detached', timeout: 10000 }).then(() => true, () => false);
+    return page.waitForSelector('.pickerDialog', { state: 'detached', timeout: 10000 }).then(() => true, () => false);
 }
 
 /** Opens the picker from a mark and returns its scope options; the page must not move. */
 async function pickerFrom(page, label, what, locator, tv, expected) {
     const before = await page.evaluate(() => location.hash);
     await press(page, locator, tv);
-    const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
+    const opened = await page.waitForSelector('.pickerDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
     await page.waitForTimeout(1000);
     const options = opened ? await scopeOptions(page) : [];
     const after = await page.evaluate(() => location.hash);
@@ -517,7 +517,7 @@ async function checkRowButton(page, label, what, episode, layout) {
         if (onMark) {
             const before = await page.evaluate(() => location.hash);
             await page.keyboard.press('Enter');
-            const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
+            const opened = await page.waitForSelector('.pickerDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
             await page.waitForTimeout(1000);
             const texts = opened ? (await scopeOptions(page)).map(option => option.text) : [];
             record(label, `${where}: Enter on it opens the picker on the episode, the page kept`, opened
@@ -539,7 +539,7 @@ async function checkRowButton(page, label, what, episode, layout) {
         await mark.focus();
         const focused = await page.evaluate(() => document.activeElement?.matches('[data-ds-state-kind=not-downloaded][data-ds-command]') ?? false);
         await page.keyboard.press('Enter');
-        const opened = await page.waitForSelector('.jfmod-releaseDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
+        const opened = await page.waitForSelector('.pickerDialog #jfmod-releaseEpisode', { timeout: 15000 }).then(() => true, () => false);
         await page.waitForTimeout(1000);
         const texts = opened ? (await scopeOptions(page)).map(option => option.text) : [];
         record(label, `${where}: a focus stop, Enter opens the picker on the episode, the page kept`, focused && opened
@@ -930,7 +930,7 @@ async function tabTrail(page, selector) {
 async function pickerOpens(page, label, what, locator) {
     const before = await page.evaluate(() => location.hash);
     await locator.click();
-    const opened = await page.waitForSelector('.jfmod-releaseDialog', { timeout: 15000 }).then(() => true, () => false);
+    const opened = await page.waitForSelector('.pickerDialog', { timeout: 15000 }).then(() => true, () => false);
     await page.waitForTimeout(800);
     record(label, `${what}: opens the picker on the page`, opened && (await page.evaluate(() => location.hash)) === before);
     if (opened) record(label, `${what}: Back closes the picker`, await closePicker(page, false));

@@ -83,9 +83,9 @@ const markOf = (node: HTMLElement): TitleCard['mark'] => {
     const link = url ? { name: mark.getAttribute('aria-label') || 'Download client', url } : undefined;
     if (kind === 'not-downloaded' || kind === 'unaired') return { kind, date: text(mark.querySelector('.jfmod-markDate')), label: mark.title, link };
     if (!['downloading', 'stalled', 'queued', 'importing', 'failed', 'seeding'].includes(kind)) return undefined;
-    const fill = mark.querySelector<SVGElement>('.jfmod-dlmark-fill');
-    const percent = fill ? 100 - Number(fill.style.strokeDashoffset || 0) : null;
-    const progress = describeDownload(kind as DownloadProgress['kind'], percent, mark.classList.contains('jfmod-dlmark--stale'));
+    const fill = mark.querySelector<SVGElement>('.arc .val');
+    const percent = fill ? Number(fill.getAttribute('stroke-dasharray')?.split(' ')[0] || 0) : null;
+    const progress = describeDownload(kind as DownloadProgress['kind'], percent, mark.classList.contains('stale'));
     return { kind, progress: { ...progress, tooltip: mark.title || progress.tooltip }, link };
 };
 

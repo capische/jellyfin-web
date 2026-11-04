@@ -15,11 +15,11 @@ import { api, control, launch, newPage, notVerified, record, saveResults, setTvL
  */
 async function pickProfile(page, { name, index }) {
     await page.locator('#jfmod-releaseProfile').click();
-    const options = page.locator('.jfmod-releaseProfileMenu [role="option"]');
+    const options = page.locator('[aria-label="Quality Profile"][role="menu"] [role="option"]');
     await options.first().waitFor({ state: 'visible', timeout: 10000 });
-    const names = await options.evaluateAll(nodes => nodes.map(node => (node.querySelector('strong') ?? node).textContent));
+    const names = await options.evaluateAll(nodes => nodes.map(node => node.querySelector('.tx0')?.firstChild?.textContent ?? (node.querySelector('strong') ?? node).textContent));
     await options.nth(name === undefined ? index : names.indexOf(name)).click();
-    await page.locator('.jfmod-releaseProfileMenu').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
+    await page.locator('[aria-label="Quality Profile"][role="menu"]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => undefined);
     return names;
 }
 
@@ -34,8 +34,8 @@ const openPicker = async page => {
     await search.waitFor({ state: 'visible', timeout: 30000 });
     await search.focus();
     await page.keyboard.press('Enter');
-    await page.waitForSelector('.jfmod-releasePicker', { timeout: 15000 });
-    await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
+    await page.waitForSelector('.picker', { timeout: 15000 });
+    await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
 };
 
 for (const layout of layouts) {
@@ -49,11 +49,11 @@ for (const layout of layouts) {
         // Late indexer: feed 3 never answers, so the search waits for its timeout; rows appear once and hold still.
         control('/fault?service=torznab3&mode=slow');
         await openPicker(page);
-        await page.evaluate(() => { window.jfmodRow = document.querySelector('.jfmod-releaseList .jfmod-releaseRow'); window.jfmodRow?.focus(); });
+        await page.evaluate(() => { window.jfmodRow = document.querySelector('.rels .rel'); window.jfmodRow?.focus(); });
         const top = await page.evaluate(() => window.jfmodRow?.getBoundingClientRect().top ?? null);
         await page.waitForTimeout(15000);
         const held = await page.evaluate(() => ({ same: document.activeElement === window.jfmodRow && window.jfmodRow.isConnected,
-            top: window.jfmodRow?.getBoundingClientRect().top ?? null, status: document.querySelector('.jfmod-releaseStatus')?.textContent ?? null }));
+            top: window.jfmodRow?.getBoundingClientRect().top ?? null, status: document.querySelector('.pstatus')?.textContent ?? null }));
         // The partial result shows in the status line (the red "Partial results" line is gone, 2026-10-26; the reason is behind the
         // Sources line's (i)).
         const answered = /(\d{1,3}) of (\d{1,3}) indexers answered/.exec(held.status ?? '');
@@ -62,20 +62,20 @@ for (const layout of layouts) {
         control('/fault?service=torznab3&mode=ok');
 
         // Profile change: a new search in place, the dialog stays, the rows re-evaluate, the entry keeps its profile.
-        const rowsBefore = await page.locator('.jfmod-releaseList .jfmod-releaseRow').count();
+        const rowsBefore = await page.locator('.rels .rel').count();
         await pickProfile(page, { name: otherProfile });
-        await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
+        await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 120000 });
         await page.waitForTimeout(1500);
-        const after = await page.evaluate(() => ({ open: !!document.querySelector('.jfmod-releasePicker'), eligible: document.querySelectorAll('.jfmod-releaseList .jfmod-releaseRow').length,
-            status: document.querySelector('.jfmod-releaseStatus')?.textContent ?? '', focus: document.activeElement?.className ?? '' }));
+        const after = await page.evaluate(() => ({ open: !!document.querySelector('.picker'), eligible: document.querySelectorAll('.rels .rel').length,
+            status: document.querySelector('.pstatus')?.textContent ?? '', focus: document.activeElement?.className ?? '' }));
         const saved = (await api(page, 'GET', `JellyfinMod/Entries/${entryId}`)).body.entry.qualityProfileId;
         record(label, 'Choosing another profile re-searches in place; the 1080p fixture is now rejected; the entry\'s saved profile is unchanged',
             after.open && rowsBefore > 0 && after.eligible === 0 && saved === before, { rowsBefore, after, before, saved });
         // Rejected-only list: focus sits on the rejected-group toggle, which opens by Enter.
-        const onToggle = /jfmod-rejectedToggle/.test(after.focus);
+        const onToggle = /\brejt\b/.test(after.focus);
         await page.keyboard.press('Enter');
         await page.waitForTimeout(800);
-        const opened = await page.locator('.jfmod-releaseRow--rejected').count();
+        const opened = await page.locator('.rejrows .rel').count();
         record(label, 'Rejected-only list: focus is on the rejected group, and Enter opens it with reasons', onToggle && opened > 0, { focus: after.focus, opened });
         record(label, 'No page errors', page.jfmodErrors.length === 0, page.jfmodErrors.slice(0, 3));
     } catch (error) {

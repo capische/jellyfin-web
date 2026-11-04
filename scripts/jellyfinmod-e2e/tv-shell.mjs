@@ -313,16 +313,16 @@ async function checkDetails(page, name, cfg, movieLib) {
             record(name, `Details: Search releases reached along the action row by arrows (${how})`, onButton, await describeFocus(page));
             if (!onButton) return;
             await press(page, 'Enter');
-            await page.waitForSelector('.dialogContainer .dialog.opened.jfmod-releaseDialog', { timeout: 10000 });
+            await page.waitForSelector('.dialogContainer .dialog.opened.pickerDialog', { timeout: 10000 });
             // The search runs against the configured indexers; the picker moves focus to its top row when it lands.
-            await page.waitForFunction(() => !/Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? 'Searching'), undefined, { timeout: 45000 });
+            await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 45000 });
             await page.waitForTimeout(800);
             const landed = await describeFocus(page);
-            const inDialog = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-releaseDialog'));
+            const inDialog = await page.evaluate(() => !!document.activeElement?.closest('.pickerDialog'));
             const moves = [landed];
             for (const key of ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown']) { await press(page, key); moves.push(await describeFocus(page)); }
-            const stillInside = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-releaseDialog'));
-            const rows = await page.evaluate(() => document.querySelectorAll('.jfmod-releaseDialog .jfmod-releaseRow').length);
+            const stillInside = await page.evaluate(() => !!document.activeElement?.closest('.pickerDialog'));
+            const rows = await page.evaluate(() => document.querySelectorAll('.pickerDialog .rel').length);
             record(name, `Release picker opens by Enter, focus lands inside, arrows stay inside (${how})`, inDialog && stillInside, { rows, moves });
             if (how === 'escape') {
                 // The profile select (an MUI select, P4.FU19) opens its menu by Enter; Back closes the menu, not the picker.
@@ -330,10 +330,10 @@ async function checkDetails(page, name, cfg, movieLib) {
                 if (await page.evaluate(() => document.activeElement?.id === 'jfmod-releaseProfile')) {
                     await press(page, 'Enter');
                     await page.waitForTimeout(800);
-                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.jfmod-releaseProfileMenu [role="listbox"]').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
+                    const sheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('[aria-label="Quality Profile"][role="menu"] [role="listbox"]').length, focus: document.activeElement?.textContent?.trim().slice(0, 30) }));
                     await press(page, 'Escape');
                     await page.waitForTimeout(900);
-                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('.jfmod-releaseProfileMenu [role="listbox"]').length, picker: !!document.querySelector('.dialogContainer .dialog.opened.jfmod-releaseDialog'), focusId: document.activeElement?.id }));
+                    const afterSheet = await page.evaluate(() => ({ sheets: document.querySelectorAll('[aria-label="Quality Profile"][role="menu"] [role="listbox"]').length, picker: !!document.querySelector('.dialogContainer .dialog.opened.pickerDialog'), focusId: document.activeElement?.id }));
                     record(name, 'Release picker: profile select opens its menu by Enter; Back closes only the menu', sheet.sheets === 1 && afterSheet.sheets === 0 && afterSheet.picker, { sheet, afterSheet });
                 } else {
                     record(name, 'Release picker: profile select reachable by ArrowUp', undefined, await describeFocus(page));

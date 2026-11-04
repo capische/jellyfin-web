@@ -64,10 +64,10 @@ const queueApi = page => page.evaluate(async () => {
     return { status: response.status, ids: (body.items ?? []).map(item => item.id), states: (body.items ?? []).map(item => item.state) };
 });
 // The row menu: the stock action sheet on the phone and the TV, the desktop table's popover since 2026-10-19 (UX §10).
-const ROW_MENU = ':is(.actionSheet, [data-ds-actionsheet]), .jfmod-queueMenuPopover .MuiPaper-root';
+const ROW_MENU = ':is(.actionSheet, [data-ds-actionsheet]), [data-ds-actionsheet] .MuiPaper-root';
 const sheet = page => page.evaluate(selector => {
     const dialog = [...document.querySelectorAll(selector)].find(node => node.getBoundingClientRect().width > 0
-        && (node.closest('.dialogContainer') || node.closest('.jfmod-queueMenuPopover')));
+        && (node.closest('.dialogContainer') || node.closest('[data-ds-actionsheet]')));
     if (!dialog) return null;
     return {
         ids: [...dialog.querySelectorAll('[data-id]')].map(node => node.getAttribute('data-id')),
@@ -99,14 +99,14 @@ for (const name of only) {
         }
         const expected = await queueApi(page);
         await page.evaluate(() => { location.hash = '#/catalog/queue'; });
-        const rowSelector = layout.tv ? '.jfmod-queueRow--tv' : name === 'mobile' ? '.jfmod-queueRow--stacked' : '.jfmod-queueTableRow';
+        const rowSelector = layout.tv ? '.qrow' : name === 'mobile' ? '.qrow' : '.qrow';
         const rendered = await page.waitForFunction(({ sel, count }) => document.querySelectorAll('#jfmodQueuePage ' + sel).length >= count && count > 0,
             { sel: rowSelector, count: expected.ids.length }, { timeout: 30000 }).then(() => true, () => false);
         const view = await page.evaluate(sel => ({
             rows: document.querySelectorAll('#jfmodQueuePage ' + sel).length,
-            layoutClass: document.querySelector('.jfmod-queue')?.className ?? null,
+            layoutClass: document.querySelector('.queue')?.className ?? null,
             errorBoundary: !!document.querySelector('.jfmod-errorBoundary, [data-jfmod-error]') || /Something went wrong|is not a function/.test(document.body.innerText),
-            titles: [...document.querySelectorAll('#jfmodQueuePage .jfmod-queueTitle')].map(node => node.textContent)
+            titles: [...document.querySelectorAll('#jfmodQueuePage .q-t .a')].map(node => node.textContent)
         }), rowSelector);
         record(name, `The Queue renders every row the API lists (${expected.ids.length}, states ${expected.states.join(', ')}) with no error boundary`,
             rendered && view.rows === expected.ids.length && !view.errorBoundary, { ...view, api: expected.states });
@@ -123,7 +123,7 @@ for (const name of only) {
             record(name, 'Keys reach a Queue row', !!opener.queueId, opener);
             await page.keyboard.press('Enter');
         } else {
-            const button = page.locator('#jfmodQueuePage .jfmod-queueMenu').first();
+            const button = page.locator('#jfmodQueuePage .qrow .ib').first();
             opener = { label: await button.getAttribute('aria-label') };
             if (name === 'mobile') await button.tap(); else await button.click();
         }
@@ -141,7 +141,7 @@ for (const name of only) {
         const stillThere = await queueApi(page);
         if (layout.tv || closed) {
             record(name, 'Escape closes the menu, changes nothing, and focus returns to the opener' + (layout.tv ? ' row' : ''),
-                closed && stillThere.ids.join() === expected.ids.join() && (layout.tv ? after.queueId === opener.queueId : /jfmod-queueMenu/.test(after.cls)),
+                closed && stillThere.ids.join() === expected.ids.join() && (layout.tv ? after.queueId === opener.queueId : /\bib\b/.test(after.cls)),
                 { closed, focus: after, queueUnchanged: stillThere.ids.join() === expected.ids.join() });
         } else {
             // Upstream keyboardNavigation.js maps Escape to Back only when layoutManager.tv; outside TV a stock dialog closes on

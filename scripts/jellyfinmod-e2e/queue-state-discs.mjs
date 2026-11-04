@@ -89,7 +89,7 @@ async function openQueue() {
     await page.evaluate(() => {
         location.hash = '#/catalog/queue';
     });
-    await page.locator('.jfmod-queue').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('.queue').waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(1500);
     // A disc's click is recorded, never opened.
     await page.evaluate(() => {
@@ -101,28 +101,28 @@ async function openQueue() {
     });
 }
 
-const rowSelector = tv ? '.jfmod-queueRow--tv' : phone ? '.jfmod-queueRow--stacked' : '.jfmod-queueTableRow';
+const rowSelector = tv ? '.qrow' : phone ? '.qrow' : '.qrow';
 const rowOf = release => page.locator(rowSelector).filter({ hasText: release }).first();
 
 /** The row's disc: its kind, arc and the State cell's other content. */
 const discOf = release => rowOf(release).evaluate(row => {
-    const mark = row.querySelector('.jfmod-dlmark');
-    const fill = mark?.querySelector('.jfmod-dlmark-fill');
-    const cell = row.querySelector('.jfmod-queueCellState');
-    const button = row.querySelector('.jfmod-queueStateButton');
+    const mark = row.querySelector('.dm');
+    const fill = mark?.querySelector('.arc .val, .arc .turn');
+    const cell = row.querySelector('.q-s');
+    const button = row.querySelector('.q-s > .rb');
     return {
-        marks: row.querySelectorAll('.jfmod-dlmark').length,
+        marks: row.querySelectorAll('.dm').length,
         kind: mark?.getAttribute('data-jfmod-kind') ?? null,
-        offset: fill ? Number(fill.style.strokeDashoffset) : null,
+        offset: fill ? 100 - Number(fill.getAttribute('stroke-dasharray').split(' ')[0]) : null,
         dash: fill?.getAttribute('stroke-dasharray') ?? null,
         nativeTitle: mark?.getAttribute('title') ?? null,
         link: mark?.getAttribute('role') === 'link',
         cellText: cell ? cell.innerText.trim() : null,
-        wrapHeight: row.querySelector('.jfmod-queueState--disc')?.getBoundingClientRect().height ?? null,
+        wrapHeight: row.querySelector('.q-s')?.getBoundingClientRect().height ?? null,
         markHeight: mark ? mark.getBoundingClientRect().height : null,
         button: !!button && button.contains(mark),
         buttonText: button ? button.innerText.trim() : null,
-        details: [...row.querySelectorAll('.jfmod-queueDetail')].map(node => node.textContent)
+        details: row.querySelector('.qdetail')?.innerText.trim().split('\n') ?? []
     };
 });
 
@@ -144,19 +144,18 @@ function checkDisc(name, disc, want) {
 }
 
 async function checkTooltip(name, release, want, link) {
-    const wrapper = rowOf(release).locator('.jfmod-queueState--disc');
+    const wrapper = rowOf(release).locator('.q-s');
     await wrapper.hover();
-    const tip = page.locator('.MuiTooltip-tooltip').last();
+    const tip = page.locator('.qtip').last();
     const shown = await tip.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
     const state = shown ? await page.evaluate(() => {
-        const tips = [...document.querySelectorAll('.MuiTooltip-tooltip')];
-        const node = tips[tips.length - 1];
-        return { lines: [...node.querySelectorAll('.jfmod-queueTipLine')].map(line => line.textContent), bottom: node.getBoundingClientRect().bottom,
-            placement: node.closest('.MuiTooltip-popper')?.getAttribute('data-popper-placement') ?? null };
+        const node = [...document.querySelectorAll('.qtip')].find(node => getComputedStyle(node).display !== 'none');
+        return { lines: node.innerText.trim().split('\n'), bottom: node.getBoundingClientRect().bottom,
+            placement: getComputedStyle(node).bottom !== 'auto' ? 'top' : null };
     }) : null;
-    const top = await wrapper.evaluate(node => node.querySelector('.jfmod-dlmark').getBoundingClientRect().top);
+    const top = await wrapper.evaluate(node => node.querySelector('.dm').getBoundingClientRect().top);
     const expected = [...want.lines, ...(link ? ['Open ' + link] : [])];
-    record(label, `${name}: hover shows the MUI tooltip above the disc with its lines`,
+    record(label, `${name}: hover shows the tooltip above the disc with its lines`,
         !!state && state.placement === 'top' && state.bottom <= top + 1 && JSON.stringify(state.lines) === JSON.stringify(expected),
         { lines: state?.lines, expected, placement: state?.placement, bottom: state?.bottom, top });
     return async () => {
@@ -167,15 +166,15 @@ async function checkTooltip(name, release, want, link) {
 
 async function checkPopover(name, release, want, link) {
     const before = await page.evaluate(() => location.hash);
-    await rowOf(release).locator('.jfmod-queueStateButton').tap();
-    const popover = page.locator('.jfmod-infoPopover');
+    await rowOf(release).locator('.q-s > .rb').tap();
+    const popover = page.locator('.ipop');
     const shown = await popover.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false);
     await page.waitForTimeout(400);
     const state = shown ? await page.evaluate(() => {
-        const node = document.querySelector('.jfmod-infoPopover');
-        const anchor = node.querySelector('.jfmod-infoPopoverLink');
-        return { title: node.querySelector('.jfmod-infoPopoverTitle')?.textContent, width: node.getBoundingClientRect().width,
-            lines: [...node.querySelectorAll('.jfmod-infoPopoverText:not(.jfmod-infoPopoverLinkLine)')].map(line => line.textContent),
+        const node = document.querySelector('.ipop');
+        const anchor = node.querySelector('.ipop > a');
+        return { title: node.querySelector('.ipop > b')?.textContent, width: node.getBoundingClientRect().width,
+            lines: [...node.querySelectorAll('[data-ds-info-line]')].map(line => line.textContent),
             link: anchor?.textContent ?? null, linkMatches: anchor ? anchor.getAttribute('href') === window.jfmodLink : null };
     }) : null;
     const after = await page.evaluate(() => ({ hash: location.hash, opened: window.jfmodOpened.length, viewport: window.innerWidth }));
@@ -185,11 +184,11 @@ async function checkPopover(name, release, want, link) {
     record(label, `${name}: a tap opens the popover (state as title, the facts${link ? ', the Open link' : ''}), full width, and opens nothing`,
         !!state && state.title === want.title && JSON.stringify(state.lines) === JSON.stringify(expected)
             && (link ? state.link === 'Open ' + link && state.linkMatches === true : state.link === null)
-            && state.width >= after.viewport - 20 && after.hash === before && after.opened === 0,
+            && Math.abs(state.width - after.viewport * 0.9) <= 1 && after.hash === before && after.opened === 0,
         { title: state?.title, lines: state?.lines, expected, link: state?.link, linkMatches: state?.linkMatches, width: state?.width, opened: after.opened,
             moved: after.hash !== before });
     return async () => {
-        await page.locator('.jfmod-infoPopover [aria-label="Close"]').click();
+        await page.locator('.ipop [aria-label="Close"]').click();
         await popover.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
         await page.waitForTimeout(300);
     };
@@ -201,13 +200,13 @@ async function checkClick(name, release, linked) {
         window.jfmodOpened = [];
     });
     const hash = await page.evaluate(() => location.hash);
-    await rowOf(release).locator('.jfmod-dlmark').click();
+    await rowOf(release).locator('.dm').click();
     await page.waitForTimeout(300);
     const state = await page.evaluate(() => ({ opened: window.jfmodOpened.length, matches: window.jfmodOpened[0] === window.jfmodLink, hash: location.hash }));
     record(label, `${name}: a click ${linked ? 'opens the client\'s page (intercepted) and nothing else' : 'opens nothing'}`,
         linked ? state.opened === 1 && state.matches && state.hash === hash : state.opened === 0 && state.hash === hash, state);
     await page.mouse.move(2, 2);
-    await page.locator('.MuiTooltip-tooltip').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
+    await page.locator('.qtip').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
 }
 
 async function checkTvSheet(name, release) {
@@ -243,9 +242,9 @@ async function realRows(queue) {
     const client = queue.items.find(item => item.client?.openUrl)?.client;
     if (client) await page.evaluate(url => { window.jfmodLink = url; }, client.openUrl);
     record(label, 'Real rows: the environment has a seeding row', seeding.length > 0, queue.items.map(item => item.state));
-    const pageText = await page.locator('.jfmod-queue').innerText();
+    const pageText = await page.locator('.queue').innerText();
     record(label, 'Real rows: "Seeding until its goal is met." is nowhere on the page', !pageText.includes('Seeding until its goal is met.'));
-    const cells = await page.evaluate(selector => [...document.querySelectorAll(selector)].map(row => row.querySelectorAll('.jfmod-dlmark').length), rowSelector);
+    const cells = await page.evaluate(selector => [...document.querySelectorAll(selector)].map(row => row.querySelectorAll('.dm').length), rowSelector);
     record(label, 'Real rows: every row has exactly one disc', cells.length === queue.items.length && cells.every(count => count === 1), cells);
     for (const item of seeding) {
         const expect = seedingExpectation(item.seeding);
@@ -260,11 +259,11 @@ async function realRows(queue) {
         record(label, `${name}: the downloading disc, its arc at the row's percent (±1 between polls)`, disc.kind === 'downloading'
             && Math.abs(disc.offset - (100 - percent)) <= 1, { offset: disc.offset, percent });
         if (!tv && !phone) {
-            const wrapper = rowOf(item.releaseTitle).locator('.jfmod-queueState--disc');
+            const wrapper = rowOf(item.releaseTitle).locator('.q-s');
             await wrapper.hover();
-            const tip = page.locator('.MuiTooltip-tooltip').last();
+            const tip = page.locator('.qtip').last();
             await tip.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
-            const lines = await tip.locator('.jfmod-queueTipLine').allTextContents().catch(() => []);
+            const lines = await tip.evaluate(node => node.innerText.trim().split('\n')).catch(() => []);
             record(label, `${name}: the tooltip reads Downloading with its figures${item.client?.openUrl ? ', then Open' : ''}`,
                 lines[0]?.startsWith('Downloading · ') && (!item.client?.openUrl || lines[lines.length - 1] === 'Open ' + item.client.name), lines);
             await page.mouse.move(2, 2);
@@ -277,15 +276,15 @@ async function realRows(queue) {
     await shot(page, 'real-rows');
     if (seeding[0] && !tv) {
         if (phone) {
-            await rowOf(seeding[0].releaseTitle).locator('.jfmod-queueStateButton').tap();
-            await page.locator('.jfmod-infoPopover').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+            await rowOf(seeding[0].releaseTitle).locator('.q-s > .rb').tap();
+            await page.locator('.ipop').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
             await page.waitForTimeout(500);
             await shot(page, 'real-seeding-popover');
-            await page.locator('.jfmod-infoPopover [aria-label="Close"]').click().catch(() => undefined);
+            await page.locator('.ipop [aria-label="Close"]').click().catch(() => undefined);
             await page.waitForTimeout(400);
         } else {
-            await rowOf(seeding[0].releaseTitle).locator('.jfmod-queueState--disc').hover();
-            await page.locator('.MuiTooltip-tooltip').last().waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+            await rowOf(seeding[0].releaseTitle).locator('.q-s').hover();
+            await page.locator('.qtip').last().waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
             await page.waitForTimeout(400);
             await shot(page, 'real-seeding-tooltip');
             await page.mouse.move(2, 2);
@@ -384,13 +383,13 @@ async function staged(queue) {
     if (!tv) {
         const target = 'Staged.ReleaseBlocked.2021.1080p-GRP';
         if (phone) {
-            await rowOf(target).locator('.jfmod-queueStateButton').tap();
-            await page.locator('.jfmod-infoPopover').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+            await rowOf(target).locator('.q-s > .rb').tap();
+            await page.locator('.ipop').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
             await page.waitForTimeout(500);
             await shot(page, 'staged-blocked-release-popover');
-            await page.locator('.jfmod-infoPopover [aria-label="Close"]').click().catch(() => undefined);
+            await page.locator('.ipop [aria-label="Close"]').click().catch(() => undefined);
         } else {
-            await rowOf(target).locator('.jfmod-queueState--disc').hover();
+            await rowOf(target).locator('.q-s').hover();
             await page.waitForTimeout(600);
             await shot(page, 'staged-blocked-release-tooltip');
             await page.mouse.move(2, 2);

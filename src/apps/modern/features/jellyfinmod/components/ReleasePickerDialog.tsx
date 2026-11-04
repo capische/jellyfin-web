@@ -1,5 +1,4 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
-import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import { useQuery } from '@tanstack/react-query';
 import classNames from 'classnames';
 import escapeHtml from 'escape-html';
@@ -21,17 +20,16 @@ import { profileSummary } from '../settings/qualityProfiles';
 import type { GrabMode, GrabOperation, IndexerOutcome, IndexerProgress, ReleaseCandidate, ReleaseIntent, ReleaseProgress, ReleaseSearch } from '../types/acquisition';
 import type { QueueRow } from '../types/queue';
 
-import { type DetailOption, detailLabelOf, detailMenuItems } from './detailOptions';
-import EmbySelect, { type EmbySelectOption } from './EmbySelect';
-import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
-import { AddGlyph, IndexerLink, qualityText, ReleaseLines, RemoveGlyph, ReplaceGlyph } from './ReleaseRowParts';
-import { SearchBlock, type SearchLine } from './ReleaseSearchBlock';
-import { ReleaseSources, type SourceLine, type TrainLine, useTrain } from './ReleaseSources';
-import { flatButtonClass } from '../utils/flatButton';
-
-import './interFont.scss';
-import './downloadProgress.scss';
-import './releasePicker.scss';
+import { type DetailOption } from './detailOptions';
+import { Select } from '../design/Controls';
+import { Icon } from '../design/Icon';
+import { Release, ReleaseGlyph } from '../design/Release';
+import { type EmbySelectOption } from './EmbySelect';
+import { type DownloadMarkLink, ringLink } from './DownloadStateMark';
+import { DownloadMark as DownloadStateMark } from '../design/StateMark';
+import { qualityText } from './ReleaseRowParts';
+import { SearchBlock, type SearchLine } from '../design/ReleaseSearchBlock';
+import { ReleaseSources, type SourceLine, type TrainLine, useTrain } from '../design/ReleaseSources';
 
 export interface ReleasePickerEpisode {
     id: string;
@@ -67,6 +65,8 @@ export interface ReleasePickerProps {
     onChanged?: () => void;
     /** The title row's place for the Sources icon (P4.FU25); without it the picker has no Sources. */
     sourcesSlot?: HTMLElement;
+    showNames?: boolean;
+    title?: string;
 }
 
 const GRAB_REASONS = new Map([
@@ -292,7 +292,7 @@ const EarlyStatus: FC<{ count: number; progress: ReleaseProgress | null; notes: 
             .map(line => line.name);
         return <>
             {releaseCount(count)} so far
-            {asking.length > 0 && <> · waiting for <span className='jfmod-releaseStatus-asking'>{asking.join(', ')}</span></>}
+            {asking.length > 0 && <> · waiting for <span className='asking'>{asking.join(', ')}</span></>}
             {notes && ' · ' + notes}
         </>;
     };
@@ -360,13 +360,8 @@ interface AddedRow {
 // The figure shares its words and colours with the rows' meta lines (downloadProgress.scss, P4.FU1/P4.FU6); no bar (rows are
 // ring only, the disc takes the Add slot).
 const ProgressFigure: FC<{ progress: DownloadProgress }> = ({ progress }) =>
-    <span className={classNames('jfmod-addedFigure jfmod-dlMeta', 'jfmod-dlMeta--' + progress.kind, { 'jfmod-dlMeta--stale': progress.stale })}
+    <span className={'dlf ' + progress.kind}
         title={progress.tooltip} aria-live='off'>{progress.text}</span>;
-
-const RowLines: FC<{ candidate: ReleaseCandidate; search: ReleaseSearch | undefined; added?: AddedRow | null; reasons?: ReactNode }> =
-    ({ candidate, search, added, reasons }) =>
-        <ReleaseLines candidate={candidate} coverage={coverageText(candidate, search)} reasons={reasons}
-            progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined} />;
 
 /**
  * How a row grabs (user decision 2, 2026-10-08). `first` is what Enter or a click on the row does: fill where the scope holds
@@ -387,8 +382,7 @@ interface RowPlan {
 const PLAIN_ROW: RowPlan = { first: undefined, choices: false, replace: false, held: 0, pack: false };
 
 /** A row action: upstream's round icon button, grey, red when it destroys, with the TV's focus ring (user rules, 2026-10-08). */
-const actionClass = (extra?: string, state: ActionState = 'idle') => classNames('paper-icon-button-light jfmod-releaseAction', extra,
-    state !== 'idle' && 'jfmod-releaseAction--' + state, { 'show-focus': layoutManager.tv });
+const actionClass = (extra?: string, state: ActionState = 'idle') => classNames('rb focusable', extra, { ok: state === 'done', working: state === 'working', red: state === 'failed' });
 
 /** Where a row's Add or Replace is in a grab: the glyph works, ticks (stays) or shows a bang for three seconds. */
 type ActionState = 'idle' | 'working' | 'done' | 'failed';
@@ -396,6 +390,12 @@ type ActionState = 'idle' | 'working' | 'done' | 'failed';
 const ACTION_SUFFIXES = new Map<ActionState, string>([['done', ' — In the Download Queue'], ['failed', ' — Failed']]);
 
 const actionTitle = (base: string, state: ActionState) => base + (ACTION_SUFFIXES.get(state) ?? '');
+
+const actionIcon = (state: ActionState, normal: 'plus' | 'swap') => {
+    if (state === 'done') return 'tick';
+    if (state === 'failed') return 'bang';
+    return normal;
+};
 
 interface ReleaseRowProps {
     candidate: ReleaseCandidate;
@@ -408,6 +408,7 @@ interface ReleaseRowProps {
     added?: AddedRow | null;
     /** A late indexer's row, just slotted in: the arrival mark fades over two seconds (P4.FU24). */
     arrived?: boolean;
+    names?: boolean;
 }
 
 /** The added row's two slots: the decorative arrow or tick (no stop), then the X where there is one. */
@@ -424,16 +425,16 @@ const AddedActions: FC<{ candidate: ReleaseCandidate; added: AddedRow }> = ({ ca
     if (progress) state = 'idle';
     let title = added.accepted ? 'In the Download Queue' : 'Adding…';
     if (progress) title = progress.tooltip;
-    return <span className='jfmod-releaseActions jfmod-releaseActions--pressed'>
-        <button type='button' className={actionClass(classNames('jfmod-releaseAction--add', { 'jfmod-releaseAction--dl': !!progress }), state)}
+    return <span className='ract'>
+        <button type='button' className={actionClass(undefined, state).replace(' focusable', '')}
             title={title} aria-hidden='true' tabIndex={-1} data-jfmod-release-add={candidate.releaseId}>
-            {progress ? <DownloadStateMark progress={progress} size='row' link={added.link} /> : <AddGlyph />}
+            {progress ? <DownloadStateMark progress={progress} size='row' link={added.link} /> : <ReleaseGlyph name={state === 'done' ? 'tick' : 'plus'} />}
         </button>
-        {x && <button type='button' className={actionClass('jfmod-releaseAction--danger jfmod-releaseAction--x')}
+        {x && <button type='button' className={actionClass('red')}
             title={x === 'cancel' ? 'Cancel' : 'Remove from Queue'}
             aria-label={x === 'cancel' ? 'Cancel adding ' + candidate.rawTitle : 'Remove ' + candidate.rawTitle + ' from the download queue'}
             aria-disabled={added.xOff} data-jfmod-release-x={candidate.releaseId} onClick={press}>
-            <RemoveGlyph />
+            <Icon name='x' />
         </button>}
     </span>;
 };
@@ -449,28 +450,28 @@ const RowActions: FC<ReleaseRowProps & { rejected: boolean }> = ({ candidate, di
     }, [candidate, onGrab, plan]);
     const replace = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        onGrab(candidate, 'replace', plan);
-    }, [candidate, onGrab, plan]);
+        if (!replaceOff) onGrab(candidate, 'replace', plan);
+    }, [candidate, onGrab, plan, replaceOff]);
     if (added) return <AddedActions candidate={candidate} added={added} />;
     // The release just imported has no actions, but keeps their room so the columns do not drift.
-    if (candidate.inLibrary) return <span className='jfmod-releaseActions jfmod-releaseActions--empty' />;
+    if (candidate.inLibrary) return <span className='ract' />;
     const addState = actionState(candidate.releaseId, 'add');
     const replaceState = actionState(candidate.releaseId, 'replace');
     const showReplace = plan.choices && plan.replace;
     let addLabel = 'Add ' + candidate.rawTitle;
     if (rejected) addLabel = 'Add the rejected release ' + candidate.rawTitle;
     else if (plan.choices) addLabel += ' beside the files held';
-    return <span className={classNames('jfmod-releaseActions', { 'jfmod-releaseActions--pressed': addState !== 'idle' || replaceState !== 'idle' })}>
-        <button type='button' className={actionClass('jfmod-releaseAction--add', addState)} title={actionTitle('Add', addState)}
+    return <span className={'ract'}>
+        <button type='button' className={actionClass(undefined, addState)} title={actionTitle('Add', addState)}
             aria-label={addLabel}
             aria-disabled={off} data-jfmod-release-add={candidate.releaseId} onClick={add}>
-            <AddGlyph />
+            <ReleaseGlyph name={actionIcon(addState, 'plus')} />
         </button>
-        {showReplace ? <button type='button' className={actionClass('jfmod-releaseAction--replace', replaceState)}
+        {showReplace ? <button type='button' className={actionClass('red', replaceState)}
             title={actionTitle(plan.held > 1 ? `Replace ${plan.held} Files` : 'Replace File', replaceState)}
             aria-label={'Replace the files held with ' + (rejected ? 'the rejected release ' : '') + candidate.rawTitle} aria-disabled={replaceOff}
             data-jfmod-release-replace={candidate.releaseId} onClick={replace}>
-            <ReplaceGlyph />
+            <ReleaseGlyph name={actionIcon(replaceState, 'swap')} />
         </button> : null}
     </span>;
 };
@@ -490,39 +491,30 @@ const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => quali
  * like any other (another file of that quality, user 2026-10-29); only its Replace is off, as the server answers 409
  * `held_quality`. The release just imported stays focusable for reading, but cannot be grabbed again.
  */
-const ReleaseRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search, disabled, plan, onGrab, added, arrived } = props;
-    // The added row is never dimmed: it is the one the grab is about.
+const ReleaseRow: FC<ReleaseRowProps & { rejected?: boolean }> = props => {
+    const { candidate, search, disabled, plan, onGrab, added, arrived, rejected, names } = props;
     const off = !added && (disabled || !!candidate.inLibrary);
-    const activate = useCallback(() => onGrab(candidate, plan.first, plan), [candidate, onGrab, plan]);
-    return <div className={classNames('jfmod-releaseItem', { 'jfmod-releaseItem--added': !!added, 'jfmod-releaseItem--arrived': arrived })}>
-        <button type='button' className='jfmod-releaseRow' aria-disabled={off} aria-label={rowLabel(candidate, added)}
-            data-jfmod-release-row={candidate.releaseId} onClick={activate}>
-            <RowLines candidate={candidate} search={search} added={added} />
-        </button>
-        <RowActions {...props} rejected={false} />
-        <IndexerLink candidate={candidate} />
+    const activate = () => {
+        if (!off && !rejected) onGrab(candidate, plan.first, plan);
+    };
+    return <div className={classNames('rel focusable', { dim: off, new: arrived })} role='button' tabIndex={0} data-ds-added={added ? '' : undefined} data-ds-release-title={candidate.rawTitle}
+        aria-disabled={off || rejected} aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}
+        onClick={activate} onKeyDown={event => {
+            if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                activate();
+            }
+        }} onFocus={event => event.currentTarget.classList.add('foc')} onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('foc');
+        }}>
+        <Release candidate={candidate} coverage={coverageText(candidate, search)} names={names}
+            actions={<RowActions {...props} rejected={!!rejected} />}
+            progress={added?.progress ? <ProgressFigure progress={added.progress} /> : undefined}>
+            {rejected && <div className='rreason'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</div>}
+        </Release>
     </div>;
 };
-
-/**
- * A rejected release (user, 2026-10-10: a rejection is soft, the choice is the person's). The row itself only reads, so a
- * stray Enter never grabs it; Add, and Replace where the row offers it, follow as their own D-pad stops and ask first, naming
- * what the profile rejected it for. Automation never grabs a rejected release.
- */
-const RejectedRow: FC<ReleaseRowProps> = props => {
-    const { candidate, search, added, arrived } = props;
-    return <div className={classNames('jfmod-releaseItem jfmod-releaseItem--rejected', { 'jfmod-releaseItem--added': !!added,
-        'jfmod-releaseItem--arrived': arrived })}>
-        <button type='button' className='jfmod-releaseRow jfmod-releaseRow--rejected' aria-disabled='true'
-            aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}>
-            <RowLines candidate={candidate} search={search} added={added}
-                reasons={<span className='jfmod-releaseReasons'>{candidate.rejections.map(rejection => rejection.message).join(' ')}</span>} />
-        </button>
-        <RowActions {...props} rejected />
-        <IndexerLink candidate={candidate} />
-    </div>;
-};
+const RejectedRow: FC<ReleaseRowProps> = props => <ReleaseRow {...props} rejected />;
 
 /** Replace's confirmation (user decision 2): what goes, and that nothing goes before the new files are in the library. */
 const replaceText = (plan: RowPlan, mediaType: 'movie' | 'series') => {
@@ -573,16 +565,16 @@ const GrabStatus: FC<{ operation: GrabOperation; now: number; adopted: boolean }
         let acceptedText = 'The download client accepted the torrent.';
         if (replacing) acceptedText = `In the download queue. ${fileWord} ${files.endsWith('s') ? 'are' : 'is'} removed once this one is in the library.`;
         else if (operation.mode === 'add') acceptedText = `In the download queue. ${fileWord} ${files.endsWith('s') ? 'stay' : 'stays'}.`;
-        return <div className={classNames('jfmod-grabStatus', { 'jfmod-grabStatus--ok': accepted, 'jfmod-grabStatus--error': refused })}
-            role='status' aria-live='polite'>
-            {operation.state === 'pending' && <span>{replacing && `Replacing ${files}. `}Sending to the download client in {seconds} s.</span>}
-            {operation.state === 'submitting' && <span>{replacing && `Replacing ${files}. `}Sending to the download client…</span>}
-            {accepted && <span>{acceptedText}</span>}
-            {accepted && operation.openUrl && <a className={flatButtonClass() + ' jfmod-grabOpen'} href={operation.openUrl}
-                target='_blank' rel='noopener noreferrer'>Open in Client</a>}
-            {!accepted && isFinal(operation) && <span>{operation.message}{replacing && ` ${fileWord} ${files.endsWith('s') ? 'stay' : 'stays'}.`}</span>}
-            {/* The file name is the diagnostic when a grab goes wrong, so the block carries it (UX §9). */}
-            <span className='jfmod-grabStatus-title'>{operation.releaseTitle}</span>
+        return <div className={classNames('grab', { ok: accepted, bad: refused })}
+            role='status' aria-live='polite'><div className='s'>
+                {operation.state === 'pending' && <span>{replacing && `Replacing ${files}. `}Sending to the download client in {seconds} s.</span>}
+                {operation.state === 'submitting' && <span>{replacing && `Replacing ${files}. `}Sending to the download client…</span>}
+                {accepted && <span>{acceptedText}</span>}
+                {accepted && operation.openUrl && <a className='flat focusable' href={operation.openUrl}
+                    target='_blank' rel='noopener noreferrer'>Open in Client</a>}
+                {!accepted && isFinal(operation) && <span>{operation.message}{replacing && ` ${fileWord} ${files.endsWith('s') ? 'stay' : 'stays'}.`}</span>}
+                {/* The file name is the diagnostic when a grab goes wrong, so the block carries it (UX §9). */}
+            </div><div className='rname'>{operation.releaseTitle}</div>
         </div>;
     };
 
@@ -831,23 +823,8 @@ const choiceOrStart = (choice: string, options: EmbySelectOption[],
  * scope switch beside it is (a small label over the value on a hairline). Its trigger keeps the id the runners find it by and is a
  * TV focus stop; the menu sits above upstream's dialog layer.
  */
-const ProfileSelect: FC<{ value: string; options: DetailOption[]; onChange: (value: string) => void }> = ({ value, options, onChange }) => {
-    const change = useCallback((event: SelectChangeEvent) => onChange(event.target.value), [onChange]);
-    return (
-        <div className='jfmod-releaseProfileField'>
-            <span className='jfmod-releaseProfileLabel' id='jfmod-releaseProfileLabel'>Quality Profile</span>
-            <Select variant='standard' disableUnderline fullWidth value={value} onChange={change} labelId='jfmod-releaseProfileLabel'
-                renderValue={detailLabelOf(options)} IconComponent={NoIcon}
-                SelectDisplayProps={{ id: 'jfmod-releaseProfile', className: 'focusable' }}
-                MenuProps={{ className: 'jfmod-releaseProfileMenu' }}>
-                {detailMenuItems(options)}
-            </Select>
-        </div>
-    );
-};
-
-/** The scope switch's own ▾ is drawn by the field's `::after`, so MUI's icon is left out. */
-const NoIcon = () => null;
+const ProfileSelect: FC<{ value: string; options: DetailOption[]; onChange: (value: string) => void }> = ({ value, options, onChange }) =>
+    <Select id='jfmod-releaseProfile' label='Quality Profile' value={value} options={options} onChange={onChange} />;
 
 /** Whether a search's rows may offer Replace: the plugin's `modes`, else, from an older plugin, as before (user, 2026-10-09). */
 const replaceOffered = (search: ReleaseSearch) => !search.grab.modes || search.grab.modes.includes('replace');
@@ -1261,8 +1238,8 @@ const useKeepPlace = (container: RefObject<HTMLDivElement | null>, searchId: str
     const root = container.current;
     if (key !== committed.current && root) {
         // The Rejected toggle too: with only rejected rows so far it holds the TV's focus, and eligible rows arrive above it.
-        const focused = document.activeElement?.closest('.jfmod-releaseItem, .jfmod-rejectedToggle');
-        const hovered = pointed.current ? root.querySelector('.jfmod-releaseItem:hover, .jfmod-rejectedToggle:hover') : null;
+        const focused = document.activeElement?.closest('.rel, .rejt');
+        const hovered = pointed.current ? root.querySelector('.rel:hover, .rejt:hover') : null;
         const item = hovered ?? (focused && root.contains(focused) ? focused : null);
         anchor.current = item ? { element: item, top: item.getBoundingClientRect().top } : null;
     }
@@ -1513,8 +1490,12 @@ const useSourcesView = (input: SourcesViewInput) => {
  * Cancel follows the grabbed row during the hold (user decision 2). Rows only change on a deliberate search:
  * a new scope or profile. Nothing refetches underneath a focused row.
  */
+const SearchScopeField: FC<{ series: boolean; title?: string; label: string; value: string; options: EmbySelectOption[]; choose: (value: string) => void }> = props =>
+    props.series ? <Select key={props.label} id='jfmod-releaseEpisode' label='Search For' value={props.value} options={props.options} onChange={props.choose} /> :
+        <Select label='Search For' value='title' options={[{ value: 'title', label: props.title ?? '' }]} onChange={() => undefined} />;
+
 const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, episodes: givenEpisodes, initialEpisodeId, episodePage,
-    seasonPage, intent, loadEpisodes, onChanged, sourcesSlot }) => {
+    seasonPage, intent, loadEpisodes, onChanged, sourcesSlot, showNames, title }) => {
     const { episodes, loading, listError } = useEpisodeList(givenEpisodes, loadEpisodes, onChanged);
     const [choice, setChoice] = useState(initialEpisodeId ?? (seasonPage === undefined ? '' : SEASON_PREFIX + seasonPage));
     const [profileId, setProfileId] = useState('');
@@ -1582,10 +1563,10 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         window.requestAnimationFrame(() => {
             const root = container.current;
             // The D-pad already on a row or its action (rows of an indexer ticked in) stays where it is.
-            if (root?.querySelector('.jfmod-releaseScroll')?.contains(document.activeElement)) return;
-            const target = root?.querySelector<HTMLElement>('.jfmod-releaseRow:not([aria-disabled="true"])')
-                ?? root?.querySelector<HTMLElement>('.jfmod-releaseRow, .jfmod-rejectedToggle')
-                ?? root?.querySelector<HTMLElement>('.jfmod-releaseStatus');
+            if (root?.querySelector('.releaseScroll')?.contains(document.activeElement)) return;
+            const target = root?.querySelector<HTMLElement>('.rel:not([aria-disabled="true"])')
+                ?? root?.querySelector<HTMLElement>('.rel, .rejt')
+                ?? root?.querySelector<HTMLElement>('.pstatus');
             // Only the TV's D-pad needs a row focused for it: on a desktop the script focus left the first row highlighted as if
             // it were selected after a mouse click (user, 2026-10-11).
             if (target && layoutManager.tv) focusManager.focus(target);
@@ -1692,46 +1673,45 @@ const ReleasePickerDialog: FC<ReleasePickerProps> = ({ api, entryId, mediaType, 
         return operationState === 'accepted' ? 'done' : 'idle';
     }, [flash, grabbedId, operationState, pressed, starting]);
 
-    return <div className={classNames('jfmod-releasePicker', { 'jfmod-releasePicker--holding': !!added })} ref={container}>
+    return <div className={'picker'} ref={container}>
         {sourcesSlot && <ReleaseSources slot={sourcesSlot} lines={sourceLines} onToggle={toggleSource}
             searching={sourcesSearching} train={train} showing={!!data} />}
         {/* The choices share one line where the screen allows (user, 2026-10-08). The scope switch keeps the episode
             select's id, so runners that pick an episode by id still work. */}
-        <div className='jfmod-releaseControls'>
-            {mediaType === 'series' && <EmbySelect key={scope.label} id='jfmod-releaseEpisode' label={scope.label} value={choiceNow}
-                options={scope.options} onChange={chooseScope} />}
+        <div className='pmchoices'>
+            <SearchScopeField series={mediaType === 'series'} title={title} label={scope.label} value={choiceNow} options={scope.options} choose={chooseScope} />
             {!!profiles.data?.length && <ProfileSelect value={shownProfileId} options={profileOptions} onChange={chooseProfile} />}
         </div>
-        {listError && <p className='jfmod-releaseNotice jfmod-releaseNotice--info jfmod-episodeListFailure'>{listError}</p>}
-        {notice && !bare && <p className='jfmod-releaseNotice jfmod-releaseNotice--info'>{notice}</p>}
-        <p className={classNames('jfmod-releaseStatus', { 'jfmod-releaseStatus--bare': bare })} role='status' tabIndex={-1}>
-            {spoken && <span className='jfmod-releaseStatus-spoken'>{spoken}</span>}
+        {listError && <p className='pnotice' data-ds-episode-list-failure=''>{listError}</p>}
+        {notice && !bare && <p className='pnotice'>{notice}</p>}
+        <p className={'pstatus'} role='status' tabIndex={-1}>
+            {spoken && <span className='sr-only'>{spoken}</span>}
             {shown && <span aria-hidden={searching}>{shown}</span>}
         </p>
         {/* The grab's status stays in view for its whole hold, also when a changed search no longer lists the release it grabbed
             (whole-review chunk 4a, P2 4). */}
         {/* Only the list scrolls; everything above it stays put (P4.FU24). */}
-        <div className='jfmod-releaseScroll scrollY'>
+        <div className='releaseScroll scrollY'>
             {!blockShown && grabStatus}
-            <div className={classNames('jfmod-releaseList', { 'jfmod-releaseList--stale': stale && hasRows })}>
+            <div className={classNames('rels', { dim: stale && hasRows })}>
                 {eligible.map(candidate => <Fragment key={candidate.releaseId}>
                     <ReleaseRow candidate={shownCandidate(candidate)} search={data} disabled={grabDisabled}
                         plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
+                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} names={showNames} />
                     {blockRowId === candidate.releaseId && grabStatus}
                 </Fragment>)}
                 {block && <SearchBlock mode={block.mode} caption={block.caption} lines={block.lines} over={search.isFetching && hasRows} />}
             </div>
-            {rejected.length > 0 && <div className='jfmod-rejectedGroup'>
-                <button type='button' className={flatButtonClass() + ' jfmod-rejectedToggle'} aria-expanded={rejectedOpen} onClick={toggleRejected}>
-                    {rejectedOpen ? '▾' : '▸'} {rejected.length} Rejected
+            {rejected.length > 0 && <div className='rejected'>
+                <button type='button' className='rejt focusable' aria-expanded={rejectedOpen} onClick={toggleRejected}>
+                    <Icon name={rejectedOpen ? 'down' : 'right'} /><b>{rejected.length} Rejected</b>
                 </button>
-                {rejectedOpen && rejected.map(candidate => <Fragment key={candidate.releaseId}>
+                {rejectedOpen && <div className='rels rejrows'>{rejected.map(candidate => <Fragment key={candidate.releaseId}>
                     <RejectedRow candidate={shownCandidate(candidate)} search={data}
                         disabled={grabDisabled} plan={plans.get(candidate.releaseId) ?? PLAIN_ROW} onGrab={onGrab} actionState={actionState}
-                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} />
+                        added={candidate.releaseId === addedId ? added : null} arrived={arrived.has(candidate.releaseId)} names={showNames} />
                     {blockRowId === candidate.releaseId && grabStatus}
-                </Fragment>)}
+                </Fragment>)}</div>}
             </div>}
         </div>
     </div>;

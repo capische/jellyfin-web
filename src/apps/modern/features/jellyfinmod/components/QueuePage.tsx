@@ -1,17 +1,9 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import type { Theme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Tooltip from '@mui/material/Tooltip';
-import classNames from 'classnames';
-import React, { type FC, type FocusEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type FC, type FocusEvent, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import focusManager from 'components/focusManager';
-import layoutManager from 'components/layoutManager';
 import Page from 'components/Page';
 import { appRouter } from 'components/router/appRouter';
 import { useUserViews } from 'hooks/api/useUserViews';
@@ -23,15 +15,17 @@ import {
     sortQueueRows, updatedAgo
 } from '../constants/queue';
 import { useQueue, useQueueCapability } from '../hooks/useQueue';
-import DownloadStateMark, { type DownloadMarkLink, ringLink } from './DownloadStateMark';
-import InfoPopover from './InfoPopover';
+import { type DownloadMarkLink, ringLink } from './DownloadStateMark';
+import { DownloadMark as DownloadStateMark } from '../design/StateMark';
+import InfoPopover from '../design/InfoPopover';
 import { episodePath, seasonPath } from './MissingChildren';
-import { openQueueRowMenu, queueRowActions, runQueueRowAction } from '../integration/queueActions';
+import { openQueueRowMenu, queueRowActions } from '../integration/queueActions';
 import type { QueueList, QueueRow } from '../types/queue';
 import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 
-import './queue.scss';
-import { raisedButtonClass } from '../utils/flatButton';
+import { DesignContext, Root } from '../design/Root';
+import { Icon } from '../design/Icon';
+import { QueueHead, QueueRowView } from '../design/Queue';
 
 type QueueLayout = 'desktop' | 'mobile' | 'tv';
 
@@ -83,24 +77,6 @@ const thumbUrl = (api: Api, row: QueueRow) => {
     return getTmdbImage(row.entry?.posterPath, 'w154');
 };
 
-const Thumb: FC<{ api: Api; row: QueueRow }> = ({ api, row }) => {
-    const url = thumbUrl(api, row);
-    return <span className='jfmod-queueThumb' aria-hidden='true' style={url ? { backgroundImage: `url("${url}")` } : undefined} />;
-};
-
-/** A plain bar: no animation, so a 3 s poll moves it once and an old TV engine draws it cheaply. */
-const ProgressBar: FC<{ text: RowText; stale: boolean }> = ({ text, stale }) => {
-    if (text.percent === null) return <span className='jfmod-queueMuted'>{text.freshness ?? '—'}</span>;
-    return <span className='jfmod-queueProgress'>
-        <span className={classNames('jfmod-queueBar', { 'jfmod-queueBar--stale': stale })} role='progressbar'
-            aria-valuemin={0} aria-valuemax={100} aria-valuenow={text.percent} aria-label={text.title}>
-            <span className='jfmod-queueBarFill' style={{ width: text.percent + '%' }} />
-        </span>
-        <span className='jfmod-queuePercent'>{text.percent} %</span>
-        {text.freshness && <span className='jfmod-queueMuted jfmod-queueFreshness'>{text.freshness}</span>}
-    </span>;
-};
-
 interface TitlePart {
     text: string;
     href?: string;
@@ -135,27 +111,6 @@ const partsOf = (row: QueueRow, serverId: string | undefined): TitlePart[] => {
         text: episodeCode(seasonNumber, episodeNumber) + (title ? ' ' + title : ''),
         href: '#' + episodePath(entry.id, seasonNumber, episodeNumber, server)
     }];
-};
-
-/** Parsed title first (its parts linked where `linked`), the raw release title dimmed beneath and never hidden (UX §9 style). */
-const TitleLines: FC<{ row: QueueRow; text: RowText; serverId?: string; linked: boolean }> = ({ row, text, serverId, linked }) => <>
-    <span className='jfmod-queueTitle'>{linked ? titleParts(row, serverId).map(part => (part.href ?
-        <a key={part.key} className='jfmod-queueTitleLink' href={part.href}>{part.text}</a> :
-        <React.Fragment key={part.key}>{part.text}</React.Fragment>)) : text.title}</span>
-    {text.version && <span className='jfmod-queueMuted'>{text.version}</span>}
-    <span className='jfmod-queueRelease'>{row.releaseTitle}</span>
-</>;
-
-/**
- * The row's client, a link to its web page where the ring is one (`ringLink`'s rule: administrators, a saved Web interface
- * link, not the TV), else its name; the row menu no longer has Open in Client (user, 2026-10-19).
- */
-const ClientName: FC<{ row: QueueRow; linked: boolean; className?: string }> = ({ row, linked, className }) => {
-    const client = row.client;
-    if (!client) return null;
-    if (!linked || layoutManager.tv || !client.openUrl) return <span className={className}>{client.name}</span>;
-    return <span className={className}><a className='jfmod-queueTitleLink' href={client.openUrl} target='_blank' rel='noopener noreferrer'
-        title={'Open ' + client.name}>{client.name}</a></span>;
 };
 
 /** What a state disc says (P4.FU28): the state word, the figures after it, then one fact per line. */
@@ -224,140 +179,17 @@ interface StateInfo {
  */
 const StateCell: FC<{ row: QueueRow; text: RowText; layout: QueueLayout; onInfo: (info: StateInfo) => void }> = ({ row, text, layout, onInfo }) => {
     const { progress, tip, link } = rowDisc(row, text);
-    const lines = tooltipLines(tip, null);
-    const name = lines.join('. ');
-    const openInfo = useCallback((event: MouseEvent<HTMLButtonElement>) => onInfo({ id: row.id, anchor: event.currentTarget }), [onInfo, row.id]);
-    if (layout === 'tv') {
-        const detail = [...(tip.summary && !tip.figures ? [capitalise(tip.summary)] : []), ...tip.lines];
-        return <>
-            <span className='jfmod-queueState jfmod-queueState--disc'><DownloadStateMark progress={progress} size='row' title={name} /></span>
-            {detail.map(line => <span key={line} className='jfmod-queueDetail'>{line}</span>)}
-        </>;
-    }
+    const name = tooltipLines(tip, link).join('\n');
     if (layout === 'mobile') {
-        return <button type='button' className='jfmod-queueState jfmod-queueState--disc jfmod-queueStateButton' aria-haspopup='dialog'
-            aria-label={name} onClick={openInfo}>
+        return <button type='button' className='rb focusable' aria-label={name} aria-haspopup='dialog'
+            onClick={event => onInfo({ id: row.id, anchor: event.currentTarget })}>
             <DownloadStateMark progress={progress} size='row' title={name} hostTip />
         </button>;
     }
-    // Every disc is a keyboard stop on the computer, so its tip shows on focus as on hover (Codex final review, 2026-10-26): a linked
-    // disc is one itself (Enter opens the client), any other one through its wrapper.
-    return <Tooltip placement='top' title={<>{tooltipLines(tip, link).map(line => <span key={line} className='jfmod-queueTipLine'>{line}</span>)}</>}>
-        <span className={classNames('jfmod-queueState jfmod-queueState--disc', { 'jfmod-queueStateFocus': !link })}
-            tabIndex={link ? undefined : 0}>
-            <DownloadStateMark progress={progress} size='row' title={name} link={link} hostTip />
-        </span>
-    </Tooltip>;
-};
-
-const metaLine = (text: RowText) => [text.size, text.speed, text.eta ? text.eta + ' left' : null].filter(Boolean).join(' · ');
-
-interface RowProps {
-    api: Api;
-    row: QueueRow;
-    text: RowText;
-    isAdmin: boolean;
-    showClient: boolean;
-    serverId?: string;
-    /** The title's parts and the client are links (not inside the TV's row button). */
-    linked: boolean;
-    stale: boolean;
-    layout: QueueLayout;
-    /** The phone's tap on a disc. */
-    onInfo: (info: StateInfo) => void;
-    onMenu: (row: QueueRow, target: HTMLElement) => void;
-    /** An item chosen in the desktop popover. */
-    onPick: (row: QueueRow, id: string, target: HTMLElement) => void;
-}
-
-/*
- * A plain button wearing upstream's class, not `is='paper-icon-button-light'`: React creates an `is` element with an
- * options object, which the v0 custom-elements polyfill rejects (`toLowerCase is not a function`), and the error
- * boundary then replaced the whole Queue for an administrator as soon as one row had actions (P7.S11 sweep; the same
- * trap `EmbySelect` documents). The class carries the look; a native button is already focusable on every layout.
- */
-const MenuButton: FC<{ row: QueueRow; title: string; onMenu: RowProps['onMenu'] }> = ({ row, title, onMenu }) => {
-    const open = useCallback((event: MouseEvent<HTMLButtonElement>) => onMenu(row, event.currentTarget), [onMenu, row]);
-    return <button type='button' className='paper-icon-button-light jfmod-queueMenu jfmod-queueFocus'
-        title='Actions' aria-label={'Actions for ' + title} aria-haspopup='menu' onClick={open}>
-        <span className='material-icons more_vert' aria-hidden='true' />
-    </button>;
-};
-
-const PopoverItem: FC<{ item: { id: string; name: string; icon: string }; onPick: (id: string) => void }> = ({ item, onPick }) => {
-    const pick = useCallback(() => onPick(item.id), [item.id, onPick]);
-    return <MenuItem className='jfmod-queueMenuItem' onClick={pick} data-id={item.id}>
-        <ListItemIcon className='jfmod-queueMenuIcon'><span className={'material-icons ' + item.icon} aria-hidden='true' /></ListItemIcon>
-        {item.name}
-    </MenuItem>;
-};
-
-/**
- * The desktop row menu (user 2026-10-19: "why menu mutes / darkens the whole page? it's menu"): a popover under the three dots,
- * MUI's Menu as the track dropdown's, with no dimming (its click-away layer is invisible), its items only, closing on a click
- * outside, Escape or a choice. The items and what they do are the action sheet's (`runQueueRowAction`).
- */
-const PopoverMenuButton: FC<{ row: QueueRow; title: string; isAdmin: boolean; onPick: RowProps['onPick'] }> = ({ row, title, isAdmin, onPick }) => {
-    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-    const open = useCallback((event: MouseEvent<HTMLButtonElement>) => setAnchor(event.currentTarget), []);
-    const close = useCallback(() => setAnchor(null), []);
-    const pick = useCallback((id: string) => {
-        const target = anchor;
-        setAnchor(null);
-        if (target) onPick(row, id, target);
-    }, [anchor, onPick, row]);
-    return <>
-        <button type='button' className='paper-icon-button-light jfmod-queueMenu jfmod-queueFocus' title='Actions'
-            aria-label={'Actions for ' + title} aria-haspopup='menu' aria-expanded={!!anchor} onClick={open}>
-            <span className='material-icons more_vert' aria-hidden='true' />
-        </button>
-        <Menu anchorEl={anchor} open={!!anchor} onClose={close} className='jfmod-queueMenuPopover'
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            slotProps={{ paper: { className: 'jfmod-queueMenuPaper' }, list: { 'aria-label': 'Actions for ' + title } }}>
-            {queueRowActions(row, isAdmin).map(item => <PopoverItem key={item.id} item={item} onPick={pick} />)}
-        </Menu>
-    </>;
-};
-
-const TableRow: FC<RowProps> = ({ api, row, text, isAdmin, showClient, serverId, linked, stale, layout, onInfo, onPick }) => <tr className='jfmod-queueTableRow'>
-    <td className='jfmod-queueCellThumb'><Thumb api={api} row={row} /></td>
-    <td className='jfmod-queueCellTitle'><TitleLines row={row} text={text} serverId={serverId} linked={linked} /></td>
-    <td className='jfmod-queueCellProgress'><ProgressBar text={text} stale={stale} /></td>
-    <td className='jfmod-queueCellNumber'>{text.size ?? '—'}</td>
-    <td className='jfmod-queueCellNumber'>{text.speed ?? '—'}</td>
-    <td className='jfmod-queueCellNumber'>{text.eta ?? '—'}</td>
-    <td className='jfmod-queueCellState'><StateCell row={row} text={text} layout={layout} onInfo={onInfo} /></td>
-    {showClient && <td className='jfmod-queueCellClient'>{row.client ? <ClientName row={row} linked={linked} /> : '—'}</td>}
-    {isAdmin && <td className='jfmod-queueCellMenu'>
-        {queueRowActions(row, isAdmin).length > 0 && <PopoverMenuButton row={row} title={text.title} isAdmin={isAdmin} onPick={onPick} />}
-    </td>}
-</tr>;
-
-const RowBody: FC<Omit<RowProps, 'isAdmin' | 'onMenu' | 'onPick'>> = ({ api, row, text, showClient, serverId, linked, stale, layout, onInfo }) => <>
-    <Thumb api={api} row={row} />
-    <span className='jfmod-queueRowBody'>
-        <TitleLines row={row} text={text} serverId={serverId} linked={linked} />
-        <ProgressBar text={text} stale={stale} />
-        {metaLine(text) && <span className='jfmod-queueMuted'>{metaLine(text)}</span>}
-        <StateCell row={row} text={text} layout={layout} onInfo={onInfo} />
-        {showClient && <ClientName row={row} linked={linked} className='jfmod-queueMuted' />}
-    </span>
-</>;
-
-/** Mobile: one column, the menu behind the row's overflow button. */
-const StackRow: FC<RowProps> = props => <div className='jfmod-queueRow jfmod-queueRow--stacked'>
-    <RowBody {...props} />
-    {queueRowActions(props.row, props.isAdmin).length > 0
-        && <MenuButton row={props.row} title={props.text.title} onMenu={props.onMenu} />}
-</div>;
-
-/** TV: the whole row is the one focusable button; Enter opens the action sheet (UX §13). */
-const TvRow: FC<RowProps> = props => {
-    const { row, onMenu } = props;
-    const open = useCallback((event: MouseEvent<HTMLButtonElement>) => onMenu(row, event.currentTarget), [onMenu, row]);
-    return <button type='button' className='jfmod-queueRow jfmod-queueRow--tv jfmod-queueFocus' data-jfmod-queue-id={row.id} onClick={open}>
-        <RowBody {...props} linked={false} />
-    </button>;
+    return <span className='qdisc' tabIndex={layout === 'desktop' && !link ? 0 : undefined}>
+        <DownloadStateMark progress={progress} size='row' title={name} link={link} hostTip />
+        {layout === 'desktop' && <span className='qtip' role='tooltip'>{tooltipLines(tip, link).map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</span>}
+    </span>;
 };
 
 /** Keeps the order the user was reading while focus is inside the list; new rows join at the end. */
@@ -373,8 +205,8 @@ const applyOrder = (order: string[], sorted: QueueRow[]) => {
 
 const LibraryLinks: FC<{ views: BaseItemDto[]; types: CollectionType[]; className?: string }> = ({ views, types, className }) => {
     const matching = views.filter(view => view.CollectionType && types.includes(view.CollectionType));
-    if (!matching.length) return <a className={raisedButtonClass(className)} href='#/home'>Open Home</a>;
-    return <>{matching.map(view => <a key={view.Id} className={raisedButtonClass(className)}
+    if (!matching.length) return <a className={'btn focusable ' + (className ?? '')} href='#/home'>Open Home</a>;
+    return <>{matching.map(view => <a key={view.Id} className={'btn focusable ' + (className ?? '')}
         href={appRouter.getRouteUrl(view, { context: view.CollectionType })}>{'Browse ' + (view.Name ?? 'library')}</a>)}</>;
 };
 
@@ -401,7 +233,6 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     const sorted = useMemo(() => sortQueueRows(list.items), [list.items]);
     const [frozenOrder, setFrozenOrder] = useState<string[] | null>(null);
     const rows = useMemo(() => frozenOrder ? applyOrder(frozenOrder, sorted) : sorted, [frozenOrder, sorted]);
-    const showClient = rows.some(row => row.client);
     const staleAll = !list.clientStatus.reachable || refreshFailed;
 
     // Polls re-render rows in place; the order is frozen while focus is inside and re-sorted when it leaves (P5.I8).
@@ -421,9 +252,6 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     const onMenu = useCallback((row: QueueRow, target: HTMLElement) => {
         void openQueueRowMenu({ api, row, isAdmin, positionTo: target, onChanged });
     }, [api, isAdmin, onChanged]);
-    const onPick = useCallback((row: QueueRow, id: string, target: HTMLElement) => {
-        void runQueueRowAction({ api, row, isAdmin, positionTo: target, onChanged }, id);
-    }, [api, isAdmin, onChanged]);
     // The phone's popover follows its row through polls and closes when the row leaves.
     const [info, setInfo] = useState<StateInfo | null>(null);
     const closeInfo = useCallback(() => setInfo(null), []);
@@ -440,7 +268,7 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
         focusedRow.current = null;
         const active = document.activeElement;
         if (active && active !== document.body && document.body.contains(active)) return;
-        const targets = root.querySelectorAll<HTMLElement>(FOCUS_SELECTOR + ', .jfmod-queueEmpty a');
+        const targets = root.querySelectorAll<HTMLElement>(FOCUS_SELECTOR + ', .empty a');
         const target = targets[Math.min(pending.index, targets.length - 1)];
         if (target) focusManager.focus(target);
     }, [rows]);
@@ -450,14 +278,10 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     useEffect(() => {
         if (layout !== 'tv' || focusedOnce.current || (!rows.length && !viewsReady)) return;
         focusedOnce.current = true;
-        const target = container.current?.querySelector<HTMLElement>(FOCUS_SELECTOR + ', .jfmod-queueEmpty a');
+        const target = container.current?.querySelector<HTMLElement>(FOCUS_SELECTOR + ', .empty a');
         if (target) focusManager.focus(target);
     }, [layout, rows.length, viewsReady]);
 
-    const rowProps = (row: QueueRow): RowProps => ({
-        api, row, text: describeRow(row, list.generatedAt), isAdmin, showClient, serverId, linked: layout !== 'tv',
-        stale: staleAll || row.state === 'unknown', layout, onInfo: setInfo, onMenu, onPick
-    });
     const seeding = rows.some(row => row.state === 'seeding');
     // Administrators only; an older plugin sends no automation block and the line stays away (P6.M8).
     const automation = isAdmin ? automationPausedText(list.automation?.pausedReasons) : null;
@@ -465,46 +289,52 @@ const QueueContent: FC<ContentProps> = ({ api, list, layout, isAdmin, serverId, 
     let body: React.ReactNode;
     if (!rows.length) {
         // No clean deep link applies the File filter, so this opens Movies itself (P5.I8 report).
-        body = <div className='jfmod-queueEmpty'>
-            <p>Nothing downloading.</p>
+        body = <div className='empty'>
+            <h3>Nothing downloading</h3><p>Pick a release from a title’s page and it shows here while it downloads.</p>
             <LibraryLinks views={views} types={[CollectionType.Movies]} className='jfmod-queueLink' />
         </div>;
-    } else if (layout === 'desktop') {
-        body = <table className='jfmod-queueTable'>
-            <thead><tr>
-                <th><span className='jfmod-queueHidden'>Poster</span></th>
-                <th>Title</th><th>Progress</th><th>Size</th><th>Speed</th><th>ETA</th><th>State</th>
-                {showClient && <th>Client</th>}
-                {isAdmin && <th><span className='jfmod-queueHidden'>Actions</span></th>}
-            </tr></thead>
-            <tbody>{rows.map(row => <TableRow key={row.id} {...rowProps(row)} />)}</tbody>
-        </table>;
-    } else if (layout === 'tv') {
-        body = <div className='jfmod-queueList'>{rows.map(row => <TvRow key={row.id} {...rowProps(row)} />)}</div>;
     } else {
-        body = <div className='jfmod-queueList'>{rows.map(row => <StackRow key={row.id} {...rowProps(row)} />)}</div>;
+        body = <><QueueHead />{rows.map(row => {
+            const text = describeRow(row, list.generatedAt);
+            const disc = rowDisc(row, text);
+            const details = [...(disc.tip.summary && !disc.tip.figures ? [capitalise(disc.tip.summary)] : []), ...disc.tip.lines];
+            return <QueueRowView key={row.id} id={row.id} image={thumbUrl(api, row)} tv={layout === 'tv'}
+                open={target => onMenu(row, target)} title={layout === 'tv' ? text.title : titleParts(row, serverId).map(part => part.href ?
+                    <a key={part.key} className='focusable' href={part.href}>{part.text}</a> : <React.Fragment key={part.key}>{part.text}</React.Fragment>)}
+                release={row.releaseTitle} version={text.version} progress={text.percent} stale={staleAll || row.state === 'unknown'}
+                figures={<>{row.state === 'failed' || row.state === 'blocked' ? <span style={{ color: 'var(--err)' }}>{disc.tip.title}: {disc.tip.summary}</span> :
+                    [text.percent === null ? null : text.percent + '%', text.size, layout === 'mobile' ? text.speed : null, layout === 'mobile' && text.eta ? text.eta + ' left' : null].filter(Boolean).join(' · ')}
+                {text.freshness && <> · {text.freshness}</>}</>} speed={text.speed} eta={text.eta}
+                details={<>{row.client && <div className='qsub'>{row.client.openUrl && layout !== 'tv' ?
+                    <a className='focusable' href={row.client.openUrl} target='_blank' rel='noopener noreferrer' title={'Open ' + row.client.name}>{row.client.name}</a> : row.client.name}</div>}
+                {layout === 'tv' && details.length > 0 && <div className='qdetail'>{details.map(line => <React.Fragment key={line}>{line}<br /></React.Fragment>)}</div>}</>}
+                mark={<StateCell row={row} text={text} layout={layout} onInfo={setInfo} />}
+                more={layout !== 'tv' && queueRowActions(row, isAdmin).length > 0 ? <button type='button' className='ib focusable jfmod-queueFocus'
+                    title='More' aria-label={'Actions for ' + text.title} aria-haspopup='menu' onClick={event => onMenu(row, event.currentTarget)}><Icon name='more' /></button> :
+                    <span className='ib' aria-hidden='true'><Icon name='more' /></span>} />;
+        })}</>;
     }
 
-    return <div className={'jfmod-queue jfmod-queue--' + layout} ref={container} onFocus={onFocus} onBlur={onBlur}>
-        {refreshFailed && <p className='jfmod-queueBanner' role='status' data-jfmod-queue-refresh-failed=''>
+    return <div className='queue' ref={container} onFocus={onFocus} onBlur={onBlur}>
+        {refreshFailed && <p className='banner' role='status' data-jfmod-queue-refresh-failed=''>
             The queue could not be refreshed. Showing the state from {new Date(updatedAt).toLocaleTimeString()}; trying again.
         </p>}
-        {!refreshFailed && !list.clientStatus.reachable && <p className='jfmod-queueBanner' role='status'>
+        {!refreshFailed && !list.clientStatus.reachable && <p className='banner' role='status'>
             The download client cannot be reached. Showing the last known state.
         </p>}
-        {automation && <p className={automation.quiet ? 'jfmod-queueNotice' : 'jfmod-queueBanner'} role='status'>
+        {automation && <p className={automation.quiet ? 'tags' : 'banner'} role='status'>
             {automation.text}
         </p>}
-        {isAdmin && !list.importEnabled && <p className='jfmod-queueNotice'>
+        {isAdmin && !list.importEnabled && <p className='tags'>
             Importing is turned off. Finished downloads wait here until it is turned on.
         </p>}
-        {isAdmin && seeding && !list.seedReleaseEnabled && <p className='jfmod-queueNotice'>
+        {isAdmin && seeding && !list.seedReleaseEnabled && <p className='tags'>
             Automatic release of seeding copies is off.
         </p>}
         {body}
         {layout === 'mobile' && <InfoPopover anchor={infoDisc ? info?.anchor ?? null : null} title={infoDisc?.tip.title ?? ''}
             message={infoDisc ? popoverLines(infoDisc.tip) : []} link={infoDisc?.link} onClose={closeInfo}
-            row={info?.anchor.closest<HTMLElement>('.jfmod-queueRow')} />}
+            row={info?.anchor.closest<HTMLElement>('.qrow')} />}
     </div>;
 };
 
@@ -515,16 +345,16 @@ const QueueMessage: FC<{ text: string; views: BaseItemDto[]; viewsReady: boolean
         const target = layout === 'tv' && viewsReady ? root.current?.querySelector<HTMLElement>('a') : null;
         if (target) focusManager.focus(target);
     }, [layout, viewsReady]);
-    return <div className='jfmod-queueEmpty' ref={root}>
+    return <div className='empty' ref={root}>
         <p role='status'>{text}</p>
         <LibraryLinks views={views} types={[CollectionType.Movies, CollectionType.Tvshows]} className='jfmod-queueLink' />
     </div>;
 };
 
 const useQueueLayout = (): QueueLayout => {
-    const narrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
-    if (layoutManager.tv) return 'tv';
-    return layoutManager.mobile || narrow ? 'mobile' : 'desktop';
+    const device = useContext(DesignContext);
+    if (device === 'tv') return 'tv';
+    return device === 'phone' || device === 'tablet' ? 'mobile' : 'desktop';
 };
 
 /** `/catalog/queue`: a monitor, not a torrent client (UX §10). */
@@ -565,11 +395,12 @@ const QueuePage: FC = () => {
     }
 
     return <Page id='jfmodQueuePage' title='Queue' className='mainAnimatedPage libraryPage allLibraryPage noSecondaryNavPage'>
-        <div className='padded-left padded-right padded-bottom-page jfmod-queuePage'>
-            <h1 className='jfmod-queueHeading'>Queue</h1>
+        <div className='qwrap plain'>
+            <h1 className='ptitle'>Queue</h1>
             {content}
         </div>
     </Page>;
 };
 
-export default QueuePage;
+const DesignQueuePage: FC = () => <Root><QueuePage /></Root>;
+export default DesignQueuePage;
