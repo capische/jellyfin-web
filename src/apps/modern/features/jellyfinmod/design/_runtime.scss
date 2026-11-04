@@ -1114,3 +1114,133 @@
     .bar [tabindex]:focus,
     .rail button:focus { box-shadow: none; }
 }
+
+/* dsF: Preferences keep their upstream page as a hidden controller host, like the title pages. */
+.page.jfmod-dsPrefs > :not(.jfmod-dsPrefsHost) { display: none; }
+
+.page.jfmod-dsPrefs,
+.page.jfmod-dsPrefsReact { padding-top: 3.226em !important; }
+
+.layout-tv .page.jfmod-dsPrefs,
+.layout-tv .page.jfmod-dsPrefsReact { padding-top: 3.85em !important; }
+
+.jfds {
+    a.srow2 { color: inherit; text-decoration: none; }
+
+    .srow2 .ctl .sw { cursor: pointer; }
+
+    .srow2 .ctl .ib {
+        border: 0;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+    .srow2 .ctl .ib + .ib { margin-left: 0.236em; }
+
+    .srow2:focus,
+    .sw:focus { outline: none; }
+
+    .srow2:focus { z-index: 1; border-top-color: transparent; border-radius: 1.618em; box-shadow: inset 0 0 0 0.236em var(--primary); }
+}
+
+.ds-pointer .jfds:not(.layout-tv) .srow2:focus { box-shadow: none; }
+
+/* dsF: the player. Video sits behind the page, so the mockup's black frame is transparent here and the header stays upstream's. */
+.page.jfds.jfmod-dsPlayer {
+    --player-glass-bg: var(--card-glass-bg);
+    --player-glass-filter: var(--card-glass-filter);
+
+    background: transparent;
+    color: #fff;
+
+    &.layout-tv,
+    &.no-bf {
+        --player-glass-bg: rgba(0, 0, 0, 0.66);
+        --player-glass-filter: none;
+    }
+
+    .jfmod-dsOsd {
+        position: static;
+        overflow: visible;
+        background: none;
+    }
+
+    .videoOsdBottom.low {
+        position: fixed;
+        display: block;
+        padding-top: 4.236em;
+    }
+
+    .osdControls { padding: 0; }
+
+    .ctrls.buttons { padding: 0; flex-wrap: nowrap; }
+
+    .actbar.glassy {
+        background: var(--player-glass-bg);
+        backdrop-filter: var(--player-glass-filter);
+    }
+
+    .jfmod-osdName { margin: 0; font-size: 1.618em; font-weight: 600; line-height: 1.2; }
+
+    .jfmod-osdFacts:not(:empty) + .osdTimeText > .endsAtText:not(:empty)::before { content: ' · '; }
+
+    .osdTimeText { margin: 0; }
+
+    .osdMainTextContainer:has(.osdTitle:empty) { display: none; }
+
+    .osdSecondaryMediaInfo:empty { display: none; }
+
+    .tline .track { background: none; }
+
+    .track .sliderContainer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+    }
+
+    .track .mdl-slider-background-flex-container,
+    .track .mdl-slider-background-flex { height: 0.236em; }
+
+    .track .mdl-slider-background-flex { background: rgba(255, 255, 255, 0.3); border-radius: 0.2em; }
+
+    .track input::-webkit-slider-thumb {
+        width: 1em;
+        height: 1em;
+        background: #fff;
+        transform: none;
+    }
+
+    .dbtn .material-icons { font-size: 1.4em; }
+
+    .dbtn[data-ds-i] .material-icons { display: none; }
+
+    .btnFullscreen .material-icons.fullscreen_exit { display: inline; }
+
+    .btnFullscreen .fullscreen_exit ~ svg { display: none; }
+
+    .btnPause .material-icons { display: none; }
+
+    .btnPause .material-icons.pause ~ [data-ds-icon='play'],
+    .btnPause .material-icons.play_arrow ~ [data-ds-icon='pause'],
+    .btnPause .material-icons.replay ~ [data-ds-icon='pause'] { display: none; }
+
+    .btnUserRating.ratingbutton-withrating { color: var(--primary); }
+
+    .btnPreviousTrack svg { transform: scaleX(-1); }
+
+    .volumeButtons { margin: 0; }
+
+    .osdVolumeSliderContainer { width: 6.854em; margin-right: 0.618em; }
+
+    .upnext {
+        position: fixed;
+        z-index: 4;
+    }
+
+    .upnext .st { min-height: 5em; }
+}
+
+html.jfmod-chromePlayer .osdHeader .pageTitle { display: none; }

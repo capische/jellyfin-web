@@ -19,6 +19,7 @@ import Events from 'utils/events';
 import globalize from 'lib/globalize';
 import { appHost } from 'components/apphost';
 import layoutManager from 'components/layoutManager';
+import { paintPlayer } from 'apps/modern/features/jellyfinmod/integration/playerDesign';
 import * as userSettings from 'scripts/settings/userSettings';
 import keyboardnavigation from 'scripts/keyboardNavigation';
 import 'styles/scrollstyles.scss';
@@ -40,6 +41,9 @@ function getOpenedDialog() {
 }
 
 export default function (view) {
+    // JellyfinMod: the mockup's root classes and icons on this template.
+    view.addEventListener('viewdestroy', paintPlayer(view), { once: true });
+
     function getDisplayItem(item) {
         if (item.Type === 'TvChannel') {
             const apiClient = ServerConnections.getApiClient(item.ServerId);
