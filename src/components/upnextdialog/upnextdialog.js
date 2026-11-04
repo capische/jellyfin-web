@@ -15,34 +15,11 @@ import '../../styles/flexstyles.scss';
 const transitionEndEventName = dom.whichTransitionEvent();
 
 function getHtml() {
-    let html = '';
-
-    html += '<div class="flex flex-direction-column flex-grow">';
-
-    html += '<h2 class="upNextDialog-nextVideoText" style="margin:.25em 0;">&nbsp;</h2>';
-
-    html += '<h3 class="upNextDialog-title" style="margin:.25em 0 .5em;"></h3>';
-
-    html += '<div class="flex flex-direction-row upNextDialog-mediainfo">';
-    html += '</div>';
-
-    html += '<div class="flex flex-direction-row upNextDialog-buttons" style="margin-top:1em;">';
-
-    html += '<button type="button" is="emby-button" class="raised raised-mini btnStartNow upNextDialog-button">';
-    html += globalize.translate('HeaderStartNow');
-    html += '</button>';
-
-    html += '<button type="button" is="emby-button" class="raised raised-mini btnHide upNextDialog-button">';
-    html += globalize.translate('Hide');
-    html += '</button>';
-
-    // buttons
-    html += '</div>';
-
-    // main
-    html += '</div>';
-
-    return html;
+    // JellyfinMod: the mockup's .upnext; the hooks stay as extra classes.
+    return '<span class="st upNextDialog-still"></span><div class="tx"><span class="capt0 upNextDialog-nextVideoText">&nbsp;</span>'
+        + '<b class="upNextDialog-title"></b><div class="upNextDialog-mediainfo hide"></div><div class="row">'
+        + '<button type="button" class="btn white focusable btnStartNow">' + globalize.translate('HeaderStartNow') + '</button>'
+        + '<button type="button" class="btn focusable btnHide">' + globalize.translate('Hide') + '</button></div></div>';
 }
 
 function setNextVideoText() {
@@ -88,6 +65,8 @@ function fillItem(item) {
     }
 
     elem.querySelector('.upNextDialog-title').innerText = title || '';
+    const still = item.ImageTags?.Primary && ServerConnections.getApiClient(item.ServerId).getScaledImageUrl(item.Id, { type: 'Primary', maxWidth: 400, tag: item.ImageTags.Primary });
+    elem.querySelector('.upNextDialog-still').style.backgroundImage = still ? `url("${still}")` : '';
 
     instance.itemType = item.Type;
 

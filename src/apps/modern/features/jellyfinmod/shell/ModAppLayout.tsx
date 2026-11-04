@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import { type Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { StrictMode, useCallback, useState, type FC } from 'react';
+import React, { StrictMode, useCallback, useEffect, useState, type FC } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import LegacyAppLayout from 'apps/legacy/AppLayout';
@@ -27,6 +27,7 @@ import './sharedChrome.scss';
 import './motionChrome.scss';
 import './chromeFont.scss';
 import { useChromeScope } from './useChromeScope';
+import { paintPreferencesPages } from '../integration/prefsPages';
 import { Bar } from '../design/Bar';
 
 /*
@@ -70,6 +71,7 @@ const ModAppLayout: FC = () => {
 
     const chromeEnabled = Boolean(user) && !PUBLIC_PATHS.includes(location.pathname) && !location.pathname.startsWith('/catalog/settings');
     useChromeScope(chromeEnabled, ['/home', '/details'].includes(location.pathname), location.pathname === '/video');
+    useEffect(() => paintPreferencesPages(), []);
 
     if (!layoutManager.modern) {
         return <ChromeTheme enabled={chromeEnabled}>
