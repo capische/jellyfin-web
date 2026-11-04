@@ -652,7 +652,7 @@
 .jfds.dialogportal {
     box-sizing: border-box;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
     height: 100%;
     padding: 2.618em 0;
@@ -1099,4 +1099,18 @@
         animation: none;
         opacity: 0.5;
     }
+}
+
+/* A click moves focus as well: the mockup's rings on these rows and disclosures are for keys and the TV. */
+.ds-pointer .jfds:not(.layout-tv) {
+    .dsc:focus,
+    .vrow:focus,
+    .seg:focus,
+    .ep:focus,
+    .qrow:focus,
+    .rel:focus,
+    .srow:focus,
+    .gpill:focus,
+    .bar [tabindex]:focus,
+    .rail button:focus { box-shadow: none; }
 }
