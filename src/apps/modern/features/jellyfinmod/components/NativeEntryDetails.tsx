@@ -39,7 +39,6 @@ import { itemRatingsKey } from './NativeRatingsLine';
 import RetentionStatus from './RetentionStatus';
 import SeasonTotal from './SeasonTotal';
 import TrackDropdowns from './TrackDropdown';
-import './entryDetails.scss';
 
 interface NativeEntryDetailsProps {
     api: Api;
@@ -285,8 +284,8 @@ interface PageMenuItem {
 const isOwnHeaderMore = (view: HTMLElement, own: string[], options: { item?: { Id?: string } | null; positionTo?: Element | null }) => {
     const button = options.positionTo;
     const header = view.querySelector('.mainDetailButtons');
-    return !!button && !!header && document.body.contains(view) && button.classList.contains('btnMoreCommands')
-        && header.contains(button) && own.some(id => sameItemId(id, options.item?.Id));
+    return !!button && !!header && document.body.contains(view) && (button.classList.contains('btnMoreCommands') || !!button.getAttribute('data-ds-command')?.split(' ').includes('btnMoreCommands'))
+        && (header.contains(button) || !!button.closest('.jfmod-dsTitleHost .actbar')) && own.some(id => sameItemId(id, options.item?.Id));
 };
 
 /**
@@ -372,20 +371,20 @@ const SeriesSection: FC<{ detail: EntryDetail }> = ({ detail }) => {
         candidate.state === FileState.Grabbed || candidate.state === FileState.Downloading);
     return <section aria-label='JellyfinMod' data-jfmod-entry-id={detail.entry.id}>
         <RetentionStatus retention={detail.retention} />
-        {inFlightEpisodes.map(candidate => <div className='jfmod-episodeRow' key={'queue:' + candidate.id}>
+        {inFlightEpisodes.map(candidate => <div className='er' key={'queue:' + candidate.id}>
             <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
             <QueueStatusLine entryId={candidate.entryId} episodeId={candidate.id} state={candidate.state} progress={candidate.progress} />
         </div>)}
         {detail.episodes.some(candidate => candidate.retention) && <HistoryToggle label='Episode Retention'>
-            {detail.episodes.map(candidate => <div className='jfmod-episodeRow' key={candidate.id}>
+            {detail.episodes.map(candidate => <div className='er' key={candidate.id}>
                 <span>S{candidate.seasonNumber} E{candidate.episodeNumber} · {candidate.title}</span>
                 <RetentionStatus retention={candidate.retention} compact />
             </div>)}
         </HistoryToggle>}
-        <HistoryToggle label={<>History{detail.history[0] ? ' · ' + detail.history[0].summary : ''}</>}>
-            <ol>{detail.history.map(event => <li key={event.id}>
+        <HistoryToggle label='History' summary={detail.history[0]?.summary}>
+            <div role='list'>{detail.history.map(event => <div className='er' role='listitem' key={event.id}><span>
                 <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
-            </li>)}</ol>
+            </span></div>)}</div>
         </HistoryToggle>
     </section>;
 };

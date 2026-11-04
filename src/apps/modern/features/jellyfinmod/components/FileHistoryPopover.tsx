@@ -1,49 +1,73 @@
-import IconButton from '@mui/material/IconButton';
-import Popover from '@mui/material/Popover';
-import React, { type FC } from 'react';
-
+import React, { type FC, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import focusManager from 'components/focusManager';
+import inputManager from 'scripts/inputManager';
+import { getKeyName } from 'scripts/keyboardNavigation';
 import { fileHistory, fileTitle } from '../constants/detailPage';
+import { Icon } from '../design/Icon';
+import { Root } from '../design/Root';
+import { menuPosition } from '../design/menuPosition';
+import { isBackKey } from '../shell/dpadModals';
 import type { HistoryRecord } from '../types/entry';
 import type { VersionDto } from '../types/versions';
 
-import './fileHistory.scss';
-
 interface FileHistoryPopoverProps {
-    /** The history icon that opened it; focus returns there when it closes (UX §13 rule 9). */
     anchor: HTMLElement | null;
     version: VersionDto | null;
     history: HistoryRecord[];
     onClose: () => void;
 }
 
-/**
- * One file's history (design step 3, user 2026-10-07): an MUI popover, so `shell/dpadModals` gives it the remote — Back closes
- * it and MUI returns focus to the icon. Titled with the file's short description; only that file's events, newest first,
- * short dates and action words without the file name. Episode-level events are not shown on this page.
- */
+/** ds2.js hpop; the existing binding-specific history calculation stays authoritative. */
 const FileHistoryPopover: FC<FileHistoryPopoverProps> = ({ anchor, version, history, onClose }) => {
-    const lines = version ? fileHistory(history, version.bindingId) : [];
-    return <Popover open={!!anchor && !!version} anchorEl={anchor} onClose={onClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{ paper: { className: 'jfmod-fileHistory', 'aria-label': 'History of this file' } as object }}>
-        {version && <>
-            <div className='jfmod-fileHistoryHead'>
-                <span className='jfmod-fileHistoryTitle'>{fileTitle(version)}</span>
-                <IconButton size='small' aria-label='Close' onClick={onClose} className='jfmod-fileHistoryClose'>
-                    <span className='material-icons close' aria-hidden='true' />
-                </IconButton>
-            </div>
-            {lines.length === 0 ?
-                <p className='jfmod-fileHistoryEmpty'>No events recorded for this file.</p> :
-                <ol className='jfmod-fileHistoryList'>
-                    {lines.map(line => <li key={line.id}>
-                        <time dateTime={line.dateTime}>{line.date}</time>{' · '}
-                        <span className='jfmod-fileHistoryAction'>{line.action}</span>
-                        {line.detail && <>{' · '}{line.detail}</>}
-                    </li>)}
-                </ol>}
-        </>}
-    </Popover>;
-};
+    const ref = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        if (!anchor || !version || !ref.current) return;
+        const place = () => {
+            if (!ref.current) return;
+            const at = menuPosition(anchor, ref.current, 0.236);
+            ref.current.style.top = at.top + 'px';
+            ref.current.style.left = at.left + 'px';
+        };
+        const outside = (event: Event) => {
+            if (!ref.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose();
+        };
 
+        const key = (event: KeyboardEvent) => {
+            if (!isBackKey(getKeyName(event)) || event.defaultPrevented) return;
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+        };
+        const command = (event: Event) => {
+            if ((event as CustomEvent<{ command?: string }>).detail?.command !== 'back' || event.defaultPrevented) return;
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+        };
+        place();
+        focusManager.autoFocus(ref.current);
+
+        window.addEventListener('resize', place);
+        document.addEventListener('pointerdown', outside);
+        window.addEventListener('keydown', key, true);
+        inputManager.on(window, command);
+
+        return () => {
+            window.removeEventListener('resize', place);
+            document.removeEventListener('pointerdown', outside);
+            window.removeEventListener('keydown', key, true);
+            inputManager.off(window, command);
+
+            if (anchor.isConnected) focusManager.focus(anchor);
+        };
+    }, [anchor, version, onClose]);
+    if (!anchor || !version) return null;
+    const lines = fileHistory(history, version.bindingId);
+    return createPortal(<Root className='menuportal'><div ref={ref} className='hpop historyportal' role='dialog' aria-label='History of this file'>
+        <div className='hh'>{fileTitle(version)}<button type='button' className='rb focusable' aria-label='Close' onClick={onClose}><Icon name='x' /></button></div>
+        {lines.length ? <ol>{lines.map(line => <li key={line.id}><b><time dateTime={line.dateTime}>{line.date}</time></b>{' · '}<span data-ds-history-action=''>{line.action}</span>{line.detail && <> · {line.detail}</>}</li>)}</ol> :
+            <p>No events recorded for this file.</p>}
+    </div></Root>, document.body);
+};
 export default FileHistoryPopover;

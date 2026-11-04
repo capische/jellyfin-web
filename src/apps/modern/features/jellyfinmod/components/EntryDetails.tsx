@@ -1,10 +1,6 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import escapeHtml from 'escape-html';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import React, { type FC, type MouseEvent, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { type FC, type MouseEvent, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import confirm from 'components/confirm/confirm';
@@ -21,20 +17,18 @@ import { RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisit
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
 import type { AcquisitionSummary } from '../types/acquisition';
-import { FileState } from '../types/entry';
-import { getTmdbImage } from '../utils/entryLinks';
+import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import FileStateMark from './FileStateMark';
 import HistoryToggle from './HistoryToggle';
 import QueueStatusLine from './QueueStatusLine';
 import RatingsGroup from './RatingsGroup';
-import RatingsRefreshButton, { useRatingsRefresh } from './RatingsRefreshButton';
+import { useRatingsRefresh } from './RatingsRefreshButton';
 import type { Rating } from '../types/ratings';
 import TitlePoster from './TitlePoster';
 import LibraryUndo from './LibraryUndo';
 import RetentionStatus from './RetentionStatus';
 import { useRatingsPreferences } from '../hooks/useRatingsPreferences';
-import { raisedButtonClass } from '../utils/flatButton';
 
 const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
     pending: 'Grab held, not sent yet', submitting: 'Sending to the download client', accepted: 'Sent to the download client',
@@ -43,12 +37,16 @@ const ACQUISITION_LABELS: Record<AcquisitionSummary['state'], string> = {
 
 const AcquisitionLine: FC<{ acquisition?: AcquisitionSummary | null }> = ({ acquisition }) => {
     if (!acquisition) return null;
-    return <p className='jfmod-acquisitionLine'>{ACQUISITION_LABELS[acquisition.state]}
+    return <p className='tags'>{ACQUISITION_LABELS[acquisition.state]}
         {acquisition.releaseTitle ? ' · ' + acquisition.releaseTitle : ''}</p>;
 };
 
-import './entryDetails.scss';
-import './fileChooser.scss';
+import { DesignEnvironment } from '../design/Root';
+import { Menu } from '../design/Menu';
+import { Icon } from '../design/Icon';
+import DownloadBlock from './DownloadBlock';
+import { BrowseCell } from '../design/BrowsePage';
+import { TitleRow } from '../design/TitleRow';
 
 interface EntryDetailsProps {
     api: Api;
@@ -61,32 +59,6 @@ interface EntryDetailsProps {
 }
 
 /**
- * Where upstream's track block would be (design step 5): a mount placed just before the hidden `.trackSelections`, so the
- * raised Get a release (or the queue line while a grab is in flight) sits under the header row like Video, Audio and
- * Subtitles do on a page with a file.
- */
-const useTrackBlockMount = (view: HTMLElement, enabled: boolean) => {
-    const [node, setNode] = useState<HTMLElement | null>(null);
-    useLayoutEffect(() => {
-        const tracks = view.querySelector('.trackSelections');
-        if (!enabled || !tracks?.parentNode) return;
-        const element = document.createElement('div');
-        element.className = 'jfmod-trackBlock';
-        tracks.parentNode.insertBefore(element, tracks);
-        setNode(element);
-        return () => {
-            element.remove();
-            setNode(null);
-        };
-    }, [view, enabled]);
-    return node;
-};
-
-/** The row actions' class: upstream's round icon button with the detail page's row-action sizing and colours; read per render, as the layout can change. */
-const rowIconClass = () => 'paper-icon-button-light jfmod-fileIcon' + (layoutManager.tv ? ' show-focus' : '');
-
-/** Reuses the existing detail template's slots without constructing a synthetic native item. */
-/**
  * Refresh Ratings in a file-less movie's More menu, whose actions are all there (review 2026-10-28, P2 3); the menu opens for
  * administrators only, and the item shows only where the plugin offers the refresh.
  */
@@ -97,10 +69,9 @@ const useRefreshRatingsMenuItem = (api: Api, entryId: string, onDone: (ratings: 
         closeMenu(null);
         run();
     }, [closeMenu, run]);
-    return available ? <MenuItem onClick={choose} aria-disabled={busy} data-jfmod-menu='refresh-ratings'>
-        <ListItemIcon><span className='material-icons star_half' aria-hidden='true' /></ListItemIcon>
-        <ListItemText>Refresh Ratings</ListItemText>
-    </MenuItem> : null;
+    return available ? <button type='button' className='mi focusable' onClick={choose} aria-disabled={busy} data-jfmod-menu='refresh-ratings'>
+        <Icon name='star' /><span className='tx0'>Refresh Ratings</span>
+    </button> : null;
 };
 
 const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serverId, signal, focusOwnership }) => {
@@ -133,9 +104,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // row, and one raised Get a release where the track block would be. A file-less series keeps its rows.
     const isMovie = entry.mediaType === 'movie';
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-    const releaseMount = useTrackBlockMount(view, isMovie);
+
     const mount = (selector: string, content: React.ReactNode) => {
-        const node = view.querySelector(selector);
+        const node = view.querySelector(selector === '.itemDetailsGroup' ? '[data-ds-slot="augment"]' : selector);
         return node ? createPortal(content, node) : null;
     };
     const poster = getTmdbImage(entry.posterPath);
@@ -176,9 +147,9 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     useEpisodeListLoad(api, { ...detail, entry, episodeListLoaded: listLoaded }, reload);
     const searchReleases = useCallback((event: MouseEvent<HTMLButtonElement>) => openPicker(event.currentTarget), [openPicker]);
     // Design step 1 and the user's decision of 2026-10-07 for this page: Get a release and More in upstream's header row.
-    useStockHeaderButton(view, { enabled: canAcquire && isMovie, icon: 'cloud_download', title: 'Get a Release',
+    useStockHeaderButton(view, { enabled: canAcquire, icon: 'cloud_download', title: 'Get a Release',
         className: 'jfmod-getRelease', onClick: openPicker, before: ['jfmod-entryMore'] });
-    useStockHeaderButton(view, { enabled: isAdmin && isMovie, icon: 'more_vert', title: 'More', className: 'jfmod-entryMore',
+    useStockHeaderButton(view, { enabled: isAdmin, icon: 'more_vert', title: 'More', className: 'jfmod-entryMore',
         onClick: setMenuAnchor });
     const closeMenu = useCallback(() => setMenuAnchor(null), []);
     // Declared after the header buttons' hooks, so their inserts exist when this runs (Get a release leads on the TV).
@@ -189,13 +160,12 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     // input, and a focus target that was already valid is kept (see utils/focusOwnership).
     useEffect(() => {
         if (!layoutManager.tv || !focusOwnership) return;
-        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease, .mainDetailButtons .jfmod-entryMore, '
-            + '.jfmod-entryActions a, .jfmod-entryActions button, .jfmod-getReleaseRaised');
+        const first = view.querySelector<HTMLElement>('.jfmod-dsTitleHost .actbar button');
         if (first && focusOwnership.mayFocus(first)) {
             focusManager.focus(first);
             focusOwnership.placed(first);
         }
-    }, [view, canAcquire, isAdmin, focusOwnership, releaseMount]);
+    }, [view, canAcquire, isAdmin, focusOwnership]);
     // Busy controls stay focusable (aria-disabled) so D-pad focus is not lost mid-request (P3.T19).
     const toggleMonitoring = useCallback(() => {
         if (busy) return;
@@ -274,6 +244,11 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     }, [signal]);
     const refreshRatingsItem = useRefreshRatingsMenuItem(api, entry.id, rereadRatings, setMenuAnchor);
     return <>
+        {view.querySelector('[data-ds-slot="ratings"]') && createPortal(<DesignEnvironment><RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
+            wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} /></DesignEnvironment>, view.querySelector('[data-ds-slot="ratings"]')!)}
+        {isMovie && <DownloadBlock anchor={view.querySelector('.trackSelections')} entryId={entry.id}
+            episode={{ id: null, state: entry.state, progress: entry.progress, availability: 'missing', airDate: null }} isAdmin={isAdmin}
+            canAcquire={canAcquire} onGetRelease={openPicker} onChanged={reload} />}
         <LibraryUndo entryId={entry.id} view={view} />
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
         {mount('.itemMiscInfo-primary', <>
@@ -283,86 +258,60 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 2026-10-30; Codex review 2026-10-30, P2 2: one source of truth, fallback and reservation included). */}
             {entry.metadata?.communityRating && !groupHidesStar ?
                 <span className='jfmod-entryStar'>★ {entry.metadata.communityRating.toFixed(1)} on TMDB</span> : null}
-            <RatingsGroup ratings={ratingsPreferences.enabled ? ratings : []} sources={ratingsPreferences.sources} ready={ratingsPreferences.loaded}
-                wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} />
+
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
             <TitlePoster src={poster} title={entry.title}><FileStateMark entry={entry} retention={retention} interactive={false} /></TitlePoster>, node, String(index)))}
-        {!isMovie && mount('.mainDetailButtons', <div className='jfmod-entryActions'>
-            {entry.jellyfinItemId && <a className={raisedButtonClass('button-submit')}
-                href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
-                Open in Jellyfin
-            </a>}
-            {canAcquire && <button className={raisedButtonClass('button-submit')} type='button'
-                onClick={searchReleases}>
-                {entry.state === 'reclaimed' ? 'Get Again' : 'Search Releases'}
-            </button>}
-            {isAdmin && <>
-                <button className={raisedButtonClass()} type='button' aria-busy={busy}
-                    aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}>
-                    {keepButtonLabel(busy, retention?.reason === 'kept')}
-                </button>
-                <button className={raisedButtonClass()} type='button' role='switch' aria-checked={entry.monitored}
-                    aria-disabled={busy} onClick={toggleMonitoring}>
-                    {entry.monitored ? '☑' : '☐'} Monitor
-                </button>
-                <button className={raisedButtonClass('button-delete')} type='button' aria-disabled={busy}
-                    onClick={remove}>Remove Entry</button>
-                {entry.mediaType === 'series' && <button className={raisedButtonClass()} type='button' aria-disabled={busy}
-                    onClick={refresh}>Refresh Metadata</button>}
-                <RatingsRefreshButton api={api} entryId={entry.id} onMessage={announce} onDone={rereadRatings} />
+        {menuAnchor && <DesignEnvironment><Menu anchor={menuAnchor} close={closeMenu} label='More'>
+            <button type='button' className='mi focusable' role='menuitemcheckbox' aria-checked={entry.monitored} aria-disabled={busy} onClick={monitorFromMenu}
+                data-jfmod-menu='monitor'><Icon name='check' /><span className='tx0'>{entry.monitored ? 'Stop Monitoring' : 'Monitor'}</span></button>
+            {!isMovie && <>
+                <button type='button' className='mi focusable' aria-disabled={busy} aria-pressed={retention?.reason === 'kept'} onClick={keep}><Icon name='pin' /><span className='tx0'>{keepButtonLabel(busy, retention?.reason === 'kept')}</span></button>
+                <button type='button' className='mi focusable' aria-disabled={busy} onClick={refresh}><Icon name='history' /><span className='tx0'>Refresh Metadata</span></button>
             </>}
-        </div>)}
-        {isMovie && <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} className='jfmod-entryMenu'>
-            <MenuItem role='menuitemcheckbox' aria-checked={entry.monitored} aria-disabled={busy} onClick={monitorFromMenu}
-                data-jfmod-menu='monitor'>
-                <ListItemIcon><span className={'material-icons ' + (entry.monitored ? 'check_box' : 'check_box_outline_blank')}
-                    aria-hidden='true' /></ListItemIcon>
-                <ListItemText>{entry.monitored ? 'Stop Monitoring' : 'Monitor'}</ListItemText>
-            </MenuItem>
             {refreshRatingsItem}
-            <MenuItem onClick={removeFromMenu} aria-disabled={busy} data-jfmod-menu='remove'>
-                <ListItemIcon><span className='material-icons delete' aria-hidden='true' /></ListItemIcon>
-                <ListItemText>Remove Entry</ListItemText>
-            </MenuItem>
-        </Menu>}
-        {isMovie && releaseMount && (entry.state === FileState.Grabbed || entry.state === FileState.Downloading) && createPortal(
-            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />, releaseMount)}
+            <button type='button' className='mi focusable' onClick={removeFromMenu} aria-disabled={busy} data-jfmod-menu='remove'>
+                <Icon name='close' /><span className='tx0'>Remove Entry</span>
+            </button>
+        </Menu></DesignEnvironment>}
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}
         {mount('.overview', entry.overview)}
         {mount('.itemDetailsGroup', <>
             {showsRetentionStatus(retention) && <RetentionStatus retention={retention} />}
             <AcquisitionLine acquisition={acquisition} />
             {!isMovie && <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />}
-            <HistoryToggle label={<>History{history[0] ? ' · ' + history[0].summary : ''}</>}>
-                <ol>{history.map(event => <li key={event.id}>
+            <HistoryToggle label='History' summary={history[0]?.summary}>
+                <div role='list'>{history.map(event => <div className='er' role='listitem' key={event.id}><span>
                     <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleDateString()}</time>{' · '}{event.summary}
-                </li>)}</ol>
+                </span></div>)}</div>
             </HistoryToggle>
-            {episodes.length > 0 && <section aria-label='Episodes'>
-                <h2>Episodes</h2>
-                {episodes.map(episode => <div className='jfmod-episodeRow' key={episode.id}>
-                    <span>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</span>
-                    <span>{episode.jellyfinItemId ? <a href={'#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>Open Episode</a> : availabilityLabel(episode.availability)}</span>
-                    <RetentionStatus retention={episode.retention} compact />
-                    <AcquisitionLine acquisition={episode.acquisition} />
-                    <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} />
-                    {/* Row actions are round, icon-only buttons (user rules, 2026-10-08). */}
-                    {canAcquire && <button className={rowIconClass()} type='button' data-episode-id={episode.id}
-                        title='Search Releases' aria-label={`Search releases for S${episode.seasonNumber} E${episode.episodeNumber}`}
-                        onClick={searchReleases}>
-                        <span className='material-icons search' aria-hidden='true' />
-                    </button>}
-                    {isAdmin && <button className={rowIconClass()} type='button'
-                        role='switch' aria-checked={episode.monitored} aria-disabled={busy} data-episode-id={episode.id}
-                        title={episode.monitored ? 'Stop Monitoring' : 'Monitor'}
-                        aria-label={`Monitor S${episode.seasonNumber} E${episode.episodeNumber}`} onClick={toggleEpisode}>
-                        <span className={'material-icons ' + (episode.monitored ? 'bookmark' : 'bookmark_border')} aria-hidden='true' />
-                    </button>}
-                </div>)}
-            </section>}
+            {view.querySelector('[data-ds-slot="sections"]') && createPortal(<>
+                {!isMovie && <TitleRow title='Seasons' name='seasons'>{[...new Set(episodes.map(episode => episode.seasonNumber))].filter(number => number > 0).sort((a, b) => a - b).map(number => {
+                    const metadata = entry.metadata?.seasons.find(season => season.number === number);
+                    return <BrowseCell key={number} title={metadata?.name || 'Season ' + number} second={episodes.filter(episode => episode.seasonNumber === number).length + ' episodes'}
+                        image={getTmdbImage(metadata?.posterPath ?? entry.posterPath)} href={'#' + getEntryPath(entry.id, serverId) + '&season=' + number} />;
+                })}</TitleRow>}
+                {(entry.metadata?.cast?.length ?? 0) > 0 && <TitleRow title='Cast & Crew' name='cast'>{entry.metadata?.cast?.map(person => <BrowseCell key={person.id + ':' + person.order} person
+                    title={person.name} second={person.character ?? undefined} image={getTmdbImage(person.profilePath, 'w185')} />)}</TitleRow>}
+            </>, view.querySelector('[data-ds-slot="sections"]')!)}
+            {episodes.length > 0 && <HistoryToggle label='Episodes' summary='Monitoring and release actions'>
+                <div>{episodes.map(episode => <div className='er' key={episode.id} data-jfmod-episode-id={episode.id}>
+                    <span><span><a className='focusable' href={episode.jellyfinItemId ? '#/details?id=' + encodeURIComponent(episode.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId) :
+                        '#' + getEntryPath(entry.id, serverId) + '&season=' + episode.seasonNumber + '&episode=' + episode.episodeNumber}>S{episode.seasonNumber} E{episode.episodeNumber} · {episode.title}</a></span> · {availabilityLabel(episode.availability)}
+                    <RetentionStatus retention={episode.retention} compact /><AcquisitionLine acquisition={episode.acquisition} />
+                    <QueueStatusLine entryId={entry.id} episodeId={episode.id} state={episode.state} progress={episode.progress} /></span>
+                    <span>
+                        {canAcquire && <button className='rb focusable' type='button' data-episode-id={episode.id}
+                            title='Search Releases' aria-label={`Search releases for S${episode.seasonNumber} E${episode.episodeNumber}`} onClick={searchReleases}><Icon name='cloud' /></button>}
+                        {isAdmin && <button className={'rb focusable' + (episode.monitored ? ' on' : '')} type='button' role='switch' aria-checked={episode.monitored}
+                            aria-disabled={busy} data-episode-id={episode.id} title={episode.monitored ? 'Stop Monitoring' : 'Monitor'}
+                            aria-label={`Monitor S${episode.seasonNumber} E${episode.episodeNumber}`} onClick={toggleEpisode}><Icon name='check' /></button>}
+                    </span>
+                </div>)}</div>
+            </HistoryToggle>}
         </>)}
     </>;
 };
 
-export default EntryDetails;
+const DesignEntryDetails: FC<EntryDetailsProps> = props => <DesignEnvironment><EntryDetails {...props} /></DesignEnvironment>;
+export default DesignEntryDetails;

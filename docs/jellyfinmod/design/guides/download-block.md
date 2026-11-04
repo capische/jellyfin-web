@@ -1,5 +1,12 @@
 # Download block (missing episode page)
 
+**dsD (2026-11-04), built, not accepted:** `design/DlBlock.tsx` and `components/DownloadBlock.tsx` draw source
+`dlb/dm/b/ln1/rls/mline/pack/br/act`, replacing `downloadBlock.scss`. Source values own presentation; earlier rd3/legacy skin
+measurements below are historical. State/queue projection, pack files/dots, permissions, client link, actions, removal dialog
+and import handoff stay in DownloadBlock. Downloading's accessible label includes the state while its visible copy is figures
+only. The importing bar is still; only the source arc turns, and reduced motion stops it. Failed text is red, the mark grey glass.
+[Complete current CSS and behavior](../dsD.md).
+
 **rd3 presentation (approved rulebook §5, built, not accepted):** inside `.jfmod-titlePage` the panel is
 paper with **1.618em corners**, **1em even padding**, a 1px divider outline, no raised shadow, a **1em**
 ring-to-body gap and **1.618em** after the slot. It fills the title's text column. All content, 4em ring,

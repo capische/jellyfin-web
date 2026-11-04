@@ -9,6 +9,7 @@ import { RATINGS_CAPABILITY, RATINGS_STALE_MS } from '../constants/ratings';
 import { usePluginHealthSummary } from '../hooks/useAcquisition';
 import { loadPluginCapabilities, loadRatingsPreferences, useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import RatingsGroup from './RatingsGroup';
+import { DesignEnvironment } from '../design/Root';
 
 interface NativeRatingsLineProps {
     api: Api;
@@ -70,8 +71,8 @@ const NativeRatingsLine: FC<NativeRatingsLineProps> = ({ api, userId, itemId, it
     else if (typeKnown && supported && preferences.loaded) wanted = true;
     // A failed minute's read keeps the last answer (react-query keeps its data): only a first answer that failed is "none".
     const ready = wanted === true && (ratings.data !== undefined || ratings.isError);
-    return <RatingsGroup ratings={ratings.data?.ratings ?? (ratings.isError ? [] : undefined)} sources={preferences.sources} ready={ready}
-        wanted={wanted} />;
+    return <DesignEnvironment><RatingsGroup ratings={ratings.data?.ratings ?? (ratings.isError ? [] : undefined)} sources={preferences.sources} ready={ready}
+        wanted={wanted} /></DesignEnvironment>;
 };
 
 export default NativeRatingsLine;

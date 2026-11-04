@@ -1,5 +1,6 @@
 import loading from 'components/loading/loading';
 import Events from 'utils/events';
+import './playbackStart.scss';
 
 let dismiss: (() => void) | undefined;
 

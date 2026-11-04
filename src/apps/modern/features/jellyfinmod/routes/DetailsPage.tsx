@@ -7,32 +7,13 @@ import globalize from 'lib/globalize';
 import type { RestoreViewFailResponse } from 'types/viewManager';
 
 /**
- * The JellyfinMod detail route (P7.S6, §2.2 "detail dispatcher").
+ * Mod detail dispatcher. Movie, series, season, episode and person pages paint the approved design's React markup.
+ * The original template remains a hidden controller host: upstream owns native data, commands and track/playback state;
+ * entry and discovery controllers retain their existing data/action paths. Other native types keep upstream presentation.
  *
- * The mod owns `details` outright. What it renders is still upstream's detail view — the same template, the same
- * controller, the same playback, seasons, track selections, cast and context menu — but it is *composed here*
- * instead of inside upstream's file:
- *
- * - a catalog entry with no file (`entryId`) gets the mod's own controller on upstream's template, and upstream's
- *   controller never runs, because there is no native item for it to load; so does a TMDB title that is not in the library
- *   (`tmdbType` and `tmdbId`, TM2);
- * - anything else gets the mod's augmentation and then upstream's controller, in that order, so the mod's
- *   `viewshow` listeners are registered first, exactly as the old in-file patch arranged;
- * - a person, album, book, photo or live TV item is "anything else": the mod augmentation finds no catalog entry
- *   for it, renders nothing, and the page is upstream's, which is what §2.2 means by the dispatcher falling
- *   through.
- *
- * That composition is why `apps/legacy/controllers/itemDetails/index.js` is back to its upstream text (§3.2). The
- * mod's own actions live in `NativeEntryDetails` and call the release picker at their own call site, so nothing
- * wraps `itemContextMenu.show` any more either; a monkey-patch would have been worse than the patch, because it
- * would not show up in a diff at all.
- *
- * ## Mirrors `components/viewManager/ViewManagerPage.tsx`
- *
- * Upstream's component hard-codes its controller import to `apps/legacy/controllers/${controller}`, so it cannot
- * load a controller that is composed rather than named. The load/restore logic below is upstream's, and the build
- * guard (`scripts/jellyfinmod-build/bootGuard.js`) fails the build if upstream's version changes, so the mirroring
- * cannot go quiet.
+ * ViewManagerPage's load/restore lifecycle is mirrored because its hard-coded controller import cannot compose controllers.
+ * The build guard checks that lifecycle on upstream updates. Controllers stay lazy: their libraryMenu dependency needs the
+ * shell header to exist before initialization.
  */
 
 /** viewManager calls this with `new`; it is a plain function, and so is upstream's own controller. */

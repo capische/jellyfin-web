@@ -1,31 +1,17 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
-import classNames from 'classnames';
-import React, { type CSSProperties, type FC, type FocusEvent, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal, flushSync } from 'react-dom';
-
-import focusManager from 'components/focusManager';
-import layoutManager from 'components/layoutManager';
-import inputManager from 'scripts/inputManager';
-import { getKeyName } from 'scripts/keyboardNavigation';
+import React, { type FC, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { TrackField, ChooseRow } from '../design/TrackField';
+import { DesignMediaMarks } from '../design/MediaMarks';
+import { Icon } from '../design/Icon';
 
 import { bestFirst, describeVersion, fileMarks, findSource, sameItemId } from '../constants/versions';
-import { isBackKey } from '../shell/dpadModals';
 import type { VersionDto } from '../types/versions';
-import PhoneMark, { PHONE_COPY_LABEL } from './PhoneMark';
-import { MediaMarks } from './ReleaseRowParts';
-
-import './fileChooser.scss';
-// The media marks' own styles.
-import './releasePicker.scss';
+import { PHONE_COPY_LABEL } from './PhoneMark';
 
 const SOURCE_SELECTOR = '.selectSource';
-const VIDEO_SELECTOR = '.trackSelections .selectVideoContainer';
 const FORM_SELECTOR = '.trackSelections';
-/** How long the list takes to slide back before its rows leave the page; matches the stylesheet. */
-const SLIDE_MS = 180;
-/** Under this width (in the list's em) a file's one-line row does not fit and the rows take two lines (D198). */
-const ONE_LINE_EMS = 24;
-/** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `fileChooser.scss`), which the Video cell's width is left after. */
+/** Audio's and Subtitles' fixed cells (17.8em and 13.2em, `ds.css`), which the Video cell's width is left after. */
 const TRACK_CELLS_EMS = 31;
 /**
  * Under this Video cell width the strip stacks as on the phone (D199). 11.7em is a named exception to the golden ratio (φ⁵, 11.09em,
@@ -178,7 +164,7 @@ export interface StripHosts {
     audio: HTMLElement;
     subtitles: HTMLElement;
     below: HTMLElement;
-    /** The segments stack as rows of the card (`.jfmod-strip--stacked`): always on the phone, elsewhere on a narrow strip (D199). */
+    /** The segments stack as rows of the card (`.gpk.stacked`): always on the phone, elsewhere on a narrow strip (D199). */
     stacked: boolean;
 }
 
@@ -186,11 +172,8 @@ export interface StripHosts {
  * Whether the strip stacks: on the phone (D4), and where the Video cell would be narrower than `STACK_EMS` (D199). It reads the
  * strip's own width, which does not depend on the stacking, so the strip never flips back and forth at the switch.
  */
-const stacks = (strip: HTMLElement) => {
-    const separation = document.documentElement.classList.contains('jfmod-chrome') ? 2 * 0.382 : 0;
-    return layoutManager.mobile
-        || strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + separation) * parseFloat(getComputedStyle(strip).fontSize);
-};
+const stacks = (strip: HTMLElement) => document.documentElement.classList.contains('layout-mobile')
+    || strip.clientWidth < (TRACK_CELLS_EMS + STACK_EMS + 2 * 0.382) * parseFloat(getComputedStyle(strip).fontSize);
 
 /**
  * The track strip (D4–D9, user-approved 2026-10-28, `reviews/upgrade-status-options/all-in-one`): Video, Audio and Subtitles as
@@ -204,36 +187,42 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
     const [stacked, setStacked] = useState(false);
     useEffect(() => {
         const form = view.querySelector<HTMLElement>(FORM_SELECTOR);
-        const parent = form?.parentNode;
+        const parent = view.querySelector('[data-ds-slot="tracks"]') ?? form?.parentNode;
         if (!enabled || !form || !parent) return;
         const strip = document.createElement('div');
-        strip.className = 'jfmod-strip';
-        const slot = (name: string) => {
-            const element = document.createElement('div');
-            element.className = 'jfmod-stripSegment jfmod-stripSegment--' + name;
-            strip.appendChild(element);
-            return element;
-        };
+        strip.className = 'gpk';
         const below = document.createElement('div');
-        below.className = 'jfmod-stripBelow';
-        const next = { video: slot('video'), audio: slot('audio'), subtitles: slot('subtitles'), below };
-        parent.insertBefore(below, form.nextSibling);
-        parent.insertBefore(strip, below);
+        below.dataset.dsTrackBelow = '';
+        const next = { video: strip, audio: strip, subtitles: strip, below };
+        parent.appendChild(strip);
+        parent.appendChild(below);
         form.classList.add('jfmod-stripMounted');
+        view.setAttribute('data-ds-tracks-mounted', '');
         // Stacked or not before the first paint, and again on a resize (a window, a rotated phone).
         const restack = () => {
+            strip.classList.toggle('hide', form.classList.contains('hide'));
+            below.classList.toggle('hide', form.classList.contains('hide'));
             const now = stacks(strip);
-            strip.classList.toggle('jfmod-strip--stacked', now);
+            strip.classList.toggle('stacked', now);
             setStacked(now);
         };
         restack();
+        // eslint-disable-next-line compat/compat -- Chromium 79 supports ResizeObserver; older engines keep the resize fallback.
+        const size = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(restack);
+        size?.observe(strip);
         window.addEventListener('resize', restack);
+        const layout = new MutationObserver(restack);
+        layout.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        layout.observe(form, { attributes: true, attributeFilter: ['class'] });
         setHosts(next);
         return () => {
             window.removeEventListener('resize', restack);
+            layout.disconnect();
+            size?.disconnect();
             strip.remove();
             below.remove();
             form.classList.remove('jfmod-stripMounted');
+            if (!view.querySelector('[data-ds-slot="tracks"] .gpk')) view.removeAttribute('data-ds-tracks-mounted');
             setHosts(null);
         };
     }, [view, enabled]);
@@ -243,434 +232,61 @@ export const useTrackStrip = (view: HTMLElement, enabled: boolean): StripHosts |
     return enabled ? result : null;
 };
 
-/**
- * Upstream's Video row steps aside while the Video segment is drawn (its select is disabled and only names the stream; the
- * segment names the file), and its Version select while the chooser is mounted (UX §1.1 exception 2).
- */
-const useVideoRowHidden = (view: HTMLElement) => {
-    useEffect(() => {
-        const container = view.querySelector<HTMLElement>(VIDEO_SELECTOR);
-        const form = view.querySelector<HTMLElement>(FORM_SELECTOR);
-        container?.classList.add('jfmod-videoHost');
-        form?.classList.add('jfmod-chooserMounted');
-        return () => {
-            container?.classList.remove('jfmod-videoHost');
-            form?.classList.remove('jfmod-chooserMounted');
-        };
-    }, [view]);
-};
-
-/** A row action: upstream's round icon button, grey, red when it destroys, with the TV's focus ring (user, 2026-10-08). */
-const iconClass = (extra?: string) => classNames('paper-icon-button-light jfmod-fileIcon', extra, { 'show-focus': layoutManager.tv });
-
-/** How a row's actions name their file for a screen reader: `the 1080p file`. */
-const fileName = (version: VersionDto) => `the ${describeVersion(version).resolution} file`;
-
-/**
- * The pin's accessible name always names its row's file: the file-level Keep acts on it; an episode or title Keep, or a
- * read-only one, says what it keeps and which file's row it is on.
- */
-const pinLabel = (pin: PinState, version: VersionDto) => {
-    if (pin.title === 'Keep') return `Keep ${fileName(version)}`;
-    if (pin.title === 'Stop Keeping') return `Stop keeping ${fileName(version)}`;
-    return `${pin.locked ?? pin.title}, on ${fileName(version)}`;
-};
-
-/** A file the plugin has not bound yet (its binding id empty or all zeros) has no events of its own, so no History. */
-const historyShown = (version: VersionDto, onHistory?: FileIconsProps['onHistory']) =>
-    !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
-
-interface FileIconsProps {
-    version: VersionDto;
-    busy: boolean;
-    onHistory?: (version: VersionDto, opener: HTMLElement) => void;
-    pin: PinState | null;
-    onPin: (version: VersionDto, opener: HTMLElement) => void;
-    removable: boolean;
-    onRemove: (version: VersionDto, opener: HTMLElement) => void;
-}
-
-/**
- * History, pin and cross at the end of a file's row (design step 2): round, icon-only stock icon buttons with a 2.5em hit
- * area, each its own D-pad stop; grey, the cross red, the pin in primary while the file is kept (user rules, 2026-10-08).
- */
-const FileIcons: FC<FileIconsProps> = ({ version, busy, onHistory, pin, onPin, removable, onRemove }) => {
-    const history = useCallback((event: MouseEvent<HTMLButtonElement>) => onHistory?.(version, event.currentTarget), [onHistory, version]);
-    const keep = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        if (busy || pin?.locked) return;
-        onPin(version, event.currentTarget);
-    }, [busy, onPin, pin?.locked, version]);
-    const remove = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-        if (!busy) onRemove(version, event.currentTarget);
-    }, [busy, onRemove, version]);
-    const hasHistory = historyShown(version, onHistory);
-    if (!hasHistory && !pin && !removable) return null;
-    return <span className='jfmod-fileIcons'>
-        {hasHistory && <button type='button' className={iconClass()} title='History' aria-label={`History of ${fileName(version)}`}
-            data-jfmod-file-history={version.bindingId} onClick={history}>
-            <span className='material-icons history' aria-hidden='true' />
-        </button>}
-        {pin && <button type='button' className={iconClass(pin.kept ? 'jfmod-fileIcon--pin jfmod-fileIcon--on' : 'jfmod-fileIcon--pin')}
-            title={pin.locked ?? pin.title} aria-label={pinLabel(pin, version)} aria-pressed={pin.kept}
-            aria-disabled={busy || !!pin.locked} data-jfmod-file-pin={version.bindingId} onClick={keep}>
-            <span className='material-icons push_pin' aria-hidden='true' />
-        </button>}
-        {removable && <button type='button' className={iconClass('jfmod-fileIcon--danger')} title='Remove This Version'
-            aria-label={`Remove ${fileName(version)}`}
-            aria-disabled={busy} data-jfmod-file-remove={version.bindingId} onClick={remove}>
-            <span className='material-icons close' aria-hidden='true' />
-        </button>}
-    </span>;
-};
-
-interface FileRowProps extends Omit<FileIconsProps, 'pin' | 'removable'> {
-    selected: boolean;
-    onChoose: (version: VersionDto) => void;
-    pin: PinState | null;
-    removable: boolean;
-    removeDate: string | null;
-    source: MediaSourceInfo | null;
-    /** The two-line row: the phone's, and a narrow Video cell's (D197, D198). */
-    twoLine: boolean;
-}
-
-/**
- * What a file's video is, the same on its row and on the closed dropdown (user, 2026-10-12; P7.FU6): the mod's resolution word
- * and the release picker's media marks for its video stream. Its audio and subtitles are the Audio and Subtitles cells' only: a
- * file's audio matters when a whole release is chosen (the picker, the Queue), not here (user, 2026-10-29; D105).
- */
-const VideoSummary: FC<{ version: VersionDto; source: MediaSourceInfo | null }> = ({ version, source }) => <>
-    {/* The file phones play carries the phone mark inside its resolution word (Phase 12, D52); the plugin marks it only on a
-        title with two or more files, and nothing names the best copy: the list is best first. */}
-    <span className='jfmod-fileResolution'>{describeVersion(version).resolution}{version.phoneCopy && <PhoneMark label={PHONE_COPY_LABEL} />}</span>
-    <span className='jfmod-fileMarks'><MediaMarks parsed={fileMarks(version, source).video} /></span>
-</>;
-
-/** The file's size, in the secondary colour at the right end of the value and of each row (P7.FU6). */
-const FileSize: FC<{ version: VersionDto }> = ({ version }) => {
-    const size = describeVersion(version).size;
-    return size ? <span className='jfmod-fileSize'>{size}</span> : null;
-};
-
-/** The file in words, for screen readers: `2160p HEVC 10-bit HDR 10.3 GB`. */
-const summaryLabel = (version: VersionDto) => {
-    const text = describeVersion(version);
-    return [text.resolution, text.video, text.size].filter(Boolean).join(' ');
-};
-
-/**
- * A file's row (P7.FU6): resolution and video marks only (D105) and the extras (episode range, removal date), then the size
- * right-aligned, then its icons. On a phone, and in a Video cell too narrow for that line, it is two lines (D197, D198): what the
- * file is across the whole row, with the icons on the right of line 2; line 1 reaches over the icons by their count. The phone
- * puts the size on line 2 before the extras (D197); a narrow computer or TV cell puts it at line 1's end, where it is not cut
- * beside the icons, and its marks drop before it (D199).
- */
-const FileRow: FC<FileRowProps> = ({ version, selected, onChoose, removeDate, source, twoLine, ...icons }) => {
-    const choose = useCallback(() => onChoose(version), [onChoose, version]);
-    if (twoLine) {
-        const count = Number(historyShown(version, icons.onHistory)) + Number(!!icons.pin) + Number(icons.removable);
-        const sizeUp = !layoutManager.mobile;
-        const extras = [version.episodeRange, removeDate && `removes ${removeDate}`].filter(Boolean);
-        return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}
-            style={{ '--jfmod-icons': count } as CSSProperties}>
-            <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
-                data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
-                <span className={classNames('jfmod-fileLine', { 'jfmod-fileLine--sized': sizeUp })}>
-                    <VideoSummary version={version} source={source} />{sizeUp && <FileSize version={version} />}
-                </span>
-                <span className='jfmod-fileLine jfmod-fileLine--extra'>
-                    {!sizeUp && <FileSize version={version} />}
-                    {extras.map((extra, index) => <span key={extra}
-                        className={classNames('jfmod-fileExtra', { 'jfmod-fileExtra--dot': !sizeUp || index > 0 })}>{extra}</span>)}
-                </span>
-            </button>
-            <FileIcons version={version} {...icons} />
-        </div>;
-    }
-    return <div className={classNames('jfmod-fileRow', { 'jfmod-fileRow--selected': selected })}>
-        <button type='button' className='jfmod-fileChoose' aria-pressed={selected}
-            data-jfmod-media-source-id={version.mediaSourceId} onClick={choose}>
-            <span className='jfmod-fileBody'>
-                <span className='jfmod-fileLine'><VideoSummary version={version} source={source} /></span>
-                {(version.episodeRange || removeDate) && <span className='jfmod-fileLine jfmod-fileLine--extra'>
-                    {version.episodeRange && <span className='jfmod-fileExtra'>{version.episodeRange}</span>}
-                    {/* Only the removal date: torrent and bookkeeping states ("waiting for seeding", "not tracked yet") are not the
-                        viewer's business (user, 2026-10-28). */}
-                    {removeDate && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>removes {removeDate}</span>}
-                </span>}
-            </span>
-            <FileSize version={version} />
-        </button>
-        <FileIcons version={version} {...icons} />
-    </div>;
-};
-
-/**
- * While the list is open on the TV, Right and Left walk a file's row (its button, then History, Keep and Remove) themselves, before
- * the remote's own search: that search could tie the focused, grown History with the Video value above the first row and jump
- * there (D199). At a row's ends the keys go on as before.
- */
-const useRowWalk = (open: boolean) => {
-    useEffect(() => {
-        if (!open || !layoutManager.tv) return;
-        const onKey = (event: KeyboardEvent) => {
-            const step = ({ ArrowRight: 1, ArrowLeft: -1 } as Record<string, number>)[getKeyName(event) || event.key];
-            const row = (event.target as HTMLElement | null)?.closest?.('.jfmod-fileList .jfmod-fileRow');
-            if (!step || !row || event.defaultPrevented) return;
-            const stops = Array.from(row.querySelectorAll<HTMLElement>('.jfmod-fileChoose, .jfmod-fileIcon'));
-            const next = stops[stops.indexOf(event.target as HTMLElement) + step];
-            if (!next) return;
-            event.preventDefault();
-            focusManager.focus(next);
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => window.removeEventListener('keydown', onKey, true);
-    }, [open]);
-};
-
-/** A list's controls that a remount has to find again: a file's actions and the pending entry's X. */
-const LIST_CONTROLS = ['data-jfmod-file-history', 'data-jfmod-file-pin', 'data-jfmod-file-remove', 'data-jfmod-pending-remove'];
-
-/** Something drawn over the page (an MUI pop-up, a stock dialog) takes Back before the list does. */
-const OVERLAY_SELECTOR = '.MuiModal-root:not(.MuiModal-hidden):not([aria-hidden="true"]), .dialogContainer .dialog';
-
-/**
- * While the Video list is open, the remote's Back (and Escape) closes it and nothing else, as for the Audio and Subtitles
- * lists (D4: one component, one step per change); with it closed, Back navigates as before.
- */
-const useBackCloses = (open: boolean, close: () => void) => {
-    const latest = useRef(close);
-    latest.current = close;
-    useEffect(() => {
-        if (!open) return;
-        const covered = () => !!document.querySelector(OVERLAY_SELECTOR);
-        const onKey = (event: KeyboardEvent) => {
-            const key = getKeyName(event) || event.key;
-            if (event.defaultPrevented || covered() || (!isBackKey(key) && !isBackKey(event.key))) return;
-            event.preventDefault();
-            event.stopPropagation();
-            latest.current();
-        };
-        const onCommand = (event: Event) => {
-            if ((event as CustomEvent<{ command?: string }>).detail?.command !== 'back' || event.defaultPrevented || covered()) return;
-            event.preventDefault();
-            latest.current();
-        };
-        window.addEventListener('keydown', onKey, true);
-        inputManager.on(window, onCommand);
-        return () => {
-            window.removeEventListener('keydown', onKey, true);
-            inputManager.off(window, onCommand);
-        };
-    }, [open]);
-};
-
-/**
- * Where a cell's list goes (D75, and the user's 2026-10-29 look): exactly under its cell, flush against the strip's bottom edge,
- * from the cell's left (its divider) to its right edge; the first cell's list starts at the strip's outer left edge and the last
- * one's ends at its outer right edge. On a stacked strip (the phone, a narrow window), under the row, the card's width.
- * Viewport coordinates.
- */
-export const listPlace = (trigger: HTMLElement) => {
-    const cell = trigger.closest<HTMLElement>('.jfmod-stripSegment') ?? trigger;
-    const strip = cell.closest<HTMLElement>('.jfmod-strip');
-    const box = cell.getBoundingClientRect();
-    const gap = document.documentElement.classList.contains('jfmod-chrome') ? 0.382 * parseFloat(getComputedStyle(trigger).fontSize) : 0;
-    if (!strip) return { top: box.bottom + gap, left: box.left, width: box.width };
-    const outer = strip.getBoundingClientRect();
-    if (strip.classList.contains('jfmod-strip--stacked')) return { top: box.bottom + gap, left: outer.left, width: outer.width };
-    const drawn = (start: Element | null, step: (element: Element) => Element | null) => {
-        let element = start;
-        while (element && !element.childElementCount) element = step(element);
-        return element;
-    };
-    const left = drawn(cell.previousElementSibling, element => element.previousElementSibling) ? box.left : outer.left;
-    const right = drawn(cell.nextElementSibling, element => element.nextElementSibling) ? box.right : outer.right;
-    return { top: outer.bottom + gap, left, width: right - left };
-};
-
-/** Slides open and closed; the rows exist only while open or closing, so a closed list is never a D-pad stop. */
-const useSlide = () => {
-    const [open, setOpen] = useState(false);
-    const [rendered, setRendered] = useState(false);
-    const timer = useRef<number>();
-    useEffect(() => () => window.clearTimeout(timer.current), []);
-    const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const show = useCallback(() => {
-        window.clearTimeout(timer.current);
-        setRendered(true);
-        // One frame with the rows present and the list closed, so the height transition has a start.
-        window.requestAnimationFrame(() => setOpen(true));
-    }, []);
-    /** `instant` closes it at once, with no slide (a tap outside the list in the card, below). */
-    const hide = useCallback((instant?: boolean) => {
-        setOpen(false);
-        window.clearTimeout(timer.current);
-        if (instant) {
-            setRendered(false);
-            return;
-        }
-        timer.current = window.setTimeout(() => setRendered(false), reduced() ? 0 : SLIDE_MS);
-    }, []);
-    return { open, rendered, show, hide };
-};
-
-/**
- * The Video segment of the track strip as the file chooser (design step 2, user 2026-10-07; UX §11.2; the strip D4–D9,
- * 2026-10-28). Its value carries a chevron and opens a list of the files under the strip, as wide as it, also when there is
- * only one (user, 2026-10-08: one dropdown everywhere); choosing one sets upstream's
- * `.selectSource` and dispatches its bubbling `change`, exactly as the version rows did, so Play, audio and subtitles follow,
- * the viewer's own choice is never replaced and the device preference still applies. The pending download (`pending`) sits
- * under the strip, or in the list while it is open.
- */
+/** The native Video picker uses the same select mutation and device preference as the former chooser. */
 const FileChooser: FC<FileChooserProps> = ({ view, versions, preferred, busy, onHistory, pin, onPin, canRemove,
     onRemove, removeDate, note, sources, strip, pending }) => {
-    const multi = versions.length > 1;
-    useVideoRowHidden(view);
     const current = useSelectedSource(view);
     const chosen = useRef(false);
     useViewerChoice(view, chosen);
-    useDevicePreference(view, multi ? preferred : null, chosen);
-    const slide = useSlide();
-    // On a stacked strip (the phone, D197; a narrow window or the TV at 1280, D199) the list is part of the card: drawn in the Video
-    // segment, under its value, it moves Audio, Subtitles and the page down. Otherwise it floats like Audio's (user, 2026-10-29):
-    // placed under its cell when it opens and on a resize; the pending entry under the strip leaves its height behind while it sits
-    // in the list, so the page does not move.
-    const inCard = strip.stacked;
-    const list = useRef<HTMLDivElement>(null);
-    const focused = useRef<{ file: string | null; kind: string | null } | null>(null);
-    const [place, setPlace] = useState<{ top: number; left: number; width: number; narrow: boolean; spacer: number } | null>(null);
-    const trigger = useRef<HTMLButtonElement>(null);
-    const measure = useCallback(() => {
-        if (!trigger.current) return null;
-        const at = listPlace(trigger.current);
-        const below = strip.below.getBoundingClientRect();
-        const em = parseFloat(getComputedStyle(strip.below).fontSize);
-        return { top: at.top - below.top, left: at.left - below.left, width: at.width, narrow: at.width < ONE_LINE_EMS * em };
-    }, [strip.below]);
-    const toggle = useCallback(() => {
-        if (slide.open) {
-            slide.hide();
-            return;
-        }
-        const at = measure();
-        if (at) {
-            const entry = strip.below.querySelector(':scope > .jfmod-pending');
-            setPlace({ ...at, spacer: entry?.getBoundingClientRect().height ?? 0 });
-        }
-        slide.show();
-    }, [slide, strip.below, measure]);
-    // A resize (a window, a rotated phone) places the open list again under its cell, as Audio's (D166), at the cell's width and
-    // with the rows the width takes (D198), also when the strip stacks or unstacks under it (D199). A floating list is in the page,
-    // not in the window, so it is never pushed over the strip and has no D168 close; the spacer keeps the height it opened with.
-    useEffect(() => {
-        if (!slide.open) {
-            focused.current = null;
-            return;
-        }
-        const again = () => {
-            const at = measure();
-            if (at) setPlace(previous => previous && { ...previous, ...at });
-        };
-        again();
-        window.addEventListener('resize', again);
-        return () => window.removeEventListener('resize', again);
-    }, [slide.open, measure, inCard]);
-    // Moving the list in or out of the card remounts it, and the focus falls to the page: it goes back to the same file's same control
-    // (Codex review of P7.FU6). A control that went away (a kept file has no Remove) leaves it on that file's row, else on the value.
-    const noteFocus = useCallback((event: FocusEvent<HTMLDivElement>) => {
-        const control = event.target as Element;
-        focused.current = {
-            file: control.closest('.jfmod-fileRow')?.querySelector('.jfmod-fileChoose')?.getAttribute('data-jfmod-media-source-id') ?? null,
-            kind: LIST_CONTROLS.find(name => control.hasAttribute(name)) ?? null
-        };
-    }, []);
-    useLayoutEffect(() => {
-        const was = focused.current;
-        if (!was || document.activeElement !== document.body) return;
-        const choose = Array.from(list.current?.querySelectorAll('.jfmod-fileChoose') ?? [])
-            .find(button => button.getAttribute('data-jfmod-media-source-id') === was.file);
-        const home = choose?.closest('.jfmod-fileRow') ?? (was.file ? null : list.current);
-        const control = (was.kind && home?.querySelector(`[${was.kind}]`)) || choose || trigger.current;
-        if (control) focusManager.focus(control);
-    }, [inCard]);
-    // A click outside the list and its cell closes it, as outside Audio's. In the card the list moves Audio and Subtitles, so a tap
-    // on one closes it at once before that cell's own click places its list (a slide would leave that list where the cell was).
-    useEffect(() => {
-        if (!slide.open) return;
-        const outside = (event: Event) => {
-            const target = event.target as Node;
-            if (list.current?.contains(target) || trigger.current?.contains(target)) return;
-            if (inCard) {
-                flushSync(() => slide.hide(true));
-            } else {
-                slide.hide();
-            }
-        };
-        const type = inCard ? 'click' : 'mousedown';
-        document.addEventListener(type, outside, true);
-        return () => document.removeEventListener(type, outside, true);
-    }, [slide, inCard]);
-    const choose = useCallback((version: VersionDto) => {
+    useDevicePreference(view, versions.length > 1 ? preferred : null, chosen);
+    const [open, setOpen] = useState(false);
+    const selected = versions.find(version => sameItemId(version.mediaSourceId, current))
+        ?? versions.find(version => version.isDefault) ?? versions[0];
+    const summary = (version: VersionDto, closed = false) => <>
+        <span className='r'>{describeVersion(version).resolution}{version.phoneCopy && <span className='pm' title={PHONE_COPY_LABEL}><Icon name='phone' /></span>}</span>
+        <span className='marks'><DesignMediaMarks parsed={fileMarks(version, findSource(sources, version.mediaSourceId)).video} /></span>
+        <span className={closed ? 'size2' : 'sz2'}>{describeVersion(version).size}</span>
+    </>;
+    const choose = (version: VersionDto) => {
         chosen.current = true;
         selectVersion(view, version);
-        slide.hide();
-        // The focused row is about to leave the page; the remote stays on the value it opened.
-        if (trigger.current) focusManager.focus(trigger.current);
-    }, [slide, view]);
-    const backClose = useCallback(() => {
-        slide.hide();
-        if (trigger.current) focusManager.focus(trigger.current);
-    }, [slide]);
-    useBackCloses(slide.open, backClose);
-    useRowWalk(slide.open);
+    };
 
-    // With no option to match (one version, or a page that cannot choose sources) the default is the one that plays.
-    const selectedId = versions.find(version => sameItemId(version.mediaSourceId, current))?.mediaSourceId
-        ?? versions.find(version => version.isDefault)?.mediaSourceId
-        ?? versions[0]?.mediaSourceId;
-    const selected = versions.find(version => version.mediaSourceId === selectedId) ?? versions[0];
-    const iconProps = (version: VersionDto) => ({
-        busy, onHistory, onPin, onRemove,
-        pin: pin(version),
-        removable: canRemove(version)
-    });
-
-    const listId = 'jfmod-fileList-' + (selected?.mediaSourceId ?? 'files');
-    // A grid row that grows from 0fr to 1fr, so the list slides at its own height (user, 2026-10-12: the max-height slide was over
-    // in two frames opening and waited 140 ms closing). Floating, it is the Video cell's width (D99, D198); another quality is got
-    // from the page's cloud icon, so the list has no row for it (D102).
-    const twoLine = layoutManager.mobile || !!place?.narrow;
-    const fileList = <div ref={list} id={listId} onFocus={noteFocus}
-        className={classNames('jfmod-fileList', { 'jfmod-fileList--open': slide.open, 'jfmod-fileList--two': twoLine, 'jfmod-fileList--narrow': !!place?.narrow })}
-        style={!inCard && place ? { top: place.top, left: place.left, width: place.width } : undefined}>
-        <div className='jfmod-fileListClip'>{slide.rendered && <div className='jfmod-fileListBox'>
-            {/* Best first, whatever order the files came in (D114: a title can hold many files). */}
-            {bestFirst(versions).map(version => <FileRow key={version.mediaSourceId} version={version}
-                selected={version.mediaSourceId === selectedId} onChoose={choose} removeDate={removeDate(version)}
-                source={findSource(sources, version.mediaSourceId)} twoLine={twoLine}
-                {...iconProps(version)} />)}
-            {pending}
-            {note && <p className='jfmod-fileNote'>{note}</p>}
-        </div>}</div>
-    </div>;
+    const opening = useCallback(() => setOpen(true), []);
+    const closing = useCallback(() => setOpen(false), []);
     return <>
-        {createPortal(<><button ref={trigger} type='button' className='jfmod-videoTrigger' aria-expanded={slide.open} aria-controls={listId}
-            aria-label={`Video: ${summaryLabel(selected)}. ${versions.length} ${versions.length === 1 ? 'file' : 'files'}`}
-            onClick={toggle}>
-            <span className='jfmod-stripCaption' aria-hidden='true'>Video</span>
-            <span className='jfmod-stripValue'>
-                <span className='jfmod-videoTriggerText'><VideoSummary version={selected} source={findSource(sources, selected.mediaSourceId)} /></span>
-                <FileSize version={selected} />
-                <span className={'material-icons jfmod-videoChevron ' + (slide.open ? 'expand_less' : 'expand_more')} aria-hidden='true' />
-            </span>
-        </button>{inCard && fileList}</>, strip.video)}
-        {createPortal(<>
-            {!inCard && fileList}
-            {/* The pending entry under the strip (D9); while the list is open it is the list's row instead, and under a floating list
-                its height stays behind. */}
-            {slide.rendered ? !inCard && <div style={{ height: place?.spacer ?? 0 }} aria-hidden='true' /> : pending}
-        </>, strip.below)}
+        {createPortal(<TrackField kind='v' name='Video' value={summary(selected, true)} stacked={strip.stacked} onOpen={opening} onClose={closing}>
+            {bestFirst(versions).map(version => {
+                const keep = pin(version);
+                const history = !!onHistory && version.tracked !== false && /[1-9a-f]/i.test(version.bindingId ?? '');
+                return <ChooseRow key={version.mediaSourceId} sourceId={version.mediaSourceId} selected={version === selected}
+                    onChoose={() => choose(version)} title={[version.episodeRange, removeDate(version)].filter(Boolean).join(' · ')}>
+                    {summary(version)}<span className='icons'>
+                        {history && <button type='button' className='rb focusable' title='History' aria-label={'History of the ' + describeVersion(version).resolution + ' file'} data-jfmod-file-history={version.bindingId}
+                            onClick={event => {
+                                event.stopPropagation();
+                                onHistory?.(version, event.currentTarget);
+                            }}><Icon name='history' /></button>}
+                        {keep && <button type='button' className='rb focusable' title={keep.locked ?? keep.title} aria-label={(keep.title === 'Stop Keeping' ? 'Stop keeping' : keep.title) + ' the ' + describeVersion(version).resolution + ' file'}
+                            aria-pressed={keep.kept} aria-disabled={busy || !!keep.locked} data-jfmod-file-pin={version.bindingId}
+                            style={keep.kept ? { color: 'var(--primary)' } : undefined}
+                            onClick={event => {
+                                event.stopPropagation();
+                                if (!busy && !keep.locked) onPin(version, event.currentTarget);
+                            }}><Icon name='pin' /></button>}
+                        {canRemove(version) && <button type='button' className='rb red focusable' title='Remove This Version' aria-label={'Remove the ' + describeVersion(version).resolution + ' file'}
+                            aria-disabled={busy} data-jfmod-file-remove={version.bindingId}
+                            onClick={event => {
+                                event.stopPropagation();
+                                if (!busy) onRemove(version, event.currentTarget);
+                            }}><Icon name='x' /></button>}
+                    </span>
+                    {(version.episodeRange || removeDate(version)) && <span className='trackextra'>{[version.episodeRange, removeDate(version) && 'removes ' + removeDate(version)].filter(Boolean).join(' · ')}</span>}
+                </ChooseRow>;
+            })}
+            {pending}{note && <div className='vnote'>{note}</div>}
+        </TrackField>, strip.video)}
+        {!open && createPortal(pending, strip.below)}
     </>;
 };
 

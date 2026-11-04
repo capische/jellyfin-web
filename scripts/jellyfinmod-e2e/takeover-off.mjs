@@ -185,7 +185,7 @@ try {
                 await stock.evaluate(id => { location.hash = '#/details?id=' + id; }, itemId);
                 const detail = await stock.waitForFunction(() => {
                     const pageNode = document.querySelector('.itemDetailPage:not(.hide)');
-                    return pageNode && pageNode.querySelector('.itemName, h1')?.textContent?.trim() && pageNode.querySelector('.btnPlay, .btnResume, .detailButton');
+                    return pageNode && pageNode.querySelector('.itemName, h1')?.textContent?.trim() && pageNode.querySelector('[data-ds-command~=btnPlay], .btnResume, .detailButton');
                 }, undefined, { timeout: 20000 }).then(() => true, () => false);
                 await stock.evaluate(() => { location.hash = '#/mypreferencesmenu'; });
                 await stock.waitForFunction(() => !!document.querySelector('.page:not(.hide) .lnkDisplayPreferences'), undefined, { timeout: 20000 });

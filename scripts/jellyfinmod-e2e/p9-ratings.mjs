@@ -172,13 +172,13 @@ const shot = async (page, name) => {
 // The ratings group (user decisions 10 and 13): one control in the first metadata row holding IMDb, Rotten Tomatoes critics
 // (tomato) and audience (popcorn), and Trakt when the row has room, each its mark and its value; every ticked rating is in its
 // popup, one row each (mark, value, votes), the provenance in each row's title.
-const GROUP = '[data-jfmod-ratings-group]:not(.jfmod-groupButton-standIn)';
-const POPUP = '[data-jfmod-ratings-popup]';
+const GROUP = '[data-jfmod-ratings-group]:not(.rgroup[aria-hidden=true])';
+const POPUP = '[data-jfmod-ratings-popup].open';
 const group = page => page.evaluate(selector => {
     const button = [...document.querySelectorAll(selector)].find(node => node.getClientRects().length);
     if (!button) return null;
-    const box = button.closest('.jfmod-ratingsGroup');
-    const row = box.closest('.itemMiscInfo');
+    const box = button.closest('.rgwrap');
+    const row = box.closest('.meta');
     const visible = node => node.getClientRects().length > 0 && getComputedStyle(node).display !== 'none';
     const rect = box.getBoundingClientRect();
     const items = [...row.children].filter(visible).map(node => {
@@ -187,10 +187,10 @@ const group = page => page.evaluate(selector => {
     });
     return {
         inline: [...button.querySelectorAll('[data-jfmod-rating]')].map(node => ({ source: node.dataset.jfmodRating,
-            text: node.querySelector('.jfmod-groupValue')?.textContent ?? '', icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null })),
-        tag: button.tagName, tabIndex: button.tabIndex, label: button.getAttribute('aria-label'), inRow: !!button.closest('.itemMiscInfo-primary'),
-        inMisc: !!button.closest('.itemMiscInfo-secondary'), focused: document.activeElement === button,
-        stockStar: [...row.querySelectorAll('.starRatingContainer')].some(visible), stockTomato: [...row.querySelectorAll('.mediaInfoCriticRating')].some(visible),
+            text: node.querySelector('b')?.textContent ?? '', icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null })),
+        tag: button.tagName, tabIndex: button.tabIndex, label: button.getAttribute('aria-label'), inRow: !!button.closest('.jfmod-dsTitleHost .meta'),
+        inMisc: !!button.closest('.meta'), focused: document.activeElement === button,
+        stockStar: [...row.querySelectorAll('.star')].some(visible), stockTomato: [...row.querySelectorAll('.critic')].some(visible),
         width: rect.width, fullWidth: Number(box.getAttribute('data-jfmod-full-width')) || null, rowWidth: row.getBoundingClientRect().width,
         itemsWidth: items.reduce((sum, width) => sum + width, 0), height: button.getBoundingClientRect().height,
         // Every item of the row on the group's line.
@@ -221,9 +221,9 @@ const popup = page => page.evaluate(selector => {
     const copy = node.cloneNode(true);
     for (const hidden of copy.querySelectorAll('.jfmod-ratingsHidden')) hidden.remove();
     return { rows: [...node.querySelectorAll('[data-jfmod-rating]')].map(row => ({ source: row.dataset.jfmodRating,
-        value: row.querySelector('.jfmod-popValue')?.textContent ?? '', votes: row.querySelector('.jfmod-popVotes')?.textContent ?? '',
+        value: row.querySelector('.rval')?.textContent ?? '', votes: row.querySelector('.rvt')?.textContent ?? '',
         title: (row.getAttribute('title') ?? row.getAttribute('data-tip')) ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
-    links: node.querySelectorAll('a').length, intrinsic: Math.abs(node.getBoundingClientRect().width - ([...node.querySelector('.jfmod-popRow').children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1 };
+    links: node.querySelectorAll('a').length, intrinsic: Math.abs(node.getBoundingClientRect().width - ([...node.querySelector('.rrow').children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1 };
 }, POPUP);
 /** Rows only (no "via …" line, no caveat), the provenance in each row's title, the content width, no links. */
 const popupOk = (shown, found, expected) => !!shown && JSON.stringify(shown.rows.map(row => row.source)) === JSON.stringify(expected)
@@ -237,7 +237,8 @@ async function preferencesPage(page, layout) {
         await reset.click();
         await page.waitForTimeout(800);
     }
-    await page.locator('[data-jfmod-card-source=""]').click();
+    await page.getByRole('combobox', { name: 'Rating on cards' }).click();
+    await page.getByRole('option', { name: 'None', exact: true }).click();
     await page.waitForTimeout(500);
     const order = await page.$$eval('[data-jfmod-source-toggle][aria-checked="true"]', nodes => nodes.map(node => node.dataset.jfmodSourceToggle));
     record(layout, 'Ratings display starts from the administrator\'s default order', JSON.stringify(order) === JSON.stringify(DEFAULT_ORDER), order);
@@ -278,12 +279,12 @@ async function nativeGroup(page, layout) {
         popupOk(hovered, found, DEFAULT_ORDER) && hovered.rows[0].votes === '250K' && /via MDBList, as of/i.test(hovered.rows[0].title)
         && goneAfterHover === 0 && popupOk(focusedPopup, found, DEFAULT_ORDER) && closed === 0, { hovered, goneAfterHover, closed });
     const order = await page.evaluate(() => {
-        const row = [...document.querySelectorAll('.itemMiscInfo-primary')].find(node => node.offsetParent !== null);
-        return row ? [...row.children].map(node => node.className) : [];
+        const row = [...document.querySelectorAll('.jfmod-dsTitleHost .meta')].find(node => node.offsetParent !== null);
+        return row ? [...row.children].map(node => node.querySelector('[data-ds-slot=ratings]') ? 'jfmod-ratingsMount' : node.hasAttribute('data-ds-endsat') ? 'endsAt' : node.className) : [];
     });
     const mountAt = order.findIndex(name => name.includes('jfmod-ratingsMount'));
-    const starAt = order.findIndex(name => name.includes('starRatingContainer'));
-    record(layout, 'The ratings mount sits where the stock star was (just before it)', mountAt >= 0 && (starAt < 0 || mountAt === starAt - 1), order);
+    const starAt = order.indexOf('endsAt');
+    record(layout, 'The ratings mount occupies the first metadata row before Ends at', mountAt >= 0 && (starAt < 0 || mountAt < starAt), order);
     return found;
 }
 
@@ -347,7 +348,7 @@ async function desktop(browser) {
     // File-less entry page: the line beside the TMDB star; TMDB is the entry's own.
     await go(page, `#/details?entryId=${STATE.fileless}`);
     found = await waitGroup(page);
-    const ownStar = await page.evaluate(() => [...document.querySelectorAll('.jfmod-entryStar')].some(node => node.offsetParent !== null));
+    const ownStar = await page.evaluate(() => [...document.querySelectorAll('.jfmod-dsTitleHost .meta .star')].some(node => node.offsetParent !== null));
     record(layout, 'The file-less entry page shows the group in its own star\'s row, IMDb in place of that star',
         rowOk(found, false) && found.inMisc && !ownStar, { inline: sources(found), ownStar });
     await shot(page, `${layout}-fileless`);
@@ -358,7 +359,7 @@ async function desktop(browser) {
     await page.waitForTimeout(500);
     await page.locator('[data-jfmod-source="letterboxd"][data-jfmod-move="up"]').click();
     await page.waitForTimeout(500);
-    const status = await page.locator('.jfmod-prefStatus').innerText();
+    const status = await page.locator('[data-jfmod-ratings-status]').innerText();
     const focused = await page.evaluate(() => document.activeElement?.dataset?.jfmodMove ?? null);
     record(layout, 'Moving a source keeps focus on the control that moved it and says it was saved', focused === 'up' && /Saved/.test(status), { focused, status });
     await go(page, `#/details?id=${STATE.hostItem}`);
@@ -384,7 +385,8 @@ async function desktop(browser) {
     record(layout, 'Cards are unchanged with the preference off: no card rating and no ratingSource sent', cardText.length === 0
         && page.jfmodBrowse.length > 0 && page.jfmodBrowse.every(body => !('ratingSource' in body)), { cardText, requests: page.jfmodBrowse.length });
     await go(page, '#/catalog/preferences');
-    await page.locator('[data-jfmod-card-source="imdb"]').click();
+    await page.getByRole('combobox', { name: 'Rating on cards' }).click();
+    await page.getByRole('option', { name: 'IMDb', exact: true }).click();
     await page.waitForTimeout(800);
     page.jfmodBrowse.length = 0;
     await go(page, grid);
@@ -483,7 +485,7 @@ async function desktop(browser) {
     await go(page3, `#/details?id=${STATE.hostItem}`);
     await page3.waitForTimeout(3000);
     const offChips = sources(await group(page3));
-    const playVisible = await page3.locator('#itemDetailPage:not(.hide) .mainDetailButtons button:visible').count();
+    const playVisible = await page3.locator('#itemDetailPage:not(.hide) .jfmod-dsTitleHost .actbar button:visible').count();
     record(layout, 'Ratings turned off: the group is absent and the page otherwise unchanged', offChips.length === 0 && playVisible > 0, { buttons: playVisible });
     await saveRatings(page3, { enabled: true });
     record(layout, 'No page errors', page3.jfmodErrors.length === 0, page3.jfmodErrors);
@@ -508,7 +510,7 @@ async function mobile(browser) {
     await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(ignore);
     const tapped = await popup(page);
     await shot(page, `${layout}-popup`);
-    await page.locator('.nameContainer:visible').tap();
+    await page.locator('.jfmod-dsTitleHost .itemName:visible').tap();
     await page.waitForTimeout(400);
     const closedAfterTap = await page.locator(POPUP).count();
     record(layout, 'The group is at least 43 px high; a tap opens the popup (rows of mark, value, votes) and a tap elsewhere closes it',
@@ -539,7 +541,7 @@ async function laterUpdates(page, layout) {
     if (layout !== 'tv1080') return;
     const lineBottom = () => page.evaluate(() => {
         const button = [...document.querySelectorAll('[data-jfmod-ratings-group]')].find(node => node.getClientRects().length);
-        return button ? button.closest('.itemMiscInfo').getBoundingClientRect().bottom : null;
+        return button ? button.closest('.meta').getBoundingClientRect().bottom : null;
     });
     let below = false;
     for (let press = 0; press < 15 && !below; press++) {
@@ -650,7 +652,7 @@ async function tv(browser, layout) {
     const focusedLater = await where();
     record(layout, 'Nothing the ratings bring in moves the focused control (same control, same place, once the group is there)',
         focusedFirst.tag === 'BUTTON' && JSON.stringify(focusedFirst) === JSON.stringify(focusedLater), { focusedFirst, focusedLater });
-    const onPlay = await page.evaluate(() => !!document.activeElement?.classList.contains('btnPlay'));
+    const onPlay = await page.evaluate(() => !!document.activeElement?.getAttribute('data-ds-command')?.split(' ').includes('btnPlay'));
     record(layout, 'The TV title page shows IMDb, RT critics and audience (Trakt if the row has room) on one line; its first focus is Play',
         onPlay && rowOk(found, false) && found.oneLine, { inline: sources(found), oneLine: found?.oneLine, onPlay, rowWidth: found?.rowWidth });
     const onGroup = () => page.evaluate(() => !!document.activeElement?.hasAttribute('data-jfmod-ratings-group'));
@@ -667,7 +669,7 @@ async function tv(browser, layout) {
     const afterBack = { hash: await page.evaluate(() => window.location.hash), popup: await page.locator(POPUP).count(), on: await onGroup() };
     await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(300);
-    const down = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
+    const down = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-dsTitleHost .actbar'));
     record(layout, 'Up from Play reaches the group, OK opens the popup (rows of mark, value, votes), Back closes only that, Down returns to the buttons',
         up && noPopupOnFocus && popupOk(shown, found, DEFAULT_ORDER) && afterBack.hash === hash && afterBack.popup === 0 && afterBack.on && down,
         { up, noPopupOnFocus, shown, afterBack, down });

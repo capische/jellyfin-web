@@ -1,5 +1,10 @@
 # Menus and action sheets
 
+**dsD (2026-11-04), built, not accepted:** title More and per-file history now use source `pmenu` and `hpop/hh/ol/li`
+with real painted anchors. File history keeps binding-specific data, scrolls at 80% viewport height and consumes key/remote Back
+before the list beneath it; focus returns to its original file icon. Monitor retains its menuitemcheckbox state. Card-menu
+registrations recognize native cells/episode rows without changing their action logic. [Details and CSS inventory](../dsD.md).
+
 **dsC (2026-11-04), built, not accepted:** shared action sheets now render the mockup’s own `.pmenu`/`.mi`/SVG markup through upstream’s API, including player settings and sublists. Phone sheets scroll; native motion classes, selected/refused rows, history, callback timing and Back/focus remain. The old chromeActionSheet decorator and action-sheet restyling are removed. [Scope, CSS delta and validation](../dsC.md).
 
 **dsA (2026-11-04), built, not accepted:** Top-bar, library view/sort/filter/settings menus draw native `.pmenu`/`.mi` markup; phone sheets add the original scrim and grab handle and scroll to the last entry. View settings draw switches; sort retains every option and its original handler, including explicit order rows. Existing More action sheets remain in their current command renderer for this slice. [Runtime adapters and validation](../dsA.md).

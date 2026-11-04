@@ -5,7 +5,7 @@ const TitlePoster: FC<{ src?: string; title: string; children?: React.ReactNode 
     const [failed, setFailed] = useState<string>();
     return <div className='card portraitCard jfmod-entryPoster'>
         <span className='material-icons cardImageIcon movie' aria-hidden='true' />
-        {src && failed !== src && <img src={src} alt={title} onError={() => setFailed(src)} />}
+        {src && failed !== src && <img src={src} alt={title} loading='lazy' onError={() => setFailed(src)} />}
         {children}
     </div>;
 };

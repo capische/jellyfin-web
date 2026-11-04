@@ -57,7 +57,7 @@ html.jfmod-chrome {
 
     .dialog:not([data-ds-dialog]),
     .MuiDialog-paper,
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
+    .MuiPopover-paper:not(.jfmod-infoPopover) {
         box-sizing: border-box;
         background: var(--jfmod-chrome-paper);
         background-image: none;
@@ -197,7 +197,7 @@ html.jfmod-chrome {
     }
 
     /* Menus and field lists share the nested corners, padding and current-entry mark. */
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
+    .MuiPopover-paper:not(.jfmod-infoPopover) {
         border-radius: 1em !important;
         min-width: 17.94em;
         max-height: 20em;
@@ -207,7 +207,7 @@ html.jfmod-chrome {
     }
 
     .MuiMenu-list,
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) > .MuiList-root { padding: 0.382em; }
+    .MuiPopover-paper:not(.jfmod-infoPopover) > .MuiList-root { padding: 0.382em; }
 
     .MuiMenuItem-root {
         box-sizing: border-box;
@@ -283,7 +283,7 @@ html.jfmod-chrome {
         opacity: 0.618;
     }
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) .MuiDivider-root {
+    .MuiPopover-paper:not(.jfmod-infoPopover) .MuiDivider-root {
         height: 1px;
         border: 0;
         background: var(--jfmod-chrome-hair);
@@ -527,8 +527,8 @@ html.jfmod-chrome {
 
 /* Phone menus are sheets, while a field's own option list stays anchored. */
 html.jfmod-chrome.layout-mobile {
-    .MuiMenu-paper:not(.MuiSelect-paper):not(.jfmod-trackMenuPaper),
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper) {
+    .MuiMenu-paper:not(.MuiSelect-paper),
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.MuiSelect-paper) {
         position: fixed !important;
         top: auto !important;
         left: 0 !important;
@@ -572,7 +572,7 @@ html.jfmod-chrome.layout-tv {
     --jfmod-chrome-enter: 0.146s;
     --jfmod-chrome-exit: 0.001s;
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.jfmod-trackMenuPaper) {
+    .MuiPopover-paper:not(.jfmod-infoPopover) {
         width: auto;
         max-height: 20em;
         font-size: 1em;

@@ -330,14 +330,14 @@ const shot = async (page, name) => {
 
 /** The ratings group's controls and states, read in the page. */
 const GROUP = '[data-jfmod-ratings-group]';
-const POPUP = '[data-jfmod-ratings-popup]';
-const SHOWN_GROUP = `${GROUP}:not(.jfmod-groupButton-standIn)`;
+const POPUP = '[data-jfmod-ratings-popup].open';
+const SHOWN_GROUP = `${GROUP}:not(.rgroup[aria-hidden=true])`;
 
 /** A detail page with its ratings group answered (not the reserved stand-in). */
 const groupDetail = async (page, url) => {
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     try {
-        await page.locator('.itemMiscInfo:visible').first().waitFor({ timeout: 30000 });
+        await page.locator('.jfmod-dsTitleHost .meta:visible').first().waitFor({ timeout: 30000 });
         await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 30000 });
     } catch (error) {
         if (SHOTS) await page.screenshot({ path: join(SHOTS, 'debug-detail.png') });
@@ -352,8 +352,8 @@ const entryUrl = () => `${ORIGIN}/web-mod/#/details?entryId=${ENTRY_ID}&serverId
 /** The row holding the group, as laid out: how many lines, what upstream shows beside it, the group's own box, Play's place. */
 const groupState = page => page.evaluate(selector => {
     const button = [...document.querySelectorAll(selector)].find(node => node.getClientRects().length);
-    const group = button?.closest('.jfmod-ratingsGroup');
-    const row = group?.closest('.itemMiscInfo');
+    const group = button?.closest('.rgwrap');
+    const row = group?.closest('.meta');
     if (!row) return null;
     const visible = node => node.getClientRects().length > 0 && getComputedStyle(node).display !== 'none';
     const items = [...row.children].filter(visible).map(node => node.getBoundingClientRect()).filter(rect => rect.width > 0).sort((a, b) => a.top - b.top);
@@ -366,16 +366,16 @@ const groupState = page => page.evaluate(selector => {
         } else { bottom = Math.max(bottom, rect.bottom); }
     }
     const shown = sel => [...row.querySelectorAll(sel)].some(visible);
-    const play = document.querySelector('.mainDetailButtons .btnPlay:not(.hide)')?.getBoundingClientRect();
+    const play = document.querySelector('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]')?.getBoundingClientRect();
     const box = group.getBoundingClientRect();
     return {
         lines, rowHeight: Math.round(row.getBoundingClientRect().height * 10) / 10, groupWidth: Math.round(box.width * 10) / 10,
-        groupLeft: Math.round(box.left * 10) / 10, stockStar: shown('.starRatingContainer'), stockTomato: shown('.mediaInfoCriticRating'),
-        entryStar: shown('.jfmod-entryStar'), standIn: button.classList.contains('jfmod-groupButton-standIn'),
+        groupLeft: Math.round(box.left * 10) / 10, stockStar: shown('.star'), stockTomato: shown('.critic'),
+        entryStar: shown('.star'), standIn: button.getAttribute('aria-hidden') === 'true',
         inline: [...button.querySelectorAll('[data-jfmod-rating]')].map(node => node.getAttribute('data-jfmod-rating')), text: button.innerText.replace(/\s+/g, ' ').trim(),
         focusStops: [...row.querySelectorAll('button, a, [tabindex]')].filter(node => node.tabIndex >= 0 && visible(node)).length,
         links: row.querySelectorAll('a').length, playMiddle: play ? Math.round((play.top + play.height / 2) * 10) / 10 : null,
-        focus: document.activeElement?.hasAttribute('data-jfmod-ratings-group') ? 'group' : (document.activeElement?.className ?? '').toString().slice(0, 60),
+        focus: document.activeElement?.hasAttribute('data-jfmod-ratings-group') ? 'group' : (document.activeElement?.getAttribute('data-ds-command') ?? document.activeElement?.className ?? '').toString().slice(0, 120),
         buttonHeight: button.getBoundingClientRect().height,
         // The group's width with all its ticked inline sources (Trakt too), as measured at its first paint: used to decide whether Trakt fits.
         fullWidth: Number(group.getAttribute('data-jfmod-full-width')) || null,
@@ -408,7 +408,7 @@ const popupState = async page => {
         const rect = node.getBoundingClientRect();
         const rows = [...node.querySelectorAll('[data-jfmod-rating]')];
         // An empty votes cell (no count) has no height.
-        const valueHeights = [...node.querySelectorAll('.jfmod-popValue, .jfmod-popVotes')].map(cell => cell.getBoundingClientRect().height).filter(Boolean);
+        const valueHeights = [...node.querySelectorAll('.rval, .rvt')].map(cell => cell.getBoundingClientRect().height).filter(Boolean);
         return {
             open: true, sources: rows.map(row => row.getAttribute('data-jfmod-rating')), text: copy.textContent.replace(/\s+/g, ' ').trim(),
             titles: rows.map(row => row.getAttribute('title') ?? ''), hiddenText: [...node.querySelectorAll('.jfmod-ratingsHidden')].map(hidden => hidden.textContent),
@@ -416,7 +416,7 @@ const popupState = async page => {
             intrinsic: Math.abs(rect.width - ([...rows[0].children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1,
             // One line per row: every value and votes cell one line high, nothing wider than the popup.
             oneLine: valueHeights.every(height => height < 2 * Math.min(...valueHeights)) && node.scrollWidth <= node.clientWidth + 1,
-            stale: rows.filter(row => row.classList.contains('jfmod-pop-stale')).map(row => row.getAttribute('data-jfmod-rating')),
+            stale: rows.filter(row => row.hasAttribute('data-ds-stale')).map(row => row.getAttribute('data-jfmod-rating')),
             inside: rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight
         };
     });
@@ -438,7 +438,7 @@ const headerShot = async (page, name) => {
     if (!SHOTS) return;
     mkdirSync(SHOTS, { recursive: true });
     const clip = await page.evaluate(() => {
-        const nodes = ['.nameContainer', '.itemMiscInfo', '.mainDetailButtons', '[data-jfmod-ratings-popup]', '.jfmod-entryActions']
+        const nodes = ['.jfmod-dsTitleHost .itemName', '.jfmod-dsTitleHost .meta', '.jfmod-dsTitleHost .actbar', '[data-jfmod-ratings-popup].open']
             .flatMap(selector => [...document.querySelectorAll(selector)]).filter(node => node.getClientRects().length);
         // Only what is in the viewport and has content (an empty upstream row has no width).
         const rects = nodes.map(node => node.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight);
@@ -490,7 +490,7 @@ const groupRun = async () => {
                     await page.goto(`${ORIGIN}/web-mod/#/home`, { waitUntil: 'domcontentloaded' });
                     await page.waitForTimeout(500);
                     await page.goto(nativeUrl(id), { waitUntil: 'domcontentloaded' });
-                    await page.waitForFunction(() => document.activeElement?.classList.contains('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
+                    await page.waitForFunction(() => document.activeElement?.getAttribute('data-ds-command')?.split(' ').includes('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
                     await page.waitForTimeout(300);
                     const early = await groupState(page);
                     await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => undefined);
@@ -567,14 +567,17 @@ const groupRun = async () => {
                     // group focused.
                     const refill = await page.evaluate(() => new Promise(resolve => {
                         // The page on screen (the app keeps earlier pages in the document, hidden).
-                        const row = [...document.querySelectorAll('.detailRibbon .itemMiscInfo-primary')].find(node => node.getClientRects().length);
+                        const row = [...document.querySelectorAll('.jfmod-dsTitleHost .meta')].find(node => node.getClientRects().length);
                         const mount = row.querySelector('.jfmod-ratingsMount');
-                        const copy = row.cloneNode(true);
-                        copy.querySelector('.jfmod-ratingsMount')?.remove();
-                        const index = [...row.children].indexOf(mount);
-                        row.innerHTML = copy.innerHTML;
-                        requestAnimationFrame(() => resolve({ back: row.contains(mount), index, indexAfter: [...row.children].indexOf(mount),
-                            focused: !!document.activeElement?.hasAttribute('data-jfmod-ratings-group') }));
+                        const source = row.closest('.page').querySelector('.detailRibbon .itemMiscInfo-primary');
+                        const index = [...row.children].findIndex(child => child.contains(mount));
+                        // Refill the controller's row; React must keep the painted group and its focused button alive.
+                        source.innerHTML = source.innerHTML;
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            const painted = document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .meta');
+                            resolve({ back: painted.contains(mount), index, indexAfter: [...painted.children].findIndex(child => child.contains(mount)),
+                                focused: !!document.activeElement?.hasAttribute('data-jfmod-ratings-group') });
+                        }));
                     }));
                     const afterRefill = await groupState(page);
                     check(`${layoutName} ${name}: an upstream refill of the row puts the group back in its place, focused, same width, one line`,
@@ -585,7 +588,7 @@ const groupRun = async () => {
                     await page.keyboard.press('ArrowDown');
                     await page.waitForTimeout(300);
                     const down = await groupState(page);
-                    const inButtons = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
+                    const inButtons = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-dsTitleHost .actbar'));
                     check(`${layoutName} ${name}: Down returns to the buttons; Play never moved`,
                         inButtons && down.playMiddle === playBefore, { inButtons, playBefore, down });
                     if (name === 'movie') {
@@ -599,7 +602,7 @@ const groupRun = async () => {
                             location.hash = url.slice(url.indexOf('#'));
                         }, nativeUrl(id));
                         await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => undefined);
-                        await page.waitForFunction(() => document.activeElement?.classList.contains('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
+                        await page.waitForFunction(() => document.activeElement?.getAttribute('data-ds-command')?.split(' ').includes('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
                         await page.waitForTimeout(500);
                         await page.keyboard.press('ArrowUp');
                         await page.waitForTimeout(250);
@@ -633,7 +636,7 @@ const groupRun = async () => {
                     await page.keyboard.press('Escape');
                     await page.locator(POPUP).waitFor({ state: 'detached', timeout: 1000 });
                     check(`desktop ${name}: keyboard focus opens it, Escape closes it`, byKeyboard && !(await popupState(page)).open, { byKeyboard });
-                    await page.locator('.nameContainer:visible').first().click();
+                    await page.locator('.jfmod-dsTitleHost .itemName:visible').first().click();
                 } else {
                     await page.locator(SHOWN_GROUP).first().tap();
                     await page.locator(POPUP).waitFor({ timeout: 3000 }).catch(() => undefined);
@@ -641,7 +644,7 @@ const groupRun = async () => {
                     if (name === 'movie') await headerShot(page, 'movie-mobile-tap');
                     check(`mobile ${name}: a tap opens the popup (rows only, on screen, no row wrapping); the group is a full touch target`,
                         popupOk(pop, state, expectedPopup, viewportWidth) && state.buttonHeight >= 40, { pop, fullWidth: state.fullWidth, height: state.buttonHeight });
-                    await page.locator('.nameContainer:visible').first().tap();
+                    await page.locator('.jfmod-dsTitleHost .itemName:visible').first().tap();
                     await page.waitForTimeout(300);
                     check(`mobile ${name}: a tap elsewhere closes it`, !(await popupState(page)).open);
                 }
@@ -895,7 +898,7 @@ const reviewFixesRun = async () => {
                 location.hash = url.slice(url.indexOf('#'));
             }, nativeUrl(MOVIE_ID));
             await page.locator(SHOWN_GROUP).first().waitFor({ state: 'attached', timeout: 20000 }).catch(() => undefined);
-            await page.waitForFunction(() => document.activeElement?.classList.contains('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
+            await page.waitForFunction(() => document.activeElement?.getAttribute('data-ds-command')?.split(' ').includes('btnPlay'), null, { timeout: 15000 }).catch(() => undefined);
             await page.waitForTimeout(500);
             await page.keyboard.press('ArrowUp');
             await page.waitForTimeout(300);
@@ -909,7 +912,7 @@ const reviewFixesRun = async () => {
             await page.waitForTimeout(800);
             const after = await groupState(page);
             const groupShown = await page.locator(SHOWN_GROUP).count();
-            const onButtons = await page.evaluate(() => !!document.activeElement?.closest('.mainDetailButtons'));
+            const onButtons = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-dsTitleHost .actbar'));
             if (CHECKS) {
                 check('review 10/1 tv1080: every source unticked with the group focused — the group stays visible and focused; Down then leaves it and it goes',
                     before?.focus === 'group' && during?.focus === 'group' && !during.standIn && focus === 'BUTTON' && onButtons
@@ -932,7 +935,7 @@ const reviewFixesRun = async () => {
                 return route.continue();
             });
             await page.goto(nativeUrl(SERIES_ID), { waitUntil: 'domcontentloaded' });
-            await page.locator('.itemMiscInfo:visible').first().waitFor({ timeout: 30000 });
+            await page.locator('.jfmod-dsTitleHost .meta:visible').first().waitFor({ timeout: 30000 });
             await page.waitForTimeout(3000);
             const empty = await page.locator(SHOWN_GROUP).count();
             await page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 70000 }).catch(() => undefined);
@@ -971,7 +974,7 @@ const reviewFixesRun = async () => {
             await page.evaluate(url => {
                 location.hash = url.slice(url.indexOf('#'));
             }, nativeUrl(MOVIE_ID));
-            await page.locator('.itemMiscInfo:visible').first().waitFor({ timeout: 30000 });
+            await page.locator('.jfmod-dsTitleHost .meta:visible').first().waitFor({ timeout: 30000 });
             await page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
             const late = await groupState(page);
             if (CHECKS) {
@@ -1042,11 +1045,11 @@ const preferencesState = page => page.evaluate(() => {
 
 /** Whether the detail page's ratings group shows its values, and whether it still holds a blank reserved space. */
 const groupPresence = page => page.evaluate(() => {
-    const group = [...document.querySelectorAll('.jfmod-ratingsGroup')].find(node => node.closest('.page:not(.hide)') || node.getClientRects().length);
+    const group = [...document.querySelectorAll('.rgwrap')].find(node => node.closest('.page:not(.hide)') || node.getClientRects().length);
     const shown = group && getComputedStyle(group).display !== 'none' && group.getClientRects().length > 0;
     const button = group?.querySelector('[data-jfmod-ratings-group]');
-    return { shown: !!shown, standIn: !!button?.classList.contains('jfmod-groupButton-standIn'),
-        stockStar: [...document.querySelectorAll('.itemMiscInfo-primary .starRatingContainer')].some(star => star.getClientRects().length > 0) };
+    return { shown: !!shown, standIn: button?.getAttribute('aria-hidden') === 'true',
+        stockStar: [...document.querySelectorAll('.jfmod-dsTitleHost .meta .star')].some(star => star.getClientRects().length > 0) };
 });
 
 /**
@@ -1062,7 +1065,7 @@ const healthBoundRun = async () => {
         await hang.page.evaluate(url => {
             location.hash = url.slice(url.indexOf('#'));
         }, nativeUrl(MOVIE_ID));
-        await hang.page.locator('.itemMiscInfo-primary:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
+        await hang.page.locator('.jfmod-dsTitleHost .meta:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
         await hang.page.waitForTimeout(6000);
         const detail = await groupPresence(hang.page);
         if (CHECKS) {
@@ -1089,7 +1092,7 @@ const healthBoundRun = async () => {
     }
     const lateDetail = await coldVisit(8000, nativeUrl(MOVIE_ID).slice(nativeUrl(MOVIE_ID).indexOf('#')));
     try {
-        await lateDetail.page.locator('.itemMiscInfo-primary:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
+        await lateDetail.page.locator('.jfmod-dsTitleHost .meta:visible').first().waitFor({ timeout: 30000 }).catch(() => undefined);
         await lateDetail.page.waitForTimeout(4500);
         const early = await groupPresence(lateDetail.page);
         await lateDetail.page.locator(SHOWN_GROUP).first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);

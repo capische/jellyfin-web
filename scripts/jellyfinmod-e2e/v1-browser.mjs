@@ -162,7 +162,7 @@ async function chooseControl(page, layout, exact) {
 
 async function checkDeleteWarning(page, layout, label, count) {
     // Stock Delete media: the warning is inside upstream's own confirmation; Cancel, nothing deleted.
-    await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
+    await page.locator('[data-ds-command~=btnMoreCommands]:visible').first().click({ timeout: 5000 });
     await page.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="delete"]').first().click({ timeout: 5000 });
     const warning = page.locator('.dialog .jfmod-deleteWarning');
     await warning.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
@@ -175,7 +175,7 @@ async function checkDeleteWarning(page, layout, label, count) {
 
 /** Opens the More menu and closes it without choosing anything, then opens Remove: Remove's dialog has no Delete warning. */
 async function checkRemoveHasNoDeleteWarning(page, layout) {
-    await page.locator('.btnMoreCommands:visible').first().click({ timeout: 5000 });
+    await page.locator('[data-ds-command~=btnMoreCommands]:visible').first().click({ timeout: 5000 });
     await page.locator(':is(.actionSheet, [data-ds-actionsheet])').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     // Desktop Back is the browser's Back (stock maps Escape to Back only in the TV layout).
     await page.goBack();
@@ -218,7 +218,7 @@ async function checkPlayback(page, layout, want) {
         }
     };
     page.on('request', onRequest);
-    await page.locator('.btnPlay:visible, .detailButton-primary:visible').first().click({ timeout: 5000 }).catch(() => {});
+    await page.locator('[data-ds-command~=btnPlay]:visible, .detailButton-primary:visible').first().click({ timeout: 5000 }).catch(() => {});
     const started = await page.waitForFunction(() => {
         const video = document.querySelector('video');
         return !!video && video.currentTime > 0.5;

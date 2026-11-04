@@ -15,7 +15,7 @@ import EntryEpisodeDetails from '../components/EntryEpisodeDetails';
 import EntrySeasonDetails from '../components/EntrySeasonDetails';
 import { getTmdbImage, preconnectTmdbImages } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
-import { titlePage } from './titlePage';
+import { titlePage, clearTitlePage } from './titlePage';
 
 /** Owns the file-less lifecycle before the native detail controller binds native-only actions. */
 export default function initializeEntryDetails(view, params) {
@@ -29,6 +29,7 @@ export default function initializeEntryDetails(view, params) {
     let focusOwnership;
 
     const hide = () => {
+        clearTitlePage(view);
         generation++;
         focusOwnership?.release();
         focusOwnership = undefined;

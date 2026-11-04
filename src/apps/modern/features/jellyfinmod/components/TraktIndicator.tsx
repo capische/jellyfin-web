@@ -5,7 +5,6 @@ import React, { type FC } from 'react';
 import { getTraktItemStatus } from '../api/traktApi';
 import { TRAKT_CAPABILITY, TRAKT_STALE_MS, traktLabel } from '../constants/trakt';
 import { usePluginHealthSummary } from '../hooks/useAcquisition';
-import './traktIndicator.scss';
 
 interface TraktIndicatorProps {
     api: Api;
@@ -37,10 +36,10 @@ const TraktIndicator: FC<TraktIndicatorProps> = ({ api, userId, itemId }) => {
     const synced = status.data.lastSyncedAt ? new Date(status.data.lastSyncedAt) : null;
     const syncedOn = synced && !Number.isNaN(synced.getTime()) ? synced.toLocaleDateString() : null;
     const label = traktLabel(syncedOn);
-    return <p className='jfmod-traktIndicator' role='note' title={label} aria-label={label}>
-        <span className='jfmod-traktIndicator-chip'>Trakt</span>{' '}
+    return <div className='trakt' role='note' title={label} aria-label={label}>
+        <span className='chip'>Trakt</span>{' '}
         <span>Watch history synced{syncedOn && synced ? <>{' · '}<time dateTime={synced.toISOString()}>{syncedOn}</time></> : null}</span>
-    </p>;
+    </div>;
 };
 
 export default TraktIndicator;

@@ -749,7 +749,7 @@ async function play() {
         const entry = await entryByTmdb(page, tmdbId);
         const itemId = entry.jellyfinItemId;
         await page.evaluate(id => { location.hash = '#/details?id=' + id; }, itemId);
-        const playButton = page.locator('button.btnPlay:visible, button[data-action="resume"]:visible, button[data-action="play"]:visible').first();
+        const playButton = page.locator('button[data-ds-command~=btnPlay]:visible, button[data-action="resume"]:visible, button[data-action="play"]:visible').first();
         await playButton.waitFor({ state: 'visible', timeout: 30000 });
         await playButton.click();
         await page.waitForFunction(() => { const video = document.querySelector('video'); return video && video.currentTime > 2; }, undefined, { timeout: 60000 });

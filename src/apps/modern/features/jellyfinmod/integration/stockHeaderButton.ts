@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 
 import focusManager from 'components/focusManager';
+import { commandOpener } from './commandOpener';
 
 /**
  * A button in upstream's detail header row (`.mainDetailButtons`), made exactly as upstream makes its own: a
@@ -43,7 +44,8 @@ const insert = (row: Element, button: HTMLButtonElement, before: string[]) => {
 };
 
 /** Focus goes back to the header button after something it opened closes, unless the viewer has moved on (UX §13). */
-export const restoreFocusTo = (opener: HTMLElement) => {
+export const restoreFocusTo = (source: HTMLElement) => {
+    const opener = commandOpener(source) as HTMLElement;
     const active = document.activeElement;
     if (!opener.isConnected || (active && active !== document.body && document.body.contains(active))) return;
     focusManager.focus(opener);
@@ -64,11 +66,19 @@ export const useStockHeaderButton = (view: HTMLElement, { enabled, icon, title, 
         if (!button) return;
         button.title = title;
         button.setAttribute('aria-label', title);
+        if (!insert(row, button, order ? order.split(' ') : [])) return;
         const click = () => onClickRef.current(button);
         button.addEventListener('click', click);
-        if (!insert(row, button, order ? order.split(' ') : [])) return;
+        const designCommand = (event: Event) => {
+            const command = event as CustomEvent<{ source: HTMLElement; opener: HTMLButtonElement }>;
+            if (command.detail.source !== button) return;
+            event.preventDefault();
+            onClickRef.current(command.detail.opener);
+        };
+        view.addEventListener('ds-title-command', designCommand);
         return () => {
             button.removeEventListener('click', click);
+            view.removeEventListener('ds-title-command', designCommand);
             button.remove();
         };
     }, [view, enabled, icon, title, className, order]);

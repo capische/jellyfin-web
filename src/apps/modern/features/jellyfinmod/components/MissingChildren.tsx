@@ -449,7 +449,7 @@ const MissingEpisodeRow: FC<EpisodeRowProps & { href: string }> = ({ episode, ra
                 <div className='listItemBodyText'><bdi><a className='jfmod-missingRowLink' href={href}>
                     {episode.episodeNumber}. {episode.title}</a></bdi></div>}
             {meta.length > 0 && <div className='secondary listItemBodyText jfmod-missingMeta'>{meta}</div>}
-            {!layoutManager.mobile && episode.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{episode.overview}</bdi></div>}
+            {episode.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{episode.overview}</bdi></div>}
         </div>
         {mark && <div className='jfmod-missingRowEnd'>
             <FileStateMark state={mark} airDate={episode.airDate} variant='row' download={mark === 'missing' ? download : null} />

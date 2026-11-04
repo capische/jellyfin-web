@@ -153,7 +153,7 @@ function sampler() {
             if (!name || card.closest('.jfmod-releaseDialog')) continue;
             out['card:' + name] = markOf(card).state;
         }
-        const block = first(document, '.jfmod-dlblock');
+        const block = first(document, '.dlb');
         if (block) out.block = block.getAttribute('data-jfmod-state');
         for (const row of document.querySelectorAll('.jfmod-queueTableRow, .jfmod-queueRow')) {
             if (!visible(row)) continue;
@@ -662,7 +662,7 @@ async function stepA5() {
     await until(async () => !!(await now(page, card)), { timeout: 20000, every: 200, label: 'the Season 2 card' });
     await page.waitForTimeout(1500);
     const cardBefore = await now(page, card);
-    const opener = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first();
+    const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     const t0 = await pickerGrab(page, opener, 'season:2', PACK2);
     await closePicker(page);
     const tClosed = Date.now();

@@ -449,7 +449,7 @@ const nowPlaying = async (page, expectedId) => {
 
 const playFromDetails = async (page, id) => {
     await page.evaluate(itemId => { location.hash = '#/details?id=' + itemId; }, id);
-    const play = page.locator('.mainDetailButtons .btnPlay:not(.hide)').first();
+    const play = page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay]').first();
     await play.waitFor({ state: 'visible', timeout: 30000 });
     await page.waitForTimeout(1200);
     await play.click();

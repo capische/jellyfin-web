@@ -24,10 +24,8 @@ import '../components/modFont.scss';
 import '../components/lightGlass.scss';
 import '../components/cardDesign.scss';
 import './sharedChrome.scss';
-import './pickerChrome.scss';
 import './motionChrome.scss';
 import './chromeFont.scss';
-import './titlePages.scss';
 import { useChromeScope } from './useChromeScope';
 import { Bar } from '../design/Bar';
 

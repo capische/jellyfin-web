@@ -1,11 +1,12 @@
 import React, { type FC, type ReactNode, useContext } from 'react';
 import { DesignContext } from './Root';
+import type { IconName } from './Icon';
 import { Poster } from './Poster';
 
 /** ds.js head/ground: phone puts the pill and copy outside the centred poster/name block. */
-export const Head: FC<{ art?: string; poster?: string; title: ReactNode; lines: ReactNode; pill: ReactNode; children: ReactNode; wide?: boolean }> = ({ art, poster, title, lines, pill, children, wide }) => {
+export const Head: FC<{ art?: string; poster?: string; title: ReactNode; lines: ReactNode; pill: ReactNode; children: ReactNode; wide?: boolean; icon?: IconName }> = ({ art, poster, title, lines, pill, children, wide, icon }) => {
     const phone = useContext(DesignContext) === 'phone';
-    const image = <div className={'poster' + (wide ? ' wide' : '')}><Poster src={poster} icon={wide ? 'tv' : 'movie'} /></div>;
+    const image = <div className={'poster' + (wide ? ' wide' : '')}><Poster src={poster} icon={icon ?? (wide ? 'tv' : 'movie')} /></div>;
     const name = <><h1 className='itemName'>{title}</h1>{lines}</>;
     return <div className='ground onart'>
         <div className='art' style={art ? { backgroundImage: `url("${art}")` } : undefined} /><div className='fade' />

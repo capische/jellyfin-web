@@ -1,5 +1,9 @@
 # Shared chrome
 
+**dsD (2026-11-04), built, not accepted:** title/picker restyling and obsolete file-history/picker exclusions are
+removed; source markup owns those surfaces. Shared chrome still serves unported custom screens. Dashboard, mod admin settings
+and wizard retain their current markup/presentation. [Removed files and complete scope](../dsD.md).
+
 **dsC (2026-11-04), built, not accepted:** shared action sheets, confirmations/prompts, removal and retention-window dialogs, fields, switches, buttons and spinner now draw native design components. Their replaced rd2 overrides are removed/excluded; custom page/dialog content and admin keep the existing rules. [Complete scope, CSS delta and verification](../dsC.md).
 
 **dsB (2026-11-04), built, not accepted:** Home, Search, TMDB browse and sign-in now own their mockup markup under `.jfds`. Their replaced restyling is removed. Native controls reuse the source CSS; lifecycle/command hosts and unmodeled actions remain. [Full scope, CSS inventory and validation](../dsB.md).

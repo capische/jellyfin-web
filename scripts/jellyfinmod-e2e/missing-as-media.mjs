@@ -354,19 +354,19 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
 
         // The stub's own page.
         await go(page, `#/details?id=${stub.Id}`);
-        await page.waitForSelector('.page:not(.hide) .mainDetailButtons', { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .actbar', { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(2500);
         await page.evaluate(`window.isShown = ${visible}`);
         const header = await page.evaluate(() => {
             const view = document.querySelector('.page:not(.hide)');
-            const buttons = view?.querySelector('.mainDetailButtons');
+            const buttons = view?.querySelector('.jfmod-dsTitleHost .actbar');
             return {
                 placeholder: !!view?.hasAttribute('data-jfmod-placeholder'),
-                play: [...(buttons?.querySelectorAll('.btnPlay, .btnReplay') ?? [])].some(window.isShown),
+                play: [...(buttons?.querySelectorAll('[data-ds-command~=btnPlay], .btnReplay') ?? [])].some(window.isShown),
                 endsAt: [...(view?.querySelectorAll('.itemMiscInfo .endsAt') ?? [])].some(window.isShown),
-                played: window.isShown(buttons?.querySelector('.btnPlaystate')),
-                favourite: window.isShown(buttons?.querySelector('.btnUserRating')),
-                getRelease: window.isShown(buttons?.querySelector('.jfmod-getRelease')),
+                played: window.isShown(buttons?.querySelector('[data-ds-command~=btnPlaystate]')),
+                favourite: window.isShown(buttons?.querySelector('[data-ds-command~=btnUserRating]')),
+                getRelease: window.isShown(buttons?.querySelector('[data-ds-command~=jfmod-getRelease]')),
                 stubCards: view?.querySelectorAll(":is(.card:not(.dm), .cell)[data-type=\"Episode\"] [data-jfmod-stubmark]").length ?? 0,
                 stubCardsPlay: [...(view?.querySelectorAll(":is(.card:not(.dm), .cell)[data-jfmod-empty] :is(.cardOverlayButton, .pi, .disc)[data-action=\"play\"]") ?? [])].some(window.isShown)
             };

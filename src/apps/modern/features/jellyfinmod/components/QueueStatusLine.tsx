@@ -4,9 +4,9 @@ import { describeDownload, downloadProgress, type DownloadProgress, packProblem,
 import { packEpisodeView, packHolds, useQueueRowFor, useQueueVisible } from '../hooks/useQueue';
 import { FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
-import DownloadStateMark, { ringLink } from './DownloadStateMark';
+import { ringLink } from './DownloadStateMark';
 
-import './queue.scss';
+import { DownloadMark } from '../design/StateMark';
 
 interface QueueStatusLineProps {
     entryId: string;
@@ -60,13 +60,13 @@ const QueueStatusLine: FC<QueueStatusLineProps> = ({ entryId, episodeId, state, 
     } else {
         line = { progress: describeDownload('queued', null, false), text: 'Grabbed · waiting for the download client' };
     }
-    return <p className='jfmod-queueStatusLine'>
-        {line.progress && <DownloadStateMark progress={line.progress} size='row' link={ringLink([row], line.progress)} />}
-        <span>
+    return <div className='dline' data-jfmod-queue-status=''>
+        {line.progress && <DownloadMark progress={line.progress} size='row' link={ringLink([row], line.progress)} />}
+        <span className='figs'>
             {line.text}
-            {visible && <>{' · '}<a href={'#' + QUEUE_ROUTE}>View queue</a></>}
+            {visible && <>{' · '}<a className='lnk focusable' href={'#' + QUEUE_ROUTE}>View queue</a></>}
         </span>
-    </p>;
+    </div>;
 };
 
 export default QueueStatusLine;

@@ -96,7 +96,7 @@ const expectedScope = episodes => {
 };
 
 async function openPicker(page, layout) {
-    const button = page.locator('.jfmod-getRelease:visible').first();
+    const button = page.locator('[data-ds-command~=jfmod-getRelease]:visible').first();
     await button.waitFor({ state: 'visible', timeout: 30000 });
     if (LAYOUTS[layout].tv) {
         await button.focus();
@@ -192,7 +192,7 @@ async function run(browser, layout) {
         await page.waitForTimeout(4000);
         record(layout, 'a second visit to the series page asks for nothing', loads.length === 1, loads);
 
-        if (!await page.locator('.jfmod-getRelease:visible').count()) {
+        if (!await page.locator('[data-ds-command~=jfmod-getRelease]:visible').count()) {
             record(layout, 'the picker shares the load and offers seasons only', 'NOT VERIFIED', 'no Get a Release on this page (not an administrator, or no release search)');
             return;
         }

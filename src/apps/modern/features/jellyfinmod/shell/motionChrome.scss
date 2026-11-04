@@ -50,21 +50,21 @@ html.jfmod-chrome {
         animation: jfmod-chrome-out var(--jfmod-chrome-exit) $ease both !important;
     }
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory) {
+    .MuiPopover-paper:not(.jfmod-infoPopover) {
         transform: none !important;
         transition: opacity var(--jfmod-chrome-enter) $ease, transform var(--jfmod-chrome-enter) $ease !important;
     }
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] {
+    .MuiPopover-paper:not(.jfmod-infoPopover)[style*='opacity: 0'] {
         transform: scale(0.964) !important;
         transition-duration: var(--jfmod-chrome-exit) !important;
     }
 }
 
 html.jfmod-chrome.layout-mobile {
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper) { transition-duration: var(--jfmod-chrome-sheet-in) !important; }
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.MuiSelect-paper) { transition-duration: var(--jfmod-chrome-sheet-in) !important; }
 
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory):not(.MuiSelect-paper):not(.jfmod-trackMenuPaper)[style*='opacity: 0'] {
+    .MuiPopover-paper:not(.jfmod-infoPopover):not(.MuiSelect-paper)[style*='opacity: 0'] {
         transform: translateY(100%) !important;
         transition-duration: var(--jfmod-chrome-sheet-out) !important;
     }
@@ -78,7 +78,7 @@ html.jfmod-chrome.layout-tv {
     .dialog:not([data-ds-dialog])[style*='scaledown'],
     .dialog:not([data-ds-dialog])[style*='slidedown'],
     .dialog:not([data-ds-dialog])[style*='fadeout'] { animation-name: jfmod-chrome-fade-out !important; }
-    .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] { transform: none !important; }
+    .MuiPopover-paper:not(.jfmod-infoPopover)[style*='opacity: 0'] { transform: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -91,8 +91,8 @@ html.jfmod-chrome.layout-tv {
         .dialog:not([data-ds-dialog])[style*='slidedown'],
         .dialog:not([data-ds-dialog])[style*='fadeout'] { animation-name: jfmod-chrome-fade-out !important; }
 
-        .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory),
-        .MuiPopover-paper:not(.jfmod-infoPopover):not(.jfmod-fileHistory)[style*='opacity: 0'] {
+        .MuiPopover-paper:not(.jfmod-infoPopover),
+        .MuiPopover-paper:not(.jfmod-infoPopover)[style*='opacity: 0'] {
             transform: none !important;
             transition-property: opacity !important;
         }
