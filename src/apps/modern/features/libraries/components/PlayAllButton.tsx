@@ -1,3 +1,4 @@
+import type { ActionRenderer } from '../../jellyfinmod/design/Action';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import React, { FC, useCallback } from 'react';
 import Button from '@mui/material/Button';
@@ -12,6 +13,7 @@ import { LibraryTab } from 'types/libraryTab';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 interface PlayAllButtonProps {
+    renderButton?: ActionRenderer;
     item: ItemDto | undefined
     items: ItemDto[]
     viewType: LibraryTab
@@ -23,6 +25,7 @@ interface PlayAllButtonProps {
 }
 
 const PlayAllButton: FC<PlayAllButtonProps> = ({
+    renderButton,
     item,
     items,
     viewType,
@@ -68,7 +71,7 @@ const PlayAllButton: FC<PlayAllButtonProps> = ({
     }, [collectionType, hasFilters, item, items, libraryViewSettings, viewType]);
 
     return (
-        <Button
+        renderButton ? renderButton({ onClick: play, disabled: disabled || isPending || totalRecordCount === 0, title: globalize.translate('HeaderPlayAll') }) : (<Button
             title={globalize.translate('HeaderPlayAll')}
             startIcon={isTextVisible ? <PlayArrow /> : undefined}
             onClick={play}
@@ -79,7 +82,7 @@ const PlayAllButton: FC<PlayAllButtonProps> = ({
             ) : (
                 <PlayArrow />
             )}
-        </Button>
+        </Button>)
     );
 };
 

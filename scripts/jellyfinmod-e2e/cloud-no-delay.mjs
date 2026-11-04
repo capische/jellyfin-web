@@ -89,16 +89,16 @@ const STAMPS = () => {
     const tick = () => { T.frame++; requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
     const stamp = () => ({ t: performance.now(), f: T.frame });
-    const cloudSel = '.jfmod-cardGet, .jfmod-cardGetCentre';
+    const cloudSel = ":is(.jfmod-cardGet, [data-ds-action=\"get\"]), :is(.jfmod-cardGetCentre, .disc[data-ds-action=\"get\"])";
     const scanCard = card => {
-        if (!T.drawn.has(card) && card.querySelector('.cardScalable')) T.drawn.set(card, stamp());
+        if (!T.drawn.has(card) && card.querySelector(":is(.cardScalable, .post)")) T.drawn.set(card, stamp());
         if (!T.cloud.has(card) && [...card.querySelectorAll(cloudSel)].some(button => !button.hidden)) T.cloud.set(card, stamp());
     };
     const scan = node => {
         if (!(node instanceof Element)) return;
-        const card = node.closest('.card');
+        const card = node.closest(":is(.card:not(.dm), .cell)");
         if (card) scanCard(card);
-        node.querySelectorAll('.card').forEach(scanCard);
+        node.querySelectorAll(":is(.card:not(.dm), .cell)").forEach(scanCard);
         if (node.matches('.actionSheet') || node.querySelector('.actionSheet')) {
             const sheet = node.matches('.actionSheet') ? node : node.querySelector('.actionSheet');
             T.sheets.push({ ...stamp(), getRelease: !!sheet.querySelector('.actionSheetMenuItem[data-id="jfmod-more-getRelease"]') });
@@ -111,7 +111,7 @@ const STAMPS = () => {
         }
     }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'data-jfmod-nofile', 'data-jfmod-empty'] });
     document.addEventListener('pointerover', event => {
-        const card = event.target.closest?.('.card');
+        const card = event.target.closest?.(":is(.card:not(.dm), .cell)");
         if (card && !T.hover.has(card)) T.hover.set(card, stamp());
     }, true);
     // A navigation's header: polled every frame from the moment it is asked for, so a reused view is measured as shown.
@@ -203,10 +203,10 @@ async function open(page, hash, pass, tv) {
 /** What the stamps say of a card, and how its overlay looks now. */
 const cardStamps = (page, handle) => page.evaluate(card => {
     const T = window.jfmodStamps;
-    const button = [...card.querySelectorAll('.jfmod-cardGet, .jfmod-cardGetCentre')].find(node => !node.hidden);
-    const play = card.querySelector('.cardOverlayButton[data-action="play"], .cardOverlayButton[data-action="resume"]');
+    const button = [...card.querySelectorAll(":is(.jfmod-cardGet, [data-ds-action=\"get\"]), :is(.jfmod-cardGetCentre, .disc[data-ds-action=\"get\"])")].find(node => !node.hidden);
+    const play = card.querySelector(":is(.cardOverlayButton, .pi, .disc)[data-action=\"play\"], :is(.cardOverlayButton, .pi, .disc)[data-action=\"resume\"]");
     return { drawn: T.drawn.get(card) ?? null, cloud: T.cloud.get(card) ?? null, hover: T.hover.get(card) ?? null,
-        centre: !!button?.classList.contains('cardOverlayFab-primary') || !!button?.classList.contains('jfmod-cardGetCentre'),
+        centre: !!button?.classList.contains('disc') || !!button?.classList.contains('cardOverlayFab-primary') || !!button?.classList.contains('jfmod-cardGetCentre'),
         playPresent: !!play, playShown: !!play && getComputedStyle(play).display !== 'none',
         empty: card.hasAttribute('data-jfmod-empty'), noFile: card.hasAttribute('data-jfmod-nofile') };
 }, handle);
@@ -372,23 +372,23 @@ async function runLayout(browser, layout, user) {
         for (const pass of passes) {
             if (layout === 'desktop') {
                 const cloud = admin ? undefined : false;
-                if (f.files) await cardPlace(page, label, pass, `${f.files.name}'s season card (files)`, details(f.files.id), '#listChildrenCollapsible .card[data-type="Season"]', { cloud, centre: false, play: true });
-                if (f.noFileSeasons) await cardPlace(page, label, pass, `${f.noFileSeasons.name}'s season card (nothing on disk)`, details(f.noFileSeasons.id), '#listChildrenCollapsible .card[data-type="Season"]', { cloud, centre: true, play: false });
+                if (f.files) await cardPlace(page, label, pass, `${f.files.name}'s season card (files)`, details(f.files.id), "#listChildrenCollapsible :is(.card:not(.dm), .cell)[data-type=\"Season\"]", { cloud, centre: false, play: true });
+                if (f.noFileSeasons) await cardPlace(page, label, pass, `${f.noFileSeasons.name}'s season card (nothing on disk)`, details(f.noFileSeasons.id), "#listChildrenCollapsible :is(.card:not(.dm), .cell)[data-type=\"Season\"]", { cloud, centre: true, play: false });
                 if (f.missing && admin) await cardPlace(page, label, pass, `${f.missing.name}'s missing-season card (the mod's)`, details(f.missing.id), '#listChildrenCollapsible .jfmod-missingCard', { centre: true });
-                if (f.some && shows) await cardPlace(page, label, pass, `Shows grid: ${f.some.name} (some files)`, showsGrid, `.card[data-id="${f.some.id}"]`, { cloud, centre: false, play: true });
-                if (f.empty && shows) await cardPlace(page, label, pass, `Shows grid: ${f.empty.name} (no files)`, showsGrid, `.card[data-id="${f.empty.id}"]`, { cloud, centre: true, play: false });
-                if (movies) await cardPlace(page, label, pass, 'Movies grid: a movie', `#/movies?topParentId=${movies}&collectionType=movies&tab=0`, '.card[data-type="Movie"]', { cloud, centre: false, play: true });
-                await cardPlace(page, label, pass, 'Home: an episode card', '#/home', '.card[data-type="Episode"]', { cloud, centre: false, play: true });
-                if (f.some) await cardPlace(page, label, pass, `search: ${f.some.name}`, `#/search?query=${encodeURIComponent(f.some.name)}`, `.card[data-id="${f.some.id}"]`, { cloud, centre: false, play: true });
-                if (f.empty) await cardPlace(page, label, pass, `search: ${f.empty.name} (no files)`, `#/search?query=${encodeURIComponent(f.empty.name)}`, `.card[data-id="${f.empty.id}"]`, { cloud, centre: true, play: false });
+                if (f.some && shows) await cardPlace(page, label, pass, `Shows grid: ${f.some.name} (some files)`, showsGrid, `:is(.card:not(.dm), .cell)[data-id="${f.some.id}"]`, { cloud, centre: false, play: true });
+                if (f.empty && shows) await cardPlace(page, label, pass, `Shows grid: ${f.empty.name} (no files)`, showsGrid, `:is(.card:not(.dm), .cell)[data-id="${f.empty.id}"]`, { cloud, centre: true, play: false });
+                if (movies) await cardPlace(page, label, pass, 'Movies grid: a movie', `#/movies?topParentId=${movies}&collectionType=movies&tab=0`, ":is(.card:not(.dm), .cell)[data-type=\"Movie\"]", { cloud, centre: false, play: true });
+                await cardPlace(page, label, pass, 'Home: an episode card', '#/home', ":is(.card:not(.dm), .cell)[data-type=\"Episode\"]", { cloud, centre: false, play: true });
+                if (f.some) await cardPlace(page, label, pass, `search: ${f.some.name}`, `#/search?query=${encodeURIComponent(f.some.name)}`, `:is(.card:not(.dm), .cell)[data-id="${f.some.id}"]`, { cloud, centre: false, play: true });
+                if (f.empty) await cardPlace(page, label, pass, `search: ${f.empty.name} (no files)`, `#/search?query=${encodeURIComponent(f.empty.name)}`, `:is(.card:not(.dm), .cell)[data-id="${f.empty.id}"]`, { cloud, centre: true, play: false });
             } else if (admin) {
-                const menuCard = tv && f.files ? [details(f.files.id), '#listChildrenCollapsible .card[data-type="Season"]', `${f.files.name}'s season card menu (Menu key)`] :
-                    [`#/movies?topParentId=${movies}&collectionType=movies&tab=0`, '.card[data-type="Movie"]', 'a movie card\'s More menu'];
+                const menuCard = tv && f.files ? [details(f.files.id), "#listChildrenCollapsible :is(.card:not(.dm), .cell)[data-type=\"Season\"]", `${f.files.name}'s season card menu (Menu key)`] :
+                    [`#/movies?topParentId=${movies}&collectionType=movies&tab=0`, ":is(.card:not(.dm), .cell)[data-type=\"Movie\"]", 'a movie card\'s More menu'];
                 await menuPlace(page, label, pass, { name: menuCard[2], hash: menuCard[0], selector: menuCard[1], tv, admin });
                 if (!tv && f.empty) {
                     // The phone's overlay Play on a series with nothing on disk.
                     await open(page, `#/search?query=${encodeURIComponent(f.empty.name)}`, pass, false);
-                    const card = page.locator(`${PAGE} .card[data-id="${f.empty.id}"]`).first();
+                    const card = page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-id="${f.empty.id}"]`).first();
                     if (await card.waitFor({ state: 'visible', timeout: 20000 }).then(() => true, () => false)) {
                         const state = await cardStamps(page, await card.elementHandle());
                         record(label, `${pass}: search: ${f.empty.name} (no files): no overlay Play on the phone`, !state.playShown, state);
@@ -416,7 +416,7 @@ async function runLayout(browser, layout, user) {
                     generatedAt: new Date().toISOString(), clientStatus: { reachable: true, checkedAt: new Date().toISOString(), reason: null },
                     importEnabled: true, seedReleaseEnabled: true }) }) : route.continue()));
             await cardPlace(page, label, 'warm', `Shows grid: ${f.empty.name} (no files, a download on its way; intercepted queue answer)`, showsGrid,
-                `.card[data-id="${f.empty.id}"]`, { cloud: admin ? undefined : false, centre: true, play: false });
+                `:is(.card:not(.dm), .cell)[data-id="${f.empty.id}"]`, { cloud: admin ? undefined : false, centre: true, play: false });
             if (SHOTS) await page.screenshot({ path: `${SHOTS}/cnd-${tier}-${layout}-${admin ? 'admin' : 'user'}-empty-downloading.png` }).catch(() => {});
             await page.unroute(url => /\/JellyfinMod\/Queue$/i.test(url.pathname)).catch(() => {});
         }

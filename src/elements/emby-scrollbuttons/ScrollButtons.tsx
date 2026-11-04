@@ -1,4 +1,6 @@
-import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type FC, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { DesignContext } from 'apps/modern/features/jellyfinmod/design/Root';
+import { Action } from 'apps/modern/features/jellyfinmod/design/Action';
 import scrollerFactory from 'lib/scroller';
 import globalize from 'lib/globalize';
 import IconButton from '../emby-button/IconButton';
@@ -15,6 +17,7 @@ interface ScrollButtonsProps {
 }
 
 const ScrollButtons: FC<ScrollButtonsProps> = ({ scrollerFactoryRef, scrollState }) => {
+    const design = useContext(DesignContext);
     const [localeScrollPos, setLocaleScrollPos] = useState<number>(0);
     const scrollButtonsRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +42,16 @@ const ScrollButtons: FC<ScrollButtonsProps> = ({ scrollerFactoryRef, scrollState
         }
         setLocaleScrollPos(localeAwarePos);
     }, [scrollState.scrollPos]);
+
+    if (design) {
+        return <div ref={scrollButtonsRef} className='emby-scrollbuttons'>
+            <div className='actbar static glassy'>
+                <Action icon='prev' title='Previous' onClick={triggerScrollLeft} disabled={localeScrollPos <= 0} />
+                <Action icon='nextp' title='Next' onClick={triggerScrollRight}
+                    disabled={scrollState.scrollWidth > 0 && localeScrollPos + scrollState.scrollSize >= scrollState.scrollWidth} />
+            </div>
+        </div>;
+    }
 
     return (
         <div ref={scrollButtonsRef} className='emby-scrollbuttons padded-right'>

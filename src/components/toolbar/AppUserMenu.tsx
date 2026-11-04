@@ -1,3 +1,4 @@
+import { Menu, MenuItem, ListItemIcon, ListItemText, Divider } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppSettingsAlt from '@mui/icons-material/AppSettingsAlt';
 import Close from '@mui/icons-material/Close';
@@ -11,11 +12,7 @@ import Logout from '@mui/icons-material/Logout';
 import PhonelinkLock from '@mui/icons-material/PhonelinkLock';
 import Settings from '@mui/icons-material/Settings';
 import Storage from '@mui/icons-material/Storage';
-import Divider from '@mui/material/Divider';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Menu, { MenuProps } from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
+import type { MenuProps } from '@mui/material/Menu';
 import React, { FC, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -95,7 +92,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 to={`/userprofile?userId=${user?.Id}`}
                 onClick={onMenuClose}
             >
-                <ListItemIcon>
+                <ListItemIcon icon='person'>
                     <AccountCircle />
                 </ListItemIcon>
                 <ListItemText>
@@ -107,7 +104,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 to='/mypreferencesmenu'
                 onClick={onMenuClose}
             >
-                <ListItemIcon>
+                <ListItemIcon icon='gear'>
                     <Settings />
                 </ListItemIcon>
                 <ListItemText>
@@ -120,7 +117,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/catalog/queue'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='arrow'>
                         <Downloading />
                     </ListItemIcon>
                     <ListItemText>
@@ -134,7 +131,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/catalog/settings'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='gear'>
                         <Tune />
                     </ListItemIcon>
                     <ListItemText>
@@ -148,7 +145,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/catalog/preferences'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='star'>
                         <StarHalf />
                     </ListItemIcon>
                     <ListItemText>
@@ -165,7 +162,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 <MenuItem
                     onClick={onDownloadManagerClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='arrow'>
                         <Download />
                     </ListItemIcon>
                     <ListItemText>
@@ -178,7 +175,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 <MenuItem
                     onClick={onClientSettingsClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='ctrl'>
                         <AppSettingsAlt />
                     </ListItemIcon>
                     <ListItemText>
@@ -197,7 +194,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     onClick={onMenuClose}
                 >
 
-                    <ListItemIcon>
+                    <ListItemIcon icon='dash'>
                         <DashboardIcon />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('TabDashboard')} />
@@ -208,7 +205,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/metadata'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='edit'>
                         <Edit />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('MetadataManager')} />
@@ -222,7 +219,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     to='/quickconnect'
                     onClick={onMenuClose}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='qc'>
                         <PhonelinkLock />
                     </ListItemIcon>
                     <ListItemText>
@@ -235,7 +232,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                 <MenuItem
                     onClick={onSelectServerClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='display'>
                         <Storage />
                     </ListItemIcon>
                     <ListItemText>
@@ -247,7 +244,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
             <MenuItem
                 onClick={onLogoutClick}
             >
-                <ListItemIcon>
+                <ListItemIcon icon='out'>
                     <Logout />
                 </ListItemIcon>
                 <ListItemText>
@@ -261,7 +258,7 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     key='exit-menu-button'
                     onClick={onExitAppClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='close'>
                         <Close />
                     </ListItemIcon>
                     <ListItemText>

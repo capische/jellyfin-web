@@ -1,17 +1,18 @@
-import Search from '@mui/icons-material/Search';
-import React, { useEffect, useLayoutEffect, useRef, useState, type FC } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useContext, useEffect, useRef, useState, type FC } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-import layoutManager from 'components/layoutManager';
 import focusManager from 'components/focusManager';
 import globalize from 'lib/globalize';
 import { getKeyName } from 'scripts/keyboardNavigation';
 
-import { isBackKey } from './dpadModals';
+import { Icon } from './Icon';
+import { DesignContext } from './Root';
+
+import { isBackKey } from '../shell/dpadModals';
 
 /** One URL-backed field. Navigating on the first character keeps the same mounted input and its caret. */
-const ChromeSearch: FC = () => {
+const BarSearch: FC = () => {
+    const tv = useContext(DesignContext) === 'tv';
     const location = useLocation();
     const navigate = useNavigate();
     const [params] = useSearchParams();
@@ -24,7 +25,6 @@ const ChromeSearch: FC = () => {
 
     useEffect(() => setValue(query), [query, isSearch]);
     useEffect(() => {
-        if (!layoutManager.tv) return;
         const keyboardState = (event: Event) => {
             keyboardVisible.current = !!(event as CustomEvent<{ visibility: boolean }>).detail?.visibility;
         };
@@ -45,8 +45,9 @@ const ChromeSearch: FC = () => {
         navigate({ pathname: '/search', search: next.toString() }, { replace: isSearch });
     };
 
-    return <label className={'jfmod-chromeSearch' + (focused ? ' jfmod-chromeSearch-focused' : '')}>
-        <Search aria-hidden='true' />
+    const searchClass = 'barsearch' + (focused ? ' on' : '') + (value ? ' typed' : '');
+    return <label className={searchClass}>
+        <Icon name='search' />
         <input
             ref={input}
             id={isSearch ? 'searchTextInput' : 'jfmod-chromeSearchInput'}
@@ -64,7 +65,7 @@ const ChromeSearch: FC = () => {
             }}
             onKeyDown={event => {
                 const key = getKeyName(event.nativeEvent);
-                if (layoutManager.tv && isBackKey(key) && keyboardVisible.current) {
+                if (tv && isBackKey(key) && keyboardVisible.current) {
                     event.preventDefault();
                     event.stopPropagation();
                     keyboardVisible.current = false;
@@ -73,7 +74,7 @@ const ChromeSearch: FC = () => {
                     // A real input keeps the trusted OK gesture, so webOS can open its native keyboard.
                     if (!isSearch) openSearch(value);
                     input.current?.focus();
-                } else if (layoutManager.tv && event.key === 'ArrowDown') {
+                } else if (tv && event.key === 'ArrowDown') {
                     event.preventDefault();
                     event.stopPropagation();
                     const first = document.querySelector<HTMLElement>('#searchPage .card, #searchPage .jfmod-searchOpen')
@@ -85,26 +86,4 @@ const ChromeSearch: FC = () => {
     </label>;
 };
 
-/** The TV keeps its legacy header and remote navigation. Only its search stop is replaced. */
-export const LegacyChromeSearch: FC = () => {
-    const [target, setTarget] = useState<HTMLElement | null>(null);
-    useLayoutEffect(() => {
-        const host = document.createElement('div');
-        host.className = 'jfmod-legacySearch';
-        const attach = () => {
-            const header = document.querySelector<HTMLElement>('.skinHeader .headerTop');
-            if (header && host.parentElement !== header) header.insertBefore(host, header.querySelector('.headerRight'));
-            if (host.isConnected) setTarget(host);
-        };
-        attach();
-        const observer = new MutationObserver(attach);
-        observer.observe(document.body, { childList: true, subtree: true });
-        return () => {
-            observer.disconnect();
-            host.remove();
-        };
-    }, []);
-    return target ? createPortal(<ChromeSearch />, target) : null;
-};
-
-export default ChromeSearch;
+export default BarSearch;

@@ -1,5 +1,7 @@
 # Top bar and search
 
+**dsA (2026-11-04), built, not accepted:** `design/Bar.tsx` and `BarSearch.tsx` now own the mockup bar markup and SVGs. Existing account/SyncPlay/cast controllers use native menu presentation only in this bar. `ChromeSearch.tsx`, `topbarChrome.scss` and `useModToolbarClass.ts` are removed. The bar is scoped by `.jfds`, with live layout/theme markers. [CSS exceptions and validation](../dsA.md).
+
 **Status:** approved D221–D226, D251, D254, D259/D262; rd2 built, not accepted. Home scrolled/search-focus mockups.
 
 Code: shell `ModToolbar.tsx`, `ChromeSearch.tsx`, `topbarChrome.scss`; mounted by `ModAppLayout.tsx` only on non-admin signed-in routes.

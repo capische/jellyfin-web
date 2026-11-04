@@ -36,6 +36,8 @@ function getShortcutOptions() {
 }
 
 export interface ItemsContainerProps {
+    /** Keep the command lifecycle on a caller-owned native container. */
+    isPlain?: boolean;
     className?: string;
     isContextMenuEnabled?: boolean;
     isMultiSelectEnabled?: boolean;
@@ -48,6 +50,7 @@ export interface ItemsContainerProps {
 }
 
 const ItemsContainer: FC<PropsWithChildren<ItemsContainerProps>> = ({
+    isPlain,
     className,
     isContextMenuEnabled,
     isMultiSelectEnabled,
@@ -395,6 +398,8 @@ const ItemsContainer: FC<PropsWithChildren<ItemsContainerProps>> = ({
         { 'itemsContainer-tv': layoutManager.tv },
         className
     );
+
+    if (isPlain) return <div ref={itemsContainerRef} className={itemsContainerClass}>{children}</div>;
 
     return (
         <Box ref={itemsContainerRef} className={itemsContainerClass}>

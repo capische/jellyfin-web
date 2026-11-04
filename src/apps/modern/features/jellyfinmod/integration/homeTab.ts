@@ -8,7 +8,6 @@ import { renderComponent } from 'utils/reactUtils';
 
 import HomeHero from '../components/HomeHero';
 import TraktReconnectNotice from '../components/TraktReconnectNotice';
-import { attachLegacyTopbar } from './homeChrome';
 import { composeHomeSections, unmountHomeRows } from './homeSections';
 
 /** How long the TV's first focus waits for the hero before falling back to the first row. */
@@ -81,7 +80,6 @@ export default class ModHomeTab {
     private traktNoticeMount: HTMLElement | null = null;
     private unmountTraktNotice: (() => void) | null = null;
     private generation = 0;
-    private detachTopbar: (() => void) | null = null;
     /**
      * The last element focused inside Home. Read at pause rather than `document.activeElement`, because by the time
      * the route unmounts the page the next screen may already have taken focus.
@@ -101,7 +99,6 @@ export default class ModHomeTab {
         this.mountHero();
         // The TV layout's navigation is upstream's legacy header, not the shell's React toolbar, so Home's
         // transparent bar is applied to that header here. Desktop and mobile get it from the shell's toolbar.
-        if (!layoutManager.modern && !this.detachTopbar) this.detachTopbar = attachLegacyTopbar();
         const sections = this.sections;
         if (!sections) return;
 
@@ -145,8 +142,6 @@ export default class ModHomeTab {
 
     onPause() {
         if (layoutManager.tv) rememberFocus(this.view, this.lastFocused);
-        this.detachTopbar?.();
-        this.detachTopbar = null;
         if (this.sections) homeSections.pause(this.sections);
     }
 
@@ -155,8 +150,6 @@ export default class ModHomeTab {
         this.generation++;
         this.view.removeEventListener('focusin', this.onFocusIn);
         this.lastFocused = null;
-        this.detachTopbar?.();
-        this.detachTopbar = null;
         if (this.sections) {
             unmountHomeRows(this.sections);
             homeSections.destroySections(this.sections);

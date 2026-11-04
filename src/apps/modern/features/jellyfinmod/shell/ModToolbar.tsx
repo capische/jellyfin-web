@@ -7,13 +7,10 @@ import SearchButton from 'apps/modern/components/AppToolbar/SearchButton';
 import SyncPlayButton from 'apps/modern/components/AppToolbar/SyncPlayButton';
 import UserViewNav from 'apps/modern/components/AppToolbar/userViews/UserViewNav';
 import { appRouter, PUBLIC_PATHS } from 'components/router/appRouter';
-import layoutManager from 'components/layoutManager';
 import BaseToolbar from 'components/toolbar/AppToolbar';
 import ServerButton from 'components/toolbar/ServerButton';
 
-import ChromeSearch from './ChromeSearch';
-
-import { useModToolbarClass } from './useModToolbarClass';
+import { Bar } from '../design/Bar';
 
 import '../components/homeChrome.scss';
 
@@ -23,24 +20,13 @@ interface ModToolbarProps {
     onDrawerButtonClick: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-/**
- * The JellyfinMod shell's top bar (P7.S2).
- *
- * Composed from upstream's own toolbar parts rather than rewritten: the same base toolbar, the same server and
- * library navigation, the same SyncPlay, remote-play and search buttons, and the same user menu, which already
- * carries Profile, Settings, the Dashboard, Quick Connect, Select server and Sign out. What the shell adds is the
- * accepted UX §7.3 presentation — transparent over Home's hero, solid once the page scrolls.
- *
- * Because this composition lives here, the stock entry's copy no longer has to carry the restyle, and the upstream
- * `AppToolbar` patch row can be retired once Stage B's Home lands (PHASE7 §3.2).
- */
+/** Signed-in mod routes own the mockup bar; excluded routes keep the original toolbar. */
 const ModToolbar: FC<ModToolbarProps> = ({
     isDrawerAvailable,
     isDrawerOpen,
     onDrawerButtonClick
 }) => {
     const location = useLocation();
-    const homeClass = useModToolbarClass();
 
     // The video OSD does not show the standard toolbar.
     if (location.pathname === '/video') return null;
@@ -49,13 +35,15 @@ const ModToolbar: FC<ModToolbarProps> = ({
     const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
     const chromeEnabled = !isPublicPath && !location.pathname.startsWith('/catalog/settings');
 
+    if (chromeEnabled) return <Bar onDrawer={onDrawerButtonClick} />;
+
     return (
         <BaseToolbar
             buttons={!isPublicPath && (
                 <>
                     <SyncPlayButton />
                     <RemotePlayButton />
-                    {chromeEnabled ? <span className='jfmod-phoneSearch'><SearchButton /></span> : <SearchButton />}
+                    <SearchButton />
                 </>
             )}
             isDrawerAvailable={isDrawerAvailable}
@@ -63,15 +51,14 @@ const ModToolbar: FC<ModToolbarProps> = ({
             onDrawerButtonClick={onDrawerButtonClick}
             isBackButtonAvailable={isBackButtonAvailable}
             isUserMenuAvailable={!isPublicPath}
-            className={'padded-left padded-right' + homeClass}
+            className='padded-left padded-right'
         >
-            {chromeEnabled && !layoutManager.mobile && <ChromeSearch />}
             {!isDrawerAvailable && (
                 <Stack
                     direction='row'
-                    spacing={chromeEnabled ? undefined : 0.5}
+                    spacing={0.5}
                 >
-                    {chromeEnabled ? <span className='jfmod-serverWordmark'><ServerButton /></span> : <ServerButton />}
+                    <ServerButton />
 
                     {!isPublicPath && (
                         <UserViewNav />

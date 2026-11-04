@@ -130,9 +130,9 @@ function sampler() {
         && getComputedStyle(element).display !== 'none' && !element.closest('.hide');
     const first = (root, selector) => Array.from(root.querySelectorAll(selector)).find(visible) ?? null;
     const markOf = element => {
-        const disc = first(element, '.jfmod-dlmark');
-        if (disc) return { state: KINDS.find(kind => disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc', tip: disc.title };
-        if (first(element, '.jfmod-mark--none')) return { state: element.classList.contains('jfmod-dlRow--failed') ? 'failed' : 'cloud' };
+        const disc = first(element, ":is(.jfmod-dlmark, [data-ds-download])");
+        if (disc) return { state: KINDS.find(kind => disc.dataset.jfmodKind === kind || disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc', tip: disc.title };
+        if (first(element, ":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))")) return { state: element.classList.contains('jfmod-dlRow--failed') ? 'failed' : 'cloud' };
         if (first(element, '.jfmod-mark--unaired')) return { state: 'unaired' };
         return { state: 'none' };
     };
@@ -147,9 +147,9 @@ function sampler() {
             const meta = first(row, '.jfmod-dlMeta');
             out['row:E' + number[1]] = mark.state + (meta ? '|' + meta.textContent : '') + (mark.tip ? '|' + mark.tip : '');
         }
-        for (const card of document.querySelectorAll('.card')) {
+        for (const card of document.querySelectorAll(":is(.card:not(.dm), .cell)")) {
             if (!visible(card)) continue;
-            const name = (card.querySelector('.cardText')?.textContent ?? '').trim();
+            const name = (card.querySelector(":is(.cardText, .capt > .ln)")?.textContent ?? '').trim();
             if (!name || card.closest('.jfmod-releaseDialog')) continue;
             out['card:' + name] = markOf(card).state;
         }
@@ -158,8 +158,8 @@ function sampler() {
         for (const row of document.querySelectorAll('.jfmod-queueTableRow, .jfmod-queueRow')) {
             if (!visible(row)) continue;
             const title = (row.querySelector('.jfmod-queueTitle')?.textContent ?? '').trim();
-            const disc = first(row, '.jfmod-dlmark');
-            out['queue:' + title] = disc ? KINDS.find(kind => disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc'
+            const disc = first(row, ":is(.jfmod-dlmark, [data-ds-download])");
+            out['queue:' + title] = disc ? KINDS.find(kind => disc.dataset.jfmodKind === kind || disc.classList.contains('jfmod-dlmark--' + kind)) ?? 'disc'
                 : (row.querySelector('.jfmod-queueState')?.textContent ?? '').trim();
         }
         return out;
@@ -453,7 +453,7 @@ async function stepA1() {
     await waitRows(page, [1, 2, 3, 4, 5, 6]);
     await page.waitForTimeout(1500);
     const before = await now(page, 'row:E3');
-    const opener = page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator('.jfmod-mark--none').first();
+    const opener = page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))").first();
     const t0 = await pickerGrab(page, opener, null, EP3);
     const grab = (await queueRows()).find(row => row.releaseTitle === EP3);
     record('A1', 'the Queue answer holds the held grab at once, queued, with the episode', !!grab && grab.state === 'queued'
@@ -782,7 +782,7 @@ async function checkTooltips(page, what, title, meta) {
     const seen = await page.evaluate(() => {
         const row = Array.from(document.querySelectorAll('.listItem')).find(item => /^3\.\s/.test((item.querySelector('.listItemBodyText')?.textContent ?? '').trim())
             && item.getClientRects().length);
-        const disc = row?.querySelector('.jfmod-dlmark');
+        const disc = row?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
         if (!disc) return null;
         disc.scrollIntoView({ block: 'center' });
         const box = disc.getBoundingClientRect();
@@ -796,7 +796,7 @@ async function checkTooltips(page, what, title, meta) {
         !!seen && seen.reached && seen.events !== 'none' && title.test(seen.title) && seen.metaShown && meta.test(seen.meta ?? ''), seen);
     // The browser's own tooltip is not in the DOM; hovering is checked to land on the disc, and the shot shows the state words.
     if (seen?.reached) {
-        const box = await page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator('.jfmod-dlmark').first().boundingBox();
+        const box = await page.locator('.listItem').filter({ hasText: /^3\.\s/ }).locator(":is(.jfmod-dlmark, [data-ds-download])").first().boundingBox();
         if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.waitForTimeout(300);
         await shot(page, `a5-${what.replace(/\s+/g, '-')}-hover`);

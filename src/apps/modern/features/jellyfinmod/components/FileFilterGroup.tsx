@@ -1,7 +1,5 @@
+import { Checkbox, FormControlLabel, FormGroup } from '../design/FilterFields';
 import React, { useCallback } from 'react';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormGroup from '@mui/material/FormGroup';
 import type { LibraryViewSettings } from 'types/library';
 
 import { usePluginHealth } from '../hooks/useEntries';

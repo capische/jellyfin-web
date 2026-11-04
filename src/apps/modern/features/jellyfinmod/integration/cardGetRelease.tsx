@@ -3,7 +3,7 @@ import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-ite
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import React, { type FC, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { type FC, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import layoutManager from 'components/layoutManager';
 
@@ -489,3 +489,35 @@ const CardGetRelease: FC = () => {
 };
 
 export default CardGetRelease;
+
+/** The design-system card uses the same cached lookup and picker as the legacy overlay and More command. */
+export const useCardRelease = (itemId?: string | null, type?: string | null) => {
+    const { api, user } = useApi();
+    const capabilities = usePluginCapabilities(api, !!user?.Policy?.IsAdministrator);
+    const packs = capabilities.includes(PACKS_CAPABILITY);
+    const key = itemId && type ? keyOf(itemId, type) : '';
+    const [resolved, setResolved] = useState<{ key: string; target: CardTarget | null }>();
+    const target = resolved?.key === key ? resolved.target : undefined;
+    const enabled = !!api && !!user?.Id && !!user?.Policy?.IsAdministrator && !!itemId && !!type
+        && capabilities.includes(RELEASES_CAPABILITY) && eligible(type, packs);
+    const prepare = () => {
+        if (!enabled) return;
+        void targetFor(api!, user!.Id!, itemId!, type!, packs).then(answer => {
+            setResolved(previous => previous?.key === key && previous.target === answer ? previous : { key, target: answer });
+        });
+    };
+    const open = (opener: HTMLElement) => {
+        if (!enabled) return;
+        void targetFor(api!, user!.Id!, itemId!, type!, packs).then(answer => {
+            if (answer) openFrom(answer, opener);
+            else announce(NOT_AVAILABLE);
+        });
+    };
+    return { open: enabled && target !== null ? open : null, prepare, label: target?.label || 'Get a Release' };
+};
+
+export const useCardHasNoFile = (itemId?: string | null) => {
+    const { api, user } = useApi();
+    const { data: ids } = useQuery(emptyFoldersQuery(api, user?.Id));
+    return !!itemId && !!ids?.includes(itemId.replace(/-/g, '').toLowerCase());
+};

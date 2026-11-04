@@ -24,13 +24,12 @@ import '../components/modFont.scss';
 import '../components/lightGlass.scss';
 import '../components/cardDesign.scss';
 import './sharedChrome.scss';
-import './topbarChrome.scss';
 import './pickerChrome.scss';
 import './motionChrome.scss';
 import './chromeFont.scss';
 import './titlePages.scss';
 import { useChromeScope } from './useChromeScope';
-import { LegacyChromeSearch } from './ChromeSearch';
+import { Bar } from '../design/Bar';
 
 /*
  * Upstream's modern overrides, for the modern layout only.
@@ -76,8 +75,8 @@ const ModAppLayout: FC = () => {
 
     if (!layoutManager.modern) {
         return <ChromeTheme enabled={chromeEnabled}>
-            <LegacyAppLayout />
-            {chromeEnabled && !layoutManager.mobile && <LegacyChromeSearch />}
+            <div className='jfmod-legacyDs'><LegacyAppLayout /></div>
+            {chromeEnabled && location.pathname !== '/video' && <div className='jfmod-dsLegacyBar'><Bar onDrawer={() => { void import('scripts/libraryMenu').then(({ default: libraryMenu }) => libraryMenu.onHardwareMenuButtonClick()); }} /></div>}
         </ChromeTheme>;
     }
 
@@ -94,13 +93,13 @@ const ModAppLayout: FC = () => {
                 >
                     <StrictMode>
                         {/* On every page the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
-                        <OffsetAppBar dense className='jfmod-homeAppBar'>
+                        <OffsetAppBar dense className={chromeEnabled ? 'jfmod-dsAppBar' : 'jfmod-homeAppBar'}>
                             <ModToolbar
                                 isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
                                 isDrawerOpen={isDrawerOpen}
                                 onDrawerButtonClick={onToggleDrawer}
                             />
-                            {isLibraryPath(location.pathname) && <LibraryToolbar />}
+                            {isLibraryPath(location.pathname) && !['/movies', '/tv'].includes(location.pathname) && <LibraryToolbar />}
                         </OffsetAppBar>
 
                         {isDrawerAvailable && (

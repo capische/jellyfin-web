@@ -268,16 +268,16 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
             await page.waitForFunction(() => !!window.ApiClient, undefined, { timeout: 30000 });
         }
         const { stub, show, movie } = context;
-        const card = `${PAGE} .card[data-id="${stub.Id}"]`;
+        const card = `${PAGE} :is(.card:not(.dm), .cell)[data-id="${stub.Id}"]`;
 
         // The movie's card in its library grid: one card, the mark, no Play, the centre cloud for an administrator.
         await go(page, `#/movies?topParentId=${moviesLibrary}`);
         await page.waitForSelector(card, { timeout: 30000 }).catch(() => {});
-        await page.waitForSelector(`${card} .jfmod-mark--none`, { timeout: 15000 }).catch(() => {});
+        await page.waitForSelector(`${card} :is(.jfmod-mark--none, .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`, { timeout: 15000 }).catch(() => {});
         await page.evaluate(`window.isShown = ${shown}`);
         const grid = await page.evaluate(({ selector, tmdb, id }) => ({
-            cards: document.querySelectorAll(`.page:not(.hide) .card[data-id="${id}"], .page:not(.hide) [data-jfmod-tmdb-id="${tmdb}"]:not([data-id])`).length,
-            mark: [...document.querySelectorAll(`${selector} .jfmod-mark--none`)].filter(window.isShown).length,
+            cards: document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"], .page:not(.hide) [data-jfmod-tmdb-id="${tmdb}"]:not([data-id])`).length,
+            mark: [...document.querySelectorAll(`${selector} :is(.jfmod-mark--none, .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`)].filter(window.isShown).length,
             noFile: !!document.querySelector(selector)?.closest('[data-jfmod-nofile], [data-jfmod-empty]')
                 || !!document.querySelector(selector)?.matches('[data-jfmod-nofile], [data-jfmod-empty]')
         }), { selector: card, tmdb: movieTmdb, id: stub.Id });
@@ -287,8 +287,8 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
             await page.waitForTimeout(800);
             const hover = await page.evaluate(selector => {
                 const node = document.querySelector(selector);
-                const play = [...(node?.querySelectorAll('.cardOverlayContainer [data-action="play"], .cardOverlayContainer [data-action="resume"]') ?? [])].filter(window.isShown).length;
-                const centre = [...(node?.querySelectorAll('.cardOverlayContainer > .jfmod-cardGet.cardOverlayFab-primary') ?? [])].filter(window.isShown).length;
+                const play = [...(node?.querySelectorAll(":is(.cardOverlayContainer, .post) [data-action=\"play\"], :is(.cardOverlayContainer, .post) [data-action=\"resume\"]") ?? [])].filter(window.isShown).length;
+                const centre = [...(node?.querySelectorAll(":is(.cardOverlayContainer, .post) > :is(.jfmod-cardGet, [data-ds-action=\"get\"]):is(.cardOverlayFab-primary, .disc)") ?? [])].filter(window.isShown).length;
                 return { play, centre };
             }, card);
             record(label, `Movies grid: no Play on hover${isAdmin ? ', Get a Release in the centre' : ''}`, grid.noFile && hover.play === 0 && (isAdmin ? hover.centre === 1 : hover.centre === 0), { ...hover, noFile: grid.noFile });
@@ -322,7 +322,7 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
             const count = selector => [...(view?.querySelectorAll(selector) ?? [])].filter(window.isShown).length;
             return { placeholder: view?.hasAttribute('data-jfmod-placeholder'), play: count('.mainDetailButtons .btnPlay, .mainDetailButtons .btnReplay'),
                 played: count('.mainDetailButtons .btnPlaystate'), favourite: count('.mainDetailButtons .btnUserRating'),
-                seasons: view?.querySelectorAll('#childrenContent .card').length ?? 0 };
+                seasons: view?.querySelectorAll("#childrenContent :is(.card:not(.dm), .cell)").length ?? 0 };
         });
         record(label, 'the series\' page: no Play, ✓ and ♥ there, its seasons listed', seriesPage.placeholder && seriesPage.play === 0
             && seriesPage.played === 1 && seriesPage.favourite === 1 && seriesPage.seasons > 0, seriesPage);
@@ -333,7 +333,7 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
         await page.waitForSelector(card, { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(2000);
         const search = await page.evaluate(({ tmdb, id }) => ({
-            native: document.querySelectorAll(`.page:not(.hide) .card[data-id="${id}"]`).length,
+            native: document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"]`).length,
             fileless: document.querySelectorAll(`.page:not(.hide) [data-jfmod-entry-id][data-jfmod-tmdb-id="${tmdb}"]`).length
         }), { tmdb: movieTmdb, id: stub.Id });
         record(label, 'search: the movie shows once, as its Jellyfin item', search.native === 1 && search.fileless === 0, search);

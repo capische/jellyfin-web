@@ -1,9 +1,6 @@
+import { Menu, MenuItem, ListItemIcon, ListItemText, Divider } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
 import Warning from '@mui/icons-material/Warning';
-import Divider from '@mui/material/Divider';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Menu, { type MenuProps } from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
+import type { MenuProps } from '@mui/material/Menu';
 import React, { FC, useEffect, useState } from 'react';
 
 import globalize from 'lib/globalize';
@@ -67,7 +64,7 @@ const RemotePlayMenu: FC<RemotePlayMenuProps> = ({
         >
             {!isChromecastPluginLoaded && (
                 <MenuItem disabled>
-                    <ListItemIcon>
+                    <ListItemIcon icon='bang'>
                         <Warning />
                     </ListItemIcon>
                     <ListItemText>

@@ -1,0 +1,8 @@
+// Scope at the import: none of the mockup's selectors can reach Dashboard or setup.
+.jfds {
+    @import './chrome';
+    @import './spinner';
+    @import './ds';
+}
+
+@import './runtime';

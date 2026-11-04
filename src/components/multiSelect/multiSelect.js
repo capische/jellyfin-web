@@ -16,6 +16,8 @@ import confirm from '../confirm/confirm';
 import itemHelper from '../itemHelper';
 import datetime from '../../scripts/datetime';
 
+const cardParent = element => dom.parentWithClass(element, 'cell') || dom.parentWithClass(element, 'card');
+
 let selectedItems = [];
 let selectedElements = [];
 let currentSelectionCommandsPanel;
@@ -112,7 +114,7 @@ function showSelection(item, isChecked, addInitialCheck) {
         itemSelectionPanel = document.createElement('div');
         itemSelectionPanel.classList.add('itemSelectionPanel');
 
-        const parent = item.querySelector('.cardBox') || item.querySelector('.cardContent');
+        const parent = item.querySelector('.cardBox') || item.querySelector('.cardContent') || item.querySelector('.tile');
         parent.classList.add('withMultiSelect');
         parent.appendChild(itemSelectionPanel);
 
@@ -391,7 +393,7 @@ function combineVersions(apiClient, selection) {
 
 function showSelections(initialCard, addInitialCheck) {
     import('../../elements/emby-checkbox/emby-checkbox').then(() => {
-        const cards = document.querySelectorAll('.card');
+        const cards = document.querySelectorAll('.card:not(.dm), .cell[data-id]');
         for (let i = 0, length = cards.length; i < length; i++) {
             showSelection(cards[i], initialCard === cards[i], addInitialCheck);
         }
@@ -405,7 +407,7 @@ function onContainerClick(e) {
     const target = e.target;
 
     if (selectedItems.length) {
-        const card = dom.parentWithClass(target, 'card');
+        const card = cardParent(target);
         if (card) {
             const itemSelectionPanel = card.querySelector('.itemSelectionPanel');
             if (itemSelectionPanel) {
@@ -427,7 +429,7 @@ export default function (options) {
     const container = options.container;
 
     function onTapHold(e) {
-        const card = dom.parentWithClass(e.target, 'card');
+        const card = cardParent(e.target);
 
         if (card) {
             showSelections(card, true);
@@ -461,7 +463,7 @@ export default function (options) {
             const element = touch.target;
 
             if (element) {
-                const card = dom.parentWithClass(element, 'card');
+                const card = cardParent(element);
 
                 if (card) {
                     if (touchStartTimeout) {
@@ -507,7 +509,7 @@ export default function (options) {
         touchStartY = e.clientY || 0;
 
         const element = e.target;
-        if (!dom.parentWithClass(element, 'card')) {
+        if (!cardParent(element)) {
             return;
         }
 
@@ -546,7 +548,7 @@ export default function (options) {
             return;
         }
 
-        const card = dom.parentWithClass(touchTarget, 'card');
+        const card = cardParent(touchTarget);
         touchTarget = null;
 
         if (card) {

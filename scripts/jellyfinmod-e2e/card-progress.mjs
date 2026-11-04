@@ -148,16 +148,16 @@ const packEpisode = (episode, own) => ({ episodeId: episode.id, seasonNumber: ep
 const cardState = (page, selector) => page.evaluate(sel => {
     const card = [...document.querySelectorAll(sel)].find(node => !node.closest('.hide'));
     if (!card) return null;
-    const frame = card.querySelector('.cardScalable') ?? card;
-    const bar = frame.querySelector('.jfmod-dlCardBar');
-    const fill = bar?.querySelector('.jfmod-dlBar-fill');
-    const disc = frame.querySelector('.jfmod-dlmark');
-    const pill = frame.querySelector('.countIndicator');
-    const indicators = frame.querySelector('.cardIndicators');
-    const none = frame.querySelector('.jfmod-mark--none');
+    const frame = card.querySelector(":is(.cardScalable, .post)") ?? card;
+    const bar = frame.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress])");
+    const fill = bar?.querySelector(":is(.jfmod-dlBar-fill, [data-ds-progress] > i)");
+    const disc = frame.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
+    const pill = frame.querySelector(":is(.countIndicator, .pill2:not(.tick))");
+    const indicators = frame.querySelector(":is(.cardIndicators, .pill2)");
+    const none = frame.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
     const fontSize = parseFloat(getComputedStyle(frame).fontSize);
     const discBox = disc?.getBoundingClientRect();
-    const arc = disc?.querySelector('.jfmod-dlmark-fill');
+    const arc = disc?.querySelector(":is(.jfmod-dlmark-fill, .dm .val, .dm .turn)");
     const pillBefore = pill ? getComputedStyle(pill, '::before').content : null;
     return {
         bar: !!bar,
@@ -166,13 +166,13 @@ const cardState = (page, selector) => page.evaluate(sel => {
         heightEm: bar ? Math.round(bar.getBoundingClientRect().height / fontSize * 100) / 100 : null,
         atBottom: bar ? Math.abs(bar.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom) < 1.5 : false,
         disc: disc ? {
-            kind: disc.getAttribute('data-jfmod-kind'), card: disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
+            kind: disc.getAttribute('data-jfmod-kind'), card: !!disc.querySelector('.dm.card') || disc.classList.contains('jfmod-dlmark--card'), title: disc.title,
             colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor, backdrop: getComputedStyle(disc).backdropFilter,
             arcColour: arc ? getComputedStyle(arc).stroke : null,
             sizeEm: Math.round(discBox.width / fontSize * 100) / 100, visible: discBox.width > 0,
-            glyphAnimation: getComputedStyle(disc.querySelector('.jfmod-dlmark-glyph')).animationName,
-            arcAnimation: disc.querySelector('.jfmod-dlmark-arc') ? getComputedStyle(disc.querySelector('.jfmod-dlmark-arc')).animationName : null,
-            arc: arc ? { offset: parseFloat(getComputedStyle(arc).strokeDashoffset), dash: arc.getAttribute('stroke-dasharray'),
+            glyphAnimation: getComputedStyle(disc.querySelector(":is(.jfmod-dlmark-glyph, .dm .glyph)")).animationName.replace(/^jfds-dmbob$/, 'jfmod-dlmarkBob'),
+            arcAnimation: disc.querySelector('.jfmod-dlmark-arc, .dm .turn') ? getComputedStyle(disc.querySelector('.jfmod-dlmark-arc, .dm .turn')).animationName.replace(/^jfds-dmspin$/, 'jfmod-dlmarkSpin') : null,
+            arc: arc ? { offset: disc.hasAttribute('data-ds-download') && !arc.classList.contains('turn') ? 100 - parseFloat(arc.getAttribute('stroke-dasharray')) : parseFloat(getComputedStyle(arc).strokeDashoffset), dash: arc.getAttribute('stroke-dasharray'),
                 opacity: getComputedStyle(arc).opacity } : null,
             // On the card's frame since 8a2599fb4c (above the hover veil), drawn just left of upstream's cluster: the first of the
             // indicators as one sees them, at the same height, within half an em.
@@ -181,14 +181,14 @@ const cardState = (page, selector) => page.evaluate(sel => {
                 return discBox.right <= cluster.left + 1 && cluster.left - discBox.right <= fontSize * 0.5
                     && discBox.bottom > cluster.top && discBox.top < cluster.bottom;
             })() : null,
-            corner: disc.classList.contains('jfmod-dlmark--corner'),
+            corner: disc.classList.contains('cmark') || disc.classList.contains('jfmod-dlmark--corner'),
             topRight: discBox.right > frame.getBoundingClientRect().left + frame.getBoundingClientRect().width * 0.6
                 && discBox.top < frame.getBoundingClientRect().top + frame.getBoundingClientRect().height * 0.3
         } : null,
         // Upstream's own pill: the number alone, no arrow drawn into it; the disc to its left.
-        pill: pill ? { text: pill.textContent.trim(), arrow: !!pill.querySelector('svg, .jfmod-dlmark') || (pillBefore !== 'none' && pillBefore !== 'normal'),
+        pill: pill ? { text: pill.textContent.trim(), arrow: !!pill.querySelector("svg, :is(.jfmod-dlmark, [data-ds-download])") || (pillBefore !== 'none' && pillBefore !== 'normal'),
             discLeft: !!discBox && discBox.right <= pill.getBoundingClientRect().left + 1 } : null,
-        tick: !!frame.querySelector('.playedIndicator'),
+        tick: !!frame.querySelector(":is(.playedIndicator, .pill2.tick)"),
         noneShown: !!none && getComputedStyle(none).display !== 'none',
         upstreamBarHidden: [...frame.querySelectorAll('.itemProgressBar, .itemLinearProgress')].every(node => getComputedStyle(node).visibility === 'hidden')
     };
@@ -196,9 +196,9 @@ const cardState = (page, selector) => page.evaluate(sel => {
 
 /** The rows that show a download: the disc and where it sits, the meta figure and where it sits, no bar, a failure's button. */
 const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll('.page:not(.hide) .jfmod-dlRow')].map(row => {
-    const disc = row.querySelector('.jfmod-dlmark');
+    const disc = row.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
     const meta = row.querySelector('.jfmod-dlMeta');
-    const cloud = row.querySelector('.jfmod-mark--none');
+    const cloud = row.querySelector(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))");
     const font = parseFloat(getComputedStyle(row).fontSize);
     const siblings = disc ? [...disc.parentElement.children] : [];
     const at = siblings.indexOf(disc);
@@ -222,7 +222,7 @@ const rowStates = page => page.evaluate(endSlot => [...document.querySelectorAll
             // The first round icon of the end slot: nothing of the slot before it, the slot (or nothing) after it.
             firstOfEnd: !siblings.slice(0, at).some(node => node.matches(endSlot)) && (at === siblings.length - 1 || siblings[at + 1].matches(endSlot)),
             atEnd: disc.getBoundingClientRect().left > row.getBoundingClientRect().left + row.getBoundingClientRect().width * 0.5,
-            arcOffset: disc.querySelector('.jfmod-dlmark-fill') ? parseFloat(getComputedStyle(disc.querySelector('.jfmod-dlmark-fill')).strokeDashoffset) : null
+            arcOffset: disc.querySelector(":is(.jfmod-dlmark-fill, .dm .val, .dm .turn)") ? parseFloat(getComputedStyle(disc.querySelector(":is(.jfmod-dlmark-fill, .dm .val, .dm .turn)")).strokeDashoffset) : null
         } : null,
         meta: meta ? {
             text: meta.textContent, title: meta.title, colour: getComputedStyle(meta).color, weight: getComputedStyle(meta).fontWeight,
@@ -260,7 +260,7 @@ async function checkInert(page, label, what, locator, holder = false) {
     const read = () => locator.first().evaluate((node, props) => {
         const own = getComputedStyle(node);
         const veil = getComputedStyle(node, '::before');
-        const titled = node.getAttribute('title') ?? node.querySelector('[title]')?.getAttribute('title');
+        const titled = (node.getAttribute('title') ?? node.getAttribute('data-tip')) ?? node.querySelector(':is([title],[data-tip])')?.getAttribute('title');
         return { styles: props.map(prop => own[prop]).join(' | '), veil: `${veil.content} ${veil.opacity} ${veil.backgroundColor}`,
             cursor: own.cursor, title: titled, tag: node.tagName, tabIndex: node.tabIndex, disabled: node.disabled === true };
     }, INERT_PROPS);
@@ -316,7 +316,7 @@ async function run(browser, layout) {
         const seriesId = detail.entry.jellyfinItemId;
         if (!seriesId) throw new Error('the series entry has no Jellyfin item');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
+        await page.waitForSelector(".page:not(.hide) #listChildrenCollapsible .itemsContainer :is(.card:not(.dm), .cell)", { timeout: 30000 });
         await page.waitForTimeout(2500);
         detail = await apiGet(page, 'JellyfinMod/Entries/' + seriesEntryId);
         const seasons = await page.evaluate(async id => (await ApiClient.getSeasons(id, { userId: ApiClient.getCurrentUserId() })).Items
@@ -382,12 +382,12 @@ async function run(browser, layout) {
         reads.length = 0;
         await go(page, '#/home');
         await go(page, `#/details?id=${seriesId}`);
-        await page.waitForSelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer .card', { timeout: 30000 });
-        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) .card[data-id="${id}"] .jfmod-dlmark`), native.id, { timeout: 20000 })
+        await page.waitForSelector(".page:not(.hide) #listChildrenCollapsible .itemsContainer :is(.card:not(.dm), .cell)", { timeout: 30000 });
+        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.jfmod-dlmark, [data-ds-download])`), native.id, { timeout: 20000 })
             .catch(() => {});
         await page.waitForTimeout(1000);
         const opened = reads.length;
-        const nativeCard = `.page:not(.hide) #listChildrenCollapsible .card[data-id="${native.id}"]`;
+        const nativeCard = `.page:not(.hide) #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id="${native.id}"]`;
         const season = await cardState(page, nativeCard);
         record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.28em`,
             !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === BAR_DARK
@@ -407,7 +407,7 @@ async function run(browser, layout) {
                 && /brightness\(0\.85\)/.test(filter) && /[,/] 0\.12\)$/.test(season?.disc?.background ?? ''), season?.disc);
         }
         record(label, `Season ${native.number} card: the tooltip is the figure ("${seasonTooltip}")`, season?.disc?.title === seasonTooltip, season?.disc?.title);
-        if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} .jfmod-dlmark`));
+        if (layout === 'desktop') await checkInert(page, label, `Season ${native.number} card's download disc`, page.locator(`${nativeCard} :is(.jfmod-dlmark, [data-ds-download])`));
         if (season?.pill) {
             record(label, `Season ${native.number} card: two icons, the disc first of upstream's indicators and left of the plain count pill (no arrow in it)`,
                 season.disc?.firstIndicator === true && season.pill.discLeft && !season.pill.arrow && /^\d+$/.test(season.pill.text), season.pill);
@@ -415,9 +415,9 @@ async function run(browser, layout) {
             record(label, `Season ${native.number} card: the disc first of upstream's indicators (no count pill on this card)`,
                 season?.disc?.firstIndicator !== false, { tick: season?.tick, firstIndicator: season?.disc?.firstIndicator });
         }
-        const others = await page.evaluate(id => [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .card[data-id]')]
+        const others = await page.evaluate(id => [...document.querySelectorAll(".page:not(.hide) #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id]")]
             .filter(card => card.getAttribute('data-id') !== id && !card.classList.contains('jfmod-missingCard'))
-            .map(card => !!card.querySelector('.jfmod-dlCardBar, .jfmod-dlmark')), native.id);
+            .map(card => !!card.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]), :is(.jfmod-dlmark, [data-ds-download])")), native.id);
         record(label, 'the other upstream season cards show no download', others.every(shown => !shown), others);
         await page.locator(nativeCard).scrollIntoViewIfNeeded().catch(() => {});
         await shotOf(page.locator(nativeCard), 'card-season-two-icons');
@@ -528,11 +528,11 @@ async function run(browser, layout) {
         // size as info and fav and heart icons"); no disc or failure mark changes under the mouse, and the failure is no stop.
         const size = await page.evaluate(() => {
             const box = node => { const rect = node.getBoundingClientRect(); return { w: rect.width, h: rect.height, cy: rect.top + rect.height / 2 }; };
-            const row = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow')].find(candidate => candidate.querySelector('.jfmod-dlmark'));
-            const disc = row?.querySelector('.jfmod-dlmark');
+            const row = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem.jfmod-dlRow')].find(candidate => candidate.querySelector(":is(.jfmod-dlmark, [data-ds-download])"));
+            const disc = row?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
             const heart = [...document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .listItem button.listItemButton')].find(button => button.getBoundingClientRect().width > 0);
             const font = disc ? parseFloat(getComputedStyle(disc).fontSize) : 0;
-            return disc ? { disc: box(disc), glyph: box(disc.querySelector('.jfmod-dlmark-glyph')), font,
+            return disc ? { disc: box(disc), glyph: box(disc.querySelector(":is(.jfmod-dlmark-glyph, .dm .glyph)")), font,
                 heart: heart ? { box: box(heart), glyph: box(heart.querySelector('.material-icons, svg')), cy: box(heart).cy } : null } : null;
         });
         if (size) {
@@ -547,8 +547,8 @@ async function run(browser, layout) {
             record(label, 'season page row disc size', 'NOT VERIFIED', 'no row with a disc');
         }
         if (layout === 'desktop') {
-            await checkInert(page, label, 'a season page row\'s download disc', page.locator('.page:not(.hide) .listItem .jfmod-dlmark'));
-            await checkInert(page, label, 'a failed row\'s red bang', page.locator('.page:not(.hide) .jfmod-dlRow--failed .jfmod-mark--none'));
+            await checkInert(page, label, 'a season page row\'s download disc', page.locator(".page:not(.hide) .listItem :is(.jfmod-dlmark, [data-ds-download])"));
+            await checkInert(page, label, 'a failed row\'s red bang', page.locator(".page:not(.hide) .jfmod-dlRow--failed :is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"]))"));
         }
 
         // ---- The episode detail line: E[1]'s own file of the pack.
@@ -559,7 +559,7 @@ async function run(browser, layout) {
             await page.waitForTimeout(800);
             const line = await page.evaluate(() => {
                 const node = document.querySelector('.page:not(.hide) .jfmod-queueStatusLine');
-                const disc = node?.querySelector('.jfmod-dlmark');
+                const disc = node?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
                 return node ? { text: node.textContent.replace(/\s+/g, ' ').trim(), disc: disc?.getAttribute('data-jfmod-kind') ?? null,
                     discFirst: node.firstElementChild === disc, title: disc?.title ?? null, link: !!node.querySelector('a[href="#/catalog/queue"]') } : null;
             });
@@ -594,11 +594,11 @@ async function run(browser, layout) {
                 progress: 0.42, etaSeconds: 720, downloadRateBytes: 3100000, grabId: opId })]);
             await go(page, `#/details?id=${pickerItem}`);
             await page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first().click({ timeout: 20000 });
-            await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseItem--added .jfmod-dlmark', { timeout: 20000 }).catch(() => {});
+            await page.waitForSelector(".jfmod-releaseDialog .jfmod-releaseItem--added :is(.jfmod-dlmark, [data-ds-download])", { timeout: 20000 }).catch(() => {});
             await page.waitForTimeout(800);
             const added = await page.evaluate(() => {
                 const item = document.querySelector('.jfmod-releaseDialog .jfmod-releaseItem--added');
-                const disc = item?.querySelector('[data-jfmod-release-add] .jfmod-dlmark');
+                const disc = item?.querySelector("[data-jfmod-release-add] :is(.jfmod-dlmark, [data-ds-download])");
                 return item ? { disc: disc?.getAttribute('data-jfmod-kind') ?? null, title: disc?.title ?? null, x: !!item.querySelector('[data-jfmod-release-x]'),
                     figure: item.querySelector('.jfmod-addedFigure')?.textContent ?? null, bars: item.querySelectorAll('.jfmod-dlBar, .jfmod-addedBar').length } : null;
             });
@@ -639,7 +639,7 @@ async function run(browser, layout) {
         await page.waitForSelector('.jfmod-queueRow, .jfmod-queueTableRow', { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(800);
         const queueRows = await page.evaluate(() => [...document.querySelectorAll('.page:not(.hide) .jfmod-queueRow, .page:not(.hide) .jfmod-queueTableRow')]
-            .map(row => ({ disc: row.querySelector('.jfmod-queueState--disc .jfmod-dlmark')?.getAttribute('data-jfmod-kind') ?? null,
+            .map(row => ({ disc: row.querySelector(".jfmod-queueState--disc :is(.jfmod-dlmark, [data-ds-download])")?.getAttribute('data-jfmod-kind') ?? null,
                 bar: !!row.querySelector('[role="progressbar"]'), word: row.querySelector('.jfmod-queueState:not(.jfmod-queueState--disc)')?.textContent ?? null })));
         const kinds = new Set(queueRows.map(row => row.disc));
         record(label, 'Queue page: the disc in place of the state word (downloading, queued, importing, stalled, failed), the progress bar kept',
@@ -653,7 +653,7 @@ async function run(browser, layout) {
         const moviesView = views.find(view => view.type === 'movies');
         const showsView = views.find(view => view.type === 'tvshows');
         if (movie && moviesView) {
-            const movieCard = `.page:not(.hide) .card[data-id="${movie.jellyfinItemId}"]`;
+            const movieCard = `.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${movie.jellyfinItemId}"]`;
             await go(page, `#/movies?topParentId=${moviesView.id}`);
             await page.waitForSelector(movieCard, { timeout: 30000 }).catch(() => {});
             const STATES = [
@@ -664,7 +664,7 @@ async function run(browser, layout) {
             ];
             for (const state of STATES) {
                 setItems(state.rows);
-                await page.waitForFunction(([sel, kind]) => document.querySelector(sel + ' .jfmod-dlmark')?.getAttribute('data-jfmod-kind') === kind,
+                await page.waitForFunction(([sel, kind]) => document.querySelector(sel + " :is(.jfmod-dlmark, [data-ds-download])")?.getAttribute('data-jfmod-kind') === kind,
                     [movieCard, state.kind], { timeout: 12000 }).catch(() => {});
                 await page.waitForTimeout(500);
                 const card = await cardState(page, movieCard);
@@ -694,7 +694,7 @@ async function run(browser, layout) {
                 }
             }
             setItems(movieRow('failed', { progress: 0.1, message: 'The torrent contains no video file.' }));
-            await page.waitForFunction(sel => !document.querySelector(sel + ' .jfmod-dlmark'), movieCard, { timeout: 12000 }).catch(() => {});
+            await page.waitForFunction(sel => !document.querySelector(sel + " :is(.jfmod-dlmark, [data-ds-download])"), movieCard, { timeout: 12000 }).catch(() => {});
             const failedCard = await cardState(page, movieCard);
             record(label, 'film card with a failed download: nothing drawn on the card', !failedCard?.disc && !failedCard?.bar, failedCard);
 
@@ -750,10 +750,10 @@ async function run(browser, layout) {
 
         // ---- The series' card in search and in its library grid; Home's Next Up when it shows one of the season's episodes.
         await go(page, `#/search?query=${encodeURIComponent(entry.title)}`);
-        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) .card[data-id="${id}"] .jfmod-dlmark`), seriesId, { timeout: 30000 })
+        await page.waitForFunction(id => !!document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.jfmod-dlmark, [data-ds-download])`), seriesId, { timeout: 30000 })
             .catch(() => {});
-        const seriesCard = await cardState(page, `.page:not(.hide) .card[data-id="${seriesId}"]`);
-        await shotOf(page.locator(`.page:not(.hide) .card[data-id="${seriesId}"]`), 'card-series-search');
+        const seriesCard = await cardState(page, `.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${seriesId}"]`);
+        await shotOf(page.locator(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${seriesId}"]`), 'card-series-search');
         record(label, 'search: the series card shows the bar and the downloading disc (two icons beside a count pill), the figure in its tooltip',
             !!seriesCard?.bar && seriesCard.colour === BAR_DARK && seriesCard.disc?.kind === 'downloading' && seriesCard.disc.title.startsWith('Downloading · ')
             && (!seriesCard.pill || (seriesCard.pill.discLeft && !seriesCard.pill.arrow)), seriesCard);
@@ -761,19 +761,19 @@ async function run(browser, layout) {
         const episodeIds = [...itemOf.values()];
         await go(page, `#/details?id=${seriesId}`);
         await page.waitForTimeout(2500);
-        if (!await page.evaluate(ids => ids.some(id => document.querySelector(`.page:not(.hide) .card[data-type="Episode"][data-id="${id}"]`)), episodeIds)) {
+        if (!await page.evaluate(ids => ids.some(id => document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${id}"]`)), episodeIds)) {
             await go(page, '#/home');
         }
-        await page.waitForFunction(ids => ids.some(id => document.querySelector(`.page:not(.hide) .card[data-id="${id}"] .jfmod-dlmark`)), episodeIds,
+        await page.waitForFunction(ids => ids.some(id => document.querySelector(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"] :is(.jfmod-dlmark, [data-ds-download])`)), episodeIds,
             { timeout: 15000 }).catch(() => {});
         const nextUp = await page.evaluate(ids => {
-            const card = [...document.querySelectorAll('.page:not(.hide) .card[data-type="Episode"]')].find(node => ids.includes(node.getAttribute('data-id')));
-            return card ? { id: card.getAttribute('data-id'), landscape: /backdrop|overflowBackdrop|thumb/i.test(card.className) } : null;
+            const card = [...document.querySelectorAll(".page:not(.hide) :is(.card:not(.dm), .cell)[data-type=\"Episode\"]")].find(node => ids.includes(node.getAttribute('data-id')));
+            return card ? { id: card.getAttribute('data-id'), landscape: card.classList.contains('w') || /backdrop|overflowBackdrop|thumb/i.test(card.className) } : null;
         }, episodeIds);
         if (nextUp) {
-            const view = await cardState(page, `.page:not(.hide) .card[data-type="Episode"][data-id="${nextUp.id}"]`);
+            const view = await cardState(page, `.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${nextUp.id}"]`);
             record(label, 'a landscape Next Up episode card (series page or Home) shows its download disc, the figure in its tooltip', !!view?.disc?.visible && view.disc.topRight && view.disc.title.startsWith('Downloading · ') && !!view.bar, { nextUp, disc: view?.disc });
-            await shotOf(page.locator(`.page:not(.hide) .card[data-type="Episode"][data-id="${nextUp.id}"]`), 'card-next-up');
+            await shotOf(page.locator(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${nextUp.id}"]`), 'card-next-up');
         } else {
             record(label, 'a Next Up card with a download', 'NOT VERIFIED', 'neither the series page nor Home shows one of the season\'s episodes');
         }
@@ -784,7 +784,7 @@ async function run(browser, layout) {
         await page.waitForTimeout(2000);
         const quietFrom = reads.length;
         await page.waitForTimeout(16000);
-        const left = await page.evaluate(() => document.querySelectorAll('.jfmod-dlCard, .jfmod-dlRow, .jfmod-dlmark, .jfmod-dlMeta').length);
+        const left = await page.evaluate(() => document.querySelectorAll(".jfmod-dlCard, .jfmod-dlRow, :is(.jfmod-dlmark, [data-ds-download]), .jfmod-dlMeta").length);
         record(label, 'nothing on its way: every mark is gone and the queue is not polled', left === 0 && reads.length - quietFrom <= 1,
             { left, readsIn16s: reads.length - quietFrom });
         record(label, 'no page errors', errors.length === 0, errors.slice(0, 3));

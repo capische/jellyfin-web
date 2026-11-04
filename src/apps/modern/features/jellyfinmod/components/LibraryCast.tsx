@@ -66,11 +66,11 @@ const LibraryCast: FC<LibraryCastProps> = ({ items, rows }) => {
         if (key && credits?.length) entryCast[key] = credits.slice(0, 2).map(person => person.name).join(', ');
     }
 
-    const rowsKey = idsKey + '|' + (rows ?? []).length;
+    const rowsKey = idsKey + '|' + (rows ?? []).map(row => row.entry?.id ?? '').join();
     useLayoutEffect(() => {
-        const cards = anchor.current?.parentElement?.querySelectorAll('.card') ?? [];
+        const cards = anchor.current?.parentElement?.querySelectorAll('.card, .cell') ?? [];
         setTargets(Array.from(cards).flatMap((card, index) => {
-            const node = card.querySelector('.cardText')?.parentElement;
+            const node = card.querySelector('[data-jfmod-cast]') ?? card.querySelector('.cardText')?.parentElement;
             const key = card.getAttribute('data-id') ?? card.getAttribute('data-jfmod-entry-id') ?? 'card' + index;
             return node ? [{ key, node }] : [];
         }));
@@ -78,8 +78,11 @@ const LibraryCast: FC<LibraryCastProps> = ({ items, rows }) => {
 
     return <>
         <span ref={anchor} hidden />
-        {targets.map(({ key, node }) => createPortal(
-            <div className='cardText jfmod-cardCast'>{cast?.[key] || entryCast[key] || ''}</div>, node, key))}
+        {targets.map(({ key, node }) => {
+            const names = libraryPageSize ? cast?.[key] || entryCast[key] || '' : '';
+            const content = node.hasAttribute('data-jfmod-cast') ? names : <div className='cardText jfmod-cardCast'>{names}</div>;
+            return createPortal(content, node, key);
+        })}
     </>;
 };
 

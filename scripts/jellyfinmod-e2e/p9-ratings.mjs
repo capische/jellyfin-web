@@ -222,7 +222,7 @@ const popup = page => page.evaluate(selector => {
     for (const hidden of copy.querySelectorAll('.jfmod-ratingsHidden')) hidden.remove();
     return { rows: [...node.querySelectorAll('[data-jfmod-rating]')].map(row => ({ source: row.dataset.jfmodRating,
         value: row.querySelector('.jfmod-popValue')?.textContent ?? '', votes: row.querySelector('.jfmod-popVotes')?.textContent ?? '',
-        title: row.getAttribute('title') ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
+        title: (row.getAttribute('title') ?? row.getAttribute('data-tip')) ?? '' })), text: copy.textContent, width: Math.round(node.getBoundingClientRect().width),
     links: node.querySelectorAll('a').length, intrinsic: Math.abs(node.getBoundingClientRect().width - ([...node.querySelector('.jfmod-popRow').children].filter(cell => !cell.classList.contains('jfmod-ratingsHidden')).reduce((sum, cell) => sum + cell.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(node).paddingLeft) + parseFloat(getComputedStyle(node).paddingRight))) < 1 };
 }, POPUP);
 /** Rows only (no "via …" line, no caveat), the provenance in each row's title, the content width, no links. */
@@ -378,7 +378,7 @@ async function desktop(browser) {
     const grid = `#/movies?topParentId=${STATE.libraryId}&collectionType=movies`;
     page.jfmodBrowse.length = 0;
     await go(page, grid);
-    await page.waitForSelector('.card', { timeout: 20000 }).catch(ignore);
+    await page.waitForSelector(":is(.card:not(.dm), .cell)", { timeout: 20000 }).catch(ignore);
     await page.waitForTimeout(1500);
     let cardText = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => node.textContent));
     record(layout, 'Cards are unchanged with the preference off: no card rating and no ratingSource sent', cardText.length === 0
@@ -389,18 +389,18 @@ async function desktop(browser) {
     page.jfmodBrowse.length = 0;
     await go(page, grid);
     await page.waitForSelector('.jfmod-cardRating', { timeout: 20000 }).catch(ignore);
-    cardText = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => ({ text: node.textContent, inSecondary: !!node.closest('.cardText-secondary'),
-        icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null, title: node.closest('[title]')?.getAttribute('title') ?? null,
-        badge: !!node.closest('.cardIndicators, .cardOverlayContainer') })));
+    cardText = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => ({ text: node.textContent, inSecondary: !!node.closest(":is(.cardText-secondary, .capt > .ln:nth-child(2))"),
+        icon: node.querySelector('svg.jfmod-ratingIcon')?.getAttribute('data-jfmod-icon') ?? null, title: node.closest(':is([title],[data-tip])')?.getAttribute('title') ?? null,
+        badge: !!node.closest(":is(.cardIndicators, .pill2), :is(.cardOverlayContainer, .post)") })));
     record(layout, 'With IMDb chosen each card carries its mark and value in its secondary text line, no badge and no tooltip', cardText.length >= 2
         && cardText.every(card => /8\.1/.test(card.text) && card.icon === 'imdb' && card.inSecondary && !card.badge && !card.title)
         && page.jfmodBrowse.some(body => body.ratingSource === 'imdb'), cardText);
     const stale = await page.$$eval('.jfmod-cardRating', nodes => nodes.map(node => ({ text: node.textContent.replace(/^\s*·\s*/, ''),
-        stale: node.classList.contains('jfmod-cardRating-stale'), title: node.closest('.card')?.querySelector('.cardText-first')?.textContent ?? '' })));
+        stale: node.classList.contains('jfmod-cardRating-stale'), title: node.closest(":is(.card:not(.dm), .cell)")?.querySelector(":is(.cardText-first, .ln.t)")?.textContent ?? '' })));
     record(layout, 'A stale card value says how old it is, compactly; a current one does not', stale.some(card => card.stale
         && /^8\.1 \([A-Z][a-z]{2} \d{4}\)$/.test(card.text) && /Second/.test(card.title))
         && stale.some(card => !card.stale && card.text === '8.1' && /Host/.test(card.title)), stale);
-    const focusables = await page.$$eval('.card .jfmod-cardRating', nodes => nodes.filter(node => node.tabIndex >= 0 || node.querySelector('[tabindex]')).length);
+    const focusables = await page.$$eval(":is(.card:not(.dm), .cell) .jfmod-cardRating", nodes => nodes.filter(node => node.tabIndex >= 0 || node.querySelector('[tabindex]')).length);
     record(layout, 'The card rating adds no focus stop', focusables === 0);
     await shot(page, `${layout}-cards`);
 
@@ -458,7 +458,7 @@ async function desktop(browser) {
     });
     await signIn(oldPage);
     await go(oldPage, grid);
-    await oldPage.waitForSelector('.card', { timeout: 20000 }).catch(ignore);
+    await oldPage.waitForSelector(":is(.card:not(.dm), .cell)", { timeout: 20000 }).catch(ignore);
     await oldPage.waitForTimeout(1500);
     const oldCards = await oldPage.$$eval('.jfmod-cardRating', nodes => nodes.length);
     await go(oldPage, `#/details?id=${STATE.hostItem}`);
