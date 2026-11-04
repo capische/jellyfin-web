@@ -134,7 +134,10 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.star ? 'star' : undefined}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
     const overview = <p className='ov'>{card.overview}</p>;
     const state = cardState(card);
-    const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{state}</span>}{card.commands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
+    // ds.js season: a phone's row has no Played, and the state mark takes the heart's place.
+    const hasState = !!state || card.commands.some(command => command.icon === 'cloud');
+    const rowCommands = device === 'phone' ? card.commands.filter(command => command.icon !== 'check' && (command.icon !== 'heart' || !hasState)) : card.commands;
+    const actions = <div className='acts'>{state && !card.commands.some(command => command.icon === 'cloud') && <span className='ib' data-ds-state-kind={card.mark?.kind} title={card.mark?.label}>{state}</span>}{rowCommands.map(command => <Command key={command.key} command={command} view={view} row />)}</div>;
     const prepare = () => card.node.dispatchEvent(new Event('pointerover', { bubbles: true }));
     const attributes = { tabIndex: 0, onMouseEnter: prepare, onFocus: () => {
         setFocus(true);
@@ -199,12 +202,13 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
         };
     }, [view]);
     useEffect(() => {
-        if (device !== 'tv' || focused.current || !model.commands.length || !ref.current) return;
+        // Get a Release is mounted before the controller has revealed Play: wait for the controller's own buttons.
+        if (device !== 'tv' || focused.current || !model.commands.some(command => ['check', 'heart'].includes(command.icon)) || !ref.current) return;
         if (document.activeElement && document.activeElement !== document.body && !view.contains(document.activeElement)) return;
         const first = ref.current.querySelector<HTMLElement>('.actbar .play, .actbar button');
         if (first) focusManager.focus(first);
         focused.current = true;
-    }, [device, model.commands.length, view]);
+    }, [device, model.commands, view]);
     const item = environment.item;
     let here = '';
     if (environment.type === 'Season') here = model.title;
@@ -243,7 +247,8 @@ const Content: FC<{ view: HTMLElement; type: string; art: string; item?: BaseIte
             <Slot view={view} name='download' />
             {model.originalTitle && <div className='tags'>{model.originalTitle}</div>}
             <div className='overview'>{model.tagline && <p>{model.tagline}</p>}{model.overview.length > 0 && <p data-ds-overview=''><Inline parts={model.overview} /></p>}</div>
-            {[...model.details, model.genres, model.tags].filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
+            {[...model.details, model.genres].filter(parts => parts.length).map(parts => <div className='tags' data-ds-detail='' key={parts.map(part => part.text).join('')}><Labelled parts={parts} /></div>)}
+            {model.tags.length > 0 && <div className='tags'><Inline parts={model.tags} /></div>}
             <div className='links'>{model.links.map((link, index) => <React.Fragment key={link.href}>{index > 0 && ', '}<a className='focusable' href={link.href} target='_blank' rel='noreferrer'><b>{link.label}</b></a></React.Fragment>)}</div>
             <Slot view={view} name='augment' />
         </Head>
