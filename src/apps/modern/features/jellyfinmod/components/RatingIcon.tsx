@@ -109,10 +109,10 @@ const TmdbMark: FC = () => {
     </>;
 };
 
-const RatingIcon: FC<{ rating: Pick<Rating, 'source' | 'value' | 'scale'> }> = ({ rating }) => {
+const RatingIcon: FC<{ rating: Pick<Rating, 'source' | 'value' | 'scale'>; className?: string }> = ({ rating, className = '' }) => {
     const kind = iconKind(rating);
     const mark = kind === 'tmdb' ? { ...MARKS.tmdb, body: <TmdbMark /> } : MARKS[kind];
-    return <svg className='jfmod-ratingIcon' viewBox={mark.viewBox} role='img' aria-label={SOURCE_LONG[rating.source]}
+    return <svg className={'jfmod-ratingIcon ' + className} viewBox={mark.viewBox} role='img' aria-label={SOURCE_LONG[rating.source]}
         data-jfmod-icon={kind} focusable='false'>{mark.body}</svg>;
 };
 

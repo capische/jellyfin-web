@@ -1,8 +1,8 @@
 /** Put paper a φ^-2 gap from its anchor, flipping above it when the room is below. */
-export const menuPosition = (anchor: Element, dialog: HTMLElement) => {
+export const menuPosition = (anchor: Element, dialog: HTMLElement, gapEms = 0.382) => {
     const box = anchor.getBoundingClientRect();
     const em = parseFloat(getComputedStyle(dialog).fontSize);
-    const gap = 0.382 * em;
+    const gap = gapEms * em;
     const width = dialog.offsetWidth;
     const height = dialog.offsetHeight;
     const below = box.bottom + gap;

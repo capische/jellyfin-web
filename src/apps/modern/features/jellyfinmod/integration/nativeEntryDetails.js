@@ -10,7 +10,7 @@ import NativeRatingsLine, { prefetchItemRatings } from '../components/NativeRati
 import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 import { moveShuffle } from './shuffleMenu';
-import { titlePage } from './titlePage';
+import { titlePage, clearTitlePage } from './titlePage';
 import { getItemBackdropImageUrl } from 'utils/jellyfin-apiclient/backdropImage';
 
 import './placeholderPage.scss';
@@ -65,6 +65,7 @@ export default function initializeNativeEntryDetails(view, params) {
     let ratingsRowWatch;
     let generation = 0;
     const hide = () => {
+        clearTitlePage(view);
         generation++;
         unmount?.();
         unmount = undefined;
@@ -93,7 +94,7 @@ export default function initializeNativeEntryDetails(view, params) {
      * to the group if the refill took it away (web review 2026-10-08, P2 2).
      */
     const watchRatingsRow = (itemRequest, api, userId) => {
-        const row = view.querySelector('.detailRibbon .itemMiscInfo-primary');
+        const row = view.querySelector('[data-ds-slot="ratings"]') ?? view.querySelector('.detailRibbon .itemMiscInfo-primary');
         if (!row) return;
         ratingsMount = document.createElement('span');
         ratingsMount.className = 'jfmod-ratingsMount';
@@ -123,7 +124,7 @@ export default function initializeNativeEntryDetails(view, params) {
             });
         });
         const place = () => {
-            if (!row.firstChild) return;
+            if (!row.firstChild && !row.hasAttribute('data-ds-slot')) return;
             const before = row.querySelector('.starRatingContainer, .closedCaptionMediaInfoText, .mediaInfoCriticRating, .endsAt');
             if (mountNode.parentNode === row && (!before || mountNode.nextSibling === before)) return;
             row.insertBefore(mountNode, before);
@@ -165,7 +166,7 @@ export default function initializeNativeEntryDetails(view, params) {
         };
         const read = client.getItem(userId, params.id).then(fresh => {
             if (currentGeneration === generation && fresh) {
-                titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '');
+                titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '', fresh.MediaSources);
             }
             const facts = nativeItemFacts(fresh);
             queryClient.setQueryData(itemKey, facts);
@@ -175,7 +176,7 @@ export default function initializeNativeEntryDetails(view, params) {
         // The ratings group goes into upstream's first metadata row before upstream fills it, and its data is read beside the
         // page's own reads (Phase 9). Nothing waits for it: the group reserves its place at its first paint, and the page's own
         // state (a placeholder's hidden Play, review 2026-10-28 P2 2) is applied as soon as the item is known.
-        watchRatingsRow(known ? Promise.resolve(known) : read, api, userId);
+
         prefetchItemRatings(api, userId, params.id).catch(() => undefined);
         let item;
         let user;
@@ -188,6 +189,7 @@ export default function initializeNativeEntryDetails(view, params) {
         }
         if (currentGeneration !== generation) return;
         titlePage(view, item?.Type);
+        watchRatingsRow(Promise.resolve(item), api, userId);
         view.toggleAttribute(PLACEHOLDER_ATTRIBUTE, !!item?.IsPlaceHolder);
         if (item?.Type === 'Season' && item.SeriesId) prefetchNativeEntry(api, userId, item.SeriesId);
         prefetchNativeChildren(api, userId, params.id, item ?? {});
@@ -195,7 +197,7 @@ export default function initializeNativeEntryDetails(view, params) {
         undoShuffle = moveShuffle(view, item, client);
         mount = document.createElement('div');
         mount.className = 'jfmod-nativeEntryDetails';
-        target.appendChild(mount);
+        (view.querySelector('[data-ds-slot="augment"]') ?? target).appendChild(mount);
         // The file chooser, the header icon, the Played badge and the More-menu item are placed by the component itself, inside
         // upstream's Video row, header row and Played button (0.1.0.0 detail page design fix, 2026-10-07; UX §1.1).
         // The Trakt indicator has its own mount, so it shows on a title that has no catalog entry too (P7.Q16). It
@@ -205,7 +207,8 @@ export default function initializeNativeEntryDetails(view, params) {
         if (TRAKT_ITEM_TYPES.includes(item?.Type)) {
             traktMount = document.createElement('div');
             traktMount.className = 'jfmod-traktMount';
-            target.insertBefore(traktMount, target.firstChild);
+            const traktTarget = view.querySelector('[data-ds-slot="augment"]') ?? target;
+            traktTarget.insertBefore(traktMount, traktTarget.firstChild);
             unmountTrakt = renderComponent(TraktIndicator, {
                 api,
                 userId: client.getCurrentUserId(),

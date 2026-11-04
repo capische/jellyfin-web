@@ -473,7 +473,7 @@ async function sweepLayout(name) {
     if (played) {
         const video = { advanced: 0 };
         const verdict = await row('Video player (play a few seconds, then Back)', (cfg.tv ? keys + ': Play, then remote Back (461)' : shell + ': Play, then Back'), async () => {
-            await activate(page, cfg, { sel: '.btnPlay, .jfmod-play, button', text: '^\\s*(Play|Resume)\\b', scope: '#itemDetailPage:not(.hide) .mainDetailButtons, #itemDetailPage:not(.hide) .detailButtons, .page:not(.hide) .jfmod-entryActions' });
+            await activate(page, cfg, { sel: '[data-ds-command~=btnPlay], .jfmod-play, button', text: '^\\s*(Play|Resume)\\b', scope: '#itemDetailPage:not(.hide) .jfmod-dsTitleHost .actbar, #itemDetailPage:not(.hide) .detailButtons, .page:not(.hide) .jfmod-entryActions' });
             await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/video') && !!document.querySelector('video') })), { timeout: 20000 });
             const progressed = await poll(() => page.evaluate(() => {
                 const v = document.querySelector('video');

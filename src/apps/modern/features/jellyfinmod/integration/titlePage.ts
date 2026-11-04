@@ -1,56 +1,39 @@
-import { titleEpisodeRows } from './titleEpisodeRows';
+import { renderComponent } from 'utils/reactUtils';
+import { TitlePage, clearTitleSlots } from '../design/TitlePage';
+import { setTitleSources } from '../design/titleModel';
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client';
 
-const arrangeTitle = (view: HTMLElement, primary: Element) => {
-    if (!primary.querySelector('.jfmod-titleColumn')) {
-        const column = document.createElement('div');
-        column.className = 'jfmod-titleColumn';
-        const notice = document.createElement('div');
-        notice.className = 'jfmod-titleNotice';
-        column.appendChild(notice);
-        for (const selector of ['.detailRibbon', '.detailPagePrimaryContent']) {
-            const slot = primary.querySelector(selector);
-            if (slot) column.appendChild(slot);
-        }
-        primary.appendChild(column);
-        const art = document.createElement('div');
-        art.className = 'jfmod-titleArt';
-        art.setAttribute('aria-hidden', 'true');
-        primary.prepend(art);
-        const secondary = view.querySelector('.detailPageSecondaryContainer');
-        if (secondary) {
-            for (const selector of ['#listChildrenCollapsible', '.nextUpSection']) {
-                const section = primary.querySelector(selector);
-                if (section) secondary.prepend(section);
-            }
-        }
-        titleEpisodeRows(view);
-    }
-};
+const visits = new WeakMap<HTMLElement, { type: string; art: string; host: HTMLElement; unmount: () => void; cleanup?: () => void }>();
 
-/** Presentation only: keep the stock slots, controls and controller on title/person pages. */
-export const titlePage = (view: HTMLElement, type: string, image?: string) => {
+/** Keep the legacy template as the controller's private state; React owns the painted page. */
+export const titlePage = (view: HTMLElement, type: string, image?: string, sources?: MediaSourceInfo[]) => {
     if (!['Movie', 'Series', 'Season', 'Episode', 'Person'].includes(type)) return;
-    view.classList.add('jfmod-titlePage');
-    view.classList.toggle('jfmod-titleEpisode', type === 'Episode');
-    view.classList.toggle('jfmod-titlePerson', type === 'Person');
-    const primary = view.querySelector('.detailPagePrimaryContainer');
-    if (!primary) return;
-    arrangeTitle(view, primary);
-    if (type === 'Person') arrangePerson(view);
-    const art = primary.querySelector<HTMLElement>('.jfmod-titleArt');
-    if (art && image !== undefined) art.style.setProperty('--jfmod-title-image', image ? `url(${JSON.stringify(image)})` : 'none');
+    if (sources) setTitleSources(view, sources);
+    view.classList.add('jfmod-titlePage', 'jfmod-dsTitle');
+    const previous = visits.get(view);
+    if (previous) {
+        if (image !== undefined) previous.art = image;
+        previous.type = type;
+        view.dispatchEvent(new CustomEvent('ds-title-update', { detail: { type, art: previous.art } }));
+        return;
+    }
+    const host = document.createElement('div');
+    host.className = 'jfmod-dsTitleHost';
+    view.appendChild(host);
+    const unmount = renderComponent(TitlePage, { view, type, art: image ?? '' }, host);
+    visits.set(view, { type, art: image ?? '', host, unmount });
+    const hide = () => {
+        clearTitleSlots(view);
+        unmount();
+        host.remove();
+        visits.delete(view);
+        view.classList.remove('jfmod-dsTitle');
+        view.removeEventListener('viewbeforehide', hide);
+        view.removeEventListener('viewdestroy', hide);
+    };
+    visits.get(view)!.cleanup = hide;
+    view.addEventListener('viewbeforehide', hide);
+    view.addEventListener('viewdestroy', hide);
 };
 
-/** These keep their IDs: the stock controller still supplies the localized dates, age and birthplace link. */
-const arrangePerson = (view: HTMLElement) => {
-    if (view.querySelector('.jfmod-personFacts')) return;
-    const info = view.querySelector('.infoWrapper');
-    if (!info) return;
-    const facts = document.createElement('div');
-    facts.className = 'jfmod-personFacts';
-    for (const selector of ['#itemBirthday', '#itemBirthLocation', '#itemDeathDate']) {
-        const node = view.querySelector(selector);
-        if (node) facts.appendChild(node);
-    }
-    info.appendChild(facts);
-};
+export const clearTitlePage = (view: HTMLElement) => visits.get(view)?.cleanup?.();

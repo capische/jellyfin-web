@@ -368,7 +368,7 @@ async function openersStep() {
         await page.evaluate(([entry, server, season, episode]) => {
             location.hash = `#/details?entryId=${entry}&serverId=${server}&season=${season}&episode=${episode}`;
         }, [pack.entry.id, serverId, waiting.seasonNumber, waiting.episodeNumber]);
-        const cancel = page.locator('.jfmod-dlblock-cancel');
+        const cancel = page.locator('.act .btn:not(.main):not(.destroy)');
         await cancel.waitFor({ state: 'visible', timeout: 30000 });
         await cancel.click();
         await waitDialog();
@@ -386,7 +386,7 @@ async function openersStep() {
     const item = (await api(page, 'GET', '/Items?recursive=true&searchTerm=Resurrections&includeItemTypes=Movie')).body.Items[0];
     if (res && item && DOWNLOADS && STANDIN_LOG) {
         await page.evaluate(([id, server]) => { location.hash = `#/details?id=${id}&serverId=${server}`; }, [item.Id, serverId]);
-        const get = page.locator('.jfmod-getRelease:visible').first();
+        const get = page.locator('[data-ds-command~=jfmod-getRelease]:visible').first();
         await get.waitFor({ state: 'visible', timeout: 30000 });
         await get.click();
         const add = page.locator('.jfmod-releaseRow').filter({ hasText: 'QRS' }).first().locator('xpath=..').locator('.jfmod-releaseAction--add');

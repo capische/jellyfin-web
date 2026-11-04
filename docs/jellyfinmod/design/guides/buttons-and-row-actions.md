@@ -1,5 +1,10 @@
 # Buttons and row actions
 
+**dsD (2026-11-04), built, not accepted:** title pages use source `actbar/play/dbtn`, row `ib/rb`, and disclosure
+`dsc/opn/er` through the design components. Original commands, permissions and busy/refusal guards remain. Real buttons add
+focusable/ARIA semantics without upstream visual components; native Played/Favourite controls retain their original calls and
+source primary active ink. Per-file History/Keep/Remove act on the same binding. [Full implementation and CSS delta](../dsD.md).
+
 **dsC (2026-11-04), built, not accepted:** `design/Controls` ports the three source `.btn` kinds and dialog shell. Shared confirmations/prompts, queue removal and Remove After Watching use these native controls. The removal plan and immediate retention-save handlers are unchanged; source switch markup replaces the blocklist checkbox. Admin settings/wizard and unported custom content retain their existing controls. [Scope and CSS delta](../dsC.md).
 
 **rd3 title action pill (approved rulebook §§5/7, built, not accepted):** `.jfmod-titlePage .mainDetailButtons`

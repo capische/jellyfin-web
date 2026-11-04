@@ -1,5 +1,9 @@
 # Loading spinner
 
+**dsD (2026-11-04), built, not accepted:** `integration/playbackStart.scss` retains the existing black-screen geometry,
+z-index and timing after deletion of title restyling. The new action pill reaches the original playbackManager path. The overlay,
+spinner and listeners still clear on start/error/cancel/stop, resolved refusal, rejection and navigation. [Validation](../dsD.md).
+
 **dsC (2026-11-04), built, not accepted:** `design/Spinner` renders the source’s four-layer markup under `.jfds`, using the copied spinner CSS. Upstream loading remains the API and handles admin; an active spinner transfers back to upstream when leaving the design scope. The old sharedChrome spinner overrides are removed. Playback-start cleanup and dark-on-black colours remain. [Scope and CSS delta](../dsC.md).
 
 **rd3 playback start (approved rulebook §7/D230, built, not accepted):** `integration/playbackStart.ts` is a

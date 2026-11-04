@@ -52,7 +52,8 @@ export const moveShuffle = (view: HTMLElement, item: PageItem | undefined, clien
                 const header = view.querySelector('.mainDetailButtons');
                 const shuffle = header?.querySelector('.btnShuffle');
                 return !!button && !!header && !!shuffle && !shuffle.classList.contains('hide') && document.body.contains(view)
-                    && button.classList.contains('btnMoreCommands') && header.contains(button) && sameItemId(options.item?.Id, item.Id);
+                    && (button.classList.contains('btnMoreCommands') || !!button.getAttribute('data-ds-command')?.split(' ').includes('btnMoreCommands'))
+                    && (header.contains(button) || !!button.closest('.jfmod-dsTitleHost .actbar')) && sameItemId(options.item?.Id, item.Id);
             },
             run: () => view.querySelector<HTMLButtonElement>('.mainDetailButtons .btnShuffle')?.click()
         });

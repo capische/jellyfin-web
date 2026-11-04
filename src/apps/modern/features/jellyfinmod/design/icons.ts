@@ -1,5 +1,10 @@
 /* Icon paths from reviews/design-system/ds.js. */
 export const icons = {
+    x: 'M6 6L18 18M18 6L6 18',
+    phone: 'M17 1.01 7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z',
+    pin: 'M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z',
+    history: 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9M4.5 5V9H8.5M12 8V12L15 14',
+    client: 'M12 4V16M7 11L12 16L17 11M5 20H19',
     menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
     back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
     home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',

@@ -239,16 +239,16 @@ async function openCardMenu(page, cardSelector, tv) {
 /** Shuffle on a series or season page: hidden in the header and offered in More, or kept in the header. */
 async function checkShuffle(page, label, what, itemId, inHeader) {
     await go(page, `#/details?id=${itemId}`);
-    await page.waitForFunction(sel => !!document.querySelector(`${sel} .mainDetailButtons .btnMoreCommands:not(.hide)`), PAGE, { timeout: 30000 })
+    await page.waitForFunction(sel => !!document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=btnMoreCommands]:not(.hide)`), PAGE, { timeout: 30000 })
         .catch(() => {});
     await page.waitForTimeout(2000);
     const header = await page.evaluate(sel => {
-        const button = document.querySelector(`${sel} .mainDetailButtons .btnShuffle`);
+        const button = document.querySelector(`${sel} .jfmod-dsTitleHost .actbar [data-ds-command~=btnShuffle]`);
         return { present: !!button, upstreamShown: !!button && !button.classList.contains('hide'),
             visible: !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0 };
     }, PAGE);
     record(label, `${what}: the header Shuffle is ${inHeader ? 'shown' : 'hidden'}`, header.upstreamShown && header.visible === inHeader, header);
-    await page.locator(`${PAGE} .mainDetailButtons .btnMoreCommands:not(.hide)`).first().click();
+    await page.locator(`${PAGE} .jfmod-dsTitleHost .actbar [data-ds-command~=btnMoreCommands]:not(.hide)`).first().click();
     const opened = await page.waitForSelector(':is(.actionSheet, [data-ds-actionsheet])', { timeout: 10000 }).then(() => true, () => false);
     await page.waitForTimeout(300);
     const item = page.locator(':is(.actionSheet, [data-ds-actionsheet]) :is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="jfmod-more-shuffle"]');
@@ -260,7 +260,7 @@ async function checkShuffle(page, label, what, itemId, inHeader) {
     await page.evaluate(() => {
         window.jfmodShuffleClicks = 0;
         window.jfmodShuffleCatch = event => {
-            if (!event.target.closest?.('.btnShuffle')) return;
+            if (!event.target.closest?.('[data-ds-command~=btnShuffle]')) return;
             window.jfmodShuffleClicks++;
             event.stopPropagation();
             event.preventDefault();

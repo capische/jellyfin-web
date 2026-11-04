@@ -1,5 +1,11 @@
 # Pending version (another copy on its way for a title that plays)
 
+**dsD (2026-11-04), built, not accepted:** `design/Pending.tsx` now draws source `pend/pb/l1/l2/r/marks/sz2/dlf/flag/rb`.
+`PendingVersion.tsx` retains its queue, scope, cancellation and import-handoff logic. The deleted `pendingVersion.scss` is replaced
+by copied source CSS plus the explicit D236 survivor in `design/_runtime.scss`: three wrapping lines in lists under 24em, flag
+without a dot, scaled ring, whole marks, X clearance. Under the closed strip it retains the source two-line arrangement.
+[Every retained exception and CSS rule](../dsD.md).
+
 **rd3 integration (built, not accepted):** the entry lives in the new art-ground title column. Its existing
 **three-line** arrangement in a Video list under 24em remains authoritative: ring/quality/X, wrapping state,
 then the flag without a dot. The mockup's two-line arrangement is not used. Whole-mark dropping, sizes and

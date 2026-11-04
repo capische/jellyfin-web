@@ -514,7 +514,7 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const { open, enter, leave } = popup;
     const popupWidth = popupWidthOf(box.current, reserved, standInKey);
     if (design) {
-        return <DesignRatings box={box} button={button} popup={popup} standIn={standIn} label={label} id={popupId}
+        return <DesignRatings fullWidth={popupWidth ?? undefined} box={box} button={button} popup={popup} standIn={standIn} stack={standInKey === FALLBACK_KEY} label={label} id={popupId}
             standInList={standInList} inline={inline} enabled={enabled} onBlur={onBlur} />;
     }
     return <span ref={box} className={popup.groupClass} onPointerEnter={enter} onPointerLeave={leave}

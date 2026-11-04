@@ -10,11 +10,14 @@ import { packEpisodeView, useQueueRowFor } from '../hooks/useQueue';
 import { removeWithDialog } from '../integration/queueActions';
 import type { QueueRow, QueueState } from '../types/queue';
 import type { VersionDto } from '../types/versions';
-import DownloadStateMark, { ringLink } from './DownloadStateMark';
-import { formatSize, MediaMarks, qualityText } from './ReleaseRowParts';
+import { ringLink } from './DownloadStateMark';
+import { formatSize, qualityText } from './ReleaseRowParts';
 
 import './downloadProgress.scss';
-import './pendingVersion.scss';
+import { DownloadMark } from '../design/StateMark';
+import { DesignMediaMarks } from '../design/MediaMarks';
+import { Icon } from '../design/Icon';
+import { Pending } from '../design/Pending';
 
 /** A row the entry shows: on its way, importing, or failed (until it is removed from the queue). Seeding is done. */
 const SHOWN = new Set<QueueState>(['queued', 'downloading', 'stalled', 'identifying', 'linking', 'scanning', 'unknown', 'failed', 'blocked']);
@@ -103,28 +106,12 @@ const PendingVersion: FC<PendingVersionProps> = ({ entryId, episodeId, versions,
     // No X while it imports (D10), nor while the grab is being sent (it can be neither cancelled nor removed then).
     const cancellable = isAdmin && !IMPORTING.has(view.state) && row.importState !== 'submitting';
     const actionName = failure ? 'Remove from Queue' : 'Cancel Download';
-    return <div className={'jfmod-pending jfmod-pending--' + progress.kind} data-jfmod-pending={row.id}>
-        <DownloadStateMark progress={progress} size='row' link={ringLink([view], progress)} />
-        <div className='jfmod-pendingBody'>
-            <div className='jfmod-pendingLine'>
-                <span className='jfmod-fileResolution'>{quality}</span>
-                {/* The video's marks only, as on the file rows (D105); the Queue page draws the whole release. */}
-                {row.parsed && <span className='jfmod-fileMarks'><MediaMarks parsed={{ ...row.parsed, audio: null, audioChannels: null }} /></span>}
-                {row.sizeBytes !== null && <span className='jfmod-fileSize'>{formatSize(row.sizeBytes)}</span>}
-            </div>
-            <div className='jfmod-pendingMeta'>
-                <span className={'jfmod-dlMeta jfmod-dlMeta--' + progress.kind + (progress.stale ? ' jfmod-dlMeta--stale' : '')}
-                    title={progress.tooltip}>{flag ? progress.text.replace(/\.$/, '') : progress.text}</span>
-                {flag && <span className='jfmod-fileExtra jfmod-fileExtra--dot'>{flag}</span>}
-            </div>
-        </div>
-        {cancellable && <span className='jfmod-fileIcons'>
-            <button type='button' className='paper-icon-button-light jfmod-fileIcon jfmod-fileIcon--danger' title={actionName}
-                aria-label={actionName + ': ' + quality} aria-disabled={removing} data-jfmod-pending-remove={row.id} onClick={remove}>
-                <span className='material-icons close' aria-hidden='true' />
-            </button>
-        </span>}
-    </div>;
+    return <Pending id={row.id} quality={quality} size={row.sizeBytes !== null ? formatSize(row.sizeBytes) : undefined}
+        mark={<DownloadMark progress={progress} size='row' link={ringLink([view], progress)} />}
+        marks={row.parsed && <span className='marks'><DesignMediaMarks parsed={{ ...row.parsed, audio: null, audioChannels: null }} /></span>}
+        state={<span className={'dlf' + (failure ? ' figs fail' : '')} title={progress.tooltip}>{flag ? progress.text.replace(/\.$/, '') : progress.text}</span>}
+        flag={flag} action={cancellable && <button type='button' className='rb red focusable' title={actionName}
+            aria-label={actionName + ': ' + quality} aria-disabled={removing} data-jfmod-pending-remove={row.id} onClick={remove}><Icon name='x' /></button>} />;
 };
 
 export default PendingVersion;

@@ -306,8 +306,8 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
         const moviePage = await page.evaluate(() => {
             const view = document.querySelector('.page:not(.hide)');
             const count = selector => [...(view?.querySelectorAll(selector) ?? [])].filter(window.isShown).length;
-            return { placeholder: view?.hasAttribute('data-jfmod-placeholder'), play: count('.mainDetailButtons .btnPlay, .mainDetailButtons .btnReplay'),
-                played: count('.mainDetailButtons .btnPlaystate'), favourite: count('.mainDetailButtons .btnUserRating'), get: count('.jfmod-getRelease') };
+            return { placeholder: view?.hasAttribute('data-jfmod-placeholder'), play: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay], .jfmod-dsTitleHost .actbar .btnReplay'),
+                played: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlaystate]'), favourite: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnUserRating]'), get: count('[data-ds-command~=jfmod-getRelease]') };
         });
         record(label, `the movie's page: no Play, ✓ and ♥ there${isAdmin ? ', Get a Release in the header' : ''}`, moviePage.placeholder && moviePage.play === 0
             && moviePage.played === 1 && moviePage.favourite === 1 && (isAdmin ? moviePage.get >= 1 : moviePage.get === 0), moviePage);
@@ -320,8 +320,8 @@ async function browserChecks(browser, layout, user, isAdmin, context) {
         const seriesPage = await page.evaluate(() => {
             const view = document.querySelector('.page:not(.hide)');
             const count = selector => [...(view?.querySelectorAll(selector) ?? [])].filter(window.isShown).length;
-            return { placeholder: view?.hasAttribute('data-jfmod-placeholder'), play: count('.mainDetailButtons .btnPlay, .mainDetailButtons .btnReplay'),
-                played: count('.mainDetailButtons .btnPlaystate'), favourite: count('.mainDetailButtons .btnUserRating'),
+            return { placeholder: view?.hasAttribute('data-jfmod-placeholder'), play: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay], .jfmod-dsTitleHost .actbar .btnReplay'),
+                played: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnPlaystate]'), favourite: count('.jfmod-dsTitleHost .actbar [data-ds-command~=btnUserRating]'),
                 seasons: view?.querySelectorAll("#childrenContent :is(.card:not(.dm), .cell)").length ?? 0 };
         });
         record(label, 'the series\' page: no Play, ✓ and ♥ there, its seasons listed', seriesPage.placeholder && seriesPage.play === 0

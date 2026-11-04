@@ -202,7 +202,7 @@ const describeFocus = page => page.evaluate(() => {
     if (!node || node === document.body) return 'body';
     const text = (node.getAttribute('title') || node.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30);
     return [node.tagName.toLowerCase(), [...node.classList].filter(name => !/focus|hover|ripple/i.test(name)).slice(0, 3).join('.'),
-        node.getAttribute('data-action') ?? '', text, node.closest('.jfmod-traktIndicator') ? 'IN-INDICATOR' : ''].join('|');
+        node.getAttribute('data-action') ?? '', text, node.closest('.trakt') ? 'IN-INDICATOR' : ''].join('|');
 });
 /** Opens a detail page and waits for upstream's render and, when the plugin can answer, JellyfinMod's Trakt answer. */
 async function openDetail(page, itemId, serverId, { expectRequest }) {
@@ -221,7 +221,7 @@ async function openDetail(page, itemId, serverId, { expectRequest }) {
     await page.waitForTimeout(800);
     return page.evaluate(() => {
         const view = [...document.querySelectorAll('.itemDetailPage')].find(node => !node.classList.contains('hide') && node.offsetParent !== null);
-        const indicator = view?.querySelector('.jfmod-traktIndicator');
+        const indicator = view?.querySelector('.trakt');
         const mount = view?.querySelector('.jfmod-traktMount');
         const rect = indicator?.getBoundingClientRect();
         const top = selector => { const node = view?.querySelector(selector); return node && node.offsetParent !== null ? Math.round(node.getBoundingClientRect().top + window.scrollY) : null; };
@@ -235,7 +235,7 @@ async function openDetail(page, itemId, serverId, { expectRequest }) {
             fontEm: indicator ? Math.round(parseFloat(getComputedStyle(indicator).fontSize) / root * 100) / 100 : null,
             mount: mount ? { children: mount.childElementCount, height: Math.round(mount.getBoundingClientRect().height), firstInSection: mount.parentElement?.firstElementChild === mount } : null,
             horizontalOverflow: document.scrollingElement.scrollWidth > window.innerWidth + 1,
-            geometry: { buttons: top('.mainDetailButtons'), genres: top('.itemGenres'), overview: top('.overview'), childrenSection: top('.childrenItemsContainer, #childrenContent') },
+            geometry: { buttons: top('.jfmod-dsTitleHost .actbar'), genres: top('.itemGenres'), overview: top('.overview'), childrenSection: top('.childrenItemsContainer, #childrenContent') },
             layout: document.documentElement.classList.contains('layout-tv') ? 'tv' : document.documentElement.classList.contains('layout-mobile') ? 'mobile' : 'desktop'
         };
     });

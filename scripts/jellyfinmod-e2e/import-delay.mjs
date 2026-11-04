@@ -195,11 +195,11 @@ try {
                     if (!n) { window.importSamples.push({ at: Date.now(), missing: true }); return; }
                     const rows = name.endsWith('season-rows') ? [...n.querySelectorAll('.listItem')] : [n];
                     window.importSamples.push({ at: Date.now(), rows: rows.map(r => ({ id: r.getAttribute('data-id'),
-                        ring: [...r.querySelectorAll(":is(.jfmod-dlmark, [data-ds-download]):not(.jfmod-dlblock-none):not(.jfmod-dlblock-unaired)")].filter(shown).length,
-                        cloud: [...r.querySelectorAll(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"])),.jfmod-dlblock-none")].filter(shown).length,
+                        ring: [...r.querySelectorAll(":is(.jfmod-dlmark, [data-ds-download]):not(.dlb-none):not(.dlb-unaired)")].filter(shown).length,
+                        cloud: [...r.querySelectorAll(":is(.jfmod-mark--none, .mark:is([title=\"Not Downloaded\"],[data-tip=\"Not Downloaded\"])),.dlb-none")].filter(shown).length,
                         importing: [...r.querySelectorAll(":is(.jfmod-dlmark, [data-ds-download])")].some(d => d.getAttribute('data-jfmod-kind') === 'importing'),
-                        play: [...r.querySelectorAll('.listItemImageButton,[data-action="play"],[data-action="resume"],.btnPlay')].filter(shown).length,
-                        placeholder: r.hasAttribute('data-jfmod-placeholder'), word: r.querySelector('.jfmod-dlMeta,.jfmod-dlblock-word')?.textContent })) });
+                        play: [...r.querySelectorAll('.listItemImageButton,[data-action="play"],[data-action="resume"],[data-ds-command~=btnPlay]')].filter(shown).length,
+                        placeholder: r.hasAttribute('data-jfmod-placeholder'), word: r.querySelector('.jfmod-dlMeta,.ln1 b')?.textContent })) });
                 }, 100);
             }, { selector: surface.target, name: surface.name, text: surface.text });
         }

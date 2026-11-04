@@ -115,7 +115,7 @@ for (const [name, layout] of Object.entries(LAYOUTS)) {
         if (keptEpisode && name === 'desktop') {
             await openDetails(page, keptEpisode);
             const pressed = await keepButton(page).getAttribute('aria-pressed');
-            const status = await page.locator('.jfmod-retentionStatus').first().textContent();
+            const status = await page.locator('[data-jfmod-retention-status]').first().textContent();
             record(name, 'an episode kept through the API shows Kept on its own page', pressed === 'true' && /Kept indefinitely/.test(status), { pressed, status });
         }
 

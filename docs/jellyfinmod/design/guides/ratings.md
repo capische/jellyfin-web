@@ -1,5 +1,12 @@
 # Ratings: the group, its popup and the card rating
 
+**dsD (2026-11-04), built, not accepted:** native and entry title pages now use `design/Ratings.tsx` source
+`rgwrap/rgroup/ritem/rmenu/rrow`, with the existing RatingIcon marks and all RatingsGroup source/scale/reserve/late-answer/focus/
+Back logic. Hidden stand-ins reserve their real maximum values; a fallback reserves the widest enabled rating, never their sum,
+and is excluded from TV focus. Stale values retain .55 opacity and provenance remains in titles and accessible hidden text.
+`RatingsPreferencesPage.tsx` uses source settings cards/switches/fields with its existing save/reorder/reset/service-state hooks.
+The deleted `ratingsPreferences.scss` and title restyling do not style these surfaces. [Current CSS inventory and limits](../dsD.md).
+
 **dsB (2026-11-04), built, not accepted:** Home reads the existing NativeRatingsLine data/preferences and RatingsGroup state/reserve/focus/Back logic. In native design context only, `design/Ratings.tsx` renders `rgwrap/rgroup/ritem/rmenu/rrow` and the existing RatingIcon marks with the copied CSS. Existing detail-page presentation is unchanged. [Validation and CSS adapters](../dsB.md).
 
 **rd3 presentation (approved D243 and rulebook §5, built, not accepted):** `shell/titlePages.scss` draws the

@@ -602,7 +602,7 @@ try {
     /** Reaches Keep the way the layout is driven, activates it with Enter and checks focus and state. */
     const keepByKeyboard = async (layout, width) => {
         // Reach Keep the way this layout is driven: the D-pad on TV, Tab elsewhere, from the first detail action.
-        await page.locator('#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)').first().focus();
+        await page.locator('#itemDetailPage:not(.hide) .jfmod-dsTitleHost .actbar button:not(.hide)').first().focus();
         const key = layout === 'tv' ? 'ArrowDown' : 'Tab';
         let reached = false;
         for (let press = 0; press < 40 && !reached; press++) {
@@ -643,7 +643,7 @@ try {
             focused: document.activeElement?.matches(selector) ?? false,
             label: document.activeElement?.textContent.trim() ?? null,
             pressed: document.activeElement?.getAttribute('aria-pressed') ?? null,
-            status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails .jfmod-retentionStatus')?.textContent.trim() ?? null
+            status: document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails [data-jfmod-retention-status]')?.textContent.trim() ?? null
         }), keepSelector);
         const keptOk = state => state.focused && state.label === 'Kept' && state.pressed === 'true' && state.status === 'Kept indefinitely.';
         const keptState = await poll(readKept, keptOk, { timeout: 10000 });
@@ -677,7 +677,7 @@ try {
             const hasSearchButton = await page.locator('#itemDetailPage:not(.hide) .jfmod-nativeActions button')
                 .filter({ hasText: 'Search releases' }).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
             if (!hasSearchButton) throw new Error('Search releases missing from the mod action row in ' + layout);
-            await page.locator('#itemDetailPage:not(.hide) .btnMoreCommands:not(.hide)').first().click();
+            await page.locator('#itemDetailPage:not(.hide) [data-ds-command~=btnMoreCommands]:not(.hide)').first().click();
             const stockMenuOpened = await page.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id]').first()
                 .waitFor({ timeout: 10000 }).then(() => true, () => false);
             if (!stockMenuOpened) throw new Error('The stock More menu did not open in ' + layout);
@@ -698,7 +698,7 @@ try {
             if (expectAdmin) await page.locator(keepSelector).first().waitFor({ timeout: 15000 }).catch(ignore);
             await networkIdle();
             const unnamed = await unnamedControls('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails button, '
-                + '#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)');
+                + '#itemDetailPage:not(.hide) .jfmod-dsTitleHost .actbar button:not(.hide)');
             if (unnamed.length) throw new Error('Controls without text, aria-label or title in ' + layout + ': ' + JSON.stringify(unnamed));
             const hasKeep = await page.locator(keepSelector).count() > 0;
             if (expectAdmin) {
@@ -1043,7 +1043,7 @@ try {
         await navigate(server + '#/details?id=' + encodeURIComponent(nativeItemId));
         const nativeWithoutPlugin = await poll(() => page.evaluate(() => ({
             title: document.querySelector('#itemDetailPage:not(.hide) .itemName')?.textContent?.trim(),
-            actions: document.querySelectorAll('#itemDetailPage:not(.hide) .mainDetailButtons button:not(.hide)').length,
+            actions: document.querySelectorAll('#itemDetailPage:not(.hide) .jfmod-dsTitleHost .actbar button:not(.hide)').length,
             pluginDetails: !!document.querySelector('#itemDetailPage:not(.hide) .jfmod-nativeEntryDetails')
         })), result => result.title && result.actions);
         if (!nativeWithoutPlugin.title || !nativeWithoutPlugin.actions) {

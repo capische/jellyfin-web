@@ -11,13 +11,11 @@ import { nativeSeasonsQuery, openNativePage, useLiveEntryDetail } from '../hooks
 import { PACKS_CAPABILITY, RELEASES_CAPABILITY, usePluginCapabilities } from '../hooks/useAcquisition';
 import { openReleasePicker, useEpisodeListLoad } from '../integration/releasePicker';
 import { restoreFocusTo, useStockHeaderButton } from '../integration/stockHeaderButton';
-import { getTmdbImage } from '../utils/entryLinks';
+import { getEntryPath, getTmdbImage } from '../utils/entryLinks';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import { episodesWord, MissingEpisodeRows } from './MissingChildren';
 import SeasonTotal from './SeasonTotal';
 import TitlePoster from './TitlePoster';
-
-import './entryDetails.scss';
 
 interface EntrySeasonDetailsProps {
     api: Api;
@@ -88,8 +86,8 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
     // the first episode row (a focus stop since P1.FU15).
     useEffect(() => {
         if (!layoutManager.tv || !focusOwnership) return;
-        const first = view.querySelector<HTMLElement>('.mainDetailButtons .jfmod-getRelease')
-            ?? view.querySelector<HTMLElement>('button.jfmod-missingRow');
+        const first = view.querySelector<HTMLElement>('.jfmod-dsTitleHost .actbar button')
+            ?? view.querySelector<HTMLElement>('.jfmod-dsTitleHost .ep');
         if (first && focusOwnership.mayFocus(first)) {
             focusManager.focus(first);
             focusOwnership.placed(first);
@@ -105,7 +103,7 @@ const EntrySeasonDetails: FC<EntrySeasonDetailsProps> = ({ api, userId, serverId
     // The season's first air year, as upstream's season page shows its production year (P1.FU14).
     const year = /^\d{4}/.exec(tmdbSeason?.airDate ?? '')?.[0];
     return <>
-        {mount('.nameContainer', <h1>{detail.entry.title}</h1>)}
+        {mount('.nameContainer', <><div className='parentName'><a href={'#' + getEntryPath(detail.entry.id, serverId)}>{detail.entry.title}</a></div><h1>Season {season}</h1></>)}
         {mount('.itemMiscInfo-primary', ['Season ' + season, count ? episodesWord(count) : null, year].filter(Boolean).join(' · '))}
         {/* TMDB's season overview where upstream's page puts an item's overview; none until the series' list is refreshed. */}
         {tmdbSeason?.overview && mount('.overview', tmdbSeason.overview)}

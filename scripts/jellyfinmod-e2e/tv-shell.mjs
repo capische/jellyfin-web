@@ -294,7 +294,7 @@ async function checkDetails(page, name, cfg, movieLib) {
         const d = await page.evaluate(() => ({
             name: document.querySelector('.itemName, h1, h3.itemName')?.textContent?.trim().slice(0, 40),
             modActions: [...document.querySelectorAll('.jfmod-nativeActions button')].map(b => b.textContent.trim()),
-            upstreamPlay: !!document.querySelector('.btnPlay:not(.hide), .detailButton.btnPlay')
+            upstreamPlay: !!document.querySelector('[data-ds-command~=btnPlay], .detailButton[data-ds-command~=btnPlay]')
         }));
         record(name, 'Details: upstream actions + mod section', d.modActions.length > 0 && d.upstreamPlay, d);
         if (!cfg.tv) return;

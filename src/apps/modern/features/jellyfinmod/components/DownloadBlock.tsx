@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 
 import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
-import LinkButton from 'elements/emby-button/LinkButton';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
 
@@ -14,17 +13,13 @@ import { packEpisodeView, useQueueRowFor, useQueueVisible } from '../hooks/useQu
 import { removeWithDialog } from '../integration/queueActions';
 import { type EntryEpisode, FileState } from '../types/entry';
 import type { QueueRow } from '../types/queue';
-import { raisedButtonClass } from '../utils/flatButton';
-import DownloadStateMark, { ringLink } from './DownloadStateMark';
-import { NotDownloadedGlyph } from './FileStateMark';
-import { formatSize, MediaMarks, qualityText } from './ReleaseRowParts';
+import { ringLink } from './DownloadStateMark';
+import { formatSize, qualityText } from './ReleaseRowParts';
 
-// webpack's `?raw` rule (webpack.common.js) hands the drawing over as text; the eslint resolver does not know the query.
-// eslint-disable-next-line import/no-unresolved
-import clientOpenGlyph from '../assets/client-open.svg?raw';
-
-import './downloadBlock.scss';
-import './releasePicker.scss';
+import { DownloadMark } from '../design/StateMark';
+import { DesignMediaMarks } from '../design/MediaMarks';
+import { Icon } from '../design/Icon';
+import { DlBlock } from '../design/DlBlock';
 
 /**
  * The download block of a missing episode's page (P1.FU20, user-approved design 2026-10-13, `design/missing-episode-page-
@@ -52,11 +47,6 @@ interface DownloadBlockProps {
     /** The queue says the episode's import is over, or a download was removed: the page reads its entry again. */
     onChanged: () => void;
 }
-
-const CLOCK = <svg className='jfmod-dlmark-glyph' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.4'
-    strokeLinecap='round' strokeLinejoin='round' aria-hidden='true' focusable='false'>
-    <circle cx='12' cy='12' r='8.5' /><path d='M12 7.5V12L15 14' />
-</svg>;
 
 /** `3.1 MB/s`: one decimal, as the design writes it (the queue page keeps whole megabytes). */
 const rateText = (bytes: number | null | undefined) => {
@@ -130,7 +120,7 @@ const WORD: Record<BlockKind, string> = {
 /** One dot of a pack's strip: imported, its file finished, downloading (filled to its percent), waiting or failed. */
 const PackStrip: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episodeId }) => {
     const episodes = row.pack?.episodes ?? [];
-    return <span className='jfmod-dlblock-strip' aria-hidden='true'>
+    return <span className='packdots' aria-hidden='true'>
         {episodes.map(item => {
             const view = packEpisodeView(row, item.episodeId);
             const percent = Math.floor((view.progress ?? 0) * 100);
@@ -149,10 +139,12 @@ const PackStrip: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episo
                 kind = 'part';
                 words = 'downloading · ' + percent + '%';
             }
-            const style = kind === 'part' ? { background: `linear-gradient(90deg, currentcolor ${percent}%, var(--jfmod-dlblock-track) ${percent}%)` } : undefined;
-            return <i key={item.episodeId} className={'jfmod-dlblock-dot jfmod-dlblock-dot--' + kind
-                + (item.episodeId === episodeId ? ' jfmod-dlblock-dot--current' : '')} style={style}
-            title={'Episode ' + item.episodeNumber + ' · ' + words} data-jfmod-dot={kind} />;
+            let dotClass = kind;
+            if (kind === 'done') dotClass = 'ok';
+            if (kind === 'part') dotClass = 'dl';
+            const style = kind === 'part' ? { background: `linear-gradient(90deg, currentcolor ${percent}%, var(--ring-track) ${percent}%)` } : undefined;
+            return <i key={item.episodeId} className={dotClass} style={style}
+                title={'Episode ' + item.episodeNumber + ' · ' + words} data-jfmod-dot={kind} data-jfmod-current={item.episodeId === episodeId || undefined} />;
         })}
     </span>;
 };
@@ -162,15 +154,13 @@ const Marks: FC<{ row: QueueRow; isAdmin: boolean }> = ({ row, isAdmin }) => {
     const parsed = row.parsed;
     const client = isAdmin && !layoutManager.tv && row.client?.openUrl ? row.client : null;
     const label = client ? 'Open ' + client.name : '';
-    return <div className='jfmod-dlblock-marks'>
-        {parsed && (parsed.resolution || parsed.source) && <span className='jfmod-releaseQuality'>{qualityText(parsed)}</span>}
-        {parsed && <MediaMarks parsed={parsed} />}
-        {!!parsed?.languages?.length && <span className='jfmod-dlblock-lang'>{parsed.languages.join(' · ')}</span>}
-        {row.sizeBytes !== null && <span className='jfmod-dlblock-size'>{formatSize(row.sizeBytes)}</span>}
-        {row.indexerName && <span className='jfmod-dlblock-indexer'>{row.indexerName}</span>}
-        {client && <a className='paper-icon-button-light jfmod-dlblock-client' href={client.openUrl!} target='_blank'
-            rel='noopener noreferrer' title={label} aria-label={label}
-            dangerouslySetInnerHTML={{ __html: clientOpenGlyph.replace('<svg ', '<svg class="jfmod-dlblock-clientGlyph" ') }} />}
+    return <div className='mline'>
+        {parsed && (parsed.resolution || parsed.source) && <span className='qual'>{qualityText(parsed)}</span>}
+        {parsed && <span className='marks'><DesignMediaMarks parsed={parsed} /></span>}
+        {!!parsed?.languages?.length && <span className='s' style={{ fontSize: '0.82em', fontWeight: 700, letterSpacing: '0.05em' }}>{parsed.languages.join(' · ')}</span>}
+        {row.sizeBytes !== null && <span className='s'>{formatSize(row.sizeBytes)}</span>}
+        {row.indexerName && <span className='s lnk' style={{ fontSize: '0.92em', fontWeight: 400 }}>{row.indexerName}</span>}
+        {client && <a className='rb focusable' href={client.openUrl!} target='_blank' rel='noopener noreferrer' title={label} aria-label={label}><Icon name='client' /></a>}
     </div>;
 };
 
@@ -180,7 +170,7 @@ const PackLine: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episod
     const index = episodes.findIndex(item => item.episodeId === episodeId);
     if (!row.pack || index < 0) return null;
     const name = row.pack.label.split(' · ')[0];
-    return <div className='jfmod-dlblock-pack'>
+    return <div className='pack'>
         <span>{name + ' · this episode is file ' + (index + 1) + ' of ' + episodes.length}</span>
         <PackStrip row={row} episodeId={episodeId} />
     </div>;
@@ -190,11 +180,11 @@ const PackLine: FC<{ row: QueueRow; episodeId: string | null }> = ({ row, episod
 const useSlot = (anchor: Element | null) => {
     const [node, setNode] = useState<HTMLElement | null>(null);
     useLayoutEffect(() => {
-        const section = anchor?.closest('.detailSection');
+        const section = anchor?.closest('.page')?.querySelector('[data-ds-slot="download"]') ?? anchor?.closest('.detailSection');
         if (!anchor || !section) return;
         const slot = document.createElement('div');
         slot.className = 'jfmod-dlblockSlot';
-        section.insertBefore(slot, section.querySelector('.trackSelections') ?? section.firstChild);
+        section.insertBefore(slot, section.hasAttribute('data-ds-slot') ? null : section.querySelector('.trackSelections') ?? section.firstChild);
         setNode(slot);
         return () => {
             slot.remove();
@@ -235,15 +225,8 @@ const blockState = (row: QueueRow | undefined, view: QueueRow | undefined, last:
 const isWorking = (kind: BlockKind) => kind === 'queued' || kind === 'downloading' || kind === 'stalled' || kind === 'importing';
 const isCancellable = (kind: BlockKind) => kind === 'queued' || kind === 'downloading' || kind === 'stalled';
 
-const BlockIcon: FC<{ state: BlockState }> = ({ state }) => {
-    if (state.progress) return <DownloadStateMark progress={state.progress} size='page' link={ringLink([state.row], state.progress)} />;
-    if (state.kind === 'unaired') {
-        return <span className='jfmod-dlmark jfmod-dlmark--page jfmod-dlblock-unaired' role='img' aria-label='Unaired' title='Unaired'>{CLOCK}</span>;
-    }
-    return <span className='jfmod-dlmark jfmod-dlmark--page jfmod-dlblock-none' role='img' aria-label='Not Downloaded' title='Not Downloaded'>
-        <NotDownloadedGlyph />
-    </span>;
-};
+const BlockIcon: FC<{ state: BlockState }> = ({ state }) => <DownloadMark progress={state.progress}
+    kind={state.kind === 'none' ? 'not-downloaded' : state.kind} size='page' link={state.progress ? ringLink([state.row], state.progress) : null} />;
 
 interface ActionsProps {
     state: BlockState;
@@ -264,16 +247,16 @@ const Actions: FC<ActionsProps> = ({ state, isAdmin, canAcquire, removing, onCan
     const cancel = isAdmin && !!state.row && isCancellable(kind) && state.row.importState !== 'submitting';
     const get = kind === 'none' && canAcquire;
     if (!queue && !search && !cancel && !get) return null;
-    return <div className='jfmod-dlblock-actions'>
-        {search && <button type='button' className={raisedButtonClass('button-delete jfmod-dlblock-search')} onClick={onGetRelease}>
-            <span className='material-icons search' aria-hidden='true' /><span>Search Again</span>
+    return <div className='act'>
+        {search && <button type='button' className='btn destroy focusable' onClick={onGetRelease}>
+            Search Again
         </button>}
-        {queue && <LinkButton className='button-link jfmod-dlblock-queue' href={'#' + QUEUE_ROUTE}>View Queue</LinkButton>}
-        {cancel && <button type='button' className={raisedButtonClass('jfmod-dlblock-cancel')} disabled={removing} onClick={onCancel}>
+        {queue && <a className='lnk focusable' href={'#' + QUEUE_ROUTE}>View Queue</a>}
+        {cancel && <button type='button' className='btn focusable' disabled={removing} onClick={onCancel}>
             <span>Cancel Download</span>
         </button>}
-        {get && <button type='button' className={raisedButtonClass('jfmod-dlblock-get', 'button-submit')} onClick={onGetRelease}>
-            <span className='material-icons cloud_download' aria-hidden='true' /><span>Get a Release</span>
+        {get && <button type='button' className='btn main focusable' onClick={onGetRelease}>
+            Get a Release
         </button>}
     </div>;
 };
@@ -283,11 +266,16 @@ const ReleaseLines: FC<{ state: BlockState; episodeId: string | null; isAdmin: b
     const { row, kind } = state;
     if (!row) return null;
     return <>
-        <div className='jfmod-dlblock-release' title={row.releaseTitle}>{row.releaseTitle}</div>
+        <div className='rls' title={row.releaseTitle}>{row.releaseTitle}</div>
         <Marks row={row} isAdmin={isAdmin} />
         {isCancellable(kind) && <PackLine row={row} episodeId={episodeId} />}
     </>;
 };
+
+const StateLine: FC<{ kind: BlockState['kind']; figure: ReturnType<typeof downloadFigure> }> = ({ kind, figure }) => <>
+    {kind !== 'downloading' && <b style={kind === 'failed' ? { color: 'var(--err)' } : undefined}>{WORD[kind]}</b>}
+    {figure && (kind === 'downloading' ? <b aria-label={'Downloading ' + figure.text}>{figure.text}</b> : <span className={kind === 'failed' ? 'figs fail' : 'q'}>{figure.text}</span>)}
+</>;
 
 const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ anchor, entryId, episode, isAdmin, canAcquire,
     onGetRelease, onChanged }) => {
@@ -338,21 +326,11 @@ const DownloadBlock: FC<DownloadBlockProps & { anchor: Element | null }> = ({ an
     const figure = progress ? downloadFigure(shownView, progress) : restingFigure(kind, episode, isAdmin && canAcquire);
     const bar = kind === 'downloading' || kind === 'stalled' || kind === 'importing';
     const filled = kind === 'importing' ? 100 : progress?.percent ?? 0;
-    return createPortal(<div className={'jfmod-dlblock jfmod-dlblock--' + kind + (progress?.stale ? ' jfmod-dlblock--stale' : '')} data-jfmod-state={kind}>
-        <div className='jfmod-dlblock-ring'><BlockIcon state={state} /></div>
-        <div className='jfmod-dlblock-body'>
-            <div className='jfmod-dlblock-state'>
-                <span className={'jfmod-dlblock-word' + (kind === 'downloading' ? ' jfmod-dlblock-word--hidden' : '')}>{WORD[kind]}</span>
-                {figure && <span className={'jfmod-dlblock-figure jfmod-dlblock-figure--' + figure.tone}>{figure.text}</span>}
-            </div>
-            <ReleaseLines state={state} episodeId={episode.id} isAdmin={isAdmin} />
-            {bar && <div className='jfmod-dlblock-bar'>
-                <i className={'jfmod-dlblock-barFill jfmod-dlblock-barFill--' + kind}
-                    style={{ width: filled + '%' }} />
-            </div>}
-            <Actions state={state} isAdmin={isAdmin} canAcquire={canAcquire} removing={removing} onCancel={cancel} onGetRelease={getRelease} />
-        </div>
-    </div>, slot);
+    return createPortal(<DlBlock kind={kind} mark={<BlockIcon state={state} />}
+        state={<StateLine kind={kind} figure={figure} />}
+        release={<ReleaseLines state={state} episodeId={episode.id} isAdmin={isAdmin} />}
+        bar={bar && <div className={'br' + (kind === 'stalled' ? ' st' : '')}><i style={{ width: filled + '%' }} /></div>}
+        actions={<Actions state={state} isAdmin={isAdmin} canAcquire={canAcquire} removing={removing} onCancel={cancel} onGetRelease={getRelease} />} />, slot);
 };
 
 export default DownloadBlock;

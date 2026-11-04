@@ -68,7 +68,7 @@ const FONT = 'html body *:not(.material-icons), .formDialog *:not(.material-icon
 if (!process.env.REALFONT) await page.addStyleTag({ content: FONT });
 if (light) await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
 await page.evaluate(id => { location.hash = '#/details?id=' + id; }, ep.jellyfinItemId);
-await page.locator('.mainDetailButtons .jfmod-getRelease').first().click();
+await page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first().click();
 await page.waitForSelector('.jfmod-releaseDialog .jfmod-releasePicker');
 if (state === 'searching') await page.waitForTimeout(6300);
 else if (state === 'over') {

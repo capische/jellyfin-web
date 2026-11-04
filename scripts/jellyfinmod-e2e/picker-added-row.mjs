@@ -87,7 +87,7 @@ try {
     await page.evaluate(id => {
         location.hash = '#/details?id=' + id;
     }, episode.jellyfinItemId);
-    const opener = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first();
+    const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     await opener.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         await opener.focus();

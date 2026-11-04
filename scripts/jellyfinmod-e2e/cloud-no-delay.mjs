@@ -7,7 +7,7 @@
 // A MutationObserver installed before the app's own scripts stamps, with the time and the animation frame:
 //   - each card when it is first drawn (it holds its `.cardScalable`), and when its cloud (`.jfmod-cardGet`, `.jfmod-cardGetCentre`)
 //     is first in it and not hidden; the first pointer-over of each card;
-//   - the detail header row when it is first shown, and when the mod's header cloud (`.jfmod-getRelease`) is first in it;
+//   - the detail header row when it is first shown, and when the mod's header cloud (`[data-ds-command~=jfmod-getRelease]`) is first in it;
 //   - the card menu's sheet when it is inserted, and whether it holds Get a Release then.
 // It checks, for an administrator:
 //   - every card place on the desktop (a series page's season cards with files, a season card with nothing on disk, the mod's
@@ -118,10 +118,10 @@ const STAMPS = () => {
     window.jfmodWatchHeader = () => {
         const header = window.jfmodHeader = { asked: stamp(), shown: null, cloud: null };
         const poll = () => {
-            const row = [...document.querySelectorAll('.mainDetailButtons')].find(candidate => candidate.offsetParent
+            const row = [...document.querySelectorAll('.jfmod-dsTitleHost .actbar')].find(candidate => candidate.offsetParent
                 && [...candidate.children].some(child => child.offsetParent));
             if (row && !header.shown) header.shown = stamp();
-            if (row && !header.cloud && row.querySelector(':scope > .jfmod-getRelease')) header.cloud = stamp();
+            if (row && !header.cloud && row.querySelector(':scope > [data-ds-command~=jfmod-getRelease]')) header.cloud = stamp();
             if (!header.cloud && performance.now() - header.asked.t < 10000) requestAnimationFrame(poll);
         };
         requestAnimationFrame(poll);

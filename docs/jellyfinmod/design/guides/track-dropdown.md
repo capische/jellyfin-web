@@ -1,5 +1,12 @@
 # Track strip and dropdown (the custom dropdown)
 
+**dsD (2026-11-04), built, not accepted:** title pages now draw the mockup's `gpk/seg/cap/val/vlist/vrow` through
+`design/TrackField.tsx`, `components/FileChooser.tsx` and `TrackDropdown.tsx`. The source CSS replaces rd2/rd3 restyling and MUI
+lists. Original selects/change events, device preference and viewer-choice protection remain authoritative. The original form's
+hidden state hides the strip. Video contains video facts only; Audio/Subtitles retain roles, extra words, None/static states.
+Lists cap at 20em and scroll; narrow strips stack. History consumes Back before the picker underneath. Source check/primary-name
+selection, per-file actions and TV row/action navigation remain. [Full CSS and behavior inventory](../dsD.md).
+
 **rd3 title-page integration (approved rulebook §§2/5, built, not accepted):** `shell/titlePages.scss` supplies
 picker padding .382em 1em .382em 1.236em, full light-glass ink and .618 caption opacity on title heads. The
 stack calculation includes the two .382em separations before testing Video's **11.7em** minimum; it still

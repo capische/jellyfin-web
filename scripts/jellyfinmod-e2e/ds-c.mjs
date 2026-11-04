@@ -159,7 +159,7 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(()=>window.dsClosed===1);
     // The multi-version warning follows exactly the title's More -> Delete -> confirmation sequence.
-    await page.evaluate(()=>{window.api.warning();document.getElementById('opener').classList.add('btnMoreCommands');});
+    await page.evaluate(()=>{window.api.warning();document.getElementById('opener').setAttribute('data-ds-command','btnMoreCommands');});
     await page.locator('#opener').click();
     await openSheet();
     await page.locator('.mi[data-id="delete"]').click();

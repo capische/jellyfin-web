@@ -113,7 +113,7 @@ const sheetIdOf = (item: { id?: string }) => item.id ?? ITEM_ID;
 
 /** The movie, series, season or episode card a sheet opens from (its More button, or the card itself), if any. */
 const cardOf = (positionTo: Element | null | undefined) => {
-    const card = positionTo instanceof Element ? positionTo.closest<HTMLElement>('.card[data-id]') : null;
+    const card = positionTo instanceof Element ? positionTo.closest<HTMLElement>('.card[data-id], .cell[data-id], .ep[data-id]') : null;
     const type = card?.getAttribute('data-type') ?? '';
     const itemId = card?.getAttribute('data-id');
     return card && itemId && CARD_TYPES.has(type) ? { itemId, type, element: card } : null;

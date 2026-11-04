@@ -69,7 +69,7 @@ export const useDeleteWarning = (view: HTMLElement, warning: string | null) => {
 
         const onClick = (event: Event) => {
             const target = event.target instanceof Element ? event.target : null;
-            if (target && view.contains(target) && target.closest('.btnMoreCommands')) {
+            if (target && view.contains(target) && target.closest('.btnMoreCommands, [data-ds-command~=btnMoreCommands]')) {
                 // Only the page's own More menu acts on this page's item (the selected version, else the item).
                 reset();
                 stage = 'menuPending';

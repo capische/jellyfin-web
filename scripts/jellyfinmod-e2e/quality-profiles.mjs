@@ -396,7 +396,7 @@ async function pickerChecks(page, layout) {
             && !search.candidates.some(candidate => candidate.rejections.some(rejection => rejection.code === 'size_above_maximum')),
         (search.candidates ?? []).map(candidate => [candidate.rawTitle, candidate.score, candidate.rejections.map(rejection => rejection.code)]));
     await page.evaluate(([id]) => { location.hash = `#/details?entryId=${id}&season=1&episode=3`; }, [entryId]);
-    const opener = page.locator('.page:not(.hide) .mainDetailButtons .jfmod-getRelease').first();
+    const opener = page.locator('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     await opener.waitFor({ state: 'visible', timeout: 30000 });
     await opener.click();
     await page.waitForSelector('.jfmod-releaseDialog .jfmod-releaseList .jfmod-releaseItem', { timeout: 30000 });

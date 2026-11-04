@@ -1,5 +1,12 @@
 # Poster card
 
+**dsD (2026-11-04), built, not accepted:** title-page cards and person rows now draw source `cell > tile > post`,
+`capt` with three fixed-height lines, and lazy images/fallback SVGs through `design/TitlePage.tsx`/`BrowsePage.tsx`. Original native
+card nodes remain hidden data/command hosts. Hover/focus forwards the existing release lookup; body, Play and More keep existing
+commands. TV has one card stop; its decorative disc/foot actions have tabindex -1. Native horizontal rows retain source cell
+padding around the ring, visible poster overflow and no paint containment. LibraryCast's fetching and page-size-0 rule remain.
+[CSS, source markup and runner inventory](../dsD.md).
+
 **dsB (2026-11-04), built, not accepted:** HomeMergedRow now uses the same native `Section`/`Cell`, including three fixed caption slots, existing batched LibraryCast and its page-size-0 blank slot. Home uses its original merged feeds and actions. [Scope and CSS adapters](../dsB.md).
 
 **dsA (2026-11-04), built, not accepted:** Movies, Shows and Favorites now draw the mockup's own `Cell` markup from `design/Cell.tsx`, scoped copied CSS, and `LibraryItems`/`LibraryToolbar`. The native structure is `.cell > .tile > .post` plus `.capt`; upstream card restyling remains only on surfaces outside this slice. Cast fetching and the page-size-0 blank third slot stay in `LibraryCast`. [CSS exceptions, retained behavior and validation](../dsA.md).

@@ -4,9 +4,10 @@ import focusManager from 'components/focusManager';
 import { isBackKey } from '../shell/dpadModals';
 import { getKeyName } from 'scripts/keyboardNavigation';
 import { DesignContext, Root } from './Root';
+import { menuPosition } from './menuPosition';
 
 /** Mockup pmenu, with outside dismissal and the app's focus manager. */
-export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string; anchored?: boolean }>> = ({ children, close, label, id, anchored }) => {
+export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?: string; anchored?: boolean; anchor?: HTMLElement }>> = ({ children, close, label, id, anchored, anchor }) => {
     const ref = useRef<HTMLDivElement>(null);
     const phone = useContext(DesignContext) === 'phone' && !anchored;
     useLayoutEffect(() => {
@@ -47,19 +48,28 @@ export const Menu: FC<PropsWithChildren<{ close: () => void; label: string; id?:
             }
         };
         ref.current?.querySelectorAll('button.mi, a.mi').forEach(row => {
-            row.setAttribute('role', 'menuitem');
+            if (!row.hasAttribute('role')) row.setAttribute('role', 'menuitem');
         });
+        const place = () => {
+            if (!anchor || phone || !ref.current) return;
+            const at = menuPosition(anchor, ref.current);
+            Object.assign(ref.current.style, { position: 'fixed', top: at.top + 'px', left: at.left + 'px' });
+        };
+        place();
+        window.addEventListener('resize', place);
         if (ref.current) focusManager.autoFocus(ref.current);
         document.addEventListener('pointerdown', outside);
         document.addEventListener('keydown', key, true);
         return () => {
+            window.removeEventListener('resize', place);
             document.removeEventListener('pointerdown', outside);
             document.removeEventListener('keydown', key, true);
             clearTimeout(timer);
             if (previous?.isConnected) focusManager.focus(previous);
         };
-    }, [close, phone]);
+    }, [close, phone, anchor]);
     const menu = <div ref={ref} className={'pmenu focuscontainer-y' + (phone ? ' sheet bottom msheet' : ' mn from-top')} id={id} role='menu' aria-label={label}>
         {phone && <span className='sgrab' />}{children}</div>;
-    return phone ? createPortal(<Root className='menuportal phonesheet'><div className='sdim' />{menu}</Root>, document.body) : menu;
+    if (phone) return createPortal(<Root className='menuportal phonesheet'><div className='sdim' />{menu}</Root>, document.body);
+    return anchor ? createPortal(<Root className='menuportal'>{menu}</Root>, document.body) : menu;
 };

@@ -1,0 +1,21 @@
+@keyframes jfmod-playback-black {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+html.jfmod-chrome .jfmod-playbackStart {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999998; // Immediately below upstream's docspinner (9999999).
+    background: #000;
+    animation: jfmod-playback-black 0.236s 0.146s cubic-bezier(0.236, 0, 0, 1) both;
+}
+
+html.jfmod-chrome.layout-tv .jfmod-playbackStart { animation-duration: 0.146s; }
+
+@media (prefers-reduced-motion: reduce) {
+    html.jfmod-chrome .jfmod-playbackStart { animation: none; }
+}

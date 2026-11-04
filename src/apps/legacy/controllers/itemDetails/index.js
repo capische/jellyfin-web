@@ -61,6 +61,7 @@ const LIST_VIEW_TYPES = [
 ];
 
 function autoFocus(container) {
+    if (container.querySelector('.jfmod-dsTitleHost')) return;
     import('components/autoFocuser').then(({ default: autoFocuser }) => {
         autoFocuser.autoFocus(container);
     });
@@ -2128,6 +2129,22 @@ export default function (view, params) {
             splitVersions(self, view, apiClient, params);
         });
         bindAll(view, '.btnMoreCommands', 'click', onMoreCommandsClick);
+        // The mod's native markup dispatches the existing commands with its painted opener.
+        const designCommand = event => {
+            const { source, opener } = event.detail;
+            const commands = [
+                ['btnPlay', onPlayClick], ['btnReplay', onPlayClick], ['btnPlayTrailer', onPlayTrailerClick],
+                ['btnShuffle', onShuffleClick], ['btnInstantMix', onInstantMixClick], ['btnDownload', onDownloadClick],
+                ['btnMoreCommands', onMoreCommandsClick]
+            ];
+            const command = commands.find(([name]) => source.classList.contains(name));
+            if (!command) return;
+            event.preventDefault();
+            if (source.hasAttribute('data-action')) opener.setAttribute('data-action', source.getAttribute('data-action'));
+            command[1].call(opener);
+        };
+        view.addEventListener('ds-title-command', designCommand);
+        view.addEventListener('viewdestroy', () => view.removeEventListener('ds-title-command', designCommand), { once: true });
         view.querySelector('.selectSource').addEventListener('change', function () {
             renderVideoSelections(view, self._currentPlaybackMediaSources);
             renderAudioSelections(view, self._currentPlaybackMediaSources);

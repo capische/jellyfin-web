@@ -149,19 +149,19 @@ const episodeRef = episode => ({ id: episode.id, seasonNumber: episode.seasonNum
 
 /** The download block's state on the page: its word, figure, release, pack line, dots and actions. */
 const blockState = page => page.evaluate(() => {
-    const block = [...document.querySelectorAll('.page:not(.hide) .jfmod-dlblock')].find(node => node.getClientRects().length > 0);
+    const block = [...document.querySelectorAll('.page:not(.hide) .dlb')].find(node => node.getClientRects().length > 0);
     if (!block) return null;
     const text = selector => block.querySelector(selector)?.textContent?.trim() ?? null;
     const visible = selector => [...block.querySelectorAll(selector)].filter(node => node.getClientRects().length > 0).length;
-    const play = [...document.querySelectorAll('.page:not(.hide) .mainDetailButtons .btnPlay, .page:not(.hide) .mainDetailButtons .btnReplay')]
+    const play = [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost .actbar [data-ds-command~=btnPlay], .page:not(.hide) .jfmod-dsTitleHost .actbar .btnReplay')]
         .filter(node => getComputedStyle(node).display !== 'none' && node.getClientRects().length > 0).length;
     const tracks = document.querySelector('.page:not(.hide) .trackSelections');
     return {
-        state: block.getAttribute('data-jfmod-state'), word: text('.jfmod-dlblock-word'), figure: text('.jfmod-dlblock-figure'),
-        release: text('.jfmod-dlblock-release'), pack: text('.jfmod-dlblock-pack > span'), dots: visible('.jfmod-dlblock-dot'),
-        get: visible('.jfmod-dlblock-get'), search: visible('.jfmod-dlblock-search'), cancel: visible('.jfmod-dlblock-cancel'),
-        queue: visible('.jfmod-dlblock-queue'), ring: visible('.jfmod-dlmark'), play,
-        beforeTracks: !!tracks && !!block.closest('.jfmod-dlblockSlot') && block.closest('.jfmod-dlblockSlot').nextElementSibling === tracks
+        state: block.getAttribute('data-jfmod-state'), word: text('.ln1 b'), figure: text('.ln1 .q'),
+        release: text('.rls'), pack: text('.pack > span'), dots: visible('.pack i'),
+        get: visible('.act .btn.main'), search: visible('.act .btn.destroy'), cancel: visible('.act .btn:not(.main):not(.destroy)'),
+        queue: visible('.act .lnk'), ring: visible('.jfmod-dlmark'), play,
+        beforeTracks: !!tracks && !!block.closest('.dlbSlot') && block.closest('.dlbSlot').nextElementSibling === tracks
     };
 });
 
@@ -208,7 +208,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         // The placeholder episode's page: the block in the selectors' place, from the queue.
         setRows([]);
         await go(page, `#/details?id=${stub.Id}&serverId=${await page.evaluate(() => ApiClient.serverId())}`);
-        await page.waitForSelector(`${PAGE} .jfmod-dlblock`, { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector(`${PAGE} .dlb`, { timeout: 30000 }).catch(() => {});
         let state = await waitBlock(page, 'none');
         record(label, 'Placeholder episode page: the download block reads Not Downloaded, before the track selectors, no Play',
             state?.state === 'none' && state.word === 'Not Downloaded' && state.play === 0 && state.beforeTracks, state);
@@ -294,7 +294,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         const movieRow = queueRow({ ...movieEntry }, { state: 'downloading', progress: 0.25 });
         setRows([movieRow]);
         await go(page, `#/details?id=${movie.Id}&serverId=${await page.evaluate(() => ApiClient.serverId())}`);
-        await page.waitForSelector(`${PAGE} .jfmod-dlblock`, { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector(`${PAGE} .dlb`, { timeout: 30000 }).catch(() => {});
         state = await waitBlock(page, 'downloading');
         record(label, 'Placeholder movie page: the block shows the movie\'s download, no Play',
             state?.word === 'Downloading' && /25%/.test(state.figure ?? '') && state.play === 0, state);
