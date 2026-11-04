@@ -6,8 +6,6 @@ import type { ComponentProps } from 'react';
 import { HomeSectionType } from 'constants/homeSectionType';
 import { getAllSectionsToShow } from 'components/homesections/homesections';
 import { loadRecordings } from 'components/homesections/sections/activeRecordings';
-import { loadLibraryButtons } from 'components/homesections/sections/libraryButtons';
-import { loadLibraryTiles } from 'components/homesections/sections/libraryTiles';
 import { loadLiveTV } from 'components/homesections/sections/liveTv';
 import { loadRecentlyAdded } from 'components/homesections/sections/recentlyAdded';
 import { loadResume } from 'components/homesections/sections/resume';
@@ -124,10 +122,8 @@ export const composeHomeSections = async (
                 loadRecordings(elem, true, apiClient, options);
                 break;
             case HomeSectionType.LibraryButtons:
-                loadLibraryButtons(elem, userViews);
-                break;
             case HomeSectionType.SmallLibraryTiles:
-                loadLibraryTiles(elem, userViews, options);
+                // D221-D224: My Media is absent from Home; the bar/drawer keeps every library target.
                 break;
             case HomeSectionType.LiveTv:
                 await loadLiveTV(elem, apiClient, user, options);

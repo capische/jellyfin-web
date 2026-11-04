@@ -13,7 +13,6 @@ import Events from 'utils/events';
 import 'elements/emby-tabs/emby-tabs';
 import 'elements/emby-button/emby-button';
 import 'elements/emby-scroller/emby-scroller';
-import SetupBanner from '../components/SetupBanner';
 import TvSettingsLink from '../components/TvSettingsLink';
 
 type OnResumeOptions = {
@@ -215,7 +214,7 @@ const Home = () => {
         <div ref={element}>
             <Page
                 id='indexPage'
-                className='mainAnimatedPage homePage libraryPage allLibraryPage pageWithAbsoluteTabs withTabs'
+                className='jfmod-dsHomePage jfmod-dsPage mainAnimatedPage homePage libraryPage allLibraryPage pageWithAbsoluteTabs withTabs'
                 isBackButtonEnabled={false}
                 backDropType={[
                     BaseItemKind.Movie,
@@ -224,7 +223,6 @@ const Home = () => {
                 ]}
             >
                 <div className='tabContent pageTabContent' id='homeTab' data-index='0'>
-                    <SetupBanner />
                     <div className='sections'></div>
                     <TvSettingsLink />
                 </div>

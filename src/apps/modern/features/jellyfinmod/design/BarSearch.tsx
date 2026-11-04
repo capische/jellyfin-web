@@ -77,8 +77,8 @@ const BarSearch: FC = () => {
                 } else if (tv && event.key === 'ArrowDown') {
                     event.preventDefault();
                     event.stopPropagation();
-                    const first = document.querySelector<HTMLElement>('#searchPage .card, #searchPage .jfmod-searchOpen')
-                        || document.querySelector<HTMLElement>('#searchPage .alphaPicker button');
+                    const first = document.querySelector<HTMLElement>('#searchPage .card, #searchPage .cell.focusable')
+                        || document.querySelector<HTMLElement>('#searchPage .alpha button');
                     if (first) focusManager.focus(first);
                 }
             }}

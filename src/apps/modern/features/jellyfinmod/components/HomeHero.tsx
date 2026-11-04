@@ -9,7 +9,6 @@ import { useQuery } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getAllSectionsToShow } from 'components/homesections/homesections';
-import itemHelper from 'components/itemHelper';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
 import { HomeSectionType } from 'constants/homeSectionType';
@@ -18,7 +17,7 @@ import * as userSettings from 'scripts/settings/userSettings';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 import { useContinueWatching } from '../hooks/useContinueWatching';
-import './homeChrome.scss';
+import { Hero } from '../design/Hero';
 
 /**
  * How many recent titles to consider. Generous on purpose: a library import adds a hundred titles at once, most
@@ -193,20 +192,7 @@ const HomeHero: FC = () => {
     // More info opens what the Continue watching card opens: the episode for an episode, the title otherwise.
     const details = appRouter.getRouteUrl(item).substring(1);
     const overview = item.Overview || (isEpisode && item.SeriesId ? series.data?.get(item.SeriesId)?.Overview : undefined);
-    return <section className='jfmod-homeHero' style={{ backgroundImage: `url("${backdrop}")` }} aria-labelledby='jfmod-homeHero-title'>
-        <div className='jfmod-homeHeroContent padded-left padded-right'>
-            <h1 id='jfmod-homeHero-title'>{isEpisode ? item.SeriesName || item.Name : item.Name}</h1>
-            {isEpisode && <div className='jfmod-homeHeroEpisode'>{itemHelper.getDisplayName(item)}</div>}
-            {overview && <p>{overview}</p>}
-            <div className='jfmod-homeHeroActions focuscontainer-x'>
-                <button type='button' className='emby-button button-submit' onClick={onPlay}>
-                    <span className='material-icons play_arrow' aria-hidden='true' /> Play
-                </button>
-                <a className='emby-button button-flat' href={'#' + details}>More Info</a>
-            </div>
-            {playError && <p className='jfmod-homeHeroError' role='status'>{playError}</p>}
-        </div>
-    </section>;
+    return <Hero item={item} backdrop={backdrop} overview={overview} details={'#' + details} onPlay={onPlay} error={playError} />;
 };
 
 export default HomeHero;

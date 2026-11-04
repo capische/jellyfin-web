@@ -1,5 +1,7 @@
 # Shared chrome
 
+**dsB (2026-11-04), built, not accepted:** Home, Search, TMDB browse and sign-in now own their mockup markup under `.jfds`. Their replaced restyling is removed. Native controls reuse the source CSS; lifecycle/command hosts and unmodeled actions remain. [Full scope, CSS inventory and validation](../dsB.md).
+
 **dsA (2026-11-04), built, not accepted:** Ported bar/cards/library controls use `.jfds` on their own roots and portals, with copied mockup CSS in `design/`. The older `html.jfmod-chrome` rules below still serve the out-of-slice surfaces. Admin Dashboard and mod settings/setup remain excluded. [Complete scope and CSS exceptions](../dsA.md).
 
 **Status:** approved redesign D212–D231, D251, D254, D259/D262; rd2 built, not accepted. Rulebook sections 1–9 and Departures.

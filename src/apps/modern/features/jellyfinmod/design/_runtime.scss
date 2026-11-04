@@ -344,6 +344,171 @@
     .dm.card {
         contain: none;
     }
+
+    .ep,
+    .by a,
+    .herotext h1 a,
+    .rowt a,
+    .actbar .txt,
+    a.btn {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .actbar .txt {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .actbar > .itemAction {
+        display: flex;
+    }
+
+    .fld input.v,
+    .sfield input,
+    .alpha button,
+    .usr,
+    .rgroup {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0;
+    }
+
+    .fld input.v,
+    .sfield input {
+        width: 100%;
+        min-width: 0;
+        outline: none;
+    }
+
+    .sfield input::placeholder {
+        color: inherit;
+        opacity: 0.618;
+    }
+
+    .alpha button {
+        cursor: pointer;
+        letter-spacing: inherit;
+    }
+
+    .usr {
+        width: 11.09em;
+        padding: 1em;
+        cursor: pointer;
+    }
+
+    .usr:focus {
+        outline: none;
+    }
+
+    .rgroup {
+        padding: 0.1em 0.2em;
+        cursor: pointer;
+    }
+
+    .rgroup .jfmod-ratingIcon {
+        height: 1em;
+        width: auto;
+        margin: 0;
+        vertical-align: initial;
+    }
+
+    .rmenu .jfmod-ratingIcon {
+        display: block;
+        margin: 0 auto;
+    }
+
+    .rcentre {
+        color: var(--text);
+    }
+
+    .rgroup[aria-hidden='true'] {
+        visibility: hidden;
+    }
+
+    .avatar2 {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar2 img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .poster .post {
+        padding-top: 150%;
+    }
+
+    .poster.wide .post {
+        padding-top: 56.25%;
+    }
+
+    .still > img,
+    .still > .fallback {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit;
+    }
+
+    .still > .fallback {
+        width: 2em;
+        height: 2em;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .ep:focus {
+        outline: none;
+    }
+
+    .searchend {
+        padding: 1.618em 0 0.618em;
+    }
+
+    .disc[aria-busy='true'] {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .disc > .dm {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .signbox {
+        background: rgba(0, 0, 0, 0.66);
+        backdrop-filter: none;
+    }
+
+    @supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+        &:not(.layout-tv) .signbox {
+            background: var(--card-glass-bg);
+            backdrop-filter: var(--card-glass-filter);
+        }
+    }
+
+    .btn:focus { outline: none; }
+
+    .alpha button:focus {
+        outline: none;
+        box-shadow: 0 0 0 0.135em var(--primary);
+    }
+
+    &.layout-tv .alpha button:focus {
+        box-shadow: 0 0 0 0.236em var(--primary);
+    }
 }
 
 /* The host reserves the bar's real height; legacy pages already reserve their header. */
@@ -447,4 +612,32 @@
 
 .jfds .menuhost > .pmenu {
     right: 0;
+}
+
+/* Modern AppBar already reserves these heights; art starts under it as in the mockup. */
+.page.jfmod-dsHomePage { padding-top: 0 !important; }
+.jfmod-dsHomePage .homeSectionsContainer { padding-bottom: 2.618em; }
+.jfmod-dsHomeShell > [aria-hidden='true'] { display: none; }
+.page.jfmod-searchPage { padding-top: 0 !important; }
+.jfmod-legacyDs .page.jfmod-searchPage { padding-top: 3.226em !important; }
+.layout-tv .jfmod-legacyDs .page.jfmod-searchPage { padding-top: 3.85em !important; }
+.page.jfmod-signinPage { padding: 0 !important; }
+.page.jfmod-dsBrowse { padding-top: 0 !important; }
+.jfmod-dsBrowse > :not(.jfmod-entryDetailsRoot) { display: none; }
+.jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.226em !important; }
+.layout-tv .jfmod-legacyDs .page.jfmod-dsBrowse { padding-top: 3.85em !important; }
+
+/* Upstream reserves player/absolute-tab room with !important; the native Home owns its foot spacing. */
+.page.jfmod-dsHomePage,
+.page.jfmod-dsHomePage .pageTabContent { padding-bottom: 0 !important; }
+
+/* The shell renders the ground's bar separately; preserve the source art under it and its content offset. */
+.jfmod-dsBrowse .ground {
+    margin-top: -3.226em;
+    padding-top: 3.226em;
+}
+
+.layout-tv .jfmod-dsBrowse .ground {
+    margin-top: -3.85em;
+    padding-top: 3.85em;
 }

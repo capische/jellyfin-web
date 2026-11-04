@@ -12,8 +12,6 @@ import ServerButton from 'components/toolbar/ServerButton';
 
 import { Bar } from '../design/Bar';
 
-import '../components/homeChrome.scss';
-
 interface ModToolbarProps {
     isDrawerAvailable: boolean;
     isDrawerOpen: boolean;

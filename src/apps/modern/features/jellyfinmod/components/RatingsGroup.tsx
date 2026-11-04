@@ -1,4 +1,4 @@
-import React, { type FC, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { type FC, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import layoutManager from 'components/layoutManager';
@@ -7,6 +7,8 @@ import inputManager from 'scripts/inputManager';
 import { formatValue, formatVotes, isKnownScale, provenance, ratingName, SOURCE_LONG, tooltipLines } from '../constants/ratings';
 import type { Rating, RatingSource } from '../types/ratings';
 import RatingIcon from './RatingIcon';
+import { DesignContext } from '../design/Root';
+import { DesignRatings } from '../design/Ratings';
 import './ratings.scss';
 
 interface RatingsGroupProps {
@@ -155,7 +157,7 @@ const Popup: FC<{ list: Rating[]; id: string; anchor: Element; open: boolean }> 
  * and the remote's Back, which is taken only while the popup is open; a tap elsewhere closes it, and so does losing what it
  * shows.
  */
-const usePopup = (box: React.RefObject<HTMLElement>, popupId: string, hasContent: boolean, tv: boolean) => {
+export const usePopup = (box: React.RefObject<HTMLElement>, popupId: string, hasContent: boolean, tv: boolean) => {
     const [open, setOpen] = useState(false);
     const closing = useRef<number>();
     // What pressed the group: OK on a TV, a tap and the keyboard toggle the popup; a mouse click adds nothing to the hover.
@@ -477,13 +479,15 @@ const popupWidthOf = (node: HTMLElement | null, reserved: Reserve | null, standI
  *   height while focus sits below it;
  * - Back is taken only while the popup is open, and the popup closes when there is nothing to show.
  */
+// eslint-disable-next-line sonarjs/cognitive-complexity -- existing rating/focus guards shared by two presentations.
 const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, ownStar, onHidesStar }) => {
+    const design = useContext(DesignContext);
     const box = useRef<HTMLSpanElement>(null);
     const button = useRef<HTMLButtonElement>(null);
-    const row = () => box.current?.closest('.itemMiscInfo') ?? null;
+    const row = () => box.current?.closest('.itemMiscInfo, .meta') ?? null;
     const { standInList, standInKey, reserved, measuring } = useReserve(box, row, sources, !!ownStar);
     const popupId = useId();
-    const tv = layoutManager.tv;
+    const tv = design === 'tv' || (!design && layoutManager.tv);
 
     const shown = useAnswer(ready && ratings && wanted !== false ? enabledOf(ratings.filter(rating => isKnownScale(rating.scale)), sources) : null);
     const enabled = shown ?? [];
@@ -493,7 +497,8 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
 
     // A phone's row is narrower than the group at its widest, so there the group wraps inside its own box and reserves no
     // width: a phone has no remote focus for a late answer to move (UX §13 rule 2 is the TV's).
-    const reserve = reserved && !layoutManager.mobile ? reserved.em + 'em' : '';
+    const phone = design === 'phone' || (!design && layoutManager.mobile);
+    const reserve = reserved && !phone ? reserved.em + 'em' : '';
     const layout = rowLayoutOf(focused && inline.length ? true : wanted, shown !== null, inline, reservedFor, reserve);
     useRowLayout(box, row, layout, !!ownStar, focusMoves, onHidesStar);
 
@@ -508,6 +513,10 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const label = inline.length ? 'Ratings: ' + inline.map(ratingName).join(', ') + '. More ratings' : undefined;
     const { open, enter, leave } = popup;
     const popupWidth = popupWidthOf(box.current, reserved, standInKey);
+    if (design) {
+        return <DesignRatings box={box} button={button} popup={popup} standIn={standIn} label={label} id={popupId}
+            standInList={standInList} inline={inline} enabled={enabled} onBlur={onBlur} />;
+    }
     return <span ref={box} className={popup.groupClass} onPointerEnter={enter} onPointerLeave={leave}
         data-jfmod-full-width={popupWidth ?? undefined}>
         <button ref={button} type='button' className={'jfmod-groupButton noautofocus' + (standIn ? ' jfmod-groupButton-standIn' : '')}

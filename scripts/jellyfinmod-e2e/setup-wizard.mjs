@@ -122,7 +122,7 @@ for (const name of only) {
         await unverify(page);
         await page.evaluate(() => { location.hash = '#/home'; });
         await page.reload({ waitUntil: 'domcontentloaded' });
-        const banner = page.locator('.jfmod-setupBanner');
+        const banner = page.locator('[data-ds-notice=setup]');
         await banner.waitFor({ state: 'visible', timeout: 30000 });
         record(name, 'An incomplete setup shows the Home banner to an administrator', true, await banner.innerText());
         if (layout.tv) await page.evaluate(() => { location.hash = '#/catalog/settings/setup'; });
@@ -185,7 +185,7 @@ for (const name of only) {
         }
         record(name, 'No page errors', errors.length === 0, errors.slice(0, 3));
     } catch (error) {
-        const where = await page.evaluate(() => `${location.hash} banner=${document.querySelectorAll('.jfmod-setupBanner').length} check=${document.querySelectorAll('.jfmod-check').length}`).catch(() => '?');
+        const where = await page.evaluate(() => `${location.hash} banner=${document.querySelectorAll('[data-ds-notice=setup]').length} check=${document.querySelectorAll('.jfmod-check').length}`).catch(() => '?');
         record(name, 'run completed', false, 'NOT VERIFIED: ' + String(error?.message ?? error).split('\n')[0] + ' @ ' + where);
     } finally {
         await page.evaluate(() => localStorage.removeItem('layout')).catch(() => {});

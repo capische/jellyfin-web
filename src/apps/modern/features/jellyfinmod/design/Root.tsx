@@ -25,6 +25,12 @@ const readEnvironment = () => {
 
 export const DesignContext = createContext<Device | false>(false);
 
+const buttonFocus = (target: EventTarget | null, device?: Device) => {
+    if (!(target instanceof HTMLElement) || !target.classList.contains('btn')) return;
+    target.classList.remove('kf', 'tvf');
+    if (device) target.classList.add(device === 'tv' ? 'tvf' : 'kf');
+};
+
 const clearPhoneFocus = (root: HTMLElement | null) => {
     root?.querySelectorAll('.cell.focus, .cell.lit').forEach(cell => {
         cell.classList.remove('focus', 'lit');
@@ -50,5 +56,9 @@ export const Root: FC<PropsWithChildren<{ className?: string }>> = ({ children, 
             window.removeEventListener('resize', update);
         };
     }, []);
-    return <DesignContext.Provider value={env.device}><div ref={ref} className={`jfds dev-${env.device} layout-${env.layout}${env.noBlur ? ' no-bf' : ''} ${className}`} data-theme={env.theme}>{children}</div></DesignContext.Provider>;
+    useLayoutEffect(() => {
+        if (ref.current?.contains(document.activeElement)) buttonFocus(document.activeElement, env.device);
+    }, [env.device]);
+    return <DesignContext.Provider value={env.device}><div ref={ref} className={`jfds dev-${env.device} layout-${env.layout}${env.noBlur ? ' no-bf' : ''} ${className}`} data-theme={env.theme}
+        onFocusCapture={event => buttonFocus(event.target, env.device)} onBlurCapture={event => buttonFocus(event.target)}>{children}</div></DesignContext.Provider>;
 };

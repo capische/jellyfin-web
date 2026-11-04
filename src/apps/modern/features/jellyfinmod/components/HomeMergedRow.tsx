@@ -1,11 +1,9 @@
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
 import { useQueries } from '@tanstack/react-query';
-import React, { type FC, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { type FC, useMemo } from 'react';
 
 import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
-import Card from 'components/cardbuilder/Card/Card';
 import { setCardData } from 'components/cardbuilder/cardBuilder';
 import { CardShape } from 'components/cardbuilder/utils/shape';
 import { useApi } from 'hooks/useApi';
@@ -16,7 +14,10 @@ import { useContinueWatching } from '../hooks/useContinueWatching';
 import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import { FileState } from '../types/entry';
-import EntryCards from './EntryCards';
+import { Cell, CellSkeleton } from '../design/Cell';
+import { Root } from '../design/Root';
+import { Section } from '../design/Section';
+import LibraryCast from './LibraryCast';
 
 interface ContinueProps {
     mode: 'continue';
@@ -54,31 +55,22 @@ const portraitOptions = {
     showParentTitle: true
 };
 
-const RowShell: FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
-    const element = useRef<HTMLElement>(null);
-    const [ itemsContainer, setItemsContainer ] = useState<Element | null>(null);
-
-    useEffect(() => {
-        setItemsContainer(element.current?.querySelector('.itemsContainer') ?? null);
-    }, []);
-
-    return <section ref={element} className='verticalSection'>
-        <h2 className='sectionTitle sectionTitle-cards padded-left'>{title}</h2>
-        <div dangerouslySetInnerHTML={{
-            __html: `<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">
-                <div is="emby-itemscontainer" class="itemsContainer scrollSlider focuscontainer-x"></div>
-            </div>`
-        }} />
-        {itemsContainer && createPortal(children, itemsContainer)}
-    </section>;
+const RowShell: FC<{ title: string; rows: BrowseRow[]; wide?: boolean; loading?: boolean }> = ({ title, rows, wide, loading }) => {
+    const { api, user, __legacyApiClient__ } = useApi();
+    const options = { ...(wide ? rowOptions : portraitOptions), serverId: __legacyApiClient__?.serverId(),
+        queryKey: ['JellyfinMod', api?.basePath, user?.Id] };
+    setCardData(rows.flatMap(row => row.kind === 'native' ? [row.nativeItem] : []), options);
+    if (!rows.length && !loading) return null;
+    return <Root><Section title={title} queryKey={options.queryKey}>
+        {rows.map(row => <Cell key={row.kind === 'native' ? row.nativeItem.Id : row.entry.id} row={row} options={options} />)}
+        {loading && !rows.length && Array.from({ length: 6 }, (_, index) => <CellSkeleton key={index} wide={wide} library />)}
+        <LibraryCast rows={rows} />
+    </Section></Root>;
 };
 
 const ContinueRow: FC<ContinueProps> = ({ includeResume, includeNextUp }) => {
-    const { __legacyApiClient__ } = useApi();
-    const { items } = useContinueWatching({ includeResume, includeNextUp });
-    setCardData(items, { ...rowOptions, serverId: __legacyApiClient__?.serverId() });
-    if (!items.length) return null;
-    return <RowShell title='Continue Watching'>{items.map(item => <Card key={item.Id} item={item} cardOptions={{ ...rowOptions, serverId: __legacyApiClient__?.serverId() }} />)}</RowShell>;
+    const { items, answered } = useContinueWatching({ includeResume, includeNextUp });
+    return <RowShell title='Continue Watching' rows={items.map(nativeItem => ({ kind: 'native', nativeItem }))} wide loading={!answered} />;
 };
 
 /** A Browse row that is a title's placeholder item standing for its entry (P1.FU26). */
@@ -86,7 +78,7 @@ const isPlaceholderRow = (row: BrowseRow) => row.kind === 'native' && !!row.entr
     && row.entry.placeholderItemId.replace(/-/g, '').toLowerCase() === row.nativeItem.Id?.replace(/-/g, '').toLowerCase();
 
 const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
-    const { api, user, __legacyApiClient__ } = useApi();
+    const { api, user } = useApi();
     const health = usePluginHealth();
     const libraryIds = [...movieLibraryIds, ...seriesLibraryIds];
     const latest = useQueries({ queries: libraryIds.map(parentId => ({ ...getLatestMediaQuery(api, {
@@ -142,8 +134,7 @@ const RecentRow: FC<RecentProps> = ({ movieLibraryIds, seriesLibraryIds }) => {
         });
         return uniqueRows.slice(0, 24);
     }, [catalog, latest]);
-    if (!rows.length) return null;
-    return <RowShell title='Recently Added'><EntryCards rows={rows} cardOptions={{ ...portraitOptions, serverId: __legacyApiClient__?.serverId() }} /></RowShell>;
+    return <RowShell title='Recently Added' rows={rows} loading={latest.some(result => result.isPending)} />;
 };
 
 const HomeMergedRow: FC<Props> = props => props.mode === 'continue' ? <ContinueRow {...props} /> : <RecentRow {...props} />;

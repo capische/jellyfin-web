@@ -24,6 +24,8 @@ import layoutManager from 'components/layoutManager';
 const lastFocusedCard = new Map<string, string>();
 
 const cardIdentity = (card: Element) => {
+    const key = card.getAttribute('data-jfmod-key');
+    if (key) return 'search:' + key;
     const id = card.getAttribute('data-id');
     if (id) return 'id:' + id;
     const tmdbId = card.getAttribute('data-jfmod-tmdb-id');
