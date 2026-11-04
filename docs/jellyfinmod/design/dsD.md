@@ -8,7 +8,7 @@ setting, server or deployed environment changed. Existing partial work was retai
 `design/TitlePage.tsx` and `Head.tsx` draw the source `ground/art/fade/dhead/poster/col`, `itemName/by/meta`,
 `actbar/play/dbtn`, `sect/rowt/rowx/cell/tile/post/capt` and `eps/ep/still/body/acts` for native and catalog-entry movies,
 series, seasons, episodes and people. `BrowsePage.tsx` uses the same head and native rows for TMDB movie/show/season/episode
-browse. `TitleRow.tsx` is source `sect`; it uses native horizontal scrolling, without a visual upstream component.
+browse. `TitleRow.tsx` is source `sect` on upstream's scroller, so its rows have the arrows and focus walking of every other row (D252).
 Live download marks take precedence over old clouds; watched/download bars and countdown/search markers retain their data.
 Each caption has three fixed-height lines. Missing or failed lazy images retain their ratio and the source icon.
 
