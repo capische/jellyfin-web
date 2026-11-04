@@ -7,7 +7,7 @@ import * as userSettings from 'scripts/settings/userSettings';
 import { renderComponent } from 'utils/reactUtils';
 
 import HomeHero from '../components/HomeHero';
-import TraktReconnectNotice from '../components/TraktReconnectNotice';
+import { HomeNotices } from '../design/HomeNotices';
 import { composeHomeSections, unmountHomeRows } from './homeSections';
 
 /** How long the TV's first focus waits for the hero before falling back to the first row. */
@@ -183,7 +183,7 @@ export default class ModHomeTab {
         if (active && active !== document.body && this.view.contains(active)) return;
         const target = memory ?
             findRemembered(this.view, memory) :
-            this.heroMount?.querySelector<HTMLElement>('.jfmod-homeHeroActions .emby-button');
+            this.heroMount?.querySelector<HTMLElement>('.hero2 .actbar .play');
         if (target) {
             focusManager.focus(target);
             return;
@@ -212,6 +212,6 @@ export default class ModHomeTab {
         notice.className = 'jfmod-traktNoticeMount';
         mount.after(notice);
         this.traktNoticeMount = notice;
-        this.unmountTraktNotice = renderComponent(TraktReconnectNotice, {}, notice);
+        this.unmountTraktNotice = renderComponent(HomeNotices, {}, notice);
     }
 }

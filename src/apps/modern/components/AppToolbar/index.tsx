@@ -11,8 +11,6 @@ import SyncPlayButton from './SyncPlayButton';
 import SearchButton from './SearchButton';
 import UserViewNav from './userViews/UserViewNav';
 
-import 'apps/modern/features/jellyfinmod/components/homeChrome.scss';
-
 interface AppToolbarProps {
     isDrawerAvailable: boolean
     isDrawerOpen: boolean

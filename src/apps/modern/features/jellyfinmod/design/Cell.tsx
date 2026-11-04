@@ -29,7 +29,7 @@ const blurCell = (event: FocusEvent<HTMLElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.classList.remove('focus', 'lit');
 };
 
-export const CellSkeleton: FC<{ library?: boolean }> = ({ library }) => <div className='cell p' aria-hidden='true'><div className='tile'>
+export const CellSkeleton: FC<{ library?: boolean; wide?: boolean }> = ({ library, wide }) => <div className={'cell ' + (wide ? 'w' : 'p')} aria-hidden='true'><div className='tile'>
     <span className='post sk' /><div className='sk1' /><div className='sk1' />{library && <div className='sk1' />}
 </div></div>;
 

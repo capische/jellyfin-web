@@ -3,15 +3,12 @@ import React, { type FC } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDebounceValue } from 'usehooks-ts';
 
-import SearchFields from 'apps/legacy/features/search/components/SearchFields';
-import SearchSuggestions from 'apps/legacy/features/search/components/SearchSuggestions';
 import Page from 'components/Page';
-import layoutManager from 'components/layoutManager';
-import AlphaPicker from 'components/alphaPicker/AlphaPickerComponent';
-import browser from 'scripts/browser';
 import useSearchParam from 'hooks/useSearchParam';
 import globalize from 'lib/globalize';
 
+import { Root } from '../design/Root';
+import { SearchBody, Suggestions } from '../design/Search';
 import CatalogSearchResults from '../components/CatalogSearchResults';
 
 const COLLECTION_TYPE_PARAM = 'collectionType';
@@ -43,25 +40,21 @@ const SearchPage: FC = () => {
         <Page
             id='searchPage'
             title={globalize.translate('Search')}
-            className='mainAnimatedPage libraryPage allLibraryPage noSecondaryNavPage'
+            className='mainAnimatedPage libraryPage allLibraryPage noSecondaryNavPage jfmod-searchPage'
         >
-            {layoutManager.mobile ? <SearchFields query={query} onSearch={setQuery} /> : layoutManager.tv && !browser.tv && (
-                <AlphaPicker onAlphaPicked={event => {
-                    const value = (event as CustomEvent).detail.value;
-                    setQuery(current => value === 'backspace' ? current.slice(0, -1) : current + value);
-                }} />
-            )}
-            {!debouncedQuery ? (
-                <SearchSuggestions
-                    parentId={parentIdQuery}
-                />
-            ) : (
-                <CatalogSearchResults
-                    parentId={parentIdQuery}
-                    collectionType={collectionTypeQuery}
-                    query={debouncedQuery}
-                />
-            )}
+            <Root><SearchBody query={query} onSearch={setQuery}>
+                {!debouncedQuery ? (
+                    <Suggestions
+                        parentId={parentIdQuery}
+                    />
+                ) : (
+                    <CatalogSearchResults
+                        parentId={parentIdQuery}
+                        collectionType={collectionTypeQuery}
+                        query={debouncedQuery}
+                    />
+                )}
+            </SearchBody></Root>
         </Page>
     );
 };

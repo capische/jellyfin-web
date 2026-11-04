@@ -48,8 +48,7 @@ html .card:not(.show-animation) {
 
 // The overlay stays at full opacity: a parent fading its opacity cuts a child's backdrop-filter off from the poster. Its fill is
 // the dim, and the disc and the pill fade themselves.
-.card-hoverable .cardOverlayContainer,
-.jfmod-searchCell .cardOverlayContainer {
+.card-hoverable .cardOverlayContainer {
     opacity: 1;
     background: transparent;
     transition: background-color 0.236s $ease;

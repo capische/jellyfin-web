@@ -399,7 +399,7 @@ async function sweepLayout(name) {
     if (cfg.tv && !bundle.layoutTv) throw new Error('TV layout did not apply');
 
     // ---- Home
-    await row('Home', 'landing after sign-in', async () => ({ ...bundle }), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .jfmod-homeHero' });
+    await row('Home', 'landing after sign-in', async () => ({ ...bundle }), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .hero2' });
 
     // ---- Movies and each Movies tab
     for (const [libraryName, hashRoute] of [['Movies', 'movies'], ['Shows', 'tv']]) {
@@ -458,13 +458,13 @@ async function sweepLayout(name) {
         if (!cfg.tv && await page.locator('.barsearch input').count()) await page.locator('.barsearch input').press('Enter');
         await page.waitForSelector('#searchTextInput', { state: 'visible', timeout: 15000 });
         if (cfg.tv) { await seek(page, { sel: '#searchTextInput' }); await page.keyboard.type(playTitle, { delay: 40 }); } else await page.fill('#searchTextInput', playTitle);
-    }, { hash: '^#/search', selector: ".page:not(.hide) .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell), main .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell)", text: playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') });
+    }, { hash: '^#/search', selector: ".page:not(.hide) :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid) :is(.card:not(.dm), .cell), main :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid) :is(.card:not(.dm), .cell)", text: playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') });
 
     const titlePattern = '^\\s*' + playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let played = null;
     const before = { userData: null };
     await row('Movie detail from search', (cfg.tv ? keys : shell) + ': search result card', async () => {
-        await activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: titlePattern, scope: '.page:not(.hide) .verticalSection:not(.jfmod-discovery), main .verticalSection:not(.jfmod-discovery)' });
+        await activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: titlePattern, scope: '.page:not(.hide) :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid), main :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid)' });
         await poll(() => page.evaluate(() => ({ ok: /details\?id=/.test(location.hash) })));
         played = new URLSearchParams((await hash(page)).split('?')[1]).get('id');
         before.userData = (await api('GET', `Users/${userId}/Items/${played}`)).body?.UserData ?? null;
@@ -571,7 +571,7 @@ async function sweepLayout(name) {
             // arrives after the first has revoked the token it is answered 401; the user is signed out either way.
             { name: 'upstream\'s second Sign Out request after the first revoked the token (401)', test: f => f.status === 401 && f.method === 'POST' && f.path === '/Sessions/Logout' }]
     });
-    await row('Sign back in', cfg.tv ? keys + ': login form' : 'login form', () => signIn(), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .jfmod-homeHero' });
+    await row('Sign back in', cfg.tv ? keys + ': login form' : 'login form', () => signIn(), { hash: '^#/home', selector: '.homePage:not(.hide) .sections .verticalSection, .hero2' });
 
     // ---- Dashboard
     /** TV: to the Dashboard by keys, the way the Dashboard row goes (Home, the settings link, the Dashboard link). */

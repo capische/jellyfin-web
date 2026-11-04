@@ -316,7 +316,7 @@ const open = async (layoutName, theme = 'dark') => {
     await page.locator('#txtManualName, .btnManual').first().waitFor({ timeout: 30000 });
     if (await manual.isVisible().catch(() => false)) await manual.click();
     await page.locator('#txtManualName').fill('oleksii');
-    await page.locator('.manualLoginForm .button-submit').click();
+    await page.locator('.manualLoginForm button[type=submit]').click();
     await page.waitForFunction(() => !location.hash.includes('login'), null, { timeout: 30000 });
     return { context, page };
 };
@@ -966,7 +966,7 @@ const reviewFixesRun = async () => {
             await page.locator('#txtManualName, .btnManual').first().waitFor({ timeout: 30000 });
             if (await manual.isVisible().catch(() => false)) await manual.click();
             await page.locator('#txtManualName').fill('oleksii');
-            await page.locator('.manualLoginForm .button-submit').click();
+            await page.locator('.manualLoginForm button[type=submit]').click();
             await page.waitForFunction(() => !location.hash.includes('login'), null, { timeout: 30000 });
             await page.evaluate(url => {
                 location.hash = url.slice(url.indexOf('#'));
@@ -1025,7 +1025,7 @@ const coldVisit = async (healthDelayMs, hash) => {
     await page.locator('#txtManualName, .btnManual').first().waitFor({ timeout: 30000 });
     if (await manual.isVisible().catch(() => false)) await manual.click();
     await page.locator('#txtManualName').fill('oleksii');
-    await page.locator('.manualLoginForm .button-submit').click();
+    await page.locator('.manualLoginForm button[type=submit]').click();
     await page.waitForFunction(() => !location.hash.includes('login'), null, { timeout: 30000 });
     await page.evaluate(target => {
         location.hash = target;

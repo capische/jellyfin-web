@@ -60,11 +60,11 @@ try {
 
     // ---- Mod Home: the hero and at least one row of cards.
     await page.waitForSelector('.jfmod-homeHeroMount', { timeout: 30000 });
-    await page.waitForFunction(() => document.querySelectorAll('.card').length > 0, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelectorAll('.card:not(.dm), .cell').length > 0, undefined, { timeout: 30000 });
     const home = await page.evaluate(() => ({
-        hero: !!document.querySelector('.jfmod-homeHero'),
-        cards: document.querySelectorAll('.card').length,
-        sections: [...document.querySelectorAll('.sectionTitle')].filter(node => node.offsetParent !== null)
+        hero: !!document.querySelector('.hero2'),
+        cards: document.querySelectorAll('.card:not(.dm), .cell').length,
+        sections: [...document.querySelectorAll('.sectionTitle, .rowt')].filter(node => node.offsetParent !== null)
             .map(node => node.textContent.trim()).filter(Boolean).slice(0, 6)
     }));
     record('Mod Home renders the hero and card rows', home.hero && home.cards > 0, home);

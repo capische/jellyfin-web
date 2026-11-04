@@ -3,19 +3,12 @@ import { clearBackdrop } from 'components/backdrop/backdrop';
 import loading from 'components/loading/loading';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import libraryMenu from 'scripts/libraryMenu';
-import * as userSettings from 'scripts/settings/userSettings';
 import { renderComponent } from 'utils/reactUtils';
 
 import { getDiscoverTitle } from '../api/modApi';
 import TmdbDetails from '../components/TmdbDetails';
-import { getTmdbImage, preconnectTmdbImages } from '../utils/entryLinks';
+import { preconnectTmdbImages } from '../utils/entryLinks';
 import { createFocusOwnership } from '../utils/focusOwnership';
-import { titlePage } from './titlePage';
-
-/** The template's slots this page fills or hides, as the file-less entry page does (entryDetails.js). */
-const FILLED = '.detailLogo, .nameContainer, .itemMiscInfo, .detailImageContainer, .itemGenres, .tagline, .overview, .itemDetailsGroup, .itemExternalLinks';
-const HIDDEN = '.mainDetailButtons > button, .trackSelections, .recordingFields, .itemTags, .itemExternalLinks, .collectionItems, .nextUpSection, '
-    + '.programGuideSection, .overview-expand';
 
 /**
  * The page of a TMDB title that is not in the library (TM2, D196): `#/details?tmdbType=movie|series&tmdbId=N[&season=S[&episode=E]]`,
@@ -26,6 +19,7 @@ export default function initializeTmdbDetails(view, params) {
     const mount = document.createElement('div');
     mount.className = 'jfmod-entryDetailsRoot';
     view.appendChild(mount);
+    view.classList.add('jfmod-dsBrowse', 'jfmod-dsPage');
     let unmount;
     let renderMount;
     let abort;
@@ -57,8 +51,6 @@ export default function initializeTmdbDetails(view, params) {
         const currentGeneration = generation;
         await new Promise(resolve => setTimeout(resolve, 0));
         if (currentGeneration !== generation) return;
-        for (const node of view.querySelectorAll(FILLED)) node.textContent = '';
-        for (const node of view.querySelectorAll(HIDDEN)) node.classList.add('hide');
         const client = params.serverId ? ServerConnections.getApiClient(params.serverId) : ServerConnections.currentApiClient();
         const api = client && ServerConnections.getApi(client.serverId());
         const mediaType = params.tmdbType === 'series' ? 'series' : 'movie';
@@ -78,13 +70,6 @@ export default function initializeTmdbDetails(view, params) {
             ]);
             if (currentGeneration !== generation) return;
             libraryMenu.setTitle('');
-            const backdrop = view.querySelector('#itemBackdrop');
-            const image = getTmdbImage(data.metadata.backdropPath, 'w1280');
-            let type = mediaType === 'movie' ? 'Movie' : 'Series';
-            if (season !== undefined) type = 'Season';
-            if (episode !== undefined) type = 'Episode';
-            titlePage(view, type, image);
-            if (backdrop && image && userSettings.detailsBanner()) backdrop.style.backgroundImage = `url("${image}")`;
             renderMount = document.createElement('div');
             mount.appendChild(renderMount);
             unmount = renderComponent(TmdbDetails, { api, data, view, serverId: client.serverId(), userId: client.getCurrentUserId(),
@@ -102,6 +87,7 @@ export default function initializeTmdbDetails(view, params) {
         view.removeEventListener('viewbeforehide', hide);
         view.removeEventListener('viewdestroy', destroy);
         mount.remove();
+        view.classList.remove('jfmod-dsBrowse', 'jfmod-dsPage');
     };
     view.addEventListener('viewshow', show);
     view.addEventListener('viewbeforehide', hide);

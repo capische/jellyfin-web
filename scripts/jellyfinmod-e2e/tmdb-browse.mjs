@@ -115,24 +115,24 @@ const shot = async (page, label, name, fullPage = false) => {
 
 async function searchFacts(page) {
     return page.evaluate(() => {
-        const cells = [...document.querySelectorAll('.jfmod-searchCell')];
+        const cells = [...document.querySelectorAll('.cell[data-jfmod-key]')];
         const rect = node => node.getBoundingClientRect();
         const first = cells[0];
         const firstTop = first ? Math.round(rect(first).top) : 0;
-        const poster = first?.querySelector('.jfmod-searchPoster');
-        const title = first?.querySelector('.jfmod-searchTitle');
-        const lines = first ? [...first.querySelectorAll('.jfmod-searchLine')] : [];
-        const kind = document.querySelector('.jfmod-searchKind');
-        const cast = first?.querySelector('.jfmod-searchCast');
+        const poster = first?.querySelector('.post');
+        const title = first?.querySelector('.capt .t');
+        const lines = first ? [...first.querySelectorAll('.capt .ln')] : [];
+        const kind = document.querySelector('.capt .k');
+        const cast = first?.querySelector('.capt .ln.d');
         const style = node => getComputedStyle(node);
         const root = parseFloat(style(first).fontSize);
         return {
             count: cells.length,
             perRow: cells.filter(cell => Math.round(rect(cell).top) === firstTop).length,
-            gridRight: Math.round(rect(document.querySelector('.jfmod-searchGrid')).right),
+            gridRight: Math.round(rect(document.querySelector('.grid.searchgrid')).right),
             viewport: document.documentElement.clientWidth,
             scrollWidth: document.documentElement.scrollWidth,
-            padding: first && [style(first).paddingTop, style(first).paddingRight, style(first).paddingBottom, style(first).paddingLeft].map(value => parseFloat(value) / root),
+            padding: first && [style(first.querySelector('.tile')).paddingTop, style(first.querySelector('.tile')).paddingRight, style(first.querySelector('.tile')).paddingBottom, style(first.querySelector('.tile')).paddingLeft].map(value => parseFloat(value) / root),
             posterRatio: poster && rect(poster).height / rect(poster).width,
             posterRadius: poster && parseFloat(style(poster).borderTopLeftRadius) / root,
             lineCount: lines.length,
@@ -143,20 +143,20 @@ async function searchFacts(page) {
             castColour: cast && style(cast).color,
             kindText: kind?.textContent,
             kindOpacity: kind && style(kind).opacity,
-            cards: cells.map(cell => ({ key: cell.dataset.jfmodKey, title: cell.querySelector('.jfmod-searchTitle')?.textContent ?? '',
-                year: Number(cell.querySelectorAll('.jfmod-searchLine')[1]?.querySelector('span')?.textContent) || 0,
-                series: !!cell.querySelector('.jfmod-searchKind'), href: cell.querySelector('a.jfmod-searchOpen')?.getAttribute('href') ?? '',
-                cast: cell.querySelector('.jfmod-searchCast')?.textContent ?? '', mark: !!cell.querySelector('.jfmod-searchPoster [class*="jfmod-mark"]') })),
-            heading: [...document.querySelectorAll('.jfmod-searchResults .sectionTitle')].map(node => node.textContent),
-            adds: document.querySelectorAll('.jfmod-searchAdd').length
+            cards: cells.map(cell => ({ key: cell.dataset.jfmodKey, title: cell.querySelector('.capt .t')?.textContent ?? '',
+                year: Number(cell.querySelectorAll('.capt .ln')[1]?.querySelector('span')?.textContent) || 0,
+                series: !!cell.querySelector('.capt .k'), href: cell?.getAttribute('href') ?? '',
+                cast: cell.querySelector('.capt .ln.d')?.textContent ?? '', mark: !!cell.querySelector('.post .mark') })),
+            heading: [...document.querySelectorAll('.searchbody .rowt')].map(node => node.textContent),
+            adds: document.querySelectorAll('[data-jfmod-add]').length
         };
     });
 }
 
 const waitForSearch = async (page, query = QUERY) => {
-    await open(page, `#/search?query=${encodeURIComponent(query)}`, '.jfmod-searchGrid');
-    await page.waitForFunction(() => document.querySelector('.jfmod-searchGrid')?.getAttribute('aria-busy') === 'false'
-        && document.querySelectorAll('.jfmod-searchCell').length > 0, undefined, { timeout: 45000 });
+    await open(page, `#/search?query=${encodeURIComponent(query)}`, '.grid.searchgrid');
+    await page.waitForFunction(() => document.querySelector('.grid.searchgrid')?.getAttribute('aria-busy') === 'false'
+        && document.querySelectorAll('.cell[data-jfmod-key]').length > 0, undefined, { timeout: 45000 });
     await page.waitForTimeout(600);
 };
 
@@ -206,7 +206,7 @@ async function checkSearch(page, label, layoutName, theme) {
     record(label, 'search: results in one grid', facts.count >= 5 && facts.heading.every(text => !/add from tmdb/i.test(text)), `${facts.count} cells; headings ${facts.heading.join(', ') || 'none'}`);
     record(label, 'search: cells per row', facts.perRow === (phone ? 2 : 5), `${facts.perRow}`);
     record(label, 'search: the grid fits the page', facts.gridRight <= facts.viewport + 1 && facts.scrollWidth <= facts.viewport, `grid right ${facts.gridRight}, page ${facts.scrollWidth}, viewport ${facts.viewport}`);
-    const wantPadding = phone ? [0, 1, 1.618, 0] : [1, 1, 1, 1];
+    const wantPadding = phone ? [0, 0.618, 1, 0] : [1, 1, 1, 1];
     record(label, 'search: cell padding per the guide', facts.padding.every((value, index) => near(value, wantPadding[index], 0.02)), facts.padding.map(value => value.toFixed(3)).join(' '));
     record(label, 'search: 2:3 poster with the card radius', near(facts.posterRatio, 1.5, 0.01) && near(facts.posterRadius, 0.618, 0.02), `${facts.posterRatio.toFixed(3)}, ${facts.posterRadius.toFixed(2)}em`);
     record(label, 'search: three-line caption at pitch φ', facts.lineCount === 3 && near(facts.linePitch, 1.618, 0.02), `${facts.lineCount} lines at ${facts.linePitch.toFixed(3)}em`);
@@ -230,14 +230,14 @@ async function checkSearch(page, label, layoutName, theme) {
     // Hover: the computer lights the whole cell in paper, the phone does not.
     if (!layout.tv) {
         const key = browseCard?.key;
-        const cell = page.locator(`.jfmod-searchCell[data-jfmod-key="${key}"]`);
+        const cell = page.locator(`.cell[data-jfmod-key="${key}"]`);
         await cell.scrollIntoViewIfNeeded();
         await cell.hover();
         await page.waitForTimeout(450);
         const lit = await cell.evaluate(node => {
-            const overlay = node.querySelector('.cardOverlayContainer');
-            const button = node.querySelector('.jfmod-searchAdd');
-            return { background: getComputedStyle(node).backgroundColor, ring: getComputedStyle(node.querySelector('.jfmod-searchPoster')).boxShadow,
+            const overlay = node.querySelector('[data-jfmod-add]');
+            const button = node.querySelector('[data-jfmod-add]');
+            return { background: getComputedStyle(node).backgroundColor, ring: getComputedStyle(node.querySelector('.post')).boxShadow,
                 overlay: overlay && getComputedStyle(overlay).opacity,
                 button: button && (({ width, height }) => [Math.round(width), Math.round(height)])(button.getBoundingClientRect()) };
         });
@@ -254,37 +254,37 @@ async function checkSearch(page, label, layoutName, theme) {
     // The end of the results (one page per kind through Jellyfin's own connection; a token pages further).
     if (!TOKEN) {
         await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-        await page.waitForSelector('.jfmod-searchEnd', { timeout: 20000 }).catch(() => {});
-        const end = await page.locator('.jfmod-searchEnd').textContent().catch(() => null);
+        await page.waitForSelector('.searchend', { timeout: 20000 }).catch(() => {});
+        const end = await page.locator('.searchend').textContent().catch(() => null);
         record(label, 'search: the end says so', end === `No more results for “${QUERY}”`, end ?? 'no end line');
         await page.evaluate(() => window.scrollTo(0, 0));
     }
 
     if (layout.tv) {
-        await page.locator(`${PAGE} .searchfields-txtSearch`).focus().catch(() => {});
+        await page.locator(`${PAGE} #searchTextInput`).focus().catch(() => {});
         let reached = false;
         for (let press = 0; press < 10 && !reached; press++) {
             await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(250);
-            reached = await page.evaluate(() => !!document.activeElement?.closest('.jfmod-searchCell'));
+            reached = await page.evaluate(() => !!document.activeElement?.closest('.cell[data-jfmod-key]'));
         }
         record(label, 'search: arrows reach the first card', reached, await page.evaluate(() => document.activeElement?.className ?? 'none'));
         if (reached) {
             const ring = await page.evaluate(() => {
-                const cell = document.activeElement.closest('.jfmod-searchCell');
+                const cell = document.activeElement.closest('.cell[data-jfmod-key]');
                 const style = getComputedStyle(cell);
-                return { key: cell.dataset.jfmodKey, shadow: getComputedStyle(cell.querySelector('.jfmod-searchPoster')).boxShadow, background: style.backgroundColor, root: parseFloat(style.fontSize) };
+                return { key: cell.dataset.jfmodKey, shadow: getComputedStyle(cell.querySelector('.post')).boxShadow, background: style.backgroundColor, root: parseFloat(style.fontSize) };
             });
             record(label, 'search: TV focus rings the poster, no panel on the cell', /0px 0px 0px [\d.]+px/.test(ring.shadow) && ring.background === 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
             await shot(page, label, 'search-focus');
             await page.keyboard.press('ArrowRight');
             await page.waitForTimeout(350);
-            const next = await page.evaluate(() => document.activeElement?.closest('.jfmod-searchCell')?.dataset.jfmodKey);
+            const next = await page.evaluate(() => document.activeElement?.closest('.cell[data-jfmod-key]')?.dataset.jfmodKey);
             record(label, 'search: right moves to the next card', !!next && next !== ring.key, `${ring.key} → ${next}`);
             await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(350);
             const below = await page.evaluate(() => {
-                const cell = document.activeElement?.closest('.jfmod-searchCell');
+                const cell = document.activeElement?.closest('.cell[data-jfmod-key]');
                 const box = cell?.getBoundingClientRect();
                 return cell && { key: cell.dataset.jfmodKey, top: box.top, bottom: box.bottom, height: window.innerHeight, href: document.activeElement.getAttribute('href') };
             });
@@ -293,25 +293,25 @@ async function checkSearch(page, label, layoutName, theme) {
             const tmdbCard = facts.cards.find(card => card.key === below?.key && card.href.includes('tmdbType='));
             if (tmdbCard) {
                 await page.keyboard.press('Enter');
-                await page.waitForSelector(`${PAGE} .jfmod-browseAdd`, { timeout: 30000 }).catch(() => {});
+                await page.waitForSelector(`${PAGE} .jfds .actbar .play`, { timeout: 30000 }).catch(() => {});
                 record(label, 'search: Enter opens the browse page', await page.evaluate(() => location.hash.includes('tmdbType=')), await page.evaluate(() => location.hash));
                 await page.waitForTimeout(800);
                 await page.keyboard.press('Escape');
-                await page.waitForSelector('.jfmod-searchGrid', { timeout: 20000 }).catch(() => {});
+                await page.waitForSelector('.grid.searchgrid', { timeout: 20000 }).catch(() => {});
                 await page.waitForTimeout(800);
-                record(label, 'search: Back returns to the grid', await page.evaluate(() => location.hash.startsWith('#/search') && document.querySelectorAll('.jfmod-searchCell').length > 0), await page.evaluate(() => location.hash));
+                record(label, 'search: Back returns to the grid', await page.evaluate(() => location.hash.startsWith('#/search') && document.querySelectorAll('.cell[data-jfmod-key]').length > 0), await page.evaluate(() => location.hash));
             } else {
                 notVerified(label, 'search: Enter opens the browse page', 'the focused card is a library title');
             }
         }
     } else {
-        await page.locator(`.jfmod-searchCell[data-jfmod-key="${browseCard?.key}"] a.jfmod-searchOpen`).click();
-        await page.waitForSelector(`${PAGE} .jfmod-browseAdd`, { timeout: 30000 }).catch(() => {});
+        await page.locator(`.cell[data-jfmod-key="${browseCard?.key}"]`).click();
+        await page.waitForSelector(`${PAGE} .jfds .actbar .play`, { timeout: 30000 }).catch(() => {});
         record(label, 'search: clicking a TMDb card opens its browse page', await page.evaluate(() => location.hash.includes('tmdbType=')), await page.evaluate(() => location.hash));
         await page.goBack();
-        await page.waitForSelector('.jfmod-searchGrid', { timeout: 20000 }).catch(() => {});
+        await page.waitForSelector('.grid.searchgrid', { timeout: 20000 }).catch(() => {});
         await page.waitForTimeout(600);
-        record(label, 'search: Back returns to the grid', await page.evaluate(() => location.hash.startsWith('#/search') && document.querySelectorAll('.jfmod-searchCell').length > 0), await page.evaluate(() => location.hash));
+        record(label, 'search: Back returns to the grid', await page.evaluate(() => location.hash.startsWith('#/search') && document.querySelectorAll('.cell[data-jfmod-key]').length > 0), await page.evaluate(() => location.hash));
     }
 
     // A library title with a file: its own page, no mark.
@@ -320,9 +320,9 @@ async function checkSearch(page, label, layoutName, theme) {
     if (owned) {
         await waitForSearch(page, owned.Name);
         const row = await page.evaluate(id => {
-            const link = [...document.querySelectorAll('.jfmod-searchCell a.jfmod-searchOpen')].find(node => node.getAttribute('href').includes(id));
-            const cell = link?.closest('.jfmod-searchCell');
-            return cell && { mark: !!cell.querySelector('.jfmod-searchPoster [class*="jfmod-mark"]'), index: [...document.querySelectorAll('.jfmod-searchCell')].indexOf(cell) };
+            const link = [...document.querySelectorAll('a.cell[data-jfmod-key]')].find(node => node.getAttribute('href').includes(id));
+            const cell = link?.closest('.cell[data-jfmod-key]');
+            return cell && { mark: !!cell.querySelector('.post .mark'), index: [...document.querySelectorAll('.cell[data-jfmod-key]')].indexOf(cell) };
         }, owned.Id);
         record(label, 'search: a library title with a file links its own page, no mark', !!row && !row.mark, `${owned.Name}: ${JSON.stringify(row)}`);
     } else {
@@ -333,8 +333,8 @@ async function checkSearch(page, label, layoutName, theme) {
     const views = await apiJson(page, `Users/${await page.evaluate(() => ApiClient.getCurrentUserId())}/Views`);
     const movies = views.Items.find(view => view.CollectionType === 'movies');
     if (movies) {
-        await open(page, `#/search?parentId=${movies.Id}&query=${QUERY}`, '.jfmod-searchGrid');
-        await page.waitForFunction(() => document.querySelector('.jfmod-searchGrid')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.jfmod-searchCell').length > 0, undefined, { timeout: 45000 });
+        await open(page, `#/search?parentId=${movies.Id}&query=${QUERY}`, '.grid.searchgrid');
+        await page.waitForFunction(() => document.querySelector('.grid.searchgrid')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.cell[data-jfmod-key]').length > 0, undefined, { timeout: 45000 });
         const scoped = await searchFacts(page);
         record(label, 'search: opened from Movies it still finds shows (D201)', scoped.cards.some(card => card.series), `${scoped.cards.filter(card => card.series).length} shows`);
     }
@@ -346,40 +346,40 @@ const browseFacts = page => page.evaluate(selector => {
     const scope = document.querySelector(selector);
     const shown = node => !!node && !node.closest('.hide') && node.getBoundingClientRect().width > 0;
     const text = sel => scope.querySelector(sel)?.textContent?.trim() ?? '';
-    const buttons = [...scope.querySelectorAll('.mainDetailButtons button')].filter(shown);
-    const add = scope.querySelector('.jfmod-browseAdd');
-    const star = scope.querySelector('.itemMiscInfo-primary .starIcon');
+    const buttons = [...scope.querySelectorAll('.jfds .actbar button')].filter(shown);
+    const add = scope.querySelector('.jfds .actbar .play');
+    const star = scope.querySelector('.jfds .meta .star svg');
     const links = scope.querySelector('.itemExternalLinks');
-    const overview = scope.querySelector('.overview');
+    const overview = scope.querySelector('.jfds .overview');
     return {
         hash: location.hash,
-        name: scope.querySelector('.nameContainer')?.innerText?.replace(/\s+/g, ' ').trim() ?? '',
-        misc: scope.querySelector('.itemMiscInfo-primary')?.innerText?.replace(/\s+/g, ' ').trim() ?? '',
+        name: [scope.querySelector('.jfds .by')?.textContent, scope.querySelector('.jfds .itemName')?.textContent].filter(Boolean).join(' '),
+        misc: scope.querySelector('.jfds .meta')?.innerText?.replace(/\s+/g, ' ').trim() ?? '',
         star: shown(star),
         starColour: star && getComputedStyle(star).color,
         linksShown: shown(links) && links.textContent.trim().length > 0,
-        tmdbWord: /\b(TMDB|TheMovieDb|IMDb)\b/.test(scope.querySelector('.detailPagePrimaryContainer')?.innerText ?? '') || /\b(TMDB|IMDb)\b/.test(text('.itemDetailsGroup')),
+        tmdbWord: /\b(TMDB|TheMovieDb|IMDb)\b/.test(scope.querySelector('.jfds .dhead')?.innerText ?? '') || /\b(TMDB|IMDb)\b/.test(text('.jfds .overview')),
         buttons: buttons.map(button => button.textContent.trim()),
         addHeight: add ? Math.round(add.getBoundingClientRect().height) : 0,
         addBackground: add && getComputedStyle(add).backgroundColor,
         overview: shown(overview) ? overview.textContent.trim().length : 0,
         overviewColour: overview && getComputedStyle(overview).color,
-        cast: shown(scope.querySelector('#castCollapsible')) ? scope.querySelectorAll('#castContent .jfmod-browseCell').length : -1,
-        guests: shown(scope.querySelector('#guestCastCollapsible')) ? scope.querySelectorAll('#guestCastContent .jfmod-browseCell').length : -1,
-        more: shown(scope.querySelector('.moreFromSeasonSection')) ? scope.querySelectorAll('.moreFromSeasonSection .jfmod-browseCell').length : -1,
-        moreHeading: text('.moreFromSeasonSection .sectionTitle'),
-        seasonsHeading: text('#listChildrenCollapsible .sectionTitle'),
-        seasons: shown(scope.querySelector('#listChildrenCollapsible')) ? scope.querySelectorAll('#listChildrenCollapsible .jfmod-browseCell').length : -1,
-        episodes: scope.querySelectorAll('#listChildrenCollapsible a.jfmod-browseEpisode').length,
-        episodeStars: scope.querySelectorAll('#listChildrenCollapsible a.jfmod-browseEpisode .starIcon').length,
+        cast: shown(scope.querySelector('[data-ds-section=cast]')) ? scope.querySelectorAll('[data-ds-section=cast] .rowx .cell').length : -1,
+        guests: shown(scope.querySelector('[data-ds-section=guests]')) ? scope.querySelectorAll('[data-ds-section=guests] .rowx .cell').length : -1,
+        more: shown(scope.querySelector('[data-ds-section=more]')) ? scope.querySelectorAll('[data-ds-section=more] .cell').length : -1,
+        moreHeading: text('[data-ds-section=more] .rowt'),
+        seasonsHeading: text('[data-ds-section=children] .rowt'),
+        seasons: shown(scope.querySelector('[data-ds-section=children]')) ? scope.querySelectorAll('[data-ds-section=children] .cell').length : -1,
+        episodes: scope.querySelectorAll('[data-ds-section=children] a.ep').length,
+        episodeStars: scope.querySelectorAll('[data-ds-section=children] a.ep .star svg').length,
         // The template has one image container per layout; one of them shows.
-        still: [...scope.querySelectorAll('.jfmod-episodeStill img')].some(shown),
-        poster: [...scope.querySelectorAll('.jfmod-entryPoster img')].some(shown),
-        details: text('.itemDetailsGroup'),
+        still: [...scope.querySelectorAll('.poster.wide img')].some(shown),
+        poster: [...scope.querySelectorAll('.poster img')].some(shown),
+        details: text('.jfds .overview'),
         scrollWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
         backdrop: (() => {
-            const node = scope.querySelector('#itemBackdrop');
+            const node = scope.querySelector('.jfds .ground');
             const style = getComputedStyle(node);
             const matching = [];
             for (const sheet of document.styleSheets) {
@@ -394,14 +394,14 @@ const browseFacts = page => page.evaluate(selector => {
 }, PAGE);
 
 const cellFacts = (page, row) => page.evaluate(([selector, rowSelector]) => {
-    const cell = document.querySelector(`${selector} ${rowSelector} .jfmod-browseCell`);
+    const cell = document.querySelector(`${selector} ${rowSelector} .cell`);
     if (!cell) return null;
-    const style = getComputedStyle(cell);
-    const image = cell.querySelector('.jfmod-browseImage');
-    const line1 = cell.querySelector('.jfmod-browseLine1');
-    const line2 = cell.querySelector('.jfmod-browseLine2');
-    const section = cell.closest('.verticalSection');
-    const heading = section?.querySelector('.sectionTitle');
+    const style = getComputedStyle(cell.querySelector('.tile'));
+    const image = cell.querySelector('.post');
+    const line1 = cell.querySelector('.capt .t');
+    const line2 = cell.querySelector('.capt .ln.d');
+    const section = cell.closest('.sect');
+    const heading = section?.querySelector('.rowt');
     const root = parseFloat(style.fontSize);
     return {
         padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].map(value => parseFloat(value) / root),
@@ -411,7 +411,7 @@ const cellFacts = (page, row) => page.evaluate(([selector, rowSelector]) => {
         line1: line1 && { weight: getComputedStyle(line1).fontWeight, colour: getComputedStyle(line1).color, align: getComputedStyle(line1).textAlign },
         line2: line2 && { opacity: getComputedStyle(line2).opacity },
         direct: cell.parentElement.classList.contains('itemsContainer'),
-        widths: [...new Set([...cell.parentElement.children].map(node => Math.round(node.getBoundingClientRect().width)))]
+        widths: [...new Set([...cell.parentElement.querySelectorAll(':scope > .cell')].map(node => Math.round(node.getBoundingClientRect().width)))]
     };
 }, [PAGE, row]);
 
@@ -431,7 +431,7 @@ async function checkCells(page, label, name, row, layoutName, theme, ratio) {
     const cell = await cellFacts(page, row);
     if (!cell) { record(label, `${name}: row ${row} has cells`, false); return; }
     const phone = layoutName === 'phone';
-    const wantPadding = phone ? [0, 1, 1, 0] : [1, 1, 1, 1];
+    const wantPadding = phone ? [0, 0.618, 1, 0] : [1, 1, 1, 1];
     record(label, `${name}: ${row} cell padding per the guide`, cell.padding.every((value, index) => near(value, wantPadding[index], 0.02)), cell.padding.map(value => value.toFixed(3)).join(' '));
     record(label, `${name}: ${row} image ratio`, near(cell.ratio, ratio, 0.02), cell.ratio.toFixed(3));
     record(label, `${name}: ${row} cells are direct children of the row, one width`, cell.direct && cell.widths.length === 1, `${cell.direct}; widths ${cell.widths.join(', ')}`);
@@ -444,10 +444,10 @@ async function checkCells(page, label, name, row, layoutName, theme, ratio) {
 async function checkRowScroll(page, label, name, sectionSelector, layoutName) {
     const section = `${PAGE} ${sectionSelector}`;
     if (layoutName === 'computer') {
-        const next = page.locator(`${section} .emby-scrollbuttons-button`).last();
-        const prev = page.locator(`${section} .emby-scrollbuttons-button`).first();
+        const next = page.locator(`${section} .emby-scrollbuttons .dbtn`).last();
+        const prev = page.locator(`${section} .emby-scrollbuttons .dbtn`).first();
         if (!await next.count() || !await next.isVisible()) { notVerified(label, `${name}: › walks the row`, 'the row fits, no buttons'); return; }
-        const firstX = () => page.locator(`${section} .jfmod-browseCell`).first().evaluate(node => node.getBoundingClientRect().left);
+        const firstX = () => page.locator(`${section} .cell`).first().evaluate(node => node.getBoundingClientRect().left);
         const start = await firstX();
         await next.scrollIntoViewIfNeeded();
         await next.click();
@@ -458,7 +458,7 @@ async function checkRowScroll(page, label, name, sectionSelector, layoutName) {
             await next.click();
             await page.waitForTimeout(500);
         }
-        const last = await page.locator(`${section} .jfmod-browseCell`).last().evaluate(node => Math.round(node.getBoundingClientRect().right));
+        const last = await page.locator(`${section} .cell`).last().evaluate(node => Math.round(node.getBoundingClientRect().right));
         record(label, `${name}: › reaches the last cell`, last <= await page.evaluate(() => document.documentElement.clientWidth) + 40, `last cell right ${last}`);
         for (let press = 0; press < 12 && !await prev.isDisabled(); press++) {
             await prev.click();
@@ -480,20 +480,20 @@ async function checkRowScroll(page, label, name, sectionSelector, layoutName) {
 
 /** Computer: the Seasons row's › reaches the last season and ‹ returns; the row stays beside the poster, never over it (D252). */
 async function checkLongSeriesArrows(page, label, section, lastSeason) {
-    const next = page.locator(`${section} .emby-scrollbuttons-button[data-direction="right"]`);
-    const prev = page.locator(`${section} .emby-scrollbuttons-button[data-direction="left"]`);
+    const next = page.locator(`${section} .emby-scrollbuttons .dbtn[data-tip="Next"]`);
+    const prev = page.locator(`${section} .emby-scrollbuttons .dbtn[data-tip="Previous"]`);
     record(label, 'long series: the arrows are on the Seasons row', await next.isVisible() && await prev.isVisible());
     await next.scrollIntoViewIfNeeded();
     const place = await page.evaluate(selector => {
         const arrows = document.querySelector(selector + ' .emby-scrollbuttons').getBoundingClientRect();
-        const title = document.querySelector(selector + ' .sectionTitle').getBoundingClientRect();
-        const castArrows = document.querySelector('.mainAnimatedPage:not(.hide) #castCollapsible .emby-scrollbuttons');
+        const title = document.querySelector(selector + ' .rowt').getBoundingClientRect();
+        const castArrows = document.querySelector('.mainAnimatedPage:not(.hide) [data-ds-section=cast] .emby-scrollbuttons');
         return { sameLine: arrows.top < title.bottom && arrows.bottom > title.top, arrowsClass: document.querySelector(selector + ' .emby-scrollbuttons').className, castClass: castArrows?.className,
-            buttonWidth: document.querySelector(selector + ' .emby-scrollbuttons-button').getBoundingClientRect().width,
-            castWidth: castArrows?.querySelector('.emby-scrollbuttons-button').getBoundingClientRect().width };
+            buttonWidth: document.querySelector(selector + ' .emby-scrollbuttons .dbtn').getBoundingClientRect().width,
+            castWidth: castArrows?.querySelector('.emby-scrollbuttons .dbtn').getBoundingClientRect().width };
     }, section);
     record(label, 'long series: the arrows sit on the heading\'s line, as the other rows\'', place.sameLine && place.arrowsClass === place.castClass && place.buttonWidth === place.castWidth, JSON.stringify(place));
-    const firstLeft = () => page.locator(`${section} .jfmod-browseCell`).first().evaluate(node => node.getBoundingClientRect().left);
+    const firstLeft = () => page.locator(`${section} .cell`).first().evaluate(node => node.getBoundingClientRect().left);
     const start = await firstLeft();
     await next.click();
     await page.waitForTimeout(700);
@@ -501,10 +501,10 @@ async function checkLongSeriesArrows(page, label, section, lastSeason) {
     await shot(page, label, 'long-series-scrolled');
     const beside = await page.evaluate(selector => {
         const frame = document.querySelector(selector + ' .emby-scroller');
-        const poster = [...document.querySelectorAll('.mainAnimatedPage:not(.hide) .jfmod-entryPoster')].find(node => node.getBoundingClientRect().width > 0)?.getBoundingClientRect();
-        return { overflow: getComputedStyle(frame).overflowX, frameLeft: frame.getBoundingClientRect().left, posterRight: poster?.right };
+        const poster = [...document.querySelectorAll('.mainAnimatedPage:not(.hide) .poster')].find(node => node.getBoundingClientRect().width > 0)?.getBoundingClientRect();
+        return { overflow: getComputedStyle(frame).overflowX, frameLeft: frame.getBoundingClientRect().left, posterRight: poster?.right, posterBottom: poster?.bottom, frameTop: frame.getBoundingClientRect().top };
     }, section);
-    record(label, 'long series: a scrolled row stays beside the poster', beside.overflow === 'hidden' && beside.frameLeft >= beside.posterRight, JSON.stringify(beside));
+    record(label, 'long series: a scrolled row never covers the poster', ['hidden', 'auto'].includes(beside.overflow) && (beside.frameTop >= beside.posterBottom || beside.frameLeft >= beside.posterRight), JSON.stringify(beside));
     let presses = 0;
     for (; presses < 40 && !await next.isDisabled(); presses++) {
         await next.click();
@@ -512,9 +512,9 @@ async function checkLongSeriesArrows(page, label, section, lastSeason) {
     }
     const end = await page.evaluate(selector => {
         const frame = document.querySelector(selector + ' .emby-scroller').getBoundingClientRect();
-        const cells = [...document.querySelectorAll(selector + ' .jfmod-browseCell')];
+        const cells = [...document.querySelectorAll(selector + ' .cell')];
         const last = cells.at(-1).getBoundingClientRect();
-        return { name: cells.at(-1).querySelector('.jfmod-browseLine1').textContent, right: last.right, left: last.left, frameRight: frame.right, viewport: document.documentElement.clientWidth };
+        return { name: cells.at(-1).querySelector('.capt .t').textContent, right: last.right, left: last.left, frameRight: frame.right, viewport: document.documentElement.clientWidth };
     }, section);
     record(label, '› reaches the last season', await next.isDisabled() && end.name === lastSeason && end.left >= 0 && end.right <= end.frameRight + 1 && end.right <= end.viewport + 1, `${presses} presses; ${JSON.stringify(end)}; expected ${lastSeason}`);
     await shot(page, label, 'long-series-end');
@@ -536,7 +536,7 @@ async function reachCell(page, sectionSelector) {
 
 /** The TV: focus starts on Add; the arrows reach the row; the ring is inside the cell, not cut; right walks it in view. */
 async function checkTvRow(page, label, name, sectionSelector) {
-    const reached = await reachCell(page, `${sectionSelector} .jfmod-browseCell`);
+    const reached = await reachCell(page, `${sectionSelector} .cell`);
     record(label, `${name}: arrows reach ${sectionSelector}`, reached, await page.evaluate(() => `${document.activeElement?.tagName}.${document.activeElement?.className}`));
     if (!reached) return;
     await page.waitForTimeout(400);
@@ -546,7 +546,7 @@ async function checkTvRow(page, label, name, sectionSelector) {
         const box = cell.getBoundingClientRect();
         const frame = cell.closest('.emby-scroller');
         const clip = frame && getComputedStyle(frame).overflowX === 'hidden' ? frame.getBoundingClientRect() : null;
-        return { shadow: getComputedStyle(cell.querySelector('.jfmod-browseImage') ?? cell).boxShadow, background: style.backgroundColor, left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+        return { shadow: getComputedStyle(cell.querySelector('.post') ?? cell).boxShadow, background: style.backgroundColor, left: box.left, right: box.right, top: box.top, bottom: box.bottom,
             clipLeft: clip?.left ?? null, clipTop: clip?.top ?? null, clipBottom: clip?.bottom ?? null, clipRight: clip?.right ?? null, innerHeight: window.innerHeight, innerWidth: window.innerWidth };
     });
     record(label, `${name}: ${sectionSelector} TV ring on the image, no panel`, /0px 0px 0px [\d.]+px/.test(ring.shadow) && ring.background === 'rgba(0, 0, 0, 0)', `${ring.shadow}; ${ring.background}`);
@@ -573,7 +573,7 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     const layout = LAYOUTS[layoutName];
     const tv = !!layout.tv;
     const phone = layoutName === 'phone';
-    const ready = `${PAGE} .jfmod-browseAdd`;
+    const ready = `${PAGE} .jfds .actbar .play`;
 
     // Movie.
     await open(page, browsePath('movie', MOVIE), ready, 1500);
@@ -588,17 +588,17 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     if (phone) record(label, 'movie: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
     if (!layout.tv) record(label, 'movie: no sideways page on the phone', !phone || facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
     else record(label, 'movie: no sideways page on the TV', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
-    if (tv) record(label, 'movie: TV focus starts on Add', await page.evaluate(() => !!document.activeElement?.classList.contains('jfmod-browseAdd')), await page.evaluate(() => document.activeElement?.className));
-    await checkCells(page, label, 'movie', '#castCollapsible', layoutName, theme, 1.5);
+    if (tv) record(label, 'movie: TV focus starts on Add', await page.evaluate(() => !!document.activeElement?.matches('.jfds .actbar .play')), await page.evaluate(() => document.activeElement?.className));
+    await checkCells(page, label, 'movie', '[data-ds-section=cast]', layoutName, theme, 1.5);
     if (tv) {
-        await checkTvRow(page, label, 'movie', '#castCollapsible');
+        await checkTvRow(page, label, 'movie', '[data-ds-section=cast]');
     } else {
-        await checkRowScroll(page, label, 'movie', '#castCollapsible', layoutName);
-        const cell = page.locator(`${PAGE} #castCollapsible .jfmod-browseCell`).first();
+        await checkRowScroll(page, label, 'movie', '[data-ds-section=cast]', layoutName);
+        const cell = page.locator(`${PAGE} [data-ds-section=cast] .cell`).first();
         await cell.scrollIntoViewIfNeeded();
         await cell.hover();
         await page.waitForTimeout(350);
-        const lit = await cell.evaluate(node => [getComputedStyle(node).backgroundColor, getComputedStyle(node.querySelector('.jfmod-browseImage')).boxShadow]);
+        const lit = await cell.evaluate(node => [getComputedStyle(node).backgroundColor, getComputedStyle(node.querySelector('.post')).boxShadow]);
         if (phone) {
             record(label, 'movie: no hover panel on the phone', lit[0] === 'rgba(0, 0, 0, 0)', lit[0]);
         } else {
@@ -619,24 +619,24 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     record(label, 'series: Seasons and Cast & Crew', facts.seasons >= 1 && facts.seasonsHeading === 'Seasons' && facts.cast > 2, `seasons ${facts.seasons} "${facts.seasonsHeading}", cast ${facts.cast}`);
     if (phone) record(label, 'series: the backdrop starts at the top', facts.backdrop.top === 0, JSON.stringify(facts.backdrop));
     if (phone || tv) record(label, 'series: no sideways page', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
-    await checkCells(page, label, 'series', '#listChildrenCollapsible', layoutName, theme, 1.5);
-    record(label, 'series: no arrows where the Seasons row fits, as the other rows', await page.locator(`${PAGE} #listChildrenCollapsible .emby-scrollbuttons-button:visible`).count() === 0);
-    if (phone || tv) record(label, 'series: no arrows on any row here', await page.locator(`${PAGE} .emby-scrollbuttons-button:visible`).count() === 0);
+    await checkCells(page, label, 'series', '[data-ds-section=children]', layoutName, theme, 1.5);
+    record(label, 'series: no arrows where the Seasons row fits, as the other rows', await page.locator(`${PAGE} [data-ds-section=children] .emby-scrollbuttons .dbtn:visible`).count() === 0);
+    if (phone || tv) record(label, 'series: no arrows on any row here', await page.locator(`${PAGE} .emby-scrollbuttons .dbtn:visible`).count() === 0);
     if (tv) {
-        await checkTvRow(page, label, 'series', '#listChildrenCollapsible');
+        await checkTvRow(page, label, 'series', '[data-ds-section=children]');
         await page.keyboard.press('ArrowLeft');
     }
 
     // Season, from the series' first cell, so one page's parts must leave with it.
     if (tv) {
         await open(page, browsePath('series', SERIES), ready, 1200);
-        await reachCell(page, '#listChildrenCollapsible .jfmod-browseCell');
+        await reachCell(page, '[data-ds-section=children] .cell');
         await page.keyboard.press('Enter');
     } else {
-        await page.locator(`${PAGE} #listChildrenCollapsible a.jfmod-browseCell`).first().click();
+        await page.locator(`${PAGE} [data-ds-section=children] a.cell`).first().click();
     }
     await page.waitForFunction(() => /[?&]season=1/.test(location.hash), undefined, { timeout: 20000 }).catch(() => {});
-    await page.waitForSelector(`${PAGE} a.jfmod-browseEpisode`, { timeout: 30000 }).catch(() => {});
+    await page.waitForSelector(`${PAGE} a.ep`, { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);
     await shot(page, label, 'season', phone);
     facts = await browseFacts(page);
@@ -651,15 +651,15 @@ async function checkBrowsePages(page, label, layoutName, theme) {
 
     // Episode, from the season's first row.
     if (tv) {
-        const reached = await reachCell(page, 'a.jfmod-browseEpisode');
+        const reached = await reachCell(page, 'a.ep');
         record(label, 'season: arrows reach the episode rows', reached, await page.evaluate(() => document.activeElement?.className));
         await shot(page, label, 'season-focus');
         await page.keyboard.press('Enter');
     } else {
-        await page.locator(`${PAGE} a.jfmod-browseEpisode`).first().click();
+        await page.locator(`${PAGE} a.ep`).first().click();
     }
     await page.waitForFunction(() => /[?&]episode=1/.test(location.hash), undefined, { timeout: 20000 }).catch(() => {});
-    await page.waitForSelector(`${PAGE} .moreFromSeasonSection:not(.hide) .jfmod-browseCell`, { timeout: 30000 }).catch(() => {});
+    await page.waitForSelector(`${PAGE} [data-ds-section=more]:not(.hide) .cell`, { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1500);
     await shot(page, label, 'episode', phone);
     facts = await browseFacts(page);
@@ -670,34 +670,34 @@ async function checkBrowsePages(page, label, layoutName, theme) {
     record(label, 'episode: runtime and certification', /\d+h|\d+m/.test(facts.misc) && /TV-MA/.test(facts.misc), facts.misc);
     record(label, 'episode: More from the season, Guest Stars, Cast & Crew', facts.more === 7 && /More from Season 1/.test(facts.moreHeading) && facts.guests > 0 && facts.cast > 0, `more ${facts.more} "${facts.moreHeading}", guests ${facts.guests}, cast ${facts.cast}`);
     if (phone || tv) record(label, 'episode: no sideways page', facts.scrollWidth <= facts.viewport, `${facts.scrollWidth}/${facts.viewport}`);
-    await checkCells(page, label, 'episode', '.moreFromSeasonSection', layoutName, theme, 0.5625);
-    await checkCells(page, label, 'episode', '#guestCastCollapsible', layoutName, theme, 1.5);
+    await checkCells(page, label, 'episode', '[data-ds-section=more]', layoutName, theme, 0.5625);
+    await checkCells(page, label, 'episode', '[data-ds-section=guests]', layoutName, theme, 1.5);
     if (tv) {
-        await checkTvRow(page, label, 'episode', '.moreFromSeasonSection');
+        await checkTvRow(page, label, 'episode', '[data-ds-section=more]');
         await page.keyboard.press('Escape');
         await page.waitForFunction(() => !/episode=/.test(location.hash), undefined, { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(1000);
         record(label, 'episode: Back returns to the season', await page.evaluate(() => /season=1/.test(location.hash) && !/episode=/.test(location.hash)), await page.evaluate(() => location.hash));
     } else {
-        await checkRowScroll(page, label, 'episode', '#guestCastCollapsible', layoutName);
-        await checkRowScroll(page, label, 'episode-more', '.moreFromSeasonSection', layoutName);
-        await page.locator(`${PAGE} .nameContainer h1 a`).click();
+        await checkRowScroll(page, label, 'episode', '[data-ds-section=guests]', layoutName);
+        await checkRowScroll(page, label, 'episode-more', '[data-ds-section=more]', layoutName);
+        await page.locator(`${PAGE} .jfds .by a`).first().click();
         await page.waitForFunction(() => !/season=/.test(location.hash), undefined, { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(1200);
-        record(label, 'episode: the series name links the series', await page.evaluate(selector => !/season=/.test(location.hash) && document.querySelector(selector + ' #listChildrenCollapsible .jfmod-browseCell') !== null, PAGE), await page.evaluate(() => location.hash));
+        record(label, 'episode: the series name links the series', await page.evaluate(selector => !/season=/.test(location.hash) && document.querySelector(selector + ' [data-ds-section=children] .cell') !== null, PAGE), await page.evaluate(() => location.hash));
     }
 
     // A long series: every season can be reached. The arrows on a computer, as the other rows (D252); focus on the TV; touch on the phone.
     await open(page, browsePath('series', LONG_SERIES), ready, 1500);
-    const seasonsSection = `${PAGE} #listChildrenCollapsible`;
+    const seasonsSection = `${PAGE} [data-ds-section=children]`;
     const seasonNames = (await apiJson(page, 'JellyfinMod/Discover/Title', { type: 'series', tmdbId: LONG_SERIES })).metadata.seasons.filter(item => item.number > 0);
     const lastSeason = seasonNames.at(-1).name;
-    record(label, 'long series: every season has a cell', await page.locator(`${seasonsSection} .jfmod-browseCell`).count() === seasonNames.length, `${seasonNames.length} seasons`);
-    const shownArrows = () => page.locator(`${seasonsSection} .emby-scrollbuttons-button:visible`).count();
+    record(label, 'long series: every season has a cell', await page.locator(`${seasonsSection} .cell`).count() === seasonNames.length, `${seasonNames.length} seasons`);
+    const shownArrows = () => page.locator(`${seasonsSection} .emby-scrollbuttons .dbtn:visible`).count();
     if (tv) {
         record(label, 'long series: no arrows on the TV', await shownArrows() === 0);
-        await reachCell(page, '#listChildrenCollapsible .jfmod-browseCell');
-        const firstLeft = () => page.locator(`${seasonsSection} .jfmod-browseCell`).first().evaluate(node => node.getBoundingClientRect().left);
+        await reachCell(page, '[data-ds-section=children] .cell');
+        const firstLeft = () => page.locator(`${seasonsSection} .cell`).first().evaluate(node => node.getBoundingClientRect().left);
         const start = await firstLeft();
         let inView = true;
         for (let press = 0; press < 10; press++) {
@@ -735,20 +735,20 @@ async function checkAdd(page, label, kind, layoutName) {
     const title = ADDS[kind];
     const existing = await entryOf(page, title.type, title.id);
     if (existing) { notVerified(label, `add from the ${kind} page`, `${title.title} is already in the library`); return; }
-    await open(page, browsePath(title.type, title.id, title.season, title.episode), `${PAGE} .jfmod-browseAdd`);
+    await open(page, browsePath(title.type, title.id, title.season, title.episode), `${PAGE} .jfds .actbar .play`);
     const before = await page.evaluate(() => location.hash);
     if (LAYOUTS[layoutName].tv) {
-        record(label, `add from the ${kind} page: focus on Add`, await page.evaluate(() => !!document.activeElement?.classList.contains('jfmod-browseAdd')));
+        record(label, `add from the ${kind} page: focus on Add`, await page.evaluate(() => !!document.activeElement?.matches('.jfds .actbar .play')));
         await page.keyboard.press('Enter');
     } else {
-        await page.locator(`${PAGE} .jfmod-browseAdd`).click();
+        await page.locator(`${PAGE} .jfds .actbar .play`).click();
     }
     await page.waitForFunction(from => location.hash !== from && /details\?(entryId|id)=/.test(location.hash), before, { timeout: 45000 }).catch(() => {});
     await page.waitForTimeout(2500);
     const entry = await entryOf(page, title.type, title.id);
     if (entry) added.add(entry.id);
     const facts = await page.evaluate(selector => ({ hash: location.hash, name: document.querySelector(selector + ' .nameContainer')?.innerText ?? '',
-        add: !!document.querySelector(selector + ' .jfmod-browseAdd') }), PAGE);
+        add: !!document.querySelector(selector + ' .jfds .actbar .play') }), PAGE);
     record(label, `add from the ${kind} page: the whole title joins the library`, !!entry && entry.mediaType === title.type && entry.tmdbId === title.id, entry ? `${entry.title} ${entry.id}` : 'no entry');
     record(label, `add from the ${kind} page: the title's own page opens`, /details\?(entryId|id)=/.test(facts.hash) && !facts.add && facts.name.includes(title.title), `${facts.hash} "${facts.name.replace(/\s+/g, ' ')}"`);
     if (LAYOUTS[layoutName].tv) {
@@ -769,35 +769,35 @@ async function checkAddFromCard(page, label) {
     const existing = await entryOf(page, 'movie', 329865);
     if (existing) { notVerified(label, 'the + on a card', `${SEARCH_ADD.title} is already in the library`); return; }
     await waitForSearch(page, SEARCH_ADD.query);
-    const cell = page.locator(`.jfmod-searchCell[data-jfmod-key="${SEARCH_ADD.key}"]`);
+    const cell = page.locator(`.cell[data-jfmod-key="${SEARCH_ADD.key}"]`);
     if (!await cell.count()) { record(label, 'the + on a card: the result is there', false); return; }
-    const order = () => page.evaluate(() => [...document.querySelectorAll('.jfmod-searchCell')].map(node => node.dataset.jfmodKey).join());
+    const order = () => page.evaluate(() => [...document.querySelectorAll('.cell[data-jfmod-key]')].map(node => node.dataset.jfmodKey).join());
     const before = await order();
     await cell.scrollIntoViewIfNeeded();
     await cell.hover();
     await page.waitForTimeout(300);
-    await cell.locator('.jfmod-searchAdd').click();
+    await cell.locator('[data-jfmod-add]').click();
     const hash = await page.evaluate(() => location.hash);
-    await page.waitForSelector('.jfmod-searchUndo', { timeout: 45000 }).catch(() => {});
+    await page.waitForSelector('[data-ds-notice=undo]', { timeout: 45000 }).catch(() => {});
     await page.waitForTimeout(1200);
     const entry = await entryOf(page, 'movie', 329865);
     if (entry) added.add(entry.id);
-    const undoLine = await page.locator('.jfmod-searchUndo').textContent().catch(() => '');
+    const undoLine = await page.locator('[data-ds-notice=undo]').textContent().catch(() => '');
     record(label, 'the + on a card: the entry is added without leaving the search', !!entry && await page.evaluate(from => location.hash === from, hash), entry?.id ?? 'no entry');
     record(label, 'the + on a card: the Undo line', /Added\s*Arrival/.test(undoLine ?? ''), undoLine);
     record(label, 'the + on a card: nothing moves', before === await order());
     await page.mouse.move(0, 0);
     await page.waitForTimeout(400);
     await shot(page, label, 'search-added');
-    record(label, 'the + on a card: the card turns into the library card, cloud top right', await cell.evaluate(node => !!node.querySelector('.jfmod-searchPoster [class*="jfmod-mark"]') && !node.querySelector('.jfmod-searchAdd')));
-    const undo = page.locator('.jfmod-searchUndo button');
+    record(label, 'the + on a card: the card turns into the library card, cloud top right', await cell.evaluate(node => !!node.querySelector('.post .mark') && !node.querySelector('[data-jfmod-add]')));
+    const undo = page.locator('[data-ds-notice=undo] button');
     await undo.click();
-    await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 }).catch(() => {});
+    await page.waitForFunction(() => !document.querySelector('[data-ds-notice=undo]'), undefined, { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(1200);
     const gone = !await entryOf(page, 'movie', 329865);
     if (gone && entry) added.delete(entry.id);
     record(label, 'the + on a card: Undo removes it again', gone);
-    record(label, 'the + on a card: the + is back after Undo', await cell.evaluate(node => !!node.querySelector('.jfmod-searchAdd')));
+    record(label, 'the + on a card: the + is back after Undo', await cell.evaluate(node => !!node.querySelector('[data-jfmod-add]')));
 }
 
 /**
@@ -810,7 +810,7 @@ async function checkBackDuringAdd(page, label) {
     await page.goto(base() + '#/home', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
     await page.goto(base() + browsePath('series', LONG_SERIES), { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector(`${PAGE} .jfmod-browseAdd`, { timeout: 30000 });
+    await page.waitForSelector(`${PAGE} .jfds .actbar .play`, { timeout: 30000 });
     await page.waitForTimeout(800);
     await page.evaluate(() => {
         const realTimeout = window.setTimeout;
@@ -842,7 +842,7 @@ async function checkBackDuringAdd(page, label) {
         await route.fulfill({ response: answer });
     };
     await page.route(entriesPost, hold);
-    await page.locator(`${PAGE} .jfmod-browseAdd`).click();
+    await page.locator(`${PAGE} .jfds .actbar .play`).click();
     await Promise.race([atServer, page.waitForTimeout(90000)]);
     const entry = await entryOf(page, 'series', LONG_SERIES);
     if (entry) added.add(entry.id);
@@ -918,7 +918,7 @@ async function checkEmptyPagesStop(browser, page, label) {
                 kind.map(answer => `${answer.status}, ${answer.body?.items?.length} items, next ${answer.body?.nextPage}, skipped ${answer.body?.skipped}`).join('; '));
         }
         record(label, 'empty pages stop: it does not walk on', asked.length === settled, `${settled} then ${asked.length}`);
-        const shown = await viewer.evaluate(() => document.querySelectorAll('.jfmod-searchCell').length);
+        const shown = await viewer.evaluate(() => document.querySelectorAll('.cell[data-jfmod-key]').length);
         record(label, 'empty pages stop: the user is offered nothing', shown === 0, `${shown} cards`);
     } finally {
         await context.close();

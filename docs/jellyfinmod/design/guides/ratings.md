@@ -1,5 +1,7 @@
 # Ratings: the group, its popup and the card rating
 
+**dsB (2026-11-04), built, not accepted:** Home reads the existing NativeRatingsLine data/preferences and RatingsGroup state/reserve/focus/Back logic. In native design context only, `design/Ratings.tsx` renders `rgwrap/rgroup/ritem/rmenu/rrow` and the existing RatingIcon marks with the copied CSS. Existing detail-page presentation is unchanged. [Validation and CSS adapters](../dsB.md).
+
 **rd3 presentation (approved D243 and rulebook §5, built, not accepted):** `shell/titlePages.scss` draws the
 popup as an intrinsic-width table of mark/value/count columns, centered on its group and clamped to the viewport.
 It is glass with .618em corners, .382em/.618em padding, a .382em caret gap and .236em/1em shadow. Dark: #202020

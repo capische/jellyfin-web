@@ -32,6 +32,7 @@ The design rulebook, how the components fit together: [GUIDELINES.md](../GUIDELI
 | [ratings.md](ratings.md) | the ratings group in the first metadata row, its popup, the card rating and Refresh Ratings (accepted 2026-10-30) | the movie and series detail pages, Movies and TV cards, the settings area's Ratings section |
 | [search-card.md](search-card.md) | the search grid's card: seamless cells padded 1em, lit paper on hover and TV focus, the + shown on hover as a library poster's Play or cloud, the three-line caption, full matches with 100 or more votes first by date, the rest by votes (D253); the same cell with a two-line caption in the browse pages' rows (approved 2026-11-01, D200–D203; first look approved D232; built, not accepted) | the search page, the browse pages of a TMDB title |
 | [trakt-direction-mark.md](trakt-direction-mark.md) | the Trakt disc with the direction: up sent to Trakt, down brought from it, pending dashed, failed red (accepted 2026-10-31) | Settings › Trakt's Activity rows |
+| [sign-in.md](sign-in.md) | native glass sign-in form, wrong-password state and public users | the mod login route |
 
 ## How to use a guide
 

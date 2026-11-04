@@ -2380,3 +2380,10 @@ keep their current presentation. Source CSS adaptations, remaining upstream mark
 limits are recorded in [dsA.md](design/dsA.md). No deployment or server-backed acceptance was performed; those remain
 unverified under this task's prohibition on touching other environments. Home, detail pages, picker, Queue, player
 and Preferences are outside this slice.
+
+## dsB — native Home, Search/browse and sign-in (2026-11-04)
+
+**Built (not accepted).** Home hero/merged rows/notices, Search grid/page field/suggestions, TMDB browse heads/rows and sign-in now
+draw the approved mockup markup under `.jfds`, keeping existing data/actions. Replaced restyling is removed. [Complete CSS delta,
+retained behaviors, runners and validation](design/dsB.md). No instance/deployment/commit was changed; server-backed and physical-device
+acceptance remain unrun under the user's environment restriction.

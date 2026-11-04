@@ -1,5 +1,7 @@
 # Poster card
 
+**dsB (2026-11-04), built, not accepted:** HomeMergedRow now uses the same native `Section`/`Cell`, including three fixed caption slots, existing batched LibraryCast and its page-size-0 blank slot. Home uses its original merged feeds and actions. [Scope and CSS adapters](../dsB.md).
+
 **dsA (2026-11-04), built, not accepted:** Movies, Shows and Favorites now draw the mockup's own `Cell` markup from `design/Cell.tsx`, scoped copied CSS, and `LibraryItems`/`LibraryToolbar`. The native structure is `.cell > .tile > .post` plus `.capt`; upstream card restyling remains only on surfaces outside this slice. Cast fetching and the page-size-0 blank third slot stay in `LibraryCast`. [CSS exceptions, retained behavior and validation](../dsA.md).
 
 **Status:** approved by the user: rounded posters D214, D225–D226, the hover D216–D218, D227–D229, the disc D248, the grid and caption D260, the light glass

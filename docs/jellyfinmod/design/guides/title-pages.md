@@ -1,5 +1,7 @@
 # Title pages and art ground
 
+**dsB (2026-11-04), built, not accepted:** TMDB browse movie/show/season/episode pages now render the source `ground/head/cell/ep` structure through `design/BrowsePage.tsx`, `Head.tsx`, `Poster.tsx`. Their old template is only a hidden lifecycle host. Native and catalog-entry heads below remain rd3 until their own slice. Add, focus ownership, details, cast, episode facts, links and navigation remain; unavailable IMDb/RT values are never invented. [CSS and behavior inventory](../dsB.md).
+
 **Status:** rd3, approved rulebook §§2/5/7 (D208–D213, D225–D227, D230, D243); built, not accepted.
 Code: `integration/titlePage.ts`, `shell/titlePages.scss`, `components/TitlePoster.tsx`, `components/LibraryUndo.tsx`.
 

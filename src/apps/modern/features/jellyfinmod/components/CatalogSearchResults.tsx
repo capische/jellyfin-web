@@ -5,15 +5,11 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import actionsheet from 'components/actionSheet/actionSheet';
-import SearchResults from 'apps/legacy/features/search/components/SearchResults';
-import SearchResultsRow from 'apps/legacy/features/search/components/SearchResultsRow';
 import { useSearchItems } from 'apps/legacy/features/search/api/useSearchItems';
-import { CardShape } from 'components/cardbuilder/utils/shape';
 import layoutManager from 'components/layoutManager';
 import toast from 'components/toast/toast';
 import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
-import globalize from 'lib/globalize';
 import type { ItemDto } from 'types/base/models/item-dto';
 import { queryClient } from 'utils/query/queryClient';
 
@@ -24,10 +20,10 @@ import { usePluginHealth } from '../hooks/useEntries';
 import type { BrowseRow } from '../types/browse';
 import type { Entry, TmdbMetadata } from '../types/entry';
 import { getEntryPath, getTmdbImage, getTmdbPath } from '../utils/entryLinks';
-import { raisedButtonClass } from '../utils/flatButton';
-import SearchCard, { type SearchCardItem } from './SearchCard';
-
-import './searchGrid.scss';
+import { SearchCell, type SearchCardItem } from '../design/SearchCell';
+import { SearchRows } from '../design/Search';
+import { CellSkeleton } from '../design/Cell';
+import { useUserSettings } from 'hooks/useUserSettings';
 
 interface Props {
     parentId?: string;
@@ -39,16 +35,6 @@ type MediaType = 'movie' | 'series';
 
 /** The search grid shows both kinds wherever it was opened from (D201: "Library limit on search - A"). */
 const TYPES: MediaType[] = ['movie', 'series'];
-
-const stockCardOptions = {
-    shape: CardShape.AutoOverflow,
-    scalable: true,
-    showTitle: true,
-    showYear: true,
-    overlayText: false,
-    centerText: true,
-    allowBottomPadding: false
-};
 
 const identityOf = (mediaType: MediaType, tmdbId: number) => `${mediaType}:${tmdbId}`;
 
@@ -186,13 +172,14 @@ const shownCards = (shown: { current: string[] }, candidates: Map<string, Ranked
 /** What TMDB could not answer: nothing, one kind, or both. */
 const DiscoveryNotice: FC<{ failedTypes: MediaType[] }> = ({ failedTypes }) => {
     if (!failedTypes.length) return null;
-    if (failedTypes.length === TYPES.length) return <p className='jfmod-searchNotice'>TMDB is unavailable. Your library results are still shown.</p>;
-    return <p className='jfmod-searchNotice'>
+    if (failedTypes.length === TYPES.length) return <p className='noticex' data-ds-notice='discovery'>TMDB is unavailable. Your library results are still shown.</p>;
+    return <p className='noticex' data-ds-notice='discovery'>
         TMDB {failedTypes.map(type => (type === 'movie' ? 'movie' : 'series')).join(' and ')} results are unavailable right now.
     </p>;
 };
 
 const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
+    const { libraryPageSize } = useUserSettings();
     const resultsRef = useRef<HTMLDivElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const { api, user, __legacyApiClient__ } = useApi();
@@ -261,7 +248,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
         queryKey: ['JellyfinMod', api?.basePath, user?.Id, 'SearchPeople', nativeIds.join(',')],
         queryFn: async ({ signal }) => (await getLibraryApi(api!).getItems({ userId: user!.Id, ids: nativeIds,
             fields: [ItemFields.People] }, { signal })).data.Items ?? [],
-        enabled: !!api && !!user?.Id && nativeIds.length > 0,
+        enabled: !!api && !!user?.Id && !!libraryPageSize && nativeIds.length > 0,
         retry: false
     });
     const nativeLeads = useMemo(() => new Map((people.data ?? []).map(item => [item.Id,
@@ -288,7 +275,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
 
     const focusCard = (key: string) => {
         window.requestAnimationFrame(() => {
-            resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-key="${key}"] .jfmod-searchOpen`)?.focus();
+            resultsRef.current?.querySelector<HTMLElement>(`[data-jfmod-key="${key}"]`)?.focus();
         });
     };
 
@@ -392,7 +379,7 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
 
     // A plugin outage keeps the exact upstream page working.
     if (health.isError || (health.isSuccess && !health.data.ok)) {
-        return <SearchResults parentId={parentId} collectionType={collectionType} query={query} />;
+        return <SearchRows sections={stock.data ?? []} loading={stock.isPending} query={query} empty />;
     }
 
     const browseFailed = browse.some(result => result.isError);
@@ -424,31 +411,24 @@ const SearchSession: FC<Props> = ({ parentId, collectionType, query }) => {
     const allEmpty = !loading && !cards.length && !remainingSections.length;
     const ended = queryInput.length >= 2 && !fetching && !hasMore && cards.length > 0;
 
-    return <div ref={resultsRef} className='searchResults jfmod-searchResults padded-top padded-bottom-page'>
-        {browseFailed && TYPES.map(mediaType => {
+    return <div ref={resultsRef} className='searchbody'>
+        {browseFailed && <SearchRows sections={TYPES.flatMap(mediaType => {
             const section = stockSection(mediaType === 'movie' ? 'Movies' : 'Shows');
-            return section ? <SearchResultsRow key={mediaType} title={globalize.translate(section.title)} items={section.items}
-                cardOptions={{ ...stockCardOptions, ...section.cardOptions }} /> : null;
-        })}
-        {undoEntry && <div className='jfmod-searchUndo' role='status'>
-            Added <b>{undoEntry.title}</b> to the catalog
-            <button ref={undoButton} type='button' className={raisedButtonClass()} onClick={undo}>Undo</button>
+            return section ? [section] : [];
+        })} loading={stock.isPending} query={query} />}
+        {undoEntry && <div className='noticex' data-ds-notice='undo' role='status'>
+            <span className='tx'>Added <b>{undoEntry.title}</b> to the catalog</span>
+            <button ref={undoButton} type='button' className='btn focusable' onClick={undo}>Undo</button>
         </div>}
         {!browseFailed && !fetching && <DiscoveryNotice failedTypes={failedTypes} />}
-        <div className='jfmod-searchGrid' aria-busy={fetching}>
-            {cards.map(item => <SearchCard key={item.key} item={item} />)}
-            {loading && !browseFailed && [0, 1, 2, 3, 4].map(index => <div key={'skeleton:' + index} className='jfmod-searchSkeleton'
-                aria-hidden='true'><div /></div>)}
-        </div>
+        <div className='libgrid searchresults' style={{ paddingRight: '3.3%' }}><div className='grid searchgrid itemsContainer' aria-busy={loading}>
+            {cards.map(item => <SearchCell key={item.key} item={item} />)}
+            {loading && !browseFailed && Array.from({ length: 10 }, (_, index) => <CellSkeleton key={index} library />)}
+        </div></div>
         <div ref={endRef} />
-        {ended && <div className='jfmod-searchEnd'>No more results for “{queryInput}”</div>}
-        {remainingSections.map(section => <SearchResultsRow
-            key={section.title}
-            title={globalize.translate(section.title)}
-            items={section.items}
-            cardOptions={{ ...stockCardOptions, ...section.cardOptions }}
-        />)}
-        {allEmpty && !discoveryFailed && <div className='noItemsMessage centerMessage'>{globalize.translate('SearchResultsEmpty', query)}</div>}
+        {ended && <div className='empty searchend'>No more results for “{queryInput}”</div>}
+        <SearchRows sections={remainingSections} query={query} />
+        {allEmpty && !discoveryFailed && <div className='plain empty'><h3>No results for “{query}”</h3><p>Check the spelling, or try fewer words.</p></div>}
     </div>;
 };
 

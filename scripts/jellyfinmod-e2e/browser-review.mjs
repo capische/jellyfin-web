@@ -354,7 +354,7 @@ const setSearch = query => discoveryWait(async () => {
 const snapshot = () => page.evaluate(() => ({
     headings: Array.from(document.querySelectorAll('#searchPage .sectionTitle')).map(node => node.textContent.trim()),
     cards: Array.from(document.querySelectorAll("#searchPage :is(.card:not(.dm), .cell)")).map(node => node.getAttribute('aria-label') || node.textContent.trim()).filter(Boolean).slice(0, 30),
-    notice: document.querySelector('.jfmod-searchNotice')?.textContent.trim() ?? null,
+    notice: document.querySelector('[data-ds-notice=discovery]')?.textContent.trim() ?? null,
     discovery: !!document.querySelector('.jfmod-discovery'),
     addButtons: document.querySelectorAll('.jfmod-discoveryCard button:not(:disabled)').length,
     librarySelectors: document.querySelectorAll('.jfmod-discovery select').length,
@@ -891,7 +891,7 @@ try {
                 ids: Array.from(document.querySelectorAll('[data-jfmod-add^="movie:"]')).map(button => Number(button.dataset.jfmodAdd.split(':')[1])),
                 more: Array.from(document.querySelectorAll('.jfmod-discovery > button')).some(button => button.textContent.includes('More Movie Results')),
                 busy: document.querySelector('.jfmod-discovery')?.getAttribute('aria-busy'),
-                notice: document.querySelector('.jfmod-searchNotice')?.textContent?.trim(),
+                notice: document.querySelector('[data-ds-notice=discovery]')?.textContent?.trim(),
                 query: document.querySelector('#searchTextInput')?.value,
                 hash: window.location.hash
             }));
