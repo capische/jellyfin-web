@@ -169,7 +169,7 @@ export default function initializeNativeEntryDetails(view, params) {
         };
         const read = client.getItem(userId, params.id).then(fresh => {
             if (currentGeneration === generation && fresh) {
-                titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '', fresh.MediaSources);
+                titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '', fresh.MediaSources, fresh);
             }
             const facts = nativeItemFacts(fresh);
             queryClient.setQueryData(itemKey, facts);

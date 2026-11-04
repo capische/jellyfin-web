@@ -104,7 +104,8 @@ export const cardOf = (node: HTMLElement, index: number): TitleCard => {
         second: facts.length ? facts.map(fact => fact.text).join(' · ') : text(lines[1]), facts, overview: text(node.querySelector('.listItem-overview, .jfmod-episodeSynopsis, .jfmod-missingSynopsis, .jfmod-episodeSummary')),
         image: imageOf(node), captionCount: !!node.querySelector('[data-jfmod-count]'), mark: markOf(node), href: link?.getAttribute('href') || (id ? `#/details?id=${encodeURIComponent(id)}&serverId=${encodeURIComponent(server ?? '')}` : undefined),
         shape, row,
-        commands: Array.from(node.querySelectorAll<HTMLElement>('button, .cardOverlayButton')).filter(shown).map(commandOf),
+        // The mockup's row and pill have no Info: the row or card itself opens the title.
+        commands: Array.from(node.querySelectorAll<HTMLElement>('button, .cardOverlayButton')).filter(item => shown(item) && !item.matches('[data-action="link"]')).map(commandOf),
         played: !!node.querySelector('.playedIndicator'), count: text(node.querySelector('.countIndicator')) || undefined,
         progress: node.querySelector<HTMLElement>('.itemProgressBarForeground')?.style.width,
         downloadProgress: node.querySelector<HTMLElement>('.jfmod-dlBar-fill, .jfmod-missingProgressFill')?.style.width };
@@ -175,14 +176,17 @@ export const readTitle = (view: HTMLElement) => {
         const cards = Array.from(section.querySelectorAll<HTMLElement>('.card, .listItem, .jfmod-missingSlot')).filter(node => !node.parentElement?.closest('.card, .listItem, .jfmod-missingSlot')).map(cardOf);
         return cards.length ? [{ key: section.id || section.getAttribute('data-type') || section.className, title: text(section.querySelector('h2')), cards }] : [];
     });
+    // The template has More from Season above the cast; the mockup's episode page has it below.
+    const fromSeason = (key: string) => (key.includes('moreFromSeasonSection') ? 1 : 0);
+    sections.sort((a, b) => fromSeason(a.key) - fromSeason(b.key));
     const detailNodes = Array.from(host?.querySelectorAll('.detailsGroupItem') ?? []);
-    const byLabels = ['Director', 'Directors', 'Creator', 'Creators'].map(key => globalize.translate(key));
-    const by = detailNodes.find(node => byLabels.includes(text(node.querySelector('.label'))));
-    return { title, originalTitle: text(name?.querySelector('.originalTitle')), parents, meta, facts, by: inlineOf(by), tracks: readTracks(view, host ?? null), image: imageOf(host?.querySelector('.detailImageContainer') ?? null),
+    const byWords: Record<string, string> = Object.fromEntries([['Director', 'Directed by'], ['Directors', 'Directed by'], ['Creator', 'Created by'], ['Creators', 'Created by']].map(([key, words]) => [globalize.translate(key), words]));
+    const by = detailNodes.find(node => byWords[text(node.querySelector('.label'))]);
+    return { title, originalTitle: text(name?.querySelector('.originalTitle')), parents, meta, facts, by: inlineOf(by).slice(1), byWords: by ? byWords[text(by.querySelector('.label'))] : '', tracks: readTracks(view, host ?? null), image: imageOf(host?.querySelector('.detailImageContainer') ?? null),
         overview: inlineOf(host?.querySelector('.overview')), genres: inlineOf(host?.querySelector('.itemGenres')),
         tagline: text(host?.querySelector('.tagline')),
         tags: inlineOf(host?.querySelector('.itemTags')),
-        details: [...detailNodes.filter(node => node !== by || parents.length > 0), ...Array.from(host?.querySelectorAll('#seriesAirTime:not(.hide), .itemMiscInfo-secondary:not(.hide)') ?? [])].map(node => inlineOf(node)).filter(parts => parts.length),
+        details: [...detailNodes.filter(node => node !== by), ...Array.from(host?.querySelectorAll('#seriesAirTime:not(.hide), .itemMiscInfo-secondary:not(.hide)') ?? [])].map(node => inlineOf(node)).filter(parts => parts.length),
         links: Array.from(host?.querySelectorAll<HTMLAnchorElement>('.itemExternalLinks a') ?? []).map(node => ({ label: text(node), href: node.getAttribute('href')!, command: node.classList.contains('itemAction') ? node : undefined })),
         commands: Array.from(host?.querySelectorAll<HTMLElement>('.mainDetailButtons > button, .jfmod-entryActions > button, .jfmod-entryActions > a') ?? []).filter(shown).map(commandOf), sections };
 };
