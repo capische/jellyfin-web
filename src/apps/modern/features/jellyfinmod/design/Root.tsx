@@ -25,8 +25,15 @@ const readEnvironment = () => {
 
 export const DesignContext = createContext<Device | false>(false);
 
-const buttonFocus = (target: EventTarget | null, device?: Device) => {
+// A click also moves focus, and a dialog focuses a control when a click opens it; the mockup's rings are for keys and the TV.
+if (typeof document !== 'undefined') {
+    document.addEventListener('pointerdown', () => document.documentElement.classList.add('ds-pointer'), true);
+    document.addEventListener('keydown', () => document.documentElement.classList.remove('ds-pointer'), true);
+}
+
+const buttonFocus = (target: EventTarget | null, focusedOn?: Device) => {
     if (!(target instanceof HTMLElement)) return;
+    const device = focusedOn !== 'tv' && document.documentElement.classList.contains('ds-pointer') ? undefined : focusedOn;
     if (target.classList.contains('sw')) {
         target.classList.toggle('tvf', device === 'tv');
         return;
