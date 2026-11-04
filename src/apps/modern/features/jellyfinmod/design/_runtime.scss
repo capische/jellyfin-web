@@ -1113,7 +1113,8 @@
     .gpill:focus,
     .bar [tabindex]:focus,
     .rail button:focus,
-    .pmenu .mi:focus { box-shadow: none; }
+    .pmenu .mi:focus,
+    .rgroup:focus { box-shadow: none; }
 }
 
 /* dsF: Preferences keep their upstream page as a hidden controller host, like the title pages. */
@@ -1245,3 +1246,10 @@
 }
 
 html.jfmod-chromePlayer .osdHeader .pageTitle { display: none; }
+
+/* A real button in the mockup's icon span; phones have no hover, so a tapped disclosure must not stay lit. */
+.jfds .ib { padding: 0; }
+
+.jfds .dsc i { text-align: left; }
+
+.jfds.dev-phone .dsc:hover { background: none; }

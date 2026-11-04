@@ -1,6 +1,7 @@
-import React, { type FC, useMemo } from 'react';
+import React, { type FC, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { appHost } from 'components/apphost';
+import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
 import Page from 'components/Page';
 import { AppFeature } from 'constants/appFeature';
@@ -32,6 +33,11 @@ export const PrefsMenu: FC = () => {
     const userId = searchParams.get('userId') || currentUser?.Id;
     const loggedIn = !!userId && userId === currentUser?.Id;
     const user = useMemo(() => (loggedIn ? currentUser : users?.find(({ Id }) => Id === userId)), [currentUser, loggedIn, userId, users]);
+    useEffect(() => {
+        if (!layoutManager.tv) return;
+        const first = document.querySelector<HTMLElement>('#jfmodPrefsMenu .srow2');
+        if (first) focusManager.focus(first);
+    }, [user?.Id]);
     if (!user) return null;
     const image = user.PrimaryImageTag && `/Users/${user.Id}/Images/Primary?tag=${user.PrimaryImageTag}&quality=90&maxHeight=200`;
     const query = `?userId=${userId}`;
