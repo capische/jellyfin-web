@@ -99,7 +99,9 @@ html .card:not(.show-animation) {
     border-radius: 50%;
     cursor: pointer;
 
+    // MUI's SvgIcon sets font-size 1.5rem on the svg, so an em width here would count from that: 1.5 times too big.
     > svg {
+        font-size: 1em;
         width: 2em;
         height: 2em;
         color: inherit;
@@ -166,6 +168,7 @@ html .card:not(.show-animation) {
     &[hidden] { display: none; }
 
     > svg {
+        font-size: 1em;
         width: 1.236em;
         height: 1.236em;
     }
