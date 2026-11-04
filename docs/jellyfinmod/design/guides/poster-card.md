@@ -37,3 +37,5 @@ settings for that view: 2:3 shape, title and year always on, no card layout.
 
 - No `color-mix`, `inset`, `aspect-ratio`, flex `gap` or `min()`/`max()` in a rule the TV takes; the glass is behind `@supports`, solid black 66 % with white ink without it.
 - `!important` only against upstream's own on `.cardOverlayButtonIcon`.
+
+**The ring needs room:** the ring is drawn outside the poster, so a card must not contain paint. `cardDesign.scss` takes `paint` out of upstream's `.card:not(.show-animation)` containment; with it, a row's cards lose the ring's left side (the user's report, 2026-11-04).
