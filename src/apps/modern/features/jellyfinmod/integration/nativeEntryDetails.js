@@ -11,6 +11,8 @@ import TraktIndicator from '../components/TraktIndicator';
 import { TRAKT_ITEM_TYPES } from '../constants/trakt';
 import { observePlaceholderNote } from './placeholderNote';
 import { moveShuffle } from './shuffleMenu';
+import { titlePage } from './titlePage';
+import { getItemBackdropImageUrl } from 'utils/jellyfin-apiclient/backdropImage';
 
 import './placeholderPage.scss';
 
@@ -165,6 +167,9 @@ export default function initializeNativeEntryDetails(view, params) {
             handleMissingNativeItem(view, params, error, () => visit === generation);
         };
         const read = client.getItem(userId, params.id).then(fresh => {
+            if (currentGeneration === generation && fresh) {
+                titlePage(view, fresh.Type, getItemBackdropImageUrl(client, fresh, { maxWidth: window.innerWidth }) ?? '');
+            }
             const facts = nativeItemFacts(fresh);
             queryClient.setQueryData(itemKey, facts);
             return facts;
@@ -185,6 +190,7 @@ export default function initializeNativeEntryDetails(view, params) {
             return;
         }
         if (currentGeneration !== generation) return;
+        titlePage(view, item?.Type);
         view.toggleAttribute(PLACEHOLDER_ATTRIBUTE, !!item?.IsPlaceHolder);
         if (item?.Type === 'Season' && item.SeriesId) prefetchNativeEntry(api, userId, item.SeriesId);
         prefetchNativeChildren(api, userId, params.id, item ?? {});

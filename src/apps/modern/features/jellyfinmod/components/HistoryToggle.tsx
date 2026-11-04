@@ -10,7 +10,8 @@ const HistoryToggle: FC<{ label: ReactNode; children: ReactNode }> = ({ label, c
     const toggle = useCallback(() => setOpen(value => !value), []);
     return <div className='jfmod-entryHistory'>
         <button type='button' className={flatButtonClass() + ' jfmod-historyToggle'} aria-expanded={open} onClick={toggle}>
-            {open ? '▾' : '▸'} {label}
+            <span className='material-icons chevron_right jfmod-historyChevron' aria-hidden='true' />
+            <span>{label}</span>
         </button>
         {open && children}
     </div>;

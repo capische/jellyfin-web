@@ -1,5 +1,13 @@
 # Loading spinner
 
+**rd3 playback start (approved rulebook §7/D230, built, not accepted):** `integration/playbackStart.ts` is a
+small adapter around the unchanged playback start promise. Local Play in the mod shell shows black after the
+.146s press, fading .236s (.146s TV), with `loading.show()`'s existing Jellyfin spinner. The starting marker
+forces white arc/30% track even in light themes. Playback start, error, **playbackcancelled**, stop, a rejected or
+resolved start, hash navigation, popstate and pagehide remove the screen, marker, spinner and listeners. A second
+start dismisses the old one. Remote starts and an already-open player do not get this overlay. Reduced motion is
+instant. The screen's z-index 9999998 is the named stacking exception below upstream's spinner at 9999999.
+
 **Status:** D231 and rulebook Spinner/Motion, rd2 built, not accepted.
 
 `src/apps/modern/features/jellyfinmod/shell/sharedChrome.scss` overrides upstream's `.docspinner` only in the active mod chrome.

@@ -38,6 +38,7 @@ import { getMediaError } from 'utils/mediaError';
 import { bindSkipSegment } from './skipsegment.ts';
 import { skipPlaceholders } from 'apps/modern/features/jellyfinmod/integration/playQueue';
 import { deviceMediaSource } from 'apps/modern/features/jellyfinmod/integration/deviceSource';
+import { withPlaybackStart } from 'apps/modern/features/jellyfinmod/integration/playbackStart';
 import * as bitrateTest from 'utils/bitrateTest';
 
 const UNLIMITED_ITEMS = -1;
@@ -2155,7 +2156,9 @@ export class PlaybackManager {
          */
         self.getItemsForPlayback = (serverId, query) => getItemsForPlayback(serverId, toItemsRequest(query));
 
-        self.play = async function (options) {
+        self.play = options => withPlaybackStart(self, !self._currentPlayer || self._currentPlayer.isLocalPlayer, () => startPlayback(options));
+
+        async function startPlayback(options) {
             normalizePlayOptions(options);
 
             if (self._currentPlayer) {
@@ -2201,7 +2204,7 @@ export class PlaybackManager {
             items = items.flat();
 
             return playWithIntros(items, options);
-        };
+        }
 
         function getPlayerData(player) {
             if (!player) {

@@ -94,25 +94,38 @@ const RowItems: FC<{ list: Rating[]; stack: boolean }> = ({ list, stack }) => {
 
 /**
  * The popup (user decision 13): one compact row per ticked rating — its mark, its value, its votes — in aligned columns, exactly
- * as wide as the row's group with all of its sources (`width`, in pixels), never wider; a row that would not fit is clipped, not
- * wrapped. Where a value came from and when is the row's native title and, for a screen reader, hidden text; a value older than
+ * as wide as its mark/value/count columns, centered on the group and clamped to the viewport. Rows never wrap. Where a value came from and when is the row's native title and, for a screen reader, hidden text; a value older than
  * the refresh window is dimmed.
  */
-const Popup: FC<{ list: Rating[]; id: string; anchor: Element; width: number | null }> = ({ list, id, anchor, width }) => {
+const Popup: FC<{ list: Rating[]; id: string; anchor: Element; open: boolean }> = ({ list, id, anchor, open }) => {
     const box = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(open);
+    useEffect(() => {
+        if (open) {
+            setVisible(true);
+            return;
+        }
+        let duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 146 : 236;
+        if (layoutManager.tv) duration = 0;
+        const timer = window.setTimeout(() => setVisible(false), duration);
+        return () => window.clearTimeout(timer);
+    }, [open]);
     useLayoutEffect(() => {
         const place = () => {
             const tip = box.current;
             if (!tip) return;
             const rect = anchor.getBoundingClientRect();
-            const gap = 8;
+            const gap = 0.382 * parseFloat(getComputedStyle(tip).fontSize);
             const below = rect.bottom + gap + tip.offsetHeight <= window.innerHeight || rect.top - gap - tip.offsetHeight < 0;
             // Below the group if it fits, else above; if neither, as low as it can be while wholly on screen (it may then cover
             // the group; a phone's screen is short), and never above the top (a taller popup scrolls inside, see the styles).
             let top = below ? rect.bottom + gap : rect.top - gap - tip.offsetHeight;
             if (top + tip.offsetHeight > window.innerHeight - gap) top = window.innerHeight - gap - tip.offsetHeight;
             tip.style.top = Math.max(gap, top) + 'px';
-            tip.style.left = Math.max(gap, Math.min(rect.left, window.innerWidth - tip.offsetWidth - gap)) + 'px';
+            const left = Math.max(gap, Math.min(rect.left + rect.width / 2 - tip.offsetWidth / 2, window.innerWidth - tip.offsetWidth - gap));
+            tip.style.left = left + 'px';
+            tip.style.setProperty('--jfmod-caret-left', Math.max(gap, Math.min(rect.left + rect.width / 2 - left, tip.offsetWidth - gap)) + 'px');
+            tip.dataset.above = String(!below);
         };
         place();
         window.addEventListener('scroll', place, true);
@@ -121,16 +134,19 @@ const Popup: FC<{ list: Rating[]; id: string; anchor: Element; width: number | n
             window.removeEventListener('scroll', place, true);
             window.removeEventListener('resize', place);
         };
-    }, [anchor, list, width]);
-    return createPortal(<div ref={box} id={id} role='tooltip' className='jfmod-groupPopup' data-jfmod-ratings-popup=''
-        style={width ? { width: width + 'px' } : undefined}>
-        {list.map(rating => <div key={rating.source} className={'jfmod-popRow' + (rating.stale ? ' jfmod-pop-stale' : '')}
-            data-jfmod-rating={rating.source} title={tooltipLines(rating).join('. ')}>
-            <span className='jfmod-popMark'><RatingIcon rating={rating} /></span>
-            <span className='jfmod-popValue'>{formatValue(rating)}</span>
-            <span className='jfmod-popVotes'>{rating.votes ? formatVotes(rating.votes) + ' votes' : ''}</span>
-            <span className='jfmod-ratingsHidden'>{SOURCE_LONG[rating.source] + ', ' + provenance(rating)}</span>
-        </div>)}
+    }, [anchor, list, open, visible]);
+    if (!visible && !open) return null;
+    return createPortal(<div ref={box} className={'jfmod-ratingsPopover' + (open ? '' : ' jfmod-ratingsPopover-closing')} aria-hidden={!open || undefined}>
+        <div id={id} role='tooltip' className='jfmod-groupPopup' data-jfmod-ratings-popup=''>
+            {list.map(rating => <div key={rating.source} className={'jfmod-popRow' + (rating.stale ? ' jfmod-pop-stale' : '')}
+                data-jfmod-rating={rating.source} title={tooltipLines(rating).join('. ')}
+                aria-label={ratingName(rating) + (rating.votes ? ', ' + formatVotes(rating.votes) + ' votes' : '')}>
+                <span className='jfmod-popMark'><RatingIcon rating={rating} /></span>
+                <span className='jfmod-popValue'>{formatValue(rating)}</span>
+                <span className='jfmod-popVotes'>{rating.votes ? formatVotes(rating.votes) : ''}</span>
+                <span className='jfmod-ratingsHidden'>{SOURCE_LONG[rating.source] + ', ' + provenance(rating)}</span>
+            </div>)}
+        </div>
     </div>, document.body);
 };
 
@@ -201,7 +217,8 @@ const usePopup = (box: React.RefObject<HTMLElement>, popupId: string, hasContent
             event.stopPropagation();
         }
     }, [open, tv]);
-    return { open, enter, leave, onPointerDown, toggle, onFocus, onBlur, onKeyDown };
+    const groupClass = 'jfmod-ratingsGroup' + (open ? ' jfmod-ratingsGroup-open' : '');
+    return { open, enter, leave, onPointerDown, toggle, onFocus, onBlur, onKeyDown, groupClass };
 };
 
 /** The answer, kept as shown: a new answer that shows the same changes nothing. */
@@ -491,7 +508,7 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
     const label = inline.length ? 'Ratings: ' + inline.map(ratingName).join(', ') + '. More ratings' : undefined;
     const { open, enter, leave } = popup;
     const popupWidth = popupWidthOf(box.current, reserved, standInKey);
-    return <span ref={box} className='jfmod-ratingsGroup' onPointerEnter={enter} onPointerLeave={leave}
+    return <span ref={box} className={popup.groupClass} onPointerEnter={enter} onPointerLeave={leave}
         data-jfmod-full-width={popupWidth ?? undefined}>
         <button ref={button} type='button' className={'jfmod-groupButton noautofocus' + (standIn ? ' jfmod-groupButton-standIn' : '')}
             tabIndex={standIn ? -1 : undefined} aria-hidden={standIn || undefined} aria-label={label} aria-expanded={standIn ? undefined : open}
@@ -499,8 +516,8 @@ const RatingsGroup: FC<RatingsGroupProps> = ({ ratings, sources, ready, wanted, 
             onFocus={popup.onFocus} onBlur={onBlur} onKeyDown={popup.onKeyDown} data-jfmod-ratings-group=''>
             <RowItems list={standIn ? standInList : inline} stack={standIn && standInKey === FALLBACK_KEY} />
         </button>
-        {open && !standIn && button.current && <span onPointerEnter={enter} onPointerLeave={leave}>
-            <Popup list={enabled} id={popupId} anchor={button.current} width={popupWidth} />
+        {button.current && <span onPointerEnter={enter} onPointerLeave={leave}>
+            <Popup list={enabled} id={popupId} anchor={button.current} open={open} />
         </span>}
     </span>;
 };

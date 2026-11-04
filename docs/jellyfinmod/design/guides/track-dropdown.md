@@ -1,5 +1,11 @@
 # Track strip and dropdown (the custom dropdown)
 
+**rd3 title-page integration (approved rulebook §§2/5, built, not accepted):** `shell/titlePages.scss` supplies
+picker padding .382em 1em .382em 1.236em, full light-glass ink and .618 caption opacity on title heads. The
+stack calculation includes the two .382em separations before testing Video's **11.7em** minimum; it still
+measures the strip, not the window. The three cells, paper lists, native select source of truth and every
+keyboard interaction remain as rd2 above. Video and pending rows remain **video facts only**, without Atmos/AAC.
+
 **rd2 presentation supersedes the old strip/list skin below (approved D220, D225–D227, D251, built, not accepted):** under
 `html.jfmod-chrome`, `shell/pickerChrome.scss` gives each closed cell its own borderless card-glass pill, 1.618em corners,
 .382em separation, no dividers. Static cells remain static; measured widths/stacking, whole-mark dropping, rich runs and every

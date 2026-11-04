@@ -1,6 +1,6 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { type FC, type MouseEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import actionsheet from 'components/actionSheet/actionSheet';
@@ -19,7 +19,9 @@ import { getEntryPath, getTmdbImage, getTmdbPath } from '../utils/entryLinks';
 import { raisedButtonClass } from '../utils/flatButton';
 import type { FocusOwnership } from '../utils/focusOwnership';
 import { crewCards, DetailsLine, type Person, roleLabel } from './EntryEpisodeDetails';
-import { episodeMetaItems, episodesWord } from './MissingChildren';
+import { episodeMetaItems, episodesWord, useTmdbCover } from './MissingChildren';
+import TitlePoster from './TitlePoster';
+import { rememberLibraryAddition } from './LibraryUndo';
 
 import './entryDetails.scss';
 import './missingChildren.scss';
@@ -55,7 +57,7 @@ const BrowseCell: FC<{ image?: string; wide?: boolean; icon: 'person' | 'tv'; li
         <div className='jfmod-browseLine jfmod-browseLine1'><bdi>{line1}</bdi></div>
         {line2 && <div className='jfmod-browseLine jfmod-browseLine2'><bdi>{line2}</bdi></div>}
     </>;
-    const className = 'jfmod-browseCell' + (wide ? ' jfmod-browseCell-wide' : '');
+    const className = 'jfmod-browseCell' + (wide ? ' jfmod-browseCell-wide' : '') + (icon === 'person' ? ' jfmod-browseCell-person' : '');
     if (href) return <a className={className} href={href} aria-label={label ?? line1}>{body}</a>;
     return layoutManager.tv ? <button type='button' className={className} aria-label={label ?? line1}>{body}</button> :
         <div className={className}>{body}</div>;
@@ -180,7 +182,7 @@ const castPeople = (metadata: TmdbMetadata): Person[] => (metadata.cast ?? []).m
     name: person.name, role: roleLabel('Actor', person.character), profilePath: person.profilePath }));
 
 /** Add to Library: the whole movie or show (D196), into its only library of that kind, else the one chosen in a sheet. */
-const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: string; userId: string }> = ({ api, metadata, serverId, userId }) => {
+const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: string; userId: string; isAdmin: boolean }> = ({ api, metadata, serverId, userId, isAdmin }) => {
     const views = useUserViews({ userId });
     const [adding, setAdding] = useState(false);
     const mediaType = metadata.mediaType;
@@ -206,6 +208,9 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
         setAdding(true);
         try {
             const result = await createEntry(api, { mediaType, tmdbId: metadata.tmdbId, targetLibraryId });
+            if (isAdmin && result.created && window.location.hash === openedAt) {
+                rememberLibraryAddition({ basePath: api.basePath, userId, entryId: result.entry.id, returnHash: openedAt });
+            }
             invalidateCatalog(api);
             // The title's own library page from here on; Back returns to where the browse page was opened from. A viewer who has left
             // stays where they went, read from the address: it changes at once, and the page's unmount is deferred past its hide (tm2.r1).
@@ -215,7 +220,7 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
             toast('Could not add this title');
             setAdding(false);
         }
-    }, [adding, api, mediaType, metadata.tmdbId, serverId, views.data?.Items]);
+    }, [adding, api, isAdmin, mediaType, metadata.tmdbId, serverId, userId, views.data?.Items]);
 
     const onClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
         addToLibrary(event).catch(console.error);
@@ -233,7 +238,7 @@ const AddToLibraryButton: FC<{ api: Api; metadata: TmdbMetadata; serverId: strin
  * and an episode's page too; user, 2026-11-01). The rating sits in the meta line; no external links (user, 2026-11-01). Seasons,
  * episodes, Cast & Crew, Guest Stars and More from the season are rows of the search card's lit cell.
  */
-const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, season, episode: episodeNumber, focusOwnership }) => {
+const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, isAdmin, season, episode: episodeNumber, focusOwnership }) => {
     const { metadata, crew, creators } = data;
     const mediaType = metadata.mediaType;
     const isSeason = season !== undefined && episodeNumber === undefined;
@@ -271,7 +276,7 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
 
     const posterPath = isEpisode ? undefined : (tmdbSeason?.posterPath ?? metadata.posterPath);
     const poster = getTmdbImage(posterPath, 'w500');
-    const still = getTmdbImage(episode?.stillPath, 'w500');
+    const still = useTmdbCover(episode?.stillPath, 'w500');
 
     let overview = metadata.overview;
     if (isEpisode) overview = episode?.overview ?? null;
@@ -289,14 +294,14 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
                     <div className='cardScalable'>
                         <div className='cardPadder cardPadder-backdrop' />
                         <div className={'cardImageContainer coveredImage cardContent' + (still ? '' : ' jfmod-missingPoster jfmod-missingEmpty')}>
-                            {still ? <img className='jfmod-missingImage' src={still} alt='' /> :
-                                <span className='jfmod-missingNumber' aria-hidden='true'>{episodeNumber}</span>}
+                            {still
+                                ?? <span className='jfmod-missingNumber' aria-hidden='true'>{episodeNumber}</span>}
                         </div>
                     </div>
                 </div>
             </div> :
-            <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={metadata.title} />}</div>, node, String(index)))}
-        {mount('.mainDetailButtons', <AddToLibraryButton api={api} metadata={metadata} serverId={serverId} userId={userId} />)}
+            <TitlePoster src={poster} title={metadata.title} />, node, String(index)))}
+        {mount('.mainDetailButtons', <AddToLibraryButton api={api} metadata={metadata} serverId={serverId} userId={userId} isAdmin={isAdmin} />)}
         {overview && mount('.overview', overview)}
         {mount('.itemDetailsGroup', <>
             <DetailsLine label={globalize.translate(directors.length > 1 ? 'Directors' : 'Director')} names={directors} />
@@ -333,6 +338,14 @@ const TmdbDetails: FC<TmdbDetailsProps> = ({ api, data, view, serverId, userId, 
  * A season's episodes as upstream draws its episode rows (the file-less season page's rows, MissingChildren): TMDB's still,
  * "N. Title", the meta line, the overview. The whole row opens the episode's page; no mark and no action, nothing is held.
  */
+const BrowseStill: FC<{ episode: EntryEpisode }> = ({ episode }) => {
+    const cover = useTmdbCover(episode.stillPath, layoutManager.tv ? 'w500' : 'w300');
+    return <div className={'listItemImage listItemImage-large jfmod-missingStill' + (cover ? '' : ' jfmod-missingEmpty')
+        + (layoutManager.tv ? ' listItemImage-large-tv' : '')}>
+        {cover ?? <span className='jfmod-missingNumber' aria-hidden='true'>{episode.episodeNumber}</span>}
+    </div>;
+};
+
 const EpisodeRows: FC<{ view: HTMLElement; episodes: EntryEpisode[]; rating: (id: number) => number | undefined;
     href: (number: number) => string }> = ({ view, episodes, rating, href }) => {
     const [node, setNode] = useState<Element | null>(null);
@@ -352,19 +365,15 @@ const EpisodeRows: FC<{ view: HTMLElement; episodes: EntryEpisode[]; rating: (id
     }, [view]);
     const tv = layoutManager.tv;
     return node && createPortal(<>{episodes.map(item => {
-        const still = getTmdbImage(item.stillPath, tv ? 'w500' : 'w300');
         const meta = episodeMetaItems(item, rating(item.tmdbId));
         const content = <>
-            <div className={'listItemImage listItemImage-large jfmod-missingStill' + (still ? '' : ' jfmod-missingEmpty')
-                + (tv ? ' listItemImage-large-tv' : '')}>
-                {still ? <img className='jfmod-missingImage' src={still} alt='' loading='lazy' decoding='async' /> :
-                    <span className='jfmod-missingNumber' aria-hidden='true'>{item.episodeNumber}</span>}
-            </div>
+            <BrowseStill episode={item} />
             <div className='listItemBody'>
                 <div className='listItemBodyText'><bdi>{item.episodeNumber}. {item.title}</bdi></div>
                 {meta.length > 0 && <div className='secondary listItemBodyText jfmod-missingMeta'>{meta}</div>}
-                {item.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{item.overview}</bdi></div>}
+                {!layoutManager.mobile && item.overview && <div className='secondary listItem-overview listItemBodyText'><bdi>{item.overview}</bdi></div>}
             </div>
+            {layoutManager.mobile && item.overview && <div className='secondary jfmod-episodeSummary'><bdi>{item.overview}</bdi></div>}
         </>;
         return <a key={item.episodeNumber} className={'listItem listItem-largeImage jfmod-browseEpisode' + (tv ? ' listItem-button listItem-focusscale' : '')}
             href={href(item.episodeNumber)} aria-label={`${item.episodeNumber}. ${item.title}`}>{content}</a>;

@@ -30,6 +30,8 @@ import QueueStatusLine from './QueueStatusLine';
 import RatingsGroup from './RatingsGroup';
 import RatingsRefreshButton, { useRatingsRefresh } from './RatingsRefreshButton';
 import type { Rating } from '../types/ratings';
+import TitlePoster from './TitlePoster';
+import LibraryUndo from './LibraryUndo';
 import RetentionStatus from './RetentionStatus';
 import { useRatingsPreferences } from '../hooks/useRatingsPreferences';
 import { raisedButtonClass } from '../utils/flatButton';
@@ -272,9 +274,11 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
     }, [signal]);
     const refreshRatingsItem = useRefreshRatingsMenuItem(api, entry.id, rereadRatings, setMenuAnchor);
     return <>
+        <LibraryUndo entryId={entry.id} view={view} />
         {mount('.nameContainer', <h1>{entry.title}</h1>)}
-        {mount('.itemMiscInfo-primary', <>{[entry.year, entry.metadata?.runtimeMinutes ? entry.metadata.runtimeMinutes + ' min' : null].filter(Boolean).join(' · ')}</>)}
-        {mount('.itemMiscInfo-secondary', <>
+        {mount('.itemMiscInfo-primary', <>
+            {entry.year && <span className='mediaInfoItem'>{entry.year}</span>}
+            {entry.metadata?.runtimeMinutes ? <span className='mediaInfoItem'>{entry.metadata.runtimeMinutes + ' min'}</span> : null}
             {/* The page's own star (TMDB's score) gives way whenever the group shows, as the group itself decides (user,
                 2026-10-30; Codex review 2026-10-30, P2 2: one source of truth, fallback and reservation included). */}
             {entry.metadata?.communityRating && !groupHidesStar ?
@@ -283,7 +287,7 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 wanted={ratingsPreferences.loaded ? ratingsPreferences.enabled : undefined} ownStar onHidesStar={setGroupHidesStar} />
         </>)}
         {Array.from(view.querySelectorAll('.detailImageContainer')).map((node, index) => createPortal(
-            <div className='card portraitCard jfmod-entryPoster'>{poster && <img src={poster} alt={entry.title} />}<FileStateMark entry={entry} retention={retention} interactive={false} /></div>, node, String(index)))}
+            <TitlePoster src={poster} title={entry.title}><FileStateMark entry={entry} retention={retention} interactive={false} /></TitlePoster>, node, String(index)))}
         {!isMovie && mount('.mainDetailButtons', <div className='jfmod-entryActions'>
             {entry.jellyfinItemId && <a className={raisedButtonClass('button-submit')}
                 href={'#/details?id=' + encodeURIComponent(entry.jellyfinItemId) + '&serverId=' + encodeURIComponent(serverId)}>
@@ -322,12 +326,8 @@ const EntryDetails: FC<EntryDetailsProps> = ({ api, detail, view, isAdmin, serve
                 <ListItemText>Remove Entry</ListItemText>
             </MenuItem>
         </Menu>}
-        {isMovie && releaseMount && createPortal(entry.state === FileState.Grabbed || entry.state === FileState.Downloading ?
-            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} /> :
-            canAcquire && <button className={raisedButtonClass('button-submit jfmod-getReleaseRaised')} type='button' onClick={searchReleases}>
-                <span className='material-icons cloud_download' aria-hidden='true' />
-                <span>Get a Release</span>
-            </button>, releaseMount)}
+        {isMovie && releaseMount && (entry.state === FileState.Grabbed || entry.state === FileState.Downloading) && createPortal(
+            <QueueStatusLine entryId={entry.id} state={entry.state} progress={entry.progress} />, releaseMount)}
         {mount('.itemGenres', entry.metadata?.genres.join(' · '))}
         {mount('.overview', entry.overview)}
         {mount('.itemDetailsGroup', <>
