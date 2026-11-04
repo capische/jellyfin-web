@@ -1,3 +1,6 @@
+import React from 'react';
+import { hasDesignPage, mountDialog } from '../design/dialogHost';
+import { RemovalDialog } from '../design/RemovalDialog';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import escapeHtml from 'escape-html';
 
@@ -212,6 +215,7 @@ const removalPlan = (row: QueueRow, refused: string | null): RemovalPlan => {
  * one checkbox, independent of the choice. The close X in the header, Back on the TV and Escape on a computer are the safe choice
  * too; the dialog helper returns focus to the opener.
  */
+// eslint-disable-next-line sonarjs/cognitive-complexity -- retains the existing legacy lifecycle while dispatching native presentation.
 const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQueueRequest | null> => {
     const plan = removalPlan(row, refused);
     const dlg = dialogHelper.createDialog({ removeOnClose: true, scrollY: false, size: layoutManager.tv ? 'fullscreen' : undefined });
@@ -256,7 +260,19 @@ const confirmRemoval = (row: QueueRow, refused: string | null): Promise<RemoveQu
     };
     // The TV's Back and a click or right-click outside reach the helper's own handlers; they are held here first.
     dlg.addEventListener('command', holdWhileClosing, true);
-    dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', close);
+    const design = hasDesignPage();
+    if (design) {
+        mountDialog(dlg, React.createElement(RemovalDialog, { plan, release: row.releaseTitle, close, choose: (id: string, blocklist: boolean) => {
+            if (closing || id === 'cancel') {
+                close();
+                return;
+            }
+            result = { removeFromClient: true, deleteFiles: id === 'delete', blocklist };
+            close();
+        } }), close);
+    } else {
+        dlg.querySelector('.jfmod-removeClose')?.addEventListener('click', close);
+    }
     // Escape closes it on a computer too (the TV already maps Escape to Back), wherever focus is.
     const onKey = (event: KeyboardEvent) => {
         if (event.key === 'Escape' && !layoutManager.tv) close();

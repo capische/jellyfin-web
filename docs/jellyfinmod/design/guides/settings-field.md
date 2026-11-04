@@ -1,5 +1,7 @@
 # Settings field (label, required asterisk, help line)
 
+**dsC (2026-11-04), built, not accepted:** native `design/Controls` fields keep the source `.fld > .lb + .box > .v` structure, with a real input replacing the inert value span; native select lists use `.pmenu`/`.mi`. Required stars remain outside the accessible name. Shared prompts and Remove After Watching use them; admin/wizard fields remain unchanged. [Scope and CSS delta](../dsC.md).
+
 **rd2 presentation (approved D225–D227, built, not accepted):** in the signed-in chrome outside Dashboard and the mod's
 admin settings/setup, `shell/sharedChrome.scss` gives fields a 2.7816em pill with a neutral .09em/32% outline at rest,
 primary outline/14% fill under the pointer, .135em focus ring (.236em on TV), and .135em red refused ring. Labels sit above

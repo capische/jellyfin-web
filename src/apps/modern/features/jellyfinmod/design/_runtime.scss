@@ -28,6 +28,7 @@
     .tvbar button,
     .pi,
     .disc,
+    .rb,
     .mi,
     .rail button {
         font: inherit;
@@ -640,4 +641,75 @@
 .layout-tv .jfmod-dsBrowse .ground {
     margin-top: -3.85em;
     padding-top: 3.85em;
+}
+
+/* dsC: dialogHelper owns its invisible lifecycle host; the design owns every painted child. */
+.jfmod-designDialogHost {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.jfds.dialogportal {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 2.618em 0;
+    background: none;
+
+    .dialog {
+        flex: none;
+        max-height: 100%;
+        overflow-y: auto;
+        pointer-events: auto;
+        contain: none;
+    }
+
+    &.dev-phone,
+    &.dev-tv {
+        padding: 0;
+        min-height: 100%;
+        background: var(--paper);
+    }
+
+    &.sheetportal {
+        padding: 0;
+        background: none;
+
+        .pmenu {
+            position: fixed;
+            margin-top: 0;
+            pointer-events: auto;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        &.layout-tv .pmenu { max-height: 20em; }
+    }
+
+    .jfmod-removeOk { color: var(--ok); }
+}
+
+.jfds .pmenu.sheet.bottom {
+    overflow-y: auto;
+}
+
+.jfds.menuportal.phonesheet {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.jfds.loadingportal {
+    background: none;
+    pointer-events: none;
+}
+
+.jfmod-startingPlayback .jfds.loadingportal {
+    --spin-arc: #fff;
+    --spin-track: rgba(255, 255, 255, 0.3);
 }

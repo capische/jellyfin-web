@@ -1,3 +1,4 @@
+import { openDesignDialog, closeDesignDialog } from 'apps/modern/features/jellyfinmod/design/dialogMotion';
 import focusManager from '../focusManager';
 import browser from '../../scripts/browser';
 import layoutManager from '../layoutManager';
@@ -262,6 +263,10 @@ function isOpened(dlg) {
 }
 
 export function close(dlg) {
+    if (dlg.dataset.designDialog) {
+        if (dlg.dataset.designClosing) return;
+        dlg.dataset.designClosing = 'true';
+    }
     if (!dlg.classList.contains('hide')) {
         dlg.dispatchEvent(new CustomEvent('closing', {
             bubbles: false,
@@ -301,6 +306,12 @@ function animateDialogOpen(dlg) {
         }
     };
 
+    if (dlg.dataset.designDialog) {
+        openDesignDialog(dlg);
+        onAnimationFinish();
+        return;
+    }
+
     if (enableAnimation()) {
         dom.addEventListener(
             dlg,
@@ -315,6 +326,10 @@ function animateDialogOpen(dlg) {
 }
 
 function animateDialogClose(dlg, onAnimationFinish) {
+    if (dlg.dataset.designDialog) {
+        closeDesignDialog(dlg, onAnimationFinish);
+        return;
+    }
     if (enableAnimation()) {
         let animated = true;
 

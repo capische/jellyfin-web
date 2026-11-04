@@ -64,14 +64,14 @@ const queueApi = page => page.evaluate(async () => {
     return { status: response.status, ids: (body.items ?? []).map(item => item.id), states: (body.items ?? []).map(item => item.state) };
 });
 // The row menu: the stock action sheet on the phone and the TV, the desktop table's popover since 2026-10-19 (UX §10).
-const ROW_MENU = '.actionSheet, .jfmod-queueMenuPopover .MuiPaper-root';
+const ROW_MENU = ':is(.actionSheet, [data-ds-actionsheet]), .jfmod-queueMenuPopover .MuiPaper-root';
 const sheet = page => page.evaluate(selector => {
     const dialog = [...document.querySelectorAll(selector)].find(node => node.getBoundingClientRect().width > 0
         && (node.closest('.dialogContainer') || node.closest('.jfmod-queueMenuPopover')));
     if (!dialog) return null;
     return {
         ids: [...dialog.querySelectorAll('[data-id]')].map(node => node.getAttribute('data-id')),
-        title: dialog.querySelector('.actionSheetTitle')?.textContent ?? null,
+        title: dialog.querySelector(':is(.actionSheetTitle, [data-ds-actionsheet] .cap0)')?.textContent ?? null,
         focusInside: dialog.contains(document.activeElement)
     };
 }, ROW_MENU);
@@ -159,10 +159,10 @@ for (const name of only) {
                 await more.waitFor({ state: 'visible', timeout: 30000 });
                 await stock.waitForTimeout(1500);
                 if (name === 'mobile') await more.tap(); else await more.click();
-                const stockOpened = await stock.waitForFunction(() => [...document.querySelectorAll('.actionSheet')].some(node => node.getBoundingClientRect().width > 0),
+                const stockOpened = await stock.waitForFunction(() => [...document.querySelectorAll(':is(.actionSheet, [data-ds-actionsheet])')].some(node => node.getBoundingClientRect().width > 0),
                     undefined, { timeout: 10000 }).then(() => true, () => false);
                 await stock.keyboard.press('Escape');
-                const stockClosed = await stock.waitForFunction(() => ![...document.querySelectorAll('.actionSheet')].some(node => node.getBoundingClientRect().width > 0),
+                const stockClosed = await stock.waitForFunction(() => ![...document.querySelectorAll(':is(.actionSheet, [data-ds-actionsheet])')].some(node => node.getBoundingClientRect().width > 0),
                     undefined, { timeout: 5000 }).then(() => true, () => false);
                 stockVerdict = { stockEntry: true, opened: stockOpened, escapeClosed: stockClosed };
             } catch (error) {

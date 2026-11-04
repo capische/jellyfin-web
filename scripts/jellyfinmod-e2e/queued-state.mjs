@@ -571,7 +571,7 @@ async function stepHeldPack(step, layout, { cancelInUi = false } = {}) {
             await row.waitFor({ state: 'visible', timeout: Math.max(500, grab.holdUntil ? Date.parse(grab.holdUntil) - Date.now() : 4000) });
             await row.locator('.jfmod-queueMenu').click();
             // The desktop table's popover (2026-10-19) or the action sheet.
-            const item = queuePage.locator('.actionSheet [data-id="cancel"], .jfmod-queueMenuPopover [data-id="cancel"]').first();
+            const item = queuePage.locator(':is(.actionSheet, [data-ds-actionsheet]) [data-id="cancel"], .jfmod-queueMenuPopover [data-id="cancel"]').first();
             await item.click({ timeout: 2000 });
             cancelled = true;
         } catch (error) {

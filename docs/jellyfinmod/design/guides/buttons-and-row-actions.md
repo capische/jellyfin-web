@@ -1,5 +1,7 @@
 # Buttons and row actions
 
+**dsC (2026-11-04), built, not accepted:** `design/Controls` ports the three source `.btn` kinds and dialog shell. Shared confirmations/prompts, queue removal and Remove After Watching use these native controls. The removal plan and immediate retention-save handlers are unchanged; source switch markup replaces the blocklist checkbox. Admin settings/wizard and unported custom content retain their existing controls. [Scope and CSS delta](../dsC.md).
+
 **rd3 title action pill (approved rulebook §§5/7, built, not accepted):** `.jfmod-titlePage .mainDetailButtons`
 is card glass, 3em corners and .382em padding, icon boxes 3em/glyphs 1.6em. Play carries its existing localized
 Play/Resume title as a visible label, minimum width 6.854em, white 85.4%/dark ink (light: dark 85.4%/white),

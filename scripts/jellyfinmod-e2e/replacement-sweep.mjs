@@ -562,7 +562,7 @@ async function sweepLayout(name) {
     // ---- Sign out and back in
     await row('Sign out', cfg.tv ? keys + ': preferences menu Sign Out' : shell + ': user menu Sign Out', async () => {
         if (cfg.tv) { await tvHome(); await prefsMenu(); await activate(page, cfg, { sel: '.btnLogout', scope: '.page:not(.hide)' }); } else await userMenu('Sign Out');
-        const confirm = await poll(() => page.evaluate(() => ({ ok: /login|selectuser/.test(location.hash) || !!document.querySelector('.dialog .btnSubmit, .actionSheet [data-id]') })), { timeout: 15000 });
+        const confirm = await poll(() => page.evaluate(() => ({ ok: /login|selectuser/.test(location.hash) || !!document.querySelector('.dialog .btnSubmit, :is(.actionSheet, [data-ds-actionsheet]) [data-id]') })), { timeout: 15000 });
         return { confirmDialog: confirm.ok && !/login|selectuser/.test(await hash(page)) };
     }, { hash: '#/(login|selectuser|selectserver)', selector: '#txtManualName, .btnManual' }, {
         benignHere: [{ name: 'a GET still in flight with the token Sign Out just revoked (401)', test: f => f.status === 401 && f.method === 'GET' && ['/System/Info', '/Users'].includes(f.path) },

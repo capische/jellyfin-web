@@ -48,8 +48,22 @@ export const MenuItem: FC<RowProps> = props => {
     const design = useContext(DesignMenus);
     if (!design) return <MuiMenuItem {...props} />;
     const className = 'mi focusable' + (props.selected ? ' sel' : '') + (props.disabled ? ' dim' : '');
-    if (props.to) return <Link role='menuitem' className={className} to={props.to} onClick={props.onClick}>{props.children}</Link>;
-    return <button className={className} role='menuitem' aria-disabled={props.disabled} onClick={props.disabled ? undefined : props.onClick}>{props.children}</button>;
+    if (props.to) {
+        return <Link role='menuitem' className={className} to={props.to} aria-disabled={props.disabled} onClick={event => {
+            if (props.disabled) {
+                event.preventDefault();
+            } else {
+                props.onClick?.(event);
+            }
+        }}>{props.children}</Link>;
+    }
+    return <div className={className} role='menuitem' tabIndex={0} aria-disabled={props.disabled} onClick={props.disabled ? undefined : props.onClick}
+        onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.currentTarget.click();
+            }
+        }}>{props.children}</div>;
 };
 export const ListItemIcon: FC<ListItemIconProps & { icon?: IconName }> = ({ icon = 'display', ...props }) => {
     const design = useContext(DesignMenus);

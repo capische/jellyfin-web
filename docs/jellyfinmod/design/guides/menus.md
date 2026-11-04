@@ -1,5 +1,7 @@
 # Menus and action sheets
 
+**dsC (2026-11-04), built, not accepted:** shared action sheets now render the mockup’s own `.pmenu`/`.mi`/SVG markup through upstream’s API, including player settings and sublists. Phone sheets scroll; native motion classes, selected/refused rows, history, callback timing and Back/focus remain. The old chromeActionSheet decorator and action-sheet restyling are removed. [Scope, CSS delta and validation](../dsC.md).
+
 **dsA (2026-11-04), built, not accepted:** Top-bar, library view/sort/filter/settings menus draw native `.pmenu`/`.mi` markup; phone sheets add the original scrim and grab handle and scroll to the last entry. View settings draw switches; sort retains every option and its original handler, including explicit order rows. Existing More action sheets remain in their current command renderer for this slice. [Runtime adapters and validation](../dsA.md).
 
 **Status:** approved rulebook Menus and Dropdowns (D220, D225–D227, D251), rd2 built, not accepted.

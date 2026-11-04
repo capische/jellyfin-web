@@ -656,14 +656,6 @@ html.jfmod-chrome .jfmod-playbackStart {
     animation: jfmod-playback-black 0.236s 0.146s $ease both;
 }
 
-html.jfmod-chrome.jfmod-startingPlayback[data-theme] .docspinner {
-    color: #fff;
-
-    &::before {
-        color: #fff;
-        opacity: 0.3;
-    }
-}
 html.jfmod-chrome.layout-tv .jfmod-playbackStart { animation-duration: 0.146s; }
 
 @media (prefers-reduced-motion: reduce) {

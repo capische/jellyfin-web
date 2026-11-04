@@ -1,5 +1,7 @@
 # Loading spinner
 
+**dsC (2026-11-04), built, not accepted:** `design/Spinner` renders the source’s four-layer markup under `.jfds`, using the copied spinner CSS. Upstream loading remains the API and handles admin; an active spinner transfers back to upstream when leaving the design scope. The old sharedChrome spinner overrides are removed. Playback-start cleanup and dark-on-black colours remain. [Scope and CSS delta](../dsC.md).
+
 **rd3 playback start (approved rulebook §7/D230, built, not accepted):** `integration/playbackStart.ts` is a
 small adapter around the unchanged playback start promise. Local Play in the mod shell shows black after the
 .146s press, fading .236s (.146s TV), with `loading.show()`'s existing Jellyfin spinner. The starting marker

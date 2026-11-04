@@ -1875,7 +1875,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
         const button = harnessSide.page.locator(buttonSelector + ':visible').first();
         if (!await button.count()) return { error: buttonSelector + ' not present' };
         await nativeClick(button);
-        const items = harnessSide.page.locator('.actionSheetMenuItem');
+        const items = harnessSide.page.locator(':is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])');
         await items.first().waitFor({ state: 'visible', timeout: 8000 }).catch(ignore);
         const options = await items.evaluateAll(nodes => nodes.map(node => ({ id: node.getAttribute('data-id'), text: node.textContent.trim().slice(0, 60) })));
         const targetId = pickId(options);
@@ -1884,7 +1884,7 @@ try { // OUTER — guarantees cleanup (§7 restore, hygiene, report) even on an 
             return { options, error: 'no eligible entry' };
         }
         // Always by data-id, never by position (the action-sheet trap).
-        await nativeClick(harnessSide.page.locator(`.actionSheetMenuItem[data-id="${targetId}"]`).first());
+        await nativeClick(harnessSide.page.locator(`:is(.actionSheetMenuItem, [data-ds-actionsheet] .mi[data-id])[data-id="${targetId}"]`).first());
         return { options, targetId };
     };
 

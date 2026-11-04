@@ -20,13 +20,18 @@ const readEnvironment = () => {
     }
     // eslint-disable-next-line compat/compat -- capability detection selects the solid recipe on older webOS.
     const noBlur = !(window.CSS?.supports?.('backdrop-filter', 'blur(1px)') && window.CSS?.supports?.('color', 'color-mix(in srgb, #000 50%, transparent)'));
-    return { device, theme: html.dataset.theme || 'dark', layout, noBlur };
+    return { device, theme: html.classList.contains('jfmod-chromePlayer') ? 'dark' : html.dataset.theme || 'dark', layout, noBlur };
 };
 
 export const DesignContext = createContext<Device | false>(false);
 
 const buttonFocus = (target: EventTarget | null, device?: Device) => {
-    if (!(target instanceof HTMLElement) || !target.classList.contains('btn')) return;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.classList.contains('rb')) {
+        target.classList.toggle('foc', !!device);
+        return;
+    }
+    if (!target.classList.contains('btn')) return;
     target.classList.remove('kf', 'tvf');
     if (device) target.classList.add(device === 'tv' ? 'tvf' : 'kf');
 };
