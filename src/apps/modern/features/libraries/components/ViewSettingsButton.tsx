@@ -1,3 +1,7 @@
+import { Menu as DesignMenu } from '../../jellyfinmod/design/Menu';
+import { NativeFields, Checkbox as DesignCheckbox, FormControlLabel as DesignLabel } from '../../jellyfinmod/design/FilterFields';
+import { Icon } from '../../jellyfinmod/design/Icon';
+import type { ActionRenderer } from '../../jellyfinmod/design/Action';
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 import React, { type FC, useCallback, useState } from 'react';
 
@@ -38,6 +42,7 @@ const imageTypesOptions = [
 ];
 
 interface ViewSettingsButtonProps {
+    renderButton?: ActionRenderer;
     viewType: LibraryTab;
     libraryViewSettings: LibraryViewSettings;
     setLibraryViewSettings: React.Dispatch<
@@ -46,6 +51,7 @@ interface ViewSettingsButtonProps {
 }
 
 const ViewSettingsButton: FC<ViewSettingsButtonProps> = ({
+    renderButton,
     viewType,
     libraryViewSettings,
     setLibraryViewSettings
@@ -106,6 +112,26 @@ const ViewSettingsButton: FC<ViewSettingsButtonProps> = ({
 
     const isGridView = libraryViewSettings.ViewMode === ViewMode.GridView;
     const isImageTypeVisible = !IMAGE_TYPE_EXCLUDED_VIEWS.includes(viewType);
+
+    if (renderButton) {
+        return <div className='menuhost'>
+            {renderButton({ onClick: handleClick, title: globalize.translate('ViewSettings') })}
+            {open && <DesignMenu id='selectview-popover' label='View Settings' close={handleClose}>
+                <span className='cap0'>View</span>
+                <button className={'mi' + (isGridView ? ' sel' : '')} onClick={onGridViewClick}><Icon name='grid' /><span className='tx0'>{globalize.translate('GridView')}</span></button>
+                <button className={'mi' + (!isGridView ? ' sel' : '')} onClick={onListViewClick}><Icon name='sort' /><span className='tx0'>{globalize.translate('ListView')}</span></button>
+                {isImageTypeVisible && <><div className='mhr' /><span className='cap0'>{globalize.translate('LabelImageType')}</span>
+                    {imageTypesOptions.map(option => <button key={option.value} className={'mi' + (libraryViewSettings.ImageType === option.value ? ' sel' : '')}
+                        onClick={() => setImageType(option.value)}>{globalize.translate(option.label)}</button>)}</>}
+                <div className='mhr' />
+                <NativeFields.Provider value>
+                    <DesignLabel isSwitch label={globalize.translate('ShowTitle')} control={<DesignCheckbox isSwitch name='ShowTitle' checked={libraryViewSettings.ShowTitle} onChange={handleChange} />} />
+                    {isImageTypeVisible && <DesignLabel isSwitch label={globalize.translate('ShowYear')} control={<DesignCheckbox isSwitch name='ShowYear' checked={!!libraryViewSettings.ShowYear} onChange={handleChange} />} />}
+                    <DesignLabel isSwitch label={globalize.translate('EnableCardLayout')} control={<DesignCheckbox isSwitch name='CardLayout' checked={libraryViewSettings.CardLayout} onChange={handleChange} />} />
+                </NativeFields.Provider>
+            </DesignMenu>}
+        </div>;
+    }
 
     return (
         <>

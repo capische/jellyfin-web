@@ -1,3 +1,5 @@
+import { Menu as DesignMenu } from '../../jellyfinmod/design/Menu';
+import type { ActionRenderer } from '../../jellyfinmod/design/Action';
 import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-by';
 import { SortOrder } from '@jellyfin/sdk/lib/generated-client/models/sort-order';
 import React, { FC, useCallback } from 'react';
@@ -161,6 +163,7 @@ const getSortMenuOptions = (viewType: LibraryTab): SortOption[] => {
 };
 
 interface SortButtonProps {
+    renderButton?: ActionRenderer;
     viewType: LibraryTab;
     libraryViewSettings: LibraryViewSettings;
     setLibraryViewSettings: React.Dispatch<
@@ -169,6 +172,7 @@ interface SortButtonProps {
 }
 
 const SortButton: FC<SortButtonProps> = ({
+    renderButton,
     viewType,
     libraryViewSettings,
     setLibraryViewSettings
@@ -205,6 +209,21 @@ const SortButton: FC<SortButtonProps> = ({
         },
         [setLibraryViewSettings]
     );
+
+    if (renderButton) {
+        return <div className='menuhost'>
+            {renderButton({ onClick: handleClick, title: globalize.translate('Sort') })}
+            {open && <DesignMenu id='sort-popover' label='Sort' close={handleClose}><span className='cap0'>Sort By</span>
+                {sortMenuOptions.map(option => <button className={'mi' + (isEqual(libraryViewSettings.SortBy, option.value) ? ' sel' : '')}
+                    key={option.value.join(',')} onClick={() => onMenuItemClick(option.value)}><span className='tx0'>{globalize.translate(option.label)}</span></button>)}
+                <div className='mhr' /><span className='cap0'>Sort Order</span>
+                {[SortOrder.Ascending, SortOrder.Descending].map(order => <button className={'mi' + (libraryViewSettings.SortOrder === order ? ' sel' : '')}
+                    key={order} onClick={() => {
+                        if (libraryViewSettings.SortOrder !== order) onMenuItemClick(libraryViewSettings.SortBy);
+                    }}><span className='tx0'>{globalize.translate(order)}</span></button>)}
+            </DesignMenu>}
+        </div>;
+    }
 
     return (
         <>

@@ -1,3 +1,5 @@
+import { DesignMenus } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
+import { Icon } from 'apps/modern/features/jellyfinmod/design/Icon';
 import type { GroupInfoDto } from '@jellyfin/sdk/lib/generated-client/models/group-info-dto';
 import type { SvgIconComponent } from '@mui/icons-material';
 import AvatarGroup from '@mui/material/AvatarGroup';
@@ -5,7 +7,7 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
-import React, { type FC } from 'react';
+import React, { type FC, useContext } from 'react';
 
 import UserAvatar from 'components/UserAvatar';
 import { useUsers } from 'hooks/useUsers';
@@ -30,6 +32,11 @@ const SyncPlayGroupListItem: FC<SyncPlayGroupListItemProps> = ({
     }
 }) => {
     const { data: users } = useUsers();
+    const design = useContext(DesignMenus);
+    if (design) {
+        return <button className='mi focusable' title={tooltip} onClick={onClick}><Icon name='people' />
+            <span className='tx0'>{currentGroup.GroupName}<small>{currentGroup.Participants?.join(', ')}</small></span><Icon name='right' className='nx' /></button>;
+    }
 
     return (
         <Stack

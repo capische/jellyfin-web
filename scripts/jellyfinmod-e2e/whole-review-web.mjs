@@ -363,7 +363,7 @@ checks.pickerStatus = async browser => {
                 && !request.headers()['x-jellyfinmod-check']) pageCancels.push(request.url());
         });
         await page.locator('.jfmod-releaseList .jfmod-releaseRow:not([aria-disabled="true"])').first().click();
-        if (!await page.waitForSelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]', { timeout: 10000 }).then(() => true).catch(() => false)) {
+        if (!await page.waitForSelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])', { timeout: 10000 }).then(() => true).catch(() => false)) {
             record('4a-4', 'the grab starts its hold', false, `${(await page.locator('.jfmod-releaseStatus').innerText().catch(() => '')).trim()}; `
                 + (await page.locator('.jfmod-releasePicker').innerText().catch(() => '')).replaceAll('\n', ' | ').slice(0, 250));
             return;
@@ -373,12 +373,12 @@ checks.pickerStatus = async browser => {
         await page.waitForTimeout(400);
         const during = await page.evaluate(() => ({
             searching: /Searching/.test(document.querySelector('.jfmod-releaseStatus')?.textContent ?? ''),
-            cancel: !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]'),
+            cancel: !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])'),
             status: (document.querySelector('.jfmod-grabStatus')?.textContent ?? '').trim().slice(0, 80)
         }));
         record('4a-4', 'while the grab is held and the changed search runs, its status and Cancel stay shown',
             during.searching && during.cancel && !!during.status, JSON.stringify(during));
-        if (during.cancel) await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]').click();
+        if (during.cancel) await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])').click();
         await page.waitForFunction(() => /Cancelled/.test(document.querySelector('.jfmod-grabStatus')?.textContent ?? ''), undefined, { timeout: 5000 }).catch(() => {});
         const cancelled = (await page.locator('.jfmod-grabStatus').innerText().catch(() => '')).trim();
         const state = guard.created[0] ? (await api(page, 'GET', `JellyfinMod/Grabs/${guard.created[0]}`)).body?.state : 'none';
@@ -423,18 +423,18 @@ checks.pickerPolls = async browser => {
         });
         const eligible = page.locator('.jfmod-releaseList .jfmod-releaseRow:not([aria-disabled="true"])');
         await eligible.nth(0).click();
-        await page.waitForSelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]', { timeout: 10000 });
+        await page.waitForSelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])', { timeout: 10000 });
         firstId = created[0];
         await page.waitForTimeout(1300); // a poll for the first grab is now on its way, late
-        await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]').click();
-        await page.waitForFunction(() => !document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]'), undefined, { timeout: 10000 }).catch(() => {});
+        await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])').click();
+        await page.waitForFunction(() => !document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])'), undefined, { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(300);
         // The second grab is a new operation: another release when there is one, else the same release again.
         await eligible.nth(rows > 1 ? 1 : 0).click();
-        await page.waitForFunction(() => !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]'), undefined, { timeout: 10000 }).catch(() => {});
+        await page.waitForFunction(() => !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])'), undefined, { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(2500); // the first grab's late answers land now
         const secondId = created[1];
-        const cancelButton = page.locator('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]');
+        const cancelButton = page.locator('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])');
         const mark = cancels.length;
         if (await cancelButton.count()) await cancelButton.click();
         await page.waitForTimeout(500);
@@ -656,12 +656,12 @@ checks.dialogReload = async browser => {
 checks.libraryTabs = async browser => {
     const { context, page } = await session(browser);
     await go(page, `#/movies?topParentId=${LIBRARY}&collectionType=movies&tab=0`);
-    await page.waitForSelector('.jfmod-entryCard, [data-jfmod-entry], .card', { timeout: 30000 });
+    await page.waitForSelector(":is(.jfmod-entryCard, .cell[data-jfmod-entry-id]), [data-jfmod-entry], :is(.card:not(.dm), .cell)", { timeout: 30000 });
     await page.waitForTimeout(2000);
-    const moviesTab = await page.evaluate(() => document.querySelectorAll('[data-jfmod-entry-id], .jfmod-entryCard').length);
+    const moviesTab = await page.evaluate(() => document.querySelectorAll("[data-jfmod-entry-id], :is(.jfmod-entryCard, .cell[data-jfmod-entry-id])").length);
     await go(page, `#/movies?topParentId=${LIBRARY}&collectionType=movies&tab=3`);
     await page.waitForTimeout(4000);
-    const favorites = await page.evaluate(() => document.querySelectorAll('[data-jfmod-entry-id], .jfmod-entryCard').length);
+    const favorites = await page.evaluate(() => document.querySelectorAll("[data-jfmod-entry-id], :is(.jfmod-entryCard, .cell[data-jfmod-entry-id])").length);
     record('4c-1', 'the Favorites tab shows no catalog row from the Movies tab', moviesTab > 0 && favorites === 0, `movies ${moviesTab}, favorites ${favorites}`);
     await closeAll(context);
 };
@@ -916,7 +916,7 @@ async function pickerRecoveryRun(page, created, at) {
     await eligible.first().waitFor({ timeout: 30000 });
     await eligible.first().evaluate(node => node.click());
     const ownId = (await (await ownCreated)?.json().catch(() => null))?.id ?? null;
-    await page.waitForFunction(() => !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]'), undefined, { timeout: 1500 }).catch(() => {});
+    await page.waitForFunction(() => !!document.querySelector('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])'), undefined, { timeout: 1500 }).catch(() => {});
     // The held real answer to the picker's lookup of the other grab is released, and the check waits until it has reached the
     // page and the page has had a frame to act on it, before it presses Cancel (Codex delta review 6, P3 7).
     const lookupDelivered = page.waitForResponse(response => response.request().method() === 'GET'
@@ -926,13 +926,13 @@ async function pickerRecoveryRun(page, created, at) {
     // The held answer's body has fully arrived, and the page has had frames to act on it; its grab status is still shown.
     await delivered?.finished().catch(() => null);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 200)))));
-    const cancelShown = await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]').count() > 0;
+    const cancelShown = await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])').count() > 0;
     at.step = 'cancel';
     // Only the page's own Cancel counts: the check's setup and safety-net requests carry X-JellyfinMod-Check.
     const cancelAnswered = page.waitForResponse(response => response.request().method() === 'POST'
         && /\/JellyfinMod\/Grabs\/[^/]+\/Cancel$/.test(new URL(response.url()).pathname)
         && !response.request().headers()['x-jellyfinmod-check'], { timeout: 15000 }).catch(() => null);
-    if (cancelShown) await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x][title="Cancel"]').first().evaluate(node => node.click());
+    if (cancelShown) await page.locator('.jfmod-releaseItem--added [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])').first().evaluate(node => node.click());
     const cancelResponse = await cancelAnswered;
     const cancelledId = cancelResponse ? new URL(cancelResponse.url()).pathname.split('/').slice(-2)[0] : null;
     for (const id of created) await api(page, 'POST', `JellyfinMod/Grabs/${id}/Cancel`);

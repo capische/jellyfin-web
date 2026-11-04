@@ -16,11 +16,11 @@ const browser = await launch();
 // A downloading card (P4.FU1, P4.FU6): the amber bar at the poster's bottom, whose length is the percentage (the figure is the
 // disc's tooltip), and the download disc top right.
 const cardPercent = page => page.evaluate(name => {
-    const card = [...document.querySelectorAll('.card')].find(node => (node.textContent ?? '').includes(name));
-    const fill = card?.querySelector('.jfmod-dlCardBar .jfmod-dlBar-fill');
-    const arrow = card?.querySelector('.jfmod-dlmark');
+    const card = [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].find(node => (node.textContent ?? '').includes(name));
+    const fill = card?.querySelector(":is(.jfmod-dlCardBar, [data-ds-progress]) :is(.jfmod-dlBar-fill, [data-ds-progress] > i)");
+    const arrow = card?.querySelector(":is(.jfmod-dlmark, [data-ds-download])");
     return { found: !!card, inFlight: !!fill && !!arrow, text: fill ? Math.floor(parseFloat(fill.style.width)) + '%' : null,
-        cards: document.querySelectorAll('.card').length };
+        cards: document.querySelectorAll(":is(.card:not(.dm), .cell)").length };
 }, title);
 const queuePercent = page => page.evaluate(name => {
     const rows = [...document.querySelectorAll('.jfmod-queueRow, .jfmod-queueTableRow')];
@@ -39,7 +39,7 @@ for (const layout of layouts) {
         await page.evaluate(id => { location.hash = '#/movies?topParentId=' + id; }, libraryId);
         // Wait for the Movies route itself (Home also shows the card in Recently Added).
         await page.waitForFunction(name => location.hash.startsWith('#/movies')
-            && [...document.querySelectorAll('.card')].some(node => (node.textContent ?? '').includes(name)), title, { timeout: 45000 });
+            && [...document.querySelectorAll(":is(.card:not(.dm), .cell)")].some(node => (node.textContent ?? '').includes(name)), title, { timeout: 45000 });
         await page.waitForTimeout(1500);
         const samples = [];
         for (let i = 0; i < 5; i++) { samples.push(await cardPercent(page)); await page.waitForTimeout(3500); }

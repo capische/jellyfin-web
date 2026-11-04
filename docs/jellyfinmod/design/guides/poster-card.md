@@ -1,5 +1,7 @@
 # Poster card
 
+**dsA (2026-11-04), built, not accepted:** Movies, Shows and Favorites now draw the mockup's own `Cell` markup from `design/Cell.tsx`, scoped copied CSS, and `LibraryItems`/`LibraryToolbar`. The native structure is `.cell > .tile > .post` plus `.capt`; upstream card restyling remains only on surfaces outside this slice. Cast fetching and the page-size-0 blank third slot stay in `LibraryCast`. [CSS exceptions, retained behavior and validation](../dsA.md).
+
 **Status:** approved by the user: rounded posters D214, D225–D226, the hover D216–D218, D227–D229, the disc D248, the grid and caption D260, the light glass
 D258, D259, D262 (workspace `reviews/overnight-2026-10-28/DECISIONS.md`; rulebook [GUIDELINES.md](../GUIDELINES.md) section 5, Cards). Redesign slice 1: **built (not
 accepted)**. Code: `components/cardDesign.scss`, `components/lightGlass.scss`, `components/LibraryCast.tsx`, one class and `LibraryCast` in `libraries/components/ItemsView.tsx`

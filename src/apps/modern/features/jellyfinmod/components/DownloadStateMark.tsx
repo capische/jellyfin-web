@@ -108,7 +108,7 @@ const listening = new WeakSet<HTMLElement>();
  * tooltip the state and then "Open Transmission". `hostTip`: the host draws the tooltip (the Queue page's MUI tooltip and popover,
  * P4.FU28), so the element keeps its name but no native tooltip.
  */
-const paintLink = (element: HTMLElement, title: string, link: DownloadMarkLink | null | undefined, hostTip = false) => {
+export const paintLink = (element: HTMLElement, title: string, link: DownloadMarkLink | null | undefined, hostTip = false) => {
     const tip = (text: string) => {
         if (hostTip) removeAttribute(element, 'title');
         else if (element.title !== text) element.title = text;

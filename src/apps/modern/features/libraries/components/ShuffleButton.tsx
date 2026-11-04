@@ -1,3 +1,4 @@
+import type { ActionRenderer } from '../../jellyfinmod/design/Action';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-by';
 import React, { FC, useCallback } from 'react';
@@ -13,6 +14,7 @@ import { LibraryTab } from 'types/libraryTab';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 interface ShuffleButtonProps {
+    renderButton?: ActionRenderer;
     item: ItemDto | undefined
     items: ItemDto[]
     viewType: LibraryTab
@@ -24,6 +26,7 @@ interface ShuffleButtonProps {
 }
 
 const ShuffleButton: FC<ShuffleButtonProps> = ({
+    renderButton,
     item,
     items,
     viewType,
@@ -59,7 +62,7 @@ const ShuffleButton: FC<ShuffleButtonProps> = ({
     }, [collectionType, hasFilters, item, items, libraryViewSettings, viewType]);
 
     return (
-        <Button
+        renderButton ? renderButton({ onClick: shuffle, disabled: disabled || isPending || totalRecordCount === 0, title: globalize.translate('Shuffle') }) : (<Button
             title={globalize.translate('Shuffle')}
             startIcon={isTextVisible ? <Shuffle /> : undefined}
             onClick={shuffle}
@@ -70,7 +73,7 @@ const ShuffleButton: FC<ShuffleButtonProps> = ({
             ) : (
                 <Shuffle />
             )}
-        </Button>
+        </Button>)
     );
 };
 

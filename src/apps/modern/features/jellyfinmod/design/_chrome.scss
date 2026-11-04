@@ -1,0 +1,107 @@
+/* stylelint-disable -- verbatim approved mockup declarations; selector-only root adaptation. */
+/* Shared by the search and browse mockups: theme tokens, the fonts, the top bar sketch, the card glass, the marks and the
+   add disc. Values from the guides: card glass (12 % bar colour + blur 12px, white ink; light 20 %, dark ink; TV solid black
+   66 %), the Not Downloaded cloud (1.6em glass disc, top right), the round row-action size (2.7816em box, 1.6696em glyph).
+   webOS-safe: no flex gap, no :has, no min()/max(). Fonts are loaded relative to this file. */
+
+
+
+& {
+    --ground: #101010;
+    --paper: #202020;
+    --bar: #202020;
+    --text: #fff;
+    --text-70: rgba(255, 255, 255, 0.7);
+    --primary: #00a4dc;
+    --card-glass-bg: rgba(32, 32, 32, 0.12);
+    --card-glass-filter: blur(12px) saturate(180%) contrast(0.7) brightness(0.85);
+    --card-ink: #fff;
+    --card-track: rgba(255, 255, 255, 0.3);
+    --field-bg: #292929;
+    --hover-fill: rgba(255, 255, 255, 0.08);
+    --divider: rgba(255, 255, 255, 0.12);
+}
+&:not(html)[data-theme='light'] {
+    --ground: #f2f2f2;
+    --paper: #e8e8e8;
+    --bar: #e8e8e8;
+    --text: rgba(0, 0, 0, 0.87);
+    --text-70: rgba(0, 0, 0, 0.87);
+    --card-glass-bg: rgba(232, 232, 232, 0.2);
+    --card-glass-filter: blur(12px) saturate(170%) contrast(0.7) brightness(1.1);
+    --card-ink: rgba(0, 0, 0, 0.87);
+    --card-track: rgba(0, 0, 0, 0.25);
+    --field-bg: #fff;
+    --hover-fill: rgba(0, 0, 0, 0.06);
+    --divider: rgba(0, 0, 0, 0.14);
+}
+&:not(html).layout-mobile { font-size: 14.4px; }
+&:not(html).layout-tv { font-size: 20px; }
+* { box-sizing: border-box; }
+svg { display: block; }
+a { color: inherit; text-decoration: none; }
+@media (min-width: 420px) { }
+
+/* ---- Top bar (a sketch of the existing chrome, not part of the proposal) ---- */
+.bar { height: 3.226em; display: flex; align-items: center; padding: 0 0.6em 0 1.2em; color: var(--text); background: var(--ground); position: relative; z-index: 3; }
+.bar.over { background: transparent; }
+&.layout-tv .bar { height: 4.4em; background: var(--bar); padding: 0 1.6em; }
+&.layout-tv .bar.over { background: transparent; }
+.bar .logo { width: 1.9em; height: 1.9em; border-radius: 50%; background: linear-gradient(135deg, #aa5cc3, #00a4dc); margin-right: 0.5em; }
+.bar .name { font-weight: 700; font-size: 1.05em; margin-right: 1.2em; }
+.bar .nav { display: flex; align-items: center; font-size: 0.95em; font-weight: 700; }
+.bar .nav span { display: flex; align-items: center; margin-right: 1.1em; }
+.bar .nav span.on { color: var(--primary); }
+.bar .nav svg { width: 1.3em; height: 1.3em; fill: currentColor; margin-right: 0.45em; }
+.bar .spacer { flex: 1 1 auto; }
+.bar .icon { width: 1.5em; height: 1.5em; fill: currentColor; margin: 0 0.75em; }
+&.layout-tv .bar .icon { width: 1.6em; height: 1.6em; margin: 0 0.85em; }
+.bar .avatar { width: 2.6em; height: 2.6em; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; margin-left: 0.4em; }
+.bar .avatar svg { width: 1.5em; height: 1.5em; fill: #fff; }
+.bar .tvtitle { font-size: 1.3em; margin-left: 0.9em; }
+.bar .clock { font-size: 1.15em; margin-left: 0.9em; }
+&.layout-mobile .bar .name, &.layout-mobile .bar .logo, &.layout-mobile .bar .nav { display: none; }
+&.layout-mobile .bar .menu { display: block; width: 1.6em; height: 1.6em; fill: currentColor; margin-right: 0.3em; }
+.menu { display: none; }
+
+/* ---- Card glass and the marks ---- */
+.glass { background: var(--card-glass-bg); -webkit-backdrop-filter: var(--card-glass-filter); backdrop-filter: var(--card-glass-filter); color: var(--card-ink); }
+&.layout-tv .glass { background: rgba(0, 0, 0, 0.66); -webkit-backdrop-filter: none; backdrop-filter: none; color: #fff; }
+.mark { position: absolute; top: 0.225em; right: 0.225em; height: 1.6em; min-width: 1.6em; padding: 0 0.3em; border-radius: 0.8em; display: flex; align-items: center; justify-content: center; }
+.mark svg { width: 1em; height: 1em; }
+.mark .num { font-size: 0.72em; font-weight: 600; letter-spacing: 0.01em; margin-left: 0.3em; }
+/* The kind label (series or movie), the Unaired mark's text pill at the poster's top left. */
+.kind { position: absolute; top: 0.225em; left: 0.225em; height: 1.6em; padding: 0 0.55em; border-radius: 0.8em; display: flex; align-items: center; font-size: 1em; }
+.kind span { font-size: 0.68em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; }
+/* The stock count pill (upstream's .cardIndicators) */
+.pill { position: absolute; top: 0.225em; right: 0.225em; height: 1.6em; min-width: 1.6em; padding: 0 0.4em; border-radius: 0.8em; background: var(--primary); color: #fff; font-size: 1em; display: flex; align-items: center; justify-content: center; }
+.pill span { font-size: 0.78em; font-weight: 600; }
+.pill.after { right: 2.1em; }
+
+/* ---- The add action: the glass disc at the row-action size, centred on the poster ---- */
+.add { font: inherit; font-size: 1em; position: absolute; left: 50%; top: 50%; width: 2.7816em; height: 2.7816em; margin: -1.3908em 0 0 -1.3908em; border: 0; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s ease; }
+.add:hover { transform: scale(1.08); }
+.add:active { transform: scale(0.96); }
+.add:focus { outline: none; }
+.add:focus-visible { box-shadow: 0 0 0 0.15em var(--primary); }
+.add svg.glyph { width: 1.6696em; height: 1.6696em; }
+.add .arc { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.add .arc circle { fill: none; stroke-width: 2.2; }
+.add .arc .track { stroke: var(--card-track); }
+.add .arc .seg { stroke: var(--card-ink); stroke-linecap: round; stroke-dasharray: 28 72; display: none; transform-origin: 50% 50%; }
+&.layout-tv .add .arc .seg { stroke: #fff; }
+.adding .arc .seg { display: block; animation: jfds-spin 1.2s linear infinite; }
+.adding .add { cursor: default; }
+@keyframes jfds-spin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+@media (prefers-reduced-motion: reduce) { .adding .arc .seg { animation: none; } }
+
+/* ---- Buttons (three kinds, the size of Save) ---- */
+.btn { font: inherit; font-size: 0.9em; font-weight: 600; border: 0; border-radius: 0.2em; padding: 0.6em 1.2em; background: #444; color: #fff; cursor: pointer; display: inline-flex; align-items: center; }
+.btn svg { width: 1.3em; height: 1.3em; fill: currentColor; margin-right: 0.45em; }
+.btn.main { background: var(--primary); color: #fff; }
+.btn.destroy { background: #c62828; color: #fff; }
+&:not(html)[data-theme='light'] .btn { background: #d0d0d0; color: rgba(0, 0, 0, 0.87); }
+&:not(html)[data-theme='light'] .btn.main { background: var(--primary); color: #fff; }
+&.layout-tv .btn.tvfocus { transform: scale(1.2); transform-origin: left center; }
+.flat { font: inherit; font-size: 0.9em; font-weight: 600; color: var(--primary); cursor: pointer; padding: 0.35em 0.5em; border-radius: 0.2em; display: inline-flex; align-items: center; }
+.flat:hover { background: var(--hover-fill); }

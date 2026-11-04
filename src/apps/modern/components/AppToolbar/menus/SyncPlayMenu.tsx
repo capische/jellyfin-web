@@ -1,3 +1,4 @@
+import { ListItem, Menu, MenuItem, ListItemIcon, ListItemText, ListSubheader, Divider } from 'apps/modern/features/jellyfinmod/design/MenuPresentation';
 import { SyncPlayUserAccessType } from '@jellyfin/sdk/lib/generated-client/models/sync-play-user-access-type';
 import type { ApiClient } from 'jellyfin-apiclient';
 import GroupAdd from '@mui/icons-material/GroupAdd';
@@ -7,13 +8,7 @@ import PersonRemove from '@mui/icons-material/PersonRemove';
 import PlayCircle from '@mui/icons-material/PlayCircle';
 import StopCircle from '@mui/icons-material/StopCircle';
 import Tune from '@mui/icons-material/Tune';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import ListSubheader from '@mui/material/ListSubheader';
-import Menu, { MenuProps } from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
+import type { MenuProps } from '@mui/material/Menu';
 import React, { FC, useCallback, useEffect, useState } from 'react';
 
 import SyncPlayGroupListItem from 'apps/modern/features/syncPlay/components/SyncPlayGroupListItem';
@@ -124,7 +119,7 @@ const SyncPlayMenu: FC<SyncPlayMenuProps> = ({
                     key='sync-play-start-playback'
                     onClick={onStartGroupPlaybackClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='play'>
                         <PlayCircle />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('LabelSyncPlayResumePlayback')} />
@@ -136,7 +131,7 @@ const SyncPlayMenu: FC<SyncPlayMenuProps> = ({
                     key='sync-play-stop-playback'
                     onClick={onStopGroupPlaybackClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='pause'>
                         <StopCircle />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('LabelSyncPlayHaltPlayback')} />
@@ -149,7 +144,7 @@ const SyncPlayMenu: FC<SyncPlayMenuProps> = ({
                 key='sync-play-settings'
                 onClick={onGroupSettingsClick}
             >
-                <ListItemIcon>
+                <ListItemIcon icon='gear'>
                     <Tune />
                 </ListItemIcon>
                 <ListItemText
@@ -160,7 +155,7 @@ const SyncPlayMenu: FC<SyncPlayMenuProps> = ({
     } else if (!groups?.length && user?.Policy?.SyncPlayAccess !== SyncPlayUserAccessType.CreateAndJoinGroups) {
         menuItems.push(
             <MenuItem key='sync-play-unavailable' disabled>
-                <ListItemIcon>
+                <ListItemIcon icon='person'>
                     <PersonOff />
                 </ListItemIcon>
                 <ListItemText primary={globalize.translate('LabelSyncPlayNoGroups')} />
@@ -194,7 +189,7 @@ const SyncPlayMenu: FC<SyncPlayMenuProps> = ({
                     key='sync-play-new-group'
                     onClick={onGroupAddClick}
                 >
-                    <ListItemIcon>
+                    <ListItemIcon icon='people'>
                         <GroupAdd />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('LabelSyncPlayNewGroupDescription')} />

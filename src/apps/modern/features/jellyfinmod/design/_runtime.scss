@@ -1,0 +1,450 @@
+/* stylelint-disable no-descending-specificity -- runtime adapters follow the source surface order. */
+
+/* Runtime adaptations only; the source recipes stay in the three imported copies. */
+
+.jfds {
+    font-family: jfmod-noto, 'Noto Sans', sans-serif;
+
+    font-size: 14.88px;
+
+    line-height: 1.35;
+
+    color: var(--text-70);
+
+    background: var(--ground);
+
+    &.dev-phone {
+        font-size: 14.4px;
+    }
+
+    &.layout-tv {
+        font-size: 20px;
+    }
+
+    /* Mockup spans become real controls without browser button chrome. */
+
+    .cell,
+    .bar button,
+    .tvbar button,
+    .pi,
+    .disc,
+    .mi,
+    .rail button {
+        font: inherit;
+
+        color: inherit;
+
+        border: 0;
+
+        padding: 0;
+
+        background: none;
+
+        text-align: inherit;
+    }
+
+    .mi {
+        width: 100%;
+
+        padding: 0 1em;
+    }
+
+    .cell {
+        text-decoration: none;
+    }
+
+    .post {
+        overflow: visible;
+    }
+
+    .post::before {
+        border-radius: inherit;
+
+        z-index: 1;
+    }
+
+    .post > img {
+        position: absolute;
+
+        top: 0;
+
+        left: 0;
+
+        width: 100%;
+
+        height: 100%;
+
+        object-fit: cover;
+
+        border-radius: inherit;
+    }
+
+    .post > .fallback {
+        position: absolute;
+
+        top: 50%;
+
+        left: 50%;
+
+        width: 2em;
+
+        height: 2em;
+
+        transform: translate(-50%, -50%);
+    }
+
+    .cell:focus {
+        outline: none;
+    }
+
+    .rowx {
+        display: block;
+
+        overflow-x: auto;
+
+        overflow-y: visible;
+    }
+
+    .grid.itemsContainer {
+        display: block;
+    }
+
+    .ds-rowframe {
+        margin: 0 -1em;
+
+        padding: 0;
+
+        overflow-y: visible;
+    }
+
+    .ds-rowframe .rowx {
+        margin: 0;
+
+        overflow: visible;
+    }
+
+    &.dev-phone .ds-rowframe {
+        margin: 0;
+    }
+
+    .capt .ln {
+        height: 1.618em;
+    }
+
+    .barsearch input {
+        font: inherit;
+
+        color: inherit;
+
+        background: none;
+
+        border: 0;
+
+        padding: 0;
+
+        width: 100%;
+
+        min-width: 0;
+
+        outline: none;
+    }
+
+    .barsearch input::placeholder {
+        color: inherit;
+
+        opacity: 1;
+    }
+
+    .barsearch.typed::after {
+        display: none;
+    }
+
+    .bar .nav a {
+        color: inherit;
+    }
+
+    .bar .menu {
+        display: block;
+    }
+
+    .bar .name {
+        color: inherit;
+    }
+
+    .bar .avatar {
+        background: var(--primary);
+    }
+
+    .tvbar button {
+        display: flex;
+    }
+
+    .bar [tabindex]:focus,
+    .gpill:focus,
+    .rail button:focus {
+        outline: none;
+
+        box-shadow: 0 0 0 0.135em var(--primary);
+    }
+
+    &.layout-tv .tvbar button:focus,
+    &.layout-tv .bar [tabindex]:focus,
+    &.layout-tv .gpill:focus,
+    &.layout-tv .rail button:focus {
+        outline: none;
+
+        box-shadow: 0 0 0 0.236em var(--primary);
+    }
+
+    .libhead > .viewpicker {
+        position: relative;
+    }
+
+    .menuhost {
+        position: relative;
+    }
+
+    .pmenu {
+        max-width: none;
+
+        max-height: 80vh;
+
+        overflow-y: auto;
+    }
+
+    &.dev-phone .pmenu.sheet {
+        position: fixed;
+
+        left: 0;
+
+        right: 0;
+
+        top: auto;
+
+        bottom: 0;
+
+        max-height: 80vh;
+
+        border-radius: 1em 1em 0 0;
+
+        overflow-y: auto;
+    }
+
+    .sdim {
+        position: fixed;
+    }
+
+    .rail button {
+        display: block;
+
+        width: 100%;
+    }
+
+    .pi[aria-pressed='true'] {
+        color: var(--primary);
+    }
+
+    .glassy {
+        background: rgba(0, 0, 0, 0.66);
+
+        color: #fff;
+
+        backdrop-filter: none;
+    }
+
+    @supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+        .glassy {
+            background: var(--card-glass-bg);
+
+            color: var(--card-ink);
+
+            backdrop-filter: var(--card-glass-filter);
+        }
+    }
+
+    &[data-theme='dark'].layout-tv .plain .glassy {
+        background: var(--paper);
+
+        color: var(--text);
+    }
+
+    .post > .disc,
+    .post > .mark,
+    .post > .cmark,
+    .post > .hmenu,
+    .post > .pill2,
+    .post > .prog {
+        z-index: 2;
+    }
+
+    .pill2 ~ .mark,
+    .pill2 ~ .cmark {
+        right: 2.1em;
+    }
+
+    .ds-downloading .post > .mark:not([data-ds-download]) {
+        display: none;
+    }
+
+    .ds-downloading .post > .prog:not([data-ds-progress]) {
+        z-index: 3;
+    }
+
+    .bar.glassbar,
+    .barsearch {
+        background: var(--paper);
+
+        backdrop-filter: none;
+    }
+
+    @supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+        &:not(.layout-tv) .bar.glassbar {
+            background: var(--card-glass-bg);
+
+            backdrop-filter: var(--card-glass-filter);
+        }
+
+        &:not(.layout-tv) .barsearch {
+            background: rgba(255, 255, 255, 0.09);
+
+            backdrop-filter: blur(12px) saturate(180%);
+        }
+
+        &[data-theme='light']:not(.layout-tv) .barsearch {
+            background: rgba(0, 0, 0, 0.06);
+        }
+    }
+
+    &.menuportal {
+        position: relative;
+
+        z-index: var(--jf-zIndex-modal, 1300);
+
+        background: none;
+    }
+
+    &.menuportal .pmenu {
+        margin-top: 0;
+    }
+
+    .pmenu .mi:focus {
+        outline: none;
+
+        box-shadow: inset 0 0 0 0.236em var(--primary);
+    }
+
+    .tx0 small {
+        display: block;
+
+        font-size: 0.854em;
+
+        opacity: 0.7;
+    }
+
+    .dm.card {
+        contain: none;
+    }
+}
+
+/* The host reserves the bar's real height; legacy pages already reserve their header. */
+
+.jfmod-dsLegacyBar {
+    position: fixed;
+
+    top: 0;
+
+    left: 0;
+
+    right: 0;
+
+    z-index: 999;
+}
+
+.layout-tv .jfmod-dsLegacyBar {
+    position: absolute;
+}
+
+.jfmod-libraryGridPage {
+    padding-top: 0;
+}
+
+.jfmod-legacyDs .jfmod-libraryGridPage {
+    padding-top: 3.226em;
+}
+
+.layout-tv .jfmod-legacyDs .jfmod-libraryGridPage {
+    padding-top: 3.85em;
+}
+
+.jfmod-dsAppBar.MuiAppBar-root {
+    background: none;
+
+    box-shadow: none;
+}
+
+.jfds .cb {
+    position: relative;
+}
+
+.jfds .cb input,
+.jfds .sw input {
+    position: absolute;
+
+    top: 0;
+
+    left: 0;
+
+    width: 100%;
+
+    height: 100%;
+
+    opacity: 0;
+
+    margin: 0;
+
+    cursor: pointer;
+}
+
+@media (max-width: 1365px) {
+    .jfds .bar .name {
+        display: none;
+    }
+}
+
+.jfds.barroot {
+    background: transparent;
+
+    &:not(.onart) .bar:not(.glassbar) {
+        background: var(--ground);
+    }
+
+    &.onart .bar,
+    &.onart .tvbar {
+        color: #fff;
+    }
+
+    &.onart::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 6.854em;
+        background: linear-gradient(rgba(0, 0, 0, 0.618), rgba(0, 0, 0, 0));
+        pointer-events: none;
+    }
+}
+
+@supports (backdrop-filter: blur(1px)) and (color: color-mix(in srgb, #000 50%, transparent)) {
+    .jfds:not(.layout-tv) .barsearch:hover {
+        background: rgba(255, 255, 255, 0.14);
+    }
+
+    .jfds[data-theme='light']:not(.layout-tv) .barsearch:hover {
+        background: rgba(0, 0, 0, 0.1);
+    }
+}
+
+.jfds .menuhost > .pmenu {
+    right: 0;
+}

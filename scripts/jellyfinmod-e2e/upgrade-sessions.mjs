@@ -71,7 +71,7 @@ try {
             await page.reload({ waitUntil: 'domcontentloaded' });
             await page.waitForFunction(() => location.hash.startsWith('#/home') && document.documentElement.classList.contains('layout-tv'), undefined, { timeout: 30000 });
         }
-        await page.waitForSelector('.card', { timeout: 30000 });
+        await page.waitForSelector(":is(.card:not(.dm), .cell)", { timeout: 30000 });
         s.oldBundle = await bundleOf(page);
         record(name, 'Session open on Home before the upgrade', !!s.oldBundle, { bundle: s.oldBundle });
         sessions[name] = s;
@@ -91,8 +91,8 @@ try {
         const errorsBefore = s.errors.length;
         if (name === 'desktop') {
             await page.evaluate(() => { location.hash = '#/movies'; });
-            await page.waitForFunction(() => location.hash.startsWith('#/movies') && document.querySelectorAll('.card').length > 0, undefined, { timeout: 45000 });
-            const firstId = await page.evaluate(() => document.querySelector('.card[data-id]')?.getAttribute('data-id'));
+            await page.waitForFunction(() => location.hash.startsWith('#/movies') && document.querySelectorAll(":is(.card:not(.dm), .cell)").length > 0, undefined, { timeout: 45000 });
+            const firstId = await page.evaluate(() => document.querySelector(":is(.card:not(.dm), .cell)[data-id]")?.getAttribute('data-id'));
             await page.evaluate(id => { location.hash = '#/details?id=' + id; }, firstId);
             await page.waitForFunction(() => location.hash.startsWith('#/details') && !!document.querySelector('.detailPagePrimaryContainer, .jfmod-detail, [class*="jfmod-detail"]'), undefined, { timeout: 45000 });
             await page.evaluate(() => { location.hash = '#/search'; });
@@ -121,7 +121,7 @@ try {
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => location.hash.length > 1 && !!document.querySelector('meta[name="jellyfinmod-web"]'), undefined, { timeout: 30000 });
         await page.evaluate(() => { location.hash = '#/home'; });
-        await page.waitForSelector('.card', { timeout: 45000 });
+        await page.waitForSelector(":is(.card:not(.dm), .cell)", { timeout: 45000 });
         const newBundle = await bundleOf(page);
         record(name, 'A full reload runs the new bundle', !!newBundle && newBundle !== s.oldBundle, { from: s.oldBundle, to: newBundle, signedIn: await signedIn(page) });
         if (name === 'tv1080') await page.evaluate(() => localStorage.removeItem('layout'));

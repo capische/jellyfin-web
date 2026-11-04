@@ -93,7 +93,7 @@ const VISIBLE = 'function vis(e){if(!e)return false;const r=e.getBoundingClientR
  * Finds the first visible element matching a CSS selector whose text (or aria-label/title) matches `text`
  * (a regex source, case-insensitive), inside an optional scope selector. Runs in the page.
  */
-const FIND = `${VISIBLE};function find(q){const scopes=q.scope?[...document.querySelectorAll(q.scope)].filter(vis):[document];for(const s of scopes){for(const e of s.querySelectorAll(q.sel)){if(!vis(e))continue;if(q.text){const re=new RegExp(q.text,'i');if(![e.getAttribute('aria-label'),e.getAttribute('title'),e.textContent].some(t=>t&&re.test(t.replace(/\\s+/g,' '))))continue;}if(q.not&&e.matches(q.not))continue;return e;}}return null;}`;
+const FIND = `${VISIBLE};function find(q){const scopes=q.scope?[...document.querySelectorAll(q.scope)].filter(vis):[document];for(const s of scopes){for(const e of s.querySelectorAll(q.sel)){if(!vis(e))continue;if(q.text){const re=new RegExp(q.text,'i');if(![e.getAttribute('aria-label'),(e.getAttribute('title') ?? e.getAttribute('data-tip')),e.textContent].some(t=>t&&re.test(t.replace(/\\s+/g,' '))))continue;}if(q.not&&e.matches(q.not))continue;return e;}}return null;}`;
 
 async function click(page, q, timeout = 15000) {
     const found = await poll(() => page.evaluate(({ q, FIND }) => {
@@ -104,15 +104,15 @@ async function click(page, q, timeout = 15000) {
         // A card's centre carries the desktop hover overlay's Play button: open a card through its title link.
         // A card's centre carries the desktop hover overlay's Play button: open a card through the top-left corner of
         // its image (the overlay's link), and a list item through its text.
-        const isCard = e.matches('.card');
-        const inner = isCard ? e.querySelector('.cardScalable, .cardImageContainer') ?? e : e.matches('.listItem') ? e.querySelector('.listItemBody') ?? e : e;
+        const isCard = e.matches(":is(.card:not(.dm), .cell)");
+        const inner = isCard ? e.querySelector(":is(.cardScalable, .post), :is(.cardImageContainer, .post > img)") ?? e : e.matches('.listItem') ? e.querySelector('.listItemBody') ?? e : e;
         inner.scrollIntoView({ block: 'center', inline: 'center' });
         const r = inner.getBoundingClientRect();
         return isCard ? { ok: true, x: r.left + Math.min(14, r.width / 4), y: r.top + Math.min(14, r.height / 4) } : { ok: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }, { q, FIND }), { timeout });
     if (!found.ok) {
         const why = await page.evaluate(q => {
-            const all = [...document.querySelectorAll((q.scope ? q.scope + ' ' : '') + q.sel.split(', ')[0])];
+            const all = [...document.querySelectorAll(q.scope ? ':is(' + q.scope + ') :is(' + q.sel + ')' : q.sel)];
             const first = all[0];
             const hidden = first?.closest('.hide,[aria-hidden="true"]');
             return { matches: all.length, firstRect: first ? Math.round(first.getBoundingClientRect().width) + 'x' + Math.round(first.getBoundingClientRect().height) : null,
@@ -329,31 +329,31 @@ async function sweepLayout(name) {
     }
 
     const userMenu = async item => {
-        await click(page, { sel: 'button[aria-label="User Menu"]' });
-        await click(page, { sel: '.MuiMenuItem-root', text: `^\\s*${item}\\s*$`, scope: '.MuiPopover-root:not([aria-hidden="true"])' });
+        await click(page, { sel: ":is(button[aria-label=\"User Menu\"], .jfds [aria-label=\"User Menu\"])" });
+        await click(page, { sel: ":is(.MuiMenuItem-root, .pmenu .mi)", text: `^\\s*${item}\\s*$`, scope: ":is(.MuiPopover-root, .pmenu):not([aria-hidden=\"true\"])" });
     };
     const library = async libraryName => {
         if (cfg.mobile) {
-            await click(page, { sel: 'button[aria-label="Open Menu"]' });
+            await click(page, { sel: ":is(button[aria-label=\"Open Menu\"], .jfds [aria-label=\"Open Menu\"])" });
             await click(page, { sel: 'a.MuiListItemButton-root', text: `^\\s*${libraryName}\\s*$`, scope: '.MuiDrawer-root' });
         } else {
-            await click(page, { sel: 'a.MuiButton-root', text: `^\\s*${libraryName}\\s*$`, scope: '.MuiToolbar-root' });
+            await click(page, { sel: ":is(a.MuiButton-root, .jfds .nav a, .jfds a.name)", text: `^\\s*${libraryName}\\s*$`, scope: ":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar)" });
         }
     };
     /** TV: back to Home through the header's Home button, by keys. */
     const tvHome = async () => {
         // Upstream hides the header's Home button on Home itself.
-        if (!await page.evaluate(() => location.hash.startsWith('#/home'))) await activate(page, cfg, { sel: '.headerHomeButton' });
+        if (!await page.evaluate(() => location.hash.startsWith('#/home'))) await activate(page, cfg, { sel: ":is(.headerHomeButton, .tvbar button:is([title=\"Home\"],[data-tip=\"Home\"]))" });
         await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') && !!document.querySelector('.homePage:not(.hide) .sections .verticalSection') })), { timeout: 20000 });
         await sleep(2000);
     };
     const home = async () => {
         if (cfg.tv) return tvHome();
         if (cfg.mobile) {
-            await click(page, { sel: 'button[aria-label="Open Menu"]' });
+            await click(page, { sel: ":is(button[aria-label=\"Open Menu\"], .jfds [aria-label=\"Open Menu\"])" });
             await click(page, { sel: 'a.MuiListItemButton-root', text: '^\\s*Home\\s*$', scope: '.MuiDrawer-root' });
         } else {
-            await click(page, { sel: 'a.MuiButton-root', text: '.', scope: '.MuiToolbar-root' }); // the server name links Home
+            await click(page, { sel: ":is(a.MuiButton-root, .jfds .nav a, .jfds a.name)", text: '.', scope: ":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar)" }); // the server name links Home
         }
         await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') })), { timeout: 15000 });
         await sleep(1500);
@@ -361,14 +361,14 @@ async function sweepLayout(name) {
     /** TV: libraries are the "My Media" cards on Home. */
     const tvLibrary = async libraryName => {
         await tvHome();
-        return activate(page, cfg, { sel: '.card', text: `^\\s*${libraryName}\\s*$`, scope: '.page:not(.hide)' });
+        return activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: `^\\s*${libraryName}\\s*$`, scope: '.page:not(.hide)' });
     };
     const openLibrary = libraryName => (cfg.tv ? tvLibrary(libraryName) : library(libraryName));
     const viewMenu = async tab => {
         await activate(page, cfg, { sel: 'button[aria-controls="library-view-menu"]' });
-        await activate(page, cfg, { sel: '.MuiMenuItem-root', text: `^\\s*${tab}\\s*$`, scope: '#library-view-menu' });
+        await activate(page, cfg, { sel: ":is(.MuiMenuItem-root, .pmenu .mi)", text: `^\\s*${tab}\\s*$`, scope: '#library-view-menu' });
     };
-    const viewTabs = () => page.evaluate(() => [...document.querySelectorAll('#library-view-menu .MuiMenuItem-root')].map(e => e.textContent.trim()));
+    const viewTabs = () => page.evaluate(() => [...document.querySelectorAll("#library-view-menu :is(.MuiMenuItem-root, .pmenu .mi)")].map(e => e.textContent.trim()));
     const back = async () => {
         if (cfg.tv) await press(page, 'Escape');
         else await page.goBack();
@@ -376,13 +376,13 @@ async function sweepLayout(name) {
     };
     /** Opens the preferences menu: the user menu's Settings, or on the TV the header's user button. */
     const prefsMenu = async () => {
-        if (cfg.tv) await activate(page, cfg, { sel: '.headerUserButton' });
+        if (cfg.tv) await activate(page, cfg, { sel: ":is(.headerUserButton, .jfds [aria-label=\"User Menu\"])" });
         else await userMenu('Settings');
         await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('.page:not(.hide) .lnkDisplayPreferences') })), { timeout: 15000 });
     };
 
     const DETAIL = { hash: '^#/details\\?', selector: '#itemDetailPage:not(.hide) .itemName, .page:not(.hide) .detailPagePrimaryContainer h1, .page:not(.hide) .jfmod-entryDetailsRoot h1' };
-    const GRID = '.page:not(.hide) .itemsContainer .card, main .itemsContainer .card, .page:not(.hide) .card, main .card, .page:not(.hide) .noItemsMessage, main .noItemsMessage, main .MuiTypography-root';
+    const GRID = ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell), .page:not(.hide) :is(.card:not(.dm), .cell), main :is(.card:not(.dm), .cell), .page:not(.hide) .noItemsMessage, main .noItemsMessage, main .MuiTypography-root";
 
     // ---- sign in (setup, not a row) and the layout
     await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -405,7 +405,7 @@ async function sweepLayout(name) {
     for (const [libraryName, hashRoute] of [['Movies', 'movies'], ['Shows', 'tv']]) {
         const label = libraryName === 'Movies' ? 'Movies' : 'TV';
         await row(`${label} library`, cfg.tv ? keys + ': Home My Media card' : shell + (cfg.mobile ? ': drawer' : ': toolbar library link'),
-            () => openLibrary(libraryName), { hash: `^#/${hashRoute}\\?`, selector: '.page:not(.hide) .itemsContainer .card, main .itemsContainer .card' });
+            () => openLibrary(libraryName), { hash: `^#/${hashRoute}\\?`, selector: ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell)" });
         let tabs = [];
         try {
             await activate(page, cfg, { sel: 'button[aria-controls="library-view-menu"]' });
@@ -420,13 +420,13 @@ async function sweepLayout(name) {
                 { hash: `^#/${hashRoute}\\?.*tab=${index}(&|$)`, selector: GRID }, { before: 2000 });
         }
         if (tabs.length) await row(`${label} tab: ${tabs[0]}`, (cfg.tv ? keys : shell) + ': library view menu', () => viewMenu(tabs[0]),
-            { hash: `^#/${hashRoute}\\?(?!.*tab=[1-9])`, selector: '.page:not(.hide) .itemsContainer .card, main .itemsContainer .card' }, { before: 2000 });
+            { hash: `^#/${hashRoute}\\?(?!.*tab=[1-9])`, selector: ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell)" }, { before: 2000 });
 
         if (libraryName === 'Movies') {
             await row('Movie detail', (cfg.tv ? keys : shell) + ': first movie card in the grid',
-                () => activate(page, cfg, { sel: '.itemsContainer .card[data-type="Movie"], .itemsContainer .card', scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Movie$' });
+                () => activate(page, cfg, { sel: ".itemsContainer :is(.card:not(.dm), .cell)[data-type=\"Movie\"], .itemsContainer :is(.card:not(.dm), .cell)", scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Movie$' });
             await row('Person detail (Embed)', (cfg.tv ? keys : shell) + ': cast card on the movie detail', async () => {
-                await activate(page, cfg, { sel: '#castContent .card, .peopleSection .card', scope: '#itemDetailPage:not(.hide)' });
+                await activate(page, cfg, { sel: "#castContent :is(.card:not(.dm), .cell), .peopleSection :is(.card:not(.dm), .cell)", scope: '#itemDetailPage:not(.hide)' });
                 await poll(() => page.evaluate(() => ({ ok: /details\?id=/.test(location.hash) })));
                 await sleep(1200);
                 const id = new URLSearchParams((await hash(page)).split('?')[1]).get('id');
@@ -437,14 +437,14 @@ async function sweepLayout(name) {
             await back();
         } else {
             await row('Series detail', (cfg.tv ? keys : shell) + ': the series card in the grid',
-                () => activate(page, cfg, { sel: '.itemsContainer .card', text: '^\\s*' + escapeRe(seriesTitle), scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Series$' });
+                () => activate(page, cfg, { sel: ".itemsContainer :is(.card:not(.dm), .cell)", text: '^\\s*' + escapeRe(seriesTitle), scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Series$' });
             await row('Season detail', (cfg.tv ? keys : shell) + ': first season card on the series',
-                () => activate(page, cfg, { sel: '#childrenContent .card, #childrenContent .listItem', scope: '#itemDetailPage:not(.hide)' }), { ...DETAIL, itemType: '^Season$' });
+                () => activate(page, cfg, { sel: "#childrenContent :is(.card:not(.dm), .cell), #childrenContent .listItem", scope: '#itemDetailPage:not(.hide)' }), { ...DETAIL, itemType: '^Season$' });
             // Upstream's season list gives a desktop row no action of its own (itemDetails passes action 'none' when
             // layoutManager.desktop); there the episode opens from the row's Info button, as a mouse user does.
             const episodeTarget = !cfg.tv && !cfg.mobile ?
                 { sel: '#childrenContent .listItem button[data-action="link"]', scope: '#itemDetailPage:not(.hide)' } :
-                { sel: '#childrenContent .listItem, #childrenContent .card', scope: '#itemDetailPage:not(.hide)' };
+                { sel: "#childrenContent .listItem, #childrenContent :is(.card:not(.dm), .cell)", scope: '#itemDetailPage:not(.hide)' };
             await row('Episode detail', (cfg.tv ? keys : shell) + (!cfg.tv && !cfg.mobile ? ': Info button of the first episode on the season' : ': first episode on the season'),
                 () => activate(page, cfg, episodeTarget), { ...DETAIL, itemType: '^Episode$' });
         }
@@ -454,16 +454,17 @@ async function sweepLayout(name) {
     await row('Search', cfg.tv ? keys + ': header Search button, query typed' : shell + ': toolbar Search', async () => {
         // From Home: inside a library the toolbar's Search is scoped to that library.
         await home();
-        if (cfg.tv) await activate(page, cfg, { sel: '.headerSearchButton' }); else await click(page, { sel: 'a[aria-label="Search"]', scope: '.MuiToolbar-root' });
+        if (cfg.tv) await activate(page, cfg, { sel: ":is(.headerSearchButton, .barsearch input)" }); else await click(page, { sel: 'a[aria-label="Search"], .barsearch input', scope: ":is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar)" });
+        if (!cfg.tv && await page.locator('.barsearch input').count()) await page.locator('.barsearch input').press('Enter');
         await page.waitForSelector('#searchTextInput', { state: 'visible', timeout: 15000 });
         if (cfg.tv) { await seek(page, { sel: '#searchTextInput' }); await page.keyboard.type(playTitle, { delay: 40 }); } else await page.fill('#searchTextInput', playTitle);
-    }, { hash: '^#/search', selector: '.page:not(.hide) .verticalSection:not(.jfmod-discovery) .card, main .verticalSection:not(.jfmod-discovery) .card', text: playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') });
+    }, { hash: '^#/search', selector: ".page:not(.hide) .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell), main .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell)", text: playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') });
 
     const titlePattern = '^\\s*' + playTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let played = null;
     const before = { userData: null };
     await row('Movie detail from search', (cfg.tv ? keys : shell) + ': search result card', async () => {
-        await activate(page, cfg, { sel: '.card', text: titlePattern, scope: '.page:not(.hide) .verticalSection:not(.jfmod-discovery), main .verticalSection:not(.jfmod-discovery)' });
+        await activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: titlePattern, scope: '.page:not(.hide) .verticalSection:not(.jfmod-discovery), main .verticalSection:not(.jfmod-discovery)' });
         await poll(() => page.evaluate(() => ({ ok: /details\?id=/.test(location.hash) })));
         played = new URLSearchParams((await hash(page)).split('?')[1]).get('id');
         before.userData = (await api('GET', `Users/${userId}/Items/${played}`)).body?.UserData ?? null;
@@ -606,12 +607,12 @@ async function sweepLayout(name) {
                 const vis = (0, eval)(`(()=>{${VISIBLE};return vis;})()`);
                 const settled = link => vis(link) && link.getBoundingClientRect().left >= 0;
                 return { link: [...document.querySelectorAll(`a.MuiListItemButton-root[href="${href}"]`)].some(settled),
-                    open: !!document.querySelector('.MuiDrawer-root.MuiModal-root:not([aria-hidden="true"]):not(.MuiModal-hidden)') };
+                    open: !!document.querySelector(".MuiDrawer-root:is(.MuiModal-root, .pmenu):not([aria-hidden=\"true\"]):not(.MuiModal-hidden)") };
             }, { href, VISIBLE });
             for (let attempt = 0; attempt < 3; attempt++) {
                 const now = await drawerState();
                 if (now.link) break;
-                if (!now.open) await click(page, { sel: 'button[aria-label="Open Menu"]' });
+                if (!now.open) await click(page, { sel: ":is(button[aria-label=\"Open Menu\"], .jfds [aria-label=\"Open Menu\"])" });
                 const shown = await poll(async () => ({ ok: (await drawerState()).link }), { timeout: 5000 });
                 if (shown.ok) { await sleep(400); break; }
             }
@@ -621,7 +622,7 @@ async function sweepLayout(name) {
                 const a = document.querySelector(`a.MuiListItemButton-root[href="${h}"]`);
                 const r = a?.getBoundingClientRect();
                 return { rect: r && [Math.round(r.left), Math.round(r.top), Math.round(r.width)], hidden: !!a?.closest('[aria-hidden="true"]'),
-                    modals: [...document.querySelectorAll('.MuiModal-root')].map(m => (String(m.className).match(/Mui(Drawer|Popover|Menu|Dialog)-root/)?.[0] ?? '?') + (m.getAttribute('aria-hidden') === 'true' ? '(aria-hidden)' : '')) };
+                    modals: [...document.querySelectorAll(":is(.MuiModal-root, .pmenu)")].map(m => (String(m.className).match(/Mui(Drawer|Popover|Menu|Dialog)-root/)?.[0] ?? '?') + (m.getAttribute('aria-hidden') === 'true' ? '(aria-hidden)' : '')) };
             }, href)));
         }
         const group = { '#/dashboard/libraries': 'Libraries' }[href];
@@ -635,18 +636,18 @@ async function sweepLayout(name) {
     };
     const DASH = [
         ['Dashboard: General', '#/dashboard/settings', '.MuiTextField-root, form input, form select'],
-        ['Dashboard: Users', '#/dashboard/users', '.card, .MuiCard-root, a[href*="/dashboard/users/profile"]', 'oleksii'],
-        ['Dashboard: Libraries', '#/dashboard/libraries', '.card, .MuiCard-root', 'Movies'],
-        ['Dashboard: Plugins', '#/dashboard/plugins', '.card, .MuiCard-root', 'JellyfinMod'],
+        ['Dashboard: Users', '#/dashboard/users', ":is(.card:not(.dm), .cell), .MuiCard-root, a[href*=\"/dashboard/users/profile\"]", 'oleksii'],
+        ['Dashboard: Libraries', '#/dashboard/libraries', ":is(.card:not(.dm), .cell), .MuiCard-root", 'Movies'],
+        ['Dashboard: Plugins', '#/dashboard/plugins', ":is(.card:not(.dm), .cell), .MuiCard-root", 'JellyfinMod'],
         ['Dashboard: Scheduled tasks', '#/dashboard/tasks', '.MuiListItemText-root, .listItem, .MuiTypography-root', 'Scan Media Library'],
         ['Dashboard: Logs', '#/dashboard/logs', '.MuiListItemText-root, .listItem, a[href*="/dashboard/logs/"], .MuiTypography-root', '\\.log']
     ];
     for (const [label, href, selector, text] of DASH) {
         await row(label, (cfg.tv ? keys : shell) + ': Dashboard navigation', () => openDashboardLink(href),
-            { hash: '^' + href.replace(/[/]/g, '\\/') + '($|\\?)', selector: selector.split(', ').map(s => 'main ' + s).join(', '), text, timeout: 25000 });
+            { hash: '^' + href.replace(/[/]/g, '\\/') + '($|\\?)', selector: 'main :is(' + selector + ')', text, timeout: 25000 });
         if (label === 'Dashboard: Plugins') {
             await row('Dashboard: Plugins → JellyfinMod', (cfg.tv ? keys : shell) + ': plugin card', async () => {
-                await activate(page, cfg, { sel: '.card, .MuiCard-root, a', text: 'JellyfinMod', scope: 'main' });
+                await activate(page, cfg, { sel: ":is(.card:not(.dm), .cell), .MuiCard-root, a", text: 'JellyfinMod', scope: 'main' });
             }, { hash: '^#/dashboard/plugins/[0-9a-f-]{32,}', selector: 'main h1, main h2, main .MuiTypography-root', text: 'JellyfinMod', timeout: 25000 });
             await back();
         }

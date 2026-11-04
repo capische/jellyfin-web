@@ -99,8 +99,8 @@ const NativeEntryCard: FC<EntryCardProps & { nativeItem: ItemDto }> = ({ entry, 
  * Menu key raise `contextmenu`; a `menu` command from the input manager is honoured too. The card stays the one
  * focusable element (UX §5.7).
  */
-const useInFlightMenu = (entry: Entry, pending: boolean) => {
-    const inFlight = !pending && (entry.state === FileState.Grabbed || entry.state === FileState.Downloading);
+export const useInFlightMenu = (entry: Entry | null | undefined, pending: boolean) => {
+    const inFlight = !pending && (entry?.state === FileState.Grabbed || entry?.state === FileState.Downloading);
     const offered = useQueueVisible(inFlight);
     const [node, setNode] = useState<HTMLElement | null>(null);
     const onContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {

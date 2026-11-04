@@ -128,19 +128,19 @@ const seasonsOf = (page, seriesId) => page.evaluate(async id => (await ApiClient
 /** The overlay's bottom-right group of a card, in DOM order, with each button's width, and whether it stays inside the card. */
 const overlayFacts = (page, cardSelector) => page.evaluate(selector => {
     const card = document.querySelector(selector);
-    const group = card?.querySelector('.cardOverlayContainer .cardOverlayButton-br');
+    const group = card?.querySelector(":is(.cardOverlayContainer, .post) :is(.cardOverlayButton-br, .hmenu)");
     if (!group) return null;
-    const box = (card.querySelector('.cardScalable') ?? card).getBoundingClientRect();
+    const box = (card.querySelector(":is(.cardScalable, .post)") ?? card).getBoundingClientRect();
     const buttons = [...group.children].filter(node => getComputedStyle(node).display !== 'none').map(node => {
         let kind = node.getAttribute('data-action') === 'menu' ? 'more' : 'other';
-        if (node.classList.contains('jfmod-cardGet')) kind = 'get';
-        else if (node.matches('[is="emby-ratingbutton"]') || node.querySelector('[data-testid="FavoriteIcon"], .favorite')) kind = 'favorite';
-        else if (node.matches('[is="emby-playstatebutton"]') || node.querySelector('[data-testid="CheckIcon"], .check')) kind = 'played';
+        if (node.dataset.dsAction === 'get' || node.classList.contains('jfmod-cardGet')) kind = 'get';
+        else if (node.dataset.dsAction === 'favorite' || node.matches('[is="emby-ratingbutton"]') || node.querySelector('[data-testid="FavoriteIcon"], .favorite')) kind = 'favorite';
+        else if (node.dataset.dsAction === 'played' || node.matches('[is="emby-playstatebutton"]') || node.querySelector('[data-testid="CheckIcon"], .check')) kind = 'played';
         const rect = node.getBoundingClientRect();
         return { kind, width: Math.round(rect.width * 10) / 10, height: Math.round(rect.height * 10) / 10, top: Math.round(rect.top) };
     });
     const rect = group.getBoundingClientRect();
-    const get = group.querySelector('.jfmod-cardGet');
+    const get = group.querySelector(":is(.jfmod-cardGet, [data-ds-action=\"get\"])");
     // Upstream's own buttons measured again with the icon taken out of the layout: the icon must not change them.
     let without = null;
     if (get) {
@@ -152,8 +152,8 @@ const overlayFacts = (page, cardSelector) => page.evaluate(selector => {
     return {
         order: buttons.map(button => button.kind), buttons, without,
         inside: rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.bottom <= box.bottom + 1,
-        title: get?.getAttribute('title') ?? null, aria: get?.getAttribute('aria-label') ?? null,
-        icon: get?.querySelector('.material-icons')?.classList.contains('cloud_download') ?? false
+        title: (get?.getAttribute('title') ?? get?.getAttribute('data-tip')) ?? null, aria: get?.getAttribute('aria-label') ?? null,
+        icon: !!get?.querySelector('path[d^="M19.35 10.04"], path[d^="M8 13.5H6.6"]') || (get?.querySelector('.material-icons')?.classList.contains('cloud_download') ?? false)
     };
 }, cardSelector);
 
@@ -191,7 +191,7 @@ async function checkOverlay(page, label, what, cardSelector, expectedTitle) {
     const card = page.locator(cardSelector).first();
     await card.scrollIntoViewIfNeeded().catch(() => {});
     await card.hover().catch(() => {});
-    const shown = await page.waitForSelector(`${cardSelector} .jfmod-cardGet:not([hidden])`, { timeout: 10000 }).then(() => true, () => false);
+    const shown = await page.waitForSelector(`${cardSelector} :is(.jfmod-cardGet, [data-ds-action="get"]):not([hidden])`, { timeout: 10000 }).then(() => true, () => false);
     await page.waitForTimeout(400);
     const facts = await overlayFacts(page, cardSelector);
     if (!shown) {
@@ -199,11 +199,11 @@ async function checkOverlay(page, label, what, cardSelector, expectedTitle) {
         return false;
     }
     const play = await page.evaluate(selector => {
-        const button = document.querySelector(`${selector} .cardOverlayContainer > .cardOverlayFab-primary:not(.jfmod-cardGet)`);
+        const button = document.querySelector(`${selector} :is(.cardOverlayContainer, .post) > :is(.cardOverlayFab-primary, .disc):not(:is(.jfmod-cardGet, [data-ds-action="get"]))`);
         return !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0;
     }, cardSelector);
     record(label, `${what}: upstream's Play kept in the centre (the card has a file), the icon not there (P1.FU19)`, play
-        && !await page.locator(`${cardSelector} .cardOverlayContainer > .jfmod-cardGet`).count(), play);
+        && !await page.locator(`${cardSelector} :is(.cardOverlayContainer, .post) > :is(.jfmod-cardGet, [data-ds-action="get"])`).count(), play);
     const iconIndex = facts.order.indexOf('get');
     const upstream = facts.buttons.filter(button => button.kind !== 'get').map(button => button.width);
     const icon = facts.buttons[iconIndex];
@@ -312,29 +312,29 @@ async function run(browser, layout, user, admin) {
 
         // Get a Release on cards: the drama's series page lists its seasons as upstream's cards.
         await go(page, `#/details?id=${facts.drama.id}`);
-        await page.waitForSelector(`${PAGE} #listChildrenCollapsible .card[data-type="Season"]`, { timeout: 30000 });
+        await page.waitForSelector(`${PAGE} #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-type="Season"]`, { timeout: 30000 });
         await page.waitForTimeout(1500);
         const season = dramaSeasons[0];
-        const seasonCard = `${PAGE} #listChildrenCollapsible .card[data-id="${season.id}"]`;
+        const seasonCard = `${PAGE} #listChildrenCollapsible :is(.card:not(.dm), .cell)[data-id="${season.id}"]`;
         const seasonScope = (choices, selected) => selected === `Season ${season.number}`;
         if (layout === 'desktop') {
             if (!admin) {
                 await page.locator(seasonCard).hover().catch(() => {});
                 await page.waitForTimeout(2500);
-                const icons = await page.locator(`${PAGE} .jfmod-cardGet:not([hidden])`).count();
+                const icons = await page.locator(`${PAGE} :is(.jfmod-cardGet, [data-ds-action="get"]):not([hidden])`).count();
                 record(label, 'an ordinary user\'s card overlay has no Get a Release', icons === 0, icons);
             } else if (await checkOverlay(page, label, `Season ${season.number} card`, seasonCard, 'Get a Release')) {
                 await shot('season-card');
                 await checkPicker(page, label, `Season ${season.number} card's Get a Release`,
-                    () => page.locator(`${seasonCard} .jfmod-cardGet`).click(), { heading: 'Get a Release', scope: seasonScope });
+                    () => page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(), { heading: 'Get a Release', scope: seasonScope });
                 // Keyboard: Tab onto the icon shows the cyan ring.
-                await page.locator(`${seasonCard} .jfmod-cardGet`).focus();
+                await page.locator(`${seasonCard} :is(.jfmod-cardGet, [data-ds-action="get"])`).focus();
                 await page.keyboard.press('Shift+Tab');
                 await page.keyboard.press('Tab');
                 await page.waitForTimeout(400);
                 const ring = await page.evaluate(sel => {
                     const active = document.activeElement;
-                    return active?.matches(`${sel} .jfmod-cardGet`) ? getComputedStyle(active).boxShadow : null;
+                    return active?.matches(`${sel} :is(.jfmod-cardGet, [data-ds-action="get"])`) ? getComputedStyle(active).boxShadow : null;
                 }, seasonCard);
                 record(label, 'keyboard focus on the icon draws the cyan ring', !!ring && ring.includes('rgb(0, 164, 220)'), ring);
                 // The overlay's More opens the card's item menu, the same menu a phone's More and the TV's Menu key open.
@@ -344,7 +344,7 @@ async function run(browser, layout, user, admin) {
                 if (menu.opened) await closeDialog(page, '.actionSheet');
             }
         } else {
-            const icons = await page.locator(`${PAGE} .jfmod-cardGet`).count();
+            const icons = await page.locator(`${PAGE} :is(.jfmod-cardGet, [data-ds-action="get"])`).count();
             record(label, 'no hover-overlay icon on this layout', icons === 0, icons);
             // The TV opens any card's menu with the Menu key. On the phone a long press starts upstream's multi-select, so the
             // menu is the card's More button, which upstream draws on library grids but not on a series page's season cards.
@@ -356,9 +356,9 @@ async function run(browser, layout, user, admin) {
                 record(label, `Season ${season.number} card on the phone: upstream draws no More (Play only); its season page has the header icon`, 'NOTE');
                 if (facts.movies) {
                     await go(page, `#/movies?topParentId=${facts.movies}`);
-                    await page.waitForSelector(`${PAGE} .card[data-type="Movie"][data-id] [data-action="menu"]`, { timeout: 30000 }).catch(() => {});
-                    const id = await page.locator(`${PAGE} .card[data-type="Movie"][data-id]`).first().getAttribute('data-id').catch(() => null);
-                    menuCard = id ? `${PAGE} .card[data-type="Movie"][data-id="${id}"]` : null;
+                    await page.waitForSelector(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id] [data-action="menu"]`, { timeout: 30000 }).catch(() => {});
+                    const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id]`).first().getAttribute('data-id').catch(() => null);
+                    menuCard = id ? `${PAGE} :is(.card:not(.dm), .cell)[data-type="Movie"][data-id="${id}"]` : null;
                     what = 'Movie card in the library grid';
                     expected = 'Get Another Quality';
                     scope = null;
@@ -388,30 +388,30 @@ async function run(browser, layout, user, admin) {
             for (const [view, type, path] of [[facts.movies, 'Movie', 'movies'], [facts.shows, 'Series', 'tv']]) {
                 if (!view) { record(label, `a ${type} card in its library grid`, 'NOT VERIFIED', 'no such library'); continue; }
                 await go(page, `#/${path}?topParentId=${view}`);
-                const found = await page.waitForSelector(`${PAGE} .card[data-type="${type}"][data-id] .cardOverlayContainer`, { timeout: 30000 })
+                const found = await page.waitForSelector(`${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id] :is(.cardOverlayContainer, .post)`, { timeout: 30000 })
                     .then(() => true, () => false);
                 if (!found) { record(label, `a ${type} card in its library grid`, 'NOT VERIFIED', 'no card with an overlay'); continue; }
                 await page.waitForTimeout(1000);
-                const id = await page.locator(`${PAGE} .card[data-type="${type}"][data-id]`).first().getAttribute('data-id');
-                const card = `${PAGE} .card[data-type="${type}"][data-id="${id}"]`;
+                const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id]`).first().getAttribute('data-id');
+                const card = `${PAGE} :is(.card:not(.dm), .cell)[data-type="${type}"][data-id="${id}"]`;
                 const expected = type === 'Movie' ? 'Get Another Quality' : 'Get a Release';
                 if (await checkOverlay(page, label, `${type} card`, card, expected)) {
                     await shot(type.toLowerCase() + '-card');
-                    await checkPicker(page, label, `${type} card's ${expected}`, () => page.locator(`${card} .jfmod-cardGet`).click(),
+                    await checkPicker(page, label, `${type} card's ${expected}`, () => page.locator(`${card} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(),
                         { heading: expected, scope: type === 'Series' ? (choices, selected) => selected === 'All Seasons'
                             && !choices.some(option => /S\d+E\d+/.test(option.text)) : null });
                 }
             }
             // Home: an episode card (Next Up, Latest), when the library offers one.
             await go(page, '#/home');
-            const episode = await page.waitForSelector(`${PAGE} .card[data-type="Episode"][data-id] .cardOverlayContainer`, { timeout: 20000 })
+            const episode = await page.waitForSelector(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Episode"][data-id] :is(.cardOverlayContainer, .post)`, { timeout: 20000 })
                 .then(() => true, () => false);
             if (episode) {
                 await page.waitForTimeout(1000);
-                const id = await page.locator(`${PAGE} .card[data-type="Episode"][data-id]`).first().getAttribute('data-id');
-                const card = `${PAGE} .card[data-type="Episode"][data-id="${id}"]`;
+                const id = await page.locator(`${PAGE} :is(.card:not(.dm), .cell)[data-type="Episode"][data-id]`).first().getAttribute('data-id');
+                const card = `${PAGE} :is(.card:not(.dm), .cell)[data-type="Episode"][data-id="${id}"]`;
                 if (await checkOverlay(page, label, 'Episode card on Home', card, 'Get Another Quality')) {
-                    await checkPicker(page, label, 'Episode card\'s Get Another Quality', () => page.locator(`${card} .jfmod-cardGet`).click(),
+                    await checkPicker(page, label, 'Episode card\'s Get Another Quality', () => page.locator(`${card} :is(.jfmod-cardGet, [data-ds-action="get"])`).click(),
                         { heading: 'Get Another Quality', scope: (choices, selected) => /S\d+E\d+/.test(selected ?? '') });
                 }
             } else {

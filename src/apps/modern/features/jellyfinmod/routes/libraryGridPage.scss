@@ -1,21 +1,11 @@
-/* JellyfinMod — the modern library grid in the legacy layouts (P7 TV shell).
- *
- * The modern layout puts the library toolbar in its app bar; here it sits inside the page, under the legacy
- * `.skinHeader`, whose height `.libraryPage` already pads for. The only styling this needs is focus that reads
- * from across a room: MUI shows keyboard focus as a faint tint, and only where the engine supports
- * `:focus-visible`, which older webOS engines do not. Focused controls take upstream's TV focus treatment instead —
- * the primary fill of `.emby-button.show-focus:focus` (`themes/_base/_theme.scss`) — and buttons that are already
- * filled with primary take a ring in the primary text colour, so they do not vanish into their own fill.
- *
- * Additive only: no upstream selector or stylesheet is edited. Sizes are in `em` so the TV's 125% root applies,
- * and every custom-property value is preceded by a plain one because older webOS engines drop a `var()` line.
- */
+/* Retained only for upstream creation/queue toolbars and the saved List view alphabet picker.
+ * Poster grids and their native toolbar use design/design.scss. */
 
 $jfmod-primary: #00a4dc;
 $jfmod-on-primary: #fff;
 
 .layout-tv .jfmod-libraryGridPage {
-    .jfmod-libraryGridToolbar {
+    .upstream-toolbar {
         .MuiButton-text:focus,
         .MuiButton-outlined:focus,
         .MuiIconButton-root:focus {
