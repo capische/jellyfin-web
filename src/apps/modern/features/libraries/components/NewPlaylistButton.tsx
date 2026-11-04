@@ -3,6 +3,7 @@ import PlaylistAdd from '@mui/icons-material/PlaylistAdd';
 import Button from '@mui/material/Button';
 import type { QueryKey } from '@tanstack/react-query';
 
+import type { ActionRenderer } from 'apps/modern/features/jellyfinmod/design/Action';
 import globalize from 'lib/globalize';
 import { useApi } from 'hooks/useApi';
 import { queryClient } from 'utils/query/queryClient';
@@ -10,11 +11,13 @@ import { queryClient } from 'utils/query/queryClient';
 interface NewPlaylistButtonProps {
     isTextVisible: boolean
     queryKey: QueryKey
+    renderButton?: ActionRenderer
 }
 
 const NewPlaylistButton: FC<NewPlaylistButtonProps> = ({
     isTextVisible,
-    queryKey
+    queryKey,
+    renderButton
 }) => {
     const { serverId } = useApi();
 
@@ -36,6 +39,8 @@ const NewPlaylistButton: FC<NewPlaylistButtonProps> = ({
                 console.error('[NewPlaylist] failed to load playlist editor', err);
             });
     }, [ queryKey, serverId ]);
+
+    if (renderButton) return renderButton({ onClick: showPlaylistEditor, title: globalize.translate('NewPlaylist') });
 
     return (
         <Button

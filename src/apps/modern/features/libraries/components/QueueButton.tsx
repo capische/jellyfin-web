@@ -3,6 +3,7 @@ import Button from '@mui/material/Button';
 import Queue from '@mui/icons-material/Queue';
 
 import { playbackManager } from 'components/playback/playbackmanager';
+import type { ActionRenderer } from 'apps/modern/features/jellyfinmod/design/Action';
 import globalize from 'lib/globalize';
 import type { ItemDto } from 'types/base/models/item-dto';
 
@@ -11,13 +12,15 @@ interface QueueButtonProps {
     items: ItemDto[]
     hasFilters: boolean
     isTextVisible: boolean
+    renderButton?: ActionRenderer
 }
 
 const QueueButton: FC<QueueButtonProps> = ({
     item,
     items,
     hasFilters,
-    isTextVisible
+    isTextVisible,
+    renderButton
 }) => {
     const queue = useCallback(() => {
         if (item && !hasFilters) {
@@ -34,6 +37,8 @@ const QueueButton: FC<QueueButtonProps> = ({
             });
         }
     }, [hasFilters, item, items]);
+
+    if (renderButton) return renderButton({ onClick: queue, title: globalize.translate('AddToPlayQueue') });
 
     return (
         <Button

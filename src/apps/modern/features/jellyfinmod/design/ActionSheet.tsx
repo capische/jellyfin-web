@@ -23,6 +23,10 @@ const aliases: Record<string, string> = {
 };
 const paths: Record<string, string> = { ...icons, ...menuIcons, download: menuIcons.down };
 const playerIcons: Record<string, string> = { aspectratio: 'ratio', playbackrate: 'speed', quality: 'hd', repeatmode: 'repeat', suboffset: 'subs', subtitleappearance: 'subs', stats: 'stats' };
+/** The rulebook's Title Case for an entry's words; upstream's strings are sentence case. */
+const titleCase = (text?: string) => text?.replace(/(^|\s)([a-z])(\w*)/g, (all, gap: string, first: string, rest: string) => (
+    /^(a|an|and|at|by|for|from|in|of|on|or|the|to|with)$/.test(first + rest) && gap ? all : gap + first.toUpperCase() + rest));
+
 export const MenuIcon: FC<{ name: string }> = ({ name }) => <svg viewBox='0 0 24 24' aria-hidden='true'><path d={paths[aliases[name] || name] || menuIcons.info} /></svg>;
 
 const Sheet: FC<{ options: Options;
@@ -60,7 +64,7 @@ const Sheet: FC<{ options: Options;
                     }
                 }}>
                 {(item.icon || playerIcons[item.id || '']) && !(item.icon === 'check' && item.selected) && <MenuIcon name={item.icon || playerIcons[item.id || '']} />}
-                <span className='tx0'>{item.name || item.textContent || item.innerText}{item.secondaryText && <small>{item.secondaryText}</small>}</span>
+                <span className='tx0'>{titleCase(item.name || item.textContent || item.innerText)}{item.secondaryText && <small>{item.secondaryText}</small>}</span>
                 {item.asideText && <span className='sub'>{item.asideText}</span>}
                 {['aspectratio', 'playbackrate', 'quality', 'repeatmode'].includes(item.id || '') && <Icon name='right' className='nx' />}
             </div>)}
