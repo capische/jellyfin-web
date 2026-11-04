@@ -1,4 +1,6 @@
 import React, { type FC, useCallback, useEffect, useState } from 'react';
+import focusManager from 'components/focusManager';
+import layoutManager from 'components/layoutManager';
 import { Button, Select } from './Controls';
 import { Icon, type IconName } from './Icon';
 import { Root } from './Root';
@@ -119,6 +121,12 @@ export const PrefsPage: FC<{ view: HTMLElement }> = ({ view }) => {
         const timer = window.setInterval(refresh, 500);
         return () => window.clearInterval(timer);
     }, [refresh]);
+    useEffect(() => {
+        // The TV starts on the first control, as the mockup's focus state does.
+        if (!layoutManager.tv) return;
+        const first = view.querySelector<HTMLElement>('.jfmod-dsPrefsHost .focusable');
+        if (first) focusManager.focus(first);
+    }, [view, parts.length > 0]);
     const isProfile = view.id === 'userProfilePage';
     const hasImage = isProfile && !view.querySelector('#btnDeleteImage')?.classList.contains('hide');
     const image = hasImage ? /url\(["']?(.*?)["']?\)/.exec((view.querySelector<HTMLElement>('#image')?.style.backgroundImage) ?? '')?.[1] : undefined;
