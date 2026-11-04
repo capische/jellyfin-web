@@ -90,7 +90,7 @@ async function open(browser, layout, theme, hash) {
         await page.waitForFunction(() => location.hash.startsWith('#/home'), undefined, { timeout: 30000 });
     }
     await page.evaluate(next => { location.hash = next; }, hash);
-    await page.waitForSelector(hash.includes('settings') ? '.jfmod-check-section[data-section="trakt"]' : '.jfmod-homeHero', { timeout: 30000 });
+    await page.waitForSelector(hash.includes('settings') ? '.jfmod-check-section[data-section="trakt"]' : '.hero2', { timeout: 30000 });
     await page.waitForTimeout(2500);
     if (theme !== 'dark') await page.evaluate(id => document.documentElement.setAttribute('data-theme', id), theme);
     await page.waitForTimeout(400);
@@ -379,7 +379,7 @@ try {
                     await home.page.waitForTimeout(600);
                     await home.page.screenshot({ path: join(out, `home-${state}-${layout}.png`) });
                     const notice = await home.page.evaluate(() => {
-                        const node = document.querySelector('.jfmod-traktNoticeMount .jfmod-notice');
+                        const node = document.querySelector('.jfmod-traktNoticeMount [data-ds-notice=trakt]');
                         return node ? { text: node.innerText, overflow: document.scrollingElement.scrollWidth - window.innerWidth } : null;
                     });
                     verify(where, state === 'reconnect' ? 'Home notice shown under the hero' : 'no Home notice', state === 'reconnect' ? !!notice && /Trakt stopped receiving/.test(notice.text) && notice.overflow <= 1 : !notice,

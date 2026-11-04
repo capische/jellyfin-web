@@ -43,13 +43,6 @@ html.jfmod-chrome {
         font-family: var(--jfmod-chrome-font);
     }
 
-    .jfmod-homeHeroContent,
-    .jfmod-homeHeroContent h1,
-    .jfmod-homeHeroContent p,
-    .jfmod-searchResults .sectionTitle {
-        font-family: var(--jfmod-chrome-font);
-    }
-
     .sectionTitle,
     .MuiDialogTitle-root,
     .dialog h1,
@@ -543,17 +536,10 @@ html.jfmod-chrome {
         font-size: 0.854em;
     }
 
-    .page h1 {
+    .page:not(.jfmod-dsPage) h1 {
         font-size: 1.618em;
         font-weight: 600;
     }
-
-    .jfmod-homeHeroContent h1 {
-        font-size: 2.618em;
-        font-weight: 600;
-    }
-    .jfmod-homeHeroContent p { line-height: 1.618; }
-    .jfmod-homeHeroContent .emby-button { font-family: var(--jfmod-chrome-font); }
 
     /* Existing row contents and actions stay in place; settings pages gain no new copy in this slice. */
     .userPreferencesPage .listItem {
@@ -827,8 +813,6 @@ html.jfmod-chrome:not(.layout-tv) .jfmod-removeDialog .jfmod-removeChoice:not(.b
         }
     }
 }
-
-html.jfmod-chrome.layout-mobile .jfmod-homeHeroContent h1 { font-size: 1.618em; }
 
 /* The player menus follow the same paper recipe in both themes. */
 html.jfmod-chrome.jfmod-chromePlayer {

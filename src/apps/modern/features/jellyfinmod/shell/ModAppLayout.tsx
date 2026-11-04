@@ -84,6 +84,7 @@ const ModAppLayout: FC = () => {
         <ChromeTheme enabled={chromeEnabled}>
             <LibraryProvider>
                 <Box
+                    className={location.pathname === '/home' && !location.search.includes('tab=1') ? 'jfmod-dsHomeShell' : undefined}
                     sx={{
                         position: 'relative',
                         display: 'flex',
@@ -92,15 +93,15 @@ const ModAppLayout: FC = () => {
                     }}
                 >
                     <StrictMode>
-                        {/* On every page the bar is frosted glass once upstream turns it solid on scroll (homeChrome.scss). */}
-                        <OffsetAppBar dense className={chromeEnabled ? 'jfmod-dsAppBar' : 'jfmod-homeAppBar'}>
+                        {/* The native bar supplies the approved scrolled glass. */}
+                        {location.pathname !== '/login' && <OffsetAppBar dense className={chromeEnabled ? 'jfmod-dsAppBar' : 'jfmod-homeAppBar'}>
                             <ModToolbar
                                 isDrawerAvailable={!isMediumScreen && isDrawerAvailable}
                                 isDrawerOpen={isDrawerOpen}
                                 onDrawerButtonClick={onToggleDrawer}
                             />
                             {isLibraryPath(location.pathname) && !['/movies', '/tv'].includes(location.pathname) && <LibraryToolbar />}
-                        </OffsetAppBar>
+                        </OffsetAppBar>}
 
                         {isDrawerAvailable && (
                             <AppDrawer

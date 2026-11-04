@@ -354,20 +354,20 @@ const goHome = async page => {
 
 /** What the hero shows, how big it is, and the first card of Continue watching. */
 const heroState = page => page.evaluate(() => {
-    const hero = document.querySelector('.jfmod-homeHero');
+    const hero = document.querySelector('.hero2');
     if (!hero) return null;
     const box = hero.getBoundingClientRect();
-    const sections = [...document.querySelectorAll('.verticalSection')].filter(section => section.querySelector('.sectionTitle')?.textContent?.trim() === 'Continue Watching');
+    const sections = [...document.querySelectorAll('.verticalSection, .sect')].filter(section => section.querySelector('.sectionTitle, .rowt')?.textContent?.trim() === 'Continue Watching');
     const cards = [...sections[0]?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []].map(card => card.getAttribute('data-id'));
-    const url = /url\("?(.*?)"?\)/.exec(hero.style.backgroundImage)?.[1];
+    const url = /url\("?(.*?)"?\)/.exec(hero.querySelector('.pic').style.backgroundImage)?.[1];
     return {
         title: hero.querySelector('h1')?.textContent ?? null,
-        episode: hero.querySelector('.jfmod-homeHeroEpisode')?.textContent ?? null,
-        overview: hero.querySelector('.jfmod-homeHeroContent > p')?.textContent?.slice(0, 80) ?? null,
+        episode: hero.querySelector('[data-jfmod-hero-episode]')?.textContent ?? null,
+        overview: hero.querySelector('.herotext > p')?.textContent?.slice(0, 80) ?? null,
         backdropItem: url ? /Items\/([0-9a-f]+)\//.exec(url)?.[1] : null,
-        backdropPosition: getComputedStyle(hero).backgroundPosition,
-        more: hero.querySelector('.jfmod-homeHeroActions a')?.getAttribute('href'),
-        heroId: /[?&]id=([0-9a-f]+)/.exec(hero.querySelector('.jfmod-homeHeroActions a')?.getAttribute('href') ?? '')?.[1] ?? null,
+        backdropPosition: getComputedStyle(hero.querySelector('.pic')).backgroundPosition,
+        more: hero.getAttribute('data-jfmod-detail-href'),
+        heroId: /[?&]id=([0-9a-f]+)/.exec(hero.getAttribute('data-jfmod-detail-href') ?? '')?.[1] ?? null,
         box: { top: Math.round(box.top), width: Math.round(box.width), height: Math.round(box.height) },
         viewport: { width: window.innerWidth, height: window.innerHeight },
         firstCardId: cards[0] ?? null,
@@ -462,9 +462,9 @@ const playFromDetails = async (page, id) => {
 const clickHeroPlay = async (page, expectedId) => {
     // Checked and pressed in one task in the page, so the hero cannot change between the check and the press.
     const shown = await page.evaluate(expected => {
-        const hero = document.querySelector('.jfmod-homeHero');
-        const id = /[?&]id=([0-9a-f]+)/.exec(hero?.querySelector('.jfmod-homeHeroActions a')?.getAttribute('href') ?? '')?.[1] ?? null;
-        if (id === expected) hero.querySelector('.jfmod-homeHeroActions .button-submit').click();
+        const hero = document.querySelector('.hero2');
+        const id = /[?&]id=([0-9a-f]+)/.exec(hero?.getAttribute('data-jfmod-detail-href') ?? '')?.[1] ?? null;
+        if (id === expected) hero.querySelector('.hero2 .actbar .play').click();
         return { id, title: hero?.querySelector('h1')?.textContent ?? null };
     }, expectedId);
     if (shown.id !== expectedId) throw new Error(`the hero shows ${shown.id} (${shown.title}), not the expected ${expectedId}; Play not pressed`);
@@ -731,7 +731,7 @@ try {
                 await page.reload({ waitUntil: 'domcontentloaded' });
                 const hero = await waitHero(page, state => !!state.heroId && !!state.firstCardId, `the hero with ${hide} hidden`);
                 const rowIds = await page.evaluate(() => {
-                    const section = [...document.querySelectorAll('.verticalSection')].find(node => node.querySelector('.sectionTitle')?.textContent?.trim() === 'Continue Watching');
+                    const section = [...document.querySelectorAll('.verticalSection, .sect')].find(node => node.querySelector('.sectionTitle, .rowt')?.textContent?.trim() === 'Continue Watching');
                     return [...section?.querySelectorAll(":is(.card:not(.dm), .cell)[data-id]") ?? []].map(card => card.getAttribute('data-id'));
                 });
                 const foreign = rowIds.filter(id => !keptIds.has(id));
@@ -775,14 +775,14 @@ const LAYOUTS = [
     { name: 'tv-1280', viewport: { width: 1280, height: 720 }, tv: true }
 ];
 // The hero's rules before this change (P7.S6 2026-09-21), restored inside the page for the "before" capture only.
-const OLD_HERO_CSS = '.jfmod-homeHero.jfmod-homeHero.jfmod-homeHero { height: auto !important; max-height: none !important; background-position: center 20% !important; }'
-    + ' .layout-mobile .jfmod-homeHero.jfmod-homeHero.jfmod-homeHero { min-height: 29em !important; }'
-    + ' .layout-mobile .jfmod-homeHeroContent.jfmod-homeHeroContent { padding-bottom: 3.5em !important; }'
-    + ' .layout-mobile .jfmod-homeHeroContent.jfmod-homeHeroContent p { -webkit-line-clamp: 3 !important; }';
+const OLD_HERO_CSS = '.hero2.hero2.hero2 { height: auto !important; max-height: none !important; background-position: center 20% !important; }'
+    + ' .layout-mobile .hero2.hero2.hero2 { min-height: 29em !important; }'
+    + ' .layout-mobile .herotext.herotext { padding-bottom: 3.5em !important; }'
+    + ' .layout-mobile .herotext.herotext p { -webkit-line-clamp: 3 !important; }';
 
 const measure = page => page.evaluate(async () => {
-    const element = document.querySelector('.jfmod-homeHero');
-    const url = /url\("?(.*?)"?\)/.exec(element.style.backgroundImage)?.[1];
+    const element = document.querySelector('.hero2');
+    const url = /url\("?(.*?)"?\)/.exec(element.querySelector('.pic').style.backgroundImage)?.[1];
     const image = new Image();
     image.src = url;
     await image.decode();
@@ -800,10 +800,10 @@ const measure = page => page.evaluate(async () => {
         rootFontPx: parseFloat(getComputedStyle(document.documentElement).fontSize),
         heroFontPx: parseFloat(getComputedStyle(element).fontSize),
         layoutClass: ['layout-tv', 'layout-mobile', 'layout-desktop'].find(name => document.documentElement.classList.contains(name)),
-        backdropPosition: getComputedStyle(element).backgroundPosition,
-        titleOnScreen: visible('#jfmod-homeHero-title'), playOnScreen: visible('.jfmod-homeHeroActions .button-submit'),
+        backdropPosition: getComputedStyle(element.querySelector('.pic')).backgroundPosition,
+        titleOnScreen: visible('#jfmod-homeHero-title'), playOnScreen: visible('.hero2 .actbar .play'),
         // Inside the hero's own box, whatever sits above the hero on the page.
-        contentInHero: ['#jfmod-homeHero-title', '.jfmod-homeHeroActions .button-submit'].every(selector => {
+        contentInHero: ['#jfmod-homeHero-title', '.hero2 .actbar .play'].every(selector => {
             const rect = document.querySelector(selector)?.getBoundingClientRect();
             return rect ? rect.top >= box.top && rect.bottom <= box.bottom : false;
         })
@@ -823,17 +823,15 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         const hero = await waitHero(layoutPage);
         await layoutPage.waitForTimeout(2000);
         const after = await measure(layoutPage);
-        // The rules, worked by hand: height = ratio × width, capped at 80vh, floored at the layout's em minimum (none on
-        // a phone on its side), plus the 3em top padding the box carries under the top bar.
-        const rule = layout.tv ? { ratio: 0.435, floorEm: 37 } : layout.extra?.isMobile ?
-            { ratio: 0.5625, floorEm: layout.viewport.height <= 480 ? 0 : 29 } : { ratio: 0.435, floorEm: 34 };
-        const font = after.heroFontPx;
-        const expectedHeight = Math.max(rule.floorEm * font, Math.min(rule.ratio * layout.viewport.width, 0.8 * layout.viewport.height)) + 3 * font;
-        record(`d ${layout.name}`, 'Hero height is the width rule (within 2 px)', Math.abs(after.height - expectedHeight) <= 2,
-            { height: after.height, expected: Math.round(expectedHeight), rule });
+        // ds.js Home: viewport height × φ⁻¹, with the source's short-screen 2φ⁻² exception.
+        const rule = layout.viewport.height <= 720 ? 0.764 : 0.618;
+        const expectedHeight = Math.round(layout.viewport.height * rule);
+        record(`d ${layout.name}`, 'Hero height matches the approved mockup (within 2 px)', Math.abs(after.height - expectedHeight) <= 2,
+            { height: after.height, expected: expectedHeight, rule });
         if (!layout.tv && !layout.extra?.isMobile) {
-            record(`d ${layout.name}`, 'Desktop shows at least three quarters of the backdrop\'s height', after.shownHeightFraction >= 0.75,
-                { shownHeightFraction: after.shownHeightFraction });
+            const expectedCrop = expectedHeight / Math.max(after.width, expectedHeight * 16 / 9) * 16 / 9;
+            record(`d ${layout.name}`, 'Desktop backdrop crop matches the approved 16:9 source', Math.abs(after.shownHeightFraction - expectedCrop) <= 0.02,
+                { shownHeightFraction: after.shownHeightFraction, expectedCrop });
         }
         // Desktop and mobile: title and Play sit inside the hero and the hero fits the screen, so at the top of Home they
         // are in view whatever sits above the hero (the plugin's setup banner can, on an instance not yet set up). TV:
@@ -845,7 +843,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         if (layout.tv) {
             const focus = () => layoutPage.evaluate(() => {
                 const active = document.activeElement;
-                return { inHero: !!active?.closest('.jfmod-homeHero'), text: active?.textContent?.trim().slice(0, 30), card: active?.closest(":is(.card:not(.dm), .cell)")?.getAttribute('data-id') ?? null };
+                return { inHero: !!active?.closest('.hero2'), text: active?.textContent?.trim().slice(0, 30), card: active?.closest(":is(.card:not(.dm), .cell)")?.getAttribute('data-id') ?? null };
             });
             const first = await until(async () => { const value = await focus(); return value.inHero ? value : null; }, { timeout: 10000, label: 'TV first focus on the hero' }).catch(() => null);
             record(`d ${layout.name}`, 'TV: first focus is the hero\'s Play', first?.inHero === true && /Play/.test(first?.text ?? ''), first);
@@ -1354,7 +1352,7 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
             if (shown !== theme) throw new Error(`theme ${theme} did not apply (data-theme ${shown})`);
             // The rows' images, which the poster-row case needs, arrive after the hero.
             await glassPage.waitForFunction(() => [...document.querySelectorAll(":is(.cardImageContainer, .post > img)")]
-                .filter(image => !image.closest('.jfmod-homeHero') && (image.tagName === 'IMG' ? image.complete && image.naturalWidth > 0 : getComputedStyle(image).backgroundImage.startsWith('url('))).length >= 6,
+                .filter(image => !image.closest('.hero2') && (image.tagName === 'IMG' ? image.complete && image.naturalWidth > 0 : getComputedStyle(image).backgroundImage.startsWith('url('))).length >= 6,
             undefined, { timeout: 30000 }).catch(() => {});
             // The first poster rows, by the middle of their card images. Each is measured under the bar and the one where
             // the text reads worst counts: a row's average says nothing about the poster under one label.
@@ -1362,7 +1360,7 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                 const middles = [];
                 for (const image of document.querySelectorAll(":is(.cardImageContainer, .post > img)")) {
                     const rect = image.getBoundingClientRect();
-                    if (rect.height < 40 || image.closest('.jfmod-homeHero')) continue;
+                    if (rect.height < 40 || image.closest('.hero2')) continue;
                     const middle = Math.round(rect.top + window.scrollY + rect.height / 2);
                     if (!middles.some(seen => Math.abs(seen - middle) < 20)) middles.push(middle);
                 }

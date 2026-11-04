@@ -171,7 +171,7 @@ async function openPage(path = '#/catalog/settings?section=trakt') {
     }
     await page.evaluate(hash => { location.hash = hash; }, path);
     if (path.includes('settings')) await page.waitForSelector('.jfmod-check-section[data-section="trakt"]', { timeout: 30000 });
-    else await page.waitForSelector('.jfmod-homeHero', { timeout: 30000 });
+    else await page.waitForSelector('.hero2', { timeout: 30000 });
     await page.waitForTimeout(2500);
     return page;
 }
@@ -527,7 +527,7 @@ const steps = {
         const home = await open('#/home');
         const settings = await open('#/catalog/settings?section=trakt');
         try {
-            const noticeShown = () => home.evaluate(() => !!document.querySelector('.jfmod-traktNoticeMount .jfmod-notice'));
+            const noticeShown = () => home.evaluate(() => !!document.querySelector('.jfmod-traktNoticeMount [data-ds-notice=trakt]'));
             const settingsText = () => settings.evaluate(() => document.querySelector('.jfmod-check-section[data-section="trakt"]')?.innerText ?? '');
             verify('refresh', 'linked: no Home notice at first', !await noticeShown());
             await authorize(60);

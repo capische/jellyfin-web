@@ -174,7 +174,7 @@ async function addThenUndo(page, title, delay) {
     // With the log: that many ms after Jellyfin made the item, for the plugin stamps a new stub 2 s after it (PlaceholderItemListener).
     await page.waitForTimeout(delay);
     await undo.click();
-    await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+    await page.waitForFunction(() => !document.querySelector('[data-ds-notice=undo]'), undefined, { timeout: 30000 });
 }
 
 /** Opens the search and presses the card's +; returns its Undo button. */
@@ -185,15 +185,15 @@ async function pressAdd(page, title) {
     await page.evaluate(() => { indexedDB.deleteDatabase('keyval-store'); });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => { try { return !!ApiClient.getCurrentUserId(); } catch { return false; } }, undefined, { timeout: 30000 });
-    await page.waitForFunction(() => document.querySelector('.jfmod-searchGrid')?.getAttribute('aria-busy') === 'false'
-        && document.querySelectorAll('.jfmod-searchCell').length > 0, undefined, { timeout: 45000 });
-    const cell = page.locator(`.jfmod-searchCell[data-jfmod-key="${title.key}"]`);
+    await page.waitForFunction(() => document.querySelector('.grid.searchgrid')?.getAttribute('aria-busy') === 'false'
+        && document.querySelectorAll('.cell[data-jfmod-key]').length > 0, undefined, { timeout: 45000 });
+    const cell = page.locator(`.cell[data-jfmod-key="${title.key}"]`);
     await cell.waitFor({ state: 'attached', timeout: 15000 });
     await cell.scrollIntoViewIfNeeded();
     await cell.hover();
     await page.waitForTimeout(200);
-    await cell.locator('.jfmod-searchAdd').click();
-    const undo = page.locator('.jfmod-searchUndo button');
+    await cell.locator('[data-jfmod-add]').click();
+    const undo = page.locator('[data-ds-notice=undo] button');
     await undo.waitFor({ state: 'visible', timeout: 45000 });
     return undo;
 }
@@ -247,12 +247,12 @@ async function checkLeftBehind(page, title) {
     if (!folder || !items.length) {
         console.log(`note: ${title.title} has no stub on disk or no item here: ${folder ?? 'no folder'}, ${items.length} items`);
         await undo.click();
-        await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+        await page.waitForFunction(() => !document.querySelector('[data-ds-notice=undo]'), undefined, { timeout: 30000 });
         return false;
     }
     rmSync(`${area}/${folder}`, { recursive: true, force: true });
     await undo.click();
-    await page.waitForFunction(() => !document.querySelector('.jfmod-searchUndo'), undefined, { timeout: 30000 });
+    await page.waitForFunction(() => !document.querySelector('[data-ds-notice=undo]'), undefined, { timeout: 30000 });
     await page.waitForTimeout(1000);
     const left = await itemsOf(page, title);
     record(`${title.title}, left behind: the item is there, its stub gone, no entry`, left.length === 1 && !(await entriesOf(page, title)).length, `${left.length} items`);

@@ -19,6 +19,7 @@ import appTheme from 'themes';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
 import HomePage from '../routes/HomePage';
+import SignInPage from '../routes/SignInPage';
 import DetailsPage from '../routes/DetailsPage';
 import LibraryGridPage from '../routes/LibraryGridPage';
 import SearchPage from '../routes/SearchPage';
@@ -107,6 +108,7 @@ const embedUpstreamApp = (routes: RouteObject[]): RouteObject => {
         Component: ModAppLayout,
         children: [
             { Component: ConnectionRequired, children: MOD_ROUTES, ErrorBoundary },
+            { element: <ConnectionRequired level='public' />, children: [{ path: 'login', Component: SignInPage }], ErrorBoundary },
             ...table.children
         ]
     };
@@ -170,7 +172,7 @@ function ModRootLayout() {
         >
             <Backdrop />
             <AppHeader
-                isHidden={layoutManager.modern || isNewLayoutPath}
+                isHidden={layoutManager.modern || isNewLayoutPath || location.pathname === '/login'}
                 isToolbarHidden={!PUBLIC_PATHS.includes(location.pathname) && !location.pathname.startsWith('/catalog/settings')
                     && !(location.pathname === '/home' && !location.search.includes('tab=1'))}
             />

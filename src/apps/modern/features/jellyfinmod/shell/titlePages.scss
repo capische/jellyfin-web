@@ -265,7 +265,6 @@ html.jfmod-chrome .jfmod-titlePage {
         &:hover { background: #fff; }
     }
     .mainDetailButtons > .btnPlay:active { transform: scale(0.96); }
-    .jfmod-browseAdd { margin: 0; }
     .jfmod-entryActions { margin: 0; }
     .jfmod-libraryUndo { margin-bottom: 0.618em; }
     .jfmod-libraryUndo button { margin-left: 0.618em; }
@@ -326,8 +325,6 @@ html.jfmod-chrome .jfmod-titlePage {
     }
 
     .personCard,
-    .jfmod-browseCell-person { width: 8.854em; }
-
     #listChildrenCollapsible .listItem {
         align-items: flex-start;
         padding: 1em;

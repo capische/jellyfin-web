@@ -58,7 +58,7 @@ const describeFocus = page => page.evaluate(() => {
         el.className.split(/\s+/).filter(c => /jfmod|card|btn|emby-tab|headerButton|Hero|listItem|Mui(Button|MenuItem|Accordion|Checkbox|IconButton)/i.test(c)).slice(0, 4).join('.') :
         '';
     const text = (el.getAttribute('aria-label') || (el.getAttribute('title') ?? el.getAttribute('data-tip')) || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    const section = el.closest(":is(.MuiModal-root, .pmenu), :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar), .verticalSection, .jfmod-homeHero, :is(.skinHeader, .jfds .tvbar), .detailPagePrimaryContainer, .detailPageContent, .jfmod-nativeActions, .itemsContainer, .dialog");
+    const section = el.closest('.hero2') || el.closest(":is(.MuiModal-root, .pmenu), :is(.MuiToolbar-root, .libhead, .jfds .bar, .jfds .tvbar), .verticalSection, .hero2, :is(.skinHeader, .jfds .tvbar), .detailPagePrimaryContainer, .detailPageContent, .jfmod-nativeActions, .itemsContainer, .dialog");
     let where = '';
     if (section) {
         const names = section.className.split(/\s+/);
@@ -159,8 +159,8 @@ async function checkHome(page, name, cfg) {
         await page.waitForSelector('.jfmod-homeHeroMount', { timeout: 20000 });
         await page.waitForSelector('#homeTab .sections .verticalSection', { timeout: 20000 });
         const home = await page.evaluate(() => ({
-            hero: !!document.querySelector('.jfmod-homeHero'),
-            sections: [...document.querySelectorAll('#homeTab .sections .verticalSection .sectionTitle')].map(e => e.textContent.trim()).slice(0, 8),
+            hero: !!document.querySelector('.hero2'),
+            sections: [...document.querySelectorAll('#homeTab .sections :is(.verticalSection, .sect) :is(.sectionTitle, .rowt)')].map(e => e.textContent.trim()).slice(0, 8),
             topbar: !!document.querySelector('.jfds .tvbar') || (document.querySelector('.skinHeader')?.className.includes('jfmod-topbar') ?? false)
         }));
         record(name, 'mod Home rendered (hero + sections)', home.hero && home.sections.length > 0, home);
@@ -170,7 +170,7 @@ async function checkHome(page, name, cfg) {
     try {
         await freshHome(page);
         const trail = [await describeFocus(page)];
-        record(name, 'Home first focus is the hero Play', /Play/.test(trail[0]) && /jfmod-homeHero/.test(trail[0]), trail[0]);
+        record(name, 'Home first focus is the hero Play', /Play/.test(trail[0]) && /hero2/.test(trail[0]), trail[0]);
         for (let i = 0; i < 3; i++) { await press(page, 'ArrowDown'); trail.push(await describeFocus(page)); }
         record(name, 'Home d-pad trail (first focus, 3x Down)', !trail.includes('BODY'), trail);
         await press(page, 'ArrowUp');
@@ -238,12 +238,12 @@ async function checkSearch(page, name, cfg) {
         await page.waitForSelector('.page:not(.hide) .jfmod-discovery', { timeout: 20000 });
         // The discovery zone shows skeletons from the first keystroke; wait (bounded) for real, focusable results in
         // either zone before driving the D-pad, or Down has nothing to land on while TMDB is still answering.
-        await page.waitForSelector(".page:not(.hide) .jfmod-discovery button, .page:not(.hide) .verticalSection:not(.jfmod-discovery) :is(.card:not(.dm), .cell)", { timeout: 20000 });
+        await page.waitForSelector(".page:not(.hide) .jfmod-discovery button, .page:not(.hide) :is(.verticalSection:not(.jfmod-discovery), .sect, .searchgrid) :is(.card:not(.dm), .cell)", { timeout: 20000 });
         await page.waitForTimeout(3000);
         const s = await page.evaluate(() => {
             const pg = document.querySelector('.page:not(.hide)') || document;
             return {
-                zones: [...pg.querySelectorAll('.verticalSection .sectionTitle, .jfmod-discoveryHeading')].map(e => e.textContent.trim()).slice(0, 8),
+                zones: [...pg.querySelectorAll(':is(.verticalSection, .sect) :is(.sectionTitle, .rowt), .jfmod-discoveryHeading')].map(e => e.textContent.trim()).slice(0, 8),
                 marks: pg.querySelectorAll(":is(.jfmod-mark, .mark)").length,
                 focusInField: document.activeElement?.id === 'searchTextInput'
             };

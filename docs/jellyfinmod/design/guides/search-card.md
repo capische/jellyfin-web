@@ -1,5 +1,7 @@
 # Search card
 
+**dsB (2026-11-04), built, not accepted:** `design/SearchCell.tsx`, `Search.tsx`, `BrowsePage.tsx`, `Head.tsx` and `Poster.tsx` draw the approved mockup elements/classes directly. Search has the source 5/4/2 grid, 1em tile padding (phone 0/.618em/1em/0), three fixed caption slots, a computer-only hover/focus + and lazy ratio/fallback images. Page size 0 leaves cast blank. Browse cells/heads/episode rows are native too; ranking, Add, Undo, routes and data remain unchanged. Older restyling below now applies only where explicitly retained. [Full delta and validation](../dsB.md).
+
 **rd3 browse heads (built, not accepted):** the browse title uses the shared art-ground head and blue
 Add to Library pill; original data, routes and Add handler remain. A newly created entry, for an administrator
 only, offers Undo beside the destination head; duplicate/racing adds never arm Undo. It uses the existing
