@@ -388,15 +388,15 @@ async function run(browser, layout) {
         record(label, `Season ${native.number} card: the white 85 % bar at the poster's bottom, ${seasonMean}% (the mean of its episodes on their way), 0.28em`,
             !!season?.bar && season.atBottom && Math.abs(season.percent - seasonMean) <= 1 && season.colour === WHITE && season.barOpacity === '0.85'
             && Math.abs(season.heightEm - 0.28) < 0.03 && season.upstreamBarHidden, season);
-        record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow bobbing, the white arc at ${seasonMean}%`,
+        record(label, `Season ${native.number} card: the 1.6em disc top right, the arrow ${tv ? 'still (the TV has no bob)' : 'bobbing'}, the white arc at ${seasonMean}%`,
             season?.disc?.card && season.disc.kind === 'downloading' && Math.abs(season.disc.sizeEm - 1.6) < 0.05 && season.disc.topRight
-            && season.disc.colour === WHITE && season.disc.arcColour === WHITE && season.disc.glyphAnimation === 'jfmod-dlmarkBob'
+            && season.disc.colour === WHITE && season.disc.arcColour === WHITE && season.disc.glyphAnimation === (tv ? 'none' : 'jfmod-dlmarkBob')
             && Math.abs((season.disc.arc?.percent ?? -1) - seasonMean) <= 1, season?.disc);
         // P4.FU7: the top bar's glass (a tinted ground over a blur) on the computer and the phone, the solid black 66 % on the TV.
         const filter = season?.disc?.backdrop ?? '';
         if (layout === 'tv1080') {
-            record(label, `Season ${native.number} card: the TV's disc is solid black 66 %, no blur`,
-                season?.disc?.background === 'rgba(0, 0, 0, 0.66)' && filter === 'none', season?.disc);
+            record(label, `Season ${native.number} card: the TV's disc is solid, no blur: paper on the plain ground, where black would disappear (D225–D226)`,
+                season?.disc?.background === 'rgb(32, 32, 32)' && filter === 'none', season?.disc);
         } else {
             record(label, `Season ${native.number} card: the disc is the top bar's glass (12 % tint, blur 12px)`,
                 /blur\(12px\)/.test(filter) && /saturate\(1\.8\)/.test(filter) && /contrast\(0\.7\)/.test(filter)
