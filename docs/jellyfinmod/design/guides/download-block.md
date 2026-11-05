@@ -61,7 +61,7 @@ import finishes the panel is replaced by upstream's track rows and Play appears.
 | stalled | 42 % dimmed | Stalled 42% · no progress for 20 min (75 %) | same, bar dimmed | same |
 | queued | clock | Queued waiting to start (75 %) | release, marks, pack (muted) | same |
 | importing | spinner | Importing linking into the library… | release, marks, full bar, still | View Queue |
-| failed | red bang | Failed reason (all red) | release, marks | Search Again · View Queue |
+| failed | grey-glass bang | Failed reason (the words red) | release, marks | Search Again · View Queue |
 | not downloaded | cloud | Not Downloaded | — | Get a Release; others see "no release chosen yet" |
 | unaired | clock, 70 % | Unaired · airs 19 May 2027 · in 7 months | — | — |
 
