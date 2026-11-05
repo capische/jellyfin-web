@@ -2495,3 +2495,28 @@ legacy template is hidden controller state; Play/More/shortcuts, original select
 and playback-start cleanup remain authoritative. Replaced title/picker styles are removed. [Complete CSS and behavior inventory,
 runner list and verification limits](design/dsD.md). No server, environment, plugin, setting, dependency, branch or commit changed.
 Live API/playback/acquisition and physical-device acceptance remain unrun under this task's explicit environment restriction.
+
+## ds.t5–t6 — the redesign's testing round (2026-11-05)
+
+**Built (not accepted).** The whole redesign (rd, dsA–dsF) ran its runners on the local pool, stubs line on bravo and items line
+on charlie, then real Chrome. The user has not seen this round, and physical TVs and phones have not run it. Codex's review
+of the end state and the merge are still to come.
+
+- **Passed:** row arrows (46 px pill, 0 poster overlaps at 1440 and 1280, dark and light); tmdb-browse rows in Chrome (800/0);
+  tv-shell in Chrome (131/0); detail-design (242/0, 65 not verified: no fixture for tracks, packs or a grab); p9-design (123/0,
+  offline); queue-d6 (18/18); queue-state-discs; queue-remove-dialog (including a real delete); episode-retention (39/0);
+  quality-profiles (64/0); card-get-shuffle (59/0); missing-seasons-episodes (19/0); missing-as-media (21/0); placeholder-backfill
+  (45/0); undo-race (9/0); live-play in Chrome (7/0); live-picker and live-queue (0 failed; the indexer link has no fixture); the page sweep on 68 page states in Chrome and Chromium on both lines (no
+  fact differs); the setup wizard against beta (same tree and styles at 1440, phone and TV).
+- **Stale checks rewritten** to prove the same behaviour on the painted DOM; each is in its runner's commit. The product changes
+  they found are in the `fix(design,ds.t5)` and `fix(design,ds.t6)` commits.
+- **Not rewritten:** `card-progress` (64 checks read the pre-redesign mark geometry through the hidden source; its states are
+  proven by queue-state-discs, the picker's real add and reopen, and its screenshots) and `queue-remove-delete` (its dialog class
+  was already gone before the redesign; the delete is proven by queue-remove-dialog).
+- **Not run:** `q16-trakt` (a disposable container and the Trakt plugin), `whole-review-web` (its guard and helper need 28096 on
+  the Pi), `p9-ratings` (its helper needs the Pi's 18096); home-hero's next-up and newest-title steps lack a fixture shape.
+- **Needs the user's look:** the TV bar's Shows and Movies buttons (the mockup has no TV way to the libraries once Home has no My
+  Media row).
+- **Known, not a regression:** on a computer, Tab past a row's right edge scrolls the page sideways; beta does the same.
+- **Also the same as beta:** Dashboard's Libraries and Playback groups are not reached by Down on a TV (focus goes to the user menu
+  and on to Devices), and the Dashboard's plugin page logs a 404 for `/Packages/JellyfinMod` where no plugin repository is set.
