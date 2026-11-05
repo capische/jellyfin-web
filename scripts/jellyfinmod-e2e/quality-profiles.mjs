@@ -402,9 +402,9 @@ async function pickerChecks(page, layout) {
     await page.waitForSelector('.pickerDialog .rels .rel', { timeout: 30000 });
     await page.waitForTimeout(1200);
     const listed = () => page.evaluate(() => ({
-        rows: [...document.querySelectorAll('.pickerDialog .rel')].map(item => item.textContent),
+        rows: [...document.querySelectorAll('.pickerDialog .rel')].map(item => item.dataset.dsReleaseTitle ?? item.textContent),
         profile: document.querySelector('#jfmod-releaseProfile')?.textContent ?? null,
-        rejected: /(\d+) Rejected/.exec(document.querySelector('.pickerDialog')?.textContent ?? '')?.[1] ?? null
+        rejected: /(\d+)\s*Rejected/i.exec(document.querySelector('.pickerDialog .rejt')?.textContent ?? '')?.[1] ?? null
     }));
     const first = await listed();
     const firstQuality = await page.locator('.pickerDialog .rel .rq').first().textContent();
@@ -417,7 +417,7 @@ async function pickerChecks(page, layout) {
     first.options = await pickProfile(page, { name: '1080p' });
     record(layout, '7 the picker\'s profile menu lists "4K (Default)" first and no "Title default"', first.options[0] === '4K (Default)'
         && !first.options.includes('Title default'), first.options);
-    await page.waitForFunction(() => document.querySelector('.pickerDialog .rel')?.textContent.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })
+    await page.waitForFunction(() => document.querySelector('.pickerDialog .rel')?.dataset.dsReleaseTitle.includes('1080p.WEB-DL'), undefined, { timeout: 30000 })
         .catch(() => undefined);
     const second = await listed();
     record(layout, '7 with the 1080p profile chosen, the 1080p row is first and both 4K rows are rejected', at(second, '1080p.WEB-DL') === 0 && second.rows.length === 2 && second.rejected === '2', second);

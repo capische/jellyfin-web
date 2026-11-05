@@ -250,7 +250,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         await page.waitForSelector(`${PAGE} .ep[data-id="${stub.Id}"]`, { timeout: 30000 }).catch(() => {});
         const ring = await waitForValue(page, () => page.evaluate(id => {
             const row = document.querySelector(`.page:not(.hide) .ep[data-id="${id}"]`);
-            return row && row.querySelector('.dm') ? { meta: row.querySelector('.jfmod-dlMeta, .ln2')?.textContent } : null;
+            return row && row.querySelector('.dm') && /%/.test(row.querySelector('.jfmod-dlMeta, .ln2')?.textContent ?? '') ? { meta: row.querySelector('.jfmod-dlMeta, .ln2').textContent } : null;
         }, stub.Id), 20000);
         record(label, 'Season page: the placeholder\'s own row shows its pack episode\'s download (ring and figure)', !!ring && /30%/.test(ring.meta ?? ''), ring);
 
@@ -306,7 +306,8 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         // Search finds the placeholder title once.
         await go(page, `#/search?query=${encodeURIComponent(movieName)}`);
         await page.waitForTimeout(4000);
-        const found = await page.evaluate(id => document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"]`).length, movie.Id);
+        // The search grid draws the title once, by its TMDB id, whichever row it came from.
+        const found = await page.evaluate(([id, tmdb]) => document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell):is([data-id="${id}"], [data-jfmod-tmdb-id="${tmdb}"])`).length, [movie.Id, movie.ProviderIds?.Tmdb ?? movieEntry?.tmdbId]);
         record(label, 'Search: the placeholder movie appears once', found === 1, { found });
 
         if (readOnlyName) await readOnlyChecks(page, label, api);

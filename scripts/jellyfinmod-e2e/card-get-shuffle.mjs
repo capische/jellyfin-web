@@ -133,7 +133,7 @@ const overlayFacts = (page, cardSelector) => page.evaluate(selector => {
     if (!group) return null;
     const box = (card.querySelector(":is(.cardScalable, .post)") ?? card).getBoundingClientRect();
     const buttons = [...group.children].filter(node => getComputedStyle(node).display !== 'none').map(node => {
-        let kind = node.getAttribute('data-action') === 'menu' ? 'more' : 'other';
+        let kind = node.getAttribute('data-action') === 'menu' || node.getAttribute('data-tip') === 'More' ? 'more' : 'other';
         if (node.dataset.dsAction === 'get' || node.classList.contains('jfmod-cardGet')) kind = 'get';
         else if (node.dataset.dsAction === 'favorite' || node.matches('[is="emby-ratingbutton"]') || node.querySelector('[data-testid="FavoriteIcon"], .favorite')) kind = 'favorite';
         else if (node.dataset.dsAction === 'played' || node.matches('[is="emby-playstatebutton"]') || node.querySelector('[data-testid="CheckIcon"], .check')) kind = 'played';
@@ -199,7 +199,7 @@ async function checkOverlay(page, label, what, cardSelector, expectedTitle) {
         return false;
     }
     // The mockup's disc: Play on a card with a file, Get a Release (the same as the pill's icon) on one without.
-    const wantsPlay = expectedTitle === 'Get Another Quality';
+    const wantsPlay = !await card.getAttribute('data-jfmod-nofile').then(value => value !== null);
     const disc = await page.evaluate(selector => {
         const button = document.querySelector(`${selector} .post > .disc.hov`);
         return !!button && getComputedStyle(button).display !== 'none' && button.getBoundingClientRect().width > 0 ? button.getAttribute('aria-label') : null;
