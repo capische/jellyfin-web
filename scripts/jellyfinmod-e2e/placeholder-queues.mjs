@@ -215,7 +215,7 @@ async function apiChecks(admin, tagged, noAccess, world) {
     record(label, 'limit=1 with startIndex 0 and 1: one item each, together both replacements, the total 2 on both pages',
         pageOne?.Items.length === 1 && pageTwo?.Items.length === 1 && wanted.every(id => paged.includes(id))
             && pageOne.TotalRecordCount === answer?.TotalRecordCount && pageTwo.TotalRecordCount === answer?.TotalRecordCount,
-        { one: names(pageOne?.Items), two: names(pageTwo?.Items), totals: [pageOne?.TotalRecordCount, pageTwo?.TotalRecordCount] });
+        { one: names(pageOne?.Items), two: names(pageTwo?.Items), totals: [pageOne?.TotalRecordCount, pageTwo?.TotalRecordCount], all: answer?.TotalRecordCount, allItems: names(answer?.Items) });
     answer = await nextUp(admin, '&limit=50&enableTotalRecordCount=false');
     record(label, 'enableTotalRecordCount=false: the same items, no placeholder', !hasStub(answer?.Items)
         && wanted.every(id => answer.Items.some(item => norm(item.Id) === id)), { items: names(answer?.Items), total: answer?.TotalRecordCount });
