@@ -1449,6 +1449,23 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                 record(step, 'TV after: the header text and icons read at 4.5:1 or better where drawn, at the top of Home and past the old solid point (where any is on screen)',
                     after.top.glyphContrast >= 4.5 && (after.past.controls === 0 || after.past.glyphContrast >= 4.5),
                     { top: after.top.glyphContrast, topWorst: after.top.worstControl, past: after.past.glyphContrast, pastWorst: after.past.worstControl });
+                // The bound holds whatever the hero's art: the hardest art is a white one, whichever title Home happens to lead with.
+                await glassPage.evaluate(() => {
+                    const pic = document.querySelector('.hero2 .pic');
+                    pic.dataset.jfmodArt = pic.style.backgroundImage;
+                    pic.style.backgroundImage = 'none';
+                    pic.style.backgroundColor = '#fff';
+                });
+                await placeBar(glassPage, 'top');
+                const bright = await sampleGlass(glassPage);
+                await glassPage.screenshot({ path: path.join(out, `glass-${layout.name}-${theme}-white-hero.png`), clip });
+                await glassPage.evaluate(() => {
+                    const pic = document.querySelector('.hero2 .pic');
+                    pic.style.backgroundImage = pic.dataset.jfmodArt;
+                    pic.style.backgroundColor = '';
+                });
+                record(step, 'TV after: over a white hero the header text and icons still read at 4.5:1 or better', bright.glyphContrast >= 4.5,
+                    { contrast: bright.glyphContrast, worst: bright.worstControl, controls: bright.controls });
                 // That it no longer fills in is the layout step's check (its computed style); here, for the record, what the
                 // eye gets past the old solid point: the glass against what lies beneath, before and after.
                 record(step, 'TV: past the old solid point, the header against what lies beneath (grey levels)', 'INFO',
