@@ -450,9 +450,9 @@ async function browserChecks(browser, layout, world, flow) {
     for (const [from, expected] of [[aSecond, aSecond], [aStub, expectA]]) {
         await withPage(browser, layout, async (page, seen) => {
             await go(page, `#/details?id=${aStub.SeasonId}`);
-            const row = `${PAGE} #listChildrenCollapsible .listItem[data-id="${norm(from.Id)}"]`;
+            const row = `${PAGE} .jfmod-dsTitleHost .ep[data-id="${norm(from.Id)}"]`;
             await page.waitForSelector(row, { timeout: 30000 }).catch(() => {});
-            const menu = page.locator(`${row} button[data-action="menu"]`).first();
+            const menu = page.locator(`${row} .acts button[aria-label="More"]`).first();
             if (!await menu.isVisible().catch(() => false)) {
                 record(label, `Play All From Here on ${name(from)}'s row`, 'NOT VERIFIED', 'no ⋯ on the row in this layout');
                 return;
@@ -476,7 +476,7 @@ async function browserChecks(browser, layout, world, flow) {
         await withPage(browser, layout, async (page, seen) => {
             await go(page, `#/movies?topParentId=${moviesLibrary}`);
             // The grid's toolbar sits in the app bar, outside the page.
-            await clickButton(page, `button[title="${action}"]:visible`);
+            await clickButton(page, `.libhead button[aria-label="${action}"]:visible`);
             const { first, start } = await playback(seen, action === 'Play All');
             // Play All starts on a movie this browser plays (the .webm sorts first by name), so its start report shows the queue;
             // Shuffle may start on one it cannot play here (H.264 in Chromium), and then only its first PlaybackInfo is seen.

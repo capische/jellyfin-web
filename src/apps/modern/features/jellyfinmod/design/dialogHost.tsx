@@ -73,9 +73,10 @@ export const mountDialog = (host: HTMLElement, children: ReactNode, close: () =>
         // These dialogs close at once: a double press of Back still means one Back.
         setTimeout(() => document.removeEventListener('keydown', key), 200);
         root.unmount();
-        if (previous?.isConnected) focusManager.focus(previous);
-        // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
-        else if (layoutManager.tv) {
+        if (previous?.isConnected) {
+            focusManager.focus(previous);
+        } else if (layoutManager.tv) {
+            // The opener can go while the dialog is open (a grab replaces Get a Release): the D-pad must not fall to the top bar.
             const page = document.querySelector<HTMLElement>('.mainAnimatedPage:not(.hide)');
             const action = page?.querySelector<HTMLElement>('.actbar .focusable');
             if (action) focusManager.focus(action);
