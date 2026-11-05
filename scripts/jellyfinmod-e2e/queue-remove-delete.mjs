@@ -1,22 +1,20 @@
 /* eslint-disable no-restricted-globals -- a Node acceptance runner, not shipped code */
 /* global document, getComputedStyle, localStorage, location, ApiClient */
-// Remove from Queue and Remove the Torrent delete the downloaded files (user-approved copy and red Remove, 2026-10-26;
-// reviews/queue-remove-delete/ in the workspace), in a real browser against a local environment, signed in as oleksii with an
-// empty password.
+// Removing a download deletes its files only when the person chose that (the removal dialog, D118–D124, which replaced the
+// 2026-10-26 checkboxes), in a real browser against a local environment, signed in as oleksii with an empty password.
 //
-// JELLYFINMOD_RD_MODE=matrix (default): INTERCEPTED ANSWERS, NOTHING IS REMOVED. The queue (a downloading movie row, a seeding
-// row and a downloading row for a missing episode) is answered by this runner, and every DELETE of a queue row is stopped
-// before it leaves the browser (and counted: the run fails if there is one). Checks the Remove from Queue dialog for a download
-// not yet imported (the client option's text; Delete the downloaded files hidden until the client option is ticked, then shown,
-// ticked, indented 2.2em with its label under the client option's label; hidden again when unticked) and for a seeding row (the
-// seeding text, never a delete option), and the missing episode's Cancel Download confirmation (the new text, the release name,
-// Remove red at rest and under the pointer). Every dialog is left with Back. Safe on alpha and beta.
+// JELLYFINMOD_RD_MODE=matrix (default): INTERCEPTED ANSWERS, NOTHING IS REMOVED. The queue (a downloading movie row that may delete,
+// one that may not, a seeding row and a downloading row for a missing episode) is answered by this runner, and every DELETE of a queue row
+// is stopped before it leaves the browser (and counted: the run fails if there is one). Checks each dialog's outcomes and their
+// words: the one that deletes files named and red at rest and under the pointer, never offered where the row may not delete or
+// on a seeding row; and the missing episode's Cancel Download, the same dialog with the release name. Every dialog is left by
+// the safe choice or Back. Safe on alpha and beta.
 //
 // JELLYFINMOD_RD_MODE=live: REMOVES FOR REAL, on a pool environment other than alpha and beta (proven by local-env.mjs). With
-// JELLYFINMOD_RD_RELEASE=<release title of a downloading queue row> it removes that row from the Queue page with the client
-// option and Delete the downloaded files ticked; with JELLYFINMOD_RD_PICK_ENTRY=<entry id> and JELLYFINMOD_RD_PICK_TITLE=<raw
-// title> it adds that release in the picker and removes it again with the added row's X. Both check the request sent
-// (removeFromClient and deleteFiles true) and its 200; the files and the client are checked by the caller.
+// JELLYFINMOD_RD_RELEASE=<release title of a downloading queue row> it removes that row from the Queue page with Delete the
+// Download; with JELLYFINMOD_RD_PICK_ENTRY=<entry id> and JELLYFINMOD_RD_PICK_TITLE=<raw title> it adds that release in the picker
+// and removes it again with the added row's X. Both check the request sent (removeFromClient and deleteFiles true) and its 200;
+// the files and the client are checked by the caller.
 //
 //   JELLYFINMOD_LIVE_URL=<local environment>  JELLYFINMOD_LIVE_FIXTURE_FILE=<any 0600 file; none of it is used here>
 //   [JELLYFINMOD_LIVE_LAYOUT=desktop|mobile|tv1080]  [JELLYFINMOD_RD_THEME=dark|light]  [JELLYFINMOD_BROWSER=chromium|chrome]
@@ -33,9 +31,7 @@ const tv = layout.startsWith('tv');
 const shots = process.env.JELLYFINMOD_LIVE_SHOTS ?? '.';
 const label = `remove-delete ${mode} ${layout} ${theme}`;
 const RED = 'rgb(198, 40, 40)';
-const CONFIRM_TEXT = 'Remove this torrent from the download queue? The download stops, the torrent leaves the client and the files it '
-    + 'downloaded are deleted. Files already in your library are not touched.';
-const SEEDING_TEXT = 'The client forgets the torrent and stops seeding. The seeding copy stays on disk; library files are never touched.';
+const HOVER_RED = 'rgb(216, 67, 67)';
 const shot = (page, name) => page.screenshot({ path: `${shots}/remove-delete-${tier}-${layout}-${theme}-${name}.png` }).catch(() => undefined);
 
 const browser = await launch();
@@ -62,6 +58,8 @@ async function useTheme() {
     await page.waitForTimeout(2000);
 }
 
+const DIALOG = '.jfmod-removeDialog';
+
 /** Opens a queue row's menu and picks Remove: the desktop popover, or the action sheet by Enter (TV) or tap (phone). */
 async function openRemove(releaseTitle) {
     await page.evaluate(() => {
@@ -85,49 +83,31 @@ async function openRemove(releaseTitle) {
     } else {
         await item.click();
     }
-    await page.locator('.jfmod-queueRemoveDialog').waitFor({ state: 'visible', timeout: 10000 });
+    await page.locator(DIALOG).waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForTimeout(500);
 }
 
-const dialogState = () => page.evaluate(() => {
-    const dlg = document.querySelector('.jfmod-queueRemoveDialog');
-    const option = dlg.querySelector('.jfmod-queueRemoveDeleteOption');
-    const shown = !!option && !option.classList.contains('hide') && option.getBoundingClientRect().height > 0;
-    const labelLeft = node => node?.closest('label')?.querySelector('span')?.getBoundingClientRect().left ?? null;
-    const confirm = dlg.querySelector('.jfmod-queueRemoveConfirm');
+const dialogState = selector => page.evaluate(sel => {
+    const dialog = document.querySelector(sel);
+    const words = which => [...dialog.querySelectorAll(which)].map(node => node.textContent);
     return {
-        clientText: dlg.querySelector('.jfmod-queueRemoveClientText')?.textContent ?? null,
-        clientChecked: dlg.querySelector('.jfmod-queueRemoveClient')?.checked ?? null,
-        deleteShown: shown,
-        deleteChecked: dlg.querySelector('.jfmod-queueRemoveDelete')?.checked ?? null,
-        deleteLabel: dlg.querySelector('.jfmod-queueRemoveDelete')?.closest('label')?.textContent ?? null,
-        deleteText: option?.querySelector('.fieldDescription')?.textContent ?? null,
-        indentEm: option ? parseFloat(getComputedStyle(option).marginLeft) / parseFloat(getComputedStyle(option).fontSize) : null,
-        deleteBoxLeft: shown ? option.querySelector('.checkboxOutline, .emby-checkbox-label, input')?.getBoundingClientRect().left ?? null : null,
-        clientLabelLeft: labelLeft(dlg.querySelector('.jfmod-queueRemoveClient')),
-        deleteLabelLeft: shown ? labelLeft(dlg.querySelector('.jfmod-queueRemoveDelete')) : null,
-        removeBackground: confirm ? getComputedStyle(confirm).backgroundColor : null
+        title: dialog.querySelector('[data-ds-dialog] .dlghead h3')?.textContent ?? null,
+        question: dialog.querySelector('[data-ds-question]')?.textContent ?? null,
+        facts: words('[data-ds-fact]'),
+        notes: words('[data-ds-note]'),
+        release: dialog.querySelector('.rname')?.textContent ?? null,
+        choices: [...dialog.querySelectorAll('[data-ds-dialog] .btn[data-choice]')].map(button => ({ id: button.getAttribute('data-choice'), name: button.textContent,
+            red: button.matches('.destroy'), background: getComputedStyle(button).backgroundColor, help: button.nextElementSibling?.matches('.help') ? button.nextElementSibling.textContent : null })),
+        focused: document.activeElement?.getAttribute?.('data-choice') ?? null
     };
-});
+}, selector);
+const choice = (state, id) => state.choices.find(item => item.id === id);
 
-async function tickClient() {
-    const box = page.locator('.jfmod-queueRemoveDialog .jfmod-queueRemoveClient');
-    if (tv) {
-        // The remote's OK; where the stock checkbox does not toggle on it, the press it stands for.
-        const before = await box.isChecked();
-        await box.focus();
-        await page.keyboard.press('Enter');
-        if (await box.isChecked() === before) await box.evaluate(node => node.click());
-    } else {
-        await page.locator('.jfmod-queueRemoveDialog label:has(.jfmod-queueRemoveClient) > span').last().click();
-    }
-    await page.waitForTimeout(300);
-}
-
-async function back(selector) {
+async function back() {
     if (tv) await page.keyboard.press('Escape');
-    else await page.locator(`${selector} .btnCancel`).click();
-    await page.locator(selector).waitFor({ state: 'detached', timeout: 10000 });
+    else await page.locator(`${DIALOG} [data-choice="cancel"]`).click();
+    await page.locator(DIALOG).waitFor({ state: 'detached', timeout: 10000 });
+    await page.waitForTimeout(400);
 }
 
 async function matrix() {
@@ -136,20 +116,20 @@ async function matrix() {
     const real = (await api(page, 'GET', 'JellyfinMod/Queue')).body?.items?.find(item => item.state === 'seeding');
     if (real) {
         await openRemove(real.releaseTitle);
-        await tickClient();
-        const own = await dialogState();
-        record(label, 'The environment\'s own seeding row: the seeding text, no delete option with the client option ticked',
-            own.clientText === SEEDING_TEXT && own.clientChecked === true && !own.deleteShown, { release: real.releaseTitle, ...own });
+        const own = await dialogState(DIALOG);
+        record(label, 'The environment\'s own seeding row: Stop Seeding, the seeding copy stays, no delete option',
+            own.title === 'Stop Seeding' && !choice(own, 'delete'), { release: real.releaseTitle, ...own });
         await shot(page, 'dialog-real-seeding');
-        await back('.jfmod-queueRemoveDialog');
+        await back();
     }
     const entries = (await api(page, 'GET', 'JellyfinMod/Entries?limit=50')).body;
     const items = entries?.items ?? entries;
     const movie = items.find(item => item.mediaType === 'movie' && item.state === 'onDisk');
-    const show = items.find(item => item.title === 'Peep Show');
+    const showName = process.env.JELLYFINMOD_RD_SHOW ?? 'Peep Show';
+    const show = items.find(item => item.title === showName);
     const detail = (await api(page, 'GET', `JellyfinMod/Entries/${show.id}`)).body;
-    const episode = detail.episodes.find(item => item.state !== 'onDisk' && item.seasonNumber === 1);
-    if (!movie || !episode) throw new Error('no movie on disk or no missing Peep Show episode');
+    const episode = detail.episodes.find(item => item.state !== 'onDisk' && item.seasonNumber > 0);
+    if (!movie || !episode) throw new Error(`no movie on disk or no missing ${showName} episode`);
     const at = new Date().toISOString();
     const row = (id, entry, ep, title, state, extra = {}) => ({ id, grabId: id.replace(/^./, 'f'), entry: { id: entry.id, mediaType: entry.mediaType,
         title: entry.title, year: entry.year ?? null, posterPath: null, jellyfinItemId: null, targetLibraryId: null },
@@ -160,57 +140,58 @@ async function matrix() {
     client: { id: 'c0000000000000000000000000000001', name: 'Shared Transmission', openUrl: null }, seeding: null, pack: null, ...extra });
     const DOWNLOADING = 'Remove.Delete.Downloading.2021.1080p.WEB-DL-GRP';
     const SEEDING = 'Remove.Delete.Seeding.2021.1080p.WEB-DL-GRP';
+    const KEPT = 'Remove.Delete.Kept.2021.1080p.WEB-DL-GRP';
     const EPISODE = 'Remove.Delete.Episode.S01E03.1080p.WEB-DL-GRP';
     const rows = [
-        row('11111111111111111111111111111111', movie, null, DOWNLOADING, 'downloading'),
+        row('11111111111111111111111111111111', movie, null, DOWNLOADING, 'downloading', { canDeleteFiles: true }),
+        row('55555555555555555555555555555555', movie, null, KEPT, 'downloading', { canDeleteFiles: false }),
         row('22222222222222222222222222222222', movie, null, SEEDING, 'seeding', { seeding: { id: '3'.repeat(32), state: 'waiting', reason: null, ratio: 0.4,
             goalRatio: 1, seedingSeconds: 3600, goalSeconds: null, waitingFor: ['ratio'], goalMetAt: null, libraryLinkPresent: true, releaseEnabled: true } }),
-        row('44444444444444444444444444444444', show, episode, EPISODE, 'downloading')
+        row('44444444444444444444444444444444', show, episode, EPISODE, 'downloading', { canDeleteFiles: true })
     ];
     await page.route(/\/JellyfinMod\/Queue(\?|$)/, route => (route.request().method() === 'GET' ? route.fulfill({ json: { items: rows, totalRecordCount: rows.length,
         generatedAt: new Date().toISOString(), clientStatus: { reachable: true, checkedAt: new Date().toISOString(), reason: null }, importEnabled: true,
         seedReleaseEnabled: true, automation: null } }) : route.continue()));
 
-    // 1. A download not yet imported.
+    // 1. A download not yet imported, whose files may be deleted.
     await openRemove(DOWNLOADING);
-    const closed = await dialogState();
-    record(label, 'Not imported: the client option reads "The client forgets the torrent." and is unticked; Delete the downloaded files is hidden',
-        closed.clientText === 'The client forgets the torrent.' && closed.clientChecked === false && !closed.deleteShown, closed);
-    await tickClient();
-    const open = await dialogState();
-    record(label, 'Ticking the client option shows Delete the downloaded files, ticked, with its description, indented 2.2em, its label under the client option\'s label',
-        open.clientChecked === true && open.deleteShown && open.deleteChecked === true && open.deleteLabel?.trim() === 'Delete the downloaded files'
-            && open.deleteText === 'What this torrent downloaded so far. Library files are never touched.' && Math.abs(open.indentEm - 2.2) < 0.01
-            && Math.abs(open.deleteBoxLeft - open.clientLabelLeft) <= 6, open);
-    record(label, 'The dialog\'s Remove is red', open.removeBackground === RED, open.removeBackground);
+    const open = await dialogState(DIALOG);
+    const del = choice(open, 'delete');
+    record(label, 'Under way and deletable: Cancel Download, its one red outcome Delete the Download, which says the client deletes what it downloaded, the safe Keep Downloading focused',
+        open.title === 'Cancel Download' && open.choices.map(item => item.id).join() === 'delete,cancel' && del?.red && del.name === 'Delete the Download'
+            && /removes the torrent and deletes the .*downloaded so far\./.test(del.help ?? '') && choice(open, 'cancel')?.name === 'Keep Downloading' && open.focused === 'cancel', open);
+    record(label, 'Delete the Download is red', del?.background === RED, del?.background);
     if (!tv) {
-        await page.locator('.jfmod-queueRemoveConfirm').hover();
-        await page.waitForTimeout(300);
-        const hovered = await dialogState();
-        record(label, 'The dialog\'s Remove stays red under the pointer', hovered.removeBackground === RED, hovered.removeBackground);
+        await page.locator(`${DIALOG} [data-choice="delete"]`).hover();
+        await page.waitForTimeout(400);
+        const hovered = choice(await dialogState(DIALOG), 'delete');
+        record(label, 'Delete the Download stays red under the pointer (the lighter destroy red)', hovered?.background === HOVER_RED, hovered?.background);
         await page.mouse.move(2, 2);
     }
     await shot(page, 'dialog-downloading');
-    await tickClient();
-    const unticked = await dialogState();
-    record(label, 'Unticking the client option hides the delete option again', unticked.clientChecked === false && !unticked.deleteShown, unticked);
-    await back('.jfmod-queueRemoveDialog');
+    await back();
 
-    // 2. A seeding (imported) row: never a delete option.
+    // 2. A download whose files may not be deleted: no outcome says it deletes, and the dialog says no file is deleted.
+    await openRemove(KEPT);
+    const kept = await dialogState(DIALOG);
+    record(label, 'Not deletable: Stop the Download instead, "No file is deleted", no delete outcome',
+        kept.title === 'Cancel Download' && !choice(kept, 'delete') && choice(kept, 'keep')?.name === 'Stop the Download' && /No file is deleted\./.test(choice(kept, 'keep')?.help ?? ''), kept);
+    await shot(page, 'dialog-kept');
+    await back();
+
+    // 3. A seeding (imported) row: never a delete option.
     await openRemove(SEEDING);
-    await tickClient();
-    const seeding = await dialogState();
-    record(label, 'Seeding: the client option says the seeding copy stays; no delete option even with the client option ticked',
-        seeding.clientText === SEEDING_TEXT && seeding.clientChecked === true && !seeding.deleteShown, seeding);
+    const seeding = await dialogState(DIALOG);
+    record(label, 'Seeding: Stop Seeding, no delete option', seeding.title === 'Stop Seeding' && !choice(seeding, 'delete') && choice(seeding, 'keep')?.red === true, seeding);
     await shot(page, 'dialog-seeding');
-    await back('.jfmod-queueRemoveDialog');
+    await back();
 
-    // 3. The missing episode's Cancel Download: Remove the Torrent.
+    // 4. The missing episode's Cancel Download: the same dialog, naming its release.
     // A placeholder's own page where Jellyfin holds one, else the mod's page for an episode Jellyfin does not have.
     await page.evaluate(({ item, entry, season, number }) => {
         location.hash = item ? '#/details?id=' + item : `#/details?entryId=${entry}&season=${season}&episode=${number}`;
     }, { item: episode.jellyfinItemId, entry: show.id, season: episode.seasonNumber, number: episode.episodeNumber });
-    const cancel = page.locator('.page:not(.hide) .act .btn:not(.main):not(.destroy)').first();
+    const cancel = page.locator('.page:not(.hide) .dlb .act .btn:not(.main):not(.destroy)').filter({ hasText: 'Cancel Download' }).first();
     await cancel.waitFor({ state: 'visible', timeout: 30000 });
     if (tv) {
         await cancel.focus();
@@ -218,52 +199,28 @@ async function matrix() {
     } else {
         await cancel.click();
     }
-    const dialog = page.locator('#jfmodTorrentRemoval');
-    await dialog.waitFor({ state: 'visible', timeout: 10000 });
+    await page.locator(DIALOG).waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForTimeout(500);
-    const confirmState = async () => page.evaluate(() => {
-        const dlg = document.querySelector('#jfmodTorrentRemoval');
-        const text = dlg.querySelector('.text, [data-ds-text]');
-        const name = text?.querySelector('.jfmod-confirmName')?.textContent ?? null;
-        const remove = dlg.querySelector(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]');
-        return { title: dlg.querySelector(':is(.formDialogHeaderTitle, [data-ds-dialog] .dlghead h3)')?.textContent ?? null, text: text ? text.textContent.replace(name ?? '', '') : null, name,
-            removeLabel: remove?.textContent ?? null, removeBackground: remove ? getComputedStyle(remove).backgroundColor : null };
-    });
-    const asked = await confirmState();
-    record(label, 'Cancel Download asks Remove the Torrent with the new text and the release name',
-        asked.title === 'Remove the Torrent' && asked.text === CONFIRM_TEXT && asked.name === EPISODE, asked);
-    record(label, 'Remove the Torrent\'s Remove is red at rest', asked.removeLabel === 'Remove' && asked.removeBackground === RED, asked.removeBackground);
-    if (!tv) {
-        await dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]').hover();
-        await page.waitForTimeout(300);
-        const hovered = await confirmState();
-        record(label, 'Remove the Torrent\'s Remove stays red under the pointer', hovered.removeBackground === RED, hovered.removeBackground);
-        await page.mouse.move(2, 2);
-    }
+    const asked = await dialogState(DIALOG);
+    record(label, 'The episode\'s Cancel Download asks the removal dialog, with the release name and Delete the Download in red',
+        asked.title === 'Cancel Download' && asked.release === EPISODE && choice(asked, 'delete')?.background === RED, asked);
     await shot(page, 'confirm');
-    // Back on the TV and the phone; on the computer Escape, or Cancel when the page keeps Escape for itself.
-    await page.keyboard.press(tv ? 'Backspace' : 'Escape');
-    if (!await dialog.waitFor({ state: 'hidden', timeout: 2000 }).then(() => true, () => false)) {
-        await dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="cancel"]').click();
-        await dialog.waitFor({ state: 'hidden', timeout: 10000 });
-    }
-    record(label, 'Back left every dialog and no queue removal left the browser', deletes.length === 0, deletes);
+    await back();
+    record(label, 'Every dialog closed and no queue removal left the browser', deletes.length === 0, deletes);
 }
 
 async function live() {
     const release = process.env.JELLYFINMOD_RD_RELEASE;
     if (release) {
         await openRemove(release);
-        await tickClient();
-        const state = await dialogState();
-        record(label, 'Live: the downloading row offers Delete the downloaded files, ticked, once the client option is ticked',
-            state.deleteShown && state.deleteChecked === true, state);
+        const state = await dialogState(DIALOG);
+        record(label, 'Live: the downloading row offers Delete the Download', choice(state, 'delete')?.red === true, state);
         await shot(page, 'live-dialog');
         const answered = page.waitForResponse(response => response.request().method() === 'DELETE' && /\/JellyfinMod\/Queue\//.test(response.url()));
-        await page.locator('.jfmod-queueRemoveConfirm').click();
+        await page.locator(`${DIALOG} [data-choice="delete"]`).click();
         const response = await answered;
         const body = JSON.parse(response.request().postData() ?? '{}');
-        record(label, 'Live: Remove sends removeFromClient and deleteFiles, and the plugin answers 200',
+        record(label, 'Live: Delete the Download sends removeFromClient and deleteFiles, and the plugin answers 200',
             body.removeFromClient === true && body.deleteFiles === true && response.status() === 200, { body, status: response.status() });
         await until(async () => !(await page.locator('.queue').filter({ hasText: release }).count()), { timeout: 20000, every: 500, label: 'the row to leave' });
         record(label, 'Live: the row left the queue', true);
@@ -290,14 +247,11 @@ async function live() {
         // Let it download a little first, so there are files to delete (JELLYFINMOD_RD_PICK_WAIT seconds, default 10).
         await page.waitForTimeout(Number(process.env.JELLYFINMOD_RD_PICK_WAIT ?? 10) * 1000);
         await x.click();
-        const dialog = page.locator('#jfmodTorrentRemoval');
-        await dialog.waitFor({ state: 'visible', timeout: 10000 });
+        await page.locator(DIALOG).waitFor({ state: 'visible', timeout: 10000 });
         await page.waitForTimeout(400);
-        const remove = dialog.locator(':is(.btnOption, .dlgfoot .btn[data-id])[data-id="ok"]');
-        const text = await dialog.locator('.text').textContent();
-        const background = await remove.evaluate(node => getComputedStyle(node).backgroundColor);
-        record(label, 'Live: the picker\'s X asks Remove the Torrent with the new text, Remove red', text.startsWith(CONFIRM_TEXT) && background === RED,
-            { background });
+        const remove = page.locator(`${DIALOG} [data-choice="delete"]`);
+        const asked = await dialogState(DIALOG);
+        record(label, 'Live: the picker\'s X asks the removal dialog, Delete the Download red', choice(asked, 'delete')?.background === RED && asked.release === title, asked);
         await shot(page, 'live-confirm');
         const answered = page.waitForResponse(response => response.request().method() === 'DELETE' && /\/JellyfinMod\/Queue\//.test(response.url()));
         await remove.click();
