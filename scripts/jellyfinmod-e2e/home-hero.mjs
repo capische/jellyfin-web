@@ -695,6 +695,9 @@ try {
                     lines: [...cell.querySelectorAll('.capt .ln')].map(line => line.textContent.trim()), image: cell.querySelector('.post img')?.src ?? '' };
             });
         });
+        await page.evaluate(() => [...document.querySelectorAll('.sect')].find(node => /^Recently Added/.test(node.querySelector('.rowt')?.textContent?.trim() ?? ''))?.scrollIntoView({ block: 'center' }));
+        await page.waitForTimeout(800);
+        await page.screenshot({ path: path.join(out, 'recent-1920.png') });
         const sizes = [...new Set(cells.map(cell => cell.w + 'x' + cell.h))];
         record('recent', 'Every cell of Recently Added has one poster size, 2:3', sizes.length === 1 && Math.abs(cells[0].w / cells[0].h - 2 / 3) < 0.02, sizes);
         record('recent', 'Their captions start at one height', new Set(cells.map(cell => cell.captionTop)).size === 1, [...new Set(cells.map(cell => cell.captionTop))]);
@@ -716,7 +719,6 @@ try {
             const own = await page.locator('.page:not(.hide) [data-ds-section=listChildrenCollapsible] .cell .ln.t').allInnerTexts();
             record('recent', 'On the series\' own page its Seasons row keeps the plain caption', own.length > 0 && own.every(line => line !== facts[0].item.SeriesName), own);
         } else record('recent', 'A season says whose it is', 'NOT VERIFIED', 'no season in the row');
-        await page.screenshot({ path: path.join(out, 'recent-1920.png') });
     }
 
     if (only.includes('sections')) {
