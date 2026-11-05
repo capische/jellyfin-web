@@ -356,27 +356,31 @@ checks.pickerStatus = async browser => {
                 + (await page.locator('.picker').innerText().catch(() => '')).replaceAll('\n', ' | ').slice(0, 250));
             return;
         }
-        // While the grab is still held, the search changes to another episode.
+        // While the grab is still held, the search changes to another season. The grab's Cancel is its row's X (user, 2026-10-12: the block
+        // has no Cancel), which belongs to the search that listed it, so the status stays and the X comes back with that search.
+        const cancelX = '.rel[data-ds-added] [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])';
+        await page.route('**/JellyfinMod/Releases?*', async route => { await sleep(800); return route.fallback(); });
         await chooseScopeValue(page, second);
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(300);
         const during = await page.evaluate(() => ({
             searching: /Searching/.test(document.querySelector('.pstatus')?.textContent ?? ''),
-            cancel: !!document.querySelector('.rel[data-ds-added] [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])'),
             status: (document.querySelector('.grab')?.textContent ?? '').trim().slice(0, 80)
         }));
-        record('4a-4', 'while the grab is held and the changed search runs, its status and Cancel stay shown',
-            during.searching && during.cancel && !!during.status, JSON.stringify(during));
-        if (during.cancel) await page.locator('.rel[data-ds-added] [data-jfmod-release-x]:is([title="Cancel"],[data-tip="Cancel"])').click();
-        await page.waitForFunction(() => /Cancelled/.test(document.querySelector('.grab')?.textContent ?? ''), undefined, { timeout: 5000 }).catch(() => {});
-        const cancelled = (await page.locator('.grab').innerText().catch(() => '')).trim();
+        record('4a-4', 'while the grab is held and the changed search runs, its status stays shown', during.searching && !!during.status, JSON.stringify(during));
+        await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 3000 }).catch(() => {});
+        const settled = (await page.locator('.grab').innerText().catch(() => '')).trim();
+        record('4a-4', 'after the changed search completes, the grab status is still shown', !!settled, `"${settled}"`);
+        await chooseScopeValue(page, first);
+        const back = await page.waitForSelector(cancelX, { timeout: 2500 }).then(() => true).catch(() => false);
+        record('4a-4', 'back on the search that listed it during the hold, the row\'s X is there', back);
+        if (back) await page.locator(cancelX).click();
+        await page.waitForFunction(() => !document.querySelector('.rel[data-ds-added]'), undefined, { timeout: 5000 }).catch(() => {});
+        const added = await page.locator('.rel[data-ds-added]').count();
         const state = guard.created[0] ? (await api(page, 'GET', `JellyfinMod/Grabs/${guard.created[0]}`)).body?.state : 'none';
-        record('4a-4', 'Cancel pressed during the changed search cancels the held grab', pageCancels.length === 1 && state === 'cancelled'
-            && /Cancelled/.test(cancelled), `${pageCancels.length} page cancel(s), state ${state}, "${cancelled}"`);
-        await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 180000 });
-        await page.waitForTimeout(1000);
-        const after = (await page.locator('.grab').innerText().catch(() => '')).trim();
-        record('4a-4', 'after the changed search completes, the grab status is still shown', !!after, `"${after}"`);
+        record('4a-4', 'the X pressed after the changed search cancels the held grab and the row is no longer added', pageCancels.length === 1 && state === 'cancelled' && added === 0,
+            `${pageCancels.length} page cancel(s), state ${state}, added rows ${added}`);
     } finally {
+        await page.unrouteAll({ behavior: 'ignoreErrors' }).catch(() => {});
         await guard?.close('4a-4');
         await closeAll(context);
     }
@@ -833,7 +837,7 @@ async function pickerRecoveryRun(page, created, at) {
     const movie = process.env.JELLYFINMOD_WANTED_ENTRY;
     if (!movie) { record('fr-1', 'JELLYFINMOD_WANTED_ENTRY names a file-less movie', false); return; }
     await go(page, `#/details?entryId=${movie}`);
-    const open = page.locator('button', { hasText: 'Search releases' }).first();
+    const open = page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     await open.waitFor({ state: 'visible', timeout: 30000 });
     // The picker's own search: the other administrator's grab reuses it, so no further indexer query is needed.
     const pickerSearch = page.waitForResponse(response => response.request().method() === 'GET'
@@ -893,9 +897,7 @@ async function pickerRecoveryRun(page, created, at) {
         && String(refusedBody?.operationId ?? '').toLowerCase() === String(otherId).toLowerCase();
     at.step = `refusal ${refused?.status()} ${refusedBody?.type}`;
     at.step = 'profile switch';
-    const profileCount = await page.locator('#jfmod-releaseProfile').click()
-        .then(() => page.locator('[aria-label="Quality Profile"][role="menu"] [role="option"]').count());
-    await page.keyboard.press('Escape');
+    const profileCount = (await api(page, 'GET', 'JellyfinMod/Settings/QualityProfiles')).body?.length ?? 1;
     await pickProfile(page, { index: profileCount > 1 ? 1 : 0 });
     await settled();
     at.step = 'own grab click: ' + (await page.locator('.pstatus').innerText().catch(() => '')).trim();
