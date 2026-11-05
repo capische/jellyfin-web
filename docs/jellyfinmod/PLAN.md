@@ -2432,3 +2432,31 @@ of the end state and the merge are still to come.
 - **Known, not a regression:** on a computer, Tab past a row's right edge scrolls the page sideways; beta does the same.
 - **Also the same as beta:** Dashboard's Libraries and Playback groups are not reached by Down on a TV (focus goes to the user menu
   and on to Devices), and the Dashboard's plugin page logs a 404 for `/Packages/JellyfinMod` where no plugin repository is set.
+
+## ds.t7 — the last round before the merge (2026-11-05)
+
+**Built (not accepted); all live checks run, awaiting the user's merge.** Both lines carry the same product delta (stubs on bravo,
+12.0; items on charlie, 12.2), deployed and run in real Chrome. The user has not looked at this round.
+
+- **Fixed in the product:** Preferences stops its form scan while hidden; upstream's sentence-case labels read in Title Case; the
+  selection menu's Escape raises nothing; a row's round action has its 41 px target at the mockup's size; a failed row's red mark and
+  the block's grey glass agree with the rulebook; the TV bar's icons reach 4.5:1 over a white hero; row figures, discs, the added
+  row's slot, the video size, the phone mark and a card's Not Downloaded pointer; the keyboard's ring is the rulebook's on every
+  plain button the design draws, never the browser's (player bar included); Recently Added holds one 2:3 shape, an episode drawing its
+  series' poster; a season card away from its series names the series; the approved tab control (D273) draws Primary and Secondary
+  on the Preferences Subtitles page and in the player panel; on a TV grid, Back that only closes a menu no longer sends focus to the
+  last card when the opener already has it.
+- **Checks rewritten** to read the painted DOM, each in its runner's commit (`test(design,ds.t7)`): card-progress, queue-remove-delete,
+  episode-retention, whole-review-web, replacement-sweep's restore, home-hero, p9-ratings, live-picker, live-queue, tv-shell,
+  missing-seasons-episodes, placeholder-queues; new runners `ds-t7`, `ds-tabs` and `ds-t7-replace` (Replace through the picker to the
+  end).
+- **Not a redesign defect, found here (plugin):** Replace, and Remove This Version on a title's default copy, leave the surviving file
+  with no user data: a played favourite reads unplayed, not favourite, count 0 (both lines, real E2E). Jellyfin re-attaches parked user
+  data only at a new item's first refresh, and the import comes before the old file goes. Owned by the plugin's Replace/Remove path.
+- **Still intermittent (TV):** after Back closes a menu over a TV grid, focus sometimes lands on the grid's first card instead of the
+  opener (about one close in 30, one tv-shell run in three, under two parallel Chrome runs); a Home card's Back once left focus on
+  the document. Not reproduced alone or under 8x CPU throttling.
+- **Classified, not changed:** `placeholder-queues` paged Next Up totals count series beyond the page (plugin filter); `quality-profiles`
+  needs the six predefined profiles (charlie 64/0, bravo has HD and Any); `p9-ratings`' stale card needs values aged in the database;
+  `replacement-sweep`'s Dashboard focus and `/Packages` 404 are beta's too; `q16-trakt` needs a disposable fresh server on the Pi
+  (the painted Trakt line was read with an intercepted answer on four layouts).
