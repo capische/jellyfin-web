@@ -193,16 +193,25 @@ const Scroller: FC<PropsWithChildren<ScrollerProps>> = ({
             initCenterFocus(frame, scrollerFactoryRef.current);
         }
 
+        let sliderObserver: MutationObserver | undefined;
         if (enableScrollButtons) {
             addScrollEventListener(onScroll, {
                 capture: false,
                 passive: true
             });
+
+            // The reload above ran before this listener, and a row's cells can arrive later (Home's skeletons
+            // give way to data) without the frame changing size, so measure now and whenever the cells change.
+            onScroll();
+            sliderObserver = new MutationObserver(() => scrollerFactoryRef.current?.reload());
+            sliderObserver.observe(getScrollSlider(), { childList: true });
         }
 
         setShowControls(enableScrollButtons);
 
         return () => {
+            sliderObserver?.disconnect();
+
             if (scrollerFactoryRef.current) {
                 scrollerFactoryRef.current.destroy();
                 scrollerFactoryRef.current = null;
@@ -215,6 +224,7 @@ const Scroller: FC<PropsWithChildren<ScrollerProps>> = ({
         };
     }, [
         addScrollEventListener,
+        getScrollSlider,
         hasFinePointer,
         initCenterFocus,
         isAllowNativeSmoothScrollEnabled,
