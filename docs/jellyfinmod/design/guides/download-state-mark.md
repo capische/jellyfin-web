@@ -45,11 +45,13 @@ SVG rotated −90° so the arc starts at the top. Everything in `em` (TV 125 %, 
 ## Colour
 
 - **Card:** glyph and arc in the glass ink `--jfmod-card-ink` (white; the light theme's black 87 %, Apple TV's `text-primary`), track
-  `--jfmod-card-track` (white 30 %; light black 25 %), failed `--jfmod-card-fail` (`#ff5a4f`; light `#c62828`).
+  `--jfmod-card-track` (white 30 %; light black 25 %). Failed is the same ink on the glass: grey card glass with a bold white `!`
+  (GUIDELINES *The failed mark*, D216–D218).
 - **Row and page:** `currentColor` — the colour of upstream's round row icons beside it, the page's text on the episode
-  page. Track white 12 % (dark); light black 18 % on rows, 14 % on the page. Failed `#ff5a4f`, light `#c62828`.
+  page. Track white 12 % (dark); light black 18 % on rows, 14 % on the page. A failed row or page mark is the card's: grey card
+  glass, the glass ink, white on the TV's solid disc. Red stays for failure text and figures (`.figs.fail`).
 - **Stalled:** arc and number at 55 % opacity. **Stale** (the client cannot be read): the whole mark at 55 %, last value kept.
-- No amber anywhere in the download design; shape, arc and text carry the state, colour only marks failure.
+- No amber anywhere in the download design; shape, arc and text carry the state, and red only marks failure's words.
 
 ## States
 
@@ -84,7 +86,7 @@ easing. Motion is transform and opacity only.
   the meta line after the date (or, where the layout hides that line, as the row's last text line).
 - **Detail line** (`QueueStatusLine`): the 2.5em disc, then "In the download queue · 42% · 12 min left", then View queue.
 - **Queue page:** the State column holds **only the disc**, every state's words in its tip (P4.FU28): a download's family, the
-  seeding disc for a seeding copy, the red bang for a blocked or failed import. The row keeps its bar (the one place the bar is
+  seeding disc for a seeding copy, the grey-glass bang for a blocked or failed import. The row keeps its bar (the one place the bar is
   the content). **Computer:** the product's MUI tooltip **above** the disc (`placement="top"`, as the picker's (i)), one fact
   per line (`.jfmod-queueTipLine`): `Seeding · ratio 0.19 of 1.00 · seeded 4 d of 7 d`, `Waiting for the ratio goal and the
   seeding time goal`, and for an administrator's linked disc `Open Shared Transmission (VPN)`; the disc drops its native
