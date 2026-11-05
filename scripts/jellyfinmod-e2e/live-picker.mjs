@@ -210,9 +210,11 @@ try {
     // Back: Escape is the remote's Back on the TV layout; elsewhere upstream closes dialogs on browser Back.
     if (tv) await page.keyboard.press('Escape'); else await page.goBack();
     await page.waitForTimeout(800);
-    const back = await page.evaluate(() => ({ open: !!document.querySelector('.picker'), focus: document.activeElement?.textContent?.trim().slice(0, 40) }));
+    const back = await page.evaluate(() => ({ open: !!document.querySelector('.picker'), focus: document.activeElement?.textContent?.trim().slice(0, 40), onPill: !!document.activeElement?.closest('.actbar') }));
     // Stock dialogHelper restores focus to the opener only on the TV layout; elsewhere closing is the whole contract.
-    if (tv) record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Get a Release/i.test(back.focus ?? ''), back);
+    // A grab replaces the download block's Get a Release while the picker is open, so then focus goes to the page's action pill.
+    if (tv && step === 'list') record(label, 'Back closes the picker and restores focus to the opener', !back.open && /Get a Release/i.test(back.focus ?? ''), back);
+    else if (tv) record(label, 'Back closes the picker and leaves focus on the page\'s actions', !back.open && back.onPill, back);
     else record(label, 'Back closes the picker', !back.open, back);
     // The choice survives a reload: reopen the picker and read the toggle, then switch it off for the next run.
     await page.reload();
@@ -227,9 +229,9 @@ try {
         // Reopened while the grab is active, the row whose infohash it carries shows as added again.
         const again = await until(async () => page.evaluate(() => {
             const item = document.querySelector('.rel[data-ds-added]');
-            return item && { tick: !!item.querySelector('.ok'), x: item.querySelector('[data-jfmod-release-x]')?.title ?? null };
+            return item && { tick: !!item.querySelector('.ok, [data-jfmod-release-add] .dm'), x: item.querySelector('[data-jfmod-release-x]')?.title ?? null };
         }), { timeout: 120000, every: 1000, label: 'the added row after reopening' }).catch(() => null);
-        record(label, 'Reopened, the picker shows the grabbed row as added (tick and X), found by the active operation\'s infohash', !!again?.tick, again);
+        record(label, 'Reopened, the picker shows the grabbed row as added (disc or tick, and X), found by the active operation\'s infohash', !!again?.tick, again);
     }
     await namesToggle.click();
     await page.evaluate(() => localStorage.setItem('jfmod-releaseNames', '0'));
