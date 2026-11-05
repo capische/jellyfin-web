@@ -293,6 +293,8 @@ async function checkDetails(page, name, cfg, movieLib) {
         await page.goto(base + '#/details?id=' + movieId, { waitUntil: 'domcontentloaded' });
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.page:not(.hide) .jfds .actbar button', { timeout: 25000 });
+        // The pill fills in as the controller's buttons show: wait for Play, the check's own subject.
+        await page.waitForSelector('.page:not(.hide) .jfds .actbar [data-ds-command~=btnPlay]', { timeout: 10000 }).catch(() => undefined);
         const d = await page.evaluate(() => ({
             name: document.querySelector('.itemName, h1, h3.itemName')?.textContent?.trim().slice(0, 40),
             modActions: [...document.querySelectorAll('.page:not(.hide) .jfds .actbar button')].map(b => (b.getAttribute('data-tip') || b.getAttribute('aria-label') || b.getAttribute('title') || b.textContent).trim()),
