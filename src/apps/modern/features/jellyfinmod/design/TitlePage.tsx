@@ -169,7 +169,7 @@ const Card: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view }) => {
     }, [card.node]);
     const open = () => openCard(card);
     const still = <CardStill card={card} />;
-    const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.star ? 'star' : undefined}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
+    const name = <><div className='nm'>{card.title}</div><div className='ln2'>{card.facts.length ? card.facts.map(fact => <span key={fact.text} className={fact.figure?.className ?? (fact.star ? 'star' : undefined)} title={fact.figure?.title}>{fact.star && <Icon name='star' />}{fact.text}</span>) : <span>{card.second}</span>}</div></>;
     const overview = <p className='ov'>{card.overview}</p>;
     const state = cardState(card);
     const rowCommands = device === 'phone' ? phoneRowCommands(card, !!state) : card.commands;

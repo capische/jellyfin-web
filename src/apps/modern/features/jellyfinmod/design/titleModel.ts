@@ -22,7 +22,7 @@ export interface TitleCard {
     key: string;
     title: string;
     second: string;
-    facts: { text: string; star: boolean }[];
+    facts: { text: string; star: boolean; figure?: { className: string; title?: string } }[];
     overview: string;
     image?: string;
     href?: string;
@@ -97,6 +97,17 @@ const markOf = (node: HTMLElement): TitleCard['mark'] => {
     return { kind, progress: { ...progress, tooltip: mark.title || progress.tooltip }, link };
 };
 
+/** ds2.js epRow's `dlf`: the row's download words, from the hidden row's figure (download-block.md, treatment B). */
+const figureOf = (item: Element) => {
+    if (!item.classList.contains('jfmod-dlMeta')) return undefined;
+    const has = (name: string) => item.classList.contains('jfmod-dlMeta--' + name);
+    let className = 'dlf';
+    if (has('failed')) className += ' figs fail';
+    if (has('queued') || has('stalled')) className += ' wait';
+    if (has('stale')) className += ' stale';
+    return { className, title: (item as HTMLElement).title || undefined };
+};
+
 export const cardOf = (node: HTMLElement, index: number): TitleCard => {
     const lines = Array.from(node.querySelectorAll('.cardText, .listItemBodyText, .jfmod-missingTitle, .jfmod-missingMeta'));
     const link = node.querySelector<HTMLAnchorElement>('a[href]:not([href="#"])');
@@ -109,7 +120,7 @@ export const cardOf = (node: HTMLElement, index: number): TitleCard => {
     // Without a meta line (a phone's row) the download's figure is the row's last line.
     const figure = node.querySelector('.jfmod-dlMeta');
     if (figure && !factNodes.includes(figure)) factNodes.push(figure);
-    const facts = factNodes.map(item => ({ text: text(item), star: item.classList.contains('starRatingContainer') }));
+    const facts = factNodes.map(item => ({ text: text(item), star: item.classList.contains('starRatingContainer'), figure: figureOf(item) }));
     let shape: TitleCard['shape'] = 'p';
     if (type === 'Episode' || /backdrop|Backdrop/.test(node.className)) shape = 'w';
     if (type === 'Person' || node.classList.contains('personCard')) shape = 'c';
