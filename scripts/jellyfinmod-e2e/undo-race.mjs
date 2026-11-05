@@ -9,6 +9,7 @@
 //   [JELLYFINMOD_UNDO_DELAYS=1500,1750,2000,2250,2500]   ms between the Undo line appearing and pressing Undo, used in turn
 //   [JELLYFINMOD_UNDO_SETTLE=9000]     ms to wait after Undo before looking
 //   [JELLYFINMOD_UNDO_KINDS=movie,series]   which titles to use
+//   [JELLYFINMOD_UNDO_TITLES=Arrival,Chernobyl]   only these titles, where the others are the environment's own media
 //   [JELLYFINMOD_UNDO_LOG=<host path of the environment's Jellyfin log folder>]   count the delays from the moment Jellyfin made the
 //                                      title's item, so the removal lands around the plugin's stamp of the new stub, the race
 //   [JELLYFINMOD_UNDO_MEDIA=<host path of the /test-media folder>]   runs the two checks below, which need the disk:
@@ -53,7 +54,8 @@ const ALL_TITLES = [
         ['locke', 210479, 'Locke'], ['sicario', 273481, 'Sicario'], ['prisoners', 146233, 'Prisoners']]
         .map(([query, id, title]) => ({ query, key: `movie:${id}`, type: 'movie', id, title }))
 ];
-const TITLES = ALL_TITLES.filter(title => !KINDS || KINDS.includes(title.type));
+const ONLY = process.env.JELLYFINMOD_UNDO_TITLES?.split(',');
+const TITLES = ALL_TITLES.filter(title => (!KINDS || KINDS.includes(title.type)) && (!ONLY || ONLY.includes(title.title)));
 
 const REAL = process.env.JELLYFINMOD_UNDO_REAL === '1';
 const REAL_MEDIA = !REAL ? [] : [
