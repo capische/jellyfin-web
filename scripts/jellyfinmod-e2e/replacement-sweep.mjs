@@ -344,7 +344,7 @@ async function sweepLayout(name) {
     const tvHome = async () => {
         // Upstream hides the header's Home button on Home itself.
         if (!await page.evaluate(() => location.hash.startsWith('#/home'))) await activate(page, cfg, { sel: ":is(.headerHomeButton, .tvbar button:is([title=\"Home\"],[data-tip=\"Home\"]))" });
-        await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') && !!document.querySelector('.homePage:not(.hide) .sections .verticalSection') })), { timeout: 20000 });
+        await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') && !!document.querySelector('.homePage:not(.hide) .sect') })), { timeout: 20000 });
         await sleep(2000);
     };
     const home = async () => {
@@ -358,10 +358,10 @@ async function sweepLayout(name) {
         await poll(() => page.evaluate(() => ({ ok: location.hash.startsWith('#/home') })), { timeout: 15000 });
         await sleep(1500);
     };
-    /** TV: libraries are the "My Media" cards on Home. */
+    /** TV: libraries are the bar's Shows and Movies buttons (Home draws no My Media). */
     const tvLibrary = async libraryName => {
         await tvHome();
-        return activate(page, cfg, { sel: ":is(.card:not(.dm), .cell)", text: `^\\s*${libraryName}\\s*$`, scope: '.page:not(.hide)' });
+        return activate(page, cfg, { sel: `.tvbar button[aria-label="${libraryName}"]` });
     };
     const openLibrary = libraryName => (cfg.tv ? tvLibrary(libraryName) : library(libraryName));
     const viewMenu = async tab => {
@@ -378,10 +378,10 @@ async function sweepLayout(name) {
     const prefsMenu = async () => {
         if (cfg.tv) await activate(page, cfg, { sel: ":is(.headerUserButton, .jfds [aria-label=\"User Menu\"])" });
         else await userMenu('Settings');
-        await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('.page:not(.hide) .lnkDisplayPreferences') })), { timeout: 15000 });
+        await poll(() => page.evaluate(() => ({ ok: !!document.querySelector('.page:not(.hide) a[href^="#/mypreferencesdisplay"]') })), { timeout: 15000 });
     };
 
-    const DETAIL = { hash: '^#/details\\?', selector: '#itemDetailPage:not(.hide) .itemName, .page:not(.hide) .detailPagePrimaryContainer h1, .page:not(.hide) .jfmod-entryDetailsRoot h1' };
+    const DETAIL = { hash: '^#/details\\?', selector: '#itemDetailPage:not(.hide) .itemName, .page:not(.hide) .jfmod-dsTitleHost h1, .page:not(.hide) .detailPagePrimaryContainer h1, .page:not(.hide) .jfmod-entryDetailsRoot h1' };
     const GRID = ".page:not(.hide) .itemsContainer :is(.card:not(.dm), .cell), main .itemsContainer :is(.card:not(.dm), .cell), .page:not(.hide) :is(.card:not(.dm), .cell), main :is(.card:not(.dm), .cell), .page:not(.hide) .noItemsMessage, main .noItemsMessage, main .MuiTypography-root";
 
     // ---- sign in (setup, not a row) and the layout
@@ -426,7 +426,7 @@ async function sweepLayout(name) {
             await row('Movie detail', (cfg.tv ? keys : shell) + ': first movie card in the grid',
                 () => activate(page, cfg, { sel: ".itemsContainer :is(.card:not(.dm), .cell)[data-type=\"Movie\"], .itemsContainer :is(.card:not(.dm), .cell)", scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Movie$' });
             await row('Person detail (Embed)', (cfg.tv ? keys : shell) + ': cast card on the movie detail', async () => {
-                await activate(page, cfg, { sel: "#castContent :is(.card:not(.dm), .cell), .peopleSection :is(.card:not(.dm), .cell)", scope: '#itemDetailPage:not(.hide)' });
+                await activate(page, cfg, { sel: ".jfmod-dsTitleHost [data-ds-section*=people i] .cell, .jfmod-dsTitleHost [data-ds-section*=cast i] .cell", scope: '.page:not(.hide)' });
                 await poll(() => page.evaluate(() => ({ ok: /details\?id=/.test(location.hash) })));
                 await sleep(1200);
                 const id = new URLSearchParams((await hash(page)).split('?')[1]).get('id');
@@ -439,12 +439,12 @@ async function sweepLayout(name) {
             await row('Series detail', (cfg.tv ? keys : shell) + ': the series card in the grid',
                 () => activate(page, cfg, { sel: ".itemsContainer :is(.card:not(.dm), .cell)", text: '^\\s*' + escapeRe(seriesTitle), scope: '.page:not(.hide), main' }), { ...DETAIL, itemType: '^Series$' });
             await row('Season detail', (cfg.tv ? keys : shell) + ': first season card on the series',
-                () => activate(page, cfg, { sel: "#childrenContent :is(.card:not(.dm), .cell), #childrenContent .listItem", scope: '#itemDetailPage:not(.hide)' }), { ...DETAIL, itemType: '^Season$' });
+                () => activate(page, cfg, { sel: ".jfmod-dsTitleHost [data-ds-section=listChildrenCollapsible] .cell, .jfmod-dsTitleHost .ep", scope: '.page:not(.hide)' }), { ...DETAIL, itemType: '^Season$' });
             // Upstream's season list gives a desktop row no action of its own (itemDetails passes action 'none' when
             // layoutManager.desktop); there the episode opens from the row's Info button, as a mouse user does.
             const episodeTarget = !cfg.tv && !cfg.mobile ?
-                { sel: '#childrenContent .listItem button[data-action="link"]', scope: '#itemDetailPage:not(.hide)' } :
-                { sel: "#childrenContent .listItem, #childrenContent :is(.card:not(.dm), .cell)", scope: '#itemDetailPage:not(.hide)' };
+                { sel: '.jfmod-dsTitleHost .ep', scope: '.page:not(.hide)' } :
+                { sel: ".jfmod-dsTitleHost .ep, .jfmod-dsTitleHost [data-ds-section=listChildrenCollapsible] .cell", scope: '.page:not(.hide)' };
             await row('Episode detail', (cfg.tv ? keys : shell) + (!cfg.tv && !cfg.mobile ? ': Info button of the first episode on the season' : ': first episode on the season'),
                 () => activate(page, cfg, episodeTarget), { ...DETAIL, itemType: '^Episode$' });
         }
@@ -527,20 +527,20 @@ async function sweepLayout(name) {
     await row('Jellyfin preferences menu', cfg.tv ? keys + ': header user button' : shell + ': user menu Settings', async () => {
         if (cfg.tv) await tvHome();
         await prefsMenu();
-    }, { hash: '^#/mypreferencesmenu', selector: '.page:not(.hide) .lnkDisplayPreferences' });
+    }, { hash: '^#/mypreferencesmenu', selector: '.page:not(.hide) a[href^="#/mypreferencesdisplay"]' });
     const PREFS = [
-        ['User profile', '.lnkUserProfile', '^#/userprofile', '.page:not(.hide) #txtUserName, .page:not(.hide) .username, .page:not(.hide) form, main form'],
-        ['Display preferences', '.lnkDisplayPreferences', '^#/mypreferencesdisplay', '.page:not(.hide) select, main select, .page:not(.hide) .selectContainer, main .MuiFormControl-root, main .MuiSelect-select'],
-        ['Home screen preferences', '.lnkHomePreferences', '^#/mypreferenceshome', '.page:not(.hide) select, main select, .page:not(.hide) .selectContainer, main .MuiFormControl-root, main .MuiSelect-select'],
-        ['Playback preferences', '.lnkPlaybackPreferences', '^#/mypreferencesplayback', '.page:not(.hide) select, main select, .page:not(.hide) .selectContainer, main .MuiFormControl-root, main .MuiSelect-select'],
-        ['Subtitle preferences', '.lnkSubtitlePreferences', '^#/mypreferencessubtitles', '.page:not(.hide) select, main select, .page:not(.hide) .selectContainer, main .MuiFormControl-root, main .MuiSelect-select'],
-        ['Controls preferences', '.lnkControlsPreferences', '^#/mypreferencescontrols', '.page:not(.hide) form input, main form input, .page:not(.hide) form .checkboxContainer'],
-        ['Quick Connect', '.lnkQuickConnectPreferences', '^#/quickconnect', '.page:not(.hide) #txtQuickConnectCode, main #txtQuickConnectCode, .page:not(.hide) form input']
+        ['User profile', 'a[href^="#/userprofile"]', '^#/userprofile', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) form, main form'],
+        ['Display preferences', 'a[href^="#/mypreferencesdisplay"]', '^#/mypreferencesdisplay', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) select, main select, main .MuiFormControl-root'],
+        ['Home screen preferences', 'a[href^="#/mypreferenceshome"]', '^#/mypreferenceshome', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) select, main select, main .MuiFormControl-root'],
+        ['Playback preferences', 'a[href^="#/mypreferencesplayback"]', '^#/mypreferencesplayback', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) select, main select, main .MuiFormControl-root'],
+        ['Subtitle preferences', 'a[href^="#/mypreferencessubtitles"]', '^#/mypreferencessubtitles', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) select, main select, main .MuiFormControl-root'],
+        ['Controls preferences', 'a[href^="#/mypreferencescontrols"]', '^#/mypreferencescontrols', '.page:not(.hide) .jfmod-dsPrefsHost .scard, .page:not(.hide) form input'],
+        ['Quick Connect', 'a[href^="#/quickconnect"]', '^#/quickconnect', '.page:not(.hide) .jfmod-dsPrefsHost input, .page:not(.hide) form input']
     ];
     for (const [label, link, route, selector] of PREFS) {
         // Outside the TV the preferences menu leaves Quick Connect to the user menu (checked below).
-        if (!cfg.tv && link === '.lnkQuickConnectPreferences') continue;
-        if (cfg.mobile && link === '.lnkControlsPreferences') {
+        if (!cfg.tv && link === 'a[href^="#/quickconnect"]') continue;
+        if (cfg.mobile && link === 'a[href^="#/mypreferencescontrols"]') {
             // Upstream's preferences menu renders the Controls link only when !browser.mobile (user/settings/index.tsx).
             record(name, label, 'NOT PRESENT', 'preferences menu', { reason: 'upstream shows no Controls link on a mobile browser' });
             continue;
@@ -555,13 +555,13 @@ async function sweepLayout(name) {
         await back();
     }
     if (!cfg.tv) {
-        await row('Quick Connect (user menu)', shell + ': user menu', () => userMenu('Quick Connect'), { hash: '^#/quickconnect', selector: '.page:not(.hide) #txtQuickConnectCode, main #txtQuickConnectCode, .page:not(.hide) form input, main form input' });
+        await row('Quick Connect (user menu)', shell + ': user menu', () => userMenu('Quick Connect'), { hash: '^#/quickconnect', selector: '.page:not(.hide) .jfmod-dsPrefsHost input, .page:not(.hide) form input, main form input' });
         await row('Metadata manager', shell + ': user menu', () => userMenu('Metadata Manager'), { hash: '^#/metadata', selector: '.page:not(.hide) .metadataEditorPage, .metadataEditorPage:not(.hide), .page:not(.hide) .editPageSidebar, main .editPageSidebar, .page:not(.hide) .libraryTree' });
     }
 
     // ---- Sign out and back in
     await row('Sign out', cfg.tv ? keys + ': preferences menu Sign Out' : shell + ': user menu Sign Out', async () => {
-        if (cfg.tv) { await tvHome(); await prefsMenu(); await activate(page, cfg, { sel: '.btnLogout', scope: '.page:not(.hide)' }); } else await userMenu('Sign Out');
+        if (cfg.tv) { await tvHome(); await prefsMenu(); await activate(page, cfg, { sel: '.page:not(.hide) :is(.btnLogout, .srow2[data-signout]), .pmenu .mi', text: 'Sign Out' }); } else await userMenu('Sign Out');
         const confirm = await poll(() => page.evaluate(() => ({ ok: /login|selectuser/.test(location.hash) || !!document.querySelector('.dialog .btnSubmit, :is(.actionSheet, [data-ds-actionsheet]) [data-id]') })), { timeout: 15000 });
         return { confirmDialog: confirm.ok && !/login|selectuser/.test(await hash(page)) };
     }, { hash: '#/(login|selectuser|selectserver)', selector: '#txtManualName, .btnManual' }, {
