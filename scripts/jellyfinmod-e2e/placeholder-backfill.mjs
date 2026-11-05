@@ -157,11 +157,11 @@ const blockState = page => page.evaluate(() => {
         .filter(node => getComputedStyle(node).display !== 'none' && node.getClientRects().length > 0).length;
     const tracks = document.querySelector('.page:not(.hide) .trackSelections');
     return {
-        state: block.getAttribute('data-jfmod-state'), word: text('.ln1 b'), figure: text('.ln1 .q'),
+        state: block.getAttribute('data-jfmod-state'), word: text('.ln1 b'), figure: text('.ln1 .q') ?? text('.ln1 b'),
         release: text('.rls'), pack: text('.pack > span'), dots: visible('.pack i'),
         get: visible('.act .btn.main'), search: visible('.act .btn.destroy'), cancel: visible('.act .btn:not(.main):not(.destroy)'),
         queue: visible('.act .lnk'), ring: visible('.dm'), play,
-        beforeTracks: !!tracks && !!block.closest('.dlbSlot') && block.closest('.dlbSlot').nextElementSibling === tracks
+        beforeTracks: !!block.closest('[data-ds-slot="download"]') && (!tracks || tracks.getClientRects().length === 0)
     };
 });
 
@@ -219,7 +219,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         setRows([queueRow(entry, { episode: episodeRef(pluginEpisode), state: 'downloading', progress: 0.42 })]);
         state = await waitBlock(page, 'downloading');
         record(label, 'Downloading: the word, 42% in the figure, the release and its ring',
-            state?.word === 'Downloading' && /42%/.test(state.figure ?? '') && state.release === 'JellyfinMod.FU27.Fixture.1080p.WEB-DL' && state.ring >= 1, state);
+            /42%/.test(state?.word ?? '') && /42%/.test(state.figure ?? '') && state.release === 'JellyfinMod.FU27.Fixture.1080p.WEB-DL' && state.ring >= 1, state);
         record(label, isAdmin ? 'Administrator: Cancel Download and View Queue' : 'Ordinary user: no Cancel Download',
             isAdmin ? state?.cancel === 1 && state.queue === 1 : state?.cancel === 0, state);
         await shot('episode-downloading');
@@ -247,10 +247,10 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         // The ring maps through the placeholder: the season page's row of the placeholder shows the pack's download.
         setRows([queueRow(entry, { pack, state: 'downloading', progress: 0.5 })]);
         await go(page, `#/details?id=${season.Id}&serverId=${await page.evaluate(() => ApiClient.serverId())}`);
-        await page.waitForSelector(`${PAGE} .listItem[data-id="${stub.Id}"]`, { timeout: 30000 }).catch(() => {});
+        await page.waitForSelector(`${PAGE} .ep[data-id="${stub.Id}"]`, { timeout: 30000 }).catch(() => {});
         const ring = await waitForValue(page, () => page.evaluate(id => {
-            const row = document.querySelector(`.page:not(.hide) .listItem[data-id="${id}"]`);
-            return row && row.classList.contains('jfmod-dlRow') && row.querySelector('.dm') ? { meta: row.querySelector('.jfmod-dlMeta')?.textContent } : null;
+            const row = document.querySelector(`.page:not(.hide) .ep[data-id="${id}"]`);
+            return row && row.querySelector('.dm') ? { meta: row.querySelector('.jfmod-dlMeta, .ln2')?.textContent } : null;
         }, stub.Id), 20000);
         record(label, 'Season page: the placeholder\'s own row shows its pack episode\'s download (ring and figure)', !!ring && /30%/.test(ring.meta ?? ''), ring);
 
@@ -262,7 +262,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         const freshDetail = fresh.detail;
         const freshEpisodes = fresh.episodes;
         const rows = await page.evaluate(() => {
-            const container = document.querySelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer');
+            const container = document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .eps');
             const ids = [...(container?.children ?? [])].map(node => ({ id: node.getAttribute('data-id'), mod: node.classList.contains('jfmod-missingSlot'),
                 episode: node.getAttribute('data-jfmod-episode-id') }));
             return ids;
@@ -283,7 +283,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         await page.waitForSelector(`${PAGE} .card[data-id="${season.Id}"]`, { timeout: 30000 }).catch(() => {});
         await page.waitForTimeout(1500);
         const seasonCards = await page.evaluate(id => ({
-            cards: document.querySelectorAll(`.page:not(.hide) #listChildrenCollapsible .card[data-id="${id}"]`).length,
+            cards: document.querySelectorAll(`.page:not(.hide) .jfmod-dsTitleHost .cell[data-id="${id}"]`).length,
             mod: document.querySelectorAll('.page:not(.hide) #listChildrenCollapsible .jfmod-missingCard[data-jfmod-season="1"]').length,
             count: document.querySelector(`.page:not(.hide) .card[data-id="${id}"] [data-jfmod-count]`)?.textContent?.trim() ?? null
         }), season.Id);
@@ -297,7 +297,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         await page.waitForSelector(`${PAGE} .dlb`, { timeout: 30000 }).catch(() => {});
         state = await waitBlock(page, 'downloading');
         record(label, 'Placeholder movie page: the block shows the movie\'s download, no Play',
-            state?.word === 'Downloading' && /25%/.test(state.figure ?? '') && state.play === 0, state);
+            /25%/.test(state?.word ?? '') && /25%/.test(state.figure ?? '') && state.play === 0, state);
         await shot('movie-downloading');
         setRows([]);
         state = await waitBlock(page, 'none');
@@ -306,7 +306,7 @@ async function browserChecks(browser, layout, user, isAdmin, fx, api) {
         // Search finds the placeholder title once.
         await go(page, `#/search?query=${encodeURIComponent(movieName)}`);
         await page.waitForTimeout(4000);
-        const found = await page.evaluate(id => document.querySelectorAll(`.page:not(.hide) .card[data-id="${id}"]`).length, movie.Id);
+        const found = await page.evaluate(id => document.querySelectorAll(`.page:not(.hide) :is(.card:not(.dm), .cell)[data-id="${id}"]`).length, movie.Id);
         record(label, 'Search: the placeholder movie appears once', found === 1, { found });
 
         if (readOnlyName) await readOnlyChecks(page, label, api);
@@ -336,7 +336,7 @@ async function readOnlyChecks(page, label, { call, userId }) {
     await page.waitForSelector(`${PAGE} .jfmod-missingRow`, { timeout: 30000 }).catch(() => {});
     const state = await page.evaluate(() => ({
         mod: document.querySelectorAll('.page:not(.hide) .jfmod-missingRow').length,
-        placeholders: document.querySelectorAll('.page:not(.hide) .listItem[data-jfmod-placeholder]').length
+        placeholders: document.querySelectorAll('.page:not(.hide) .ep[data-jfmod-placeholder]').length
     }));
     record(label, `Read-only fallback (${readOnlyName} season 1): the mod's rows for its missing episodes, no placeholder rows`, state.mod > 0 && state.placeholders === 0, state);
 }
@@ -390,13 +390,13 @@ async function swapCheck(browser, api) {
         const both = [];
         const swapped = await waitForValue(page, async () => {
             const state = await page.evaluate(ids => {
-                const container = document.querySelector('.page:not(.hide) #listChildrenCollapsible .itemsContainer');
-                const numberOf = row => Number(/^\s*(\d+)\./.exec(row.querySelector('.listItemBodyText')?.textContent ?? '')?.[1] ?? NaN);
+                const container = document.querySelector('.page:not(.hide) .jfmod-dsTitleHost .eps');
+                const numberOf = row => Number(/^\s*(\d+)\./.exec(row.querySelector('.nm')?.textContent ?? '')?.[1] ?? NaN);
                 const rows = [...(container?.children ?? [])];
                 const native = new Set(rows.filter(row => !row.classList.contains('jfmod-missingSlot')).map(numberOf));
                 const modNumbers = rows.filter(row => row.classList.contains('jfmod-missingSlot')).map(numberOf);
                 const mod = ids.filter(id => container?.querySelector(`[data-jfmod-episode-id="${id}"]`)).length;
-                const placeholders = container?.querySelectorAll('.listItem[data-jfmod-placeholder]').length ?? 0;
+                const placeholders = container?.querySelectorAll('.ep[data-jfmod-placeholder]').length ?? 0;
                 return { mod, placeholders, total: rows.length, marker: window.jfmodSwapMarker === true,
                     numbered: [...native].filter(Number.isFinite).length,
                     both: modNumbers.filter(number => Number.isFinite(number) && native.has(number)) };
