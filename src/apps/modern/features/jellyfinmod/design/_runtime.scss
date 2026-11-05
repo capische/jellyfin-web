@@ -127,6 +127,12 @@
         margin: 0;
     }
 
+    /* A download disc that opens nothing is no control, on a card that opens its page (P1.FU19). */
+    .post .dm:not([role='link']),
+    .post .mark {
+        cursor: default;
+    }
+
     /* Row arrows: the library toolbar's pill on the title line, above the posters; a computer only (title-pages.md). */
     &:not(html) .emby-scrollbuttons {
         top: 2.165em;
@@ -1354,7 +1360,7 @@
 html.jfmod-chrome.layout-tv .skinHeader .headerTabs { display: none; }
 
 /* The legacy header only hosts the TV's bar; the mockup's bar has no band of its own over Home's art. */
-.layout-tv .skinHeader.skinHeader-withBackground {
+html.jfmod-chrome.layout-tv .skinHeader.skinHeader-withBackground {
     background: none;
     backdrop-filter: none;
 }

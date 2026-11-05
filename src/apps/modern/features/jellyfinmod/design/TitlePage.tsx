@@ -99,7 +99,8 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
     const primary = card.commands.find(command => ['play', 'cloud'].includes(command.icon));
     const playCommand = !card.node.matches('[data-jfmod-placeholder], [data-jfmod-nofile], [data-jfmod-empty]') && !!card.node.dataset.id
         && ['Movie', 'Series', 'Season', 'Episode'].includes(card.node.dataset.type ?? '');
-    const menuCommands = card.commands.filter(command => command !== primary);
+    // The mockup's pill keeps Get a Release beside the disc that offers the same; Play stays only on the disc.
+    const menuCommands = card.commands.filter(command => command !== primary || command.icon === 'cloud');
     return <>
         {(primary || playCommand) && <button type='button' className={'disc hov glassy' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-ds-primary-action={primary ? primaryAction(primary) : 'play'} aria-label={primary?.label || 'Play ' + card.title} onClick={event => {
             event.stopPropagation();
@@ -107,7 +108,8 @@ const PosterActions: FC<{ card: TitleCard; view: HTMLElement }> = ({ card, view 
             // The same existing shortcut command as a remote's Play key, on the original command host.
             else card.node.dispatchEvent(new CustomEvent('command', { bubbles: true, cancelable: true, detail: { command: 'play' } }));
         }}>{posterActionIcon(primary, card.mark)}</button>}
-        {menuCommands.length > 0 && <span className='hmenu glassy'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label}
+        {menuCommands.length > 0 && <span className='hmenu glassy'>{menuCommands.map(command => <button type='button' key={command.key} className={'pi' + (device === 'tv' ? '' : ' focusable')} tabIndex={device === 'tv' ? -1 : 0} data-tip={command.label} aria-label={command.label}
+            data-ds-action={{ check: 'played', heart: 'favorite', cloud: 'get' }[command.icon as string]}
             aria-pressed={['check', 'heart'].includes(command.icon) ? command.pressed : undefined}
             onClick={event => {
                 event.stopPropagation();
