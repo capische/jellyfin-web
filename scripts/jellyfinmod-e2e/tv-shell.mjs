@@ -286,8 +286,10 @@ async function walkRowTo(page, rowSelector, label) {
 async function checkDetails(page, name, cfg, movieLib) {
     const movieId = await page.evaluate(async parentId => {
         const r = await ApiClient.getItems(ApiClient.getCurrentUserId(), { ParentId: parentId, IncludeItemTypes: 'Movie', Recursive: true, SortBy: 'SortName' });
-        // A movie with a file: a file-less one has no Play to look for.
-        return (r.Items.find(item => item.LocationType === 'FileSystem') ?? r.Items[0])?.Id;
+        // A movie with a real file: a file-less one has no Play to look for, and a placeholder of the stubs line is a file on disk too, so the plugin says which.
+        const entries = await ApiClient.getJSON(ApiClient.getUrl('JellyfinMod/Entries'));
+        const onDisk = new Set((entries.items ?? []).filter(entry => entry.mediaType === 'movie' && entry.state === 'onDisk' && !entry.placeholderItemId).map(entry => entry.jellyfinItemId));
+        return (r.Items.find(item => onDisk.has(item.Id)) ?? r.Items.find(item => item.LocationType === 'FileSystem') ?? r.Items[0])?.Id;
     }, movieLib.id);
     try {
         await page.goto(base + '#/details?id=' + movieId, { waitUntil: 'domcontentloaded' });
