@@ -1195,6 +1195,30 @@
         box-shadow: 0 0 0 0.135em var(--primary);
     }
 
+    /* No browser ring on anything the design draws: upstream's outline: none stopped reaching these with D268. On a computer or tablet
+       the keyboard draws the rulebook's ring, a round row action the card pill's; the TV's stops keep their own focus. */
+    a:focus,
+    button:focus,
+    .disc:focus,
+    .box:focus {
+        outline: none;
+    }
+
+    &.dev-computer,
+    &.dev-tablet {
+        a:not(.cell):not(.srow2):focus-visible,
+        .dbtn:focus-visible,
+        .play:focus-visible {
+            outline: 0.15em solid var(--primary);
+            outline-offset: 0.15em;
+        }
+
+        .ib:focus-visible,
+        .disc:focus-visible {
+            box-shadow: 0 0 0 0.135em var(--primary);
+        }
+    }
+
     .ipop {
         max-height: 80vh;
         overflow-y: auto;
