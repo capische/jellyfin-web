@@ -96,6 +96,7 @@ const PRIMARY = 'rgb(0, 164, 220)';
 for (const [device, theme] of [['computer', 'dark'], ['computer', 'light'], ['phone', 'dark'], ['phone', 'light'], ['tv', 'dark'], ['tv', 'light']]) {
     const label = `${device} ${theme}`;
     const { context, page } = await session(device, theme);
+    let at = 'start';
     try {
         await openPrefs(page);
         let state = await railState(page);
@@ -123,8 +124,7 @@ for (const [device, theme] of [['computer', 'dark'], ['computer', 'light'], ['ph
             const changed = options.find(option => option !== secondary && option !== primary) ?? options.find(option => option !== secondary);
             await pick(page, device, 'Text size', changed);
             record(label, 'Secondary takes its own Text Size', await textSize(page) === changed, { primary, secondary, changed });
-            await page.keyboard.press('Shift+Tab').catch(() => undefined);
-            await tab(page, 'Primary').focus();
+            await tab(page, 'Secondary').focus();
             await page.keyboard.press('ArrowLeft');
             await page.waitForTimeout(800);
             record(label, 'back on Primary by the arrow, Primary keeps its own value', (await railState(page)).selected === 'Primary' && await textSize(page) === primary, { now: await textSize(page), primary });
@@ -153,6 +153,7 @@ for (const [device, theme] of [['computer', 'dark'], ['computer', 'light'], ['ph
         }
         // The player's own panel: the same rail, its arrow switching it.
         if (theme === 'dark' || device === 'computer') {
+            at = 'player';
             await page.evaluate(id => { location.hash = '#/details?id=' + id; }, process.env.JELLYFINMOD_TABS_PLAYER);
             await page.waitForSelector('.page:not(.hide) .jfmod-dsTitleHost .actbar button', { timeout: 30000 });
             await page.waitForTimeout(1200);
@@ -161,11 +162,17 @@ for (const [device, theme] of [['computer', 'dark'], ['computer', 'light'], ['ph
             await page.waitForTimeout(3000);
             await page.mouse.move(700, 500);
             const settings = page.locator('.btnVideoOsdSettings').first();
+            at = 'the bar';
+            // The TV shows the bar on a key, a computer on the pointer.
+            if (device === 'tv') await page.keyboard.press('ArrowUp');
+            else { await page.mouse.move(720, 520); await page.mouse.move(700, 500); }
             await settings.waitFor({ state: 'visible', timeout: 10000 });
             await press(page, device, settings);
+            at = 'the settings menu';
             const item = page.locator('[data-ds-actionsheet] [data-id="subtitleappearance"], .actionSheet [data-id="subtitleappearance"]').first();
             await item.waitFor({ state: 'visible', timeout: 10000 });
             await press(page, device, item);
+            at = 'the panel';
             const profiles = page.locator('.playerSubtitleSettings-profiles');
             await profiles.waitFor({ state: 'visible', timeout: 15000 });
             await page.waitForTimeout(800);
@@ -193,7 +200,8 @@ for (const [device, theme] of [['computer', 'dark'], ['computer', 'light'], ['ph
         }
         record(label, 'no page errors', page.errors.length === 0, page.errors.slice(0, 3));
     } catch (error) {
-        record(label, 'ran to the end', false, String(error.message).split('\n')[0]);
+        record(label, 'ran to the end', false, `at ${at}: ` + String(error.message).split('\n')[0]);
+        await page.screenshot({ path: `${SHOTS}/tabs-${tier}-${device}-${theme}-error.png` }).catch(() => undefined);
     } finally {
         await context.close();
     }
