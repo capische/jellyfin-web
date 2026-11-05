@@ -27,7 +27,7 @@
 //   JELLYFINMOD_LIVE_URL=http://127.0.0.1:<port>/   JELLYFINMOD_LIVE_FIXTURE_FILE=<stand-ins' 0600 secrets file>
 //   JELLYFINMOD_LIVE_LAYOUT=desktop|mobile|tv1080|tv720   JELLYFINMOD_QR_THEME=dark|light   JELLYFINMOD_QR_STEPS=dialog,openers,refused,postlink,double
 //   JELLYFINMOD_LIVE_SHOTS=<folder>   JELLYFINMOD_BROWSER=chromium|chrome   [JELLYFINMOD_QR_CONTROL=http://127.0.0.1:38419]
-//   JELLYFINMOD_QR_DOWNLOADS=<the stand-in client's /downloads on this Mac>   JELLYFINMOD_QR_STANDIN_LOG=<the stand-ins' log> (openers)
+//   JELLYFINMOD_QR_DOWNLOADS=<the stand-in client's /downloads on this Mac>   JELLYFINMOD_QR_STANDIN_LOG=<the stand-ins' log>   [JELLYFINMOD_QR_PICK=<a missing movie's title>] (openers)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { api, launch, newPage, origin, record, results, saveResults, setTvLayout, signIn } from './live-lib.mjs';
@@ -385,15 +385,18 @@ async function openersStep() {
     }
     // The picker's added-row X on a missing movie.
     const entries = (await api(page, 'GET', '/JellyfinMod/Entries?limit=200')).body.items;
-    const res = entries.find(entry => entry.tmdbId === 624860);
-    const item = (await api(page, 'GET', '/Items?recursive=true&searchTerm=Resurrections&includeItemTypes=Movie')).body.Items[0];
+    // Which missing movie: JELLYFINMOD_QR_PICK=<its title>, with a stand-in release of the group JELLYFINMOD_QR_PICK_GROUP, no other torrent's.
+    const pickTitle = process.env.JELLYFINMOD_QR_PICK ?? 'The Matrix Resurrections';
+    const pickGroup = process.env.JELLYFINMOD_QR_PICK_GROUP ?? 'QRS';
+    const res = entries.find(entry => entry.title === pickTitle);
+    const item = (await api(page, 'GET', `/Items?recursive=true&searchTerm=${encodeURIComponent(pickTitle)}&includeItemTypes=Movie`)).body.Items[0];
     if (res && item && DOWNLOADS && STANDIN_LOG) {
         await page.evaluate(([id, server]) => { location.hash = `#/details?id=${id}&serverId=${server}`; }, [item.Id, serverId]);
         const get = page.locator('[data-ds-command~=jfmod-getRelease]:visible').first();
         await get.waitFor({ state: 'visible', timeout: 30000 });
         await get.click();
-        const add = page.locator('.rel[data-ds-release-title*="QRS"]').first().locator('[data-jfmod-release-add]');
-        const row = page.locator('.rel[data-ds-release-title*="QRS"]').first();
+        const add = page.locator(`.rel[data-ds-release-title*="${pickGroup}"]`).first().locator('[data-jfmod-release-add]');
+        const row = page.locator(`.rel[data-ds-release-title*="${pickGroup}"]`).first();
         await row.waitFor({ state: 'visible', timeout: 60000 });
         await (await add.count() ? add : row).click();
         const x = page.locator('[data-jfmod-release-x][aria-label^="Remove "]');
@@ -414,7 +417,7 @@ async function openersStep() {
         record(step, 'picker X: Keep Downloading returns focus to the X', focus.label.startsWith('Remove ') && focus.cls.includes('rb'), JSON.stringify(focus));
         // The X once more, and Delete the Download: the row, the torrent and its files go (Codex review P2 2). The stand-in
         // writes a file only when it completes, so the half-downloaded file is written here where the client keeps it.
-        const torrent = (await (await fetch(CONTROL + '/state')).json()).torrents.find(candidate => candidate.name.includes('QRS'));
+        const torrent = (await (await fetch(CONTROL + '/state')).json()).torrents.find(candidate => candidate.name.includes(pickGroup));
         const files = (torrent?.files ?? []).map(file => join(DOWNLOADS, torrent.downloadDir.replace(/^\/downloads/, ''), file.name));
         for (const file of files) {
             mkdirSync(dirname(file), { recursive: true });
@@ -429,7 +432,7 @@ async function openersStep() {
         await waitClosed();
         await page.waitForTimeout(2000);
         const left = (await queueRows()).some(entryRow => entryRow.entry?.id === res.id);
-        const torrents = (await (await fetch(CONTROL + '/state')).json()).torrents.filter(candidate => candidate.name.includes('QRS'));
+        const torrents = (await (await fetch(CONTROL + '/state')).json()).torrents.filter(candidate => candidate.name.includes(pickGroup));
         const removedLine = readFileSync(STANDIN_LOG, 'utf8').slice(logBefore).split('\n').find(line => line.includes(`transmission removed ${torrent?.hashString}`)) ?? '';
         record(step, 'picker X: Delete the Download removes the row, the torrent with delete-local-data, and its files',
             !left && torrents.length === 0 && removedLine.endsWith('with data') && files.every(file => !existsSync(file)),
