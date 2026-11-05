@@ -1200,13 +1200,14 @@
     a:focus,
     button:focus,
     .disc:focus,
-    .box:focus {
+    .box:focus,
+    .cb input:focus {
         outline: none;
     }
 
     &.dev-computer,
     &.dev-tablet {
-        a:not(.cell):not(.srow2):focus-visible,
+        a:not(.cell):not(.srow2):not(.rb):focus-visible,
         .dbtn:focus-visible,
         .play:focus-visible {
             outline: 0.15em solid var(--primary);
@@ -1214,7 +1215,8 @@
         }
 
         .ib:focus-visible,
-        .disc:focus-visible {
+        .disc:focus-visible,
+        .cb:has(input:focus-visible) {
             box-shadow: 0 0 0 0.135em var(--primary);
         }
     }
