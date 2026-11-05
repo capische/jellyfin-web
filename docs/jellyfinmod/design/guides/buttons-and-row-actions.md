@@ -54,7 +54,9 @@ TMDB*, *Turn Grabbing On*); product names keep their spelling. Help, status line
 ## Row actions are round icons
 
 - Every action of a list row (indexers, quality profiles, path mappings, a profile's quality order, the file chooser's
-  rows, the picker's rows) is a round icon-only button of at least 40 px: **2.5em** in the mod's own rows, **2.7816em with a
+  rows, the picker's rows) is a round icon-only button with a target of at least 40 px. On the signed-in pages the design's
+  `.rb` keeps the mockup's visible 2.5em (37 px at a computer's 14.88px root), and its `::before` makes the target 40 px
+  (ds.t7, 2026-11-05). Otherwise **2.5em** in the mod's own rows, **2.7816em with a
   1.6696em glyph on upstream's `.listItem` rows** so it matches Played / Favourite / More beside it. On the phone the Video
   list's file rows and the pending entry's X are **2.7816em with a 1.39em glyph** (D197): 2.5em at the phone's 14.4px root is
   36 px, under the minimum. Transparent, like
