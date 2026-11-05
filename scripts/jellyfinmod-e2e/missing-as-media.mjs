@@ -284,17 +284,17 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
 
         // The stub's row on its season page.
         await go(page, `#/details?id=${stub.SeasonId}`);
-        const rowSelector = `.page:not(.hide) #listChildrenCollapsible .listItem[data-id="${stub.Id}"]`;
+        const rowSelector = `.page:not(.hide) .jfmod-dsTitleHost .ep[data-id="${stub.Id}"]`;
         await page.waitForSelector(`${rowSelector}[data-jfmod-placeholder] :is(.jfmod-mark--none, [data-ds-state-kind="not-downloaded"], .mark:is([title="Not Downloaded"],[data-tip="Not Downloaded"]))`, { timeout: 30000 }).catch(() => {});
         await page.evaluate(`window.isShown = ${visible}`);
         // Upstream's own row buttons differ by layout (the phone and the TV draw fewer): the placeholder's row has the ones a
         // real episode's row has.
         const buttonsOf = selector => page.evaluate(target => {
             const node = document.querySelector(target);
-            return node ? [...node.querySelectorAll('button')].filter(window.isShown)
-                .map(button => button.getAttribute('is') ?? button.getAttribute('data-action') ?? '').filter(name => name && name !== 'paper-icon-button-light').sort() : null;
+            return node ? [...node.querySelectorAll('.acts button')].filter(window.isShown)
+                .map(button => button.getAttribute('data-tip') ?? '').filter(name => name && !['Play', 'Not Downloaded'].includes(name)).sort() : null;
         }, selector);
-        const realButtons = await buttonsOf(`.page:not(.hide) #listChildrenCollapsible .listItem[data-id="${real.Id}"]`);
+        const realButtons = await buttonsOf(`.page:not(.hide) .jfmod-dsTitleHost .ep[data-id="${real.Id}"]`);
         const stubButtons = await buttonsOf(rowSelector);
         const row = await page.evaluate(selector => {
             const node = document.querySelector(selector);
@@ -303,7 +303,7 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
             return {
                 placeholder: node.hasAttribute('data-jfmod-placeholder'),
                 mark: !!mark && window.isShown(mark), button: mark?.tagName === 'BUTTON', label: mark?.getAttribute('aria-label'),
-                play: [...node.querySelectorAll('.listItemImageButton')].some(window.isShown),
+                play: [...node.querySelectorAll('[data-ds-command~=listItemImageButton]')].some(window.isShown),
                 endsAt: /Ends at/.test(node.innerText)
             };
         }, rowSelector);
@@ -312,11 +312,11 @@ async function browserChecks(browser, layout, user, isAdmin, context, api) {
             !!row && row.placeholder && row.mark && row.button === isAdmin && !row.play && !row.endsAt && sameButtons, { ...row, realButtons, stubButtons });
         await page.locator(rowSelector).first().scrollIntoViewIfNeeded().catch(() => {});
         await page.screenshot({ path: `${SHOTS}/mam-${layout}-${user}-season-row.png` });
-        if (stubButtons?.includes('emby-ratingbutton')) {
-            await page.locator(`${rowSelector} button[is="emby-ratingbutton"]`).first().click().catch(() => {});
+        if (stubButtons?.includes('Add to favorites')) {
+            await page.locator(`${rowSelector} [data-tip*="avorite"]`).first().click().catch(() => {});
             await page.waitForTimeout(1500);
             const liked = (await api.call('GET', `/UserItems/${stub.Id}/UserData?userId=${api.userId}`)).json?.IsFavorite;
-            await page.locator(`${rowSelector} button[is="emby-ratingbutton"]`).first().click().catch(() => {});
+            await page.locator(`${rowSelector} [data-tip*="avorite"]`).first().click().catch(() => {});
             await page.waitForTimeout(1500);
             const unliked = (await api.call('GET', `/UserItems/${stub.Id}/UserData?userId=${api.userId}`)).json?.IsFavorite;
             if (unliked) await api.call('DELETE', `/UserFavoriteItems/${stub.Id}?userId=${api.userId}`);
