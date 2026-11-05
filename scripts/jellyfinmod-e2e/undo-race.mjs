@@ -401,7 +401,7 @@ let stray = 0;
 try {
     await signIn(page);
     await page.waitForTimeout(1000);
-    for (const title of [...ALL_TITLES, ...REAL_MEDIA.filter(fixture => fixture.id)]) await requireAbsent(page, title);
+    for (const title of [...TITLES, ...REAL_MEDIA.filter(fixture => fixture.id)]) await requireAbsent(page, title);
     for (let round = 0; round < ROUNDS; round++) {
         for (const title of TITLES) {
             const delay = DELAYS[attempts % DELAYS.length];

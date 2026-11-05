@@ -510,7 +510,7 @@ try {
         await playFromDetails(page, EPISODE);
         record('a', 'The episode as the server has it after a few seconds of play', 'INFO', (await userData(page, EPISODE)).UserData);
         await goHome(page);
-        const hero = await waitHero(page, state => state.episode !== null && state.title === episode.SeriesName, 'the episode hero');
+        const hero = await waitHero(page, state => state.episode !== null && state.title === episode.SeriesName && state.rowIds.length > 0, 'the episode hero');
         record('a', 'Hero shows the series of the partly watched episode', hero.title === episode.SeriesName, hero);
         record('a', 'Episode line under it in the card form', hero.episode === displayName(episode), { episode: hero.episode });
         record('a', 'Backdrop is the series\'', hero.backdropItem === (episode.ParentBackdropItemId ?? episode.SeriesId), { backdropItem: hero.backdropItem });
@@ -563,7 +563,7 @@ try {
         await playFromDetails(page, MOVIE);
         const saved = (await userData(page, MOVIE)).UserData;
         await goHome(page);
-        const hero = await waitHero(page, state => state.title === movie.Name, 'the movie hero');
+        const hero = await waitHero(page, state => state.title === movie.Name && state.rowIds.length > 0, 'the movie hero');
         record('b', 'Hero shows the partly watched movie, more recent than any episode', hero.title === movie.Name && hero.episode === null, hero);
         const expectedB = await firstWithBackdrop(page, hero.rowIds);
         record('b', 'Hero is the first Continue watching card with a backdrop', hero.heroId === MOVIE && expectedB.id === MOVIE, { heroId: hero.heroId, ...expectedB });
@@ -826,7 +826,7 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         // ds.js Home: viewport height × φ⁻¹, with the source's short-screen 2φ⁻² exception.
         // On a computer the frame follows the window's width, like the mockup's frames (ds.t4, guides/title-pages.md).
         let frameHeight = layout.viewport.height;
-        if (!layout.tv && layout.viewport.width >= 800) {
+        if (!layout.tv && !layout.extra?.isMobile && layout.viewport.width >= 800) {
             const { width } = layout.viewport;
             frameHeight = 900;
             if (width <= 1280) frameHeight = 720;
