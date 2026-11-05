@@ -1,5 +1,7 @@
 # Settings field (label, required asterisk, help line)
 
+**Review fixes (2026-11-04), built, not accepted:** Preferences walks the custom element's prototype chain for the value setter before emitting input/change, so dropdowns, text and CSS fields reach their original controller. Native form validation and controller `.quickConnectError` messages appear as error-coloured alerts. `integration/prefsPages.ts` unmounts the painted root (including its environment observers and 500 ms read timer) when the owning page is removed, on legacy `viewdestroy`, or when the painter stops. No save or setting semantics change.
+
 **dsC (2026-11-04), built, not accepted:** native `design/Controls` fields keep the source `.fld > .lb + .box > .v` structure, with a real input replacing the inert value span; native select lists use `.pmenu`/`.mi`. Required stars remain outside the accessible name. Shared prompts and Remove After Watching use them; admin/wizard fields remain unchanged. [Scope and CSS delta](../dsC.md).
 
 **rd2 presentation (approved D225–D227, built, not accepted):** in the signed-in chrome outside Dashboard and the mod's

@@ -113,6 +113,9 @@ const ViewSettingsButton: FC<ViewSettingsButtonProps> = ({
     const isGridView = libraryViewSettings.ViewMode === ViewMode.GridView;
     const isImageTypeVisible = !IMAGE_TYPE_EXCLUDED_VIEWS.includes(viewType);
 
+    const fixedCaption = isGridView && [LibraryTab.Movies, LibraryTab.Series].includes(viewType)
+        && (libraryViewSettings.ImageType ?? ImageType.Primary) === ImageType.Primary;
+
     if (renderButton) {
         return <div className='menuhost'>
             {renderButton({ onClick: handleClick, title: globalize.translate('ViewSettings') })}
@@ -123,12 +126,12 @@ const ViewSettingsButton: FC<ViewSettingsButtonProps> = ({
                 {isImageTypeVisible && <><div className='mhr' /><span className='cap0'>{globalize.translate('LabelImageType')}</span>
                     {imageTypesOptions.map(option => <button key={option.value} className={'mi' + (libraryViewSettings.ImageType === option.value ? ' sel' : '')}
                         onClick={() => setImageType(option.value)}>{globalize.translate(option.label)}</button>)}</>}
-                <div className='mhr' />
-                <NativeFields.Provider value>
-                    <DesignLabel isSwitch label={globalize.translate('ShowTitle')} control={<DesignCheckbox isSwitch name='ShowTitle' checked={libraryViewSettings.ShowTitle} onChange={handleChange} />} />
-                    {isImageTypeVisible && <DesignLabel isSwitch label={globalize.translate('ShowYear')} control={<DesignCheckbox isSwitch name='ShowYear' checked={!!libraryViewSettings.ShowYear} onChange={handleChange} />} />}
-                    <DesignLabel isSwitch label={globalize.translate('EnableCardLayout')} control={<DesignCheckbox isSwitch name='CardLayout' checked={libraryViewSettings.CardLayout} onChange={handleChange} />} />
-                </NativeFields.Provider>
+                {!fixedCaption && <><div className='mhr' />
+                    <NativeFields.Provider value>
+                        <DesignLabel isSwitch label={globalize.translate('ShowTitle')} control={<DesignCheckbox isSwitch name='ShowTitle' checked={libraryViewSettings.ShowTitle} onChange={handleChange} />} />
+                        {isImageTypeVisible && <DesignLabel isSwitch label={globalize.translate('ShowYear')} control={<DesignCheckbox isSwitch name='ShowYear' checked={!!libraryViewSettings.ShowYear} onChange={handleChange} />} />}
+                        <DesignLabel isSwitch label={globalize.translate('EnableCardLayout')} control={<DesignCheckbox isSwitch name='CardLayout' checked={libraryViewSettings.CardLayout} onChange={handleChange} />} />
+                    </NativeFields.Provider></>}
             </DesignMenu>}
         </div>;
     }

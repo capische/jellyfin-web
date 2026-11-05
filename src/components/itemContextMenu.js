@@ -7,7 +7,6 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 import browser from '../scripts/browser';
 import { copy } from '../scripts/clipboard';
-import dom from '../utils/dom';
 import globalize from '../lib/globalize';
 import actionsheet from './actionSheet/actionSheet';
 import { appHost } from './apphost';
@@ -133,7 +132,7 @@ export async function getCommands(options) {
     if (!browser.tv) {
         // Multiselect is currrently only ran on long clicks of card components
         // This disables Select on any context menu not originating from a card i.e songs
-        if (options.positionTo && (dom.parentWithClass(options.positionTo, 'card') !== null)) {
+        if (options.positionTo && (options.positionTo.closest('.card, .jfds .cell[data-id]') !== null)) {
             commands.push({
                 name:  globalize.translate('Select'),
                 id: 'multiSelect',
@@ -534,7 +533,7 @@ function executeCommand(item, id, options) {
                 break;
             case 'multiSelect':
                 import('./multiSelect/multiSelect').then(({ startMultiSelect }) => {
-                    const card = dom.parentWithClass(options.positionTo, 'card');
+                    const card = options.positionTo.closest('.card, .jfds .cell[data-id]');
                     startMultiSelect(card);
                 });
                 break;

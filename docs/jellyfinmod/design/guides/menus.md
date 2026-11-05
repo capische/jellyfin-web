@@ -1,5 +1,7 @@
 # Menus and action sheets
 
+**Review fixes (2026-11-04), built, not accepted:** outside dismissal excludes only the actual anchor or previously focused control, never `<body>` when Safari leaves focus there. File History has a focus scope/container: Up/Down scroll its existing 80% viewport surface, Left/Right and Tab stay inside, Back closes it and restores the file icon. Movies/Shows Primary grids omit Show Title, Show Year and Enable Card Layout (fixed D260 caption); List and other image types keep those controls.
+
 **dsF sweep (2026-11-04), built, not accepted:** menus stay inside the page's 3.3% gutter. The user menu has the caption and the mockup's order (Queue and Ratings Display first, JellyfinMod Settings with the admin links). Action sheet entries are Title Case. A click no longer leaves a keyboard ring; `ds-pointer` on `html` marks pointer input.
 
 **dsD (2026-11-04), built, not accepted:** title More and per-file history now use source `pmenu` and `hpop/hh/ol/li`

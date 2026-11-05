@@ -8,6 +8,8 @@ import React, { type FC, Fragment, type MouseEvent, type ReactNode, type RefObje
 import confirm from 'components/confirm/confirm';
 import focusManager from 'components/focusManager';
 import layoutManager from 'components/layoutManager';
+import inputManager from 'scripts/inputManager';
+import { getKeyName } from 'scripts/keyboardNavigation';
 import { useApi } from 'hooks/useApi';
 
 import { cancelGrab, getGrab, getQualityProfiles, getQueue, getReleaseProgress, getSourceIndexers, grabRelease, type ReleaseQuery,
@@ -493,13 +495,39 @@ const rowLabel = (candidate: ReleaseCandidate, added?: AddedRow | null) => quali
  */
 const ReleaseRow: FC<ReleaseRowProps & { rejected?: boolean }> = props => {
     const { candidate, search, disabled, plan, onGrab, added, arrived, rejected, names } = props;
+    const row = useRef<HTMLDivElement>(null);
+    const move = useCallback((direction: string) => {
+        if (!layoutManager.tv || !row.current || !['left', 'right'].includes(direction)) return false;
+        const stops = [row.current, ...focusManager.getFocusableElements(row.current)];
+        const index = stops.indexOf(document.activeElement as HTMLElement);
+        const next = Math.max(0, Math.min(stops.length - 1, index + (direction === 'right' ? 1 : -1)));
+        focusManager.focus(stops[next]);
+        return true;
+    }, []);
+    useEffect(() => {
+        const host = row.current;
+        if (!host) return;
+        const command = (event: Event) => {
+            if (!event.defaultPrevented && move((event as CustomEvent<{ command: string }>).detail.command)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        };
+        inputManager.on(host, command);
+        return () => inputManager.off(host, command);
+    }, [move]);
     const off = !added && (disabled || !!candidate.inLibrary);
     const activate = () => {
         if (!off && !rejected) onGrab(candidate, plan.first, plan);
     };
-    return <div className={classNames('rel focusable', { dim: off, new: arrived })} role='button' tabIndex={0} data-ds-added={added ? '' : undefined} data-ds-release-title={candidate.rawTitle}
+    return <div ref={row} className={classNames('rel focusable', { dim: off, new: arrived })} role='button' tabIndex={0} data-ds-added={added ? '' : undefined} data-ds-release-title={candidate.rawTitle}
         aria-disabled={off || rejected} aria-label={rowLabel(candidate, added)} data-jfmod-release-row={candidate.releaseId}
         onClick={activate} onKeyDown={event => {
+            const direction = { ArrowLeft: 'left', ArrowRight: 'right' }[getKeyName(event.nativeEvent)];
+            if (direction && move(direction)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
                 activate();

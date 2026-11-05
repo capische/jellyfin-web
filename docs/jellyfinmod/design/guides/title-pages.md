@@ -1,5 +1,7 @@
 # Title pages and art ground
 
+**Review fixes (2026-11-04), built, not accepted:** painted episode rows and title cards forward cancellable remote `command` events with their detail to the original hidden card host, retaining the painted opener for menus. Consumption by upstream is reflected back to the original event so Play/Menu do not fall through to global playback actions. Click/context-menu behavior and approved markup stay unchanged.
+
 **dsF sweep (2026-11-04), built, not accepted:** `by` reads `Directed by` / `Created by`; details are `.tags` lines (`Label: <b>value</b>`), links bold, More from Season below the cast; season and series show the mockup's counts; the phone's row drops Played and the state takes the heart's place; the bar lights the title's library. `renderOverview` selects `p.overview`, because a painted `div.overview` inside the view crashed the controller.
 
 **dsD (2026-11-04): built, not accepted.** The user's native-markup instruction supersedes the earlier rd3 restyling.
