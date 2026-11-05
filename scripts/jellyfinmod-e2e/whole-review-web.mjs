@@ -160,47 +160,36 @@ const checks = {};
 checks.focus = async browser => {
     const { context, page } = await session(browser, 'tv');
     await go(page, `#/details?id=${ITEM}`);
-    await page.waitForSelector('[data-jfmod-remove-version]', { timeout: 30000 });
+    await page.locator('.jfds .gpk .seg.v').first().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-jfmod-file-remove]', { timeout: 30000 });
     await page.waitForTimeout(1500);
     const shape = await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('.jfmod-nativeEntryDetails button.emby-button, [data-jfmod-remove-version], .jfmod-versionsMount button.emby-button'));
         const style = node => { const s = getComputedStyle(node); return [s.transform, s.backgroundColor, s.color, s.boxShadow].join('|'); };
-        const target = document.querySelector('[data-jfmod-remove-version]');
-        const other = document.querySelectorAll('[data-jfmod-remove-version]')[1];
+        const actions = Array.from(document.querySelectorAll('.vlist .vrow button.rb'));
+        const [target, other] = document.querySelectorAll('[data-jfmod-file-remove]');
         other?.focus();
         const unfocused = style(target);
         target.focus();
         const focused = style(target);
-        return { count: buttons.length, missing: buttons.filter(button => !button.classList.contains('show-focus')).map(button => button.textContent.trim().slice(0, 30)), changed: unfocused !== focused };
+        return { count: actions.length, missing: actions.filter(button => !button.classList.contains('focusable')).length, changed: unfocused !== focused };
     });
-    record('4a-2', 'every mod action button on the TV detail page has show-focus', shape.count > 1 && shape.missing.length === 0,
-        `${shape.count} buttons, without: ${shape.missing.join(' | ')}`);
-    record('4a-2', 'the focused Remove this version is painted differently from an unfocused one', shape.changed);
+    record('4a-2', 'every row action of the TV\'s Video list is a focus stop', shape.count > 1 && shape.missing === 0, `${shape.count} buttons, without: ${shape.missing}`);
+    record('4a-2', 'the focused Remove This Version is painted differently from an unfocused one', shape.changed);
     await closeAll(context);
 };
 
-// 4a P2 3: global search's library selectors are emby-select, which a webOS remote can open.
-checks.librarySelect = async browser => {
-    const { context, page } = await session(browser);
-    await go(page, '#/search?query=' + encodeURIComponent('The Matrix'));
-    await page.waitForSelector('.jfmod-discovery', { timeout: 60000 });
-    await page.waitForFunction(() => !document.querySelector('.jfmod-discovery[aria-busy="true"]'), undefined, { timeout: 60000 }).catch(() => {});
-    await page.waitForTimeout(2000);
-    const selects = await page.evaluate(() => Array.from(document.querySelectorAll('.jfmod-discoveryHeading select'))
-        .map(select => select.getAttribute('is') ?? 'native'));
-    record('4a-3', 'each library selector in Add from TMDB is an emby-select', selects.length > 0 && selects.every(kind => kind === 'emby-select'),
-        selects.join(', ') || 'no selector');
-    await closeAll(context);
-};
+// 4a P2 3 is gone with its control: since TM2 Add from TMDB is one search grid, and a title's library is asked by the design's
+// action sheet (a D-pad's list), so no select is left to check.
 
-/** Opens the series' picker and searches the given episode; returns the eligible rows' count. */
-async function openPicker(page, episodeId) {
+/** Opens the series' picker on the given scope (a series offers its seasons, user 2026-10-12); returns the eligible rows' count. */
+async function openPicker(page, scope) {
     await go(page, `#/details?entryId=${SERIES}`);
-    const search = page.locator('button', { hasText: 'Search releases' }).first();
+    const search = page.locator('.jfmod-dsTitleHost .actbar [data-ds-command~=jfmod-getRelease]').first();
     await search.waitFor({ state: 'visible', timeout: 30000 });
     await search.click();
     await page.waitForSelector('.picker', { timeout: 15000 });
-    await chooseScopeValue(page, episodeId);
+    await chooseScopeValue(page, scope);
     await page.waitForFunction(() => !/Searching/.test(document.querySelector('.pstatus')?.textContent ?? 'Searching'), undefined, { timeout: 180000 });
     return page.locator('.rels .rel:not([aria-disabled="true"])').count();
 }
@@ -343,10 +332,7 @@ async function grabGuard(page, ms = 3000) {
     };
 }
 
-async function seriesEpisodes(page) {
-    const detail = await api(page, 'GET', `JellyfinMod/Entries/${SERIES}`);
-    return (detail.body?.episodes ?? []).filter(episode => episode.seasonNumber > 0).slice(0, 3).map(episode => episode.id);
-}
+const seriesEpisodes = () => ['season:1', 'season:2'];
 
 // 4a P2 4: the grab's status and Cancel stay in view while a changed search runs and after it no longer lists the release.
 checks.pickerStatus = async browser => {
@@ -355,7 +341,7 @@ checks.pickerStatus = async browser => {
     let guard;
     try {
         guard = await grabGuard(page, 4000);
-        const [first, second] = await seriesEpisodes(page);
+        const [first, second] = seriesEpisodes();
         const rows = await openPicker(page, first);
         if (!rows) { record('4a-4', 'the picker has an eligible release to grab', false, 'no eligible release'); return; }
         // Only the page's own Cancel counts: the guard's requests come from this runner and carry X-JellyfinMod-Check.
@@ -403,7 +389,7 @@ checks.pickerPolls = async browser => {
     try {
         guard = await grabGuard(page, 4300);
         const created = guard.created;
-        const [first] = await seriesEpisodes(page);
+        const [first] = seriesEpisodes();
         const rows = await openPicker(page, first);
         if (rows < 1) { record('4a-5', 'the picker has an eligible release', false, `${rows}`); return; }
         // Every read of the first grab is answered 3 s late (the real response, delayed).
@@ -1937,6 +1923,7 @@ checks.editorDuringSave = async browser => {
             return route.fallback();
         });
         const saved = responseTo(page, 'PATCH', /\/Settings\/QualityProfiles\/[^/]+$/, 20000).catch(() => null);
+        await dialog.locator('details summary', { hasText: 'Advanced' }).first().click();
         await dialog.locator('button', { hasText: /^Save$/ }).click();
         await page.waitForTimeout(400);
         const seeders = dialog.getByLabel('Minimum seeders');
@@ -2062,7 +2049,7 @@ checks.wizardFailures = async browser => {
     let heading = null;
     const where = () => page.evaluate(() => {
         const active = document.activeElement;
-        return { tag: active?.tagName ?? '', id: active?.id ?? '', inStep: !!active?.closest('.jfmod-check-main') };
+        return { tag: active?.tagName ?? '', role: active?.getAttribute('role') ?? '', id: active?.id ?? '', inStep: !!active?.closest('.jfmod-check-main') };
     });
     let down = null;
     let tab = null;
@@ -2091,7 +2078,7 @@ checks.wizardFailures = async browser => {
     record('fr-4', 'the wizard names a section it could not read, and its Retry recovers', /Settings\/DownloadClients/.test(shown) && recovered,
         `${shown.replace(/\s+/g, ' ')}; recovered ${recovered}`);
     record('d4-3', 'after a Retry pressed with Enter recovers, focus is on the current step\'s heading', !!heading, String(heading));
-    const control = state => state?.inStep && /BUTTON|INPUT|SELECT|TEXTAREA|A/.test(state.tag);
+    const control = state => state?.inStep && (/BUTTON|INPUT|SELECT|TEXTAREA|A/.test(state.tag) || /button|combobox|switch|checkbox/.test(state.role));
     record('d6-8', 'from there, Down and Tab move to controls of the step, and Back leaves the wizard (TV, 1280x720)',
         control(down) && control(tab) && !!back && !back.startsWith('#/catalog/settings/setup'),
         `down ${JSON.stringify(down)}, tab ${JSON.stringify(tab)}, back to "${back}"`);
