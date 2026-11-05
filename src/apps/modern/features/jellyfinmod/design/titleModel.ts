@@ -73,6 +73,11 @@ const imageOf = (node: Element | null): string | undefined => {
     return image?.getAttribute('data-src') || image?.getAttribute('data-imageurl') || /url\(["']?(.*?)["']?\)/.exec(image?.style.backgroundImage ?? '')?.[1];
 };
 const markOf = (node: HTMLElement): TitleCard['mark'] => {
+    // A row with no file whose download failed: the hidden row keeps its Not Downloaded mark, the state is on the row itself.
+    if (node.classList.contains('jfmod-dlRow--failed') && !node.querySelector('[data-jfmod-kind="failed"]')) {
+        const failed = describeDownload('failed', null, false);
+        return { kind: 'failed', progress: { ...failed, tooltip: node.querySelector<HTMLElement>('.jfmod-dlMeta')?.title || failed.tooltip } };
+    }
     const mark = node.querySelector<HTMLElement>('[data-jfmod-kind]') ?? node.querySelector<HTMLElement>('.jfmod-mark--none, .jfmod-mark--unaired, .jfmod-mark--countdown, .jfmod-mark--inFlight');
     if (!mark) return undefined;
     if (mark.classList.contains('jfmod-mark--countdown')) return { kind: 'countdown', date: text(mark.querySelector('.jfmod-countdown')), label: mark.title };
