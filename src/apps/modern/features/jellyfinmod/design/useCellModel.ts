@@ -23,9 +23,21 @@ import { isKnownScale } from '../constants/ratings';
 
 const cellShape = (item: ItemDto | undefined, options: CardOptions) => {
     if (item?.Type === 'Person') return 'c';
-    if (item?.Type === 'Episode' || [CardShape.Backdrop, CardShape.BackdropOverflow, CardShape.Banner].includes(options.shape as CardShape)
+    if ([CardShape.Backdrop, CardShape.BackdropOverflow, CardShape.Banner].includes(options.shape as CardShape)
         || options.preferThumb || options.preferBanner || options.preferLogo) return 'w';
-    return 'p';
+    // An episode is its still, except in a row of posters that asks for the parent's: Home's Recently Added.
+    return item?.Type === 'Episode' && !options.preferParentPoster ? 'w' : 'p';
+};
+
+/** A poster row's episode draws its series' poster: the still would be cropped, and a season's poster is not what the caption names. */
+const posterItem = (item: ItemDto, shape: string) => item.Type === 'Episode' && shape === 'p' ?
+    { ...item, ImageTags: undefined, ParentPrimaryImageTag: undefined, ParentPrimaryImageItemId: undefined } : item;
+
+/** The caption's first two lines. A cell is never on its own series' page (the Seasons row there is the title page's), so a season says whose it is. */
+const captionOf = (item: ItemDto | undefined, title: string, year: string | number) => {
+    if (item?.Type === 'Episode') return { name: item.SeriesName || title, second: `S${item.ParentIndexNumber}:E${item.IndexNumber} · ${title}` };
+    if (item?.Type === 'Season' && item.SeriesName) return { name: item.SeriesName, second: [title, year].filter(Boolean).join(' · ') };
+    return { name: title, second: year };
 };
 
 const visibleRating = (rating: Rating | null | undefined) => rating && isKnownScale(rating.scale) ? rating : null;
@@ -53,12 +65,10 @@ export const useCellModel = (row: BrowseRow, options: CardOptions, alwaysShowCou
     const shape = cellShape(item, options);
     let source = getTmdbImage(entry?.posterPath);
     if (shape === 'w') source = getTmdbImage(entry?.metadata?.backdropPath ?? entry?.posterPath);
-    if (item) source = getCardImageUrl({ api, item, options, shape: shape === 'w' ? CardShape.Backdrop : CardShape.Portrait }).imgUrl;
+    if (item) source = getCardImageUrl({ api, item: posterItem(item, shape), options, shape: shape === 'w' ? CardShape.Backdrop : CardShape.Portrait }).imgUrl;
     const [failedSource, setFailedSource] = useState<string>();
     const title = item?.Name ?? entry?.title ?? '';
-    const isEpisode = item?.Type === 'Episode';
-    const name = isEpisode ? item.SeriesName || title : title;
-    const second = isEpisode ? `S${item.ParentIndexNumber}:E${item.IndexNumber} · ${title}` : item?.ProductionYear ?? entry?.year ?? '';
+    const { name, second } = captionOf(item, title, item?.ProductionYear ?? entry?.year ?? '');
     const progress = item?.UserData?.PlayedPercentage;
     const count = item?.UserData?.UnplayedItemCount;
     const action = resolveAction({ defaultAction: options.action ?? ItemAction.Link, isFolder: item?.IsFolder ?? false, isPhoto: item?.MediaType === 'Photo' });
