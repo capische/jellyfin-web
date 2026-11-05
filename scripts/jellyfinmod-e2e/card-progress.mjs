@@ -218,6 +218,7 @@ const rowStates = page => page.evaluate(mark => [...document.querySelectorAll('.
         // The theme's full text colour: the row's own title (the `--text` both are drawn in).
         refPrimary: (node => (node ? getComputedStyle(node).color : null))(row.querySelector('.nm')),
         id: row.getAttribute('data-id') ?? row.getAttribute('data-jfmod-episode-id'),
+        number: parseInt(row.querySelector('.nm')?.textContent ?? '', 10),
         disc: disc ? {
             kind: disc.getAttribute('data-jfmod-kind'), row: disc.classList.contains('row'), title: disc.title || host?.getAttribute('data-tip'),
             colour: getComputedStyle(disc).color, background: getComputedStyle(disc).backgroundColor, backdrop: getComputedStyle(disc).backdropFilter,
@@ -412,7 +413,7 @@ async function run(browser, layout) {
                 season?.disc?.firstIndicator !== false, { tick: season?.tick, firstIndicator: season?.disc?.firstIndicator });
         }
         const others = await page.evaluate(([id, mark, season]) => [...document.querySelectorAll('.page:not(.hide) .jfmod-dsTitleHost [data-ds-section*="childrencollapsible" i] .cell[data-id]')]
-            .filter(card => card.getAttribute('data-id') !== id && card.getAttribute('data-ds-season') !== season)
+            .filter(card => card.getAttribute('data-id') !== id && card.getAttribute('data-jfmod-season') !== season)
             .map(card => !!card.querySelector(`[data-ds-progress], ${mark}`)), [native.id, DOWNLOAD_MARK, String(missingSeason)]);
         record(label, 'the other upstream season cards show no download', others.every(shown => !shown), others);
         await page.locator(nativeCard).scrollIntoViewIfNeeded().catch(() => {});
@@ -454,7 +455,8 @@ async function run(browser, layout) {
             const packRows = await rowStates(page);
             await shot('rows-pack-season', true);
             for (const expected of packExpected) {
-                const row = findRow(packRows, expected.episode.id);
+                // A row of a season Jellyfin lacks is the mod's own, known by its number.
+                const row = findRow(packRows, expected.episode.id) ?? packRows.find(candidate => candidate.number === expected.episode.episodeNumber);
                 const failed = expected.kind === 'failed';
                 const discOk = row?.disc?.kind === expected.kind && row.disc.firstOfEnd && row.disc.atEnd && !row.noneShown;
                 record(label, `pack Season ${missingSeason} E${expected.episode.episodeNumber}: its own "${expected.meta}" on the meta line, the ${failed ? 'grey-glass bang in place of Not Downloaded' : expected.kind + ' disc'}, no bar`,
@@ -478,7 +480,7 @@ async function run(browser, layout) {
         [seriesId, native.id])));
         for (const [index, expected] of SEASON.entries()) {
             const episode = inSeason[index];
-            const row = findRow(rows, itemOf.get(episode.episodeNumber), episode.id);
+            const row = findRow(rows, itemOf.get(episode.episodeNumber), episode.id) ?? rows.find(candidate => candidate.number === episode.episodeNumber);
             const kind = row?.id && itemOf.get(episode.episodeNumber) && row.id.replace(/-/g, '') === itemOf.get(episode.episodeNumber).replace(/-/g, '') ? 'native' : 'mod';
             // The heart's box (user 2026-10-13: "the same size as info and fav and heart icons"; the mockup's 2.7816em). A failure
             // is the rulebook's grey card glass with the ink's bang, no longer red; every other disc is transparent in the row's icon colour.

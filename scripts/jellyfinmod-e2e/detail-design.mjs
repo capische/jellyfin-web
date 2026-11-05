@@ -648,15 +648,11 @@ function expectedAudio(stream) {
     return { labels, channels: CHANNEL_WORDS[stream.Channels] ?? (stream.Channels ? `${stream.Channels} ch` : null) };
 }
 
-/** Default, Forced, SDH, then the stream's own title when it adds a word (design: Default / Forced / Commentary muted). */
-function expectedFlags(stream, language) {
-    const flags = [];
-    if (stream.IsDefault) flags.push('Default');
-    if (stream.IsForced) flags.push('Forced');
-    if (stream.IsHearingImpaired) flags.push('SDH');
-    const title = (stream.Title ?? '').trim();
-    if (title && ![...flags, language].some(flag => flag.toLowerCase() === title.toLowerCase())) flags.push(title);
-    return flags;
+/** At most one role mark (D76, D61): Default, Original, External and Full are not shown, and a track's own title is never in the run. */
+function expectedFlags(stream) {
+    if (stream.Type === 'Audio') return [];
+    if (stream.IsForced) return ['FORCED'];
+    return stream.IsHearingImpaired ? ['SDH'] : [];
 }
 
 const plainWord = text => (text ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[\s(]/)[0];
@@ -668,7 +664,7 @@ const installTrackReader = page => page.evaluate(() => {
         labels: [...el.querySelectorAll('.mk[aria-label]')].map(node => node.getAttribute('aria-label')).filter(label => label !== 'Dolby Vision'),
         channels: el.querySelector('.chs, .mk.ch')?.textContent.trim() ?? null,
         words: [...el.querySelectorAll('.marks > .mk')].map(node => node.textContent.trim()),
-        flags: [...el.querySelectorAll('.trackextra')].map(node => node.textContent.replace(/^·\s*/, '').trim())
+        flags: [...el.querySelectorAll('.rflag')].map(node => node.textContent.trim())
     });
 });
 
@@ -687,7 +683,7 @@ function trackDifferences(drawn, stream, optionText) {
         const want = SUBTITLE_WORDS[codec] ?? codec.toUpperCase();
         if (JSON.stringify(drawn.words) !== JSON.stringify([want])) problems.push(`format ${drawn.words} want ${want}`);
     }
-    const flags = expectedFlags(stream, drawn.language ?? '');
+    const flags = expectedFlags(stream);
     if (JSON.stringify(drawn.flags) !== JSON.stringify(flags)) problems.push(`flags ${drawn.flags} want ${flags}`);
     return problems;
 }
@@ -706,7 +702,7 @@ const trackField = (page, name) => page.evaluate(([sel, fieldName]) => {
     else el.blur?.();
     return { tag: el.tagName, chevron: !!el.querySelector('.chev'), focusable, title: el.title,
         height: Math.round(el.getBoundingClientRect().height), videoHeight: Math.round(video?.getBoundingClientRect().height ?? 0),
-        selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.dataset.value ?? null,
+        selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.value ?? null,
         options: [...select?.options ?? []].map(option => ({ value: option.value, text: option.textContent })), drawn: window.jfmodTrack(el),
         background: getComputedStyle(el).backgroundColor };
 }, [PAGE, name]);
@@ -834,7 +830,7 @@ async function checkTracks(page, layout, itemId) {
                 size: size?.textContent ?? null, sizeRight: Math.round(box(size).right),
                 end: Math.round(box(row.querySelector('.icons')).left - parseFloat(getComputedStyle(row.querySelector('.icons')).marginLeft)),
                 video: window.jfmodTrack(videoLine), whole: window.jfmodTrack(button),
-                divider: !!row.querySelector('.jfmod-fileDivider, .marks') };
+                divider: !!row.querySelector('.jfmod-fileDivider') };
         }), PAGE);
         const selected = rows.find(row => row.selected) ?? rows[0];
         record(layout, `${tag}: each file's size is right-aligned at its row's end, one column for every row`, rows.length > 0
