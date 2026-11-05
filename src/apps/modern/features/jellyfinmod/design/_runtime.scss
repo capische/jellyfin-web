@@ -1062,7 +1062,20 @@
         flex: none;
     }
 
+    /* .rels bleeds 1.618em to the dialog's edges: its scroller clips there too, or the grab block loses its left edge. */
+    .pickerDialog .releaseScroll {
+        margin: 0 -1.618em;
+        padding: 0 1.618em;
+    }
+
+    &.dev-phone .pickerDialog .releaseScroll {
+        margin: 0 -1em;
+        padding: 0 1em;
+    }
+
     .pickerDialog {
+        overflow-x: hidden;
+
         position: relative;
     }
 
