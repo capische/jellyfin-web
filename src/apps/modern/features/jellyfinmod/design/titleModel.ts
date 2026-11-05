@@ -58,9 +58,12 @@ const commandKey = (node: HTMLElement) => {
     }
     return key;
 };
+/** The rulebook's Title Case for a label; upstream's strings ("Mark played") are sentence case. */
+export const titleCase = (words: string) => words.replace(/(^|\s)([a-z])(\w*)/g, (all, gap: string, first: string, rest: string) => (
+    /^(a|an|and|at|by|for|from|in|of|on|or|the|to|with)$/.test(first + rest) && gap ? all : gap + first.toUpperCase() + rest));
 export const commandOf = (node: HTMLElement): TitleCommand => {
     const badge = node.querySelector<HTMLElement>('.jfmod-playedBadge');
-    return { node, key: commandKey(node), label: node.title || node.getAttribute('aria-label') || text(node), icon: iconOf(node),
+    return { node, key: commandKey(node), label: titleCase(node.title || node.getAttribute('aria-label') || text(node)), icon: iconOf(node),
         play: node.classList.contains('btnPlay'),
         pressed: node.classList.contains('playstatebutton-played') || node.classList.contains('ratingbutton-withrating') || node.getAttribute('aria-pressed') === 'true',
         disabled: node.hasAttribute('disabled') || node.getAttribute('aria-disabled') === 'true',
