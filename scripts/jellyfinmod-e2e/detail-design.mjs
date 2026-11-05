@@ -704,7 +704,7 @@ const trackField = (page, name) => page.evaluate(([sel, fieldName]) => {
         height: Math.round(el.getBoundingClientRect().height), videoHeight: Math.round(video?.getBoundingClientRect().height ?? 0),
         selectInDom: !!select, selectHidden: !!select && select.getClientRects().length === 0, value: select?.value ?? null,
         options: [...select?.options ?? []].map(option => ({ value: option.value, text: option.textContent })), drawn: window.jfmodTrack(el),
-        background: getComputedStyle(el).backgroundColor };
+        background: getComputedStyle(el).backgroundColor, colour: getComputedStyle(el).color };
 }, [PAGE, name]);
 
 const LISTBOX = '.gpk [role="listbox"]';
@@ -908,8 +908,10 @@ async function checkTracks(page, layout, itemId) {
     } finally {
         await page.evaluate(() => document.documentElement.setAttribute('data-theme', window.jfmodTheme ?? 'dark'));
     }
-    record(layout, `${tag}: light theme: the field and its list are light`, !!light && relativeLuminance(light.background) > 0.6
-        && (!lightPaper || relativeLuminance(lightPaper) > 0.6), `${light?.background} / ${lightPaper}`);
+    // A TV's field is the solid disc in every theme (card-glass.md), white on black; its list is the theme's paper.
+    record(layout, `${tag}: light theme: ${isTv(layout) ? 'the field stays solid with white ink and its list is light' : 'the field and its list are light'}`,
+        !!light && (isTv(layout) ? light.background === 'rgba(0, 0, 0, 0.66)' && light.colour === 'rgb(255, 255, 255)' : relativeLuminance(light.background) > 0.6)
+        && (!lightPaper || relativeLuminance(lightPaper) > 0.6), `${light?.background} ${light?.colour} / ${lightPaper}`);
 
     // Play sends the chosen audio and subtitle stream, as upstream's selects do (desktop: the player is left at once).
     if (layoutOf(layout) === 'desktop' && (page.jfmodChosenAudio || page.jfmodChosenSubtitle)) {
@@ -973,7 +975,7 @@ const PACK_CHECKS = [
     'packs: Season scope rows carry a "Season N · M episodes" chip',
     'packs: All Seasons rows carry a "Complete · S01–S05" or "Seasons A–B" chip',
     'packs: rows where the scope holds files end with Add and Replace',
-    'packs: rows where nothing is held have no Add or Replace',
+    'packs: rows where nothing is held offer Add alone, no Replace (the mockup draws + on every row not held)',
     'packs: Add and Replace are D-pad stops after their row',
     'packs: with every indexer unavailable the status says so, never "No releases found"',
     // The user's answer of 2026-10-09: with episode upgrades off the picker offers Add alone; with them on, Add and Replace.
@@ -1090,7 +1092,7 @@ function recordRows(layout, label, body, state, seen, upgrades = null) {
             recordHeldRow(layout, label, body, state, row, seen, upgrades);
         } else if (scope !== 'episode' || body.intent !== 'addVersion') {
             seen.empty = true;
-            record(layout, `${PACK_CHECKS[4]} (${label})`, !row.add && !row.replace, row.title);
+            record(layout, `${PACK_CHECKS[4]} (${label})`, row.add && !row.replace, row.title);
         }
     });
     return eligible;
@@ -1217,7 +1219,7 @@ async function checkActionStops(page, layout, state) {
         notVerified(layout, PACK_CHECKS[5], why);
         return;
     }
-    await page.locator('.rels .rel').nth(index).locator('.rel').focus();
+    await page.locator('.rels .rel').nth(index).focus();
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(300);
     const add = await activeMatches(page, '[data-jfmod-release-add]');
