@@ -824,8 +824,17 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
         await layoutPage.waitForTimeout(2000);
         const after = await measure(layoutPage);
         // ds.js Home: viewport height × φ⁻¹, with the source's short-screen 2φ⁻² exception.
-        const rule = layout.viewport.height <= 720 ? 0.764 : 0.618;
-        const expectedHeight = Math.round(layout.viewport.height * rule);
+        // On a computer the frame follows the window's width, like the mockup's frames (ds.t4, guides/title-pages.md).
+        let frameHeight = layout.viewport.height;
+        if (!layout.tv && layout.viewport.width >= 800) {
+            const { width } = layout.viewport;
+            frameHeight = 900;
+            if (width <= 1280) frameHeight = 720;
+            else if (width >= 2560) frameHeight = 1440;
+            else if (width >= 1920) frameHeight = 1080;
+        }
+        const rule = frameHeight <= 720 ? 0.764 : 0.618;
+        const expectedHeight = Math.round(frameHeight * rule);
         record(`d ${layout.name}`, 'Hero height matches the approved mockup (within 2 px)', Math.abs(after.height - expectedHeight) <= 2,
             { height: after.height, expected: expectedHeight, rule });
         if (!layout.tv && !layout.extra?.isMobile) {
@@ -945,8 +954,9 @@ if (only.includes('d')) for (const layout of LAYOUTS.filter(entry => !layoutFilt
                 solidClass: !!header && (header.matches('.glassbar, .tvbar') || header.classList.contains('MuiAppBar-colorDefault') || header.classList.contains('jfmod-topbarSolid')),
                 design: !!header?.closest('.jfds'),
                 background: style?.backgroundColor ?? null, image: style?.backgroundImage ?? null,
-                fade: header ? getComputedStyle(header.closest('.jfds') || header, '::before').backgroundImage : null,
-                fadeHeight: header ? parseFloat(getComputedStyle(header.closest('.jfds') || header, '::before').height) / parseFloat(getComputedStyle(header).fontSize) : null,
+                // ds.css: the scrim is the hero picture's own ::after, 6.854em high.
+                fade: header ? getComputedStyle(document.querySelector('.jfds .hero2 .pic') ?? header, '::after').backgroundImage : null,
+                fadeHeight: header ? parseFloat(getComputedStyle(document.querySelector('.jfds .hero2 .pic') ?? header, '::after').height) / parseFloat(getComputedStyle(document.querySelector('.jfds .hero2 .pic') ?? header).fontSize) : null,
                 tintAlpha: style ? Math.round(context.getImageData(0, 0, 1, 1).data[3] / 255 * 100) / 100 : null,
                 filter: style ? style.backdropFilter || style.webkitBackdropFilter || 'none' : null,
                 theme: document.documentElement.getAttribute('data-theme'),
@@ -1471,7 +1481,8 @@ if (only.includes('glass')) for (const layout of glassLayouts) {
                 record(step, `After, for the record: the same labels over a plain ${extreme} panel, the extreme the bar is no longer held to`, 'INFO',
                     { [extreme]: after[extreme].glyphContrast, worst: after[extreme].worstControl });
                 const before = measured.before;
-                if (before?.rows?.length === after.rows.length && after.row) {
+                // Light reads D259 (white 61.8 %, brightness 1.09), more solid than the first glass by decision; its values are checked in step d.
+                if (theme !== 'light' && before?.rows?.length === after.rows.length && after.row) {
                     // More of the page through the bar than the first glass, over the hero and over the same poster row.
                     const sameRow = before.rows[after.rowIndex];
                     const more = after.hero.showThrough > before.hero.showThrough && after.row.showThrough > sameRow.showThrough;
