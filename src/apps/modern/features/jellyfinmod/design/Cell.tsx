@@ -45,10 +45,12 @@ const FileMark: FC<{ model: CellModel }> = ({ model }) => {
 const CellMarks: FC<{ model: CellModel }> = ({ model }) => {
     const { count, item, progress } = model;
     return <>
-        {!!count && <span className='pill2'><span>{count}</span></span>}
-        {item?.UserData?.Played && <span className='pill2 tick'><Icon name='check' /></span>}
+        <span className='corner'>
+            {!!count && <span className='pill2'><span>{count}</span></span>}
+            {item?.UserData?.Played && <span className='pill2 tick'><Icon name='check' /></span>}
+            <FileMark model={model} />
+        </span>
         {!!progress && progress < 100 && <span className='prog'><i style={{ width: `${progress}%` }} /></span>}
-        <FileMark model={model} />
     </>;
 };
 

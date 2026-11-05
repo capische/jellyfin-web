@@ -39,3 +39,5 @@ network. Compiler/linter results are recorded with the slice. Server-backed and 
 user's environment restriction; this page documents a built slice, not accepted or deployed behavior.
 
 Every row on a title or browse page (`TitleRow.tsx`) sits on upstream's scroller, with the same arrows and focus walking as Home's rows (D252).
+
+**Home hero height (ds.t4, 2026-11-05, built, not accepted):** on a computer the height follows the window's width like the mockup's frames: up to 1280 px wide 720 × 0.764 (550), up to 1919 px 900 × 0.618 (556), up to 2559 px 1080 × 0.618 (667), from 2560 px 1440 × 0.618 (890). Phone, tablet and TV use the window's height. Episode stills keep the mockup's `overflow: hidden`, so the image follows the ring's corners.

@@ -28,7 +28,7 @@ export const paintCellDownload = (cell: HTMLElement, progress: DownloadProgress 
         mark = document.createElement('span');
         mark.dataset.dsDownload = '';
         mark.className = 'cmark glassy';
-        post.append(mark);
+        (post.querySelector('.corner') ?? post).append(mark);
     }
     const kind = progress.kind;
     const turning = kind === 'importing';

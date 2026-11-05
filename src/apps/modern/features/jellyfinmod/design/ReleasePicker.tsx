@@ -38,9 +38,9 @@ const Picker: FC<ReleasePickerProps & { close: () => void }> = props => {
     return <div data-ds-dialog='' className='dialog wide pickerDialog' role='dialog' aria-modal='true' aria-label={props.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release'}>
         <div className='dlghead'><h3>{props.intent === 'addVersion' ? 'Get Another Quality' : 'Get a Release'}<small>{props.title}</small></h3>
             <span ref={setSlot} className='sourcesSlot' />
-            <button type='button' className={'rb focusable' + (names ? ' on' : '')} title={label} aria-label={label} aria-pressed={names} onClick={toggle}><ReleaseGlyph name='names' /></button>
-            {client && device !== 'tv' && <a className='rb focusable' href={client.openUrl} target='_blank' rel='noopener noreferrer' title={'Open ' + client.name} aria-label={'Open ' + client.name}><ReleaseGlyph name='client' /></a>}
-            <button type='button' className='rb focusable' title='Close' aria-label='Close' onClick={props.close}><ReleaseGlyph name='close' /></button>
+            <button type='button' className={'rb focusable' + (names ? ' on' : '')} data-tip={label} aria-label={label} aria-pressed={names} onClick={toggle}><ReleaseGlyph name='names' /></button>
+            {client && device !== 'tv' && <a className='rb focusable' href={client.openUrl} target='_blank' rel='noopener noreferrer' data-tip={'Open ' + client.name} aria-label={'Open ' + client.name}><ReleaseGlyph name='client' /></a>}
+            <button type='button' className='rb focusable' data-tip='Close' aria-label='Close' onClick={props.close}><ReleaseGlyph name='close' /></button>
         </div>
         <div className='dlgbody'><ReleasePickerDialog {...props} sourcesSlot={slot ?? undefined} showNames={names} /></div>
     </div>;

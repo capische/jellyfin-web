@@ -11,7 +11,7 @@ import type { ItemDto } from 'types/base/models/item-dto';
 import datetime from 'scripts/datetime';
 import { useQueryClient } from '@tanstack/react-query';
 import NativeRatingsLine from '../components/NativeRatingsLine';
-import { Root, DesignContext } from './Root';
+import { Root, DesignContext, readEnvironment } from './Root';
 import { Action } from './Action';
 
 interface Props {
@@ -23,6 +23,19 @@ interface Props {
     error: string | null;
 }
 
+/** ds.js P.home's H on page.html's frame: a computer's height comes from its window's width, whatever the window's own height. */
+const heroHeight = () => {
+    const width = window.innerWidth;
+    let frame = window.innerHeight;
+    if (readEnvironment().device === 'computer') {
+        frame = 900;
+        if (width <= 1280) frame = 720;
+        else if (width >= 2560) frame = 1440;
+        else if (width >= 1920) frame = 1080;
+    }
+    return Math.round(frame * (frame <= 720 ? 0.764 : 0.618));
+};
+
 /** ds.js Home hero and actbar, supplied by HomeHero's existing choice/play logic. */
 const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error }) => {
     const device = useContext(DesignContext);
@@ -30,9 +43,9 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const queryClient = useQueryClient();
     const played = useTogglePlayedMutation();
     const favorite = useToggleFavoriteMutation();
-    const [height, setHeight] = useState(window.innerHeight);
+    const [height, setHeight] = useState(heroHeight);
     useLayoutEffect(() => {
-        const resize = () => setHeight(window.innerHeight);
+        const resize = () => setHeight(heroHeight());
         window.addEventListener('resize', resize);
         return () => window.removeEventListener('resize', resize);
     }, []);
@@ -52,7 +65,7 @@ const HeroBody: FC<Props> = ({ item, backdrop, overview, details, onPlay, error 
     const title = item.Type === 'Episode' ? item.SeriesName || item.Name : item.Name;
     // The TV's focus scrolling would centre Play and take the bar off the top of the page: the hero stays at the page's top.
     const holdTop = device === 'tv' ? { 'data-scroll-mode-y': 'custom', onFocusCapture: () => window.scrollTo(0, 0) } : {};
-    return <div className='hero2 onart' data-jfmod-hero-id={item.Id} data-jfmod-detail-href={details} {...holdTop} style={{ height: Math.round(height * (height <= 720 ? 0.764 : 0.618)) }}>
+    return <div className='hero2 onart' data-jfmod-hero-id={item.Id} data-jfmod-detail-href={details} {...holdTop} style={{ height }}>
         <div className='pic' style={{ backgroundImage: `url("${backdrop}")` }} /><div className='scrim' /><div className='foot' />
         <div className='herotext'>
             <h1 id='jfmod-homeHero-title'>{device === 'phone' ? <a href={details}>{title}</a> : title}</h1>
